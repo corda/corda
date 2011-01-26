@@ -834,6 +834,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
   void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
+  void* link = reinterpret_cast<void*>(LINK_REGISTER(c));
 
   unsigned index;
 
@@ -841,7 +842,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   case VisitSignal: {
     index = VisitSignalIndex;
 
-    system->threadVisitor->visit(ip, stack);
+    system->threadVisitor->visit(ip, stack, link);
 
     System::Thread* t = system->visitTarget;
     system->visitTarget = 0;

@@ -164,13 +164,13 @@ inline int carry16(intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 : 0; }
 inline bool isOfWidth(long long i, int size) { return static_cast<unsigned long long>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
-const unsigned FrameFooterSize = 2;
-const unsigned FrameHeaderSize = 0;
+const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
 const unsigned StackAlignmentInBytes = 8;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 
 const int ThreadRegister = 8;
+const int FrameRegister = 12;
 const int StackRegister = 13;
 const int LinkRegister = 14;
 const int ProgramCounter = 15;
@@ -1701,6 +1701,9 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual bool reserved(int register_) {
     switch (register_) {
+    case FrameRegister:
+      return UseFramePointer;
+
     case LinkRegister:
     case StackRegister:
     case ThreadRegister:
@@ -1781,8 +1784,8 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
-    const unsigned alignment = StackAlignmentInBytes / BytesPerWord;
-    return (ceiling(sizeInWords + FrameFooterSize, alignment) * alignment);
+    return pad(sizeInWords + FrameHeaderSize, StackAlignmentInWords)
+      - FrameHeaderSize;
   }
 
   virtual void* frameIp(void* stack) {
@@ -1798,15 +1801,15 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFooterSize() {
-    return FrameFooterSize;
+    return 0;
   }
 
   virtual int returnAddressOffset() {
-    return 1;
+    return -1;
   }
 
   virtual int framePointerOffset() {
-    return 0;
+    return -2;
   }
 
   virtual void nextFrame(void** stack, void**) {
@@ -2006,11 +2009,14 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned) {
+  virtual void saveFrame(unsigned stackOffset) {
+    appendFrameSizeEvent(&c, FrameSizePoison);
+
+    // ???
     Register returnAddress(LinkRegister);
-    Memory returnAddressDst
-      (StackRegister, arch_->returnAddressOffset() * BytesPerWord);
-    moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
+    Memory returnAddressDst(StackRegister, - BytesPerWord);
+    moveAndUpdateRM(&c, BytesPerWord, &returnAddress, BytesPerWord,
+                    &returnAddressDst);
 
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
@@ -2059,33 +2065,53 @@ class MyAssembler: public Assembler {
   }
 
   virtual void allocateFrame(unsigned footprint) {
-    Register returnAddress(LinkRegister);
+    Register stack(StackRegister);
+    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
+    subCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack,
+          BytesPerWord, &stack);
 
-    Memory returnAddressDst(StackRegister, arch_->returnAddressOffset() * BytesPerWord);
+    appendFrameSizeEvent(&c, footprint);
+
+    Register returnAddress(LinkRegister);
+    Memory returnAddressDst(StackRegister, (footprint - 1) * BytesPerWord);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
 
-    Register stack(StackRegister);
-    Memory stackDst(StackRegister, -footprint * BytesPerWord);
-    moveAndUpdateRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
+    if (UseFramePointer) {
+      Register frame(FrameRegister);
+      Memory frameDst(StackRegister, (footprint - 2) * BytesPerWord);
+      moveRM(&c, BytesPerWord, &frame, BytesPerWord, &frameDst);
+    }
   }
 
-  virtual void adjustFrame(unsigned footprint) {
-    Register nextStack(5);
-    Memory stackSrc(StackRegister, 0);
-    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
+  virtual void adjustFrame(unsigned difference) {
+    appendFrameSizeEvent(&c, - difference);
 
-    Memory stackDst(StackRegister, -footprint * BytesPerWord);
-    moveAndUpdateRM(&c, BytesPerWord, &nextStack, BytesPerWord, &stackDst);
+    Register stack(StackRegister);
+    Constant differenceConstant(resolved(&c, difference * BytesPerWord));
+    subCR(&c, BytesPerWord, &differenceConstant, BytesPerWord, &stack,
+          BytesPerWord, &stack);
+
+    appendFrameSizeEvent(&c, difference);
   }
 
-  virtual void popFrame() {
-    Register stack(StackRegister);
-    Memory stackSrc(StackRegister, arch_->framePointerOffset() * BytesPerWord);
-    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
+  virtual void popFrame(unsigned frameFootprint) {
+    if (UseFramePointer) {
+      Register frame(FrameRegister);
+      Memory frameSrc(StackRegister, (frameFootprint - 1) * BytesPerWord);
+      moveMR(&c, BytesPerWord, &frameSrc, BytesPerWord, &frame);
+    }
 
     Register returnAddress(LinkRegister);
-    Memory returnAddressSrc(StackRegister, arch_->returnAddressOffset() * BytesPerWord);
+    Memory returnAddressSrc
+      (StackRegister, (frameFootprint - 1) * BytesPerWord);
     moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
+    
+    Register stack(StackRegister);
+    Constant differenceConstant(resolved(&c, frameFootprint * BytesPerWord));
+    addCR(&c, BytesPerWord, &differenceConstant, BytesPerWord, &stack,
+          BytesPerWord, &stack);
+
+    appendFrameSizeEvent(&c, - frameFootprint);
   }
 
   virtual void popFrameForTailCall(unsigned footprint,
@@ -2095,80 +2121,85 @@ class MyAssembler: public Assembler {
   {
     if (TailCalls) {
       if (offset) {
+        if (UseFramePointer) {
+          Register frame(FrameRegister);
+          Memory frameSrc(StackRegister, (footprint - 1) * BytesPerWord);
+          moveMR(&c, BytesPerWord, &frameSrc, BytesPerWord, &frame);
+        }
+
         Register link(LinkRegister);
         Memory returnAddressSrc
-          (StackRegister, BytesPerWord + (footprint * BytesPerWord));
+          (StackRegister, (footprint - 1) * BytesPerWord);
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &link);
     
-        Register tmp(c.client->acquireTemporary());
-        Memory stackSrc(StackRegister, footprint * BytesPerWord);
-        moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
+        Register stack(StackRegister);
+        Constant footprintConstant
+          (resolved(&c, (footprint - offset + 1) * BytesPerWord));
+        addCR(&c, BytesPerWord, &footprintConstant, BytesPerWord, &stack);
 
-        Memory stackDst(StackRegister, (footprint - offset) * BytesPerWord);
-        moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
-
-        c.client->releaseTemporary(tmp.low);
+        appendFrameSizeEvent(&c, - (frameFootprint - offset + 1));
 
         if (returnAddressSurrogate != NoRegister) {
           assert(&c, offset > 0);
 
           Register ras(returnAddressSurrogate);
-          Memory dst(StackRegister, BytesPerWord + (offset * BytesPerWord));
+          Memory dst(StackRegister, (offset - 1) * BytesPerWord);
           moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
         }
 
         if (framePointerSurrogate != NoRegister) {
           assert(&c, offset > 0);
 
-          Register fps(framePointerSurrogate);
-          Memory dst(StackRegister, offset * BytesPerWord);
-          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+          Register las(framePointerSurrogate);
+          Memory dst(StackRegister, (offset - 2) * BytesPerWord);
+          moveRM(&c, BytesPerWord, &las, BytesPerWord, &dst);          
         }
       } else {
-        popFrame();
+        popFrame(footprint);
       }
     } else {
       abort(&c);
     }
   }
 
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
-    popFrame();
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
+  {
+    popFrame(frameFootprint);
 
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
+    unsigned offset;
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
-      Register tmp(5);
-      Memory stackSrc(StackRegister, 0);
-      moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp);
+      offset = argumentFootprint - StackAlignmentInWords;
 
-      Memory stackDst(StackRegister,
-                      (argumentFootprint - StackAlignmentInWords)
-                      * BytesPerWord);
-      moveAndUpdateRM(&c, BytesPerWord, &tmp, BytesPerWord, &stackDst);
+      Register stack(StackRegister);
+      Constant adjustment(resolved(&c, offset * BytesPerWord));
+      addCR(&c, BytesPerWord, &adjustment, BytesPerWord, &stack);
+
+      appendFrameSizeEvent(&c, - offset);
+    } else {
+      offset = 0;
     }
 
     return_(&c);
+
+    // todo: this is not necessary if there are no instructions to
+    // follow:
+    appendFrameSizeEvent(&c, frameFootprint + offset);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   {
-    popFrame();
+    appendFrameSizeEvent(&c, FrameSizePoison);
 
-    Register tmp1(6);
-    Memory stackSrc(StackRegister, 0);
-    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &tmp1);
-
-    Register tmp2(5);
-    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
-    moveMR(&c, BytesPerWord, &newStackSrc, BytesPerWord, &tmp2);
+    popFrame(frameFootprint);
 
     Register stack(StackRegister);
-    subR(&c, BytesPerWord, &stack, &tmp2, &tmp2);
-
-    Memory stackDst(StackRegister, 0, tmp2.low);
-    moveAndUpdateRM(&c, BytesPerWord, &tmp1, BytesPerWord, &stackDst);
+    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    moveMR(&c, BytesPerWord, &newStackSrc, BytesPerWord, &stack);
 
     return_(&c);
   }

@@ -86,7 +86,7 @@
   (object pool)
   (object exceptionHandlerTable)
   (object lineNumberTable)
-  (object frameSizeTable)
+  (object frameTable)
   (intptr_t compiled)
   (uint16_t maxStack)
   (uint16_t maxLocals)

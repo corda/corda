@@ -35,7 +35,7 @@ class System {
 
   class ThreadVisitor {
    public:
-    virtual void visit(void* ip, void* stack) = 0;
+    virtual void visit(void* ip, void* stack, void* link) = 0;
   };
 
   class Runnable {

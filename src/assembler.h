@@ -304,11 +304,10 @@ class Assembler {
     virtual unsigned resolve(unsigned start, Block* next) = 0;
   };
 
-  class FrameSizeEvent {
+  class FrameEvent {
    public:
     virtual unsigned offset() = 0;
-    virtual int change() = 0;
-    virtual FrameSizeEvent* next() = 0;
+    virtual FrameEvent* next() = 0;
   };
 
   class Architecture {
@@ -351,6 +350,10 @@ class Assembler {
 
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
+    virtual void nextFrame(void* start, unsigned size, unsigned footprint,
+                           int32_t* frameTable, void* link, void* stackLimit,
+                           unsigned targetParameterFootprint, void** ip,
+                           void** stack) = 0;
     virtual void* frameIp(void* stack) = 0;
     virtual unsigned frameHeaderSize() = 0;
     virtual unsigned frameReturnAddressSize() = 0;
@@ -437,9 +440,9 @@ class Assembler {
 
   virtual unsigned length() = 0;
 
-  virtual unsigned frameSizeEventCount() = 0;
+  virtual unsigned frameEventCount() = 0;
 
-  virtual FrameSizeEvent* firstFrameSizeEvent() = 0;
+  virtual FrameEvent* firstFrameEvent() = 0;
 
   virtual void dispose() = 0;
 };

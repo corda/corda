@@ -295,9 +295,9 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 
 #define THREAD_STACK 2148
 #define THREAD_SCRATCH 2152
-   
+
 #define CALLEE_SAVED_REGISTER_FOOTPRINT 16
-   
+
 .globl GLOBAL(vmInvoke)
 GLOBAL(vmInvoke):
    pushl  %ebp
