@@ -4,7 +4,6 @@ import java.io.FileInputStream;
 
 public class DefineClass {
   private static File findClass(String name, File directory) {
-    File[] files = directory.listFiles();
     for (File file: directory.listFiles()) {
       if (file.isFile()) {
         if (file.getName().equals(name + ".class")) {
@@ -50,7 +49,7 @@ public class DefineClass {
   }
 
   public static void main(String[] args) throws Exception {
-    testStatic();
+    //testStatic();
     testDerived();
   }
 
@@ -72,6 +71,7 @@ public class DefineClass {
 
   public abstract static class Base {
     public int foo;
+    public int[] array;
     
     public void bar() { }
 

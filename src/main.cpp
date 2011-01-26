@@ -62,7 +62,13 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 // we link against a System implmentation, which requires this at link
 // time, but it should not be used at runtime:
 extern "C" uint64_t
-vmNativeCall(void*, void*, unsigned, unsigned) { abort(); }
+vmNativeCall(void*, void*, unsigned, unsigned)
+{
+  abort();
+  // abort is not declared __declspec(noreturn) on MSVC, so we have to
+  // pretend it might return to make the compiler happy:
+  return 0;
+}
 
 #endif // BOOT_LIBRARY
 

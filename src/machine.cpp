@@ -1842,7 +1842,16 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
 
     return c;
   } else {
-    return makeArrayClass(t, loader, spec, throw_);
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+
+    c = findLoadedClass(t, root(t, Machine::BootLoader), spec);
+
+    if (c) {
+      return c;
+    } else {
+      return makeArrayClass(t, loader, spec, throw_);
+    }
   }
 }
 

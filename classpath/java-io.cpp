@@ -37,10 +37,12 @@
 #  define OPEN_MASK O_BINARY
 
 #  ifdef _MSC_VER
-#    define S_ISREG(x) ((x) | _S_IFREG)
-#    define S_ISDIR(x) ((x) | _S_IFDIR)
+#    define S_ISREG(x) ((x) & _S_IFREG)
+#    define S_ISDIR(x) ((x) & _S_IFDIR)
 #    define S_IRUSR _S_IREAD
 #    define S_IWUSR _S_IWRITE
+#    define W_OK 2
+#    define R_OK 4
 #  else
 #    define OPEN _wopen
 #    define CREAT _wcreat
@@ -331,7 +333,7 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
     }
   }
 
-  return -1;
+  return 0;
 }
 
 extern "C" JNIEXPORT void JNICALL

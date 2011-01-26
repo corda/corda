@@ -353,7 +353,8 @@ ifdef msvc
 	ld = "$(msvc)/BIN/link.exe"
 	mt = "mt.exe"
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
-		-DUSE_ATOMIC_OPERATIONS \
+		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
+		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32"
 	shared = -dll

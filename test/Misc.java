@@ -227,5 +227,13 @@ public class Misc {
     }
 
     System.out.println(new java.util.Date().toString());
+
+    System.out.println('x');
+    System.out.println(true);
+    System.out.println(42);
+    System.out.println(123456789012345L);
+    System.out.println(75.62);
+    System.out.println(75.62d);
+    System.out.println(new char[] { 'h', 'i' });
   }
 }

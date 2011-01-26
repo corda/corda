@@ -28,5 +28,17 @@ public abstract class Reader {
   public abstract int read(char[] buffer, int offset, int length)
     throws IOException;
 
+  public boolean markSupported() {
+    return false;
+  }
+  
+  public void mark(int readAheadLimit) throws IOException {
+    throw new IOException("mark not supported");
+  }
+  
+  public void reset() throws IOException {
+    throw new IOException("reset not supported");
+  }
+
   public abstract void close() throws IOException;
 }

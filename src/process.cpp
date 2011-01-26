@@ -206,12 +206,12 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
 object
 resolveNativeMethod(Thread* t, object method)
 {
-  void* p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
+  void* p = resolveNativeMethod(t, method, "Avian_", 6, 3);
   if (p) {
     return makeNative(t, p, true);
   }
 
-  p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
+  p = resolveNativeMethod(t, method, "Java_", 5, -1);
   if (p) {
     return makeNative(t, p, false);
   }

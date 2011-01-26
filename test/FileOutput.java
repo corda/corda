@@ -4,6 +4,10 @@ import java.io.File;
 import java.io.IOException;
 
 public class FileOutput {
+  private static void expect(boolean v) {
+    if (! v) throw new RuntimeException();
+  }
+
   private static void test(boolean appendFirst) throws IOException {
     try {
       FileOutputStream f = new FileOutputStream("test.txt", appendFirst);
@@ -21,6 +25,7 @@ public class FileOutput {
       while ((c = in.read(buffer, offset, buffer.length - offset)) != -1) {
         offset += c;
       }
+      in.close();
 
       if (! "Hello world!\nHello world again!".equals
           (new String(buffer, 0, offset)))
@@ -28,11 +33,13 @@ public class FileOutput {
         throw new RuntimeException();
       }
     } finally {
-      new File("test.txt").delete();
+      expect(new File("test.txt").delete());
     }
   }
 
   public static void main(String[] args) throws IOException {
+    expect(new File("nonexistent-file").length() == 0);
+
     test(false);
     test(true);
   }

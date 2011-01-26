@@ -7,7 +7,6 @@ import java.util.zip.ZipEntry;
 public class Zip {
 
   private static String findJar(File directory) {
-    File[] files = directory.listFiles();
     for (File file: directory.listFiles()) {
       if (file.isFile()) {
         if (file.getName().endsWith(".jar")) {

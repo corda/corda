@@ -187,7 +187,7 @@ C++ portions of the VM, while the assembly code and helper tools are
 built using GCC.
 
 The MSVC build has been tested with Visual Studio Express Edition
-versions 8 and 9.  Other versions may also work.
+versions 8, 9, and 10.  Other versions may also work.
 
 To build with MSVC, install Cygwin as described above and set the
 following environment variables:
@@ -442,7 +442,10 @@ For boot image builds:
    space in the executable than the equivalent class files.  In
    practice, this can make the executable 30-50% larger.  Also, AOT
    compilation does not yet yield significantly faster or smaller code
-   than JIT compilation.
+   than JIT compilation.  Finally, floating point code may be slower
+   on 32-bit x86 since the compiler cannot assume SSE2 support will be
+   available at runtime, and the x87 FPU is not supported except via
+   out-of-line helper functions.
 
 Note you can use ProGuard without using a boot image and vice-versa,
 as desired.
@@ -462,7 +465,7 @@ Step 2: Create a stage1 directory and extract the contents of the
 class library jar into it.
 
  $ mkdir stage1
- $ (cd stage1 && jar xf ../../build/${platform}-${arch}/classpath.jar)
+ $ (cd stage1 && jar xf ../../build/linux-i386-bootimage/classpath.jar)
 
 Step 3: Build the Java code and add it to stage1.
 
@@ -498,10 +501,10 @@ Step 6: Build the boot image.
 
 Step 7: Make an object file out of the boot image.
 
- $ ../build/${platform}-${arch}/binaryToObject \
+ $ ../build/linux-i386-bootimage/binaryToObject \
      bootimage.bin bootimage-bin.o \
      _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     ${platform} ${arch} 8 writable executable
+     linux i386 8 writable executable
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
