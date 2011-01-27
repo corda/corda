@@ -2133,14 +2133,14 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
 
       object c = makeContinuation
         (t, 0, context, method, ip,
-         ((frameSize
-           + t->arch->frameFooterSize()
-           + t->arch->returnAddressOffset()
-           - t->arch->frameReturnAddressSize()) * BytesPerWord),
-         ((frameSize
-           + t->arch->frameFooterSize()
-           + t->arch->framePointerOffset() 
-           - t->arch->frameReturnAddressSize()) * BytesPerWord),
+         (frameSize
+          + t->arch->frameFooterSize()
+          + t->arch->returnAddressOffset()
+          - t->arch->frameReturnAddressSize()) * BytesPerWord,
+         (frameSize
+          + t->arch->frameFooterSize()
+          + t->arch->framePointerOffset()
+          - t->arch->frameReturnAddressSize()) * BytesPerWord,
          totalSize);
 
       memcpy(&continuationBody(t, c, 0), top, totalSize * BytesPerWord);
@@ -6780,6 +6780,8 @@ callContinuation(MyThread* t, object continuation, object result,
   t->trace->nativeMethod = 0;
   t->trace->targetMethod = 0;
 
+  popResources(t);
+
   transition(t, ip, stack, continuation, t->trace);
 
   vmJump(ip, stack, t, reinterpret_cast<uintptr_t>(result), 0);
@@ -6857,6 +6859,10 @@ jumpAndInvoke(MyThread* t, object method, void* stack, ...)
     RUNTIME_ARRAY_BODY(arguments)[i] = va_arg(a, uintptr_t);
   }
   va_end(a);
+
+  assert(t, t->exception == 0);
+
+  popResources(t);
   
   vmJumpAndInvoke
     (t, reinterpret_cast<void*>(methodAddress(t, method)),

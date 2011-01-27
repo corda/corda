@@ -3029,7 +3029,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual int framePointerOffset() {
-    return -1;
+    return UseFramePointer ? -1 : 0;
   }
 
   virtual void plan

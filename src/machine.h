@@ -2572,8 +2572,24 @@ makeThrowable(Thread* t, Machine::Type type, const char* format, ...)
   return r;
 }
 
-void NO_RETURN
-throw_(Thread* t, object e);
+void
+popResources(Thread* t);
+
+inline void NO_RETURN
+throw_(Thread* t, object e)
+{
+  assert(t, t->exception == 0);
+
+  expect(t, not t->checkpoint->noThrow);
+
+  t->exception = e;
+
+  popResources(t);
+
+  t->checkpoint->unwind();
+
+  abort(t);
+}
 
 inline void NO_RETURN
 throwNew(Thread* t, Machine::Type type)

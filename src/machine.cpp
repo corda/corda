@@ -2843,28 +2843,19 @@ makeNewGeneral(Thread* t, object class_)
   return instance;
 }
 
-void NO_RETURN
-throw_(Thread* t, object e)
+void
+popResources(Thread* t)
 {
-  assert(t, t->exception == 0);
-
-  Thread::Checkpoint* checkpoint = t->checkpoint;
-
-  expect(t, not checkpoint->noThrow);
-
-  t->exception = e;
-
-  while (t->resource != checkpoint->resource) {
+  while (t->resource != t->checkpoint->resource) {
     Thread::Resource* r = t->resource;
     t->resource = r->next;
+    fprintf(stderr, "unwind resource %p %p %p\n", r,
+            reinterpret_cast<void**>(r)[0],
+            reinterpret_cast<void***>(r)[0][0]);
     r->release();
   }
 
-  t->protector = checkpoint->protector;
-
-  checkpoint->unwind();
-
-  abort(t);
+  t->protector = t->checkpoint->protector;
 }
 
 object
