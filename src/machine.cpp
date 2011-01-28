@@ -2849,9 +2849,6 @@ popResources(Thread* t)
   while (t->resource != t->checkpoint->resource) {
     Thread::Resource* r = t->resource;
     t->resource = r->next;
-    fprintf(stderr, "unwind resource %p %p %p\n", r,
-            reinterpret_cast<void**>(r)[0],
-            reinterpret_cast<void***>(r)[0][0]);
     r->release();
   }
 
