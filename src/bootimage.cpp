@@ -407,29 +407,29 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 
   // resolve primitive array classes in case they are needed at
   // runtime:
-  { resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[B"), true);
+  { object name = makeByteArray(t, "[B");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[Z"), true);
+    name = makeByteArray(t, "[Z");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[S"), true);
+    name = makeByteArray(t, "[S");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[C"), true);
+    name = makeByteArray(t, "[C");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[I"), true);
+    name = makeByteArray(t, "[I");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[J"), true);
+    name = makeByteArray(t, "[J");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[F"), true);
+    name = makeByteArray(t, "[F");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-    resolveSystemClass
-      (t, root(t, Machine::BootLoader), makeByteArray(t, "[D"), true);
+    name = makeByteArray(t, "[D");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
   }
 
   collect(t, Heap::MajorCollection);
