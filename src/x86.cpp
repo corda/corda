@@ -2576,7 +2576,7 @@ read4(uint8_t* p)
 }
 
 void
-nextFrame(ArchitectureContext* c, uint8_t* start, unsigned size,
+nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned,
           unsigned footprint, int32_t*, void*, void* stackLimit,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
