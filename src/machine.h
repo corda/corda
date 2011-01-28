@@ -1472,7 +1472,7 @@ class Thread {
       void* stack = this->stack;
       this->stack = 0;
       expect(t->m->system, stack);
-      vmJump(voidPointer(vmRun_returnAddress), stack, t, 0, 0);
+      vmJump(voidPointer(vmRun_returnAddress), 0, stack, t, 0, 0);
     }
 
     void* stack;

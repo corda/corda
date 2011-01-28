@@ -14,7 +14,7 @@ echo -n "" >${log}
 echo
 
 for test in ${tests}; do
-  printf "%16s" "${test}: "
+  printf "%24s" "${test}: "
 
   case ${mode} in
     debug|debug-fast|fast|small )

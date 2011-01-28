@@ -1992,8 +1992,8 @@ releaseLock(MyThread* t, object method, void* stack)
 }
 
 void
-findUnwindTarget(MyThread* t, void** targetIp, void** targetStack,
-                 object* targetContinuation)
+findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
+                 void** targetStack, object* targetContinuation)
 {
   void* ip;
   void* stack;
@@ -2029,6 +2029,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetStack,
         void** sp = static_cast<void**>(stackForFrame(t, stack, method))
           + t->arch->frameReturnAddressSize();
 
+        *targetFrame = static_cast<void**>
+          (stack) + t->arch->framePointerOffset();
         *targetStack = sp;
         *targetContinuation = continuation;
 
@@ -2046,6 +2048,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetStack,
       }
     } else {
       *targetIp = ip;
+      *targetFrame = 0;
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
       *targetContinuation = continuation;
@@ -2172,13 +2175,14 @@ void NO_RETURN
 unwind(MyThread* t)
 {
   void* ip;
+  void* frame;
   void* stack;
   object continuation;
-  findUnwindTarget(t, &ip, &stack, &continuation);
+  findUnwindTarget(t, &ip, &frame, &stack, &continuation);
 
   transition(t, ip, stack, continuation, t->trace);
 
-  vmJump(ip, stack, t, 0, 0);
+  vmJump(ip, frame, stack, t, 0, 0);
 }
 
 class MyCheckpoint: public Thread::Checkpoint {
@@ -6774,7 +6778,8 @@ callContinuation(MyThread* t, object continuation, object result,
 
     MyThread::TraceContext c(t, ip, stack, continuation, t->trace);
 
-    findUnwindTarget(t, &ip, &stack, &continuation);
+    void* frame;
+    findUnwindTarget(t, &ip, &frame, &stack, &continuation);
   }
 
   t->trace->nativeMethod = 0;
@@ -6784,7 +6789,7 @@ callContinuation(MyThread* t, object continuation, object result,
 
   transition(t, ip, stack, continuation, t->trace);
 
-  vmJump(ip, stack, t, reinterpret_cast<uintptr_t>(result), 0);
+  vmJump(ip, 0, stack, t, reinterpret_cast<uintptr_t>(result), 0);
 }
 
 int8_t*
@@ -6941,10 +6946,12 @@ callContinuation(MyThread* t, object continuation, object result,
             (t, root(t, Machine::BootLoader), "avian/Continuations", "rewind",
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
-            
-          setRoot(t, RewindMethod, method);
+
+          PROTECT(t, method);
             
           compile(t, local::codeAllocator(t), 0, method);
+            
+          setRoot(t, RewindMethod, method);
         }
       } else {
         action = Call;
@@ -6957,9 +6964,10 @@ callContinuation(MyThread* t, object continuation, object result,
   }
 
   void* ip;
+  void* frame;
   void* stack;
   object threadContinuation;
-  findUnwindTarget(t, &ip, &stack, &threadContinuation);
+  findUnwindTarget(t, &ip, &frame, &stack, &threadContinuation);
 
   switch (action) {
   case Call: {
@@ -7037,7 +7045,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
       object method = resolveMethod
         (t, root(t, Machine::BootLoader), "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
-        "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
+         "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
       if (method) {
         setRoot(t, WindMethod, method);
@@ -7264,7 +7272,9 @@ class SignalHandler: public System::SignalHandler {
   SignalHandler(Machine::Type type, Machine::Root root, unsigned fixedSize):
     m(0), type(type), root(root), fixedSize(fixedSize) { }
 
-  virtual bool handleSignal(void** ip, void** stack, void** thread) {
+  virtual bool handleSignal(void** ip, void** frame, void** stack,
+                            void** thread)
+  {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t and t->state == Thread::ActiveState) {
       object node = methodForIp(t, *ip);
@@ -7289,7 +7299,7 @@ class SignalHandler: public System::SignalHandler {
         // printTrace(t, t->exception);
 
         object continuation;
-        findUnwindTarget(t, ip, stack, &continuation);
+        findUnwindTarget(t, ip, frame, stack, &continuation);
 
         transition(t, ip, stack, continuation, t->trace);
 
@@ -8274,7 +8284,8 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
 void
 fixupVirtualThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
-  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2) {
+  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2)
+  {
     if (wordArrayBody(t, root(t, VirtualThunks), i)) {
       wordArrayBody(t, root(t, VirtualThunks), i)
         = (wordArrayBody(t, root(t, VirtualThunks), i) - image->codeBase)

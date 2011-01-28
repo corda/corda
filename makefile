@@ -151,11 +151,16 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
-common-cflags = $(warnings) -fno-rtti -fno-exceptions -fno-omit-frame-pointer \
+common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
+
+ifeq ($(use-frame-pointer),true)
+	common-cflags += -fno-omit-frame-pointer -DAVIAN_USE_FRAME_POINTER
+	asmflags += -DAVIAN_USE_FRAME_POINTER
+endif
 
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
@@ -544,6 +549,13 @@ test-extra-classes = \
 	$(call java-classes,$(test-extra-sources),$(test),$(test-build))
 test-extra-dep = $(test-build)-extra.dep
 
+ifeq ($(continuations),true)
+	continuation-tests = \
+		extra.Continuations \
+		extra.Coroutines \
+		extra.DynamicWind
+endif
+
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
@@ -575,7 +587,8 @@ vg: build
 test: build
 	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
 		$(test-executable) $(mode) "$(test-flags)" \
-		$(call class-names,$(test-build),$(test-classes))
+		$(call class-names,$(test-build),$(test-classes)) \
+		$(continuation-tests)
 
 .PHONY: tarball
 tarball:

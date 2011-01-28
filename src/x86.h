@@ -32,17 +32,20 @@
 #      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
 #      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
 #      define LINK_REGISTER(context) (context->uc_mcontext->__ss.__ecx)
+#      define FRAME_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
 #    else
 #      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
 #      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
 #      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
 #      define LINK_REGISTER(context) (context->uc_mcontext->ss.ecx)
+#      define FRAME_REGISTER(context) (context->uc_mcontext->ss.ebp)
 #    endif
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
 #    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
 #    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_ECX])
+#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
 #  endif
 
 extern "C" uint64_t
@@ -68,17 +71,20 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__rsp)
 #      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__rbx)
 #      define LINK_REGISTER(context) (context->uc_mcontext->__ss.__rcx)
+#      define FRAME_REGISTER(context) (context->uc_mcontext->__ss.__rbp)
 #    else
 #      define IP_REGISTER(context) (context->uc_mcontext->ss.rip)
 #      define STACK_REGISTER(context) (context->uc_mcontext->ss.rsp)
 #      define THREAD_REGISTER(context) (context->uc_mcontext->ss.rbx)
 #      define LINK_REGISTER(context) (context->uc_mcontext->ss.rcx)
+#      define FRAME_REGISTER(context) (context->uc_mcontext->ss.rbp)
 #    endif
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
 #    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
 #    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_RCX])
+#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
 #  endif
 
 extern "C" uint64_t

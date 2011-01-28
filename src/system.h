@@ -96,7 +96,8 @@ class System {
 
   class SignalHandler {
    public:
-    virtual bool handleSignal(void** ip, void** stack, void** thread) = 0;
+    virtual bool handleSignal(void** ip, void** frame, void** stack, 
+                              void** thread) = 0;
   };
 
   class MonitorResource {

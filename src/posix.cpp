@@ -815,7 +815,7 @@ class MySystem: public System {
   }
 
   class NullSignalHandler: public SignalHandler {
-    virtual bool handleSignal(void**, void**, void**) { return false; }
+    virtual bool handleSignal(void**, void**, void**, void**) { return false; }
   } nullHandler;
 
   SignalHandler* handlers[SignalCount];
@@ -835,6 +835,11 @@ handleSignal(int signal, siginfo_t* info, void* context)
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
   void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
   void* link = reinterpret_cast<void*>(LINK_REGISTER(c));
+#ifdef FRAME_REGISTER
+  void* frame = reinterpret_cast<void*>(FRAME_REGISTER(c));
+#else
+  void* frame = 0;
+#endif
 
   unsigned index;
 
@@ -871,7 +876,8 @@ handleSignal(int signal, siginfo_t* info, void* context)
       abort();
     }
 
-    bool jump = system->handlers[index]->handleSignal(&ip, &stack, &thread);
+    bool jump = system->handlers[index]->handleSignal
+      (&ip, &frame, &stack, &thread);
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
@@ -885,7 +891,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, signal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(ip, stack, thread, 0, 0);
+      vmJump(ip, frame, stack, thread, 0, 0);
     }
   } break;
 

@@ -170,10 +170,11 @@ LOCAL(exit):
 
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
-   movq   %r9,%rax
-   movq   40(%rsp),%rdx
-   movq   %rdx,%rsp
-   movq   %r8,%rbx
+   movq   %rdx,%rbp
+   movq   40(%rsp),%rax
+   movq   48(%rsp),%rdx
+   movq   %r8,%rsp
+   movq   %r9,%rbx
    jmp    *%rcx
 
 #define VMRUN_FRAME_SIZE 80
@@ -350,10 +351,11 @@ LOCAL(exit):
 
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
-   movq   %rsi,%rsp
-   movq   %rdx,%rbx
-   movq   %rcx,%rax
-   movq   %r8,%rdx
+   movq   %rsi,%rbp
+   movq   %rdx,%rsp
+   movq   %rcx,%rbx
+   movq   %r8,%rax
+   movq   %r9,%rdx
    jmp    *%rdi
 
 #define VMRUN_FRAME_SIZE 64
@@ -508,10 +510,11 @@ LOCAL(exit):
 .globl GLOBAL(vmJump)
 GLOBAL(vmJump):
    movl   4(%esp),%esi
-   movl   12(%esp),%ebx
-   movl   16(%esp),%eax
-   movl   20(%esp),%edx
-   movl   8(%esp),%esp
+   movl   8(%esp),%ebp
+   movl   16(%esp),%ebx
+   movl   20(%esp),%eax
+   movl   24(%esp),%edx
+   movl   12(%esp),%esp
    jmp    *%esi
 
 #define VMRUN_FRAME_SIZE 32
