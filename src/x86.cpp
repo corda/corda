@@ -2585,13 +2585,12 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
 
   uint8_t* instruction = static_cast<uint8_t*>(*ip);
 
+  // skip stack overflow check, if present:
   if (BytesPerWord == 4) {
     if (*start == 0x39) {
-      // skip stack overflow check
       start += 11;
     }
   } else if (*start == 0x48 and start[1] == 0x39) {
-    // skip stack overflow check
     start += 12;
   }
 
@@ -2611,7 +2610,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     }
   }
 
-  if (*instruction == 0xc3) {
+  if (*instruction == 0xc3) { // return
     *ip = reinterpret_cast<void**>(*stack)[0];
     return;
   }
@@ -2625,6 +2624,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
         - StackAlignmentInWords;
     }
 
+    // check for post-non-tail-call stack adjustment of the form "add
+    // $offset,%rsp":
     if (BytesPerWord == 4) {
       if ((*instruction == 0x83 or *instruction == 0x81)
           and instruction[1] == 0xec)
