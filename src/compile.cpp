@@ -437,7 +437,7 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
     javaStackLimit = 0;
   }
 
-  // fprintf(stderr, "nextFrame %s.%s%s target %s.%s%s\n",
+  // fprintf(stderr, "nextFrame %s.%s%s target %s.%s%s ip %p sp %p\n",
   //         &byteArrayBody(t, className(t, methodClass(t, method)), 0),
   //         &byteArrayBody(t, methodName(t, method), 0),
   //         &byteArrayBody(t, methodSpec(t, method), 0),
@@ -449,13 +449,16 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
   //         : 0,
   //         target
   //         ? &byteArrayBody(t, methodSpec(t, target), 0)
-  //         : 0);
+  //         : 0,
+  //         *ip, *sp);
 
   t->arch->nextFrame
     (reinterpret_cast<void*>(start), compiledSize(start),
      alignedFrameSize(t, method), table ? &intArrayBody(t, table, 0) : 0,
      link, javaStackLimit, target ? methodParameterFootprint(t, target) : -1,
      ip, sp);
+
+  // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
 }
 
 class MyStackWalker: public Processor::StackWalker {
