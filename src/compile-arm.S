@@ -23,6 +23,7 @@
 #endif
 
 #define THREAD_STACK 2148
+#define THREAD_SCRATCH 2152
 #define THREAD_CONTINUATION 2156
 #define THREAD_EXCEPTION 44
 #define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
@@ -50,24 +51,20 @@ GLOBAL(vmInvoke):
     [sp, #4] : returnType
   */
 
-  // save stack frame
-  mov   ip, sp
-
   // save all non-volatile registers
   stmfd sp!, {r4-r11, lr}
 
   // save return type
-  ldr   r4, [ip, #4]
+  ldr   r4, [sp, #4]
   str   r4, [sp, #-4]!
 
-  // we're at the bottom of our local stack frame; save it
-  mov   ip, sp
+  str   sp, [r0, #THREAD_SCRATCH]
 
   // align stack, if necessary
   eor   r4, sp, r3
   tst   r4, #4
   subne sp, sp, #4
-
+   
   // copy arguments into place
   sub   sp, r3
   mov   r4, #0
@@ -82,9 +79,6 @@ LOCAL(vmInvoke_argumentTest):
   cmp   r4, r3
   blt   LOCAL(vmInvoke_argumentLoop)
 
-  // save frame
-  str   ip, [sp, #-8]!
-
   // we use r8 to hold the thread pointer, by convention
   mov   r8, r0
 
@@ -93,17 +87,16 @@ LOCAL(vmInvoke_argumentTest):
 
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
-
-  // restore frame
-  ldr   sp, [sp]
+  // restore stack pointer
+  ldr   sp, [r8, #THREAD_SCRATCH]
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
-   mov  r5,#0
-   str  r5,[r8,#THREAD_STACK]
+   mov  r5, #0
+   str  r5, [r8, #THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):

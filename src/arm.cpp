@@ -872,19 +872,13 @@ addC(Context* c, unsigned size, Assembler::Constant* a,
 
   int32_t v = a->value->value();
   if (v) {
-    if (v > 0 and v < 1024 and v % 4 == 0) {
+    if (v > 0 and v < 256) {
+      emit(c, addi(dst->low, b->low, v));
+    } else if (v > 0 and v < 1024 and v % 4 == 0) {
       emit(c, addi(dst->low, b->low, v >> 2, 15));
     } else {
-      emit(c, addi(dst->low, b->low, lo8(v)));
-      if (not isOfWidth(v, 8)) {
-        emit(c, addi(dst->low, b->low, hi8(v), 12));
-        if (not isOfWidth(v, 16)) {
-          emit(c, addi(dst->low, b->low, lo8(hi16(v)), 8));
-          if (not isOfWidth(v, 24)) {
-            emit(c, addi(dst->low, b->low, hi8(hi16(v)), 4));
-          }
-        }
-      }
+      // todo
+      abort(c);
     }
   } else {
     moveRR(c, size, b, size, dst);
@@ -898,14 +892,17 @@ subC(Context* c, unsigned size, Assembler::Constant* a,
   assert(c, size == BytesPerWord);
 
   int32_t v = a->value->value();
-  if (v > 0 and v < 256) {
-    emit(c, subi(dst->low, b->low, v));
-  } else if (v > 0 and v < 1024 and v % 4 == 0) {
-    emit(c, subi(dst->low, b->low, v >> 2, 15));
+  if (v) {
+    if (v > 0 and v < 256) {
+      emit(c, subi(dst->low, b->low, v));
+    } else if (v > 0 and v < 1024 and v % 4 == 0) {
+      emit(c, subi(dst->low, b->low, v >> 2, 15));
+    } else {
+      // todo
+      abort(c);
+    }
   } else {
-    ResolvedPromise promise(- v);
-    Assembler::Constant constant(&promise);
-    addC(c, size, &constant, b, dst);
+    moveRR(c, size, b, size, dst);
   }
 }
 
@@ -1613,9 +1610,15 @@ memoryBarrier(Context*) {}
 
 // END OPERATION COMPILERS
 
+unsigned
+argumentFootprint(unsigned footprint)
+{
+  return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+}
+
 void
 nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
-          unsigned footprint, int32_t*, void* link, void* stackLimit,
+          unsigned footprint, int32_t*, void* link, void*,
           unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1633,8 +1636,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
     return;
   }
 
-  unsigned offset = footprint + FrameHeaderSize
-    - (stackLimit == *stack ? 1 : 0);
+  unsigned offset = footprint + FrameHeaderSize;
 
   if (instruction <= start + 2) {
     *ip = link;
@@ -1658,7 +1660,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
     // todo: use frameTable to check for and handle tail calls
   }
 
-  *ip = reinterpret_cast<void**>(*stack)[offset];
+  *ip = reinterpret_cast<void**>(*stack)[offset - 1];
   *stack = reinterpret_cast<void**>(*stack) + offset;
 }
 
@@ -1810,7 +1812,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+    return ::argumentFootprint(footprint);
   }
 
   virtual bool argumentAlignment() {
