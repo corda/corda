@@ -19,6 +19,7 @@
 #define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
 #define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
 #define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)
+#define LINK_REGISTER(context) (context->uc_mcontext.arm_lr)
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
