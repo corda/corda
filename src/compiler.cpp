@@ -5720,12 +5720,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
   Block* block = firstBlock;
 
   if (stackOverflowHandler) {
-    Assembler::Register stack(c->arch->stack());
-    Assembler::Memory stackLimit(c->arch->thread(), stackLimitOffset);
-    Assembler::Constant handler(resolved(c, stackOverflowHandler));
-    a->apply(JumpIfGreaterOrEqual, BytesPerWord, RegisterOperand, &stack,
-             BytesPerWord, MemoryOperand, &stackLimit,
-             BytesPerWord, ConstantOperand, &handler);
+    a->checkStackOverflow(stackOverflowHandler, stackLimitOffset);
   }
 
   a->allocateFrame(c->alignedFrameSize);
@@ -5854,7 +5849,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     block = next;
   }
 
-  return block->assemblerBlock->resolve(block->start, 0);
+  return block->assemblerBlock->resolve(block->start, 0) + a->footerSize();
 }
 
 unsigned

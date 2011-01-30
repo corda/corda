@@ -304,12 +304,6 @@ class Assembler {
     virtual unsigned resolve(unsigned start, Block* next) = 0;
   };
 
-  class FrameEvent {
-   public:
-    virtual unsigned offset() = 0;
-    virtual FrameEvent* next() = 0;
-  };
-
   class Architecture {
    public:
     virtual unsigned floatRegisterSize() = 0;
@@ -351,7 +345,7 @@ class Assembler {
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
     virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                           int32_t* frameTable, void* link, void* stackLimit,
+                           void* link, void* stackLimit,
                            unsigned targetParameterFootprint, void** ip,
                            void** stack) = 0;
     virtual void* frameIp(void* stack) = 0;
@@ -401,6 +395,8 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread) = 0;
   virtual void saveFrame(unsigned stackOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
@@ -440,9 +436,7 @@ class Assembler {
 
   virtual unsigned length() = 0;
 
-  virtual unsigned frameEventCount() = 0;
-
-  virtual FrameEvent* firstFrameEvent() = 0;
+  virtual unsigned footerSize() = 0;
 
   virtual void dispose() = 0;
 };

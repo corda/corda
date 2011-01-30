@@ -1618,7 +1618,7 @@ argumentFootprint(unsigned footprint)
 
 void
 nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
-          unsigned footprint, int32_t*, void* link, void*,
+          unsigned footprint, void* link, void*,
           unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1891,12 +1891,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         int32_t* frameTable, void* link, void* stackLimit,
+                         void* link, void* stackLimit,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    ::nextFrame(&c, static_cast<uint32_t*>(start), size, footprint, frameTable,
-                link, stackLimit, targetParameterFootprint, ip, stack);
+    ::nextFrame(&c, static_cast<uint32_t*>(start), size, footprint, link,
+                stackLimit, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -1921,12 +1921,6 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int framePointerOffset() {
     return 0;
-  }
-
-  virtual void nextFrame(void** stack, void**) {
-    assert(&c, *static_cast<void**>(*stack) != *stack);
-
-    *stack = *static_cast<void**>(*stack);
   }
 
   virtual BinaryOperation hasBinaryIntrinsic(Thread*, object) {
@@ -2118,6 +2112,18 @@ class MyAssembler: public Assembler {
 
   virtual Architecture* arch() {
     return arch_;
+  }
+
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread)
+  {
+    Register stack(StackRegister);
+    Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
+    Constant handlerConstant
+      (new (c.zone->allocate(sizeof(ResolvedPromise)))
+       ResolvedPromise(handler));
+    branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
+             &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset) {
@@ -2444,11 +2450,7 @@ class MyAssembler: public Assembler {
     return c.code.length();
   }
 
-  virtual unsigned frameEventCount() {
-    return 0;
-  }
-
-  virtual FrameEvent* firstFrameEvent() {
+  virtual unsigned footerSize() {
     return 0;
   }
 

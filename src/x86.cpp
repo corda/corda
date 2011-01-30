@@ -86,7 +86,7 @@ isInt32(intptr_t v)
 
 class Task;
 class AlignmentPadding;
-class MyFrameEvent;
+class FrameEvent;
 
 unsigned
 padding(AlignmentPadding* p, unsigned index, unsigned offset,
@@ -115,8 +115,8 @@ class MyBlock: public Assembler::Block {
   MyBlock* next;
   AlignmentPadding* firstPadding;
   AlignmentPadding* lastPadding;
-  MyFrameEvent* firstFrameEvent;
-  MyFrameEvent* lastFrameEvent;
+  FrameEvent* firstFrameEvent;
+  FrameEvent* lastFrameEvent;
   unsigned offset;
   unsigned start;
   unsigned size;
@@ -171,8 +171,8 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
-  MyFrameEvent* firstFrameEvent;
-  MyFrameEvent* lastFrameEvent;
+  FrameEvent* firstFrameEvent;
+  FrameEvent* lastFrameEvent;
   ArchitectureContext* ac;
   unsigned frameEventCount;
 };
@@ -461,33 +461,25 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
   return padding;
 }
 
-class MyFrameEvent: public Assembler::FrameEvent {
+class FrameEvent {
  public:
-  MyFrameEvent(Context* c, Promise* offset):
-    c(c), next_(0), offset_(offset)
+  FrameEvent(Context* c, Promise* offset):
+    c(c), next(0), offset(offset)
   { }
 
-  virtual unsigned offset() {
-    return offset_->value();
-  }
-
-  virtual Assembler::FrameEvent* next() {
-    return next_;
-  }
-
   Context* c;
-  MyFrameEvent* next_;
-  Promise* offset_;
+  FrameEvent* next;
+  Promise* offset;
 };
 
 void
 appendFrameEvent(Context* c, MyBlock* b, Promise* offset)
 {
-  MyFrameEvent* e = new (c->zone->allocate(sizeof(MyFrameEvent)))
-    MyFrameEvent(c, offset);
+  FrameEvent* e = new (c->zone->allocate(sizeof(FrameEvent)))
+    FrameEvent(c, offset);
 
   if (b->firstFrameEvent) {
-    b->lastFrameEvent->next_ = e;
+    b->lastFrameEvent->next = e;
   } else {
     b->firstFrameEvent = e;
   }
@@ -2577,7 +2569,7 @@ read4(uint8_t* p)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
-          unsigned footprint, int32_t*, void*, void* stackLimit,
+          unsigned footprint, void*, void* stackLimit,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -2643,7 +2635,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
         / BytesPerWord;
     }
 
-    // todo: use frameTable to check for and handle tail calls
+    // todo: check for and handle tail calls
   }
 
   *ip = static_cast<void**>(*stack)[offset];
@@ -2977,13 +2969,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         int32_t* frameTable, void* link, void* stackLimit,
+                         void* link, void* stackLimit,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     local::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
-                     frameTable, link, stackLimit, targetParameterFootprint,
-                     ip, stack);
+                     link, stackLimit, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -3421,6 +3412,16 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread)
+  {
+    Register stack(rsp);
+    Memory stackLimit(rbx, stackLimitOffsetFromThread);
+    Constant handlerConstant(resolved(&c, handler));
+    branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
+             &handlerConstant);
+  }
+
   virtual void saveFrame(unsigned stackOffset) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
@@ -3661,7 +3662,7 @@ class MyAssembler: public Assembler {
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       if (b->firstFrameEvent) {
         if (c.firstFrameEvent) {
-          c.lastFrameEvent->next_ = b->firstFrameEvent;
+          c.lastFrameEvent->next = b->firstFrameEvent;
         } else {
           c.firstFrameEvent = b->firstFrameEvent;
         }
@@ -3721,12 +3722,8 @@ class MyAssembler: public Assembler {
     return c.code.length();
   }
 
-  virtual unsigned frameEventCount() {
-    return c.frameEventCount;
-  }
-
-  virtual FrameEvent* firstFrameEvent() {
-    return c.firstFrameEvent;
+  virtual unsigned footerSize() {
+    return 0;
   }
 
   virtual void dispose() {

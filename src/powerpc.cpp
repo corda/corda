@@ -191,13 +191,15 @@ class MyBlock: public Assembler::Block {
 
 class Task;
 class ConstantPoolEntry;
+class JumpPromise;
 
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
     firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), constantPool(0), constantPoolCount(0)
+    lastBlock(firstBlock), constantPool(0), jumps(0), constantPoolCount(0),
+    jumpCount(0)
   { }
 
   System* s;
@@ -209,7 +211,9 @@ class Context {
   MyBlock* firstBlock;
   MyBlock* lastBlock;
   ConstantPoolEntry* constantPool;
+  JumpPromise* jumps;
   unsigned constantPoolCount;
+  unsigned jumpCount;
 };
 
 class Task {
@@ -310,6 +314,38 @@ offset(Context* c)
 {
   return new (c->zone->allocate(sizeof(Offset)))
     Offset(c, c->lastBlock, c->code.length());
+}
+
+class JumpPromise: public Promise {
+ public:
+  JumpPromise(Context* c, uintptr_t target):
+    c(c), target(target), next(c->jumps), index(c->jumpCount++)
+  {
+    c->jumps = this;
+  }
+
+  virtual bool resolved() {
+    return c->result != 0;
+  }
+  
+  virtual int64_t value() {
+    assert(c, resolved());
+
+    return reinterpret_cast<intptr_t>
+      (c->result + c->code.length() + (index * BytesPerWord));
+  }
+
+  Context* c;
+  uintptr_t target;
+  JumpPromise* next;
+  unsigned index;
+};
+
+Promise*
+jump(Context* c, uintptr_t target)
+{
+  return new (c->zone->allocate(sizeof(JumpPromise)))
+    JumpPromise(c, target);
 }
 
 bool
@@ -659,7 +695,6 @@ class ConstantPoolEntry: public Promise {
   Promise* constant;
   ConstantPoolEntry* next;
   void* address;
-  unsigned constantPoolCount;
 };
 
 ConstantPoolEntry*
@@ -1699,7 +1734,7 @@ argumentFootprint(unsigned footprint)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size UNUSED,
-          unsigned footprint, int32_t*, void* link, void*,
+          unsigned footprint, void* link, void*,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1970,12 +2005,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         int32_t* frameTable, void* link, void* stackLimit,
+                         void* link, void* stackLimit,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, frameTable,
-                link, stackLimit, targetParameterFootprint, ip, stack);
+    ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, link,
+                stackLimit, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -2000,12 +2035,6 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int framePointerOffset() {
     return 0;
-  }
-
-  virtual void nextFrame(void** stack, void**) {
-    assert(&c, *static_cast<void**>(*stack) != *stack);
-
-    *stack = *static_cast<void**>(*stack);
   }
 
   virtual BinaryOperation hasBinaryIntrinsic(Thread*, object) {
@@ -2201,6 +2230,16 @@ class MyAssembler: public Assembler {
 
   virtual Architecture* arch() {
     return arch_;
+  }
+
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread)
+  {
+    Register stack(StackRegister);
+    Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
+    Constant handlerConstant(jump(&c, handler));
+    branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
+             &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset) {
@@ -2420,12 +2459,20 @@ class MyAssembler: public Assembler {
 
   virtual void writeTo(uint8_t* dst) {
     c.result = dst;
-    
+
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       memcpy(dst + b->start, c.code.data + b->offset, b->size);
     }
+
+    for (JumpPromise* j = c.jumps; j; j = j->next) {
+      uint8_t* instruction
+        = dst + c.code.length() + (c.jumpCount - j->index - 1);
+      int32_t op = ::b(0);
+      memcpy(instruction, &op, BytesPerWord);
+      updateOffset(c.s, instruction, false, j->target);
+    }
     
-    unsigned index = c.code.length();
+    unsigned index = c.code.length() + (c.jumpCount * BytesPerWord);
     assert(&c, index % BytesPerWord == 0);
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
       e->address = dst + index;
@@ -2466,12 +2513,8 @@ class MyAssembler: public Assembler {
     return c.code.length();
   }
 
-  virtual unsigned frameEventCount() {
-    return 0;
-  }
-
-  virtual FrameEvent* firstFrameEvent() {
-    return 0;
+  virtual unsigned footerSize() {
+    return (c.jumpCount + c.constantPoolCount) * BytesPerWord;
   }
 
   virtual void dispose() {

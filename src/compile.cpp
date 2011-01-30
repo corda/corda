@@ -396,35 +396,10 @@ alignedFrameSize(MyThread* t, object method)
      + t->arch->frameFootprint(MaxNativeCallFootprint));
 }
 
-unsigned
-bitsNeeded(unsigned v)
-{
-  return log(v + 1);
-}
-
-void
-setTableValue(Thread* t, object table, unsigned base, unsigned max,
-              unsigned index, unsigned value)
-{
-  unsigned bits = bitsNeeded(max);
-  setBits<int32_t>
-    (&intArrayBody(t, table, base), bits, index * bits, value);
-}
-
-unsigned
-getTableValue(Thread* t, object table, unsigned base, unsigned max,
-              unsigned index)
-{
-  unsigned bits = bitsNeeded(max);
-  return getBits<int32_t>
-    (&intArrayBody(t, table, base), bits, index * bits);
-}
-
 void
 nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
 {
   object code = methodCode(t, method);
-  object table = codeFrameTable(t, code);
   intptr_t start = codeCompiled(t, code);
   void* link;
   void* javaStackLimit;
@@ -454,9 +429,8 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
 
   t->arch->nextFrame
     (reinterpret_cast<void*>(start), compiledSize(start),
-     alignedFrameSize(t, method), table ? &intArrayBody(t, table, 0) : 0,
-     link, javaStackLimit, target ? methodParameterFootprint(t, target) : -1,
-     ip, sp);
+     alignedFrameSize(t, method), link, javaStackLimit,
+     target ? methodParameterFootprint(t, target) : -1, ip, sp);
 
   // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
 }
@@ -5226,37 +5200,6 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
   }
 }
 
-object
-makeFrameTable(MyThread* t, Context* c, unsigned codeSize)
-{
-  Assembler* a = c->assembler;
-  unsigned count = a->frameEventCount();
-  if (count == 0) {
-    return 0;
-  }
-
-  unsigned size = ceiling(count * bitsNeeded(codeSize), 32);
-  object table = makeIntArray(t, 1 + size);
-  
-  intArrayBody(t, table, 0) = count;
-
-  unsigned index = 0;
-  for (Assembler::FrameEvent* e = a->firstFrameEvent();
-       e; e = e->next())
-  {
-    assert(t, index < count);
-
-    unsigned offset = e->offset();
-    assert(t, offset <= codeSize);
-
-    setTableValue(t, table, 1, codeSize, index, offset);
-
-    ++ index;
-  }
-
-  return table;
-}
-
 void
 printSet(uintptr_t m, unsigned limit)
 {
@@ -5943,14 +5886,10 @@ finish(MyThread* t, Allocator* allocator, Context* context)
       (t, c, methodCode(t, context->method),
        reinterpret_cast<intptr_t>(start));
 
-    PROTECT(t, newLineNumberTable);
-
-    object frameTable = makeFrameTable(t, context, codeSize);
-
     object code = methodCode(t, context->method);
 
     code = makeCode
-      (t, 0, newExceptionHandlerTable, newLineNumberTable, frameTable,
+      (t, 0, newExceptionHandlerTable, newLineNumberTable,
        reinterpret_cast<uintptr_t>(start), codeMaxStack(t, code),
        codeMaxLocals(t, code), 0);
 
