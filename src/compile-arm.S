@@ -36,8 +36,6 @@
 #define CONTINUATION_FRAME_POINTER_OFFSET 24
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
-
-#define ARGUMENT_BASE (BYTES_PER_WORD * 2)
    
 .globl GLOBAL(vmInvoke)
 GLOBAL(vmInvoke):
@@ -117,12 +115,11 @@ GLOBAL(vmInvoke_safeStack):
    add  r7,r5,#CONTINUATION_BODY
 
    mov  r11,#0
-   add  r10,sp,#ARGUMENT_BASE
    b    LOCAL(vmInvoke_continuationTest)
 
 LOCAL(vmInvoke_continuationLoop):
    ldr  r9,[r7,r11]
-   str  r9,[r10,r11]
+   str  r9,[sp,r11]
    add  r11,r11,#4
 
 LOCAL(vmInvoke_continuationTest):
@@ -136,12 +133,6 @@ LOCAL(vmInvoke_getAddress):
    add  r11,pc,r11
    ldr  r11,[r11,r10]
    str  r11,[sp,r7]
-
-   ldr  r7,[r5,#CONTINUATION_FRAME_POINTER_OFFSET]
-   ldr  r11,[sp]
-   add  r7,r7,sp
-   str  r11,[r7]
-   str  r7,[sp]
 
    ldr  r7,[r5,#CONTINUATION_NEXT]
    str  r7,[r8,#THREAD_CONTINUATION]
@@ -198,40 +189,27 @@ GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
    //      r0: thread
    //      r1: address
-   //      r2: (unused)
-   //      r3: stack
-   // [sp,#0]: argumentFootprint
-   // [sp,#4]: arguments
-   // [sp,#8]: frameSize
+   //      r2: stack
+   //      r3: argumentFootprint
+   // [sp,#0]: arguments
+   // [sp,#4]: frameSize
 
-   ldr  r4,[sp]
-   ldr  r5,[sp,#4]
-   ldr  r6,[sp,#8]
-   
-   // restore (pseudo)-stack pointer (we don't want to touch the real
-   // stack pointer, since we haven't copied the arguments yet)
-   ldr  r3,[r3]
-
-   // make everything between sp and r3 one big stack frame while we
-   // shuffle things around
-   str  r3,[sp]
+   ldr  r5,[sp,#0]
+   ldr  r6,[sp,#4]
 
    // allocate new frame, adding room for callee-saved registers
-   neg  r10,r6
-   add  r10,r10,#-80
-   mov  r2,r3
-	 str  r2,[r3,r10]!
+   sub  r2,r2,r6
+   sub  r2,r2,#80
    
    mov  r8,r0
 
    // copy arguments into place
    mov  r6,#0
-   add  r9,r3,#ARGUMENT_BASE
    b    LOCAL(vmJumpAndInvoke_argumentTest)
 
 LOCAL(vmJumpAndInvoke_argumentLoop):
    ldr  r12,[r5,r6]
-   str  r12,[r9,r6]
+   str  r12,[r2,r6]
    add  r6,r6,#4
 
 LOCAL(vmJumpAndInvoke_argumentTest):
@@ -240,7 +218,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 
    // the arguments have been copied, so we can set the real stack
    // pointer now
-   mov  sp,r3
+   mov  sp,r2
    
    // set return address to vmInvoke_returnAddress
    ldr  r10,LOCAL(vmInvoke_returnAddress_word)

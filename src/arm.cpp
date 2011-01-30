@@ -1617,7 +1617,7 @@ argumentFootprint(unsigned footprint)
 }
 
 void
-nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
+nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
           unsigned footprint, int32_t*, void* link, void*,
           unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
 {
@@ -1640,7 +1640,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
 
   if (instruction <= start + 2) {
     *ip = link;
-    *stack = reinterpret_cast<void**>(*stack) + offset;
+    *stack = static_cast<void**>(*stack) + offset;
+    return;
   }
 
   if (*instruction == 0xe12fff1e) { // return
@@ -1654,14 +1655,23 @@ nextFrame(ArchitectureContext* c UNUSED, uint32_t* start, unsigned size UNUSED,
         - StackAlignmentInWords;
     }
 
-    // todo: check for post-non-tail-call stack adjustment of the form
-    // "add sp, sp, #offset"
+    // check for post-non-tail-call stack adjustment of the form "add
+    // sp, sp, #offset":
+    if ((*instruction >> 12) == 0xe24dd) {
+      unsigned value = *instruction & 0xff;
+      unsigned rotation = (*instruction >> 8) & 0xf;
+      switch (rotation) {
+      case  0: offset -= value / BytesPerWord; break;
+      case 15: offset -= value; break;
+      default: abort(c);
+      }
+    }
 
-    // todo: use frameTable to check for and handle tail calls
+    // todo: check for and handle tail calls
   }
 
-  *ip = reinterpret_cast<void**>(*stack)[offset - 1];
-  *stack = reinterpret_cast<void**>(*stack) + offset;
+  *ip = static_cast<void**>(*stack)[offset - 1];
+  *stack = static_cast<void**>(*stack) + offset;
 }
 
 void
@@ -2204,14 +2214,15 @@ class MyAssembler: public Assembler {
 
     if (TailCalls) {
       if (offset) {
+        footprint += FrameHeaderSize;
+
         Register link(LinkRegister);
         Memory returnAddressSrc
           (StackRegister, (footprint - 1) * BytesPerWord);
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &link);
     
         Register stack(StackRegister);
-        ResolvedPromise footprintPromise
-          ((footprint - offset + 1) * BytesPerWord);
+        ResolvedPromise footprintPromise((footprint - offset) * BytesPerWord);
         Constant footprintConstant(&footprintPromise);
         addC(&c, BytesPerWord, &footprintConstant, &stack, &stack);
 
