@@ -1691,6 +1691,55 @@ memoryBarrier(Context* c)
 
 // END OPERATION COMPILERS
 
+unsigned
+argumentFootprint(unsigned footprint)
+{
+  return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+}
+
+void
+nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size UNUSED,
+          unsigned footprint, int32_t*, void* link, void*,
+          unsigned targetParameterFootprint, void** ip, void** stack)
+{
+  assert(c, *ip >= start);
+  assert(c, *ip <= start + (size / BytesPerWord));
+
+  int32_t* instruction = static_cast<int32_t*>(*ip);
+
+  if ((*start >> 26) == 32) {
+    // skip stack overflow check
+    start += 3;
+  }
+
+  if (instruction <= start + 2
+      or *instruction == lwz(0, 1, 8)
+      or *instruction == mtlr(0)
+      or *instruction == blr())
+  {
+    *ip = link;
+    return;
+  }
+
+  unsigned offset = footprint;
+
+  if (TailCalls) {
+    if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
+      offset += argumentFootprint(targetParameterFootprint)
+        - StackAlignmentInWords;
+    }
+
+    // check for post-non-tail-call stack adjustment of the form "lwzx
+    // r0,0(r1); stwux r0,offset(r1)":
+
+    // todo
+
+    // todo: check for and handle tail calls
+  }
+
+  *ip = static_cast<void**>(*stack)[offset + 2];
+  *stack = static_cast<void**>(*stack) + offset;
+}
 
 void
 populateTables(ArchitectureContext* c)
@@ -1847,7 +1896,11 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+    return ::argumentFootprint(footprint);
+  }
+
+  virtual bool argumentAlignment() {
+    return false;
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -1914,6 +1967,15 @@ class MyArchitecture: public Assembler::Architecture {
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
     const unsigned alignment = StackAlignmentInBytes / BytesPerWord;
     return (ceiling(sizeInWords + FrameFooterSize, alignment) * alignment);
+  }
+
+  virtual void nextFrame(void* start, unsigned size, unsigned footprint,
+                         int32_t* frameTable, void* link, void* stackLimit,
+                         unsigned targetParameterFootprint, void** ip,
+                         void** stack)
+  {
+    ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, frameTable,
+                link, stackLimit, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -2141,7 +2203,7 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned) {
+  virtual void saveFrame(unsigned stackOffset) {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
@@ -2206,16 +2268,16 @@ class MyAssembler: public Assembler {
     moveAndUpdateRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
   }
 
-  virtual void adjustFrame(unsigned footprint) {
+  virtual void adjustFrame(unsigned difference) {
     Register nextStack(0);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
 
-    Memory stackDst(StackRegister, -footprint * BytesPerWord);
+    Memory stackDst(StackRegister, -difference * BytesPerWord);
     moveAndUpdateRM(&c, BytesPerWord, &nextStack, BytesPerWord, &stackDst);
   }
 
-  virtual void popFrame() {
+  virtual void popFrame(unsigned) {
     Register stack(StackRegister);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
@@ -2262,15 +2324,17 @@ class MyAssembler: public Assembler {
           moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
         }
       } else {
-        popFrame();
+        popFrame(footprint);
       }
     } else {
       abort(&c);
     }
   }
 
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
-    popFrame();
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
+  {
+    popFrame(frameFootprint);
 
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
@@ -2289,9 +2353,10 @@ class MyAssembler: public Assembler {
     return_(&c);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   {
-    popFrame();
+    popFrame(frameFootprint);
 
     Register tmp1(0);
     Memory stackSrc(StackRegister, 0);
@@ -2399,6 +2464,14 @@ class MyAssembler: public Assembler {
 
   virtual unsigned length() {
     return c.code.length();
+  }
+
+  virtual unsigned frameEventCount() {
+    return 0;
+  }
+
+  virtual FrameEvent* firstFrameEvent() {
+    return 0;
   }
 
   virtual void dispose() {

@@ -14,20 +14,22 @@
 #include "types.h"
 #include "common.h"
 
+#define VA_LIST(x) (x)
+
 #ifdef __APPLE__
 #  if __DARWIN_UNIX03 && defined(_STRUCT_PPC_EXCEPTION_STATE)
 #    define IP_REGISTER(context) (context->uc_mcontext->__ss.__srr0)
 #    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__r1)
 #    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r13)
+#    define LINK_REGISTER(context) (context->uc_mcontext->__ss.__lr)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext->ss.srr0)
 #    define STACK_REGISTER(context) (context->uc_mcontext->ss.r1)
 #    define THREAD_REGISTER(context) (context->uc_mcontext->ss.r13)
+#    define LINK_REGISTER(context) (context->uc_mcontext->ss.lr)
 #  endif
 #else
-#  define IP_REGISTER(context) (context->uc_mcontext.gregs[32])
-#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[1])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[13])
+#  error "non-Apple PowerPC-based platforms not yet supported"
 #endif
 
 extern "C" uint64_t

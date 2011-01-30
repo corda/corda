@@ -17,14 +17,15 @@
 #define GPR_COUNT 8
 #define MEMORY_BASE BYTES_PER_WORD * (LINKAGE_AREA + GPR_COUNT)
 #define LOCAL(x) L##x
-
+   
 #ifdef __APPLE__
-.globl _vmNativeCall
-_vmNativeCall: 
+#  define GLOBAL(x) _##x
 #else
-.globl vmNativeCall
-vmNativeCall:
+#  define GLOBAL(x) x   
 #endif
+
+.globl GLOBAL(vmNativeCall)
+GLOBAL(vmNativeCall):
    // save return address
    mflr r0
    stw  r0,8(r1)
@@ -151,16 +152,80 @@ LOCAL(exit):
    // return
    blr
    
-#ifdef __APPLE__
-.globl _vmJump
-_vmJump:
-#else
-.globl vmJump
-vmJump:
-#endif
+.globl GLOBAL(vmJump)
+GLOBAL(vmJump):
    mtlr r3
    mr   r1,r5
    mr   r13,r6
    mr   r4,r7
    mr   r3,r8
+   blr
+
+#define CHECKPOINT_THREAD 4
+#define CHECKPOINT_STACK 24
+
+.globl GLOBAL(vmRun)
+GLOBAL(vmRun):
+   // r3: function
+   // r4: arguments
+   // r5: checkpoint
+
+   mflr r0
+   stw  r0,8(r1)
+
+   stwu r1,-(MEMORY_BASE+80)(r1)
+      
+   stw  r13,MEMORY_BASE+0(r1)
+   stw  r14,MEMORY_BASE+4(r1)
+   stw  r15,MEMORY_BASE+8(r1)
+   stw  r16,MEMORY_BASE+12(r1)
+   stw  r17,MEMORY_BASE+16(r1)
+   stw  r18,MEMORY_BASE+20(r1)
+   stw  r19,MEMORY_BASE+24(r1)
+   stw  r20,MEMORY_BASE+28(r1)
+   stw  r21,MEMORY_BASE+32(r1)
+   stw  r22,MEMORY_BASE+36(r1)
+   stw  r23,MEMORY_BASE+40(r1)
+   stw  r24,MEMORY_BASE+44(r1)
+   stw  r25,MEMORY_BASE+48(r1)
+   stw  r26,MEMORY_BASE+52(r1)
+   stw  r27,MEMORY_BASE+56(r1)
+   stw  r28,MEMORY_BASE+60(r1)
+   stw  r29,MEMORY_BASE+64(r1)
+   stw  r30,MEMORY_BASE+68(r1)
+   stw  r31,MEMORY_BASE+72(r1)
+
+   stw  r1,CHECKPOINT_STACK(r5)
+
+   mr   r6,r3
+   lwz  r3,CHECKPOINT_THREAD(r5)
+
+   mtctr r6
+   bctrl   
+   
+.globl GLOBAL(vmRun_returnAddress)
+GLOBAL(vmRun_returnAddress):
+   lwz  r13,MEMORY_BASE+0(r1)
+   lwz  r14,MEMORY_BASE+4(r1)
+   lwz  r15,MEMORY_BASE+8(r1)
+   lwz  r16,MEMORY_BASE+12(r1)
+   lwz  r17,MEMORY_BASE+16(r1)
+   lwz  r18,MEMORY_BASE+20(r1)
+   lwz  r19,MEMORY_BASE+24(r1)
+   lwz  r20,MEMORY_BASE+28(r1)
+   lwz  r21,MEMORY_BASE+32(r1)
+   lwz  r22,MEMORY_BASE+36(r1)
+   lwz  r23,MEMORY_BASE+40(r1)
+   lwz  r24,MEMORY_BASE+44(r1)
+   lwz  r25,MEMORY_BASE+48(r1)
+   lwz  r26,MEMORY_BASE+52(r1)
+   lwz  r27,MEMORY_BASE+56(r1)
+   lwz  r28,MEMORY_BASE+60(r1)
+   lwz  r29,MEMORY_BASE+64(r1)
+   lwz  r30,MEMORY_BASE+68(r1)
+   lwz  r31,MEMORY_BASE+72(r1)
+
+   lwz	r1,0(r1)
+   lwz  r0,8(r1)
+   mtlr r0
    blr
