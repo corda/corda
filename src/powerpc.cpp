@@ -2158,7 +2158,13 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Divide:
     case Remainder:
-      if (BytesPerWord == 4 and aSize == 8) {
+      // todo: we shouldn't need to defer to thunks for integers which
+      // are smaller than or equal to tne native word size, but
+      // PowerPC doesn't generate traps for divide by zero, so we'd
+      // need to do the checks ourselves.  Using an inline check
+      // should be faster than calling an out-of-line thunk, but the
+      // thunk is easier, so they's what we do for now.
+      if (true) {//if (BytesPerWord == 4 and aSize == 8) {
         *thunk = true;        
       } else {
         *aTypeMask = (1 << RegisterOperand);
