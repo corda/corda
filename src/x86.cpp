@@ -2595,7 +2595,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   }
 
   if (instruction <= start) {
-    *ip = reinterpret_cast<void**>(*stack)[0];
+    *ip = static_cast<void**>(*stack)[0];
     return;
   }
 
@@ -2604,14 +2604,14 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     start += (BytesPerWord == 4 ? 3 : 4);
 
     if (instruction <= start or *instruction == 0x5d) {
-      *ip = reinterpret_cast<void**>(*stack)[1];
-      *stack = reinterpret_cast<void**>(*stack) + 1;
+      *ip = static_cast<void**>(*stack)[1];
+      *stack = static_cast<void**>(*stack) + 1;
       return;
     }
   }
 
   if (*instruction == 0xc3) { // return
-    *ip = reinterpret_cast<void**>(*stack)[0];
+    *ip = static_cast<void**>(*stack)[0];
     return;
   }
 
@@ -2646,8 +2646,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     // todo: use frameTable to check for and handle tail calls
   }
 
-  *ip = reinterpret_cast<void**>(*stack)[offset];
-  *stack = reinterpret_cast<void**>(*stack) + offset;
+  *ip = static_cast<void**>(*stack)[offset];
+  *stack = static_cast<void**>(*stack) + offset;
 }
 
 void
