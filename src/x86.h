@@ -22,7 +22,7 @@
 #  undef interface
 #endif
 
-#define VA_LIST(x) x
+#define VA_LIST(x) (x)
 
 #ifdef ARCH_x86_32
 
