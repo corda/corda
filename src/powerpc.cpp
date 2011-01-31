@@ -1733,7 +1733,7 @@ argumentFootprint(unsigned footprint)
 }
 
 void
-nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size UNUSED,
+nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
           unsigned footprint, void* link, void*,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
