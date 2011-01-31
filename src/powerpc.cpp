@@ -1765,9 +1765,14 @@ nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size UNUSED,
     }
 
     // check for post-non-tail-call stack adjustment of the form "lwzx
-    // r0,0(r1); stwux r0,offset(r1)":
-
-    // todo
+    // r0,0(r1); stwu r0,offset(r1)":
+    if (instruction < start + (size / BytesPerWord) - 1
+        and (static_cast<uint32_t>(instruction[1]) >> 16) == 0x9421)
+    {
+      offset += static_cast<int16_t>(instruction[1]);
+    } else if ((static_cast<uint32_t>(*instruction) >> 16) == 0x9421) {
+      offset += static_cast<int16_t>(*instruction);
+    }
 
     // todo: check for and handle tail calls
   }
