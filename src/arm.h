@@ -58,9 +58,11 @@ loadMemoryBarrier()
 }
 
 inline void
-syncInstructionCache(const void* start UNUSED, unsigned size UNUSED)
+syncInstructionCache(const void* start, unsigned size)
 {
-  asm("nop");
+  __clear_cache
+    (const_cast<void*>(start),
+     const_cast<uint8_t*>(static_cast<const uint8_t*>(start) + size));
 }
 
 typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);
