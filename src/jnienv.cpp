@@ -2212,7 +2212,7 @@ MonitorEnter(Thread* t, jobject o)
 void
 release0(Thread* t, object o)
 {
-  return acquire(t, o);
+  return release(t, o);
 }
 
 jint JNICALL
