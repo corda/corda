@@ -86,7 +86,6 @@ isInt32(intptr_t v)
 
 class Task;
 class AlignmentPadding;
-class FrameEvent;
 
 unsigned
 padding(AlignmentPadding* p, unsigned index, unsigned offset,
@@ -101,8 +100,8 @@ resolved(Context* c, int64_t value);
 class MyBlock: public Assembler::Block {
  public:
   MyBlock(unsigned offset):
-    next(0), firstPadding(0), lastPadding(0), firstFrameEvent(0),
-    lastFrameEvent(0), offset(offset), start(~0), size(0)
+    next(0), firstPadding(0), lastPadding(0), offset(offset), start(~0),
+    size(0)
   { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
@@ -115,8 +114,6 @@ class MyBlock: public Assembler::Block {
   MyBlock* next;
   AlignmentPadding* firstPadding;
   AlignmentPadding* lastPadding;
-  FrameEvent* firstFrameEvent;
-  FrameEvent* lastFrameEvent;
   unsigned offset;
   unsigned start;
   unsigned size;
@@ -159,8 +156,7 @@ class Context {
   Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
     firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), firstFrameEvent(0), lastFrameEvent(0),
-    ac(ac), frameEventCount(0)
+    lastBlock(firstBlock), ac(ac)
   { }
 
   System* s;
@@ -171,10 +167,7 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
-  FrameEvent* firstFrameEvent;
-  FrameEvent* lastFrameEvent;
   ArchitectureContext* ac;
-  unsigned frameEventCount;
 };
 
 void NO_RETURN
@@ -459,39 +452,6 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
     }
   }
   return padding;
-}
-
-class FrameEvent {
- public:
-  FrameEvent(Context* c, Promise* offset):
-    c(c), next(0), offset(offset)
-  { }
-
-  Context* c;
-  FrameEvent* next;
-  Promise* offset;
-};
-
-void
-appendFrameEvent(Context* c, MyBlock* b, Promise* offset)
-{
-  FrameEvent* e = new (c->zone->allocate(sizeof(FrameEvent)))
-    FrameEvent(c, offset);
-
-  if (b->firstFrameEvent) {
-    b->lastFrameEvent->next = e;
-  } else {
-    b->firstFrameEvent = e;
-  }
-  b->lastFrameEvent = e;
-
-  ++ c->frameEventCount;
-}
-
-void
-appendFrameEvent(Context* c)
-{
-  appendFrameEvent(c, c->lastBlock, offset(c));
 }
 
 extern "C" bool
@@ -3524,8 +3484,6 @@ class MyAssembler: public Assembler {
   {
     if (TailCalls) {
       if (offset) {
-        appendFrameEvent(&c);
-
         Register tmp(c.client->acquireTemporary());
       
         unsigned baseSize = UseFramePointer ? 1 : 0;
@@ -3583,8 +3541,6 @@ class MyAssembler: public Assembler {
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
-      appendFrameEvent(&c);
-
       Register returnAddress(rcx);
       popR(&c, BytesPerWord, &returnAddress);
 
@@ -3660,15 +3616,6 @@ class MyAssembler: public Assembler {
     c.result = dst;
     
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
-      if (b->firstFrameEvent) {
-        if (c.firstFrameEvent) {
-          c.lastFrameEvent->next = b->firstFrameEvent;
-        } else {
-          c.firstFrameEvent = b->firstFrameEvent;
-        }
-        c.lastFrameEvent = b->lastFrameEvent;
-      }
-
       unsigned index = 0;
       unsigned padding = 0;
       for (AlignmentPadding* p = b->firstPadding; p; p = p->next) {
