@@ -2430,13 +2430,49 @@ absoluteInt(int32_t a)
   return a > 0 ? a : -a;
 }
 
+unsigned
+traceSize(Thread* t)
+{
+  class Counter: public Processor::StackVisitor {
+   public:
+    Counter(): count(0) { }
+
+    virtual bool visit(Processor::StackWalker*) {
+      ++ count;
+      return true;
+    }
+
+    unsigned count;
+  } counter;
+
+  t->m->processor->walkStack(t, &counter);
+
+  return FixedSizeOfArray + (counter.count * ArrayElementSizeOfArray)
+    + (counter.count * FixedSizeOfTraceElement);
+}
+
+void NO_RETURN
+throwArithmetic(MyThread* t)
+{
+  if (ensure(t, FixedSizeOfArithmeticException + traceSize(t))) {
+    atomicOr(&(t->flags), Thread::TracingFlag);
+    THREAD_RESOURCE0(t, atomicAnd(&(t->flags), ~Thread::TracingFlag));
+
+    throwNew(t, Machine::ArithmeticExceptionType); 
+  } else {
+    // not enough memory available for a new exception and stack trace
+    // -- use a preallocated instance instead
+    throw_(t, root(t, Machine::ArithmeticException));
+  }
+}
+
 int64_t
 divideLong(MyThread* t, int64_t b, int64_t a)
 {
   if (LIKELY(b)) {
     return a / b;
   } else {
-    throwNew(t, Machine::ArithmeticExceptionType);
+    throwArithmetic(t);
   }
 }
 
@@ -2446,7 +2482,7 @@ divideInt(MyThread* t, int32_t b, int32_t a)
   if (LIKELY(b)) {
     return a / b;
   } else {
-    throwNew(t, Machine::ArithmeticExceptionType);
+    throwArithmetic(t);
   }
 }
 
@@ -2456,7 +2492,7 @@ moduloLong(MyThread* t, int64_t b, int64_t a)
   if (LIKELY(b)) {
     return a % b;
   } else {
-    throwNew(t, Machine::ArithmeticExceptionType);
+    throwArithmetic(t);
   }
 }
 
@@ -2466,7 +2502,7 @@ moduloInt(MyThread* t, int32_t b, int32_t a)
   if (LIKELY(b)) {
     return a % b;
   } else {
-    throwNew(t, Machine::ArithmeticExceptionType);
+    throwArithmetic(t);
   }
 }
 
@@ -2654,27 +2690,6 @@ makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
   return reinterpret_cast<uintptr_t>
     (makeMultidimensionalArray2
      (t, class_, static_cast<uintptr_t*>(t->stack) + offset, dimensions));
-}
-
-unsigned
-traceSize(Thread* t)
-{
-  class Counter: public Processor::StackVisitor {
-   public:
-    Counter(): count(0) { }
-
-    virtual bool visit(Processor::StackWalker*) {
-      ++ count;
-      return true;
-    }
-
-    unsigned count;
-  } counter;
-
-  t->m->processor->walkStack(t, &counter);
-
-  return FixedSizeOfArray + (counter.count * ArrayElementSizeOfArray)
-    + (counter.count * FixedSizeOfTraceElement);
 }
 
 void NO_RETURN
