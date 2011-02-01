@@ -316,11 +316,15 @@ setting the boot classpath to "[bootJar]".
 #include "stdint.h"
 #include "jni.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
-#  define SYMBOL(x) binary_boot_jar_##x
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
+#endif
+
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#  define SYMBOL(x) binary_boot_jar_##x
+#else
 #  define SYMBOL(x) _binary_boot_jar_##x
 #endif
 
@@ -520,11 +524,15 @@ containing them.  See the previous example for instructions.
 #include "stdint.h"
 #include "jni.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
-#  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
+#endif
+
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
+#else
 #  define BOOTIMAGE_BIN(x) _binary_bootimage_bin_##x
 #endif
 
