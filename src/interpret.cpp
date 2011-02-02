@@ -3203,9 +3203,9 @@ class MyProcessor: public Processor {
     return ::invoke(t, method);
   }
 
-  virtual object getStackTrace(vm::Thread*, vm::Thread*) {
+  virtual object getStackTrace(vm::Thread* t, vm::Thread*) {
     // not implemented
-    return 0;
+    return makeObjectArray(t, 0);
   }
 
   virtual void initialize(BootImage*, uint8_t*, unsigned) {
