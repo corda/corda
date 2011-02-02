@@ -63,6 +63,11 @@ public class Trace implements Runnable {
     try {
       for (int i = 0; i < 10000; ++i) {
         test(this);
+        
+        if (i % 100 == 0) {
+          System.out.print("r");
+          System.out.flush();
+        }
       }
     } finally {
       alive = false;
@@ -81,9 +86,15 @@ public class Trace implements Runnable {
       while (trace.alive) {
         thread.getStackTrace();
         ++ count;
+        
+        if (count % 100 == 0) {
+          Thread.yield();
+          System.out.print("t");
+          System.out.flush();
+        }
       }
 
-      System.out.println("got " + count + " traces");
+      System.out.println("\ngot " + count + " traces");
     }
   }
 }
