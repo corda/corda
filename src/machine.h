@@ -1568,20 +1568,20 @@ class Classpath {
 #ifdef _MSC_VER
 
 template <class T>
-class RuntimeArray: public Thread::Resource {
+class ThreadRuntimeArray: public Thread::Resource {
  public:
-  RuntimeArray(Thread* t, unsigned size):
+  ThreadRuntimeArray(Thread* t, unsigned size):
     Resource(t),
     body(static_cast<T*>(t->m->heap->allocate(size * sizeof(T)))),
     size(size)
   { }
 
-  ~RuntimeArray() {
+  ~ThreadRuntimeArray() {
     t->m->heap->free(body, size * sizeof(T));
   }
 
   virtual void release() {
-    RuntimeArray::~RuntimeArray();
+    ThreadRuntimeArray::~ThreadRuntimeArray();
   }
 
   T* body;
@@ -1589,7 +1589,7 @@ class RuntimeArray: public Thread::Resource {
 };
 
 #  define THREAD_RUNTIME_ARRAY(thread, type, name, size)        \
-  RuntimeArray<type> name(thread, size);
+  ThreadRuntimeArray<type> name(thread, size);
 
 #else // not _MSC_VER
 
