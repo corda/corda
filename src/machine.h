@@ -1913,11 +1913,18 @@ instanceOf(Thread* t, object class_, object o);
 #include "type-declarations.cpp"
 
 inline uint64_t
+runRaw(Thread* t,
+       uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments)
+{
+  Thread::RunCheckpoint checkpoint(t);
+  return vmRun(function, arguments, &checkpoint);
+}
+
+inline uint64_t
 run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments)
 {
   ENTER(t, Thread::ActiveState);
-  Thread::RunCheckpoint checkpoint(t);
-  return vmRun(function, arguments, &checkpoint);
+  return runRaw(t, function, arguments);
 }
 
 inline void

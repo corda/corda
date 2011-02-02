@@ -91,7 +91,7 @@ DestroyJavaVM(Machine* m)
 {
   Thread* t; AttachCurrentThread(m, &t, 0);
 
-  if (run(t, destroyJavaVM, 0)) {
+  if (runRaw(t, destroyJavaVM, 0)) {
     t->exit();
     return 0;
   } else {
