@@ -22,7 +22,11 @@
 #  undef interface
 #endif
 
-#define VA_LIST(x) (x)
+#ifdef PLATFORM_WINDOWS
+#  define VA_LIST(x) (&x)
+#else
+#  define VA_LIST(x) (x)
+#endif
 
 #ifdef ARCH_x86_32
 
