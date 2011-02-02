@@ -658,22 +658,24 @@ invokeNative(Thread* t, object method)
   if (nativeFast(t, native)) {
     pushFrame(t, method);
 
-    unsigned footprint = methodParameterFootprint(t, method);
-    RUNTIME_ARRAY(uintptr_t, args, footprint);
-    unsigned sp = frameBase(t, t->frame);
-    unsigned argOffset = 0;
-    if ((methodFlags(t, method) & ACC_STATIC) == 0) {
-      RUNTIME_ARRAY_BODY(args)[argOffset++]
-        = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+    uint64_t result;
+    { THREAD_RESOURCE0(t, popFrame(static_cast<Thread*>(t)));
+
+      unsigned footprint = methodParameterFootprint(t, method);
+      RUNTIME_ARRAY(uintptr_t, args, footprint);
+      unsigned sp = frameBase(t, t->frame);
+      unsigned argOffset = 0;
+      if ((methodFlags(t, method) & ACC_STATIC) == 0) {
+        RUNTIME_ARRAY_BODY(args)[argOffset++]
+          = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+      }
+
+      marshalArguments
+        (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
+
+      result = reinterpret_cast<FastNativeFunction>
+        (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
     }
-
-    marshalArguments
-      (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
-
-    uint64_t result = reinterpret_cast<FastNativeFunction>
-       (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
-    
-    popFrame(t);
 
     pushResult(t, methodReturnCode(t, method), result, false);
 
