@@ -2156,21 +2156,6 @@ class HeapClient: public Heap::Client {
     ::walk(m->rootThread, w, o, 0);
   }
 
-  virtual void outOfMemory() {
-#ifdef AVIAN_HEAPDUMP
-    const char* path = findProperty(m->rootThread, "avian.heap.dump");
-    if (path) {
-      FILE* out = vm::fopen(path, "wb");
-      if (out) {
-        dumpHeap(m->rootThread, out);
-        fclose(out);
-      }
-    }
-#endif//AVIAN_HEAPDUMP
-
-    abort(m->system);
-  }
-
   void dispose() {
     m->heap->free(this, sizeof(*this));
   }
@@ -2282,6 +2267,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   tenuredWeakReferences(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
+  dumpedHeapOnOOM(false),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -3798,6 +3784,20 @@ collect(Thread* t, Heap::CollectionType type)
     // into the smallest possible space:
     doCollect(t, Heap::MajorCollection);
   }
+
+#ifdef AVIAN_HEAPDUMP
+  if ((not t->m->dumpedHeapOnOOM) and t->m->heap->limitExceeded()) {
+    t->m->dumpedHeapOnOOM = true;
+    const char* path = findProperty(t, "avian.heap.dump");
+    if (path) {
+      FILE* out = vm::fopen(path, "wb");
+      if (out) {
+        dumpHeap(t, out);
+        fclose(out);
+      }
+    }
+  }
+#endif//AVIAN_HEAPDUMP
 }
 
 void

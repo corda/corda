@@ -70,7 +70,6 @@ System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
 void* allocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
-void outOfMemory(Context*);
 
 #ifdef USE_ATOMIC_OPERATIONS
 inline void
@@ -1778,12 +1777,6 @@ void
 free_(Context* c, const void* p, unsigned size)
 {
   free(c, p, size);
-}
-
-void
-outOfMemory(Context* c)
-{
-  c->client->outOfMemory();
 }
 
 class MyHeap: public Heap {

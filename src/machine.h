@@ -1307,6 +1307,7 @@ class Machine {
   object tenuredWeakReferences;
   bool unsafe;
   bool triedBuiltinOnLoad;
+  bool dumpedHeapOnOOM;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];

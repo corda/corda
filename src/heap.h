@@ -49,7 +49,6 @@ class Heap: public Allocator {
     virtual unsigned copiedSizeInWords(void*) = 0;
     virtual void copy(void*, void*) = 0;
     virtual void walk(void*, Walker*) = 0;
-    virtual void outOfMemory() = 0;
   };
 
   virtual void setClient(Client* client) = 0;
