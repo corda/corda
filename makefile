@@ -196,7 +196,7 @@ endif
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
-	cflags += -Wno-psabi
+	cflags += -marm -Wno-psabi
 
 	ifneq ($(arch),$(build-arch))
 		cxx = arm-linux-gnueabi-g++
