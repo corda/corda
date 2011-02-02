@@ -196,10 +196,10 @@ GLOBAL(vmRun):
    movq   %rsi,56(%rsp)
    movq   %rdi,64(%rsp)
 
-   movq   %rsp,CHECKPOINT_STACK(%rcx)
+   movq   %rsp,CHECKPOINT_STACK(%r8)
 
    movq   %rcx,%r11
-   movq   CHECKPOINT_THREAD(%rdx),%rcx
+   movq   CHECKPOINT_THREAD(%r8),%rcx
    
    call   *%r11
    
