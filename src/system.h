@@ -141,6 +141,7 @@ class System {
   virtual char pathSeparator() = 0;
   virtual char fileSeparator() = 0;
   virtual int64_t now() = 0;
+  virtual void yield() = 0;
   virtual void exit(int code) = 0;
   virtual void abort() = 0;
   virtual void dispose() = 0;

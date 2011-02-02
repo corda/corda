@@ -580,6 +580,13 @@ Avian_java_lang_Thread_enumerate
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Thread_yield
+(Thread* t, object, uintptr_t*)
+{
+  t->m->system->yield();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_avian_Classes_acquireClassLock
 (Thread* t, object, uintptr_t*)
 {

@@ -30,6 +30,7 @@
 #include "sys/ucontext.h"
 #include "stdint.h"
 #include "dirent.h"
+#include "sched.h"
 
 #include "arch.h"
 #include "system.h"
@@ -793,6 +794,10 @@ class MySystem: public System {
     gettimeofday(&tv, 0);
     return (static_cast<int64_t>(tv.tv_sec) * 1000) +
       (static_cast<int64_t>(tv.tv_usec) / 1000);
+  }
+
+  virtual void yield() {
+    sched_yield();
   }
 
   virtual void exit(int code) {

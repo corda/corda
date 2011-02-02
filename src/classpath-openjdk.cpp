@@ -2210,13 +2210,9 @@ EXPORT(JVM_SetThreadPriority)(Thread*, jobject, jint)
 }
 
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_Yield)(Thread*, jclass)
+EXPORT(JVM_Yield)(Thread* t, jclass)
 {
-#ifdef PLATFORM_WINDOWS
-  SwitchToThread();
-#else
-  sched_yield();
-#endif
+  t->m->system->yield();
 }
 
 uint64_t

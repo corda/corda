@@ -807,6 +807,10 @@ class MySystem: public System {
              | time.dwLowDateTime) / 10000) - 11644473600000LL;
   }
 
+  virtual void yield() {
+    SwitchToThread();
+  }
+
   virtual void exit(int code) {
     ::exit(code);
   }
