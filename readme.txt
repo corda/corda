@@ -4,24 +4,24 @@ Quick Start
 on Linux:
  $ export JAVA_HOME=/usr/local/java # or wherever you have the JDK installed
  $ make
- $ build/linux-i386/avian -cp build/test Hello
+ $ build/linux-i386/avian -cp build/linux-i386/test Hello
 
 on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
- $ build/darwin-i386/avian -cp build/test Hello
+ $ build/darwin-i386/avian -cp build/darwin-i386/test Hello
  
 on Windows (MSYS):
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
 on Windows (Cygwin):
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
 Adjust JAVA_HOME according to your system, but be sure to use forward
 slashes in the path.
