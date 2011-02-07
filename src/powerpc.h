@@ -14,7 +14,7 @@
 #include "types.h"
 #include "common.h"
 
-#define VA_LIST(x) (x)
+#define VA_LIST(x) (&x)
 
 #ifdef __APPLE__
 #  if __DARWIN_UNIX03 && defined(_STRUCT_PPC_EXCEPTION_STATE)

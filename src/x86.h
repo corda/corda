@@ -22,7 +22,7 @@
 #  undef interface
 #endif
 
-#ifdef PLATFORM_WINDOWS
+#if (defined ARCH_x86_32) || (defined PLATFORM_WINDOWS)
 #  define VA_LIST(x) (&x)
 #else
 #  define VA_LIST(x) (x)
