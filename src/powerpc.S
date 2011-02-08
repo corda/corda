@@ -173,7 +173,7 @@ GLOBAL(vmRun):
    mflr r0
    stw  r0,8(r1)
 
-   stwu r1,-(MEMORY_BASE+80)(r1)
+   stwu r1,-(MEMORY_BASE+88)(r1)
       
    stw  r13,MEMORY_BASE+0(r1)
    stw  r14,MEMORY_BASE+4(r1)
