@@ -66,6 +66,7 @@ public class BufferedInputStream extends InputStream {
         }
         break;
       } else {
+        offset += c;
         count += c;
         length -= c;
 
