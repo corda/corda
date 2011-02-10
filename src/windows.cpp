@@ -888,16 +888,23 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
 
       if (file != INVALID_HANDLE_VALUE) {
         My_MINIDUMP_EXCEPTION_INFORMATION exception
-          = { GetCurrentThreadId(), e, true };
+           = { GetCurrentThreadId(), e, true };
+ 
+        union {
+          MINIDUMP_EXCEPTION_INFORMATION* exceptionPointer;
+          My_MINIDUMP_EXCEPTION_INFORMATION* myExceptionPointer;
+        };
 
-        MiniDumpWriteDump
-          (GetCurrentProcess(),
-           GetCurrentProcessId(),
-           file,
-           MiniDumpWithFullMemory,
-           reinterpret_cast<MINIDUMP_EXCEPTION_INFORMATION*>(&exception),
-           0,
-           0);
+        myExceptionPointer = &exception;
+
+         MiniDumpWriteDump
+           (GetCurrentProcess(),
+            GetCurrentProcessId(),
+            file,
+            MiniDumpWithFullMemory,
+            exceptionPointer,
+            0,
+            0);
 
         CloseHandle(file);
       }
