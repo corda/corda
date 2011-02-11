@@ -833,7 +833,7 @@ class MySystem: public System {
   const char* crashDumpDirectory;
 };
 
-struct MINIDUMP_EXCEPTION_INFORMATION {
+struct __attribute__ ((__packed__)) MINIDUMP_EXCEPTION_INFORMATION {
   DWORD thread;
   LPEXCEPTION_POINTERS exception;
   BOOL exceptionInCurrentAddressSpace;
@@ -856,16 +856,6 @@ typedef BOOL (*MiniDumpWriteDumpType)
  const MINIDUMP_USER_STREAM_INFORMATION* userStream,
  const MINIDUMP_CALLBACK_INFORMATION* callback);
 
-// dbghelp.dll expects that MINIDUMP_EXCEPTION_INFORMATION has a
-// packed layout and will crash if it doesn't (at least on 64-bit
-// systems), but as of this writing mingw-w64's version is not
-// declared to be so.  Hence this workaround:
-struct __attribute__ ((__packed__)) My_MINIDUMP_EXCEPTION_INFORMATION {
-  DWORD ThreadId;
-  PEXCEPTION_POINTERS ExceptionPointers;
-  WINBOOL ClientPointers;
-};
-
 void
 dump(LPEXCEPTION_POINTERS e, const char* directory)
 {
@@ -887,22 +877,15 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
         (name, FILE_WRITE_DATA, 0, 0, CREATE_ALWAYS, 0, 0);
 
       if (file != INVALID_HANDLE_VALUE) {
-        My_MINIDUMP_EXCEPTION_INFORMATION exception
+        MINIDUMP_EXCEPTION_INFORMATION exception
            = { GetCurrentThreadId(), e, true };
- 
-        union {
-          MINIDUMP_EXCEPTION_INFORMATION* exceptionPointer;
-          My_MINIDUMP_EXCEPTION_INFORMATION* myExceptionPointer;
-        };
-
-        myExceptionPointer = &exception;
 
          MiniDumpWriteDump
            (GetCurrentProcess(),
             GetCurrentProcessId(),
             file,
             MiniDumpWithFullMemory,
-            exceptionPointer,
+            &exception,
             0,
             0);
 
