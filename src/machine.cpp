@@ -3523,7 +3523,8 @@ postInitClass(Thread* t, object c)
     object exception = t->exception;
     t->exception = 0;
 
-    throwNew(t, Machine::ExceptionInInitializerErrorType, 0, 0, exception);
+    throwNew(t, Machine::ExceptionInInitializerErrorType,
+             static_cast<object>(0), 0, exception);
   } else {
     classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
   }

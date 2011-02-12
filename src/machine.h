@@ -1971,6 +1971,8 @@ addThread(Thread* t, Thread* p)
 
   p->peer = p->parent->child;
   p->parent->child = p;
+
+  threadPeer(t, p->javaThread) = reinterpret_cast<jlong>(p);
 }
 
 inline void
@@ -1985,6 +1987,8 @@ removeThread(Thread* t, Thread* p)
   t->m->stateLock->notifyAll(t->systemThread);
 
   p->parent->child = p->peer;
+
+  threadPeer(t, p->javaThread) = 0;
 }
 
 inline Thread*
@@ -2592,6 +2596,8 @@ throw_(Thread* t, object e)
 
   t->exception = e;
 
+  // printTrace(t, e);
+
   popResources(t);
 
   t->checkpoint->unwind();
@@ -2600,9 +2606,11 @@ throw_(Thread* t, object e)
 }
 
 inline void NO_RETURN
-throwNew(Thread* t, Machine::Type type)
+throwNew
+(Thread* t, Machine::Type type, object message = 0, object trace = 0,
+ object cause = 0)
 {
-  throw_(t, makeThrowable(t, type));
+  throw_(t, makeThrowable(t, type, message, trace, cause));
 }
 
 inline void NO_RETURN

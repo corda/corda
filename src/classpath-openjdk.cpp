@@ -616,11 +616,11 @@ checkFileAccess
       return 0;
     }
   } else {
-    return booleanValue
+    return intValue
       (t, t->m->processor->invoke
        (t, nativeInterceptOriginal
         (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-        reinterpret_cast<object>(arguments[0]), file, mask));
+        reinterpret_cast<object>(arguments[0]), file, mask)) != 0;
   }
 }
 
@@ -3128,7 +3128,7 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
   }
 
   object result;
-  if (arguments) {
+  if (args) {
     result = t->m->processor->invokeArray
       (t, vmMethod, instance ? *instance : 0, *args);
   } else {
