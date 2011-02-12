@@ -66,32 +66,32 @@ inline object
 getTreeNodeValue(Thread*, object n)
 {
   return reinterpret_cast<object>
-    (cast<intptr_t>(n, TreeNodeValue) & PointerMask);
+    (cast<alias_t>(n, TreeNodeValue) & PointerMask);
 }
 
 inline void
 setTreeNodeValue(Thread* t, object n, object value)
 {
-  intptr_t red = cast<intptr_t>(n, TreeNodeValue) & (~PointerMask);
+  alias_t red = cast<alias_t>(n, TreeNodeValue) & (~PointerMask);
 
   set(t, n, TreeNodeValue, value);
 
-  cast<intptr_t>(n, TreeNodeValue) |= red;
+  cast<alias_t>(n, TreeNodeValue) |= red;
 }
 
 inline bool
 treeNodeRed(Thread*, object n)
 {
-  return (cast<intptr_t>(n, TreeNodeValue) & (~PointerMask)) == 1;
+  return (cast<alias_t>(n, TreeNodeValue) & (~PointerMask)) == 1;
 }
 
 inline void
 setTreeNodeRed(Thread*, object n, bool red)
 {
   if (red) {
-    cast<intptr_t>(n, TreeNodeValue) |= 1;
+    cast<alias_t>(n, TreeNodeValue) |= 1;
   } else {
-    cast<intptr_t>(n, TreeNodeValue) &= PointerMask;
+    cast<alias_t>(n, TreeNodeValue) &= PointerMask;
   }
 }
 
@@ -108,7 +108,7 @@ cloneTreeNode(Thread* t, object n)
 
 object
 treeFind(Thread* t, object tree, intptr_t key, object sentinal,
-          intptr_t (*compare)(Thread* t, intptr_t key, object b))
+         intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   object node = tree;
   while (node != sentinal) {
@@ -140,6 +140,7 @@ treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
   object new_ = newRoot;
   PROTECT(t, new_);
 
+  int count = 0;
   while (old != sentinal) {
     c->ancestors = path(c, new_, c->ancestors);
 
@@ -161,6 +162,13 @@ treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
       c->node = new_;
       c->ancestors = c->ancestors->next;
       return;
+    }
+
+    if (++ count > 100) {
+      // if we've gone this deep, we probably have an unbalanced tree,
+      // which should only happen if there's a serious bug somewhere
+      // in our insertion process
+      abort(t);
     }
   }
 

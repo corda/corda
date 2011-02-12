@@ -1878,8 +1878,8 @@ setObjectClass(Thread*, object o, object value)
 {
   cast<object>(o, 0)
     = reinterpret_cast<object>
-    (reinterpret_cast<uintptr_t>(value)
-     | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
+    (reinterpret_cast<alias_t>(value)
+     | (reinterpret_cast<alias_t>(cast<object>(o, 0)) & (~PointerMask)));
 }
 
 inline const char*
@@ -2094,19 +2094,19 @@ setType(Thread* t, Machine::Type type, object value)
 inline bool
 objectFixed(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == FixedMark;
+  return (cast<alias_t>(o, 0) & (~PointerMask)) == FixedMark;
 }
 
 inline bool
 objectExtended(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
+  return (cast<alias_t>(o, 0) & (~PointerMask)) == ExtendedMark;
 }
 
 inline bool
 hashTaken(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
+  return (cast<alias_t>(o, 0) & (~PointerMask)) == HashTakenMark;
 }
 
 inline unsigned
@@ -2237,7 +2237,7 @@ markHashTaken(Thread* t, object o)
 
   ACQUIRE_RAW(t, t->m->heapLock);
 
-  cast<uintptr_t>(o, 0) |= HashTakenMark;
+  cast<alias_t>(o, 0) |= HashTakenMark;
   t->m->heap->pad(o);
 }
 

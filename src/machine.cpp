@@ -2145,8 +2145,8 @@ class HeapClient: public Heap::Client {
     memcpy(dst, src, n * BytesPerWord);
 
     if (hashTaken(t, src)) {
-      cast<uintptr_t>(dst, 0) &= PointerMask;
-      cast<uintptr_t>(dst, 0) |= ExtendedMark;
+      cast<alias_t>(dst, 0) &= PointerMask;
+      cast<alias_t>(dst, 0) |= ExtendedMark;
       extendedWord(t, dst, base) = takeHash(t, src);
     }
   }
@@ -2781,7 +2781,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
     memset(o, 0, sizeInBytes);
 
-    cast<uintptr_t>(o, 0) = FixedMark;
+    cast<alias_t>(o, 0) = FixedMark;
 
     t->m->fixedFootprint += total;
 
@@ -2796,7 +2796,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
     memset(o, 0, sizeInBytes);
 
-    cast<uintptr_t>(o, 0) = FixedMark;
+    cast<alias_t>(o, 0) = FixedMark;
 
     return o;
   }

@@ -59,6 +59,8 @@ typedef uint64_t uintptr_t;
 #    error "unsupported architecture"
 #  endif
 
+typedef intptr_t alias_t;
+
 #else // not _MSC_VER
 
 #  include "stdint.h"
@@ -85,6 +87,8 @@ typedef uint64_t uintptr_t;
 #  else
 #    error "unsupported architecture"
 #  endif
+
+typedef intptr_t __attribute__((__may_alias__)) alias_t;
 
 #endif // not _MSC_VER
 
