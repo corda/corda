@@ -833,11 +833,13 @@ class MySystem: public System {
   const char* crashDumpDirectory;
 };
 
-struct __attribute__ ((__packed__)) MINIDUMP_EXCEPTION_INFORMATION {
+#pragma pack(push,4)
+struct MINIDUMP_EXCEPTION_INFORMATION {
   DWORD thread;
   LPEXCEPTION_POINTERS exception;
   BOOL exceptionInCurrentAddressSpace;
 };
+#pragma pack(pop)
 
 struct MINIDUMP_USER_STREAM_INFORMATION;
 struct MINIDUMP_CALLBACK_INFORMATION;
