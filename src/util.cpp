@@ -66,32 +66,32 @@ inline object
 getTreeNodeValue(Thread*, object n)
 {
   return reinterpret_cast<object>
-    (cast<alias_t>(n, TreeNodeValue) & PointerMask);
+    (alias(n, TreeNodeValue) & PointerMask);
 }
 
 inline void
 setTreeNodeValue(Thread* t, object n, object value)
 {
-  alias_t red = cast<alias_t>(n, TreeNodeValue) & (~PointerMask);
+  intptr_t red = alias(n, TreeNodeValue) & (~PointerMask);
 
   set(t, n, TreeNodeValue, value);
 
-  cast<alias_t>(n, TreeNodeValue) |= red;
+  alias(n, TreeNodeValue) |= red;
 }
 
 inline bool
 treeNodeRed(Thread*, object n)
 {
-  return (cast<alias_t>(n, TreeNodeValue) & (~PointerMask)) == 1;
+  return (alias(n, TreeNodeValue) & (~PointerMask)) == 1;
 }
 
 inline void
 setTreeNodeRed(Thread*, object n, bool red)
 {
   if (red) {
-    cast<alias_t>(n, TreeNodeValue) |= 1;
+    alias(n, TreeNodeValue) |= 1;
   } else {
-    cast<alias_t>(n, TreeNodeValue) &= PointerMask;
+    alias(n, TreeNodeValue) &= PointerMask;
   }
 }
 

@@ -59,7 +59,15 @@ typedef uint64_t uintptr_t;
 #    error "unsupported architecture"
 #  endif
 
-typedef intptr_t alias_t;
+namespace vm {
+
+inline intptr_t&
+alias(void* p, unsigned offset)
+{
+  return *reinterpret_cast<intptr_t*>(static_cast<uint8_t*>(p) + offset);
+}
+
+} // namespace vm
 
 #else // not _MSC_VER
 
@@ -88,7 +96,16 @@ typedef intptr_t alias_t;
 #    error "unsupported architecture"
 #  endif
 
-typedef intptr_t __attribute__((__may_alias__)) alias_t;
+namespace vm {
+
+typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
+inline intptr_alias_t&
+alias(void* p, unsigned offset)
+{
+  return *reinterpret_cast<intptr_alias_t*>(static_cast<uint8_t*>(p) + offset);
+}
+
+} // namespace vm
 
 #endif // not _MSC_VER
 
