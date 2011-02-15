@@ -1973,7 +1973,9 @@ addThread(Thread* t, Thread* p)
   p->peer = p->parent->child;
   p->parent->child = p;
 
-  threadPeer(t, p->javaThread) = reinterpret_cast<jlong>(p);
+  if (p->javaThread) {
+    threadPeer(t, p->javaThread) = reinterpret_cast<jlong>(p);
+  }
 }
 
 inline void
@@ -1989,7 +1991,9 @@ removeThread(Thread* t, Thread* p)
 
   p->parent->child = p->peer;
 
-  threadPeer(t, p->javaThread) = 0;
+  if (p->javaThread) {
+    threadPeer(t, p->javaThread) = 0;
+  }
 }
 
 inline Thread*
