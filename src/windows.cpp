@@ -96,7 +96,7 @@ class MySystem: public System {
 
       if (flags & Waiting) {
         int r UNUSED = SetEvent(event);
-        assert(s, r == 0);
+        assert(s, r != 0);
       }
     }
 
