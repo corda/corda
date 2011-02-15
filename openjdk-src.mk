@@ -98,7 +98,6 @@ openjdk-headers-classes = \
 	java.net.Inet6AddressImpl \
 	java.net.NetworkInterface \
 	java.net.PlainSocketImpl \
-	java.net.PlainDatagramSocketImpl \
 	java.net.SocketInputStream \
 	java.net.SocketOutputStream \
 	java.nio.MappedByteBuffer \
@@ -280,6 +279,7 @@ else
 	endif
 
 	openjdk-headers-classes += \
+		java.net.PlainDatagramSocketImpl \
 		java.io.UnixFileSystem \
 		sun.nio.ch.InheritedChannel \
 		sun.nio.ch.EPollArrayWrapper \
