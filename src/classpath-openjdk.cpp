@@ -1806,28 +1806,61 @@ EXPORT(JVM_IHashCode)(Thread* t, jobject o)
   return objectHash(t, *o);
 }
 
+uint64_t
+jvmWait(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jlong milliseconds; memcpy(&milliseconds, arguments + 1, sizeof(jlong));
+
+  vm::wait(t, *o, milliseconds);
+
+  return 1;
+}
+
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_MonitorWait)(Thread* t, jobject o, jlong milliseconds)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[1 + (sizeof(jlong) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(o);
+  memcpy(arguments + 1, &milliseconds, sizeof(jlong));
 
-  vm::wait(t, *o, milliseconds);
+  run(t, jvmWait, arguments);
+}
+
+uint64_t
+jvmNotify(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+
+  notify(t, *o);
+
+  return 1;
 }
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_MonitorNotify)(Thread* t, jobject o)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
 
-  notify(t, *o);
+  run(t, jvmNotify, arguments);
+}
+
+uint64_t
+jvmNotifyAll(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+
+  notifyAll(t, *o);
+
+  return 1;
 }
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_MonitorNotifyAll)(Thread* t, jobject o)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
 
-  notifyAll(t, *o);
+  run(t, jvmNotifyAll, arguments);
 }
 
 uint64_t
