@@ -1500,7 +1500,7 @@ class Thread {
     }
 
     virtual bool interrupted() {
-      return threadInterrupted(t, t->javaThread);
+      return t->javaThread and threadInterrupted(t, t->javaThread);
     }
 
     virtual void setInterrupted(bool v) {
@@ -2059,9 +2059,9 @@ attachThread(Machine* m, bool daemon)
 
   addThread(t, t);
 
-  uintptr_t arguments[] = { daemon };
-
   enter(t, Thread::ActiveState);
+
+  uintptr_t arguments[] = { daemon };
 
   if (run(t, initAttachedThread, arguments)) {
     enter(t, Thread::IdleState);
