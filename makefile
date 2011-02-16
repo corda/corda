@@ -636,7 +636,7 @@ $(test-dep): $(test-sources)
 		$(javac) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
-		test/Subroutine.java
+		-bootclasspath $(boot-classpath) test/Subroutine.java
 	@touch $(@)
 
 $(test-extra-dep): $(test-extra-sources)
