@@ -5288,7 +5288,8 @@ calculateTryCatchRoots(Context* context, SubroutinePath* subroutinePath,
 
 unsigned
 calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   unsigned eventIndex, SubroutinePath* subroutinePath = 0)
+                   unsigned eventIndex, SubroutinePath* subroutinePath = 0,
+                   uintptr_t* resultRoots = 0)
 {
   // for each instruction with more than one predecessor, and for each
   // stack position, determine if there exists a path to that
@@ -5321,11 +5322,12 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     switch (e) {
     case PushContextEvent: {
       eventIndex = calculateFrameMaps
-        (t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, subroutinePath);
+        (t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, subroutinePath,
+         resultRoots);
     } break;
 
     case PopContextEvent:
-      return eventIndex;
+      goto exit;
 
     case IpEvent: {
       ip = context->eventLog.get2(eventIndex);
@@ -5491,16 +5493,39 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
                          makeRootTable(t, &(context->zone), context->method));
       }
 
+      THREAD_RUNTIME_ARRAY(t, uintptr_t, subroutineRoots, mapSize);
+
       calculateFrameMaps
         (t, context, RUNTIME_ARRAY_BODY(roots), call->subroutine->logIndex,
-         path);
+         path, RUNTIME_ARRAY_BODY(subroutineRoots));
+
+      for (unsigned wi = 0; wi < mapSize; ++wi) {
+        RUNTIME_ARRAY_BODY(roots)[wi]
+          &= RUNTIME_ARRAY_BODY(subroutineRoots)[wi];
+      }      
     } break;
 
     case PopSubroutineEvent:
-      return static_cast<unsigned>(-1);
+      eventIndex = static_cast<unsigned>(-1);
+      goto exit;
 
     default: abort(t);
     }
+  }
+
+ exit:
+  if (resultRoots and ip != -1) {
+    if (DebugFrameMaps) {
+      fprintf(stderr, "result roots at ip %3d: ", ip);
+      printSet(*RUNTIME_ARRAY_BODY(roots), mapSize);
+      if (subroutinePath) {
+        fprintf(stderr, " ");
+        print(subroutinePath);
+      }
+      fprintf(stderr, "\n");
+    }
+
+    memcpy(resultRoots, RUNTIME_ARRAY_BODY(roots), mapSize * BytesPerWord);
   }
 
   return eventIndex;

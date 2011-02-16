@@ -31,7 +31,7 @@ public class Subroutine {
     //  4:
     Stream.write1(out, Assembler.invokestatic);
     Stream.write2(out, ConstantPool.addMethodRef
-           (pool, "java/lang/System", "gc", "()V") + 1);
+                  (pool, "java/lang/System", "gc", "()V") + 1);
 
     //  7:
     Stream.write1(out, Assembler.goto_);
@@ -43,7 +43,7 @@ public class Subroutine {
     // 11:
     Stream.write1(out, Assembler.invokestatic);
     Stream.write2(out, ConstantPool.addMethodRef
-           (pool, "java/lang/System", "gc", "()V") + 1);
+                  (pool, "java/lang/System", "gc", "()V") + 1);
 
     // 14:
     Stream.write1(out, Assembler.ret);
@@ -56,7 +56,7 @@ public class Subroutine {
     // 19:
     Stream.write1(out, Assembler.invokestatic);
     Stream.write2(out, ConstantPool.addMethodRef
-           (pool, "java/lang/System", "gc", "()V") + 1);
+                  (pool, "java/lang/System", "gc", "()V") + 1);
 
     // 22:
     Stream.write1(out, Assembler.return_);
@@ -237,58 +237,58 @@ public class Subroutine {
   }
 
   public static void main(String[] args) throws Exception {
-    // test(false, false);
-    // test(false, true);
-    // test(true, false);
+    test(false, false);
+    test(false, true);
+    test(true, false);
 
-    // String.valueOf(test2(1));
-    // String.valueOf(test2(2));
-    // String.valueOf(test2(3));
+    String.valueOf(test2(1));
+    String.valueOf(test2(2));
+    String.valueOf(test2(3));
 
-    // String.valueOf(test3(1, 1, 1));
-    // String.valueOf(test3(2, 1, 1));
-    // String.valueOf(test3(3, 1, 1));
+    String.valueOf(test3(1, 1, 1));
+    String.valueOf(test3(2, 1, 1));
+    String.valueOf(test3(3, 1, 1));
 
-    // String.valueOf(test3(1, 2, 1));
-    // String.valueOf(test3(2, 2, 1));
-    // String.valueOf(test3(3, 2, 1));
+    String.valueOf(test3(1, 2, 1));
+    String.valueOf(test3(2, 2, 1));
+    String.valueOf(test3(3, 2, 1));
 
-    // String.valueOf(test3(1, 3, 1));
-    // String.valueOf(test3(2, 3, 1));
-    // String.valueOf(test3(3, 3, 1));
+    String.valueOf(test3(1, 3, 1));
+    String.valueOf(test3(2, 3, 1));
+    String.valueOf(test3(3, 3, 1));
 
-    // String.valueOf(test3(1, 1, 2));
-    // String.valueOf(test3(2, 1, 2));
-    // String.valueOf(test3(3, 1, 2));
+    String.valueOf(test3(1, 1, 2));
+    String.valueOf(test3(2, 1, 2));
+    String.valueOf(test3(3, 1, 2));
 
-    // String.valueOf(test3(1, 2, 2));
-    // String.valueOf(test3(2, 2, 2));
-    // String.valueOf(test3(3, 2, 2));
+    String.valueOf(test3(1, 2, 2));
+    String.valueOf(test3(2, 2, 2));
+    String.valueOf(test3(3, 2, 2));
 
-    // String.valueOf(test3(1, 3, 2));
-    // String.valueOf(test3(2, 3, 2));
-    // String.valueOf(test3(3, 3, 2));
+    String.valueOf(test3(1, 3, 2));
+    String.valueOf(test3(2, 3, 2));
+    String.valueOf(test3(3, 3, 2));
 
-    // String.valueOf(test3(1, 1, 3));
-    // String.valueOf(test3(2, 1, 3));
-    // String.valueOf(test3(3, 1, 3));
+    String.valueOf(test3(1, 1, 3));
+    String.valueOf(test3(2, 1, 3));
+    String.valueOf(test3(3, 1, 3));
 
-    // String.valueOf(test3(1, 2, 3));
-    // String.valueOf(test3(2, 2, 3));
-    // String.valueOf(test3(3, 2, 3));
+    String.valueOf(test3(1, 2, 3));
+    String.valueOf(test3(2, 2, 3));
+    String.valueOf(test3(3, 2, 3));
 
-    // String.valueOf(test3(1, 3, 3));
-    // String.valueOf(test3(2, 3, 3));
-    // String.valueOf(test3(3, 3, 3));
+    String.valueOf(test3(1, 3, 3));
+    String.valueOf(test3(2, 3, 3));
+    String.valueOf(test3(3, 3, 3));
 
-    // String.valueOf(test4(1));
-    // String.valueOf(test4(2));
-    // String.valueOf(test4(3));
+    String.valueOf(test4(1));
+    String.valueOf(test4(2));
+    String.valueOf(test4(3));
 
-    // expect(test4(1) == 0xFABFABFABFL);
+    expect(test4(1) == 0xFABFABFABFL);
 
-    // new Subroutine().test5(true);
-    // new Subroutine().test5(false);
+    new Subroutine().test5(true);
+    new Subroutine().test5(false);
 
     makeTestClass().getMethod("test", new Class[0]).invoke
       (null, new Object[0]);
