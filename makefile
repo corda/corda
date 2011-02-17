@@ -501,17 +501,23 @@ dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(build)/$(name)-dynamic${exe-suffix}
 
 ifneq ($(classpath),avian)
+# Assembler, ConstantPool, and Stream are not technically needed for a
+# working build, but we include them since our Subroutine test uses
+# them to synthesize a class:
 	classpath-sources := \
-		$(classpath-src)/avian/Continuations.java \
+		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
-		$(classpath-src)/avian/IncompatibleContinuationException.java \
-		$(classpath-src)/avian/SystemClassLoader.java \
-		$(classpath-src)/avian/Machine.java \
-		$(classpath-src)/avian/Addendum.java \
 		$(classpath-src)/avian/ClassAddendum.java \
-		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/ConstantPool.java \
+		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
+		$(classpath-src)/avian/IncompatibleContinuationException.java \
+		$(classpath-src)/avian/Machine.java \
+		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/Stream.java \
+		$(classpath-src)/avian/SystemClassLoader.java \
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
