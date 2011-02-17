@@ -86,11 +86,9 @@ ifneq ($(openjdk),)
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
-		javahome-files = lib/zi
+		javahome-files = lib/zi lib/currency.data
 		ifeq ($(platform),windows)
 			javahome-files += lib/tzmappings
-		else
-			javahome-files += lib/currency.data
 		endif
 		javahome-object = $(build)/javahome-jar.o
 		boot-javahome-object = $(build)/boot-javahome.o
