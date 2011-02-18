@@ -215,9 +215,20 @@ ifeq ($(arch),arm)
 endif
 
 ifeq ($(platform),darwin)
+	ifneq ($(build-platform),darwin)
+		cxx = i686-apple-darwin8-g++ $(mflag)
+		cc = i686-apple-darwin8-gcc $(mflag)
+		ar = i686-apple-darwin8-ar
+		ranlib = i686-apple-darwin8-ranlib
+		strip = i686-apple-darwin8-strip
+		extra-cflags = -I$(JAVA_HOME)/include/linux
+	else
+		build-lflags += -framework CoreFoundation
+	endif
+
+	build-cflags = $(common-cflags) $(extra-cflags) -fPIC -fvisibility=hidden \
+		-I$(src)
 	version-script-flag =
-	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	build-lflags += -framework CoreFoundation
 	lflags = $(common-lflags) -ldl -framework CoreFoundation \
 		-framework CoreServices
 	ifeq ($(bootimage),true)
