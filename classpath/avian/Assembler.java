@@ -74,7 +74,7 @@ public class Assembler {
       e.writeTo(out);
     }
 
-    write2(out, 0); // flags
+    write2(out, ACC_PUBLIC); // flags
     write2(out, name + 1);
     write2(out, super_ + 1);
     
