@@ -14,6 +14,7 @@
 #  include "CoreFoundation/CoreFoundation.h"
 #  undef assert
 #  define _XOPEN_SOURCE
+#  define _DARWIN_C_SOURCE
 #endif
 
 #include "sys/mman.h"
@@ -144,6 +145,12 @@ class MySystem: public System {
       r->setInterrupted(true);
 
       pthread_kill(thread, InterruptSignal);
+
+      // pthread_kill won't necessarily wake a thread blocked in
+      // pthread_cond_{timed}wait (it does on Linux but not Mac OS),
+      // so we signal the condition as well:
+      int rv UNUSED = pthread_cond_signal(&condition);
+      expect(s, rv == 0);
     }
 
     virtual void join() {
@@ -641,13 +648,40 @@ class MySystem: public System {
     return registerHandler(handler, DivideByZeroSignalIndex);
   }
 
-  virtual Status visit(System::Thread* st, System::Thread* sTarget,
+  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
     assert(this, st != sTarget);
 
-    Thread* t = static_cast<Thread*>(st);
     Thread* target = static_cast<Thread*>(sTarget);
+
+#ifdef __APPLE__
+    // On Mac OS, signals sent using pthread_kill are never delivered
+    // if the target thread is blocked (e.g. acquiring a lock or
+    // waiting on a condition), so we can't rely on it and must use
+    // the Mach-specific thread execution API instead.
+
+    mach_port_t port = pthread_mach_thread_np(target->thread);
+
+    if (thread_suspend(port)) return -1;
+
+    THREAD_STATE_TYPE state;
+    mach_msg_type_number_t stateCount = THREAD_STATE_COUNT;
+    kern_return_t rv = thread_get_state
+      (port, THREAD_STATE, reinterpret_cast<thread_state_t>(&state),
+       &stateCount);
+    
+    if (rv == 0) {
+      visitor->visit(reinterpret_cast<void*>(THREAD_STATE_IP(state)),
+                     reinterpret_cast<void*>(THREAD_STATE_STACK(state)),
+                     reinterpret_cast<void*>(THREAD_STATE_LINK(state)));
+    }
+
+    thread_resume(port);
+
+    return rv ? -1 : 0;
+#else // not __APPLE__
+    Thread* t = static_cast<Thread*>(st);
 
     ACQUIRE_MONITOR(t, visitLock);
 
@@ -674,6 +708,7 @@ class MySystem: public System {
     system->visitLock->notifyAll(t);
 
     return result;
+#endif // not  __APPLE__
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,

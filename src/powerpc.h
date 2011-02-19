@@ -14,20 +14,37 @@
 #include "types.h"
 #include "common.h"
 
-#define VA_LIST(x) (&x)
+#define VA_LIST(x) (&(x))
 
 #ifdef __APPLE__
+#  include "mach/mach_types.h"
+#  include "mach/ppc/thread_act.h"
+#  include "mach/ppc/thread_status.h"
+
+#  define THREAD_STATE PPC_THREAD_STATE
+#  define THREAD_STATE_TYPE ppc_thread_state_t
+#  define THREAD_STATE_COUNT PPC_THREAD_STATE_COUNT
+
 #  if __DARWIN_UNIX03 && defined(_STRUCT_PPC_EXCEPTION_STATE)
-#    define IP_REGISTER(context) (context->uc_mcontext->__ss.__srr0)
-#    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r13)
-#    define LINK_REGISTER(context) (context->uc_mcontext->__ss.__lr)
+#    define FIELD(x) __##x
 #  else
-#    define IP_REGISTER(context) (context->uc_mcontext->ss.srr0)
-#    define STACK_REGISTER(context) (context->uc_mcontext->ss.r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.r13)
-#    define LINK_REGISTER(context) (context->uc_mcontext->ss.lr)
+#    define FIELD(x) x
 #  endif
+
+#  define THREAD_STATE_IP(state) ((state).FIELD(srr0))
+#  define THREAD_STATE_STACK(state) ((state).FIELD(r1))
+#  define THREAD_STATE_THREAD(state) ((state).FIELD(r13))
+#  define THREAD_STATE_LINK(state) ((state).FIELD(lr))
+
+#  define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#  define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#  define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#  define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+
 #else
 #  error "non-Apple PowerPC-based platforms not yet supported"
 #endif

@@ -23,27 +23,47 @@
 #endif
 
 #if (defined ARCH_x86_32) || (defined PLATFORM_WINDOWS)
-#  define VA_LIST(x) (&x)
+#  define VA_LIST(x) (&(x))
 #else
 #  define VA_LIST(x) (x)
+#endif
+
+#ifdef __APPLE__
+#  include "mach/mach_types.h"
+#  include "mach/i386/thread_act.h"
+#  include "mach/i386/thread_status.h"
+
+#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#    define FIELD(x) __##x
+#  else
+#    define FIELD(x) x
+#  endif
 #endif
 
 #ifdef ARCH_x86_32
 
 #  ifdef __APPLE__
-#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
-#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
-#      define LINK_REGISTER(context) (context->uc_mcontext->__ss.__ecx)
-#      define FRAME_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
-#    else
-#      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
-#      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
-#      define LINK_REGISTER(context) (context->uc_mcontext->ss.ecx)
-#      define FRAME_REGISTER(context) (context->uc_mcontext->ss.ebp)
-#    endif
+#    define THREAD_STATE x86_THREAD_STATE32
+#    define THREAD_STATE_TYPE x86_thread_state32_t
+#    define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
+
+#    define THREAD_STATE_IP(state) ((state).FIELD(eip))
+#    define THREAD_STATE_STACK(state) ((state).FIELD(esp))
+#    define THREAD_STATE_THREAD(state) ((state).FIELD(ebx))
+#    define THREAD_STATE_LINK(state) ((state).FIELD(ecx))
+#    define THREAD_STATE_FRAME(state) ((state).FIELD(ebp))
+
+#    define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#    define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#    define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#    define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+#    define FRAME_REGISTER(context) \
+  THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
+
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
@@ -70,19 +90,27 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #elif defined ARCH_x86_64
 
 #  ifdef __APPLE__
-#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__rip)
-#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__rsp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__rbx)
-#      define LINK_REGISTER(context) (context->uc_mcontext->__ss.__rcx)
-#      define FRAME_REGISTER(context) (context->uc_mcontext->__ss.__rbp)
-#    else
-#      define IP_REGISTER(context) (context->uc_mcontext->ss.rip)
-#      define STACK_REGISTER(context) (context->uc_mcontext->ss.rsp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.rbx)
-#      define LINK_REGISTER(context) (context->uc_mcontext->ss.rcx)
-#      define FRAME_REGISTER(context) (context->uc_mcontext->ss.rbp)
-#    endif
+#    define THREAD_STATE x86_THREAD_STATE64
+#    define THREAD_STATE_TYPE x86_thread_state64_t
+#    define THREAD_STATE_COUNT x86_THREAD_STATE64_COUNT
+
+#    define THREAD_STATE_IP(state) ((state).FIELD(rip))
+#    define THREAD_STATE_STACK(state) ((state).FIELD(rsp))
+#    define THREAD_STATE_THREAD(state) ((state).FIELD(rbx))
+#    define THREAD_STATE_LINK(state) ((state).FIELD(rcx))
+#    define THREAD_STATE_FRAME(state) ((state).FIELD(rbp))
+
+#    define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#    define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#    define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#    define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+#    define FRAME_REGISTER(context) \
+  THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
+
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
