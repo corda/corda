@@ -13,8 +13,6 @@
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
 #  undef assert
-#  define _XOPEN_SOURCE
-#  define _DARWIN_C_SOURCE
 #endif
 
 #include "sys/mman.h"
