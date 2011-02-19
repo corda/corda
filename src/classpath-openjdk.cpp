@@ -2722,6 +2722,8 @@ jvmGetClassInterfaces(Thread* t, uintptr_t* arguments)
 
   object table = classInterfaceTable(t, jclassVmClass(t, *c));
   if (table) {
+    PROTECT(t, table);
+
     unsigned stride =
       (classFlags(t, jclassVmClass(t, *c)) & ACC_INTERFACE) == 0 ? 2 : 1;
 
