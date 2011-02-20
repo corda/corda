@@ -3382,7 +3382,7 @@ class MyAssembler: public Assembler {
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
     apply(Move, BytesPerWord, RegisterOperand, &stack,

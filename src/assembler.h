@@ -397,7 +397,7 @@ class Assembler {
 
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread) = 0;
-  virtual void saveFrame(unsigned stackOffset) = 0;
+  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void adjustFrame(unsigned difference) = 0;

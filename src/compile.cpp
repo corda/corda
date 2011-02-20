@@ -435,6 +435,18 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
   // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
 }
 
+void*
+getIp(MyThread* t)
+{
+  // Here we use the convention that, if the return address is neither
+  // pushed on to the stack automatically as part of the call nor
+  // stored in the caller's frame, it will be saved in MyThread::ip
+  // instead of on the stack.  See the various implementations of
+  // Assembler::saveFrame for details on how this is done.
+  return t->arch->returnAddressOffset() < 0
+    ? t->ip : t->arch->frameIp(t->stack);
+}
+
 class MyStackWalker: public Processor::StackWalker {
  public:
   enum State {
@@ -475,7 +487,7 @@ class MyStackWalker: public Processor::StackWalker {
       trace = t->traceContext->trace;
       continuation = t->traceContext->continuation;
     } else {
-      ip_ = 0;
+      ip_ = getIp(t);
       stack = t->stack;
       trace = t->trace;
       continuation = t->continuation;      
@@ -1981,7 +1993,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
     stack = t->traceContext->stack;
     continuation = t->traceContext->continuation;
   } else {
-    ip = 0;
+    ip = getIp(t);
     stack = t->stack;
     continuation = t->continuation;      
   }
@@ -6669,7 +6681,7 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
 void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
-  void* ip = t->arch->frameIp(t->stack);
+  void* ip = getIp(t);
   void* stack = t->stack;
 
   MyThread::CallTrace* trace = t->trace;
@@ -8398,7 +8410,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = defaultContext.context.assembler;
     
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.default_.frameSavedOffset = a->length();
 
@@ -8442,7 +8454,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     a->apply(Move, BytesPerWord, RegisterOperand, &index,
              BytesPerWord, MemoryOperand, &virtualCallIndex);
     
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
@@ -8464,7 +8476,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = nativeContext.context.assembler;
 
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.native.frameSavedOffset = a->length();
 
@@ -8484,7 +8496,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = aioobContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.aioob.frameSavedOffset = a->length();
 
@@ -8501,7 +8513,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = stackOverflowContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
@@ -8518,7 +8530,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = tableContext.context.assembler;
   
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.table.frameSavedOffset = a->length();
 

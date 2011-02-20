@@ -2126,7 +2126,11 @@ class MyAssembler: public Assembler {
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) {
+    Register link(LinkRegister);
+    Memory linkDst(ThreadRegister, ipOffset);
+    moveRM(&c, BytesPerWord, &link, BytesPerWord, &linkDst);
+
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);

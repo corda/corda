@@ -2253,7 +2253,7 @@ class MyAssembler: public Assembler {
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned) {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
