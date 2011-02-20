@@ -81,12 +81,18 @@ isVmInvokeUnsafeStack(void* ip)
     < reinterpret_cast<uintptr_t> (voidPointer(vmInvoke_safeStack));
 }
 
+class MyThread;
+
+void*
+getIp(MyThread*);
+
 class MyThread: public Thread {
  public:
   class CallTrace {
    public:
     CallTrace(MyThread* t, object method):
       t(t),
+      ip(getIp(t)),
       stack(t->stack),
       scratch(t->scratch),
       continuation(t->continuation),
@@ -107,6 +113,7 @@ class MyThread: public Thread {
     }
 
     MyThread* t;
+    void* ip;
     void* stack;
     void* scratch;
     object continuation;
@@ -436,15 +443,20 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
 }
 
 void*
-getIp(MyThread* t)
+getIp(MyThread* t, void* ip, void* stack)
 {
   // Here we use the convention that, if the return address is neither
   // pushed on to the stack automatically as part of the call nor
   // stored in the caller's frame, it will be saved in MyThread::ip
   // instead of on the stack.  See the various implementations of
   // Assembler::saveFrame for details on how this is done.
-  return t->arch->returnAddressOffset() < 0
-    ? t->ip : t->arch->frameIp(t->stack);
+  return t->arch->returnAddressOffset() < 0 ? ip : t->arch->frameIp(stack);
+}
+
+void*
+getIp(MyThread* t)
+{
+  return getIp(t, t->ip, t->stack);
 }
 
 class MyStackWalker: public Processor::StackWalker {
@@ -521,10 +533,6 @@ class MyStackWalker: public Processor::StackWalker {
 //       fprintf(stderr, "state: %d\n", state);
       switch (state) {
       case Start:
-        if (ip_ == 0) {
-          ip_ = t->arch->frameIp(stack);
-        }
-
         if (trace and trace->nativeMethod) {
           method_ = trace->nativeMethod;
           state = NativeMethod;
@@ -554,7 +562,7 @@ class MyStackWalker: public Processor::StackWalker {
         if (trace) {
           continuation = trace->continuation;
           stack = trace->stack;
-          ip_ = t->arch->frameIp(stack);
+          ip_ = trace->ip;
           trace = trace->next;
 
           state = Start;
@@ -1998,10 +2006,6 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
     continuation = t->continuation;      
   }
 
-  if (ip == 0) {
-    ip = t->arch->frameIp(stack);
-  }
-
   object target = t->trace->targetMethod;
 
   *targetIp = 0;
@@ -2080,7 +2084,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
 object
 makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
 {
-  void* ip = t->arch->frameIp(t->stack);
+  void* ip = getIp(t);
   void* stack = t->stack;
 
   object context = t->continuation
@@ -6219,7 +6223,7 @@ compileMethod(MyThread* t)
     ip = t->tailAddress;
     t->tailAddress = 0;
   } else {
-    ip = t->arch->frameIp(t->stack);
+    ip = getIp(t);
   }
 
   return reinterpret_cast<uintptr_t>(compileMethod2(t, ip));
@@ -6470,7 +6474,7 @@ invokeNative(MyThread* t)
       ip = t->tailAddress;
       t->tailAddress = 0;
     } else {
-      ip = t->arch->frameIp(t->stack);
+      ip = getIp(t);
     }
 
     object node = findCallNode(t, ip);
@@ -6511,7 +6515,7 @@ invokeNative(MyThread* t)
 
   stack += t->arch->frameReturnAddressSize();
 
-  transition(t, t->arch->frameIp(t->stack), stack, t->continuation, t->trace);
+  transition(t, getIp(t), stack, t->continuation, t->trace);
 
   return result;
 }
@@ -6708,7 +6712,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
       target = method;
     } else if (trace) {
       stack = trace->stack;
-      ip = t->arch->frameIp(stack);
+      ip = trace->ip;
       trace = trace->next;
 
       if (trace) {
@@ -7697,12 +7701,12 @@ class MyProcessor: public Processor {
           // we caught the thread in a thunk or native code, and the
           // saved stack pointer indicates the most recent Java frame
           // on the stack
-          c.ip = t->arch->frameIp(target->stack);
+          c.ip = getIp(target);
           c.stack = target->stack;
         } else if (isThunk(t, ip) or isVirtualThunk(t, ip)) {
           // we caught the thread in a thunk where the stack register
           // indicates the most recent Java frame on the stack
-          c.ip = t->arch->frameIp(stack);
+          c.ip = getIp(t, link, stack);
           c.stack = stack;
         } else {
           // we caught the thread in native code, and the most recent
