@@ -197,9 +197,12 @@ GLOBAL(vmJumpAndInvoke):
    ldr  r5,[sp,#0]
    ldr  r6,[sp,#4]
 
-   // allocate new frame, adding room for callee-saved registers
+   // allocate new frame, adding room for callee-saved registers, plus
+   // 4 bytes of padding since the calculation of frameSize assumes 4
+   // bytes have already been allocated to save the return address,
+   // which is not true in this case
    sub  r2,r2,r6
-   sub  r2,r2,#80
+   sub  r2,r2,#84
    
    mov  r8,r0
 
@@ -213,7 +216,7 @@ LOCAL(vmJumpAndInvoke_argumentLoop):
    add  r6,r6,#4
 
 LOCAL(vmJumpAndInvoke_argumentTest):
-   cmp  r6,r4
+   cmp  r6,r3
    ble  LOCAL(vmJumpAndInvoke_argumentLoop)
 
    // the arguments have been copied, so we can set the real stack
