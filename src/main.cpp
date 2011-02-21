@@ -74,22 +74,6 @@ vmNativeCall(void*, void*, unsigned, unsigned)
 
 namespace {
 
-bool
-readLine(const uint8_t* base, unsigned total, unsigned* start,
-         unsigned* length)
-{
-  const uint8_t* p = base + *start;
-  const uint8_t* end = base + total;
-  while (p != end and (*p == '\n' or *p == '\r')) ++ p;
-
-  *start = p - base;
-  while (p != end and not (*p == '\n' or *p == '\r')) ++ p;
-
-  *length = (p - base) - *start;
-
-  return *length != 0;
-}
-
 const char*
 mainClass(const char* jar)
 {
