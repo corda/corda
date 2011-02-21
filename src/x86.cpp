@@ -2846,6 +2846,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual bool hasLinkRegister() {
+    return false;
+  }
+
   virtual unsigned stackAlignmentInWords() {
     return StackAlignmentInWords;
   }

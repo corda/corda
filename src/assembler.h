@@ -333,6 +333,8 @@ class Assembler {
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
+    virtual bool hasLinkRegister() = 0;
+
     virtual unsigned stackAlignmentInWords() = 0;
 
     virtual bool matchCall(void* returnAddress, void* target) = 0;
