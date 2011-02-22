@@ -219,13 +219,14 @@ ifeq ($(platform),darwin)
 		ar = i686-apple-darwin8-ar
 		ranlib = i686-apple-darwin8-ranlib
 		strip = i686-apple-darwin8-strip
-		extra-cflags = -I$(JAVA_HOME)/include/linux
+		sysroot = /opt/mac/SDKs/MacOSX10.4u.sdk
+		cflags = -I$(sysroot)/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Headers/ \
+			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	else
+		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 		build-lflags += -framework CoreFoundation
 	endif
 
-	build-cflags = $(common-cflags) $(extra-cflags) -fPIC -fvisibility=hidden \
-		-I$(src)
 	version-script-flag =
 	lflags = $(common-lflags) -ldl -framework CoreFoundation \
 		-framework CoreServices
