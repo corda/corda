@@ -33,6 +33,14 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
         }
     });
   }
+
+  public TreeSet(Collection<? extends T> collection) {
+    this();
+
+    for (T item: collection) {
+      add(item);
+    }
+  }
   
   public Iterator<T> iterator() {
     return new MyIterator<T>(set.first());

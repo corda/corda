@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -56,9 +56,6 @@ isSpecialMethod(Thread* t, object method, object class_)
     and isSuperclass(t, methodClass(t, method), class_);
 }
 
-void*
-resolveNativeMethod(Thread* t, object method);
-
 inline void
 populateMultiArray(Thread* t, object array, int32_t* counts,
                    unsigned index, unsigned dimensions)
@@ -77,7 +74,8 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
          &byteArrayBody(t, spec, 1),
          byteArrayLength(t, spec) - 1);
 
-  object class_ = resolveSystemClass(t, elementSpec);
+  object class_ = resolveClass
+    (t, classLoader(t,  objectClass(t, array)), elementSpec);
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {
@@ -88,6 +86,9 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
     populateMultiArray(t, a, counts, index + 1, dimensions);
   }
 }
+
+void
+resolveNative(Thread* t, object method);
 
 int
 findLineNumber(Thread* t, object method, unsigned ip);

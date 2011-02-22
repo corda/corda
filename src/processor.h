@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -128,7 +128,7 @@ class Processor {
                 DelayedPromise** addresses, object method) = 0;
 
   virtual void
-  visitRoots(HeapWalker* w) = 0;
+  visitRoots(Thread* t, HeapWalker* w) = 0;
 
   virtual unsigned*
   makeCallTable(Thread* t, HeapWalker* w) = 0;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -59,6 +59,16 @@ typedef uint64_t uintptr_t;
 #    error "unsupported architecture"
 #  endif
 
+namespace vm {
+
+inline intptr_t&
+alias(void* p, unsigned offset)
+{
+  return *reinterpret_cast<intptr_t*>(static_cast<uint8_t*>(p) + offset);
+}
+
+} // namespace vm
+
 #else // not _MSC_VER
 
 #  include "stdint.h"
@@ -85,6 +95,17 @@ typedef uint64_t uintptr_t;
 #  else
 #    error "unsupported architecture"
 #  endif
+
+namespace vm {
+
+typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
+inline intptr_alias_t&
+alias(void* p, unsigned offset)
+{
+  return *reinterpret_cast<intptr_alias_t*>(static_cast<uint8_t*>(p) + offset);
+}
+
+} // namespace vm
 
 #endif // not _MSC_VER
 
@@ -132,7 +153,7 @@ typedef uint64_t uintptr_t;
 #endif
 
 #ifdef __APPLE__
-#  define SO_SUFFIX ".jnilib"
+#  define SO_SUFFIX ".dylib"
 #elif defined PLATFORM_WINDOWS
 #  define SO_SUFFIX ".dll"
 #else
@@ -142,6 +163,16 @@ typedef uint64_t uintptr_t;
 #define MACRO_XY(X, Y) X##Y
 #define MACRO_MakeNameXY(FX, LINE) MACRO_XY(FX, LINE)
 #define MAKE_NAME(FX) MACRO_MakeNameXY(FX, __LINE__)
+
+#define RESOURCE(type, name, release)                                   \
+  class MAKE_NAME(Resource_) {                                          \
+  public:                                                               \
+    MAKE_NAME(Resource_)(type name): name(name) { }                     \
+    ~MAKE_NAME(Resource_)() { release; }                                \
+                                                                        \
+  private:                                                              \
+    type name;                                                          \
+  } MAKE_NAME(resource_)(name);
 
 inline void* operator new(size_t, void* p) throw() { return p; }
 
@@ -301,67 +332,98 @@ log(unsigned n)
   return r;
 }
 
+template <class T>
 inline unsigned
 wordOf(unsigned i)
 {
-  return i / BitsPerWord;
+  return i / (sizeof(T) * 8);
+}
+
+inline unsigned
+wordOf(unsigned i)
+{
+  return wordOf<uintptr_t>(i);
+}
+
+template <class T>
+inline unsigned
+bitOf(unsigned i)
+{
+  return i % (sizeof(T) * 8);
 }
 
 inline unsigned
 bitOf(unsigned i)
 {
-  return i % BitsPerWord;
+  return bitOf<uintptr_t>(i);
+}
+
+template <class T>
+inline unsigned
+indexOf(unsigned word, unsigned bit)
+{
+  return (word * (sizeof(T) * 8)) + bit;
 }
 
 inline unsigned
 indexOf(unsigned word, unsigned bit)
 {
-  return (word * BitsPerWord) + bit;
+  return indexOf<uintptr_t>(word, bit);
 }
 
+template <class T>
 inline void
-markBit(uintptr_t* map, unsigned i)
+markBit(T* map, unsigned i)
 {
-  map[wordOf(i)] |= static_cast<uintptr_t>(1) << bitOf(i);
+  map[wordOf<T>(i)] |= static_cast<T>(1) << bitOf<T>(i);
 }
 
+template <class T>
 inline void
-clearBit(uintptr_t* map, unsigned i)
+clearBit(T* map, unsigned i)
 {
-  map[wordOf(i)] &= ~(static_cast<uintptr_t>(1) << bitOf(i));
+  map[wordOf<T>(i)] &= ~(static_cast<T>(1) << bitOf<T>(i));
 }
 
+template <class T>
 inline unsigned
-getBit(uintptr_t* map, unsigned i)
+getBit(T* map, unsigned i)
 {
-  return (map[wordOf(i)] & (static_cast<uintptr_t>(1) << bitOf(i)))
-    >> bitOf(i);
+  return (map[wordOf<T>(i)] & (static_cast<T>(1) << bitOf<T>(i)))
+    >> bitOf<T>(i);
 }
 
+// todo: the following (clearBits, setBits, and getBits) could be made
+// more efficient by operating on a word at a time instead of a bit at
+// a time:
+
+template <class T>
 inline void
-clearBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+clearBits(T* map, unsigned bitsPerRecord, unsigned index)
 {
   for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
-    clearBit(map, i);
+    clearBit<T>(map, i);
   }
 }
 
+template <class T>
 inline void
-setBits(uintptr_t* map, unsigned bitsPerRecord, int index, unsigned v)
+setBits(T* map, unsigned bitsPerRecord, int index, unsigned v)
 {
   for (int i = index + bitsPerRecord - 1; i >= index; --i) {
-    if (v & 1) markBit(map, i); else clearBit(map, i);
+    if (v & 1) markBit<T>(map, i); else clearBit<T>(map, i);
     v >>= 1;
   }
 }
 
+template <class T>
 inline unsigned
-getBits(uintptr_t* map, unsigned bitsPerRecord, unsigned index)
+getBits(T* map, unsigned bitsPerRecord, unsigned index)
 {
   unsigned v = 0;
   for (unsigned i = index, limit = index + bitsPerRecord; i < limit; ++i) {
     v <<= 1;
-    v |= getBit(map, i);
+    v |= getBit<T>(map, i);
   }
   return v;
 }
@@ -463,6 +525,16 @@ inline void
 replace(char a, char b, char* c)
 {
   for (; *c; ++c) if (*c == a) *c = b;
+}
+
+inline void
+replace(char a, char b, char* dst, const char* src)
+{
+  unsigned i = 0;
+  for (; src[i]; ++ i) {
+    dst[i] = src[i] == a ? b : src[i];
+  }
+  dst[i] = 0;
 }
 
 class Machine;

@@ -71,4 +71,10 @@ public abstract class Stream {
             (b5 << 24) | (b6 << 16) | (b7 << 8) | (b8));
   }
 
+  public static void set4(byte[] array, int offset, int v) {
+    array[offset    ] = (byte) ((v >>> 24) & 0xFF);
+    array[offset + 1] = (byte) ((v >>> 16) & 0xFF);
+    array[offset + 2] = (byte) ((v >>>  8) & 0xFF);
+    array[offset + 3] = (byte) ((v       ) & 0xFF);
+  }
 }

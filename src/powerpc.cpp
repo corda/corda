@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -191,13 +191,15 @@ class MyBlock: public Assembler::Block {
 
 class Task;
 class ConstantPoolEntry;
+class JumpPromise;
 
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
     firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), constantPool(0), constantPoolCount(0)
+    lastBlock(firstBlock), constantPool(0), jumps(0), constantPoolCount(0),
+    jumpCount(0)
   { }
 
   System* s;
@@ -209,7 +211,9 @@ class Context {
   MyBlock* firstBlock;
   MyBlock* lastBlock;
   ConstantPoolEntry* constantPool;
+  JumpPromise* jumps;
   unsigned constantPoolCount;
+  unsigned jumpCount;
 };
 
 class Task {
@@ -310,6 +314,38 @@ offset(Context* c)
 {
   return new (c->zone->allocate(sizeof(Offset)))
     Offset(c, c->lastBlock, c->code.length());
+}
+
+class JumpPromise: public Promise {
+ public:
+  JumpPromise(Context* c, uintptr_t target):
+    c(c), target(target), next(c->jumps), index(c->jumpCount++)
+  {
+    c->jumps = this;
+  }
+
+  virtual bool resolved() {
+    return c->result != 0;
+  }
+  
+  virtual int64_t value() {
+    assert(c, resolved());
+
+    return reinterpret_cast<intptr_t>
+      (c->result + c->code.length() + (index * BytesPerWord));
+  }
+
+  Context* c;
+  uintptr_t target;
+  JumpPromise* next;
+  unsigned index;
+};
+
+Promise*
+jump(Context* c, uintptr_t target)
+{
+  return new (c->zone->allocate(sizeof(JumpPromise)))
+    JumpPromise(c, target);
 }
 
 bool
@@ -659,7 +695,6 @@ class ConstantPoolEntry: public Promise {
   Promise* constant;
   ConstantPoolEntry* next;
   void* address;
-  unsigned constantPoolCount;
 };
 
 ConstantPoolEntry*
@@ -1678,62 +1713,6 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
-jumpIfEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, beq(0));
-}
-
-void
-jumpIfNotEqualC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bne(0));
-}
-
-void
-jumpIfGreaterC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bgt(0));
-}
-
-void
-jumpIfGreaterOrEqualC(Context* c, unsigned size UNUSED,
-                      Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, bge(0));
-}
-
-void
-jumpIfLessC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, blt(0));
-}
-
-void
-jumpIfLessOrEqualC(Context* c, unsigned size UNUSED,
-                   Assembler::Constant* target)
-{
-  assert(c, size == BytesPerWord);
-
-  appendOffsetTask(c, target->value, offset(c), true);
-  emit(c, ble(0));
-}
-
-void
 return_(Context* c)
 {
   emit(c, blr());
@@ -1747,6 +1726,60 @@ memoryBarrier(Context* c)
 
 // END OPERATION COMPILERS
 
+unsigned
+argumentFootprint(unsigned footprint)
+{
+  return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+}
+
+void
+nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
+          unsigned footprint, void* link, void*,
+          unsigned targetParameterFootprint, void** ip, void** stack)
+{
+  assert(c, *ip >= start);
+  assert(c, *ip <= start + (size / BytesPerWord));
+
+  int32_t* instruction = static_cast<int32_t*>(*ip);
+
+  if ((*start >> 26) == 32) {
+    // skip stack overflow check
+    start += 3;
+  }
+
+  if (instruction <= start + 2
+      or *instruction == lwz(0, 1, 8)
+      or *instruction == mtlr(0)
+      or *instruction == blr())
+  {
+    *ip = link;
+    return;
+  }
+
+  unsigned offset = footprint;
+
+  if (TailCalls) {
+    if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
+      offset += argumentFootprint(targetParameterFootprint)
+        - StackAlignmentInWords;
+    }
+
+    // check for post-non-tail-call stack adjustment of the form "lwzx
+    // r0,0(r1); stwu r0,offset(r1)":
+    if (instruction < start + (size / BytesPerWord) - 1
+        and (static_cast<uint32_t>(instruction[1]) >> 16) == 0x9421)
+    {
+      offset += static_cast<int16_t>(instruction[1]);
+    } else if ((static_cast<uint32_t>(*instruction) >> 16) == 0x9421) {
+      offset += static_cast<int16_t>(*instruction);
+    }
+
+    // todo: check for and handle tail calls
+  }
+
+  *ip = static_cast<void**>(*stack)[offset + 2];
+  *stack = static_cast<void**>(*stack) + offset;
+}
 
 void
 populateTables(ArchitectureContext* c)
@@ -1903,7 +1936,11 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
+    return ::argumentFootprint(footprint);
+  }
+
+  virtual bool argumentAlignment() {
+    return false;
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -1972,6 +2009,15 @@ class MyArchitecture: public Assembler::Architecture {
     return (ceiling(sizeInWords + FrameFooterSize, alignment) * alignment);
   }
 
+  virtual void nextFrame(void* start, unsigned size, unsigned footprint,
+                         void* link, void* stackLimit,
+                         unsigned targetParameterFootprint, void** ip,
+                         void** stack)
+  {
+    ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, link,
+                stackLimit, targetParameterFootprint, ip, stack);
+  }
+
   virtual void* frameIp(void* stack) {
     return stack ? static_cast<void**>(stack)[2] : 0;
   }
@@ -1994,12 +2040,6 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual int framePointerOffset() {
     return 0;
-  }
-
-  virtual void nextFrame(void** stack, void**) {
-    assert(&c, *static_cast<void**>(*stack) != *stack);
-
-    *stack = *static_cast<void**>(*stack);
   }
 
   virtual BinaryOperation hasBinaryIntrinsic(Thread*, object) {
@@ -2123,7 +2163,13 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Divide:
     case Remainder:
-      if (BytesPerWord == 4 and aSize == 8) {
+      // todo: we shouldn't need to defer to thunks for integers which
+      // are smaller than or equal to tne native word size, but
+      // PowerPC doesn't generate traps for divide by zero, so we'd
+      // need to do the checks ourselves.  Using an inline check
+      // should be faster than calling an out-of-line thunk, but the
+      // thunk is easier, so they's what we do for now.
+      if (true) {//if (BytesPerWord == 4 and aSize == 8) {
         *thunk = true;        
       } else {
         *aTypeMask = (1 << RegisterOperand);
@@ -2197,7 +2243,23 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned) {
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread)
+  {
+    Register stack(StackRegister);
+    Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
+    Constant handlerConstant(jump(&c, handler));
+    branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
+             &handlerConstant);
+  }
+
+  virtual void saveFrame(unsigned stackOffset) {
+    Register returnAddress(0);
+    emit(&c, mflr(returnAddress.low));
+
+    Memory returnAddressDst(StackRegister, 8);
+    moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
+
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
@@ -2256,16 +2318,16 @@ class MyAssembler: public Assembler {
     moveAndUpdateRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
   }
 
-  virtual void adjustFrame(unsigned footprint) {
+  virtual void adjustFrame(unsigned difference) {
     Register nextStack(0);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &nextStack);
 
-    Memory stackDst(StackRegister, -footprint * BytesPerWord);
+    Memory stackDst(StackRegister, -difference * BytesPerWord);
     moveAndUpdateRM(&c, BytesPerWord, &nextStack, BytesPerWord, &stackDst);
   }
 
-  virtual void popFrame() {
+  virtual void popFrame(unsigned) {
     Register stack(StackRegister);
     Memory stackSrc(StackRegister, 0);
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
@@ -2312,15 +2374,17 @@ class MyAssembler: public Assembler {
           moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
         }
       } else {
-        popFrame();
+        popFrame(footprint);
       }
     } else {
       abort(&c);
     }
   }
 
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint) {
-    popFrame();
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
+  {
+    popFrame(frameFootprint);
 
     assert(&c, argumentFootprint >= StackAlignmentInWords);
     assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
@@ -2339,9 +2403,10 @@ class MyAssembler: public Assembler {
     return_(&c);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   {
-    popFrame();
+    popFrame(frameFootprint);
 
     Register tmp1(0);
     Memory stackSrc(StackRegister, 0);
@@ -2405,12 +2470,20 @@ class MyAssembler: public Assembler {
 
   virtual void writeTo(uint8_t* dst) {
     c.result = dst;
-    
+
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       memcpy(dst + b->start, c.code.data + b->offset, b->size);
     }
+
+    for (JumpPromise* j = c.jumps; j; j = j->next) {
+      uint8_t* instruction
+        = dst + c.code.length() + (c.jumpCount - j->index - 1);
+      int32_t op = ::b(0);
+      memcpy(instruction, &op, BytesPerWord);
+      updateOffset(c.s, instruction, false, j->target);
+    }
     
-    unsigned index = c.code.length();
+    unsigned index = c.code.length() + (c.jumpCount * BytesPerWord);
     assert(&c, index % BytesPerWord == 0);
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
       e->address = dst + index;
@@ -2427,7 +2500,7 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual Promise* offset() {
+  virtual Promise* offset(bool) {
     return ::offset(&c);
   }
 
@@ -2443,12 +2516,16 @@ class MyAssembler: public Assembler {
     return b;
   }
 
+  virtual void endEvent() {
+    // ignore
+  }
+
   virtual unsigned length() {
     return c.code.length();
   }
 
-  virtual unsigned scratchSize() {
-    return c.constantPoolCount * BytesPerWord;
+  virtual unsigned footerSize() {
+    return (c.jumpCount + c.constantPoolCount) * BytesPerWord;
   }
 
   virtual void dispose() {

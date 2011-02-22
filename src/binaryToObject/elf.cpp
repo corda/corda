@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -232,7 +232,7 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   fileHeader.e_entry = 0;
   fileHeader.e_phoff = 0;
   fileHeader.e_shoff = sizeof(FileHeader);
-  fileHeader.e_flags = 0;
+  fileHeader.e_flags = (machine == EM_ARM ? 0x04000000 : 0);
   fileHeader.e_ehsize = sizeof(FileHeader);
   fileHeader.e_phentsize = 0;
   fileHeader.e_phnum = 0;

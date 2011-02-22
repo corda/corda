@@ -31,6 +31,7 @@ public class PrintStream extends OutputStream {
   public synchronized void print(String s) {
     try {
       out.write(s.getBytes());
+      if (autoFlush) flush();
     } catch (IOException e) { }
   }
 
@@ -38,8 +39,32 @@ public class PrintStream extends OutputStream {
     print(String.valueOf(o));
   }
 
+  public void print(boolean v) {
+    print(String.valueOf(v));
+  }
+
   public void print(char c) {
     print(String.valueOf(c));
+  }
+
+  public void print(int v) {
+    print(String.valueOf(v));
+  }
+
+  public void print(long v) {
+    print(String.valueOf(v));
+  }
+
+  public void print(float v) {
+    print(String.valueOf(v));
+  }
+
+  public void print(double v) {
+    print(String.valueOf(v));
+  }
+
+  public void print(char[] s) {
+    print(String.valueOf(s));
   }
 
   public synchronized void println(String s) {
@@ -61,8 +86,32 @@ public class PrintStream extends OutputStream {
     println(String.valueOf(o));
   }
 
+  public void println(boolean v) {
+    println(String.valueOf(v));
+  }
+
   public void println(char c) {
     println(String.valueOf(c));
+  }
+
+  public void println(int v) {
+    println(String.valueOf(v));
+  }
+
+  public void println(long v) {
+    println(String.valueOf(v));
+  }
+
+  public void println(float v) {
+    println(String.valueOf(v));
+  }
+
+  public void println(double v) {
+    println(String.valueOf(v));
+  }
+
+  public void println(char[] s) {
+    println(String.valueOf(s));
   }
   
   public void write(int c) throws IOException {

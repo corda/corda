@@ -1,4 +1,16 @@
 public class Misc {
+  private interface Bar {
+    public int baz();
+  }
+
+  private static abstract class Bim implements Bar { }
+
+  private static class Baz extends Bim {
+    public int baz() {
+      return 42;
+    }
+  }
+
   private static int alpha;
   private static int beta;
   private static byte byte1, byte2, byte3;
@@ -92,7 +104,31 @@ public class Misc {
     return (o == null ? default_ : o);
   }
 
+  private static class Zam {
+    public void bim() { }
+  }
+
+  private static class Zim {
+    public Object zum() {
+      return null;
+    }
+  }
+
+  private static Zim zim = new Zim();
+
+  private static void zam() {
+    Zam z;
+    while ((z = (Zam) zim.zum()) != null) {
+      z.bim();
+    }
+  }
+
   public static void main(String[] args) {
+    zam();
+
+    Bim bim = new Baz();
+    expect(bim.baz() == 42);
+
     expect(queryDefault(new Object()) != null);
 
     { Foo foo = new Foo();
@@ -189,5 +225,15 @@ public class Misc {
         } while (x != 1);
       }
     }
+
+    System.out.println(new java.util.Date().toString());
+
+    System.out.println('x');
+    System.out.println(true);
+    System.out.println(42);
+    System.out.println(123456789012345L);
+    System.out.println(75.62);
+    System.out.println(75.62d);
+    System.out.println(new char[] { 'h', 'i' });
   }
 }

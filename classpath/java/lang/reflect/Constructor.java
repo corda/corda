@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -12,9 +12,7 @@ package java.lang.reflect;
 
 import java.lang.annotation.Annotation;
 
-public class Constructor<T> extends AccessibleObject
-  implements Member, GenericDeclaration
-{
+public class Constructor<T> extends AccessibleObject implements Member {
   private Method<T> method;
 
   public Constructor(Method<T> method) {
@@ -42,20 +40,12 @@ public class Constructor<T> extends AccessibleObject
     return method.getParameterTypes();
   }
 
-  public Class[] getExceptionTypes() {
-    return method.getExceptionTypes();
-  }
-
   public int getModifiers() {
     return method.getModifiers();
   }
 
   public String getName() {
     return method.getName();
-  }
-
-  public boolean isSynthetic() {
-    return method.isSynthetic();
   }
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
@@ -70,21 +60,13 @@ public class Constructor<T> extends AccessibleObject
     return method.getDeclaredAnnotations();
   }
 
-  public TypeVariable<Constructor<T>>[] getTypeParameters() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Type[] getGenericParameterTypes() {
-    return method.getGenericParameterTypes();
-  }
-
-  private static native <T> T make(Class<T> c);
+  private static native Object make(avian.VMClass c);
 
   public T newInstance(Object ... arguments)
     throws InvocationTargetException, InstantiationException,
     IllegalAccessException
   {
-    T v = make(method.getDeclaringClass());
+    T v = (T) make(method.getDeclaringClass().vmClass);
     method.invoke(v, arguments);
     return v;
   }

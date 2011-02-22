@@ -4,24 +4,24 @@ Quick Start
 on Linux:
  $ export JAVA_HOME=/usr/local/java # or wherever you have the JDK installed
  $ make
- $ build/linux-i386/avian -cp build/test Hello
+ $ build/linux-i386/avian -cp build/linux-i386/test Hello
 
 on Mac OS X:
  $ export JAVA_HOME=/Library/Java/Home
  $ make
- $ build/darwin-i386/avian -cp build/test Hello
+ $ build/darwin-i386/avian -cp build/darwin-i386/test Hello
  
 on Windows (MSYS):
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
 on Windows (Cygwin):
  $ git clone git://oss.readytalk.com/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
- $ build/windows-i386/avian -cp build/test Hello
+ $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
 Adjust JAVA_HOME according to your system, but be sure to use forward
 slashes in the path.
@@ -51,7 +51,7 @@ Supported Platforms
 
 Avian can currently target the following platforms:
 
-  Linux (i386 and x86_64)
+  Linux (i386, x86_64 and ARM)
   Windows (i386 and x86_64)
   Mac OS X (i386, x86_64 and 32-bit PowerPC)
 
@@ -62,7 +62,7 @@ Building
 Build requirements include:
 
   * GNU make 3.80 or later
-  * GCC 3.4 or later (4.5 or later for Windows/x86_64)
+  * GCC 3.4 or later (4.5.1 or later for Windows/x86_64)
   * JDK 1.5 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
@@ -73,10 +73,17 @@ been tested.
 The build is directed by a single makefile and may be influenced via
 certain flags described below, all of which are optional.
 
- $ make platform={linux,windows,darwin} arch={i386,x86_64,powerpc} \
-     process={compile,interpret} mode={debug,debug-fast,fast,small} \
-     bootimage={true,false} heapdump={true,false} tails={true,false} \
-     continuations={true,false}
+ $ make \
+     platform={linux,windows,darwin} \
+     arch={i386,x86_64,powerpc,arm} \
+     process={compile,interpret} \
+     mode={debug,debug-fast,fast,small} \
+     bootimage={true,false} \
+     heapdump={true,false} \
+     tails={true,false} \
+     continuations={true,false} \
+     openjdk=<openjdk installation directory> \
+     openjdk-src=<openjdk source directory>
 
   * platform - the target platform
       default: output of $(uname -s | tr [:upper:] [:lower:]),
@@ -118,6 +125,18 @@ certain flags described below, all of which are optional.
     dynamicWind.  See Continuations.java for details.  This option is
     only valid for process=compile builds.
       default: false
+
+  * openjdk - if set, use OpenJDK class library instead of the default
+    Avian class library.  See "Building with the OpenJDK Class
+    Library" below for details.
+      default: not set
+
+  * openjdk-src - if this and the openjdk option above are both set,
+    build an embeddable VM using the OpenJDK class library.  The JNI
+    components of the OpenJDK class library will be built from the
+    sources found under the specified directory.  See "Building with
+    the OpenJDK Class Library" below for details.
+      default: not set
 
 These flags determine the name of the directory used for the build.
 The name always starts with ${platform}-${arch}, and each non-default
@@ -168,7 +187,7 @@ C++ portions of the VM, while the assembly code and helper tools are
 built using GCC.
 
 The MSVC build has been tested with Visual Studio Express Edition
-versions 8 and 9.  Other versions may also work.
+versions 8, 9, and 10.  Other versions may also work.
 
 To build with MSVC, install Cygwin as described above and set the
 following environment variables:
@@ -191,25 +210,57 @@ Finally, build with the msvc flag set to the MSVC tool directory:
  $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
 
 
-Building with GNU Classpath
----------------------------
-
- ** Please note that this feature is still under development and is
-    neither complete nor well-tested. **
+Building with the OpenJDK Class Library
+---------------------------------------
 
 By default, Avian uses its own lightweight class library.  However,
 that library only contains a relatively small subset of the classes
 and methods included in the JRE.  If your application requires
-features beyond that subset, you may want to tell Avian to use GNU
-Classpath instead.  To do so, specify the directory where Classpath is
-installed, e.g.:
+features beyond that subset, you may want to tell Avian to use
+OpenJDK's class library instead.  To do so, specify the directory
+where OpenJDK is installed, e.g.:
 
- $ make clean
- $ make gnu=/usr/local/classpath-0.98
+ $ make openjdk=/usr/lib/jvm/java-6-openjdk
 
-This build will use the classes and native code from Classpath, except
-that certain core classes are replaced with implementations from the
-Avian class library for compatibility with the VM.
+This will build Avian as a conventional JVM (e.g. libjvm.so) which
+loads its boot class library and native libraries (e.g. libjava.so)
+from /usr/lib/jvm/java-6-openjdk/jre at runtime.  To run an
+application in this configuration, you'll need to make sure the VM is
+in your library search path.  For example:
+
+ $ LD_LIBRARY_PATH=build/linux-x86_64-openjdk \
+     build/linux-x86_64-openjdk/avian-dynamic -cp /path/to/my/application \
+     com.example.MyApplication
+
+Alternatively, you can enable a stand-alone build using OpenJDK by
+specifying the location of the OpenJDK source code, e.g.:
+
+ $ make openjdk=$(pwd)/../jdk6/build/linux-amd64/j2sdk-image \
+     openjdk-src=$(pwd)/../jdk6/jdk/src
+
+You must ensure that the path specified for openjdk-src does not have
+any spaces in it; make gets confused when dependency paths include
+spaces, and we haven't found away around that except to avoid paths
+with spaces entirely.
+
+The result of such a build is a self-contained binary which does not
+depend on external libraries, jars, or other files.  In this case, the
+specified paths are used only at build time; anything needed at
+runtime is embedded in the binary.  Thus, the process of running an
+application is simplified:
+
+ $ build/linux-x86_64-openjdk-src/avian -cp /path/to/my/application \
+     com.example.MyApplication
+
+Note that the resulting binary will be very large due to the size of
+OpenJDK's class library.  This can be mitigated using UPX, preferably
+an LZMA-enabled version:
+
+ $ upx --lzma --best build/linux-x86_64-openjdk-src/avian
+
+You can reduce the size futher for embedded builds by using ProGuard
+and the supplied openjdk.pro configuration file (see "Embedding with
+ProGuard and a Boot Image" below).
 
 
 Installing
@@ -237,7 +288,7 @@ VM object files and bootstrap classpath jar.
  $ mkdir hello
  $ cd hello
  $ ar x ../build/${platform}-${arch}/libavian.a
- $ cp ../build/classpath.jar boot.jar
+ $ cp ../build/${platform}-${arch}/classpath.jar boot.jar
 
 Step 2: Build the Java code and add it to the jar.
 
@@ -259,17 +310,21 @@ Step 3: Make an object file out of the jar.
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to
 get a handle to the embedded jar.  We tell the VM about this jar by
-setting the classpath to "[bootJar]".
+setting the boot classpath to "[bootJar]".
 
  $ cat >main.cpp <<EOF
 #include "stdint.h"
 #include "jni.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
-#  define SYMBOL(x) binary_boot_jar_##x
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
+#endif
+
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#  define SYMBOL(x) binary_boot_jar_##x
+#else
 #  define SYMBOL(x) _binary_boot_jar_##x
 #endif
 
@@ -298,7 +353,7 @@ main(int ac, const char** av)
   JavaVMOption options[vmArgs.nOptions];
   vmArgs.options = options;
 
-  options[0].optionString = const_cast<char*>("-Djava.class.path=[bootJar]");
+  options[0].optionString = const_cast<char*>("-Xbootclasspath:[bootJar]");
 
   JavaVM* vm;
   void* env;
@@ -391,7 +446,10 @@ For boot image builds:
    space in the executable than the equivalent class files.  In
    practice, this can make the executable 30-50% larger.  Also, AOT
    compilation does not yet yield significantly faster or smaller code
-   than JIT compilation.
+   than JIT compilation.  Finally, floating point code may be slower
+   on 32-bit x86 since the compiler cannot assume SSE2 support will be
+   available at runtime, and the x87 FPU is not supported except via
+   out-of-line helper functions.
 
 Note you can use ProGuard without using a boot image and vice-versa,
 as desired.
@@ -411,7 +469,7 @@ Step 2: Create a stage1 directory and extract the contents of the
 class library jar into it.
 
  $ mkdir stage1
- $ (cd stage1 && jar xf ../../build/classpath.jar)
+ $ (cd stage1 && jar xf ../../build/linux-i386-bootimage/classpath.jar)
 
 Step 3: Build the Java code and add it to stage1.
 
@@ -435,7 +493,7 @@ EOF
 
 Step 5: Run ProGuard with stage1 as input and stage2 as output.
 
- $ java -jar ../../proguard4.4/lib/proguard.jar \
+ $ java -jar ../../proguard4.6/lib/proguard.jar \
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
 (note: pass -dontusemixedcaseclassnames to ProGuard when building on
@@ -447,10 +505,10 @@ Step 6: Build the boot image.
 
 Step 7: Make an object file out of the boot image.
 
- $ ../build/${platform}-${arch}/binaryToObject \
+ $ ../build/linux-i386-bootimage/binaryToObject \
      bootimage.bin bootimage-bin.o \
      _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     ${platform} ${arch} 8 writable executable
+     linux i386 8 writable executable
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
@@ -466,11 +524,15 @@ containing them.  See the previous example for instructions.
 #include "stdint.h"
 #include "jni.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
-#  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
+#endif
+
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
+#else
 #  define BOOTIMAGE_BIN(x) _binary_bootimage_bin_##x
 #endif
 
@@ -545,3 +607,12 @@ executable, and optionally strip its symbols.
 
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
  $ strip --strip-all hello
+
+
+Trademarks
+----------
+
+Oracle and Java are registered trademarks of Oracle and/or its
+affiliates.  Other names may be trademarks of their respective owners.
+
+The Avian project is not affiliated with Oracle.

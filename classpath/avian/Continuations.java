@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -53,8 +53,8 @@ import java.util.concurrent.Callable;
  * causes the current continuation to be replaced with the calling
  * continuation.  When the last method in this new continuation
  * returns, it returns to the native frame which created the current
- * context, which may not be the same as the context in which that
- * continuation was created.
+ * context, which may or may not be the same as the context in which
+ * that continuation was created.
  *
  * <p>We define the return type of a continuation context as the
  * return type of the first method called in that context.  A
@@ -128,7 +128,7 @@ public class Continuations {
    * <code>receiver.receive(Callback)</code>, propagate the exception
    * thrown by that method, return the result passed to the
    * handleResult(T) method of the continuation, or throw the
-   * exception passed to the handleException(Throwable) of the
+   * exception passed to the handleException(Throwable) method of the
    * continuation.
    */
   public static native <T> T callWithCurrentContinuation

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -23,6 +23,38 @@ using namespace vm;
 
 namespace {
 
+const unsigned HeapCapacity = 768 * 1024 * 1024;
+
+// Notes on immutable references in the heap image:
+//
+// One of the advantages of a bootimage-based build is that reduces
+// the overhead of major GCs at runtime since we can avoid scanning
+// the pre-built heap image entirely.  However, this only works if we
+// can ensure that no part of the heap image (with exceptions noted
+// below) ever points to runtime-allocated objects.  Therefore (most)
+// references in the heap image are considered immutable, and any
+// attempt to update them at runtime will cause the process to abort.
+//
+// However, some references in the heap image really must be updated
+// at runtime: e.g. the static field table for each class.  Therefore,
+// we allocate these as "fixed" objects, subject to mark-and-sweep
+// collection, instead of as "copyable" objects subject to copying
+// collection.  This strategy avoids the necessity of maintaining
+// "dirty reference" bitsets at runtime for the entire heap image;
+// each fixed object has its own bitset specific to that object.
+//
+// In addition to the "fixed" object solution, there are other
+// strategies available to avoid attempts to update immutable
+// references at runtime:
+//
+//  * Table-based: use a lazily-updated array or vector to associate
+//    runtime data with heap image objects (see
+//    e.g. getClassRuntimeData in machine.cpp).
+//
+//  * Update references at build time: for example, we set the names
+//    of primitive classes before generating the heap image so that we
+//    need not populate them lazily at runtime.
+
 bool
 endsWith(const char* suffix, const char* s, unsigned length)
 {
@@ -44,7 +76,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
   DelayedPromise* addresses = 0;
 
-  for (Finder::Iterator it(t->m->finder); it.hasMore();) {
+  for (Finder::Iterator it
+         (static_cast<Finder*>
+          (systemClassLoaderFinder(t, root(t, Machine::BootLoader))));
+       it.hasMore();)
+  {
     unsigned nameSize = 0;
     const char* name = it.next(&nameSize);
 
@@ -53,30 +89,59 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     {
 //       fprintf(stderr, "%.*s\n", nameSize - 6, name);
       object c = resolveSystemClass
-        (t, makeByteArray(t, "%.*s", nameSize - 6, name));
-
-      if (t->exception) return 0;
+        (t, root(t, Machine::BootLoader),
+         makeByteArray(t, "%.*s", nameSize - 6, name), true);
 
       PROTECT(t, c);
 
       if (classMethodTable(t, c)) {
         for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
           object method = arrayBody(t, classMethodTable(t, c), i);
-          if ((methodCode(t, method) or (methodFlags(t, method) & ACC_NATIVE))
-              and ((methodName == 0
+          if (((methodName == 0
+                or ::strcmp
+                (reinterpret_cast<char*>
+                 (&byteArrayBody
+                  (t, vm::methodName(t, method), 0)), methodName) == 0)
+               and (methodSpec == 0
                     or ::strcmp
                     (reinterpret_cast<char*>
                      (&byteArrayBody
-                      (t, vm::methodName(t, method), 0)), methodName) == 0)
-                   and (methodSpec == 0
-                        or ::strcmp
-                        (reinterpret_cast<char*>
-                         (&byteArrayBody
-                          (t, vm::methodSpec(t, method), 0)), methodSpec)
-                        == 0)))
+                      (t, vm::methodSpec(t, method), 0)), methodSpec)
+                    == 0)))
           {
-            t->m->processor->compileMethod
-              (t, zone, &constants, &calls, &addresses, method);
+            if (methodCode(t, method)
+                or (methodFlags(t, method) & ACC_NATIVE))
+            {
+              PROTECT(t, method);
+
+              t->m->processor->compileMethod
+                (t, zone, &constants, &calls, &addresses, method);
+            }
+
+            object addendum = methodAddendum(t, method);
+            if (addendum and methodAddendumExceptionTable(t, addendum)) {
+              PROTECT(t, addendum);
+
+              // resolve exception types now to avoid trying to update
+              // immutable references at runtime
+              for (unsigned i = 0; i < shortArrayLength
+                     (t, methodAddendumExceptionTable(t, addendum)); ++i)
+              {
+                uint16_t index = shortArrayBody
+                  (t, methodAddendumExceptionTable(t, addendum), i) - 1;
+
+                object o = singletonObject
+                  (t, addendumPool(t, addendum), index);
+
+                if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
+                  o = resolveClass
+                    (t, root(t, Machine::BootLoader), referenceName(t, o));
+    
+                  set(t, addendumPool(t, addendum),
+                      SingletonBody + (index * BytesPerWord), o);
+                }
+              }
+            }
           }
         }
       }
@@ -89,7 +154,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (methodFlags(t, method) & ACC_NATIVE) {
       address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
-      address = methodCompiled(t, method);
+      address = codeCompiled(t, methodCode(t, method));
     }
 
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
@@ -101,7 +166,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     assert(t, value >= code);
 
     void* location;
-    bool flat = addresses->listener->resolve(0, &location);
+    bool flat = addresses->listener->resolve
+      (reinterpret_cast<int64_t>(code), &location);
     uintptr_t offset = value - code;
     if (flat) {
       offset |= BootFlatConstant;
@@ -131,14 +197,17 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 {
   Machine* m = t->m;
 
-  for (HashMapIterator it(t, m->classMap); it.hasMore();) {
+  for (HashMapIterator it(t, classLoaderMap(t, root(t, Machine::BootLoader)));
+       it.hasMore();)
+  {
     w->visitRoot(tripleSecond(t, it.next()));
   }
 
-  image->loader = w->visitRoot(m->loader);
+  image->bootLoader = w->visitRoot(root(t, Machine::BootLoader));
+  image->appLoader = w->visitRoot(root(t, Machine::AppLoader));
   image->types = w->visitRoot(m->types);
 
-  m->processor->visitRoots(w);
+  m->processor->visitRoots(t, w);
 
   for (; constants; constants = tripleThird(t, constants)) {
     w->visitRoot(tripleFirst(t, constants));
@@ -177,9 +246,17 @@ makeHeapImage(Thread* t, BootImage* image, uintptr_t* heap, uintptr_t* map,
         unsigned size = objectSize(t, p);
 
         unsigned number;
-        if (currentObject
-            and (currentOffset * BytesPerWord) == ClassStaticTable)
+        if ((currentObject
+             and (currentOffset * BytesPerWord) == ClassStaticTable)
+            or instanceOf(t, type(t, Machine::SystemClassLoaderType), p))
         {
+          // Static tables and system classloaders must be allocated
+          // as fixed objects in the heap image so that they can be
+          // marked as dirty and visited during GC.  Otherwise,
+          // attempts to update references in these objects to point
+          // to runtime-allocated memory would fail because we don't
+          // scan non-fixed objects in the heap image during GC.
+
           FixedAllocator allocator
             (t->m->system, reinterpret_cast<uint8_t*>(heap + position),
              (capacity - position) * BytesPerWord);
@@ -279,9 +356,9 @@ offset(object a, uintptr_t* b)
 }
 
 void
-writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
-               unsigned codeCapacity, const char* className,
-               const char* methodName, const char* methodSpec)
+writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
+                unsigned codeCapacity, const char* className,
+                const char* methodName, const char* methodSpec)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -292,44 +369,119 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
   object constants = makeCodeImage
     (t, &zone, image, code, codeMap, className, methodName, methodSpec);
 
-  if (t->exception) return;
-
   PROTECT(t, constants);
 
-  const unsigned HeapCapacity = 32 * 1024 * 1024;
+  // this map will not be used when the bootimage is loaded, so
+  // there's no need to preserve it:
+  setRoot(t, Machine::ByteArrayMap, makeWeakHashMap(t, 0, 0));
+
+  // name all primitive classes so we don't try to update immutable
+  // references at runtime:
+  { object name = makeByteArray(t, "void");
+    set(t, type(t, Machine::JvoidType), ClassName, name);
+    
+    name = makeByteArray(t, "boolean");
+    set(t, type(t, Machine::JbooleanType), ClassName, name);
+
+    name = makeByteArray(t, "byte");
+    set(t, type(t, Machine::JbyteType), ClassName, name);
+
+    name = makeByteArray(t, "short");
+    set(t, type(t, Machine::JshortType), ClassName, name);
+
+    name = makeByteArray(t, "char");
+    set(t, type(t, Machine::JcharType), ClassName, name);
+
+    name = makeByteArray(t, "int");
+    set(t, type(t, Machine::JintType), ClassName, name);
+
+    name = makeByteArray(t, "float");
+    set(t, type(t, Machine::JfloatType), ClassName, name);
+
+    name = makeByteArray(t, "long");
+    set(t, type(t, Machine::JlongType), ClassName, name);
+
+    name = makeByteArray(t, "double");
+    set(t, type(t, Machine::JdoubleType), ClassName, name);
+  }
+
+  // resolve primitive array classes in case they are needed at
+  // runtime:
+  { object name = makeByteArray(t, "[B");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[Z");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[S");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[C");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[I");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[J");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[F");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+
+    name = makeByteArray(t, "[D");
+    resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+  }
+
+  collect(t, Heap::MajorCollection);
+
   uintptr_t* heap = static_cast<uintptr_t*>
     (t->m->heap->allocate(HeapCapacity));
   uintptr_t* heapMap = static_cast<uintptr_t*>
     (t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
-  // this map will not be used when the bootimage is loaded, so
-  // there's no need to preserve it:
-  t->m->byteArrayMap = makeWeakHashMap(t, 0, 0);
-
-  collect(t, Heap::MajorCollection);
-
   HeapWalker* heapWalker = makeHeapImage
     (t, image, heap, heapMap, HeapCapacity, constants);
 
   updateConstants(t, constants, code, codeMap, heapWalker->map());
 
-  image->classCount = hashMapSize(t, t->m->classMap);
-  unsigned* classTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image->classCount * sizeof(unsigned)));
+  image->bootClassCount = hashMapSize
+    (t, classLoaderMap(t, root(t, Machine::BootLoader)));
+
+  unsigned* bootClassTable = static_cast<unsigned*>
+    (t->m->heap->allocate(image->bootClassCount * sizeof(unsigned)));
 
   { unsigned i = 0;
-    for (HashMapIterator it(t, t->m->classMap); it.hasMore();) {
-      classTable[i++] = heapWalker->map()->find(tripleSecond(t, it.next()));
+    for (HashMapIterator it
+           (t, classLoaderMap(t, root(t, Machine::BootLoader)));
+         it.hasMore();)
+    {
+      bootClassTable[i++] = heapWalker->map()->find
+        (tripleSecond(t, it.next()));
     }
   }
 
-  image->stringCount = hashMapSize(t, t->m->stringMap);
+  image->appClassCount = hashMapSize
+    (t, classLoaderMap(t, root(t, Machine::AppLoader)));
+
+  unsigned* appClassTable = static_cast<unsigned*>
+    (t->m->heap->allocate(image->appClassCount * sizeof(unsigned)));
+
+  { unsigned i = 0;
+    for (HashMapIterator it
+           (t, classLoaderMap(t, root(t, Machine::AppLoader)));
+         it.hasMore();)
+    {
+      appClassTable[i++] = heapWalker->map()->find(tripleSecond(t, it.next()));
+    }
+  }
+
+  image->stringCount = hashMapSize(t, root(t, Machine::StringMap));
   unsigned* stringTable = static_cast<unsigned*>
     (t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
 
   { unsigned i = 0;
-    for (HashMapIterator it(t, t->m->stringMap); it.hasMore();) {
+    for (HashMapIterator it(t, root(t, Machine::StringMap)); it.hasMore();) {
       stringTable[i++] = heapWalker->map()->find
         (jreferenceTarget(t, tripleFirst(t, it.next())));
     }
@@ -344,17 +496,19 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 
   fprintf(stderr, "class count %d string count %d call count %d\n"
           "heap size %d code size %d\n",
-          image->classCount, image->stringCount, image->callCount,
+          image->bootClassCount, image->stringCount, image->callCount,
           image->heapSize, image->codeSize);
 
   if (true) {
     fwrite(image, sizeof(BootImage), 1, out);
 
-    fwrite(classTable, image->classCount * sizeof(unsigned), 1, out);
+    fwrite(bootClassTable, image->bootClassCount * sizeof(unsigned), 1, out);
+    fwrite(appClassTable, image->appClassCount * sizeof(unsigned), 1, out);
     fwrite(stringTable, image->stringCount * sizeof(unsigned), 1, out);
     fwrite(callTable, image->callCount * sizeof(unsigned) * 2, 1, out);
 
-    unsigned offset = (image->classCount * sizeof(unsigned))
+    unsigned offset = (image->bootClassCount * sizeof(unsigned))
+      + (image->appClassCount * sizeof(unsigned))
       + (image->stringCount * sizeof(unsigned))
       + (image->callCount * sizeof(unsigned) * 2);
 
@@ -372,6 +526,23 @@ writeBootImage(Thread* t, FILE* out, BootImage* image, uint8_t* code,
   }
 }
 
+uint64_t
+writeBootImage(Thread* t, uintptr_t* arguments)
+{
+  FILE* out = reinterpret_cast<FILE*>(arguments[0]);
+  BootImage* image = reinterpret_cast<BootImage*>(arguments[1]);
+  uint8_t* code = reinterpret_cast<uint8_t*>(arguments[2]);
+  unsigned codeCapacity = arguments[3];
+  const char* className = reinterpret_cast<const char*>(arguments[4]);
+  const char* methodName = reinterpret_cast<const char*>(arguments[5]);
+  const char* methodSpec = reinterpret_cast<const char*>(arguments[6]);
+
+  writeBootImage2
+    (t, out, image, code, codeCapacity, className, methodName, methodSpec);
+
+  return 1;
+}
+
 } // namespace
 
 int
@@ -384,16 +555,18 @@ main(int ac, const char** av)
   }
 
   System* s = makeSystem(0);
-  Heap* h = makeHeap(s, 128 * 1024 * 1024);
-  Finder* f = makeFinder(s, av[1], 0);
+  Heap* h = makeHeap(s, HeapCapacity * 2);
+  Classpath* c = makeClasspath(s, h, AVIAN_JAVA_HOME, AVIAN_EMBED_PREFIX);
+  Finder* f = makeFinder(s, h, av[1], 0);
   Processor* p = makeProcessor(s, h, false);
 
   BootImage image;
-  const unsigned CodeCapacity = 16 * 1024 * 1024;
+  const unsigned CodeCapacity = 128 * 1024 * 1024;
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   p->initialize(&image, code, CodeCapacity);
 
-  Machine* m = new (h->allocate(sizeof(Machine))) Machine(s, h, f, p, 0, 0);
+  Machine* m = new (h->allocate(sizeof(Machine))) Machine
+    (s, h, f, 0, p, c, 0, 0);
   Thread* t = p->makeThread(m, 0, 0);
   
   enter(t, Thread::ActiveState);
@@ -405,15 +578,22 @@ main(int ac, const char** av)
     return -1;
   }
 
-  writeBootImage
-    (t, output, &image, code, CodeCapacity,
-     (ac > 3 ? av[3] : 0), (ac > 4 ? av[4] : 0), (ac > 5 ? av[5] : 0));
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(output),
+                            reinterpret_cast<uintptr_t>(&image),
+                            reinterpret_cast<uintptr_t>(code),
+                            CodeCapacity,
+                            reinterpret_cast<uintptr_t>(ac > 3 ? av[3] : 0),
+                            reinterpret_cast<uintptr_t>(ac > 4 ? av[4] : 0),
+                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0) };
+
+  run(t, writeBootImage, arguments);
 
   fclose(output);
 
   if (t->exception) {
     printTrace(t, t->exception);
+    return -1;
+  } else {
+    return 0;
   }
-
-  return 0;
 }

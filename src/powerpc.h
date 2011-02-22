@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -14,20 +14,39 @@
 #include "types.h"
 #include "common.h"
 
+#define VA_LIST(x) (&(x))
+
 #ifdef __APPLE__
-#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#    define IP_REGISTER(context) (context->uc_mcontext->__ss.__srr0)
-#    define STACK_REGISTER(context) (context->uc_mcontext->__ss.__r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__r13)
+#  include "mach/mach_types.h"
+#  include "mach/ppc/thread_act.h"
+#  include "mach/ppc/thread_status.h"
+
+#  define THREAD_STATE PPC_THREAD_STATE
+#  define THREAD_STATE_TYPE ppc_thread_state_t
+#  define THREAD_STATE_COUNT PPC_THREAD_STATE_COUNT
+
+#  if __DARWIN_UNIX03 && defined(_STRUCT_PPC_EXCEPTION_STATE)
+#    define FIELD(x) __##x
 #  else
-#    define IP_REGISTER(context) (context->uc_mcontext->ss.srr0)
-#    define STACK_REGISTER(context) (context->uc_mcontext->ss.r1)
-#    define THREAD_REGISTER(context) (context->uc_mcontext->ss.r13)
+#    define FIELD(x) x
 #  endif
+
+#  define THREAD_STATE_IP(state) ((state).FIELD(srr0))
+#  define THREAD_STATE_STACK(state) ((state).FIELD(r1))
+#  define THREAD_STATE_THREAD(state) ((state).FIELD(r13))
+#  define THREAD_STATE_LINK(state) ((state).FIELD(lr))
+
+#  define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#  define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#  define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#  define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+
 #else
-#  define IP_REGISTER(context) (context->uc_mcontext.gregs[32])
-#  define STACK_REGISTER(context) (context->uc_mcontext.gregs[1])
-#  define THREAD_REGISTER(context) (context->uc_mcontext.gregs[13])
+#  error "non-Apple PowerPC-based platforms not yet supported"
 #endif
 
 extern "C" uint64_t

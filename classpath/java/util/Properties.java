@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -14,10 +14,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.IOException;
+import java.io.Reader;
 
 public class Properties extends Hashtable {
   public void load(InputStream in) throws IOException {
-    new Parser().parse(in, this);
+    new InputStreamParser(in).parse(this);
+  }
+  
+  public void load(Reader reader) throws IOException {
+    new ReaderParser(reader).parse(this);
   }
 
   public void store(OutputStream out, String comment) throws IOException {
@@ -48,8 +53,12 @@ public class Properties extends Hashtable {
   public Object setProperty(String key, String value) {
     return put(key, value);
   }
+  
+  public Enumeration<?> propertyNames() {
+    return keys();
+  }
 
-  private static class Parser {
+  private abstract static class Parser {
     private StringBuilder key = null;
     private StringBuilder value = null;
     private StringBuilder current = null;
@@ -75,13 +84,15 @@ public class Properties extends Hashtable {
       key = value = current = null;
     }
 
-    private void parse(InputStream in, Map map)
+    abstract int readCharacter() throws IOException;
+    
+    void parse(Map map)
       throws IOException
     {
       boolean escaped = false;
 
       int c;
-      while ((c = in.read()) != -1) {
+      while ((c = readCharacter()) != -1) {
         if (c == '\\') {
           if (escaped) {
             escaped = false;
@@ -94,7 +105,7 @@ public class Properties extends Hashtable {
           case '#':
           case '!':
             if (key == null) {
-              while ((c = in.read()) != -1 && c != '\n');
+              while ((c = readCharacter()) != -1 && c != '\n');
             } else {
               append(c);
             }
@@ -162,4 +173,32 @@ public class Properties extends Hashtable {
       finishLine(map);
     }
   }
+  
+  static class InputStreamParser extends Parser {
+    InputStream in;
+    
+    
+    public InputStreamParser(InputStream in) {
+      this.in = in;
+    }
+
+    @Override
+    int readCharacter() throws IOException {
+      return in.read();
+    }
+  }
+
+  static class ReaderParser extends Parser {
+    Reader in;
+    
+    public ReaderParser(Reader in) {
+      this.in = in;
+    }
+
+    @Override
+    int readCharacter() throws IOException {
+      return in.read();
+    }
+  }
+
 }

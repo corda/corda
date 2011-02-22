@@ -1,6 +1,8 @@
 import java.util.Comparator;
 import java.util.TreeSet;
 import java.util.TreeMap;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Iterator;
 
@@ -87,5 +89,13 @@ public class Tree {
     map.put("y", "Y");
 
     isEqual(printMap(map), "a=A, b=B, c=C, q=Q, y=Y, z=Z");
+
+    Collection<Integer> list = new ArrayList<Integer>();
+    list.add(7);
+    list.add(2);
+    list.add(9);
+    list.add(2);
+
+    isEqual(printList(new TreeSet<Integer>(list)), "2, 7, 9");
   }
 }

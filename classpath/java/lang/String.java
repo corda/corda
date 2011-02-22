@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -13,7 +13,6 @@ package java.lang;
 import java.io.UnsupportedEncodingException;
 import java.util.regex.Pattern;
 import java.util.Comparator;
-import java.util.Formatter;
 import java.util.Locale;
 import java.io.Serializable;
 import avian.Utf8;
@@ -236,19 +235,31 @@ public final class String
   }
 
   public String toLowerCase() {
-    char[] b = new char[length];
-    for (int i = 0; i < length; ++i) {
-      b[i] = Character.toLowerCase(charAt(i));
+    for (int j = 0; j < length; ++j) {
+      char ch = charAt(j);
+      if (Character.toLowerCase(ch) != ch) {
+        char[] b = new char[length];
+        for (int i = 0; i < length; ++i) {
+          b[i] = Character.toLowerCase(charAt(i));
+        }
+        return new String(b, 0, length, false);
+      }
     }
-    return new String(b, 0, length, false);
+    return this;
   }
 
   public String toUpperCase() {
-    char[] b = new char[length];
-    for (int i = 0; i < length; ++i) {
-      b[i] = Character.toUpperCase(charAt(i));
+    for (int j = 0; j < length; ++j) {
+      char ch = charAt(j);
+      if (Character.toUpperCase(ch) != ch) {
+        char[] b = new char[length];
+        for (int i = 0; i < length; ++i) {
+          b[i] = Character.toUpperCase(charAt(i));
+        }
+        return new String(b, 0, length, false);
+      }
     }
-    return new String(b, 0, length, false);
+    return this;
   }
 
   public int indexOf(int c) {
@@ -507,9 +518,7 @@ public final class String
   }
 
   public static String valueOf(int v) {
-    // use Integer.toString(int, int), because GNU Classpath's
-    // Integer.toString(int) just calls String.valueOf(int):
-    return Integer.toString(v, 10);
+    return Integer.toString(v);
   }
 
   public static String valueOf(long v) {
@@ -576,36 +585,19 @@ public final class String
     return Character.codePointCount(this, start, end);
   }
 
-  public String replace(CharSequence match, CharSequence replacement) {
-    throw new UnsupportedOperationException();
-  }
-
   public String toUpperCase(Locale locale) {
-    throw new UnsupportedOperationException();
+    if (locale == Locale.ENGLISH) {
+      return toUpperCase();
+    } else {
+      throw new UnsupportedOperationException("toUpperCase("+locale+')');
+    }
   }
 
   public String toLowerCase(Locale locale) {
-    throw new UnsupportedOperationException();
-  }
-
-  public static String format(Locale locale, String format, Object ... args) {
-    return new Formatter(locale).format(format, args).toString();
-  }
-
-  public static String format(String format, Object ... args) {
-    return format(Locale.getDefault(), format, args);
-  }
-
-  // for GNU Classpath compatibility:
-  static char[] zeroBasedStringValue(String s) {
-    if (s.offset == 0) {
-      if (s.data instanceof char[]) {
-        char[] data = (char[]) s.data;
-        if (data.length == s.length) {
-          return data;
-        }
-      }
+    if (locale == Locale.ENGLISH) {
+      return toLowerCase();
+    } else {
+      throw new UnsupportedOperationException("toLowerCase("+locale+')');
     }
-    return s.toCharArray();
   }
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -14,9 +14,12 @@
 #include "types.h"
 #include "common.h"
 
+#define VA_LIST(x) (&(x))
+
 #define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
 #define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
 #define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)
+#define LINK_REGISTER(context) (context->uc_mcontext.arm_lr)
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
@@ -27,7 +30,7 @@ namespace vm {
 inline void
 trap()
 {
-  asm("nop");
+  asm("bkpt");
 }
 
 inline void
@@ -55,9 +58,11 @@ loadMemoryBarrier()
 }
 
 inline void
-syncInstructionCache(const void* start UNUSED, unsigned size UNUSED)
+syncInstructionCache(const void* start, unsigned size)
 {
-  asm("nop");
+  __clear_cache
+    (const_cast<void*>(start),
+     const_cast<uint8_t*>(static_cast<const uint8_t*>(start) + size));
 }
 
 typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);
@@ -101,6 +106,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
         memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += 8 / BytesPerWord;
       } else {                                         // pass argument on stack
+        gprIndex = GprCount;
         if (stackIndex & 1) {                          // 8-byte alignment
           memset(stack + stackIndex, 0, 4);            // probably not necessary, but for good luck
           ++stackIndex;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -30,9 +30,62 @@
 
 #define ACQUIRE(t, x) MonitorResource MAKE_NAME(monitorResource_) (t, x)
 
+#define ACQUIRE_OBJECT(t, x) \
+  ObjectMonitorResource MAKE_NAME(monitorResource_) (t, x)
+
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
+
+#define THREAD_RESOURCE0(t, releaseBody)                                \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t): Resource(t) { }                    \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+  } MAKE_NAME(resource_)(t);
+
+#define OBJECT_RESOURCE(t, name, releaseBody)                           \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, object name):                       \
+      Resource(t), name(name), protector(t, &(this->name)) { }          \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    object name;                                                        \
+    Thread::SingleProtector protector;                                  \
+  } MAKE_NAME(resource_)(t, name);
+
+#define THREAD_RESOURCE(t, type, name, releaseBody)                     \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, type name):                         \
+      Resource(t), name(name) { }                                       \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    type name;                                                          \
+  } MAKE_NAME(resource_)(t, name);
+
+#define THREAD_RESOURCE2(t, type1, name1, type2, name2, releaseBody)    \
+  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  public:                                                               \
+    MAKE_NAME(Resource_)(Thread* t, type1 name1, type2 name2):          \
+      Resource(t), name1(name1), name2(name2) { }                       \
+    ~MAKE_NAME(Resource_)() { releaseBody; }                            \
+    virtual void release()                                              \
+    { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
+                                                                        \
+  private:                                                              \
+    type1 name1;                                                        \
+    type2 name2;                                                        \
+  } MAKE_NAME(resource_)(t, name1, name2);
 
 namespace vm {
 
@@ -52,6 +105,9 @@ const unsigned ThreadHeapSizeInWords = ThreadHeapSizeInBytes / BytesPerWord;
 const unsigned ThreadBackupHeapSizeInBytes = 2 * 1024;
 const unsigned ThreadBackupHeapSizeInWords
 = ThreadBackupHeapSizeInBytes / BytesPerWord;
+
+const unsigned StackSizeInBytes = 128 * 1024;
+const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
 
 const unsigned ThreadHeapPoolSize = 64;
 
@@ -97,7 +153,6 @@ const unsigned ContinuationFlag = 1 << 11;
 const unsigned ClassInitFlag = 1 << 0;
 const unsigned CompiledFlag = 1 << 1;
 const unsigned ConstructorFlag = 1 << 2;
-const unsigned FastNative = 1 << 3;
 
 #ifndef JNI_VERSION_1_6
 #define JNI_VERSION_1_6 0x00010006
@@ -1121,6 +1176,24 @@ struct JNIEnvVTable {
 #endif
 };
 
+inline void
+atomicOr(uint32_t* p, int v)
+{
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old | v);
+       old = *p)
+  { }
+}
+
+inline void
+atomicAnd(uint32_t* p, int v)
+{
+  for (uint32_t old = *p;
+       not atomicCompareAndSwap32(p, old, old & v);
+       old = *p)
+  { }
+}
+
 inline int
 strcmp(const int8_t* a, const int8_t* b)
 {
@@ -1151,6 +1224,8 @@ class Reference {
   unsigned count;
 };
 
+class Classpath;
+
 class Machine {
  public:
   enum Type {
@@ -1163,8 +1238,34 @@ class Machine {
     ImmortalAllocation
   };
 
-  Machine(System* system, Heap* heap, Finder* finder, Processor* processor,
-          const char** properties, unsigned propertyCount);
+  enum Root {
+    BootLoader,
+    AppLoader,
+    BootstrapClassMap,
+    FindLoadedClassMethod,
+    LoadClassMethod,
+    MonitorMap,
+    StringMap,
+    ByteArrayMap,
+    ClassRuntimeDataTable,
+    MethodRuntimeDataTable,
+    JNIMethodTable,
+    ShutdownHooks,
+    FinalizerThread,
+    ObjectsToFinalize,
+    NullPointerException,
+    ArithmeticException,
+    ArrayIndexOutOfBoundsException,
+    OutOfMemoryError,
+    VirtualFileFinders,
+    VirtualFiles
+  };
+
+  static const unsigned RootCount = VirtualFiles + 1;
+
+  Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
+          Processor* processor, Classpath* classpath, const char** properties,
+          unsigned propertyCount);
 
   ~Machine() { 
     dispose();
@@ -1176,8 +1277,10 @@ class Machine {
   System* system;
   Heap::Client* heapClient;
   Heap* heap;
-  Finder* finder;
+  Finder* bootFinder;
+  Finder* appFinder;
   Processor* processor;
+  Classpath* classpath;
   Thread* rootThread;
   Thread* exclusive;
   Thread* finalizeThread;
@@ -1195,26 +1298,16 @@ class Machine {
   System::Monitor* referenceLock;
   System::Monitor* shutdownLock;
   System::Library* libraries;
-  object loader;
-  object classMap;
-  object loadClassMethod;
-  object bootstrapClassMap;
-  object monitorMap;
-  object stringMap;
-  object byteArrayMap;
   object types;
-  object jniMethodTable;
+  object roots;
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;
   object weakReferences;
   object tenuredWeakReferences;
-  object shutdownHooks;
-  object objectsToFinalize;
-  object nullPointerException;
-  object arrayIndexOutOfBoundsException;
   bool unsafe;
   bool triedBuiltinOnLoad;
+  bool dumpedHeapOnOOM;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
@@ -1240,11 +1333,22 @@ inline void stress(Thread* t);
 
 #endif // not VM_STRESS
 
-void
-runJavaThread(Thread* t);
+uint64_t
+runThread(Thread*, uintptr_t*);
+
+uint64_t
+run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*),
+    uintptr_t* arguments);
 
 void
-runFinalizeThread(Thread* t);
+checkDaemon(Thread* t);
+
+extern "C" uint64_t
+vmRun(uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments,
+      void* checkpoint);
+
+extern "C" void
+vmRun_returnAddress();
 
 class Thread {
  public:
@@ -1257,6 +1361,14 @@ class Thread {
     ExclusiveState,
     ExitState
   };
+
+  static const unsigned UseBackupHeapFlag = 1 << 0;
+  static const unsigned WaitingFlag = 1 << 1;
+  static const unsigned TracingFlag = 1 << 2;
+  static const unsigned DaemonFlag = 1 << 3;
+  static const unsigned StressFlag = 1 << 4;
+  static const unsigned ActiveFlag = 1 << 5;
+  static const unsigned SystemFlag = 1 << 6;
 
   class Protector {
    public:
@@ -1285,9 +1397,26 @@ class Thread {
     object* p;
   };
 
-  class ClassInitStack {
+  class Resource {
+   public:
+    Resource(Thread* t): t(t), next(t->resource) {
+      t->resource = this;
+    }
+
+    ~Resource() {
+      t->resource = next;
+    }
+
+    virtual void release() = 0;
+
+    Thread* t;
+    Resource* next;
+  };
+
+  class ClassInitStack: public Resource {
    public:
     ClassInitStack(Thread* t, object class_):
+      Resource(t),
       next(t->classInitStack),
       class_(class_),
       protector(t, &(this->class_))
@@ -1296,12 +1425,58 @@ class Thread {
     }
 
     ~ClassInitStack() {
-      protector.t->classInitStack = next;
+      t->classInitStack = next;
+    }
+
+    virtual void release() {
+      this->ClassInitStack::~ClassInitStack();
     }
 
     ClassInitStack* next;
     object class_;
     SingleProtector protector;
+  };
+
+  class Checkpoint {
+   public:
+    Checkpoint(Thread* t):
+      t(t),
+      next(t->checkpoint),
+      resource(t->resource),
+      protector(t->protector),
+      noThrow(false)
+    {
+      t->checkpoint = this;
+    }
+
+    ~Checkpoint() {
+      t->checkpoint = next;
+    }
+
+    virtual void NO_RETURN unwind() = 0;
+
+    Thread* t;
+    Checkpoint* next;
+    Resource* resource;
+    Protector* protector;
+    bool noThrow;
+  };
+
+  class RunCheckpoint: public Checkpoint {
+   public:
+    RunCheckpoint(Thread* t):
+      Checkpoint(t),
+      stack(0)
+    { }
+
+    virtual void unwind() {
+      void* stack = this->stack;
+      this->stack = 0;
+      expect(t->m->system, stack);
+      vmJump(voidPointer(vmRun_returnAddress), 0, stack, t, 0, 0);
+    }
+
+    void* stack;
   };
 
   class Runnable: public System::Runnable {
@@ -1315,23 +1490,17 @@ class Thread {
     virtual void run() {
       enterActiveState(t);
 
-      t->m->localThread->set(t);
+      vm::run(t, runThread, 0);
 
-      if (t == t->m->finalizeThread) {
-        runFinalizeThread(t);
-      } else if (t->javaThread) {
-        runJavaThread(t);
-
-        if (t->exception) {
-          printTrace(t, t->exception);
-        }
+      if (t->exception) {
+        printTrace(t, t->exception);
       }
 
       t->exit();
     }
 
     virtual bool interrupted() {
-      return threadInterrupted(t, t->javaThread);
+      return t->javaThread and threadInterrupted(t, t->javaThread);
     }
 
     virtual void setInterrupted(bool v) {
@@ -1363,18 +1532,75 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   ClassInitStack* classInitStack;
+  Resource* resource;
+  Checkpoint* checkpoint;
   Runnable runnable;
   uintptr_t* defaultHeap;
   uintptr_t* heap;
   uintptr_t backupHeap[ThreadBackupHeapSizeInWords];
   unsigned backupHeapIndex;
-  bool useBackupHeap;
-  bool waiting;
-  bool tracing;
-#ifdef VM_STRESS
-  bool stress;
-#endif // VM_STRESS
+  unsigned flags;
 };
+
+class Classpath {
+ public:
+  virtual object
+  makeJclass(Thread* t, object class_) = 0;
+
+  virtual object
+  makeString(Thread* t, object array, int32_t offset, int32_t length) = 0;
+
+  virtual object
+  makeThread(Thread* t, Thread* parent) = 0;
+
+  virtual void
+  runThread(Thread* t) = 0;
+
+  virtual void
+  boot(Thread* t) = 0;
+
+  virtual const char*
+  bootClasspath() = 0;
+
+  virtual void
+  dispose() = 0;
+};
+
+#ifdef _MSC_VER
+
+template <class T>
+class ThreadRuntimeArray: public Thread::Resource {
+ public:
+  ThreadRuntimeArray(Thread* t, unsigned size):
+    Resource(t),
+    body(static_cast<T*>(t->m->heap->allocate(size * sizeof(T)))),
+    size(size)
+  { }
+
+  ~ThreadRuntimeArray() {
+    t->m->heap->free(body, size * sizeof(T));
+  }
+
+  virtual void release() {
+    ThreadRuntimeArray::~ThreadRuntimeArray();
+  }
+
+  T* body;
+  unsigned size;
+};
+
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size)        \
+  ThreadRuntimeArray<type> name(thread, size);
+
+#else // not _MSC_VER
+
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) type name[size];
+
+#endif // not _MSC_VER
+
+Classpath*
+makeClasspath(System* system, Allocator* allocator, const char* javaHome,
+              const char* embedPrefix);
 
 typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 
@@ -1393,16 +1619,21 @@ enterActiveState(Thread* t)
   enter(t, Thread::ActiveState);
 }
 
-class StateResource {
+class StateResource: public Thread::Resource {
  public:
-  StateResource(Thread* t, Thread::State state): t(t), oldState(t->state) {
+  StateResource(Thread* t, Thread::State state):
+    Resource(t), oldState(t->state)
+  {
     enter(t, state);
   }
 
   ~StateResource() { enter(t, oldState); }
 
+  virtual void release() {
+    this->StateResource::~StateResource();
+  }
+
  private:
-  Thread* t;
   Thread::State oldState;
 };
 
@@ -1441,20 +1672,20 @@ shutDown(Thread* t);
 inline void
 stress(Thread* t)
 {
-  if ((not t->stress)
-      and (not t->tracing)
+  if ((not t->m->unsafe)
+      and (t->flags & (Thread::StressFlag | Thread::TracingFlag)) == 0
       and t->state != Thread::NoState
       and t->state != Thread::IdleState)
   {
-    t->stress = true;
+    atomicOr(&(t->flags), Thread::StressFlag);
 
 #  ifdef VM_STRESS_MAJOR
-      collect(t, Heap::MajorCollection);
+    collect(t, Heap::MajorCollection);
 #  else // not VM_STRESS_MAJOR
-      collect(t, Heap::MinorCollection);
+    collect(t, Heap::MinorCollection);
 #  endif // not VM_STRESS_MAJOR
 
-    t->stress = false;
+    atomicAnd(&(t->flags), ~Thread::StressFlag);
   }
 }
 
@@ -1477,33 +1708,43 @@ release(Thread* t, System::Monitor* m)
   m->release(t->systemThread);
 }
 
-class MonitorResource {
+class MonitorResource: public Thread::Resource {
  public:
-  MonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+  MonitorResource(Thread* t, System::Monitor* m):
+    Resource(t), m(m)
+  {
     acquire(t, m);
   }
 
   ~MonitorResource() {
-    release(t, m);
+    vm::release(t, m);
+  }
+
+  virtual void release() {
+    this->MonitorResource::~MonitorResource();
   }
 
  private:
-  Thread* t;
   System::Monitor* m;
 };
 
-class RawMonitorResource {
+class RawMonitorResource: public Thread::Resource {
  public:
-  RawMonitorResource(Thread* t, System::Monitor* m): t(t), m(m) {
+  RawMonitorResource(Thread* t, System::Monitor* m):
+    Resource(t), m(m)
+  {
     m->acquire(t->systemThread);
   }
 
   ~RawMonitorResource() {
-    release(t, m);
+    vm::release(t, m);
+  }
+
+  virtual void release() {
+    this->RawMonitorResource::~RawMonitorResource();
   }
 
  private:
-  Thread* t;
   System::Monitor* m;
 };
 
@@ -1546,8 +1787,12 @@ class FixedAllocator: public Allocator {
     return p;
   }
 
-  virtual void free(const void*, unsigned) {
-    abort(s);
+  virtual void free(const void* p, unsigned size) {
+    if (p >= base and static_cast<const uint8_t*>(p) + size == base + offset) {
+      offset -= size;
+    } else {
+      abort(s);
+    }
   }
 
   System* s;
@@ -1563,9 +1808,9 @@ ensure(Thread* t, unsigned sizeInBytes)
       > ThreadHeapSizeInWords)
   {
     if (sizeInBytes <= ThreadBackupHeapSizeInBytes) {
-      expect(t, not t->useBackupHeap);
+      expect(t, (t->flags & Thread::UseBackupHeapFlag) == 0);
 
-      t->useBackupHeap = true;
+      atomicOr(&(t->flags), Thread::UseBackupHeapFlag);
 
       return true;
     } else {
@@ -1591,7 +1836,6 @@ allocateSmall(Thread* t, unsigned sizeInBytes)
 
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
   t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
-  cast<object>(o, 0) = 0;
   return o;
 }
 
@@ -1634,21 +1878,9 @@ setObjectClass(Thread*, object o, object value)
 {
   cast<object>(o, 0)
     = reinterpret_cast<object>
-    (reinterpret_cast<uintptr_t>(value)
-     | (reinterpret_cast<uintptr_t>(cast<object>(o, 0)) & (~PointerMask)));
-}
-
-inline Thread*
-startThread(Thread* t, object javaThread)
-{
-  Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
-
-  if (t->m->system->success(t->m->system->start(&(p->runnable)))) {
-    return p;
-  } else {
-    p->exit();
-    return 0;
-  }
+    (reinterpret_cast<intptr_alias_t>(value)
+     | (reinterpret_cast<intptr_alias_t>
+        (cast<object>(o, 0)) & (~PointerMask)));
 }
 
 inline const char*
@@ -1682,32 +1914,204 @@ instanceOf(Thread* t, object class_, object o);
 
 #include "type-declarations.cpp"
 
-inline object
-getClassLoaderMap(Thread* t, object loader)
+inline uint64_t
+runRaw(Thread* t,
+       uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments)
 {
-  if (loader == t->m->loader) {
-    return t->m->classMap;
-  } else {
-    return classLoaderMap(t, loader);
+  Thread::RunCheckpoint checkpoint(t);
+  return vmRun(function, arguments, &checkpoint);
+}
+
+inline uint64_t
+run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments)
+{
+  ENTER(t, Thread::ActiveState);
+  return runRaw(t, function, arguments);
+}
+
+inline void
+runJavaThread(Thread* t)
+{
+  t->m->classpath->runThread(t);
+}
+
+void
+runFinalizeThread(Thread* t);
+
+inline uint64_t
+runThread(Thread* t, uintptr_t*)
+{
+  t->m->localThread->set(t);
+
+  checkDaemon(t);
+
+  if (t == t->m->finalizeThread) {
+    runFinalizeThread(t);
+  } else if (t->javaThread) {
+    runJavaThread(t);
   }
+
+  return 1;
+}
+
+inline bool
+startThread(Thread* t, Thread* p)
+{
+  return t->m->system->success(t->m->system->start(&(p->runnable)));
+}
+
+inline void
+addThread(Thread* t, Thread* p)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, p->state == Thread::NoState);
+
+  p->state = Thread::IdleState;
+  ++ t->m->liveCount;
+
+  p->peer = p->parent->child;
+  p->parent->child = p;
+
+  if (p->javaThread) {
+    threadPeer(t, p->javaThread) = reinterpret_cast<jlong>(p);
+  }
+}
+
+inline void
+removeThread(Thread* t, Thread* p)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, p->state == Thread::IdleState);
+
+  -- t->m->liveCount;
+
+  t->m->stateLock->notifyAll(t->systemThread);
+
+  p->parent->child = p->peer;
+
+  if (p->javaThread) {
+    threadPeer(t, p->javaThread) = 0;
+  }
+}
+
+inline Thread*
+startThread(Thread* t, object javaThread)
+{
+  Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
+
+  addThread(t, p);
+
+  if (startThread(t, p)) {
+    return p;
+  } else {
+    removeThread(t, p);
+    return 0;
+  }
+}
+
+inline void
+registerDaemon(Thread* t)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  atomicOr(&(t->flags), Thread::DaemonFlag);
+
+  ++ t->m->daemonCount;
+        
+  t->m->stateLock->notifyAll(t->systemThread);
+}
+
+inline void
+checkDaemon(Thread* t)
+{
+  if (threadDaemon(t, t->javaThread)) {
+    registerDaemon(t);
+  }
+}
+
+inline uint64_t
+initAttachedThread(Thread* t, uintptr_t* arguments)
+{
+  bool daemon = arguments[0];
+
+  t->javaThread = t->m->classpath->makeThread(t, t->m->rootThread);
+
+  threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
+
+  if (daemon) {
+    threadDaemon(t, t->javaThread) = true;
+
+    registerDaemon(t);
+  }
+
+  t->m->localThread->set(t);
+
+  return 1;
+}
+
+inline Thread*
+attachThread(Machine* m, bool daemon)
+{
+  Thread* t = m->processor->makeThread(m, 0, m->rootThread);
+  m->system->attach(&(t->runnable));
+
+  addThread(t, t);
+
+  enter(t, Thread::ActiveState);
+
+  uintptr_t arguments[] = { daemon };
+
+  if (run(t, initAttachedThread, arguments)) {
+    enter(t, Thread::IdleState);
+    return t;
+  } else {
+    t->exit();
+    return 0;
+  }
+}
+
+inline object&
+root(Thread* t, Machine::Root root)
+{
+  return arrayBody(t, t->m->roots, root);
+}
+
+inline void
+setRoot(Thread* t, Machine::Root root, object value)
+{
+  set(t, t->m->roots, ArrayBody + (root * BytesPerWord), value);
+}
+
+inline object
+type(Thread* t, Machine::Type type)
+{
+  return arrayBody(t, t->m->types, type);
+}
+
+inline void
+setType(Thread* t, Machine::Type type, object value)
+{
+  set(t, t->m->types, ArrayBody + (type * BytesPerWord), value);
 }
 
 inline bool
 objectFixed(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == FixedMark;
+  return (alias(o, 0) & (~PointerMask)) == FixedMark;
 }
 
 inline bool
 objectExtended(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == ExtendedMark;
+  return (alias(o, 0) & (~PointerMask)) == ExtendedMark;
 }
 
 inline bool
 hashTaken(Thread*, object o)
 {
-  return (cast<uintptr_t>(o, 0) & (~PointerMask)) == HashTakenMark;
+  return (alias(o, 0) & (~PointerMask)) == HashTakenMark;
 }
 
 inline unsigned
@@ -1732,159 +2136,9 @@ makeTrace(Thread* t)
 }
 
 inline object
-makeRuntimeException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeRuntimeException(t, message, trace, 0);
-}
-
-inline object
-makeIllegalStateException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeIllegalStateException(t, message, trace, 0);
-}
-
-inline object
-makeIllegalArgumentException(Thread* t)
-{
-  return makeIllegalArgumentException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIllegalMonitorStateException(Thread* t)
-{
-  return makeIllegalMonitorStateException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIndexOutOfBoundsException(Thread* t)
-{
-  return makeIndexOutOfBoundsException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeArrayIndexOutOfBoundsException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeArrayIndexOutOfBoundsException(t, message, trace, 0);
-}
-
-inline object
-makeArrayStoreException(Thread* t)
-{
-  return makeArrayStoreException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeNegativeArraySizeException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNegativeArraySizeException(t, message, trace, 0);
-}
-
-inline object
-makeClassCastException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassCastException(t, message, trace, 0);
-}
-
-inline object
-makeClassNotFoundException(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeClassNotFoundException(t, message, trace, 0, 0);
-}
-
-inline object
-makeNullPointerException(Thread* t)
-{
-  return makeNullPointerException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeInvocationTargetException(Thread* t, object targetException)
-{
-  PROTECT(t, targetException);
-  object trace = makeTrace(t);
-  return makeRuntimeException(t, 0, trace, targetException);
-}
-
-inline object
-makeInterruptedException(Thread* t)
-{
-  return makeInterruptedException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeIncompatibleContinuationException(Thread* t)
-{
-  return makeIncompatibleContinuationException(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeStackOverflowError(Thread* t)
-{
-  return makeStackOverflowError(t, 0, makeTrace(t), 0);
-}
-
-inline object
-makeNoSuchFieldError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchFieldError(t, message, trace, 0);
-}
-
-inline object
-makeNoSuchMethodError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoSuchMethodError(t, message, trace, 0);
-}
-
-inline object
-makeNoClassDefFoundError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeNoClassDefFoundError(t, message, trace, 0);
-}
-
-inline object
-makeUnsatisfiedLinkError(Thread* t, object message)
-{
-  PROTECT(t, message);
-  object trace = makeTrace(t);
-  return makeUnsatisfiedLinkError(t, message, trace, 0);
-}
-
-inline object
-makeExceptionInInitializerError(Thread* t, object cause)
-{
-  PROTECT(t, cause);
-  object trace = makeTrace(t);
-  return makeExceptionInInitializerError(t, 0, trace, cause, cause);
-}
-
-inline object
-makeIncompatibleClassChangeError(Thread* t)
-{
-  return makeIncompatibleClassChangeError(t, 0, makeTrace(t), 0);
-}
-
-inline object
 makeNew(Thread* t, object class_)
 {
-  assert(t, t->state == Thread::ActiveState);
+  assert(t, t->state == Thread::NoState or t->state == Thread::ActiveState);
 
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(classFixedSize(t, class_));
@@ -1911,22 +2165,52 @@ make(Thread* t, object class_)
 }
 
 object
+makeByteArray(Thread* t, const char* format, va_list a);
+
+object
 makeByteArray(Thread* t, const char* format, ...);
 
 object
 makeString(Thread* t, const char* format, ...);
 
 int
-stringUTFLength(Thread* t, object string);
+stringUTFLength(Thread* t, object string, unsigned start, unsigned length);
+
+inline int
+stringUTFLength(Thread* t, object string)
+{
+  return stringUTFLength(t, string, 0, stringLength(t, string));
+}
 
 void
-stringChars(Thread* t, object string, char* chars);
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            char* chars);
+
+inline void
+stringChars(Thread* t, object string, char* chars)
+{
+  stringChars(t, string, 0, stringLength(t, string), chars);
+}
 
 void
-stringChars(Thread* t, object string, uint16_t* chars);
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            uint16_t* chars);
+
+inline void
+stringChars(Thread* t, object string, uint16_t* chars)
+{
+  stringChars(t, string, 0, stringLength(t, string), chars);
+}
 
 void
-stringUTFChars(Thread* t, object string, char* chars, unsigned length);
+stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
+               char* chars, unsigned charsLength);
+
+inline void
+stringUTFChars(Thread* t, object string, char* chars, unsigned charsLength)
+{
+  stringUTFChars(t, string, 0, stringLength(t, string), chars, charsLength);  
+}
 
 bool
 isAssignableFrom(Thread* t, object a, object b);
@@ -1958,7 +2242,7 @@ markHashTaken(Thread* t, object o)
 
   ACQUIRE_RAW(t, t->m->heapLock);
 
-  cast<uintptr_t>(o, 0) |= HashTakenMark;
+  alias(o, 0) |= HashTakenMark;
   t->m->heap->pad(o);
 }
 
@@ -2013,9 +2297,7 @@ stringHash(Thread* t, object s)
 {
   if (stringHashCode(t, s) == 0 and stringLength(t, s)) {
     object data = stringData(t, s);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
       stringHashCode(t, s) = hash
         (&byteArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
     } else {
@@ -2030,9 +2312,7 @@ inline uint16_t
 stringCharAt(Thread* t, object s, int i)
 {
   object data = stringData(t, s);
-  if (objectClass(t, data)
-      == arrayBody(t, t->m->types, Machine::ByteArrayType))
-  {
+  if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
     return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
     return charArrayBody(t, data, stringOffset(t, s) + i);
@@ -2149,7 +2429,7 @@ fieldSize(Thread* t, object field)
 }
 
 object
-findLoadedSystemClass(Thread* t, object spec);
+findLoadedClass(Thread* t, object loader, object spec);
 
 inline bool
 emptyMethod(Thread* t, object method)
@@ -2160,26 +2440,29 @@ emptyMethod(Thread* t, object method)
 }
 
 object
+parseUtf8(Thread* t, const char* data, unsigned length);
+
+object
 parseClass(Thread* t, object loader, const uint8_t* data, unsigned length);
 
 object
-resolveClass(Thread* t, object loader, object name);
+resolveClass(Thread* t, object loader, object name, bool throw_ = true);
 
 inline object
-resolveClass(Thread* t, object loader, const char* name)
+resolveClass(Thread* t, object loader, const char* name, bool throw_ = true)
 {
   PROTECT(t, loader);
   object n = makeByteArray(t, "%s", name);
-  return resolveClass(t, loader, n);
+  return resolveClass(t, loader, n, throw_);
 }
 
 object
-resolveSystemClass(Thread* t, object name);
+resolveSystemClass(Thread* t, object loader, object name, bool throw_ = true);
 
 inline object
-resolveSystemClass(Thread* t, const char* name)
+resolveSystemClass(Thread* t, object loader, const char* name)
 {
-  return resolveSystemClass(t, makeByteArray(t, "%s", name));
+  return resolveSystemClass(t, loader, makeByteArray(t, "%s", name));
 }
 
 void
@@ -2193,12 +2476,8 @@ inline object
 resolveMethod(Thread* t, object loader, const char* className,
               const char* methodName, const char* methodSpec)
 {
-  object class_ = resolveClass(t, loader, className);
-  if (LIKELY(t->exception == 0)) {
-    return resolveMethod(t, class_, methodName, methodSpec);
-  } else {
-    return 0;
-  }
+  return resolveMethod
+    (t, resolveClass(t, loader, className), methodName, methodSpec);
 }
 
 object
@@ -2209,16 +2488,9 @@ inline object
 resolveField(Thread* t, object loader, const char* className,
              const char* fieldName, const char* fieldSpec)
 {
-  object class_ = resolveClass(t, loader, className);
-  if (LIKELY(t->exception == 0)) {
-    return resolveField(t, class_, fieldName, fieldSpec);
-  } else {
-    return 0;
-  }
+  return resolveField
+    (t, resolveClass(t, loader, className), fieldName, fieldSpec);
 }
-
-object
-resolveObjectArrayClass(Thread* t, object loader, object elementSpec);
 
 bool
 classNeedsInit(Thread* t, object c);
@@ -2233,13 +2505,15 @@ void
 initClass(Thread* t, object c);
 
 object
-makeObjectArray(Thread* t, object loader, object elementClass, unsigned count);
+resolveObjectArrayClass(Thread* t, object loader, object elementClass);
+
+object
+makeObjectArray(Thread* t, object elementClass, unsigned count);
 
 inline object
 makeObjectArray(Thread* t, unsigned count)
 {
-  return makeObjectArray
-    (t, t->m->loader, arrayBody(t, t->m->types, Machine::JobjectType), count);
+  return makeObjectArray(t, type(t, Machine::JobjectType), count);
 }
 
 object
@@ -2255,29 +2529,148 @@ findFieldInClass(Thread* t, object class_, object name, object spec)
 }
 
 inline object
+findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
+{
+  PROTECT(t, class_);
+  object n = makeByteArray(t, "%s", name);
+  PROTECT(t, n);
+  object s = makeByteArray(t, "%s", spec);
+  return findFieldInClass(t, class_, n, s);
+}
+
+inline object
 findMethodInClass(Thread* t, object class_, object name, object spec)
 {
   return findInTable
     (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
 }
 
+inline object
+makeThrowable
+(Thread* t, Machine::Type type, object message = 0, object trace = 0,
+ object cause = 0)
+{
+  PROTECT(t, message);
+  PROTECT(t, trace);
+  PROTECT(t, cause);
+    
+  if (trace == 0) {
+    trace = makeTrace(t);
+  }
+
+  object result = make(t, vm::type(t, type));
+    
+  set(t, result, ThrowableMessage, message);
+  set(t, result, ThrowableTrace, trace);
+  set(t, result, ThrowableCause, cause);
+
+  return result;
+}
+
+inline object
+makeThrowable(Thread* t, Machine::Type type, const char* format, va_list a)
+{
+  object s = makeByteArray(t, format, a);
+
+  object message = t->m->classpath->makeString
+    (t, s, 0, byteArrayLength(t, s) - 1);
+
+  return makeThrowable(t, type, message);
+}
+
+inline object
+makeThrowable(Thread* t, Machine::Type type, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object r = makeThrowable(t, type, format, a);
+  va_end(a);
+
+  return r;
+}
+
+void
+popResources(Thread* t);
+
+inline void NO_RETURN
+throw_(Thread* t, object e)
+{
+  assert(t, t->exception == 0);
+
+  expect(t, not t->checkpoint->noThrow);
+
+  t->exception = e;
+
+  // printTrace(t, e);
+
+  popResources(t);
+
+  t->checkpoint->unwind();
+
+  abort(t);
+}
+
+inline void NO_RETURN
+throwNew
+(Thread* t, Machine::Type type, object message = 0, object trace = 0,
+ object cause = 0)
+{
+  throw_(t, makeThrowable(t, type, message, trace, cause));
+}
+
+inline void NO_RETURN
+throwNew(Thread* t, Machine::Type type, const char* format, ...)
+{
+  va_list a;
+  va_start(a, format);
+  object r = makeThrowable(t, type, format, a);
+  va_end(a);
+
+  throw_(t, r);
+}
+
 object
+findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
+                      object (*find)(Thread*, object, object, object));
+
+inline object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
-                object (*makeError)(Thread*, object));
+                Machine::Type errorType)
+{
+  object o = findInHierarchyOrNull(t, class_, name, spec, find);
+
+  if (o == 0) {
+    throwNew(t, errorType, "%s %s not found in %s",
+             &byteArrayBody(t, name, 0),
+             &byteArrayBody(t, spec, 0),
+             &byteArrayBody(t, className(t, class_), 0));
+  }
+
+  return o;
+}
 
 inline object
 findMethod(Thread* t, object class_, object name, object spec)
 {
   return findInHierarchy
-    (t, class_, name, spec, findMethodInClass, makeNoSuchMethodError);
+    (t, class_, name, spec, findMethodInClass, Machine::NoSuchMethodErrorType);
+}
+
+inline object
+findMethodOrNull(Thread* t, object class_, const char* name, const char* spec)
+{
+  PROTECT(t, class_);
+  object n = makeByteArray(t, "%s", name);
+  PROTECT(t, n);
+  object s = makeByteArray(t, "%s", spec);
+  return findInHierarchyOrNull(t, class_, n, s, findMethodInClass);
 }
 
 inline object
 findVirtualMethod(Thread* t, object method, object class_)
 {
-  return arrayBody(t, classVirtualTable(t, class_), 
-                   methodOffset(t, method));
+  return arrayBody(t, classVirtualTable(t, class_), methodOffset(t, method));
 }
 
 inline object
@@ -2289,8 +2682,8 @@ findInterfaceMethod(Thread* t, object method, object class_)
   object itable = classInterfaceTable(t, class_);
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
     if (arrayBody(t, itable, i) == interface) {
-      return arrayBody(t, arrayBody(t, itable, i + 1),
-                       methodOffset(t, method));
+      return arrayBody
+        (t, arrayBody(t, itable, i + 1), methodOffset(t, method));
     }
   }
   abort(t);
@@ -2320,6 +2713,36 @@ parameterFootprint(Thread* t, const char* s, bool static_);
 
 void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
+
+inline bool
+zombified(Thread* t)
+{
+  return t->state == Thread::ZombieState
+    or t->state == Thread::JoinedState;
+}
+
+inline bool
+acquireSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  if (not zombified(target)) {
+    atomicOr(&(target->flags), Thread::SystemFlag);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+inline void
+releaseSystem(Thread* t, Thread* target)
+{
+  ACQUIRE_RAW(t, t->m->stateLock);
+
+  assert(t, not zombified(target));
+
+  atomicAnd(&(target->flags), ~Thread::SystemFlag);
+}
 
 inline bool
 atomicCompareAndSwapObject(Thread* t, object target, unsigned offset,
@@ -2468,10 +2891,12 @@ monitorRelease(Thread* t, object monitor)
     
     Thread* next = monitorAtomicPollAcquire(t, monitor, false);
 
-    if (next) {
+    if (next and acquireSystem(t, next)) {
       ACQUIRE(t, next->lock);
        
       next->lock->notify(t->systemThread);
+
+      releaseSystem(t, next);
     }
   }
 }
@@ -2481,10 +2906,10 @@ monitorAppendWait(Thread* t, object monitor)
 {
   assert(t, monitorOwner(t, monitor) == t);
 
-  expect(t, not t->waiting);
+  expect(t, (t->flags & Thread::WaitingFlag) == 0);
   expect(t, t->waitNext == 0);
 
-  t->waiting = true;
+  atomicOr(&(t->flags), Thread::WaitingFlag);
 
   if (monitorWaitTail(t, monitor)) {
     static_cast<Thread*>(monitorWaitTail(t, monitor))->waitNext = t;
@@ -2517,7 +2942,7 @@ monitorRemoveWait(Thread* t, object monitor)
       }
 
       t->waitNext = 0;
-      t->waiting = false;
+      atomicAnd(&(t->flags), ~Thread::WaitingFlag);
 
       return;
     } else {
@@ -2572,7 +2997,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
   monitorDepth(t, monitor) = depth;
 
-  if (t->waiting) {
+  if (t->flags & Thread::WaitingFlag) {
     monitorRemoveWait(t, monitor);
   } else {
     expect(t, not monitorFindWait(t, monitor));
@@ -2592,7 +3017,7 @@ monitorPollWait(Thread* t, object monitor)
 
   if (next) {
     monitorWaitHead(t, monitor) = next->waitNext;
-    next->waiting = false;
+    atomicAnd(&(next->flags), ~Thread::WaitingFlag);
     next->waitNext = 0;
     if (next == monitorWaitTail(t, monitor)) {
       monitorWaitTail(t, monitor) = 0;
@@ -2630,6 +3055,21 @@ monitorNotifyAll(Thread* t, object monitor)
   while (monitorNotify(t, monitor)) { }
 }
 
+class ObjectMonitorResource {
+ public:
+  ObjectMonitorResource(Thread* t, object o): o(o), protector(t, &(this->o)) {
+    monitorAcquire(protector.t, o);
+  }
+
+  ~ObjectMonitorResource() {
+    monitorRelease(protector.t, o);
+  }
+
+ private:
+  object o;
+  Thread::SingleProtector protector;
+};
+
 object
 objectMonitor(Thread* t, object o, bool createNew);
 
@@ -2644,8 +3084,7 @@ acquire(Thread* t, object o)
   object m = objectMonitor(t, o, true);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p acquires %p for %x\n",
-            t, m, hash);
+    fprintf(stderr, "thread %p acquires %p for %x\n", t, m, hash);
   }
 
   monitorAcquire(t, m);
@@ -2662,8 +3101,7 @@ release(Thread* t, object o)
   object m = objectMonitor(t, o, false);
 
   if (DebugMonitors) {
-    fprintf(stderr, "thread %p releases %p for %x\n",
-            t, m, hash);
+    fprintf(stderr, "thread %p releases %p for %x\n", t, m, hash);
   }
 
   monitorRelease(t, m);
@@ -2690,10 +3128,10 @@ wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      t->exception = makeInterruptedException(t);
+      throwNew(t, Machine::InterruptedExceptionType);
     }
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 
   if (DebugMonitors) {
@@ -2722,7 +3160,7 @@ notify(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotify(t, m);
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
@@ -2739,32 +3177,16 @@ notifyAll(Thread* t, object o)
   if (m and monitorOwner(t, m) == t) {
     monitorNotifyAll(t, m);
   } else {
-    t->exception = makeIllegalMonitorStateException(t);
+    throwNew(t, Machine::IllegalMonitorStateExceptionType);
   }
 }
 
 inline void
-interrupt(Thread*, Thread* target)
+interrupt(Thread* t, Thread* target)
 {
-  target->systemThread->interrupt();
-}
-
-inline void
-setDaemon(Thread* t, object thread, bool daemon)
-{
-  ACQUIRE_RAW(t, t->m->stateLock);
-
-  if ((threadDaemon(t, thread) != 0) != daemon) {
-    threadDaemon(t, thread) = daemon;
-
-    if (daemon) {
-      ++ t->m->daemonCount;
-    } else {
-      expect(t, t->m->daemonCount);
-      -- t->m->daemonCount;
-    }
-    
-    t->m->stateLock->notifyAll(t->systemThread);
+  if (acquireSystem(t, target)) {
+    target->systemThread->interrupt();
+    releaseSystem(t, target);
   }
 }
 
@@ -2910,11 +3332,10 @@ resolveClassInObject(Thread* t, object loader, object container,
                      unsigned classOffset)
 {
   object o = cast<object>(container, classOffset);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
+  if (objectClass(t, o) == type(t, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
     o = resolveClass(t, loader, o);
-    if (UNLIKELY(t->exception)) return 0;
     
     set(t, container, classOffset, o);
   }
@@ -2925,11 +3346,10 @@ inline object
 resolveClassInPool(Thread* t, object loader, object method, unsigned index)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType)) {
+  if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
     PROTECT(t, method);
 
     o = resolveClass(t, loader, referenceName(t, o));
-    if (UNLIKELY(t->exception)) return 0;
     
     set(t, codePool(t, methodCode(t, method)),
         SingletonBody + (index * BytesPerWord), o);
@@ -2947,10 +3367,10 @@ resolveClassInPool(Thread* t, object method, unsigned index)
 inline object
 resolve(Thread* t, object loader, object method, unsigned index,
         object (*find)(vm::Thread*, object, object, object),
-        object (*makeError)(vm::Thread*, object))
+        Machine::Type errorType)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
-  if (objectClass(t, o) == arrayBody(t, t->m->types, Machine::ReferenceType))
+  if (objectClass(t, o) == type(t, Machine::ReferenceType))
   {
     PROTECT(t, method);
 
@@ -2958,12 +3378,10 @@ resolve(Thread* t, object loader, object method, unsigned index,
     PROTECT(t, reference);
 
     object class_ = resolveClassInObject(t, loader, o, ReferenceClass);
-    if (UNLIKELY(t->exception)) return 0;
     
     o = findInHierarchy
       (t, class_, referenceName(t, reference), referenceSpec(t, reference),
-       find, makeError);
-    if (UNLIKELY(t->exception)) return 0;
+       find, errorType);
     
     set(t, codePool(t, methodCode(t, method)),
         SingletonBody + (index * BytesPerWord), o);
@@ -2976,7 +3394,7 @@ inline object
 resolveField(Thread* t, object loader, object method, unsigned index)
 {
   return resolve(t, loader, method, index, findFieldInClass,
-                 makeNoSuchFieldError);
+                 Machine::NoSuchFieldErrorType);
 }
 
 inline object
@@ -2990,7 +3408,7 @@ inline object
 resolveMethod(Thread* t, object loader, object method, unsigned index)
 {
   return resolve(t, loader, method, index, findMethodInClass,
-                 makeNoSuchMethodError);
+                 Machine::NoSuchMethodErrorType);
 }
 
 inline object
@@ -3000,8 +3418,162 @@ resolveMethod(Thread* t, object method, unsigned index)
     (t, classLoader(t, methodClass(t, method)), method, index);
 }
 
+object
+vectorAppend(Thread*, object, object);
+
+inline object
+getClassRuntimeDataIfExists(Thread* t, object c)
+{
+  if (classRuntimeDataIndex(t, c)) {
+    return vectorBody(t, root(t, Machine::ClassRuntimeDataTable),
+                      classRuntimeDataIndex(t, c) - 1);
+  } else {
+    return 0;
+  }
+}
+
+inline object
+getClassRuntimeData(Thread* t, object c)
+{
+  if (classRuntimeDataIndex(t, c) == 0) {
+    PROTECT(t, c);
+
+    ACQUIRE(t, t->m->classLock);
+
+    if (classRuntimeDataIndex(t, c) == 0) {
+      object runtimeData = makeClassRuntimeData(t, 0, 0, 0, 0);
+
+      setRoot(t, Machine::ClassRuntimeDataTable, vectorAppend
+              (t, root(t, Machine::ClassRuntimeDataTable), runtimeData));
+
+      classRuntimeDataIndex(t, c) = vectorSize
+        (t, root(t, Machine::ClassRuntimeDataTable));
+    }
+  }
+
+  return vectorBody(t, root(t, Machine::ClassRuntimeDataTable),
+                    classRuntimeDataIndex(t, c) - 1);
+}
+
+inline object
+getMethodRuntimeData(Thread* t, object method)
+{
+  if (methodRuntimeDataIndex(t, method) == 0) {
+    PROTECT(t, method);
+
+    ACQUIRE(t, t->m->classLock);
+
+    if (methodRuntimeDataIndex(t, method) == 0) {
+      object runtimeData = makeMethodRuntimeData(t, 0);
+
+      setRoot(t, Machine::MethodRuntimeDataTable, vectorAppend
+              (t, root(t, Machine::MethodRuntimeDataTable), runtimeData));
+
+      methodRuntimeDataIndex(t, method) = vectorSize
+        (t, root(t, Machine::MethodRuntimeDataTable));
+    }
+  }
+
+  return vectorBody(t, root(t, Machine::MethodRuntimeDataTable),
+                    methodRuntimeDataIndex(t, method) - 1);
+}
+
+inline object
+getJClass(Thread* t, object c)
+{
+  PROTECT(t, c);
+
+  object jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+  if (jclass == 0) {
+    ACQUIRE(t, t->m->classLock);
+
+    jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+    if (jclass == 0) {
+      jclass = t->m->classpath->makeJclass(t, c);
+      
+      set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, jclass);
+    }
+  }
+
+  return jclass;
+}
+
+inline object
+primitiveClass(Thread* t, char name)
+{
+  switch (name) {
+  case 'B': return type(t, Machine::JbyteType);
+  case 'C': return type(t, Machine::JcharType);
+  case 'D': return type(t, Machine::JdoubleType);
+  case 'F': return type(t, Machine::JfloatType);
+  case 'I': return type(t, Machine::JintType);
+  case 'J': return type(t, Machine::JlongType);
+  case 'S': return type(t, Machine::JshortType);
+  case 'V': return type(t, Machine::JvoidType);
+  case 'Z': return type(t, Machine::JbooleanType);
+  default: throwNew(t, Machine::IllegalArgumentExceptionType);
+  }
+}
+  
+inline void
+registerNative(Thread* t, object method, void* function)
+{
+  PROTECT(t, method);
+
+  expect(t, methodFlags(t, method) & ACC_NATIVE);
+
+  object native = makeNative(t, function, false);
+  PROTECT(t, native);
+
+  object runtimeData = getMethodRuntimeData(t, method);
+
+  // ensure other threads only see the methodRuntimeDataNative field
+  // populated once the object it points to has been populated:
+  storeStoreMemoryBarrier();
+
+  set(t, runtimeData, MethodRuntimeDataNative, native);
+}
+
+inline void
+unregisterNatives(Thread* t, object c)
+{
+  if (classMethodTable(t, c)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+      object method = arrayBody(t, classMethodTable(t, c), i);
+      if (methodFlags(t, method) & ACC_NATIVE) {
+        set(t, getMethodRuntimeData(t, method), MethodRuntimeDataNative, 0);
+      }
+    }
+  }
+}
+
+object
+getCaller(Thread* t, unsigned target);
+
+object
+defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);
+
 void
 dumpHeap(Thread* t, FILE* out);
+
+inline object
+methodClone(Thread* t, object method)
+{
+  return makeMethod
+    (t, methodVmFlags(t, method),
+     methodReturnCode(t, method),
+     methodParameterCount(t, method),
+     methodParameterFootprint(t, method),
+     methodFlags(t, method),
+     methodOffset(t, method),
+     methodNativeID(t, method),
+     methodRuntimeDataIndex(t, method),
+     methodName(t, method),
+     methodSpec(t, method),
+     methodAddendum(t, method),
+     methodClass(t, method),
+     methodCode(t, method));
+}
 
 } // namespace vm
 

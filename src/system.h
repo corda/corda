@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -35,7 +35,7 @@ class System {
 
   class ThreadVisitor {
    public:
-    virtual void visit(void* ip, void* base, void* stack) = 0;
+    virtual void visit(void* ip, void* stack, void* link) = 0;
   };
 
   class Runnable {
@@ -87,9 +87,8 @@ class System {
 
   class Library {
    public:
-    virtual void* resolve(const char* function) = 0;
+    virtual void* resolve(const char* symbol) = 0;
     virtual const char* name() = 0;
-    virtual bool mapName() = 0;
     virtual Library* next() = 0;
     virtual void setNext(Library* lib) = 0;
     virtual void disposeAll() = 0;
@@ -97,7 +96,7 @@ class System {
 
   class SignalHandler {
    public:
-    virtual bool handleSignal(void** ip, void** base, void** stack,
+    virtual bool handleSignal(void** ip, void** frame, void** stack, 
                               void** thread) = 0;
   };
 
@@ -127,17 +126,22 @@ class System {
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
   virtual Status handleSegFault(SignalHandler* handler) = 0;
+  virtual Status handleDivideByZero(SignalHandler* handler) = 0;
   virtual Status visit(Thread* thread, Thread* target,
                        ThreadVisitor* visitor) = 0;
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;
   virtual Status map(Region**, const char* name) = 0;
-  virtual FileType identify(const char* name) = 0;
+  virtual FileType stat(const char* name, unsigned* length) = 0;
   virtual Status open(Directory**, const char* name) = 0;
-  virtual Status load(Library**, const char* name, bool mapName) = 0;
+  virtual const char* libraryPrefix() = 0;
+  virtual const char* librarySuffix() = 0;
+  virtual Status load(Library**, const char* name) = 0;
   virtual char pathSeparator() = 0;
+  virtual char fileSeparator() = 0;
   virtual int64_t now() = 0;
+  virtual void yield() = 0;
   virtual void exit(int code) = 0;
   virtual void abort() = 0;
   virtual void dispose() = 0;

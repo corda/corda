@@ -1,7 +1,20 @@
 (type jobject java/lang/Object)
 
-(type class java/lang/Class
+(type class avian/VMClass
   (array void* vtable))
+
+(type jclass java/lang/Class
+  (require object vmClass))
+
+(type jaccessibleObject java/lang/reflect/AccessibleObject)
+
+(type jfield java/lang/reflect/Field)
+
+(type jmethod java/lang/reflect/Method)
+
+(type jconstructor java/lang/reflect/Constructor)
+
+(type constantPool sun/reflect/ConstantPool)
 
 (type singleton
   (array uintptr_t body))
@@ -9,27 +22,49 @@
 (type classLoader java/lang/ClassLoader
   (object map))
 
-(type systemClassLoader avian/SystemClassLoader)
+(type systemClassLoader avian/SystemClassLoader
+  (void* finder))
 
-(type accessibleObject java/lang/reflect/AccessibleObject)
+(type field avian/VMField)
 
-(type field java/lang/reflect/Field)
-
-(type method java/lang/reflect/Method)
-
-(type proxy java/lang/reflect/Proxy)
+(type method avian/VMMethod)
 
 (type addendum avian/Addendum)
 
 (type classAddendum avian/ClassAddendum)
 
-(type nativeMethodData
-  (void* function)
-  (uint16_t argumentTableSize)
-  (array uint8_t parameterTypes))
+(type methodAddendum avian/MethodAddendum)
+
+(type fieldAddendum avian/FieldAddendum)
+
+(type classRuntimeData
+  (object arrayClass)
+  (object jclass)
+  (object pool)
+  (object signers))
+
+(type methodRuntimeData
+  (object native))
 
 (type pointer
   (void* value))
+
+(type native
+  (void* function)
+  (uint8_t fast))
+
+(type nativeIntercept
+  (extends native)
+  (object original))
+
+(type finder
+  (void* finder)
+  (object name)
+  (object next))
+
+(type region
+  (void* region)
+  (unsigned position))
 
 (pod exceptionHandler
   (uint16_t start)
@@ -51,6 +86,7 @@
   (object pool)
   (object exceptionHandlerTable)
   (object lineNumberTable)
+  (intptr_t compiled)
   (uint16_t maxStack)
   (uint16_t maxLocals)
   (array uint8_t body))
@@ -143,21 +179,33 @@
 
 (type callbackReceiver avian/CallbackReceiver)
 
-(type string java/lang/String)
+(type string java/lang/String
+  (alias data object value)
+  (alias length uint32_t count)
+  (alias hashCode uint32_t hash))
 
-(type thread java/lang/Thread)
+(type thread java/lang/Thread
+  (require object sleepLock)
+  (require object interruptLock)
+  (require uint8_t interrupted)
+  (require uint8_t unparked)
+  (alias peer uint64_t eetop))
 
 (type threadGroup java/lang/ThreadGroup)
 
 (type stackTraceElement java/lang/StackTraceElement)
 
-(type throwable java/lang/Throwable)
+(type throwable java/lang/Throwable
+  (alias message object detailMessage)
+  (alias trace object backtrace))
 
 (type exception java/lang/Exception)
 
 (type runtimeException java/lang/RuntimeException)
 
 (type nullPointerException java/lang/NullPointerException)
+
+(type arithmeticException java/lang/ArithmeticException)
 
 (type illegalStateException java/lang/IllegalStateException)
 
@@ -185,6 +233,8 @@
 
 (type virtualMachineError java/lang/VirtualMachineError)
 
+(type outOfMemoryError java/lang/OutOfMemoryError)
+
 (type stackOverflowError java/lang/StackOverflowError)
 
 (type linkageError java/lang/LinkageError)
@@ -200,6 +250,10 @@
 (type unsatisfiedLinkError java/lang/UnsatisfiedLinkError)
 
 (type exceptionInInitializerError java/lang/ExceptionInInitializerError)
+
+(type ioException java/io/IOException)
+
+(type fileNotFoundException java/io/FileNotFoundException)
 
 (type incompatibleContinuationException
   avian/IncompatibleContinuationException)
@@ -222,9 +276,17 @@
 
 (type double java/lang/Double)
 
-(type referenceQueue java/lang/ref/ReferenceQueue)
+(type referenceQueue java/lang/ref/ReferenceQueue
+  (alias front object head))
 
-(type jreference java/lang/ref/Reference)
+(type jreference java/lang/ref/Reference
+  (alias target object referent)
+  (alias queue object queue)
+  (alias jNext object next)
+  (alias vmNext object discovered)
+  (nogc object target)
+  (nogc object queue)
+  (nogc object vmNext))
 
 (type weakReference java/lang/ref/WeakReference)
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -94,13 +94,12 @@ public abstract class ResourceBundle {
   }
 
   public static ResourceBundle getBundle(String name, Locale locale) {
-    return getBundle(name, locale,
-                     Method.getCaller().getDeclaringClass().getClassLoader());
+    return getBundle(name, locale, Method.getCaller().class_.loader);
   }
 
   public static ResourceBundle getBundle(String name) {
-    return getBundle(name, Locale.getDefault(),
-                     Method.getCaller().getDeclaringClass().getClassLoader());
+    return getBundle
+      (name, Locale.getDefault(), Method.getCaller().class_.loader);
   }
 
   public Object getObject(String key) {

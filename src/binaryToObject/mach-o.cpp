@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -11,6 +11,32 @@
 #include "stdint.h"
 #include "stdio.h"
 #include "string.h"
+
+#define V1(v) v
+
+#ifdef OPPOSITE_ENDIAN
+#  define V2(v) \
+  ((((v) >> 8) & 0xFF) | \
+   (((v) << 8)))
+#  define V4(v) \
+  ((((v) >> 24) & 0x000000FF) | \
+   (((v) >>  8) & 0x0000FF00) | \
+   (((v) <<  8) & 0x00FF0000) | \
+   (((v) << 24)))
+#  define V8(v) \
+  (((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF)) | \
+   ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00)) | \
+   ((static_cast<uint64_t>(v) >> 24) & UINT64_C(0x0000000000FF0000)) | \
+   ((static_cast<uint64_t>(v) >>  8) & UINT64_C(0x00000000FF000000)) | \
+   ((static_cast<uint64_t>(v) <<  8) & UINT64_C(0x000000FF00000000)) | \
+   ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000)) | \
+   ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000)) | \
+   ((static_cast<uint64_t>(v) << 56)))
+#else
+#  define V2(v) v
+#  define V4(v) v
+#  define V8(v) v
+#endif
 
 #define MH_MAGIC_64 0xfeedfacf
 #define MH_MAGIC 0xfeedface
@@ -37,6 +63,7 @@
 #define CPU_SUBTYPE_POWERPC_ALL 0
 
 #if (BITS_PER_WORD == 64)
+#  define VW(v) V8(v)
 #  define Magic MH_MAGIC_64
 #  define Segment LC_SEGMENT_64
 #  define FileHeader mach_header_64
@@ -44,6 +71,7 @@
 #  define Section section_64
 #  define NList struct nlist_64
 #elif (BITS_PER_WORD == 32)
+#  define VW(v) V4(v)
 #  define Magic MH_MAGIC
 #  define Segment LC_SEGMENT
 #  define FileHeader mach_header
@@ -191,32 +219,32 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   unsigned endNameLength = strlen(endName) + 1;
 
   FileHeader header = {
-    Magic, // magic
-    cpuType,
-    cpuSubType,
-    MH_OBJECT, // filetype,
-    2, // ncmds
-    sizeof(SegmentCommand)
-    + sizeof(Section)
-    + sizeof(symtab_command), // sizeofcmds
-    0 // flags
+    V4(Magic), // magic
+    V4(cpuType),
+    V4(cpuSubType),
+    V4(MH_OBJECT), // filetype,
+    V4(2), // ncmds
+    V4(sizeof(SegmentCommand)
+       + sizeof(Section)
+       + sizeof(symtab_command)), // sizeofcmds
+    V4(0) // flags
   };
 
   SegmentCommand segment = {
-    Segment, // cmd
-    sizeof(SegmentCommand) + sizeof(Section), // cmdsize
+    V4(Segment), // cmd
+    V4(sizeof(SegmentCommand) + sizeof(Section)), // cmdsize
     "", // segname
-    0, // vmaddr
-    pad(size), // vmsize
-    sizeof(FileHeader)
-    + sizeof(SegmentCommand)
-    + sizeof(Section)
-    + sizeof(symtab_command), // fileoff
-    pad(size), // filesize
-    7, // maxprot
-    7, // initprot
-    1, // nsects
-    0 // flags
+    VW(0), // vmaddr
+    VW(pad(size)), // vmsize
+    VW(sizeof(FileHeader)
+       + sizeof(SegmentCommand)
+       + sizeof(Section)
+       + sizeof(symtab_command)), // fileoff
+    VW(pad(size)), // filesize
+    V4(7), // maxprot
+    V4(7), // initprot
+    V4(1), // nsects
+    V4(0) // flags
   };
 
   strncpy(segment.segname, segmentName, sizeof(segment.segname));
@@ -224,55 +252,55 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   Section sect = {
     "", // sectname
     "", // segname
-    0, // addr
-    pad(size), // size
-    sizeof(FileHeader)
-    + sizeof(SegmentCommand)
-    + sizeof(Section)
-    + sizeof(symtab_command), // offset
-    log(alignment), // align
-    0, // reloff
-    0, // nreloc
-    S_REGULAR, // flags
-    0, // reserved1
-    0, // reserved2
+    VW(0), // addr
+    VW(pad(size)), // size
+    V4(sizeof(FileHeader)
+       + sizeof(SegmentCommand)
+       + sizeof(Section)
+       + sizeof(symtab_command)), // offset
+    V4(log(alignment)), // align
+    V4(0), // reloff
+    V4(0), // nreloc
+    V4(S_REGULAR), // flags
+    V4(0), // reserved1
+    V4(0), // reserved2
   };
 
   strncpy(sect.segname, segmentName, sizeof(sect.segname));
   strncpy(sect.sectname, sectionName, sizeof(sect.sectname));
 
   symtab_command symbolTable = {
-    LC_SYMTAB, // cmd
-    sizeof(symtab_command), // cmdsize
-    sizeof(FileHeader)
-    + sizeof(SegmentCommand)
-    + sizeof(Section)
-    + sizeof(symtab_command)
-    + pad(size), // symoff
-    2, // nsyms
-    sizeof(FileHeader)
-    + sizeof(SegmentCommand)
-    + sizeof(Section)
-    + sizeof(symtab_command)
-    + pad(size)
-    + (sizeof(NList) * 2), // stroff
-    1 + startNameLength + endNameLength, // strsize
+    V4(LC_SYMTAB), // cmd
+    V4(sizeof(symtab_command)), // cmdsize
+    V4(sizeof(FileHeader)
+       + sizeof(SegmentCommand)
+       + sizeof(Section)
+       + sizeof(symtab_command)
+       + pad(size)), // symoff
+    V4(2), // nsyms
+    V4(sizeof(FileHeader)
+       + sizeof(SegmentCommand)
+       + sizeof(Section)
+       + sizeof(symtab_command)
+       + pad(size)
+       + (sizeof(NList) * 2)), // stroff
+    V4(1 + startNameLength + endNameLength), // strsize
   };
 
   NList symbolList[] = {
     {
-      1, // n_un
-      N_SECT | N_EXT, // n_type
-      1, // n_sect
-      0, // n_desc
-      0 // n_value
+      V4(1), // n_un
+      V1(N_SECT | N_EXT), // n_type
+      V1(1), // n_sect
+      V2(0), // n_desc
+      VW(0) // n_value
     },
     {
-      1 + startNameLength, // n_un
-      N_SECT | N_EXT, // n_type
-      1, // n_sect
-      0, // n_desc
-      size // n_value
+      V4(1 + startNameLength), // n_un
+      V1(N_SECT | N_EXT), // n_type
+      V1(1), // n_sect
+      V2(0), // n_desc
+      VW(size) // n_value
     }
   };
 

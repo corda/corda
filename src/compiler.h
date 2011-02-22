@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -30,7 +30,7 @@ class Compiler {
     virtual intptr_t getThunk(BinaryOperation op, unsigned size,
                               unsigned resultSize) = 0;
     virtual intptr_t getThunk(TernaryOperation op, unsigned size,
-                              unsigned resultSize) = 0;
+                              unsigned resultSize, bool* threadParameter) = 0;
   };
   
   static const unsigned Aligned  = 1 << 0;
@@ -188,7 +188,8 @@ class Compiler {
   virtual void storeStoreBarrier() = 0;
   virtual void storeLoadBarrier() = 0;
 
-  virtual unsigned compile() = 0;
+  virtual unsigned compile(uintptr_t stackOverflowHandler,
+                           unsigned stackLimitOffset) = 0;
   virtual unsigned poolSize() = 0;
   virtual void writeTo(uint8_t* dst) = 0;
 

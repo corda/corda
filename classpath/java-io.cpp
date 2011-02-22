@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -25,6 +25,7 @@
 #  include <direct.h>
 #  include <share.h>
 
+#  define ACCESS _waccess
 #  define CLOSE _close
 #  define READ _read
 #  define WRITE _write
@@ -36,10 +37,12 @@
 #  define OPEN_MASK O_BINARY
 
 #  ifdef _MSC_VER
-#    define S_ISREG(x) ((x) | _S_IFREG)
-#    define S_ISDIR(x) ((x) | _S_IFDIR)
+#    define S_ISREG(x) ((x) & _S_IFREG)
+#    define S_ISDIR(x) ((x) & _S_IFDIR)
 #    define S_IRUSR _S_IREAD
 #    define S_IWUSR _S_IWRITE
+#    define W_OK 2
+#    define R_OK 4
 #  else
 #    define OPEN _wopen
 #    define CREAT _wcreat
@@ -56,6 +59,7 @@ typedef wchar_t char_t;
 #  include <unistd.h>
 #  include "sys/mman.h"
 
+#  define ACCESS access
 #  define OPEN open
 #  define CLOSE close
 #  define READ read
@@ -323,13 +327,13 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
   if (chars) {
     STRUCT_STAT s;
     int r = STAT(chars, &s);
+    releaseChars(e, path, chars);
     if (r == 0) {
       return s.st_size;
     }
-    releaseChars(e, path, chars);
   }
 
-  return -1;
+  return 0;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -376,6 +380,31 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
     releaseChars(e, path, chars);
   }
 }
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canRead(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, R_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canWrite(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, W_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)
@@ -593,11 +622,13 @@ Java_java_io_FileInputStream_close(JNIEnv* e, jclass, jint fd)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path)
+Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path, jboolean append)
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    int fd = doOpen(e, chars, O_WRONLY | O_CREAT | O_TRUNC);
+    int fd = doOpen(e, chars, append
+                    ? (O_WRONLY | O_CREAT | O_APPEND)
+                    : (O_WRONLY | O_CREAT | O_TRUNC));
     releaseChars(e, path, chars);
     return fd;
   } else {

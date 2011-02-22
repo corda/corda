@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -66,32 +66,32 @@ inline object
 getTreeNodeValue(Thread*, object n)
 {
   return reinterpret_cast<object>
-    (cast<intptr_t>(n, TreeNodeValue) & PointerMask);
+    (alias(n, TreeNodeValue) & PointerMask);
 }
 
 inline void
 setTreeNodeValue(Thread* t, object n, object value)
 {
-  intptr_t red = cast<intptr_t>(n, TreeNodeValue) & (~PointerMask);
+  intptr_t red = alias(n, TreeNodeValue) & (~PointerMask);
 
   set(t, n, TreeNodeValue, value);
 
-  cast<intptr_t>(n, TreeNodeValue) |= red;
+  alias(n, TreeNodeValue) |= red;
 }
 
 inline bool
 treeNodeRed(Thread*, object n)
 {
-  return (cast<intptr_t>(n, TreeNodeValue) & (~PointerMask)) == 1;
+  return (alias(n, TreeNodeValue) & (~PointerMask)) == 1;
 }
 
 inline void
 setTreeNodeRed(Thread*, object n, bool red)
 {
   if (red) {
-    cast<intptr_t>(n, TreeNodeValue) |= 1;
+    alias(n, TreeNodeValue) |= 1;
   } else {
-    cast<intptr_t>(n, TreeNodeValue) &= PointerMask;
+    alias(n, TreeNodeValue) &= PointerMask;
   }
 }
 
@@ -108,7 +108,7 @@ cloneTreeNode(Thread* t, object n)
 
 object
 treeFind(Thread* t, object tree, intptr_t key, object sentinal,
-          intptr_t (*compare)(Thread* t, intptr_t key, object b))
+         intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   object node = tree;
   while (node != sentinal) {
@@ -140,6 +140,7 @@ treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
   object new_ = newRoot;
   PROTECT(t, new_);
 
+  int count = 0;
   while (old != sentinal) {
     c->ancestors = path(c, new_, c->ancestors);
 
@@ -161,6 +162,13 @@ treeFind(Thread* t, TreeContext* c, object old, intptr_t key, object node,
       c->node = new_;
       c->ancestors = c->ancestors->next;
       return;
+    }
+
+    if (++ count > 100) {
+      // if we've gone this deep, we probably have an unbalanced tree,
+      // which should only happen if there's a serious bug somewhere
+      // in our insertion process
+      abort(t);
     }
   }
 
@@ -318,8 +326,7 @@ hashMapFindNode(Thread* t, object map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
   if (array) {
@@ -367,9 +374,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     }
 
     if (oldArray) {
-      bool weak = objectClass(t, map)
-        == arrayBody(t, t->m->types, Machine::WeakHashMapType);
-
+      bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
       for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
         object next;
         for (object p = arrayBody(t, oldArray, i); p; p = next) {
@@ -407,8 +412,7 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
   uint32_t h = hash(t, key);
 
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
 
@@ -432,7 +436,8 @@ hashMapInsert(Thread* t, object map, object key, object value,
     object r = makeWeakReference(t, 0, 0, 0, 0);
     jreferenceTarget(t, r) = key;
     jreferenceVmNext(t, r) = t->m->weakReferences;
-    k = t->m->weakReferences = r;
+    t->m->weakReferences = r;
+    k = r;
 
     array = hashMapArray(t, map);
   }
@@ -465,8 +470,7 @@ hashMapRemove(Thread* t, object map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map)
-    == arrayBody(t, t->m->types, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
 
   object array = hashMapArray(t, map);
   object o = 0;
@@ -533,17 +537,28 @@ vectorAppend(Thread* t, object vector, object value)
              vectorSize(t, vector) * BytesPerWord);
     }
 
-    memset(&vectorBody(t, newVector, vectorSize(t, vector) + 1),
-           0,
-           (vectorLength(t, newVector) - vectorSize(t, vector) - 1)
-           * BytesPerWord);
-
     vector = newVector;
   }
 
   set(t, vector, VectorBody + (vectorSize(t, vector) * BytesPerWord), value);
   ++ vectorSize(t, vector);
   return vector;
+}
+
+object
+growArray(Thread* t, object array)
+{
+  PROTECT(t, array);
+
+  object newArray = makeArray
+    (t, array == 0 ? 16 : (arrayLength(t, array) * 2));
+
+  if (array) {
+    memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+           arrayLength(t, array));
+  }
+
+  return newArray;
 }
 
 object

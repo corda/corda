@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -45,7 +45,10 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    o->systemThread->join();
+    if (acquireSystem(t, o)) {
+      o->systemThread->join();
+      releaseSystem(t, o);
+    }
     o->state = Thread::JoinedState;
   }
 }
@@ -80,7 +83,7 @@ dispose(Thread* t, Thread* o, bool remove)
     expect(t, find(t->m->rootThread, o));
 
     unsigned c = count(t->m->rootThread, o);
-    RUNTIME_ARRAY(Thread*, threads, c);
+    THREAD_RUNTIME_ARRAY(t, Thread*, threads, c);
     fill(t->m->rootThread, o, RUNTIME_ARRAY_BODY(threads));
 #endif
 
@@ -167,26 +170,47 @@ turnOffTheLights(Thread* t)
 
   enter(t, Thread::ExitState);
 
-  for (object* p = &(t->m->finalizers); *p;) {
-    object f = *p;
-    *p = finalizerNext(t, *p);
+  { object p = 0;
+    PROTECT(t, p);
 
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    if (function) {
-      function(t, finalizerTarget(t, f));
+    for (p = t->m->finalizers; p;) {
+      object f = p;
+      p = finalizerNext(t, p);
+
+      void (*function)(Thread*, object);
+      memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+      if (function) {
+        function(t, finalizerTarget(t, f));
+      }
+    }
+
+    for (p = t->m->tenuredFinalizers; p;) {
+      object f = p;
+      p = finalizerNext(t, p);
+
+      void (*function)(Thread*, object);
+      memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+      if (function) {
+        function(t, finalizerTarget(t, f));
+      }
     }
   }
 
-  for (object* p = &(t->m->tenuredFinalizers); *p;) {
-    object f = *p;
-    *p = finalizerNext(t, *p);
-
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    if (function) {
-      function(t, finalizerTarget(t, f));
+  if (root(t, Machine::VirtualFiles)) {
+    for (unsigned i = 0; i < arrayLength(t, root(t, Machine::VirtualFiles));
+         ++i)
+    {
+      object region = arrayBody(t, root(t, Machine::VirtualFiles), i);
+      if (region) {
+        static_cast<System::Region*>(regionRegion(t, region))->dispose();
+      }
     }
+  }
+
+  for (object p = root(t, Machine::VirtualFileFinders);
+       p; p = finderNext(t, p))
+  {
+    static_cast<Finder*>(finderFinder(t, p))->dispose();
   }
 
   Machine* m = t->m;
@@ -196,13 +220,17 @@ turnOffTheLights(Thread* t)
   System* s = m->system;
   Heap* h = m->heap;
   Processor* p = m->processor;
-  Finder* f = m->finder;
+  Classpath* c = m->classpath;
+  Finder* bf = m->bootFinder;
+  Finder* af = m->appFinder;
 
+  c->dispose();
   m->dispose();
   h->disposeFixies();
   p->dispose();
+  bf->dispose();
+  af->dispose();
   h->dispose();
-  f->dispose();
   s->dispose();
 }
 
@@ -225,23 +253,6 @@ killZombies(Thread* t, Thread* o)
 
   default: break;
   }
-}
-
-object
-makeJavaThread(Thread* t, Thread* parent)
-{ 
-  object group;
-  if (parent) {
-    group = threadGroup(t, parent->javaThread);
-  } else {
-    group = makeThreadGroup(t, 0, 0, 0);
-  }
-
-  const unsigned NewState = 0;
-  const unsigned NormalPriority = 5;
-
-  return makeThread
-    (t, 0, 0, 0, NewState, NormalPriority, 0, 0, 0, t->m->loader, 0, 0, group);
 }
 
 unsigned
@@ -377,13 +388,12 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 
     object q = jreferenceQueue(t, *p);
 
-    set(t, *p, JreferenceJNext, *p);
     if (referenceQueueFront(t, q)) {
-      set(t, referenceQueueRear(t, q), JreferenceJNext, *p);
+      set(t, *p, JreferenceJNext, referenceQueueFront(t, q));
     } else {
-      set(t, q, ReferenceQueueFront, *p);
+      set(t, *p, JreferenceJNext, *p);
     }
-    set(t, q, ReferenceQueueRear, *p);
+    set(t, q, ReferenceQueueFront, *p);
 
     jreferenceQueue(t, *p) = 0;
   }
@@ -568,18 +578,36 @@ postCollect(Thread* t)
   }
 
   t->heapOffset = 0;
-  t->heapIndex = 0;
 
-  if (t->useBackupHeap) {
+  if (t->m->heap->limitExceeded()) {
+    // if we're out of memory, pretend the thread-local heap is
+    // already full so we don't make things worse:
+    t->heapIndex = ThreadHeapSizeInWords;
+  } else {
+    t->heapIndex = 0;
+  }
+
+  if (t->flags & Thread::UseBackupHeapFlag) {
     memset(t->backupHeap, 0, ThreadBackupHeapSizeInBytes);
 
-    t->useBackupHeap = false;
+    t->flags &= ~Thread::UseBackupHeapFlag;
     t->backupHeapIndex = 0;
   }
 
   for (Thread* c = t->child; c; c = c->peer) {
     postCollect(c);
   }
+}
+
+uint64_t
+invoke(Thread* t, uintptr_t* arguments)
+{
+  object m = reinterpret_cast<object>(arguments[0]);
+  object o = reinterpret_cast<object>(arguments[1]);
+
+  t->m->processor->invoke(t, m, o);
+
+  return 1;
 }
 
 void
@@ -594,28 +622,17 @@ finalizeObject(Thread* t, object o)
           and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
                          &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
       {
-        t->m->processor->invoke(t, m, o);
+        uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(m),
+                                  reinterpret_cast<uintptr_t>(o) };
+
+        run(t, invoke, arguments);
+
         t->exception = 0;
         return;
       }               
     }
   }
   abort(t);
-}
-
-object
-makeByteArray(Thread* t, const char* format, va_list a)
-{
-  const int Size = 256;
-  char buffer[Size];
-  
-  int r = vm::vsnprintf(buffer, Size - 1, format, a);
-  expect(t, r >= 0 and r < Size - 1);
-
-  object s = makeByteArray(t, strlen(buffer) + 1);
-  memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
-
-  return s;
 }
 
 unsigned
@@ -727,7 +744,8 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
 void
 removeByteArray(Thread* t, object o)
 {
-  hashMapRemove(t, t->m->byteArrayMap, o, byteArrayHash, objectEqual);
+  hashMapRemove
+    (t, root(t, Machine::ByteArrayMap), o, byteArrayHash, objectEqual);
 }
 
 object
@@ -735,12 +753,14 @@ internByteArray(Thread* t, object array)
 {
   PROTECT(t, array);
 
+  ACQUIRE(t, t->m->referenceLock);
+
   object n = hashMapFindNode
-    (t, t->m->byteArrayMap, array, byteArrayHash, byteArrayEqual);
+    (t, root(t, Machine::ByteArrayMap), array, byteArrayHash, byteArrayEqual);
   if (n) {
     return jreferenceTarget(t, tripleFirst(t, n));
   } else {
-    hashMapInsert(t, t->m->byteArrayMap, array, 0, byteArrayHash);
+    hashMapInsert(t, root(t, Machine::ByteArrayMap), array, 0, byteArrayHash);
     addFinalizer(t, array, removeByteArray);
     return array;
   }
@@ -768,9 +788,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
       object value = parseUtf8(t, s, s.read2());
-      if (objectClass(t, value)
-          == arrayBody(t, t->m->types, Machine::ByteArrayType))
-      {
+      if (objectClass(t, value) == type(t, Machine::ByteArrayType)) {
         value = internByteArray(t, value);
       }
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
@@ -793,8 +811,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       parsePoolEntry(t, s, index, pool, si);
         
       object value = singletonObject(t, pool, si);
-      value = makeString
-        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1, 0);
+      value = t->m->classpath->makeString
+        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
     }
@@ -847,6 +865,9 @@ parsePool(Thread* t, Stream& s)
   if (count) {
     uint32_t* index = static_cast<uint32_t*>(t->m->heap->allocate(count * 4));
 
+    THREAD_RESOURCE2(t, uint32_t*, index, unsigned, count,
+                     t->m->heap->free(index, count * 4));
+
     for (unsigned i = 0; i < count; ++i) {
       index[i] = s.position();
 
@@ -878,6 +899,7 @@ parsePool(Thread* t, Stream& s)
         s.skip(8);
         ++ i;
         break;
+
       case CONSTANT_Double:
         singletonSetBit(t, pool, count, i);
         singletonSetBit(t, pool, count, i + 1);
@@ -899,8 +921,6 @@ parsePool(Thread* t, Stream& s)
     for (unsigned i = 0; i < count;) {
       i += parsePoolEntry(t, s, index, pool, i);
     }
-
-    t->m->heap->free(index, count * 4);
 
     s.setPosition(end);
   }
@@ -949,7 +969,6 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     PROTECT(t, name);
 
     object interface = resolveClass(t, classLoader(t, class_), name);
-    if (UNLIKELY(t->exception)) return;
 
     PROTECT(t, interface);
 
@@ -969,9 +988,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
 
     unsigned i = 0;
     for (HashMapIterator it(t, map); it.hasMore();) {
-      object interface = resolveClass
-        (t, classLoader(t, class_), tripleFirst(t, it.next()));
-      if (UNLIKELY(t->exception)) return;
+      object interface = tripleSecond(t, it.next());
 
       set(t, interfaceTable, ArrayBody + (i * BytesPerWord), interface);
       ++ i;
@@ -1018,7 +1035,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     object addendum = 0;
     PROTECT(t, addendum);
 
-    RUNTIME_ARRAY(uint8_t, staticTypes, count);
+    THREAD_RUNTIME_ARRAY(t, uint8_t, staticTypes, count);
 
     for (unsigned i = 0; i < count; ++i) {
       unsigned flags = s.read2();
@@ -1046,7 +1063,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
-          addendum = makeAddendum(t, pool, body);
+          addendum = makeFieldAddendum(t, pool, body);
         } else {
           s.skip(length);
         }
@@ -1082,9 +1099,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           classVmFlags(t, class_) |= HasFinalMemberFlag;
         }
 
-        unsigned excess = (memberOffset % fieldSize(t, code)) % BytesPerWord;
-        if (excess) {
-          memberOffset += BytesPerWord - excess;
+        while (memberOffset % fieldSize(t, code)) {
+          ++ memberOffset;
         }
 
         fieldOffset(t, field) = memberOffset;
@@ -1211,7 +1227,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -1305,11 +1321,11 @@ addInterfaceMethods(Thread* t, object class_, object virtualMap,
                methodFlags(t, method),
                (*virtualCount)++,
                0,
+               0,
                methodName(t, method),
                methodSpec(t, method),
                0,
                class_,
-               0,
                0);
 
             hashMapInsert(t, virtualMap, method, method, methodHash);
@@ -1392,14 +1408,29 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                        &byteArrayBody(t, name, 0)) == 0)
         {
           code = parseCode(t, s, pool);
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Exceptions"),
+                              &byteArrayBody(t, name, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0);
+          }
+          unsigned exceptionCount = s.read2();
+          object body = makeShortArray(t, exceptionCount);
+          for (unsigned i = 0; i < exceptionCount; ++i) {
+            shortArrayBody(t, body, i) = s.read2();
+          }
+          set(t, addendum, MethodAddendumExceptionTable, body);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0);
+          }
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
-          addendum = makeAddendum(t, pool, body);
+          set(t, addendum, AddendumAnnotationTable, body);
         } else {
           s.skip(length);
         }
@@ -1491,6 +1522,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   bool populateInterfaceVtables = false;
 
   if (declaredVirtualCount == 0
+      and abstractVirtuals == 0
       and (classFlags(t, class_) & ACC_INTERFACE) == 0)
   {
     if (classSuper(t, class_)) {
@@ -1549,7 +1581,6 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
       if (abstractVirtuals) {
         PROTECT(t, vtable);
-        PROTECT(t, abstractVirtuals);
 
         unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
         object newMethodTable = makeArray
@@ -1627,7 +1658,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
       object body = makeByteArray(t, length);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
-      object addendum = makeClassAddendum(t, pool, body, 0);
+      object addendum = makeClassAddendum(t, pool, body);
       
       set(t, class_, ClassAddendum, addendum);
     } else {
@@ -1673,8 +1704,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   // verify that the classes have the same layout
   expect(t, classSuper(t, bootstrapClass) == classSuper(t, class_));
 
-  expect(t, bootstrapClass == arrayBody(t, t->m->types, Machine::ClassType)
-         or classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
+  expect(t, classFixedSize(t, bootstrapClass) >= classFixedSize(t, class_));
 
   expect(t, (classVmFlags(t, class_) & HasFinalizerFlag) == 0);
 
@@ -1702,8 +1732,22 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
                object elementClass)
 {
   // todo: arrays should implement Cloneable and Serializable
-  object vtable = classVirtualTable
-    (t, arrayBody(t, t->m->types, Machine::JobjectType));
+
+  if (classVmFlags(t, type(t, Machine::JobjectType)) & BootstrapFlag) {
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+    PROTECT(t, elementClass);
+
+    // Load java.lang.Object if present so we can use its vtable, but
+    // don't throw an exception if we can't find it.  This way, we
+    // avoid infinite recursion due to trying to create an array to
+    // make a stack trace for a ClassNotFoundException.
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader),
+       className(t, type(t, Machine::JobjectType)), false);
+  }
+
+  object vtable = classVirtualTable(t, type(t, Machine::JobjectType));
 
   object c = t->m->processor->makeClass
     (t,
@@ -1712,10 +1756,10 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      2 * BytesPerWord,
      BytesPerWord,
      dimensions,
-     classObjectMask(t, arrayBody(t, t->m->types, Machine::ArrayType)),
+     classObjectMask(t, type(t, Machine::ArrayType)),
      spec,
      0,
-     arrayBody(t, t->m->types, Machine::JobjectType),
+     type(t, Machine::JobjectType),
      0,
      vtable,
      0,
@@ -1731,7 +1775,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
 }
 
 object
-makeArrayClass(Thread* t, object loader, object spec)
+makeArrayClass(Thread* t, object loader, object spec, bool throw_)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
@@ -1769,47 +1813,58 @@ makeArrayClass(Thread* t, object loader, object spec)
   }
 
   object elementClass = hashMapFind
-    (t, t->m->bootstrapClassMap, elementSpec, byteArrayHash, byteArrayEqual);
-
+    (t, root(t, Machine::BootstrapClassMap), elementSpec, byteArrayHash,
+     byteArrayEqual);
+  
   if (elementClass == 0) {
-    elementClass = resolveClass(t, loader, elementSpec);
-    if (UNLIKELY(t->exception)) return 0;
+    elementClass = resolveClass(t, loader, elementSpec, throw_);
+    if (elementClass == 0) return 0;
   }
 
-  return makeArrayClass(t, loader, dimensions, spec, elementClass);
+  PROTECT(t, elementClass);
+
+  object class_ = findLoadedClass(t, classLoader(t, elementClass), spec);
+
+  return class_ ? class_ : makeArrayClass
+    (t, classLoader(t, elementClass), dimensions, spec, elementClass);
 }
 
 object
-resolveArrayClass(Thread* t, object loader, object spec)
+resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
 {
   object c = hashMapFind
-    (t, t->m->bootstrapClassMap, spec, byteArrayHash, byteArrayEqual);
+    (t, root(t, Machine::BootstrapClassMap), spec, byteArrayHash,
+     byteArrayEqual);
 
   if (c) {
     set(t, c, ClassVirtualTable,
-        classVirtualTable
-        (t, arrayBody(t, t->m->types, Machine::JobjectType)));
+        classVirtualTable(t, type(t, Machine::JobjectType)));
 
     return c;
   } else {
-    return makeArrayClass(t, loader, spec);
+    PROTECT(t, loader);
+    PROTECT(t, spec);
+
+    c = findLoadedClass(t, root(t, Machine::BootLoader), spec);
+
+    if (c) {
+      return c;
+    } else {
+      return makeArrayClass(t, loader, spec, throw_);
+    }
   }
 }
 
 void
 removeMonitor(Thread* t, object o)
 {
-  expect(t, t->state == Thread::ExclusiveState
-         or t->state == Thread::ExitState);
-
   unsigned hash;
   if (DebugMonitors) {
     hash = objectHash(t, o);
   }
 
-  object m = hashMapRemove(t, t->m->monitorMap, o, objectHash, objectEqual);
-
-  expect(t, m);
+  object m = hashMapRemove
+    (t, root(t, Machine::MonitorMap), o, objectHash, objectEqual);
 
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n", m, hash);
@@ -1819,14 +1874,15 @@ removeMonitor(Thread* t, object o)
 void
 removeString(Thread* t, object o)
 {
-  hashMapRemove(t, t->m->stringMap, o, stringHash, objectEqual);
+  hashMapRemove(t, root(t, Machine::StringMap), o, stringHash, objectEqual);
 }
 
 void
 bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
           unsigned fixedSize, unsigned arrayElementSize, unsigned vtableLength)
 {
-  object super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
+  object super = (superType >= 0
+                  ? vm::type(t, static_cast<Machine::Type>(superType)) : 0);
 
   object mask;
   if (objectMask) {
@@ -1835,7 +1891,8 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
         and intArrayBody(t, classObjectMask(t, super), 0)
         == static_cast<int32_t>(objectMask))
     {
-      mask = classObjectMask(t, arrayBody(t, t->m->types, superType));
+      mask = classObjectMask
+        (t, vm::type(t, static_cast<Machine::Type>(superType)));
     } else {
       mask = makeIntArray(t, 1);
       intArrayBody(t, mask, 0) = objectMask;
@@ -1844,14 +1901,15 @@ bootClass(Thread* t, Machine::Type type, int superType, uint32_t objectMask,
     mask = 0;
   }
 
-  super = (superType >= 0 ? arrayBody(t, t->m->types, superType) : 0);
+  super = (superType >= 0
+           ? vm::type(t, static_cast<Machine::Type>(superType)) : 0);
 
   object class_ = t->m->processor->makeClass
     (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
      arrayElementSize ? 1 : 0, mask, 0, 0, super, 0, 0, 0, 0, 0, 0,
-     t->m->loader, vtableLength);
+     root(t, Machine::BootLoader), vtableLength);
 
-  set(t, t->m->types, ArrayBody + (type * BytesPerWord), class_);
+  setType(t, type, class_);
 }
 
 void
@@ -1861,27 +1919,37 @@ bootJavaClass(Thread* t, Machine::Type type, int superType, const char* name,
   PROTECT(t, bootMethod);
 
   object n = makeByteArray(t, name);
-  object class_ = arrayBody(t, t->m->types, type);
+  PROTECT(t, n);
+
+  object class_ = vm::type(t, type);
+  PROTECT(t, class_);
 
   set(t, class_, ClassName, n);
 
   object vtable;
   if (vtableLength >= 0) {
-    PROTECT(t, class_);
-
     vtable = makeArray(t, vtableLength);
     for (int i = 0; i < vtableLength; ++ i) {
       arrayBody(t, vtable, i) = bootMethod;
     }
   } else {
-    vtable = classVirtualTable(t, arrayBody(t, t->m->types, superType));
+    vtable = classVirtualTable
+      (t, vm::type(t, static_cast<Machine::Type>(superType)));
   }
 
   set(t, class_, ClassVirtualTable, vtable);
 
   t->m->processor->initVtable(t, class_);
 
-  hashMapInsert(t, t->m->bootstrapClassMap, n, class_, byteArrayHash);
+  hashMapInsert
+    (t, root(t, Machine::BootstrapClassMap), n, class_, byteArrayHash);
+}
+
+void
+nameClass(Thread* t, Machine::Type type, const char* name)
+{
+  object n = makeByteArray(t, name);
+  set(t, arrayBody(t, t->m->types, type), ClassName, n);
 }
 
 void
@@ -1891,101 +1959,123 @@ boot(Thread* t)
 
   m->unsafe = true;
 
-  m->loader = allocate(t, FixedSizeOfSystemClassLoader, true);
+  m->roots = allocate(t, pad((Machine::RootCount + 2) * BytesPerWord), true);
+  arrayLength(t, m->roots) = Machine::RootCount;
+
+  setRoot(t, Machine::BootLoader,
+          allocate(t, FixedSizeOfSystemClassLoader, true));
+
+  setRoot(t, Machine::AppLoader,
+          allocate(t, FixedSizeOfSystemClassLoader, true));
 
   m->types = allocate(t, pad((TypeCount + 2) * BytesPerWord), true);
   arrayLength(t, m->types) = TypeCount;
 
 #include "type-initializations.cpp"
 
-  object arrayClass = arrayBody(t, m->types, Machine::ArrayType);
+  object arrayClass = type(t, Machine::ArrayType);
   set(t, m->types, 0, arrayClass);
+  set(t, m->roots, 0, arrayClass);
 
-  object loaderClass = arrayBody
-    (t, m->types, Machine::SystemClassLoaderType);
-  set(t, m->loader, 0, loaderClass);
+  object loaderClass = type(t, Machine::SystemClassLoaderType);
+  set(t, root(t, Machine::BootLoader), 0, loaderClass);
+  set(t, root(t, Machine::AppLoader), 0, loaderClass);
 
-#ifdef AVIAN_GNU
-  classLoaderInitialized(t, m->loader) = true;
-#endif
+  object objectClass = type(t, Machine::JobjectType);
 
-  object objectClass = arrayBody(t, m->types, Machine::JobjectType);
-
-  object classClass = arrayBody(t, m->types, Machine::ClassType);
+  object classClass = type(t, Machine::ClassType);
   set(t, classClass, 0, classClass);
   set(t, classClass, ClassSuper, objectClass);
 
-  object intArrayClass = arrayBody(t, m->types, Machine::IntArrayType);
+  object intArrayClass = type(t, Machine::IntArrayType);
   set(t, intArrayClass, 0, classClass);
   set(t, intArrayClass, ClassSuper, objectClass);
 
   m->unsafe = false;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::SingletonType))
+  classVmFlags(t, type(t, Machine::SingletonType))
     |= SingletonFlag;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::ContinuationType))
+  classVmFlags(t, type(t, Machine::ContinuationType))
     |= ContinuationFlag;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::JreferenceType))
+  classVmFlags(t, type(t, Machine::JreferenceType))
     |= ReferenceFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::WeakReferenceType))
+  classVmFlags(t, type(t, Machine::WeakReferenceType))
     |= ReferenceFlag | WeakReferenceFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::SoftReferenceType))
+  classVmFlags(t, type(t, Machine::SoftReferenceType))
     |= ReferenceFlag | WeakReferenceFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::PhantomReferenceType))
+  classVmFlags(t, type(t, Machine::PhantomReferenceType))
     |= ReferenceFlag | WeakReferenceFlag;
 
-  classVmFlags(t, arrayBody(t, m->types, Machine::JbooleanType))
+  classVmFlags(t, type(t, Machine::JbooleanType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JbyteType))
+  classVmFlags(t, type(t, Machine::JbyteType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JcharType))
+  classVmFlags(t, type(t, Machine::JcharType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JshortType))
+  classVmFlags(t, type(t, Machine::JshortType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JintType))
+  classVmFlags(t, type(t, Machine::JintType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JlongType))
+  classVmFlags(t, type(t, Machine::JlongType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JfloatType))
+  classVmFlags(t, type(t, Machine::JfloatType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JdoubleType))
+  classVmFlags(t, type(t, Machine::JdoubleType))
     |= PrimitiveFlag;
-  classVmFlags(t, arrayBody(t, m->types, Machine::JvoidType))
+  classVmFlags(t, type(t, Machine::JvoidType))
     |= PrimitiveFlag;
 
-  set(t, arrayBody(t, m->types, Machine::BooleanArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JbooleanType));
-  set(t, arrayBody(t, m->types, Machine::ByteArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JbyteType));
-  set(t, arrayBody(t, m->types, Machine::CharArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JcharType));
-  set(t, arrayBody(t, m->types, Machine::ShortArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JshortType));
-  set(t, arrayBody(t, m->types, Machine::IntArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JintType));
-  set(t, arrayBody(t, m->types, Machine::LongArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JlongType));
-  set(t, arrayBody(t, m->types, Machine::FloatArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JfloatType));
-  set(t, arrayBody(t, m->types, Machine::DoubleArrayType), ClassStaticTable,
-      arrayBody(t, m->types, Machine::JdoubleType));
+  set(t, type(t, Machine::BooleanArrayType), ClassStaticTable,
+      type(t, Machine::JbooleanType));
+  set(t, type(t, Machine::ByteArrayType), ClassStaticTable,
+      type(t, Machine::JbyteType));
+  set(t, type(t, Machine::CharArrayType), ClassStaticTable,
+      type(t, Machine::JcharType));
+  set(t, type(t, Machine::ShortArrayType), ClassStaticTable,
+      type(t, Machine::JshortType));
+  set(t, type(t, Machine::IntArrayType), ClassStaticTable,
+      type(t, Machine::JintType));
+  set(t, type(t, Machine::LongArrayType), ClassStaticTable,
+      type(t, Machine::JlongType));
+  set(t, type(t, Machine::FloatArrayType), ClassStaticTable,
+      type(t, Machine::JfloatType));
+  set(t, type(t, Machine::DoubleArrayType), ClassStaticTable,
+      type(t, Machine::JdoubleType));
 
-  m->classMap = makeHashMap(t, 0, 0);
+  { object map = makeHashMap(t, 0, 0);
+    set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
+  }
 
-  m->bootstrapClassMap = makeHashMap(t, 0, 0);
+  systemClassLoaderFinder(t, root(t, Machine::BootLoader)) = m->bootFinder;
 
-  m->stringMap = makeWeakHashMap(t, 0, 0);
+  { object map = makeHashMap(t, 0, 0);
+    set(t, root(t, Machine::AppLoader), ClassLoaderMap, map);
+  }
+
+  systemClassLoaderFinder(t, root(t, Machine::AppLoader)) = m->appFinder;
+
+  set(t, root(t, Machine::AppLoader), ClassLoaderParent,
+      root(t, Machine::BootLoader));
+
+  setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
+
+  setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
+
   m->processor->boot(t, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 1);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
-      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode, 0);
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
+
+#ifdef AVIAN_HEAPDUMP
+#  include "type-name-initializations.cpp"
+#endif
   }
 }
 
@@ -2055,8 +2145,8 @@ class HeapClient: public Heap::Client {
     memcpy(dst, src, n * BytesPerWord);
 
     if (hashTaken(t, src)) {
-      cast<uintptr_t>(dst, 0) &= PointerMask;
-      cast<uintptr_t>(dst, 0) |= ExtendedMark;
+      alias(dst, 0) &= PointerMask;
+      alias(dst, 0) |= ExtendedMark;
       extendedWord(t, dst, base) = takeHash(t, src);
     }
   }
@@ -2074,20 +2164,83 @@ class HeapClient: public Heap::Client {
   Machine* m;
 };
 
+void
+doCollect(Thread* t, Heap::CollectionType type)
+{
+#ifdef VM_STRESS
+  bool stress = (t->flags |= Thread::StressFlag);
+  if (not stress) atomicOr(&(t->flags), Thread::StressFlag);
+#endif
+
+  Machine* m = t->m;
+
+  m->unsafe = true;
+  m->heap->collect(type, footprint(m->rootThread));
+  m->unsafe = false;
+
+  postCollect(m->rootThread);
+
+  killZombies(t, m->rootThread);
+
+  for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
+    m->heap->free(m->heapPool[i], ThreadHeapSizeInBytes);
+  }
+  m->heapPoolIndex = 0;
+
+  if (m->heap->limitExceeded()) {
+    // if we're out of memory, disallow further allocations of fixed
+    // objects:
+    m->fixedFootprint = FixedFootprintThresholdInBytes;
+  } else {
+    m->fixedFootprint = 0;
+  }
+
+#ifdef VM_STRESS
+  if (not stress) atomicAnd(&(t->flags), ~Thread::StressFlag);
+#endif
+
+  object f = t->m->finalizeQueue;
+  t->m->finalizeQueue = 0;
+  for (; f; f = finalizerNext(t, f)) {
+    void (*function)(Thread*, object);
+    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    if (function) {
+      function(t, finalizerTarget(t, f));
+    } else {
+      setRoot(t, Machine::ObjectsToFinalize, makePair
+              (t, finalizerTarget(t, f), root(t, Machine::ObjectsToFinalize)));
+    }
+  }
+
+  if (root(t, Machine::ObjectsToFinalize) and m->finalizeThread == 0) {
+    m->finalizeThread = m->processor->makeThread
+      (m, root(t, Machine::FinalizerThread), m->rootThread);
+    
+    addThread(t, m->finalizeThread);
+
+    if (not startThread(t, m->finalizeThread)) {
+      removeThread(t, m->finalizeThread);
+      m->finalizeThread = 0;
+    }
+  }
+}
+
 } // namespace
 
 namespace vm {
 
-Machine::Machine(System* system, Heap* heap, Finder* finder,
-                 Processor* processor, const char** properties,
-                 unsigned propertyCount):
+Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
+                 Finder* appFinder, Processor* processor, Classpath* classpath,
+                 const char** properties, unsigned propertyCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
              HeapClient(this)),
   heap(heap),
-  finder(finder),
+  bootFinder(bootFinder),
+  appFinder(appFinder),
   processor(processor),
+  classpath(classpath),
   rootThread(0),
   exclusive(0),
   finalizeThread(0),
@@ -2105,26 +2258,16 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
   referenceLock(0),
   shutdownLock(0),
   libraries(0),
-  loader(0),
-  classMap(0),
-  loadClassMethod(0),
-  bootstrapClassMap(0),
-  monitorMap(0),
-  stringMap(0),
-  byteArrayMap(0),
   types(0),
-  jniMethodTable(0),
+  roots(0),
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
-  shutdownHooks(0),
-  objectsToFinalize(0),
-  nullPointerException(0),
-  arrayIndexOutOfBoundsException(0),
   unsafe(false),
   triedBuiltinOnLoad(false),
+  dumpedHeapOnOOM(false),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -2138,7 +2281,7 @@ Machine::Machine(System* system, Heap* heap, Finder* finder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, findProperty(this, "avian.bootstrap"), false)))
+      (system->load(&libraries, findProperty(this, "avian.bootstrap"))))
   {
     system->abort();
   }
@@ -2179,7 +2322,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   vtable(&(m->jniEnvVTable)),
   m(m),
   parent(parent),
-  peer((parent ? parent->child : 0)),
+  peer(0),
   child(0),
   waitNext(0),
   state(NoState),
@@ -2197,12 +2340,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
               (m->heap->allocate(ThreadHeapSizeInBytes))),
   heap(defaultHeap),
   backupHeapIndex(0),
-  useBackupHeap(false),
-  waiting(false),
-  tracing(false)
-#ifdef VM_STRESS
-  , stress(false)
-#endif // VM_STRESS
+  flags(ActiveFlag)
 { }
 
 void
@@ -2237,35 +2375,29 @@ Thread::init()
 
     m->unsafe = false;
 
+    enter(this, ActiveState);
+
     if (image) {
       m->processor->boot(this, image);
     } else {
       boot(this);
     }
 
-    m->byteArrayMap = makeWeakHashMap(this, 0, 0);
-    m->monitorMap = makeWeakHashMap(this, 0, 0);
+    setRoot(this, Machine::ByteArrayMap, makeWeakHashMap(this, 0, 0));
+    setRoot(this, Machine::MonitorMap, makeWeakHashMap(this, 0, 0));
 
-    m->jniMethodTable = makeVector(this, 0, 0);
-
-    m->nullPointerException = makeNullPointerException(this);
-
-    m->arrayIndexOutOfBoundsException
-      = makeArrayIndexOutOfBoundsException(this, 0);
+    setRoot(this, Machine::ClassRuntimeDataTable, makeVector(this, 0, 0));
+    setRoot(this, Machine::MethodRuntimeDataTable, makeVector(this, 0, 0));
+    setRoot(this, Machine::JNIMethodTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
-  } else {
-    peer = parent->child;
-    parent->child = this;
+
+    javaThread = m->classpath->makeThread(this, 0);
+
+    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   }
 
   expect(this, m->system->success(m->system->make(&lock)));
-
-  if (javaThread == 0) {
-    this->javaThread = makeJavaThread(this, parent);
-  }
-
-  threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
 }
 
 void
@@ -2280,7 +2412,21 @@ Thread::exit()
       turnOffTheLights(this);
     } else {
       threadPeer(this, javaThread) = 0;
-      enter(this, Thread::ZombieState);
+
+      { ACQUIRE_RAW(this, m->stateLock);
+
+        while (flags & SystemFlag) {
+          m->stateLock->wait(systemThread, 0);
+        }
+      
+        enter(this, Thread::ZombieState);
+      }
+
+      lock->dispose();
+      lock = 0;
+
+      systemThread->dispose();
+      systemThread = 0;
     }
   }
 }
@@ -2288,7 +2434,9 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  lock->dispose();
+  if (lock) {
+    lock->dispose();
+  }
 
   if (systemThread) {
     systemThread->dispose();
@@ -2304,10 +2452,10 @@ shutDown(Thread* t)
 {
   ACQUIRE(t, t->m->shutdownLock);
 
-  object hooks = t->m->shutdownHooks;
+  object hooks = root(t, Machine::ShutdownHooks);
   PROTECT(t, hooks);
 
-  t->m->shutdownHooks = 0;
+  setRoot(t, Machine::ShutdownHooks, 0);
 
   object h = hooks;
   PROTECT(t, h);
@@ -2408,7 +2556,7 @@ enter(Thread* t, Thread::State s)
   } break;
 
   case Thread::IdleState:
-    if (t->state == Thread::ActiveState) {
+    if (LIKELY(t->state == Thread::ActiveState)) {
       // fast path
       assert(t, t->m->activeCount > 0);
       INCREMENT(&(t->m->activeCount), -1);
@@ -2420,6 +2568,7 @@ enter(Thread* t, Thread::State s)
 
         t->m->stateLock->notifyAll(t->systemThread);
       }
+
       break;
     } else {
       // fall through to slow path
@@ -2446,17 +2595,18 @@ enter(Thread* t, Thread::State s)
       assert(t, t->m->liveCount > 0);
       -- t->m->liveCount;
 
-      if (threadDaemon(t, t->javaThread)) {
+      if (t->flags & Thread::DaemonFlag) {
         -- t->m->daemonCount;
       }
     }
+
     t->state = s;
 
     t->m->stateLock->notifyAll(t->systemThread);
   } break;
 
   case Thread::ActiveState:
-    if (t->state == Thread::IdleState and t->m->exclusive == 0) {
+    if (LIKELY(t->state == Thread::IdleState and t->m->exclusive == 0)) {
       // fast path
       INCREMENT(&(t->m->activeCount), 1);
 
@@ -2544,7 +2694,7 @@ object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           unsigned sizeInBytes, bool objectMask)
 {
-  if (UNLIKELY(t->useBackupHeap)) {
+  if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
     expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
            <= ThreadBackupHeapSizeInWords);
     
@@ -2552,7 +2702,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
     cast<object>(o, 0) = 0;
     return o;
-  } else if (UNLIKELY(t->tracing)) {
+  } else if (UNLIKELY(t->flags & Thread::TracingFlag)) {
     expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
            <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
@@ -2577,7 +2727,9 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           > ThreadHeapSizeInWords)
       {
         t->heap = 0;
-        if (t->m->heapPoolIndex < ThreadHeapPoolSize) {
+        if ((not t->m->heap->limitExceeded())
+            and t->m->heapPoolIndex < ThreadHeapPoolSize)
+        {
           t->heap = static_cast<uintptr_t*>
             (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
 
@@ -2608,6 +2760,10 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       //     vmPrintTrace(t);
       collect(t, Heap::MinorCollection);
     }
+
+    if (t->m->heap->limitExceeded()) {
+      throw_(t, root(t, Machine::OutOfMemoryError));
+    }
   } while (type == Machine::MovableAllocation
            and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
            > ThreadHeapSizeInWords);
@@ -2625,7 +2781,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
     memset(o, 0, sizeInBytes);
 
-    cast<uintptr_t>(o, 0) = FixedMark;
+    alias(o, 0) = FixedMark;
 
     t->m->fixedFootprint += total;
 
@@ -2640,7 +2796,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 
     memset(o, 0, sizeInBytes);
 
-    cast<uintptr_t>(o, 0) = FixedMark;
+    alias(o, 0) = FixedMark;
 
     return o;
   }
@@ -2673,12 +2829,39 @@ makeNewGeneral(Thread* t, object class_)
   return instance;
 }
 
+void
+popResources(Thread* t)
+{
+  while (t->resource != t->checkpoint->resource) {
+    Thread::Resource* r = t->resource;
+    t->resource = r->next;
+    r->release();
+  }
+
+  t->protector = t->checkpoint->protector;
+}
+
+object
+makeByteArray(Thread* t, const char* format, va_list a)
+{
+  const int Size = 256;
+  char buffer[Size];
+  
+  int r = vm::vsnprintf(buffer, Size - 1, format, a);
+  expect(t, r >= 0 and r < Size - 1);
+
+  object s = makeByteArray(t, strlen(buffer) + 1);
+  memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
+
+  return s;
+}
+
 object
 makeByteArray(Thread* t, const char* format, ...)
 {
   va_list a;
   va_start(a, format);
-  object s = ::makeByteArray(t, format, a);
+  object s = makeByteArray(t, format, a);
   va_end(a);
 
   return s;
@@ -2689,94 +2872,93 @@ makeString(Thread* t, const char* format, ...)
 {
   va_list a;
   va_start(a, format);
-  object s = ::makeByteArray(t, format, a);
+  object s = makeByteArray(t, format, a);
   va_end(a);
 
-  return makeString(t, s, 0, byteArrayLength(t, s) - 1, 0);
+  return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
 }
-
 
 int
-stringUTFLength(Thread* t, object string) {
-  int length = 0;
+stringUTFLength(Thread* t, object string, unsigned start, unsigned length)
+{
+  unsigned result = 0;
 
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType)) {
-      length = stringLength(t, string);
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
+      result = length;
     } else {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
-        if (!c)             length += 1; // null char (was 2 bytes in Java)
-        else if (c < 0x80)  length += 1; // ASCII char
-        else if (c < 0x800) length += 2; // two-byte char
-        else                length += 3; // three-byte char
+      for (unsigned i = 0; i < length; ++i) {
+        uint16_t c = charArrayBody
+          (t, data, stringOffset(t, string) + start + i);
+        if (c == 0)         result += 1; // null char (was 2 bytes in Java)
+        else if (c < 0x80)  result += 1; // ASCII char
+        else if (c < 0x800) result += 2; // two-byte char
+        else                result += 3; // three-byte char
       }
     }
   }
 
-  return length;
+  return result;
 }
 
 void
-stringChars(Thread* t, object string, char* chars)
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            char* chars)
 {
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
       memcpy(chars,
-             &byteArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string));
+             &byteArrayBody(t, data, stringOffset(t, string) + start),
+             length);
     } else {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        chars[i] = charArrayBody(t, data, stringOffset(t, string) + i);
+      for (unsigned i = 0; i < length; ++i) {
+        chars[i] = charArrayBody(t, data, stringOffset(t, string) + start + i);
       }
     }
   }
-  chars[stringLength(t, string)] = 0;
+  chars[length] = 0;
 }
 
 void
-stringChars(Thread* t, object string, uint16_t* chars)
+stringChars(Thread* t, object string, unsigned start, unsigned length,
+            uint16_t* chars)
 {
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        chars[i] = byteArrayBody(t, data, stringOffset(t, string) + i);
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
+      for (unsigned i = 0; i < length; ++i) {
+        chars[i] = byteArrayBody(t, data, stringOffset(t, string) + start + i);
       }
     } else {
       memcpy(chars,
-             &charArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string) * sizeof(uint16_t));
+             &charArrayBody(t, data, stringOffset(t, string) + start),
+             length * sizeof(uint16_t));
     }
   }
-  chars[stringLength(t, string)] = 0;
+  chars[length] = 0;
 }
 
 void
-stringUTFChars(Thread* t, object string, char* chars, unsigned length UNUSED)
+stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
+               char* chars, unsigned charsLength UNUSED)
 {
-  assert(t, static_cast<unsigned>(stringUTFLength(t, string)) == length);
+  assert(t, static_cast<unsigned>
+         (stringUTFLength(t, string, start, length)) == charsLength);
 
-  if (stringLength(t, string)) {
+  if (length) {
     object data = stringData(t, string);
-    if (objectClass(t, data)
-        == arrayBody(t, t->m->types, Machine::ByteArrayType))
-    {    
+    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {    
       memcpy(chars,
-             &byteArrayBody(t, data, stringOffset(t, string)),
-             stringLength(t, string));
-      chars[stringLength(t, string)] = 0; 
+             &byteArrayBody(t, data, stringOffset(t, string) + start),
+             length);
+      chars[length] = 0; 
     } else {
       int j = 0;
-      for (unsigned i = 0; i < stringLength(t, string); ++i) {
-        uint16_t c = charArrayBody(t, data, stringOffset(t, string) + i);
+      for (unsigned i = 0; i < length; ++i) {
+        uint16_t c = charArrayBody
+          (t, data, stringOffset(t, string) + start + i);
         if(!c) {                // null char
           chars[j++] = 0;
         } else if (c < 0x80) {  // ASCII char
@@ -2795,15 +2977,29 @@ stringUTFChars(Thread* t, object string, char* chars, unsigned length UNUSED)
   }
 }
 
+uint64_t
+resolveBootstrap(Thread* t, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[0]);
+
+  resolveSystemClass(t, root(t, Machine::BootLoader), name);
+
+  return 1;
+}
+
 bool
 isAssignableFrom(Thread* t, object a, object b)
 {
+  assert(t, a);
+  assert(t, b);
+
   if (a == b) return true;
 
   if (classFlags(t, a) & ACC_INTERFACE) {
     if (classVmFlags(t, b) & BootstrapFlag) {
-      resolveSystemClass(t, className(t, b));
-      if (UNLIKELY(t->exception)) {
+      uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(className(t, b)) };
+
+      if (run(t, resolveBootstrap, arguments) == 0) {
         t->exception = 0;
         return false;
       }
@@ -2941,15 +3137,6 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 object
-findLoadedSystemClass(Thread* t, object spec)
-{
-  PROTECT(t, spec);
-  ACQUIRE(t, t->m->classLock);
-
-  return hashMapFind(t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
-}
-
-object
 parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
 {
   PROTECT(t, loader);
@@ -2985,6 +3172,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
                             0, // fixed size
                             0, // array size
                             0, // array dimensions
+                            0, // runtime data index
                             0, // object mask
                             referenceName
                             (t, singletonObject(t, pool, name - 1)),
@@ -3004,7 +3192,6 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   if (super) {
     object sc = resolveClass
       (t, loader, referenceName(t, singletonObject(t, pool, super - 1)));
-    if (UNLIKELY(t->exception)) return 0;
 
     set(t, class_, ClassSuper, sc);
 
@@ -3014,16 +3201,12 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   }
   
   parseInterfaceTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
 
   parseFieldTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
 
   parseMethodTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
 
   parseAttributeTable(t, s, class_, pool);
-  if (UNLIKELY(t->exception)) return 0;
 
   object vtable = classVirtualTable(t, class_);
   unsigned vtableLength = (vtable ? arrayLength(t, vtable) : 0);
@@ -3058,20 +3241,29 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
 }
 
 object
-resolveSystemClass(Thread* t, object spec)
+resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
 {
+  PROTECT(t, loader);
   PROTECT(t, spec);
 
   ACQUIRE(t, t->m->classLock);
 
   object class_ = hashMapFind
-    (t, t->m->classMap, spec, byteArrayHash, byteArrayEqual);
+    (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
 
   if (class_ == 0) {
+    if (classLoaderParent(t, loader)) {
+      class_ = resolveSystemClass
+        (t, classLoaderParent(t, loader), spec, false);
+      if (class_) {
+        return class_;
+      }
+    }
+
     if (byteArrayBody(t, spec, 0) == '[') {
-      class_ = resolveArrayClass(t, t->m->loader, spec);
+      class_ = resolveArrayClass(t, loader, spec, throw_);
     } else {
-      RUNTIME_ARRAY(char, file, byteArrayLength(t, spec) + 6);
+      THREAD_RUNTIME_ARRAY(t, char, file, byteArrayLength(t, spec) + 6);
       memcpy(RUNTIME_ARRAY_BODY(file),
              &byteArrayBody(t, spec, 0),
              byteArrayLength(t, spec) - 1);
@@ -3079,35 +3271,36 @@ resolveSystemClass(Thread* t, object spec)
              ".class",
              7);
 
-      System::Region* region = t->m->finder->find(RUNTIME_ARRAY_BODY(file));
+      System::Region* region = static_cast<Finder*>
+        (systemClassLoaderFinder(t, loader))->find
+        (RUNTIME_ARRAY_BODY(file));
 
       if (region) {
         if (Verbose) {
           fprintf(stderr, "parsing %s\n", &byteArrayBody(t, spec, 0));
         }
 
-        // parse class file
-        class_ = parseClass
-          (t, t->m->loader, region->start(), region->length());
-        region->dispose();
+        { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
-        if (LIKELY(t->exception == 0)) {
-          if (Verbose) {
-            fprintf(stderr, "done parsing %s: %p\n",
-                    &byteArrayBody(t, spec, 0),
-                    class_);
-          }
+          // parse class file
+          class_ = parseClass(t, loader, region->start(), region->length());
+        }
 
-          object bootstrapClass = hashMapFind
-            (t, t->m->bootstrapClassMap, spec, byteArrayHash,
-             byteArrayEqual);
+        if (Verbose) {
+          fprintf(stderr, "done parsing %s: %p\n",
+                  &byteArrayBody(t, spec, 0),
+                  class_);
+        }
 
-          if (bootstrapClass) {
-            PROTECT(t, bootstrapClass);
-              
-            updateBootstrapClass(t, bootstrapClass, class_);
-            class_ = bootstrapClass;
-          }
+        object bootstrapClass = hashMapFind
+          (t, root(t, Machine::BootstrapClassMap), spec, byteArrayHash,
+           byteArrayEqual);
+
+        if (bootstrapClass) {
+          PROTECT(t, bootstrapClass);
+          
+          updateBootstrapClass(t, bootstrapClass, class_);
+          class_ = bootstrapClass;
         }
       }
     }
@@ -3115,10 +3308,10 @@ resolveSystemClass(Thread* t, object spec)
     if (class_) {
       PROTECT(t, class_);
 
-      hashMapInsert(t, t->m->classMap, spec, class_, byteArrayHash);
-    } else if (t->exception == 0) {
-      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
+      hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
+    } else if (throw_) {
+      throwNew(t, Machine::ClassNotFoundExceptionType, "%s",
+               &byteArrayBody(t, spec, 0));
     }
   }
 
@@ -3126,75 +3319,89 @@ resolveSystemClass(Thread* t, object spec)
 }
 
 object
-resolveClass(Thread* t, object loader, object spec)
+findLoadedClass(Thread* t, object loader, object spec)
 {
-  if (loader == t->m->loader) {
-    return resolveSystemClass(t, spec);
+  PROTECT(t, loader);
+  PROTECT(t, spec);
+
+  ACQUIRE(t, t->m->classLock);
+
+  return classLoaderMap(t, loader) ? hashMapFind
+    (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual) : 0;
+}
+
+object
+resolveClass(Thread* t, object loader, object spec, bool throw_)
+{
+  if (objectClass(t, loader) == type(t, Machine::SystemClassLoaderType)) {
+    return resolveSystemClass(t, loader, spec, throw_);
   } else {
+    expect(t, throw_);
+
     PROTECT(t, loader);
     PROTECT(t, spec);
 
-    ACQUIRE(t, t->m->classLock);
-
-    if (classLoaderMap(t, loader) == 0) {
-      object map = makeHashMap(t, 0, 0);
-      set(t, loader, ClassLoaderMap, map);
+    object c = findLoadedClass(t, loader, spec);
+    if (c) {
+      return c;
     }
 
-    object class_ = hashMapFind
-      (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
+    if (byteArrayBody(t, spec, 0) == '[') {
+      c = resolveArrayClass(t, loader, spec, throw_);
+    } else {
+      if (root(t, Machine::LoadClassMethod) == 0) {
+        object m = resolveMethod
+          (t, root(t, Machine::BootLoader), "java/lang/ClassLoader",
+           "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
 
-    if (class_ == 0) {
-      if (byteArrayBody(t, spec, 0) == '[') {
-        class_ = resolveArrayClass(t, loader, spec);
-      } else {
-        if (t->m->loadClassMethod == 0) {
-          object m = resolveMethod
-            (t, t->m->loader, "java/lang/ClassLoader", "loadClass",
-             "(Ljava/lang/String;)Ljava/lang/Class;");
+        if (m) {
+          setRoot(t, Machine::LoadClassMethod, m);
 
-          if (m) {
-            t->m->loadClassMethod = m;
-
-            object classLoaderClass = arrayBody
-              (t, t->m->types, Machine::ClassLoaderType);
+          object classLoaderClass = type(t, Machine::ClassLoaderType);
         
-            if (classVmFlags(t, classLoaderClass) & BootstrapFlag) {
-              resolveSystemClass(t, vm::className(t, classLoaderClass));
-            }
-          }      
-        }
-
-        if (LIKELY(t->exception == 0)) {
-          object method = findVirtualMethod
-            (t, t->m->loadClassMethod, objectClass(t, loader));
-
-          if (LIKELY(t->exception == 0)) {
-            PROTECT(t, method);
-
-            object specString = makeString
-              (t, "%s", &byteArrayBody(t, spec, 0));
-
-            replace('/', '.', reinterpret_cast<char*>
-                    (&byteArrayBody(t, stringData(t, specString), 0)));
-
-            class_ = t->m->processor->invoke(t, method, loader, specString);
+          if (classVmFlags(t, classLoaderClass) & BootstrapFlag) {
+            resolveSystemClass
+              (t, root(t, Machine::BootLoader),
+               vm::className(t, classLoaderClass));
           }
-        }
+        }      
+      }
+
+      object method = findVirtualMethod
+        (t, root(t, Machine::LoadClassMethod), objectClass(t, loader));
+
+      PROTECT(t, method);
+        
+      THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, spec));
+      replace('/', '.', RUNTIME_ARRAY_BODY(s), reinterpret_cast<char*>
+              (&byteArrayBody(t, spec, 0)));
+
+      object specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
+
+      object jc = t->m->processor->invoke(t, method, loader, specString);
+      if (LIKELY(jc)) {
+        c = jclassVmClass(t, jc);
       }
     }
 
-    if (class_) {
-      PROTECT(t, class_);
+    if (LIKELY(c)) {
+      PROTECT(t, c);
 
-      hashMapInsert(t, classLoaderMap(t, loader), spec, class_,
-                    byteArrayHash);
-    } else if (t->exception == 0) {
-      object message = makeString(t, "%s", &byteArrayBody(t, spec, 0));
-      t->exception = makeClassNotFoundException(t, message);
+      ACQUIRE(t, t->m->classLock);
+
+      if (classLoaderMap(t, loader) == 0) {
+        object map = makeHashMap(t, 0, 0);
+        set(t, loader, ClassLoaderMap, map);
+      }
+
+      hashMapInsert
+        (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
+
+      return c;
+    } else {
+      throwNew(t, Machine::ClassNotFoundExceptionType, "%s",
+               &byteArrayBody(t, spec, 0));
     }
-
-    return class_;
   }
 }
 
@@ -3211,13 +3418,10 @@ resolveMethod(Thread* t, object class_, const char* methodName,
     
   object method = findMethodInClass(t, class_, name, spec);
 
-  if (t->exception == 0 and method == 0) {
-    object message = makeString
-      (t, "%s %s not found in %s", methodName, methodSpec,
-       &byteArrayBody(t, className(t, class_), 0));
-
-    t->exception = makeNoSuchMethodError(t, message);
-    return 0;
+  if (method == 0) {
+    throwNew(t, Machine::NoSuchMethodErrorType, "%s %s not found in %s",
+             methodName, methodSpec, &byteArrayBody
+             (t, className(t, class_), 0));
   } else {
     return method;
   }
@@ -3237,47 +3441,19 @@ resolveField(Thread* t, object class_, const char* fieldName,
  
   object field = findInInterfaces(t, class_, name, spec, findFieldInClass);
 
-  for (; class_ != 0 and field == 0; class_ = classSuper(t, class_)) {
-    field = findFieldInClass(t, class_, name, spec);
+  object c = class_;
+  PROTECT(t, c);
+
+  for (; c != 0 and field == 0; c = classSuper(t, c)) {
+    field = findFieldInClass(t, c, name, spec);
   }
 
-  if (t->exception == 0 and field == 0) {
-    object message = makeString
-      (t, "%s %s not found in %s", fieldName, fieldSpec,
-       &byteArrayBody(t, className(t, class_), 0));
-
-    t->exception = makeNoSuchFieldError(t, message);
-    return 0;
+  if (field == 0) {
+    throwNew(t, Machine::NoSuchFieldErrorType, "%s %s not found in %s",
+             fieldName, fieldSpec, &byteArrayBody(t, className(t, class_), 0));
   } else {
     return field;
   }
-}
-
-object
-resolveObjectArrayClass(Thread* t, object loader, object elementSpec)
-{
-  PROTECT(t, loader);
-  PROTECT(t, elementSpec);
-
-  object spec;
-  if (byteArrayBody(t, elementSpec, 0) == '[') {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
-    byteArrayBody(t, spec, 0) = '[';
-    memcpy(&byteArrayBody(t, spec, 1),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec));
-  } else {
-    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
-    byteArrayBody(t, spec, 0) = '[';
-    byteArrayBody(t, spec, 1) = 'L';
-    memcpy(&byteArrayBody(t, spec, 2),
-           &byteArrayBody(t, elementSpec, 0),
-           byteArrayLength(t, elementSpec) - 1);
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
-    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
-  }
-
-  return resolveClass(t, loader, spec);
 }
 
 bool
@@ -3307,6 +3483,7 @@ preInitClass(Thread* t, object c)
   if (classVmFlags(t, c) & NeedInitFlag) {
     PROTECT(t, c);
     ACQUIRE(t, t->m->classLock);
+
     if (classVmFlags(t, c) & NeedInitFlag) {
       if (classVmFlags(t, c) & InitFlag) {
         // If the class is currently being initialized and this the thread
@@ -3322,9 +3499,8 @@ preInitClass(Thread* t, object c)
           t->m->classLock->wait(t->systemThread, 0);
         }
       } else if (classVmFlags(t, c) & InitErrorFlag) {
-        object message = makeString
-          (t, "%s", &byteArrayBody(t, className(t, c), 0));
-        t->exception = makeNoClassDefFoundError(t, message);
+        throwNew(t, Machine::NoClassDefFoundErrorType, "%s",
+                 &byteArrayBody(t, className(t, c), 0));
       } else {
         classVmFlags(t, c) |= InitFlag;
         return true;
@@ -3338,12 +3514,17 @@ void
 postInitClass(Thread* t, object c)
 {
   PROTECT(t, c);
-
   ACQUIRE(t, t->m->classLock);
+
   if (t->exception) {
-    t->exception = makeExceptionInInitializerError(t, t->exception);
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
     classVmFlags(t, c) &= ~InitFlag;
+
+    object exception = t->exception;
+    t->exception = 0;
+
+    throwNew(t, Machine::ExceptionInInitializerErrorType,
+             static_cast<object>(0), 0, exception);
   } else {
     classVmFlags(t, c) &= ~(NeedInitFlag | InitFlag);
   }
@@ -3356,19 +3537,62 @@ initClass(Thread* t, object c)
   PROTECT(t, c);
 
   if (preInitClass(t, c)) {
+    OBJECT_RESOURCE(t, c, postInitClass(t, c));
+
     Thread::ClassInitStack stack(t, c);
 
     t->m->processor->invoke(t, classInitializer(t, c), 0);
-
-    postInitClass(t, c);
   }
 }
 
 object
-makeObjectArray(Thread* t, object loader, object elementClass, unsigned count)
+resolveObjectArrayClass(Thread* t, object loader, object elementClass)
+{
+  { object arrayClass = classRuntimeDataArrayClass
+      (t, getClassRuntimeData(t, elementClass));
+    if (arrayClass) {
+      return arrayClass;
+    }
+  }
+
+  PROTECT(t, loader);
+  PROTECT(t, elementClass);
+
+  object elementSpec = className(t, elementClass);
+  PROTECT(t, elementSpec);
+
+  object spec;
+  if (byteArrayBody(t, elementSpec, 0) == '[') {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 1);
+    byteArrayBody(t, spec, 0) = '[';
+    memcpy(&byteArrayBody(t, spec, 1),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec));
+  } else {
+    spec = makeByteArray(t, byteArrayLength(t, elementSpec) + 3);
+    byteArrayBody(t, spec, 0) = '[';
+    byteArrayBody(t, spec, 1) = 'L';
+    memcpy(&byteArrayBody(t, spec, 2),
+           &byteArrayBody(t, elementSpec, 0),
+           byteArrayLength(t, elementSpec) - 1);
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 1) = ';';
+    byteArrayBody(t, spec, byteArrayLength(t, elementSpec) + 2) = 0;
+  }
+
+  object arrayClass = resolveClass(t, loader, spec);
+
+  set(t, getClassRuntimeData(t, elementClass), ClassRuntimeDataArrayClass,
+      arrayClass);
+
+  return arrayClass;
+}
+
+object
+makeObjectArray(Thread* t, object elementClass, unsigned count)
 {
   object arrayClass = resolveObjectArrayClass
-    (t, loader, className(t, elementClass));
+    (t, classLoader(t, elementClass), elementClass);
+
   PROTECT(t, arrayClass);
 
   object array = makeArray(t, count);
@@ -3410,9 +3634,8 @@ findInTable(Thread* t, object table, object name, object spec,
 }
 
 object
-findInHierarchy(Thread* t, object class_, object name, object spec,
-                object (*find)(Thread*, object, object, object),
-                object (*makeError)(Thread*, object))
+findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
+                      object (*find)(Thread*, object, object, object))
 {
   object originalClass = class_;
 
@@ -3432,15 +3655,6 @@ findInHierarchy(Thread* t, object class_, object name, object spec,
     if (o == 0 and find == findFieldInClass) {
       o = findInInterfaces(t, originalClass, name, spec, find);
     }
-  }
-
-  if (o == 0) {
-    object message = makeString
-      (t, "%s %s not found in %s",
-       &byteArrayBody(t, name, 0),
-       &byteArrayBody(t, spec, 0),
-       &byteArrayBody(t, className(t, originalClass), 0));
-    t->exception = makeError(t, message);
   }
 
   return o;
@@ -3490,7 +3704,8 @@ objectMonitor(Thread* t, object o, bool createNew)
 {
   assert(t, t->state == Thread::ActiveState);
 
-  object m = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
+  object m = hashMapFind
+    (t, root(t, Machine::MonitorMap), o, objectHash, objectEqual);
 
   if (m) {
     if (DebugMonitors) {
@@ -3504,7 +3719,9 @@ objectMonitor(Thread* t, object o, bool createNew)
 
     { ENTER(t, Thread::ExclusiveState);
 
-      m = hashMapFind(t, t->m->monitorMap, o, objectHash, objectEqual);
+      m = hashMapFind
+        (t, root(t, Machine::MonitorMap), o, objectHash, objectEqual);
+
       if (m) {
         if (DebugMonitors) {
           fprintf(stderr, "found monitor %p for object %x\n",
@@ -3522,7 +3739,7 @@ objectMonitor(Thread* t, object o, bool createNew)
                 objectHash(t, o));
       }
 
-      hashMapInsert(t, t->m->monitorMap, o, m, objectHash);
+      hashMapInsert(t, root(t, Machine::MonitorMap), o, m, objectHash);
 
       addFinalizer(t, o, removeMonitor);
     }
@@ -3540,11 +3757,13 @@ intern(Thread* t, object s)
 
   ACQUIRE(t, t->m->referenceLock);
 
-  object n = hashMapFindNode(t, t->m->stringMap, s, stringHash, stringEqual);
+  object n = hashMapFindNode
+    (t, root(t, Machine::StringMap), s, stringHash, stringEqual);
+
   if (n) {
     return jreferenceTarget(t, tripleFirst(t, n));
   } else {
-    hashMapInsert(t, t->m->stringMap, s, 0, stringHash);
+    hashMapInsert(t, root(t, Machine::StringMap), s, 0, stringHash);
     addFinalizer(t, s, removeString);
     return s;
   }
@@ -3555,56 +3774,31 @@ collect(Thread* t, Heap::CollectionType type)
 {
   ENTER(t, Thread::ExclusiveState);
 
-#ifdef VM_STRESS
-  bool stress = t->stress;
-  if (not stress) t->stress = true;
-#endif
-
-  Machine* m = t->m;
-
-  m->unsafe = true;
-  m->heap->collect(type, footprint(m->rootThread));
-  m->unsafe = false;
-
-  postCollect(m->rootThread);
-
-  killZombies(t, m->rootThread);
-
-  for (unsigned i = 0; i < m->heapPoolIndex; ++i) {
-    m->heap->free(m->heapPool[i], ThreadHeapSizeInBytes);
+  if (t->m->heap->limitExceeded()) {
+    type = Heap::MajorCollection;
   }
-  m->heapPoolIndex = 0;
 
-  m->fixedFootprint = 0;
+  doCollect(t, type);
 
-#ifdef VM_STRESS
-  if (not stress) t->stress = false;
-#endif
+  if (t->m->heap->limitExceeded()) {
+    // try once more, giving the heap a chance to squeeze everything
+    // into the smallest possible space:
+    doCollect(t, Heap::MajorCollection);
+  }
 
-  object f = m->finalizeQueue;
-  m->finalizeQueue = 0;
-  for (; f; f = finalizerNext(t, f)) {
-    void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
-    if (function) {
-      function(t, finalizerTarget(t, f));
-    } else {
-      m->objectsToFinalize = makePair
-        (t, finalizerTarget(t, f), m->objectsToFinalize);      
+#ifdef AVIAN_HEAPDUMP
+  if ((not t->m->dumpedHeapOnOOM) and t->m->heap->limitExceeded()) {
+    t->m->dumpedHeapOnOOM = true;
+    const char* path = findProperty(t, "avian.heap.dump");
+    if (path) {
+      FILE* out = vm::fopen(path, "wb");
+      if (out) {
+        dumpHeap(t, out);
+        fclose(out);
+      }
     }
   }
-
-  if (m->objectsToFinalize and m->finalizeThread == 0) {
-    m->finalizeThread = m->processor->makeThread
-      (m, makeJavaThread(t, m->rootThread), m->rootThread);
-
-    if (not t->m->system->success
-        (m->system->start(&(m->finalizeThread->runnable))))
-    {
-      m->finalizeThread->exit();
-      m->finalizeThread = 0;
-    }
-  }
+#endif//AVIAN_HEAPDUMP
 }
 
 void
@@ -3623,7 +3817,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
       = (arrayElementSize ?
          cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
-    RUNTIME_ARRAY(uint32_t, mask, intArrayLength(t, objectMask));
+    THREAD_RUNTIME_ARRAY(t, uint32_t, mask, intArrayLength(t, objectMask));
     memcpy(RUNTIME_ARRAY_BODY(mask), &intArrayBody(t, objectMask, 0),
            intArrayLength(t, objectMask) * 4);
 
@@ -3668,19 +3862,8 @@ walkNext(Thread* t, object o, int previous)
 void
 visitRoots(Machine* m, Heap::Visitor* v)
 {
-  v->visit(&(m->loader));
-  v->visit(&(m->classMap));
-  v->visit(&(m->loadClassMethod));
-  v->visit(&(m->bootstrapClassMap));
-  v->visit(&(m->monitorMap));
-  v->visit(&(m->stringMap));
-  v->visit(&(m->byteArrayMap));
   v->visit(&(m->types));
-  v->visit(&(m->jniMethodTable));
-  v->visit(&(m->shutdownHooks));
-  v->visit(&(m->objectsToFinalize));
-  v->visit(&(m->nullPointerException));
-  v->visit(&(m->arrayIndexOutOfBoundsException));
+  v->visit(&(m->roots));
 
   for (Thread* t = m->rootThread; t; t = t->peer) {
     ::visitRoots(t, v);
@@ -3695,7 +3878,7 @@ void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
-    exception = makeNullPointerException(t, 0, makeTrace(t), 0);
+    exception = makeThrowable(t, Machine::NullPointerExceptionType);
   }
 
   for (object e = exception; e; e = throwableCause(t, e)) {
@@ -3708,7 +3891,7 @@ printTrace(Thread* t, object exception)
   
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
-      RUNTIME_ARRAY(char, message, stringLength(t, m) + 1);
+      THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
       fprintf(stderr, ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
@@ -3716,8 +3899,8 @@ printTrace(Thread* t, object exception)
     }
 
     object trace = throwableTrace(t, e);
-    for (unsigned i = 0; i < arrayLength(t, trace); ++i) {
-      object e = arrayBody(t, trace, i);
+    for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
+      object e = objectArrayBody(t, trace, i);
       const int8_t* class_ = &byteArrayBody
         (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
       const int8_t* method = &byteArrayBody
@@ -3738,7 +3921,13 @@ printTrace(Thread* t, object exception)
         fprintf(stderr, "(line %d)\n", line);
       }
     }
+
+    if (e == throwableCause(t, e)) {
+      break;
+    }
   }
+
+  fflush(stderr);
 }
 
 object
@@ -3750,11 +3939,12 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
-        trace = makeArray(t, walker->count());
+        trace = makeObjectArray(t, walker->count());
+        vm_assert(t, trace);
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
-      vm_assert(t, index < arrayLength(t, trace));
+      vm_assert(t, index < objectArrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;
@@ -3768,7 +3958,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
 
   walker->walk(&v);
 
-  return v.trace ? v.trace : makeArray(t, 0);
+  return v.trace ? v.trace : makeObjectArray(t, 0);
 }
 
 object
@@ -3789,32 +3979,21 @@ makeTrace(Thread* t, Thread* target)
 
   t->m->processor->walkStack(target, &v);
 
-  return v.trace ? v.trace : makeArray(t, 0);
-}
-
-void
-runJavaThread(Thread* t)
-{
-  object method = resolveMethod
-    (t, t->m->loader, "java/lang/Thread", "run", "(Ljava/lang/Thread;)V");
-
-  if (t->exception == 0) {
-    t->m->processor->invoke(t, method, 0, t->javaThread);
-  }
+  return v.trace ? v.trace : makeObjectArray(t, 0);
 }
 
 void
 runFinalizeThread(Thread* t)
 {
-  setDaemon(t, t->javaThread, true);
-
   object list = 0;
   PROTECT(t, list);
 
   while (true) {
     { ACQUIRE(t, t->m->stateLock);
 
-      while (t->m->finalizeThread and t->m->objectsToFinalize == 0) {
+      while (t->m->finalizeThread
+             and root(t, Machine::ObjectsToFinalize) == 0)
+      {
         ENTER(t, Thread::IdleState);
         t->m->stateLock->wait(t->systemThread, 0);
       }
@@ -3822,8 +4001,8 @@ runFinalizeThread(Thread* t)
       if (t->m->finalizeThread == 0) {
         return;
       } else {
-        list = t->m->objectsToFinalize;
-        t->m->objectsToFinalize = 0;
+        list = root(t, Machine::ObjectsToFinalize);
+        setRoot(t, Machine::ObjectsToFinalize, 0);
       }
     }
 
@@ -3831,6 +4010,79 @@ runFinalizeThread(Thread* t)
       finalizeObject(t, pairFirst(t, list));
     }
   }
+}
+
+object
+parseUtf8(Thread* t, const char* data, unsigned length)
+{
+  class Client: public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void NO_RETURN handleError() {
+      vm::abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  Stream s(&client, reinterpret_cast<const uint8_t*>(data), length);
+
+  return ::parseUtf8(t, s, length);
+}
+
+object
+getCaller(Thread* t, unsigned target)
+{
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t, unsigned target):
+      t(t), method(0), count(0), target(target)
+    { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      if (count == target) {
+        method = walker->method();
+        return false;
+      } else {
+        ++ count;
+        return true;
+      }
+    }
+
+    Thread* t;
+    object method;
+    unsigned count;
+    unsigned target;
+  } v(t, target);
+
+  t->m->processor->walkStack(t, &v);
+
+  return v.method;
+}
+
+object
+defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
+{
+  PROTECT(t, loader);
+
+  object c = parseClass(t, loader, buffer, length);
+
+  if (c) {
+    PROTECT(t, c);
+    ACQUIRE(t, t->m->classLock);
+
+    if (classLoaderMap(t, loader) == 0) {
+      object map = makeHashMap(t, 0, 0);
+      set(t, loader, ClassLoaderMap, map);
+    }
+
+    hashMapInsert
+      (t, classLoaderMap(t, loader), className(t, c), c, byteArrayHash);
+  }
+
+  return c;
 }
 
 void
@@ -3876,31 +4128,35 @@ vmPrintTrace(Thread* t)
     Thread* t;
   } v(t);
 
+  fprintf(stderr, "debug trace for thread %p\n", t);
+
   t->m->processor->walkStack(t, &v);
+
+  fflush(stderr);
 }
 
 // also for debugging
 void*
 vmAddressFromLine(Thread* t, object m, unsigned line)
 {
-	object code = methodCode(t, m);
-	printf("code: %p\n", code);
-	object lnt = codeLineNumberTable(t, code);
-	printf("lnt: %p\n", lnt);
+  object code = methodCode(t, m);
+  printf("code: %p\n", code);
+  object lnt = codeLineNumberTable(t, code);
+  printf("lnt: %p\n", lnt);
 	
-	if (lnt) {
-		unsigned last = 0;
-		unsigned bottom = 0;
-		unsigned top = lineNumberTableLength(t, lnt);
-		for(unsigned i = bottom; i < top; i++)
-		{
-			LineNumber* ln = lineNumberTableBody(t, lnt, i);
-			if(lineNumberLine(ln) == line)
-				return reinterpret_cast<void*>(lineNumberIp(ln));
-			else if(lineNumberLine(ln) > line)
-				return reinterpret_cast<void*>(last);
-			last = lineNumberIp(ln);
-		}
-	}
-	return 0;
+  if (lnt) {
+    unsigned last = 0;
+    unsigned bottom = 0;
+    unsigned top = lineNumberTableLength(t, lnt);
+    for(unsigned i = bottom; i < top; i++)
+    {
+      LineNumber* ln = lineNumberTableBody(t, lnt, i);
+      if(lineNumberLine(ln) == line)
+        return reinterpret_cast<void*>(lineNumberIp(ln));
+      else if(lineNumberLine(ln) > line)
+        return reinterpret_cast<void*>(last);
+      last = lineNumberIp(ln);
+    }
+  }
+  return 0;
 }

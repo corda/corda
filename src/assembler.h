@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -20,6 +20,12 @@ namespace vm {
 const bool TailCalls = true;
 #else
 const bool TailCalls = false;
+#endif
+
+#ifdef AVIAN_USE_FRAME_POINTER
+const bool UseFramePointer = true;
+#else
+const bool UseFramePointer = false;
 #endif
 
 enum Operation {
@@ -323,6 +329,7 @@ class Assembler {
 
     virtual unsigned frameFootprint(unsigned footprint) = 0;
     virtual unsigned argumentFootprint(unsigned footprint) = 0;
+    virtual bool argumentAlignment() = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
@@ -337,13 +344,16 @@ class Assembler {
 
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
+    virtual void nextFrame(void* start, unsigned size, unsigned footprint,
+                           void* link, void* stackLimit,
+                           unsigned targetParameterFootprint, void** ip,
+                           void** stack) = 0;
     virtual void* frameIp(void* stack) = 0;
     virtual unsigned frameHeaderSize() = 0;
     virtual unsigned frameReturnAddressSize() = 0;
     virtual unsigned frameFooterSize() = 0;
     virtual int returnAddressOffset() = 0;
     virtual int framePointerOffset() = 0;
-    virtual void nextFrame(void** stack, void** base) = 0;
 
     virtual void plan
     (UnaryOperation op,
@@ -385,17 +395,21 @@ class Assembler {
 
   virtual Architecture* arch() = 0;
 
-  virtual void saveFrame(unsigned stackOffset, unsigned baseOffset) = 0;
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread) = 0;
+  virtual void saveFrame(unsigned stackOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
-  virtual void adjustFrame(unsigned footprint) = 0;
-  virtual void popFrame() = 0;
+  virtual void adjustFrame(unsigned difference) = 0;
+  virtual void popFrame(unsigned footprint) = 0;
   virtual void popFrameForTailCall(unsigned footprint, int offset,
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate) = 0;
-  virtual void popFrameAndPopArgumentsAndReturn(unsigned argumentFootprint)
+  virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
+                                                unsigned argumentFootprint)
   = 0;
-  virtual void popFrameAndUpdateStackAndReturn(unsigned stackOffsetFromThread)
+  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+                                               unsigned stackOffsetFromThread)
   = 0;
 
   virtual void apply(Operation op) = 0;
@@ -414,13 +428,15 @@ class Assembler {
 
   virtual void writeTo(uint8_t* dst) = 0;
 
-  virtual Promise* offset() = 0;
+  virtual Promise* offset(bool forTrace = false) = 0;
 
   virtual Block* endBlock(bool startNew) = 0;
 
+  virtual void endEvent() = 0;
+
   virtual unsigned length() = 0;
 
-  virtual unsigned scratchSize() = 0;
+  virtual unsigned footerSize() = 0;
 
   virtual void dispose() = 0;
 };

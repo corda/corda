@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -78,6 +78,10 @@ public class ObjectInputStream extends InputStream {
   public double readDouble() throws IOException {
     read('d');
     return readDoubleToken();
+  }
+  
+  public void defaultReadObject() throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   private void skipSpace() throws IOException {

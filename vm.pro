@@ -12,6 +12,7 @@
 -keepclassmembers class java.lang.ClassLoader { !static <fields>; }
 -keepclassmembers class java.lang.String { !static <fields>; }
 -keepclassmembers class java.lang.Thread { !static <fields>; }
+-keepclassmembers class java.lang.ThreadGroup { !static <fields>; }
 -keepclassmembers class java.lang.StackTraceElement { !static <fields>; }
 -keepclassmembers class java.lang.Throwable { !static <fields>; }
 -keepclassmembers class java.lang.Byte { !static <fields>; }
@@ -28,6 +29,17 @@
 -keepclassmembers class java.lang.ref.PhantomReference { !static <fields>; }
 -keepclassmembers class java.lang.reflect.Field { !static <fields>; }
 -keepclassmembers class java.lang.reflect.Method { !static <fields>; }
+-keepclassmembers class java.lang.reflect.Constructor { !static <fields>; }
+-keepclassmembers class java.lang.reflect.AccessibleObject { !static <fields>; }
+-keepclassmembers class sun.reflect.ConstantPool { !static <fields>; }
+-keepclassmembers class avian.VMClass { !static <fields>; }
+-keepclassmembers class avian.VMMethod { !static <fields>; }
+-keepclassmembers class avian.VMField { !static <fields>; }
+-keepclassmembers class avian.ClassAddendum { !static <fields>; }
+-keepclassmembers class avian.MethodAddendum { !static <fields>; }
+-keepclassmembers class avian.FieldAddendum { !static <fields>; }
+-keepclassmembers class avian.Continuations$Continuation { !static <fields>; }
+-keepclassmembers class avian.Continuations$UnwindResult { !static <fields>; }
 
 # the VM may throw instances of the following:
 
@@ -45,6 +57,7 @@
 -keep public class java.lang.ClassCastException
 -keep public class java.lang.ClassNotFoundException
 -keep public class java.lang.NullPointerException
+-keep public class java.lang.ArithmeticException
 -keep public class java.lang.InterruptedException
 -keep public class java.lang.StackOverflowError
 -keep public class java.lang.NoSuchFieldError
@@ -64,6 +77,7 @@
 # the VM references these classes by name, so protect them from obfuscation:
 
 -keepnames public class java.lang.**
+-keepnames public class avian.**
 
 # Don't optimize calls to ResourceBundle
 -keep,allowshrinking,allowobfuscation public class java.util.ResourceBundle {
@@ -97,3 +111,15 @@
 
 -keepnames public class avian.Callback
 -keepnames public class java.util.concurrent.Callable
+
+# Proguard gets confused about clone() and array classes (http://sourceforge.net/tracker/index.php?func=detail&aid=2851344&group_id=54750&atid=474704):
+
+-keepclassmembers class java.lang.Object {
+   protected java.lang.Object clone();
+ }
+
+# called by name in the VM:
+
+-keepclassmembers class java.lang.ClassLoader {
+   public java.lang.Class loadClass(java.lang.String);
+ }

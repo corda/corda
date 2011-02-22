@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -11,6 +11,22 @@
 package java.security;
 
 public abstract class Permission {
+  
+  protected String name;
+  
+  public Permission(String name) {
+    this.name = name;
+  }
+  
+  public String getName() {
+    return name;
+  }
+  
+  @Override
+  public String toString() {
+    return this.getClass().getSimpleName() + '['+name+']';
+  }
+  
   public PermissionCollection newPermissionCollection() {
     return null;
   }

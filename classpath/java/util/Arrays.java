@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -144,6 +144,12 @@ public class Arrays {
   }
 
   public static void fill(char[] array, char value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+  
+  public static <T> void fill(T[] array, T value) {
     for (int i=0;i<array.length;i++) {
       array[i] = value;
     }

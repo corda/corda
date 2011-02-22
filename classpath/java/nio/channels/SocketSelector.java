@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -96,6 +96,7 @@ class SocketSelector extends Selector {
         int ready = natUpdateReadySet(socket, key.interestOps(), state);
         key.readyOps(ready);
         if (ready != 0) {
+          c.handleReadyOps(ready);
           selectedKeys.add(key);
         }
       }

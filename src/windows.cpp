@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -49,6 +49,11 @@ class MutexResource {
   HANDLE m;
 };
 
+const unsigned SegFaultIndex = 0;
+const unsigned DivideByZeroIndex = 1;
+
+const unsigned HandlerCount = 2;
+
 class MySystem;
 MySystem* system;
 
@@ -91,7 +96,7 @@ class MySystem: public System {
 
       if (flags & Waiting) {
         int r UNUSED = SetEvent(event);
-        assert(s, r == 0);
+        assert(s, r != 0);
       }
     }
 
@@ -457,11 +462,10 @@ class MySystem: public System {
 
   class Library: public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name, bool mapName):
+    Library(System* s, HMODULE handle, const char* name):
       s(s),
       handle(handle),
       name_(name),
-      mapName_(mapName),
       next_(0)
     { }
 
@@ -476,10 +480,6 @@ class MySystem: public System {
       return name_;
     }
 
-    virtual bool mapName() {
-      return mapName_;
-    }
-
     virtual System::Library* next() {
       return next_;
     }
@@ -490,7 +490,7 @@ class MySystem: public System {
 
     virtual void disposeAll() {
       if (Verbose) {
-        fprintf(stderr, "close %p\n", handle);
+        fprintf(stderr, "close %p\n", handle); fflush(stderr);
       }
 
       if (name_) {
@@ -511,20 +511,59 @@ class MySystem: public System {
     System* s;
     HMODULE handle;
     const char* name_;
-    bool mapName_;
     System::Library* next_;
   };
 
   MySystem(const char* crashDumpDirectory):
-    segFaultHandler(0),
-    oldSegFaultHandler(0),
+    oldHandler(0),
     crashDumpDirectory(crashDumpDirectory)
   {
     expect(this, system == 0);
     system = this;
 
+    memset(handlers, 0, sizeof(handlers));
+
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
+  }
+
+  bool findHandler() {
+    for (unsigned i = 0; i < HandlerCount; ++i) {
+      if (handlers[i]) return true;
+    }
+    return false;
+  }
+
+  int registerHandler(System::SignalHandler* handler, int index) {
+    if (handler) {
+      handlers[index] = handler;
+      
+      if (oldHandler == 0) {
+#ifdef ARCH_x86_32
+        oldHandler = SetUnhandledExceptionFilter(handleException);
+#elif defined ARCH_x86_64
+        AddVectoredExceptionHandler(1, handleException);
+        oldHandler = reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(1);
+#endif
+      }
+
+      return 0;
+    } else if (handlers[index]) {
+      handlers[index] = 0;
+
+      if (not findHandler()) {
+#ifdef ARCH_x86_32
+        SetUnhandledExceptionFilter(oldHandler);
+        oldHandler = 0;
+#elif defined ARCH_x86_64
+        // do nothing, handlers are never "unregistered" anyway
+#endif        
+      }
+
+      return 0;
+    } else {
+      return 1;
+    }
   }
 
   virtual void* tryAllocate(unsigned sizeInBytes) {
@@ -584,27 +623,11 @@ class MySystem: public System {
   }
 
   virtual Status handleSegFault(SignalHandler* handler) {
-    if (handler) {
-      segFaultHandler = handler;
+    return registerHandler(handler, SegFaultIndex);
+  }
 
-#ifdef ARCH_x86_32
-      oldSegFaultHandler = SetUnhandledExceptionFilter(handleException);
-#elif defined ARCH_x86_64
-      AddVectoredExceptionHandler(1, handleException);
-      oldSegFaultHandler = 0;
-#endif
-      return 0;
-    } else if (segFaultHandler) {
-      segFaultHandler = 0;
-#ifdef ARCH_x86_32
-      SetUnhandledExceptionFilter(oldSegFaultHandler);
-#elif defined ARCH_x86_64
-      //do nothing, handlers are never "unregistered" anyway
-#endif
-      return 0;
-    } else {
-      return 1;
-    }
+  virtual Status handleDivideByZero(SignalHandler* handler) {
+    return registerHandler(handler, DivideByZeroIndex);
   }
 
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
@@ -701,35 +724,40 @@ class MySystem: public System {
     return status;
   }
 
-  virtual FileType identify(const char* name) {
+  virtual FileType stat(const char* name, unsigned* length) {
     struct _stat s;
     int r = _stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
+        *length = s.st_size;
         return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
+        *length = 0;
         return TypeDirectory;
       } else {
+        *length = 0;
         return TypeUnknown;
       }
     } else {
+      *length = 0;
       return TypeDoesNotExist;
     }
   }
 
+  virtual const char* libraryPrefix() {
+    return SO_PREFIX;
+  }
+
+  virtual const char* librarySuffix() {
+    return SO_SUFFIX;
+  }
+
   virtual Status load(System::Library** lib,
-                      const char* name,
-                      bool mapName)
+                      const char* name)
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName and name) {
-      unsigned size = sizeof(SO_PREFIX) + nameLength + sizeof(SO_SUFFIX);
-      RUNTIME_ARRAY(char, buffer, size);;
-      vm::snprintf
-        (RUNTIME_ARRAY_BODY(buffer), size, SO_PREFIX "%s" SO_SUFFIX, name);
-      handle = LoadLibrary(RUNTIME_ARRAY_BODY(buffer));
-    } else if (name) {
+    if (name) {
       handle = LoadLibrary(name);
     } else {
       handle = GetModuleHandle(0);
@@ -737,7 +765,7 @@ class MySystem: public System {
  
     if (handle) {
       if (Verbose) {
-        fprintf(stderr, "open %s as %p\n", name, handle);
+        fprintf(stderr, "open %s as %p\n", name, handle); fflush(stderr);
       }
 
       char* n;
@@ -748,11 +776,15 @@ class MySystem: public System {
         n = 0;
       }
 
-      *lib = new (allocate(this, sizeof(Library)))
-        Library(this, handle, n, mapName);
+      *lib = new (allocate(this, sizeof(Library))) Library(this, handle, n);
 
       return 0;
     } else {
+      if (Verbose) {
+        fprintf(stderr, "unable to open %s: %ld\n", name, GetLastError());
+        fflush(stderr);
+      }
+
       return 1;
     }
   }
@@ -761,25 +793,22 @@ class MySystem: public System {
     return ';';
   }
 
+  virtual char fileSeparator() {
+    return '\\';
+  }
+
   virtual int64_t now() {
-    static LARGE_INTEGER frequency;
-    static LARGE_INTEGER time;
-    static bool init = true;
+    // We used to use _ftime here, but that only gives us 1-second
+    // resolution on Windows 7.  _ftime_s might work better, but MinGW
+    // doesn't have it as of this writing.  So we use this mess instead:
+    FILETIME time;
+    GetSystemTimeAsFileTime(&time);
+    return (((static_cast<int64_t>(time.dwHighDateTime) << 32)
+             | time.dwLowDateTime) / 10000) - 11644473600000LL;
+  }
 
-    if (init) {
-      QueryPerformanceFrequency(&frequency);
-
-      if (frequency.QuadPart == 0) {
-        return 0;      
-      }
-
-      init = false;
-    }
-
-    QueryPerformanceCounter(&time);
-    return static_cast<int64_t>
-      (((static_cast<double>(time.QuadPart)) * 1000.0) /
-       (static_cast<double>(frequency.QuadPart)));
+  virtual void yield() {
+    SwitchToThread();
   }
 
   virtual void exit(int code) {
@@ -799,16 +828,18 @@ class MySystem: public System {
   }
 
   HANDLE mutex;
-  System::SignalHandler* segFaultHandler;
-  LPTOP_LEVEL_EXCEPTION_FILTER oldSegFaultHandler;
+  SignalHandler* handlers[HandlerCount];
+  LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
   const char* crashDumpDirectory;
 };
 
+#pragma pack(push,4)
 struct MINIDUMP_EXCEPTION_INFORMATION {
   DWORD thread;
   LPEXCEPTION_POINTERS exception;
   BOOL exceptionInCurrentAddressSpace;
 };
+#pragma pack(pop)
 
 struct MINIDUMP_USER_STREAM_INFORMATION;
 struct MINIDUMP_CALLBACK_INFORMATION;
@@ -849,16 +880,16 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
 
       if (file != INVALID_HANDLE_VALUE) {
         MINIDUMP_EXCEPTION_INFORMATION exception
-          = { GetCurrentThreadId(), e, true };
+           = { GetCurrentThreadId(), e, true };
 
-        MiniDumpWriteDump
-          (GetCurrentProcess(),
-           GetCurrentProcessId(),
-           file,
-           MiniDumpWithFullMemory,
-           &exception,
-           0,
-           0);
+         MiniDumpWriteDump
+           (GetCurrentProcess(),
+            GetCurrentProcessId(),
+            file,
+            MiniDumpWithFullMemory,
+            &exception,
+            0,
+            0);
 
         CloseHandle(file);
       }
@@ -871,7 +902,15 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
 LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e)
 {
+  System::SignalHandler* handler = 0;
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+    handler = system->handlers[SegFaultIndex];
+  } else if (e->ExceptionRecord->ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO)
+  {
+    handler = system->handlers[DivideByZeroIndex];
+  }
+
+  if (handler) {
 #ifdef ARCH_x86_32
     void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
     void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
@@ -884,8 +923,8 @@ handleException(LPEXCEPTION_POINTERS e)
     void* thread = reinterpret_cast<void*>(e->ContextRecord->Rbx);
 #endif
 
-    bool jump = system->segFaultHandler->handleSignal
-      (&ip, &base, &stack, &thread);
+    bool jump = handler->handleSignal(&ip, &base, &stack, &thread);
+
 #ifdef  ARCH_x86_32
     e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
     e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
@@ -901,10 +940,10 @@ handleException(LPEXCEPTION_POINTERS e)
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;
     }
+  }
 
-    if (system->crashDumpDirectory) {
-      dump(e, system->crashDumpDirectory);
-    }
+  if (system->crashDumpDirectory) {
+    dump(e, system->crashDumpDirectory);
   }
 
   return EXCEPTION_CONTINUE_SEARCH;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -11,6 +11,7 @@
 package java.util;
 
 public class Collections {
+
   private Collections() { }
 
   public static void shuffle(List list, Random random) {
@@ -79,7 +80,15 @@ public class Collections {
     sb.append("}");
     return sb.toString();
   }
+  
+  public static <T> Enumeration<T> enumeration(Collection<T> c) {
+    return new IteratorEnumeration<T> (c.iterator());
+  }
 
+  public static <T> Comparator<T> reverseOrder(Comparator<T> cmp) {
+    return new ReverseComparator<T>(cmp);
+  }
+  
   static class IteratorEnumeration<T> implements Enumeration<T> {
     private final Iterator<T> it;
 
@@ -375,4 +384,19 @@ public class Collections {
       it.remove();
     }
   }
+  
+  private static final class ReverseComparator<T> implements Comparator<T> {
+
+    Comparator<T> cmp;
+    
+    public ReverseComparator(Comparator<T> cmp) {
+      this.cmp = cmp;
+    }
+    
+    public int compare(T o1, T o2) {
+      return - cmp.compare(o1, o2);
+    }
+
+  }
+
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -12,6 +12,9 @@
 #include "stdio.h"
 #include "string.h"
 #include "jni.h"
+
+#include "system.h"
+#include "finder.h"
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PATH_SEPARATOR ';'
@@ -50,7 +53,104 @@ class RuntimeArray {
 
 #endif // not _MSC_VER
 
+#ifdef BOOT_LIBRARY
+
+// since we aren't linking against libstdc++, we must implement this
+// ourselves:
+extern "C" void __cxa_pure_virtual(void) { abort(); }
+
+// we link against a System implmentation, which requires this at link
+// time, but it should not be used at runtime:
+extern "C" uint64_t
+vmNativeCall(void*, void*, unsigned, unsigned)
+{
+  abort();
+  // abort is not declared __declspec(noreturn) on MSVC, so we have to
+  // pretend it might return to make the compiler happy:
+  return 0;
+}
+
+#endif // BOOT_LIBRARY
+
 namespace {
+
+bool
+readLine(const uint8_t* base, unsigned total, unsigned* start,
+         unsigned* length)
+{
+  const uint8_t* p = base + *start;
+  const uint8_t* end = base + total;
+  while (p != end and (*p == '\n' or *p == '\r')) ++ p;
+
+  *start = p - base;
+  while (p != end and not (*p == '\n' or *p == '\r')) ++ p;
+
+  *length = (p - base) - *start;
+
+  return *length != 0;
+}
+
+const char*
+mainClass(const char* jar)
+{
+  using namespace vm;
+
+  System* system = makeSystem(0);
+
+  class MyAllocator: public Allocator {
+   public:
+    MyAllocator(System* s): s(s) { }
+
+    virtual void* tryAllocate(unsigned size) {
+      return s->tryAllocate(size);
+    }
+
+    virtual void* allocate(unsigned size) {
+      void* p = tryAllocate(size);
+      if (p == 0) {
+        abort(s);
+      }
+      return p;
+    }
+
+    virtual void free(const void* p, unsigned) {
+      s->free(p);
+    }
+
+    System* s;
+  } allocator(system);
+
+  Finder* finder = makeFinder(system, &allocator, jar, 0);
+
+  char* result = 0;
+
+  System::Region* region = finder->find("META-INF/MANIFEST.MF");
+  if (region) {
+    unsigned start = 0;
+    unsigned length;
+    while (readLine(region->start(), region->length(), &start, &length)) {
+      const unsigned PrefixLength = 12;
+      if (strncmp("Main-Class: ", reinterpret_cast<const char*>
+                  (region->start() + start), PrefixLength) == 0)
+      {
+        result = static_cast<char*>(malloc(length + 1 - PrefixLength));
+        memcpy(result, region->start() + start + PrefixLength,
+               length - PrefixLength);
+        result[length - PrefixLength] = 0;
+        break;
+      }
+      start += length;
+    }
+
+    region->dispose();
+  }
+
+  finder->dispose();
+
+  system->dispose();
+
+  return result;
+}
 
 void
 usageAndExit(const char* name)
@@ -63,7 +163,7 @@ usageAndExit(const char* name)
      "\t[-Xbootclasspath:<bootstrap classpath>]\n"
      "\t[-Xbootclasspath/a:<classpath to append to bootstrap classpath>]\n"
      "\t[-D<property name>=<property value> ...]\n"
-     "\t<class name> [<argument> ...]\n", name);
+     "\t{<class name>|-jar <app jar>} [<argument> ...]\n", name);
   exit(-1);
 }
 
@@ -78,6 +178,7 @@ main(int ac, const char** av)
   vmArgs.ignoreUnrecognized = JNI_TRUE;
 
   const char* class_ = 0;
+  const char* jar = 0;
   int argc = 0;
   const char** argv = 0;
   const char* classpath = ".";
@@ -87,12 +188,17 @@ main(int ac, const char** av)
         or strcmp(av[i], "-classpath") == 0)
     {
       classpath = av[++i];
+    } else if (strcmp(av[i], "-jar") == 0)
+    {
+      jar = av[++i];
     } else if (strncmp(av[i], "-X", 2) == 0
                or strncmp(av[i], "-D", 2) == 0)
     {
       ++ vmArgs.nOptions;
     } else {
-      class_ = av[i++];
+      if (jar == 0) {
+        class_ = av[i++];
+      }
       if (i < ac) {
         argc = ac - i;
         argv = av + i;
@@ -101,11 +207,18 @@ main(int ac, const char** av)
     }
   }
 
-#ifdef BOOT_LIBRARY
-  ++ vmArgs.nOptions;
-#endif
+  if (jar) {
+    classpath = jar;
+    
+    class_ = mainClass(jar);
 
-#ifdef BOOT_CLASSPATH
+    if (class_ == 0) {
+      fprintf(stderr, "Main-Class manifest header not found in %s\n", jar);
+      exit(-1);
+    }
+  }
+
+#ifdef BOOT_LIBRARY
   ++ vmArgs.nOptions;
 #endif
 
@@ -125,11 +238,6 @@ main(int ac, const char** av)
 #ifdef BOOT_IMAGE
   vmArgs.options[optionIndex++].optionString
     = const_cast<char*>("-Davian.bootimage=" BOOT_IMAGE);
-#endif
-
-#ifdef BOOT_CLASSPATH
-  vmArgs.options[optionIndex++].optionString
-    = const_cast<char*>("-Xbootclasspath:" BOOT_CLASSPATH);
 #endif
 
 #ifdef BOOT_LIBRARY
@@ -178,6 +286,11 @@ main(int ac, const char** av)
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
   jclass c = e->FindClass(class_);
+
+  if (jar) {
+    free(const_cast<char*>(class_));
+  }
+
   if (not e->ExceptionCheck()) {
     jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
     if (not e->ExceptionCheck()) {

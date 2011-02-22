@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -32,7 +32,7 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 #ifdef BOOT_IMAGE
 
-#if (defined __MINGW32__) || (defined _MSC_VER)
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define SYMBOL(x) binary_bootimage_bin_##x
 #else
 #  define SYMBOL(x) _binary_bootimage_bin_##x
@@ -52,11 +52,13 @@ extern "C" {
 
 }
 
+#undef SYMBOL
+
 #endif//BOOT_IMAGE
 
 #ifdef BOOT_CLASSPATH
 
-#if (defined __MINGW32__) || (defined _MSC_VER)
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define SYMBOL(x) binary_classpath_jar_##x
 #else
 #  define SYMBOL(x) _binary_classpath_jar_##x
@@ -75,5 +77,7 @@ extern "C" {
   }
 
 }
+
+#undef SYMBOL
 
 #endif//BOOT_CLASSPATH

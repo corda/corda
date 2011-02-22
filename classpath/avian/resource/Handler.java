@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -34,6 +34,10 @@ public class Handler extends URLStreamHandler {
     public InputStream getInputStream() throws IOException {
       return new ResourceInputStream(url.getFile());
     }
+
+    public void connect() {
+      // ignore
+    }
   }
 
   private static class ResourceInputStream extends InputStream {
@@ -58,6 +62,12 @@ public class Handler extends URLStreamHandler {
       throws IOException;
 
     public static native void close(long peer) throws IOException;
+
+    public static native int available(long peer, int position);
+
+    public int available() {
+      return available(peer, position);
+    }
 
     public int read() throws IOException {
       if (peer != 0) {

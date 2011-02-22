@@ -15,6 +15,17 @@ public class Arrays {
       expect(exception != null);
     }
 
+    { int[] array = new int[0];
+      Exception exception = null;
+      try {
+        int x = array[-1];
+      } catch (ArrayIndexOutOfBoundsException e) {
+        exception = e;
+      }
+
+      expect(exception != null);
+    }
+
     { int[] array = new int[3];
       int i = 0;
       array[i++] = 1;
@@ -53,6 +64,18 @@ public class Arrays {
       expect(array[0] == array[p ? 0 : 1]);
       p = false;
       expect(array[1] == array[p ? 0 : 1]);
+    }
+
+    { int[] array = new int[1024];
+      array[1023] = -1;
+      expect(array[1023] == -1);
+      expect(array[1022] == 0);
+    }
+
+    { Integer[] array = (Integer[])
+        java.lang.reflect.Array.newInstance(Integer.class, 1);
+      array[0] = Integer.valueOf(42);
+      expect(array[0].intValue() == 42);
     }
   }
 }

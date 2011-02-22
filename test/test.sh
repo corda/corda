@@ -14,14 +14,15 @@ echo -n "" >${log}
 echo
 
 for test in ${tests}; do
-  printf "%16s" "${test}: "
+  printf "%24s" "${test}: "
 
   case ${mode} in
     debug|debug-fast|fast|small )
       ${vm} ${flags} ${test} >>${log} 2>&1;;
 
     stress* )
-      ${vg} ${vm} ${flags} ${test} >>${log} 2>&1;;
+      ${vg} ${vm} ${flags} ${test} \
+        >>${log} 2>&1;;
 
     * )
       echo "unknown mode: ${mode}" >&2

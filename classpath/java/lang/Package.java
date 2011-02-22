@@ -43,4 +43,8 @@ public class Package {
     this.sealed = sealed;
     this.loader = loader;
   }
+
+  public String getName() {
+    return name;
+  }
 }

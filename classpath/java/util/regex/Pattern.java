@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -92,10 +92,6 @@ public class Pattern {
     return pattern;
   }
 
-  public static String quote(String s) {
-    throw new UnsupportedOperationException();
-  }
-
   public String[] split(CharSequence input) {
     return split(input, 0);
   }
@@ -115,23 +111,34 @@ public class Pattern {
     List<CharSequence> list = new LinkedList();
     int index = 0;
     int trailing = 0;
-    while (index < input.length() && list.size() < limit) {
-      int i = indexOf(input, pattern, index);
+    int patternLength = pattern.length();
+    while (index < input.length() && list.size() < limit - 1) {
+      int i;
+      if (patternLength == 0) {
+        if (list.size() == 0) {
+          i = 0;
+        } else {
+          i = index + 1;
+        }
+      } else {
+        i = indexOf(input, pattern, index);
+      }
+
       if (i >= 0) {
-        if (i == index) {
+        if (patternLength != 0 && i == index) {
           ++ trailing;
         } else {
           trailing = 0;
         }
 
         list.add(input.subSequence(index, i));
-        index = i + pattern.length();
+        index = i + patternLength;
       } else {
         break;
       }
     }
 
-    if (strip && index == input.length()) {
+    if (strip && index > 0 && index == input.length()) {
       ++ trailing;
     } else {
       trailing = 0;

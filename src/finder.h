@@ -60,13 +60,19 @@ class Finder {
 
   virtual IteratorImp* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
-  virtual bool exists(const char* name) = 0;
+  virtual System::FileType stat(const char* name,
+                                unsigned* length,
+                                bool tryDirectory = false) = 0;
   virtual const char* path() = 0;
   virtual void dispose() = 0;
 };
 
 Finder*
-makeFinder(System* s, const char* path, const char* bootLibrary);
+makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary);
+
+Finder*
+makeFinder(System* s, Allocator* a, const uint8_t* jarData,
+           unsigned jarLength);
 
 } // namespace vm
 

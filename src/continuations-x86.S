@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,11 +10,11 @@
 
 #ifdef __x86_64__
 
-#define THREAD_CONTINUATION 2224
+#define THREAD_CONTINUATION 2240
 #define THREAD_EXCEPTION 80
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2232
-#define THREAD_EXCEPTION_OFFSET 2240
-#define THREAD_EXCEPTION_HANDLER 2248
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2248
+#define THREAD_EXCEPTION_OFFSET 2256
+#define THREAD_EXCEPTION_HANDLER 2264
 
 #define CONTINUATION_NEXT 8
 #define CONTINUATION_ADDRESS 32
@@ -59,11 +59,13 @@ LOCAL(vmInvoke_continuationTest):
 #endif
    movq   %r10,(%rsp,%rdi,1)
 
+#ifdef AVIAN_USE_FRAME_POINTER
    // save the current base pointer in the frame and update it
    movq   CONTINUATION_FRAME_POINTER_OFFSET(%rcx),%rdi
    movq   %rbp,(%rsp,%rdi,1)
    addq   %rsp,%rdi
    movq   %rdi,%rbp
+#endif
 
    // consume the continuation
    movq   CONTINUATION_NEXT(%rcx),%rdi
@@ -89,11 +91,11 @@ LOCAL(vmInvoke_exit):
 
 #elif defined __i386__
    
-#define THREAD_CONTINUATION 2148
+#define THREAD_CONTINUATION 2156
 #define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2152
-#define THREAD_EXCEPTION_OFFSET 2156
-#define THREAD_EXCEPTION_HANDLER 2160
+#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
+#define THREAD_EXCEPTION_OFFSET 2164
+#define THREAD_EXCEPTION_HANDLER 2168
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -151,11 +153,13 @@ LOCAL(vmInvoke_offset):
 #endif
    movl   %esi,(%esp,%edi,1)
    
+#ifdef AVIAN_USE_FRAME_POINTER
    // save the current base pointer in the frame and update it
    movl   CONTINUATION_FRAME_POINTER_OFFSET(%ecx),%edi
    movl   %ebp,(%esp,%edi,1)
    addl   %esp,%edi
    movl   %edi,%ebp
+#endif
    
    // consume the continuation
    movl   CONTINUATION_NEXT(%ecx),%edi

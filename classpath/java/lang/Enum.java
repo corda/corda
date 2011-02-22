@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -34,7 +34,7 @@ public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
 
     try {
       Method method = enumType.getMethod("values");
-      Enum values[] = (Enum[]) (method.invoke(null));
+      Enum values[] = (Enum[]) method.invoke(null);
       for (Enum value: values) {
         if (name.equals(value.name)) {
           return (T) value;

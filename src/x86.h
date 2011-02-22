@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -22,25 +22,54 @@
 #  undef interface
 #endif
 
+#if (defined ARCH_x86_32) || (defined PLATFORM_WINDOWS)
+#  define VA_LIST(x) (&(x))
+#else
+#  define VA_LIST(x) (x)
+#endif
+
+#ifdef __APPLE__
+#  include "mach/mach_types.h"
+#  include "mach/i386/thread_act.h"
+#  include "mach/i386/thread_status.h"
+
+#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#    define FIELD(x) __##x
+#  else
+#    define FIELD(x) x
+#  endif
+#endif
+
 #ifdef ARCH_x86_32
 
 #  ifdef __APPLE__
-#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__eip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__ebp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__ebx)
-#    else
-#      define IP_REGISTER(context) (context->uc_mcontext->ss.eip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->ss.ebp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->ss.esp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.ebx)
-#    endif
+#    define THREAD_STATE x86_THREAD_STATE32
+#    define THREAD_STATE_TYPE x86_thread_state32_t
+#    define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
+
+#    define THREAD_STATE_IP(state) ((state).FIELD(eip))
+#    define THREAD_STATE_STACK(state) ((state).FIELD(esp))
+#    define THREAD_STATE_THREAD(state) ((state).FIELD(ebx))
+#    define THREAD_STATE_LINK(state) ((state).FIELD(ecx))
+#    define THREAD_STATE_FRAME(state) ((state).FIELD(ebp))
+
+#    define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#    define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#    define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#    define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+#    define FRAME_REGISTER(context) \
+  THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
+
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
-#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
 #    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
+#    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_ECX])
+#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
 #  endif
 
 extern "C" uint64_t
@@ -61,22 +90,33 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #elif defined ARCH_x86_64
 
 #  ifdef __APPLE__
-#    if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#      define IP_REGISTER(context) (context->uc_mcontext->__ss.__rip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->__ss.__rbp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->__ss.__rsp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->__ss.__rbx)
-#    else
-#      define IP_REGISTER(context) (context->uc_mcontext->ss.rip)
-#      define BASE_REGISTER(context) (context->uc_mcontext->ss.rbp)
-#      define STACK_REGISTER(context) (context->uc_mcontext->ss.rsp)
-#      define THREAD_REGISTER(context) (context->uc_mcontext->ss.rbx)
-#    endif
+#    define THREAD_STATE x86_THREAD_STATE64
+#    define THREAD_STATE_TYPE x86_thread_state64_t
+#    define THREAD_STATE_COUNT x86_THREAD_STATE64_COUNT
+
+#    define THREAD_STATE_IP(state) ((state).FIELD(rip))
+#    define THREAD_STATE_STACK(state) ((state).FIELD(rsp))
+#    define THREAD_STATE_THREAD(state) ((state).FIELD(rbx))
+#    define THREAD_STATE_LINK(state) ((state).FIELD(rcx))
+#    define THREAD_STATE_FRAME(state) ((state).FIELD(rbp))
+
+#    define IP_REGISTER(context) \
+  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#    define STACK_REGISTER(context) \
+  THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
+#    define THREAD_REGISTER(context) \
+  THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
+#    define LINK_REGISTER(context) \
+  THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
+#    define FRAME_REGISTER(context) \
+  THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
+
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
-#    define BASE_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
 #    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
+#    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_RCX])
+#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
 #  endif
 
 extern "C" uint64_t
@@ -223,6 +263,19 @@ atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
     (reinterpret_cast<LONGLONG*>(p), new_, old);
 #elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
+#elif defined ARCH_x86_32
+  uint8_t result;
+
+  __asm__ __volatile__("lock; cmpxchg8b %0; setz %1"
+                       : "=m"(*p), "=q"(result)
+                       : "a"(static_cast<uint32_t>(old)),
+                         "d"(static_cast<uint32_t>(old >> 32)),
+                         "b"(static_cast<uint32_t>(new_)),
+                         "c"(static_cast<uint32_t>(new_ >> 32)),
+                         "m"(*p)
+                       : "memory");
+
+  return result != 0;
 #else
   uint8_t result;
 

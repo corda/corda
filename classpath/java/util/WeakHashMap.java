@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -114,8 +114,10 @@ public class WeakHashMap<K, V> implements Map<K, V> {
       return value;
     }
 
-    public void setValue(V value) {
+    public V setValue(V value) {
+      V old = this.value;
       this.value = value;
+      return old;
     }
 
     public HashMap.Cell<K, V> next() {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -18,6 +18,8 @@ public abstract class SelectableChannel implements Channel {
   private boolean open = true;
 
   abstract int socketFD();
+
+  abstract void handleReadyOps(int ops);
 
   public abstract SelectableChannel configureBlocking(boolean v)
     throws IOException;

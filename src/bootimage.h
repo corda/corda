@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -45,6 +45,7 @@ class BootImage {
     Thunk defaultVirtual;
     Thunk native;
     Thunk aioob;
+    Thunk stackOverflow;
     Thunk table;
   };
 
@@ -55,11 +56,13 @@ class BootImage {
   unsigned heapSize;
   unsigned codeSize;
 
-  unsigned classCount;
+  unsigned bootClassCount;
+  unsigned appClassCount;
   unsigned stringCount;
   unsigned callCount;
 
-  unsigned loader;
+  unsigned bootLoader;
+  unsigned appLoader;
   unsigned types;
   unsigned methodTree;
   unsigned methodTreeSentinal;
@@ -73,6 +76,7 @@ class BootImage {
   unsigned compileVirtualMethodCall;
   unsigned invokeNativeCall;
   unsigned throwArrayIndexOutOfBoundsCall;
+  unsigned throwStackOverflowCall;
 
 #define THUNK(s) unsigned s##Call;
 #include "thunks.cpp"

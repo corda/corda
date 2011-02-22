@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -83,6 +83,9 @@ listAppend(Thread* t, object list, object value);
 
 object
 vectorAppend(Thread* t, object vector, object value);
+
+object
+growArray(Thread* t, object array);
 
 object
 treeQuery(Thread* t, object tree, intptr_t key, object sentinal,

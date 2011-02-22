@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010 Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -31,26 +31,17 @@ AttachCurrentThread(Machine* m, Thread** t, void*)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
-    *t = m->processor->makeThread(m, 0, m->rootThread);
-    m->system->attach(&((*t)->runnable));
-
-    enter(*t, Thread::ActiveState);
-    enter(*t, Thread::IdleState);
-
-    m->localThread->set(*t);
+    *t = attachThread(m, false);
   }
   return 0;
 }
 
 jint JNICALL
-AttachCurrentThreadAsDaemon(Machine* m, Thread** t, void* parameters)
+AttachCurrentThreadAsDaemon(Machine* m, Thread** t, void*)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t == 0) {
-    AttachCurrentThread(m, t, parameters);
-
-    ENTER(*t, Thread::ActiveState);
-    setDaemon(*t, (*t)->javaThread, true);
+    *t = attachThread(m, true);
   }
   return 0;
 }
@@ -80,11 +71,9 @@ DetachCurrentThread(Machine* m)
   }
 }
 
-jint JNICALL
-DestroyJavaVM(Machine* m)
+uint64_t
+destroyJavaVM(Thread* t, uintptr_t*)
 {
-  Thread* t; AttachCurrentThread(m, &t, 0);
-
   // wait for other non-daemon threads to exit
   { ACQUIRE(t, t->m->stateLock);
     while (t->m->liveCount - t->m->daemonCount > 1) {
@@ -92,16 +81,22 @@ DestroyJavaVM(Machine* m)
     }
   }
 
-  { ENTER(t, Thread::ActiveState);
+  shutDown(t);
 
-    shutDown(t);
+  return 1;
+}
+
+jint JNICALL
+DestroyJavaVM(Machine* m)
+{
+  Thread* t; AttachCurrentThread(m, &t, 0);
+
+  if (runRaw(t, destroyJavaVM, 0)) {
+    t->exit();
+    return 0;
+  } else {
+    return -1;
   }
-
-  int exitCode = (t->exception ? -1 : 0);
-
-  t->exit();
-
-  return exitCode;
 }
 
 jint JNICALL
@@ -156,6 +151,45 @@ ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
   t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar));
 }
 
+void JNICALL
+GetStringRegion(Thread* t, jstring s, jsize start, jsize length, jchar* dst)
+{
+  ENTER(t, Thread::ActiveState);
+
+  stringChars(t, *s, start, length, dst);
+}
+
+const jchar* JNICALL
+GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
+{
+  if ((t->criticalLevel ++) == 0) {
+    enter(t, Thread::ActiveState);
+  }
+
+  if (isCopy) {
+    *isCopy = true;
+  }
+  
+  object data = stringData(t, *s);
+  if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {
+    return GetStringChars(t, s, isCopy);
+  } else {
+    return &charArrayBody(t, data, stringOffset(t, *s));
+  }
+}
+
+void JNICALL
+ReleaseStringCritical(Thread* t, jstring s, const jchar* chars)
+{
+  if (objectClass(t, stringData(t, *s)) == type(t, Machine::ByteArrayType)) {
+    ReleaseStringChars(t, s, chars);
+  }
+
+  if ((-- t->criticalLevel) == 0) {
+    enter(t, Thread::IdleState);
+  }
+}
+
 jsize JNICALL
 GetStringUTFLength(Thread* t, jstring s)
 {
@@ -186,6 +220,15 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
   t->m->heap->free(chars, stringLength(t, *s) + 1);
 }
 
+void JNICALL
+GetStringUTFRegion(Thread* t, jstring s, jsize start, jsize length, char* dst)
+{
+  ENTER(t, Thread::ActiveState);
+
+  stringUTFChars
+    (t, *s, start, length, dst, stringUTFLength(t, *s, start, length));
+}
+
 jsize JNICALL
 GetArrayLength(Thread* t, jarray array)
 {
@@ -194,21 +237,43 @@ GetArrayLength(Thread* t, jarray array)
   return cast<uintptr_t>(*array, BytesPerWord);
 }
 
-jstring JNICALL
-NewString(Thread* t, const jchar* chars, jsize size)
+uint64_t
+newString(Thread* t, uintptr_t* arguments)
 {
-  if (chars == 0) return 0;
-
-  ENTER(t, Thread::ActiveState);
+  const jchar* chars = reinterpret_cast<const jchar*>(arguments[0]);
+  jsize size = arguments[1];
 
   object a = 0;
   if (size) {
     a = makeCharArray(t, size);
     memcpy(&charArrayBody(t, a, 0), chars, size * sizeof(jchar));
   }
-  object s = makeString(t, a, 0, size, 0);
 
-  return makeLocalReference(t, s);
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference(t, t->m->classpath->makeString(t, a, 0, size)));
+}
+
+jstring JNICALL
+NewString(Thread* t, const jchar* chars, jsize size)
+{
+  if (chars == 0) return 0;
+
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(chars), size };
+
+  return reinterpret_cast<jstring>(run(t, newString, arguments));
+}
+
+uint64_t
+newStringUTF(Thread* t, uintptr_t* arguments)
+{
+  const char* chars = reinterpret_cast<const char*>(arguments[0]);
+
+  object array = parseUtf8(t, chars, strlen(chars));
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, t->m->classpath->makeString
+      (t, array, 0, cast<uintptr_t>(array, BytesPerWord) - 1)));
 }
 
 jstring JNICALL
@@ -216,17 +281,9 @@ NewStringUTF(Thread* t, const char* chars)
 {
   if (chars == 0) return 0;
 
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(chars) };
 
-  object a = 0;
-  unsigned size = strlen(chars);
-  if (size) {
-    a = makeByteArray(t, size);
-    memcpy(&byteArrayBody(t, a, 0), chars, size);
-  }
-  object s = makeString(t, a, 0, size, 0);
-
-  return makeLocalReference(t, s);
+  return reinterpret_cast<jstring>(run(t, newStringUTF, arguments));
 }
 
 void
@@ -240,26 +297,63 @@ replace(int a, int b, const char* in, int8_t* out)
   *out = 0;
 }
 
-jclass JNICALL
-FindClass(Thread* t, const char* name)
+uint64_t
+defineClass(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jobject loader = reinterpret_cast<jobject>(arguments[0]);
+  const uint8_t* buffer = reinterpret_cast<const uint8_t*>(arguments[1]);
+  jsize length = arguments[2];
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, getJClass
+      (t, defineClass
+       (t, loader ? *loader : root(t, Machine::BootLoader), buffer, length))));
+}
+
+jclass JNICALL
+DefineClass(Thread* t, const char*, jobject loader, const jbyte* buffer,
+            jsize length)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
+                            reinterpret_cast<uintptr_t>(buffer),
+                            length };
+
+  return reinterpret_cast<jclass>(run(t, defineClass, arguments));
+}
+
+uint64_t
+findClass(Thread* t, uintptr_t* arguments)
+{
+  const char* name = reinterpret_cast<const char*>(arguments[0]);
 
   object n = makeByteArray(t, strlen(name) + 1);
   replace('.', '/', name, &byteArrayBody(t, n, 0));
 
-  return makeLocalReference(t, resolveClass(t, t->m->loader, n));
+  object caller = getCaller(t, 0);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, getJClass
+      (t, resolveClass
+       (t, caller ? classLoader(t, methodClass(t, caller))
+        : root(t, Machine::AppLoader), n))));
 }
 
-jint JNICALL
-ThrowNew(Thread* t, jclass c, const char* message)
+jclass JNICALL
+FindClass(Thread* t, const char* name)
 {
-  if (t->exception) {
-    return -1;
-  }
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(name) };
 
-  ENTER(t, Thread::ActiveState);
-  
+  return reinterpret_cast<jclass>(run(t, findClass, arguments));
+}
+
+uint64_t
+throwNew(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  const char* message = reinterpret_cast<const char*>(arguments[1]);
+
   object m = 0;
   PROTECT(t, m);
 
@@ -270,9 +364,36 @@ ThrowNew(Thread* t, jclass c, const char* message)
   object trace = makeTrace(t);
   PROTECT(t, trace);
 
-  t->exception = make(t, *c);
+  t->exception = make(t, jclassVmClass(t, *c));
   set(t, t->exception, ThrowableMessage, m);
   set(t, t->exception, ThrowableTrace, trace);
+
+  return 1;
+}
+
+jint JNICALL
+ThrowNew(Thread* t, jclass c, const char* message)
+{
+  if (t->exception) {
+    return -1;
+  }
+
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(message) };
+
+  return run(t, throwNew, arguments) ? 0 : -1;
+}
+
+jint JNICALL
+Throw(Thread* t, jthrowable throwable)
+{
+  if (t->exception) {
+    return -1;
+  }
+
+  ENTER(t, Thread::ActiveState);
+  
+  t->exception = *throwable;
 
   return 0;
 }
@@ -291,7 +412,6 @@ ExceptionCheck(Thread* t)
   return t->exception != 0;
 }
 
-#ifndef AVIAN_GNU
 jobject JNICALL
 NewDirectByteBuffer(Thread*, void*, jlong)
 {
@@ -309,14 +429,13 @@ GetDirectBufferCapacity(Thread*, jobject)
 {
   return -1;
 }
-#endif// not AVIAN_GNU
 
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, objectClass(t, *o));
+  return makeLocalReference(t, getJClass(t, objectClass(t, *o)));
 }
 
 jboolean JNICALL
@@ -324,7 +443,15 @@ IsInstanceOf(Thread* t, jobject o, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  return instanceOf(t, *c, *o);
+  return instanceOf(t, jclassVmClass(t, *c), *o);
+}
+
+jboolean JNICALL
+IsAssignableFrom(Thread* t, jclass b, jclass a)
+{
+  ENTER(t, Thread::ActiveState);
+
+  return isAssignableFrom(t, jclassVmClass(t, *a), jclassVmClass(t, *b));
 }
 
 object
@@ -334,7 +461,7 @@ findMethod(Thread* t, jclass c, const char* name, const char* spec)
   PROTECT(t, n);
 
   object s = makeByteArray(t, "%s", spec);
-  return vm::findMethod(t, *c, n, s);
+  return vm::findMethod(t, jclassVmClass(t, *c), n, s);
 }
 
 jint
@@ -346,23 +473,50 @@ methodID(Thread* t, object method)
     ACQUIRE(t, t->m->referenceLock);
     
     if (methodNativeID(t, method) == 0) {
-      t->m->jniMethodTable = vectorAppend(t, t->m->jniMethodTable, method);
-      methodNativeID(t, method) = vectorSize(t, t->m->jniMethodTable);
+      setRoot(t, Machine::JNIMethodTable, vectorAppend
+              (t, root(t, Machine::JNIMethodTable), method));
+      methodNativeID(t, method) = vectorSize
+        (t, root(t, Machine::JNIMethodTable));
     }
   }
 
   return methodNativeID(t, method);
 }
 
+uint64_t
+getMethodID(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  const char* name = reinterpret_cast<const char*>(arguments[1]);
+  const char* spec = reinterpret_cast<const char*>(arguments[2]);
+
+  object method = findMethod(t, c, name, spec);
+
+  assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
+
+  return methodID(t, method);  
+}
+
 jmethodID JNICALL
 GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(name),
+                            reinterpret_cast<uintptr_t>(spec) };
+
+  return run(t, getMethodID, arguments);
+}
+
+uint64_t
+getStaticMethodID(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  const char* name = reinterpret_cast<const char*>(arguments[1]);
+  const char* spec = reinterpret_cast<const char*>(arguments[2]);
 
   object method = findMethod(t, c, name, spec);
-  if (UNLIKELY(t->exception)) return 0;
 
-  assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
+  assert(t, methodFlags(t, method) & ACC_STATIC);
 
   return methodID(t, method);
 }
@@ -370,37 +524,46 @@ GetMethodID(Thread* t, jclass c, const char* name, const char* spec)
 jmethodID JNICALL
 GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(name),
+                            reinterpret_cast<uintptr_t>(spec) };
 
-  object method = findMethod(t, c, name, spec);
-  if (UNLIKELY(t->exception)) return 0;
-
-  assert(t, methodFlags(t, method) & ACC_STATIC);
-
-  return methodID(t, method);
+  return run(t, getStaticMethodID, arguments);
 }
 
 inline object
 getMethod(Thread* t, jmethodID m)
 {
-  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
+  object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
 
   return method;
 }
 
+uint64_t
+newObjectV(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  va_list* a = reinterpret_cast<va_list*>(arguments[2]);
+
+  object o = make(t, jclassVmClass(t, *c));
+  PROTECT(t, o);
+
+  t->m->processor->invokeList(t, getMethod(t, m), o, true, *a);
+
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, o));
+}
+
 jobject JNICALL
 NewObjectV(Thread* t, jclass c, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object o = make(t, *c);
-  PROTECT(t, o);
-
-  t->m->processor->invokeList(t, getMethod(t, m), o, true, a);
-
-  return makeLocalReference(t, o);
+  return reinterpret_cast<jobject>(run(t, newObjectV, arguments));
 }
 
 jobject JNICALL
@@ -416,14 +579,27 @@ NewObject(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callObjectMethodV(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  va_list* a = reinterpret_cast<va_list*>(arguments[2]);
+
+  object method = getMethod(t, m);
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, t->m->processor->invokeList(t, method, *o, true, *a)));
+}
+
 jobject JNICALL
 CallObjectMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  return makeLocalReference
-    (t, t->m->processor->invokeList(t, method, *o, true, a));
+  return reinterpret_cast<jobject>(run(t, callObjectMethodV, arguments));
 }
 
 jobject JNICALL
@@ -439,14 +615,25 @@ CallObjectMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callIntMethodV(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  va_list* a = reinterpret_cast<va_list*>(arguments[2]);
+
+  object method = getMethod(t, m);
+  return intValue(t, t->m->processor->invokeList(t, method, *o, true, *a));
+}
+
 jboolean JNICALL
 CallBooleanMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? (intValue(t, r) != 0) : false);
+  return run(t, callIntMethodV, arguments) != 0;
 }
 
 jboolean JNICALL
@@ -465,11 +652,11 @@ CallBooleanMethod(Thread* t, jobject o, jmethodID m, ...)
 jbyte JNICALL
 CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callIntMethodV, arguments);
 }
 
 jbyte JNICALL
@@ -488,11 +675,11 @@ CallByteMethod(Thread* t, jobject o, jmethodID m, ...)
 jchar JNICALL
 CallCharMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callIntMethodV, arguments);
 }
 
 jchar JNICALL
@@ -511,11 +698,11 @@ CallCharMethod(Thread* t, jobject o, jmethodID m, ...)
 jshort JNICALL
 CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callIntMethodV, arguments);
 }
 
 jshort JNICALL
@@ -534,11 +721,11 @@ CallShortMethod(Thread* t, jobject o, jmethodID m, ...)
 jint JNICALL
 CallIntMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callIntMethodV, arguments);
 }
 
 jint JNICALL
@@ -554,14 +741,25 @@ CallIntMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callLongMethodV(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  va_list* a = reinterpret_cast<va_list*>(arguments[2]);
+
+  object method = getMethod(t, m);
+  return longValue(t, t->m->processor->invokeList(t, method, *o, true, *a));
+}
+
 jlong JNICALL
 CallLongMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? longValue(t, r) : 0);
+  return run(t, callLongMethodV, arguments);
 }
 
 jlong JNICALL
@@ -580,11 +778,11 @@ CallLongMethod(Thread* t, jobject o, jmethodID m, ...)
 jfloat JNICALL
 CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? bitsToFloat(intValue(t, r)) : 0);
+  return bitsToFloat(run(t, callIntMethodV, arguments));
 }
 
 jfloat JNICALL
@@ -603,11 +801,11 @@ CallFloatMethod(Thread* t, jobject o, jmethodID m, ...)
 jdouble JNICALL
 CallDoubleMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  object r = t->m->processor->invokeList(t, method, *o, true, a);
-  return (r ? bitsToDouble(longValue(t, r)) : 0);
+  return bitsToDouble(run(t, callLongMethodV, arguments));
 }
 
 jdouble JNICALL
@@ -623,13 +821,27 @@ CallDoubleMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callVoidMethodV(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  va_list* a = reinterpret_cast<va_list*>(arguments[2]);
+
+  object method = getMethod(t, m);
+  t->m->processor->invokeList(t, method, *o, true, *a);
+
+  return 0;
+}
+
 void JNICALL
 CallVoidMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object method = getMethod(t, m);
-  t->m->processor->invokeList(t, method, *o, true, a);
+  run(t, callVoidMethodV, arguments);
 }
 
 void JNICALL
@@ -646,20 +858,30 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
 inline object
 getStaticMethod(Thread* t, jmethodID m)
 {
-  object method = vectorBody(t, t->m->jniMethodTable, m - 1);
+  object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, methodFlags(t, method) & ACC_STATIC);
 
   return method;
 }
 
+uint64_t
+callStaticObjectMethodV(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  va_list* a = reinterpret_cast<va_list*>(arguments[1]);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, *a)));
+}
+
 jobject JNICALL
 CallStaticObjectMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  return makeLocalReference(t, t->m->processor->invokeList
-                            (t, getStaticMethod(t, m), 0, true, a));
+  return reinterpret_cast<jobject>(run(t, callStaticObjectMethodV, arguments));
 }
 
 jobject JNICALL
@@ -675,13 +897,22 @@ CallStaticObjectMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callStaticIntMethodV(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  va_list* a = reinterpret_cast<va_list*>(arguments[1]);
+
+  return intValue
+    (t, t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, *a));
+}
+
 jboolean JNICALL
 CallStaticBooleanMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? (intValue(t, r) != 0) : false);
+  return run(t, callStaticIntMethodV, arguments) != 0;
 }
 
 jboolean JNICALL
@@ -700,10 +931,9 @@ CallStaticBooleanMethod(Thread* t, jclass c, jmethodID m, ...)
 jbyte JNICALL
 CallStaticByteMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callStaticIntMethodV, arguments);
 }
 
 jbyte JNICALL
@@ -722,10 +952,9 @@ CallStaticByteMethod(Thread* t, jclass c, jmethodID m, ...)
 jchar JNICALL
 CallStaticCharMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callStaticIntMethodV, arguments);
 }
 
 jchar JNICALL
@@ -744,10 +973,9 @@ CallStaticCharMethod(Thread* t, jclass c, jmethodID m, ...)
 jshort JNICALL
 CallStaticShortMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callStaticIntMethodV, arguments);
 }
 
 jshort JNICALL
@@ -766,10 +994,9 @@ CallStaticShortMethod(Thread* t, jclass c, jmethodID m, ...)
 jint JNICALL
 CallStaticIntMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? intValue(t, r) : 0);
+  return run(t, callStaticIntMethodV, arguments);
 }
 
 jint JNICALL
@@ -785,13 +1012,22 @@ CallStaticIntMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callStaticLongMethodV(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  va_list* a = reinterpret_cast<va_list*>(arguments[1]);
+
+  return longValue
+    (t, t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, *a));
+}
+
 jlong JNICALL
 CallStaticLongMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? longValue(t, r) : 0);
+  return run(t, callStaticLongMethodV, arguments);
 }
 
 jlong JNICALL
@@ -810,10 +1046,9 @@ CallStaticLongMethod(Thread* t, jclass c, jmethodID m, ...)
 jfloat JNICALL
 CallStaticFloatMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? bitsToFloat(intValue(t, r)) : 0);
+  return bitsToFloat(run(t, callStaticIntMethodV, arguments));
 }
 
 jfloat JNICALL
@@ -832,10 +1067,9 @@ CallStaticFloatMethod(Thread* t, jclass c, jmethodID m, ...)
 jdouble JNICALL
 CallStaticDoubleMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  object r = t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
-  return (r ? bitsToDouble(longValue(t, r)) : 0);
+  return bitsToDouble(run(t, callStaticLongMethodV, arguments));
 }
 
 jdouble JNICALL
@@ -851,12 +1085,23 @@ CallStaticDoubleMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callStaticVoidMethodV(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  va_list* a = reinterpret_cast<va_list*>(arguments[1]);
+
+  t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, *a);
+
+  return 0;
+}
+
 void JNICALL
 CallStaticVoidMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(VA_LIST(a)) };
 
-  t->m->processor->invokeList(t, getStaticMethod(t, m), 0, true, a);
+  run(t, callStaticVoidMethodV, arguments);
 }
 
 void JNICALL
@@ -870,26 +1115,34 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 }
 
+uint64_t
+getFieldID(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  const char* name = reinterpret_cast<const char*>(arguments[1]);
+  const char* spec = reinterpret_cast<const char*>(arguments[2]);
+
+  return fieldOffset(t, resolveField(t, jclassVmClass(t, *c), name, spec));
+}
+
 jfieldID JNICALL
 GetFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(name),
+                            reinterpret_cast<uintptr_t>(spec) };
 
-  object field = resolveField(t, *c, name, spec);
-  if (UNLIKELY(t->exception)) return 0;
-
-  return fieldOffset(t, field);
+  return run(t, getFieldID, arguments);
 }
 
 jfieldID JNICALL
 GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(name),
+                            reinterpret_cast<uintptr_t>(spec) };
 
-  object field = resolveField(t, *c, name, spec);
-  if (UNLIKELY(t->exception)) return 0;
-
-  return fieldOffset(t, field);
+  return run(t, getFieldID, arguments);
 }
 
 jobject JNICALL
@@ -1041,7 +1294,8 @@ GetStaticObjectField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, cast<object>(classStaticTable(t, *c), field));
+  return makeLocalReference
+    (t, cast<object>(classStaticTable(t, jclassVmClass(t, *c)), field));
 }
 
 jboolean JNICALL
@@ -1049,7 +1303,7 @@ GetStaticBooleanField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<int8_t>(classStaticTable(t, *c), field);
+  return cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jbyte JNICALL
@@ -1057,7 +1311,7 @@ GetStaticByteField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<int8_t>(classStaticTable(t, *c), field);
+  return cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jchar JNICALL
@@ -1065,7 +1319,7 @@ GetStaticCharField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<uint16_t>(classStaticTable(t, *c), field);
+  return cast<uint16_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jshort JNICALL
@@ -1073,7 +1327,7 @@ GetStaticShortField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<int16_t>(classStaticTable(t, *c), field);
+  return cast<int16_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jint JNICALL
@@ -1081,7 +1335,7 @@ GetStaticIntField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<int32_t>(classStaticTable(t, *c), field);
+  return cast<int32_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jlong JNICALL
@@ -1089,7 +1343,7 @@ GetStaticLongField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<int64_t>(classStaticTable(t, *c), field);
+  return cast<int64_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jfloat JNICALL
@@ -1097,7 +1351,7 @@ GetStaticFloatField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<float>(classStaticTable(t, *c), field);
+  return cast<float>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 jdouble JNICALL
@@ -1105,7 +1359,7 @@ GetStaticDoubleField(Thread* t, jclass c, jfieldID field)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<double>(classStaticTable(t, *c), field);
+  return cast<double>(classStaticTable(t, jclassVmClass(t, *c)), field);
 }
 
 void JNICALL
@@ -1113,7 +1367,7 @@ SetStaticObjectField(Thread* t, jclass c, jfieldID field, jobject v)
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, classStaticTable(t, *c), field, (v ? *v : 0));
+  set(t, classStaticTable(t, jclassVmClass(t, *c)), field, (v ? *v : 0));
 }
 
 void JNICALL
@@ -1121,7 +1375,7 @@ SetStaticBooleanField(Thread* t, jclass c, jfieldID field, jboolean v)
 {
   ENTER(t, Thread::ActiveState);
   
-  cast<int8_t>(classStaticTable(t, *c), field) = v;
+  cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1129,7 +1383,7 @@ SetStaticByteField(Thread* t, jclass c, jfieldID field, jbyte v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<int8_t>(classStaticTable(t, *c), field) = v;
+  cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1137,7 +1391,7 @@ SetStaticCharField(Thread* t, jclass c, jfieldID field, jchar v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<uint16_t>(classStaticTable(t, *c), field) = v;
+  cast<uint16_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1145,7 +1399,7 @@ SetStaticShortField(Thread* t, jclass c, jfieldID field, jshort v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<int16_t>(classStaticTable(t, *c), field) = v;
+  cast<int16_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1153,7 +1407,7 @@ SetStaticIntField(Thread* t, jclass c, jfieldID field, jint v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<int32_t>(classStaticTable(t, *c), field) = v;
+  cast<int32_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1161,7 +1415,7 @@ SetStaticLongField(Thread* t, jclass c, jfieldID field, jlong v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<int64_t>(classStaticTable(t, *c), field) = v;
+  cast<int64_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1169,7 +1423,7 @@ SetStaticFloatField(Thread* t, jclass c, jfieldID field, jfloat v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<float>(classStaticTable(t, *c), field) = v;
+  cast<float>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 void JNICALL
@@ -1177,7 +1431,7 @@ SetStaticDoubleField(Thread* t, jclass c, jfieldID field, jdouble v)
 {
   ENTER(t, Thread::ActiveState);
 
-  cast<double>(classStaticTable(t, *c), field) = v;
+  cast<double>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
 }
 
 jobject JNICALL
@@ -1219,6 +1473,12 @@ DeleteGlobalRef(Thread* t, jobject r)
   }
 }
 
+jint JNICALL
+EnsureLocalCapacity(Thread*, jint)
+{
+  return 0;
+}
+
 jthrowable JNICALL
 ExceptionOccurred(Thread* t)
 {
@@ -1243,17 +1503,29 @@ ExceptionClear(Thread* t)
   t->exception = 0;
 }
 
-jobjectArray JNICALL
-NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
+uint64_t
+newObjectArray(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jsize length = arguments[0];
+  jclass class_ = reinterpret_cast<jclass>(arguments[1]);
+  jobject init = reinterpret_cast<jobject>(arguments[2]);
 
-  object a = makeObjectArray(t, classLoader(t, *class_), *class_, length);
+  object a = makeObjectArray(t, jclassVmClass(t, *class_), length);
   object value = (init ? *init : 0);
   for (jsize i = 0; i < length; ++i) {
     set(t, a, ArrayBody + (i * BytesPerWord), value);
   }
-  return makeLocalReference(t, a);
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, a));
+}
+
+jobjectArray JNICALL
+NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
+{
+  uintptr_t arguments[] = { length,
+                            reinterpret_cast<uintptr_t>(class_),
+                            reinterpret_cast<uintptr_t>(init) };
+
+  return reinterpret_cast<jobjectArray>(run(t, newObjectArray, arguments));
 }
 
 jobject JNICALL
@@ -1273,68 +1545,102 @@ SetObjectArrayElement(Thread* t, jobjectArray array, jsize index,
   set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
 }
 
+uint64_t
+newArray(Thread* t, uintptr_t* arguments)
+{
+  object (*constructor)(Thread*, unsigned)
+    = reinterpret_cast<object (*)(Thread*, unsigned)>(arguments[0]);
+
+  jsize length = arguments[1];
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference(t, constructor(t, length)));
+}
+
 jbooleanArray JNICALL
 NewBooleanArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeBooleanArray)),
+        length };
 
-  return makeLocalReference(t, makeBooleanArray(t, length));
+  return reinterpret_cast<jbooleanArray>(run(t, newArray, arguments));
+}
+
+object
+makeByteArray0(Thread* t, unsigned length)
+{
+  return makeByteArray(t, length);
 }
 
 jbyteArray JNICALL
 NewByteArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeByteArray0)),
+        length };
 
-  return makeLocalReference(t, makeByteArray(t, length));
+  return reinterpret_cast<jbyteArray>(run(t, newArray, arguments));
 }
 
 jcharArray JNICALL
 NewCharArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeCharArray)),
+        length };
 
-  return makeLocalReference(t, makeCharArray(t, length));
+  return reinterpret_cast<jcharArray>(run(t, newArray, arguments));
 }
 
 jshortArray JNICALL
 NewShortArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeShortArray)),
+        length };
 
-  return makeLocalReference(t, makeShortArray(t, length));
+  return reinterpret_cast<jshortArray>(run(t, newArray, arguments));
 }
 
 jintArray JNICALL
 NewIntArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeIntArray)),
+        length };
 
-  return makeLocalReference(t, makeIntArray(t, length));
+  return reinterpret_cast<jintArray>(run(t, newArray, arguments));
 }
 
 jlongArray JNICALL
 NewLongArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeLongArray)),
+        length };
 
-  return makeLocalReference(t, makeLongArray(t, length));
+  return reinterpret_cast<jlongArray>(run(t, newArray, arguments));
 }
 
 jfloatArray JNICALL
 NewFloatArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeFloatArray)),
+        length };
 
-  return makeLocalReference(t, makeFloatArray(t, length));
+  return reinterpret_cast<jfloatArray>(run(t, newArray, arguments));
 }
 
 jdoubleArray JNICALL
 NewDoubleArray(Thread* t, jsize length)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(makeDoubleArray)),
+        length };
 
-  return makeLocalReference(t, makeDoubleArray(t, length));
+  return reinterpret_cast<jdoubleArray>(run(t, newArray, arguments));
 }
 
 jboolean* JNICALL
@@ -1827,24 +2133,96 @@ ReleasePrimitiveArrayCritical(Thread* t, jarray, void*, jint)
   }
 }
 
+uint64_t
+registerNatives(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  const JNINativeMethod* methods
+    = reinterpret_cast<const JNINativeMethod*>(arguments[1]);
+  jint methodCount = arguments[2];
+
+  for (int i = 0; i < methodCount; ++i) {
+    if (methods[i].function) {
+      object method = findMethodOrNull
+        (t, jclassVmClass(t, *c), methods[i].name, methods[i].signature);
+
+      if (method == 0 or (methodFlags(t, method) & ACC_NATIVE) == 0) {
+        // The JNI spec says we must throw a NoSuchMethodError in this
+        // case, but that would prevent using a code shrinker like
+        // ProGuard effectively.  Instead, we just ignore it.
+      } else {
+        registerNative(t, method, methods[i].function);
+      }
+    }
+  }
+
+  return 1;  
+}
+
 jint JNICALL
-MonitorEnter(Thread* t, jobject o)
+RegisterNatives(Thread* t, jclass c, const JNINativeMethod* methods,
+                jint methodCount)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(methods),
+                            methodCount };
+
+  return run(t, registerNatives, arguments) ? 0 : -1;
+}
+
+jint JNICALL
+UnregisterNatives(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  acquire(t, *o);
+  unregisterNatives(t, *c);
 
   return 0;
+}
+
+uint64_t
+monitorOp(Thread* t, uintptr_t* arguments)
+{
+  void (*op)(Thread*, object)
+    = reinterpret_cast<void (*)(Thread*, object)>(arguments[0]);
+
+  jobject o = reinterpret_cast<jobject>(arguments[1]);
+  
+  op(t, *o);
+
+  return 1;
+}
+
+void
+acquire0(Thread* t, object o)
+{
+  return acquire(t, o);
+}
+
+jint JNICALL
+MonitorEnter(Thread* t, jobject o)
+{
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(acquire0)),
+        reinterpret_cast<uintptr_t>(o) };
+
+  return run(t, monitorOp, arguments) ? 0 : -1;
+}
+
+void
+release0(Thread* t, object o)
+{
+  return release(t, o);
 }
 
 jint JNICALL
 MonitorExit(Thread* t, jobject o)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[]
+    = { reinterpret_cast<uintptr_t>(voidPointer(release0)),
+        reinterpret_cast<uintptr_t>(o) };
 
-  release(t, *o);
-
-  return 0;
+  return run(t, monitorOp, arguments) ? 0 : -1;
 }
 
 jint JNICALL
@@ -1888,11 +2266,11 @@ parseSize(const char* s)
     return 0;
   } else if (s[length - 1] == 'k') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
-    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024;
   } else if (s[length - 1] == 'm') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
-    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+    RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024;
   } else {
     return atoi(s);
@@ -1909,22 +2287,39 @@ append(char** p, const char* value, unsigned length, char tail)
   }
 }
 
+void
+boot(Thread* t)
+{
+  enter(t, Thread::ActiveState);
+
+  t->javaThread = t->m->classpath->makeThread(t, 0);
+
+  setRoot(t, Machine::NullPointerException, makeThrowable
+          (t, Machine::NullPointerExceptionType));
+      
+  setRoot(t, Machine::ArithmeticException,
+          makeThrowable(t, Machine::ArithmeticExceptionType));
+
+  setRoot(t, Machine::ArrayIndexOutOfBoundsException,
+          makeThrowable(t, Machine::ArrayIndexOutOfBoundsExceptionType));
+
+  setRoot(t, Machine::OutOfMemoryError,
+          makeThrowable(t, Machine::OutOfMemoryErrorType));
+
+  setRoot(t, Machine::FinalizerThread, t->m->classpath->makeThread(t, t));
+
+  threadDaemon(t, root(t, Machine::FinalizerThread)) = true;
+
+  t->m->classpath->boot(t);
+
+  enter(t, Thread::IdleState);
+}
+
 } // namespace local
 
 } // namespace
 
 namespace vm {
-
-#ifdef AVIAN_GNU
-jobject JNICALL
-NewDirectByteBuffer(Thread*, void*, jlong);
-
-void* JNICALL
-GetDirectBufferAddress(Thread*, jobject);
-
-jlong JNICALL
-GetDirectBufferCapacity(Thread*, jobject);
-#endif//AVIAN_GNU
 
 void
 populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
@@ -1943,14 +2338,20 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetStringLength = local::GetStringLength;
   envTable->GetStringChars = local::GetStringChars;
   envTable->ReleaseStringChars = local::ReleaseStringChars;
+  envTable->GetStringRegion = local::GetStringRegion;
+  envTable->GetStringCritical = local::GetStringCritical;
+  envTable->ReleaseStringCritical = local::ReleaseStringCritical;
   envTable->GetStringUTFLength = local::GetStringUTFLength;
   envTable->GetStringUTFChars = local::GetStringUTFChars;
   envTable->ReleaseStringUTFChars = local::ReleaseStringUTFChars;
+  envTable->GetStringUTFRegion = local::GetStringUTFRegion;
   envTable->GetArrayLength = local::GetArrayLength;
   envTable->NewString = local::NewString;
   envTable->NewStringUTF = local::NewStringUTF;
+  envTable->DefineClass = local::DefineClass;
   envTable->FindClass = local::FindClass;
   envTable->ThrowNew = local::ThrowNew;
+  envTable->Throw = local::Throw;
   envTable->ExceptionCheck = local::ExceptionCheck;
   envTable->NewDirectByteBuffer = local::NewDirectByteBuffer;
   envTable->GetDirectBufferAddress = local::GetDirectBufferAddress;
@@ -1958,6 +2359,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
   envTable->IsInstanceOf = local::IsInstanceOf;
+  envTable->IsAssignableFrom = local::IsAssignableFrom;
   envTable->GetFieldID = local::GetFieldID;
   envTable->GetMethodID = local::GetMethodID;
   envTable->GetStaticMethodID = local::GetStaticMethodID;
@@ -2043,6 +2445,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->NewGlobalRef = local::NewGlobalRef;
   envTable->NewWeakGlobalRef = local::NewGlobalRef;
   envTable->DeleteGlobalRef = local::DeleteGlobalRef;
+  envTable->EnsureLocalCapacity = local::EnsureLocalCapacity;
   envTable->ExceptionOccurred = local::ExceptionOccurred;
   envTable->ExceptionDescribe = local::ExceptionDescribe;
   envTable->ExceptionClear = local::ExceptionClear;
@@ -2092,6 +2495,8 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetPrimitiveArrayCritical = local::GetPrimitiveArrayCritical;
   envTable->ReleasePrimitiveArrayCritical
     = local::ReleasePrimitiveArrayCritical;
+  envTable->RegisterNatives = local::RegisterNatives;
+  envTable->UnregisterNatives = local::UnregisterNatives;
   envTable->MonitorEnter = local::MonitorEnter;
   envTable->MonitorExit = local::MonitorExit;
   envTable->GetJavaVM = local::GetJavaVM;
@@ -2102,7 +2507,9 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
 #define CRASHDIR_PROPERTY "avian.crash.dir"
+#define EMBED_PREFIX_PROPERTY "avian.embed.prefix"
 #define CLASSPATH_PROPERTY "java.class.path"
+#define JAVA_HOME_PROPERTY "java.home"
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
 #define BOOTCLASSPATH_OPTION "bootclasspath"
 #define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
@@ -2122,8 +2529,10 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   unsigned heapLimit = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
+  const char* javaHome = AVIAN_JAVA_HOME;
+  const char* embedPrefix = AVIAN_EMBED_PREFIX;
   const char* bootClasspathPrepend = "";
-  const char* bootClasspath = "";
+  const char* bootClasspath = 0;
   const char* bootClasspathAppend = "";
   const char* crashDumpDirectory = 0;
 
@@ -2161,6 +2570,14 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
                          sizeof(CLASSPATH_PROPERTY)) == 0)
       {
         classpath = p + sizeof(CLASSPATH_PROPERTY);
+      } else if (strncmp(p, JAVA_HOME_PROPERTY "=",
+                         sizeof(JAVA_HOME_PROPERTY)) == 0)
+      {
+        javaHome = p + sizeof(JAVA_HOME_PROPERTY);
+      } else if (strncmp(p, EMBED_PREFIX_PROPERTY "=",
+                         sizeof(EMBED_PREFIX_PROPERTY)) == 0)
+      {
+        embedPrefix = p + sizeof(EMBED_PREFIX_PROPERTY);
       }
 
       ++ propertyCount;
@@ -2171,24 +2588,30 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   if (classpath == 0) classpath = ".";
   
+  System* s = makeSystem(crashDumpDirectory);
+  Heap* h = makeHeap(s, heapLimit);
+  Classpath* c = makeClasspath(s, h, javaHome, embedPrefix);
+
+  if (bootClasspath == 0) {
+    bootClasspath = c->bootClasspath();
+  }
+
   unsigned bcppl = strlen(bootClasspathPrepend);
   unsigned bcpl = strlen(bootClasspath);
   unsigned bcpal = strlen(bootClasspathAppend);
-  unsigned cpl = strlen(classpath);
 
-  unsigned classpathBufferSize = bcppl + bcpl + bcpal + cpl + 4;
-  RUNTIME_ARRAY(char, classpathBuffer, classpathBufferSize);
-  char* classpathPointer = RUNTIME_ARRAY_BODY(classpathBuffer);
+  unsigned bootClasspathBufferSize = bcppl + bcpl + bcpal + 3;
+  RUNTIME_ARRAY(char, bootClasspathBuffer, bootClasspathBufferSize);
+  char* bootClasspathPointer = RUNTIME_ARRAY_BODY(bootClasspathBuffer);
+  local::append(&bootClasspathPointer, bootClasspathPrepend, bcppl,
+                bcpl + bcpal ? PATH_SEPARATOR : 0);
+  local::append(&bootClasspathPointer, bootClasspath, bcpl,
+                bcpal ? PATH_SEPARATOR : 0);
+  local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
 
-  local::append
-    (&classpathPointer, bootClasspathPrepend, bcppl, PATH_SEPARATOR);
-  local::append(&classpathPointer, bootClasspath, bcpl, PATH_SEPARATOR);
-  local::append(&classpathPointer, bootClasspathAppend, bcpal, PATH_SEPARATOR);
-  local::append(&classpathPointer, classpath, cpl, 0);
-
-  System* s = makeSystem(crashDumpDirectory);
-  Heap* h = makeHeap(s, heapLimit);
-  Finder* f = makeFinder(s, RUNTIME_ARRAY_BODY(classpathBuffer), bootLibrary);
+  Finder* bf = makeFinder
+    (s, h, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
+  Finder* af = makeFinder(s, h, classpath, bootLibrary);
   Processor* p = makeProcessor(s, h, true);
 
   const char** properties = static_cast<const char**>
@@ -2201,12 +2624,11 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, f, p, properties, propertyCount);
+    Machine(s, h, bf, af, p, c, properties, propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
 
-  enter(*t, Thread::ActiveState);
-  enter(*t, Thread::IdleState);
+  local::boot(*t);
 
   return 0;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -22,7 +22,7 @@
 #include "common.h"
 
 extern "C" void NO_RETURN
-vmJump(void* address, void* base, void* stack, void* thread,
+vmJump(void* address, void* frame, void* stack, void* thread,
        uintptr_t returnLow, uintptr_t returnHigh);
 
 namespace vm {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -58,14 +58,21 @@ public class BufferedInputStream extends InputStream {
       length -= remaining;
     }
 
-    if (length > 0) {
+    while (length > 0) {
       int c = in.read(b, offset, length);
       if (c == -1) {
         if (count == 0) {
           count = -1;
         }
+        break;
       } else {
+        offset += c;
         count += c;
+        length -= c;
+
+        if (in.available() <= 0) {
+          break;
+        }
       }
     }
 

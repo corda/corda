@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -15,7 +15,8 @@ import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
   private long peer;
-  private boolean interrupted;
+  private volatile boolean interrupted;
+  private volatile boolean unparked;
   private boolean daemon;
   private byte state;
   private byte priority;
@@ -24,11 +25,8 @@ public class Thread implements Runnable {
   private Object sleepLock;
   private ClassLoader classLoader;
   private UncaughtExceptionHandler exceptionHandler;
-
-  // package private for GNU Classpath, which inexplicably bypasses
-  // the accessor methods:
-  String name;
-  ThreadGroup group;
+  private String name;
+  private ThreadGroup group;
 
   private static UncaughtExceptionHandler defaultExceptionHandler;
 
@@ -141,25 +139,9 @@ public class Thread implements Runnable {
 
   public static native Thread currentThread();
 
-  private static native void interrupt(long peer);
+  public native void interrupt();
 
-  public synchronized void interrupt() {
-    if (peer != 0) {
-      interrupt(peer);
-    } else {
-      interrupted = true;
-    }
-  }
-
-  public static boolean interrupted() {
-    Thread t = currentThread();
-    
-    synchronized (t) {
-      boolean v = t.interrupted;
-      t.interrupted = false;
-      return v;
-    }
-  }
+  public native boolean interrupted();
 
   public static boolean isInterrupted() {
     return currentThread().interrupted;
@@ -257,12 +239,12 @@ public class Thread implements Runnable {
   }
 
   public synchronized void setDaemon(boolean v) {
-    if (v != daemon) {
-      setDaemon(this, v);
+    if (getState() != State.NEW) {
+      throw new IllegalStateException();
     }
-  }
 
-  private static native void setDaemon(Thread t, boolean increment);
+    daemon = v;
+  }
 
   public static native void yield();
 
@@ -301,22 +283,6 @@ public class Thread implements Runnable {
 
   public long getId() {
     return peer;
-  }
-
-  public void stop() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void stop(Throwable t) {
-    throw new UnsupportedOperationException();
-  }
-
-  public void suspend() {
-    throw new UnsupportedOperationException();
-  }
-
-  public void resume() {
-    throw new UnsupportedOperationException();
   }
 
   public interface UncaughtExceptionHandler {

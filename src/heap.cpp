@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -68,6 +68,7 @@ void assert(Context*, bool);
 
 System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
+void* allocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
 
 #ifdef USE_ATOMIC_OPERATIONS
@@ -359,7 +360,9 @@ class Segment {
               break;
             }
           } else {
-            abort(context);
+            data = static_cast<uintptr_t*>
+              (local::allocate
+               (context, (footprint(capacity_)) * BytesPerWord));
           }
         }
       }
@@ -1708,7 +1711,8 @@ collect(Context* c)
   }
 }
 
-void* tryAllocate(Context* c, unsigned size)
+void*
+allocate(Context* c, unsigned size, bool limit)
 {
   ACQUIRE(c->lock);
 
@@ -1716,7 +1720,7 @@ void* tryAllocate(Context* c, unsigned size)
     size = pad(size) + 2 * BytesPerWord;
   }
 
-  if (size + c->count < c->limit) {
+  if ((not limit) or size + c->count < c->limit) {
     void* p = c->system->tryAllocate(size);
     if (p) {
       c->count += size;
@@ -1733,7 +1737,21 @@ void* tryAllocate(Context* c, unsigned size)
   return 0;
 }
 
-void free(Context* c, const void* p, unsigned size) {
+void*
+tryAllocate(Context* c, unsigned size)
+{
+  return allocate(c, size, true);
+}
+
+void*
+allocate(Context* c, unsigned size)
+{
+  return allocate(c, size, false);
+}
+
+void
+free(Context* c, const void* p, unsigned size)
+{
   ACQUIRE(c->lock);
 
   if (DebugAllocation) {
@@ -1755,7 +1773,9 @@ void free(Context* c, const void* p, unsigned size) {
   c->count -= size;
 }
 
-void free_(Context* c, const void* p, unsigned size) {
+void
+free_(Context* c, const void* p, unsigned size)
+{
   free(c, p, size);
 }
 
@@ -1775,14 +1795,16 @@ class MyHeap: public Heap {
     c.immortalHeapEnd = start + sizeInWords;
   }
 
+  virtual bool limitExceeded() {
+    return c.count > c.limit;
+  }
+
   virtual void* tryAllocate(unsigned size) {
     return local::tryAllocate(&c, size);
   }
 
   virtual void* allocate(unsigned size) {
-    void* p = local::tryAllocate(&c, size);
-    expect(c.system, p);
-    return p;
+    return local::allocate(&c, size);
   }
 
   virtual void free(const void* p, unsigned size) {

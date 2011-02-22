@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -13,7 +13,7 @@ package java.lang;
 import avian.Cell;
 
 public class ThreadGroup implements Thread.UncaughtExceptionHandler {
-  final ThreadGroup parent; // package private for GNU Classpath compatibility
+  private final ThreadGroup parent;
   private final String name;
   private Cell<ThreadGroup> subgroups;
 

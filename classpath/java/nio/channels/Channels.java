@@ -24,6 +24,14 @@ public class Channels {
     return new MyOutputStream(channel);
   }
 
+  public static ReadableByteChannel newChannel(InputStream stream) {
+    return new InputStreamChannel(stream);
+  }
+
+  public static WritableByteChannel newChannel(OutputStream stream) {
+    return new OutputStreamChannel(stream);
+  }
+
   private static class MyInputStream extends InputStream {
     private final ReadableByteChannel channel;
 
@@ -70,6 +78,65 @@ public class Channels {
 
     public void close() throws IOException {
       channel.close();
+    }
+  }
+
+  private static class InputStreamChannel implements ReadableByteChannel {
+    private InputStream stream;
+
+    public InputStreamChannel(InputStream stream) {
+      this.stream = stream;
+    }
+
+    public void close() throws IOException {
+      if (stream != null) {
+        stream.close();
+        stream = null;
+      }
+    }
+
+    public boolean isOpen() {
+      return stream != null;
+    }
+
+    public int read(ByteBuffer b) throws IOException {
+      int c = stream.read
+        (b.array(), b.arrayOffset() + b.position(), b.remaining());
+      
+      if (c > 0) {
+        b.position(b.position() + c);
+      }
+
+      return c;
+    }
+  }
+
+  private static class OutputStreamChannel implements WritableByteChannel {
+    private OutputStream stream;
+
+    public OutputStreamChannel(OutputStream stream) {
+      this.stream = stream;
+    }
+
+    public void close() throws IOException {
+      if (stream != null) {
+        stream.close();
+        stream = null;
+      }
+    }
+
+    public boolean isOpen() {
+      return stream != null;
+    }
+
+    public int write(ByteBuffer b) throws IOException {
+      stream.write(b.array(), b.arrayOffset() + b.position(), b.remaining());
+
+      int c = b.remaining();
+
+      b.position(b.limit());
+      
+      return c;
     }
   }
 }

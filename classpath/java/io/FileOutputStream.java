@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -22,14 +22,19 @@ public class FileOutputStream extends OutputStream {
   }
 
   public FileOutputStream(String path) throws IOException {
-    fd = open(path);
+    this(path, false);
   }
+
+  public FileOutputStream(String path, boolean append) throws IOException {
+    fd = open(path, append);
+  }
+  
 
   public FileOutputStream(File file) throws IOException {
     this(file.getPath());
   }
 
-  private static native int open(String path) throws IOException;
+  private static native int open(String path, boolean append) throws IOException;
 
   private static native void write(int fd, int c) throws IOException;
 

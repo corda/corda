@@ -60,6 +60,13 @@ public class Longs {
   }
 
   public static void main(String[] args) throws Exception {
+    { long a = 0x1FFFFFFFFL;
+      long b = -1;
+      expect(a != b);
+    }
+
+    expect(Math.abs(-123L) == 123L);
+
     expect(readLongFrom(new java.io.InputStream() {
         int step;
 
@@ -241,6 +248,23 @@ public class Longs {
     expect(buffer.getLong() == 231);
 
     expect(unsignedShiftRight32(231) == 0);
+
+    { int[] x = new int[] { 1701899151 };
+      int[] z = new int[x.length * 2];
+      final long LONG_MASK = 0xffffffffL;
+
+      int lastProductLowWord = 0;
+      for (int j=0, i=0; j<x.length; j++) {
+        long piece = (x[j] & LONG_MASK);
+        long product = piece * piece;
+        z[i++] = (lastProductLowWord << 31) | (int) (product >>> 33);
+        z[i++] = (int) (product >>> 1);
+        lastProductLowWord = (int) product;
+      }
+
+      expect(z[0] == 337192406);
+      expect(z[1] == -437261072);
+    }
   }
 
 }

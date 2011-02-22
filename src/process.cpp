@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -153,13 +153,13 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
 {
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   // extra 6 is for code below:
-  RUNTIME_ARRAY(char, undecorated, undecoratedSize + 1 + 6);
+  THREAD_RUNTIME_ARRAY(t, char, undecorated, undecoratedSize + 1 + 6);
   makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(undecorated) + 1,
               method, false);
 
   unsigned decoratedSize = prefixLength + jniNameLength(t, method, true);
   // extra 6 is for code below:
-  RUNTIME_ARRAY(char, decorated, decoratedSize + 1 + 6);
+  THREAD_RUNTIME_ARRAY(t, char, decorated, decoratedSize + 1 + 6);
   makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(decorated) + 1,
               method, true);
 
@@ -203,25 +203,54 @@ resolveNativeMethod(Thread* t, object method, const char* prefix,
   return 0;
 }
 
+object
+resolveNativeMethod(Thread* t, object method)
+{
+  void* p = resolveNativeMethod(t, method, "Avian_", 6, 3);
+  if (p) {
+    return makeNative(t, p, true);
+  }
+
+  p = resolveNativeMethod(t, method, "Java_", 5, -1);
+  if (p) {
+    return makeNative(t, p, false);
+  }
+
+  return 0;
+}
+
 } // namespace
 
 namespace vm {
 
-void*
-resolveNativeMethod(Thread* t, object method)
+void
+resolveNative(Thread* t, object method)
 {
-  void* p = ::resolveNativeMethod(t, method, "Avian_", 6, 3);
-  if (p) {
-    methodVmFlags(t, method) |= FastNative;
-    return p;
-  }
+  PROTECT(t, method);
 
-  p = ::resolveNativeMethod(t, method, "Java_", 5, -1);
-  if (p) {
-    return p;
-  }
+  assert(t, methodFlags(t, method) & ACC_NATIVE);
 
-  return 0;
+  initClass(t, methodClass(t, method));
+
+  if (methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0) {
+    object native = resolveNativeMethod(t, method);
+    if (UNLIKELY(native == 0)) {
+      throwNew(t, Machine::UnsatisfiedLinkErrorType, "%s.%s%s",
+               &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+               &byteArrayBody(t, methodName(t, method), 0),
+               &byteArrayBody(t, methodSpec(t, method), 0));
+    }
+
+    PROTECT(t, native);
+
+    object runtimeData = getMethodRuntimeData(t, method);
+
+    // ensure other threads only see the methodRuntimeDataNative field
+    // populated once the object it points to has been populated:
+    storeStoreMemoryBarrier();
+
+    set(t, runtimeData, MethodRuntimeDataNative, native);
+  } 
 }
 
 int

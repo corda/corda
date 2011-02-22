@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -18,12 +18,13 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 
 public class SocketChannel extends SelectableChannel
-  implements ReadableByteChannel, WritableByteChannel
+  implements ReadableByteChannel, GatheringByteChannel
 {
   public static final int InvalidSocket = -1;
 
   int socket = InvalidSocket;
   boolean connected = false;
+  boolean readyToConnect = false;
   boolean blocking = true;
 
   public static SocketChannel open() throws IOException {
@@ -66,8 +67,23 @@ public class SocketChannel extends SelectableChannel
 
   public boolean finishConnect() throws IOException {
     if (! connected) {
-      connected = natFinishConnect(socket);
+      while (! readyToConnect) {
+        Selector selector = Selector.open();
+        SelectionKey key = register(selector, SelectionKey.OP_CONNECT, null);
+
+        if (blocking) {
+          selector.select();
+        } else {
+          selector.selectNow();
+          break;
+        }
+      }
+
+      natFinishConnect(socket);
+
+      connected = readyToConnect;
     }
+
     return connected;
   }
 
@@ -117,12 +133,35 @@ public class SocketChannel extends SelectableChannel
     return w;
   }
 
+  public long write(ByteBuffer[] srcs) throws IOException {
+    return write(srcs, 0, srcs.length);
+  }
+
+  public long write(ByteBuffer[] srcs, int offset, int length)
+    throws IOException
+  {
+    long total = 0;
+    for (int i = offset; i < offset + length; ++i) {
+      total += write(srcs[i]);
+      if (srcs[i].hasRemaining()) {
+        return total;
+      }
+    }
+    return total;
+  }
+
   private void closeSocket() {
     natCloseSocket(socket);
   }
 
   int socketFD() {
     return socket;
+  }
+
+  void handleReadyOps(int ops) {
+    if ((ops & SelectionKey.OP_CONNECT) != 0) {
+      readyToConnect = true;
+    }
   }
 
   public class Handle extends Socket {
@@ -139,7 +178,7 @@ public class SocketChannel extends SelectableChannel
 
   private static native int natDoConnect(String host, int port, boolean blocking, boolean[] connected)
     throws IOException;
-  private static native boolean natFinishConnect(int socket)
+  private static native void natFinishConnect(int socket)
     throws IOException;
   private static native int natRead(int socket, byte[] buffer, int offset, int length, boolean blocking)
     throws IOException;

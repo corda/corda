@@ -1,5 +1,5 @@
 /* arm.S: JNI gluecode for ARM/Linux
-   Copyright (c) 2008-2009, Avian Contributors
+   Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -50,7 +50,31 @@ vmNativeCall:
 
 .globl vmJump
 vmJump:
+  mov   lr, r0
+  ldr   r0, [sp]
+  ldr   r1, [sp, #4]
   mov   sp, r2
-  mov   r4, r3
-  ldmia sp, {r0,r1}
-  mov   pc, lr
+  mov   r8, r3
+  bx    lr
+
+#define CHECKPOINT_THREAD 4
+#define CHECKPOINT_STACK 24
+
+.globl vmRun
+vmRun:
+  // r0: function
+  // r1: arguments
+  // r2: checkpoint
+  stmfd sp!, {r4-r11, lr}
+   
+  str   sp, [r2, #CHECKPOINT_STACK]
+
+  mov   r12, r0
+  ldr   r0, [r2, #CHECKPOINT_THREAD]
+
+  blx   r12
+
+.globl vmRun_returnAddress
+vmRun_returnAddress:
+  ldmfd sp!, {r4-r11, lr}
+  bx    lr

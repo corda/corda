@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -53,6 +53,7 @@ class Heap: public Allocator {
 
   virtual void setClient(Client* client) = 0;
   virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) = 0;
+  virtual bool limitExceeded() = 0;
   virtual void collect(CollectionType type, unsigned footprint) = 0;
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
                               bool objectMask, unsigned* totalInBytes) = 0;

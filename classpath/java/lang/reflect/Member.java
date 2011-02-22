@@ -19,6 +19,4 @@ public interface Member {
   public int getModifiers();
 
   public String getName();
-
-  public boolean isSynthetic();
 }

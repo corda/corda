@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -27,7 +27,11 @@ public class Object {
 
   protected void finalize() throws Throwable { }
 
-  public native final Class<? extends Object> getClass();
+  public final Class<? extends Object> getClass() {
+    return avian.SystemClassLoader.getClass(getVMClass(this));
+  }
+
+  private static native avian.VMClass getVMClass(Object o);
 
   public native int hashCode();
 

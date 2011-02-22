@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,10 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#define __STDC_CONSTANT_MACROS
+
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
 #  undef assert
-#  define _XOPEN_SOURCE
 #endif
 
 #include "sys/mman.h"
@@ -28,6 +29,7 @@
 #include "sys/ucontext.h"
 #include "stdint.h"
 #include "dirent.h"
+#include "sched.h"
 
 #include "arch.h"
 #include "system.h"
@@ -65,13 +67,19 @@ const int AltSegFaultSignal = SIGBUS;
 const int AltSegFaultSignal = InvalidSignal;
 #endif
 const unsigned AltSegFaultSignalIndex = 3;
+const int PipeSignal = SIGPIPE;
+const unsigned PipeSignalIndex = 4;
+const int DivideByZeroSignal = SIGFPE;
+const unsigned DivideByZeroSignalIndex = 5;
 
 const int signals[] = { VisitSignal,
                         SegFaultSignal,
                         InterruptSignal,
-                        AltSegFaultSignal };
+                        AltSegFaultSignal,
+                        PipeSignal,
+                        DivideByZeroSignal };
 
-const unsigned SignalCount = 4;
+const unsigned SignalCount = 6;
 
 class MySystem;
 MySystem* system;
@@ -135,6 +143,12 @@ class MySystem: public System {
       r->setInterrupted(true);
 
       pthread_kill(thread, InterruptSignal);
+
+      // pthread_kill won't necessarily wake a thread blocked in
+      // pthread_cond_{timed}wait (it does on Linux but not Mac OS),
+      // so we signal the condition as well:
+      int rv UNUSED = pthread_cond_signal(&condition);
+      expect(s, rv == 0);
     }
 
     virtual void join() {
@@ -287,7 +301,9 @@ class MySystem: public System {
           owner_ = 0;
           pthread_mutex_unlock(&mutex);
 
-          if (time) {
+          // pretend anything greater than one million years (in
+          // milliseconds) is infinity so as to avoid overflow:
+          if (time and time < INT64_C(31536000000000000)) {
             int64_t then = s->now() + time;
             timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
             int rv UNUSED = pthread_cond_timedwait
@@ -465,13 +481,12 @@ class MySystem: public System {
   class Library: public System::Library {
    public:
     Library(System* s, void* p, const char* name, unsigned nameLength,
-            bool mapName, bool isMain):
+            bool isMain):
       s(s),
       p(p),
       mainExecutable(isMain),
       name_(name),
       nameLength(nameLength),
-      mapName_(mapName),
       next_(0)
     { }
 
@@ -481,10 +496,6 @@ class MySystem: public System {
 
     virtual const char* name() {
       return name_;
-    }
-
-    virtual bool mapName() {
-      return mapName_;
     }
 
     virtual System::Library* next() {
@@ -500,7 +511,7 @@ class MySystem: public System {
         fprintf(stderr, "close %p\n", p);
       }
 
-      if (!mainExecutable) dlclose(p);
+      if (not mainExecutable) dlclose(p);
 
       if (next_) {
         next_->disposeAll();
@@ -518,7 +529,6 @@ class MySystem: public System {
     bool mainExecutable;
     const char* name_;
     unsigned nameLength;
-    bool mapName_;
     System::Library* next_;
   };
 
@@ -529,7 +539,10 @@ class MySystem: public System {
     expect(this, system == 0);
     system = this;
 
+    memset(handlers, 0, sizeof(handlers));
+
     registerHandler(&nullHandler, InterruptSignalIndex);
+    registerHandler(&nullHandler, PipeSignalIndex);
     registerHandler(&nullHandler, VisitSignalIndex);
 
     expect(this, make(&visitLock) == 0);
@@ -629,13 +642,44 @@ class MySystem: public System {
     return s;
   }
 
-  virtual Status visit(System::Thread* st, System::Thread* sTarget,
+  virtual Status handleDivideByZero(SignalHandler* handler) {
+    return registerHandler(handler, DivideByZeroSignalIndex);
+  }
+
+  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
     assert(this, st != sTarget);
 
-    Thread* t = static_cast<Thread*>(st);
     Thread* target = static_cast<Thread*>(sTarget);
+
+#ifdef __APPLE__
+    // On Mac OS, signals sent using pthread_kill are never delivered
+    // if the target thread is blocked (e.g. acquiring a lock or
+    // waiting on a condition), so we can't rely on it and must use
+    // the Mach-specific thread execution API instead.
+
+    mach_port_t port = pthread_mach_thread_np(target->thread);
+
+    if (thread_suspend(port)) return -1;
+
+    THREAD_STATE_TYPE state;
+    mach_msg_type_number_t stateCount = THREAD_STATE_COUNT;
+    kern_return_t rv = thread_get_state
+      (port, THREAD_STATE, reinterpret_cast<thread_state_t>(&state),
+       &stateCount);
+    
+    if (rv == 0) {
+      visitor->visit(reinterpret_cast<void*>(THREAD_STATE_IP(state)),
+                     reinterpret_cast<void*>(THREAD_STATE_STACK(state)),
+                     reinterpret_cast<void*>(THREAD_STATE_LINK(state)));
+    }
+
+    thread_resume(port);
+
+    return rv ? -1 : 0;
+#else // not __APPLE__
+    Thread* t = static_cast<Thread*>(st);
 
     ACQUIRE_MONITOR(t, visitLock);
 
@@ -646,15 +690,23 @@ class MySystem: public System {
 
     int rv = pthread_kill(target->thread, VisitSignal);
 
+    int result;
     if (rv == 0) {
       while (visitTarget) visitLock->wait(t, 0);
 
-      threadVisitor = 0;
-
-      return 0;
+      result = 0;
     } else {
-      return -1;
+      visitTarget = 0;
+
+      result = -1;
     }
+
+    threadVisitor = 0;
+
+    system->visitLock->notifyAll(t);
+
+    return result;
+#endif // not  __APPLE__
   }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
@@ -696,43 +748,43 @@ class MySystem: public System {
     return status;
   }
 
-  virtual FileType identify(const char* name) {
+  virtual FileType stat(const char* name, unsigned* length) {
     struct stat s;
-    int r = stat(name, &s);
+    int r = ::stat(name, &s);
     if (r == 0) {
       if (S_ISREG(s.st_mode)) {
+        *length = s.st_size;
         return TypeFile;
       } else if (S_ISDIR(s.st_mode)) {
+        *length = 0;
         return TypeDirectory;
       } else {
+        *length = 0;
         return TypeUnknown;
       }
     } else {
+      *length = 0;
       return TypeDoesNotExist;
     }
   }
 
+  virtual const char* libraryPrefix() {
+    return SO_PREFIX;
+  }
+
+  virtual const char* librarySuffix() {
+    return SO_SUFFIX;
+  }
+
   virtual Status load(System::Library** lib,
-                      const char* name,
-                      bool mapName)
+                      const char* name)
   {
-    void* p;
-    bool alreadyAllocated = false;
-    bool isMain = false;
     unsigned nameLength = (name ? strlen(name) : 0);
-    if (mapName and name) {
-      unsigned size = nameLength + 3 + sizeof(SO_SUFFIX);
-      char buffer[size];
-      vm::snprintf(buffer, size, "lib%s" SO_SUFFIX, name);
-      p = dlopen(buffer, RTLD_LAZY | RTLD_LOCAL);
-    } else {
-      if (!name) {
-        pathOfExecutable(this, &name, &nameLength);
-        alreadyAllocated = true;
-        isMain = true;
-      }
-      p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
+    bool isMain = name == 0;
+    if (isMain) {
+      pathOfExecutable(this, &name, &nameLength);
     }
+    void* p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
  
     if (p) {
       if (Verbose) {
@@ -743,7 +795,7 @@ class MySystem: public System {
       if (name) {
         n = static_cast<char*>(allocate(this, nameLength + 1));
         memcpy(n, name, nameLength + 1);
-        if (alreadyAllocated) {
+        if (isMain) {
           free(name);
         }
       } else {
@@ -751,11 +803,13 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, mapName, isMain);
+        Library(this, p, n, nameLength, isMain);
 
       return 0;
     } else {
-//       fprintf(stderr, "dlerror: %s\n", dlerror());
+      if (Verbose) {
+        fprintf(stderr, "dlerror opening %s: %s\n", name, dlerror());
+      }
       return 1;
     }
   }
@@ -764,11 +818,19 @@ class MySystem: public System {
     return ':';
   }
 
+  virtual char fileSeparator() {
+    return '/';
+  }
+
   virtual int64_t now() {
     timeval tv = { 0, 0 };
     gettimeofday(&tv, 0);
     return (static_cast<int64_t>(tv.tv_sec) * 1000) +
       (static_cast<int64_t>(tv.tv_usec) / 1000);
+  }
+
+  virtual void yield() {
+    sched_yield();
   }
 
   virtual void exit(int code) {
@@ -784,6 +846,7 @@ class MySystem: public System {
 
     registerHandler(0, InterruptSignalIndex);
     registerHandler(0, VisitSignalIndex);
+    registerHandler(0, PipeSignalIndex);
     system = 0;
 
     ::free(this);
@@ -806,14 +869,15 @@ handleSignal(int signal, siginfo_t* info, void* context)
 {
   ucontext_t* c = static_cast<ucontext_t*>(context);
 
-#ifndef BASE_REGISTER
-#  define BASE_REGISTER(x) 0
-#endif
-
   void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
-  void* base = reinterpret_cast<void*>(BASE_REGISTER(c));
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
   void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
+  void* link = reinterpret_cast<void*>(LINK_REGISTER(c));
+#ifdef FRAME_REGISTER
+  void* frame = reinterpret_cast<void*>(FRAME_REGISTER(c));
+#else
+  void* frame = 0;
+#endif
 
   unsigned index;
 
@@ -821,7 +885,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
   case VisitSignal: {
     index = VisitSignalIndex;
 
-    system->threadVisitor->visit(ip, base, stack);
+    system->threadVisitor->visit(ip, stack, link);
 
     System::Thread* t = system->visitTarget;
     system->visitTarget = 0;
@@ -831,14 +895,27 @@ handleSignal(int signal, siginfo_t* info, void* context)
   } break;
 
   case SegFaultSignal:
-  case AltSegFaultSignal: {
-    if (signal == SegFaultSignal) {
+  case AltSegFaultSignal:
+  case DivideByZeroSignal: {
+    switch (signal) {
+    case SegFaultSignal:
       index = SegFaultSignalIndex;
-    } else {
+      break;
+
+    case AltSegFaultSignal:
       index = AltSegFaultSignalIndex;
+      break;
+
+    case DivideByZeroSignal:
+      index = DivideByZeroSignalIndex;
+      break;
+
+    default:
+      abort();
     }
+
     bool jump = system->handlers[index]->handleSignal
-      (&ip, &base, &stack, &thread);
+      (&ip, &frame, &stack, &thread);
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
@@ -852,7 +929,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
       sigaddset(&set, signal);
       sigprocmask(SIG_UNBLOCK, &set, 0);
 
-      vmJump(ip, base, stack, thread, 0, 0);
+      vmJump(ip, frame, stack, thread, 0, 0);
     }
   } break;
 
@@ -860,10 +937,16 @@ handleSignal(int signal, siginfo_t* info, void* context)
     index = InterruptSignalIndex;
   } break;
 
+  case PipeSignal: {
+    index = PipeSignalIndex;
+  } break;
+
   default: abort();
   }
 
-  if (system->oldHandlers[index].sa_flags & SA_SIGINFO) {
+  if (system->oldHandlers[index].sa_flags & SA_SIGINFO
+      and system->oldHandlers[index].sa_sigaction)
+  {
     system->oldHandlers[index].sa_sigaction(signal, info, context);
   } else if (system->oldHandlers[index].sa_handler) {
     system->oldHandlers[index].sa_handler(signal);
@@ -871,6 +954,7 @@ handleSignal(int signal, siginfo_t* info, void* context)
     switch (signal) {
     case VisitSignal:
     case InterruptSignal:
+    case PipeSignal:
       break;
 
     default:

@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2010, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,16 +8,19 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.util;
+package java.lang;
 
-public class Formatter {
-  private final Locale locale;
+/**
+ * TODO : current Avian runtime doesn't check, need to be implemented.
+ * 
+ */
+public class IllegalAccessError extends IncompatibleClassChangeError {
 
-  public Formatter(Locale locale) {
-    this.locale = locale;
+  public IllegalAccessError(String message) {
+    super(message);
   }
 
-  public Formatter format(String format, Object ... args) {
-    throw new UnsupportedOperationException();
+  public IllegalAccessError() {
   }
+
 }
