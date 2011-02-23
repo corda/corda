@@ -170,17 +170,6 @@ LOCAL(vmInvoke_exit):
   // restore callee-saved registers
   ldmfd sp!, {r4-r11, lr}
 
-LOCAL(vmInvoke_void):
-  cmp   ip, #VOID_TYPE
-  beq   LOCAL(vmInvoke_return)
-
-LOCAL(vmInvoke_int64):
-  cmp   ip, #INT64_TYPE
-  beq   LOCAL(vmInvoke_return)
-
-LOCAL(vmInvoke_int32):
-  mov   r1, #0
-
 LOCAL(vmInvoke_return):
   bx    lr
 
