@@ -313,7 +313,6 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
 
   case DoubleField:
     return makeDouble(t, longValue(t, o));
-    break;
 
   default:
     abort(t);
