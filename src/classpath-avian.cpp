@@ -312,8 +312,11 @@ Avian_java_lang_reflect_Method_invoke
       }
     });
 
+  unsigned returnCode = methodReturnCode(t, method);
+
   return reinterpret_cast<int64_t>
-    (t->m->processor->invokeArray(t, method, instance, args));
+    (translateInvokeResult
+     (t, returnCode, t->m->processor->invokeArray(t, method, instance, args)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

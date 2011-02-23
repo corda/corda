@@ -3162,6 +3162,8 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
     instance = 0;
   }
 
+  unsigned returnCode = methodReturnCode(t, vmMethod);
+
   object result;
   if (args) {
     result = t->m->processor->invokeArray
@@ -3170,7 +3172,8 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
     result = t->m->processor->invoke(t, vmMethod, instance ? *instance : 0);
   }
 
-  return reinterpret_cast<uint64_t>(makeLocalReference(t, result));
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference(t, translateInvokeResult(t, returnCode, result)));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
