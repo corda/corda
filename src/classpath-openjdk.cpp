@@ -1395,6 +1395,22 @@ pipeAvailable(int fd, int* available)
 #endif
 }
 
+object
+fieldForOffset(Thread* t, object o, unsigned offset)
+{
+  object table = classFieldTable(t, objectClass(t, o));
+  for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+    object field = objectArrayBody(t, table, i);
+    if ((fieldFlags(t, field) & ACC_STATIC) == 0
+        and fieldOffset(t, field) == offset)
+    {
+      return field;
+    }
+  }
+  
+  abort(t);
+}
+
 } // namespace local
 
 } // namespace
@@ -1566,6 +1582,32 @@ Avian_sun_misc_Unsafe_getIntVolatile
 
   int32_t result = cast<int32_t>(o, offset);
   loadMemoryBarrier();
+  return result;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLongVolatile
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  object field;
+  if (BytesPerWord < 8) {
+    field = local::fieldForOffset(t, o, offset);
+
+    PROTECT(t, field);
+    acquire(t, field);        
+  }
+
+  int64_t result = cast<int64_t>(o, offset);
+
+  if (BytesPerWord < 8) {
+    release(t, field);        
+  } else {
+    loadMemoryBarrier();
+  }
+
   return result;
 }
 
@@ -3730,7 +3772,11 @@ extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_GetSockOpt)(jint, int, int, char*, int*) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-EXPORT(JVM_SetSockOpt)(jint, int, int, const char*, int) { abort(); }
+EXPORT(JVM_SetSockOpt)(jint socket, int level, int optionName,
+                       const char* optionValue, int optionLength)
+{
+  return setsockopt(socket, level, optionName, optionValue, optionLength);
+}
 
 extern "C" JNIEXPORT struct protoent* JNICALL
 EXPORT(JVM_GetProtoByName)(char*) { abort(); }
