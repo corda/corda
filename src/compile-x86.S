@@ -385,21 +385,7 @@ GLOBAL(vmInvoke_safeStack):
 
    // handle return value based on expected type
    movl   28(%esp),%ecx
-   
-LOCAL(vmInvoke_void):
-   cmpl   $VOID_TYPE,%ecx
-   jne    LOCAL(vmInvoke_int64)
-   jmp    LOCAL(vmInvoke_return)
 
-LOCAL(vmInvoke_int64):
-   cmpl   $INT64_TYPE,%ecx
-   jne    LOCAL(vmInvoke_int32)
-   jmp    LOCAL(vmInvoke_return)
-   
-LOCAL(vmInvoke_int32):
-   movl   $0,%edx
-
-LOCAL(vmInvoke_return):
    popl   %ebp
    ret
 
