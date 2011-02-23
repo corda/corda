@@ -215,19 +215,6 @@ LOCAL(vmInvoke_exit):
    // handle return value based on expected type
    lwz  r8,44(r1)
    
-LOCAL(vmInvoke_void):
-   cmplwi r8,VOID_TYPE
-   bne    LOCAL(vmInvoke_int64)
-   b      LOCAL(vmInvoke_return)
-
-LOCAL(vmInvoke_int64):
-   cmplwi r8,INT64_TYPE
-   bne    LOCAL(vmInvoke_int32)
-   b      LOCAL(vmInvoke_return)
-   
-LOCAL(vmInvoke_int32):
-   li   r3,0
-
 LOCAL(vmInvoke_return):
    // load return address
    lwz  r0,8(r1)
