@@ -109,7 +109,7 @@ class MyThread: public Thread {
 
       t->scratch = scratch;
 
-      doTransition(t, 0, stack, continuation, next);
+      doTransition(t, ip, stack, continuation, next);
     }
 
     MyThread* t;
@@ -2040,6 +2040,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
         target = method;
       }
     } else {
+      expect(t, ip);
       *targetIp = ip;
       *targetFrame = 0;
       *targetStack = static_cast<void**>(stack)
