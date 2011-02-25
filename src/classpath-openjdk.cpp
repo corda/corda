@@ -1845,7 +1845,7 @@ EXPORT(JVM_IHashCode)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
 
-  return objectHash(t, *o);
+  return o ? objectHash(t, *o) : 0;
 }
 
 uint64_t
@@ -2913,10 +2913,18 @@ extern "C" JNIEXPORT jobjectArray JNICALL
 EXPORT(JVM_GetDeclaredClasses)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jclass JNICALL
-EXPORT(JVM_GetDeclaringClass)(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetDeclaringClass)(Thread*, jclass)
+{
+  // todo: implement properly
+  return 0;
+}
 
 extern "C" JNIEXPORT jstring JNICALL
-EXPORT(JVM_GetClassSignature)(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetClassSignature)(Thread*, jclass)
+{
+  // todo: implement properly
+  return 0;
+}
 
 extern "C" JNIEXPORT jbyteArray JNICALL
 EXPORT(JVM_GetClassAnnotations)(Thread* t, jclass c)
@@ -3769,7 +3777,14 @@ EXPORT(JVM_GetSockName)(jint socket, struct sockaddr* address,
 }
 
 extern "C" JNIEXPORT jint JNICALL
-EXPORT(JVM_GetSockOpt)(jint, int, int, char*, int*) { abort(); }
+EXPORT(JVM_GetSockOpt)(jint socket, int level, int optionName,
+                       char* optionValue, int* optionLength)
+{
+  socklen_t length;
+  int rv = getsockopt(socket, level, optionName, optionValue, &length);
+  *optionLength = length;
+  return rv;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_SetSockOpt)(jint socket, int level, int optionName,
@@ -3836,7 +3851,11 @@ extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_InitAgentProperties)(Thread*, jobject) { abort(); }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_GetEnclosingMethodInfo)(JNIEnv*, jclass) { abort(); }
+EXPORT(JVM_GetEnclosingMethodInfo)(JNIEnv*, jclass)
+{
+  // todo: implement properly
+  return 0;
+}
 
 extern "C" JNIEXPORT jintArray JNICALL
 EXPORT(JVM_GetThreadStateValues)(JNIEnv*, jint) { abort(); }
