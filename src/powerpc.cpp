@@ -162,7 +162,15 @@ carry16(intptr_t v)
   return static_cast<int16_t>(v) < 0 ? 1 : 0;
 }
 
+#ifdef __APPLE__
 const unsigned FrameFooterSize = 6;
+const unsigned ReturnAddressOffset = 2;
+const unsigned AlignArguments = false;
+#else
+const unsigned FrameFooterSize = 2;
+const unsigned ReturnAddressOffset = 1;
+const unsigned AlignArguments = true;
+#endif
 
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
@@ -1777,7 +1785,7 @@ nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
     // todo: check for and handle tail calls
   }
 
-  *ip = static_cast<void**>(*stack)[offset + 2];
+  *ip = static_cast<void**>(*stack)[offset + ReturnAddressOffset];
   *stack = static_cast<void**>(*stack) + offset;
 }
 
@@ -1940,7 +1948,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual bool argumentAlignment() {
-    return false;
+    return AlignArguments;
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -2023,7 +2031,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void* frameIp(void* stack) {
-    return stack ? static_cast<void**>(stack)[2] : 0;
+    return stack ? static_cast<void**>(stack)[ReturnAddressOffset] : 0;
   }
 
   virtual unsigned frameHeaderSize() {
@@ -2039,7 +2047,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual int returnAddressOffset() {
-    return 8 / BytesPerWord;
+    return ReturnAddressOffset;
   }
 
   virtual int framePointerOffset() {
@@ -2261,7 +2269,7 @@ class MyAssembler: public Assembler {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
-    Memory returnAddressDst(StackRegister, 8);
+    Memory returnAddressDst(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
 
     Register stack(StackRegister);
@@ -2314,7 +2322,7 @@ class MyAssembler: public Assembler {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
-    Memory returnAddressDst(StackRegister, 8);
+    Memory returnAddressDst(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
 
     Register stack(StackRegister);
@@ -2337,7 +2345,7 @@ class MyAssembler: public Assembler {
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
 
     Register returnAddress(0);
-    Memory returnAddressSrc(StackRegister, 8);
+    Memory returnAddressSrc(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
     
     emit(&c, mtlr(returnAddress.low));
@@ -2351,7 +2359,8 @@ class MyAssembler: public Assembler {
     if (TailCalls) {
       if (offset) {
         Register tmp(0);
-        Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
+        Memory returnAddressSrc
+          (StackRegister, (ReturnAddressOffset + footprint) * BytesPerWord);
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
         emit(&c, mtlr(tmp.low));
@@ -2366,7 +2375,8 @@ class MyAssembler: public Assembler {
           assert(&c, offset > 0);
 
           Register ras(returnAddressSurrogate);
-          Memory dst(StackRegister, 8 + (offset * BytesPerWord));
+          Memory dst
+            (StackRegister, (ReturnAddressOffset + offset) * BytesPerWord);
           moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
         }
 

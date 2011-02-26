@@ -3,7 +3,11 @@ MAKEFLAGS = -s
 name = avian
 version = 0.4
 
-build-arch := $(shell uname -m | sed 's/^i.86$$/i386/' | sed 's/^arm.*$$/arm/')
+build-arch := $(shell uname -m \
+	| sed 's/^i.86$$/i386/' \
+	| sed 's/^arm.*$$/arm/' \
+	| sed 's/ppc/powerpc/')
+
 ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif

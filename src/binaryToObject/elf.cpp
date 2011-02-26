@@ -35,6 +35,7 @@
 #define EV_CURRENT 1
 
 #define ELFDATA2LSB 1
+#define ELFDATA2MSB 2
 
 #define ELFOSABI_SYSV 0
 
@@ -43,6 +44,7 @@
 #define EM_386 3
 #define EM_X86_64 62
 #define EM_ARM 40
+#define EM_PPC 20
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -77,7 +79,6 @@
 #  error
 #endif
 
-#define Data ELFDATA2LSB
 #define OSABI ELFOSABI_SYSV
 
 namespace {
@@ -178,7 +179,7 @@ void
 writeObject(const uint8_t* data, unsigned size, FILE* out,
             const char* startName, const char* endName,
             const char* sectionName, unsigned sectionFlags,
-            unsigned alignment, int machine)
+            unsigned alignment, int machine, int encoding)
 {
   const unsigned sectionCount = 5;
   const unsigned symbolCount = 2;
@@ -222,7 +223,7 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   fileHeader.e_ident[EI_MAG2] = ELFMAG2;
   fileHeader.e_ident[EI_MAG3] = ELFMAG3;
   fileHeader.e_ident[EI_CLASS] = Class;
-  fileHeader.e_ident[EI_DATA] = Data;
+  fileHeader.e_ident[EI_DATA] = encoding;
   fileHeader.e_ident[EI_VERSION] = EV_CURRENT;
   fileHeader.e_ident[EI_OSABI] = OSABI;
   fileHeader.e_ident[EI_ABIVERSION] = 0;
@@ -349,12 +350,19 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
    bool writable, bool executable)
 {
   int machine;
+  int encoding;
   if (strcmp(architecture, "x86_64") == 0) {
     machine = EM_X86_64;
+    encoding = ELFDATA2LSB;
   } else if (strcmp(architecture, "i386") == 0) {
     machine = EM_386;
+    encoding = ELFDATA2LSB;
   } else if (strcmp(architecture, "arm") == 0) {
     machine = EM_ARM;
+    encoding = ELFDATA2LSB;
+  } else if (strcmp(architecture, "powerpc") == 0) {
+    machine = EM_PPC;
+    encoding = ELFDATA2MSB;
   } else {
     fprintf(stderr, "unsupported architecture: %s\n", architecture);
     return false;
@@ -376,7 +384,7 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
   }
 
   writeObject(data, size, out, startName, endName, sectionName, sectionFlags,
-              alignment, machine);
+              alignment, machine, encoding);
 
   return true;
 }

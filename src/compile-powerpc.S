@@ -13,16 +13,21 @@
 .text
 
 #define BYTES_PER_WORD 4
-#define LINKAGE_AREA 6
-#define ARGUMENT_BASE BYTES_PER_WORD * LINKAGE_AREA
-
-#define LOCAL(x) L##x
    
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
+#  define LOCAL(x) L##x
+#  define LINKAGE_AREA 6
+#  define RETURN_ADDRESS_OFFSET 8
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
+#  define LOCAL(x) .L##x
+#  define LINKAGE_AREA 2
+#  define RETURN_ADDRESS_OFFSET 4
+#  include "powerpc-regs.S"
 #endif
+
+#define ARGUMENT_BASE BYTES_PER_WORD * LINKAGE_AREA
       
 #define THREAD_STACK 2148
 #define THREAD_CONTINUATION 2156
@@ -42,7 +47,7 @@
 GLOBAL(vmInvoke):
    // save return address
    mflr r0
-   stw  r0,8(r1)
+   stw  r0,RETURN_ADDRESS_OFFSET(r1)
 
    // r3: thread
    // r4: function
@@ -53,12 +58,10 @@ GLOBAL(vmInvoke):
 
    // r9: temporary
 
-   // save return type
-   stw  r8,44(r1)
-
-   // allocate stack space, adding room for callee-saved registers
+   // allocate stack space, adding room for callee-saved registers and
+   // return type
    subfic r9,r7,-80
-	 stwux r1,r1,r9
+   stwux r1,r1,r9
    
    // save callee-saved registers
    add  r9,r7,r1
@@ -82,6 +85,9 @@ GLOBAL(vmInvoke):
    stw  r29,64(r9)
    stw  r30,68(r9)
    stw  r31,72(r9)
+
+   // save return type
+   stw  r8,74(r9)
 
    // we use r13 to hold the thread pointer, by convention
    mr   r13,r3
@@ -213,11 +219,11 @@ LOCAL(vmInvoke_exit):
    lwz  r31,72(r9)
    
    // handle return value based on expected type
-   lwz  r8,44(r1)
+   lwz  r8,74(r9)
    
 LOCAL(vmInvoke_return):
    // load return address
-   lwz  r0,8(r1)
+   lwz  r0,RETURN_ADDRESS_OFFSET(r1)
    mtlr r0
 
    // return

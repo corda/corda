@@ -13,22 +13,28 @@
 .text
 
 #define BYTES_PER_WORD 4
-#define LINKAGE_AREA 6
 #define GPR_COUNT 8
-#define MEMORY_BASE BYTES_PER_WORD * (LINKAGE_AREA + GPR_COUNT)
-#define LOCAL(x) L##x
    
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
+#  define LOCAL(x) L##x
+#  define LINKAGE_AREA 6
+#  define MEMORY_BASE BYTES_PER_WORD * (LINKAGE_AREA + GPR_COUNT)
+#  define RETURN_ADDRESS_OFFSET 8
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
+#  define LOCAL(x) .L##x
+#  define LINKAGE_AREA 2
+#  define MEMORY_BASE BYTES_PER_WORD * LINKAGE_AREA
+#  define RETURN_ADDRESS_OFFSET 4
+#  include "powerpc-regs.S"
 #endif
 
 .globl GLOBAL(vmNativeCall)
 GLOBAL(vmNativeCall):
    // save return address
    mflr r0
-   stw  r0,8(r1)
+   stw  r0,RETURN_ADDRESS_OFFSET(r1)
    
    // r3 aka r13: function
    // r4        : stackTotal
@@ -42,17 +48,26 @@ GLOBAL(vmNativeCall):
    // r16       : temporary
    // r17       : temporary
    // r18       : temporary
-   
-   // save registers used for local variables
-   stw  r13,24(r1)
-   stw  r14,28(r1)
-   stw  r15,32(r1)
-   stw  r16,36(r1)
-   stw  r17,40(r1)
-   stw  r18,44(r1)
 
-   // allocate stack space
-	 stwux	r1,r1,r4
+   // allocate stack space, adding room for callee-saved registers and
+   // scratch space for copying a FP return value into GPRs
+   subfic r10,r4,-48
+	 stwux r1,r1,r10
+
+   // save callee-saved registers used for local variables
+   add  r10,r4,r1
+
+   // save registers used for local variables
+   stw  r13,0(r10)
+   stw  r14,4(r10)
+   stw  r15,8(r10)
+   stw  r16,12(r10)
+   stw  r17,16(r10)
+   stw  r18,20(r10)
+   stw  r19,24(r10)
+
+   // remember where we saved the local variables
+   mr   r19,r10
 
    // save our argument registers so we can clobber them
    mr   r13,r3
@@ -84,12 +99,14 @@ LOCAL(test):
    lfd  f6,40(r8)
    lfd  f7,48(r8)
    lfd  f8,56(r8)
+#ifdef __APPLE__
    lfd  f9,64(r8)
    lfd  f10,72(r8)
    lfd  f11,80(r8)
    lfd  f12,88(r8)
    lfd  f13,96(r8)
-   
+#endif
+
 LOCAL(gpr):
    // do we need to load the general-purpose registers?
    cmpwi r7,0
@@ -128,25 +145,26 @@ LOCAL(float):
 
 LOCAL(copy):
    // move floating point return value to GPRs via memory
-   stfd f1,8(r1)
-   lwz  r3,8(r1)
-   lwz  r4,12(r1)
+   stfd f1,32(r19)
+   lwz  r3,32(r19)
+   lwz  r4,36(r19)
    b    LOCAL(exit)
 
 LOCAL(exit):
+   // restore callee-saved registers used for local variables
+   lwz  r13,0(r19)
+   lwz  r14,4(r19)
+   lwz  r15,8(r19)
+   lwz  r16,12(r19)
+   lwz  r17,16(r19)
+   lwz  r18,20(r19)
+   lwz  r19,24(r19)
+
    // restore stack pointer
 	 lwz	r1,0(r1)
 
-   // restore registers used for local variables
-   lwz  r13,24(r1)
-   lwz  r14,28(r1)
-   lwz  r15,32(r1)
-   lwz  r16,36(r1)
-   lwz  r17,40(r1)
-   lwz  r18,44(r1)
-
    // load return address
-   lwz  r0,8(r1)
+   lwz  r0,RETURN_ADDRESS_OFFSET(r1)
    mtlr r0
 
    // return
@@ -171,7 +189,7 @@ GLOBAL(vmRun):
    // r5: checkpoint
 
    mflr r0
-   stw  r0,8(r1)
+   stw  r0,RETURN_ADDRESS_OFFSET(r1)
 
    stwu r1,-(MEMORY_BASE+88)(r1)
       
@@ -226,6 +244,6 @@ GLOBAL(vmRun_returnAddress):
    lwz  r31,MEMORY_BASE+72(r1)
 
    lwz	r1,0(r1)
-   lwz  r0,8(r1)
+   lwz  r0,RETURN_ADDRESS_OFFSET(r1)
    mtlr r0
    blr

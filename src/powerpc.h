@@ -14,8 +14,6 @@
 #include "types.h"
 #include "common.h"
 
-#define VA_LIST(x) (&(x))
-
 #ifdef __APPLE__
 #  include "mach/mach_types.h"
 #  include "mach/ppc/thread_act.h"
@@ -45,9 +43,17 @@
 #  define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
 
-#else
-#  error "non-Apple PowerPC-based platforms not yet supported"
-#endif
+#define VA_LIST(x) (&(x))
+
+#else // not __APPLE__
+#  define IP_REGISTER(context) (context->uc_mcontext.regs->gpr[32])
+#  define STACK_REGISTER(context) (context->uc_mcontext.regs->gpr[1])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.regs->gpr[13])
+#  define LINK_REGISTER(context) (context->uc_mcontext.regs->gpr[36])
+
+#define VA_LIST(x) (x)
+
+#endif // not __APPLE__
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
@@ -150,13 +156,22 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize,
             unsigned returnType)
 {
+#ifdef __APPLE__
+#  define SKIP(var, count) var += count;
+#  define ALIGN(var)
   const unsigned LinkageArea = 24;
+  const unsigned FprCount = 13;
+#else
+#  define SKIP(var, count)
+#  define ALIGN(var) if (var & 1) ++var;
+  const unsigned LinkageArea = 8;
+  const unsigned FprCount = 8;
+#endif
 
   const unsigned GprCount = 8;
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
 
-  const unsigned FprCount = 13;
   uint64_t fprTable[FprCount];
   unsigned fprIndex = 0;
 
@@ -172,8 +187,8 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
         double d = bitsToFloat(arguments[ai]);
         memcpy(fprTable + fprIndex, &d, 8);
         ++ fprIndex;
-        ++ gprIndex;
-        ++ stackSkip;
+        SKIP(gprIndex, 1);
+        SKIP(stackSkip, 1);
       } else {
         stack[stackIndex++] = arguments[ai];
       }
@@ -184,9 +199,10 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
       if (fprIndex + (8 / BytesPerWord) <= FprCount) {
         memcpy(fprTable + fprIndex, arguments + ai, 8);
         ++ fprIndex;
-        gprIndex += 8 / BytesPerWord;
-        stackSkip += 8 / BytesPerWord;
+        SKIP(gprIndex, 8 / BytesPerWord);
+        SKIP(stackSkip, 8 / BytesPerWord);
       } else {
+        ALIGN(stackIndex);
         memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += 8 / BytesPerWord;
       }
@@ -195,10 +211,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
 
     case INT64_TYPE: {
       if (gprIndex + (8 / BytesPerWord) <= GprCount) {
+        ALIGN(gprIndex);
         memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += 8 / BytesPerWord;
-        stackSkip += 8 / BytesPerWord;
+        SKIP(stackSkip, 8 / BytesPerWord);
       } else {
+        ALIGN(stackIndex);
         memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += 8 / BytesPerWord;
       }
@@ -208,7 +226,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     default: {
       if (gprIndex < GprCount) {
         gprTable[gprIndex++] = arguments[ai];
-        ++ stackSkip;
+        SKIP(stackSkip, 1);
       } else {
         stack[stackIndex++] = arguments[ai];
       }
@@ -219,8 +237,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
 
   return vmNativeCall
     (function,
-     - ((((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15)
-        & -16),
+     (((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15) & -16,
      stack, stackIndex * BytesPerWord,
      (gprIndex ? gprTable : 0),
      (fprIndex ? fprTable : 0), returnType);

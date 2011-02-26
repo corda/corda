@@ -2171,9 +2171,9 @@ class MemorySite: public Site {
   }
 
   virtual Site* makeNextWord(Context* c, unsigned index) {
-    // todo: endianness?
     return memorySite
-      (c, base, offset + (index == 1 ? BytesPerWord : -BytesPerWord),
+      (c, base, offset + ((index == 1) xor c->arch->bigEndian()
+                          ? BytesPerWord : -BytesPerWord),
        this->index, scale);
   }
 
@@ -2184,12 +2184,11 @@ class MemorySite: public Site {
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned index) {
-    // todo: endianness?
     int frameIndex;
     if (base == c->arch->stack()) {
       assert(c, this->index == NoRegister);
       frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
-        + (index == 1 ? 1 : -1);
+        + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
     } else {
       frameIndex = NoFrameIndex;
     }
