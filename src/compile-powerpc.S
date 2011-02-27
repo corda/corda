@@ -87,7 +87,7 @@ GLOBAL(vmInvoke):
    stw  r31,72(r9)
 
    // save return type
-   stw  r8,74(r9)
+   stw  r8,76(r9)
 
    // we use r13 to hold the thread pointer, by convention
    mr   r13,r3
@@ -219,7 +219,7 @@ LOCAL(vmInvoke_exit):
    lwz  r31,72(r9)
    
    // handle return value based on expected type
-   lwz  r8,74(r9)
+   lwz  r8,76(r9)
    
 LOCAL(vmInvoke_return):
    // load return address
