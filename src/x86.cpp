@@ -3616,9 +3616,12 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual void writeTo(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst) {
     c.result = dst;
-    
+  }
+
+  virtual void write() {
+    uint8_t* dst = c.result;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       unsigned index = 0;
       unsigned padding = 0;

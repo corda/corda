@@ -374,7 +374,7 @@ methodForIp(MyThread* t, void* ip)
 
   // we must use a version of the method tree at least as recent as the
   // compiled form of the method containing the specified address (see
-  // compile(MyThread*, Allocator*, BootContext*, object)):
+  // compile(MyThread*, FixedAllocator*, BootContext*, object)):
   loadMemoryBarrier();
 
   return treeQuery(t, root(t, MethodTree), reinterpret_cast<intptr_t>(ip),
@@ -2229,7 +2229,7 @@ FixedAllocator*
 codeAllocator(MyThread* t);
 
 void
-compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         object method);
 
 int64_t
@@ -5583,7 +5583,8 @@ finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name,
 {
   uint8_t* start = static_cast<uint8_t*>(allocator->allocate(pad(length)));
 
-  a->writeTo(start);
+  a->setDestination(start);
+  a->write();
 
   logCompile(t, start, length, 0, name, 0);
 
@@ -5851,7 +5852,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 }
 
 void
-finish(MyThread* t, Allocator* allocator, Context* context)
+finish(MyThread* t, FixedAllocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
@@ -5885,9 +5886,13 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   // parallelism (the downside being that it may end up being a waste
   // of cycles if another thread compiles the same method in parallel,
   // which might be mitigated by fine-grained, per-method locking):
-  unsigned codeSize = c->compile
-    (context->leaf ? 0 : stackOverflowThunk(t),
-     difference(&(t->stackLimit), t));
+  c->compile(context->leaf ? 0 : stackOverflowThunk(t),
+             difference(&(t->stackLimit), t));
+
+  // we must acquire the class lock here at the latest
+ 
+  unsigned codeSize = c->resolve
+    (allocator->base + allocator->offset + BytesPerWord);
 
   unsigned total = pad(codeSize) + pad(c->poolSize()) + BytesPerWord;
 
@@ -5921,7 +5926,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     }
   }
 
-  c->writeTo(start);
+  c->write();
 
   BootContext* bc = context->bootContext;
   if (bc) {
@@ -8646,7 +8651,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   uint8_t* start = p->thunks.table.start;
 
 #define THUNK(s)                                                        \
-  tableContext.context.assembler->writeTo(start);                       \
+  tableContext.context.assembler->setDestination(start);                \
+  tableContext.context.assembler->write();                              \
   start += p->thunks.table.length;                                      \
   { void* call;                                                         \
     tableContext.promise.listener->resolve                              \
@@ -8737,7 +8743,8 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   uint8_t* start = static_cast<uint8_t*>(codeAllocator(t)->allocate(*size));
 
-  a->writeTo(start);
+  a->setDestination(start);
+  a->write();
 
   logCompile(t, start, *size, 0, "virtualThunk", 0);
 
@@ -8774,7 +8781,7 @@ virtualThunk(MyThread* t, unsigned index)
 }
 
 void
-compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         object method)
 {
   PROTECT(t, method);

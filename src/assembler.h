@@ -428,7 +428,9 @@ class Assembler {
                      unsigned bSize, OperandType bType, Operand* bOperand,
                      unsigned cSize, OperandType cType, Operand* cOperand) = 0;
 
-  virtual void writeTo(uint8_t* dst) = 0;
+  virtual void setDestination(uint8_t* dst) = 0;
+
+  virtual void write() = 0;
 
   virtual Promise* offset(bool forTrace = false) = 0;
 
