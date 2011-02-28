@@ -2096,6 +2096,10 @@ class MyArchitecture: public Assembler::Architecture {
     case 0: // r0 has special meaning in addi and other instructions
     case StackRegister:
     case ThreadRegister:
+#ifndef __APPLE__
+      // r2 is reserved for system uses on SYSV
+    case 2:
+#endif
       return true;
 
     default:
