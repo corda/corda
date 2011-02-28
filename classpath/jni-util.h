@@ -64,7 +64,7 @@ typedef unsigned __int64 uint64_t;
 #    define ARCH_x86_32
 #  elif defined __x86_64__
 #    define ARCH_x86_64
-#  elif defined __POWERPC__
+#  elif (defined __POWERPC__) || (defined __powerpc__)
 #    define ARCH_powerpc
 #  elif defined __arm__
 #    define ARCH_arm
