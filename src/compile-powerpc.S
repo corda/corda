@@ -157,7 +157,11 @@ LOCAL(vmInvoke_continuationTest):
    
 LOCAL(vmInvoke_getPC):
    mflr r10
+#ifdef __APPLE__
    la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmInvoke_getPC))(r10)
+#else
+   lwz  r10,LOCAL(vmInvoke_returnAddress_address)-LOCAL(vmInvoke_getPC)(r10)
+#endif
    stwx r10,r1,r7
 
    lwz  r7,CONTINUATION_FRAME_POINTER_OFFSET(r5)
@@ -228,6 +232,9 @@ LOCAL(vmInvoke_return):
 
    // return
    blr
+   
+LOCAL(vmInvoke_returnAddress_address):
+   .long GLOBAL(vmInvoke_returnAddress)
 
 .globl GLOBAL(vmJumpAndInvoke)
 GLOBAL(vmJumpAndInvoke):
@@ -276,7 +283,11 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 LOCAL(vmJumpAndInvoke_getPC):
    mflr r10
+#ifdef __APPLE__
    la   r10,lo16(GLOBAL(vmInvoke_returnAddress)-LOCAL(vmJumpAndInvoke_getPC))(r10)
+#else
+   lwz  r10,LOCAL(vmInvoke_returnAddress_address)-LOCAL(vmJumpAndInvoke_getPC)(r10)
+#endif
    mtlr r10
 
    mtctr r4
