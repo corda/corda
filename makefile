@@ -202,13 +202,15 @@ ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
 
-	ifneq ($(arch),$(build-arch))
-		converter-cflags += -DOPPOSITE_ENDIAN
-		cxx = powerpc-linux-gnu-g++
-		cc = powerpc-linux-gnu-gcc
-		ar = powerpc-linux-gnu-ar
-		ranlib = powerpc-linux-gnu-ranlib
-		strip = powerpc-linux-gnu-strip
+	ifneq ($(platform),darwin)
+		ifneq ($(arch),$(build-arch))
+			converter-cflags += -DOPPOSITE_ENDIAN
+			cxx = powerpc-linux-gnu-g++
+			cc = powerpc-linux-gnu-gcc
+			ar = powerpc-linux-gnu-ar
+			ranlib = powerpc-linux-gnu-ranlib
+			strip = powerpc-linux-gnu-strip
+		endif
 	endif
 endif
 ifeq ($(arch),arm)
