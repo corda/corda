@@ -232,9 +232,11 @@ LOCAL(vmInvoke_return):
 
    // return
    blr
-   
+
+#ifndef __APPLE__
 LOCAL(vmInvoke_returnAddress_address):
    .long GLOBAL(vmInvoke_returnAddress)
+#endif
 
 .globl GLOBAL(vmJumpAndInvoke)
 GLOBAL(vmJumpAndInvoke):
