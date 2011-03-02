@@ -430,12 +430,40 @@ GetDirectBufferCapacity(Thread*, jobject)
   return -1;
 }
 
+uint64_t
+getObjectClass(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference(t, getJClass(t, objectClass(t, *o))));
+}
+
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
 
-  return makeLocalReference(t, getJClass(t, objectClass(t, *o)));
+  return reinterpret_cast<jobject>(run(t, getObjectClass, arguments));
+}
+
+uint64_t
+getSuperclass(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+
+  object super = classSuper(t, jclassVmClass(t, *c));
+
+  return super ? reinterpret_cast<uint64_t>
+    (makeLocalReference(t, getJClass(t, super))) : 0;
+}
+
+jclass JNICALL
+GetSuperclass(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jclass>(run(t, getSuperclass, arguments));
 }
 
 jboolean JNICALL
@@ -2358,6 +2386,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
+  envTable->GetSuperclass = local::GetSuperclass;
   envTable->IsInstanceOf = local::IsInstanceOf;
   envTable->IsAssignableFrom = local::IsAssignableFrom;
   envTable->GetFieldID = local::GetFieldID;
