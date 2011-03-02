@@ -1586,6 +1586,16 @@ Avian_sun_misc_Unsafe_getIntVolatile
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<int64_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getLongVolatile
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -1666,6 +1676,19 @@ Avian_sun_misc_Unsafe_getObjectVolatile
   return value;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putObjectVolatile
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  object value = reinterpret_cast<object>(arguments[4]);
+  
+  storeStoreMemoryBarrier();
+  set(t, o, offset, reinterpret_cast<object>(value));
+  storeLoadMemoryBarrier();
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapInt
 (Thread*, object, uintptr_t* arguments)
@@ -1742,6 +1765,16 @@ Avian_sun_misc_Unsafe_setMemory
   int8_t v = arguments[5];
 
   memset(reinterpret_cast<int8_t*>(p), v, count);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putByte__JB
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int8_t v = arguments[3];
+
+  *reinterpret_cast<int8_t*>(p) = v;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2489,7 +2522,34 @@ EXPORT(JVM_AllocateNewArray)(Thread*, jobject, jclass,
                      jint) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-EXPORT(JVM_LatestUserDefinedLoader)(Thread*) { abort(); }
+EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
+{
+  ENTER(t, Thread::ActiveState);
+
+  class Visitor: public Processor::StackVisitor {
+   public:
+    Visitor(Thread* t):
+      t(t), loader(0)
+    { }
+
+    virtual bool visit(Processor::StackWalker* walker) {
+      object loader = classLoader(t, methodClass(t, walker->method()));
+      if (loader and loader != root(t, Machine::BootLoader)) {
+        this->loader = loader;
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    Thread* t;
+    object loader;
+  } v(t);
+
+  t->m->processor->walkStack(t, &v);
+
+  return makeLocalReference(t, v.loader);
+}
 
 extern "C" JNIEXPORT jclass JNICALL
 EXPORT(JVM_LoadClass0)(Thread*, jobject, jclass,
@@ -3764,7 +3824,10 @@ EXPORT(JVM_SendTo)(jint, char*, int,
            int, struct sockaddr*, int) { abort(); }
 
 extern "C" JNIEXPORT jint JNICALL
-EXPORT(JVM_SocketAvailable)(jint, jint*) { abort(); }
+EXPORT(JVM_SocketAvailable)(jint socket, jint* count)
+{
+  return ioctl(socket, FIONREAD, count) < 0 ? 0 : 1;
+}
 
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_GetSockName)(jint socket, struct sockaddr* address,
