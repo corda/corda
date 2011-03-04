@@ -3904,26 +3904,28 @@ printTrace(Thread* t, object exception)
     }
 
     object trace = throwableTrace(t, e);
-    for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
-      object e = objectArrayBody(t, trace, i);
-      const int8_t* class_ = &byteArrayBody
-        (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
-      const int8_t* method = &byteArrayBody
-        (t, methodName(t, traceElementMethod(t, e)), 0);
-      int line = t->m->processor->lineNumber
-        (t, traceElementMethod(t, e), traceElementIp(t, e));
+    if (trace) {
+      for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
+        object e = objectArrayBody(t, trace, i);
+        const int8_t* class_ = &byteArrayBody
+          (t, className(t, methodClass(t, traceElementMethod(t, e))), 0);
+        const int8_t* method = &byteArrayBody
+          (t, methodName(t, traceElementMethod(t, e)), 0);
+        int line = t->m->processor->lineNumber
+          (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-      fprintf(stderr, "  at %s.%s ", class_, method);
+        fprintf(stderr, "  at %s.%s ", class_, method);
 
-      switch (line) {
-      case NativeLine:
-        fprintf(stderr, "(native)\n");
-        break;
-      case UnknownLine:
-        fprintf(stderr, "(unknown line)\n");
-        break;
-      default:
-        fprintf(stderr, "(line %d)\n", line);
+        switch (line) {
+        case NativeLine:
+          fprintf(stderr, "(native)\n");
+          break;
+        case UnknownLine:
+          fprintf(stderr, "(unknown line)\n");
+          break;
+        default:
+          fprintf(stderr, "(line %d)\n", line);
+        }
       }
     }
 
