@@ -2597,6 +2597,7 @@ inline void NO_RETURN
 throw_(Thread* t, object e)
 {
   assert(t, t->exception == 0);
+  assert(t, e);
 
   expect(t, not t->checkpoint->noThrow);
 
