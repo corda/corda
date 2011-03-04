@@ -41,16 +41,6 @@ copy(Allocator* allocator, const char* a)
   return p;
 }
 
-bool
-equal(const void* a, unsigned al, const void* b, unsigned bl)
-{
-  if (al == bl) {
-    return memcmp(a, b, al) == 0;
-  } else {
-    return false;
-  }
-}
-
 class Element {
  public:
   class Iterator {
@@ -233,9 +223,6 @@ class DataRegion: public System::Region {
 
 class JarIndex {
  public:
-  static const unsigned LocalHeaderSize = 30;
-  static const unsigned HeaderSize = 46;
-
   enum CompressionMethod {
     Stored = 0,
     Deflated = 8
@@ -262,78 +249,6 @@ class JarIndex {
     memset(table, 0, sizeof(Node*) * capacity);
   }
 
-  static uint16_t get2(const uint8_t* p) {
-    return
-      (static_cast<uint16_t>(p[1]) <<  8) |
-      (static_cast<uint16_t>(p[0])      );
-  }
-
-  static uint32_t get4(const uint8_t* p) {
-    return
-      (static_cast<uint32_t>(p[3]) << 24) |
-      (static_cast<uint32_t>(p[2]) << 16) |
-      (static_cast<uint32_t>(p[1]) <<  8) |
-      (static_cast<uint32_t>(p[0])      );
-  }
-
-  static uint32_t signature(const uint8_t* p) {
-    return get4(p);
-  }
-
-  static uint16_t compressionMethod(const uint8_t* centralHeader) {
-    return get2(centralHeader + 10);
-  }
-
-  static uint32_t compressedSize(const uint8_t* centralHeader) {
-    return get4(centralHeader + 20);
-  }
-
-  static uint32_t uncompressedSize(const uint8_t* centralHeader) {
-    return get4(centralHeader + 24);
-  }
-
-  static uint16_t fileNameLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 28);
-  }
-
-  static uint16_t extraFieldLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 30);
-  }
-
-  static uint16_t commentFieldLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 32);
-  }
-
-  static uint32_t localHeaderOffset(const uint8_t* centralHeader) {
-    return get4(centralHeader + 42);
-  }
-
-  static uint16_t localFileNameLength(const uint8_t* localHeader) {
-    return get2(localHeader + 26);
-  }
-
-  static uint16_t localExtraFieldLength(const uint8_t* localHeader) {
-    return get2(localHeader + 28);
-  }
-
-  static uint32_t centralDirectoryOffset(const uint8_t* centralHeader) {
-    return get4(centralHeader + 16);
-  }
-
-  static const uint8_t* fileName(const uint8_t* centralHeader) {
-    return centralHeader + 46;
-  }
-
-  static const uint8_t* fileData(const uint8_t* localHeader) {
-    return localHeader + LocalHeaderSize + localFileNameLength(localHeader) +
-      localExtraFieldLength(localHeader);
-  }
-
-  static const uint8_t* endOfEntry(const uint8_t* p) {
-    return p + HeaderSize + fileNameLength(p) + extraFieldLength(p) +
-      commentFieldLength(p);
-  }
-
   static JarIndex* make(System* s, Allocator* allocator, unsigned capacity) {
     return new
       (allocator->allocate(sizeof(JarIndex) + (sizeof(Node*) * capacity)))
@@ -347,14 +262,14 @@ class JarIndex {
 
     const uint8_t* start = region->start();
     const uint8_t* end = start + region->length();
-    const uint8_t* p = end - 22;
+    const uint8_t* p = end - CentralDirectorySearchStart;
     // Find end of central directory record
     while (p > start) {
-      if (signature(p) == 0x06054b50) {
+      if (signature(p) == CentralDirectorySignature) {
 	p = region->start() + centralDirectoryOffset(p);
 	
 	while (p < end) {
-	  if (signature(p) == 0x02014b50) {
+	  if (signature(p) == EntrySignature) {
 	    index = index->add(hash(fileName(p), fileNameLength(p)), p);
 
 	    p = endOfEntry(p);
@@ -495,8 +410,8 @@ class JarElement: public Element {
     virtual const char* next(unsigned* size) {
       if (position < index->position) {
         JarIndex::Node* n = index->nodes + (position++);
-        *size = JarIndex::fileNameLength(n->entry);
-        return reinterpret_cast<const char*>(JarIndex::fileName(n->entry));
+        *size = fileNameLength(n->entry);
+        return reinterpret_cast<const char*>(fileName(n->entry));
       } else {
         return 0;
       }

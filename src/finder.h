@@ -17,6 +17,94 @@
 
 namespace vm {
 
+const unsigned LocalHeaderSize = 30;
+const unsigned HeaderSize = 46;
+
+const unsigned CentralDirectorySignature = 0x06054b50;
+const unsigned EntrySignature = 0x02014b50;
+
+const unsigned CentralDirectorySearchStart = 22;
+
+inline uint16_t get2(const uint8_t* p) {
+  return
+    (static_cast<uint16_t>(p[1]) <<  8) |
+    (static_cast<uint16_t>(p[0])      );
+}
+
+inline uint32_t get4(const uint8_t* p) {
+  return
+    (static_cast<uint32_t>(p[3]) << 24) |
+    (static_cast<uint32_t>(p[2]) << 16) |
+    (static_cast<uint32_t>(p[1]) <<  8) |
+    (static_cast<uint32_t>(p[0])      );
+}
+
+inline uint32_t signature(const uint8_t* p) {
+  return get4(p);
+}
+
+inline uint16_t compressionMethod(const uint8_t* centralHeader) {
+  return get2(centralHeader + 10);
+}
+
+inline uint32_t fileTime(const uint8_t* centralHeader) {
+  return get4(centralHeader + 12);
+}
+
+inline uint32_t fileCRC(const uint8_t* centralHeader) {
+  return get4(centralHeader + 16);
+}
+
+inline uint32_t compressedSize(const uint8_t* centralHeader) {
+  return get4(centralHeader + 20);
+}
+
+inline uint32_t uncompressedSize(const uint8_t* centralHeader) {
+  return get4(centralHeader + 24);
+}
+
+inline uint16_t fileNameLength(const uint8_t* centralHeader) {
+  return get2(centralHeader + 28);
+}
+
+inline uint16_t extraFieldLength(const uint8_t* centralHeader) {
+  return get2(centralHeader + 30);
+}
+
+inline uint16_t commentFieldLength(const uint8_t* centralHeader) {
+  return get2(centralHeader + 32);
+}
+
+inline uint32_t localHeaderOffset(const uint8_t* centralHeader) {
+  return get4(centralHeader + 42);
+}
+
+inline uint16_t localFileNameLength(const uint8_t* localHeader) {
+  return get2(localHeader + 26);
+}
+
+inline uint16_t localExtraFieldLength(const uint8_t* localHeader) {
+  return get2(localHeader + 28);
+}
+
+inline uint32_t centralDirectoryOffset(const uint8_t* centralHeader) {
+  return get4(centralHeader + 16);
+}
+
+inline const uint8_t* fileName(const uint8_t* centralHeader) {
+  return centralHeader + 46;
+}
+
+inline const uint8_t* fileData(const uint8_t* localHeader) {
+  return localHeader + LocalHeaderSize + localFileNameLength(localHeader) +
+    localExtraFieldLength(localHeader);
+}
+
+inline const uint8_t* endOfEntry(const uint8_t* p) {
+  return p + HeaderSize + fileNameLength(p) + extraFieldLength(p) +
+    commentFieldLength(p);
+}
+
 inline bool
 readLine(const uint8_t* base, unsigned total, unsigned* start,
          unsigned* length)

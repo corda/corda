@@ -537,6 +537,16 @@ replace(char a, char b, char* dst, const char* src)
   dst[i] = 0;
 }
 
+inline bool
+equal(const void* a, unsigned al, const void* b, unsigned bl)
+{
+  if (al == bl) {
+    return memcmp(a, b, al) == 0;
+  } else {
+    return false;
+  }
+}
+
 class Machine;
 class Thread;
 

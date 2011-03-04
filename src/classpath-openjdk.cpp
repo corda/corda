@@ -224,6 +224,9 @@ class MyClasspath : public Classpath {
     sb.append("/lib/jce.jar");
     sb.append(s->pathSeparator());
     sb.append(javaHome);
+    sb.append("/lib/ext/sunjce_provider.jar");
+    sb.append(s->pathSeparator());
+    sb.append(javaHome);
     sb.append("/lib/resources.jar");
     sb.append('\0');
 
@@ -400,6 +403,13 @@ class MyClasspath : public Classpath {
   unsigned filePathField;
   unsigned fileDescriptorFdField;
   unsigned fileInputStreamFdField;
+  unsigned zipFileJzfileField;
+  unsigned zipEntryNameField;
+  unsigned zipEntryTimeField;
+  unsigned zipEntryCrcField;
+  unsigned zipEntrySizeField;
+  unsigned zipEntryCsizeField;
+  unsigned zipEntryMethodField;
   bool ranNetOnLoad;
   char buffer[BufferSize];
 };
@@ -925,6 +935,438 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
   }
 }
 
+class ZipFile {
+ public:
+  class Entry {
+   public:
+    Entry(unsigned hash, const uint8_t* start, Entry* next):
+      hash(hash), start(start), next(next), entry(0)
+    { }
+
+    Entry(int64_t entry):
+      hash(0), start(0), next(0), entry(entry)
+    { }
+
+    unsigned hash;
+    const uint8_t* start;
+    Entry* next;
+    int64_t entry;
+  };
+
+  ZipFile(Thread* t, System::Region* region, unsigned entryCount):
+    region(region),
+    entryCount(entryCount),
+    indexSize(nextPowerOfTwo(entryCount)),
+    index(reinterpret_cast<ZipFile::Entry**>
+          (t->m->heap->allocate(sizeof(ZipFile::Entry*) * indexSize))),
+    file(0)
+  {
+    memset(index, 0, sizeof(ZipFile::Entry*) * indexSize);
+  }
+
+  ZipFile(int64_t file):
+    region(0), entryCount(0), indexSize(0), index(0), file(file)
+  { }
+
+  System::Region* region;
+  unsigned entryCount;
+  unsigned indexSize;
+  Entry** index;
+  int64_t file;
+  Entry entries[0];
+};
+
+int64_t JNICALL
+openZipFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object path = reinterpret_cast<object>(arguments[0]);
+  int mode = arguments[1];
+  int64_t lastModified; memcpy(&lastModified, arguments + 2, 8);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+  replace('\\', '/', RUNTIME_ARRAY_BODY(p));
+
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  if (ef.jar) {
+    if (ef.jarLength == 0 or ef.pathLength == 0) {
+      throwNew(t, Machine::FileNotFoundExceptionType);
+    }
+
+    Finder* finder = getFinder(t, ef.jar, ef.jarLength);
+    if (finder == 0) {
+      throwNew(t, Machine::FileNotFoundExceptionType);
+    }
+
+    System::Region* r = finder->find(ef.path);
+    if (r == 0) {
+      throwNew(t, Machine::FileNotFoundExceptionType);
+    }
+
+    const uint8_t* start = r->start();
+    const uint8_t* end = start + r->length();
+    unsigned entryCount = 0;
+    for (const uint8_t* p = end - CentralDirectorySearchStart; p > start;) {
+      if (get4(p) == CentralDirectorySignature) {
+        p = start + centralDirectoryOffset(p);
+
+        while (p < end) {
+          if (get4(p) == EntrySignature) {
+            ++ entryCount;
+
+            p = endOfEntry(p);
+          } else {
+            goto make;
+          }
+        }
+      } else {
+	-- p;
+      }
+    }
+
+  make:
+    ZipFile* file = new
+      (t->m->heap->allocate
+       (sizeof(ZipFile) + (sizeof(ZipFile::Entry) * entryCount)))
+      ZipFile(t, r, entryCount);
+
+    { unsigned position = 0;
+      for (const uint8_t* p = end - CentralDirectorySearchStart; p > start;) {
+        if (get4(p) == CentralDirectorySignature) {
+          p = start + centralDirectoryOffset(p);
+
+          while (p < end) {
+            if (get4(p) == EntrySignature) {
+              unsigned h = hash(fileName(p), fileNameLength(p));
+              unsigned i = h & (file->indexSize - 1);
+
+              file->index[i] = new (file->entries + (position++))
+                ZipFile::Entry(h, p, file->index[i]);
+
+              p = endOfEntry(p);
+            } else {
+              goto exit;
+            }
+          }
+        } else {
+          -- p;
+        }
+      }
+    }
+
+  exit:
+    return reinterpret_cast<int64_t>(file);
+  } else {
+    return reinterpret_cast<int64_t>
+      (new (t->m->heap->allocate(sizeof(ZipFile))) ZipFile
+       (longValue
+        (t, t->m->processor->invoke
+         (t, nativeInterceptOriginal
+          (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+          0, path, mode, lastModified))));
+  }
+}
+
+int64_t JNICALL
+getZipFileEntryCount(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    return file->entryCount;
+  } else {
+    return intValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, file->file));
+  }
+}
+
+ZipFile::Entry*
+find(ZipFile* file, const char* path, unsigned pathLength)
+{
+  unsigned i = hash(path) & (file->indexSize - 1);
+  for (ZipFile::Entry* e = file->index[i]; e; e = e->next) {
+    const uint8_t* p = e->start;
+    if (equal(path, pathLength, fileName(p), fileNameLength(p))) {
+      return e;
+    }
+  }
+  return 0;
+}
+
+int64_t JNICALL
+getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+  object path = reinterpret_cast<object>(arguments[2]);
+  bool addSlash = arguments[3];
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 2);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
+    replace('\\', '/', RUNTIME_ARRAY_BODY(p));
+    if (addSlash) {
+      RUNTIME_ARRAY_BODY(p)[stringLength(t, path)] = '/';
+      RUNTIME_ARRAY_BODY(p)[stringLength(t, path) + 1] = 0;
+    }
+
+    return reinterpret_cast<int64_t>(find(file, p, stringLength(t, path)));
+  } else {
+    int64_t entry = longValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, file->file, path, addSlash));
+
+    return entry ? reinterpret_cast<int64_t>
+      (new (t->m->heap->allocate(sizeof(ZipFile::Entry)))
+       ZipFile::Entry(entry)) : 0;
+  }
+}
+
+int64_t JNICALL
+getNextZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+  int index = arguments[2];
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    return reinterpret_cast<int64_t>(file->entries + index);
+  } else {
+    int64_t entry = longValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, file->file, index));
+
+    return entry ? reinterpret_cast<int64_t>
+      (new (t->m->heap->allocate(sizeof(ZipFile::Entry)))
+       ZipFile::Entry(entry)) : 0;
+  }
+}
+
+void JNICALL
+initializeZipEntryFields(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  int64_t peer; memcpy(&peer, arguments + 1, 8);
+
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(peer);
+  if (entry->start) {
+    PROTECT(t, this_);
+
+    MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+    unsigned nameLength = fileNameLength(entry->start);
+    object array = makeByteArray(t, nameLength + 1);
+    memcpy(&byteArrayBody(t, array, 0), fileName(entry->start), nameLength);
+    byteArrayBody(t, array, nameLength) = 0;
+
+    object name = t->m->classpath->makeString
+      (t, array, 0, byteArrayLength(t, array) - 1);
+
+    set(t, this_, cp->zipEntryNameField, name);
+
+    cast<int64_t>(this_, cp->zipEntryTimeField)
+      = fileTime(entry->start);
+    cast<int64_t>(this_, cp->zipEntryCrcField)
+      = fileCRC(entry->start);
+    cast<int64_t>(this_, cp->zipEntrySizeField)
+      = uncompressedSize(entry->start);
+    cast<int64_t>(this_, cp->zipEntryCsizeField)
+      = compressedSize(entry->start);
+    cast<int64_t>(this_, cp->zipEntryMethodField)
+      = compressionMethod(entry->start);
+  } else {
+    t->m->processor->invoke
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       this_, entry->entry);
+  }
+}
+
+int64_t JNICALL
+getZipFileEntryMethod(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(peer);
+  if (entry->start) {
+    return compressionMethod(entry->start);
+  } else {
+    return intValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, entry->entry));
+  }
+}
+
+int64_t JNICALL
+getZipFileEntryCompressedSize(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(peer);
+  if (entry->start) {
+    return compressedSize(entry->start);
+  } else {
+    return longValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, entry->entry));
+  }
+}
+
+int64_t JNICALL
+getZipFileEntryUncompressedSize(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(peer);
+  if (entry->start) {
+    return uncompressedSize(entry->start);
+  } else {
+    return longValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, entry->entry));
+  }
+}
+
+void JNICALL
+freeZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t filePeer; memcpy(&filePeer, arguments, 8);
+  int64_t entryPeer; memcpy(&entryPeer, arguments + 2, 8);
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(filePeer);
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(entryPeer);
+  if (file->region == 0) {
+    t->m->processor->invoke
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       0, file->file, entry->entry);
+  }
+}
+
+int64_t JNICALL
+readZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t filePeer; memcpy(&filePeer, arguments, 8);
+  int64_t entryPeer; memcpy(&entryPeer, arguments + 2, 8);
+  int64_t position; memcpy(&position, arguments + 4, 8);
+  object buffer = reinterpret_cast<object>(arguments[6]);
+  int offset = arguments[7];
+  int length = arguments[8];
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(filePeer);
+  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(entryPeer);
+  if (file->region) {
+    unsigned size = uncompressedSize(entry->start);
+    if (position >= size) {
+      return -1;
+    }
+
+    if (position + length > size) {
+      length = size - position;
+    }
+
+    memcpy(&byteArrayBody(t, buffer, offset),
+           fileData(file->region->start() + localHeaderOffset(entry->start))
+           + position,
+           length);
+
+    return length;
+  } else {
+    return intValue
+      (t, t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, file->file, entry->entry, position, buffer, offset, length));
+  }
+}
+
+int64_t JNICALL
+getZipMessage(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    return 0;
+  } else {
+    return reinterpret_cast<int64_t>
+      (t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        0, file->file));
+  }
+}
+
+int64_t JNICALL
+getJarFileMetaInfEntryNames(Thread* t, object method, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  int64_t peer = cast<int64_t>(this_, cp->zipFileJzfileField);
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    return 0;
+  } else {
+    PROTECT(t, method);
+
+    // OpenJDK's Java_java_util_jar_JarFile_getMetaInfEntryNames
+    // implementation expects to find a pointer to an instance of its
+    // jzfile structure in the ZipFile.jzfile field of the object we
+    // pass in.  However, we can't pass this_ in, because its
+    // ZipFile.jzfile field points to a ZipFile instance, not a
+    // jzfile.  So we pass in a temporary object instead which has the
+    // desired pointer at the same offset.  We assume here that
+    // ZipFile.jzfile is the first field in that class and that
+    // Java_java_util_jar_JarFile_getMetaInfEntryNames will not look
+    // for any other fields in the object.
+    object pseudoThis = makeLong(t, file->file);
+
+    return reinterpret_cast<int64_t>
+      (t->m->processor->invoke
+       (t, nativeInterceptOriginal
+        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        pseudoThis));
+  }
+}
+
+void JNICALL
+closeZipFile(Thread* t, object method, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  ZipFile* file = reinterpret_cast<ZipFile*>(peer);
+  if (file->region) {
+    file->region->dispose();
+    t->m->heap->free(file, sizeof(ZipFile)
+                     + (sizeof(ZipFile::Entry) * file->entryCount));
+  } else {
+    t->m->processor->invoke
+      (t, nativeInterceptOriginal
+       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+       0, file->file);
+
+    t->m->heap->free(file, sizeof(ZipFile));
+  }
+}
+
 int64_t JNICALL
 getBootstrapResource(Thread* t, object, uintptr_t* arguments)
 {
@@ -1090,6 +1532,102 @@ interceptFileOperations(Thread* t)
   
     intercept(t, fileInputStreamClass, "close0", "()V",
               voidPointer(closeFile));
+  }
+
+  { object zipEntryClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/util/zip/ZipEntry");
+    if (zipEntryClass == 0) return;
+
+    object zipEntryNameField = findFieldInClass2
+      (t, zipEntryClass, "name", "Ljava/lang/String;");
+    if (zipEntryNameField == 0) return;
+
+    cp->zipEntryNameField = fieldOffset(t, zipEntryNameField);
+
+    object zipEntryTimeField = findFieldInClass2
+      (t, zipEntryClass, "time", "J");
+    if (zipEntryTimeField == 0) return;
+
+    cp->zipEntryTimeField = fieldOffset(t, zipEntryTimeField);
+
+    object zipEntryCrcField = findFieldInClass2
+      (t, zipEntryClass, "crc", "J");
+    if (zipEntryCrcField == 0) return;
+
+    cp->zipEntryCrcField = fieldOffset(t, zipEntryCrcField);
+
+    object zipEntrySizeField = findFieldInClass2
+      (t, zipEntryClass, "size", "J");
+    if (zipEntrySizeField == 0) return;
+
+    cp->zipEntrySizeField = fieldOffset(t, zipEntrySizeField);
+
+    object zipEntryCsizeField = findFieldInClass2
+      (t, zipEntryClass, "csize", "J");
+    if (zipEntryCsizeField == 0) return;
+
+    cp->zipEntryCsizeField = fieldOffset(t, zipEntryCsizeField);
+
+    object zipEntryMethodField = findFieldInClass2
+      (t, zipEntryClass, "method", "I");
+    if (zipEntryMethodField == 0) return;
+
+    cp->zipEntryMethodField = fieldOffset(t, zipEntryMethodField);
+
+    intercept(t, zipEntryClass, "initFields", "(J)V",
+              voidPointer(initializeZipEntryFields));
+  }
+
+  { object zipFileClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/util/zip/ZipFile");
+    if (zipFileClass == 0) return;
+
+    object zipFileJzfileField = findFieldInClass2
+      (t, zipFileClass, "jzfile", "J");
+    if (zipFileJzfileField == 0) return;
+
+    cp->zipFileJzfileField = fieldOffset(t, zipFileJzfileField);
+
+    intercept(t, zipFileClass, "open", "(Ljava/lang/String;IJ)J",
+              voidPointer(openZipFile));
+
+    intercept(t, zipFileClass, "getTotal", "(J)I",
+              voidPointer(getZipFileEntryCount));
+
+    intercept(t, zipFileClass, "getEntry", "(JLjava/lang/String;Z)J",
+              voidPointer(getZipFileEntry));
+
+    intercept(t, zipFileClass, "getNextEntry", "(JI)J",
+              voidPointer(getNextZipFileEntry));
+
+    intercept(t, zipFileClass, "getMethod", "(J)I",
+              voidPointer(getZipFileEntryMethod));
+
+    intercept(t, zipFileClass, "freeEntry", "(JJ)V",
+              voidPointer(freeZipFileEntry));
+
+    intercept(t, zipFileClass, "read", "(JJJ[BII)I",
+              voidPointer(readZipFileEntry));
+
+    intercept(t, zipFileClass, "getCSize", "(J)J",
+              voidPointer(getZipFileEntryCompressedSize));
+
+    intercept(t, zipFileClass, "getSize", "(J)J",
+              voidPointer(getZipFileEntryUncompressedSize));
+
+    intercept(t, zipFileClass, "getZipMessage", "(J)Ljava/lang/String;",
+              voidPointer(getZipMessage));
+
+    intercept(t, zipFileClass, "close", "(J)V",
+              voidPointer(closeZipFile));
+  }
+
+  { object jarFileClass = resolveClass
+      (t, root(t, Machine::BootLoader), "java/util/jar/JarFile");
+    if (jarFileClass == 0) return;
+
+    intercept(t, jarFileClass, "getMetaInfEntryNames", "()[Ljava/lang/String;",
+              voidPointer(getJarFileMetaInfEntryNames));
   }
 
   {
