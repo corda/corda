@@ -3,7 +3,11 @@ MAKEFLAGS = -s
 name = avian
 version = 0.4
 
-build-arch := $(shell uname -m | sed 's/^i.86$$/i386/' | sed 's/^arm.*$$/arm/')
+build-arch := $(shell uname -m \
+	| sed 's/^i.86$$/i386/' \
+	| sed 's/^arm.*$$/arm/' \
+	| sed 's/ppc/powerpc/')
+
 ifeq (Power,$(filter Power,$(build-arch)))
 	build-arch = powerpc
 endif
@@ -165,7 +169,7 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS
+converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject
 
 cflags = $(build-cflags)
 
@@ -197,6 +201,17 @@ endif
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
+
+	ifneq ($(platform),darwin)
+		ifneq ($(arch),$(build-arch))
+			converter-cflags += -DOPPOSITE_ENDIAN
+			cxx = powerpc-linux-gnu-g++
+			cc = powerpc-linux-gnu-gcc
+			ar = powerpc-linux-gnu-ar
+			ranlib = powerpc-linux-gnu-ranlib
+			strip = powerpc-linux-gnu-strip
+		endif
+	endif
 endif
 ifeq ($(arch),arm)
 	asm = arm
@@ -239,7 +254,7 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 
 	ifeq ($(arch),powerpc)
-		ifneq (,$(filter i386 x86_64,$(build-arch)))
+		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=10.4

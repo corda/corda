@@ -23,20 +23,27 @@ class Tokenizer {
     unsigned length;
   };
 
-  Tokenizer(const char* s, char delimiter): s(s), delimiter(delimiter) { }
+  Tokenizer(const char* s, char delimiter):
+    s(s), limit(0), delimiter(delimiter)
+  { }
+
+  Tokenizer(const char* s, unsigned length, char delimiter):
+    s(s), limit(s + length), delimiter(delimiter)
+  { }
 
   bool hasMore() {
-    while (*s == delimiter) ++s;
-    return *s != 0;
+    while (*s == delimiter and s != limit) ++s;
+    return *s != 0 and s != limit;
   }
 
   Token next() {
     const char* p = s;
-    while (*s and *s != delimiter) ++s;
+    while (*s and *s != delimiter and s != limit) ++s;
     return Token(p, s - p);
   }
 
   const char* s;
+  const char* limit;
   char delimiter;
 };
 

@@ -12,31 +12,7 @@
 #include "stdio.h"
 #include "string.h"
 
-#define V1(v) v
-
-#ifdef OPPOSITE_ENDIAN
-#  define V2(v) \
-  ((((v) >> 8) & 0xFF) | \
-   (((v) << 8)))
-#  define V4(v) \
-  ((((v) >> 24) & 0x000000FF) | \
-   (((v) >>  8) & 0x0000FF00) | \
-   (((v) <<  8) & 0x00FF0000) | \
-   (((v) << 24)))
-#  define V8(v) \
-  (((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF)) | \
-   ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00)) | \
-   ((static_cast<uint64_t>(v) >> 24) & UINT64_C(0x0000000000FF0000)) | \
-   ((static_cast<uint64_t>(v) >>  8) & UINT64_C(0x00000000FF000000)) | \
-   ((static_cast<uint64_t>(v) <<  8) & UINT64_C(0x000000FF00000000)) | \
-   ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000)) | \
-   ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000)) | \
-   ((static_cast<uint64_t>(v) << 56)))
-#else
-#  define V2(v) v
-#  define V4(v) v
-#  define V8(v) v
-#endif
+#include "endianness.h"
 
 #define MH_MAGIC_64 0xfeedfacf
 #define MH_MAGIC 0xfeedface
@@ -63,7 +39,6 @@
 #define CPU_SUBTYPE_POWERPC_ALL 0
 
 #if (BITS_PER_WORD == 64)
-#  define VW(v) V8(v)
 #  define Magic MH_MAGIC_64
 #  define Segment LC_SEGMENT_64
 #  define FileHeader mach_header_64
@@ -71,7 +46,6 @@
 #  define Section section_64
 #  define NList struct nlist_64
 #elif (BITS_PER_WORD == 32)
-#  define VW(v) V4(v)
 #  define Magic MH_MAGIC
 #  define Segment LC_SEGMENT
 #  define FileHeader mach_header

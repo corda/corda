@@ -386,6 +386,7 @@ class Context {
     lastEvent(0),
     forkState(0),
     subroutine(0),
+    firstBlock(0),
     logicalIp(-1),
     constantCount(0),
     logicalCodeLength(0),
@@ -432,6 +433,7 @@ class Context {
   Event* lastEvent;
   ForkState* forkState;
   MySubroutine* subroutine;
+  Block* firstBlock;
   int logicalIp;
   unsigned constantCount;
   unsigned logicalCodeLength;
@@ -2171,9 +2173,9 @@ class MemorySite: public Site {
   }
 
   virtual Site* makeNextWord(Context* c, unsigned index) {
-    // todo: endianness?
     return memorySite
-      (c, base, offset + (index == 1 ? BytesPerWord : -BytesPerWord),
+      (c, base, offset + ((index == 1) xor c->arch->bigEndian()
+                          ? BytesPerWord : -BytesPerWord),
        this->index, scale);
   }
 
@@ -2184,12 +2186,11 @@ class MemorySite: public Site {
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned index) {
-    // todo: endianness?
     int frameIndex;
     if (base == c->arch->stack()) {
       assert(c, this->index == NoRegister);
       frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
-        + (index == 1 ? 1 : -1);
+        + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
     } else {
       frameIndex = NoFrameIndex;
     }
@@ -5707,7 +5708,7 @@ block(Context* c, Event* head)
   return new (c->zone->allocate(sizeof(Block))) Block(head);
 }
 
-unsigned
+void
 compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
 {
   if (c->logicalCode[c->logicalIp]->lastEvent == 0) {
@@ -5837,19 +5838,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     }
   }
 
-  block = firstBlock;
-  while (block->nextBlock or block->nextInstruction) {
-    Block* next = block->nextBlock
-      ? block->nextBlock
-      : block->nextInstruction->firstEvent->block;
-
-    next->start = block->assemblerBlock->resolve
-      (block->start, next->assemblerBlock);
-
-    block = next;
-  }
-
-  return block->assemblerBlock->resolve(block->start, 0) + a->footerSize();
+  c->firstBlock = firstBlock;
 }
 
 unsigned
@@ -6884,25 +6873,43 @@ class MyCompiler: public Compiler {
     appendBarrier(&c, StoreLoadBarrier);
   }
 
-  virtual unsigned compile(uintptr_t stackOverflowHandler,
-                           unsigned stackLimitOffset)
+  virtual void compile(uintptr_t stackOverflowHandler,
+                       unsigned stackLimitOffset)
   {
-    return c.machineCodeSize = local::compile
-      (&c, stackOverflowHandler, stackLimitOffset);
+    local::compile(&c, stackOverflowHandler, stackLimitOffset);
+  }
+
+  virtual unsigned resolve(uint8_t* dst) {
+    c.machineCode = dst;
+    c.assembler->setDestination(dst);
+
+    Block* block = c.firstBlock;
+    while (block->nextBlock or block->nextInstruction) {
+      Block* next = block->nextBlock
+        ? block->nextBlock
+        : block->nextInstruction->firstEvent->block;
+
+      next->start = block->assemblerBlock->resolve
+        (block->start, next->assemblerBlock);
+
+      block = next;
+    }
+
+    return c.machineCodeSize = block->assemblerBlock->resolve
+      (block->start, 0) + c.assembler->footerSize();
   }
 
   virtual unsigned poolSize() {
     return c.constantCount * BytesPerWord;
   }
 
-  virtual void writeTo(uint8_t* dst) {
-    c.machineCode = dst;
-    c.assembler->writeTo(dst);
+  virtual void write() {
+    c.assembler->write();
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
       intptr_t* target = reinterpret_cast<intptr_t*>
-        (dst + pad(c.machineCodeSize) + i);
+        (c.machineCode + pad(c.machineCodeSize) + i);
 
       if (n->promise->resolved()) {
         *target = n->promise->value();

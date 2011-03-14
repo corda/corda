@@ -670,7 +670,9 @@ padding(MyBlock* b, unsigned offset)
   unsigned total = 0;
   for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
     if (e->offset <= offset) {
-      total += BytesPerWord;
+      if (b->next) {
+        total += BytesPerWord;
+      }
       for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
         total += BytesPerWord;
       }
@@ -1838,7 +1840,11 @@ class MyArchitecture: public Assembler::Architecture {
 
     return index;
   }
-  
+
+  virtual bool hasLinkRegister() {
+    return true;
+  }
+
   virtual unsigned stackAlignmentInWords() {
     return StackAlignmentInWords;
   }
@@ -2126,7 +2132,11 @@ class MyAssembler: public Assembler {
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) {
+    Register link(LinkRegister);
+    Memory linkDst(ThreadRegister, ipOffset);
+    moveRM(&c, BytesPerWord, &link, BytesPerWord, &linkDst);
+
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&c, BytesPerWord, &stack, BytesPerWord, &stackDst);
@@ -2325,9 +2335,12 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual void writeTo(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst) {
     c.result = dst;
-    
+  }
+
+  virtual void write() {
+    uint8_t* dst = c.result;
     unsigned dstOffset = 0;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       if (DebugPool) {
@@ -2348,9 +2361,11 @@ class MyAssembler: public Assembler {
                     o, o->offset, b);
           }
 
-          poolSize += BytesPerWord;
-
           unsigned entry = dstOffset + poolSize;
+
+          if (b->next) {
+            entry += BytesPerWord;
+          }
 
           o->entry->address = dst + entry;
 
@@ -2362,9 +2377,13 @@ class MyAssembler: public Assembler {
 
           int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
           *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
+
+          poolSize += BytesPerWord;
         }
 
-        write4(dst + dstOffset, ::b((poolSize + BytesPerWord - 8) >> 2));
+        if (b->next) {
+          write4(dst + dstOffset, ::b((poolSize + BytesPerWord - 8) >> 2));
+        }
 
         dstOffset += poolSize + BytesPerWord;
       }

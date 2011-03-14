@@ -81,12 +81,18 @@ isVmInvokeUnsafeStack(void* ip)
     < reinterpret_cast<uintptr_t> (voidPointer(vmInvoke_safeStack));
 }
 
+class MyThread;
+
+void*
+getIp(MyThread*);
+
 class MyThread: public Thread {
  public:
   class CallTrace {
    public:
     CallTrace(MyThread* t, object method):
       t(t),
+      ip(getIp(t)),
       stack(t->stack),
       scratch(t->scratch),
       continuation(t->continuation),
@@ -103,10 +109,11 @@ class MyThread: public Thread {
 
       t->scratch = scratch;
 
-      doTransition(t, 0, stack, continuation, next);
+      doTransition(t, ip, stack, continuation, next);
     }
 
     MyThread* t;
+    void* ip;
     void* stack;
     void* scratch;
     object continuation;
@@ -367,7 +374,7 @@ methodForIp(MyThread* t, void* ip)
 
   // we must use a version of the method tree at least as recent as the
   // compiled form of the method containing the specified address (see
-  // compile(MyThread*, Allocator*, BootContext*, object)):
+  // compile(MyThread*, FixedAllocator*, BootContext*, object)):
   loadMemoryBarrier();
 
   return treeQuery(t, root(t, MethodTree), reinterpret_cast<intptr_t>(ip),
@@ -435,6 +442,23 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
   // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
 }
 
+void*
+getIp(MyThread* t, void* ip, void* stack)
+{
+  // Here we use the convention that, if the return address is neither
+  // pushed on to the stack automatically as part of the call nor
+  // stored in the caller's frame, it will be saved in MyThread::ip
+  // instead of on the stack.  See the various implementations of
+  // Assembler::saveFrame for details on how this is done.
+  return t->arch->returnAddressOffset() < 0 ? ip : t->arch->frameIp(stack);
+}
+
+void*
+getIp(MyThread* t)
+{
+  return getIp(t, t->ip, t->stack);
+}
+
 class MyStackWalker: public Processor::StackWalker {
  public:
   enum State {
@@ -475,7 +499,7 @@ class MyStackWalker: public Processor::StackWalker {
       trace = t->traceContext->trace;
       continuation = t->traceContext->continuation;
     } else {
-      ip_ = 0;
+      ip_ = getIp(t);
       stack = t->stack;
       trace = t->trace;
       continuation = t->continuation;      
@@ -509,10 +533,6 @@ class MyStackWalker: public Processor::StackWalker {
 //       fprintf(stderr, "state: %d\n", state);
       switch (state) {
       case Start:
-        if (ip_ == 0) {
-          ip_ = t->arch->frameIp(stack);
-        }
-
         if (trace and trace->nativeMethod) {
           method_ = trace->nativeMethod;
           state = NativeMethod;
@@ -542,7 +562,7 @@ class MyStackWalker: public Processor::StackWalker {
         if (trace) {
           continuation = trace->continuation;
           stack = trace->stack;
-          ip_ = t->arch->frameIp(stack);
+          ip_ = trace->ip;
           trace = trace->next;
 
           state = Start;
@@ -1981,13 +2001,9 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
     stack = t->traceContext->stack;
     continuation = t->traceContext->continuation;
   } else {
-    ip = 0;
+    ip = getIp(t);
     stack = t->stack;
     continuation = t->continuation;      
-  }
-
-  if (ip == 0) {
-    ip = t->arch->frameIp(stack);
   }
 
   object target = t->trace->targetMethod;
@@ -2024,6 +2040,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
         target = method;
       }
     } else {
+      expect(t, ip);
       *targetIp = ip;
       *targetFrame = 0;
       *targetStack = static_cast<void**>(stack)
@@ -2068,7 +2085,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
 object
 makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
 {
-  void* ip = t->arch->frameIp(t->stack);
+  void* ip = getIp(t);
   void* stack = t->stack;
 
   object context = t->continuation
@@ -2212,7 +2229,7 @@ FixedAllocator*
 codeAllocator(MyThread* t);
 
 void
-compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         object method);
 
 int64_t
@@ -5566,7 +5583,8 @@ finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name,
 {
   uint8_t* start = static_cast<uint8_t*>(allocator->allocate(pad(length)));
 
-  a->writeTo(start);
+  a->setDestination(start);
+  a->write();
 
   logCompile(t, start, length, 0, name, 0);
 
@@ -5834,7 +5852,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 }
 
 void
-finish(MyThread* t, Allocator* allocator, Context* context)
+finish(MyThread* t, FixedAllocator* allocator, Context* context)
 {
   Compiler* c = context->compiler;
 
@@ -5868,9 +5886,13 @@ finish(MyThread* t, Allocator* allocator, Context* context)
   // parallelism (the downside being that it may end up being a waste
   // of cycles if another thread compiles the same method in parallel,
   // which might be mitigated by fine-grained, per-method locking):
-  unsigned codeSize = c->compile
-    (context->leaf ? 0 : stackOverflowThunk(t),
-     difference(&(t->stackLimit), t));
+  c->compile(context->leaf ? 0 : stackOverflowThunk(t),
+             difference(&(t->stackLimit), t));
+
+  // we must acquire the class lock here at the latest
+ 
+  unsigned codeSize = c->resolve
+    (allocator->base + allocator->offset + BytesPerWord);
 
   unsigned total = pad(codeSize) + pad(c->poolSize()) + BytesPerWord;
 
@@ -5904,7 +5926,7 @@ finish(MyThread* t, Allocator* allocator, Context* context)
     }
   }
 
-  c->writeTo(start);
+  c->write();
 
   BootContext* bc = context->bootContext;
   if (bc) {
@@ -6207,7 +6229,7 @@ compileMethod(MyThread* t)
     ip = t->tailAddress;
     t->tailAddress = 0;
   } else {
-    ip = t->arch->frameIp(t->stack);
+    ip = getIp(t);
   }
 
   return reinterpret_cast<uintptr_t>(compileMethod2(t, ip));
@@ -6458,7 +6480,7 @@ invokeNative(MyThread* t)
       ip = t->tailAddress;
       t->tailAddress = 0;
     } else {
-      ip = t->arch->frameIp(t->stack);
+      ip = getIp(t);
     }
 
     object node = findCallNode(t, ip);
@@ -6499,7 +6521,7 @@ invokeNative(MyThread* t)
 
   stack += t->arch->frameReturnAddressSize();
 
-  transition(t, t->arch->frameIp(t->stack), stack, t->continuation, t->trace);
+  transition(t, getIp(t), stack, t->continuation, t->trace);
 
   return result;
 }
@@ -6669,7 +6691,7 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, object method)
 void
 visitStack(MyThread* t, Heap::Visitor* v)
 {
-  void* ip = t->arch->frameIp(t->stack);
+  void* ip = getIp(t);
   void* stack = t->stack;
 
   MyThread::CallTrace* trace = t->trace;
@@ -6696,7 +6718,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
       target = method;
     } else if (trace) {
       stack = trace->stack;
-      ip = t->arch->frameIp(stack);
+      ip = trace->ip;
       trace = trace->next;
 
       if (trace) {
@@ -7685,12 +7707,20 @@ class MyProcessor: public Processor {
           // we caught the thread in a thunk or native code, and the
           // saved stack pointer indicates the most recent Java frame
           // on the stack
-          c.ip = t->arch->frameIp(target->stack);
+          c.ip = getIp(target);
           c.stack = target->stack;
         } else if (isThunk(t, ip) or isVirtualThunk(t, ip)) {
           // we caught the thread in a thunk where the stack register
           // indicates the most recent Java frame on the stack
-          c.ip = t->arch->frameIp(stack);
+          
+          // On e.g. x86, the return address will have already been
+          // pushed onto the stack, in which case we use getIp to
+          // retrieve it.  On e.g. PowerPC and ARM, it will be in the
+          // link register.  Note that we can't just check if the link
+          // argument is null here, since we use ecx/rcx as a
+          // pseudo-link register on x86 for the purpose of tail
+          // calls.
+          c.ip = t->arch->hasLinkRegister() ? link : getIp(t, link, stack);
           c.stack = stack;
         } else {
           // we caught the thread in native code, and the most recent
@@ -8398,7 +8428,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = defaultContext.context.assembler;
     
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.default_.frameSavedOffset = a->length();
 
@@ -8442,7 +8472,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     a->apply(Move, BytesPerWord, RegisterOperand, &index,
              BytesPerWord, MemoryOperand, &virtualCallIndex);
     
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
@@ -8464,7 +8494,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = nativeContext.context.assembler;
 
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.native.frameSavedOffset = a->length();
 
@@ -8484,7 +8514,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = aioobContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.aioob.frameSavedOffset = a->length();
 
@@ -8501,7 +8531,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = stackOverflowContext.context.assembler;
       
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
@@ -8518,7 +8548,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
   { Assembler* a = tableContext.context.assembler;
   
-    a->saveFrame(difference(&(t->stack), t));
+    a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.table.frameSavedOffset = a->length();
 
@@ -8621,7 +8651,8 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
   uint8_t* start = p->thunks.table.start;
 
 #define THUNK(s)                                                        \
-  tableContext.context.assembler->writeTo(start);                       \
+  tableContext.context.assembler->setDestination(start);                \
+  tableContext.context.assembler->write();                              \
   start += p->thunks.table.length;                                      \
   { void* call;                                                         \
     tableContext.promise.listener->resolve                              \
@@ -8712,7 +8743,8 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   uint8_t* start = static_cast<uint8_t*>(codeAllocator(t)->allocate(*size));
 
-  a->writeTo(start);
+  a->setDestination(start);
+  a->write();
 
   logCompile(t, start, *size, 0, "virtualThunk", 0);
 
@@ -8749,7 +8781,7 @@ virtualThunk(MyThread* t, unsigned index)
 }
 
 void
-compile(MyThread* t, Allocator* allocator, BootContext* bootContext,
+compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         object method)
 {
   PROTECT(t, method);

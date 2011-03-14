@@ -188,10 +188,11 @@ class Compiler {
   virtual void storeStoreBarrier() = 0;
   virtual void storeLoadBarrier() = 0;
 
-  virtual unsigned compile(uintptr_t stackOverflowHandler,
-                           unsigned stackLimitOffset) = 0;
+  virtual void compile(uintptr_t stackOverflowHandler,
+                       unsigned stackLimitOffset) = 0;
+  virtual unsigned resolve(uint8_t* dst) = 0;
   virtual unsigned poolSize() = 0;
-  virtual void writeTo(uint8_t* dst) = 0;
+  virtual void write() = 0;
 
   virtual void dispose() = 0;
 };

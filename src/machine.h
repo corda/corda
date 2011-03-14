@@ -1369,6 +1369,7 @@ class Thread {
   static const unsigned StressFlag = 1 << 4;
   static const unsigned ActiveFlag = 1 << 5;
   static const unsigned SystemFlag = 1 << 6;
+  static const unsigned DisposeFlag = 1 << 7;
 
   class Protector {
    public:

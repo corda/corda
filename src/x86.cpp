@@ -2846,6 +2846,10 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual bool hasLinkRegister() {
+    return false;
+  }
+
   virtual unsigned stackAlignmentInWords() {
     return StackAlignmentInWords;
   }
@@ -3382,7 +3386,7 @@ class MyAssembler: public Assembler {
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
     apply(Move, BytesPerWord, RegisterOperand, &stack,
@@ -3612,9 +3616,12 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual void writeTo(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst) {
     c.result = dst;
-    
+  }
+
+  virtual void write() {
+    uint8_t* dst = c.result;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       unsigned index = 0;
       unsigned padding = 0;

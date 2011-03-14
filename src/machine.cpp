@@ -2413,20 +2413,23 @@ Thread::exit()
     } else {
       threadPeer(this, javaThread) = 0;
 
+      System::Monitor* myLock = lock;
+      System::Thread* mySystemThread = systemThread;
+
       { ACQUIRE_RAW(this, m->stateLock);
 
         while (flags & SystemFlag) {
           m->stateLock->wait(systemThread, 0);
         }
+
+        atomicOr(&flags, Thread::DisposeFlag);
       
         enter(this, Thread::ZombieState);
       }
 
-      lock->dispose();
-      lock = 0;
+      myLock->dispose();
 
-      systemThread->dispose();
-      systemThread = 0;
+      mySystemThread->dispose();
     }
   }
 }
@@ -2434,12 +2437,14 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  if (lock) {
-    lock->dispose();
-  }
+  if ((flags & Thread::DisposeFlag) == 0) {
+    if (lock) {
+      lock->dispose();
+    }
 
-  if (systemThread) {
-    systemThread->dispose();
+    if (systemThread) {
+      systemThread->dispose();
+    }
   }
 
   m->heap->free(defaultHeap, ThreadHeapSizeInBytes);

@@ -66,6 +66,8 @@ vmRun:
   // r1: arguments
   // r2: checkpoint
   stmfd sp!, {r4-r11, lr}
+  // align stack
+  sub   sp, sp, #12
    
   str   sp, [r2, #CHECKPOINT_STACK]
 
@@ -76,5 +78,6 @@ vmRun:
 
 .globl vmRun_returnAddress
 vmRun_returnAddress:
+  add   sp, sp, #12
   ldmfd sp!, {r4-r11, lr}
   bx    lr

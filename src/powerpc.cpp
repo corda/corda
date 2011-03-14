@@ -162,7 +162,15 @@ carry16(intptr_t v)
   return static_cast<int16_t>(v) < 0 ? 1 : 0;
 }
 
+#ifdef __APPLE__
 const unsigned FrameFooterSize = 6;
+const unsigned ReturnAddressOffset = 2;
+const unsigned AlignArguments = false;
+#else
+const unsigned FrameFooterSize = 2;
+const unsigned ReturnAddressOffset = 1;
+const unsigned AlignArguments = true;
+#endif
 
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
@@ -170,20 +178,44 @@ const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
 const int StackRegister = 1;
 const int ThreadRegister = 13;
 
+const bool DebugJumps = false;
+
+class Context;
+class MyBlock;
+class JumpOffset;
+class JumpEvent;
+
+void
+resolve(MyBlock*);
+
+unsigned
+padding(MyBlock*, unsigned);
+
 class MyBlock: public Assembler::Block {
  public:
-  MyBlock(unsigned offset):
-    next(0), offset(offset), start(~0), size(0)
+  MyBlock(Context* context, unsigned offset):
+    context(context), next(0), jumpOffsetHead(0), jumpOffsetTail(0),
+    lastJumpOffsetTail(0), jumpEventHead(0), jumpEventTail(0),
+    lastEventOffset(0), offset(offset), start(~0), size(0)
   { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
 
-    return start + size;
+    ::resolve(this);
+
+    return start + size + padding(this, size);
   }
 
+  Context* context;
   MyBlock* next;
+  JumpOffset* jumpOffsetHead;
+  JumpOffset* jumpOffsetTail;
+  JumpOffset* lastJumpOffsetTail;
+  JumpEvent* jumpEventHead;
+  JumpEvent* jumpEventTail;
+  unsigned lastEventOffset;
   unsigned offset;
   unsigned start;
   unsigned size;
@@ -191,15 +223,14 @@ class MyBlock: public Assembler::Block {
 
 class Task;
 class ConstantPoolEntry;
-class JumpPromise;
 
 class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
-    lastBlock(firstBlock), constantPool(0), jumps(0), constantPoolCount(0),
-    jumpCount(0)
+    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(this, 0)),
+    lastBlock(firstBlock), jumpOffsetHead(0), jumpOffsetTail(0),
+    constantPool(0), constantPoolCount(0)
   { }
 
   System* s;
@@ -210,10 +241,10 @@ class Context {
   uint8_t* result;
   MyBlock* firstBlock;
   MyBlock* lastBlock;
+  JumpOffset* jumpOffsetHead;
+  JumpOffset* jumpOffsetTail;
   ConstantPoolEntry* constantPool;
-  JumpPromise* jumps;
   unsigned constantPoolCount;
-  unsigned jumpCount;
 };
 
 class Task {
@@ -316,38 +347,6 @@ offset(Context* c)
     Offset(c, c->lastBlock, c->code.length());
 }
 
-class JumpPromise: public Promise {
- public:
-  JumpPromise(Context* c, uintptr_t target):
-    c(c), target(target), next(c->jumps), index(c->jumpCount++)
-  {
-    c->jumps = this;
-  }
-
-  virtual bool resolved() {
-    return c->result != 0;
-  }
-  
-  virtual int64_t value() {
-    assert(c, resolved());
-
-    return reinterpret_cast<intptr_t>
-      (c->result + c->code.length() + (index * BytesPerWord));
-  }
-
-  Context* c;
-  uintptr_t target;
-  JumpPromise* next;
-  unsigned index;
-};
-
-Promise*
-jump(Context* c, uintptr_t target)
-{
-  return new (c->zone->allocate(sizeof(JumpPromise)))
-    JumpPromise(c, target);
-}
-
 bool
 bounded(int right, int left, int32_t v)
 {
@@ -355,13 +354,21 @@ bounded(int right, int left, int32_t v)
 }
 
 void*
-updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
+updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value,
+             void* jumpAddress)
 {
   int32_t v = reinterpret_cast<uint8_t*>(value) - instruction;
    
   int32_t mask;
   if (conditional) {
-    expect(s, bounded(2, 16, v));
+    if (not bounded(2, 16, v)) {
+      *static_cast<uint32_t*>(jumpAddress) = isa::b(0);
+      updateOffset(s, static_cast<uint8_t*>(jumpAddress), false, value, 0);
+
+      v = static_cast<uint8_t*>(jumpAddress) - instruction;
+
+      expect(s, bounded(2, 16, v));
+    }
     mask = 0xFFFC;
   } else {
     expect(s, bounded(2, 6, v));
@@ -376,20 +383,23 @@ updateOffset(System* s, uint8_t* instruction, bool conditional, int64_t value)
 
 class OffsetListener: public Promise::Listener {
  public:
-  OffsetListener(System* s, uint8_t* instruction, bool conditional):
+  OffsetListener(System* s, uint8_t* instruction, bool conditional,
+                 void* jumpAddress):
     s(s),
     instruction(instruction),
+    jumpAddress(jumpAddress),
     conditional(conditional)
   { }
 
   virtual bool resolve(int64_t value, void** location) {
-    void* p = updateOffset(s, instruction, conditional, value);
+    void* p = updateOffset(s, instruction, conditional, value, jumpAddress);
     if (location) *location = p;
     return false;
   }
 
   System* s;
   uint8_t* instruction;
+  void* jumpAddress;
   bool conditional;
 };
 
@@ -400,6 +410,7 @@ class OffsetTask: public Task {
     Task(next),
     promise(promise),
     instructionOffset(instructionOffset),
+    jumpAddress(0),
     conditional(conditional)
   { }
 
@@ -407,25 +418,181 @@ class OffsetTask: public Task {
     if (promise->resolved()) {
       updateOffset
         (c->s, c->result + instructionOffset->value(), conditional,
-         promise->value());
+         promise->value(), jumpAddress);
     } else {
       new (promise->listen(sizeof(OffsetListener)))
         OffsetListener(c->s, c->result + instructionOffset->value(),
-                       conditional);
+                       conditional, jumpAddress);
     }
   }
 
   Promise* promise;
   Promise* instructionOffset;
+  void* jumpAddress;
   bool conditional;
+};
+
+class JumpOffset {
+ public:
+  JumpOffset(MyBlock* block, OffsetTask* task, unsigned offset):
+    block(block), task(task), next(0), offset(offset)
+  { }
+
+  MyBlock* block;
+  OffsetTask* task;
+  JumpOffset* next;
+  unsigned offset;  
+};
+
+class JumpEvent {
+ public:
+  JumpEvent(JumpOffset* jumpOffsetHead, JumpOffset* jumpOffsetTail,
+            unsigned offset):
+    jumpOffsetHead(jumpOffsetHead), jumpOffsetTail(jumpOffsetTail), next(0),
+    offset(offset)
+  { }
+
+  JumpOffset* jumpOffsetHead;
+  JumpOffset* jumpOffsetTail;
+  JumpEvent* next;
+  unsigned offset;
 };
 
 void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
                  bool conditional)
 {
-  c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
+  OffsetTask* task = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
     (c->tasks, promise, instructionOffset, conditional);
+
+  c->tasks = task;
+
+  if (conditional) {
+    JumpOffset* offset = new (c->zone->allocate(sizeof(JumpOffset))) JumpOffset
+      (c->lastBlock, task, c->code.length() - c->lastBlock->offset);
+
+    if (c->lastBlock->jumpOffsetTail) {
+      c->lastBlock->jumpOffsetTail->next = offset;
+    } else {
+      c->lastBlock->jumpOffsetHead = offset;
+    }
+    c->lastBlock->jumpOffsetTail = offset;
+  }
+}
+
+void
+appendJumpEvent(Context* c, MyBlock* b, unsigned offset, JumpOffset* head,
+                JumpOffset* tail)
+{
+  JumpEvent* e = new (c->zone->allocate(sizeof(JumpEvent))) JumpEvent
+    (head, tail, offset);
+
+  if (b->jumpEventTail) {
+    b->jumpEventTail->next = e;
+  } else {
+    b->jumpEventHead = e;
+  }
+  b->jumpEventTail = e;
+}
+
+unsigned
+padding(MyBlock* b, unsigned offset)
+{
+  unsigned total = 0;
+  for (JumpEvent** e = &(b->jumpEventHead); *e;) {
+    if ((*e)->offset <= offset) {
+      for (JumpOffset** o = &((*e)->jumpOffsetHead); *o;) {
+        if ((*o)->task->promise->resolved()
+            and (*o)->task->instructionOffset->resolved())
+        {
+          int32_t v = reinterpret_cast<uint8_t*>((*o)->task->promise->value())
+            - (b->context->result + (*o)->task->instructionOffset->value());
+
+          if (bounded(2, 16, v)) {
+            // this conditional jump needs no indirection -- a direct
+            // jump will suffice
+            *o = (*o)->next;
+            continue;
+          }
+        }
+
+        total += BytesPerWord;
+        o = &((*o)->next);
+      }
+
+      if ((*e)->jumpOffsetHead == 0) {
+        *e = (*e)->next;
+      } else {
+        if (b->next) {
+          total += BytesPerWord;
+        }
+        e = &((*e)->next);
+      }
+    } else {
+      break;
+    }
+  }
+
+  return total;
+}
+
+void
+resolve(MyBlock* b)
+{
+  Context* c = b->context;
+
+  if (b->jumpOffsetHead) {
+    if (c->jumpOffsetTail) {
+      c->jumpOffsetTail->next = b->jumpOffsetHead;
+    } else {
+      c->jumpOffsetHead = b->jumpOffsetHead;
+    }
+    c->jumpOffsetTail = b->jumpOffsetTail;
+  }
+
+  if (c->jumpOffsetHead) {
+    bool append;
+    if (b->next == 0 or b->next->jumpEventHead) {
+      append = true;
+    } else {
+      int32_t v = (b->start + b->size + b->next->size + BytesPerWord)
+        - (c->jumpOffsetHead->offset + c->jumpOffsetHead->block->start);
+
+      append = not bounded(2, 16, v);
+
+      if (DebugJumps) {
+        fprintf(stderr,
+                "current %p %d %d next %p %d %d\n",
+                b, b->start, b->size, b->next, b->start + b->size,
+                b->next->size);
+        fprintf(stderr,
+                "offset %p %d is of distance %d to next block; append? %d\n",
+                c->jumpOffsetHead, c->jumpOffsetHead->offset, v, append);
+      }
+    }
+
+    if (append) {
+#ifndef NDEBUG
+      int32_t v = (b->start + b->size)
+        - (c->jumpOffsetHead->offset + c->jumpOffsetHead->block->start);
+      
+      expect(c, bounded(2, 16, v));
+#endif // not NDEBUG
+
+      appendJumpEvent(c, b, b->size, c->jumpOffsetHead, c->jumpOffsetTail);
+
+      if (DebugJumps) {
+        for (JumpOffset* o = c->jumpOffsetHead; o; o = o->next) {
+          fprintf(stderr,
+                  "include %p %d in jump event %p at offset %d in block %p\n",
+                  o, o->offset, b->jumpEventTail, b->size, b);
+        }
+      }
+
+      c->jumpOffsetHead = 0;
+      c->jumpOffsetTail = 0;
+    }
+  }
 }
 
 inline unsigned
@@ -483,6 +650,11 @@ inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
 inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
 inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
 
+inline void
+write4(uint8_t* dst, uint32_t v)
+{
+  memcpy(dst, &v, 4);
+}
 
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
@@ -1525,7 +1697,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
   if (next) {
     updateOffset
       (c->s, c->code.data + next, true, reinterpret_cast<intptr_t>
-       (c->code.data + c->code.length()));
+       (c->code.data + c->code.length()), 0);
   }
 }
 
@@ -1767,17 +1939,17 @@ nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
     // check for post-non-tail-call stack adjustment of the form "lwzx
     // r0,0(r1); stwu r0,offset(r1)":
     if (instruction < start + (size / BytesPerWord) - 1
-        and (static_cast<uint32_t>(instruction[1]) >> 16) == 0x9421)
+        and (static_cast<uint32_t>(instruction[1]) >> 16) == 0x9401)
     {
-      offset += static_cast<int16_t>(instruction[1]);
-    } else if ((static_cast<uint32_t>(*instruction) >> 16) == 0x9421) {
-      offset += static_cast<int16_t>(*instruction);
+      offset += static_cast<int16_t>(instruction[1]) / BytesPerWord;
+    } else if ((static_cast<uint32_t>(*instruction) >> 16) == 0x9401) {
+      offset += static_cast<int16_t>(*instruction) / BytesPerWord;
     }
 
     // todo: check for and handle tail calls
   }
 
-  *ip = static_cast<void**>(*stack)[offset + 2];
+  *ip = static_cast<void**>(*stack)[offset + ReturnAddressOffset];
   *stack = static_cast<void**>(*stack) + offset;
 }
 
@@ -1924,6 +2096,10 @@ class MyArchitecture: public Assembler::Architecture {
     case 0: // r0 has special meaning in addi and other instructions
     case StackRegister:
     case ThreadRegister:
+#ifndef __APPLE__
+      // r2 is reserved for system uses on SYSV
+    case 2:
+#endif
       return true;
 
     default:
@@ -1940,7 +2116,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual bool argumentAlignment() {
-    return false;
+    return AlignArguments;
   }
 
   virtual unsigned argumentRegisterCount() {
@@ -1951,6 +2127,10 @@ class MyArchitecture: public Assembler::Architecture {
     assert(&c, index < argumentRegisterCount());
 
     return index + 3;
+  }
+
+  virtual bool hasLinkRegister() {
+    return true;
   }
   
   virtual unsigned stackAlignmentInWords() {
@@ -1975,7 +2155,7 @@ class MyArchitecture: public Assembler::Architecture {
     case AlignedCall:
     case AlignedJump: {
       updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4, false,
-                   reinterpret_cast<intptr_t>(newTarget));
+                   reinterpret_cast<intptr_t>(newTarget), 0);
     } break;
 
     case LongCall:
@@ -2019,7 +2199,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void* frameIp(void* stack) {
-    return stack ? static_cast<void**>(stack)[2] : 0;
+    return stack ? static_cast<void**>(stack)[ReturnAddressOffset] : 0;
   }
 
   virtual unsigned frameHeaderSize() {
@@ -2035,7 +2215,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual int returnAddressOffset() {
-    return 8 / BytesPerWord;
+    return ReturnAddressOffset;
   }
 
   virtual int framePointerOffset() {
@@ -2248,16 +2428,18 @@ class MyAssembler: public Assembler {
   {
     Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
-    Constant handlerConstant(jump(&c, handler));
+    Constant handlerConstant
+      (new (c.zone->allocate(sizeof(ResolvedPromise)))
+       ResolvedPromise(handler));
     branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned) {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
-    Memory returnAddressDst(StackRegister, 8);
+    Memory returnAddressDst(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
 
     Register stack(StackRegister);
@@ -2310,7 +2492,7 @@ class MyAssembler: public Assembler {
     Register returnAddress(0);
     emit(&c, mflr(returnAddress.low));
 
-    Memory returnAddressDst(StackRegister, 8);
+    Memory returnAddressDst(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveRM(&c, BytesPerWord, &returnAddress, BytesPerWord, &returnAddressDst);
 
     Register stack(StackRegister);
@@ -2333,7 +2515,7 @@ class MyAssembler: public Assembler {
     moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
 
     Register returnAddress(0);
-    Memory returnAddressSrc(StackRegister, 8);
+    Memory returnAddressSrc(StackRegister, ReturnAddressOffset * BytesPerWord);
     moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &returnAddress);
     
     emit(&c, mtlr(returnAddress.low));
@@ -2347,7 +2529,8 @@ class MyAssembler: public Assembler {
     if (TailCalls) {
       if (offset) {
         Register tmp(0);
-        Memory returnAddressSrc(StackRegister, 8 + (footprint * BytesPerWord));
+        Memory returnAddressSrc
+          (StackRegister, (ReturnAddressOffset + footprint) * BytesPerWord);
         moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
     
         emit(&c, mtlr(tmp.low));
@@ -2362,7 +2545,8 @@ class MyAssembler: public Assembler {
           assert(&c, offset > 0);
 
           Register ras(returnAddressSurrogate);
-          Memory dst(StackRegister, 8 + (offset * BytesPerWord));
+          Memory dst
+            (StackRegister, (ReturnAddressOffset + offset) * BytesPerWord);
           moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
         }
 
@@ -2468,22 +2652,62 @@ class MyAssembler: public Assembler {
     }
   }
 
-  virtual void writeTo(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst) {
     c.result = dst;
+  }
 
+  virtual void write() {
+    uint8_t* dst = c.result;
+    unsigned dstOffset = 0;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
-      memcpy(dst + b->start, c.code.data + b->offset, b->size);
-    }
+      if (DebugJumps) {
+        fprintf(stderr, "write block %p\n", b);
+      }
 
-    for (JumpPromise* j = c.jumps; j; j = j->next) {
-      uint8_t* instruction
-        = dst + c.code.length() + (c.jumpCount - j->index - 1);
-      int32_t op = ::b(0);
-      memcpy(instruction, &op, BytesPerWord);
-      updateOffset(c.s, instruction, false, j->target);
+      unsigned blockOffset = 0;
+      for (JumpEvent* e = b->jumpEventHead; e; e = e->next) {
+        unsigned size = e->offset - blockOffset;
+        memcpy(dst + dstOffset, c.code.data + b->offset + blockOffset, size);
+        blockOffset = e->offset;
+        dstOffset += size;
+
+        unsigned jumpTableSize = 0;
+        for (JumpOffset* o = e->jumpOffsetHead; o; o = o->next) {
+          if (DebugJumps) {
+            fprintf(stderr, "visit offset %p %d in block %p\n",
+                    o, o->offset, b);
+          }
+
+          uint8_t* address = dst + dstOffset + jumpTableSize;
+
+          if (b->next) {
+            address += BytesPerWord;
+          }
+
+          o->task->jumpAddress = address;
+
+          jumpTableSize += BytesPerWord;
+        }
+
+        assert(&c, jumpTableSize);
+
+        if (b->next) {
+          write4(dst + dstOffset, ::b(jumpTableSize + BytesPerWord));
+        }
+
+        dstOffset += jumpTableSize + BytesPerWord;
+      }
+
+      unsigned size = b->size - blockOffset;
+
+      memcpy(dst + dstOffset,
+             c.code.data + b->offset + blockOffset,
+             size);
+
+      dstOffset += size;
     }
     
-    unsigned index = c.code.length() + (c.jumpCount * BytesPerWord);
+    unsigned index = c.code.length();
     assert(&c, index % BytesPerWord == 0);
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
       e->address = dst + index;
@@ -2509,7 +2733,7 @@ class MyAssembler: public Assembler {
     b->size = c.code.length() - b->offset;
     if (startNew) {
       c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(c.code.length());
+        MyBlock(&c, c.code.length());
     } else {
       c.lastBlock = 0;
     }
@@ -2517,7 +2741,37 @@ class MyAssembler: public Assembler {
   }
 
   virtual void endEvent() {
-    // ignore
+    MyBlock* b = c.lastBlock;
+    unsigned thisEventOffset = c.code.length() - b->offset;
+    if (b->jumpOffsetHead) {
+      int32_t v = (thisEventOffset + BytesPerWord)
+        - b->jumpOffsetHead->offset;
+
+      if (v > 0 and not bounded(2, 16, v)) {
+        appendJumpEvent
+          (&c, b, b->lastEventOffset, b->jumpOffsetHead,
+           b->lastJumpOffsetTail);
+
+        if (DebugJumps) {
+          for (JumpOffset* o = b->jumpOffsetHead;
+               o != b->lastJumpOffsetTail->next; o = o->next)
+          {
+            fprintf(stderr,
+                    "in endEvent, include %p %d in jump event %p "
+                    "at offset %d in block %p\n",
+                    o, o->offset, b->jumpEventTail, b->lastEventOffset, b);
+          }
+        }
+
+        b->jumpOffsetHead = b->lastJumpOffsetTail->next;
+        b->lastJumpOffsetTail->next = 0;
+        if (b->jumpOffsetHead == 0) {
+          b->jumpOffsetTail = 0;
+        }
+      }
+    }
+    b->lastEventOffset = thisEventOffset;
+    b->lastJumpOffsetTail = b->jumpOffsetTail;
   }
 
   virtual unsigned length() {
@@ -2525,7 +2779,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual unsigned footerSize() {
-    return (c.jumpCount + c.constantPoolCount) * BytesPerWord;
+    return c.constantPoolCount * BytesPerWord;
   }
 
   virtual void dispose() {

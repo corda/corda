@@ -23,7 +23,7 @@ using namespace vm;
 
 namespace {
 
-const unsigned HeapCapacity = 768 * 1024 * 1024;
+const unsigned HeapCapacity = 128 * 1024 * 1024;
 
 // Notes on immutable references in the heap image:
 //
@@ -560,9 +560,15 @@ main(int ac, const char** av)
   Finder* f = makeFinder(s, h, av[1], 0);
   Processor* p = makeProcessor(s, h, false);
 
-  BootImage image;
-  const unsigned CodeCapacity = 128 * 1024 * 1024;
+  // todo: currently, the compiler cannot compile code with jumps or
+  // calls spanning more than the maximum size of an immediate value
+  // in a branch instruction for the target architecture (~32MB on
+  // PowerPC and ARM).  When that limitation is removed, we'll be able
+  // to specify a capacity as large as we like here:
+  const unsigned CodeCapacity = 30 * 1024 * 1024;
+
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
+  BootImage image;
   p->initialize(&image, code, CodeCapacity);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
