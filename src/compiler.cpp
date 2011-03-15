@@ -527,7 +527,8 @@ class IpPromise: public Promise {
   }
 
   virtual bool resolved() {
-    return c->machineCode != 0;
+    return c->machineCode != 0
+      and c->logicalCode[logicalIp]->machineOffset->resolved();
   }
 
   Context* c;
