@@ -57,8 +57,8 @@
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
-             unsigned memoryCount, void* gprTable, void* fprTable,
-             unsigned returnType);
+             unsigned memoryCount, unsigned memoryBase,
+             void* gprTable, void* fprTable, unsigned returnType);
 
 namespace vm {
 
@@ -239,6 +239,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     (function,
      (((1 + stackSkip + stackIndex) * BytesPerWord) + LinkageArea + 15) & -16,
      stack, stackIndex * BytesPerWord,
+     LinkageArea + (stackSkip * BytesPerWord),
      (gprIndex ? gprTable : 0),
      (fprIndex ? fprTable : 0), returnType);
 }
