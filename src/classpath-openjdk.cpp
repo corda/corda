@@ -59,6 +59,7 @@ typedef int socklen_t;
 #else // not PLATFORM_WINDOWS
 
 #  include <unistd.h>
+#  include <limits.h>
 #  include <sys/types.h>
 #  include <sys/stat.h>
 #  include <sys/socket.h>
@@ -2586,7 +2587,10 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
 #  endif
   local::setProperty(t, method, *properties, "java.io.tmpdir", "/tmp");
   local::setProperty(t, method, *properties, "user.home", getenv("HOME"));
-  local::setProperty(t, method, *properties, "user.dir", getenv("PWD"));
+
+  char buffer[PATH_MAX];
+  local::setProperty(t, method, *properties, "user.dir",
+                     getcwd(buffer, PATH_MAX));
 #endif
 
   local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
