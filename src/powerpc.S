@@ -36,13 +36,14 @@ GLOBAL(vmNativeCall):
    mflr r0
    stw  r0,RETURN_ADDRESS_OFFSET(r1)
    
-   // r3 aka r13: function
-   // r4        : stackTotal
-   // r5        : memoryTable
-   // r6        : memoryCount
-   // r7        : gprTable
-   // r8        : fprTable
-   // r9 aka r14: returnType
+   // r3  aka r13: function
+   // r4         : stackTotal
+   // r5         : memoryTable
+   // r6         : memoryCount
+   // r7         : memoryBase
+   // r8         : gprTable
+   // r9         : fprTable
+   // r10 aka r14: returnType
    
    // r15       : stack frame size
    // r16       : temporary
@@ -51,34 +52,34 @@ GLOBAL(vmNativeCall):
 
    // allocate stack space, adding room for callee-saved registers and
    // scratch space for copying a FP return value into GPRs
-   subfic r10,r4,-48
-	 stwux r1,r1,r10
+   subfic r11,r4,-48
+	 stwux r1,r1,r11
 
    // save callee-saved registers used for local variables
-   add  r10,r4,r1
+   add  r11,r4,r1
 
    // save registers used for local variables
-   stw  r13,0(r10)
-   stw  r14,4(r10)
-   stw  r15,8(r10)
-   stw  r16,12(r10)
-   stw  r17,16(r10)
-   stw  r18,20(r10)
-   stw  r19,24(r10)
+   stw  r13,0(r11)
+   stw  r14,4(r11)
+   stw  r15,8(r11)
+   stw  r16,12(r11)
+   stw  r17,16(r11)
+   stw  r18,20(r11)
+   stw  r19,24(r11)
 
    // remember where we saved the local variables
-   mr   r19,r10
+   mr   r19,r11
 
    // save our argument registers so we can clobber them
    mr   r13,r3
-   mr   r14,r9
+   mr   r14,r10
 
    li   r16,0
    b    LOCAL(test)
    
 LOCAL(loop):
    lwzx r17,r16,r5
-   addi r18,r16,MEMORY_BASE
+   add  r18,r16,r7
    stwx r17,r18,r1
    addi r16,r16,BYTES_PER_WORD
    
@@ -87,33 +88,33 @@ LOCAL(test):
    blt  LOCAL(loop)
 
    // do we need to load the floating point registers?
-   cmpwi r8,0
+   cmpwi r9,0
    beq   LOCAL(gpr)
 
    // yes, we do
-   lfd  f1,0(r8)
-   lfd  f2,8(r8)
-   lfd  f3,16(r8)
-   lfd  f4,24(r8)
-   lfd  f5,32(r8)
-   lfd  f6,40(r8)
-   lfd  f7,48(r8)
-   lfd  f8,56(r8)
+   lfd  f1,0(r9)
+   lfd  f2,8(r9)
+   lfd  f3,16(r9)
+   lfd  f4,24(r9)
+   lfd  f5,32(r9)
+   lfd  f6,40(r9)
+   lfd  f7,48(r9)
+   lfd  f8,56(r9)
 #ifdef __APPLE__
-   lfd  f9,64(r8)
-   lfd  f10,72(r8)
-   lfd  f11,80(r8)
-   lfd  f12,88(r8)
-   lfd  f13,96(r8)
+   lfd  f9,64(r9)
+   lfd  f10,72(r9)
+   lfd  f11,80(r9)
+   lfd  f12,88(r9)
+   lfd  f13,96(r9)
 #endif
 
 LOCAL(gpr):
    // do we need to load the general-purpose registers?
-   cmpwi r7,0
+   cmpwi r8,0
    beq  LOCAL(call)
 
    // yes, we do
-   mr   r16,r7
+   mr   r16,r8
    lwz  r3,0(r16)
    lwz  r4,4(r16)
    lwz  r5,8(r16)
