@@ -49,7 +49,7 @@ public class DefineClass {
   }
 
   public static void main(String[] args) throws Exception {
-    //testStatic();
+    testStatic();
     testDerived();
   }
 
@@ -59,7 +59,7 @@ public class DefineClass {
     }
 
     public Class defineClass(String name, byte[] bytes) {
-      return super.defineClass(name, bytes, 0, bytes.length);
+      return defineClass(name, bytes, 0, bytes.length);
     }
   }
 
