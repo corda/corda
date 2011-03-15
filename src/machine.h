@@ -1298,6 +1298,7 @@ class Machine {
   System::Monitor* referenceLock;
   System::Monitor* shutdownLock;
   System::Library* libraries;
+  FILE* errorLog;
   object types;
   object roots;
   object finalizers;
@@ -3575,6 +3576,21 @@ methodClone(Thread* t, object method)
      methodAddendum(t, method),
      methodClass(t, method),
      methodCode(t, method));
+}
+
+inline FILE*
+errorLog(Thread* t)
+{
+  if (t->m->errorLog == 0) {
+    const char* path = findProperty(t, "avian.error.log");
+    if (path) {
+      t->m->errorLog = vm::fopen(path, "wb");
+    } else {
+      t->m->errorLog = stderr;
+    }
+  }
+
+  return t->m->errorLog;
 }
 
 } // namespace vm

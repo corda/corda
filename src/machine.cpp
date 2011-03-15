@@ -2258,6 +2258,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   referenceLock(0),
   shutdownLock(0),
   libraries(0),
+  errorLog(0),
   types(0),
   roots(0),
   finalizers(0),
@@ -3888,19 +3889,19 @@ printTrace(Thread* t, object exception)
 
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
-      fprintf(stderr, "caused by: ");
+      fprintf(errorLog(t), "caused by: ");
     }
 
-    fprintf(stderr, "%s", &byteArrayBody
+    fprintf(errorLog(t), "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
   
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
       THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
-      fprintf(stderr, ": %s\n", RUNTIME_ARRAY_BODY(message));
+      fprintf(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
-      fprintf(stderr, "\n");
+      fprintf(errorLog(t), "\n");
     }
 
     object trace = throwableTrace(t, e);
@@ -3914,17 +3915,17 @@ printTrace(Thread* t, object exception)
         int line = t->m->processor->lineNumber
           (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-        fprintf(stderr, "  at %s.%s ", class_, method);
+        fprintf(errorLog(t), "  at %s.%s ", class_, method);
 
         switch (line) {
         case NativeLine:
-          fprintf(stderr, "(native)\n");
+          fprintf(errorLog(t), "(native)\n");
           break;
         case UnknownLine:
-          fprintf(stderr, "(unknown line)\n");
+          fprintf(errorLog(t), "(unknown line)\n");
           break;
         default:
-          fprintf(stderr, "(line %d)\n", line);
+          fprintf(errorLog(t), "(line %d)\n", line);
         }
       }
     }
@@ -3934,7 +3935,7 @@ printTrace(Thread* t, object exception)
     }
   }
 
-  fflush(stderr);
+  fflush(errorLog(t));
 }
 
 object
