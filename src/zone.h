@@ -45,6 +45,8 @@ class Zone: public Allocator {
       next = seg->next;
       allocator->free(seg, sizeof(Segment) + seg->size);
     }
+
+    segment = 0;
   }
 
   bool ensure(unsigned space) {

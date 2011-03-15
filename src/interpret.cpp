@@ -1460,27 +1460,11 @@ interpret3(Thread* t, const int base)
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
-      if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
-                   and BytesPerWord == 4
-                   and (fieldCode(t, field) == DoubleField
-                        or fieldCode(t, field) == LongField)))
-      {
-        PROTECT(t, field);
-        acquire(t, field);        
-      }
+      PROTECT(t, field);
+
+      ACQUIRE_FIELD_FOR_READ(t, field);
 
       pushField(t, popObject(t), field);
-
-      if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-        if (BytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
-        {
-          release(t, field);        
-        } else {
-          loadMemoryBarrier();
-        }
-      }
     } else {
       exception = makeThrowable(t, Machine::NullPointerExceptionType);
       goto throw_;
@@ -1498,26 +1482,9 @@ interpret3(Thread* t, const int base)
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
 
-    if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
-                 and BytesPerWord == 4
-                 and (fieldCode(t, field) == DoubleField
-                      or fieldCode(t, field) == LongField)))
-    {
-      acquire(t, field);        
-    }
+    ACQUIRE_FIELD_FOR_READ(t, field);
 
     pushField(t, classStaticTable(t, fieldClass(t, field)), field);
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        loadMemoryBarrier();
-      }
-    }
   } goto loop;
 
   case goto_: {
@@ -2460,80 +2427,61 @@ interpret3(Thread* t, const int base)
     assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
     PROTECT(t, field);
 
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        acquire(t, field);        
-      } else {
-        storeStoreMemoryBarrier();
-      }
-    }
+    { ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-    switch (fieldCode(t, field)) {
-    case ByteField:
-    case BooleanField:
-    case CharField:
-    case ShortField:
-    case FloatField:
-    case IntField: {
-      int32_t value = popInt(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        switch (fieldCode(t, field)) {
-        case ByteField:
-        case BooleanField:
-          cast<int8_t>(o, fieldOffset(t, field)) = value;
-          break;
+      switch (fieldCode(t, field)) {
+      case ByteField:
+      case BooleanField:
+      case CharField:
+      case ShortField:
+      case FloatField:
+      case IntField: {
+        int32_t value = popInt(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          switch (fieldCode(t, field)) {
+          case ByteField:
+          case BooleanField:
+            cast<int8_t>(o, fieldOffset(t, field)) = value;
+            break;
             
-        case CharField:
-        case ShortField:
-          cast<int16_t>(o, fieldOffset(t, field)) = value;
-          break;
+          case CharField:
+          case ShortField:
+            cast<int16_t>(o, fieldOffset(t, field)) = value;
+            break;
             
-        case FloatField:
-        case IntField:
-          cast<int32_t>(o, fieldOffset(t, field)) = value;
-          break;
+          case FloatField:
+          case IntField:
+            cast<int32_t>(o, fieldOffset(t, field)) = value;
+            break;
+          }
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
         }
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      } break;
 
-    case DoubleField:
-    case LongField: {
-      int64_t value = popLong(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        cast<int64_t>(o, fieldOffset(t, field)) = value;
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      case DoubleField:
+      case LongField: {
+        int64_t value = popLong(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          cast<int64_t>(o, fieldOffset(t, field)) = value;
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
+        }
+      } break;
 
-    case ObjectField: {
-      object value = popObject(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        set(t, o, fieldOffset(t, field), value);
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      case ObjectField: {
+        object value = popObject(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          set(t, o, fieldOffset(t, field), value);
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
+        }
+      } break;
 
-    default: abort(t);
-    }
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        storeLoadMemoryBarrier();
+      default: abort(t);
       }
     }
 
@@ -2551,16 +2499,7 @@ interpret3(Thread* t, const int base)
 
     PROTECT(t, field);
 
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        acquire(t, field);        
-      } else {
-        storeStoreMemoryBarrier();
-      }
-    }
+    ACQUIRE_FIELD_FOR_WRITE(t, field);
 
     if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
       
@@ -2602,17 +2541,6 @@ interpret3(Thread* t, const int base)
     } break;
 
     default: abort(t);
-    }
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        storeLoadMemoryBarrier();
-      }
     }
   } goto loop;
 

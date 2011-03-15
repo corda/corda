@@ -1075,6 +1075,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          code,
          flags,
          0, // offset
+         i,
          singletonObject(t, pool, name - 1),
          singletonObject(t, pool, spec - 1),
          addendum,
@@ -1268,20 +1269,6 @@ parseCode(Thread* t, Stream& s, object pool)
   }
 
   return code;
-}
-
-void
-scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
-               unsigned* returnCode)
-{
-  unsigned count = 0;
-  MethodSpecIterator it(t, s);
-  for (; it.hasNext(); it.next()) {
-    ++ count;
-  }
-
-  *parameterCount = count;
-  *returnCode = fieldCode(t, *it.returnSpec());
 }
 
 object
@@ -2223,6 +2210,17 @@ doCollect(Thread* t, Heap::CollectionType type)
       m->finalizeThread = 0;
     }
   }
+}
+
+uint64_t
+invokeLoadClass(Thread* t, uintptr_t* arguments)
+{
+  object method = reinterpret_cast<object>(arguments[0]);
+  object loader = reinterpret_cast<object>(arguments[1]);
+  object specString = reinterpret_cast<object>(arguments[2]);
+
+  return reinterpret_cast<uintptr_t>
+    (t->m->processor->invoke(t, method, loader, specString));
 }
 
 } // namespace
@@ -3342,8 +3340,6 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
   if (objectClass(t, loader) == type(t, Machine::SystemClassLoaderType)) {
     return resolveSystemClass(t, loader, spec, throw_);
   } else {
-    expect(t, throw_);
-
     PROTECT(t, loader);
     PROTECT(t, spec);
 
@@ -3384,9 +3380,23 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
 
       object specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
-      object jc = t->m->processor->invoke(t, method, loader, specString);
+      uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(method),
+                                reinterpret_cast<uintptr_t>(loader),
+                                reinterpret_cast<uintptr_t>(specString) };
+
+      object jc = reinterpret_cast<object>
+        (runRaw(t, invokeLoadClass, arguments));
+
       if (LIKELY(jc)) {
         c = jclassVmClass(t, jc);
+      } else if (t->exception) {
+        if (throw_) {
+          object e = t->exception;
+          t->exception = 0;
+          vm::throw_(t, e);
+        } else {
+          t->exception = 0;
+        }
       }
     }
 
@@ -3402,12 +3412,12 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
 
       hashMapInsert
         (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
-
-      return c;
-    } else {
+    } else if (throw_) {
       throwNew(t, Machine::ClassNotFoundExceptionType, "%s",
                &byteArrayBody(t, spec, 0));
     }
+
+    return c;
   }
 }
 

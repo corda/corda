@@ -33,6 +33,12 @@
 #define ACQUIRE_OBJECT(t, x) \
   ObjectMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
+#define ACQUIRE_FIELD_FOR_READ(t, field) \
+  FieldReadResource MAKE_NAME(monitorResource_) (t, field)
+
+#define ACQUIRE_FIELD_FOR_WRITE(t, field) \
+  FieldReadResource MAKE_NAME(monitorResource_) (t, field)
+
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
@@ -2430,6 +2436,20 @@ fieldSize(Thread* t, object field)
   return fieldSize(t, fieldCode(t, field));
 }
 
+inline void
+scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
+               unsigned* returnCode)
+{
+  unsigned count = 0;
+  MethodSpecIterator it(t, s);
+  for (; it.hasNext(); it.next()) {
+    ++ count;
+  }
+
+  *parameterCount = count;
+  *returnCode = fieldCode(t, *it.returnSpec());
+}
+
 object
 findLoadedClass(Thread* t, object loader, object spec);
 
@@ -2639,11 +2659,11 @@ findInHierarchyOrNull(Thread* t, object class_, object name, object spec,
 inline object
 findInHierarchy(Thread* t, object class_, object name, object spec,
                 object (*find)(Thread*, object, object, object),
-                Machine::Type errorType)
+                Machine::Type errorType, bool throw_ = true)
 {
   object o = findInHierarchyOrNull(t, class_, name, spec, find);
 
-  if (o == 0) {
+  if (throw_ and o == 0) {
     throwNew(t, errorType, "%s %s not found in %s",
              &byteArrayBody(t, name, 0),
              &byteArrayBody(t, spec, 0),
@@ -3332,93 +3352,208 @@ poolSize(Thread* t, object pool)
 
 inline object
 resolveClassInObject(Thread* t, object loader, object container,
-                     unsigned classOffset)
+                     unsigned classOffset, bool throw_ = true)
 {
   object o = cast<object>(container, classOffset);
+
+  loadMemoryBarrier();  
+
   if (objectClass(t, o) == type(t, Machine::ByteArrayType)) {
     PROTECT(t, container);
 
-    o = resolveClass(t, loader, o);
+    o = resolveClass(t, loader, o, throw_);
     
-    set(t, container, classOffset, o);
+    if (o) {
+      storeStoreMemoryBarrier();
+
+      set(t, container, classOffset, o);
+    }
   }
   return o; 
 }
 
 inline object
-resolveClassInPool(Thread* t, object loader, object method, unsigned index)
+resolveClassInPool(Thread* t, object loader, object method, unsigned index,
+                   bool throw_ = true)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
+
+  loadMemoryBarrier();
+
   if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
     PROTECT(t, method);
 
-    o = resolveClass(t, loader, referenceName(t, o));
+    o = resolveClass(t, loader, referenceName(t, o), throw_);
     
-    set(t, codePool(t, methodCode(t, method)),
-        SingletonBody + (index * BytesPerWord), o);
+    if (o) {
+      storeStoreMemoryBarrier();
+
+      set(t, codePool(t, methodCode(t, method)),
+          SingletonBody + (index * BytesPerWord), o);
+    }
   }
   return o; 
 }
 
 inline object
-resolveClassInPool(Thread* t, object method, unsigned index)
+resolveClassInPool(Thread* t, object method, unsigned index,
+                   bool throw_ = true)
 {
   return resolveClassInPool(t, classLoader(t, methodClass(t, method)),
-                            method, index);
+                            method, index, throw_);
 }
 
 inline object
 resolve(Thread* t, object loader, object method, unsigned index,
         object (*find)(vm::Thread*, object, object, object),
-        Machine::Type errorType)
+        Machine::Type errorType, bool throw_ = true)
 {
   object o = singletonObject(t, codePool(t, methodCode(t, method)), index);
-  if (objectClass(t, o) == type(t, Machine::ReferenceType))
-  {
+
+  loadMemoryBarrier();  
+
+  if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
     PROTECT(t, method);
 
     object reference = o;
     PROTECT(t, reference);
 
-    object class_ = resolveClassInObject(t, loader, o, ReferenceClass);
+    object class_ = resolveClassInObject(t, loader, o, ReferenceClass, throw_);
     
-    o = findInHierarchy
-      (t, class_, referenceName(t, reference), referenceSpec(t, reference),
-       find, errorType);
+    if (class_) {
+      o = findInHierarchy
+        (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+         find, errorType, throw_);
     
-    set(t, codePool(t, methodCode(t, method)),
-        SingletonBody + (index * BytesPerWord), o);
+      if (o) {
+        storeStoreMemoryBarrier();
+
+        set(t, codePool(t, methodCode(t, method)),
+            SingletonBody + (index * BytesPerWord), o);
+      }
+    } else {
+      o = 0;
+    }
   }
 
   return o;
 }
 
 inline object
-resolveField(Thread* t, object loader, object method, unsigned index)
+resolveField(Thread* t, object loader, object method, unsigned index,
+             bool throw_ = true)
 {
   return resolve(t, loader, method, index, findFieldInClass,
-                 Machine::NoSuchFieldErrorType);
+                 Machine::NoSuchFieldErrorType, throw_);
 }
 
 inline object
-resolveField(Thread* t, object method, unsigned index)
+resolveField(Thread* t, object method, unsigned index, bool throw_ = true)
 {
   return resolveField
-    (t, classLoader(t, methodClass(t, method)), method, index);
+    (t, classLoader(t, methodClass(t, method)), method, index, throw_);
 }
 
+inline void
+acquireFieldForRead(Thread* t, object field)
+{
+  if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
+               and BytesPerWord == 4
+               and (fieldCode(t, field) == DoubleField
+                    or fieldCode(t, field) == LongField)))
+  {
+    acquire(t, field);        
+  }
+}
+
+inline void
+releaseFieldForRead(Thread* t, object field)
+{
+  if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+    if (BytesPerWord == 4
+        and (fieldCode(t, field) == DoubleField
+             or fieldCode(t, field) == LongField))
+    {
+      release(t, field);        
+    } else {
+      loadMemoryBarrier();
+    }
+  }
+}
+
+class FieldReadResource {
+ public:
+  FieldReadResource(Thread* t, object o): o(o), protector(t, &(this->o)) {
+    acquireFieldForRead(protector.t, o);
+  }
+
+  ~FieldReadResource() {
+    releaseFieldForRead(protector.t, o);
+  }
+
+ private:
+  object o;
+  Thread::SingleProtector protector;
+};
+
+inline void
+acquireFieldForWrite(Thread* t, object field)
+{
+  if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+    if (BytesPerWord == 4
+        and (fieldCode(t, field) == DoubleField
+             or fieldCode(t, field) == LongField))
+    {
+      acquire(t, field);        
+    } else {
+      storeStoreMemoryBarrier();
+    }
+  }
+}
+
+inline void
+releaseFieldForWrite(Thread* t, object field)
+{
+  if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
+    if (BytesPerWord == 4
+        and (fieldCode(t, field) == DoubleField
+             or fieldCode(t, field) == LongField))
+    {
+      release(t, field);        
+    } else {
+      storeLoadMemoryBarrier();
+    }
+  }
+}
+
+class FieldWriteResource {
+ public:
+  FieldWriteResource(Thread* t, object o): o(o), protector(t, &(this->o)) {
+    acquireFieldForWrite(protector.t, o);
+  }
+
+  ~FieldWriteResource() {
+    releaseFieldForWrite(protector.t, o);
+  }
+
+ private:
+  object o;
+  Thread::SingleProtector protector;
+};
+
 inline object
-resolveMethod(Thread* t, object loader, object method, unsigned index)
+resolveMethod(Thread* t, object loader, object method, unsigned index,
+                   bool throw_ = true)
 {
   return resolve(t, loader, method, index, findMethodInClass,
-                 Machine::NoSuchMethodErrorType);
+                 Machine::NoSuchMethodErrorType, throw_);
 }
 
 inline object
-resolveMethod(Thread* t, object method, unsigned index)
+resolveMethod(Thread* t, object method, unsigned index, bool throw_ = true)
 {
   return resolveMethod
-    (t, classLoader(t, methodClass(t, method)), method, index);
+    (t, classLoader(t, methodClass(t, method)), method, index, throw_);
 }
 
 object
