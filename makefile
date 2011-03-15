@@ -585,6 +585,11 @@ ifeq ($(continuations),true)
 		extra.DynamicWind
 endif
 
+ifeq ($(tails),true)
+	tail-tests = \
+		extra.Tails
+endif
+
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
@@ -617,7 +622,7 @@ test: build
 	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
 		$(test-executable) $(mode) "$(test-flags)" \
 		$(call class-names,$(test-build),$(test-classes)) \
-		$(continuation-tests)
+		$(continuation-tests) $(tail-tests)
 
 .PHONY: tarball
 tarball:
