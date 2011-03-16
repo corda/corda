@@ -1075,7 +1075,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          code,
          flags,
          0, // offset
-         i,
+         0, // native ID
          singletonObject(t, pool, name - 1),
          singletonObject(t, pool, spec - 1),
          addendum,
@@ -2388,6 +2388,7 @@ Thread::init()
     setRoot(this, Machine::ClassRuntimeDataTable, makeVector(this, 0, 0));
     setRoot(this, Machine::MethodRuntimeDataTable, makeVector(this, 0, 0));
     setRoot(this, Machine::JNIMethodTable, makeVector(this, 0, 0));
+    setRoot(this, Machine::JNIFieldTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
 

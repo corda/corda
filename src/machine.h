@@ -1256,6 +1256,7 @@ class Machine {
     ClassRuntimeDataTable,
     MethodRuntimeDataTable,
     JNIMethodTable,
+    JNIFieldTable,
     ShutdownHooks,
     FinalizerThread,
     ObjectsToFinalize,
