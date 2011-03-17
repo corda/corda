@@ -2922,6 +2922,8 @@ getStaticFieldValueFromReference(MyThread* t, object pair)
   object field = resolveField(t, pair);
   PROTECT(t, field);
 
+  initClass(t, fieldClass(t, field));
+
   ACQUIRE_FIELD_FOR_READ(t, field);
 
   return getFieldValue(t, classStaticTable(t, fieldClass(t, field)), field);
@@ -2945,6 +2947,8 @@ setStaticLongFieldValueFromReference(MyThread* t, object pair, uint64_t value)
 {
   object field = resolveField(t, pair);
   PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
@@ -2973,6 +2977,8 @@ setStaticObjectFieldValueFromReference(MyThread* t, object pair, object value)
 
   object field = resolveField(t, pair);
   PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
@@ -3024,6 +3030,8 @@ setStaticFieldValueFromReference(MyThread* t, object pair, uint32_t value)
 {
   object field = resolveField(t, pair);
   PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
@@ -5452,7 +5460,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (LIKELY(field)) {
         int fieldCode = vm::fieldCode(t, field);
-        Compiler::Operand* value = popField(t, frame, fieldCode);
 
         object staticTable = 0;
 
@@ -5484,6 +5491,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             frame->trace(0, 0);
           }
         }
+
+        Compiler::Operand* value = popField(t, frame, fieldCode);
 
         Compiler::Operand* table;
 
@@ -7828,7 +7837,7 @@ class ArgumentList {
       default:
         addInt(cast<int32_t>(objectArrayBody(t, arguments, index++),
                              BytesPerWord));
-        break;        
+        break;
       }
     }
   }
