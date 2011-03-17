@@ -793,6 +793,8 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
+    PROTECT(t, dst);
+
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
@@ -1539,6 +1541,8 @@ interceptFileOperations(Thread* t)
       (t, root(t, Machine::BootLoader), "java/util/zip/ZipEntry");
     if (zipEntryClass == 0) return;
 
+    PROTECT(t, zipEntryClass);
+
     object zipEntryNameField = findFieldInClass2
       (t, zipEntryClass, "name", "Ljava/lang/String;");
     if (zipEntryNameField == 0) return;
@@ -1582,6 +1586,8 @@ interceptFileOperations(Thread* t)
   { object zipFileClass = resolveClass
       (t, root(t, Machine::BootLoader), "java/util/zip/ZipFile");
     if (zipFileClass == 0) return;
+
+    PROTECT(t, zipFileClass);
 
     object zipFileJzfileField = findFieldInClass2
       (t, zipFileClass, "jzfile", "J");
@@ -2763,7 +2769,7 @@ jvmFillInStackTrace(Thread* t, uintptr_t* arguments)
 
   object trace = getTrace(t, 1);
   set(t, *throwable, ThrowableTrace, trace);
-  
+
   return 1;
 }
 
@@ -3489,18 +3495,28 @@ EXPORT(JVM_IsPrimitiveClass)(Thread* t, jclass c)
   return (classVmFlags(t, jclassVmClass(t, *c)) & PrimitiveFlag) != 0;
 }
 
-extern "C" JNIEXPORT jclass JNICALL
-EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
+uint64_t
+jvmGetComponentType(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jclass c = reinterpret_cast<jobject>(arguments[0]);
 
   uint8_t n = byteArrayBody(t, className(t, jclassVmClass(t, *c)), 1);
   if (n != 'L' and n != '[') {
-    return makeLocalReference(t, getJClass(t, primitiveClass(t, n)));
+    return reinterpret_cast<uintptr_t>
+      (makeLocalReference(t, getJClass(t, primitiveClass(t, n))));
   } else {
-    return makeLocalReference
-      (t, getJClass(t, classStaticTable(t, jclassVmClass(t, *c))));
+    return reinterpret_cast<uintptr_t>
+      (makeLocalReference
+       (t, getJClass(t, classStaticTable(t, jclassVmClass(t, *c)))));
   }
+}
+
+extern "C" JNIEXPORT jclass JNICALL
+EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jclass>(run(t, jvmGetComponentType, arguments));
 }
 
 extern "C" JNIEXPORT jint JNICALL
