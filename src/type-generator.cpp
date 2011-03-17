@@ -2177,8 +2177,22 @@ writeNameInitialization(Output* out, Object* type)
 {
   out->write("nameClass(t, Machine::");
   out->write(capitalize(typeName(type)));
-  out->write("Type, \"vm::");
-  out->write(typeName(type));
+  out->write("Type, \"");
+  if (equal(typeName(type), "jbyte")
+      or equal(typeName(type), "jboolean")
+      or equal(typeName(type), "jshort")
+      or equal(typeName(type), "jchar")
+      or equal(typeName(type), "jint")
+      or equal(typeName(type), "jlong")
+      or equal(typeName(type), "jfloat")
+      or equal(typeName(type), "jdouble")
+      or equal(typeName(type), "jvoid"))
+  {
+    out->write(typeName(type) + 1);    
+  } else {
+    out->write("vm::");
+    out->write(typeName(type));
+  }
   out->write("\");\n");
 }
 
