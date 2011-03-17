@@ -602,8 +602,8 @@ postCollect(Thread* t)
 uint64_t
 invoke(Thread* t, uintptr_t* arguments)
 {
-  object m = reinterpret_cast<object>(arguments[0]);
-  object o = reinterpret_cast<object>(arguments[1]);
+  object m = *reinterpret_cast<object*>(arguments[0]);
+  object o = *reinterpret_cast<object*>(arguments[1]);
 
   t->m->processor->invoke(t, m, o);
 
@@ -622,8 +622,11 @@ finalizeObject(Thread* t, object o)
           and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
                          &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
       {
-        uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(m),
-                                  reinterpret_cast<uintptr_t>(o) };
+        PROTECT(t, m);
+        PROTECT(t, o);
+
+        uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(&m),
+                                  reinterpret_cast<uintptr_t>(&o) };
 
         run(t, invoke, arguments);
 
@@ -2155,7 +2158,7 @@ void
 doCollect(Thread* t, Heap::CollectionType type)
 {
 #ifdef VM_STRESS
-  bool stress = (t->flags |= Thread::StressFlag);
+  bool stress = (t->flags & Thread::StressFlag) != 0;
   if (not stress) atomicOr(&(t->flags), Thread::StressFlag);
 #endif
 
