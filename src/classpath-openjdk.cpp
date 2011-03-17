@@ -3500,14 +3500,18 @@ jvmGetComponentType(Thread* t, uintptr_t* arguments)
 {
   jclass c = reinterpret_cast<jobject>(arguments[0]);
 
-  uint8_t n = byteArrayBody(t, className(t, jclassVmClass(t, *c)), 1);
-  if (n != 'L' and n != '[') {
-    return reinterpret_cast<uintptr_t>
-      (makeLocalReference(t, getJClass(t, primitiveClass(t, n))));
+  if (classArrayDimensions(t, jclassVmClass(t, *c))) {
+    uint8_t n = byteArrayBody(t, className(t, jclassVmClass(t, *c)), 1);
+    if (n != 'L' and n != '[') {
+      return reinterpret_cast<uintptr_t>
+        (makeLocalReference(t, getJClass(t, primitiveClass(t, n))));
+    } else {
+      return reinterpret_cast<uintptr_t>
+        (makeLocalReference
+         (t, getJClass(t, classStaticTable(t, jclassVmClass(t, *c)))));
+    }
   } else {
-    return reinterpret_cast<uintptr_t>
-      (makeLocalReference
-       (t, getJClass(t, classStaticTable(t, jclassVmClass(t, *c)))));
+    return 0;
   }
 }
 
