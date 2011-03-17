@@ -138,8 +138,8 @@ enum StackTag {
   ObjectTag
 };
 
-const int NativeLine = -1;
-const int UnknownLine = -2;
+const int NativeLine = -2;
+const int UnknownLine = -1;
 
 // class vmFlags:
 const unsigned ReferenceFlag = 1 << 0;
