@@ -610,7 +610,8 @@ Avian_avian_Classes_resolveVMClass
   object loader = reinterpret_cast<object>(arguments[0]);
   object spec = reinterpret_cast<object>(arguments[1]);
 
-  return reinterpret_cast<int64_t>(resolveClass(t, loader, spec));
+  return reinterpret_cast<int64_t>
+    (resolveClass(t, loader, spec, true, Machine::ClassNotFoundExceptionType));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

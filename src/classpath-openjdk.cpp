@@ -277,7 +277,10 @@ class MyClasspath : public Classpath {
       }
 
       array = charArray;
+    } else {
+      expect(t, objectClass(t, array) == type(t, Machine::CharArrayType));
     }
+
     return vm::makeString(t, array, offset, length, 0);
   }
 
@@ -2119,6 +2122,16 @@ Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<int32_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getIntVolatile
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2168,6 +2181,17 @@ Avian_sun_misc_Unsafe_getLongVolatile
 
 extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int32_t value = arguments[4];
+
+  cast<int32_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF
 (Thread*, object, uintptr_t* arguments)
 {
   object o = reinterpret_cast<object>(arguments[1]);
@@ -3248,21 +3272,10 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
   jobject loader = reinterpret_cast<jobject>(arguments[2]);
   jboolean throwError = arguments[3];
 
-  THREAD_RESOURCE(t, jboolean, throwError, {
-      if (t->exception and throwError) {
-        object exception = t->exception;
-        t->exception = 0;
-
-        t->exception = makeThrowable
-          (t, Machine::NoClassDefFoundErrorType,
-           throwableMessage(t, exception),
-           throwableTrace(t, exception),
-           throwableCause(t, exception));
-      }
-    });
-
   object c = resolveClass
-    (t, loader ? *loader : root(t, Machine::BootLoader), name);
+    (t, loader ? *loader : root(t, Machine::BootLoader), name, true,
+     throwError ? Machine::NoClassDefFoundErrorType
+     : Machine::ClassNotFoundExceptionType);
 
   if (init) {
     PROTECT(t, c);
@@ -3542,9 +3555,19 @@ EXPORT(JVM_GetDeclaringClass)(Thread*, jclass)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-EXPORT(JVM_GetClassSignature)(Thread*, jclass)
+EXPORT(JVM_GetClassSignature)(Thread* t, jclass c)
 {
-  // todo: implement properly
+  ENTER(t, Thread::ActiveState);
+
+  object addendum = classAddendum(t, jclassVmClass(t, *c));
+  if (addendum) {
+    object signature = addendumSignature(t, addendum);
+    if (signature) {
+      return makeLocalReference
+        (t, t->m->classpath->makeString
+         (t, signature, 0, byteArrayLength(t, signature) - 1));
+    }
+  }
   return 0;
 }
 
@@ -3605,16 +3628,30 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
            methodAddendum(t, vmMethod));
         PROTECT(t, exceptionTypes);
 
-        object signature = t->m->classpath->makeString
-          (t, methodSpec(t, vmMethod), 0, byteArrayLength
-           (t, methodSpec(t, vmMethod)) - 1);
+        object signature;
+        object annotationTable;
+        object annotationDefault;
+        object addendum = methodAddendum(t, vmMethod);
+        if (addendum) {
+          signature = addendumSignature(t, addendum);
+          if (signature) {
+            signature = t->m->classpath->makeString
+              (t, signature, 0, byteArrayLength(t, signature) - 1);
+          }
 
-        object annotationTable = methodAddendum(t, vmMethod) == 0
-          ? 0 : addendumAnnotationTable(t, methodAddendum(t, vmMethod));
+          annotationTable = addendumAnnotationTable(t, addendum);
 
-        if (annotationTable) {
+          annotationDefault = methodAddendumAnnotationDefault(t, addendum);
+        } else {
+          signature = 0;
+          annotationTable = 0;
+          annotationDefault = 0;
+        }
+
+        if (annotationTable or annotationDefault) {
           PROTECT(t, signature);
           PROTECT(t, annotationTable);
+          PROTECT(t, annotationDefault);
 
           object runtimeData = getClassRuntimeData(t, jclassVmClass(t, *c));
 
@@ -3624,8 +3661,8 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
 
         object method = makeJmethod
           (t, true, *c, i, name, returnType, parameterTypes, exceptionTypes,
-           methodFlags(t, vmMethod), signature, 0, annotationTable, 0, 0, 0, 0,
-           0, 0, 0);
+           methodFlags(t, vmMethod), signature, 0, annotationTable, 0,
+           annotationDefault, 0, 0, 0, 0, 0);
 
         assert(t, ai < objectArrayLength(t, array));
 
@@ -3685,12 +3722,21 @@ jvmGetClassDeclaredFields(Thread* t, uintptr_t* arguments)
 
         type = getJClass(t, type);
 
-        object signature = t->m->classpath->makeString
-          (t, fieldSpec(t, vmField), 0, byteArrayLength
-           (t, fieldSpec(t, vmField)) - 1);
+        object signature;
+        object annotationTable;
+        object addendum = fieldAddendum(t, vmField);
+        if (addendum) {
+          signature = addendumSignature(t, addendum);
+          if (signature) {
+            signature = t->m->classpath->makeString
+              (t, signature, 0, byteArrayLength(t, signature) - 1);
+          }
 
-        object annotationTable = fieldAddendum(t, vmField) == 0
-          ? 0 : addendumAnnotationTable(t, fieldAddendum(t, vmField));
+          annotationTable = addendumAnnotationTable(t, addendum);
+        } else {
+          signature = 0;
+          annotationTable = 0;
+        }
 
         if (annotationTable) {
           PROTECT(t, signature);
@@ -3767,12 +3813,21 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
            methodAddendum(t, vmMethod));
         PROTECT(t, exceptionTypes);
 
-        object signature = t->m->classpath->makeString
-          (t, methodSpec(t, vmMethod), 0, byteArrayLength
-           (t, methodSpec(t, vmMethod)) - 1);
+        object signature;
+        object annotationTable;
+        object addendum = methodAddendum(t, vmMethod);
+        if (addendum) {
+          signature = addendumSignature(t, addendum);
+          if (signature) {
+            signature = t->m->classpath->makeString
+              (t, signature, 0, byteArrayLength(t, signature) - 1);
+          }
 
-        object annotationTable = methodAddendum(t, vmMethod) == 0
-          ? 0 : addendumAnnotationTable(t, methodAddendum(t, vmMethod));
+          annotationTable = addendumAnnotationTable(t, addendum);
+        } else {
+          signature = 0;
+          annotationTable = 0;
+        }
 
         if (annotationTable) {
           PROTECT(t, signature);
@@ -4405,7 +4460,7 @@ extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_GetSockOpt)(jint socket, int level, int optionName,
                        char* optionValue, int* optionLength)
 {
-  socklen_t length;
+  socklen_t length = *optionLength;
   int rv = getsockopt(socket, level, optionName, optionValue, &length);
   *optionLength = length;
   return rv;

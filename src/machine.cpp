@@ -954,7 +954,8 @@ addInterfaces(Thread* t, object class_, object map)
 }
 
 void
-parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
+parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
+                    Machine::Type throwType)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
@@ -971,7 +972,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool)
     object name = referenceName(t, singletonObject(t, pool, s.read2() - 1));
     PROTECT(t, name);
 
-    object interface = resolveClass(t, classLoader(t, class_), name);
+    object interface = resolveClass
+      (t, classLoader(t, class_), name, true, throwType);
 
     PROTECT(t, interface);
 
@@ -1047,6 +1049,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned value = 0;
 
+      addendum = 0;
+
       unsigned code = fieldCode
         (t, byteArrayBody(t, singletonObject(t, pool, spec - 1), 0));
 
@@ -1059,14 +1063,28 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
                        &byteArrayBody(t, name, 0)) == 0)
         {
           value = s.read2();
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
+                              &byteArrayBody(t, name, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeFieldAddendum(t, pool, 0, 0);
+          }
+      
+          set(t, addendum, AddendumSignature,
+              singletonObject(t, pool, s.read2() - 1));
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
+          if (addendum == 0) {
+            addendum = makeFieldAddendum(t, pool, 0, 0);
+          }
+
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
-          addendum = makeFieldAddendum(t, pool, body);
+
+          set(t, addendum, AddendumAnnotationTable, body);
         } else {
           s.skip(length);
         }
@@ -1387,6 +1405,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned name = s.read2();
       unsigned spec = s.read2();
 
+      addendum = 0;
       code = 0;
 
       unsigned attributeCount = s.read2();
@@ -1402,7 +1421,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, name, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
           }
           unsigned exceptionCount = s.read2();
           object body = makeShortArray(t, exceptionCount);
@@ -1411,15 +1430,39 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           }
           set(t, addendum, MethodAddendumExceptionTable, body);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
+                              ("AnnotationDefault"),
+                              &byteArrayBody(t, name, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+          }
+
+          object body = makeByteArray(t, length);
+          s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
+                 length);
+
+          set(t, addendum, MethodAddendumAnnotationDefault, body);          
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
+                              &byteArrayBody(t, name, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+          }
+      
+          set(t, addendum, AddendumSignature,
+              singletonObject(t, pool, s.read2() - 1));
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("RuntimeVisibleAnnotations"),
                               &byteArrayBody(t, name, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
           }
+
           object body = makeByteArray(t, length);
           s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
                  length);
+
           set(t, addendum, AddendumAnnotationTable, body);
         } else {
           s.skip(length);
@@ -1632,6 +1675,12 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 void
 parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
 {
+  PROTECT(t, class_);
+  PROTECT(t, pool);
+
+  object addendum = 0;
+  PROTECT(t, addendum);
+
   unsigned attributeCount = s.read2();
   for (unsigned j = 0; j < attributeCount; ++j) {
     object name = singletonObject(t, pool, s.read2() - 1);
@@ -1641,20 +1690,33 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
                    &byteArrayBody(t, name, 0)) == 0)
     {
       set(t, class_, ClassSourceFile, singletonObject(t, pool, s.read2() - 1));
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
+                          &byteArrayBody(t, name, 0)) == 0)
+    {
+      if (addendum == 0) {
+        addendum = makeClassAddendum(t, pool, 0, 0);
+      }
+      
+      set(t, addendum, AddendumSignature,
+          singletonObject(t, pool, s.read2() - 1));
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                           ("RuntimeVisibleAnnotations"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
+      if (addendum == 0) {
+        addendum = makeClassAddendum(t, pool, 0, 0);
+      }
+
       object body = makeByteArray(t, length);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
-      object addendum = makeClassAddendum(t, pool, body);
-      
-      set(t, class_, ClassAddendum, addendum);
+      set(t, addendum, AddendumAnnotationTable, body);
     } else {
       s.skip(length);
     }
   }
+
+  set(t, class_, ClassAddendum, addendum);
 }
 
 void
@@ -1713,6 +1775,7 @@ updateBootstrapClass(Thread* t, object bootstrapClass, object class_)
   set(t, bootstrapClass, ClassFieldTable, classFieldTable(t, class_));
   set(t, bootstrapClass, ClassMethodTable, classMethodTable(t, class_));
   set(t, bootstrapClass, ClassStaticTable, classStaticTable(t, class_));
+  set(t, bootstrapClass, ClassAddendum, classAddendum(t, class_));
 
   updateClassTables(t, bootstrapClass, class_);
 }
@@ -1765,7 +1828,8 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
 }
 
 object
-makeArrayClass(Thread* t, object loader, object spec, bool throw_)
+makeArrayClass(Thread* t, object loader, object spec, bool throw_,
+               Machine::Type throwType)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
@@ -1807,7 +1871,7 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_)
      byteArrayEqual);
   
   if (elementClass == 0) {
-    elementClass = resolveClass(t, loader, elementSpec, throw_);
+    elementClass = resolveClass(t, loader, elementSpec, throw_, throwType);
     if (elementClass == 0) return 0;
   }
 
@@ -1820,7 +1884,8 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_)
 }
 
 object
-resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
+resolveArrayClass(Thread* t, object loader, object spec, bool throw_,
+                  Machine::Type throwType)
 {
   object c = hashMapFind
     (t, root(t, Machine::BootstrapClassMap), spec, byteArrayHash,
@@ -1840,7 +1905,7 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_)
     if (c) {
       return c;
     } else {
-      return makeArrayClass(t, loader, spec, throw_);
+      return makeArrayClass(t, loader, spec, throw_, throwType);
     }
   }
 }
@@ -3145,7 +3210,8 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 object
-parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
+parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
+           Machine::Type throwType)
 {
   PROTECT(t, loader);
 
@@ -3199,7 +3265,8 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
   unsigned super = s.read2();
   if (super) {
     object sc = resolveClass
-      (t, loader, referenceName(t, singletonObject(t, pool, super - 1)));
+      (t, loader, referenceName(t, singletonObject(t, pool, super - 1)),
+       true, throwType);
 
     set(t, class_, ClassSuper, sc);
 
@@ -3208,7 +3275,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
           & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag));
   }
   
-  parseInterfaceTable(t, s, class_, pool);
+  parseInterfaceTable(t, s, class_, pool, throwType);
 
   parseFieldTable(t, s, class_, pool);
 
@@ -3249,7 +3316,8 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size)
 }
 
 object
-resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
+resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
+                   Machine::Type throwType)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
@@ -3269,7 +3337,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
     }
 
     if (byteArrayBody(t, spec, 0) == '[') {
-      class_ = resolveArrayClass(t, loader, spec, throw_);
+      class_ = resolveArrayClass(t, loader, spec, throw_, throwType);
     } else {
       THREAD_RUNTIME_ARRAY(t, char, file, byteArrayLength(t, spec) + 6);
       memcpy(RUNTIME_ARRAY_BODY(file),
@@ -3291,7 +3359,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
         { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
           // parse class file
-          class_ = parseClass(t, loader, region->start(), region->length());
+          class_ = parseClass
+            (t, loader, region->start(), region->length(), throwType);
         }
 
         if (Verbose) {
@@ -3318,8 +3387,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_)
 
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
     } else if (throw_) {
-      throwNew(t, Machine::ClassNotFoundExceptionType, "%s",
-               &byteArrayBody(t, spec, 0));
+      throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
   }
 
@@ -3339,10 +3407,11 @@ findLoadedClass(Thread* t, object loader, object spec)
 }
 
 object
-resolveClass(Thread* t, object loader, object spec, bool throw_)
+resolveClass(Thread* t, object loader, object spec, bool throw_,
+             Machine::Type throwType)
 {
   if (objectClass(t, loader) == type(t, Machine::SystemClassLoaderType)) {
-    return resolveSystemClass(t, loader, spec, throw_);
+    return resolveSystemClass(t, loader, spec, throw_, throwType);
   } else {
     PROTECT(t, loader);
     PROTECT(t, spec);
@@ -3353,7 +3422,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
     }
 
     if (byteArrayBody(t, spec, 0) == '[') {
-      c = resolveArrayClass(t, loader, spec, throw_);
+      c = resolveArrayClass(t, loader, spec, throw_, throwType);
     } else {
       if (root(t, Machine::LoadClassMethod) == 0) {
         object m = resolveMethod
@@ -3383,6 +3452,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
               (&byteArrayBody(t, spec, 0)));
 
       object specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
+      PROTECT(t, specString);
 
       uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(method),
                                 reinterpret_cast<uintptr_t>(loader),
@@ -3395,7 +3465,9 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
         c = jclassVmClass(t, jc);
       } else if (t->exception) {
         if (throw_) {
-          object e = t->exception;
+          object e = type(t, throwType) == objectClass(t, t->exception)
+            ? t->exception
+            : makeThrowable(t, throwType, specString, 0, t->exception);
           t->exception = 0;
           vm::throw_(t, e);
         } else {
@@ -3417,8 +3489,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_)
       hashMapInsert
         (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
     } else if (throw_) {
-      throwNew(t, Machine::ClassNotFoundExceptionType, "%s",
-               &byteArrayBody(t, spec, 0));
+      throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
 
     return c;

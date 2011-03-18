@@ -2466,21 +2466,26 @@ object
 parseUtf8(Thread* t, const char* data, unsigned length);
 
 object
-parseClass(Thread* t, object loader, const uint8_t* data, unsigned length);
+parseClass(Thread* t, object loader, const uint8_t* data, unsigned length,
+           Machine::Type throwType = Machine::NoClassDefFoundErrorType);
 
 object
-resolveClass(Thread* t, object loader, object name, bool throw_ = true);
+resolveClass(Thread* t, object loader, object name, bool throw_ = true,
+             Machine::Type throwType = Machine::NoClassDefFoundErrorType);
 
 inline object
-resolveClass(Thread* t, object loader, const char* name, bool throw_ = true)
+resolveClass(Thread* t, object loader, const char* name, bool throw_ = true,
+             Machine::Type throwType = Machine::NoClassDefFoundErrorType)
 {
   PROTECT(t, loader);
   object n = makeByteArray(t, "%s", name);
-  return resolveClass(t, loader, n, throw_);
+  return resolveClass(t, loader, n, throw_, throwType);
 }
 
 object
-resolveSystemClass(Thread* t, object loader, object name, bool throw_ = true);
+resolveSystemClass
+(Thread* t, object loader, object name, bool throw_ = true,
+ Machine::Type throwType = Machine::NoClassDefFoundErrorType);
 
 inline object
 resolveSystemClass(Thread* t, object loader, const char* name)

@@ -42,7 +42,8 @@ search(Thread* t, object loader, object name,
 object
 resolveSystemClassThrow(Thread* t, object loader, object spec)
 {
-  return resolveSystemClass(t, loader, spec, true);
+  return resolveSystemClass
+    (t, loader, spec, true, Machine::ClassNotFoundExceptionType);
 }
 
 } // namespace
