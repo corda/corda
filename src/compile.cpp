@@ -56,7 +56,7 @@ const unsigned MaxNativeCallFootprint = 4;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
-const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
+const unsigned ExecutableAreaSizeInBytes = 30 * 1024 * 1024;
 
 enum Root {
   CallTable,
