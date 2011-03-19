@@ -1311,6 +1311,7 @@ class Machine {
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;
+  object cleanerQueue;
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;

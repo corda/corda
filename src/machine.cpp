@@ -379,26 +379,33 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
   v->visit(p);
   jreferenceTarget(t, *p) = 0;
 
-  if (jreferenceQueue(t, *p)
-      and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
-  {
-    // queue is reachable - add the reference
+  if (objectClass(t, *p) == type(t, Machine::CleanerType)) {
+    object reference = *p;
+    *p = jreferenceVmNext(t, reference);
+    jreferenceVmNext(t, reference) = t->m->cleanerQueue;
+    t->m->cleanerQueue = reference;
+  } else {
+    if (jreferenceQueue(t, *p)
+        and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
+    {
+      // queue is reachable - add the reference
 
-    v->visit(&jreferenceQueue(t, *p));
+      v->visit(&jreferenceQueue(t, *p));
 
-    object q = jreferenceQueue(t, *p);
+      object q = jreferenceQueue(t, *p);
 
-    if (referenceQueueFront(t, q)) {
-      set(t, *p, JreferenceJNext, referenceQueueFront(t, q));
-    } else {
-      set(t, *p, JreferenceJNext, *p);
+      if (referenceQueueFront(t, q)) {
+        set(t, *p, JreferenceJNext, referenceQueueFront(t, q));
+      } else {
+        set(t, *p, JreferenceJNext, *p);
+      }
+      set(t, q, ReferenceQueueFront, *p);
+
+      jreferenceQueue(t, *p) = 0;
     }
-    set(t, q, ReferenceQueueFront, *p);
 
-    jreferenceQueue(t, *p) = 0;
+    *p = jreferenceVmNext(t, *p);
   }
-
-  *p = jreferenceVmNext(t, *p);
 }
 
 void
@@ -446,6 +453,7 @@ postVisit(Thread* t, Heap::Visitor* v)
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
   assert(t, m->finalizeQueue == 0);
+  assert(t, m->cleanerQueue == 0);
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
@@ -611,13 +619,13 @@ invoke(Thread* t, uintptr_t* arguments)
 }
 
 void
-finalizeObject(Thread* t, object o)
+finalizeObject(Thread* t, object o, const char* name)
 {
   for (object c = objectClass(t, o); c; c = classSuper(t, c)) {
     for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
       object m = arrayBody(t, classMethodTable(t, c), i);
 
-      if (vm::strcmp(reinterpret_cast<const int8_t*>("finalize"),
+      if (vm::strcmp(reinterpret_cast<const int8_t*>(name),
                      &byteArrayBody(t, methodName(t, m), 0)) == 0
           and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
                          &byteArrayBody(t, methodSpec(t, m), 0)) == 0)
@@ -2254,17 +2262,34 @@ doCollect(Thread* t, Heap::CollectionType type)
   if (not stress) atomicAnd(&(t->flags), ~Thread::StressFlag);
 #endif
 
-  object f = t->m->finalizeQueue;
+  object finalizeQueue = t->m->finalizeQueue;
+  PROTECT(t, finalizeQueue);
   t->m->finalizeQueue = 0;
-  for (; f; f = finalizerNext(t, f)) {
+  for (; finalizeQueue; finalizeQueue = finalizerNext(t, finalizeQueue)) {
     void (*function)(Thread*, object);
-    memcpy(&function, &finalizerFinalize(t, f), BytesPerWord);
+    memcpy(&function, &finalizerFinalize(t, finalizeQueue), BytesPerWord);
     if (function) {
-      function(t, finalizerTarget(t, f));
+      function(t, finalizerTarget(t, finalizeQueue));
     } else {
-      setRoot(t, Machine::ObjectsToFinalize, makePair
-              (t, finalizerTarget(t, f), root(t, Machine::ObjectsToFinalize)));
+      setRoot(t, Machine::ObjectsToFinalize, makeFinalizeNode
+              (t, finalizerTarget(t, finalizeQueue),
+               const_cast<char*>("finalize"),
+               root(t, Machine::ObjectsToFinalize)));
     }
+  }
+
+  object cleanerQueue = t->m->cleanerQueue;
+  PROTECT(t, cleanerQueue);
+  t->m->cleanerQueue = 0;
+  while (cleanerQueue) {
+    setRoot(t, Machine::ObjectsToFinalize, makeFinalizeNode
+            (t, cleanerQueue,
+             const_cast<char*>("clean"),
+             root(t, Machine::ObjectsToFinalize)));
+
+    object tmp = cleanerQueue;
+    cleanerQueue = jreferenceVmNext(t, cleanerQueue);
+    jreferenceVmNext(t, tmp) = 0;
   }
 
   if (root(t, Machine::ObjectsToFinalize) and m->finalizeThread == 0) {
@@ -2330,6 +2355,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
+  cleanerQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false),
@@ -4099,8 +4125,10 @@ runFinalizeThread(Thread* t)
       }
     }
 
-    for (; list; list = pairSecond(t, list)) {
-      finalizeObject(t, pairFirst(t, list));
+    for (; list; list = finalizeNodeNext(t, list)) {
+      finalizeObject
+        (t, finalizeNodeTarget(t, list),
+         static_cast<const char*>(finalizeNodeMethodName(t, list)));
     }
   }
 }
