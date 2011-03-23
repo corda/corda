@@ -12,6 +12,8 @@
 #include "stdio.h"
 #include "string.h"
 
+#include "endianness.h"
+
 #define EI_NIDENT 16
 
 #define EI_MAG0 0
@@ -35,6 +37,7 @@
 #define EV_CURRENT 1
 
 #define ELFDATA2LSB 1
+#define ELFDATA2MSB 2
 
 #define ELFOSABI_SYSV 0
 
@@ -43,6 +46,7 @@
 #define EM_386 3
 #define EM_X86_64 62
 #define EM_ARM 40
+#define EM_PPC 20
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -77,7 +81,6 @@
 #  error
 #endif
 
-#define Data ELFDATA2LSB
 #define OSABI ELFOSABI_SYSV
 
 namespace {
@@ -178,7 +181,7 @@ void
 writeObject(const uint8_t* data, unsigned size, FILE* out,
             const char* startName, const char* endName,
             const char* sectionName, unsigned sectionFlags,
-            unsigned alignment, int machine)
+            unsigned alignment, int machine, int encoding)
 {
   const unsigned sectionCount = 5;
   const unsigned symbolCount = 2;
@@ -217,99 +220,108 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   const unsigned stringTableSectionNumber = 3;
 
   FileHeader fileHeader;
-  fileHeader.e_ident[EI_MAG0] = ELFMAG0;
-  fileHeader.e_ident[EI_MAG1] = ELFMAG1;
-  fileHeader.e_ident[EI_MAG2] = ELFMAG2;
-  fileHeader.e_ident[EI_MAG3] = ELFMAG3;
-  fileHeader.e_ident[EI_CLASS] = Class;
-  fileHeader.e_ident[EI_DATA] = Data;
-  fileHeader.e_ident[EI_VERSION] = EV_CURRENT;
-  fileHeader.e_ident[EI_OSABI] = OSABI;
-  fileHeader.e_ident[EI_ABIVERSION] = 0;
-  fileHeader.e_type = ET_REL;
-  fileHeader.e_machine = machine;
-  fileHeader.e_version = EV_CURRENT;
-  fileHeader.e_entry = 0;
-  fileHeader.e_phoff = 0;
-  fileHeader.e_shoff = sizeof(FileHeader);
-  fileHeader.e_flags = (machine == EM_ARM ? 0x04000000 : 0);
-  fileHeader.e_ehsize = sizeof(FileHeader);
-  fileHeader.e_phentsize = 0;
-  fileHeader.e_phnum = 0;
-  fileHeader.e_shentsize = sizeof(SectionHeader);
-  fileHeader.e_shnum = sectionCount;
-  fileHeader.e_shstrndx = sectionStringTableSectionNumber;
+  memset(&fileHeader, 0, sizeof(FileHeader));
+  fileHeader.e_ident[EI_MAG0] = V1(ELFMAG0);
+  fileHeader.e_ident[EI_MAG1] = V1(ELFMAG1);
+  fileHeader.e_ident[EI_MAG2] = V1(ELFMAG2);
+  fileHeader.e_ident[EI_MAG3] = V1(ELFMAG3);
+  fileHeader.e_ident[EI_CLASS] = V1(Class);
+  fileHeader.e_ident[EI_DATA] = V1(encoding);
+  fileHeader.e_ident[EI_VERSION] = V1(EV_CURRENT);
+  fileHeader.e_ident[EI_OSABI] = V1(OSABI);
+  fileHeader.e_ident[EI_ABIVERSION] = V1(0);
+  fileHeader.e_type = V2(ET_REL);
+  fileHeader.e_machine = V2(machine);
+  fileHeader.e_version = V4(EV_CURRENT);
+  fileHeader.e_entry = VW(0);
+  fileHeader.e_phoff = VW(0);
+  fileHeader.e_shoff = VW(sizeof(FileHeader));
+  fileHeader.e_flags = V4(machine == EM_ARM ? 0x04000000 : 0);
+  fileHeader.e_ehsize = V2(sizeof(FileHeader));
+  fileHeader.e_phentsize = V2(0);
+  fileHeader.e_phnum = V2(0);
+  fileHeader.e_shentsize = V2(sizeof(SectionHeader));
+  fileHeader.e_shnum = V2(sectionCount);
+  fileHeader.e_shstrndx = V2(sectionStringTableSectionNumber);
 
   SectionHeader nullSection;
   memset(&nullSection, 0, sizeof(SectionHeader));
 
   SectionHeader bodySection;
-  bodySection.sh_name = sectionNameOffset;
-  bodySection.sh_type = SHT_PROGBITS;
-  bodySection.sh_flags = sectionFlags;
-  bodySection.sh_addr = 0;
-  bodySection.sh_offset = sizeof(FileHeader)
-    + (sizeof(SectionHeader) * sectionCount);
-  bodySection.sh_size = size;
-  bodySection.sh_link = 0;
-  bodySection.sh_info = 0;
-  bodySection.sh_addralign = alignment;
-  bodySection.sh_entsize = 0;
+  bodySection.sh_name = V4(sectionNameOffset);
+  bodySection.sh_type = V4(SHT_PROGBITS);
+  bodySection.sh_flags = VW(sectionFlags);
+  bodySection.sh_addr = VW(0);
+  unsigned bodySectionOffset
+    = sizeof(FileHeader) + (sizeof(SectionHeader) * sectionCount);
+  bodySection.sh_offset = VW(bodySectionOffset);
+  unsigned bodySectionSize = size;
+  bodySection.sh_size = VW(bodySectionSize);
+  bodySection.sh_link = V4(0);
+  bodySection.sh_info = V4(0);
+  bodySection.sh_addralign = VW(alignment);
+  bodySection.sh_entsize = VW(0);
 
   SectionHeader sectionStringTableSection;
-  sectionStringTableSection.sh_name = sectionStringTableNameOffset;
-  sectionStringTableSection.sh_type = SHT_STRTAB;
-  sectionStringTableSection.sh_flags = 0;
-  sectionStringTableSection.sh_addr = 0;
-  sectionStringTableSection.sh_offset
-    = bodySection.sh_offset + bodySection.sh_size;
-  sectionStringTableSection.sh_size = sectionStringTableLength;
-  sectionStringTableSection.sh_link = 0;
-  sectionStringTableSection.sh_info = 0;
-  sectionStringTableSection.sh_addralign = 1;
-  sectionStringTableSection.sh_entsize = 0;
+  sectionStringTableSection.sh_name = V4(sectionStringTableNameOffset);
+  sectionStringTableSection.sh_type = V4(SHT_STRTAB);
+  sectionStringTableSection.sh_flags = VW(0);
+  sectionStringTableSection.sh_addr = VW(0);
+  unsigned sectionStringTableSectionOffset
+    = bodySectionOffset + bodySectionSize;
+  sectionStringTableSection.sh_offset = VW(sectionStringTableSectionOffset);
+  unsigned sectionStringTableSectionSize = sectionStringTableLength;
+  sectionStringTableSection.sh_size = VW(sectionStringTableSectionSize);
+  sectionStringTableSection.sh_link = V4(0);
+  sectionStringTableSection.sh_info = V4(0);
+  sectionStringTableSection.sh_addralign = VW(1);
+  sectionStringTableSection.sh_entsize = VW(0);
 
   SectionHeader stringTableSection;
-  stringTableSection.sh_name = stringTableNameOffset;
-  stringTableSection.sh_type = SHT_STRTAB;
-  stringTableSection.sh_flags = 0;
-  stringTableSection.sh_addr = 0;
-  stringTableSection.sh_offset = sectionStringTableSection.sh_offset
-    + sectionStringTableSection.sh_size;
-  stringTableSection.sh_size = stringTableLength;
-  stringTableSection.sh_link = 0;
-  stringTableSection.sh_info = 0;
-  stringTableSection.sh_addralign = 1;
-  stringTableSection.sh_entsize = 0;
+  stringTableSection.sh_name = V4(stringTableNameOffset);
+  stringTableSection.sh_type = V4(SHT_STRTAB);
+  stringTableSection.sh_flags = VW(0);
+  stringTableSection.sh_addr = VW(0);
+  unsigned stringTableSectionOffset
+    = sectionStringTableSectionOffset + sectionStringTableSectionSize;
+  stringTableSection.sh_offset  = VW(stringTableSectionOffset);
+  unsigned stringTableSectionSize = stringTableLength;
+  stringTableSection.sh_size = VW(stringTableSectionSize);
+  stringTableSection.sh_link = V4(0);
+  stringTableSection.sh_info = V4(0);
+  stringTableSection.sh_addralign = VW(1);
+  stringTableSection.sh_entsize = VW(0);
 
   SectionHeader symbolTableSection;
-  symbolTableSection.sh_name = symbolTableNameOffset;
-  symbolTableSection.sh_type = SHT_SYMTAB;
-  symbolTableSection.sh_flags = 0;
-  symbolTableSection.sh_addr = 0;
-  symbolTableSection.sh_offset = stringTableSection.sh_offset
-    + stringTableSection.sh_size;
-  symbolTableSection.sh_size = sizeof(Symbol) * symbolCount;
-  symbolTableSection.sh_link = stringTableSectionNumber;
-  symbolTableSection.sh_info = 0;
-  symbolTableSection.sh_addralign = BITS_PER_WORD / 8;
-  symbolTableSection.sh_entsize = sizeof(Symbol);
+  symbolTableSection.sh_name = V4(symbolTableNameOffset);
+  symbolTableSection.sh_type = V4(SHT_SYMTAB);
+  symbolTableSection.sh_flags = VW(0);
+  symbolTableSection.sh_addr = VW(0);
+  unsigned symbolTableSectionOffset
+    = stringTableSectionOffset + stringTableSectionSize;
+  symbolTableSection.sh_offset = VW(symbolTableSectionOffset);
+  unsigned symbolTableSectionSize = sizeof(Symbol) * symbolCount;
+  symbolTableSection.sh_size = VW(symbolTableSectionSize);
+  symbolTableSection.sh_link = V4(stringTableSectionNumber);
+  symbolTableSection.sh_info = V4(0);
+  symbolTableSection.sh_addralign = VW(BITS_PER_WORD / 8);
+  symbolTableSection.sh_entsize = VW(sizeof(Symbol));
 
   Symbol startSymbol;
-  startSymbol.st_name = startNameOffset;
-  startSymbol.st_value = 0;
-  startSymbol.st_size = 0;
-  startSymbol.st_info = SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE);
-  startSymbol.st_other = STV_DEFAULT;
-  startSymbol.st_shndx = bodySectionNumber;
+  startSymbol.st_name = V4(startNameOffset);
+  startSymbol.st_value = VW(0);
+  startSymbol.st_size = VW(0);
+  startSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
+  startSymbol.st_other = V1(STV_DEFAULT);
+  startSymbol.st_shndx = V2(bodySectionNumber);
 
   Symbol endSymbol;
-  endSymbol.st_name = endNameOffset;
-  endSymbol.st_value = size;
-  endSymbol.st_size = 0;
-  endSymbol.st_info = SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE);
-  endSymbol.st_other = STV_DEFAULT;
-  endSymbol.st_shndx = bodySectionNumber;
+  endSymbol.st_name = V4(endNameOffset);
+  endSymbol.st_value = VW(size);
+  endSymbol.st_size = VW(0);
+  endSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
+  endSymbol.st_other = V1(STV_DEFAULT);
+  endSymbol.st_shndx = V2(bodySectionNumber);
 
   fwrite(&fileHeader, 1, sizeof(fileHeader), out);
   fwrite(&nullSection, 1, sizeof(nullSection), out);
@@ -349,12 +361,19 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
    bool writable, bool executable)
 {
   int machine;
+  int encoding;
   if (strcmp(architecture, "x86_64") == 0) {
     machine = EM_X86_64;
+    encoding = ELFDATA2LSB;
   } else if (strcmp(architecture, "i386") == 0) {
     machine = EM_386;
+    encoding = ELFDATA2LSB;
   } else if (strcmp(architecture, "arm") == 0) {
     machine = EM_ARM;
+    encoding = ELFDATA2LSB;
+  } else if (strcmp(architecture, "powerpc") == 0) {
+    machine = EM_PPC;
+    encoding = ELFDATA2MSB;
   } else {
     fprintf(stderr, "unsupported architecture: %s\n", architecture);
     return false;
@@ -376,7 +395,7 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
   }
 
   writeObject(data, size, out, startName, endName, sectionName, sectionFlags,
-              alignment, machine);
+              alignment, machine, encoding);
 
   return true;
 }

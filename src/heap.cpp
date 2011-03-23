@@ -1746,7 +1746,10 @@ tryAllocate(Context* c, unsigned size)
 void*
 allocate(Context* c, unsigned size)
 {
-  return allocate(c, size, false);
+  void* p = allocate(c, size, false);
+  expect(c->system, p);
+
+  return p;
 }
 
 void

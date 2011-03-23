@@ -286,6 +286,39 @@ makeStackTraceElement(Thread* t, object e)
   return makeStackTraceElement(t, class_, method, file, line);
 }
 
+object
+translateInvokeResult(Thread* t, unsigned returnCode, object o)
+{
+  switch (returnCode) {
+  case ByteField:
+    return makeByte(t, intValue(t, o));
+
+  case BooleanField:
+    return makeBoolean(t, intValue(t, o) != 0);
+
+  case CharField:
+    return makeChar(t, intValue(t, o));
+
+  case ShortField:
+    return makeShort(t, intValue(t, o));
+
+  case FloatField:
+    return makeFloat(t, intValue(t, o));
+
+  case IntField:
+  case LongField:
+  case ObjectField:
+  case VoidField:
+    return o;
+
+  case DoubleField:
+    return makeDouble(t, longValue(t, o));
+
+  default:
+    abort(t);
+  }
+}
+
 } // namespace vm
 
 #endif//CLASSPATH_COMMON_H

@@ -22,7 +22,7 @@ const bool TailCalls = true;
 const bool TailCalls = false;
 #endif
 
-#ifdef AVIAN_USE_FRAME_POINTER
+#if (defined AVIAN_USE_FRAME_POINTER) || (defined ARCH_powerpc)
 const bool UseFramePointer = true;
 #else
 const bool UseFramePointer = false;
@@ -333,6 +333,8 @@ class Assembler {
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 
+    virtual bool hasLinkRegister() = 0;
+
     virtual unsigned stackAlignmentInWords() = 0;
 
     virtual bool matchCall(void* returnAddress, void* target) = 0;
@@ -397,7 +399,7 @@ class Assembler {
 
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread) = 0;
-  virtual void saveFrame(unsigned stackOffset) = 0;
+  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) = 0;
   virtual void pushFrame(unsigned argumentCount, ...) = 0;
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void adjustFrame(unsigned difference) = 0;
@@ -426,7 +428,9 @@ class Assembler {
                      unsigned bSize, OperandType bType, Operand* bOperand,
                      unsigned cSize, OperandType cType, Operand* cOperand) = 0;
 
-  virtual void writeTo(uint8_t* dst) = 0;
+  virtual void setDestination(uint8_t* dst) = 0;
+
+  virtual void write() = 0;
 
   virtual Promise* offset(bool forTrace = false) = 0;
 

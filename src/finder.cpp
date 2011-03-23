@@ -632,59 +632,139 @@ class BuiltinElement: public JarElement {
   const char* libraryName;
 };
 
+void
+add(Element** first, Element** last, Element* e)
+{
+  if (*last) {
+    (*last)->next = e;
+  } else {
+    *first = e;
+  }
+  *last = e;
+}
+
+unsigned
+baseName(const char* name, char fileSeparator)
+{
+  const char* p = name;
+  const char* last = 0;
+  while (*p) {
+    if (*p == fileSeparator) {
+      last = p;
+    }
+    ++p;
+  }
+
+  return last ? (last + 1) - name : 0;
+}
+
+void
+add(System* s, Element** first, Element** last, Allocator* allocator,
+    const char* name, unsigned nameLength, const char* bootLibrary);
+
+void
+addJar(System* s, Element** first, Element** last, Allocator* allocator,
+       const char* name, const char* bootLibrary)
+{
+  if (DebugFind) {
+    fprintf(stderr, "add jar %s\n", name);
+  }
+
+  JarElement* e = new (allocator->allocate(sizeof(JarElement)))
+    JarElement(s, allocator, name);
+
+  add(first, last, e);
+
+  System::Region* region = e->find("META-INF/MANIFEST.MF");
+  if (region) {
+    unsigned start = 0;
+    unsigned length;
+    while (readLine(region->start(), region->length(), &start, &length)) {
+      const unsigned PrefixLength = 12;
+      if (strncmp("Class-Path: ", reinterpret_cast<const char*>
+                  (region->start() + start), PrefixLength) == 0)
+      {
+        for (Tokenizer t(reinterpret_cast<const char*>
+                         (region->start() + start + PrefixLength),
+                         length - PrefixLength, ' ');
+             t.hasMore();)
+        {
+          Tokenizer::Token token(t.next());
+
+          unsigned base = baseName(name, s->fileSeparator());
+
+          RUNTIME_ARRAY(char, n, base + token.length + 1);
+          memcpy(RUNTIME_ARRAY_BODY(n), name, base);
+          memcpy(RUNTIME_ARRAY_BODY(n) + base, token.s, token.length);
+          RUNTIME_ARRAY_BODY(n)[base + token.length] = 0;
+          
+          add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
+              base + token.length, bootLibrary);
+        }
+      }
+      start += length;
+    }
+
+    region->dispose();
+  }
+}
+
+void
+add(System* s, Element** first, Element** last, Allocator* allocator,
+    const char* token, unsigned tokenLength, const char* bootLibrary)
+{
+  if (*token == '[' and token[tokenLength - 1] == ']') {
+    char* name = static_cast<char*>(allocator->allocate(tokenLength - 1));
+    memcpy(name, token + 1, tokenLength - 1);
+    name[tokenLength - 2] = 0; 
+
+    if (DebugFind) {
+      fprintf(stderr, "add builtin %s\n", name);
+    }
+  
+    add(first, last, new (allocator->allocate(sizeof(BuiltinElement)))
+        BuiltinElement(s, allocator, name, bootLibrary));
+  } else {
+    char* name = static_cast<char*>(allocator->allocate(tokenLength + 1));
+    memcpy(name, token, tokenLength);
+    name[tokenLength] = 0;
+
+    unsigned length;
+    switch (s->stat(name, &length)) {
+    case System::TypeFile: {
+      addJar(s, first, last, allocator, name, bootLibrary);
+    } break;
+
+    case System::TypeDirectory: {
+      if (DebugFind) {
+        fprintf(stderr, "add directory %s\n", name);
+      }
+
+      add(first, last, new (allocator->allocate(sizeof(DirectoryElement)))
+          DirectoryElement(s, allocator, name));
+    } break;
+
+    default: {
+      if (DebugFind) {
+        fprintf(stderr, "ignore nonexistent %s\n", name);
+      }
+
+      allocator->free(name, strlen(name) + 1);
+    } break;
+    }
+  }
+}
+
 Element*
 parsePath(System* s, Allocator* allocator, const char* path,
           const char* bootLibrary)
 {
   Element* first = 0;
-  Element* prev = 0;
+  Element* last = 0;
   for (Tokenizer t(path, s->pathSeparator()); t.hasMore();) {
     Tokenizer::Token token(t.next());
 
-    Element* e;
-    if (*token.s == '[' and token.s[token.length - 1] == ']') {
-      char* name = static_cast<char*>(allocator->allocate(token.length - 1));
-      memcpy(name, token.s + 1, token.length - 1);
-      name[token.length - 2] = 0; 
-  
-      e = new (allocator->allocate(sizeof(BuiltinElement)))
-        BuiltinElement(s, allocator, name, bootLibrary);
-    } else {
-      char* name = static_cast<char*>(allocator->allocate(token.length + 1));
-      memcpy(name, token.s, token.length);
-      name[token.length] = 0;
-
-      unsigned length;
-      switch (s->stat(name, &length)) {
-      case System::TypeFile: {
-        e = new (allocator->allocate(sizeof(JarElement)))
-          JarElement(s, allocator, name);
-      } break;
-
-      case System::TypeDirectory: {
-        e = new (allocator->allocate(sizeof(DirectoryElement)))
-          DirectoryElement(s, allocator, name);
-      } break;
-
-      default: {
-        allocator->free(name, strlen(name) + 1);
-        e = 0;
-      } break;
-      }
-    }
-
-    if (DebugFind) {
-      fprintf(stderr, "add element %.*s %p\n", token.length, token.s, e);
-    }
-
-    if (e) {
-      if (prev) {
-        prev->next = e;
-      } else {
-        first = e;
-      }
-      prev = e;
-    }
+    add(s, &first, &last, allocator, token.s, token.length, bootLibrary);
   }
 
   return first;

@@ -67,10 +67,16 @@ public class Trace implements Runnable {
         if (i % 100 == 0) {
           System.out.print("r");
           System.out.flush();
+          synchronized (this) {
+            notifyAll();
+          }
         }
       }
     } finally {
-      alive = false;
+      synchronized (this) {
+        alive = false;
+        notifyAll();
+      }
     }
   }
 
@@ -88,7 +94,7 @@ public class Trace implements Runnable {
         ++ count;
         
         if (count % 100 == 0) {
-          Thread.yield();
+          trace.wait();
           System.out.print("t");
           System.out.flush();
         }

@@ -924,10 +924,9 @@ handleSignal(int signal, siginfo_t* info, void* context)
       // supposed to work.
 
       sigset_t set;
-
       sigemptyset(&set);
       sigaddset(&set, signal);
-      sigprocmask(SIG_UNBLOCK, &set, 0);
+      pthread_sigmask(SIG_UNBLOCK, &set, 0);
 
       vmJump(ip, frame, stack, thread, 0, 0);
     }

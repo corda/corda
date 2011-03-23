@@ -2287,11 +2287,9 @@ append(char** p, const char* value, unsigned length, char tail)
   }
 }
 
-void
-boot(Thread* t)
+uint64_t
+boot(Thread* t, uintptr_t*)
 {
-  enter(t, Thread::ActiveState);
-
   t->javaThread = t->m->classpath->makeThread(t, 0);
 
   setRoot(t, Machine::NullPointerException, makeThrowable
@@ -2313,6 +2311,8 @@ boot(Thread* t)
   t->m->classpath->boot(t);
 
   enter(t, Thread::IdleState);
+
+  return 1;
 }
 
 } // namespace local
@@ -2628,7 +2628,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   *t = p->makeThread(*m, 0, 0);
 
-  local::boot(*t);
+  enter(*t, Thread::ActiveState);
+  enter(*t, Thread::IdleState);
 
-  return 0;
+  return run(*t, local::boot, 0) ? 0 : -1;
 }
