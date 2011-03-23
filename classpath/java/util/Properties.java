@@ -85,7 +85,18 @@ public class Properties extends Hashtable {
     }
 
     abstract int readCharacter() throws IOException;
-    
+
+    char readUtf16() throws IOException {
+      char c = 0;
+      for (int i = 0; i < 4; ++i) {
+        int digit = Character.digit((char)readCharacter(), 16);
+        if (digit == -1) throw new IOException("Invalid Unicode escape encountered.");
+        c <<= 4;
+        c |= digit;
+      }   
+      return c;
+    }
+
     void parse(Map map)
       throws IOException
     {
@@ -149,17 +160,11 @@ public class Properties extends Hashtable {
             break;
 
           case 'u':
-            if (escaped) { // ASCII Unicode escape
-              int most  = Character.digit((char)in.read(), 16);
-              int more  = Character.digit((char)in.read(), 16);
-              int less  = Character.digit((char)in.read(), 16);
-              int least = Character.digit((char)in.read(), 16);
-              char utf16 = (char)(most << 12 | more << 8 | less << 4 | least);
-              append(utf16);
+            if (escaped) {
+              append(readUtf16());
             } else {
               append(c);
-            }
-            break;
+            } break;
 
           default:
             append(c);
