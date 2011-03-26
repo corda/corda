@@ -3701,6 +3701,10 @@ unregisterNatives(Thread* t, object c)
   }
 }
 
+void
+populateMultiArray(Thread* t, object array, int32_t* counts,
+                   unsigned index, unsigned dimensions);
+
 object
 getCaller(Thread* t, unsigned target);
 

@@ -2733,7 +2733,13 @@ EXPORT(JVM_MaxMemory)()
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_ActiveProcessorCount)()
 {
-  return 1;
+#ifdef PLATFORM_WINDOWS
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  return si.dwNumberOfProcessors;
+#else
+  return sysconf(_SC_NPROCESSORS_ONLN);
+#endif
 }
 
 uint64_t
@@ -2780,7 +2786,7 @@ EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
 extern "C" JNIEXPORT jboolean JNICALL
 EXPORT(JVM_IsSupportedJNIVersion)(jint version)
 {
-  return version <= JNI_VERSION_1_4;
+  return version <= JNI_VERSION_1_6;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -3165,14 +3171,9 @@ extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_SetPrimitiveArrayElement)(Thread*, jobject, jint, jvalue,
                              unsigned char) { abort(); }
 
-uint64_t
-jvmNewArray(Thread* t, uintptr_t* arguments)
+object
+makeNewArray(Thread* t, object c, unsigned length)
 {
-  jclass elementClass = reinterpret_cast<jclass>(arguments[0]);
-  jint length = arguments[1];
-
-  object c = jclassVmClass(t, *elementClass);
-
   if (classVmFlags(t, c) & PrimitiveFlag) {
     const char* name = reinterpret_cast<char*>
       (&byteArrayBody(t, local::getClassName(t, c), 0));
@@ -3180,30 +3181,32 @@ jvmNewArray(Thread* t, uintptr_t* arguments)
     switch (*name) {
     case 'b':
       if (name[1] == 'o') {
-        return reinterpret_cast<uint64_t>
-          (makeLocalReference(t, makeBooleanArray(t, length)));
+        return makeBooleanArray(t, length);
       } else {
-        return reinterpret_cast<uint64_t>
-          (makeLocalReference(t, makeByteArray(t, length)));
+        return makeByteArray(t, length);
       }
-    case 'c': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeCharArray(t, length)));
-    case 'd': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeDoubleArray(t, length)));
-    case 'f': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeFloatArray(t, length)));
-    case 'i': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeIntArray(t, length)));
-    case 'l': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeLongArray(t, length)));
-    case 's': return reinterpret_cast<uint64_t>
-        (makeLocalReference(t, makeShortArray(t, length)));
+    case 'c': return makeCharArray(t, length);
+    case 'd': return makeDoubleArray(t, length);
+    case 'f': return makeFloatArray(t, length);
+    case 'i': return makeIntArray(t, length);
+    case 'l': return makeLongArray(t, length);
+    case 's': return makeShortArray(t, length);
     default: abort(t);
     }
   } else {
-    return reinterpret_cast<uint64_t>
-      (makeLocalReference(t, makeObjectArray(t, c, length)));
+    return makeObjectArray(t, c, length);
   }
+}
+
+uint64_t
+jvmNewArray(Thread* t, uintptr_t* arguments)
+{
+  jclass elementClass = reinterpret_cast<jclass>(arguments[0]);
+  jint length = arguments[1];
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, makeNewArray(t, jclassVmClass(t, *elementClass), length)));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
@@ -3215,8 +3218,41 @@ EXPORT(JVM_NewArray)(Thread* t, jclass elementClass, jint length)
   return reinterpret_cast<jobject>(run(t, jvmNewArray, arguments));
 }
 
+uint64_t
+jvmNewMultiArray(Thread* t, uintptr_t* arguments)
+{
+  jclass elementClass = reinterpret_cast<jclass>(arguments[0]);
+  jintArray dimensions = reinterpret_cast<jintArray>(arguments[1]);
+
+  THREAD_RUNTIME_ARRAY(t, int32_t, counts, intArrayLength(t, *dimensions));
+  for (int i = intArrayLength(t, *dimensions) - 1; i >= 0; --i) {
+    RUNTIME_ARRAY_BODY(counts)[i] = intArrayBody(t, *dimensions, i);
+    if (UNLIKELY(RUNTIME_ARRAY_BODY(counts)[i] < 0)) {
+      throwNew(t, Machine::NegativeArraySizeExceptionType, "%d",
+               RUNTIME_ARRAY_BODY(counts)[i]);
+      return 0;
+    }
+  }
+
+  object array = makeNewArray
+    (t, jclassVmClass(t, *elementClass), RUNTIME_ARRAY_BODY(counts)[0]);
+  PROTECT(t, array);
+
+  populateMultiArray(t, array, RUNTIME_ARRAY_BODY(counts), 0,
+                     intArrayLength(t, *dimensions));
+
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
+}
+
 extern "C" JNIEXPORT jobject JNICALL
-EXPORT(JVM_NewMultiArray)(Thread*, jclass, jintArray) { abort(); }
+EXPORT(JVM_NewMultiArray)(Thread* t, jclass elementClass,
+                          jintArray dimensions)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(elementClass),
+                            reinterpret_cast<uintptr_t>(dimensions) };
+
+  return reinterpret_cast<jobject>(run(t, jvmNewMultiArray, arguments));
+}
 
 extern "C" JNIEXPORT jclass JNICALL
 EXPORT(JVM_GetCallerClass)(Thread* t, int target)
@@ -4338,7 +4374,25 @@ EXPORT(JVM_Lseek)(jint fd, jlong offset, jint seek)
 }
 
 extern "C" JNIEXPORT jint JNICALL
-EXPORT(JVM_SetLength)(jint, jlong) { abort(); }
+EXPORT(JVM_SetLength)(jint fd, jlong length)
+{
+#ifdef PLATFORM_WINDOWS
+  HANDLE h = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+  if (h == INVALID_HANDLE_VALUE) {
+    errno = EBADF;
+    return -1;
+  }
+
+  if (SetEndOfFile(h, length)) {
+    return 0;
+  } else {
+    errno = EIO;
+    return -1;
+  }
+#else
+  return ftruncate(fd, length);
+#endif
+}
 
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_Sync)(jint fd)
