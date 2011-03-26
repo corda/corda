@@ -354,9 +354,22 @@ ifeq ($(mode),stress-major)
 endif
 ifeq ($(mode),fast)
 	optimization-cflags = -O3 -g3 -DNDEBUG
+	use-lto = true
 endif
 ifeq ($(mode),small)
 	optimization-cflags = -Os -g3 -DNDEBUG
+	use-lto = true
+endif
+
+ifeq ($(use-lto),true)
+# only try to use LTO when GCC 4.6.0 or greater is available
+	gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
+	gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
+	ifeq ($(shell expr 4 \< $(gcc-major) \
+			\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
+		optimization-cflags += -flto
+		lflags += $(optimization-cflags)
+	endif
 endif
 
 cflags += $(optimization-cflags)
