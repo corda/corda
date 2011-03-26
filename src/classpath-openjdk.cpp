@@ -952,6 +952,10 @@ class ZipFile {
     Entry(int64_t entry):
       hash(0), start(0), next(0), entry(entry)
     { }
+    
+    Entry():
+      hash(0), start(0), next(0), entry(0)
+    { }
 
     unsigned hash;
     const uint8_t* start;
@@ -4383,7 +4387,14 @@ EXPORT(JVM_SetLength)(jint fd, jlong length)
     return -1;
   }
 
-  if (SetEndOfFile(h, length)) {
+  long high = length >> 32;
+  DWORD r = SetFilePointer(h, static_cast<long>(length), &high, FILE_BEGIN);
+  if (r == 0xFFFFFFFF and GetLastError() != NO_ERROR) {
+    errno = EIO;
+    return -1;
+  }
+
+  if (SetEndOfFile(h)) {
     return 0;
   } else {
     errno = EIO;
@@ -4505,7 +4516,14 @@ EXPORT(JVM_SendTo)(jint, char*, int,
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_SocketAvailable)(jint socket, jint* count)
 {
+#ifdef PLATFORM_WINDOWS
+  unsigned long c = *count;
+  int r = ioctlsocket(socket, FIONREAD, &c);
+  *count = c;
+  return r;
+#else
   return ioctl(socket, FIONREAD, count) < 0 ? 0 : 1;
+#endif
 }
 
 extern "C" JNIEXPORT jint JNICALL
