@@ -82,7 +82,7 @@ public class LazyLoading {
     }
   }
 
-  private static class Test {
+  public static class Test {
     public static void test() {
       doTest();
       loadLazy = true;
