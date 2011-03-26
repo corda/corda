@@ -326,7 +326,7 @@ class Value: public Compiler::Operand {
   Site* target;
   Value* buddy;
   Value* nextWord;
-  int8_t home;
+  int16_t home;
   ValueType type;
   uint8_t wordIndex;
 };
