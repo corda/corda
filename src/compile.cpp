@@ -6859,7 +6859,7 @@ compile(MyThread* t, Context* context)
     memset(RUNTIME_ARRAY_BODY(visited), 0, visitCount * sizeof(bool));
 
     while (visitCount) {
-      bool progress = false;
+      bool progress UNUSED = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         c->restoreState(state);

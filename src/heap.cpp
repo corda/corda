@@ -1434,7 +1434,7 @@ visitDirtyFixies(Context* c, Fixie** p)
   while (*p) {
     Fixie* f = *p;
 
-    bool wasDirty = false;
+    bool wasDirty UNUSED = false;
     bool clean = true;
     uintptr_t* mask = f->mask();
 
@@ -1527,7 +1527,7 @@ void
 collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
         bool* dirty, bool expectDirty UNUSED)
 {
-  bool wasDirty = false;
+  bool wasDirty UNUSED = false;
   for (Segment::Map::Iterator it(map, start, end); it.hasMore();) {
     wasDirty = true;
     if (map->child) {

@@ -2865,7 +2865,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void updateCall(UnaryOperation op, void* returnAddress,
                           void* newTarget)
   {
-    bool assertAlignment;
+    bool assertAlignment UNUSED;
     switch (op) {
     case AlignedCall:
       op = Call;
