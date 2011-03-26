@@ -5875,6 +5875,25 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   }
 }
 
+unsigned
+resolveIp(MyThread* t, object code, unsigned ip)
+{
+  switch (codeBody(t, code, ip)) {
+  case goto_: {
+    unsigned tmp = ip + 1;
+    return ip + codeReadInt16(t, code, tmp);
+  }
+
+  case goto_w: {
+    unsigned tmp = ip + 1;
+    return ip + codeReadInt32(t, code, tmp);
+  }
+
+  default:
+    return ip;
+  }
+}
+
 object
 translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
                                intptr_t start)
@@ -5900,7 +5919,10 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
         (t, oldTable, i);
 
       intArrayBody(t, newIndex, i * 3)
-        = c->machineIp(exceptionHandlerStart(oldHandler))->value() - start;
+        = c->machineIp
+        (resolveIp
+         (t, methodCode(t, method),
+          exceptionHandlerStart(oldHandler)))->value() - start;
 
       intArrayBody(t, newIndex, (i * 3) + 1)
         = c->machineIp(exceptionHandlerEnd(oldHandler))->value() - start;
@@ -5940,7 +5962,8 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
       LineNumber* newLine = lineNumberTableBody(t, newTable, i);
 
       lineNumberIp(newLine)
-        = c->machineIp(lineNumberIp(oldLine))->value() - start;
+        = c->machineIp(resolveIp(t, code, lineNumberIp(oldLine)))->value()
+        - start;
 
       lineNumberLine(newLine) = lineNumberLine(oldLine);
     }
@@ -6842,7 +6865,8 @@ compile(MyThread* t, Context* context)
         c->restoreState(state);
 
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-        unsigned start = exceptionHandlerStart(eh);
+        unsigned start = resolveIp
+          (t, methodCode(t, context->method), exceptionHandlerStart(eh));
 
         if ((not RUNTIME_ARRAY_BODY(visited)[i])
             and context->visitTable[start])
@@ -7916,6 +7940,17 @@ object
 invoke(Thread* thread, object method, ArgumentList* arguments)
 {
   MyThread* t = static_cast<MyThread*>(thread);
+
+  if (false) {
+    PROTECT(t, method);
+
+    compile(t, local::codeAllocator(static_cast<MyThread*>(t)), 0,
+            resolveMethod
+            (t, root(t, Machine::AppLoader),
+             "foo/ClassName",
+             "methodName",
+             "()V"));
+  }
 
   uintptr_t stackLimit = t->stackLimit;
   uintptr_t stackPosition = reinterpret_cast<uintptr_t>(&t);
