@@ -322,14 +322,28 @@ setLocalLong(Thread* t, unsigned index, uint64_t value)
 void
 pushFrame(Thread* t, object method)
 {
-  if (t->frame >= 0) {
-    pokeInt(t, t->frame + FrameIpOffset, t->ip);
-  }
-  t->ip = 0;
+  PROTECT(t, method);
 
   unsigned parameterFootprint = methodParameterFootprint(t, method);
   unsigned base = t->sp - parameterFootprint;
   unsigned locals = parameterFootprint;
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    // Try to acquire the monitor before doing anything else.
+    // Otherwise, if we were to push the frame first, we risk trying
+    // to release a monitor we never successfully acquired when we try
+    // to pop the frame back off.
+    if (methodFlags(t, method) & ACC_STATIC) {
+      acquire(t, methodClass(t, method));
+    } else {
+      acquire(t, peekObject(t, base));
+    }   
+  }
+
+  if (t->frame >= 0) {
+    pokeInt(t, t->frame + FrameIpOffset, t->ip);
+  }
+  t->ip = 0;
 
   if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
     t->code = methodCode(t, method);
@@ -349,14 +363,6 @@ pushFrame(Thread* t, object method)
   pokeInt(t, frame + FrameBaseOffset, base);
   pokeObject(t, frame + FrameMethodOffset, method);
   pokeInt(t, t->frame + FrameIpOffset, 0);
-
-  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-    if (methodFlags(t, method) & ACC_STATIC) {
-      acquire(t, methodClass(t, method));
-    } else {
-      acquire(t, peekObject(t, base));
-    }   
-  }
 }
 
 void

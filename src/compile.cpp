@@ -235,7 +235,8 @@ class MyThread: public Thread {
          : makeArchitecture(m->system, useNativeFeatures)),
     transition(0),
     traceContext(0),
-    stackLimit(0)
+    stackLimit(0),
+    methodLockIsClean(true)
   {
     arch->acquire();
   }
@@ -256,6 +257,7 @@ class MyThread: public Thread {
   Context* transition;
   TraceContext* traceContext;
   uintptr_t stackLimit;
+  bool methodLockIsClean;
 };
 
 void
@@ -1982,16 +1984,23 @@ void
 releaseLock(MyThread* t, object method, void* stack)
 {
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-    object lock;
-    if (methodFlags(t, method) & ACC_STATIC) {
-      lock = methodClass(t, method);
-    } else {
-      lock = *localObject
-        (t, stackForFrame(t, stack, method), method,
-         savedTargetIndex(t, method));
-    }
+    if (t->methodLockIsClean) {
+      object lock;
+      if (methodFlags(t, method) & ACC_STATIC) {
+        lock = methodClass(t, method);
+      } else {
+        lock = *localObject
+          (t, stackForFrame(t, stack, method), method,
+           savedTargetIndex(t, method));
+      }
     
-    release(t, lock);
+      release(t, lock);
+    } else {
+      // got an exception while trying to acquire the lock for a
+      // synchronized method -- don't try to release it, since we
+      // never succeeded in acquiring it.
+      t->methodLockIsClean = true;
+    }
   }
 }
 
@@ -2765,6 +2774,18 @@ acquireMonitorForObject(MyThread* t, object o)
 }
 
 void
+acquireMonitorForObjectOnEntrance(MyThread* t, object o)
+{
+  if (LIKELY(o)) {
+    t->methodLockIsClean = false;
+    acquire(t, o);
+    t->methodLockIsClean = true;
+  } else {
+    throwNew(t, Machine::NullPointerExceptionType);
+  }
+}
+
+void
 releaseMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -3456,7 +3477,7 @@ handleEntrance(MyThread* t, Frame* frame)
   }
 
   handleMonitorEvent
-    (t, frame, getThunk(t, acquireMonitorForObjectThunk));
+    (t, frame, getThunk(t, acquireMonitorForObjectOnEntranceThunk));
 }
 
 void
