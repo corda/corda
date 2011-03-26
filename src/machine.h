@@ -1260,6 +1260,7 @@ class Machine {
     ShutdownHooks,
     FinalizerThread,
     ObjectsToFinalize,
+    ObjectsToClean,
     NullPointerException,
     ArithmeticException,
     ArrayIndexOutOfBoundsException,
@@ -1311,10 +1312,10 @@ class Machine {
   object finalizers;
   object tenuredFinalizers;
   object finalizeQueue;
-  object cleanerQueue;
   object weakReferences;
   object tenuredWeakReferences;
   bool unsafe;
+  bool collecting;
   bool triedBuiltinOnLoad;
   bool dumpedHeapOnOOM;
   JavaVMVTable javaVMVTable;

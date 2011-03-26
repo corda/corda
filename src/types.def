@@ -104,12 +104,9 @@
 (type finalizer
   (nogc object target)
   (void* finalize)
-  (nogc object next))
-
-(type finalizeNode
-  (object target)
-  (void* methodName)
-  (object next))
+  (nogc object next)
+  (object queueTarget)
+  (object queueNext))
 
 (type hashMap
   (uint32_t size)
@@ -299,7 +296,8 @@
 
 (type phantomReference java/lang/ref/PhantomReference)
 
-(type cleaner sun/misc/Cleaner)
+(type cleaner sun/misc/Cleaner
+  (object queueNext))
 
 (type byteArray [B
   (extends jobject)

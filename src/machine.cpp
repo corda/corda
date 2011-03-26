@@ -364,8 +364,18 @@ finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
 
   object finalizer = *p;
   *p = finalizerNext(t, finalizer);
-  finalizerNext(t, finalizer) = t->m->finalizeQueue;
-  t->m->finalizeQueue = finalizer;
+
+  void (*function)(Thread*, object);
+  memcpy(&function, &finalizerFinalize(t, finalizer), BytesPerWord);
+
+  if (function) {
+    finalizerNext(t, finalizer) = t->m->finalizeQueue;
+    t->m->finalizeQueue = finalizer;
+  } else {
+    set(t, finalizer, FinalizerQueueTarget, finalizerTarget(t, finalizer));
+    set(t, finalizer, FinalizerQueueNext, root(t, Machine::ObjectsToFinalize));
+    setRoot(t, Machine::ObjectsToFinalize, finalizer);
+  }
 }
 
 void
@@ -382,8 +392,9 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, object* p)
   if (objectClass(t, *p) == type(t, Machine::CleanerType)) {
     object reference = *p;
     *p = jreferenceVmNext(t, reference);
-    jreferenceVmNext(t, reference) = t->m->cleanerQueue;
-    t->m->cleanerQueue = reference;
+
+    set(t, reference, CleanerQueueNext, root(t, Machine::ObjectsToClean));
+    setRoot(t, Machine::ObjectsToClean, reference);
   } else {
     if (jreferenceQueue(t, *p)
         and t->m->heap->status(jreferenceQueue(t, *p)) != Heap::Unreachable)
@@ -453,7 +464,6 @@ postVisit(Thread* t, Heap::Visitor* v)
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
   assert(t, m->finalizeQueue == 0);
-  assert(t, m->cleanerQueue == 0);
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
@@ -2230,6 +2240,11 @@ class HeapClient: public Heap::Client {
 void
 doCollect(Thread* t, Heap::CollectionType type)
 {
+  expect(t, not t->m->collecting);
+
+  t->m->collecting = true;
+  THREAD_RESOURCE0(t, t->m->collecting = false);
+
 #ifdef VM_STRESS
   bool stress = (t->flags & Thread::StressFlag) != 0;
   if (not stress) atomicOr(&(t->flags), Thread::StressFlag);
@@ -2263,36 +2278,16 @@ doCollect(Thread* t, Heap::CollectionType type)
 #endif
 
   object finalizeQueue = t->m->finalizeQueue;
-  PROTECT(t, finalizeQueue);
   t->m->finalizeQueue = 0;
   for (; finalizeQueue; finalizeQueue = finalizerNext(t, finalizeQueue)) {
     void (*function)(Thread*, object);
     memcpy(&function, &finalizerFinalize(t, finalizeQueue), BytesPerWord);
-    if (function) {
-      function(t, finalizerTarget(t, finalizeQueue));
-    } else {
-      setRoot(t, Machine::ObjectsToFinalize, makeFinalizeNode
-              (t, finalizerTarget(t, finalizeQueue),
-               const_cast<char*>("finalize"),
-               root(t, Machine::ObjectsToFinalize)));
-    }
+    function(t, finalizerTarget(t, finalizeQueue));
   }
 
-  object cleanerQueue = t->m->cleanerQueue;
-  PROTECT(t, cleanerQueue);
-  t->m->cleanerQueue = 0;
-  while (cleanerQueue) {
-    setRoot(t, Machine::ObjectsToFinalize, makeFinalizeNode
-            (t, cleanerQueue,
-             const_cast<char*>("clean"),
-             root(t, Machine::ObjectsToFinalize)));
-
-    object tmp = cleanerQueue;
-    cleanerQueue = jreferenceVmNext(t, cleanerQueue);
-    jreferenceVmNext(t, tmp) = 0;
-  }
-
-  if (root(t, Machine::ObjectsToFinalize) and m->finalizeThread == 0) {
+  if ((root(t, Machine::ObjectsToFinalize) or root(t, Machine::ObjectsToClean))
+      and m->finalizeThread == 0)
+  {
     m->finalizeThread = m->processor->makeThread
       (m, root(t, Machine::FinalizerThread), m->rootThread);
     
@@ -2355,10 +2350,10 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   finalizers(0),
   tenuredFinalizers(0),
   finalizeQueue(0),
-  cleanerQueue(0),
   weakReferences(0),
   tenuredWeakReferences(0),
   unsafe(false),
+  collecting(false),
   triedBuiltinOnLoad(false),
   dumpedHeapOnOOM(false),
   heapPoolIndex(0)
@@ -3810,7 +3805,7 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
   void* function;
   memcpy(&function, &finalize, BytesPerWord);
 
-  object f = makeFinalizer(t, 0, function, 0);
+  object f = makeFinalizer(t, 0, function, 0, 0, 0);
   finalizerTarget(t, f) = target;
   finalizerNext(t, f) = t->m->finalizers;
   t->m->finalizers = f;
@@ -4104,14 +4099,18 @@ makeTrace(Thread* t, Thread* target)
 void
 runFinalizeThread(Thread* t)
 {
-  object list = 0;
-  PROTECT(t, list);
+  object finalizeList = 0;
+  PROTECT(t, finalizeList);
+
+  object cleanList = 0;
+  PROTECT(t, cleanList);
 
   while (true) {
     { ACQUIRE(t, t->m->stateLock);
 
       while (t->m->finalizeThread
-             and root(t, Machine::ObjectsToFinalize) == 0)
+             and root(t, Machine::ObjectsToFinalize) == 0
+             and root(t, Machine::ObjectsToClean) == 0)
       {
         ENTER(t, Thread::IdleState);
         t->m->stateLock->wait(t->systemThread, 0);
@@ -4120,15 +4119,20 @@ runFinalizeThread(Thread* t)
       if (t->m->finalizeThread == 0) {
         return;
       } else {
-        list = root(t, Machine::ObjectsToFinalize);
+        finalizeList = root(t, Machine::ObjectsToFinalize);
         setRoot(t, Machine::ObjectsToFinalize, 0);
+
+        cleanList = root(t, Machine::ObjectsToClean);
+        setRoot(t, Machine::ObjectsToClean, 0);
       }
     }
 
-    for (; list; list = finalizeNodeNext(t, list)) {
-      finalizeObject
-        (t, finalizeNodeTarget(t, list),
-         static_cast<const char*>(finalizeNodeMethodName(t, list)));
+    for (; finalizeList; finalizeList = finalizerQueueNext(t, finalizeList)) {
+      finalizeObject(t, finalizerQueueTarget(t, finalizeList), "finalize");
+    }
+
+    for (; cleanList; cleanList = cleanerQueueNext(t, cleanList)) {
+      finalizeObject(t, cleanList, "clean");
     }
   }
 }
