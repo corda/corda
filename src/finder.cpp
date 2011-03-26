@@ -55,6 +55,7 @@ class Element {
   virtual System::Region* find(const char* name) = 0;
   virtual System::FileType stat(const char* name, unsigned* length,
                                 bool tryDirectory) = 0;
+  virtual const char* urlPrefix() = 0;
   virtual void dispose() = 0;
 
   Element* next;
@@ -123,7 +124,8 @@ class DirectoryElement: public Element {
   };
 
   DirectoryElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name)
+    s(s), allocator(allocator), name(name),
+    urlPrefix_(append(allocator, "file:", name, "/"))
   { }
 
   virtual Element::Iterator* iterator() {
@@ -157,14 +159,20 @@ class DirectoryElement: public Element {
     return type;
   }
 
+  virtual const char* urlPrefix() {
+    return urlPrefix_;
+  }
+
   virtual void dispose() {
     allocator->free(name, strlen(name) + 1);
+    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
     allocator->free(this, sizeof(*this));
   }
 
   System* s;
   Allocator* allocator;
   const char* name;
+  const char* urlPrefix_;
 };
 
 class PointerRegion: public System::Region {
@@ -428,7 +436,9 @@ class JarElement: public Element {
   };
 
   JarElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name), region(0), index(0)
+    s(s), allocator(allocator), name(name),
+    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
+    region(0), index(0)
   { }
 
   JarElement(System* s, Allocator* allocator, const uint8_t* jarData,
@@ -436,6 +446,7 @@ class JarElement: public Element {
     s(s),
     allocator(allocator),
     name(0),
+    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
     region(new (allocator->allocate(sizeof(PointerRegion)))
            PointerRegion(s, allocator, jarData, jarLength)),
     index(JarIndex::open(s, allocator, region))
@@ -485,12 +496,17 @@ class JarElement: public Element {
             : System::TypeDoesNotExist);
   }
 
+  virtual const char* urlPrefix() {
+    return urlPrefix_;
+  }
+
   virtual void dispose() {
     dispose(sizeof(*this));
   }
 
   virtual void dispose(unsigned size) {
     allocator->free(name, strlen(name) + 1);
+    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
     if (index) {
       index->dispose();
     }
@@ -503,6 +519,7 @@ class JarElement: public Element {
   System* s;
   Allocator* allocator;
   const char* name;
+  const char* urlPrefix_;
   System::Region* region;
   JarIndex* index;
 };
@@ -533,6 +550,10 @@ class BuiltinElement: public JarElement {
         }
       }
     }
+  }
+
+  virtual const char* urlPrefix() {
+    return "resource:";
   }
 
   virtual void dispose() {
@@ -767,6 +788,18 @@ class MyFinder: public Finder {
     }
     
     return System::TypeDoesNotExist;
+  }
+
+  virtual const char* urlPrefix(const char* name) {
+    for (Element* e = path_; e; e = e->next) {
+      unsigned length;
+      System::FileType type = e->stat(name, &length, true);
+      if (type != System::TypeDoesNotExist) {
+        return e->urlPrefix();
+      }
+    }
+
+    return 0;
   }
 
   virtual const char* path() {

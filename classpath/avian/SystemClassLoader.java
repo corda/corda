@@ -34,12 +34,13 @@ public class SystemClassLoader extends ClassLoader {
     return c == null ? null : getClass(c);
   }
 
-  private native boolean resourceExists(String name);
+  private native String resourceURLPrefix(String name);
 
   protected URL findResource(String name) {
-    if (resourceExists(name)) {
+    String prefix = resourceURLPrefix(name);
+    if (prefix != null) {
       try {
-        return new URL("resource:" + name);
+        return new URL(prefix + name);
       } catch (MalformedURLException ignored) { }
     }
     return null;

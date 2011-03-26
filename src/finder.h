@@ -167,6 +167,7 @@ class Finder {
   virtual System::FileType stat(const char* name,
                                 unsigned* length,
                                 bool tryDirectory = false) = 0;
+  virtual const char* urlPrefix(const char* name) = 0;
   virtual const char* path() = 0;
   virtual void dispose() = 0;
 };

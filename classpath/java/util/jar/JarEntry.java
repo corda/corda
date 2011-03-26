@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,10 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.util.zip;
+package java.util.jar;
 
-public abstract class ZipEntry {
-  public abstract String getName();
-  public abstract int getCompressedSize();
-  public abstract int getSize();
-}
+import java.util.zip.ZipEntry;
+
+public abstract class JarEntry extends ZipEntry { }
