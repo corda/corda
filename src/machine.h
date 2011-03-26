@@ -2794,11 +2794,13 @@ atomicCompareAndSwapObject(Thread* t, object target, unsigned offset,
 // Queue Algorithm: http://www.cs.rochester.edu/u/michael/PODC96.html
 
 inline void
-monitorAtomicAppendAcquire(Thread* t, object monitor)
+monitorAtomicAppendAcquire(Thread* t, object monitor, object node)
 {
-  PROTECT(t, monitor);
+  if (node == 0) {
+    PROTECT(t, monitor);
 
-  object node = makeMonitorNode(t, t, 0);
+    node = makeMonitorNode(t, t, 0);
+  }
 
   while (true) {
     object tail = monitorAcquireTail(t, monitor);
@@ -2878,14 +2880,15 @@ monitorTryAcquire(Thread* t, object monitor)
 }
 
 inline void
-monitorAcquire(Thread* t, object monitor)
+monitorAcquire(Thread* t, object monitor, object node = 0)
 {
   if (not monitorTryAcquire(t, monitor)) {
     PROTECT(t, monitor);
+    PROTECT(t, node);
 
     ACQUIRE(t, t->lock);
 
-    monitorAtomicAppendAcquire(t, monitor);
+    monitorAtomicAppendAcquire(t, monitor, node);
     
     // note that we don't try to acquire the lock until we're first in
     // line, both because it's fair and because we don't support
@@ -3009,6 +3012,11 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
   PROTECT(t, monitor);
 
+  // pre-allocate monitor node so we don't get an OutOfMemoryError
+  // when we try to re-acquire the monitor below
+  object monitorNode = makeMonitorNode(t, t, 0);
+  PROTECT(t, monitorNode);
+
   { ACQUIRE(t, t->lock);
 
     monitorAppendWait(t, monitor);
@@ -3023,7 +3031,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
     interrupted = t->lock->wait(t->systemThread, time);
   }
 
-  monitorAcquire(t, monitor);
+  monitorAcquire(t, monitor, monitorNode);
 
   monitorDepth(t, monitor) = depth;
 
