@@ -82,6 +82,10 @@ public class File {
     }
   }
 
+  public String toString() {
+    return getPath();
+  }
+
   public String getPath() {
     return path;
   }
