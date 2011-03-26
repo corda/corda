@@ -3223,8 +3223,10 @@ EXPORT(JVM_GetCallerClass)(Thread* t, int target)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference
-    (t, getJClass(t, methodClass(t, getCaller(t, target))));
+  object method = getCaller(t, target);
+
+  return method ? makeLocalReference
+    (t, getJClass(t, methodClass(t, method))) : 0;
 }
 
 extern "C" JNIEXPORT jclass JNICALL
