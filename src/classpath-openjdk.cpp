@@ -2843,10 +2843,16 @@ extern "C" JNIEXPORT jboolean JNICALL
 EXPORT(JVM_IsSilentCompiler)(Thread*, jclass) { abort(); }
 
 extern "C" JNIEXPORT jboolean JNICALL
-EXPORT(JVM_CompileClass)(Thread*, jclass, jclass) { abort(); }
+EXPORT(JVM_CompileClass)(Thread*, jclass, jclass)
+{
+  return false;
+}
 
 extern "C" JNIEXPORT jboolean JNICALL
-EXPORT(JVM_CompileClasses)(Thread*, jclass, jstring) { abort(); }
+EXPORT(JVM_CompileClasses)(Thread*, jclass, jstring)
+{
+  return false;
+}
 
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_CompilerCommand)(Thread*, jclass, jobject) { abort(); }
