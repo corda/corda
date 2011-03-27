@@ -1845,6 +1845,23 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
   return c;
 }
 
+void
+saveLoadedClass(Thread* t, object loader, object c)
+{
+  PROTECT(t, loader);
+  PROTECT(t, c);
+
+  ACQUIRE(t, t->m->classLock);
+
+  if (classLoaderMap(t, loader) == 0) {
+    object map = makeHashMap(t, 0, 0);
+    set(t, loader, ClassLoaderMap, map);
+  }
+
+  hashMapInsert
+    (t, classLoaderMap(t, loader), className(t, c), c, byteArrayHash);
+}
+
 object
 makeArrayClass(Thread* t, object loader, object spec, bool throw_,
                Machine::Type throwType)
@@ -1895,10 +1912,21 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_,
 
   PROTECT(t, elementClass);
 
-  object class_ = findLoadedClass(t, classLoader(t, elementClass), spec);
+  ACQUIRE(t, t->m->classLock);
 
-  return class_ ? class_ : makeArrayClass
+  object class_ = findLoadedClass(t, classLoader(t, elementClass), spec);
+  if (class_) {
+    return class_;
+  }
+
+  class_ = makeArrayClass
     (t, classLoader(t, elementClass), dimensions, spec, elementClass);
+
+  PROTECT(t, class_);
+
+  saveLoadedClass(t, classLoader(t, elementClass), class_);
+
+  return class_;
 }
 
 object
@@ -3500,15 +3528,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_,
     if (LIKELY(c)) {
       PROTECT(t, c);
 
-      ACQUIRE(t, t->m->classLock);
-
-      if (classLoaderMap(t, loader) == 0) {
-        object map = makeHashMap(t, 0, 0);
-        set(t, loader, ClassLoaderMap, map);
-      }
-
-      hashMapInsert
-        (t, classLoaderMap(t, loader), spec, c, byteArrayHash);
+      saveLoadedClass(t, loader, c);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
@@ -4196,15 +4216,8 @@ defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
 
   if (c) {
     PROTECT(t, c);
-    ACQUIRE(t, t->m->classLock);
 
-    if (classLoaderMap(t, loader) == 0) {
-      object map = makeHashMap(t, 0, 0);
-      set(t, loader, ClassLoaderMap, map);
-    }
-
-    hashMapInsert
-      (t, classLoaderMap(t, loader), className(t, c), c, byteArrayHash);
+    saveLoadedClass(t, loader, c);
   }
 
   return c;
