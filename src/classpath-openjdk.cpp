@@ -2116,6 +2116,16 @@ Avian_sun_misc_Unsafe_putObject
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return cast<int16_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2711,7 +2721,10 @@ EXPORT(JVM_GC)()
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-EXPORT(JVM_MaxObjectInspectionAge)(void) { abort(); }
+EXPORT(JVM_MaxObjectInspectionAge)(void)
+{
+  return 0;
+}
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_TraceInstructions)(jboolean) { abort(); }
