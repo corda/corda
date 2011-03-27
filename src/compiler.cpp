@@ -218,7 +218,8 @@ class LogicalInstruction {
 class Resource {
  public:
   Resource(bool reserved = false):
-    value(0), site(0), freezeCount(0), referenceCount(0), reserved(reserved)
+    value(0), site(0), previousAcquired(0), nextAcquired(0), freezeCount(0),
+    referenceCount(0), reserved(reserved)
   { }
 
   virtual void freeze(Context*, Value*) = 0;
@@ -229,6 +230,8 @@ class Resource {
 
   Value* value;
   Site* site;
+  Resource* previousAcquired;
+  Resource* nextAcquired;
   uint8_t freezeCount;
   uint8_t referenceCount;
   bool reserved;
@@ -379,6 +382,7 @@ class Context {
     (static_cast<RegisterResource*>
      (zone->allocate(sizeof(RegisterResource) * registerLimit))),
     frameResources(0),
+    acquiredResources(0),
     firstConstant(0),
     lastConstant(0),
     machineCode(0),
@@ -426,6 +430,7 @@ class Context {
   uint8_t floatRegisterLimit;
   RegisterResource* registerResources;
   FrameResource* frameResources;
+  Resource* acquiredResources;
   ConstantPoolNode* firstConstant;
   ConstantPoolNode* lastConstant;
   uint8_t* machineCode;
@@ -2586,6 +2591,12 @@ acquire(Context* c, Resource* resource, Value* value, Site* site)
       steal(c, resource, value);
     }
 
+    if (c->acquiredResources) {
+      c->acquiredResources->previousAcquired = resource;
+      resource->nextAcquired = c->acquiredResources;        
+    }
+    c->acquiredResources = resource;
+
     resource->value = value;
     resource->site = site;
   }
@@ -2605,6 +2616,21 @@ release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED)
 
     assert(c, buddies(resource->value, value));
     assert(c, site == resource->site);
+
+    Resource* next = resource->nextAcquired;
+    if (next) {
+      next->previousAcquired = resource->previousAcquired;
+      resource->nextAcquired = 0;
+    }
+
+    Resource* previous = resource->previousAcquired;
+    if (previous) {
+      previous->nextAcquired = next;
+      resource->previousAcquired = 0;
+    } else {
+      assert(c, c->acquiredResources == resource);
+      c->acquiredResources = next;
+    }
     
     resource->value = 0;
     resource->site = 0;
@@ -5526,6 +5552,15 @@ resetFrame(Context* c, Event* e)
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
     clearSites(c, el.value);
+  }
+
+  for (Resource* r = c->acquiredResources; r;) {
+    Resource* next = r->nextAcquired;
+    Value* v = r->value;
+    if (v) {
+      clearSites(c, v);
+    }
+    r = next;
   }
 }
 
