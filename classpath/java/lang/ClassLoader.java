@@ -93,7 +93,7 @@ public abstract class ClassLoader {
     avian.Classes.link(c.vmClass, this);
   }
 
-  private ClassLoader getParent() {
+  public final ClassLoader getParent() {
     return parent;
   }
   
