@@ -5876,32 +5876,46 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
 }
 
 unsigned
-resolveIp(MyThread* t, object code, unsigned ip)
+resolveIp(MyThread* t, Context* context, object code, unsigned ip)
 {
-  switch (codeBody(t, code, ip)) {
-  case goto_: {
-    unsigned tmp = ip + 1;
-    return ip + codeReadInt16(t, code, tmp);
-  }
-
-  case goto_w: {
-    unsigned tmp = ip + 1;
-    return ip + codeReadInt32(t, code, tmp);
-  }
-
-  default:
+  if (context->visitTable[ip]) {
     return ip;
+  } else {
+    // Very rarely, we'll encounter an unreachable goto which is
+    // referred to by the exception handler table or line number
+    // table.  This can be a problem if we need to determine the
+    // corresponding machine address for the bytecode instruction
+    // since we never generated any machine code for it.  For now, we
+    // just follow the goto.  The "proper" fix is probably to go ahead
+    // and generate machine code even though it's unreachable; that
+    // will protect us against unreachable instructions which aren't
+    // gotos as well.
+    switch (codeBody(t, code, ip)) {
+    case goto_: {
+      unsigned tmp = ip + 1;
+      return ip + codeReadInt16(t, code, tmp);
+    }
+
+    case goto_w: {
+      unsigned tmp = ip + 1;
+      return ip + codeReadInt32(t, code, tmp);
+    }
+
+    default:
+      return ip;
+    }
   }
 }
 
 object
-translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
-                               intptr_t start)
+translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = codeExceptionHandlerTable(t, methodCode(t, method));
+  Compiler* c = context->compiler;
+
+  object oldTable = codeExceptionHandlerTable
+    (t, methodCode(t, context->method));
 
   if (oldTable) {
-    PROTECT(t, method);
     PROTECT(t, oldTable);
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
@@ -5921,7 +5935,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
       intArrayBody(t, newIndex, i * 3)
         = c->machineIp
         (resolveIp
-         (t, methodCode(t, method),
+         (t, context, methodCode(t, context->method),
           exceptionHandlerStart(oldHandler)))->value() - start;
 
       intArrayBody(t, newIndex, (i * 3) + 1)
@@ -5933,7 +5947,7 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
       object type;
       if (exceptionHandlerCatchType(oldHandler)) {
         type = resolveClassInPool
-          (t, method, exceptionHandlerCatchType(oldHandler) - 1);
+          (t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
       } else {
         type = 0;
       }
@@ -5948,11 +5962,10 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
 }
 
 object
-translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
+translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = codeLineNumberTable(t, code);
+  object oldTable = codeLineNumberTable(t, methodCode(t, context->method));
   if (oldTable) {
-    PROTECT(t, code);
     PROTECT(t, oldTable);
 
     unsigned length = lineNumberTableLength(t, oldTable);
@@ -5962,7 +5975,10 @@ translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
       LineNumber* newLine = lineNumberTableBody(t, newTable, i);
 
       lineNumberIp(newLine)
-        = c->machineIp(resolveIp(t, code, lineNumberIp(oldLine)))->value()
+        = context->compiler->machineIp
+        (resolveIp
+         (t, context, methodCode(t, context->method), lineNumberIp(oldLine)))
+        ->value()
         - start;
 
       lineNumberLine(newLine) = lineNumberLine(oldLine);
@@ -6682,13 +6698,12 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   }
 
   { object newExceptionHandlerTable = translateExceptionHandlerTable
-      (t, c, context->method, reinterpret_cast<intptr_t>(start));
+      (t, context, reinterpret_cast<intptr_t>(start));
 
     PROTECT(t, newExceptionHandlerTable);
 
     object newLineNumberTable = translateLineNumberTable
-      (t, c, methodCode(t, context->method),
-       reinterpret_cast<intptr_t>(start));
+      (t, context, reinterpret_cast<intptr_t>(start));
 
     object code = methodCode(t, context->method);
 
@@ -6866,7 +6881,8 @@ compile(MyThread* t, Context* context)
 
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         unsigned start = resolveIp
-          (t, methodCode(t, context->method), exceptionHandlerStart(eh));
+          (t, context, methodCode(t, context->method),
+           exceptionHandlerStart(eh));
 
         if ((not RUNTIME_ARRAY_BODY(visited)[i])
             and context->visitTable[start])
