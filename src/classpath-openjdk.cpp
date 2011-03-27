@@ -3138,7 +3138,13 @@ EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
 
     virtual bool visit(Processor::StackWalker* walker) {
       object loader = classLoader(t, methodClass(t, walker->method()));
-      if (loader and loader != root(t, Machine::BootLoader)) {
+      if (loader
+          and loader != root(t, Machine::BootLoader)
+          and strcmp
+          (&byteArrayBody(t, className(t, objectClass(t, loader)), 0),
+           reinterpret_cast<const int8_t*>
+           ("sun/reflect/DelegatingClassLoader")))
+      {
         this->loader = loader;
         return false;
       } else {
