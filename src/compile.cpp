@@ -4890,33 +4890,41 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       if (LIKELY(target)) {
         assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-        unsigned parameterFootprint = methodParameterFootprint(t, target);
-
-        unsigned offset = ClassVtable
-          + (methodOffset(t, target) * BytesPerWord);
-
-        Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
-
-        unsigned rSize = resultSize(t, methodReturnCode(t, target));
-
         bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-        Compiler::Operand* result = c->stackCall
-          (c->memory
-           (c->and_
-            (BytesPerWord, c->constant(PointerMask, Compiler::IntegerType),
-             c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
-            Compiler::ObjectType, offset, 0, 1),
-           tailCall ? Compiler::TailJump : 0,
-           frame->trace(0, 0),
-           rSize,
-           operandTypeForFieldCode(t, methodReturnCode(t, target)),
-           parameterFootprint);
+        if (LIKELY(methodVirtual(t, target))) {
+          unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-        frame->pop(parameterFootprint);
+          unsigned offset = ClassVtable
+            + (methodOffset(t, target) * BytesPerWord);
 
-        if (rSize) {
-          pushReturnValue(t, frame, methodReturnCode(t, target), result);
+          Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
+
+          unsigned rSize = resultSize(t, methodReturnCode(t, target));
+
+          Compiler::Operand* result = c->stackCall
+            (c->memory
+             (c->and_
+              (BytesPerWord, c->constant(PointerMask, Compiler::IntegerType),
+               c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
+              Compiler::ObjectType, offset, 0, 1),
+             tailCall ? Compiler::TailJump : 0,
+             frame->trace(0, 0),
+             rSize,
+             operandTypeForFieldCode(t, methodReturnCode(t, target)),
+             parameterFootprint);
+
+          frame->pop(parameterFootprint);
+
+          if (rSize) {
+            pushReturnValue(t, frame, methodReturnCode(t, target), result);
+          }
+        } else {
+          // OpenJDK generates invokevirtual calls to private methods
+          // (e.g. readObject and writeObject for serialization), so
+          // we must handle such cases here.
+
+          compileDirectInvoke(t, frame, target, tailCall);          
         }
       } else {
         PROTECT(t, reference);
