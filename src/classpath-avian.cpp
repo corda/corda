@@ -589,31 +589,6 @@ Avian_java_lang_Thread_yield
   t->m->system->yield();
 }
 
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_acquireClassLock
-(Thread* t, object, uintptr_t*)
-{
-  acquire(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_releaseClassLock
-(Thread* t, object, uintptr_t*)
-{
-  release(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_resolveVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  object spec = reinterpret_cast<object>(arguments[1]);
-
-  return reinterpret_cast<int64_t>
-    (resolveClass(t, loader, spec, true, Machine::ClassNotFoundExceptionType));
-}
-
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_Classes_primitiveClass
 (Thread* t, object, uintptr_t* arguments)

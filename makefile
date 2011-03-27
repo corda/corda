@@ -552,12 +552,14 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
 		$(classpath-src)/avian/ClassAddendum.java \
+		$(classpath-src)/avian/Classes.java \
 		$(classpath-src)/avian/ConstantPool.java \
 		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
 		$(classpath-src)/avian/IncompatibleContinuationException.java \
 		$(classpath-src)/avian/Machine.java \
 		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/Singleton.java \
 		$(classpath-src)/avian/Stream.java \
 		$(classpath-src)/avian/SystemClassLoader.java \
 		$(classpath-src)/avian/VMClass.java \

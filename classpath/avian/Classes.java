@@ -53,7 +53,7 @@ public class Classes {
       return c;
     } catch (ClassNotFoundException e) {
       NoClassDefFoundError error = new NoClassDefFoundError
-        (new String(nameBytes, offset, length, false));
+        (new String(nameBytes, offset, length));
       error.initCause(e);
       throw error;
     }
@@ -96,7 +96,7 @@ public class Classes {
     case 's': {
       byte[] data = (byte[]) Singleton.getObject(pool, read2(in) - 1);
 
-      return new String(data, 0, data.length - 1, false);
+      return new String(data, 0, data.length - 1);
     }
 
     case 'e': {
@@ -106,7 +106,7 @@ public class Classes {
       return Enum.valueOf
         (SystemClassLoader.getClass
          (loadVMClass(loader, typeName, 1, typeName.length - 3)),
-         new String(name, 0, name.length - 1, false));
+         new String(name, 0, name.length - 1));
     }
 
     case 'c':{
@@ -143,7 +143,7 @@ public class Classes {
 
     for (int i = 2; i < annotation.length; i += 2) {
       byte[] name = (byte[]) Singleton.getObject(pool, read2(in) - 1);
-      annotation[i] = new String(name, 0, name.length - 1, false);
+      annotation[i] = new String(name, 0, name.length - 1);
       annotation[i + 1] = parseAnnotationValue(loader, pool, in);
     }
 

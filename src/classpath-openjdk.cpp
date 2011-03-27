@@ -3312,8 +3312,27 @@ EXPORT(JVM_FindPrimitiveClass)(Thread* t, const char* name)
   }
 }
 
+uint64_t
+jvmResolveClass(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+
+  object method = resolveMethod
+    (t, root(t, Machine::BootLoader), "avian/Classes", "link",
+     "(Lavian/VMClass;)V");
+
+  t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c));
+
+  return 1;
+}
+
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_ResolveClass)(Thread*, jclass) { abort(); }
+EXPORT(JVM_ResolveClass)(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  run(t, jvmResolveClass, arguments);
+}
 
 uint64_t
 jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
