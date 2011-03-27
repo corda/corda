@@ -2630,6 +2630,9 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
                      "avian");
 
+  local::setProperty(t, method, *properties, "java.vm.vendor",
+                     "Avian Contributors");
+
   local::setProperty
     (t, method, *properties, "java.home",
      static_cast<local::MyClasspath*>(t->m->classpath)->javaHome);
