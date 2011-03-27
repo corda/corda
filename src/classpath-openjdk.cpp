@@ -305,7 +305,7 @@ class MyClasspath : public Classpath {
     setObjectClass(t, thread, type(t, Machine::ThreadType));
     threadPriority(t, thread) = NormalPriority;
     threadGroup(t, thread) = group;
-    threadContextClassLoader(t, thread) = root(t, Machine::BootLoader);
+    threadContextClassLoader(t, thread) = root(t, Machine::AppLoader);
 
     PROTECT(t, thread);
 
