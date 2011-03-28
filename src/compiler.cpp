@@ -5554,10 +5554,8 @@ resetFrame(Context* c, Event* e)
     clearSites(c, el.value);
   }
 
-  for (Resource* r = c->acquiredResources; r;) {
-    Resource* next = r->nextAcquired;
-    clearSites(c, r->value);
-    r = next;
+  while (c->acquiredResources) {
+    clearSites(c, c->acquiredResources->value);
   }
 }
 
