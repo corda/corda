@@ -3553,28 +3553,27 @@ jvmGetClassInterfaces(Thread* t, uintptr_t* arguments)
 {
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
-  object table = classInterfaceTable(t, jclassVmClass(t, *c));
-  if (table) {
-    PROTECT(t, table);
+  object addendum = classAddendum(t, jclassVmClass(t, *c));
+  if (addendum) {
+    object table = classAddendumInterfaceTable(t, addendum);
+    if (table) {
+      PROTECT(t, table);
 
-    unsigned stride =
-      (classFlags(t, jclassVmClass(t, *c)) & ACC_INTERFACE) == 0 ? 2 : 1;
+      object array = makeObjectArray(t, arrayLength(t, table));
+      PROTECT(t, array);
 
-    object array = makeObjectArray
-       (t, type(t, Machine::JclassType), arrayLength(t, table) / stride);
-    PROTECT(t, array);
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object c = getJClass(t, arrayBody(t, table, i));
+        set(t, array, ArrayBody + (i * BytesPerWord), c);
+      }
 
-    for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
-      object interface = getJClass(t, arrayBody(t, table, i * stride));
-      set(t, array, ArrayBody + (i * BytesPerWord), interface);
+      return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
     }
-
-    return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
-  } else {
-    return reinterpret_cast<uint64_t>
-      (makeLocalReference
-       (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
   }
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL

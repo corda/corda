@@ -986,6 +986,17 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
   }
 
   unsigned count = s.read2();
+  object table = 0;
+  PROTECT(t, table);
+
+  if (count) {
+    table = makeArray(t, count);
+    if (classAddendum(t, class_) == 0) {
+      object addendum = makeClassAddendum(t, pool, 0, 0, table);
+      set(t, class_, ClassAddendum, addendum);
+    }
+  }
+
   for (unsigned i = 0; i < count; ++i) {
     object name = referenceName(t, singletonObject(t, pool, s.read2() - 1));
     PROTECT(t, name);
@@ -994,6 +1005,8 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
       (t, classLoader(t, class_), name, true, throwType);
 
     PROTECT(t, interface);
+
+    set(t, table, ArrayBody + (i * BytesPerWord), interface);
 
     hashMapInsertMaybe(t, map, name, interface, byteArrayHash, byteArrayEqual);
 
@@ -1696,7 +1709,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, class_);
   PROTECT(t, pool);
 
-  object addendum = 0;
+  object addendum = classAddendum(t, class_);
   PROTECT(t, addendum);
 
   unsigned attributeCount = s.read2();
@@ -1712,7 +1725,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
                           &byteArrayBody(t, name, 0)) == 0)
     {
       if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0);
+        addendum = makeClassAddendum(t, pool, 0, 0, 0);
       }
       
       set(t, addendum, AddendumSignature,
@@ -1722,7 +1735,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
                           &byteArrayBody(t, name, 0)) == 0)
     {
       if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0);
+        addendum = makeClassAddendum(t, pool, 0, 0, 0);
       }
 
       object body = makeByteArray(t, length);
