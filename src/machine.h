@@ -2260,7 +2260,11 @@ markHashTaken(Thread* t, object o)
 inline uint32_t
 takeHash(Thread*, object o)
 {
-  return reinterpret_cast<uintptr_t>(o) / BytesPerWord;
+  // some broken code implicitly relies on System.identityHashCode
+  // always returning a non-negative number (e.g. old versions of
+  // com/sun/xml/bind/v2/util/CollisionCheckStack.hash), hence the "&
+  // 0x7FFFFFFF":
+  return (reinterpret_cast<uintptr_t>(o) / BytesPerWord) & 0x7FFFFFFF;
 }
 
 inline uint32_t
