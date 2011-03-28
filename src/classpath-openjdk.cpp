@@ -3173,12 +3173,62 @@ EXPORT(JVM_GetArrayLength)(Thread* t, jobject array)
   return cast<uintptr_t>(*array, BytesPerWord);
 }
 
+uint64_t
+jvmGetArrayElement(Thread* t, uintptr_t* arguments)
+{
+  jobject array = reinterpret_cast<jobject>(arguments[0]);
+  jint index = arguments[1];
+
+  switch (byteArrayBody(t, className(t, objectClass(t, *array)), 1)) {
+  case 'Z':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeBoolean(t, cast<int8_t>(*array, ArrayBody + index))));
+  case 'B':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeByte(t, cast<int8_t>(*array, ArrayBody + index))));
+  case 'C':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeChar(t, cast<int16_t>(*array, ArrayBody + (index * 2)))));
+  case 'S':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeShort(t, cast<int16_t>(*array, ArrayBody + (index * 2)))));
+  case 'I':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeInt(t, cast<int32_t>(*array, ArrayBody + (index * 4)))));
+  case 'F':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeFloat(t, cast<int32_t>(*array, ArrayBody + (index * 4)))));
+  case 'J':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeLong(t, cast<int64_t>(*array, ArrayBody + (index * 8)))));
+  case 'D':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, makeDouble(t, cast<int64_t>(*array, ArrayBody + (index * 8)))));
+  case 'L':
+  case '[':
+    return reinterpret_cast<intptr_t>
+      (makeLocalReference
+       (t, cast<object>(*array, ArrayBody + (index * BytesPerWord))));
+  default:
+    abort(t);
+  }
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_GetArrayElement)(Thread* t, jobject array, jint index)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(array),
+                            index };
 
-  return makeLocalReference(t, objectArrayBody(t, *array, index));
+  return reinterpret_cast<jobject>(run(t, jvmGetArrayElement, arguments));
 }
 
 extern "C" JNIEXPORT jvalue JNICALL
@@ -3190,7 +3240,38 @@ EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
+  switch (byteArrayBody(t, className(t, objectClass(t, *array)), 1)) {
+  case 'Z':
+    cast<int8_t>(*array, ArrayBody + index) = booleanValue(t, *value);
+    break;
+  case 'B':
+    cast<int8_t>(*array, ArrayBody + index) = byteValue(t, *value);
+    break;
+  case 'C':
+    cast<int16_t>(*array, ArrayBody + (index * 2)) = charValue(t, *value);
+    break;
+  case 'S':
+    cast<int16_t>(*array, ArrayBody + (index * 2)) = shortValue(t, *value);
+    break;
+  case 'I':
+    cast<int32_t>(*array, ArrayBody + (index * 4)) = intValue(t, *value);
+    break;
+  case 'F':
+    cast<int32_t>(*array, ArrayBody + (index * 4)) = floatValue(t, *value);
+    break;
+  case 'J':
+    cast<int64_t>(*array, ArrayBody + (index * 8)) = longValue(t, *value);
+    break;
+  case 'D':
+    cast<int64_t>(*array, ArrayBody + (index * 8)) = doubleValue(t, *value);
+    break;
+  case 'L':
+  case '[':
+    set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
+    break;
+  default:
+    abort(t);
+  }
 }
 
 extern "C" JNIEXPORT void JNICALL
