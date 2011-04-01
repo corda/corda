@@ -3128,8 +3128,21 @@ EXPORT(JVM_GetSystemPackage)(Thread*, jstring)
   return 0;
 }
 
+uint64_t
+jvmGetSystemPackages(Thread* t, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, makeObjectArray
+      (t, resolveClass
+       (t, root(t, Machine::BootLoader), "java/lang/Package"), 0)));
+}
+
 extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_GetSystemPackages)(Thread*) { abort(); }
+EXPORT(JVM_GetSystemPackages)(Thread* t)
+{
+  return reinterpret_cast<jobjectArray>(run(t, jvmGetSystemPackages, 0));
+}
 
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_AllocateNewObject)(Thread*, jobject, jclass,
