@@ -8234,8 +8234,8 @@ class MyProcessor: public Processor {
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
-       0, objectMask, name, sourceFile, super, interfaceTable,
-       virtualTable, fieldTable, methodTable, staticTable, addendum, loader,
+       0, objectMask, name, sourceFile, super, interfaceTable, virtualTable,
+       fieldTable, methodTable, staticTable, addendum, loader, 0,
        vtableLength);
   }
 

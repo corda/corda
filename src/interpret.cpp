@@ -2982,7 +2982,7 @@ class MyProcessor: public Processor {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions, 0,
        objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, addendum, staticTable, loader, 0);
+       fieldTable, methodTable, addendum, staticTable, loader, 0, 0);
   }
 
   virtual void

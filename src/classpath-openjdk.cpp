@@ -3667,22 +3667,25 @@ EXPORT(JVM_SetClassSigners)(Thread* t, jclass c, jobjectArray signers)
 }
 
 uint64_t
-jvmGetProtectionDomain(Thread* t, uintptr_t*)
+jvmGetProtectionDomain(Thread* t, uintptr_t* arguments)
 {
-  object openJDK = resolveClass
-    (t, root(t, Machine::BootLoader), "avian/OpenJDK");
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   object method = resolveMethod
-    (t, openJDK, "getProtectionDomain", "()Ljava/security/ProtectionDomain;");
+    (t, root(t, Machine::BootLoader), "avian/OpenJDK", "getProtectionDomain",
+     "(Lavian/VMClass;)Ljava/security/ProtectionDomain;");
 
   return reinterpret_cast<uint64_t>
-    (makeLocalReference(t, t->m->processor->invoke(t, method, 0)));
+    (makeLocalReference
+     (t, t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c))));
 }
 
 extern "C" JNIEXPORT jobject JNICALL
-EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass)
+EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass c)
 {
-  return reinterpret_cast<jobject>(run(t, jvmGetProtectionDomain, 0));
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jobject>(run(t, jvmGetProtectionDomain, arguments));
 }
 
 extern "C" JNIEXPORT void JNICALL

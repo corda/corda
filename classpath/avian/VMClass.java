@@ -25,7 +25,8 @@ public class VMClass {
   public VMMethod[] virtualTable;
   public VMField[] fieldTable;
   public VMMethod[] methodTable;
-  public avian.ClassAddendum addendum;
+  public ClassAddendum addendum;
   public Object staticTable;
   public ClassLoader loader;
+  public byte[] source;
 }

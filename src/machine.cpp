@@ -3320,6 +3320,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
                             0, // addendum
                             0, // static table
                             loader,
+                            0, // source
                             0);// vtable length
   PROTECT(t, class_);
   
@@ -3389,6 +3390,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
     (t, classLoaderMap(t, loader), spec, byteArrayHash, byteArrayEqual);
 
   if (class_ == 0) {
+    PROTECT(t, class_);
+
     if (classLoaderParent(t, loader)) {
       class_ = resolveSystemClass
         (t, classLoaderParent(t, loader), spec, false);
@@ -3430,6 +3433,20 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
                   class_);
         }
 
+        { const char* source = static_cast<Finder*>
+            (systemClassLoaderFinder(t, loader))->sourceUrl
+            (RUNTIME_ARRAY_BODY(file));
+          
+          if (source) {
+            unsigned length = strlen(source);
+            object array = makeByteArray(t, length + 1);
+            memcpy(&byteArrayBody(t, array, 0), source, length);
+            array = internByteArray(t, array);
+            
+            set(t, class_, ClassSource, array);
+          }
+        }
+
         object bootstrapClass = hashMapFind
           (t, root(t, Machine::BootstrapClassMap), spec, byteArrayHash,
            byteArrayEqual);
@@ -3444,8 +3461,6 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
     }
 
     if (class_) {
-      PROTECT(t, class_);
-
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));

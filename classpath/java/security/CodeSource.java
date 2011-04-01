@@ -10,4 +10,17 @@
 
 package java.security;
 
-public class CodeSource { }
+import java.net.URL;
+import java.security.cert.Certificate;
+
+public class CodeSource {
+  private final URL url;
+
+  public CodeSource(URL url, Certificate[] certificates) {
+    this.url = url;
+  }
+
+  public URL getLocation() {
+    return url;
+  }
+}
