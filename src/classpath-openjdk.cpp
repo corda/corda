@@ -309,6 +309,9 @@ class MyClasspath : public Classpath {
 
     PROTECT(t, thread);
 
+    object blockerLock = makeJobject(t);
+    set(t, thread, ThreadBlockerLock, blockerLock);
+
     const unsigned BufferSize = 256;
     char buffer[BufferSize];
     unsigned length = vm::snprintf(buffer, BufferSize, "Thread-%p", thread);
