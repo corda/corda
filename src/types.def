@@ -161,6 +161,12 @@
   (void* value)
   (object next))
 
+(type innerClassReference
+  (object inner)
+  (object outer)
+  (object name)
+  (int16_t flags))
+
 (type continuationContext
   (object next)
   (object before)

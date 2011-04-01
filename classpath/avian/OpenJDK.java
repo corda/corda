@@ -34,4 +34,31 @@ public class OpenJDK {
 
     return new ProtectionDomain(source, p);
   }
+
+  private static byte[] replace(int a, int b, byte[] s, int offset,
+                                int length)
+  {
+    byte[] array = new byte[length];
+    for (int i = 0; i < length; ++i) {
+      byte c = s[i];
+      array[i] = (byte) (c == a ? b : c);
+    }
+    return array;
+  }
+
+  public static Class getDeclaringClass(VMClass c) {
+    try {
+      String name = new String
+        (replace('/', '.', c.name, 0, c.name.length - 1), 0,
+         c.name.length - 1);
+      int index = name.lastIndexOf("$");
+      if (index == -1) {
+        return null;
+      } else {
+        return c.loader.loadClass(name.substring(0, index));
+      }
+    } catch (ClassNotFoundException e) {
+      return null;
+    }
+  }
 }

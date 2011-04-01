@@ -3743,31 +3743,101 @@ EXPORT(JVM_GetClassModifiers)(Thread* t, jclass c)
   return classFlags(t, jclassVmClass(t, *c));
 }
 
+uint64_t
+jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jobject>(arguments[0]);
+
+  object addendum = classAddendum(t, jclassVmClass(t, *c));
+  if (addendum) {
+    object table = classAddendumInnerClassTable(t, addendum);
+    if (table) {
+      PROTECT(t, table);
+
+      unsigned count = 0;
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        if (innerClassReferenceOuter(t, arrayBody(t, table, i))) {
+          ++ count;
+        }
+      }
+
+      object result = makeObjectArray(t, count);
+      PROTECT(t, result);
+
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        if (innerClassReferenceOuter(t, arrayBody(t, table, i))) {
+          object inner = getJClass
+            (t, resolveClass
+             (t, classLoader(t, jclassVmClass(t, *c)), referenceName
+              (t, innerClassReferenceInner(t, arrayBody(t, table, i)))));
+          
+          -- count;
+          set(t, result, ArrayBody + (count * BytesPerWord), inner);
+        }
+      }
+
+      return reinterpret_cast<uintptr_t>(makeLocalReference(t, result));
+    }
+  }
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference(t, makeObjectArray(t, 0)));
+}
+
 extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_GetDeclaredClasses)(Thread*, jclass) { abort(); }
+EXPORT(JVM_GetDeclaredClasses)(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jclass>(run(t, jvmGetDeclaredClasses, arguments));  
+}
+
+uint64_t
+jvmGetDeclaringClass(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jobject>(arguments[0]);
+
+  object method = resolveMethod
+    (t, root(t, Machine::BootLoader), "avian/OpenJDK", "getDeclaringClass",
+     "(Lavian/VMClass;)Ljava/lang/Class;");
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c))));
+}
 
 extern "C" JNIEXPORT jclass JNICALL
-EXPORT(JVM_GetDeclaringClass)(Thread*, jclass)
+EXPORT(JVM_GetDeclaringClass)(Thread* t, jclass c)
 {
-  // todo: implement properly
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jclass>(run(t, jvmGetDeclaringClass, arguments));
+}
+
+uint64_t
+jvmGetClassSignature(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jobject>(arguments[0]);
+
+  object addendum = classAddendum(t, jclassVmClass(t, *c));
+  if (addendum) {
+    object signature = addendumSignature(t, addendum);
+    if (signature) {
+      return reinterpret_cast<uintptr_t>
+        (makeLocalReference
+         (t, t->m->classpath->makeString
+          (t, signature, 0, byteArrayLength(t, signature) - 1)));
+    }
+  }
   return 0;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
 EXPORT(JVM_GetClassSignature)(Thread* t, jclass c)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
 
-  object addendum = classAddendum(t, jclassVmClass(t, *c));
-  if (addendum) {
-    object signature = addendumSignature(t, addendum);
-    if (signature) {
-      return makeLocalReference
-        (t, t->m->classpath->makeString
-         (t, signature, 0, byteArrayLength(t, signature) - 1));
-    }
-  }
-  return 0;
+  return reinterpret_cast<jclass>(run(t, jvmGetClassSignature, arguments));
 }
 
 extern "C" JNIEXPORT jbyteArray JNICALL

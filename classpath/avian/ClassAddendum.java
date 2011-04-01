@@ -12,4 +12,5 @@ package avian;
 
 public class ClassAddendum extends Addendum {
   public Object[] interfaceTable;
+  public Object[] innerClassTable;
 }

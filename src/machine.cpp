@@ -991,7 +991,7 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
   if (count) {
     table = makeArray(t, count);
     if (classAddendum(t, class_) == 0) {
-      object addendum = makeClassAddendum(t, pool, 0, 0, table);
+      object addendum = makeClassAddendum(t, pool, 0, 0, table, 0);
       set(t, class_, ClassAddendum, addendum);
     }
   }
@@ -1724,17 +1724,44 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
                           &byteArrayBody(t, name, 0)) == 0)
     {
       if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0, 0);
+        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
       }
       
       set(t, addendum, AddendumSignature,
           singletonObject(t, pool, s.read2() - 1));
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>("InnerClasses"),
+                          &byteArrayBody(t, name, 0)) == 0)
+    {
+      if (addendum == 0) {
+        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
+      }
+
+      unsigned innerClassCount = s.read2();
+      object table = makeArray(t, innerClassCount);
+      PROTECT(t, table);
+
+      for (unsigned i = 0; i < innerClassCount; ++i) {
+        int16_t inner = s.read2();
+        int16_t outer = s.read2();
+        int16_t name = s.read2();
+        int16_t flags = s.read2();
+
+        object reference = makeInnerClassReference
+          (t, inner ? singletonObject(t, pool, inner - 1) : 0,
+           outer ? singletonObject(t, pool, outer - 1) : 0,
+           name ? singletonObject(t, pool, name - 1) : 0,
+           flags);
+
+        set(t, table, ArrayBody + (i * BytesPerWord), reference);
+      }
+
+      set(t, addendum, ClassAddendumInnerClassTable, table);
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                           ("RuntimeVisibleAnnotations"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
       if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0, 0);
+        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
       }
 
       object body = makeByteArray(t, length);
