@@ -2351,6 +2351,17 @@ invokeLoadClass(Thread* t, uintptr_t* arguments)
     (t->m->processor->invoke(t, method, loader, specString));
 }
 
+bool
+isInitializing(Thread* t, object c)
+{
+  for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
+    if (s->class_ == c) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 namespace vm {
@@ -3187,7 +3198,7 @@ classInitializer(Thread* t, object class_)
       return o;
     }               
   }
-  abort(t);
+  return 0;
 }
 
 unsigned
@@ -3334,7 +3345,8 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
 
     classVmFlags(t, class_)
       |= (classVmFlags(t, sc)
-          & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag));
+          & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag
+             | NeedInitFlag));
   }
   
   parseInterfaceTable(t, s, class_, pool, throwType);
@@ -3648,7 +3660,7 @@ preInitClass(Thread* t, object c)
         // If the class is currently being initialized and this the thread
         // which is initializing it, we should not try to initialize it
         // recursively.
-        if (t->m->processor->isInitializing(t, c)) {
+        if (isInitializing(t, c)) {
           return false;
         }
 
@@ -3695,12 +3707,21 @@ initClass(Thread* t, object c)
 {
   PROTECT(t, c);
 
+  object super = classSuper(t, c);
+  if (super) {
+    initClass(t, super);
+  }
+
   if (preInitClass(t, c)) {
     OBJECT_RESOURCE(t, c, postInitClass(t, c));
 
-    Thread::ClassInitStack stack(t, c);
+    object initializer = classInitializer(t, c);
 
-    t->m->processor->invoke(t, classInitializer(t, c), 0);
+    if (initializer) {
+      Thread::ClassInitStack stack(t, c);
+
+      t->m->processor->invoke(t, initializer, 0);
+    }
   }
 }
 

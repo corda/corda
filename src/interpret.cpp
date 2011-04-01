@@ -26,8 +26,6 @@ const unsigned FrameMethodOffset = 2;
 const unsigned FrameIpOffset = 3;
 const unsigned FrameFootprint = 4;
 
-class ClassInitList;
-
 class Thread: public vm::Thread {
  public:
   Thread(Machine* m, object javaThread, vm::Thread* parent):
@@ -35,37 +33,14 @@ class Thread: public vm::Thread {
     ip(0),
     sp(0),
     frame(-1),
-    code(0),
-    classInitList(0)
+    code(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
-  ClassInitList* classInitList;
   uintptr_t stack[StackSizeInWords];
-};
-
-class ClassInitList {
- public:
-  ClassInitList(Thread* t, object class_, ClassInitList* next):
-    t(t), class_(class_), next(next)
-  { }
-
-  static void push(Thread* t, object class_) {
-    t->classInitList = new (t->m->heap->allocate(sizeof(ClassInitList)))
-      ClassInitList(t, class_, t->classInitList);
-  }
-
-  void pop() {
-    t->classInitList = next;
-    t->m->heap->free(this, sizeof(ClassInitList));
-  }
-
-  Thread* t;
-  object class_;
-  ClassInitList* next;
 };
 
 inline void
@@ -377,15 +352,6 @@ popFrame(Thread* t)
       release(t, peekObject(t, frameBase(t, t->frame)));
     }   
   }
-  
-  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
-      and t->classInitList
-      and t->classInitList->class_ == methodClass(t, method))
-  {
-    t->classInitList->pop();
-
-    postInitClass(t, methodClass(t, method));
-  }
 
   t->sp = frameBase(t, t->frame);
   t->frame = frameNext(t, t->frame);
@@ -691,32 +657,6 @@ invokeNative(Thread* t, object method)
   }
 }
 
-bool
-classInit2(Thread* t, object class_, unsigned ipOffset)
-{
-  PROTECT(t, class_);
-
-  if (preInitClass(t, class_)) {
-    ClassInitList::push(t, class_);
-    
-    t->code = classInitializer(t, class_);
-    t->ip -= ipOffset;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-inline bool
-classInit(Thread* t, object class_, unsigned ipOffset)
-{
-  if (UNLIKELY(classVmFlags(t, class_) & NeedInitFlag)) {
-    return classInit2(t, class_, ipOffset);
-  } else {
-    return false;
-  }
-}
-
 inline void
 store(Thread* t, unsigned index)
 {
@@ -822,9 +762,7 @@ interpret3(Thread* t, const int base)
     goto throw_;
   }
 
-  if (UNLIKELY(classInit(t, methodClass(t, frameMethod(t, frame)), 0))) {
-    goto invoke;
-  }
+  initClass(t, methodClass(t, frameMethod(t, frame)));
 
  loop:
   instruction = codeBody(t, code, ip++);
@@ -1486,7 +1424,7 @@ interpret3(Thread* t, const int base)
 
     PROTECT(t, field);
 
-    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
+    initClass(t, fieldClass(t, field));
 
     ACQUIRE_FIELD_FOR_READ(t, field);
 
@@ -1864,7 +1802,10 @@ interpret3(Thread* t, const int base)
       object class_ = methodClass(t, frameMethod(t, frame));
       if (isSpecialMethod(t, method, class_)) {
         class_ = classSuper(t, class_);
-        if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+        PROTECT(t, method);
+        PROTECT(t, class_);
+
+        initClass(t, class_);
 
         code = findVirtualMethod(t, method, class_);
       } else {
@@ -1884,7 +1825,7 @@ interpret3(Thread* t, const int base)
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     PROTECT(t, method);
     
-    if (UNLIKELY(classInit(t, methodClass(t, method), 3))) goto invoke;
+    initClass(t, methodClass(t, method));
 
     code = method;
   } goto invoke;
@@ -1897,7 +1838,10 @@ interpret3(Thread* t, const int base)
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
-      if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+      PROTECT(t, method);
+      PROTECT(t, class_);
+
+      initClass(t, class_);
 
       code = findVirtualMethod(t, method, class_);
       goto invoke;
@@ -2358,7 +2302,7 @@ interpret3(Thread* t, const int base)
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
 
-    if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+    initClass(t, class_);
 
     pushObject(t, make(t, class_));
   } goto loop;
@@ -2507,7 +2451,7 @@ interpret3(Thread* t, const int base)
 
     ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
+    initClass(t, fieldClass(t, field));
       
     object table = classStaticTable(t, fieldClass(t, field));
 
@@ -2991,26 +2935,6 @@ class MyProcessor: public Processor {
     // ignore
   }
 
-  virtual bool
-  isInitializing(vm::Thread* vmt, object c)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    for (ClassInitList* list = t->classInitList; list; list = list->next) {
-      if (list->class_ == c) {
-        return true;
-      }
-    }
-
-    for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
-      if (s->class_ == c) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   virtual void
   visitObjects(vm::Thread* vmt, Heap::Visitor* v)
   {
@@ -3022,10 +2946,6 @@ class MyProcessor: public Processor {
       if (t->stack[i * 2] == ObjectTag) {
         v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
       }
-    }
-
-    for (ClassInitList* list = t->classInitList; list; list = list->next) {
-      v->visit(reinterpret_cast<object*>(&(list->class_)));
     }
   }
 
