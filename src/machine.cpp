@@ -758,7 +758,6 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
     value = v;
   }
   
-  byteArrayBody(t, value, vi) = 0;
   return value;
 }
 
