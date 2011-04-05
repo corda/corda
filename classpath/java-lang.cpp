@@ -471,8 +471,8 @@ Locale getLocale() {
   if (!LANG || strcmp(LANG, "C") == 0) return fallback;
 
   int len = strlen(LANG);
-  char buf[len];
-  memcpy(buf, LANG, len);
+  char buf[len + 1]; // + 1 for the '\0' char
+  memcpy(buf, LANG, len + 1);
 
   char* tracer = buf;
   const char* reg;
@@ -480,7 +480,7 @@ Locale getLocale() {
   while (*tracer && *tracer != '_') ++tracer;
   if (!*tracer) return fallback;
   *tracer = '\0';
-  reg = tracer++ + 1;
+  reg = ++tracer;
 
   while (*tracer && *tracer != '.') ++tracer;
   if (tracer == reg) return fallback;
