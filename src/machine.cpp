@@ -697,7 +697,6 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
     value = v;
   }
   
-  charArrayBody(t, value, vi) = 0;
   return value;
 }
 
@@ -4024,8 +4023,8 @@ parseUtf8(Thread* t, const char* data, unsigned length)
    public:
     Client(Thread* t): t(t) { }
 
-    virtual void NO_RETURN handleError() {
-      vm::abort(t);
+    virtual void handleError() {
+      //      vm::abort(t);
     }
 
    private:
