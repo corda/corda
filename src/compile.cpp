@@ -5883,36 +5883,75 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   }
 }
 
-unsigned
-resolveIp(MyThread* t, Context* context, object code, unsigned ip)
+int
+resolveIpForwards(Context* context, int start, int end)
 {
-  if (context->visitTable[ip]) {
-    return ip;
-  } else {
-    // Very rarely, we'll encounter an unreachable goto which is
-    // referred to by the exception handler table or line number
-    // table.  This can be a problem if we need to determine the
-    // corresponding machine address for the bytecode instruction
-    // since we never generated any machine code for it.  For now, we
-    // just follow the goto.  The "proper" fix is probably to go ahead
-    // and generate machine code even though it's unreachable; that
-    // will protect us against unreachable instructions which aren't
-    // gotos as well.
-    switch (codeBody(t, code, ip)) {
-    case goto_: {
-      unsigned tmp = ip + 1;
-      return ip + codeReadInt16(t, code, tmp);
-    }
-
-    case goto_w: {
-      unsigned tmp = ip + 1;
-      return ip + codeReadInt32(t, code, tmp);
-    }
-
-    default:
-      return ip;
-    }
+  while (start < end and context->visitTable[start] == 0) {
+    ++ start;
   }
+  
+  if (start >= end) {
+    return -1;
+  } else {
+    return start;
+  }
+}
+
+int
+resolveIpBackwards(Context* context, int start, int end)
+{
+  while (start >= end and context->visitTable[start] == 0) {
+    -- start;
+  }
+  
+  if (start < end) {
+    return -1;
+  } else {
+    return start;
+  }
+}
+
+object
+truncateIntArray(Thread* t, object array, unsigned length)
+{
+  expect(t, intArrayLength(t, array) > length);
+
+  PROTECT(t, array);
+
+  object newArray = makeIntArray(t, length);
+  memcpy(&intArrayBody(t, newArray, 0), &intArrayBody(t, array, 0),
+         length * 4);
+
+  return newArray;
+}
+
+object
+truncateArray(Thread* t, object array, unsigned length)
+{
+  expect(t, arrayLength(t, array) > length);
+
+  PROTECT(t, array);
+
+  object newArray = makeArray(t, length);
+  memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+         length * BytesPerWord);
+
+  return newArray;
+}
+
+object
+truncateLineNumberTable(Thread* t, object table, unsigned length)
+{
+  expect(t, lineNumberTableLength(t, table) > length);
+
+  PROTECT(t, table);
+
+  object newTable = makeLineNumberTable(t, length);
+  memcpy(lineNumberTableBody(t, newTable, 0),
+         lineNumberTableBody(t, table, 0),
+         length * sizeof(LineNumber));
+
+  return newTable;
 }
 
 object
@@ -5934,34 +5973,51 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
     object newTable = makeArray(t, length + 1);
     PROTECT(t, newTable);
 
-    set(t, newTable, ArrayBody, newIndex);
-
-    for (unsigned i = 0; i < length; ++i) {
+    unsigned ni = 0;
+    for (unsigned oi = 0; oi < length; ++ oi) {
       ExceptionHandler* oldHandler = exceptionHandlerTableBody
-        (t, oldTable, i);
+        (t, oldTable, oi);
 
-      intArrayBody(t, newIndex, i * 3)
-        = c->machineIp
-        (resolveIp
-         (t, context, methodCode(t, context->method),
-          exceptionHandlerStart(oldHandler)))->value() - start;
+      int handlerStart = resolveIpForwards
+        (context, exceptionHandlerStart(oldHandler),
+         exceptionHandlerEnd(oldHandler));
 
-      intArrayBody(t, newIndex, (i * 3) + 1)
-        = c->machineIp(exceptionHandlerEnd(oldHandler))->value() - start;
+      if (LIKELY(handlerStart >= 0)) {
+        int handlerEnd = resolveIpBackwards
+          (context, exceptionHandlerEnd(oldHandler),
+           exceptionHandlerStart(oldHandler));
 
-      intArrayBody(t, newIndex, (i * 3) + 2)
-        = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+        assert(t, handlerEnd >= 0);
 
-      object type;
-      if (exceptionHandlerCatchType(oldHandler)) {
-        type = resolveClassInPool
-          (t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
-      } else {
-        type = 0;
+        intArrayBody(t, newIndex, ni * 3)
+          = c->machineIp(handlerStart)->value() - start;
+
+        intArrayBody(t, newIndex, (ni * 3) + 1)
+          = c->machineIp(handlerEnd)->value() - start;
+
+        intArrayBody(t, newIndex, (ni * 3) + 2)
+          = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+
+        object type;
+        if (exceptionHandlerCatchType(oldHandler)) {
+          type = resolveClassInPool
+            (t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
+        } else {
+          type = 0;
+        }
+
+        set(t, newTable, ArrayBody + ((ni + 1) * BytesPerWord), type);
+
+        ++ ni;
       }
-
-      set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
+
+    if (UNLIKELY(ni < length)) {
+      newIndex = truncateIntArray(t, newIndex, ni * 3);
+      newTable = truncateArray(t, newTable, ni + 1);
+    }
+
+    set(t, newTable, ArrayBody, newIndex);
 
     return newTable;
   } else {
@@ -5978,18 +6034,28 @@ translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 
     unsigned length = lineNumberTableLength(t, oldTable);
     object newTable = makeLineNumberTable(t, length);
-    for (unsigned i = 0; i < length; ++i) {
-      LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
-      LineNumber* newLine = lineNumberTableBody(t, newTable, i);
+    unsigned ni = 0;
+    for (unsigned oi = 0; oi < length; ++oi) {
+      LineNumber* oldLine = lineNumberTableBody(t, oldTable, oi);
+      LineNumber* newLine = lineNumberTableBody(t, newTable, ni);
 
-      lineNumberIp(newLine)
-        = context->compiler->machineIp
-        (resolveIp
-         (t, context, methodCode(t, context->method), lineNumberIp(oldLine)))
-        ->value()
-        - start;
+      int ip = resolveIpForwards
+        (context, lineNumberIp(oldLine), oi + 1 < length
+         ? lineNumberIp(lineNumberTableBody(t, oldTable, oi + 1)) - 1
+         : lineNumberIp(oldLine) + 1);
 
-      lineNumberLine(newLine) = lineNumberLine(oldLine);
+      if (LIKELY(ip >= 0)) {
+        lineNumberIp(newLine)
+          = context->compiler->machineIp(ip)->value() - start;
+
+        lineNumberLine(newLine) = lineNumberLine(oldLine);
+
+        ++ ni;
+      }
+    }
+
+    if (UNLIKELY(ni < length)) {
+      newTable = truncateLineNumberTable(t, newTable, ni);      
     }
 
     return newTable;
@@ -6881,55 +6947,56 @@ compile(MyThread* t, Context* context)
     THREAD_RUNTIME_ARRAY(t, bool, visited, visitCount);
     memset(RUNTIME_ARRAY_BODY(visited), 0, visitCount * sizeof(bool));
 
-    while (visitCount) {
-      bool progress UNUSED = false;
+    bool progress = true;
+    while (progress) {
+      progress = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
         c->restoreState(state);
 
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-        unsigned start = resolveIp
-          (t, context, methodCode(t, context->method),
-           exceptionHandlerStart(eh));
+        int start = resolveIpForwards
+          (context, exceptionHandlerStart(eh), exceptionHandlerEnd(eh));
 
         if ((not RUNTIME_ARRAY_BODY(visited)[i])
+            and start >= 0
             and context->visitTable[start])
         {
-          -- visitCount;
           RUNTIME_ARRAY_BODY(visited)[i] = true;
           progress = true;
 
-          THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
-                        codeMaxStack(t, methodCode(t, context->method)));
-          Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
+          if (context->visitTable[exceptionHandlerIp(eh)] == 0) {
+            THREAD_RUNTIME_ARRAY
+              (t, uint8_t, stackMap,
+               codeMaxStack(t, methodCode(t, context->method)));
+            Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
-          unsigned end = exceptionHandlerEnd(eh);
-          if (exceptionHandlerIp(eh) >= start
-              and exceptionHandlerIp(eh) < end)
-          {
-            end = exceptionHandlerIp(eh);
+            unsigned end = exceptionHandlerEnd(eh);
+            if (exceptionHandlerIp(eh) >= start
+                and exceptionHandlerIp(eh) < end)
+            {
+              end = exceptionHandlerIp(eh);
+            }
+
+            context->eventLog.append(PushExceptionHandlerEvent);
+            context->eventLog.append2(start);
+            context->eventLog.append2(end);
+
+            for (unsigned i = 1;
+                 i < codeMaxStack(t, methodCode(t, context->method));
+                 ++i)
+            {
+              frame2.set(localSize(t, context->method) + i, Frame::Integer);
+            }
+
+            compile(t, &frame2, exceptionHandlerIp(eh), start);
+
+            context->eventLog.append(PopContextEvent);
+
+            eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
           }
-
-          context->eventLog.append(PushExceptionHandlerEvent);
-          context->eventLog.append2(start);
-          context->eventLog.append2(end);
-
-          for (unsigned i = 1;
-               i < codeMaxStack(t, methodCode(t, context->method));
-               ++i)
-          {
-            frame2.set(localSize(t, context->method) + i, Frame::Integer);
-          }
-
-          compile(t, &frame2, exceptionHandlerIp(eh), start);
-
-          context->eventLog.append(PopContextEvent);
-
-          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
-
-      assert(t, progress);
     }
   }
 
