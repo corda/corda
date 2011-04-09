@@ -6952,8 +6952,6 @@ compile(MyThread* t, Context* context)
       progress = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-        c->restoreState(state);
-
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
         int start = resolveIpForwards
           (context, exceptionHandlerStart(eh), exceptionHandlerEnd(eh));
@@ -6965,36 +6963,36 @@ compile(MyThread* t, Context* context)
           RUNTIME_ARRAY_BODY(visited)[i] = true;
           progress = true;
 
-          if (true) {//context->visitTable[exceptionHandlerIp(eh)] == 0) {
-            THREAD_RUNTIME_ARRAY
-              (t, uint8_t, stackMap,
-               codeMaxStack(t, methodCode(t, context->method)));
-            Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
+          c->restoreState(state);
 
-            unsigned end = exceptionHandlerEnd(eh);
-            if (exceptionHandlerIp(eh) >= start
-                and exceptionHandlerIp(eh) < end)
-            {
-              end = exceptionHandlerIp(eh);
-            }
+          THREAD_RUNTIME_ARRAY
+            (t, uint8_t, stackMap,
+             codeMaxStack(t, methodCode(t, context->method)));
+          Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
-            context->eventLog.append(PushExceptionHandlerEvent);
-            context->eventLog.append2(start);
-            context->eventLog.append2(end);
-
-            for (unsigned i = 1;
-                 i < codeMaxStack(t, methodCode(t, context->method));
-                 ++i)
-            {
-              frame2.set(localSize(t, context->method) + i, Frame::Integer);
-            }
-
-            compile(t, &frame2, exceptionHandlerIp(eh), start);
-
-            context->eventLog.append(PopContextEvent);
-
-            eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
+          unsigned end = exceptionHandlerEnd(eh);
+          if (exceptionHandlerIp(eh) >= start
+              and exceptionHandlerIp(eh) < end)
+          {
+            end = exceptionHandlerIp(eh);
           }
+
+          context->eventLog.append(PushExceptionHandlerEvent);
+          context->eventLog.append2(start);
+          context->eventLog.append2(end);
+
+          for (unsigned i = 1;
+               i < codeMaxStack(t, methodCode(t, context->method));
+               ++i)
+          {
+            frame2.set(localSize(t, context->method) + i, Frame::Integer);
+          }
+
+          compile(t, &frame2, exceptionHandlerIp(eh), start);
+
+          context->eventLog.append(PopContextEvent);
+
+          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
     }
