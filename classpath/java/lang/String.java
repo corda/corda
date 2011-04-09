@@ -494,6 +494,42 @@ public final class String
   public String replaceAll(String regex, String replacement) {
     return Pattern.compile(regex).matcher(this).replaceAll(replacement);
   }
+
+  public String replace(CharSequence target, CharSequence replace) {
+    if (target.length() == 0) {
+      return this.infuse(replace.toString());
+    }
+
+    String targetString = target.toString();
+    String replaceString = replace.toString();
+
+    int targetSize = target.length();
+
+    StringBuilder returnValue = new StringBuilder();
+    String unhandled = this;
+
+    int index = -1;
+    while ((index = unhandled.indexOf(targetString)) != -1) {
+      returnValue.append(unhandled.substring(0, index)).append(replaceString);
+      unhandled = unhandled.substring(index + targetSize,
+                                      unhandled.length());
+    }
+
+    returnValue.append(unhandled);
+    return returnValue.toString();
+  }
+
+  private String infuse(String infuseWith) {
+    StringBuilder retVal = new StringBuilder();
+
+    String me = this;
+    for (int i = 0; i < me.length(); i++) {
+      retVal.append(infuseWith).append(me.substring(i, i + 1));
+    }
+
+    retVal.append(infuseWith);
+    return retVal.toString();
+  }
   
   public native String intern();
 
