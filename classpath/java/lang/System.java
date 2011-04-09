@@ -20,6 +20,8 @@ import java.io.FileDescriptor;
 import java.util.Properties;
 
 public abstract class System {
+  private static final long NanoTimeBaseInMillis = currentTimeMillis();
+  
   private static Property properties;
   
   private static SecurityManager securityManager;
@@ -93,6 +95,10 @@ public abstract class System {
   public static native long currentTimeMillis();
 
   public static native int identityHashCode(Object o);
+
+  public static long nanoTime() {
+    return (currentTimeMillis() - NanoTimeBaseInMillis) * 1000000;
+  }
 
   public static String mapLibraryName(String name) {
     if (name != null) {
