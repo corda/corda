@@ -4287,12 +4287,25 @@ defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
   PROTECT(t, loader);
 
   object c = parseClass(t, loader, buffer, length);
+  
+  // char name[byteArrayLength(t, className(t, c))];
+  // memcpy(name, &byteArrayBody(t, className(t, c), 0),
+  //        byteArrayLength(t, className(t, c)));
+  // replace('/', '-', name);
 
-  if (c) {
-    PROTECT(t, c);
+  // const unsigned BufferSize = 1024;
+  // char path[BufferSize];
+  // snprintf(path, BufferSize, "/tmp/avian-define-class/%s.class", name);
 
-    saveLoadedClass(t, loader, c);
-  }
+  // FILE* file = fopen(path, "wb");
+  // if (file) {
+  //   fwrite(buffer, length, 1, file);
+  //   fclose(file);
+  // }
+
+  PROTECT(t, c);
+
+  saveLoadedClass(t, loader, c);
 
   return c;
 }
