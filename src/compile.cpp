@@ -6965,7 +6965,7 @@ compile(MyThread* t, Context* context)
           RUNTIME_ARRAY_BODY(visited)[i] = true;
           progress = true;
 
-          if (context->visitTable[exceptionHandlerIp(eh)] == 0) {
+          if (true) {//context->visitTable[exceptionHandlerIp(eh)] == 0) {
             THREAD_RUNTIME_ARRAY
               (t, uint8_t, stackMap,
                codeMaxStack(t, methodCode(t, context->method)));
