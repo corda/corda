@@ -52,7 +52,7 @@ const bool Continuations = true;
 const bool Continuations = false;
 #endif
 
-const unsigned MaxNativeCallFootprint = 4;
+const unsigned MaxNativeCallFootprint = BytesPerWord == 8 ? 4 : 5;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
