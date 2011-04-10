@@ -2120,13 +2120,20 @@ setProperty(Thread* t, object method, object properties,
 object
 interruptLock(Thread* t, object thread)
 {
-  if (threadInterruptLock(t, thread) == 0) {
+  object lock = threadInterruptLock(t, thread);
+
+  loadMemoryBarrier();
+
+  if (lock == 0) {
     PROTECT(t, thread);
     ACQUIRE(t, t->m->referenceLock);
 
     if (threadInterruptLock(t, thread) == 0) {
       object head = makeMonitorNode(t, 0, 0);
       object lock = makeMonitor(t, 0, 0, 0, head, head, 0);
+
+      storeStoreMemoryBarrier();
+
       set(t, thread, ThreadInterruptLock, lock);
     }
   }

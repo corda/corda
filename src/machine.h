@@ -3619,7 +3619,11 @@ getClassRuntimeData(Thread* t, object c)
 inline object
 getMethodRuntimeData(Thread* t, object method)
 {
-  if (methodRuntimeDataIndex(t, method) == 0) {
+  int index = methodRuntimeDataIndex(t, method);
+
+  loadMemoryBarrier();
+
+  if (index == 0) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->classLock);
@@ -3629,6 +3633,8 @@ getMethodRuntimeData(Thread* t, object method)
 
       setRoot(t, Machine::MethodRuntimeDataTable, vectorAppend
               (t, root(t, Machine::MethodRuntimeDataTable), runtimeData));
+
+      storeStoreMemoryBarrier();
 
       methodRuntimeDataIndex(t, method) = vectorSize
         (t, root(t, Machine::MethodRuntimeDataTable));
@@ -3645,12 +3651,17 @@ getJClass(Thread* t, object c)
   PROTECT(t, c);
 
   object jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+
+  loadMemoryBarrier();
+
   if (jclass == 0) {
     ACQUIRE(t, t->m->classLock);
 
     jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
     if (jclass == 0) {
       jclass = t->m->classpath->makeJclass(t, c);
+
+      storeStoreMemoryBarrier();
       
       set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, jclass);
     }

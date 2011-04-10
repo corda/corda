@@ -9586,6 +9586,8 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 uintptr_t
 virtualThunk(MyThread* t, unsigned index)
 {
+  ACQUIRE(t, t->m->classLock);
+
   if (root(t, VirtualThunks) == 0
       or wordArrayLength(t, root(t, VirtualThunks)) <= index * 2)
   {
@@ -9599,14 +9601,10 @@ virtualThunk(MyThread* t, unsigned index)
   }
 
   if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
-    ACQUIRE(t, t->m->classLock);
-
-    if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
-      unsigned size;
-      uintptr_t thunk = compileVirtualThunk(t, index, &size);
-      wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
-      wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
-    }
+    unsigned size;
+    uintptr_t thunk = compileVirtualThunk(t, index, &size);
+    wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
+    wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
   }
 
   return wordArrayBody(t, root(t, VirtualThunks), index * 2);

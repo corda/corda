@@ -509,7 +509,11 @@ findMethod(Thread* t, jclass c, const char* name, const char* spec)
 jint
 methodID(Thread* t, object method)
 {
-  if (methodNativeID(t, method) == 0) {
+  int id = methodNativeID(t, method);
+
+  loadMemoryBarrier();
+
+  if (id == 0) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->referenceLock);
@@ -517,6 +521,9 @@ methodID(Thread* t, object method)
     if (methodNativeID(t, method) == 0) {
       setRoot(t, Machine::JNIMethodTable, vectorAppend
               (t, root(t, Machine::JNIMethodTable), method));
+
+      storeStoreMemoryBarrier();
+
       methodNativeID(t, method) = vectorSize
         (t, root(t, Machine::JNIMethodTable));
     }
@@ -1164,7 +1171,11 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
 jint
 fieldID(Thread* t, object field)
 {
-  if (fieldNativeID(t, field) == 0) {
+  int id = fieldNativeID(t, field);
+
+  loadMemoryBarrier();
+
+  if (id == 0) {
     PROTECT(t, field);
 
     ACQUIRE(t, t->m->referenceLock);
@@ -1172,6 +1183,9 @@ fieldID(Thread* t, object field)
     if (fieldNativeID(t, field) == 0) {
       setRoot(t, Machine::JNIFieldTable, vectorAppend
               (t, root(t, Machine::JNIFieldTable), field));
+
+      storeStoreMemoryBarrier();
+
       fieldNativeID(t, field) = vectorSize(t, root(t, Machine::JNIFieldTable));
     }
   }

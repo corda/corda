@@ -3677,7 +3677,11 @@ classNeedsInit(Thread* t, object c)
 bool
 preInitClass(Thread* t, object c)
 {
-  if (classVmFlags(t, c) & NeedInitFlag) {
+  int flags = classVmFlags(t, c);
+
+  loadMemoryBarrier();
+
+  if (flags & NeedInitFlag) {
     PROTECT(t, c);
     ACQUIRE(t, t->m->classLock);
 
