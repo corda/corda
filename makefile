@@ -299,7 +299,7 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags)
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
