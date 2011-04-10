@@ -2180,6 +2180,13 @@ Avian_sun_misc_Unsafe_registerNatives
 }
 
 extern "C" JNIEXPORT int64_t
+Avian_sun_misc_Unsafe_addressSize
+(Thread*, object, uintptr_t*)
+{
+  return BytesPerWord;
+}
+
+extern "C" JNIEXPORT int64_t
 Avian_sun_misc_Unsafe_defineClass__Ljava_lang_String_2_3BIILjava_lang_ClassLoader_2Ljava_security_ProtectionDomain_2
 (Thread* t, object, uintptr_t* arguments)
 {
