@@ -91,8 +91,18 @@ ifneq ($(openjdk),)
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
 		javahome-files = lib/zi lib/currency.data lib/security/java.security \
-			lib/security/java.policy lib/security/cacerts \
-			lib/security/local_policy.jar lib/security/US_export_policy.jar
+			lib/security/java.policy lib/security/cacerts
+
+		local-policy = lib/security/local_policy.jar
+		ifeq ($(shell test -e $(openjdk)/$(local-policy) && echo found),found)
+			javahome-files += $(local-policy)
+		endif
+
+		export-policy = lib/security/US_export_policy.jar
+		ifeq ($(shell test -e $(openjdk)/$(export-policy) && echo found),found)
+			javahome-files += $(export-policy)
+		endif
+
 		ifeq ($(platform),windows)
 			javahome-files += lib/tzmappings
 		endif
