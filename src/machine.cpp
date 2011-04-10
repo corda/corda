@@ -3176,13 +3176,12 @@ isAssignableFrom(Thread* t, object a, object b)
       }
     }
 
-    for (; b; b = classSuper(t, b)) {
-      object itable = classInterfaceTable(t, b);
-      if (itable) {
-        for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-          if (arrayBody(t, itable, i) == a) {
-            return true;
-          }
+    object itable = classInterfaceTable(t, b);
+    if (itable) {
+      unsigned stride = (classFlags(t, b) & ACC_INTERFACE) ? 1 : 2;
+      for (unsigned i = 0; i < arrayLength(t, itable); i += stride) {
+        if (arrayBody(t, itable, i) == a) {
+          return true;
         }
       }
     }
