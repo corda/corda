@@ -262,6 +262,55 @@ You can reduce the size futher for embedded builds by using ProGuard
 and the supplied openjdk.pro configuration file (see "Embedding with
 ProGuard and a Boot Image" below).
 
+Here are some examples of how to install OpenJDK and build Avian with
+it on various OSes:
+
+  Debian-based Linux:
+    # conventional build:
+    apt-get install openjdk-6-jdk
+    make openjdk=/usr/lib/jvm/java-6-openjdk test
+
+    # stand-alone build:
+    apt-get install openjdk-6-jdk
+    apt-get source openjdk-6-jdk
+    apt-get build-dep openjdk-6-jdk
+    (cd openjdk-6-6b18-1.8.3 && ./debian/rules patch)
+    make openjdk=/usr/lib/jvm/java-6-openjdk \
+      openjdk-src=$(pwd)/openjdk-6-6b18-1.8.3/build/openjdk/jdk/src \
+      test
+
+  Mac OS X:
+    # Prerequisite: install MacPorts (http://www.macports.org/)
+    sudo port selfupdate
+
+    # conventional build:
+    sudo port install openjdk6
+    make openjdk=/opt/local/share/java/openjdk6 test
+
+    # stand-alone build:
+    sudo port fetch openjdk6
+    sudo port patch openjdk6
+    make openjdk=/opt/local/share/java/openjdk6 \
+      openjdk-src=/opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_ports_java_openjdk6/work/jdk/src \
+      test
+
+  Windows (Cygwin):
+    # conventional build:
+    # Prerequisite: download and install the latest Windows OpenJDK
+    # build from http://www.openscg.com/se/openjdk/
+    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 test
+
+    # stand-alone build:
+    # Prerequisite: install OpenSCG build as above, plus the
+    # corresponding source bundle from
+    # http://download.java.net/openjdk/jdk6/promoted/, e.g.:
+    wget http://download.java.net/openjdk/jdk6/promoted/b21/openjdk-6-src-b21-20_jan_2011.tar.gz
+    mkdir openjdk
+    (cd openjdk && tar xzf openjdk-6-src-b21-20_jan_2011.tar.gz)
+    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 \
+      openjdk-src=$(pwd)/openjdk/jdk/src \
+      test
+
 
 Installing
 ----------
