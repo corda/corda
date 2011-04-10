@@ -460,20 +460,40 @@ GetSuperclass(Thread* t, jclass c)
   return reinterpret_cast<jclass>(run(t, getSuperclass, arguments));
 }
 
-jboolean JNICALL
-IsInstanceOf(Thread* t, jobject o, jclass c)
+uint64_t
+isInstanceOf(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jclass c = reinterpret_cast<jclass>(arguments[1]);
 
   return instanceOf(t, jclassVmClass(t, *c), *o);
 }
 
 jboolean JNICALL
-IsAssignableFrom(Thread* t, jclass b, jclass a)
+IsInstanceOf(Thread* t, jobject o, jclass c)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            reinterpret_cast<uintptr_t>(c) };
+
+  return run(t, isInstanceOf, arguments);
+}
+
+uint64_t
+isAssignableFrom(Thread* t, uintptr_t* arguments)
+{
+  jclass b = reinterpret_cast<jclass>(arguments[0]);
+  jclass a = reinterpret_cast<jclass>(arguments[1]);
 
   return isAssignableFrom(t, jclassVmClass(t, *a), jclassVmClass(t, *b));
+}
+
+jboolean JNICALL
+IsAssignableFrom(Thread* t, jclass b, jclass a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(b),
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, isAssignableFrom, arguments);
 }
 
 object
