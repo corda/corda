@@ -1691,156 +1691,174 @@ interceptFileOperations(Thread* t)
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   { object fileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/File");
-    if (fileClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/io/File", false);
 
-    object filePathField = findFieldInClass2
-      (t, fileClass, "path", "Ljava/lang/String;");
-    if (filePathField == 0) return;
-
-    cp->filePathField = fieldOffset(t, filePathField);
+    if (fileClass) {
+      object filePathField = findFieldInClass2
+        (t, fileClass, "path", "Ljava/lang/String;");
+      
+      if (filePathField) {
+        cp->filePathField = fieldOffset(t, filePathField);
+      }
+    }
   }
 
   { object fileDescriptorClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/FileDescriptor");
-    if (fileDescriptorClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/io/FileDescriptor", false);
 
-    object fileDescriptorFdField = findFieldInClass2
-      (t, fileDescriptorClass, "fd", "I");
-    if (fileDescriptorFdField == 0) return;
+    if (fileDescriptorClass) {
+      object fileDescriptorFdField = findFieldInClass2
+        (t, fileDescriptorClass, "fd", "I");
 
-    cp->fileDescriptorFdField = fieldOffset(t, fileDescriptorFdField);
+      if (fileDescriptorFdField) {
+        cp->fileDescriptorFdField = fieldOffset(t, fileDescriptorFdField);
+      }
+    }
   }
 
   { object fileInputStreamClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/FileInputStream");
-    if (fileInputStreamClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/io/FileInputStream", false);
 
-    PROTECT(t, fileInputStreamClass);
+    if (fileInputStreamClass) {
+      PROTECT(t, fileInputStreamClass);
 
-    object fileInputStreamFdField = findFieldInClass2
-      (t, fileInputStreamClass, "fd", "Ljava/io/FileDescriptor;");
-    if (fileInputStreamFdField == 0) return;
+      object fileInputStreamFdField = findFieldInClass2
+        (t, fileInputStreamClass, "fd", "Ljava/io/FileDescriptor;");
 
-    cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
+      if (fileInputStreamFdField) {
+        cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
 
-    intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
-              voidPointer(openFile));
+        intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
+                  voidPointer(openFile));
   
-    intercept(t, fileInputStreamClass, "read", "()I",
-              voidPointer(readByteFromFile));
+        intercept(t, fileInputStreamClass, "read", "()I",
+                  voidPointer(readByteFromFile));
   
-    intercept(t, fileInputStreamClass, "readBytes", "([BII)I",
-              voidPointer(readBytesFromFile));
+        intercept(t, fileInputStreamClass, "readBytes", "([BII)I",
+                  voidPointer(readBytesFromFile));
   
-    intercept(t, fileInputStreamClass, "skip", "(J)J",
-              voidPointer(skipBytesInFile));
+        intercept(t, fileInputStreamClass, "skip", "(J)J",
+                  voidPointer(skipBytesInFile));
   
-    intercept(t, fileInputStreamClass, "available", "()I",
-              voidPointer(availableBytesInFile));
+        intercept(t, fileInputStreamClass, "available", "()I",
+                  voidPointer(availableBytesInFile));
   
-    intercept(t, fileInputStreamClass, "close0", "()V",
-              voidPointer(closeFile));
+        intercept(t, fileInputStreamClass, "close0", "()V",
+                  voidPointer(closeFile));
+      }
+    }
   }
 
   { object zipEntryClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/util/zip/ZipEntry");
-    if (zipEntryClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/util/zip/ZipEntry", false);
 
-    PROTECT(t, zipEntryClass);
+    if (zipEntryClass) {
+      PROTECT(t, zipEntryClass);
 
-    object zipEntryNameField = findFieldInClass2
-      (t, zipEntryClass, "name", "Ljava/lang/String;");
-    if (zipEntryNameField == 0) return;
+      object zipEntryNameField = findFieldInClass2
+        (t, zipEntryClass, "name", "Ljava/lang/String;");
 
-    cp->zipEntryNameField = fieldOffset(t, zipEntryNameField);
+      if (zipEntryNameField) {
+        cp->zipEntryNameField = fieldOffset(t, zipEntryNameField);
 
-    object zipEntryTimeField = findFieldInClass2
-      (t, zipEntryClass, "time", "J");
-    if (zipEntryTimeField == 0) return;
+        object zipEntryTimeField = findFieldInClass2
+          (t, zipEntryClass, "time", "J");
 
-    cp->zipEntryTimeField = fieldOffset(t, zipEntryTimeField);
+        if (zipEntryTimeField) {
+          cp->zipEntryTimeField = fieldOffset(t, zipEntryTimeField);
 
-    object zipEntryCrcField = findFieldInClass2
-      (t, zipEntryClass, "crc", "J");
-    if (zipEntryCrcField == 0) return;
+          object zipEntryCrcField = findFieldInClass2
+            (t, zipEntryClass, "crc", "J");
 
-    cp->zipEntryCrcField = fieldOffset(t, zipEntryCrcField);
+          if (zipEntryCrcField) {
+            cp->zipEntryCrcField = fieldOffset(t, zipEntryCrcField);
 
-    object zipEntrySizeField = findFieldInClass2
-      (t, zipEntryClass, "size", "J");
-    if (zipEntrySizeField == 0) return;
+            object zipEntrySizeField = findFieldInClass2
+              (t, zipEntryClass, "size", "J");
 
-    cp->zipEntrySizeField = fieldOffset(t, zipEntrySizeField);
+            if (zipEntrySizeField) {
+              cp->zipEntrySizeField = fieldOffset(t, zipEntrySizeField);
 
-    object zipEntryCsizeField = findFieldInClass2
-      (t, zipEntryClass, "csize", "J");
-    if (zipEntryCsizeField == 0) return;
+              object zipEntryCsizeField = findFieldInClass2
+                (t, zipEntryClass, "csize", "J");
+              
+              if (zipEntryCsizeField) {
+                cp->zipEntryCsizeField = fieldOffset(t, zipEntryCsizeField);
 
-    cp->zipEntryCsizeField = fieldOffset(t, zipEntryCsizeField);
+                object zipEntryMethodField = findFieldInClass2
+                  (t, zipEntryClass, "method", "I");
 
-    object zipEntryMethodField = findFieldInClass2
-      (t, zipEntryClass, "method", "I");
-    if (zipEntryMethodField == 0) return;
+                if (zipEntryMethodField) {
+                  cp->zipEntryMethodField = fieldOffset
+                    (t, zipEntryMethodField);
 
-    cp->zipEntryMethodField = fieldOffset(t, zipEntryMethodField);
-
-    intercept(t, zipEntryClass, "initFields", "(J)V",
-              voidPointer(initializeZipEntryFields));
+                  intercept(t, zipEntryClass, "initFields", "(J)V",
+                            voidPointer(initializeZipEntryFields));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   { object zipFileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/util/zip/ZipFile");
-    if (zipFileClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/util/zip/ZipFile", false);
 
-    PROTECT(t, zipFileClass);
+    if (zipFileClass) {
+      PROTECT(t, zipFileClass);
 
-    object zipFileJzfileField = findFieldInClass2
-      (t, zipFileClass, "jzfile", "J");
-    if (zipFileJzfileField == 0) return;
+      object zipFileJzfileField = findFieldInClass2
+        (t, zipFileClass, "jzfile", "J");
 
-    cp->zipFileJzfileField = fieldOffset(t, zipFileJzfileField);
+      if (zipFileJzfileField) {
+        cp->zipFileJzfileField = fieldOffset(t, zipFileJzfileField);
 
-    intercept(t, zipFileClass, "open", "(Ljava/lang/String;IJ)J",
-              voidPointer(openZipFile));
+        intercept(t, zipFileClass, "open", "(Ljava/lang/String;IJ)J",
+                  voidPointer(openZipFile));
 
-    intercept(t, zipFileClass, "getTotal", "(J)I",
-              voidPointer(getZipFileEntryCount));
+        intercept(t, zipFileClass, "getTotal", "(J)I",
+                  voidPointer(getZipFileEntryCount));
 
-    intercept(t, zipFileClass, "getEntry", "(JLjava/lang/String;Z)J",
-              voidPointer(getZipFileEntry));
+        intercept(t, zipFileClass, "getEntry", "(JLjava/lang/String;Z)J",
+                  voidPointer(getZipFileEntry));
 
-    intercept(t, zipFileClass, "getNextEntry", "(JI)J",
-              voidPointer(getNextZipFileEntry));
+        intercept(t, zipFileClass, "getNextEntry", "(JI)J",
+                  voidPointer(getNextZipFileEntry));
 
-    intercept(t, zipFileClass, "getMethod", "(J)I",
-              voidPointer(getZipFileEntryMethod));
+        intercept(t, zipFileClass, "getMethod", "(J)I",
+                  voidPointer(getZipFileEntryMethod));
 
-    intercept(t, zipFileClass, "freeEntry", "(JJ)V",
-              voidPointer(freeZipFileEntry));
+        intercept(t, zipFileClass, "freeEntry", "(JJ)V",
+                  voidPointer(freeZipFileEntry));
 
-    intercept(t, zipFileClass, "read", "(JJJ[BII)I",
-              voidPointer(readZipFileEntry));
+        intercept(t, zipFileClass, "read", "(JJJ[BII)I",
+                  voidPointer(readZipFileEntry));
 
-    intercept(t, zipFileClass, "getCSize", "(J)J",
-              voidPointer(getZipFileEntryCompressedSize));
+        intercept(t, zipFileClass, "getCSize", "(J)J",
+                  voidPointer(getZipFileEntryCompressedSize));
 
-    intercept(t, zipFileClass, "getSize", "(J)J",
-              voidPointer(getZipFileEntryUncompressedSize));
+        intercept(t, zipFileClass, "getSize", "(J)J",
+                  voidPointer(getZipFileEntryUncompressedSize));
 
-    intercept(t, zipFileClass, "getZipMessage", "(J)Ljava/lang/String;",
-              voidPointer(getZipMessage));
+        intercept(t, zipFileClass, "getZipMessage", "(J)Ljava/lang/String;",
+                  voidPointer(getZipMessage));
 
-    intercept(t, zipFileClass, "close", "(J)V",
-              voidPointer(closeZipFile));
+        intercept(t, zipFileClass, "close", "(J)V",
+                  voidPointer(closeZipFile));
+      }
+    }
   }
 
   { object jarFileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/util/jar/JarFile");
-    if (jarFileClass == 0) return;
+      (t, root(t, Machine::BootLoader), "java/util/jar/JarFile", false);
 
-    intercept(t, jarFileClass, "getMetaInfEntryNames", "()[Ljava/lang/String;",
-              voidPointer(getJarFileMetaInfEntryNames));
+    if (jarFileClass) {
+      intercept(t, jarFileClass, "getMetaInfEntryNames",
+                "()[Ljava/lang/String;",
+                voidPointer(getJarFileMetaInfEntryNames));
+    }
   }
 
   {
@@ -1854,18 +1872,19 @@ interceptFileOperations(Thread* t)
 
     object fsClass = resolveClass
       (t, root(t, Machine::BootLoader), fsClassName, false);
-    if (fsClass == 0) return;
 
-    PROTECT(t, fsClass);
+    if (fsClass) {
+      PROTECT(t, fsClass);
 
-    intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
-              voidPointer(getFileAttributes));
+      intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
+                voidPointer(getFileAttributes));
 
-    intercept(t, fsClass, "checkAccess", "(Ljava/io/File;I)Z",
-              voidPointer(checkFileAccess));
+      intercept(t, fsClass, "checkAccess", "(Ljava/io/File;I)Z",
+                voidPointer(checkFileAccess));
   
-    intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
-              voidPointer(getFileLength));
+      intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
+                voidPointer(getFileLength));
+    }
   }
 
   intercept(t, type(t, Machine::ClassLoaderType), "loadLibrary",
