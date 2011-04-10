@@ -260,7 +260,9 @@ an LZMA-enabled version:
 
 You can reduce the size futher for embedded builds by using ProGuard
 and the supplied openjdk.pro configuration file (see "Embedding with
-ProGuard and a Boot Image" below).
+ProGuard and a Boot Image" below).  Also see app.mk in
+git://oss.readytalk.com/avian-swt-examples.git for an example of using
+Avian, OpenJDK, ProGuard, and UPX in concert.
 
 Here are some examples of how to install OpenJDK and build Avian with
 it on various OSes:
