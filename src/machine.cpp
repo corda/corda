@@ -969,6 +969,17 @@ addInterfaces(Thread* t, object class_, object map)
   }
 }
 
+object
+getClassAddendum(Thread* t, object class_, object pool)
+{
+  object addendum = classAddendum(t, class_);
+  if (addendum == 0) {
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0);
+    set(t, class_, ClassAddendum, addendum);
+  }
+  return addendum;
+}
+
 void
 parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
                     Machine::Type throwType)
@@ -989,10 +1000,9 @@ parseInterfaceTable(Thread* t, Stream& s, object class_, object pool,
 
   if (count) {
     table = makeArray(t, count);
-    if (classAddendum(t, class_) == 0) {
-      object addendum = makeClassAddendum(t, pool, 0, 0, table, 0);
-      set(t, class_, ClassAddendum, addendum);
-    }
+
+    object addendum = getClassAddendum(t, class_, pool);
+    set(t, addendum, ClassAddendumInterfaceTable, table);
   }
 
   for (unsigned i = 0; i < count; ++i) {
@@ -1644,6 +1654,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       if (abstractVirtuals) {
         PROTECT(t, vtable);
 
+        object addendum = getClassAddendum(t, class_, pool);
+        set(t, addendum, ClassAddendumMethodTable,
+            classMethodTable(t, class_));
+
         unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
         object newMethodTable = makeArray
           (t, oldLength + listSize(t, abstractVirtuals));
@@ -1707,9 +1721,6 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, class_);
   PROTECT(t, pool);
 
-  object addendum = classAddendum(t, class_);
-  PROTECT(t, addendum);
-
   unsigned attributeCount = s.read2();
   for (unsigned j = 0; j < attributeCount; ++j) {
     object name = singletonObject(t, pool, s.read2() - 1);
@@ -1722,19 +1733,12 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
-      if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
-      }
-      
+      object addendum = getClassAddendum(t, class_, pool);
       set(t, addendum, AddendumSignature,
           singletonObject(t, pool, s.read2() - 1));
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>("InnerClasses"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
-      if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
-      }
-
       unsigned innerClassCount = s.read2();
       object table = makeArray(t, innerClassCount);
       PROTECT(t, table);
@@ -1754,25 +1758,22 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
         set(t, table, ArrayBody + (i * BytesPerWord), reference);
       }
 
+      object addendum = getClassAddendum(t, class_, pool);
       set(t, addendum, ClassAddendumInnerClassTable, table);
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                           ("RuntimeVisibleAnnotations"),
                           &byteArrayBody(t, name, 0)) == 0)
     {
-      if (addendum == 0) {
-        addendum = makeClassAddendum(t, pool, 0, 0, 0, 0);
-      }
-
       object body = makeByteArray(t, length);
+      PROTECT(t, body);
       s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)), length);
 
+      object addendum = getClassAddendum(t, class_, pool);
       set(t, addendum, AddendumAnnotationTable, body);
     } else {
       s.skip(length);
     }
   }
-
-  set(t, class_, ClassAddendum, addendum);
 }
 
 void

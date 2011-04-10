@@ -1865,10 +1865,23 @@ interceptFileOperations(Thread* t)
             voidPointer(getBootstrapResources));
 }
 
+object
+getClassMethodTable(Thread* t, object c)
+{
+  object addendum = classAddendum(t, c);
+  if (addendum) {
+    object table = classAddendumMethodTable(t, addendum);
+    if (table) {
+      return table;
+    }
+  }
+  return classMethodTable(t, c);
+}
+
 unsigned
 countMethods(Thread* t, object c, bool publicOnly)
 {
-  object table = classMethodTable(t, c);
+  object table = getClassMethodTable(t, c);
   unsigned count = 0;
   for (unsigned i = 0; i < arrayLength(t, table); ++i) {
     object vmMethod = arrayBody(t, table, i);
@@ -1902,7 +1915,7 @@ countFields(Thread* t, object c, bool publicOnly)
 unsigned
 countConstructors(Thread* t, object c, bool publicOnly)
 {
-  object table = classMethodTable(t, c);
+  object table = getClassMethodTable(t, c);
   unsigned count = 0;
   for (unsigned i = 0; i < arrayLength(t, table); ++i) {
     object vmMethod = arrayBody(t, table, i);
@@ -4054,7 +4067,7 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
   jboolean publicOnly = arguments[1];
 
-  object table = classMethodTable(t, jclassVmClass(t, *c));
+  object table = getClassMethodTable(t, jclassVmClass(t, *c));
   if (table) {
     PROTECT(t, table);
 
@@ -4249,7 +4262,7 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
   jboolean publicOnly = arguments[1];
 
-  object table = classMethodTable(t, jclassVmClass(t, *c));
+  object table = getClassMethodTable(t, jclassVmClass(t, *c));
   if (table) {
     PROTECT(t, table);
 
