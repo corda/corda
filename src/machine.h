@@ -37,7 +37,7 @@
   FieldReadResource MAKE_NAME(monitorResource_) (t, field)
 
 #define ACQUIRE_FIELD_FOR_WRITE(t, field) \
-  FieldReadResource MAKE_NAME(monitorResource_) (t, field)
+  FieldWriteResource MAKE_NAME(monitorResource_) (t, field)
 
 #define ACQUIRE_RAW(t, x) RawMonitorResource MAKE_NAME(monitorResource_) (t, x)
 
