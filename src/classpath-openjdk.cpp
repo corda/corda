@@ -106,6 +106,185 @@ CREAT(string_t path, int mode)
 
 namespace local {
 
+const int JMM_VERSION_1_0 = 0x20010000;
+
+struct jmmOptionalSupport {
+  unsigned isLowMemoryDetectionSupported : 1;
+  unsigned isCompilationTimeMonitoringSupported : 1;
+  unsigned isThreadContentionMonitoringSupported : 1;
+  unsigned isCurrentThreadCpuTimeSupported : 1;
+  unsigned isOtherThreadCpuTimeSupported : 1;
+  unsigned isBootClassPathSupported : 1;
+  unsigned isObjectMonitorUsageSupported : 1;
+  unsigned isSynchronizerUsageSupported : 1;
+};
+
+typedef unsigned jmmLongAttribute;
+typedef unsigned jmmBoolAttribute;
+typedef unsigned jmmStatisticType;
+typedef unsigned jmmThresholdType;
+typedef unsigned jmmVMGlobalType;
+typedef unsigned jmmVMGlobalOrigin;
+
+struct jmmVMGlobal {
+  jstring name;
+  jvalue value;
+  jmmVMGlobalType type;
+  jmmVMGlobalOrigin origin;
+  unsigned writeable : 1;
+  unsigned external : 1;
+  unsigned reserved : 30;
+  void* reserved1;
+  void* reserved2;
+};
+
+struct jmmExtAttributeInfo {
+  const char* name;
+  char type;
+  const char* description;
+};
+
+struct jmmGCStat {
+  jlong gc_index;
+  jlong start_time;
+  jlong end_time;
+  jobjectArray usage_before_gc;
+  jobjectArray usage_after_gc;
+  jint gc_ext_attribute_values_size;
+  jvalue* gc_ext_attribute_values;
+  jint num_gc_ext_attributes;
+};
+
+struct JmmInterface {
+  void* reserved1;
+  void* reserved2;
+
+  jint
+  (JNICALL *GetVersion)
+    (JNIEnv*);
+
+  jint
+  (JNICALL *GetOptionalSupport)
+    (JNIEnv*, jmmOptionalSupport*);
+
+  jobject
+  (JNICALL *GetInputArguments)
+    (JNIEnv*);
+
+  jint
+  (JNICALL *GetThreadInfo)
+    (JNIEnv*, jlongArray, jint, jobjectArray);
+
+  jobjectArray
+  (JNICALL *GetInputArgumentArray)
+    (JNIEnv*);
+
+  jobjectArray
+  (JNICALL *GetMemoryPools)
+    (JNIEnv*, jobject);
+
+  jobjectArray
+  (JNICALL *GetMemoryManagers)
+    (JNIEnv*, jobject);
+
+  jobject
+  (JNICALL *GetMemoryPoolUsage)
+    (JNIEnv*, jobject);
+
+  jobject
+  (JNICALL *GetPeakMemoryPoolUsage)
+    (JNIEnv*, jobject);
+
+  void* reserved4;
+
+  jobject
+  (JNICALL *GetMemoryUsage)
+    (JNIEnv*, jboolean);
+
+  jlong
+  (JNICALL *GetLongAttribute)
+    (JNIEnv*, jobject, jmmLongAttribute);
+
+  jboolean (JNICALL *GetBoolAttribute)
+    (JNIEnv*, jmmBoolAttribute);
+
+  jboolean
+  (JNICALL *SetBoolAttribute)
+    (JNIEnv*, jmmBoolAttribute, jboolean);
+
+  jint
+  (JNICALL *GetLongAttributes)
+    (JNIEnv*, jobject, jmmLongAttribute*, jint, jlong*);
+
+  jobjectArray
+  (JNICALL *FindCircularBlockedThreads)
+    (JNIEnv*);
+
+  jlong
+  (JNICALL *GetThreadCpuTime)
+  (JNIEnv*, jlong);
+
+  jobjectArray
+  (JNICALL *GetVMGlobalNames)
+    (JNIEnv*);
+
+  jint
+  (JNICALL *GetVMGlobals)
+    (JNIEnv*, jobjectArray, jmmVMGlobal*, jint);
+
+  jint
+  (JNICALL *GetInternalThreadTimes)
+    (JNIEnv*, jobjectArray, jlongArray);
+
+  jboolean
+  (JNICALL *ResetStatistic)
+    (JNIEnv*, jvalue, jmmStatisticType);
+
+  void
+  (JNICALL *SetPoolSensor)
+  (JNIEnv*, jobject, jmmThresholdType, jobject);
+
+  jlong
+  (JNICALL *SetPoolThreshold)
+    (JNIEnv*, jobject, jmmThresholdType, jlong);
+
+  jobject
+  (JNICALL *GetPoolCollectionUsage)
+  (JNIEnv*, jobject);
+
+  jint
+  (JNICALL *GetGCExtAttributeInfo)
+    (JNIEnv*, jobject, jmmExtAttributeInfo*, jint);
+
+  void
+  (JNICALL *GetLastGCStat)
+  (JNIEnv*, jobject, jmmGCStat*);
+
+  jlong
+  (JNICALL *GetThreadCpuTimeWithKind)
+    (JNIEnv*, jlong, jboolean);
+
+  void* reserved5;
+
+  jint
+  (JNICALL *DumpHeap0)
+    (JNIEnv*, jstring, jboolean);
+
+  jobjectArray
+  (JNICALL *FindDeadlocks)
+    (JNIEnv*, jboolean);
+
+  void
+  (JNICALL *SetVMGlobal)
+  (JNIEnv*, jstring, jvalue );
+
+  void* reserved6;
+
+  jobjectArray
+  (JNICALL *DumpThreads)
+    (JNIEnv*, jlongArray, jboolean, jboolean);
+};
+
 const unsigned InterfaceVersion = 4;
 const unsigned PageSize = 4 * 1024;
 const int VirtualFileBase = 1000000000;
@@ -419,6 +598,7 @@ class MyClasspath : public Classpath {
   unsigned zipEntryMethodField;
   bool ranNetOnLoad;
   char buffer[BufferSize];
+  JmmInterface jmmInterface;
 };
 
 struct JVM_ExceptionTableEntryType {
@@ -4825,8 +5005,103 @@ EXPORT(JVM_RawMonitorExit)(void* lock)
      (local::globalMachine->localThread->get())->systemThread);
 }
 
+int JNICALL
+GetVersion(Thread*)
+{
+  return JMM_VERSION_1_0;
+}
+
+jint JNICALL  
+GetOptionalSupport(Thread*, jmmOptionalSupport* support)
+{
+  memset(support, 0, sizeof(jmmOptionalSupport));
+  return 0;
+}
+
+jlong JNICALL
+GetLongAttribute(Thread* t, jobject, jmmLongAttribute attribute)
+{
+  const unsigned JMM_JVM_INIT_DONE_TIME_MS = 7;
+
+  switch (attribute) {
+  case JMM_JVM_INIT_DONE_TIME_MS:
+    return 0;
+
+  default:
+    abort(t);
+  }
+}
+
+jboolean JNICALL
+GetBoolAttribute(Thread* t, jmmBoolAttribute attribute)
+{
+  const unsigned JMM_THREAD_CPU_TIME = 24;
+
+  switch (attribute) {
+  case JMM_THREAD_CPU_TIME:
+    return false;
+
+  default:
+    abort(t);
+  }
+}
+
+uint64_t
+getMemoryManagers(Thread* t, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, makeObjectArray
+      (t, resolveClass
+       (t, root(t, Machine::BootLoader),
+        "java/lang/management/MemoryManagerMXBean"), 0)));
+}
+
+jobjectArray JNICALL
+GetMemoryManagers(Thread* t, jobject)
+{
+  return reinterpret_cast<jobjectArray>(run(t, getMemoryManagers, 0));
+}
+
+uint64_t
+getMemoryPools(Thread* t, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, makeObjectArray
+      (t, resolveClass
+       (t, root(t, Machine::BootLoader),
+        "java/lang/management/MemoryPoolMXBean"), 0)));
+}
+
+jobjectArray JNICALL
+GetMemoryPools(Thread* t, jobject)
+{
+  return reinterpret_cast<jobjectArray>(run(t, getMemoryPools, 0));
+}
+
 extern "C" JNIEXPORT void* JNICALL
-EXPORT(JVM_GetManagement)(jint) { abort(); }
+EXPORT(JVM_GetManagement)(jint version)
+{
+  if (version == JMM_VERSION_1_0) {
+    JmmInterface* interface
+      = &(static_cast<MyClasspath*>
+          (local::globalMachine->classpath)->jmmInterface);
+
+    memset(interface, 0, sizeof(JmmInterface));
+
+    interface->GetVersion = GetVersion;
+    interface->GetOptionalSupport = GetOptionalSupport;
+    interface->GetLongAttribute = GetLongAttribute;
+    interface->GetBoolAttribute = GetBoolAttribute;
+    interface->GetMemoryManagers = GetMemoryManagers;
+    interface->GetMemoryPools = GetMemoryPools;
+
+    return interface; 
+  } else {
+    return 0;
+  }
+}
 
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_InitAgentProperties)(Thread*, jobject) { abort(); }
