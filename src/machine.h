@@ -1568,6 +1568,9 @@ class Classpath {
   runThread(Thread* t) = 0;
 
   virtual void
+  resolveNative(Thread* t, object method) = 0;
+
+  virtual void
   boot(Thread* t) = 0;
 
   virtual const char*

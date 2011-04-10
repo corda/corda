@@ -7334,7 +7334,7 @@ invokeNative(MyThread* t)
       static_cast<MyThread*>(t)->trace->nativeMethod = 0;
     });
 
-  resolveNative(t, t->trace->nativeMethod);
+  t->m->classpath->resolveNative(t, t->trace->nativeMethod);
 
   result = invokeNative2(t, t->trace->nativeMethod);
 
@@ -8143,7 +8143,7 @@ class SignalHandler: public System::SignalHandler {
           t->exception = vm::root(t, root);
         }
 
-        // printTrace(t, t->exception);
+        printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);

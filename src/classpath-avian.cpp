@@ -10,6 +10,7 @@
 
 #include "machine.h"
 #include "classpath-common.h"
+#include "process.h"
 
 using namespace vm;
 
@@ -61,6 +62,12 @@ class MyClasspath : public Classpath {
        "(Ljava/lang/Thread;)V");
 
     t->m->processor->invoke(t, method, 0, t->javaThread);
+  }
+
+  virtual void
+  resolveNative(Thread* t, object method)
+  {
+    vm::resolveNative(t, method);
   }
 
   virtual void

@@ -11,6 +11,7 @@
 #include "machine.h"
 #include "classpath-common.h"
 #include "util.h"
+#include "process.h"
 
 #ifdef PLATFORM_WINDOWS
 
@@ -518,6 +519,24 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  resolveNative(Thread* t, object method)
+  {
+    if (strcmp(reinterpret_cast<const int8_t*>("sun/font/FontManager"),
+               &byteArrayBody(t, className(t, methodClass(t, method)), 0)) == 0
+        and strcmp(reinterpret_cast<const int8_t*>("initIDs"),
+                   &byteArrayBody(t, methodName(t, method), 0)) == 0
+        and strcmp(reinterpret_cast<const int8_t*>("()V"),
+                   &byteArrayBody(t, methodSpec(t, method), 0)) == 0)
+    {
+      PROTECT(t, method);
+
+      expect(t, loadLibrary(t, libraryPath, "fontmanager", true, true));
+    }
+
+    vm::resolveNative(t, method);
+  }
+
+  virtual void
   boot(Thread* t)
   {
     globalMachine = t->m;
@@ -528,11 +547,8 @@ class MyClasspath : public Classpath {
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t);
 #else // not AVIAN_OPENJDK_SRC
-    if (loadLibrary(t, libraryPath, "verify", true, true) == 0
-        or loadLibrary(t, libraryPath, "java", true, true) == 0)
-    {
-      abort(t);
-    }
+    expect(t, loadLibrary(t, libraryPath, "verify", true, true));
+    expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif // not AVIAN_OPENJDK_SRC
 
     object constructor = resolveMethod
