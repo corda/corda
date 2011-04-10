@@ -2395,6 +2395,17 @@ Avian_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int16_t value = arguments[4];
+
+  cast<int16_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
 (Thread*, object, uintptr_t* arguments)
 {
