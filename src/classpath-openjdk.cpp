@@ -2624,6 +2624,15 @@ Avian_sun_misc_Unsafe_getInt__J
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getFloat__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int32_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_pageSize
 (Thread*, object, uintptr_t*)
 {
