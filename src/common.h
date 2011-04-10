@@ -61,11 +61,7 @@ typedef uint64_t uintptr_t;
 
 namespace vm {
 
-inline intptr_t&
-alias(void* p, unsigned offset)
-{
-  return *reinterpret_cast<intptr_t*>(static_cast<uint8_t*>(p) + offset);
-}
+typedef intptr_t intptr_alias_t;
 
 } // namespace vm
 
@@ -99,11 +95,6 @@ alias(void* p, unsigned offset)
 namespace vm {
 
 typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
-inline intptr_alias_t&
-alias(void* p, unsigned offset)
-{
-  return *reinterpret_cast<intptr_alias_t*>(static_cast<uint8_t*>(p) + offset);
-}
 
 } // namespace vm
 
@@ -177,6 +168,12 @@ alias(void* p, unsigned offset)
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
+
+inline intptr_alias_t&
+alias(void* p, unsigned offset)
+{
+  return *reinterpret_cast<intptr_alias_t*>(static_cast<uint8_t*>(p) + offset);
+}
 
 #ifdef _MSC_VER
 
