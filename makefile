@@ -898,7 +898,7 @@ $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-ld) $(^) $(build-lflags) -o $(@)
 
-$(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
+$(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
@@ -907,7 +907,7 @@ $(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@))
 
-$(openjdk-local-objects): $(build)/openjdk/%.o: $(src)/openjdk/%.c \
+$(openjdk-local-objects): $(build)/openjdk/%-openjdk.o: $(src)/openjdk/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))

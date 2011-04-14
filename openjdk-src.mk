@@ -298,7 +298,7 @@ endif
 openjdk-local-sources = \
 	$(src)/openjdk/my_net_util.c
 
-c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
+c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-openjdk.o,$(x)))
 
 openjdk-objects = \
 	$(call c-objects,$(openjdk-sources),$(openjdk-src),$(build)/openjdk)
