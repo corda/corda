@@ -104,7 +104,8 @@
  }
 
 -keepclassmembers class java.io.FileDescriptor {
-   private int fd;   
+   private int fd;
+   private long handle;
  }
 
 -keep class java.net.InetAddress {
@@ -132,7 +133,8 @@
  }
 
 -keepclassmembers class java.io.FileOutputStream {
-   private java.io.FileDescriptor fd;   
+   private java.io.FileDescriptor fd;
+   private boolean append;
  }
 
 # changed in native code via sun.misc.Unsafe (todo: handle other
@@ -172,6 +174,10 @@
 
 -keep class java.io.UnixFileSystem {
    public UnixFileSystem();
+ }
+
+-keep class java.io.WinNTFileSystem {
+   public WinNTFileSystem();
  }
 
 -keep class java.io.File {
