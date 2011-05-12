@@ -664,13 +664,19 @@ appendPoolEvent(Context* c, MyBlock* b, unsigned offset, PoolOffset* head,
   b->poolEventTail = e;
 }
 
+bool
+needJump(MyBlock* b)
+{
+  return b->next or b->size != (b->size & PoolOffsetMask);
+}
+
 unsigned
 padding(MyBlock* b, unsigned offset)
 {
   unsigned total = 0;
   for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
     if (e->offset <= offset) {
-      if (b->next) {
+      if (needJump(b)) {
         total += BytesPerWord;
       }
       for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
@@ -2363,7 +2369,7 @@ class MyAssembler: public Assembler {
 
           unsigned entry = dstOffset + poolSize;
 
-          if (b->next) {
+          if (needJump(b)) {
             entry += BytesPerWord;
           }
 
@@ -2381,7 +2387,7 @@ class MyAssembler: public Assembler {
           poolSize += BytesPerWord;
         }
 
-        if (b->next) {
+        if (needJump(b)) {
           write4(dst + dstOffset, ::b((poolSize + BytesPerWord - 8) >> 2));
         }
 
