@@ -196,7 +196,7 @@ class MyBlock: public Assembler::Block {
   MyBlock(Context* context, unsigned offset):
     context(context), next(0), jumpOffsetHead(0), jumpOffsetTail(0),
     lastJumpOffsetTail(0), jumpEventHead(0), jumpEventTail(0),
-    lastEventOffset(0), offset(offset), start(~0), size(0)
+    lastEventOffset(0), offset(offset), start(~0), size(0), resolved(false)
   { }
 
   virtual unsigned resolve(unsigned start, Assembler::Block* next) {
@@ -204,6 +204,8 @@ class MyBlock: public Assembler::Block {
     this->next = static_cast<MyBlock*>(next);
 
     ::resolve(this);
+
+    this->resolved = true;
 
     return start + size + padding(this, size);
   }
@@ -219,6 +221,7 @@ class MyBlock: public Assembler::Block {
   unsigned offset;
   unsigned start;
   unsigned size;
+  bool resolved;
 };
 
 class Task;
@@ -326,13 +329,14 @@ class Offset: public Promise {
   { }
 
   virtual bool resolved() {
-    return block->start != static_cast<unsigned>(~0);
+    return block->resolved;
   }
   
   virtual int64_t value() {
     assert(c, resolved());
 
-    return block->start + (offset - block->offset);
+    unsigned o = offset - block->offset;
+    return block->start + padding(block, o) + o;
   }
 
   Context* c;
@@ -495,38 +499,24 @@ appendJumpEvent(Context* c, MyBlock* b, unsigned offset, JumpOffset* head,
   b->jumpEventTail = e;
 }
 
+bool
+needJump(MyBlock* b)
+{
+  return b->next or (not bounded(2, 16, b->size));
+}
+
 unsigned
 padding(MyBlock* b, unsigned offset)
 {
   unsigned total = 0;
-  for (JumpEvent** e = &(b->jumpEventHead); *e;) {
-    if ((*e)->offset <= offset) {
-      for (JumpOffset** o = &((*e)->jumpOffsetHead); *o;) {
-        if ((*o)->task->promise->resolved()
-            and (*o)->task->instructionOffset->resolved())
-        {
-          int32_t v = reinterpret_cast<uint8_t*>((*o)->task->promise->value())
-            - (b->context->result + (*o)->task->instructionOffset->value());
-
-          if (bounded(2, 16, v)) {
-            // this conditional jump needs no indirection -- a direct
-            // jump will suffice
-            *o = (*o)->next;
-            continue;
-          }
-        }
-
+  for (JumpEvent* e = b->jumpEventHead; e; e = e->next) {
+    if (e->offset <= offset) {
+      for (JumpOffset* o = e->jumpOffsetHead; o; o = o->next) {
         total += BytesPerWord;
-        o = &((*o)->next);
       }
 
-      if ((*e)->jumpOffsetHead == 0) {
-        *e = (*e)->next;
-      } else {
-        if (b->next) {
-          total += BytesPerWord;
-        }
-        e = &((*e)->next);
+      if (needJump(b)) {
+        total += BytesPerWord;
       }
     } else {
       break;
@@ -540,6 +530,32 @@ void
 resolve(MyBlock* b)
 {
   Context* c = b->context;
+
+  for (JumpEvent** e = &(b->jumpEventHead); *e;) {
+    for (JumpOffset** o = &((*e)->jumpOffsetHead); *o;) {
+      if ((*o)->task->promise->resolved()
+          and (*o)->task->instructionOffset->resolved())
+      {
+        int32_t v = reinterpret_cast<uint8_t*>((*o)->task->promise->value())
+          - (c->result + (*o)->task->instructionOffset->value());
+
+        if (bounded(2, 16, v)) {
+          // this conditional jump needs no indirection -- a direct
+          // jump will suffice
+          *o = (*o)->next;
+          continue;
+        }
+      }
+
+      o = &((*o)->next);
+    }
+
+    if ((*e)->jumpOffsetHead == 0) {
+      *e = (*e)->next;
+    } else {
+      e = &((*e)->next);
+    }
+  }
 
   if (b->jumpOffsetHead) {
     if (c->jumpOffsetTail) {
@@ -2680,7 +2696,7 @@ class MyAssembler: public Assembler {
 
           uint8_t* address = dst + dstOffset + jumpTableSize;
 
-          if (b->next) {
+          if (needJump(b)) {
             address += BytesPerWord;
           }
 
@@ -2691,7 +2707,7 @@ class MyAssembler: public Assembler {
 
         assert(&c, jumpTableSize);
 
-        if (b->next) {
+        if (needJump(b)) {
           write4(dst + dstOffset, ::b(jumpTableSize + BytesPerWord));
         }
 
