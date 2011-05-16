@@ -630,6 +630,33 @@ add(System* s, Element** first, Element** last, Allocator* allocator,
     const char* name, unsigned nameLength, const char* bootLibrary);
 
 void
+addTokens(System* s, Element** first, Element** last, Allocator* allocator,
+          const char* jarName, unsigned jarNameBase, const char* tokens,
+          unsigned tokensLength, const char* bootLibrary)
+{
+  for (Tokenizer t(tokens, tokensLength, ' '); t.hasMore();) {
+    Tokenizer::Token token(t.next());
+
+    RUNTIME_ARRAY(char, n, jarNameBase + token.length + 1);
+    memcpy(RUNTIME_ARRAY_BODY(n), jarName, jarNameBase);
+    memcpy(RUNTIME_ARRAY_BODY(n) + jarNameBase, token.s, token.length);
+    RUNTIME_ARRAY_BODY(n)[jarNameBase + token.length] = 0;
+          
+    add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
+        jarNameBase + token.length, bootLibrary);
+  }
+}
+
+bool
+continuationLine(const uint8_t* base, unsigned total, unsigned* start,
+                 unsigned* length)
+{
+  return readLine(base, total, start, length)
+    and *length > 0
+    and base[*start] == ' ';
+}
+
+void
 addJar(System* s, Element** first, Element** last, Allocator* allocator,
        const char* name, const char* bootLibrary)
 {
@@ -640,6 +667,8 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
   JarElement* e = new (allocator->allocate(sizeof(JarElement)))
     JarElement(s, allocator, name);
 
+  unsigned nameBase = baseName(name, s->fileSeparator());
+
   add(first, last, e);
 
   System::Region* region = e->find("META-INF/MANIFEST.MF");
@@ -647,29 +676,60 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
     unsigned start = 0;
     unsigned length;
     while (readLine(region->start(), region->length(), &start, &length)) {
+      unsigned multilineTotal = 0;
+
       const unsigned PrefixLength = 12;
-      if (strncmp("Class-Path: ", reinterpret_cast<const char*>
-                  (region->start() + start), PrefixLength) == 0)
+      if (length > PrefixLength
+          and strncmp("Class-Path: ", reinterpret_cast<const char*>
+                      (region->start() + start), PrefixLength) == 0)
       {
-        for (Tokenizer t(reinterpret_cast<const char*>
-                         (region->start() + start + PrefixLength),
-                         length - PrefixLength, ' ');
-             t.hasMore();)
-        {
-          Tokenizer::Token token(t.next());
+        { unsigned nextStart = start + length;
+          unsigned nextLength;
+          while (continuationLine
+                 (region->start(), region->length(), &nextStart, &nextLength))
+          {
+            multilineTotal += nextLength;
+            nextStart += nextLength;
+          }
+        }
 
-          unsigned base = baseName(name, s->fileSeparator());
+        const char* line = reinterpret_cast<const char*>
+          (region->start() + start + PrefixLength);
 
-          RUNTIME_ARRAY(char, n, base + token.length + 1);
-          memcpy(RUNTIME_ARRAY_BODY(n), name, base);
-          memcpy(RUNTIME_ARRAY_BODY(n) + base, token.s, token.length);
-          RUNTIME_ARRAY_BODY(n)[base + token.length] = 0;
-          
-          add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
-              base + token.length, bootLibrary);
+        unsigned lineLength = length - PrefixLength;
+
+        if (multilineTotal) {
+          RUNTIME_ARRAY
+            (char, n, (length - PrefixLength) + multilineTotal + 1);
+
+          memcpy(RUNTIME_ARRAY_BODY(n), line, lineLength);
+
+          unsigned offset = lineLength;
+          { unsigned nextStart = start + length;
+            unsigned nextLength;
+            while (continuationLine
+                   (region->start(), region->length(), &nextStart,
+                    &nextLength))
+            {
+              unsigned continuationLength = nextLength - 1;
+
+              memcpy(RUNTIME_ARRAY_BODY(n) + offset,
+                     region->start() + nextStart + 1, continuationLength);
+            
+              offset += continuationLength;
+              nextStart += nextLength;
+            }
+          }
+
+          addTokens(s, first, last, allocator, name, nameBase,
+                    RUNTIME_ARRAY_BODY(n), offset, bootLibrary);
+        } else {
+          addTokens(s, first, last, allocator, name, nameBase, line,
+                    lineLength, bootLibrary);
         }
       }
-      start += length;
+
+      start += length + multilineTotal;
     }
 
     region->dispose();
