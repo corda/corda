@@ -3160,10 +3160,16 @@ extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_CompilerCommand)(Thread*, jclass, jobject) { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_EnableCompiler)(Thread*, jclass) { abort(); }
+EXPORT(JVM_EnableCompiler)(Thread*, jclass)
+{
+  // ignore
+}
 
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_DisableCompiler)(Thread*, jclass) { abort(); }
+EXPORT(JVM_DisableCompiler)(Thread*, jclass)
+{
+  // ignore
+}
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_StartThread)(Thread* t, jobject thread)
