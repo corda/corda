@@ -121,7 +121,7 @@ Java_java_util_zip_Deflater_deflate
 (JNIEnv* e, jclass, jlong peer, 
  jbyteArray input, jint inputOffset, jint inputLength,
  jbyteArray output, jint outputOffset, jint outputLength,
- jintArray results)
+ jboolean finish, jintArray results)
 {
   z_stream* s = reinterpret_cast<z_stream*>(peer);
 
@@ -145,7 +145,7 @@ Java_java_util_zip_Deflater_deflate
   s->next_out = reinterpret_cast<Bytef*>(out);
   s->avail_out = outputLength;
 
-  int r = deflate(s, Z_SYNC_FLUSH);
+  int r = deflate(s, finish ? Z_FINISH : Z_NO_FLUSH);
   jint resultArray[3]
     = { r, inputLength - s->avail_in, outputLength - s->avail_out };
 

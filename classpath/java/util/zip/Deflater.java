@@ -27,14 +27,19 @@ public class Deflater {
   private boolean needDictionary;
   private boolean finished;
   private final boolean nowrap;
+  private boolean finish;
 
-  public Deflater(boolean nowrap) {
+  public Deflater(int level, boolean nowrap) {
     this.nowrap = nowrap;
-    peer = make(nowrap, DEFAULT_LEVEL);
+    peer = make(nowrap, level);
+  }
+
+  public Deflater(int level) {
+    this(level, false);
   }
 
   public Deflater() {
-    this(false);
+    this(DEFAULT_LEVEL);
   }
 
   private void check() {
@@ -85,16 +90,15 @@ public class Deflater {
     peer = make(nowrap, DEFAULT_LEVEL);
     input = null;
     offset = length = 0;
+    finish = false;
     needDictionary = finished = false;
   }
 
-  public int deflate(byte[] output) throws DataFormatException {
+  public int deflate(byte[] output) {
     return deflate(output, 0, output.length);
   }
 
-  public int deflate(byte[] output, int offset, int length)
-    throws DataFormatException
-  {
+  public int deflate(byte[] output, int offset, int length) {
     final int zlibResult = 0;
     final int inputCount = 1;
     final int outputCount = 2;
@@ -110,10 +114,10 @@ public class Deflater {
     int[] results = new int[3];
     deflate(peer, 
             input, this.offset, this.length,
-            output, offset, length, results);
+            output, offset, length, finish, results);
 
     if (results[zlibResult] < 0) {
-      throw new DataFormatException();
+      throw new AssertionError();
     }
 
     switch (results[zlibResult]) {
@@ -132,10 +136,15 @@ public class Deflater {
     return results[outputCount];
   }
 
+  public void finish() {
+    finish = true;
+  }
+
   private static native void deflate
     (long peer,
      byte[] input, int inputOffset, int inputLength,
      byte[] output, int outputOffset, int outputLength,
+     boolean finish,
      int[] results);
 
   public void dispose() {
