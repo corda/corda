@@ -33,7 +33,7 @@ public class JarFile extends ZipFile {
     return (JarEntry) getEntry(JarEntryFactory.Instance, name);
   }
 
-  private static class MyJarEntry extends JarEntry {
+  private static class MyJarEntry extends JarEntry implements MyEntry {
     public final Window window;
     public final int pointer;
 
@@ -64,6 +64,10 @@ public class JarFile extends ZipFile {
       } catch (IOException e) {
         return 0;
       }
+    }
+
+    public int pointer() {
+      return pointer;
     }
   }
 

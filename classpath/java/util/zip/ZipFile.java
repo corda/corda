@@ -83,7 +83,7 @@ public class ZipFile {
   }
 
   public InputStream getInputStream(ZipEntry entry) throws IOException {
-    int pointer = ((MyZipEntry) entry).pointer;
+    int pointer = ((MyEntry) entry).pointer();
     int method = compressionMethod(window, pointer);
     int size = compressedSize(window, pointer);
     InputStream in = new MyInputStream(file, fileData(window, pointer), size);
@@ -245,7 +245,11 @@ public class ZipFile {
     }
   }
 
-  private static class MyZipEntry extends ZipEntry {
+  protected interface MyEntry {
+    public int pointer();
+  }
+
+  private static class MyZipEntry extends ZipEntry implements MyEntry {
     public final Window window;
     public final int pointer;
 
@@ -276,6 +280,10 @@ public class ZipFile {
       } catch (IOException e) {
         return 0;
       }
+    }
+
+    public int pointer() {
+      return pointer;
     }
   }
 
