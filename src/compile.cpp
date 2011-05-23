@@ -5521,18 +5521,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           }
         }
 
-        Compiler::Operand* value = popField(t, frame, fieldCode);
-
-        Compiler::Operand* table;
-
-        if (instruction == putstatic) {
-          PROTECT(t, field);
-
-          table = frame->append(staticTable);
-        } else {
-          table = frame->popObject();
-        }
-
         if (fieldFlags(t, field) & ACC_VOLATILE) {
           if (BytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
@@ -5548,6 +5536,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           } else {
             c->storeStoreBarrier();
           }
+        }
+
+        Compiler::Operand* value = popField(t, frame, fieldCode);
+
+        Compiler::Operand* table;
+
+        if (instruction == putstatic) {
+          PROTECT(t, field);
+
+          table = frame->append(staticTable);
+        } else {
+          table = frame->popObject();
         }
 
         switch (fieldCode) {
