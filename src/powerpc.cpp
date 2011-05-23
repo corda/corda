@@ -2439,16 +2439,16 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void checkStackOverflow(uintptr_t handler,
-                                  unsigned stackLimitOffsetFromThread)
+  virtual void checkStackOverflow(uintptr_t /*handler*/,
+                                  unsigned /*stackLimitOffsetFromThread*/)
   {
-    Register stack(StackRegister);
+    /*Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
     Constant handlerConstant
       (new (c.zone->allocate(sizeof(ResolvedPromise)))
        ResolvedPromise(handler));
     branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
-             &handlerConstant);
+             &handlerConstant);*/
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned) {
