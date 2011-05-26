@@ -11,7 +11,11 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
-#include "jni.h"
+#ifdef __APPLE__
+#  include <JavaVM/jni.h>
+#else
+#  include "jni.h"
+#endif
 
 #include "system.h"
 #include "finder.h"

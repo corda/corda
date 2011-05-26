@@ -9,7 +9,11 @@
    details. */
 
 #include "time.h"
-#include "jni.h"
+#ifdef __APPLE__
+#  include <JavaVM/jni.h>
+#else
+#  include "jni.h"
+#endif
 #include "jni-util.h"
 
 namespace {
