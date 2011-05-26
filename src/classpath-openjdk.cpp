@@ -2628,6 +2628,16 @@ Avian_sun_misc_Unsafe_putByte__JB
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putShort__JS
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int16_t v = arguments[3];
+
+  *reinterpret_cast<int16_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_putLong__JJ
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2663,6 +2673,15 @@ Avian_sun_misc_Unsafe_getInt__J
   int64_t p; memcpy(&p, arguments + 1, 8);
 
   return *reinterpret_cast<int32_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLong__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int64_t*>(p);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
