@@ -1667,6 +1667,9 @@ uint64_t
 getStaticObjectField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1691,6 +1694,9 @@ uint64_t
 getStaticBooleanField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1713,6 +1719,9 @@ uint64_t
 getStaticByteField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1735,6 +1744,9 @@ uint64_t
 getStaticCharField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1757,6 +1769,9 @@ uint64_t
 getStaticShortField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1779,6 +1794,9 @@ uint64_t
 getStaticIntField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1801,6 +1819,9 @@ uint64_t
 getStaticLongField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1823,6 +1844,9 @@ uint64_t
 getStaticFloatField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1846,6 +1870,9 @@ uint64_t
 getStaticDoubleField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
@@ -1869,6 +1896,9 @@ uint64_t
 setStaticObjectField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jobject v = reinterpret_cast<jobject>(arguments[2]);
   
@@ -1895,6 +1925,9 @@ uint64_t
 setStaticBooleanField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jboolean v = arguments[2];
   
@@ -1921,6 +1954,9 @@ uint64_t
 setStaticByteField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jbyte v = arguments[2];
 
@@ -1947,6 +1983,9 @@ uint64_t
 setStaticCharField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jchar v = arguments[2];
 
@@ -1973,6 +2012,9 @@ uint64_t
 setStaticShortField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jshort v = arguments[2];
 
@@ -1999,6 +2041,9 @@ uint64_t
 setStaticIntField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jint v = arguments[2];
 
@@ -2025,6 +2070,9 @@ uint64_t
 setStaticLongField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jlong v; memcpy(&v, arguments + 2, sizeof(jlong));
 
@@ -2052,6 +2100,9 @@ uint64_t
 setStaticFloatField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jfloat v = bitsToFloat(arguments[2]);
 
@@ -2078,6 +2129,9 @@ uint64_t
 setStaticDoubleField(Thread* t, uintptr_t* arguments)
 {
   jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
   object field = getStaticField(t, arguments[1]);
   jdouble v = bitsToDouble(arguments[2]);
 
