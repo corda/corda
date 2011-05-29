@@ -8143,7 +8143,7 @@ class SignalHandler: public System::SignalHandler {
           t->exception = vm::root(t, root);
         }
 
-        printTrace(t, t->exception);
+        //printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);
