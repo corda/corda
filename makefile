@@ -228,17 +228,24 @@ ifeq ($(arch),arm)
 endif
 
 ifeq ($(platform),darwin)
+	ifeq (${OSX_SDK_SYSROOT},)
+		OSX_SDK_SYSROOT = 10.4u
+	endif
+	ifeq (${OSX_SDK_VERSION},)
+		OSX_SDK_VERSION = 10.4
+	endif
 	ifneq ($(build-platform),darwin)
 		cxx = i686-apple-darwin8-g++ $(mflag)
 		cc = i686-apple-darwin8-gcc $(mflag)
 		ar = i686-apple-darwin8-ar
 		ranlib = i686-apple-darwin8-ranlib
 		strip = i686-apple-darwin8-strip
-		sysroot = /opt/mac/SDKs/MacOSX10.4u.sdk
+		sysroot = /opt/mac/SDKs/MacOSX${OSX_SDK_SYSROOT}.sdk
 		cflags = -I$(sysroot)/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Headers/ \
 			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	else
 		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+		cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
 		build-lflags += -framework CoreFoundation
 	endif
 
@@ -257,20 +264,20 @@ ifeq ($(platform),darwin)
 		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
-		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=10.4
-		cflags += -arch ppc -mmacosx-version-min=10.4
-		asmflags += -arch ppc -mmacosx-version-min=10.4
-		lflags += -arch ppc -mmacosx-version-min=10.4
+		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
+		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
+		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
+		lflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 	endif
 
 	ifeq ($(arch),i386)
 		ifeq ($(build-arch),powerpc)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
-		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=10.4
-		cflags += -arch i386 -mmacosx-version-min=10.4
-		asmflags += -arch i386 -mmacosx-version-min=10.4
-		lflags += -arch i386 -mmacosx-version-min=10.4
+		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 	endif
 
 	ifeq ($(arch),x86_64)
