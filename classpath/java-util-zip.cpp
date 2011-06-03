@@ -12,11 +12,7 @@
 #include "string.h"
 #include "zlib-custom.h"
 
-#ifdef __APPLE__
-#  include <JavaVM/jni.h>
-#else
-#  include "jni.h"
-#endif
+#include "jni.h"
 #include "jni-util.h"
 
 extern "C" JNIEXPORT jlong JNICALL

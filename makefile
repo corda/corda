@@ -240,6 +240,12 @@ ifeq ($(arch),arm)
 endif
 
 ifeq ($(platform),darwin)
+	ifeq (${OSX_SDK_SYSROOT},)
+		OSX_SDK_SYSROOT = 10.4u
+	endif
+	ifeq (${OSX_SDK_VERSION},)
+		OSX_SDK_VERSION = 10.4
+	endif
 	ifneq ($(build-platform),darwin)
 		cxx = i686-apple-darwin8-g++ $(mflag)
 		cc = i686-apple-darwin8-gcc $(mflag)
@@ -251,6 +257,7 @@ ifeq ($(platform),darwin)
 			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	else
 		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+		cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
 		build-lflags += -framework CoreFoundation
 	endif
 

@@ -8,11 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifdef __APPLE__
-#  include <JavaVM/jni.h>
-#else
-#  include "jni.h"
-#endif
+#include "jni.h"
 #include "jni-util.h"
 
 #ifdef PLATFORM_WINDOWS
