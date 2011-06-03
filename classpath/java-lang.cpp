@@ -13,7 +13,11 @@
 #include "time.h"
 #include "string.h"
 #include "stdio.h"
-#include "jni.h"
+#ifdef __APPLE__
+#  include <JavaVM/jni.h>
+#else
+#  include "jni.h"
+#endif
 #include "jni-util.h"
 #include "errno.h"
 #include "fcntl.h"
