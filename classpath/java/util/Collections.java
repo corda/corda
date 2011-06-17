@@ -52,6 +52,23 @@ public class Collections {
     return array;
   }
 
+  public static final List EMPTY_LIST
+    = new UnmodifiableList<Object>(new ArrayList<Object>(0));
+
+  public static final <E> List<E> emptyList() {
+    return EMPTY_LIST;
+  }
+
+  public static final <K,V> Map<K,V> emptyMap() {
+    return (Map<K, V>) new UnmodifiableMap<Object, Object>(
+      new HashMap<Object, Object>(0));
+  }
+
+  public static final <T> Set<T> emptySet() {
+    return (Set<T>) new UnmodifiableSet<Object>(
+      new HashSet<Object>(0));
+  }
+
   static String toString(Collection c) {
     StringBuilder sb = new StringBuilder();
     sb.append("[");
@@ -293,8 +310,153 @@ public class Collections {
     }
   }
 
+  public static <T> List<T> unmodifiableList(List<T> list)  {
+    return new UnmodifiableList<T>(list);
+  }
+
+  static class UnmodifiableList<T> implements List<T> {
+
+    private List<T> inner;
+
+    UnmodifiableList(List<T> l) {
+      this.inner = l;
+    }
+
+    public T get(int index) {
+      return inner.get(index);
+    }
+
+    public T set(int index, T value) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public T remove(int index) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public boolean remove(Object o) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public boolean add(T element) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public void add(int index, T element) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public Iterator<T> iterator() {
+      return inner.iterator();
+    }
+
+    public int indexOf(Object value) {
+      return inner.indexOf(value);
+    }
+
+    public int lastIndexOf(Object value) {
+      return inner.lastIndexOf(value);
+    }
+
+    public boolean isEmpty() {
+      return inner.isEmpty();
+    }
+
+    public ListIterator<T> listIterator(int index) {
+      return inner.listIterator(index);
+    }
+
+    public ListIterator<T> listIterator() {
+      return inner.listIterator();
+    }
+
+    public int size() {
+      return inner.size();
+    }
+
+    public boolean contains(Object element) {
+      return inner.contains(element);
+    }
+
+    public boolean addAll(Collection<? extends T> collection) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public Object[] toArray() {
+      return inner.toArray();
+    }
+
+    public <S> S[] toArray(S[] array) {
+      return inner.toArray(array);
+    }
+
+    public void clear() {
+      throw new UnsupportedOperationException("not supported");
+    }
+  }
+
+  public static <K,V> Map<K,V> unmodifiableMap(Map<K,V> m) {
+	  return new UnmodifiableMap<K, V>(m);
+  }
+
+  static class UnmodifiableMap<K, V> implements Map<K, V> {
+	  private Map<K, V> inner;
+
+	  UnmodifiableMap(Map<K, V> m) {
+	    this.inner = m;
+	  }
+
+    public void clear() {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public boolean containsKey(Object key) {
+      return inner.containsKey(key);
+    }
+
+    public boolean containsValue(Object value) {
+      return inner.containsValue(value);
+    }
+
+    public Set<Map.Entry<K, V>> entrySet() {
+      return unmodifiableSet(inner.entrySet());
+    }
+
+    public V get(Object key) {
+      return inner.get(key);
+    }
+
+    public boolean isEmpty() {
+      return inner.isEmpty();
+    }
+
+    public Set<K> keySet() {
+      return unmodifiableSet(inner.keySet());
+    }
+
+    public V put(K key, V value) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public void putAll(Map<? extends K, ? extends V> t) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public V remove(Object key) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public int size() {
+      return inner.size();
+    }
+
+    public Collection<V> values() {
+      return unmodifiableSet((Set<V>)inner.values());
+    }
+  }
+
   static class UnmodifiableSet<T> implements Set<T> {
-    Set<T> inner;
+    private Set<T> inner;
 
     UnmodifiableSet(Set<T> inner) {
       this.inner = inner;
@@ -396,7 +558,5 @@ public class Collections {
     public int compare(T o1, T o2) {
       return - cmp.compare(o1, o2);
     }
-
   }
-
 }
