@@ -1631,7 +1631,7 @@ setDoubleField(Thread* t, uintptr_t* arguments)
 {
   jobject o = reinterpret_cast<jobject>(arguments[0]);
   object field = getField(t, arguments[1]);
-  jdouble v = bitsToDouble(arguments[2]);
+  jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
 
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
@@ -1644,9 +1644,10 @@ setDoubleField(Thread* t, uintptr_t* arguments)
 void JNICALL
 SetDoubleField(Thread* t, jobject o, jfieldID field, jdouble v)
 {
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
-                            field,
-                            doubleToBits(v) };
+  uintptr_t arguments[2 + (sizeof(jdouble) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(o);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jdouble));
 
   run(t, setDoubleField, arguments);
 }
@@ -2133,7 +2134,7 @@ setStaticDoubleField(Thread* t, uintptr_t* arguments)
   initClass(t, jclassVmClass(t, *c));
 
   object field = getStaticField(t, arguments[1]);
-  jdouble v = bitsToDouble(arguments[2]);
+  jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
 
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
@@ -2147,9 +2148,10 @@ setStaticDoubleField(Thread* t, uintptr_t* arguments)
 void JNICALL
 SetStaticDoubleField(Thread* t, jobject c, jfieldID field, jdouble v)
 {
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
-                            field,
-                            doubleToBits(v) };
+  uintptr_t arguments[2 + (sizeof(jdouble) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(c);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jdouble));
 
   run(t, setStaticDoubleField, arguments);
 }
