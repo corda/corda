@@ -11,26 +11,30 @@
 package java.io;
 
 public class FilterOutputStream extends OutputStream {
-  private OutputStream os;
+  protected OutputStream out;
+
+  public FilterOutputStream(OutputStream out) {
+    this.out = out;
+  }
 
   public void close() throws IOException {
-    os.close();
+    out.close();
   }
 
   public void flush() throws IOException {
-    os.flush();
+    out.flush();
   }
 
   public void write(byte[] b) throws IOException {
-    os.write(b);
+    out.write(b);
   }
 
   public void write(byte[] b, int off, int len) throws IOException {
-    os.write(b, off, len);
+    out.write(b, off, len);
   }
 
   public void write(int b) throws IOException {
-    os.write(b);
+    out.write(b);
   }
 
 }

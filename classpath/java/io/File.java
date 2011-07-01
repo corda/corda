@@ -10,7 +10,7 @@
 
 package java.io;
 
-public class File {
+public class File implements Serializable {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 

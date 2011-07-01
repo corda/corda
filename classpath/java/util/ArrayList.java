@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class ArrayList<T> extends AbstractList<T> {
+public class ArrayList<T> extends AbstractList<T> implements java.io.Serializable {
   private static final int MinimumCapacity = 16;
 
   private Object[] array;
