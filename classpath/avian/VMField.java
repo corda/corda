@@ -15,6 +15,7 @@ public class VMField {
   public byte code;
   public short flags;
   public short offset;
+  public int nativeID;
   public byte[] name;
   public byte[] spec;
   public FieldAddendum addendum;

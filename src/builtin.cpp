@@ -42,10 +42,36 @@ search(Thread* t, object loader, object name,
 object
 resolveSystemClassThrow(Thread* t, object loader, object spec)
 {
-  return resolveSystemClass(t, loader, spec, true);
+  return resolveSystemClass
+    (t, loader, spec, true, Machine::ClassNotFoundExceptionType);
 }
 
 } // namespace
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_acquireClassLock
+(Thread* t, object, uintptr_t*)
+{
+  acquire(t, t->m->classLock);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_releaseClassLock
+(Thread* t, object, uintptr_t*)
+{
+  release(t, t->m->classLock);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_resolveVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object spec = reinterpret_cast<object>(arguments[1]);
+
+  return reinterpret_cast<int64_t>
+    (resolveClass(t, loader, spec, true, Machine::ClassNotFoundExceptionType));
+}
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedVMClass
@@ -68,7 +94,7 @@ Avian_avian_SystemClassLoader_findVMClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_SystemClassLoader_resourceExists
+Avian_avian_SystemClassLoader_resourceURLPrefix
 (Thread* t, object, uintptr_t* arguments)
 {
   object loader = reinterpret_cast<object>(arguments[0]);
@@ -78,13 +104,10 @@ Avian_avian_SystemClassLoader_resourceExists
     THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-    unsigned length;
-    bool r = static_cast<Finder*>(systemClassLoaderFinder(t, loader))->stat
-      (RUNTIME_ARRAY_BODY(n), &length) == System::TypeFile;
+    const char* name = static_cast<Finder*>
+      (systemClassLoaderFinder(t, loader))->urlPrefix(RUNTIME_ARRAY_BODY(n));
 
-//     fprintf(stderr, "resource %s exists? %d\n", n, r);
-
-    return r;
+    return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;
   } else {
     throwNew(t, Machine::NullPointerExceptionType);
   }

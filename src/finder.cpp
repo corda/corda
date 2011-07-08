@@ -33,22 +33,23 @@ append(Allocator* allocator, const char* a, const char* b, const char* c)
 }
 
 const char*
+append(Allocator* allocator, const char* a, const char* b)
+{
+  unsigned al = strlen(a);
+  unsigned bl = strlen(b);
+  char* p = static_cast<char*>(allocator->allocate((al + bl) + 1));
+  memcpy(p, a, al);
+  memcpy(p + al, b, bl + 1);
+  return p;
+}
+
+const char*
 copy(Allocator* allocator, const char* a)
 {
   unsigned al = strlen(a);
   char* p = static_cast<char*>(allocator->allocate(al + 1));
   memcpy(p, a, al + 1);
   return p;
-}
-
-bool
-equal(const void* a, unsigned al, const void* b, unsigned bl)
-{
-  if (al == bl) {
-    return memcmp(a, b, al) == 0;
-  } else {
-    return false;
-  }
 }
 
 class Element {
@@ -65,6 +66,8 @@ class Element {
   virtual System::Region* find(const char* name) = 0;
   virtual System::FileType stat(const char* name, unsigned* length,
                                 bool tryDirectory) = 0;
+  virtual const char* urlPrefix() = 0;
+  virtual const char* sourceUrl() = 0;
   virtual void dispose() = 0;
 
   Element* next;
@@ -133,7 +136,9 @@ class DirectoryElement: public Element {
   };
 
   DirectoryElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name)
+    s(s), allocator(allocator), name(name),
+    urlPrefix_(append(allocator, "file:", name, "/")),
+    sourceUrl_(append(allocator, "file:", name))
   { }
 
   virtual Element::Iterator* iterator() {
@@ -167,14 +172,26 @@ class DirectoryElement: public Element {
     return type;
   }
 
+  virtual const char* urlPrefix() {
+    return urlPrefix_;
+  }
+
+  virtual const char* sourceUrl() {
+    return sourceUrl_;
+  }
+
   virtual void dispose() {
     allocator->free(name, strlen(name) + 1);
+    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
+    allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     allocator->free(this, sizeof(*this));
   }
 
   System* s;
   Allocator* allocator;
   const char* name;
+  const char* urlPrefix_;
+  const char* sourceUrl_;
 };
 
 class PointerRegion: public System::Region {
@@ -233,9 +250,6 @@ class DataRegion: public System::Region {
 
 class JarIndex {
  public:
-  static const unsigned LocalHeaderSize = 30;
-  static const unsigned HeaderSize = 46;
-
   enum CompressionMethod {
     Stored = 0,
     Deflated = 8
@@ -262,78 +276,6 @@ class JarIndex {
     memset(table, 0, sizeof(Node*) * capacity);
   }
 
-  static uint16_t get2(const uint8_t* p) {
-    return
-      (static_cast<uint16_t>(p[1]) <<  8) |
-      (static_cast<uint16_t>(p[0])      );
-  }
-
-  static uint32_t get4(const uint8_t* p) {
-    return
-      (static_cast<uint32_t>(p[3]) << 24) |
-      (static_cast<uint32_t>(p[2]) << 16) |
-      (static_cast<uint32_t>(p[1]) <<  8) |
-      (static_cast<uint32_t>(p[0])      );
-  }
-
-  static uint32_t signature(const uint8_t* p) {
-    return get4(p);
-  }
-
-  static uint16_t compressionMethod(const uint8_t* centralHeader) {
-    return get2(centralHeader + 10);
-  }
-
-  static uint32_t compressedSize(const uint8_t* centralHeader) {
-    return get4(centralHeader + 20);
-  }
-
-  static uint32_t uncompressedSize(const uint8_t* centralHeader) {
-    return get4(centralHeader + 24);
-  }
-
-  static uint16_t fileNameLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 28);
-  }
-
-  static uint16_t extraFieldLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 30);
-  }
-
-  static uint16_t commentFieldLength(const uint8_t* centralHeader) {
-    return get2(centralHeader + 32);
-  }
-
-  static uint32_t localHeaderOffset(const uint8_t* centralHeader) {
-    return get4(centralHeader + 42);
-  }
-
-  static uint16_t localFileNameLength(const uint8_t* localHeader) {
-    return get2(localHeader + 26);
-  }
-
-  static uint16_t localExtraFieldLength(const uint8_t* localHeader) {
-    return get2(localHeader + 28);
-  }
-
-  static uint32_t centralDirectoryOffset(const uint8_t* centralHeader) {
-    return get4(centralHeader + 16);
-  }
-
-  static const uint8_t* fileName(const uint8_t* centralHeader) {
-    return centralHeader + 46;
-  }
-
-  static const uint8_t* fileData(const uint8_t* localHeader) {
-    return localHeader + LocalHeaderSize + localFileNameLength(localHeader) +
-      localExtraFieldLength(localHeader);
-  }
-
-  static const uint8_t* endOfEntry(const uint8_t* p) {
-    return p + HeaderSize + fileNameLength(p) + extraFieldLength(p) +
-      commentFieldLength(p);
-  }
-
   static JarIndex* make(System* s, Allocator* allocator, unsigned capacity) {
     return new
       (allocator->allocate(sizeof(JarIndex) + (sizeof(Node*) * capacity)))
@@ -347,14 +289,14 @@ class JarIndex {
 
     const uint8_t* start = region->start();
     const uint8_t* end = start + region->length();
-    const uint8_t* p = end - 22;
+    const uint8_t* p = end - CentralDirectorySearchStart;
     // Find end of central directory record
     while (p > start) {
-      if (signature(p) == 0x06054b50) {
+      if (signature(p) == CentralDirectorySignature) {
 	p = region->start() + centralDirectoryOffset(p);
 	
 	while (p < end) {
-	  if (signature(p) == 0x02014b50) {
+	  if (signature(p) == EntrySignature) {
 	    index = index->add(hash(fileName(p), fileNameLength(p)), p);
 
 	    p = endOfEntry(p);
@@ -495,8 +437,8 @@ class JarElement: public Element {
     virtual const char* next(unsigned* size) {
       if (position < index->position) {
         JarIndex::Node* n = index->nodes + (position++);
-        *size = JarIndex::fileNameLength(n->entry);
-        return reinterpret_cast<const char*>(JarIndex::fileName(n->entry));
+        *size = fileNameLength(n->entry);
+        return reinterpret_cast<const char*>(fileName(n->entry));
       } else {
         return 0;
       }
@@ -513,7 +455,10 @@ class JarElement: public Element {
   };
 
   JarElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name), region(0), index(0)
+    s(s), allocator(allocator), name(name),
+    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
+    sourceUrl_(name ? append(allocator, "file:", name) : 0),
+    region(0), index(0)
   { }
 
   JarElement(System* s, Allocator* allocator, const uint8_t* jarData,
@@ -521,6 +466,8 @@ class JarElement: public Element {
     s(s),
     allocator(allocator),
     name(0),
+    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
+    sourceUrl_(name ? append(allocator, "file:", name) : 0),
     region(new (allocator->allocate(sizeof(PointerRegion)))
            PointerRegion(s, allocator, jarData, jarLength)),
     index(JarIndex::open(s, allocator, region))
@@ -570,12 +517,22 @@ class JarElement: public Element {
             : System::TypeDoesNotExist);
   }
 
+  virtual const char* urlPrefix() {
+    return urlPrefix_;
+  }
+
+  virtual const char* sourceUrl() {
+    return sourceUrl_;
+  }
+
   virtual void dispose() {
     dispose(sizeof(*this));
   }
 
   virtual void dispose(unsigned size) {
     allocator->free(name, strlen(name) + 1);
+    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
+    allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     if (index) {
       index->dispose();
     }
@@ -588,6 +545,8 @@ class JarElement: public Element {
   System* s;
   Allocator* allocator;
   const char* name;
+  const char* urlPrefix_;
+  const char* sourceUrl_;
   System::Region* region;
   JarIndex* index;
 };
@@ -618,6 +577,14 @@ class BuiltinElement: public JarElement {
         }
       }
     }
+  }
+
+  virtual const char* urlPrefix() {
+    return "resource:";
+  }
+
+  virtual const char* sourceUrl() {
+    return 0;
   }
 
   virtual void dispose() {
@@ -663,6 +630,33 @@ add(System* s, Element** first, Element** last, Allocator* allocator,
     const char* name, unsigned nameLength, const char* bootLibrary);
 
 void
+addTokens(System* s, Element** first, Element** last, Allocator* allocator,
+          const char* jarName, unsigned jarNameBase, const char* tokens,
+          unsigned tokensLength, const char* bootLibrary)
+{
+  for (Tokenizer t(tokens, tokensLength, ' '); t.hasMore();) {
+    Tokenizer::Token token(t.next());
+
+    RUNTIME_ARRAY(char, n, jarNameBase + token.length + 1);
+    memcpy(RUNTIME_ARRAY_BODY(n), jarName, jarNameBase);
+    memcpy(RUNTIME_ARRAY_BODY(n) + jarNameBase, token.s, token.length);
+    RUNTIME_ARRAY_BODY(n)[jarNameBase + token.length] = 0;
+          
+    add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
+        jarNameBase + token.length, bootLibrary);
+  }
+}
+
+bool
+continuationLine(const uint8_t* base, unsigned total, unsigned* start,
+                 unsigned* length)
+{
+  return readLine(base, total, start, length)
+    and *length > 0
+    and base[*start] == ' ';
+}
+
+void
 addJar(System* s, Element** first, Element** last, Allocator* allocator,
        const char* name, const char* bootLibrary)
 {
@@ -673,6 +667,8 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
   JarElement* e = new (allocator->allocate(sizeof(JarElement)))
     JarElement(s, allocator, name);
 
+  unsigned nameBase = baseName(name, s->fileSeparator());
+
   add(first, last, e);
 
   System::Region* region = e->find("META-INF/MANIFEST.MF");
@@ -680,29 +676,60 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
     unsigned start = 0;
     unsigned length;
     while (readLine(region->start(), region->length(), &start, &length)) {
+      unsigned multilineTotal = 0;
+
       const unsigned PrefixLength = 12;
-      if (strncmp("Class-Path: ", reinterpret_cast<const char*>
-                  (region->start() + start), PrefixLength) == 0)
+      if (length > PrefixLength
+          and strncmp("Class-Path: ", reinterpret_cast<const char*>
+                      (region->start() + start), PrefixLength) == 0)
       {
-        for (Tokenizer t(reinterpret_cast<const char*>
-                         (region->start() + start + PrefixLength),
-                         length - PrefixLength, ' ');
-             t.hasMore();)
-        {
-          Tokenizer::Token token(t.next());
+        { unsigned nextStart = start + length;
+          unsigned nextLength;
+          while (continuationLine
+                 (region->start(), region->length(), &nextStart, &nextLength))
+          {
+            multilineTotal += nextLength;
+            nextStart += nextLength;
+          }
+        }
 
-          unsigned base = baseName(name, s->fileSeparator());
+        const char* line = reinterpret_cast<const char*>
+          (region->start() + start + PrefixLength);
 
-          RUNTIME_ARRAY(char, n, base + token.length + 1);
-          memcpy(RUNTIME_ARRAY_BODY(n), name, base);
-          memcpy(RUNTIME_ARRAY_BODY(n) + base, token.s, token.length);
-          RUNTIME_ARRAY_BODY(n)[base + token.length] = 0;
-          
-          add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
-              base + token.length, bootLibrary);
+        unsigned lineLength = length - PrefixLength;
+
+        if (multilineTotal) {
+          RUNTIME_ARRAY
+            (char, n, (length - PrefixLength) + multilineTotal + 1);
+
+          memcpy(RUNTIME_ARRAY_BODY(n), line, lineLength);
+
+          unsigned offset = lineLength;
+          { unsigned nextStart = start + length;
+            unsigned nextLength;
+            while (continuationLine
+                   (region->start(), region->length(), &nextStart,
+                    &nextLength))
+            {
+              unsigned continuationLength = nextLength - 1;
+
+              memcpy(RUNTIME_ARRAY_BODY(n) + offset,
+                     region->start() + nextStart + 1, continuationLength);
+            
+              offset += continuationLength;
+              nextStart += nextLength;
+            }
+          }
+
+          addTokens(s, first, last, allocator, name, nameBase,
+                    RUNTIME_ARRAY_BODY(n), offset, bootLibrary);
+        } else {
+          addTokens(s, first, last, allocator, name, nameBase, line,
+                    lineLength, bootLibrary);
         }
       }
-      start += length;
+
+      start += length + multilineTotal;
     }
 
     region->dispose();
@@ -852,6 +879,30 @@ class MyFinder: public Finder {
     }
     
     return System::TypeDoesNotExist;
+  }
+
+  virtual const char* urlPrefix(const char* name) {
+    for (Element* e = path_; e; e = e->next) {
+      unsigned length;
+      System::FileType type = e->stat(name, &length, true);
+      if (type != System::TypeDoesNotExist) {
+        return e->urlPrefix();
+      }
+    }
+
+    return 0;
+  }
+
+  virtual const char* sourceUrl(const char* name) {
+    for (Element* e = path_; e; e = e->next) {
+      unsigned length;
+      System::FileType type = e->stat(name, &length, true);
+      if (type != System::TypeDoesNotExist) {
+        return e->sourceUrl();
+      }
+    }
+
+    return 0;
   }
 
   virtual const char* path() {

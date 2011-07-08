@@ -1,4 +1,10 @@
-public class Longs {  
+public class Longs {
+  private static volatile long volatileLong = getConstant();
+  
+  private static long getConstant() {
+    return 0x123456789ABCDEFL;
+  }
+
   private static void expect(boolean v) {
     if (! v) throw new RuntimeException();
   }
@@ -60,6 +66,8 @@ public class Longs {
   }
 
   public static void main(String[] args) throws Exception {
+    expect(volatileLong == getConstant());
+
     { long a = 0x1FFFFFFFFL;
       long b = -1;
       expect(a != b);

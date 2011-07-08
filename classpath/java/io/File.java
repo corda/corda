@@ -10,7 +10,7 @@
 
 package java.io;
 
-public class File {
+public class File implements Serializable {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
@@ -80,6 +80,10 @@ public class File {
     } else {
       return path;
     }
+  }
+
+  public String toString() {
+    return getPath();
   }
 
   public String getPath() {

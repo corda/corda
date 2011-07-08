@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class Vector<T> extends AbstractList<T> {
+public class Vector<T> extends AbstractList<T> implements java.io.Serializable {
   private final ArrayList<T> list;
 
   public Vector(int capacity) {
@@ -79,6 +79,10 @@ public class Vector<T> extends AbstractList<T> {
 
   public void removeElementAt(int index) {
     remove(index);
+  }
+
+  public synchronized void removeAllElements() {
+    list.clear();
   }
 
   public synchronized boolean remove(Object element) {

@@ -104,7 +104,9 @@
 (type finalizer
   (nogc object target)
   (void* finalize)
-  (nogc object next))
+  (nogc object next)
+  (object queueTarget)
+  (object queueNext))
 
 (type hashMap
   (uint32_t size)
@@ -158,6 +160,12 @@
 (type monitorNode
   (void* value)
   (object next))
+
+(type innerClassReference
+  (object inner)
+  (object outer)
+  (object name)
+  (int16_t flags))
 
 (type continuationContext
   (object next)
@@ -293,6 +301,9 @@
 (type softReference java/lang/ref/SoftReference)
 
 (type phantomReference java/lang/ref/PhantomReference)
+
+(type cleaner sun/misc/Cleaner
+  (object queueNext))
 
 (type byteArray [B
   (extends jobject)

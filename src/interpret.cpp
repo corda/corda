@@ -26,8 +26,6 @@ const unsigned FrameMethodOffset = 2;
 const unsigned FrameIpOffset = 3;
 const unsigned FrameFootprint = 4;
 
-class ClassInitList;
-
 class Thread: public vm::Thread {
  public:
   Thread(Machine* m, object javaThread, vm::Thread* parent):
@@ -35,37 +33,14 @@ class Thread: public vm::Thread {
     ip(0),
     sp(0),
     frame(-1),
-    code(0),
-    classInitList(0)
+    code(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
-  ClassInitList* classInitList;
   uintptr_t stack[StackSizeInWords];
-};
-
-class ClassInitList {
- public:
-  ClassInitList(Thread* t, object class_, ClassInitList* next):
-    t(t), class_(class_), next(next)
-  { }
-
-  static void push(Thread* t, object class_) {
-    t->classInitList = new (t->m->heap->allocate(sizeof(ClassInitList)))
-      ClassInitList(t, class_, t->classInitList);
-  }
-
-  void pop() {
-    t->classInitList = next;
-    t->m->heap->free(this, sizeof(ClassInitList));
-  }
-
-  Thread* t;
-  object class_;
-  ClassInitList* next;
 };
 
 inline void
@@ -322,14 +297,28 @@ setLocalLong(Thread* t, unsigned index, uint64_t value)
 void
 pushFrame(Thread* t, object method)
 {
-  if (t->frame >= 0) {
-    pokeInt(t, t->frame + FrameIpOffset, t->ip);
-  }
-  t->ip = 0;
+  PROTECT(t, method);
 
   unsigned parameterFootprint = methodParameterFootprint(t, method);
   unsigned base = t->sp - parameterFootprint;
   unsigned locals = parameterFootprint;
+
+  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
+    // Try to acquire the monitor before doing anything else.
+    // Otherwise, if we were to push the frame first, we risk trying
+    // to release a monitor we never successfully acquired when we try
+    // to pop the frame back off.
+    if (methodFlags(t, method) & ACC_STATIC) {
+      acquire(t, methodClass(t, method));
+    } else {
+      acquire(t, peekObject(t, base));
+    }   
+  }
+
+  if (t->frame >= 0) {
+    pokeInt(t, t->frame + FrameIpOffset, t->ip);
+  }
+  t->ip = 0;
 
   if ((methodFlags(t, method) & ACC_NATIVE) == 0) {
     t->code = methodCode(t, method);
@@ -349,14 +338,6 @@ pushFrame(Thread* t, object method)
   pokeInt(t, frame + FrameBaseOffset, base);
   pokeObject(t, frame + FrameMethodOffset, method);
   pokeInt(t, t->frame + FrameIpOffset, 0);
-
-  if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-    if (methodFlags(t, method) & ACC_STATIC) {
-      acquire(t, methodClass(t, method));
-    } else {
-      acquire(t, peekObject(t, base));
-    }   
-  }
 }
 
 void
@@ -370,15 +351,6 @@ popFrame(Thread* t)
     } else {
       release(t, peekObject(t, frameBase(t, t->frame)));
     }   
-  }
-  
-  if (UNLIKELY(methodVmFlags(t, method) & ClassInitFlag)
-      and t->classInitList
-      and t->classInitList->class_ == methodClass(t, method))
-  {
-    t->classInitList->pop();
-
-    postInitClass(t, methodClass(t, method));
   }
 
   t->sp = frameBase(t, t->frame);
@@ -685,32 +657,6 @@ invokeNative(Thread* t, object method)
   }
 }
 
-bool
-classInit2(Thread* t, object class_, unsigned ipOffset)
-{
-  PROTECT(t, class_);
-
-  if (preInitClass(t, class_)) {
-    ClassInitList::push(t, class_);
-    
-    t->code = classInitializer(t, class_);
-    t->ip -= ipOffset;
-    return true;
-  } else {
-    return false;
-  }
-}
-
-inline bool
-classInit(Thread* t, object class_, unsigned ipOffset)
-{
-  if (UNLIKELY(classVmFlags(t, class_) & NeedInitFlag)) {
-    return classInit2(t, class_, ipOffset);
-  } else {
-    return false;
-  }
-}
-
 inline void
 store(Thread* t, unsigned index)
 {
@@ -816,9 +762,7 @@ interpret3(Thread* t, const int base)
     goto throw_;
   }
 
-  if (UNLIKELY(classInit(t, methodClass(t, frameMethod(t, frame)), 0))) {
-    goto invoke;
-  }
+  initClass(t, methodClass(t, frameMethod(t, frame)));
 
  loop:
   instruction = codeBody(t, code, ip++);
@@ -1460,27 +1404,11 @@ interpret3(Thread* t, const int base)
 
       assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
-      if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
-                   and BytesPerWord == 4
-                   and (fieldCode(t, field) == DoubleField
-                        or fieldCode(t, field) == LongField)))
-      {
-        PROTECT(t, field);
-        acquire(t, field);        
-      }
+      PROTECT(t, field);
+
+      ACQUIRE_FIELD_FOR_READ(t, field);
 
       pushField(t, popObject(t), field);
-
-      if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-        if (BytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
-        {
-          release(t, field);        
-        } else {
-          loadMemoryBarrier();
-        }
-      }
     } else {
       exception = makeThrowable(t, Machine::NullPointerExceptionType);
       goto throw_;
@@ -1496,28 +1424,11 @@ interpret3(Thread* t, const int base)
 
     PROTECT(t, field);
 
-    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
+    initClass(t, fieldClass(t, field));
 
-    if (UNLIKELY((fieldFlags(t, field) & ACC_VOLATILE)
-                 and BytesPerWord == 4
-                 and (fieldCode(t, field) == DoubleField
-                      or fieldCode(t, field) == LongField)))
-    {
-      acquire(t, field);        
-    }
+    ACQUIRE_FIELD_FOR_READ(t, field);
 
     pushField(t, classStaticTable(t, fieldClass(t, field)), field);
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        loadMemoryBarrier();
-      }
-    }
   } goto loop;
 
   case goto_: {
@@ -1891,7 +1802,10 @@ interpret3(Thread* t, const int base)
       object class_ = methodClass(t, frameMethod(t, frame));
       if (isSpecialMethod(t, method, class_)) {
         class_ = classSuper(t, class_);
-        if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+        PROTECT(t, method);
+        PROTECT(t, class_);
+
+        initClass(t, class_);
 
         code = findVirtualMethod(t, method, class_);
       } else {
@@ -1911,7 +1825,7 @@ interpret3(Thread* t, const int base)
     object method = resolveMethod(t, frameMethod(t, frame), index - 1);
     PROTECT(t, method);
     
-    if (UNLIKELY(classInit(t, methodClass(t, method), 3))) goto invoke;
+    initClass(t, methodClass(t, method));
 
     code = method;
   } goto invoke;
@@ -1924,7 +1838,10 @@ interpret3(Thread* t, const int base)
     unsigned parameterFootprint = methodParameterFootprint(t, method);
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       object class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
-      if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+      PROTECT(t, method);
+      PROTECT(t, class_);
+
+      initClass(t, class_);
 
       code = findVirtualMethod(t, method, class_);
       goto invoke;
@@ -2385,7 +2302,7 @@ interpret3(Thread* t, const int base)
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
 
-    if (UNLIKELY(classInit(t, class_, 3))) goto invoke;
+    initClass(t, class_);
 
     pushObject(t, make(t, class_));
   } goto loop;
@@ -2460,80 +2377,61 @@ interpret3(Thread* t, const int base)
     assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
     PROTECT(t, field);
 
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        acquire(t, field);        
-      } else {
-        storeStoreMemoryBarrier();
-      }
-    }
+    { ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-    switch (fieldCode(t, field)) {
-    case ByteField:
-    case BooleanField:
-    case CharField:
-    case ShortField:
-    case FloatField:
-    case IntField: {
-      int32_t value = popInt(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        switch (fieldCode(t, field)) {
-        case ByteField:
-        case BooleanField:
-          cast<int8_t>(o, fieldOffset(t, field)) = value;
-          break;
+      switch (fieldCode(t, field)) {
+      case ByteField:
+      case BooleanField:
+      case CharField:
+      case ShortField:
+      case FloatField:
+      case IntField: {
+        int32_t value = popInt(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          switch (fieldCode(t, field)) {
+          case ByteField:
+          case BooleanField:
+            cast<int8_t>(o, fieldOffset(t, field)) = value;
+            break;
             
-        case CharField:
-        case ShortField:
-          cast<int16_t>(o, fieldOffset(t, field)) = value;
-          break;
+          case CharField:
+          case ShortField:
+            cast<int16_t>(o, fieldOffset(t, field)) = value;
+            break;
             
-        case FloatField:
-        case IntField:
-          cast<int32_t>(o, fieldOffset(t, field)) = value;
-          break;
+          case FloatField:
+          case IntField:
+            cast<int32_t>(o, fieldOffset(t, field)) = value;
+            break;
+          }
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
         }
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      } break;
 
-    case DoubleField:
-    case LongField: {
-      int64_t value = popLong(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        cast<int64_t>(o, fieldOffset(t, field)) = value;
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      case DoubleField:
+      case LongField: {
+        int64_t value = popLong(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          cast<int64_t>(o, fieldOffset(t, field)) = value;
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
+        }
+      } break;
 
-    case ObjectField: {
-      object value = popObject(t);
-      object o = popObject(t);
-      if (LIKELY(o)) {
-        set(t, o, fieldOffset(t, field), value);
-      } else {
-        exception = makeThrowable(t, Machine::NullPointerExceptionType);
-      }
-    } break;
+      case ObjectField: {
+        object value = popObject(t);
+        object o = popObject(t);
+        if (LIKELY(o)) {
+          set(t, o, fieldOffset(t, field), value);
+        } else {
+          exception = makeThrowable(t, Machine::NullPointerExceptionType);
+        }
+      } break;
 
-    default: abort(t);
-    }
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        storeLoadMemoryBarrier();
+      default: abort(t);
       }
     }
 
@@ -2551,18 +2449,9 @@ interpret3(Thread* t, const int base)
 
     PROTECT(t, field);
 
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        acquire(t, field);        
-      } else {
-        storeStoreMemoryBarrier();
-      }
-    }
+    ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-    if (UNLIKELY(classInit(t, fieldClass(t, field), 3))) goto invoke;
+    initClass(t, fieldClass(t, field));
       
     object table = classStaticTable(t, fieldClass(t, field));
 
@@ -2602,17 +2491,6 @@ interpret3(Thread* t, const int base)
     } break;
 
     default: abort(t);
-    }
-
-    if (UNLIKELY(fieldFlags(t, field) & ACC_VOLATILE)) {
-      if (BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        release(t, field);        
-      } else {
-        storeLoadMemoryBarrier();
-      }
     }
   } goto loop;
 
@@ -3048,33 +2926,13 @@ class MyProcessor: public Processor {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions, 0,
        objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, addendum, staticTable, loader, 0);
+       fieldTable, methodTable, addendum, staticTable, loader, 0, 0);
   }
 
   virtual void
   initVtable(vm::Thread*, object)
   {
     // ignore
-  }
-
-  virtual bool
-  isInitializing(vm::Thread* vmt, object c)
-  {
-    Thread* t = static_cast<Thread*>(vmt);
-
-    for (ClassInitList* list = t->classInitList; list; list = list->next) {
-      if (list->class_ == c) {
-        return true;
-      }
-    }
-
-    for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
-      if (s->class_ == c) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   virtual void
@@ -3088,10 +2946,6 @@ class MyProcessor: public Processor {
       if (t->stack[i * 2] == ObjectTag) {
         v->visit(reinterpret_cast<object*>(t->stack + (i * 2) + 1));
       }
-    }
-
-    for (ClassInitList* list = t->classInitList; list; list = list->next) {
-      v->visit(reinterpret_cast<object*>(&(list->class_)));
     }
   }
 

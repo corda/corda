@@ -205,7 +205,7 @@ public class Field<T> extends AccessibleObject {
       } else {
         throw new IllegalArgumentException
           ("needed " + getType() + ", got "
-           + Class.getName(Classes.vmClass(target)) +
+           + value.getClass().getName() +
            " when setting " + Class.getName(vmField.class_) + "." + getName());
       }
       break;

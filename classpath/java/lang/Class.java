@@ -29,6 +29,7 @@ import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import java.security.ProtectionDomain;
@@ -424,6 +425,25 @@ public final class Class <T> implements Type, AnnotatedElement {
     return array;
   }
 
+  private static void getAllFields(VMClass vmClass, ArrayList<Field> fields) {
+    if (vmClass.super_ != null) {
+      getAllFields(vmClass.super_, fields);
+    }
+    if (vmClass.fieldTable != null) {
+      Classes.link(vmClass);
+
+      for (int i = 0; i < vmClass.fieldTable.length; ++i) {
+        fields.add(new Field(vmClass.fieldTable[i]));
+      }
+    }
+  }
+
+  public Field[] getAllFields() {
+    ArrayList<Field> fields = new ArrayList<Field>();
+    getAllFields(vmClass, fields);
+    return fields.toArray(new Field[fields.size()]);
+  }
+
   private int countMethods(boolean publicOnly) {
     int count = 0;
     if (vmClass.methodTable != null) {
@@ -515,7 +535,7 @@ public final class Class <T> implements Type, AnnotatedElement {
   }
 
   public Class getSuperclass() {
-    return SystemClassLoader.getClass(vmClass.super_);
+    return (vmClass.super_ == null ? null : SystemClassLoader.getClass(vmClass.super_));
   }
 
   public boolean isArray() {

@@ -52,11 +52,11 @@ const bool Continuations = true;
 const bool Continuations = false;
 #endif
 
-const unsigned MaxNativeCallFootprint = 4;
+const unsigned MaxNativeCallFootprint = BytesPerWord == 8 ? 4 : 5;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
-const unsigned ExecutableAreaSizeInBytes = 16 * 1024 * 1024;
+const unsigned ExecutableAreaSizeInBytes = 30 * 1024 * 1024;
 
 enum Root {
   CallTable,
@@ -235,7 +235,8 @@ class MyThread: public Thread {
          : makeArchitecture(m->system, useNativeFeatures)),
     transition(0),
     traceContext(0),
-    stackLimit(0)
+    stackLimit(0),
+    methodLockIsClean(true)
   {
     arch->acquire();
   }
@@ -256,6 +257,7 @@ class MyThread: public Thread {
   Context* transition;
   TraceContext* traceContext;
   uintptr_t stackLimit;
+  bool methodLockIsClean;
 };
 
 void
@@ -1202,7 +1204,8 @@ class Context {
     dirtyRoots(false),
     leaf(true),
     eventLog(t->m->system, t->m->heap, 1024),
-    protector(this)
+    protector(this),
+    resource(this)
   { }
 
   Context(MyThread* t):
@@ -1227,7 +1230,8 @@ class Context {
     dirtyRoots(false),
     leaf(true),
     eventLog(t->m->system, t->m->heap, 0),
-    protector(this)
+    protector(this),
+    resource(this)
   { }
 
   ~Context() {
@@ -1244,6 +1248,10 @@ class Context {
     if (executableAllocator) {
       executableAllocator->free(executableStart, executableSize);
     }
+
+    eventLog.dispose();
+
+    zone.dispose();
   }
 
   MyThread* thread;
@@ -1268,6 +1276,7 @@ class Context {
   bool leaf;
   Vector eventLog;
   MyProtector protector;
+  MyResource resource;
 };
 
 unsigned
@@ -1975,16 +1984,23 @@ void
 releaseLock(MyThread* t, object method, void* stack)
 {
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-    object lock;
-    if (methodFlags(t, method) & ACC_STATIC) {
-      lock = methodClass(t, method);
-    } else {
-      lock = *localObject
-        (t, stackForFrame(t, stack, method), method,
-         savedTargetIndex(t, method));
-    }
+    if (t->methodLockIsClean) {
+      object lock;
+      if (methodFlags(t, method) & ACC_STATIC) {
+        lock = methodClass(t, method);
+      } else {
+        lock = *localObject
+          (t, stackForFrame(t, stack, method), method,
+           savedTargetIndex(t, method));
+      }
     
-    release(t, lock);
+      release(t, lock);
+    } else {
+      // got an exception while trying to acquire the lock for a
+      // synchronized method -- don't try to release it, since we
+      // never succeeded in acquiring it.
+      t->methodLockIsClean = true;
+    }
   }
 }
 
@@ -2232,25 +2248,107 @@ void
 compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         object method);
 
+object
+resolveMethod(Thread* t, object pair)
+{
+  object reference = pairSecond(t, pair);
+  PROTECT(t, reference);
+
+  object class_ = resolveClassInObject
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))), reference,
+     ReferenceClass);
+
+  return findInHierarchy
+    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+     findMethodInClass, Machine::NoSuchMethodErrorType);
+}
+
+int64_t
+prepareMethodForCall(MyThread* t, object target)
+{
+  if (unresolved(t, methodAddress(t, target))) {
+    PROTECT(t, target);
+
+    compile(t, codeAllocator(t), 0, target);
+  }
+
+  if (methodFlags(t, target) & ACC_NATIVE) {
+    t->trace->nativeMethod = target;
+  }
+  return methodAddress(t, target);
+}
+
 int64_t
 findInterfaceMethodFromInstance(MyThread* t, object method, object instance)
 {
   if (instance) {
-    object target = findInterfaceMethod(t, method, objectClass(t, instance));
-
-    if (unresolved(t, methodAddress(t, target))) {
-      PROTECT(t, target);
-
-      compile(t, codeAllocator(t), 0, target);
-    }
-
-    if (methodFlags(t, target) & ACC_NATIVE) {
-      t->trace->nativeMethod = target;
-    }
-    return methodAddress(t, target);
+    return prepareMethodForCall
+      (t, findInterfaceMethod(t, method, objectClass(t, instance)));
   } else {
     throwNew(t, Machine::NullPointerExceptionType);
   }
+}
+
+int64_t
+findInterfaceMethodFromInstanceAndReference
+(MyThread* t, object pair, object instance)
+{
+  PROTECT(t, instance);
+
+  object method = resolveMethod(t, pair);
+
+  return findInterfaceMethodFromInstance(t, method, instance);
+}
+
+int64_t
+findSpecialMethodFromReference(MyThread* t, object pair)
+{
+  PROTECT(t, pair);
+
+  object target = resolveMethod(t, pair);
+
+  object class_ = methodClass(t, pairFirst(t, pair));
+  if (isSpecialMethod(t, target, class_)) {
+    target = findVirtualMethod(t, target, classSuper(t, class_));
+  }
+
+  assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+
+  return prepareMethodForCall(t, target);
+}
+
+int64_t
+findStaticMethodFromReference(MyThread* t, object pair)
+{
+  object target = resolveMethod(t, pair);
+
+  assert(t, methodFlags(t, target) & ACC_STATIC);
+
+  return prepareMethodForCall(t, target);
+}
+
+int64_t
+findVirtualMethodFromReference(MyThread* t, object pair, object instance)
+{
+  PROTECT(t, instance);
+
+  object target = resolveMethod(t, pair);
+
+  target = findVirtualMethod(t, target, objectClass(t, instance));
+
+  assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+
+  return prepareMethodForCall(t, target);
+}
+
+int64_t
+getJClassFromReference(MyThread* t, object pair)
+{
+  return reinterpret_cast<intptr_t>
+    (getJClass
+     (t, resolveClass
+      (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+       referenceName(t, pairSecond(t, pair)))));
 }
 
 int64_t
@@ -2576,6 +2674,16 @@ makeBlankObjectArray(MyThread* t, object class_, int32_t length)
 }
 
 uint64_t
+makeBlankObjectArrayFromReference(MyThread* t, object pair,
+                                  int32_t length)
+{
+  return makeBlankObjectArray
+    (t, resolveClass
+     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+      referenceName(t, pairSecond(t, pair))), length);
+}
+
+uint64_t
 makeBlankArray(MyThread* t, unsigned type, int32_t length)
 {
   if (length >= 0) {
@@ -2666,6 +2774,18 @@ acquireMonitorForObject(MyThread* t, object o)
 }
 
 void
+acquireMonitorForObjectOnEntrance(MyThread* t, object o)
+{
+  if (LIKELY(o)) {
+    t->methodLockIsClean = false;
+    acquire(t, o);
+    t->methodLockIsClean = true;
+  } else {
+    throwNew(t, Machine::NullPointerExceptionType);
+  }
+}
+
+void
 releaseMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
@@ -2707,6 +2827,17 @@ makeMultidimensionalArray(MyThread* t, object class_, int32_t dimensions,
   return reinterpret_cast<uintptr_t>
     (makeMultidimensionalArray2
      (t, class_, static_cast<uintptr_t*>(t->stack) + offset, dimensions));
+}
+
+uint64_t
+makeMultidimensionalArrayFromReference(MyThread* t, object pair,
+                                       int32_t dimensions,
+                                       int32_t offset)
+{
+  return makeMultidimensionalArray
+    (t, resolveClass
+     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+      referenceName(t, pairSecond(t, pair))), dimensions, offset);
 }
 
 void NO_RETURN
@@ -2751,10 +2882,212 @@ checkCast(MyThread* t, object class_, object o)
   }
 }
 
+void
+checkCastFromReference(MyThread* t, object pair, object o)
+{
+  PROTECT(t, o);
+
+  object c = resolveClass
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+     referenceName(t, pairSecond(t, pair)));
+
+  checkCast(t, c, o);
+}
+
+object
+resolveField(Thread* t, object pair)
+{
+  object reference = pairSecond(t, pair);
+  PROTECT(t, reference);
+
+  object class_ = resolveClassInObject
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))), reference,
+     ReferenceClass);
+
+  return findInHierarchy
+    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+     findFieldInClass, Machine::NoSuchFieldErrorType);
+}
+
+uint64_t
+getFieldValue(Thread* t, object target, object field)
+{
+  switch (fieldCode(t, field)) {
+  case ByteField:
+  case BooleanField:
+    return cast<int8_t>(target, fieldOffset(t, field));
+
+  case CharField:
+  case ShortField:
+    return cast<int16_t>(target, fieldOffset(t, field));
+
+  case FloatField:
+  case IntField:
+    return cast<int32_t>(target, fieldOffset(t, field));
+
+  case DoubleField:
+  case LongField:
+    return cast<int64_t>(target, fieldOffset(t, field));
+
+  case ObjectField:
+    return cast<intptr_t>(target, fieldOffset(t, field));
+
+  default:
+    abort(t);
+  }
+}
+
+uint64_t
+getStaticFieldValueFromReference(MyThread* t, object pair)
+{
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
+
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return getFieldValue(t, classStaticTable(t, fieldClass(t, field)), field);
+}
+
+uint64_t
+getFieldValueFromReference(MyThread* t, object pair, object instance)
+{
+  PROTECT(t, instance);
+
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return getFieldValue(t, instance, field);
+}
+
+void
+setStaticLongFieldValueFromReference(MyThread* t, object pair, uint64_t value)
+{
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  cast<int64_t>
+    (classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field)) = value;
+}
+
+void
+setLongFieldValueFromReference(MyThread* t, object pair, object instance,
+                               uint64_t value)
+{
+  PROTECT(t, instance);
+
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  cast<int64_t>(instance, fieldOffset(t, field)) = value;
+}
+
+void
+setStaticObjectFieldValueFromReference(MyThread* t, object pair, object value)
+{
+  PROTECT(t, value);
+
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  set(t, classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field),
+      value);
+}
+
+void
+setObjectFieldValueFromReference(MyThread* t, object pair, object instance,
+                                 object value)
+{
+  PROTECT(t, instance);
+  PROTECT(t, value);
+
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  set(t, instance, fieldOffset(t, field), value);
+}
+
+void
+setFieldValue(MyThread* t, object target, object field, uint32_t value)
+{
+  switch (fieldCode(t, field)) {
+  case ByteField:
+  case BooleanField:
+    cast<int8_t>(target, fieldOffset(t, field)) = value;
+    break;
+
+  case CharField:
+  case ShortField:
+    cast<int16_t>(target, fieldOffset(t, field)) = value;
+    break;
+
+  case FloatField:
+  case IntField:
+    cast<int32_t>(target, fieldOffset(t, field)) = value;
+    break;
+
+  default:
+    abort(t);
+  }
+}
+
+void
+setStaticFieldValueFromReference(MyThread* t, object pair, uint32_t value)
+{
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  initClass(t, fieldClass(t, field));
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  setFieldValue(t, classStaticTable(t, fieldClass(t, field)), field, value);
+}
+
+void
+setFieldValueFromReference(MyThread* t, object pair, object instance,
+                           uint32_t value)
+{
+  PROTECT(t, instance);
+  object field = resolveField(t, pair);
+  PROTECT(t, field);
+
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  setFieldValue(t, instance, field, value);
+}
+
 uint64_t
 instanceOf64(Thread* t, object class_, object o)
 {
   return instanceOf(t, class_, o);
+}
+
+uint64_t
+instanceOfFromReference(Thread* t, object pair, object o)
+{
+  PROTECT(t, o);
+
+  object c = resolveClass
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+     referenceName(t, pairSecond(t, pair)));
+
+  return instanceOf64(t, c, o);
 }
 
 uint64_t
@@ -2767,6 +3100,15 @@ uint64_t
 makeNew64(Thread* t, object class_)
 {
   return reinterpret_cast<uintptr_t>(makeNew(t, class_));
+}
+
+uint64_t
+makeNewFromReference(Thread* t, object pair)
+{
+  return makeNewGeneral64
+    (t, resolveClass
+     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+      referenceName(t, pairSecond(t, pair))));
 }
 
 uint64_t
@@ -2834,6 +3176,29 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code,
 
   default:
     abort(t);
+  }
+}
+
+Compiler::Operand*
+popField(MyThread* t, Frame* frame, int code)
+{
+  switch (code) {
+  case ByteField:
+  case BooleanField:
+  case CharField:
+  case ShortField:
+  case FloatField:
+  case IntField:
+    return frame->popInt();
+
+  case DoubleField:
+  case LongField:
+    return frame->popLong();
+
+  case ObjectField:
+    return frame->popObject();
+
+  default: abort(t);
   }
 }
 
@@ -3004,6 +3369,74 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
   return tailCall;
 }
 
+unsigned
+methodReferenceParameterFootprint(Thread* t, object reference, bool isStatic)
+{
+  return parameterFootprint
+    (t, reinterpret_cast<const char*>
+     (&byteArrayBody(t, referenceSpec(t, reference), 0)), isStatic);
+}
+
+int
+methodReferenceReturnCode(Thread* t, object reference)
+{
+  unsigned parameterCount;
+  unsigned returnCode;
+  scanMethodSpec
+    (t, reinterpret_cast<const char*>
+     (&byteArrayBody(t, referenceSpec(t, reference), 0)), &parameterCount,
+     &returnCode);
+
+  return returnCode;
+}
+
+void
+compileReferenceInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
+                       object reference, bool isStatic, bool tailCall)
+{
+  unsigned parameterFootprint
+    = methodReferenceParameterFootprint(t, reference, isStatic);
+
+  int returnCode = methodReferenceReturnCode(t, reference);
+
+  unsigned rSize = resultSize(t, returnCode);
+
+  Compiler::Operand* result = frame->c->stackCall
+    (method,
+     tailCall ? Compiler::TailJump : 0,
+     frame->trace(0, 0),
+     rSize,
+     operandTypeForFieldCode(t, returnCode),
+     parameterFootprint);
+
+  frame->pop(parameterFootprint);
+
+  if (rSize) {
+    pushReturnValue(t, frame, returnCode, result);
+  }
+}
+
+void
+compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
+                             object reference, bool isStatic, bool tailCall)
+{
+  Compiler* c = frame->c;
+
+  PROTECT(t, reference);
+
+  object pair = makePair(t, frame->context->method, reference);
+
+  compileReferenceInvoke
+    (t, frame, c->call
+     (c->constant(getThunk(t, thunk), Compiler::AddressType),
+      0,
+      frame->trace(0, 0),
+      BytesPerWord,
+      Compiler::AddressType,
+      2, c->register_(t->arch->thread()), frame->append(pair)),
+     reference, isStatic, tailCall);
+}
+
 void
 handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
 {
@@ -3044,7 +3477,7 @@ handleEntrance(MyThread* t, Frame* frame)
   }
 
   handleMonitorEvent
-    (t, frame, getThunk(t, acquireMonitorForObjectThunk));
+    (t, frame, getThunk(t, acquireMonitorForObjectOnEntranceThunk));
 }
 
 void
@@ -3113,15 +3546,30 @@ returnsNext(MyThread* t, object code, unsigned ip)
 }
 
 bool
-isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
+isTailCall(MyThread* t, object code, unsigned ip, object caller,
+           int calleeReturnCode)
 {
   return TailCalls
     and ((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
     and (not inTryBlock(t, code, ip - 1))
     and (not needsReturnBarrier(t, caller))
     and (methodReturnCode(t, caller) == VoidField
-         or methodReturnCode(t, caller) == methodReturnCode(t, callee))
+         or methodReturnCode(t, caller) == calleeReturnCode)
     and returnsNext(t, code, ip);
+}
+
+bool
+isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
+{
+  return isTailCall(t, code, ip, caller, methodReturnCode(t, callee));
+}
+
+bool
+isReferenceTailCall(MyThread* t, object code, unsigned ip, object caller,
+                    object calleeReference)
+{
+  return isTailCall
+    (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference));
 }
 
 void
@@ -3524,19 +3972,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case anewarray: {
       uint16_t index = codeReadInt16(t, code, ip);
       
-      object class_ = resolveClassInPool(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
+
+      PROTECT(t, reference);
+
+      object class_ = resolveClassInPool(t, context->method, index - 1, false);
 
       Compiler::Operand* length = frame->popInt();
 
+      object argument;
+      Thunk thunk;
+      if (LIKELY(class_)) {
+        argument = class_;
+        thunk = makeBlankObjectArrayThunk;
+      } else {
+        argument = makePair(t, context->method, reference);
+        thunk = makeBlankObjectArrayFromReferenceThunk;
+      }
+
       frame->pushObject
         (c->call
-         (c->constant
-          (getThunk(t, makeBlankObjectArrayThunk), Compiler::AddressType),
+         (c->constant(getThunk(t, thunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
           BytesPerWord,
           Compiler::ObjectType,
-          3, c->register_(t->arch->thread()), frame->append(class_), length));
+          3, c->register_(t->arch->thread()), frame->append(argument),
+          length));
     } break;
 
     case areturn: {
@@ -3594,17 +4057,33 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case checkcast: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object class_ = resolveClassInPool(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
+
+      PROTECT(t, reference);
+
+      object class_ = resolveClassInPool(t, context->method, index - 1, false);
+
+      object argument;
+      Thunk thunk;
+      if (LIKELY(class_)) {
+        argument = class_;
+        thunk = checkCastThunk;
+      } else {
+        argument = makePair(t, context->method, reference);
+        thunk = checkCastFromReferenceThunk;
+      }
 
       Compiler::Operand* instance = c->peek(1, 0);
 
       c->call
-        (c->constant(getThunk(t, checkCastThunk), Compiler::AddressType),
+        (c->constant(getThunk(t, thunk), Compiler::AddressType),
          0,
          frame->trace(0, 0),
          0,
          Compiler::VoidType,
-         3, c->register_(t->arch->thread()), frame->append(class_), instance);
+         3, c->register_(t->arch->thread()), frame->append(argument),
+         instance);
     } break;
 
     case d2f: {
@@ -3813,140 +4292,177 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case getstatic: {
       uint16_t index = codeReadInt16(t, code, ip);
         
-      object field = resolveField(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      if ((fieldFlags(t, field) & ACC_VOLATILE)
-          and BytesPerWord == 4
-          and (fieldCode(t, field) == DoubleField
-               or fieldCode(t, field) == LongField))
-      {
-        PROTECT(t, field);
+      PROTECT(t, reference);
 
-        c->call
-          (c->constant
-           (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
-           0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
-           c->register_(t->arch->thread()),
-           frame->append(field));
-      }
+      object field = resolveField(t, context->method, index - 1, false);
 
-      Compiler::Operand* table;
-
-      if (instruction == getstatic) {
-        assert(t, fieldFlags(t, field) & ACC_STATIC);
-
-        PROTECT(t, field);
-
-        if (fieldClass(t, field) != methodClass(t, context->method)
-            and classNeedsInit(t, fieldClass(t, field)))
-        {
-          c->call
-            (c->constant
-             (getThunk(t, tryInitClassThunk), Compiler::AddressType),
-             0,
-             frame->trace(0, 0),
-             0,
-             Compiler::VoidType,
-             2, c->register_(t->arch->thread()),
-             frame->append(fieldClass(t, field)));
-        }
-
-        table = frame->append(classStaticTable(t, fieldClass(t, field)));
-      } else {
-        assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
-
-        table = frame->popObject();
-
-        if (inTryBlock(t, code, ip - 3)) {
-          c->saveLocals();
-          frame->trace(0, 0);
-        }
-      }
-
-      switch (fieldCode(t, field)) {
-      case ByteField:
-      case BooleanField:
-        frame->pushInt
-          (c->load
-           (1, 1, c->memory
-            (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      case CharField:
-        frame->pushInt
-          (c->loadz
-           (2, 2, c->memory
-            (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      case ShortField:
-        frame->pushInt
-          (c->load
-           (2, 2, c->memory
-            (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      case FloatField:
-        frame->pushInt
-          (c->load
-           (4, 4, c->memory
-            (table, Compiler::FloatType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      case IntField:
-        frame->pushInt
-          (c->load
-           (4, 4, c->memory
-            (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      case DoubleField:
-        frame->pushLong
-          (c->load
-           (8, 8, c->memory
-            (table, Compiler::FloatType, fieldOffset(t, field), 0, 1), 8));
-        break;
-
-      case LongField:
-        frame->pushLong
-          (c->load
-           (8, 8, c->memory
-            (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1), 8));
-        break;
-
-      case ObjectField:
-        frame->pushObject
-          (c->load
-           (BytesPerWord, BytesPerWord,
-            c->memory
-            (table, Compiler::ObjectType, fieldOffset(t, field), 0, 1),
-            BytesPerWord));
-        break;
-
-      default:
-        abort(t);
-      }
-
-      if (fieldFlags(t, field) & ACC_VOLATILE) {
-        if (BytesPerWord == 4
+      if (LIKELY(field)) {
+        if ((fieldFlags(t, field) & ACC_VOLATILE)
+            and BytesPerWord == 4
             and (fieldCode(t, field) == DoubleField
                  or fieldCode(t, field) == LongField))
         {
+          PROTECT(t, field);
+
           c->call
             (c->constant
-             (getThunk(t, releaseMonitorForObjectThunk),
-              Compiler::AddressType),
+             (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
              0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
              c->register_(t->arch->thread()),
              frame->append(field));
-        } else {
-          c->loadBarrier();
         }
+
+        Compiler::Operand* table;
+
+        if (instruction == getstatic) {
+          assert(t, fieldFlags(t, field) & ACC_STATIC);
+
+          PROTECT(t, field);
+
+          if (fieldClass(t, field) != methodClass(t, context->method)
+              and classNeedsInit(t, fieldClass(t, field)))
+          {
+            c->call
+              (c->constant
+               (getThunk(t, tryInitClassThunk), Compiler::AddressType),
+               0,
+               frame->trace(0, 0),
+               0,
+               Compiler::VoidType,
+               2, c->register_(t->arch->thread()),
+               frame->append(fieldClass(t, field)));
+          }
+
+          table = frame->append(classStaticTable(t, fieldClass(t, field)));
+        } else {
+          assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
+          table = frame->popObject();
+
+          if (inTryBlock(t, code, ip - 3)) {
+            c->saveLocals();
+            frame->trace(0, 0);
+          }
+        }
+
+        switch (fieldCode(t, field)) {
+        case ByteField:
+        case BooleanField:
+          frame->pushInt
+            (c->load
+             (1, 1, c->memory
+              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        case CharField:
+          frame->pushInt
+            (c->loadz
+             (2, 2, c->memory
+              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        case ShortField:
+          frame->pushInt
+            (c->load
+             (2, 2, c->memory
+              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        case FloatField:
+          frame->pushInt
+            (c->load
+             (4, 4, c->memory
+              (table, Compiler::FloatType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        case IntField:
+          frame->pushInt
+            (c->load
+             (4, 4, c->memory
+              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        case DoubleField:
+          frame->pushLong
+            (c->load
+             (8, 8, c->memory
+              (table, Compiler::FloatType, fieldOffset(t, field), 0, 1), 8));
+          break;
+
+        case LongField:
+          frame->pushLong
+            (c->load
+             (8, 8, c->memory
+              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1), 8));
+          break;
+
+        case ObjectField:
+          frame->pushObject
+            (c->load
+             (BytesPerWord, BytesPerWord,
+              c->memory
+              (table, Compiler::ObjectType, fieldOffset(t, field), 0, 1),
+              BytesPerWord));
+          break;
+
+        default:
+          abort(t);
+        }
+
+        if (fieldFlags(t, field) & ACC_VOLATILE) {
+          if (BytesPerWord == 4
+              and (fieldCode(t, field) == DoubleField
+                   or fieldCode(t, field) == LongField))
+          {
+            c->call
+              (c->constant
+               (getThunk(t, releaseMonitorForObjectThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
+               c->register_(t->arch->thread()),
+               frame->append(field));
+          } else {
+            c->loadBarrier();
+          }
+        }
+      } else {
+        int fieldCode = vm::fieldCode
+          (t, byteArrayBody(t, referenceSpec(t, reference), 0));
+
+        object pair = makePair(t, context->method, reference);
+
+        unsigned rSize = resultSize(t, fieldCode);
+        Compiler::OperandType rType = operandTypeForFieldCode(t, fieldCode);
+
+        Compiler::Operand* result;
+        if (instruction == getstatic) {
+          result = c->call
+            (c->constant
+             (getThunk(t, getStaticFieldValueFromReferenceThunk),
+              Compiler::AddressType),
+             0, frame->trace(0, 0), rSize, rType, 2,
+             c->register_(t->arch->thread()), frame->append(pair));
+        } else {
+          Compiler::Operand* instance = frame->popObject();
+
+          result = c->call
+            (c->constant
+             (getThunk(t, getFieldValueFromReferenceThunk),
+              Compiler::AddressType),
+             0, frame->trace(0, 0), rSize, rType, 3,
+             c->register_(t->arch->thread()), frame->append(pair),
+             instance);
+        }
+
+        pushReturnValue(t, frame, fieldCode, result);
       }
     } break;
 
@@ -4213,14 +4729,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case instanceof: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object class_ = resolveClassInPool(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
+
+      PROTECT(t, reference);
+
+      object class_ = resolveClassInPool(t, context->method, index - 1, false);
+
+      Compiler::Operand* instance = frame->popObject();
+
+      object argument;
+      Thunk thunk;
+      TraceElement* trace;
+      if (LIKELY(class_)) {
+        argument = class_;
+        thunk = instanceOf64Thunk;
+        trace = 0;
+      } else {
+        argument = makePair(t, context->method, reference);
+        thunk = instanceOfFromReferenceThunk;
+        trace = frame->trace(0, 0);
+      }
 
       frame->pushInt
         (c->call
-         (c->constant(getThunk(t, instanceOf64Thunk), Compiler::AddressType),
-          0, 0, 4, Compiler::IntegerType,
-          3, c->register_(t->arch->thread()), frame->append(class_),
-          frame->popObject()));
+         (c->constant(getThunk(t, thunk), Compiler::AddressType),
+          0, trace, 4, Compiler::IntegerType,
+          3, c->register_(t->arch->thread()), frame->append(argument),
+          instance));
     } break;
 
     case invokeinterface: {
@@ -4229,30 +4765,48 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
       ip += 2;
 
-      object target = resolveMethod(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+      PROTECT(t, reference);
 
-      unsigned parameterFootprint = methodParameterFootprint(t, target);
+      object target = resolveMethod(t, context->method, index - 1, false);
 
-      unsigned instance = parameterFootprint - 1;
+      object argument;
+      Thunk thunk;
+      unsigned parameterFootprint;
+      int returnCode;
+      bool tailCall;
+      if (LIKELY(target)) {
+        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-      int returnCode = methodReturnCode(t, target);
+        argument = target;
+        thunk = findInterfaceMethodFromInstanceThunk;
+        parameterFootprint = methodParameterFootprint(t, target);
+        returnCode = methodReturnCode(t, target);
+        tailCall = isTailCall(t, code, ip, context->method, target);
+      } else {
+        argument = makePair(t, context->method, reference);
+        thunk = findInterfaceMethodFromInstanceAndReferenceThunk;
+        parameterFootprint = methodReferenceParameterFootprint
+          (t, reference, false);
+        returnCode = methodReferenceReturnCode(t, reference);
+        tailCall = isReferenceTailCall
+          (t, code, ip, context->method, reference);
+      }
 
       unsigned rSize = resultSize(t, returnCode);
 
       Compiler::Operand* result = c->stackCall
         (c->call
-         (c->constant
-          (getThunk(t, findInterfaceMethodFromInstanceThunk),
-           Compiler::AddressType),
+         (c->constant(getThunk(t, thunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
           BytesPerWord,
           Compiler::AddressType,
-          3, c->register_(t->arch->thread()), frame->append(target),
-          c->peek(1, instance)),
-         0,
+          3, c->register_(t->arch->thread()), frame->append(argument),
+          c->peek(1, parameterFootprint - 1)),
+         tailCall ? Compiler::TailJump : 0,
          frame->trace(0, 0),
          rSize,
          operandTypeForFieldCode(t, returnCode),
@@ -4269,18 +4823,30 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       context->leaf = false;
 
       uint16_t index = codeReadInt16(t, code, ip);
-      object target = resolveMethod(t, context->method, index - 1);
 
-      object class_ = methodClass(t, context->method);
-      if (isSpecialMethod(t, target, class_)) {
-        target = findVirtualMethod(t, target, classSuper(t, class_));
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
+
+      PROTECT(t, reference);
+
+      object target = resolveMethod(t, context->method, index - 1, false);
+
+      if (LIKELY(target)) {
+        object class_ = methodClass(t, context->method);
+        if (isSpecialMethod(t, target, class_)) {
+          target = findVirtualMethod(t, target, classSuper(t, class_));
+        }
+
+        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+
+        bool tailCall = isTailCall(t, code, ip, context->method, target);
+
+        compileDirectInvoke(t, frame, target, tailCall);
+      } else {
+        compileDirectReferenceInvoke
+          (t, frame, findSpecialMethodFromReferenceThunk, reference, false,
+           isReferenceTailCall(t, code, ip, context->method, reference));
       }
-
-      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
-
-      bool tailCall = isTailCall(t, code, ip, context->method, target);
-
-      compileDirectInvoke(t, frame, target, tailCall);
     } break;
 
     case invokestatic: {
@@ -4288,13 +4854,24 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object target = resolveMethod(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      assert(t, methodFlags(t, target) & ACC_STATIC);
+      PROTECT(t, reference);
 
-      if (not intrinsic(t, frame, target)) {
-        bool tailCall = isTailCall(t, code, ip, context->method, target);
-        compileDirectInvoke(t, frame, target, tailCall);
+      object target = resolveMethod(t, context->method, index - 1, false);
+
+      if (LIKELY(target)) {
+        assert(t, methodFlags(t, target) & ACC_STATIC);
+
+        if (not intrinsic(t, frame, target)) {
+          bool tailCall = isTailCall(t, code, ip, context->method, target);
+          compileDirectInvoke(t, frame, target, tailCall);
+        }
+      } else {
+        compileDirectReferenceInvoke
+          (t, frame, findStaticMethodFromReferenceThunk, reference, true,
+           isReferenceTailCall(t, code, ip, context->method, reference));
       }
     } break;
 
@@ -4303,36 +4880,70 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object target = resolveMethod(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+      PROTECT(t, reference);
 
-      unsigned parameterFootprint = methodParameterFootprint(t, target);
+      object target = resolveMethod(t, context->method, index - 1, false);
 
-      unsigned offset = ClassVtable + (methodOffset(t, target) * BytesPerWord);
+      if (LIKELY(target)) {
+        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
-      Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
+        bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-      unsigned rSize = resultSize(t, methodReturnCode(t, target));
+        if (LIKELY(methodVirtual(t, target))) {
+          unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-      bool tailCall = isTailCall(t, code, ip, context->method, target);
+          unsigned offset = ClassVtable
+            + (methodOffset(t, target) * BytesPerWord);
 
-      Compiler::Operand* result = c->stackCall
-        (c->memory
-         (c->and_
-          (BytesPerWord, c->constant(PointerMask, Compiler::IntegerType),
-           c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
-          Compiler::ObjectType, offset, 0, 1),
-         tailCall ? Compiler::TailJump : 0,
-         frame->trace(0, 0),
-         rSize,
-         operandTypeForFieldCode(t, methodReturnCode(t, target)),
-         parameterFootprint);
+          Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
 
-      frame->pop(parameterFootprint);
+          unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-      if (rSize) {
-        pushReturnValue(t, frame, methodReturnCode(t, target), result);
+          Compiler::Operand* result = c->stackCall
+            (c->memory
+             (c->and_
+              (BytesPerWord, c->constant(PointerMask, Compiler::IntegerType),
+               c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
+              Compiler::ObjectType, offset, 0, 1),
+             tailCall ? Compiler::TailJump : 0,
+             frame->trace(0, 0),
+             rSize,
+             operandTypeForFieldCode(t, methodReturnCode(t, target)),
+             parameterFootprint);
+
+          frame->pop(parameterFootprint);
+
+          if (rSize) {
+            pushReturnValue(t, frame, methodReturnCode(t, target), result);
+          }
+        } else {
+          // OpenJDK generates invokevirtual calls to private methods
+          // (e.g. readObject and writeObject for serialization), so
+          // we must handle such cases here.
+
+          compileDirectInvoke(t, frame, target, tailCall);          
+        }
+      } else {
+        PROTECT(t, reference);
+
+        object pair = makePair(t, context->method, reference);
+
+        compileReferenceInvoke
+          (t, frame, c->call
+           (c->constant(getThunk(t, findVirtualMethodFromReferenceThunk),
+                        Compiler::AddressType),
+            0,
+            frame->trace(0, 0),
+            BytesPerWord,
+            Compiler::AddressType,
+            3, c->register_(t->arch->thread()), frame->append(pair),
+            c->peek(1, methodReferenceParameterFootprint
+                    (t, reference, false) - 1)),
+           reference, false, isReferenceTailCall
+           (t, code, ip, context->method, reference));
       }
     } break;
 
@@ -4502,22 +5113,44 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
+
+        loadMemoryBarrier();  
+
         if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
-          v = resolveClassInPool(t, context->method, index - 1); 
+          object reference = v;
+          PROTECT(t, reference);
+
+          v = resolveClassInPool(t, context->method, index - 1, false);
+
+          if (UNLIKELY(v == 0)) {
+            frame->pushObject
+              (c->call
+               (c->constant
+                (getThunk(t, getJClassFromReferenceThunk),
+                 Compiler::AddressType),
+                0,
+                frame->trace(0, 0),
+                BytesPerWord,
+                Compiler::ObjectType,
+                2, c->register_(t->arch->thread()),
+                frame->append(makePair(t, context->method, reference))));
+          }
         }
 
-        if (objectClass(t, v) == type(t, Machine::ClassType)) {
-          frame->pushObject
-            (c->call
-             (c->constant
-              (getThunk(t, getJClass64Thunk), Compiler::AddressType),
-              0,
-              frame->trace(0, 0),
-              BytesPerWord,
-              Compiler::ObjectType,
-              2, c->register_(t->arch->thread()), frame->append(v)));
-        } else {
-          frame->pushObject(frame->append(v));
+        if (v) {
+          if (objectClass(t, v) == type(t, Machine::ClassType)) {
+            frame->pushObject
+              (c->call
+               (c->constant
+                (getThunk(t, getJClass64Thunk), Compiler::AddressType),
+                0,
+                frame->trace(0, 0),
+                BytesPerWord,
+                Compiler::ObjectType,
+                2, c->register_(t->arch->thread()), frame->append(v)));
+          } else {
+            frame->pushObject(frame->append(v));
+          }
         }
       } else {
         frame->pushInt
@@ -4746,8 +5379,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint16_t index = codeReadInt16(t, code, ip);
       uint8_t dimensions = codeBody(t, code, ip++);
 
-      object class_ = resolveClassInPool(t, context->method, index - 1);
-      PROTECT(t, class_);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
+
+      PROTECT(t, reference);
+
+      object class_ = resolveClassInPool(t, context->method, index - 1, false);
+
+      object argument;
+      Thunk thunk;
+      if (LIKELY(class_)) {
+        argument = class_;
+        thunk = makeMultidimensionalArrayThunk;
+      } else {
+        argument = makePair(t, context->method, reference);
+        thunk = makeMultidimensionalArrayFromReferenceThunk;
+      }
 
       unsigned offset
         = localOffset
@@ -4756,12 +5403,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       Compiler::Operand* result = c->call
         (c->constant
-         (getThunk(t, makeMultidimensionalArrayThunk), Compiler::AddressType),
+         (getThunk(t, thunk), Compiler::AddressType),
          0,
          frame->trace(0, 0),
          BytesPerWord,
          Compiler::ObjectType,
-         4, c->register_(t->arch->thread()), frame->append(class_),
+         4, c->register_(t->arch->thread()), frame->append(argument),
          c->constant(dimensions, Compiler::IntegerType),
          c->constant(offset, Compiler::IntegerType));
 
@@ -4772,28 +5419,35 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case new_: {
       uint16_t index = codeReadInt16(t, code, ip);
         
-      object class_ = resolveClassInPool(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      if (classVmFlags(t, class_) & (WeakReferenceFlag | HasFinalizerFlag)) {
-        frame->pushObject
-          (c->call
-           (c->constant
-            (getThunk(t, makeNewGeneral64Thunk), Compiler::AddressType),
-            0,
-            frame->trace(0, 0),
-            BytesPerWord,
-            Compiler::ObjectType,
-            2, c->register_(t->arch->thread()), frame->append(class_)));
+      PROTECT(t, reference);
+
+      object class_ = resolveClassInPool(t, context->method, index - 1, false);
+
+      object argument;
+      Thunk thunk;
+      if (LIKELY(class_)) {
+        argument = class_;
+        if (classVmFlags(t, class_) & (WeakReferenceFlag | HasFinalizerFlag)) {
+          thunk = makeNewGeneral64Thunk;
+        } else {
+          thunk = makeNew64Thunk;
+        }
       } else {
-        frame->pushObject
-          (c->call
-           (c->constant(getThunk(t, makeNew64Thunk), Compiler::AddressType),
-            0,
-            frame->trace(0, 0),
-            BytesPerWord,
-            Compiler::ObjectType,
-            2, c->register_(t->arch->thread()), frame->append(class_)));
+        argument = makePair(t, context->method, reference);
+        thunk = makeNewFromReferenceThunk;
       }
+
+      frame->pushObject
+        (c->call
+         (c->constant(getThunk(t, thunk), Compiler::AddressType),
+          0,
+          frame->trace(0, 0),
+          BytesPerWord,
+          Compiler::ObjectType,
+          2, c->register_(t->arch->thread()), frame->append(argument)));
     } break;
 
     case newarray: {
@@ -4826,165 +5480,238 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     case putstatic: {
       uint16_t index = codeReadInt16(t, code, ip);
     
-      object field = resolveField(t, context->method, index - 1);
+      object reference = singletonObject
+        (t, codePool(t, methodCode(t, context->method)), index - 1);
 
-      object staticTable = 0;
+      PROTECT(t, reference);
 
-      if (instruction == putstatic) {
-        assert(t, fieldFlags(t, field) & ACC_STATIC);
+      object field = resolveField(t, context->method, index - 1, false);
 
-        if (fieldClass(t, field) != methodClass(t, context->method)
-            and classNeedsInit(t, fieldClass(t, field)))
-        {
-          PROTECT(t, field);
+      if (LIKELY(field)) {
+        int fieldCode = vm::fieldCode(t, field);
 
-          c->call
-            (c->constant
-             (getThunk(t, tryInitClassThunk), Compiler::AddressType),
-             0,
-             frame->trace(0, 0),
-             0,
-             Compiler::VoidType,
-             2, c->register_(t->arch->thread()),
-             frame->append(fieldClass(t, field)));
-        }
+        object staticTable = 0;
 
-        staticTable = classStaticTable(t, fieldClass(t, field));      
-      } else {
-        assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+        if (instruction == putstatic) {
+          assert(t, fieldFlags(t, field) & ACC_STATIC);
 
-        if (inTryBlock(t, code, ip - 3)) {
-          c->saveLocals();
-          frame->trace(0, 0);
-        }
-      }
+          if (fieldClass(t, field) != methodClass(t, context->method)
+              and classNeedsInit(t, fieldClass(t, field)))
+          {
+            PROTECT(t, field);
 
-      if (fieldFlags(t, field) & ACC_VOLATILE) {
-        if (BytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
-        {
-          PROTECT(t, field);
+            c->call
+              (c->constant
+               (getThunk(t, tryInitClassThunk), Compiler::AddressType),
+               0,
+               frame->trace(0, 0),
+               0,
+               Compiler::VoidType,
+               2, c->register_(t->arch->thread()),
+               frame->append(fieldClass(t, field)));
+          }
 
-          c->call
-            (c->constant
-             (getThunk(t, acquireMonitorForObjectThunk),
-              Compiler::AddressType),
-             0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
-             c->register_(t->arch->thread()), frame->append(field));
+          staticTable = classStaticTable(t, fieldClass(t, field));      
         } else {
-          c->storeStoreBarrier();
+          assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
+          if (inTryBlock(t, code, ip - 3)) {
+            c->saveLocals();
+            frame->trace(0, 0);
+          }
         }
-      }
 
-      Compiler::Operand* value;
-      switch (fieldCode(t, field)) {
-      case ByteField:
-      case BooleanField:
-      case CharField:
-      case ShortField:
-      case FloatField:
-      case IntField: {
-        value = frame->popInt();
-      } break;
+        if (fieldFlags(t, field) & ACC_VOLATILE) {
+          if (BytesPerWord == 4
+              and (fieldCode == DoubleField or fieldCode == LongField))
+          {
+            PROTECT(t, field);
 
-      case DoubleField:
-      case LongField: {
-        value = frame->popLong();
-      } break;
+            c->call
+              (c->constant
+               (getThunk(t, acquireMonitorForObjectThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
+               c->register_(t->arch->thread()), frame->append(field));
+          } else {
+            c->storeStoreBarrier();
+          }
+        }
 
-      case ObjectField: {
-        value = frame->popObject();
-      } break;
+        Compiler::Operand* value = popField(t, frame, fieldCode);
 
-      default: abort(t);
-      }
+        Compiler::Operand* table;
 
-      Compiler::Operand* table;
+        if (instruction == putstatic) {
+          PROTECT(t, field);
 
-      if (instruction == putstatic) {
-        PROTECT(t, field);
+          table = frame->append(staticTable);
+        } else {
+          table = frame->popObject();
+        }
 
-        table = frame->append(staticTable);
-      } else {
-        table = frame->popObject();
-      }
+        switch (fieldCode) {
+        case ByteField:
+        case BooleanField:
+          c->store
+            (BytesPerWord, value, 1, c->memory
+             (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
+          break;
 
-      switch (fieldCode(t, field)) {
-      case ByteField:
-      case BooleanField:
-        c->store
-          (BytesPerWord, value, 1, c->memory
-           (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
-        break;
-
-      case CharField:
-      case ShortField:
-        c->store
-          (BytesPerWord, value, 2, c->memory
-           (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
-        break;
+        case CharField:
+        case ShortField:
+          c->store
+            (BytesPerWord, value, 2, c->memory
+             (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
+          break;
             
-      case FloatField:
-        c->store
-          (BytesPerWord, value, 4, c->memory
-           (table, Compiler::FloatType, fieldOffset(t, field), 0, 1));
-        break;
+        case FloatField:
+          c->store
+            (BytesPerWord, value, 4, c->memory
+             (table, Compiler::FloatType, fieldOffset(t, field), 0, 1));
+          break;
 
-      case IntField:
-        c->store
-          (BytesPerWord, value, 4, c->memory
-           (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
-        break;
+        case IntField:
+          c->store
+            (BytesPerWord, value, 4, c->memory
+             (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
+          break;
 
-      case DoubleField:
-        c->store
-          (8, value, 8, c->memory
-           (table, Compiler::FloatType, fieldOffset(t, field), 0, 1));
-        break;
+        case DoubleField:
+          c->store
+            (8, value, 8, c->memory
+             (table, Compiler::FloatType, fieldOffset(t, field), 0, 1));
+          break;
 
-      case LongField:
-        c->store
-          (8, value, 8, c->memory
-           (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
-        break;
+        case LongField:
+          c->store
+            (8, value, 8, c->memory
+             (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
+          break;
 
-      case ObjectField:
-        if (instruction == putfield) {
-          c->call
-            (c->constant
-             (getThunk(t, setMaybeNullThunk), Compiler::AddressType),
-             0,
-             frame->trace(0, 0),
-             0,
-             Compiler::VoidType,
-             4, c->register_(t->arch->thread()), table,
-             c->constant(fieldOffset(t, field), Compiler::IntegerType), value);
-        } else {
-          c->call
-            (c->constant(getThunk(t, setThunk), Compiler::AddressType),
-             0, 0, 0, Compiler::VoidType,
-             4, c->register_(t->arch->thread()), table,
-             c->constant(fieldOffset(t, field), Compiler::IntegerType), value);
+        case ObjectField:
+          if (instruction == putfield) {
+            c->call
+              (c->constant
+               (getThunk(t, setMaybeNullThunk), Compiler::AddressType),
+               0,
+               frame->trace(0, 0),
+               0,
+               Compiler::VoidType,
+               4, c->register_(t->arch->thread()), table,
+               c->constant(fieldOffset(t, field), Compiler::IntegerType),
+               value);
+          } else {
+            c->call
+              (c->constant(getThunk(t, setThunk), Compiler::AddressType),
+               0, 0, 0, Compiler::VoidType,
+               4, c->register_(t->arch->thread()), table,
+               c->constant(fieldOffset(t, field), Compiler::IntegerType),
+               value);
+          }
+          break;
+
+        default: abort(t);
         }
-        break;
 
-      default: abort(t);
-      }
+        if (fieldFlags(t, field) & ACC_VOLATILE) {
+          if (BytesPerWord == 4
+              and (fieldCode == DoubleField or fieldCode == LongField))
+          {
+            c->call
+              (c->constant
+               (getThunk(t, releaseMonitorForObjectThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
+               c->register_(t->arch->thread()), frame->append(field));
+          } else {
+            c->storeLoadBarrier();
+          }
+        }
+      } else {
+        int fieldCode = vm::fieldCode
+          (t, byteArrayBody(t, referenceSpec(t, reference), 0));
 
-      if (fieldFlags(t, field) & ACC_VOLATILE) {
-        if (BytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
-        {
-          c->call
-            (c->constant
-             (getThunk(t, releaseMonitorForObjectThunk),
-              Compiler::AddressType),
-             0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
-             c->register_(t->arch->thread()), frame->append(field));
-        } else {
-          c->storeLoadBarrier();
+        Compiler::Operand* value = popField(t, frame, fieldCode);
+        unsigned rSize = resultSize(t, fieldCode);
+        Compiler::OperandType rType = operandTypeForFieldCode(t, fieldCode);
+
+        object pair = makePair(t, context->method, reference);
+
+        switch (fieldCode) {
+        case ByteField:
+        case BooleanField:
+        case CharField:
+        case ShortField:
+        case FloatField:
+        case IntField: {
+          if (instruction == putstatic) {
+            c->call
+              (c->constant
+               (getThunk(t, setStaticFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 3,
+               c->register_(t->arch->thread()), frame->append(pair),
+               value);
+          } else {
+            Compiler::Operand* instance = frame->popObject();
+
+            c->call
+              (c->constant
+               (getThunk(t, setFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 4,
+               c->register_(t->arch->thread()), frame->append(pair),
+               instance, value);
+          }
+        } break;
+
+        case DoubleField:
+        case LongField: {
+          if (instruction == putstatic) {
+            c->call
+              (c->constant
+               (getThunk(t, setStaticLongFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 4,
+               c->register_(t->arch->thread()), frame->append(pair),
+               static_cast<Compiler::Operand*>(0), value);
+          } else {
+            Compiler::Operand* instance = frame->popObject();
+
+            c->call
+              (c->constant
+               (getThunk(t, setLongFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 5,
+               c->register_(t->arch->thread()), frame->append(pair),
+               instance, static_cast<Compiler::Operand*>(0), value);
+          }
+        } break;
+
+        case ObjectField: {
+          if (instruction == putstatic) {
+            c->call
+              (c->constant
+               (getThunk(t, setStaticObjectFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 3,
+               c->register_(t->arch->thread()), frame->append(pair),
+               value);
+          } else {
+            Compiler::Operand* instance = frame->popObject();
+
+            c->call
+              (c->constant
+               (getThunk(t, setObjectFieldValueFromReferenceThunk),
+                Compiler::AddressType),
+               0, frame->trace(0, 0), rSize, rType, 4,
+               c->register_(t->arch->thread()), frame->append(pair),
+               instance, value);
+          }
+        } break;
+
+        default: abort(t);
         }
       }
     } break;
@@ -5156,14 +5883,86 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   }
 }
 
-object
-translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
-                               intptr_t start)
+int
+resolveIpForwards(Context* context, int start, int end)
 {
-  object oldTable = codeExceptionHandlerTable(t, methodCode(t, method));
+  while (start < end and context->visitTable[start] == 0) {
+    ++ start;
+  }
+  
+  if (start >= end) {
+    return -1;
+  } else {
+    return start;
+  }
+}
+
+int
+resolveIpBackwards(Context* context, int start, int end)
+{
+  while (start >= end and context->visitTable[start] == 0) {
+    -- start;
+  }
+  
+  if (start < end) {
+    return -1;
+  } else {
+    return start;
+  }
+}
+
+object
+truncateIntArray(Thread* t, object array, unsigned length)
+{
+  expect(t, intArrayLength(t, array) > length);
+
+  PROTECT(t, array);
+
+  object newArray = makeIntArray(t, length);
+  memcpy(&intArrayBody(t, newArray, 0), &intArrayBody(t, array, 0),
+         length * 4);
+
+  return newArray;
+}
+
+object
+truncateArray(Thread* t, object array, unsigned length)
+{
+  expect(t, arrayLength(t, array) > length);
+
+  PROTECT(t, array);
+
+  object newArray = makeArray(t, length);
+  memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+         length * BytesPerWord);
+
+  return newArray;
+}
+
+object
+truncateLineNumberTable(Thread* t, object table, unsigned length)
+{
+  expect(t, lineNumberTableLength(t, table) > length);
+
+  PROTECT(t, table);
+
+  object newTable = makeLineNumberTable(t, length);
+  memcpy(lineNumberTableBody(t, newTable, 0),
+         lineNumberTableBody(t, table, 0),
+         length * sizeof(LineNumber));
+
+  return newTable;
+}
+
+object
+translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
+{
+  Compiler* c = context->compiler;
+
+  object oldTable = codeExceptionHandlerTable
+    (t, methodCode(t, context->method));
 
   if (oldTable) {
-    PROTECT(t, method);
     PROTECT(t, oldTable);
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
@@ -5174,31 +5973,51 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
     object newTable = makeArray(t, length + 1);
     PROTECT(t, newTable);
 
-    set(t, newTable, ArrayBody, newIndex);
-
-    for (unsigned i = 0; i < length; ++i) {
+    unsigned ni = 0;
+    for (unsigned oi = 0; oi < length; ++ oi) {
       ExceptionHandler* oldHandler = exceptionHandlerTableBody
-        (t, oldTable, i);
+        (t, oldTable, oi);
 
-      intArrayBody(t, newIndex, i * 3)
-        = c->machineIp(exceptionHandlerStart(oldHandler))->value() - start;
+      int handlerStart = resolveIpForwards
+        (context, exceptionHandlerStart(oldHandler),
+         exceptionHandlerEnd(oldHandler));
 
-      intArrayBody(t, newIndex, (i * 3) + 1)
-        = c->machineIp(exceptionHandlerEnd(oldHandler))->value() - start;
+      if (LIKELY(handlerStart >= 0)) {
+        int handlerEnd = resolveIpBackwards
+          (context, exceptionHandlerEnd(oldHandler),
+           exceptionHandlerStart(oldHandler));
 
-      intArrayBody(t, newIndex, (i * 3) + 2)
-        = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+        assert(t, handlerEnd >= 0);
 
-      object type;
-      if (exceptionHandlerCatchType(oldHandler)) {
-        type = resolveClassInPool
-          (t, method, exceptionHandlerCatchType(oldHandler) - 1);
-      } else {
-        type = 0;
+        intArrayBody(t, newIndex, ni * 3)
+          = c->machineIp(handlerStart)->value() - start;
+
+        intArrayBody(t, newIndex, (ni * 3) + 1)
+          = c->machineIp(handlerEnd)->value() - start;
+
+        intArrayBody(t, newIndex, (ni * 3) + 2)
+          = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+
+        object type;
+        if (exceptionHandlerCatchType(oldHandler)) {
+          type = resolveClassInPool
+            (t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
+        } else {
+          type = 0;
+        }
+
+        set(t, newTable, ArrayBody + ((ni + 1) * BytesPerWord), type);
+
+        ++ ni;
       }
-
-      set(t, newTable, ArrayBody + ((i + 1) * BytesPerWord), type);
     }
+
+    if (UNLIKELY(ni < length)) {
+      newIndex = truncateIntArray(t, newIndex, ni * 3);
+      newTable = truncateArray(t, newTable, ni + 1);
+    }
+
+    set(t, newTable, ArrayBody, newIndex);
 
     return newTable;
   } else {
@@ -5207,23 +6026,36 @@ translateExceptionHandlerTable(MyThread* t, Compiler* c, object method,
 }
 
 object
-translateLineNumberTable(MyThread* t, Compiler* c, object code, intptr_t start)
+translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = codeLineNumberTable(t, code);
+  object oldTable = codeLineNumberTable(t, methodCode(t, context->method));
   if (oldTable) {
-    PROTECT(t, code);
     PROTECT(t, oldTable);
 
     unsigned length = lineNumberTableLength(t, oldTable);
     object newTable = makeLineNumberTable(t, length);
-    for (unsigned i = 0; i < length; ++i) {
-      LineNumber* oldLine = lineNumberTableBody(t, oldTable, i);
-      LineNumber* newLine = lineNumberTableBody(t, newTable, i);
+    unsigned ni = 0;
+    for (unsigned oi = 0; oi < length; ++oi) {
+      LineNumber* oldLine = lineNumberTableBody(t, oldTable, oi);
+      LineNumber* newLine = lineNumberTableBody(t, newTable, ni);
 
-      lineNumberIp(newLine)
-        = c->machineIp(lineNumberIp(oldLine))->value() - start;
+      int ip = resolveIpForwards
+        (context, lineNumberIp(oldLine), oi + 1 < length
+         ? lineNumberIp(lineNumberTableBody(t, oldTable, oi + 1)) - 1
+         : lineNumberIp(oldLine) + 1);
 
-      lineNumberLine(newLine) = lineNumberLine(oldLine);
+      if (LIKELY(ip >= 0)) {
+        lineNumberIp(newLine)
+          = context->compiler->machineIp(ip)->value() - start;
+
+        lineNumberLine(newLine) = lineNumberLine(oldLine);
+
+        ++ ni;
+      }
+    }
+
+    if (UNLIKELY(ni < length)) {
+      newTable = truncateLineNumberTable(t, newTable, ni);      
     }
 
     return newTable;
@@ -5940,13 +6772,12 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   }
 
   { object newExceptionHandlerTable = translateExceptionHandlerTable
-      (t, c, context->method, reinterpret_cast<intptr_t>(start));
+      (t, context, reinterpret_cast<intptr_t>(start));
 
     PROTECT(t, newExceptionHandlerTable);
 
     object newLineNumberTable = translateLineNumberTable
-      (t, c, methodCode(t, context->method),
-       reinterpret_cast<intptr_t>(start));
+      (t, context, reinterpret_cast<intptr_t>(start));
 
     object code = methodCode(t, context->method);
 
@@ -6116,24 +6947,27 @@ compile(MyThread* t, Context* context)
     THREAD_RUNTIME_ARRAY(t, bool, visited, visitCount);
     memset(RUNTIME_ARRAY_BODY(visited), 0, visitCount * sizeof(bool));
 
-    while (visitCount) {
-      bool progress = false;
+    bool progress = true;
+    while (progress) {
+      progress = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-        c->restoreState(state);
-
         ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-        unsigned start = exceptionHandlerStart(eh);
+        int start = resolveIpForwards
+          (context, exceptionHandlerStart(eh), exceptionHandlerEnd(eh));
 
         if ((not RUNTIME_ARRAY_BODY(visited)[i])
+            and start >= 0
             and context->visitTable[start])
         {
-          -- visitCount;
           RUNTIME_ARRAY_BODY(visited)[i] = true;
           progress = true;
 
-          THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
-                        codeMaxStack(t, methodCode(t, context->method)));
+          c->restoreState(state);
+
+          THREAD_RUNTIME_ARRAY
+            (t, uint8_t, stackMap,
+             codeMaxStack(t, methodCode(t, context->method)));
           Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
           unsigned end = exceptionHandlerEnd(eh);
@@ -6161,8 +6995,6 @@ compile(MyThread* t, Context* context)
           eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
-
-      assert(t, progress);
     }
   }
 
@@ -6502,7 +7334,7 @@ invokeNative(MyThread* t)
       static_cast<MyThread*>(t)->trace->nativeMethod = 0;
     });
 
-  resolveNative(t, t->trace->nativeMethod);
+  t->m->classpath->resolveNative(t, t->trace->nativeMethod);
 
   result = invokeNative2(t, t->trace->nativeMethod);
 
@@ -7139,7 +7971,7 @@ class ArgumentList {
       default:
         addInt(cast<int32_t>(objectArrayBody(t, arguments, index++),
                              BytesPerWord));
-        break;        
+        break;
       }
     }
   }
@@ -7197,6 +8029,17 @@ object
 invoke(Thread* thread, object method, ArgumentList* arguments)
 {
   MyThread* t = static_cast<MyThread*>(thread);
+
+  if (false) {
+    PROTECT(t, method);
+
+    compile(t, local::codeAllocator(static_cast<MyThread*>(t)), 0,
+            resolveMethod
+            (t, root(t, Machine::AppLoader),
+             "foo/ClassName",
+             "methodName",
+             "()V"));
+  }
 
   uintptr_t stackLimit = t->stackLimit;
   uintptr_t stackPosition = reinterpret_cast<uintptr_t>(&t);
@@ -7300,7 +8143,7 @@ class SignalHandler: public System::SignalHandler {
           t->exception = vm::root(t, root);
         }
 
-        // printTrace(t, t->exception);
+        //printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);
@@ -7456,8 +8299,8 @@ class MyProcessor: public Processor {
   {
     return vm::makeClass
       (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions,
-       0, objectMask, name, sourceFile, super, interfaceTable,
-       virtualTable, fieldTable, methodTable, staticTable, addendum, loader,
+       0, objectMask, name, sourceFile, super, interfaceTable, virtualTable,
+       fieldTable, methodTable, staticTable, addendum, loader, 0,
        vtableLength);
   }
 
@@ -7470,17 +8313,6 @@ class MyProcessor: public Processor {
         (virtualThunk(static_cast<MyThread*>(t), i));
       classVtable(t, c, i) = thunk;
     }
-  }
-
-  virtual bool
-  isInitializing(Thread* t, object c)
-  {
-    for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
-      if (s->class_ == c) {
-        return true;
-      }
-    }
-    return false;
   }
 
   virtual void
@@ -8754,6 +9586,8 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 uintptr_t
 virtualThunk(MyThread* t, unsigned index)
 {
+  ACQUIRE(t, t->m->classLock);
+
   if (root(t, VirtualThunks) == 0
       or wordArrayLength(t, root(t, VirtualThunks)) <= index * 2)
   {
@@ -8767,14 +9601,10 @@ virtualThunk(MyThread* t, unsigned index)
   }
 
   if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
-    ACQUIRE(t, t->m->classLock);
-
-    if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
-      unsigned size;
-      uintptr_t thunk = compileVirtualThunk(t, index, &size);
-      wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
-      wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
-    }
+    unsigned size;
+    uintptr_t thunk = compileVirtualThunk(t, index, &size);
+    wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
+    wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
   }
 
   return wordArrayBody(t, root(t, VirtualThunks), index * 2);

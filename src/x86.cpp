@@ -969,7 +969,7 @@ sseMoveRR(Context* c, unsigned aSize, Assembler::Register* a,
       modrm(c, 0xc0, a, b);
     } else {
       opcode(c, 0xf2);
-      maybeRex(c, 4, a, b);
+      maybeRex(c, 4, b, a);
       opcode(c, 0x0f, 0x10);
       modrm(c, 0xc0, a, b);
     } 
@@ -2865,7 +2865,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void updateCall(UnaryOperation op, void* returnAddress,
                           void* newTarget)
   {
-    bool assertAlignment;
+    bool assertAlignment UNUSED;
     switch (op) {
     case AlignedCall:
       op = Call;

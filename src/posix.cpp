@@ -865,7 +865,7 @@ class MySystem: public System {
 };
 
 void
-handleSignal(int signal, siginfo_t* info, void* context)
+handleSignal(int signal, siginfo_t*, void* context)
 {
   ucontext_t* c = static_cast<ucontext_t*>(context);
 
@@ -943,22 +943,14 @@ handleSignal(int signal, siginfo_t* info, void* context)
   default: abort();
   }
 
-  if (system->oldHandlers[index].sa_flags & SA_SIGINFO
-      and system->oldHandlers[index].sa_sigaction)
-  {
-    system->oldHandlers[index].sa_sigaction(signal, info, context);
-  } else if (system->oldHandlers[index].sa_handler) {
-    system->oldHandlers[index].sa_handler(signal);
-  } else {
-    switch (signal) {
-    case VisitSignal:
-    case InterruptSignal:
-    case PipeSignal:
-      break;
+  switch (signal) {
+  case VisitSignal:
+  case InterruptSignal:
+  case PipeSignal:
+    break;
 
-    default:
-      abort();
-    }
+  default:
+    abort();
   }
 }
 

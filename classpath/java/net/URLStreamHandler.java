@@ -13,7 +13,9 @@ package java.net;
 import java.io.IOException;
 
 public abstract class URLStreamHandler {
-  protected void parseURL(URL url, String s, int start, int end) {
+  protected void parseURL(URL url, String s, int start, int end)
+    throws MalformedURLException
+  {
     String protocol = s.substring(0, start - 1);
     s = s.substring(start, end);
 

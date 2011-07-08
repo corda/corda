@@ -45,23 +45,27 @@ class Zone: public Allocator {
       next = seg->next;
       allocator->free(seg, sizeof(Segment) + seg->size);
     }
+
+    segment = 0;
   }
 
-  bool ensure(unsigned space) {
-    if (segment == 0 or position + space > segment->size) {
-      unsigned size = max
-        (space, max
-         (minimumFootprint, segment == 0 ? 0 : segment->size * 2))
-        + sizeof(Segment);
+  static unsigned padToPage(unsigned size) {
+    return (size + (LikelyPageSizeInBytes - 1))
+      & ~(LikelyPageSizeInBytes - 1);
+  }
 
-      // pad to page size
-      size = (size + (LikelyPageSizeInBytes - 1))
-        & ~(LikelyPageSizeInBytes - 1);
+  bool tryEnsure(unsigned space) {
+    if (segment == 0 or position + space > segment->size) {
+      unsigned size = padToPage
+        (max
+         (space, max
+          (minimumFootprint, segment == 0 ? 0 : segment->size * 2))
+         + sizeof(Segment));
 
       void* p = allocator->tryAllocate(size);
       if (p == 0) {
-        size = space + sizeof(Segment);
-        void* p = allocator->tryAllocate(size);
+        size = padToPage(space + sizeof(Segment));
+        p = allocator->tryAllocate(size);
         if (p == 0) {
           return false;
         }
@@ -73,9 +77,19 @@ class Zone: public Allocator {
     return true;
   }
 
+  void ensure(unsigned space) {
+    if (segment == 0 or position + space > segment->size) {
+      unsigned size = padToPage(space + sizeof(Segment));
+
+      segment = new (allocator->allocate(size))
+        Segment(segment, size - sizeof(Segment));
+      position = 0;
+    }
+  }
+
   virtual void* tryAllocate(unsigned size) {
     size = pad(size);
-    if (ensure(size)) {
+    if (tryEnsure(size)) {
       void* r = segment->data + position;
       position += size;
       return r;
@@ -86,8 +100,14 @@ class Zone: public Allocator {
 
   virtual void* allocate(unsigned size) {
     void* p = tryAllocate(size);
-    expect(s, p);
-    return p;
+    if (p) {
+      return p;
+    } else {
+      ensure(size);
+      void* r = segment->data + position;
+      position += size;
+      return r;
+    }
   }
 
   virtual void free(const void*, unsigned) {

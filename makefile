@@ -90,7 +90,19 @@ ifneq ($(openjdk),)
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
-		javahome-files = lib/zi lib/currency.data
+		javahome-files = lib/zi lib/currency.data lib/security/java.security \
+			lib/security/java.policy lib/security/cacerts
+
+		local-policy = lib/security/local_policy.jar
+		ifeq ($(shell test -e $(openjdk)/$(local-policy) && echo found),found)
+			javahome-files += $(local-policy)
+		endif
+
+		export-policy = lib/security/US_export_policy.jar
+		ifeq ($(shell test -e $(openjdk)/$(export-policy) && echo found),found)
+			javahome-files += $(export-policy)
+		endif
+
 		ifeq ($(platform),windows)
 			javahome-files += lib/tzmappings
 		endif
@@ -304,7 +316,7 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags)
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -359,9 +371,22 @@ ifeq ($(mode),stress-major)
 endif
 ifeq ($(mode),fast)
 	optimization-cflags = -O3 -g3 -DNDEBUG
+	use-lto = true
 endif
 ifeq ($(mode),small)
 	optimization-cflags = -Os -g3 -DNDEBUG
+	use-lto = true
+endif
+
+ifeq ($(use-lto),true)
+# only try to use LTO when GCC 4.6.0 or greater is available
+	gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
+	gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
+	ifeq ($(shell expr 4 \< $(gcc-major) \
+			\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
+		optimization-cflags += -flto
+		lflags += $(optimization-cflags)
+	endif
 endif
 
 cflags += $(optimization-cflags)
@@ -544,12 +569,14 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
 		$(classpath-src)/avian/ClassAddendum.java \
+		$(classpath-src)/avian/Classes.java \
 		$(classpath-src)/avian/ConstantPool.java \
 		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
 		$(classpath-src)/avian/IncompatibleContinuationException.java \
 		$(classpath-src)/avian/Machine.java \
 		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/Singleton.java \
 		$(classpath-src)/avian/Stream.java \
 		$(classpath-src)/avian/SystemClassLoader.java \
 		$(classpath-src)/avian/VMClass.java \
@@ -590,6 +617,11 @@ ifeq ($(continuations),true)
 		extra.DynamicWind
 endif
 
+ifeq ($(tails),true)
+	tail-tests = \
+		extra.Tails
+endif
+
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
@@ -622,7 +654,7 @@ test: build
 	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
 		$(test-executable) $(mode) "$(test-flags)" \
 		$(call class-names,$(test-build),$(test-classes)) \
-		$(continuation-tests)
+		$(continuation-tests) $(tail-tests)
 
 .PHONY: tarball
 tarball:
@@ -873,7 +905,7 @@ $(generator): $(generator-objects)
 	@echo "linking $(@)"
 	$(build-ld) $(^) $(build-lflags) -o $(@)
 
-$(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
+$(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
@@ -882,7 +914,7 @@ $(openjdk-objects): $(build)/openjdk/%.o: $(openjdk-src)/%.c \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@))
 
-$(openjdk-local-objects): $(build)/openjdk/%.o: $(src)/openjdk/%.c \
+$(openjdk-local-objects): $(build)/openjdk/%-openjdk.o: $(src)/openjdk/%.c \
 		$(openjdk-headers-dep)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
@@ -912,5 +944,6 @@ $(openjdk-jar-dep):
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)

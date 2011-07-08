@@ -33,6 +33,7 @@ class Vector {
   void dispose() {
     if (data and minimumCapacity >= 0) {
       allocator->free(data, capacity);
+      data = 0;
     }
   }
 

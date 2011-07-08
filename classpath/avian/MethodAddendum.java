@@ -12,4 +12,5 @@ package avian;
 
 public class MethodAddendum extends Addendum {
   public Object exceptionTable;
+  public Object annotationDefault;
 }

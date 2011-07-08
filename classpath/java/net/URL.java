@@ -73,13 +73,17 @@ public final class URL {
   {
     if ("resource".equals(protocol)) {
       return new avian.resource.Handler();
+    } else if ("file".equals(protocol)) {
+      return new avian.file.Handler();
+    } else if ("jar".equals(protocol)) {
+      return new avian.jar.Handler();
     } else {
       throw new MalformedURLException("unknown protocol: " + protocol);
     }
   }
 
-  protected void set(String protocol, String host, int port, String file,
-                     String ref)
+  public void set(String protocol, String host, int port, String file,
+                  String ref)
   {
     this.protocol = protocol;
     this.host = host;

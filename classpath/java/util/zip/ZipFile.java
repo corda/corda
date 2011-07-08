@@ -63,17 +63,27 @@ public class ZipFile {
     return index.size();
   }
 
+  protected Enumeration<? extends ZipEntry> makeEnumeration
+    (EntryFactory factory)
+  {
+    return new MyEnumeration(factory, window, index.values().iterator());
+  }
+
   public Enumeration<? extends ZipEntry> entries() {
-    return new MyEnumeration(window, index.values().iterator());
+    return makeEnumeration(ZipEntryFactory.Instance);
+  }
+
+  protected ZipEntry getEntry(EntryFactory factory, String name) {
+    Integer pointer = index.get(name);
+    return (pointer == null ? null : factory.makeEntry(window, pointer));
   }
 
   public ZipEntry getEntry(String name) {
-    Integer pointer = index.get(name);
-    return (pointer == null ? null : new MyZipEntry(window, pointer));
+    return getEntry(ZipEntryFactory.Instance, name);
   }
 
   public InputStream getInputStream(ZipEntry entry) throws IOException {
-    int pointer = ((MyZipEntry) entry).pointer;
+    int pointer = ((MyEntry) entry).pointer();
     int method = compressionMethod(window, pointer);
     int size = compressedSize(window, pointer);
     InputStream in = new MyInputStream(file, fileData(window, pointer), size);
@@ -126,7 +136,7 @@ public class ZipFile {
     return get2(w, p + 28);
   }
 
-  private static String entryName(Window w, int p) throws IOException {
+  protected static String entryName(Window w, int p) throws IOException {
     int length = entryNameLength(w, p);
     return new String(w.data, w.seek(p + 46, length), length);
   }
@@ -135,8 +145,12 @@ public class ZipFile {
     return get2(w, p + 10);
   }
 
-  private static int compressedSize(Window w, int p) throws IOException {
+  protected static int compressedSize(Window w, int p) throws IOException {
     return get4(w, p + 20);
+  }
+
+  protected static int uncompressedSize(Window w, int p) throws IOException {
+    return get4(w, p + 24);
   }
 
   private static int fileNameLength(Window w, int p) throws IOException {
@@ -186,7 +200,7 @@ public class ZipFile {
     file.close();
   }
 
-  private static class Window {
+  protected static class Window {
     private final RandomAccessFile file;
     public final byte[] data;
     public int start;
@@ -231,7 +245,11 @@ public class ZipFile {
     }
   }
 
-  private static class MyZipEntry extends ZipEntry {
+  protected interface MyEntry {
+    public int pointer();
+  }
+
+  private static class MyZipEntry extends ZipEntry implements MyEntry {
     public final Window window;
     public final int pointer;
 
@@ -255,13 +273,41 @@ public class ZipFile {
         return 0;
       }
     }
+
+    public int getSize() {
+      try {
+        return uncompressedSize(window, pointer);
+      } catch (IOException e) {
+        return 0;
+      }
+    }
+
+    public int pointer() {
+      return pointer;
+    }
+  }
+
+  protected interface EntryFactory {
+    public ZipEntry makeEntry(Window window, int pointer);
+  }
+
+  private static class ZipEntryFactory implements EntryFactory {
+    public static final ZipEntryFactory Instance = new ZipEntryFactory();
+
+    public ZipEntry makeEntry(Window window, int pointer) {
+      return new MyZipEntry(window, pointer);
+    }
   }
 
   private static class MyEnumeration implements Enumeration<ZipEntry> {
+    private final EntryFactory factory;
     private final Window window;
     private final Iterator<Integer> iterator;
 
-    public MyEnumeration(Window window, Iterator<Integer> iterator) {
+    public MyEnumeration(EntryFactory factory, Window window,
+                         Iterator<Integer> iterator)
+    {
+      this.factory = factory;
       this.window = window;
       this.iterator = iterator;
     }
@@ -271,7 +317,7 @@ public class ZipFile {
     }
 
     public ZipEntry nextElement() {
-      return new MyZipEntry(window, iterator.next());
+      return factory.makeEntry(window, iterator.next());
     }
   }
 

@@ -10,6 +10,7 @@
 
 #include "machine.h"
 #include "classpath-common.h"
+#include "process.h"
 
 using namespace vm;
 
@@ -61,6 +62,12 @@ class MyClasspath : public Classpath {
        "(Ljava/lang/Thread;)V");
 
     t->m->processor->invoke(t, method, 0, t->javaThread);
+  }
+
+  virtual void
+  resolveNative(Thread* t, object method)
+  {
+    vm::resolveNative(t, method);
   }
 
   virtual void
@@ -587,30 +594,6 @@ Avian_java_lang_Thread_yield
 (Thread* t, object, uintptr_t*)
 {
   t->m->system->yield();
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_acquireClassLock
-(Thread* t, object, uintptr_t*)
-{
-  acquire(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_releaseClassLock
-(Thread* t, object, uintptr_t*)
-{
-  release(t, t->m->classLock);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_resolveVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  object spec = reinterpret_cast<object>(arguments[1]);
-
-  return reinterpret_cast<int64_t>(resolveClass(t, loader, spec));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

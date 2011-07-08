@@ -20,12 +20,6 @@ namespace {
 
 namespace local {
 
-const uintptr_t InterfaceMethodID
-= (static_cast<uintptr_t>(1) << (BitsPerWord - 1));
-
-const uintptr_t NonVirtualMethodID
-= (static_cast<uintptr_t>(1) << (BitsPerWord - 2));
-
 jint JNICALL
 AttachCurrentThread(Machine* m, Thread** t, void*)
 {
@@ -430,28 +424,76 @@ GetDirectBufferCapacity(Thread*, jobject)
   return -1;
 }
 
+uint64_t
+getObjectClass(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jclass>(arguments[0]);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference(t, getJClass(t, objectClass(t, *o))));
+}
+
 jclass JNICALL
 GetObjectClass(Thread* t, jobject o)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
 
-  return makeLocalReference(t, getJClass(t, objectClass(t, *o)));
+  return reinterpret_cast<jobject>(run(t, getObjectClass, arguments));
 }
 
-jboolean JNICALL
-IsInstanceOf(Thread* t, jobject o, jclass c)
+uint64_t
+getSuperclass(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+
+  object super = classSuper(t, jclassVmClass(t, *c));
+
+  return super ? reinterpret_cast<uint64_t>
+    (makeLocalReference(t, getJClass(t, super))) : 0;
+}
+
+jclass JNICALL
+GetSuperclass(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jclass>(run(t, getSuperclass, arguments));
+}
+
+uint64_t
+isInstanceOf(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jclass c = reinterpret_cast<jclass>(arguments[1]);
 
   return instanceOf(t, jclassVmClass(t, *c), *o);
 }
 
 jboolean JNICALL
-IsAssignableFrom(Thread* t, jclass b, jclass a)
+IsInstanceOf(Thread* t, jobject o, jclass c)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            reinterpret_cast<uintptr_t>(c) };
+
+  return run(t, isInstanceOf, arguments);
+}
+
+uint64_t
+isAssignableFrom(Thread* t, uintptr_t* arguments)
+{
+  jclass b = reinterpret_cast<jclass>(arguments[0]);
+  jclass a = reinterpret_cast<jclass>(arguments[1]);
 
   return isAssignableFrom(t, jclassVmClass(t, *a), jclassVmClass(t, *b));
+}
+
+jboolean JNICALL
+IsAssignableFrom(Thread* t, jclass b, jclass a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(b),
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, isAssignableFrom, arguments);
 }
 
 object
@@ -467,7 +509,11 @@ findMethod(Thread* t, jclass c, const char* name, const char* spec)
 jint
 methodID(Thread* t, object method)
 {
-  if (methodNativeID(t, method) == 0) {
+  int id = methodNativeID(t, method);
+
+  loadMemoryBarrier();
+
+  if (id == 0) {
     PROTECT(t, method);
 
     ACQUIRE(t, t->m->referenceLock);
@@ -475,6 +521,9 @@ methodID(Thread* t, object method)
     if (methodNativeID(t, method) == 0) {
       setRoot(t, Machine::JNIMethodTable, vectorAppend
               (t, root(t, Machine::JNIMethodTable), method));
+
+      storeStoreMemoryBarrier();
+
       methodNativeID(t, method) = vectorSize
         (t, root(t, Machine::JNIMethodTable));
     }
@@ -531,9 +580,11 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
   return run(t, getStaticMethodID, arguments);
 }
 
-inline object
+object
 getMethod(Thread* t, jmethodID m)
 {
+  assert(t, m);
+
   object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, (methodFlags(t, method) & ACC_STATIC) == 0);
@@ -855,9 +906,11 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
   va_end(a);
 }
 
-inline object
+object
 getStaticMethod(Thread* t, jmethodID m)
 {
+  assert(t, m);
+
   object method = vectorBody(t, root(t, Machine::JNIMethodTable), m - 1);
 
   assert(t, methodFlags(t, method) & ACC_STATIC);
@@ -1115,6 +1168,31 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 }
 
+jint
+fieldID(Thread* t, object field)
+{
+  int id = fieldNativeID(t, field);
+
+  loadMemoryBarrier();
+
+  if (id == 0) {
+    PROTECT(t, field);
+
+    ACQUIRE(t, t->m->referenceLock);
+    
+    if (fieldNativeID(t, field) == 0) {
+      setRoot(t, Machine::JNIFieldTable, vectorAppend
+              (t, root(t, Machine::JNIFieldTable), field));
+
+      storeStoreMemoryBarrier();
+
+      fieldNativeID(t, field) = vectorSize(t, root(t, Machine::JNIFieldTable));
+    }
+  }
+
+  return fieldNativeID(t, field);
+}
+
 uint64_t
 getFieldID(Thread* t, uintptr_t* arguments)
 {
@@ -1122,7 +1200,7 @@ getFieldID(Thread* t, uintptr_t* arguments)
   const char* name = reinterpret_cast<const char*>(arguments[1]);
   const char* spec = reinterpret_cast<const char*>(arguments[2]);
 
-  return fieldOffset(t, resolveField(t, jclassVmClass(t, *c), name, spec));
+  return fieldID(t, resolveField(t, jclassVmClass(t, *c), name, spec));
 }
 
 jfieldID JNICALL
@@ -1145,293 +1223,937 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
   return run(t, getFieldID, arguments);
 }
 
+object
+getField(Thread* t, jfieldID f)
+{
+  assert(t, f);
+
+  object field = vectorBody(t, root(t, Machine::JNIFieldTable), f - 1);
+
+  assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+
+  return field;
+}
+
+uint64_t
+getObjectField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference(t, cast<object>(*o, fieldOffset(t, field))));
+}
+
 jobject JNICALL
 GetObjectField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return makeLocalReference(t, cast<object>(*o, field));
+  return reinterpret_cast<jobject>(run(t, getObjectField, arguments));
+}
+
+uint64_t
+getBooleanField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jboolean>(*o, fieldOffset(t, field));
 }
 
 jboolean JNICALL
 GetBooleanField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jboolean>(*o, field);
+  return run(t, getBooleanField, arguments);
+}
+
+uint64_t
+getByteField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jbyte>(*o, fieldOffset(t, field));
 }
 
 jbyte JNICALL
 GetByteField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jbyte>(*o, field);
+  return run(t, getByteField, arguments);
+}
+
+uint64_t
+getCharField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jchar>(*o, fieldOffset(t, field));
 }
 
 jchar JNICALL
 GetCharField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jchar>(*o, field);
+  return run(t, getCharField, arguments);
+}
+
+uint64_t
+getShortField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jshort>(*o, fieldOffset(t, field));
 }
 
 jshort JNICALL
 GetShortField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jshort>(*o, field);
+  return run(t, getShortField, arguments);
+}
+
+uint64_t
+getIntField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jint>(*o, fieldOffset(t, field));
 }
 
 jint JNICALL
 GetIntField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jint>(*o, field);
+  return run(t, getIntField, arguments);
+}
+
+uint64_t
+getLongField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jlong>(*o, fieldOffset(t, field));
 }
 
 jlong JNICALL
 GetLongField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jlong>(*o, field);
+  return run(t, getLongField, arguments);
+}
+
+uint64_t
+getFloatField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return floatToBits(cast<jfloat>(*o, fieldOffset(t, field)));
 }
 
 jfloat JNICALL
 GetFloatField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jfloat>(*o, field);
+  return bitsToFloat(run(t, getFloatField, arguments));
+}
+
+uint64_t
+getDoubleField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return doubleToBits(cast<jdouble>(*o, fieldOffset(t, field)));
 }
 
 jdouble JNICALL
 GetDoubleField(Thread* t, jobject o, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field };
 
-  return cast<jdouble>(*o, field);
+  return bitsToDouble(run(t, getDoubleField, arguments));
+}
+
+uint64_t
+setObjectField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jobject v = reinterpret_cast<jobject>(arguments[2]);
+  
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  set(t, *o, fieldOffset(t, field), (v ? *v : 0));
+  
+  return 1;
 }
 
 void JNICALL
 SetObjectField(Thread* t, jobject o, jfieldID field, jobject v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            reinterpret_cast<uintptr_t>(v) };
 
-  set(t, *o, field, (v ? *v : 0));
+  run(t, setObjectField, arguments);
+}
+
+uint64_t
+setBooleanField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jboolean v = arguments[2];
+  
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  cast<jboolean>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetBooleanField(Thread* t, jobject o, jfieldID field, jboolean v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            v };
 
-  cast<jboolean>(*o, field) = v;
+  run(t, setBooleanField, arguments);
+}
+
+uint64_t
+setByteField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jbyte v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jbyte>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetByteField(Thread* t, jobject o, jfieldID field, jbyte v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            v };
 
-  cast<jbyte>(*o, field) = v;
+  run(t, setByteField, arguments);
+}
+
+uint64_t
+setCharField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jchar v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jchar>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetCharField(Thread* t, jobject o, jfieldID field, jchar v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            v };
 
-  cast<jchar>(*o, field) = v;
+  run(t, setCharField, arguments);
+}
+
+uint64_t
+setShortField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jshort v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jshort>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetShortField(Thread* t, jobject o, jfieldID field, jshort v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            v };
 
-  cast<jshort>(*o, field) = v;
+  run(t, setShortField, arguments);
+}
+
+uint64_t
+setIntField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jint v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jint>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetIntField(Thread* t, jobject o, jfieldID field, jint v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            v };
 
-  cast<jint>(*o, field) = v;
+  run(t, setIntField, arguments);
+}
+
+uint64_t
+setLongField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jlong v; memcpy(&v, arguments + 2, sizeof(jlong));
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jlong>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetLongField(Thread* t, jobject o, jfieldID field, jlong v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[2 + (sizeof(jlong) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(o);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jlong));
 
-  cast<jlong>(*o, field) = v;
+  run(t, setLongField, arguments);
+}
+
+uint64_t
+setFloatField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jfloat v = bitsToFloat(arguments[2]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jfloat>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetFloatField(Thread* t, jobject o, jfieldID field, jfloat v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            field,
+                            floatToBits(v) };
 
-  cast<jfloat>(*o, field) = v;
+  run(t, setFloatField, arguments);
+}
+
+uint64_t
+setDoubleField(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  object field = getField(t, arguments[1]);
+  jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jdouble>(*o, fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
 SetDoubleField(Thread* t, jobject o, jfieldID field, jdouble v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[2 + (sizeof(jdouble) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(o);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jdouble));
 
-  cast<jdouble>(*o, field) = v;
+  run(t, setDoubleField, arguments);
+}
+
+object
+getStaticField(Thread* t, jfieldID f)
+{
+  assert(t, f);
+
+  object field = vectorBody(t, root(t, Machine::JNIFieldTable), f - 1);
+
+  assert(t, fieldFlags(t, field) & ACC_STATIC);
+
+  return field;
+}
+
+uint64_t
+getStaticObjectField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, cast<object>
+      (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field))));
 }
 
 jobject JNICALL
-GetStaticObjectField(Thread* t, jclass c, jfieldID field)
+GetStaticObjectField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return makeLocalReference
-    (t, cast<object>(classStaticTable(t, jclassVmClass(t, *c)), field));
+  return reinterpret_cast<jobject>(run(t, getStaticObjectField, arguments));
+}
+
+uint64_t
+getStaticBooleanField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jboolean>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jboolean JNICALL
-GetStaticBooleanField(Thread* t, jclass c, jfieldID field)
+GetStaticBooleanField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticBooleanField, arguments);
+}
+
+uint64_t
+getStaticByteField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jbyte>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jbyte JNICALL
-GetStaticByteField(Thread* t, jclass c, jfieldID field)
+GetStaticByteField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticByteField, arguments);
+}
+
+uint64_t
+getStaticCharField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jchar>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jchar JNICALL
-GetStaticCharField(Thread* t, jclass c, jfieldID field)
+GetStaticCharField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<uint16_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticCharField, arguments);
+}
+
+uint64_t
+getStaticShortField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jshort>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jshort JNICALL
-GetStaticShortField(Thread* t, jclass c, jfieldID field)
+GetStaticShortField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<int16_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticShortField, arguments);
+}
+
+uint64_t
+getStaticIntField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jint>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jint JNICALL
-GetStaticIntField(Thread* t, jclass c, jfieldID field)
+GetStaticIntField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<int32_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticIntField, arguments);
+}
+
+uint64_t
+getStaticLongField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return cast<jlong>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
 jlong JNICALL
-GetStaticLongField(Thread* t, jclass c, jfieldID field)
+GetStaticLongField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<int64_t>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return run(t, getStaticLongField, arguments);
+}
+
+uint64_t
+getStaticFloatField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return floatToBits
+    (cast<jfloat>
+     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)));
 }
 
 jfloat JNICALL
-GetStaticFloatField(Thread* t, jclass c, jfieldID field)
+GetStaticFloatField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<float>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return bitsToFloat(run(t, getStaticFloatField, arguments));
+}
+
+uint64_t
+getStaticDoubleField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, field);
+
+  return doubleToBits
+    (cast<jdouble>
+     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)));
 }
 
 jdouble JNICALL
-GetStaticDoubleField(Thread* t, jclass c, jfieldID field)
+GetStaticDoubleField(Thread* t, jobject c, jfieldID field)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field };
 
-  return cast<double>(classStaticTable(t, jclassVmClass(t, *c)), field);
+  return bitsToDouble(run(t, getStaticDoubleField, arguments));
 }
 
-void JNICALL
-SetStaticObjectField(Thread* t, jclass c, jfieldID field, jobject v)
+uint64_t
+setStaticObjectField(Thread* t, uintptr_t* arguments)
 {
-  ENTER(t, Thread::ActiveState);
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
 
-  set(t, classStaticTable(t, jclassVmClass(t, *c)), field, (v ? *v : 0));
-}
+  initClass(t, jclassVmClass(t, *c));
 
-void JNICALL
-SetStaticBooleanField(Thread* t, jclass c, jfieldID field, jboolean v)
-{
-  ENTER(t, Thread::ActiveState);
+  object field = getStaticField(t, arguments[1]);
+  jobject v = reinterpret_cast<jobject>(arguments[2]);
   
-  cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  set(t, classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field),
+      (v ? *v : 0));
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticByteField(Thread* t, jclass c, jfieldID field, jbyte v)
+SetStaticObjectField(Thread* t, jobject c, jfieldID field, jobject v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            reinterpret_cast<uintptr_t>(v) };
 
-  cast<int8_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticObjectField, arguments);
+}
+
+uint64_t
+setStaticBooleanField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jboolean v = arguments[2];
+  
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+
+  cast<jboolean>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticCharField(Thread* t, jclass c, jfieldID field, jchar v)
+SetStaticBooleanField(Thread* t, jobject c, jfieldID field, jboolean v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            v };
 
-  cast<uint16_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticBooleanField, arguments);
+}
+
+uint64_t
+setStaticByteField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jbyte v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jbyte>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticShortField(Thread* t, jclass c, jfieldID field, jshort v)
+SetStaticByteField(Thread* t, jobject c, jfieldID field, jbyte v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            v };
 
-  cast<int16_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticByteField, arguments);
+}
+
+uint64_t
+setStaticCharField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jchar v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jchar>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticIntField(Thread* t, jclass c, jfieldID field, jint v)
+SetStaticCharField(Thread* t, jobject c, jfieldID field, jchar v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            v };
 
-  cast<int32_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticCharField, arguments);
+}
+
+uint64_t
+setStaticShortField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jshort v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jshort>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticLongField(Thread* t, jclass c, jfieldID field, jlong v)
+SetStaticShortField(Thread* t, jobject c, jfieldID field, jshort v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            v };
 
-  cast<int64_t>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticShortField, arguments);
+}
+
+uint64_t
+setStaticIntField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jint v = arguments[2];
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jint>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticFloatField(Thread* t, jclass c, jfieldID field, jfloat v)
+SetStaticIntField(Thread* t, jobject c, jfieldID field, jint v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            v };
 
-  cast<float>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticIntField, arguments);
+}
+
+uint64_t
+setStaticLongField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jlong v; memcpy(&v, arguments + 2, sizeof(jlong));
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jlong>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
 }
 
 void JNICALL
-SetStaticDoubleField(Thread* t, jclass c, jfieldID field, jdouble v)
+SetStaticLongField(Thread* t, jobject c, jfieldID field, jlong v)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[2 + (sizeof(jlong) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(c);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jlong));
 
-  cast<double>(classStaticTable(t, jclassVmClass(t, *c)), field) = v;
+  run(t, setStaticLongField, arguments);
+}
+
+uint64_t
+setStaticFloatField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jfloat v = bitsToFloat(arguments[2]);
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jfloat>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
+}
+
+void JNICALL
+SetStaticFloatField(Thread* t, jobject c, jfieldID field, jfloat v)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            field,
+                            floatToBits(v) };
+
+  run(t, setStaticFloatField, arguments);
+}
+
+uint64_t
+setStaticDoubleField(Thread* t, uintptr_t* arguments)
+{
+  jobject c = reinterpret_cast<jobject>(arguments[0]);
+
+  initClass(t, jclassVmClass(t, *c));
+
+  object field = getStaticField(t, arguments[1]);
+  jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
+
+  PROTECT(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  
+  cast<jdouble>
+    (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
+  
+  return 1;
+}
+
+void JNICALL
+SetStaticDoubleField(Thread* t, jobject c, jfieldID field, jdouble v)
+{
+  uintptr_t arguments[2 + (sizeof(jdouble) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(c);
+  arguments[1] = field;
+  memcpy(arguments + 2, &v, sizeof(jdouble));
+
+  run(t, setStaticDoubleField, arguments);
 }
 
 jobject JNICALL
@@ -2290,8 +3012,6 @@ append(char** p, const char* value, unsigned length, char tail)
 uint64_t
 boot(Thread* t, uintptr_t*)
 {
-  t->javaThread = t->m->classpath->makeThread(t, 0);
-
   setRoot(t, Machine::NullPointerException, makeThrowable
           (t, Machine::NullPointerExceptionType));
       
@@ -2358,6 +3078,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
+  envTable->GetSuperclass = local::GetSuperclass;
   envTable->IsInstanceOf = local::IsInstanceOf;
   envTable->IsAssignableFrom = local::IsAssignableFrom;
   envTable->GetFieldID = local::GetFieldID;

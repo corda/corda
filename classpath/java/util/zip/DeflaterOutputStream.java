@@ -52,23 +52,25 @@ public class DeflaterOutputStream extends OutputStream {
     } else if (length == 0) {
       return;
     }
-    
-    for (int i = 0; i < length; i+= buffer.length) {
-      deflater.setInput(b, offset + i, Math.min(buffer.length, length - i));
-      while (deflater.getRemaining() > 0) {
-        try {
-          int len = deflater.deflate(buffer, 0, buffer.length);
-          if (len > 0) {
-            out.write(buffer, 0, len);
-          }
-        } catch (DataFormatException e) {
-          e.printStackTrace();
-        }
-      }
+
+    deflater.setInput(b, offset, length);
+    while (deflater.getRemaining() > 0) {
+      deflate();
+    }
+  }
+
+  private void deflate() throws IOException {
+    int len = deflater.deflate(buffer, 0, buffer.length);
+    if (len > 0) {
+      out.write(buffer, 0, len);
     }
   }
 
   public void close() throws IOException {
+    deflater.finish();
+    while (! deflater.finished()) {
+      deflate();
+    }
     out.close();
     deflater.dispose();
   }
