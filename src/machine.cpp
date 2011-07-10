@@ -3016,16 +3016,20 @@ popResources(Thread* t)
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
-  const int Size = 256;
-  char buffer[Size];
+  int size = 256;
+  while (true) {
+    THREAD_RUNTIME_ARRAY(t, char, buffer, size);
   
-  int r = vm::vsnprintf(buffer, Size - 1, format, a);
-  expect(t, r >= 0 and r < Size - 1);
-
-  object s = makeByteArray(t, strlen(buffer) + 1);
-  memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
-
-  return s;
+    int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+    if (r >= 0 and r < size - 1) {
+      object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
+      memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
+             byteArrayLength(t, s));
+      return s;
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 object
