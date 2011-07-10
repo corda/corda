@@ -974,6 +974,8 @@ getClassAddendum(Thread* t, object class_, object pool)
 {
   object addendum = classAddendum(t, class_);
   if (addendum == 0) {
+    PROTECT(t, class_);
+
     addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0);
     set(t, class_, ClassAddendum, addendum);
   }
@@ -1878,6 +1880,8 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      elementClass,
      loader,
      arrayLength(t, vtable));
+
+  PROTECT(t, c);
 
   t->m->processor->initVtable(t, c);
 
