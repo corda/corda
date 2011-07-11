@@ -776,6 +776,15 @@ class MySystem: public System {
     return SO_SUFFIX;
   }
 
+  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+    if (name[0] == '/') {
+      return copy(allocator, name);
+    } else {
+      char buffer[PATH_MAX];
+      return append(allocator, getcwd(buffer, PATH_MAX), "/", name);
+    }
+  }
+
   virtual Status load(System::Library** lib,
                       const char* name)
   {

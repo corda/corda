@@ -752,6 +752,20 @@ class MySystem: public System {
     return SO_SUFFIX;
   }
 
+  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+    if (strncmp(name, "//", 2) == 0
+        or strncmp(name, "\\\\", 2) == 0
+        or strncmp(name + 1, ":/", 2) == 0
+        or strncmp(name + 1, ":\\", 2) == 0)
+    {
+      return copy(allocator, name);
+    } else {
+      TCHAR buffer[MAX_PATH];
+      GetCurrentDirectory(MAX_PATH, buffer);
+      return append(allocator, buffer, "\\", name);
+    }
+  }
+
   virtual Status load(System::Library** lib,
                       const char* name)
   {
