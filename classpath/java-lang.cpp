@@ -48,6 +48,7 @@
 #    define SO_SUFFIX ".so"
 #  endif
 #  include "unistd.h"
+#  include "limits.h"
 #  include "sys/time.h"
 #  include "sys/sysctl.h"
 #  include "sys/utsname.h"
@@ -590,7 +591,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.dir") == 0) {
-      r = e->NewStringUTF(getenv("PWD"));
+      char buffer[PATH_MAX];
+      r = e->NewStringUTF(getcwd(buffer, PATH_MAX));
     } else if (strcmp(chars, "user.home") == 0) {
       r = e->NewStringUTF(getenv("HOME"));
     }
