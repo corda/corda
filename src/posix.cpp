@@ -151,6 +151,16 @@ class MySystem: public System {
       expect(s, rv == 0);
     }
 
+    virtual bool getAndClearInterrupted() {
+      ACQUIRE(mutex);
+
+      bool interrupted = r->interrupted();
+
+      r->setInterrupted(false);
+
+      return interrupted;
+    }
+
     virtual void join() {
       int rv UNUSED = pthread_join(thread, 0);
       expect(s, rv == 0);

@@ -555,6 +555,15 @@ Avian_java_lang_Thread_interrupt
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Thread_interrupted
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  return getAndClearInterrupted(t, reinterpret_cast<Thread*>(peer));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Thread_getStackTrace
 (Thread* t, object, uintptr_t* arguments)
 {
