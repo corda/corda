@@ -29,6 +29,7 @@ class System {
   class Thread {
    public:
     virtual void interrupt() = 0;
+    virtual bool getAndClearInterrupted() = 0;
     virtual void join() = 0;
     virtual void dispose() = 0;
   };

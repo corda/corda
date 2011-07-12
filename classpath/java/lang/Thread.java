@@ -139,9 +139,17 @@ public class Thread implements Runnable {
 
   public static native Thread currentThread();
 
-  public native void interrupt();
+  public void interrupt() {
+    interrupt(peer);
+  }
 
-  public native boolean interrupted();
+  private static native boolean interrupt(long peer);
+
+  public boolean interrupted() {
+    return interrupted(peer);
+  }
+
+  private static native boolean interrupted(long peer);
 
   public static boolean isInterrupted() {
     return currentThread().interrupted;

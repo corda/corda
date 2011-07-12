@@ -3236,6 +3236,18 @@ interrupt(Thread* t, Thread* target)
   }
 }
 
+inline bool
+getAndClearInterrupted(Thread* t, Thread* target)
+{
+  if (acquireSystem(t, target)) {
+    bool result = target->systemThread->getAndClearInterrupted();
+    releaseSystem(t, target);
+    return result;
+  } else {
+    return false;
+  }
+}
+
 object
 intern(Thread* t, object s);
 

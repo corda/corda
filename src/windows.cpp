@@ -100,6 +100,16 @@ class MySystem: public System {
       }
     }
 
+    virtual bool getAndClearInterrupted() {
+      ACQUIRE(s, mutex);
+
+      bool interrupted = r->interrupted();
+
+      r->setInterrupted(false);
+
+      return interrupted;
+    }
+
     virtual void join() {
       int r UNUSED = WaitForSingleObject(thread, INFINITE);
       assert(s, r == WAIT_OBJECT_0);
