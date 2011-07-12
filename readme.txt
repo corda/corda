@@ -162,8 +162,8 @@ Installing MSYS:
 Installing Cygwin:
 
   1. Download and run setup.exe from cygwin.com, installing the base
-  system and these packages: make, gcc-mingw-g++, and (optionally)
-  git.
+  system and these packages: make, gcc-mingw-g++,
+  mingw64-i686-gcc-g++, mingw64-x86_64-gcc-g++, and (optionally) git.
 
 You may also find our win32 repository useful: (run this from the
 directory containing the avian directory)

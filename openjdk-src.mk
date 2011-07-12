@@ -184,6 +184,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessImpl_md.c \
 		$(openjdk-src)/windows/native/java/net/net_util_md.c \
+		$(openjdk-src)/windows/native/java/net/DualStackPlainSocketImpl.c \
 		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
 		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
@@ -210,6 +211,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	openjdk-headers-classes += \
+		java.net.DualStackPlainSocketImpl \
 		java.lang.ProcessImpl \
 		sun.io.Win32ErrorMode \
 		sun.nio.ch.WindowsSelectorImpl \
@@ -225,7 +227,6 @@ ifeq ($(platform),windows)
 		"-I$(root)/win32/include" \
 		-D_JNI_IMPLEMENTATION_ \
 		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
-		-D_WINSOCK2API_ \
 		-Ds6_words=_s6_words \
 		-Ds6_bytes=_s6_bytes
 else
