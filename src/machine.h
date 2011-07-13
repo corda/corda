@@ -3036,7 +3036,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
     ENTER(t, Thread::IdleState);
 
-    interrupted = t->lock->wait(t->systemThread, time);
+    interrupted = t->lock->waitAndClearInterrupted(t->systemThread, time);
   }
 
   monitorAcquire(t, monitor, monitorNode);

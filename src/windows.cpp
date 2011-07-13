@@ -247,7 +247,16 @@ class MySystem: public System {
       }
     }
 
-    virtual bool wait(System::Thread* context, int64_t time) {
+    virtual void wait(System::Thread* context, int64_t time) {
+      wait(context, time, false);
+    }
+
+    virtual bool waitAndClearInterrupted(System::Thread* context, int64_t time)
+    {
+      return wait(context, time, true);
+    }
+
+    bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
       Thread* t = static_cast<Thread*>(context);
       assert(s, t);
 
@@ -262,7 +271,9 @@ class MySystem: public System {
         { ACQUIRE(s, t->mutex);
       
           if (t->r->interrupted()) {
-            t->r->setInterrupted(false);
+            if (clearInterrupted) {
+              t->r->setInterrupted(false);
+            }
             return true;
           }
 
@@ -294,7 +305,7 @@ class MySystem: public System {
           t->flags = 0;
 
           interrupted = t->r->interrupted();
-          if (interrupted) {
+          if (interrupted and clearInterrupted) {
             t->r->setInterrupted(false);
           }
         }

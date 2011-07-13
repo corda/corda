@@ -60,7 +60,8 @@ class System {
     virtual bool tryAcquire(Thread* context) = 0;
     virtual void acquire(Thread* context) = 0;
     virtual void release(Thread* context) = 0;
-    virtual bool wait(Thread* context, int64_t time) = 0;
+    virtual void wait(Thread* context, int64_t time) = 0;
+    virtual bool waitAndClearInterrupted(Thread* context, int64_t time) = 0;
     virtual void notify(Thread* context) = 0;
     virtual void notifyAll(Thread* context) = 0;
     virtual Thread* owner() = 0;
