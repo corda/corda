@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.4
+version = 0.5
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
