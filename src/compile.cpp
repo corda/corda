@@ -2190,6 +2190,9 @@ unwind(MyThread* t)
   object continuation;
   findUnwindTarget(t, &ip, &frame, &stack, &continuation);
 
+  t->trace->targetMethod = 0;
+  t->trace->nativeMethod = 0;
+
   transition(t, ip, stack, continuation, t->trace);
 
   vmJump(ip, frame, stack, t, 0, 0);
@@ -7328,11 +7331,6 @@ invokeNative(MyThread* t)
   uint64_t result = 0;
 
   t->trace->targetMethod = t->trace->nativeMethod;
-  
-  THREAD_RESOURCE0(t, {
-      static_cast<MyThread*>(t)->trace->targetMethod = 0;
-      static_cast<MyThread*>(t)->trace->nativeMethod = 0;
-    });
 
   t->m->classpath->resolveNative(t, t->trace->nativeMethod);
 
@@ -7354,6 +7352,9 @@ invokeNative(MyThread* t)
   stack += t->arch->frameReturnAddressSize();
 
   transition(t, getIp(t), stack, t->continuation, t->trace);
+
+  t->trace->targetMethod = 0;
+  t->trace->nativeMethod = 0;
 
   return result;
 }
