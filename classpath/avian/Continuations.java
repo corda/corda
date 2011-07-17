@@ -50,7 +50,7 @@ import java.util.concurrent.Callable;
  * frames from within that context.
  *
  * <p>Calling a continuation (i.e. feeding it a result or exception)
- * causes the current continuation to be replaced with the calling
+ * causes the current continuation to be replaced with the called
  * continuation.  When the last method in this new continuation
  * returns, it returns to the native frame which created the current
  * context, which may or may not be the same as the context in which
