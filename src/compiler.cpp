@@ -4815,7 +4815,11 @@ class BranchEvent: public Event {
     ConstantSite* secondConstant = findConstantSite(c, second);
 
     if (not unreachable(this)) {
-      if (firstConstant and secondConstant) {
+      if (firstConstant
+          and secondConstant
+          and firstConstant->value->resolved()
+          and secondConstant->value->resolved())
+      {
         int64_t firstValue = firstConstant->value->value();
         int64_t secondValue = secondConstant->value->value();
 
