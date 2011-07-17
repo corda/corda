@@ -238,7 +238,7 @@ codePromise(Context* c, unsigned offset)
 class Offset: public Promise {
  public:
   Offset(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit):
-    c(c), block(block), offset(offset), limit(limit)
+    c(c), block(block), offset(offset), limit(limit), value_(-1)
   { }
 
   virtual bool resolved() {
@@ -248,14 +248,19 @@ class Offset: public Promise {
   virtual int64_t value() {
     assert(c, resolved());
 
-    return block->start + (offset - block->offset)
-      + padding(block->firstPadding, block->start, block->offset, limit);
+    if (value_ == -1) {
+      value_ = block->start + (offset - block->offset)
+        + padding(block->firstPadding, block->start, block->offset, limit);
+    }
+
+    return value_;
   }
 
   Context* c;
   MyBlock* block;
   unsigned offset;
   AlignmentPadding* limit;
+  int value_;
 };
 
 Promise*
@@ -419,7 +424,8 @@ class AlignmentPadding {
     offset(c->code.length()),
     instructionOffset(instructionOffset),
     alignment(alignment),
-    next(0)
+    next(0),
+    padding(-1)
   {
     if (c->lastBlock->firstPadding) {
       c->lastBlock->lastPadding->next = this;
@@ -433,6 +439,7 @@ class AlignmentPadding {
   unsigned instructionOffset;
   unsigned alignment;
   AlignmentPadding* next;
+  int padding;
 };
 
 unsigned
@@ -441,14 +448,25 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
 {
   unsigned padding = 0;
   if (limit) {
-    unsigned index = 0;
-    for (; p; p = p->next) {
-      index = p->offset - offset;
-      while ((start + index + padding + p->instructionOffset) % p->alignment) {
-        ++ padding;
-      }
+    if (limit->padding == -1) {
+      for (; p; p = p->next) {
+        if (p->padding == -1) {
+          unsigned index = p->offset - offset;
+          while ((start + index + padding + p->instructionOffset)
+                 % p->alignment)
+          {
+            ++ padding;
+          }
       
-      if (p == limit) break;
+          p->padding = padding;
+
+          if (p == limit) break;
+        } else {
+          padding = p->padding;
+        }
+      }
+    } else {
+      padding = limit->padding;
     }
   }
   return padding;
