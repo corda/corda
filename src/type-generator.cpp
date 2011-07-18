@@ -1911,7 +1911,7 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write(")\n{\n");
 
-      bool hasObjectMask = false;
+      bool hasObjectMask = strcmp(typeName(o), "singleton") == 0;
       for (MemberIterator it(o); it.hasMore();) {
         Object* m = it.next();
         if (m->type == Object::Scalar
