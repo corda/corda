@@ -23,7 +23,7 @@ using namespace vm;
 
 namespace {
 
-const unsigned HeapCapacity = 128 * 1024 * 1024;
+const unsigned HeapCapacity = 256 * 1024 * 1024;
 
 // Notes on immutable references in the heap image:
 //
