@@ -2344,6 +2344,26 @@ findVirtualMethodFromReference(MyThread* t, object pair, object instance)
   return prepareMethodForCall(t, target);
 }
 
+bool
+methodAbstract(Thread* t, object method)
+{
+  return methodCode(t, method) == 0
+    and (methodFlags(t, method) & ACC_NATIVE) == 0;
+}
+
+int64_t
+getMethodAddress(MyThread* t, object target)
+{
+  if (methodAbstract(t, target)) {
+    throwNew(t, Machine::AbstractMethodErrorType, "%s.%s%s",
+             &byteArrayBody(t, className(t, methodClass(t, target)), 0),
+             &byteArrayBody(t, methodName(t, target), 0),
+             &byteArrayBody(t, methodSpec(t, target), 0));
+  } else {
+    return prepareMethodForCall(t, target);
+  }
+}
+
 int64_t
 getJClassFromReference(MyThread* t, object pair)
 {
@@ -3438,6 +3458,48 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
       Compiler::AddressType,
       2, c->register_(t->arch->thread()), frame->append(pair)),
      reference, isStatic, tailCall);
+}
+
+void
+compileAbstractInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
+                      object target, bool tailCall)
+{
+  unsigned parameterFootprint = methodParameterFootprint(t, target);
+  
+  int returnCode = methodReturnCode(t, target);
+
+  unsigned rSize = resultSize(t, returnCode);
+
+  Compiler::Operand* result = frame->c->stackCall
+    (method,
+     tailCall ? Compiler::TailJump : 0,
+     frame->trace(0, 0),
+     rSize,
+     operandTypeForFieldCode(t, returnCode),
+     parameterFootprint);
+
+  frame->pop(parameterFootprint);
+
+  if (rSize) {
+    pushReturnValue(t, frame, returnCode, result);
+  }    
+}
+
+void
+compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
+                            object target, bool tailCall)
+{
+  Compiler* c = frame->c;
+
+  compileAbstractInvoke
+    (t, frame, c->call
+     (c->constant(getThunk(t, thunk), Compiler::AddressType),
+      0,
+      frame->trace(0, 0),
+      BytesPerWord,
+      Compiler::AddressType,
+      2, c->register_(t->arch->thread()), frame->append(target)),
+     target, tailCall);
 }
 
 void
@@ -4844,7 +4906,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-        compileDirectInvoke(t, frame, target, tailCall);
+        if (UNLIKELY(methodAbstract(t, target))) {
+          compileDirectAbstractInvoke
+            (t, frame, getMethodAddressThunk, target, tailCall);
+        } else {
+          compileDirectInvoke(t, frame, target, tailCall);
+        }
       } else {
         compileDirectReferenceInvoke
           (t, frame, findSpecialMethodFromReferenceThunk, reference, false,

@@ -249,6 +249,8 @@
 
 (type incompatibleClassChangeError java/lang/IncompatibleClassChangeError)
 
+(type abstractMethodError java/lang/AbstractMethodError)
+
 (type noSuchFieldError java/lang/NoSuchFieldError)
 
 (type noSuchMethodError java/lang/NoSuchMethodError)
