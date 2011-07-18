@@ -179,6 +179,10 @@ main(int ac, const char** av)
                or strncmp(av[i], "-D", 2) == 0)
     {
       ++ vmArgs.nOptions;
+    } else if (strcmp(av[i], "-client") == 0
+               or strcmp(av[i], "-server") == 0)
+    {
+      // ignore
     } else {
       if (jar == 0) {
         class_ = av[i++];
