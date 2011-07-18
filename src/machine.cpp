@@ -3223,14 +3223,17 @@ instanceOf(Thread* t, object class_, object o)
 object
 classInitializer(Thread* t, object class_)
 {
-  for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i) {
-    object o = arrayBody(t, classMethodTable(t, class_), i);
-
-    if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
-                   &byteArrayBody(t, methodName(t, o), 0)) == 0)
+  if (classMethodTable(t, class_)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i)
     {
-      return o;
-    }               
+      object o = arrayBody(t, classMethodTable(t, class_), i);
+
+      if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
+                     &byteArrayBody(t, methodName(t, o), 0)) == 0)
+      {
+        return o;
+      }               
+    }
   }
   return 0;
 }
