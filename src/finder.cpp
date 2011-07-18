@@ -18,6 +18,7 @@ using namespace vm;
 namespace {
 
 const bool DebugFind = false;
+const bool DebugStat = false;
 
 class Element {
  public:
@@ -138,6 +139,9 @@ class DirectoryElement: public Element {
   virtual System::FileType stat(const char* name, unsigned* length, bool)  {
     const char* file = append(allocator, this->name, "/", name);
     System::FileType type = s->stat(file, length);
+    if (DebugStat) {
+      fprintf(stderr, "stat %s in %s: %d\n", name, this->name, type);
+    }
     allocator->free(file, strlen(file) + 1);
     return type;
   }
@@ -492,8 +496,12 @@ class JarElement: public Element {
 
     while (*name == '/') name++;
 
-    return (index ? index->stat(name, length, tryDirectory)
-            : System::TypeDoesNotExist);
+    System::FileType type = (index ? index->stat(name, length, tryDirectory)
+                             : System::TypeDoesNotExist);
+    if (DebugStat) {
+      fprintf(stderr, "stat %s in %s: %d\n", name, this->name, type);
+    }
+    return type;
   }
 
   virtual const char* urlPrefix() {
