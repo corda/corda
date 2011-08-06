@@ -1273,7 +1273,8 @@ class Machine {
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
-          unsigned propertyCount);
+          unsigned propertyCount, const char** arguments,
+          unsigned argumentCount);
 
   ~Machine() { 
     dispose();
@@ -1295,6 +1296,8 @@ class Machine {
   Reference* jniReferences;
   const char** properties;
   unsigned propertyCount;
+  const char** arguments;
+  unsigned argumentCount;
   unsigned activeCount;
   unsigned liveCount;
   unsigned daemonCount;

@@ -2399,7 +2399,8 @@ namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
-                 const char** properties, unsigned propertyCount):
+                 const char** properties, unsigned propertyCount,
+                 const char** arguments, unsigned argumentCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2415,6 +2416,8 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   jniReferences(0),
   properties(properties),
   propertyCount(propertyCount),
+  arguments(arguments),
+  argumentCount(argumentCount),
   activeCount(0),
   liveCount(0),
   daemonCount(0),
@@ -2480,6 +2483,8 @@ Machine::dispose()
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
     heap->free(heapPool[i], ThreadHeapSizeInBytes);
   }
+
+  heap->free(arguments, sizeof(const char*) * argumentCount);
 
   heap->free(properties, sizeof(const char*) * propertyCount);
 

@@ -48,6 +48,7 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/ZipEntry.c \
 	$(openjdk-src)/share/native/java/util/zip/ZipFile.c \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
+	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
 	$(openjdk-src)/share/native/sun/misc/GC.c \
 	$(openjdk-src)/share/native/sun/misc/MessageUtils.c \
 	$(openjdk-src)/share/native/sun/misc/NativeSignalHandler.c \
@@ -112,6 +113,7 @@ openjdk-headers-classes = \
 	java.util.zip.Inflater \
 	java.util.zip.ZipEntry \
 	java.util.zip.ZipFile \
+	sun.management.VMManagementImpl \
 	sun.misc.GC \
 	sun.misc.MessageUtils \
 	sun.misc.NativeSignalHandler \
@@ -151,6 +153,7 @@ openjdk-cflags = \
 	"-I$(openjdk-src)/share/native/java/lang/fdlibm/include" \
 	"-I$(openjdk-src)/share/native/java/net" \
 	"-I$(openjdk-src)/share/native/java/util/zip" \
+	"-I$(openjdk-src)/share/native/sun/management" \
 	"-I$(openjdk-src)/share/native/sun/nio/ch" \
 	"-I$(openjdk-src)/share/javavm/include" \
 	-D_LITTLE_ENDIAN \
@@ -291,13 +294,15 @@ else
 		"-I$(openjdk-src)/solaris/native/java/lang" \
 		"-I$(openjdk-src)/solaris/native/java/net" \
 		"-I$(openjdk-src)/solaris/native/java/util" \
+		"-I$(openjdk-src)/solaris/native/sun/management" \
 		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
 		"-I$(openjdk-src)/solaris/hpi/include"
 endif
 
 openjdk-local-sources = \
-	$(src)/openjdk/my_net_util.c
+	$(src)/openjdk/my_net_util.c \
+	$(src)/openjdk/my_management.c
 
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-openjdk.o,$(x)))
 
