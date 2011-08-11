@@ -2135,6 +2135,10 @@ class MyArchitecture: public Assembler::Architecture {
     return AlignArguments;
   }
 
+  virtual bool argumentRegisterAlignment() {
+    return true;
+  }
+
   virtual unsigned argumentRegisterCount() {
     return 8;
   }

@@ -330,6 +330,7 @@ class Assembler {
     virtual unsigned frameFootprint(unsigned footprint) = 0;
     virtual unsigned argumentFootprint(unsigned footprint) = 0;
     virtual bool argumentAlignment() = 0;
+    virtual bool argumentRegisterAlignment() = 0;
     virtual unsigned argumentRegisterCount() = 0;
     virtual int argumentRegister(unsigned index) = 0;
 

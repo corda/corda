@@ -3179,21 +3179,19 @@ class CallEvent: public Event {
       unsigned argumentIndex = 0;
 
       while (true) {
-        unsigned footprint;
-        if (argumentIndex + 1 < argumentCount
-            and s->value->nextWord == s->next->value)
-        {
-          footprint = 2;
-        } else {
-          footprint = 1;
-        }
+        unsigned footprint
+          = (argumentIndex + 1 < argumentCount
+             and s->value->nextWord == s->next->value)
+          ? 2 : 1;
 
-        if (footprint > 1 and index & 1 and c->arch->argumentAlignment()) {
+        if (index % (c->arch->argumentAlignment() ? footprint : 1)) {
           ++ index;
         }
 
         SiteMask targetMask;
-        if (index + footprint <= c->arch->argumentRegisterCount()) {
+        if (index + (c->arch->argumentRegisterAlignment() ? footprint : 1)
+            <= c->arch->argumentRegisterCount())
+        {
           int number = c->arch->argumentRegister(index);
         
           if (DebugReads) {

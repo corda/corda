@@ -2824,6 +2824,10 @@ class MyArchitecture: public Assembler::Architecture {
     return false;
   }
 
+  virtual bool argumentRegisterAlignment() {
+    return false;
+  }
+
   virtual unsigned argumentRegisterCount() {
 #ifdef PLATFORM_WINDOWS
     if (BytesPerWord == 8) return 4; else

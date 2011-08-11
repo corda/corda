@@ -128,6 +128,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize UNUSED,
             unsigned returnType UNUSED)
 {
+#ifdef __APPLE__
+  const unsigned Alignment = 1;
+#else
+  const unsigned Alignment = 2;
+#endif
+
   const unsigned GprCount = 4;
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
@@ -140,19 +146,21 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
     case INT64_TYPE: {
-      if (gprIndex + (8 / BytesPerWord) <= GprCount) { // pass argument on registers
-        if (gprIndex & 1) {                            // 8-byte alignment
-          memset(gprTable + gprIndex, 0, 4);           // probably not necessary, but for good luck
+      if (gprIndex + Alignment <= GprCount) { // pass argument on registers
+        if (gprIndex % Alignment) {           // 8-byte alignment
+          memset(gprTable + gprIndex, 0, 4);  // probably not necessary, but for good luck
           ++gprIndex;
         }
+
         memcpy(gprTable + gprIndex, arguments + ai, 8);
         gprIndex += 8 / BytesPerWord;
-      } else {                                         // pass argument on stack
+      } else {                                // pass argument on stack
         gprIndex = GprCount;
-        if (stackIndex & 1) {                          // 8-byte alignment
-          memset(stack + stackIndex, 0, 4);            // probably not necessary, but for good luck
+        if (stackIndex % Alignment) {         // 8-byte alignment
+          memset(stack + stackIndex, 0, 4);   // probably not necessary, but for good luck
           ++stackIndex;
         }
+
         memcpy(stack + stackIndex, arguments + ai, 8);
         stackIndex += 8 / BytesPerWord;
       }

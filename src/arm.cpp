@@ -1834,7 +1834,19 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual bool argumentAlignment() {
+#ifdef __APPLE__
+    return false;
+#else
     return true;
+#endif
+  }
+
+  virtual bool argumentRegisterAlignment() {
+#ifdef __APPLE__
+    return false;
+#else
+    return true;
+#endif
   }
 
   virtual unsigned argumentRegisterCount() {
