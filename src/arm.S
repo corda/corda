@@ -11,8 +11,16 @@
 
 .text
 
-.globl vmNativeCall
-vmNativeCall:
+#define LOCAL(x) .L##x
+
+#ifdef __APPLE__
+#  define GLOBAL(x) _##x
+#else
+#  define GLOBAL(x) x   
+#endif
+
+.globl GLOBAL(vmNativeCall)
+GLOBAL(vmNativeCall):
   /*
     arguments:
     r0 -> r4       : function
@@ -32,12 +40,12 @@ vmNativeCall:
   // setup stack arguments if necessary
   sub   sp, sp, r5 // allocate stack
   mov   ip, sp
-.Lloop:
+LOCAL(loop):
   tst   r3, r3
   ldrne r0, [r2], #4
   strne r0, [ip], #4
   subne r3, r3, #4
-  bne   .Lloop
+  bne   LOCAL(loop)
 
   // setup argument registers if necessary
   tst     r6, r6
@@ -48,8 +56,8 @@ vmNativeCall:
 
   ldmfd sp!, {r4-r6, pc} // restore non-volatile regs and return
 
-.globl vmJump
-vmJump:
+.globl GLOBAL(vmJump)
+GLOBAL(vmJump):
   mov   lr, r0
   ldr   r0, [sp]
   ldr   r1, [sp, #4]
@@ -60,8 +68,8 @@ vmJump:
 #define CHECKPOINT_THREAD 4
 #define CHECKPOINT_STACK 24
 
-.globl vmRun
-vmRun:
+.globl GLOBAL(vmRun)
+GLOBAL(vmRun):
   // r0: function
   // r1: arguments
   // r2: checkpoint
@@ -76,8 +84,8 @@ vmRun:
 
   blx   r12
 
-.globl vmRun_returnAddress
-vmRun_returnAddress:
+.globl GLOBAL(vmRun_returnAddress)
+GLOBAL(vmRun_returnAddress):
   add   sp, sp, #12
   ldmfd sp!, {r4-r11, lr}
   bx    lr

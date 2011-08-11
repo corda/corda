@@ -229,14 +229,25 @@ endif
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
-	cflags += -marm -Wno-psabi
+	ifneq ($(platform),darwin)
+		cflags += -marm -Wno-psabi
+	endif
 
 	ifneq ($(arch),$(build-arch))
-		cxx = arm-linux-gnueabi-g++
-		cc = arm-linux-gnueabi-gcc
-		ar = arm-linux-gnueabi-ar
-		ranlib = arm-linux-gnueabi-ranlib
-		strip = arm-linux-gnueabi-strip
+		ifeq ($(platform),darwin)
+			ios-bin = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin
+			cxx = $(ios-bin)/g++
+			cc = $(ios-bin)/gcc
+			ar = $(ios-bin)/ar
+			ranlib = $(ios-bin)/ranlib
+			strip = $(ios-bin)/strip
+		else
+			cxx = arm-linux-gnueabi-g++
+			cc = arm-linux-gnueabi-gcc
+			ar = arm-linux-gnueabi-ar
+			ranlib = arm-linux-gnueabi-ranlib
+			strip = arm-linux-gnueabi-strip
+		endif
 	endif
 endif
 
@@ -263,8 +274,10 @@ ifeq ($(platform),darwin)
 	endif
 
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation \
-		-framework CoreServices
+	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	ifneq ($(arch),arm)
+		lflags +=	-framework CoreServices
+	endif
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
 	endif
@@ -272,6 +285,18 @@ ifeq ($(platform),darwin)
 	strip-all = -S -x
 	so-suffix = .dylib
 	shared = -dynamiclib
+
+	ifeq ($(arch),arm)
+		ifeq ($(build-arch),powerpc)
+			converter-cflags += -DOPPOSITE_ENDIAN
+		endif
+		flags = -arch armv6 -isysroot \
+			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/
+		openjdk-extra-cflags += $(flags)
+		cflags += $(flags)
+		asmflags += $(flags)
+		lflags += $(flags)
+	endif
 
 	ifeq ($(arch),powerpc)
 		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))

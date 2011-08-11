@@ -89,7 +89,8 @@ writeObject(uint8_t* data, unsigned size, FILE* out, const char* startName,
         (data, size, out, startName, endName, architecture, alignment,
          writable, executable);
     } else if (strcmp("i386", architecture) == 0
-               or strcmp("powerpc", architecture) == 0)
+               or strcmp("powerpc", architecture) == 0
+               or strcmp("arm", architecture) == 0)
     {
       found = true;
       success = writeMachO32Object

@@ -43,7 +43,9 @@
 #  define SO_PREFIX "lib"
 #  ifdef __APPLE__
 #    define SO_SUFFIX ".jnilib"
-#    include <CoreServices/CoreServices.h>
+#    ifndef ARCH_arm
+#      include <CoreServices/CoreServices.h>
+#    endif
 #  else
 #    define SO_SUFFIX ".so"
 #  endif
@@ -558,7 +560,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("Linux");
 #endif
     } else if (strcmp(chars, "os.version") == 0) {
-#ifdef __APPLE__
+#if (defined __APPLE__) && (! defined ARCH_arm)
       unsigned size = 32;
       char buffer[size];
 #ifdef ARCH_x86_64
