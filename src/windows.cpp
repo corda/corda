@@ -269,12 +269,10 @@ class MySystem: public System {
         int r UNUSED;
 
         { ACQUIRE(s, t->mutex);
-      
-          if (t->r->interrupted()) {
-            if (clearInterrupted) {
-              t->r->setInterrupted(false);
-            }
-            return true;
+
+          interrupted = t->r->interrupted();
+          if (interrupted and clearInterrupted) {
+            t->r->setInterrupted(false);
           }
 
           t->flags |= Waiting;
@@ -288,26 +286,28 @@ class MySystem: public System {
           bool success UNUSED = ReleaseMutex(mutex);
           assert(s, success);
 
-          success = ResetEvent(t->event);
-          assert(s, success);
+          if (not interrupted) {
+            success = ResetEvent(t->event);
+            assert(s, success);
 
-          success = ReleaseMutex(t->mutex);
-          assert(s, success);
+            success = ReleaseMutex(t->mutex);
+            assert(s, success);
 
-          r = WaitForSingleObject(t->event, (time ? time : INFINITE));
-          assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
+            r = WaitForSingleObject(t->event, (time ? time : INFINITE));
+            assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
 
-          r = WaitForSingleObject(t->mutex, INFINITE);
-          assert(s, r == WAIT_OBJECT_0);
+            r = WaitForSingleObject(t->mutex, INFINITE);
+            assert(s, r == WAIT_OBJECT_0);
+
+            interrupted = t->r->interrupted();
+            if (interrupted and clearInterrupted) {
+              t->r->setInterrupted(false);
+            }
+          }
 
           notified = ((t->flags & Notified) != 0);
         
           t->flags = 0;
-
-          interrupted = t->r->interrupted();
-          if (interrupted and clearInterrupted) {
-            t->r->setInterrupted(false);
-          }
         }
 
         r = WaitForSingleObject(mutex, INFINITE);

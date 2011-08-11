@@ -306,11 +306,9 @@ class MySystem: public System {
 
         { ACQUIRE(t->mutex);
       
-          if (t->r->interrupted()) {
-            if (clearInterrupted) {
-              t->r->setInterrupted(false);
-            }
-            return true;
+          interrupted = t->r->interrupted();
+          if (interrupted and clearInterrupted) {
+            t->r->setInterrupted(false);
           }
 
           t->flags |= Waiting;
@@ -322,27 +320,29 @@ class MySystem: public System {
           owner_ = 0;
           pthread_mutex_unlock(&mutex);
 
-          // pretend anything greater than one million years (in
-          // milliseconds) is infinity so as to avoid overflow:
-          if (time and time < INT64_C(31536000000000000)) {
-            int64_t then = s->now() + time;
-            timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
-            int rv UNUSED = pthread_cond_timedwait
-              (&(t->condition), &(t->mutex), &ts);
-            expect(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
-          } else {
-            int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
-            expect(s, rv == 0 or rv == EINTR);
+          if (not interrupted) {
+            // pretend anything greater than one million years (in
+            // milliseconds) is infinity so as to avoid overflow:
+            if (time and time < INT64_C(31536000000000000)) {
+              int64_t then = s->now() + time;
+              timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
+              int rv UNUSED = pthread_cond_timedwait
+                (&(t->condition), &(t->mutex), &ts);
+              expect(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
+            } else {
+              int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
+              expect(s, rv == 0 or rv == EINTR);
+            }
+
+            interrupted = t->r->interrupted();
+            if (interrupted and clearInterrupted) {
+              t->r->setInterrupted(false);
+            }
           }
 
           notified = ((t->flags & Notified) != 0);
         
           t->flags = 0;
-
-          interrupted = t->r->interrupted();
-          if (interrupted and clearInterrupted) {
-            t->r->setInterrupted(false);
-          }
         }
 
         pthread_mutex_lock(&mutex);
