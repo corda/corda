@@ -346,6 +346,10 @@ class Segment {
     map(map)
   {
     if (desired) {
+      if (minimum == 0) {
+        minimum = 1;
+      }
+      
       assert(context, desired >= minimum);
 
       capacity_ = desired;
