@@ -308,7 +308,7 @@ it on various OSes:
     # http://download.java.net/openjdk/jdk6/promoted/, e.g.:
     wget http://download.java.net/openjdk/jdk6/promoted/b21/openjdk-6-src-b21-20_jan_2011.tar.gz
     mkdir openjdk
-    (cd openjdk && tar xzf openjdk-6-src-b21-20_jan_2011.tar.gz)
+    (cd openjdk && tar xzf ../openjdk-6-src-b21-20_jan_2011.tar.gz)
     make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 \
       openjdk-src=$(pwd)/openjdk/jdk/src \
       test
