@@ -314,10 +314,29 @@ Java_java_io_File_toCanonicalPath(JNIEnv* /*e*/, jclass, jstring path)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_io_File_toAbsolutePath(JNIEnv* /*e*/, jclass, jstring path)
+Java_java_io_File_toAbsolutePath(JNIEnv* e, jclass, jstring path)
 {
+#ifdef PLATFORM_WINDOWS
   // todo
   return path;
+#else
+  jstring result = path;
+  string_t chars = getChars(e, path);
+  if (chars) {
+    if (chars[0] != '/') {
+      char* cwd = getcwd(NULL, 0);
+      if (cwd) {
+        unsigned size = strlen(cwd) + strlen(chars) + 2;
+        RUNTIME_ARRAY(char, buffer, size);
+        snprintf(RUNTIME_ARRAY_BODY(buffer), size, "%s/%s", cwd, chars);
+        result = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
+        free(cwd);
+      }
+    }
+    releaseChars(e, path, chars);
+  }
+  return result;
+#endif
 }
 
 extern "C" JNIEXPORT jlong JNICALL

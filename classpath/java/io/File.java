@@ -120,6 +120,10 @@ public class File implements Serializable {
     return toAbsolutePath(path);
   }
 
+  public File getAbsoluteFile() {
+    return new File(getAbsolutePath());
+  }
+
   private static native long length(String path);
 
   public long length() {
