@@ -411,8 +411,8 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     execvp(argv[0], argv);
     
     // Error if here
-    char c = errno;
-    ssize_t rv UNUSED = write(msg[1], &c, 1);
+    int val = errno;
+    ssize_t rv UNUSED = write(msg[1], &val, sizeof(val));
     exit(127);
   } break;
     
@@ -425,12 +425,13 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     safeClose(err[1]);
     safeClose(msg[1]);
       
-    char c;
-    int r = read(msg[0], &c, 1);
+    int val;
+    int r = read(msg[0], &val, sizeof(val));
     if(r == -1) {
       throwNewErrno(e, "java/io/IOException");
       return;
     } else if(r) {
+      errno = val;
       throwNewErrno(e, "java/io/IOException");
       return;
     }
