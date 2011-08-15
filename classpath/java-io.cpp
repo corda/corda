@@ -314,7 +314,7 @@ Java_java_io_File_toCanonicalPath(JNIEnv* /*e*/, jclass, jstring path)
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_io_File_toAbsolutePath(JNIEnv* e, jclass, jstring path)
+Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 {
 #ifdef PLATFORM_WINDOWS
   // todo
