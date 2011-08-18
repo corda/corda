@@ -161,7 +161,7 @@ public class ObjectInputStream extends InputStream {
     case 'n':
       return null;
     case 'z':
-      return (readLongToken() == 0);
+      return (readLongToken() != 0);
     case 'b':
       return (byte) readLongToken();
     case 'c':

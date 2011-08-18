@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010 Avian Contributors
+/* Copyright (c) 2008-2011 Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -3337,15 +3337,24 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));
+
   const char** propertyPointer = properties;
+
+  const char** arguments = static_cast<const char**>
+    (h->allocate(sizeof(const char*) * a->nOptions));
+
+  const char** argumentPointer = arguments;
+
   for (int i = 0; i < a->nOptions; ++i) {
     if (strncmp(a->options[i].optionString, "-D", 2) == 0) {
       *(propertyPointer++) = a->options[i].optionString + 2;
     }
+    *(argumentPointer++) = a->options[i].optionString;
   }
 
   *m = new (h->allocate(sizeof(Machine)))
-    Machine(s, h, bf, af, p, c, properties, propertyCount);
+    Machine
+    (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions);
 
   *t = p->makeThread(*m, 0, 0);
 

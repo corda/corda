@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -1911,7 +1911,7 @@ writeConstructors(Output* out, Object* declarations)
 
       out->write(")\n{\n");
 
-      bool hasObjectMask = false;
+      bool hasObjectMask = strcmp(typeName(o), "singleton") == 0;
       for (MemberIterator it(o); it.hasMore();) {
         Object* m = it.next();
         if (m->type == Object::Scalar

@@ -162,8 +162,8 @@ Installing MSYS:
 Installing Cygwin:
 
   1. Download and run setup.exe from cygwin.com, installing the base
-  system and these packages: make, gcc-mingw-g++, and (optionally)
-  git.
+  system and these packages: make, gcc-mingw-g++,
+  mingw64-i686-gcc-g++, mingw64-x86_64-gcc-g++, and (optionally) git.
 
 You may also find our win32 repository useful: (run this from the
 directory containing the avian directory)
@@ -308,7 +308,7 @@ it on various OSes:
     # http://download.java.net/openjdk/jdk6/promoted/, e.g.:
     wget http://download.java.net/openjdk/jdk6/promoted/b21/openjdk-6-src-b21-20_jan_2011.tar.gz
     mkdir openjdk
-    (cd openjdk && tar xzf openjdk-6-src-b21-20_jan_2011.tar.gz)
+    (cd openjdk && tar xzf ../openjdk-6-src-b21-20_jan_2011.tar.gz)
     make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 \
       openjdk-src=$(pwd)/openjdk/jdk/src \
       test

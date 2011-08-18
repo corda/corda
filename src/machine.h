@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -1273,7 +1273,8 @@ class Machine {
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
-          unsigned propertyCount);
+          unsigned propertyCount, const char** arguments,
+          unsigned argumentCount);
 
   ~Machine() { 
     dispose();
@@ -1295,6 +1296,8 @@ class Machine {
   Reference* jniReferences;
   const char** properties;
   unsigned propertyCount;
+  const char** arguments;
+  unsigned argumentCount;
   unsigned activeCount;
   unsigned liveCount;
   unsigned daemonCount;
@@ -3036,7 +3039,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
 
     ENTER(t, Thread::IdleState);
 
-    interrupted = t->lock->wait(t->systemThread, time);
+    interrupted = t->lock->waitAndClearInterrupted(t->systemThread, time);
   }
 
   monitorAcquire(t, monitor, monitorNode);

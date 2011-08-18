@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -974,6 +974,8 @@ getClassAddendum(Thread* t, object class_, object pool)
 {
   object addendum = classAddendum(t, class_);
   if (addendum == 0) {
+    PROTECT(t, class_);
+
     addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0);
     set(t, class_, ClassAddendum, addendum);
   }
@@ -1879,6 +1881,8 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      loader,
      arrayLength(t, vtable));
 
+  PROTECT(t, c);
+
   t->m->processor->initVtable(t, c);
 
   return c;
@@ -2395,7 +2399,8 @@ namespace vm {
 
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
-                 const char** properties, unsigned propertyCount):
+                 const char** properties, unsigned propertyCount,
+                 const char** arguments, unsigned argumentCount):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2411,6 +2416,8 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   jniReferences(0),
   properties(properties),
   propertyCount(propertyCount),
+  arguments(arguments),
+  argumentCount(argumentCount),
   activeCount(0),
   liveCount(0),
   daemonCount(0),
@@ -2476,6 +2483,8 @@ Machine::dispose()
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
     heap->free(heapPool[i], ThreadHeapSizeInBytes);
   }
+
+  heap->free(arguments, sizeof(const char*) * argumentCount);
 
   heap->free(properties, sizeof(const char*) * propertyCount);
 
@@ -3016,16 +3025,20 @@ popResources(Thread* t)
 object
 makeByteArray(Thread* t, const char* format, va_list a)
 {
-  const int Size = 256;
-  char buffer[Size];
+  int size = 256;
+  while (true) {
+    THREAD_RUNTIME_ARRAY(t, char, buffer, size);
   
-  int r = vm::vsnprintf(buffer, Size - 1, format, a);
-  expect(t, r >= 0 and r < Size - 1);
-
-  object s = makeByteArray(t, strlen(buffer) + 1);
-  memcpy(&byteArrayBody(t, s, 0), buffer, byteArrayLength(t, s));
-
-  return s;
+    int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+    if (r >= 0 and r < size - 1) {
+      object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
+      memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
+             byteArrayLength(t, s));
+      return s;
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 object
@@ -3215,14 +3228,17 @@ instanceOf(Thread* t, object class_, object o)
 object
 classInitializer(Thread* t, object class_)
 {
-  for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i) {
-    object o = arrayBody(t, classMethodTable(t, class_), i);
-
-    if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
-                   &byteArrayBody(t, methodName(t, o), 0)) == 0)
+  if (classMethodTable(t, class_)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, class_)); ++i)
     {
-      return o;
-    }               
+      object o = arrayBody(t, classMethodTable(t, class_), i);
+
+      if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
+                     &byteArrayBody(t, methodName(t, o), 0)) == 0)
+      {
+        return o;
+      }               
+    }
   }
   return 0;
 }

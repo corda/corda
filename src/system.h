@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -12,6 +12,7 @@
 #define SYSTEM_H
 
 #include "common.h"
+#include "allocator.h"
 
 namespace vm {
 
@@ -59,7 +60,8 @@ class System {
     virtual bool tryAcquire(Thread* context) = 0;
     virtual void acquire(Thread* context) = 0;
     virtual void release(Thread* context) = 0;
-    virtual bool wait(Thread* context, int64_t time) = 0;
+    virtual void wait(Thread* context, int64_t time) = 0;
+    virtual bool waitAndClearInterrupted(Thread* context, int64_t time) = 0;
     virtual void notify(Thread* context) = 0;
     virtual void notifyAll(Thread* context) = 0;
     virtual Thread* owner() = 0;
@@ -141,6 +143,8 @@ class System {
   virtual Status load(Library**, const char* name) = 0;
   virtual char pathSeparator() = 0;
   virtual char fileSeparator() = 0;
+  virtual const char* toAbsolutePath(Allocator* allocator,
+                                     const char* name) = 0;
   virtual int64_t now() = 0;
   virtual void yield() = 0;
   virtual void exit(int code) = 0;

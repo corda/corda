@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.4
+version = 0.5
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
@@ -94,12 +94,12 @@ ifneq ($(openjdk),)
 			lib/security/java.policy lib/security/cacerts
 
 		local-policy = lib/security/local_policy.jar
-		ifeq ($(shell test -e $(openjdk)/$(local-policy) && echo found),found)
+		ifeq ($(shell test -e "$(openjdk)/$(local-policy)" && echo found),found)
 			javahome-files += $(local-policy)
 		endif
 
 		export-policy = lib/security/US_export_policy.jar
-		ifeq ($(shell test -e $(openjdk)/$(export-policy) && echo found),found)
+		ifeq ($(shell test -e "$(openjdk)/$(export-policy)" && echo found),found)
 			javahome-files += $(export-policy)
 		endif
 
@@ -181,7 +181,8 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject
+converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject \
+	-fno-rtti -fno-exceptions
 
 cflags = $(build-cflags)
 
@@ -333,15 +334,20 @@ ifeq ($(platform),windows)
 		openjdk-extra-cflags =
 		build-lflags = -L$(lib) $(common-lflags)
 		ifeq ($(build-platform),cygwin)
-			build-lflags += -mno-cygwin
-			build-cflags += -mno-cygwin
-			openjdk-extra-cflags += -mno-cygwin
-			lflags += -mno-cygwin
-			cflags += -mno-cygwin
+			build-cxx = i686-w64-mingw32-g++
+			build-cc = i686-w64-mingw32-gcc
+			dlltool = i686-w64-mingw32-dlltool
+			ar = i686-w64-mingw32-ar
+			ranlib = i686-w64-mingw32-ranlib
+			strip = i686-w64-mingw32-strip
 		endif
 	endif
 
 	ifeq ($(arch),x86_64)
+		ifeq ($(build-platform),cygwin)
+			build-cxx = x86_64-w64-mingw32-g++
+			build-cc = x86_64-w64-mingw32-gcc
+		endif
 		cxx = x86_64-w64-mingw32-g++ $(mflag)
 		cc = x86_64-w64-mingw32-gcc $(mflag)
 		dlltool = x86_64-w64-mingw32-dlltool
@@ -758,7 +764,7 @@ $(boot-javahome-object): $(src)/boot-javahome.cpp
 	$(compile-object)
 
 $(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
-	$(build-cxx) -c $(^) -o $(@)
+	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
 $(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
 	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
@@ -776,7 +782,7 @@ $(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
 	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
 $(converter): $(converter-objects)
-	$(build-cxx) $(^) -o $(@)
+	$(build-cc) $(^) -o $(@)
 
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 	@echo "creating $(@)"
@@ -930,8 +936,14 @@ ifeq ($(platform),windows)
 	sed 's/^#ifdef _WIN64/#if 1/' \
 		< "$(openjdk-src)/windows/native/java/net/net_util_md.h" \
 		> $(build)/openjdk/net_util_md.h
-	cp "$(openjdk-src)/windows/native/java/net/NetworkInterface.h" \
-		$(build)/openjdk/NetworkInterface.h
+	sed \
+		-e 's/IpPrefix/hide_IpPrefix/' \
+		-e 's/IpSuffix/hide_IpSuffix/' \
+		-e 's/IpDad/hide_IpDad/' \
+		-e 's/ScopeLevel/hide_ScopeLevel/' \
+		-e 's/SCOPE_LEVEL/hide_SCOPE_LEVEL/' \
+		< "$(openjdk-src)/windows/native/java/net/NetworkInterface.h" \
+		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
 	@touch $(@)
