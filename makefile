@@ -229,7 +229,7 @@ endif
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
-	ifneq ($(platform),darwin)
+	ifneq ($(build-platform),darwin)
 		cflags += -marm -Wno-psabi
 	endif
 
@@ -251,6 +251,12 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+ifeq ($(build-platform),darwin)
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
+	build-lflags += -framework CoreFoundation
+endif
+
 ifeq ($(platform),darwin)
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
@@ -267,10 +273,6 @@ ifeq ($(platform),darwin)
 		sysroot = /opt/mac/SDKs/MacOSX${OSX_SDK_SYSROOT}.sdk
 		cflags = -I$(sysroot)/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Headers/ \
 			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	else
-		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-		cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
-		build-lflags += -framework CoreFoundation
 	endif
 
 	version-script-flag =
@@ -554,6 +556,9 @@ else
 	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\" \
 		-DAVIAN_CLASSPATH=\"[classpathJar]\"
 endif
+
+cflags += $(extra-cflags)
+lflags += $(extra-lflags)
 
 driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o
