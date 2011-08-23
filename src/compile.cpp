@@ -2266,19 +2266,34 @@ resolveMethod(Thread* t, object pair)
      findMethodInClass, Machine::NoSuchMethodErrorType);
 }
 
+bool
+methodAbstract(Thread* t, object method)
+{
+  return methodCode(t, method) == 0
+    and (methodFlags(t, method) & ACC_NATIVE) == 0;
+}
+
 int64_t
 prepareMethodForCall(MyThread* t, object target)
 {
-  if (unresolved(t, methodAddress(t, target))) {
-    PROTECT(t, target);
+  if (methodAbstract(t, target)) {
+    throwNew(t, Machine::AbstractMethodErrorType, "%s.%s%s",
+             &byteArrayBody(t, className(t, methodClass(t, target)), 0),
+             &byteArrayBody(t, methodName(t, target), 0),
+             &byteArrayBody(t, methodSpec(t, target), 0));
+  } else { 
+    if (unresolved(t, methodAddress(t, target))) {
+      PROTECT(t, target);
+      
+      compile(t, codeAllocator(t), 0, target);
+    }
 
-    compile(t, codeAllocator(t), 0, target);
-  }
+    if (methodFlags(t, target) & ACC_NATIVE) {
+      t->trace->nativeMethod = target;
+    }
 
-  if (methodFlags(t, target) & ACC_NATIVE) {
-    t->trace->nativeMethod = target;
+    return methodAddress(t, target);
   }
-  return methodAddress(t, target);
 }
 
 int64_t
@@ -2344,24 +2359,10 @@ findVirtualMethodFromReference(MyThread* t, object pair, object instance)
   return prepareMethodForCall(t, target);
 }
 
-bool
-methodAbstract(Thread* t, object method)
-{
-  return methodCode(t, method) == 0
-    and (methodFlags(t, method) & ACC_NATIVE) == 0;
-}
-
 int64_t
 getMethodAddress(MyThread* t, object target)
 {
-  if (methodAbstract(t, target)) {
-    throwNew(t, Machine::AbstractMethodErrorType, "%s.%s%s",
-             &byteArrayBody(t, className(t, methodClass(t, target)), 0),
-             &byteArrayBody(t, methodName(t, target), 0),
-             &byteArrayBody(t, methodSpec(t, target), 0));
-  } else {
-    return prepareMethodForCall(t, target);
-  }
+  return prepareMethodForCall(t, target);
 }
 
 int64_t

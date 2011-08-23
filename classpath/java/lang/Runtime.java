@@ -103,7 +103,8 @@ public class Runtime {
 
     if (exception[0] != null) {
       if (exception[0] instanceof IOException) {
-        throw new IOException(exception[0]);
+        String message = "Failed to run \"" + command[0] + "\": " + exception[0].getMessage();
+        throw new IOException(message);
       } else {
         throw new RuntimeException(exception[0]);
       }
