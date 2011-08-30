@@ -1143,11 +1143,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
          addendum,
          class_);
 
+      unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        unsigned size = fieldSize(t, code);
-        unsigned excess = (staticOffset % size) % BytesPerWord;
-        if (excess) {
-          staticOffset += BytesPerWord - excess;
+        while (staticOffset % size) {
+          ++ staticOffset;
         }
 
         fieldOffset(t, field) = staticOffset;
@@ -1162,12 +1161,13 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           classVmFlags(t, class_) |= HasFinalMemberFlag;
         }
 
-        while (memberOffset % fieldSize(t, code)) {
+        while (memberOffset % size) {
           ++ memberOffset;
         }
 
         fieldOffset(t, field) = memberOffset;
-        memberOffset += fieldSize(t, code);
+
+        memberOffset += size;
       }
 
       set(t, fieldTable, ArrayBody + (i * BytesPerWord), field);
@@ -1298,11 +1298,12 @@ parseCode(Thread* t, Stream& s, object pool)
   if (ehtLength) {
     object eht = makeExceptionHandlerTable(t, ehtLength);
     for (unsigned i = 0; i < ehtLength; ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
-      exceptionHandlerStart(eh) = s.read2();
-      exceptionHandlerEnd(eh) = s.read2();
-      exceptionHandlerIp(eh) = s.read2();
-      exceptionHandlerCatchType(eh) = s.read2();
+      unsigned start = s.read2();
+      unsigned end = s.read2();
+      unsigned ip = s.read2();
+      unsigned catchType = s.read2();
+      exceptionHandlerTableBody(t, eht, i) = exceptionHandler
+        (start, end, ip, catchType);
     }
 
     set(t, code, CodeExceptionHandlerTable, eht);
@@ -1319,9 +1320,9 @@ parseCode(Thread* t, Stream& s, object pool)
       unsigned lntLength = s.read2();
       object lnt = makeLineNumberTable(t, lntLength);
       for (unsigned i = 0; i < lntLength; ++i) {
-        LineNumber* ln = lineNumberTableBody(t, lnt, i);
-        lineNumberIp(ln) = s.read2();
-        lineNumberLine(ln) = s.read2();
+        unsigned ip = s.read2();
+        unsigned line = s.read2();
+        lineNumberTableBody(t, lnt, i) = lineNumber(ip, line);
       }
 
       set(t, code, CodeLineNumberTable, lnt);
@@ -2217,9 +2218,9 @@ boot(Thread* t)
 
 #include "type-java-initializations.cpp"
 
-#ifdef AVIAN_HEAPDUMP
+    //#ifdef AVIAN_HEAPDUMP
 #  include "type-name-initializations.cpp"
-#endif
+      //#endif
   }
 }
 
@@ -3428,6 +3429,16 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
 
   updateClassTables(t, real, class_);
 
+  if (root(t, Machine::PoolMap)) {
+    object bootstrapClass = hashMapFind
+      (t, root(t, Machine::BootstrapClassMap), className(t, class_),
+       byteArrayHash, byteArrayEqual);
+
+    hashMapInsert
+      (t, root(t, Machine::PoolMap), bootstrapClass ? bootstrapClass : real,
+       pool, objectHash);
+  }
+
   return real;
 }
 
@@ -4426,7 +4437,7 @@ vmAddressFromLine(Thread* t, object m, unsigned line)
     unsigned top = lineNumberTableLength(t, lnt);
     for(unsigned i = bottom; i < top; i++)
     {
-      LineNumber* ln = lineNumberTableBody(t, lnt, i);
+      uint64_t ln = lineNumberTableBody(t, lnt, i);
       if(lineNumberLine(ln) == line)
         return reinterpret_cast<void*>(lineNumberIp(ln));
       else if(lineNumberLine(ln) > line)

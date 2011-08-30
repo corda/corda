@@ -271,7 +271,7 @@ findLineNumber(Thread* t, object method, unsigned ip)
     unsigned top = lineNumberTableLength(t, lnt);
     for (unsigned span = top - bottom; span; span = top - bottom) {
       unsigned middle = bottom + (span / 2);
-      LineNumber* ln = lineNumberTableBody(t, lnt, middle);
+      uint64_t ln = lineNumberTableBody(t, lnt, middle);
 
       if (ip >= lineNumberIp(ln)
           and (middle + 1 == lineNumberTableLength(t, lnt)

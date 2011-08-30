@@ -13,6 +13,7 @@
 #include "vector.h"
 #include "process.h"
 #include "assembler.h"
+#include "target.h"
 #include "compiler.h"
 #include "arch.h"
 
@@ -52,7 +53,7 @@ const bool Continuations = true;
 const bool Continuations = false;
 #endif
 
-const unsigned MaxNativeCallFootprint = BytesPerWord == 8 ? 4 : 5;
+const unsigned MaxNativeCallFootprint = TargetBytesPerWord == 8 ? 4 : 5;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
@@ -3164,7 +3165,7 @@ resultSize(MyThread* t, unsigned code)
     return 4;
 
   case ObjectField:
-    return BytesPerWord;
+    return TargetBytesPerWord;
 
   case LongField:
   case DoubleField:
@@ -3305,8 +3306,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
          methodParameterFootprint(t, target));
 
       c->store
-        (BytesPerWord, frame->addressOperand(returnAddressPromise),
-         BytesPerWord, c->memory
+        (TargetBytesPerWord, frame->addressOperand(returnAddressPromise),
+         TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           difference(&(t->tailAddress), t)));
 
@@ -3455,7 +3456,7 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
      (c->constant(getThunk(t, thunk), Compiler::AddressType),
       0,
       frame->trace(0, 0),
-      BytesPerWord,
+      TargetBytesPerWord,
       Compiler::AddressType,
       2, c->register_(t->arch->thread()), frame->append(pair)),
      reference, isStatic, tailCall);
@@ -3497,7 +3498,7 @@ compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
      (c->constant(getThunk(t, thunk), Compiler::AddressType),
       0,
       frame->trace(0, 0),
-      BytesPerWord,
+      TargetBytesPerWord,
       Compiler::AddressType,
       2, c->register_(t->arch->thread()), frame->append(target)),
      target, tailCall);
@@ -3560,7 +3561,7 @@ inTryBlock(MyThread* t, object code, unsigned ip)
   if (table) {
     unsigned length = exceptionHandlerTableLength(t, table);
     for (unsigned i = 0; i < length; ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, table, i);
+      uint64_t eh = exceptionHandlerTableBody(t, table, i);
       if (ip >= exceptionHandlerStart(eh)
           and ip < exceptionHandlerEnd(eh))
       {
@@ -3867,16 +3868,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       case aaload:
         frame->pushObject
           (c->load
-           (BytesPerWord, BytesPerWord, c->memory
-            (array, Compiler::ObjectType, ArrayBody, index, BytesPerWord),
-            BytesPerWord));
+           (TargetBytesPerWord, TargetBytesPerWord, c->memory
+            (array, Compiler::ObjectType, ArrayBody, index,
+             TargetBytesPerWord),
+            TargetBytesPerWord));
         break;
 
       case faload:
         frame->pushInt
           (c->load
            (4, 4, c->memory
-            (array, Compiler::FloatType, ArrayBody, index, 4), BytesPerWord));
+            (array, Compiler::FloatType, ArrayBody, index, 4),
+            TargetBytesPerWord));
         break;
 
       case iaload:
@@ -3884,7 +3887,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->load
            (4, 4, c->memory
             (array, Compiler::IntegerType, ArrayBody, index, 4),
-            BytesPerWord));
+            TargetBytesPerWord));
         break;
 
       case baload:
@@ -3892,7 +3895,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->load
            (1, 1, c->memory
             (array, Compiler::IntegerType, ArrayBody, index, 1),
-            BytesPerWord));
+            TargetBytesPerWord));
         break;
 
       case caload:
@@ -3900,7 +3903,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->loadz
            (2, 2, c->memory
             (array, Compiler::IntegerType, ArrayBody, index, 2),
-            BytesPerWord));
+            TargetBytesPerWord));
         break;
 
       case daload:
@@ -3922,7 +3925,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->load
            (2, 2, c->memory
             (array, Compiler::IntegerType, ArrayBody, index, 2),
-            BytesPerWord));
+            TargetBytesPerWord));
         break;
       }
     } break;
@@ -3968,32 +3971,33 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
            c->add
            (4, c->constant(ArrayBody, Compiler::IntegerType),
             c->shl
-            (4, c->constant(log(BytesPerWord), Compiler::IntegerType), index)),
+            (4, c->constant(log(TargetBytesPerWord), Compiler::IntegerType),
+             index)),
            value);
       } break;
 
       case fastore:
         c->store
-          (BytesPerWord, value, 4, c->memory
+          (TargetBytesPerWord, value, 4, c->memory
            (array, Compiler::FloatType, ArrayBody, index, 4));
         break;
 
       case iastore:
         c->store
-          (BytesPerWord, value, 4, c->memory
+          (TargetBytesPerWord, value, 4, c->memory
            (array, Compiler::IntegerType, ArrayBody, index, 4));
         break;
 
       case bastore:
         c->store
-          (BytesPerWord, value, 1, c->memory
+          (TargetBytesPerWord, value, 1, c->memory
            (array, Compiler::IntegerType, ArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
         c->store
-          (BytesPerWord, value, 2, c->memory
+          (TargetBytesPerWord, value, 2, c->memory
            (array, Compiler::IntegerType, ArrayBody, index, 2));
         break;
 
@@ -4062,7 +4066,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->constant(getThunk(t, thunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
-          BytesPerWord,
+          TargetBytesPerWord,
           Compiler::ObjectType,
           3, c->register_(t->arch->thread()), frame->append(argument),
           length));
@@ -4070,16 +4074,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(BytesPerWord, frame->popObject());
+      c->return_(TargetBytesPerWord, frame->popObject());
     } return;
 
     case arraylength: {
       frame->pushInt
         (c->load
-         (BytesPerWord, BytesPerWord,
+         (TargetBytesPerWord, TargetBytesPerWord,
           c->memory
           (frame->popObject(), Compiler::IntegerType, ArrayLength, 0, 1),
-          BytesPerWord));
+          TargetBytesPerWord));
     } break;
 
     case astore:
@@ -4367,7 +4371,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (LIKELY(field)) {
         if ((fieldFlags(t, field) & ACC_VOLATILE)
-            and BytesPerWord == 4
+            and TargetBytesPerWord == 4
             and (fieldCode(t, field) == DoubleField
                  or fieldCode(t, field) == LongField))
         {
@@ -4375,7 +4379,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
           c->call
             (c->constant
-             (getThunk(t, acquireMonitorForObjectThunk), Compiler::AddressType),
+             (getThunk(t, acquireMonitorForObjectThunk),
+              Compiler::AddressType),
              0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
              c->register_(t->arch->thread()),
              frame->append(field));
@@ -4421,7 +4426,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             (c->load
              (1, 1, c->memory
               (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         case CharField:
@@ -4429,7 +4434,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             (c->loadz
              (2, 2, c->memory
               (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         case ShortField:
@@ -4437,7 +4442,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             (c->load
              (2, 2, c->memory
               (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         case FloatField:
@@ -4445,7 +4450,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             (c->load
              (4, 4, c->memory
               (table, Compiler::FloatType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         case IntField:
@@ -4453,7 +4458,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
             (c->load
              (4, 4, c->memory
               (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         case DoubleField:
@@ -4473,10 +4478,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         case ObjectField:
           frame->pushObject
             (c->load
-             (BytesPerWord, BytesPerWord,
+             (TargetBytesPerWord, TargetBytesPerWord,
               c->memory
               (table, Compiler::ObjectType, fieldOffset(t, field), 0, 1),
-              BytesPerWord));
+              TargetBytesPerWord));
           break;
 
         default:
@@ -4484,7 +4489,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         if (fieldFlags(t, field) & ACC_VOLATILE) {
-          if (BytesPerWord == 4
+          if (TargetBytesPerWord == 4
               and (fieldCode(t, field) == DoubleField
                    or fieldCode(t, field) == LongField))
           {
@@ -4551,11 +4556,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2b: {
-      frame->pushInt(c->load(BytesPerWord, 1, frame->popInt(), BytesPerWord));
+      frame->pushInt
+        (c->load(TargetBytesPerWord, 1, frame->popInt(), TargetBytesPerWord));
     } break;
 
     case i2c: {
-      frame->pushInt(c->loadz(BytesPerWord, 2, frame->popInt(), BytesPerWord));
+      frame->pushInt
+        (c->loadz(TargetBytesPerWord, 2, frame->popInt(), TargetBytesPerWord));
     } break;
 
     case i2d: {
@@ -4567,11 +4574,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case i2l:
-      frame->pushLong(c->load(BytesPerWord, 4, frame->popInt(), 8));
+      frame->pushLong(c->load(TargetBytesPerWord, 4, frame->popInt(), 8));
       break;
 
     case i2s: {
-      frame->pushInt(c->load(BytesPerWord, 2, frame->popInt(), BytesPerWord));
+      frame->pushInt
+        (c->load(TargetBytesPerWord, 2, frame->popInt(), TargetBytesPerWord));
     } break;
       
     case iadd: {
@@ -4637,9 +4645,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == if_acmpeq) {
-        c->jumpIfEqual(BytesPerWord, a, b, target);
+        c->jumpIfEqual(TargetBytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(BytesPerWord, a, b, target);
+        c->jumpIfNotEqual(TargetBytesPerWord, a, b, target);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -4737,9 +4745,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == ifnull) {
-        c->jumpIfEqual(BytesPerWord, a, b, target);
+        c->jumpIfEqual(TargetBytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(BytesPerWord, a, b, target);
+        c->jumpIfNotEqual(TargetBytesPerWord, a, b, target);
       }
 
       saveStateAndCompile(t, frame, newIp);
@@ -4868,7 +4876,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->constant(getThunk(t, thunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
-          BytesPerWord,
+          TargetBytesPerWord,
           Compiler::AddressType,
           3, c->register_(t->arch->thread()), frame->append(argument),
           c->peek(1, parameterFootprint - 1)),
@@ -4976,7 +4984,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           Compiler::Operand* result = c->stackCall
             (c->memory
              (c->and_
-              (BytesPerWord, c->constant(PointerMask, Compiler::IntegerType),
+              (TargetBytesPerWord, c->constant
+               (PointerMask, Compiler::IntegerType),
                c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
               Compiler::ObjectType, offset, 0, 1),
              tailCall ? Compiler::TailJump : 0,
@@ -5008,7 +5017,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
                         Compiler::AddressType),
             0,
             frame->trace(0, 0),
-            BytesPerWord,
+            TargetBytesPerWord,
             Compiler::AddressType,
             3, c->register_(t->arch->thread()), frame->append(pair),
             c->peek(1, methodReferenceParameterFootprint
@@ -5132,7 +5141,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
     } break;
 
     case l2i:
-      frame->pushInt(c->load(8, 8, frame->popLong(), BytesPerWord));
+      frame->pushInt(c->load(8, 8, frame->popLong(), TargetBytesPerWord));
       break;
 
     case ladd: {
@@ -5201,7 +5210,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
                  Compiler::AddressType),
                 0,
                 frame->trace(0, 0),
-                BytesPerWord,
+                TargetBytesPerWord,
                 Compiler::ObjectType,
                 2, c->register_(t->arch->thread()),
                 frame->append(makePair(t, context->method, reference))));
@@ -5216,7 +5225,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
                 (getThunk(t, getJClass64Thunk), Compiler::AddressType),
                 0,
                 frame->trace(0, 0),
-                BytesPerWord,
+                TargetBytesPerWord,
                 Compiler::ObjectType,
                 2, c->register_(t->arch->thread()), frame->append(v)));
           } else {
@@ -5330,7 +5339,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (c->call
            (c->constant
             (getThunk(t, lookUpAddressThunk), Compiler::AddressType),
-            0, 0, BytesPerWord, Compiler::AddressType,
+            0, 0, TargetBytesPerWord, Compiler::AddressType,
             4, key, start, c->constant(pairCount, Compiler::IntegerType),
             default_));
 
@@ -5477,7 +5486,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (getThunk(t, thunk), Compiler::AddressType),
          0,
          frame->trace(0, 0),
-         BytesPerWord,
+         TargetBytesPerWord,
          Compiler::ObjectType,
          4, c->register_(t->arch->thread()), frame->append(argument),
          c->constant(dimensions, Compiler::IntegerType),
@@ -5516,7 +5525,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->constant(getThunk(t, thunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
-          BytesPerWord,
+          TargetBytesPerWord,
           Compiler::ObjectType,
           2, c->register_(t->arch->thread()), frame->append(argument)));
     } break;
@@ -5531,7 +5540,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          (c->constant(getThunk(t, makeBlankArrayThunk), Compiler::AddressType),
           0,
           frame->trace(0, 0),
-          BytesPerWord,
+          TargetBytesPerWord,
           Compiler::ObjectType,
           3, c->register_(t->arch->thread()),
           c->constant(type, Compiler::IntegerType), length));
@@ -5593,7 +5602,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         if (fieldFlags(t, field) & ACC_VOLATILE) {
-          if (BytesPerWord == 4
+          if (TargetBytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
           {
             PROTECT(t, field);
@@ -5625,26 +5634,26 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         case ByteField:
         case BooleanField:
           c->store
-            (BytesPerWord, value, 1, c->memory
+            (TargetBytesPerWord, value, 1, c->memory
              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
           break;
 
         case CharField:
         case ShortField:
           c->store
-            (BytesPerWord, value, 2, c->memory
+            (TargetBytesPerWord, value, 2, c->memory
              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
           break;
             
         case FloatField:
           c->store
-            (BytesPerWord, value, 4, c->memory
+            (TargetBytesPerWord, value, 4, c->memory
              (table, Compiler::FloatType, fieldOffset(t, field), 0, 1));
           break;
 
         case IntField:
           c->store
-            (BytesPerWord, value, 4, c->memory
+            (TargetBytesPerWord, value, 4, c->memory
              (table, Compiler::IntegerType, fieldOffset(t, field), 0, 1));
           break;
 
@@ -5686,7 +5695,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
 
         if (fieldFlags(t, field) & ACC_VOLATILE) {
-          if (BytesPerWord == 4
+          if (TargetBytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
           {
             c->call
@@ -5862,9 +5871,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       c->jmp
         (c->load
-         (BytesPerWord, BytesPerWord, c->memory
-          (start, Compiler::AddressType, 0, normalizedKey, BytesPerWord),
-          BytesPerWord));
+         (TargetBytesPerWord, TargetBytesPerWord, c->memory
+          (start, Compiler::AddressType, 0, normalizedKey, TargetBytesPerWord),
+          TargetBytesPerWord));
 
       Compiler::State* state = c->saveState();
 
@@ -6018,9 +6027,9 @@ truncateLineNumberTable(Thread* t, object table, unsigned length)
   PROTECT(t, table);
 
   object newTable = makeLineNumberTable(t, length);
-  memcpy(lineNumberTableBody(t, newTable, 0),
-         lineNumberTableBody(t, table, 0),
-         length * sizeof(LineNumber));
+  memcpy(&lineNumberTableBody(t, newTable, 0),
+         &lineNumberTableBody(t, table, 0),
+         length * sizeof(uint64_t));
 
   return newTable;
 }
@@ -6046,7 +6055,7 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
 
     unsigned ni = 0;
     for (unsigned oi = 0; oi < length; ++ oi) {
-      ExceptionHandler* oldHandler = exceptionHandlerTableBody
+      uint64_t oldHandler = exceptionHandlerTableBody
         (t, oldTable, oi);
 
       int handlerStart = resolveIpForwards
@@ -6107,8 +6116,7 @@ translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
     object newTable = makeLineNumberTable(t, length);
     unsigned ni = 0;
     for (unsigned oi = 0; oi < length; ++oi) {
-      LineNumber* oldLine = lineNumberTableBody(t, oldTable, oi);
-      LineNumber* newLine = lineNumberTableBody(t, newTable, ni);
+      uint64_t oldLine = lineNumberTableBody(t, oldTable, oi);
 
       int ip = resolveIpForwards
         (context, lineNumberIp(oldLine), oi + 1 < length
@@ -6116,12 +6124,9 @@ translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
          : lineNumberIp(oldLine) + 1);
 
       if (LIKELY(ip >= 0)) {
-        lineNumberIp(newLine)
-          = context->compiler->machineIp(ip)->value() - start;
-
-        lineNumberLine(newLine) = lineNumberLine(oldLine);
-
-        ++ ni;
+        lineNumberTableBody(t, newTable, ni++) = lineNumber
+          (context->compiler->machineIp(ip)->value() - start,
+           lineNumberLine(oldLine));
       }
     }
 
@@ -6675,7 +6680,9 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 
       pathIndex = subroutine->tableIndex;
 
-      THREAD_RUNTIME_ARRAY(t, SubroutineTrace*, traces, p->subroutineTraceCount);
+      THREAD_RUNTIME_ARRAY
+        (t, SubroutineTrace*, traces, p->subroutineTraceCount);
+
       unsigned i = 0;
       for (SubroutineTrace* trace = p->subroutineTrace;
            trace; trace = trace->next)
@@ -6795,9 +6802,9 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   // we must acquire the class lock here at the latest
  
   unsigned codeSize = c->resolve
-    (allocator->base + allocator->offset + BytesPerWord);
+    (allocator->base + allocator->offset + TargetBytesPerWord);
 
-  unsigned total = pad(codeSize) + pad(c->poolSize()) + BytesPerWord;
+  unsigned total = pad(codeSize) + pad(c->poolSize()) + TargetBytesPerWord;
 
   uintptr_t* code = static_cast<uintptr_t*>(allocator->allocate(total));
   code[0] = codeSize;
@@ -6810,7 +6817,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   if (context->objectPool) {
     object pool = allocate3
       (t, allocator, Machine::ImmortalAllocation,
-       FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
+       FixedSizeOfArray
+       + ((context->objectPoolCount + 1) * TargetBytesPerWord),
        true);
 
     initArray(t, pool, context->objectPoolCount + 1);
@@ -6821,7 +6829,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
 
     unsigned i = 1;
     for (PoolElement* p = context->objectPool; p; p = p->next) {
-      unsigned offset = ArrayBody + ((i++) * BytesPerWord);
+      unsigned offset = ArrayBody + ((i++) * TargetBytesPerWord);
 
       p->address = reinterpret_cast<uintptr_t>(pool) + offset;
 
@@ -7023,7 +7031,7 @@ compile(MyThread* t, Context* context)
       progress = false;
 
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-        ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+        uint64_t eh = exceptionHandlerTableBody(t, eht, i);
         int start = resolveIpForwards
           (context, exceptionHandlerStart(eh), exceptionHandlerEnd(eh));
 
@@ -7042,7 +7050,7 @@ compile(MyThread* t, Context* context)
           Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
 
           unsigned end = exceptionHandlerEnd(eh);
-          if (exceptionHandlerIp(eh) >= start
+          if (exceptionHandlerIp(eh) >= static_cast<unsigned>(start)
               and exceptionHandlerIp(eh) < end)
           {
             end = exceptionHandlerIp(eh);
@@ -9334,15 +9342,15 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.default_.frameSavedOffset = a->length();
 
     Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+    a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
   
     Assembler::Constant proc(&(defaultContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
 
     a->popFrame(t->arch->alignFrameSize(1));
 
     Assembler::Register result(t->arch->returnLow());
-    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+    a->apply(Jump, TargetBytesPerWord, RegisterOperand, &result);
 
     p->thunks.default_.length = a->endBlock(false)->resolve(0, 0);
   }
@@ -9355,38 +9363,38 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Memory virtualCallTargetSrc
       (t->arch->stack(),
        (t->arch->frameFooterSize() + t->arch->frameReturnAddressSize())
-       * BytesPerWord);
+       * TargetBytesPerWord);
 
-    a->apply(Move, BytesPerWord, MemoryOperand, &virtualCallTargetSrc,
-             BytesPerWord, RegisterOperand, &class_);
+    a->apply(Move, TargetBytesPerWord, MemoryOperand, &virtualCallTargetSrc,
+             TargetBytesPerWord, RegisterOperand, &class_);
 
     Assembler::Memory virtualCallTargetDst
       (t->arch->thread(), difference(&(t->virtualCallTarget), t));
 
-    a->apply(Move, BytesPerWord, RegisterOperand, &class_,
-             BytesPerWord, MemoryOperand, &virtualCallTargetDst);
+    a->apply(Move, TargetBytesPerWord, RegisterOperand, &class_,
+             TargetBytesPerWord, MemoryOperand, &virtualCallTargetDst);
 
     Assembler::Register index(t->arch->virtualCallIndex());
     Assembler::Memory virtualCallIndex
       (t->arch->thread(), difference(&(t->virtualCallIndex), t));
 
-    a->apply(Move, BytesPerWord, RegisterOperand, &index,
-             BytesPerWord, MemoryOperand, &virtualCallIndex);
+    a->apply(Move, TargetBytesPerWord, RegisterOperand, &index,
+             TargetBytesPerWord, MemoryOperand, &virtualCallIndex);
     
     a->saveFrame(difference(&(t->stack), t), difference(&(t->ip), t));
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
     Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+    a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
   
     Assembler::Constant proc(&(defaultVirtualContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
 
     a->popFrame(t->arch->alignFrameSize(1));
 
     Assembler::Register result(t->arch->returnLow());
-    a->apply(Jump, BytesPerWord, RegisterOperand, &result);
+    a->apply(Jump, TargetBytesPerWord, RegisterOperand, &result);
 
     p->thunks.defaultVirtual.length = a->endBlock(false)->resolve(0, 0);
   }
@@ -9400,10 +9408,10 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.native.frameSavedOffset = a->length();
 
     Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+    a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
     Assembler::Constant proc(&(nativeContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
   
     a->popFrameAndUpdateStackAndReturn
       (t->arch->alignFrameSize(1), difference(&(t->stack), t));
@@ -9420,10 +9428,10 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.aioob.frameSavedOffset = a->length();
 
     Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+    a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
     Assembler::Constant proc(&(aioobContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
 
     p->thunks.aioob.length = a->endBlock(false)->resolve(0, 0);
   }
@@ -9437,10 +9445,10 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
     Assembler::Register thread(t->arch->thread());
-    a->pushFrame(1, BytesPerWord, RegisterOperand, &thread);
+    a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
     Assembler::Constant proc(&(stackOverflowContext.promise));
-    a->apply(LongCall, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
 
     p->thunks.stackOverflow.length = a->endBlock(false)->resolve(0, 0);
   }
@@ -9454,7 +9462,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     p->thunks.table.frameSavedOffset = a->length();
 
     Assembler::Constant proc(&(tableContext.promise));
-    a->apply(LongJump, BytesPerWord, ConstantOperand, &proc);
+    a->apply(LongJump, TargetBytesPerWord, ConstantOperand, &proc);
 
     p->thunks.table.length = a->endBlock(false)->resolve(0, 0);
   }  
@@ -9633,12 +9641,12 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
   ResolvedPromise indexPromise(index);
   Assembler::Constant indexConstant(&indexPromise);
   Assembler::Register indexRegister(t->arch->virtualCallIndex());
-  a->apply(Move, BytesPerWord, ConstantOperand, &indexConstant,
-           BytesPerWord, RegisterOperand, &indexRegister);
+  a->apply(Move, TargetBytesPerWord, ConstantOperand, &indexConstant,
+           TargetBytesPerWord, RegisterOperand, &indexRegister);
   
   ResolvedPromise defaultVirtualThunkPromise(defaultVirtualThunk(t));
   Assembler::Constant thunk(&defaultVirtualThunkPromise);
-  a->apply(Jump, BytesPerWord, ConstantOperand, &thunk);
+  a->apply(Jump, TargetBytesPerWord, ConstantOperand, &thunk);
 
   *size = a->endBlock(false)->resolve(0, 0);
 
@@ -9723,7 +9731,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
       // resolve all exception handler catch types before we acquire
       // the class lock:
       for (unsigned i = 0; i < exceptionHandlerTableLength(t, ehTable); ++i) {
-        ExceptionHandler* handler = exceptionHandlerTableBody(t, ehTable, i);
+        uint64_t handler = exceptionHandlerTableBody(t, ehTable, i);
         if (exceptionHandlerCatchType(handler)) {
           resolveClassInPool
             (t, clone, exceptionHandlerCatchType(handler) - 1);

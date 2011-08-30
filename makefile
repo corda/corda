@@ -169,7 +169,8 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
-	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
+	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
+	-DTARGET_BYTES_PER_WORD=$(pointer-size)
 
 ifneq (,$(filter i386 x86_64,$(arch)))
 	ifeq ($(use-frame-pointer),true)
@@ -208,12 +209,22 @@ shared = -shared
 
 openjdk-extra-cflags = -fvisibility=hidden
 
+ifeq ($(build-arch),powerpc)
+	ifneq ($(arch),$(build-arch))
+		cflags += -DTARGET_OPPOSITE_ENDIAN
+	endif
+endif
+
 ifeq ($(arch),i386)
 	pointer-size = 4
 endif
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
+
+	ifneq ($(arch),$(build-arch))
+		cflags += -DTARGET_OPPOSITE_ENDIAN
+	endif
 
 	ifneq ($(platform),darwin)
 		ifneq ($(arch),$(build-arch))
@@ -251,7 +262,13 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+ifeq ($(platform),linux)
+	cflags += -DTARGET_PLATFORM_LINUX
+endif
+
 ifeq ($(platform),darwin)
+	cflags += -DTARGET_PLATFORM_DARWIN
+
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -330,6 +347,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
+	cflags += -DTARGET_PLATFORM_WINDOWS
+
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
 
@@ -479,7 +498,8 @@ generated-code = \
 	$(build)/type-constructors.cpp \
 	$(build)/type-initializations.cpp \
 	$(build)/type-java-initializations.cpp \
-	$(build)/type-name-initializations.cpp
+	$(build)/type-name-initializations.cpp \
+	$(build)/type-maps.cpp
 
 vm-depends := $(generated-code) $(wildcard $(src)/*.h)
 
@@ -537,16 +557,6 @@ bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
-	ifneq ($(build-arch),$(arch))
-$(error "bootimage cross-builds not yet supported")
-	endif
-
-	ifeq ($(arch),x86_64)
-		ifneq ($(build-platform),$(platform))
-$(error "bootimage cross-builds not yet supported")
-		endif
-	endif
-
 	vm-classpath-object = $(bootimage-object)
 	cflags += -DBOOT_IMAGE=\"bootimageBin\" -DAVIAN_CLASSPATH=\"\"
 else

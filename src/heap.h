@@ -16,6 +16,12 @@
 
 namespace vm {
 
+// an object must survive TenureThreshold + 2 garbage collections
+// before being copied to gen2 (must be at least 1):
+const unsigned TenureThreshold = 3;
+
+const unsigned FixieTenureThreshold = TenureThreshold + 2;
+
 class Heap: public Allocator {
  public:
   enum CollectionType {

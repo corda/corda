@@ -9,6 +9,7 @@
    details. */
 
 #include "assembler.h"
+#include "target.h"
 #include "vector.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
@@ -60,17 +61,17 @@ enum {
 };
 
 const unsigned GeneralRegisterMask
-= BytesPerWord == 4 ? 0x000000ff : 0x0000ffff;
+= TargetBytesPerWord == 4 ? 0x000000ff : 0x0000ffff;
 
 const unsigned FloatRegisterMask
-= BytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
+= TargetBytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
 
 const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
 const int LongJumpRegister = r10;
 
 const unsigned StackAlignmentInBytes = 16;
-const unsigned StackAlignmentInWords = StackAlignmentInBytes / BytesPerWord;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes / TargetBytesPerWord;
 
 bool
 isInt8(intptr_t v)
@@ -478,7 +479,7 @@ detectFeature(unsigned ecx, unsigned edx);
 bool
 useSSE(ArchitectureContext* c)
 {
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     // amd64 implies SSE2 support
     return true;
   } else if (c->useNativeFeatures) {
@@ -502,7 +503,7 @@ useSSE(ArchitectureContext* c)
 void maybeRex(Context* c, unsigned size, int a, int index, int base,
               bool always)
 {
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     uint8_t byte;
     if (size == 8) {
       byte = REX_W;
@@ -656,7 +657,7 @@ storeLoadBarrier(Context* c)
   } else {
     // lock addq $0x0,(%rsp):
     c->code.append(0xf0);
-    if (BytesPerWord == 8) {
+    if (TargetBytesPerWord == 8) {
       c->code.append(0x48);
     }
     c->code.append(0x83);
@@ -746,7 +747,7 @@ callR(Context*, unsigned, Assembler::Register*);
 void
 callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
   unconditional(c, 0xe8, a);
 }
@@ -754,9 +755,9 @@ callC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 void
 longCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     Assembler::Register r(LongJumpRegister);
     moveCR2(c, size, a, size, &r, 11);
     callR(c, size, &r);
@@ -768,7 +769,7 @@ longCallC(Context* c, unsigned size, Assembler::Constant* a)
 void
 jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
   maybeRex(c, 4, a);
   opcode(c, 0xff, 0xe0 + regCode(a));
@@ -777,7 +778,7 @@ jumpR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 void
 jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
   unconditional(c, 0xe9, a);
 }
@@ -785,7 +786,7 @@ jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* a)
 void
 jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
   
   maybeRex(c, 4, a);
   opcode(c, 0xff);
@@ -795,9 +796,9 @@ jumpM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 void
 longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     Assembler::Register r(LongJumpRegister);
     moveCR2(c, size, a, size, &r, 11);
     jumpR(c, size, &r);
@@ -809,7 +810,7 @@ longJumpC(Context* c, unsigned size, Assembler::Constant* a)
 void
 callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
   // maybeRex.W has no meaning here so we disable it
   maybeRex(c, 4, a);
@@ -819,7 +820,7 @@ callR(Context* c, unsigned size UNUSED, Assembler::Register* a)
 void
 callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
   
   maybeRex(c, 4, a);
   opcode(c, 0xff);
@@ -836,9 +837,9 @@ alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 void
 alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     new (c->zone->allocate(sizeof(AlignmentPadding)))
       AlignmentPadding(c, 2, 8);
     longCallC(c, size, a);
@@ -857,9 +858,9 @@ alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
 void
 alignedLongJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  assert(c, size == BytesPerWord);
+  assert(c, size == TargetBytesPerWord);
 
-  if (BytesPerWord == 8) {
+  if (TargetBytesPerWord == 8) {
     new (c->zone->allocate(sizeof(AlignmentPadding)))
       AlignmentPadding(c, 2, 8);
     longJumpC(c, size, a);
@@ -871,7 +872,7 @@ alignedLongJumpC(Context* c, unsigned size, Assembler::Constant* a)
 void
 pushR(Context* c, unsigned size, Assembler::Register* a)
 {
-  if (BytesPerWord == 4 and size == 8) {
+  if (TargetBytesPerWord == 4 and size == 8) {
     Assembler::Register ah(a->high);
 
     pushR(c, 4, &ah);
@@ -889,7 +890,7 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
 void
 popR(Context* c, unsigned size, Assembler::Register* a)
 {
-  if (BytesPerWord == 4 and size == 8) {
+  if (TargetBytesPerWord == 4 and size == 8) {
     Assembler::Register ah(a->high);
 
     popR(c, 4, a);
@@ -897,7 +898,7 @@ popR(Context* c, unsigned size, Assembler::Register* a)
   } else {
     maybeRex(c, 4, a);
     opcode(c, 0x58 + regCode(a));
-    if (BytesPerWord == 8 and size == 4) {
+    if (TargetBytesPerWord == 8 and size == 4) {
       moveRR(c, 4, a, 8, a);
     }
   }
@@ -910,7 +911,7 @@ addCarryCR(Context* c, unsigned size, Assembler::Constant* a,
 void
 negateR(Context* c, unsigned size, Assembler::Register* a)
 {
-  if (BytesPerWord == 4 and size == 8) {
+  if (TargetBytesPerWord == 4 and size == 8) {
     assert(c, a->low == rax and a->high == rdx);
 
     ResolvedPromise zeroPromise(0);
@@ -940,7 +941,7 @@ void
 moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
         UNUSED unsigned bSize, Assembler::Register* b, unsigned promiseOffset)
 {
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     int64_t v = a->value->value();
 
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
@@ -954,13 +955,13 @@ moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
     moveCR(c, 4, &al, 4, b);
     moveCR(c, 4, &ah, 4, &bh);
   } else {
-    maybeRex(c, BytesPerWord, b);
+    maybeRex(c, TargetBytesPerWord, b);
     opcode(c, 0xb8 + regCode(b));
     if (a->value->resolved()) {
       c->code.appendAddress(a->value->value());
     } else {
       appendImmediateTask
-        (c, a->value, offset(c), BytesPerWord, promiseOffset);
+        (c, a->value, offset(c), TargetBytesPerWord, promiseOffset);
       c->code.appendAddress(static_cast<uintptr_t>(0));
     }
   }
@@ -1008,7 +1009,7 @@ void
 sseMoveCR(Context* c, unsigned aSize, Assembler::Constant* a,
           unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize <= BytesPerWord);
+  assert(c, aSize <= TargetBytesPerWord);
   Assembler::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
   moveCR2(c, aSize, a, aSize, &tmp, 0);
   sseMoveRR(c, aSize, &tmp, bSize, b);
@@ -1031,7 +1032,7 @@ swapRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
        unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-  assert(c, aSize == BytesPerWord);
+  assert(c, aSize == TargetBytesPerWord);
   
   alwaysRex(c, aSize, a, b);
   opcode(c, 0x87);
@@ -1047,7 +1048,7 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
     return;
   }
   
-  if (BytesPerWord == 4 and aSize == 8 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8 and bSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1065,11 +1066,11 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
   } else {
     switch (aSize) {
     case 1:
-      if (BytesPerWord == 4 and a->low > rbx) {
+      if (TargetBytesPerWord == 4 and a->low > rbx) {
         assert(c, b->low <= rbx);
 
-        moveRR(c, BytesPerWord, a, BytesPerWord, b);
-        moveRR(c, 1, b, BytesPerWord, b);
+        moveRR(c, TargetBytesPerWord, a, TargetBytesPerWord, b);
+        moveRR(c, 1, b, TargetBytesPerWord, b);
       } else {
         alwaysRex(c, aSize, b, a);
         opcode(c, 0x0f, 0xbe);
@@ -1085,7 +1086,7 @@ moveRR(Context* c, unsigned aSize, Assembler::Register* a,
 
     case 4:
       if (bSize == 8) {
-      	if (BytesPerWord == 8) {
+      	if (TargetBytesPerWord == 8) {
           alwaysRex(c, bSize, b, a);
           opcode(c, 0x63);
           modrm(c, 0xc0, a, b);
@@ -1125,7 +1126,7 @@ sseMoveMR(Context* c, unsigned aSize, Assembler::Memory* a,
 {
   assert(c, aSize >= 4);
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
     opcode(c, 0x0f, 0x7e);
     modrmSibImm(c, b, a);
@@ -1160,7 +1161,7 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
     break;
 
   case 4:
-    if (BytesPerWord == 8) {
+    if (TargetBytesPerWord == 8) {
       maybeRex(c, bSize, b, a);
       opcode(c, 0x63);
       modrmSibImm(c, b, a);
@@ -1179,7 +1180,7 @@ moveMR(Context* c, unsigned aSize, Assembler::Memory* a,
     break;
     
   case 8:
-    if (BytesPerWord == 4 and bSize == 8) {
+    if (TargetBytesPerWord == 4 and bSize == 8) {
       Assembler::Memory ah(a->base, a->offset + 4, a->index, a->scale);
       Assembler::Register bh(b->high);
 
@@ -1203,7 +1204,7 @@ sseMoveRM(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, aSize >= 4);
   assert(c, aSize == bSize);
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     opcode(c, 0x66);
     opcode(c, 0x0f, 0xd6);
     modrmSibImm(c, a, b);
@@ -1241,7 +1242,7 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
     break;
 
   case 4:
-    if (BytesPerWord == 8) {
+    if (TargetBytesPerWord == 8) {
       maybeRex(c, bSize, a, b);
       opcode(c, 0x89);
       modrmSibImm(c, a, b);
@@ -1253,7 +1254,7 @@ moveRM(Context* c, unsigned aSize, Assembler::Register* a,
     break;
     
   case 8:
-    if (BytesPerWord == 8) {
+    if (TargetBytesPerWord == 8) {
       maybeRex(c, bSize, a, b);
       opcode(c, 0x89);
       modrmSibImm(c, a, b);
@@ -1274,7 +1275,7 @@ void
 moveAR(Context* c, unsigned aSize, Assembler::Address* a,
        unsigned bSize, Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or (aSize == 4 and bSize == 4));
+  assert(c, TargetBytesPerWord == 8 or (aSize == 4 and bSize == 4));
 
   Assembler::Constant constant(a->address);
   Assembler::Memory memory(b->low, 0, -1, 0);
@@ -1323,7 +1324,7 @@ moveCM(Context* c, unsigned aSize UNUSED, Assembler::Constant* a,
     break;
 
   case 8: {
-    if (BytesPerWord == 8) {
+    if (TargetBytesPerWord == 8) {
       if (a->value->resolved() and isInt32(a->value->value())) {
         maybeRex(c, bSize, b);
         opcode(c, 0xc7);
@@ -1370,7 +1371,7 @@ void
 moveZMR(Context* c, unsigned aSize UNUSED, Assembler::Memory* a,
         unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, bSize == BytesPerWord);
+  assert(c, bSize == TargetBytesPerWord);
   assert(c, aSize == 2);
   
   maybeRex(c, bSize, b, a);
@@ -1382,7 +1383,7 @@ void
 addCarryRR(Context* c, unsigned size, Assembler::Register* a,
            Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  assert(c, TargetBytesPerWord == 8 or size == 4);
   
   maybeRex(c, size, a, b);
   opcode(c, 0x11);
@@ -1395,7 +1396,7 @@ addRR(Context* c, unsigned aSize, Assembler::Register* a,
 {
   assert(c, aSize == bSize);
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1432,7 +1433,7 @@ addCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and bSize == 8) {
+    if (TargetBytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1468,7 +1469,7 @@ void
 subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
                  Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  assert(c, TargetBytesPerWord == 8 or size == 4);
   
   int64_t v = a->value->value();
   if (isInt8(v)) {
@@ -1491,7 +1492,7 @@ subtractCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and bSize == 8) {
+    if (TargetBytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1527,7 +1528,7 @@ void
 subtractBorrowRR(Context* c, unsigned size, Assembler::Register* a,
                  Assembler::Register* b)
 {
-  assert(c, BytesPerWord == 8 or size == 4);
+  assert(c, TargetBytesPerWord == 8 or size == 4);
   
   maybeRex(c, size, a, b);
   opcode(c, 0x19);
@@ -1540,7 +1541,7 @@ subtractRR(Context* c, unsigned aSize, Assembler::Register* a,
 {
   assert(c, aSize == bSize);
   
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1560,7 +1561,7 @@ andRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, aSize == bSize);
 
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1581,7 +1582,7 @@ andCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
 
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     Assembler::Constant ah(&high);
 
@@ -1618,7 +1619,7 @@ orRR(Context* c, unsigned aSize, Assembler::Register* a,
 {
   assert(c, aSize == bSize);
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1639,7 +1640,7 @@ orCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and bSize == 8) {
+    if (TargetBytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1675,7 +1676,7 @@ void
 xorRR(Context* c, unsigned aSize, Assembler::Register* a,
       unsigned bSize UNUSED, Assembler::Register* b)
 {
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -1696,7 +1697,7 @@ xorCR(Context* c, unsigned aSize, Assembler::Constant* a,
 
   int64_t v = a->value->value();
   if (v) {
-    if (BytesPerWord == 4 and bSize == 8) {
+    if (TargetBytesPerWord == 4 and bSize == 8) {
       ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
       Assembler::Constant ah(&high);
 
@@ -1735,7 +1736,7 @@ multiplyRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, aSize == bSize);
 
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     assert(c, b->high == rdx);
     assert(c, b->low != rax);
     assert(c, a->low != rax);
@@ -1870,7 +1871,7 @@ compareRR(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-  assert(c, aSize <= BytesPerWord);
+  assert(c, aSize <= TargetBytesPerWord);
 
   maybeRex(c, aSize, a, b);
   opcode(c, 0x39);
@@ -1882,7 +1883,7 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
           unsigned bSize, Assembler::Register* b)
 {
   assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, TargetBytesPerWord == 8 or aSize == 4);
   
   if (a->value->resolved() and isInt32(a->value->value())) {
     int64_t v = a->value->value();
@@ -1907,9 +1908,9 @@ compareRM(Context* c, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Memory* b)
 {
   assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, TargetBytesPerWord == 8 or aSize == 4);
   
-  if (BytesPerWord == 8 and aSize == 4) {
+  if (TargetBytesPerWord == 8 and aSize == 4) {
     moveRR(c, 4, a, 8, a);
   }
   maybeRex(c, bSize, a, b);
@@ -1922,7 +1923,7 @@ compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
           unsigned bSize, Assembler::Memory* b)
 {
   assert(c, aSize == bSize);
-  assert(c, BytesPerWord == 8 or aSize == 4);
+  assert(c, TargetBytesPerWord == 8 or aSize == 4);
   
   if (a->value->resolved()) { 
     int64_t v = a->value->value();   
@@ -2048,7 +2049,7 @@ branchRR(Context* c, TernaryOperation op, unsigned size,
   if (isFloatBranch(op)) {
     compareFloatRR(c, size, a, size, b);
     branchFloat(c, op, target);
-  } else if (size > BytesPerWord) {
+  } else if (size > TargetBytesPerWord) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
@@ -2066,7 +2067,7 @@ branchCR(Context* c, TernaryOperation op, unsigned size,
 {
   assert(c, not isFloatBranch(op));
 
-  if (size > BytesPerWord) {
+  if (size > TargetBytesPerWord) {
     int64_t v = a->value->value();
 
     ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
@@ -2090,7 +2091,7 @@ branchRM(Context* c, TernaryOperation op, unsigned size,
          Assembler::Constant* target)
 {
   assert(c, not isFloatBranch(op));
-  assert(c, size <= BytesPerWord);
+  assert(c, size <= TargetBytesPerWord);
 
   compareRM(c, size, a, size, b);
   branch(c, op, target);
@@ -2102,7 +2103,7 @@ branchCM(Context* c, TernaryOperation op, unsigned size,
          Assembler::Constant* target)
 {
   assert(c, not isFloatBranch(op));
-  assert(c, size <= BytesPerWord);
+  assert(c, size <= TargetBytesPerWord);
 
   compareCM(c, size, a, size, b);
   branch(c, op, target);
@@ -2114,7 +2115,7 @@ multiplyCR(Context* c, unsigned aSize, Assembler::Constant* a,
 {
   assert(c, aSize == bSize);
 
-  if (BytesPerWord == 4 and aSize == 8) {
+  if (TargetBytesPerWord == 4 and aSize == 8) {
     const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
     Assembler::Register tmp(c->client->acquireTemporary(mask),
                             c->client->acquireTemporary(mask));
@@ -2182,7 +2183,7 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
   opcode(c, 0xf7, 0xf8 + regCode(a));
 
   Assembler::Register dx(rdx);
-  moveRR(c, BytesPerWord, &dx, BytesPerWord, b);
+  moveRR(c, TargetBytesPerWord, &dx, TargetBytesPerWord, b);
 }
 
 void
@@ -2194,7 +2195,7 @@ doShift(Context* c, UNUSED void (*shift)
 {
   int64_t v = a->value->value();
 
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     c->client->save(rcx);
 
     Assembler::Register cx(rcx);
@@ -2219,7 +2220,7 @@ shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
 {
   assert(c, a->low == rcx);
   
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     // shld
     opcode(c, 0x0f, 0xa5);
     modrm(c, 0xc0, b->high, b->low);
@@ -2255,7 +2256,7 @@ shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
              unsigned bSize, Assembler::Register* b)
 {
   assert(c, a->low == rcx);
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     // shrd
     opcode(c, 0x0f, 0xad);
     modrm(c, 0xc0, b->low, b->high);
@@ -2295,7 +2296,7 @@ unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
 {
   assert(c, a->low == rcx);
 
-  if (BytesPerWord == 4 and bSize == 8) {
+  if (TargetBytesPerWord == 4 and bSize == 8) {
     // shrd
     opcode(c, 0x0f, 0xad);
     modrm(c, 0xc0, b->low, b->high);
@@ -2556,7 +2557,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   uint8_t* instruction = static_cast<uint8_t*>(*ip);
 
   // skip stack overflow check, if present:
-  if (BytesPerWord == 4) {
+  if (TargetBytesPerWord == 4) {
     if (*start == 0x39) {
       start += 11;
     }
@@ -2571,7 +2572,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
 
   if (UseFramePointer) {
     // skip preamble
-    start += (BytesPerWord == 4 ? 3 : 4);
+    start += (TargetBytesPerWord == 4 ? 3 : 4);
 
     if (instruction <= start or *instruction == 0x5d) {
       *ip = static_cast<void**>(*stack)[1];
@@ -2596,13 +2597,13 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
 
     // check for post-non-tail-call stack adjustment of the form "add
     // $offset,%rsp":
-    if (BytesPerWord == 4) {
+    if (TargetBytesPerWord == 4) {
       if ((*instruction == 0x83 or *instruction == 0x81)
           and instruction[1] == 0xec)
       {
         offset
           -= (*instruction == 0x83 ? instruction[2] : read4(instruction + 2))
-          / BytesPerWord;
+          / TargetBytesPerWord;
       }
     } else if (*instruction == 0x48
                and (instruction[1] == 0x83 or instruction[1] == 0x81)
@@ -2610,7 +2611,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     {
       offset
         -= (instruction[1] == 0x83 ? instruction[3] : read4(instruction + 3))
-        / BytesPerWord;
+        / TargetBytesPerWord;
     }
 
     // todo: check for and handle tail calls
@@ -2773,7 +2774,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual int returnHigh() {
-    return (BytesPerWord == 4 ? rdx : NoRegister);
+    return (TargetBytesPerWord == 4 ? rdx : NoRegister);
   }
 
   virtual int virtualCallTarget() {
@@ -2807,7 +2808,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#ifdef PLATFORM_WINDOWS
+#ifdef TARGET_PLATFORM_WINDOWS
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2829,18 +2830,18 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef PLATFORM_WINDOWS
-    if (BytesPerWord == 8) return 4; else
+#ifdef TARGET_PLATFORM_WINDOWS
+    if (TargetBytesPerWord == 8) return 4; else
 #else
-    if (BytesPerWord == 8) return 6; else
+    if (TargetBytesPerWord == 8) return 6; else
 #endif
     return 0;
   }
 
   virtual int argumentRegister(unsigned index) {
-    assert(&c, BytesPerWord == 8);
+    assert(&c, TargetBytesPerWord == 8);
     switch (index) {
-#ifdef PLATFORM_WINDOWS
+#ifdef TARGET_PLATFORM_WINDOWS
     case 0:
       return rcx;
     case 1:
@@ -2913,7 +2914,7 @@ class MyArchitecture: public Assembler::Architecture {
       assertAlignment = false;
     }
 
-    if (BytesPerWord == 4 or op == Call or op == Jump) {
+    if (TargetBytesPerWord == 4 or op == Call or op == Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
       
       assert(&c, ((op == Call or op == LongCall) and *instruction == 0xE8)
@@ -2945,8 +2946,9 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
-  virtual void setConstant(void* dst, uintptr_t constant) {
-    memcpy(dst, &constant, BytesPerWord);
+  virtual void setConstant(void* dst, uint64_t constant) {
+    target_uintptr_t v = TARGET_VW(constant);
+    memcpy(dst, &v, TargetBytesPerWord);
   }
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
@@ -3040,7 +3042,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Absolute:
-      if (aSize <= BytesPerWord) {
+      if (aSize <= TargetBytesPerWord) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = (static_cast<uint64_t>(1) << rax);
       } else {
@@ -3089,7 +3091,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Float2Int:
-      if (useSSE(&c) and bSize <= BytesPerWord) {
+      if (useSSE(&c) and bSize <= TargetBytesPerWord) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
@@ -3099,7 +3101,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Int2Float:
-      if (useSSE(&c) and aSize <= BytesPerWord) {
+      if (useSSE(&c) and aSize <= TargetBytesPerWord) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
@@ -3112,7 +3114,7 @@ class MyArchitecture: public Assembler::Architecture {
       *aTypeMask = ~0;
       *aRegisterMask = ~static_cast<uint64_t>(0);
 
-      if (BytesPerWord == 4) {
+      if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
           *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
           const uint32_t mask
@@ -3188,7 +3190,7 @@ class MyArchitecture: public Assembler::Architecture {
         *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
       }
 
-      if (BytesPerWord == 4) {
+      if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
           *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
             | (static_cast<uint64_t>(1) << rax);
@@ -3223,7 +3225,7 @@ class MyArchitecture: public Assembler::Architecture {
       *tmpRegisterMask = GeneralRegisterMask
         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
     } else if (dstTypeMask & (1 << RegisterOperand)) {
-      if (size > BytesPerWord) {
+      if (size > TargetBytesPerWord) {
         // can't move directly from FPR to GPR or vice-versa for
         // values larger than the GPR size
         if (dstRegisterMask & FloatRegisterMask) {
@@ -3239,7 +3241,7 @@ class MyArchitecture: public Assembler::Architecture {
       if (dstRegisterMask & FloatRegisterMask) {
         // can't move directly from constant to FPR
         *srcTypeMask &= ~(1 << ConstantOperand);
-        if (size > BytesPerWord) {
+        if (size > TargetBytesPerWord) {
           *tmpTypeMask = 1 << MemoryOperand;
         } else {
           *tmpTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
@@ -3290,7 +3292,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
    	  
     case Multiply:
-      if (BytesPerWord == 4 and aSize == 8) { 
+      if (TargetBytesPerWord == 4 and aSize == 8) { 
         const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
         *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
         *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
@@ -3301,7 +3303,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Divide:
-      if (BytesPerWord == 4 and aSize == 8) {
+      if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;        			
       } else {
         *aTypeMask = (1 << RegisterOperand);
@@ -3311,7 +3313,7 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Remainder:
-      if (BytesPerWord == 4 and aSize == 8) {
+      if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;
       } else {
         *aTypeMask = (1 << RegisterOperand);
@@ -3404,15 +3406,15 @@ class MyAssembler: public Assembler {
     Register stack(rsp);
     Memory stackLimit(rbx, stackLimitOffsetFromThread);
     Constant handlerConstant(resolved(&c, handler));
-    branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
+    branchRM(&c, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned) {
     Register stack(rsp);
     Memory stackDst(rbx, stackOffset);
-    apply(Move, BytesPerWord, RegisterOperand, &stack,
-          BytesPerWord, MemoryOperand, &stackDst);
+    apply(Move, TargetBytesPerWord, RegisterOperand, &stack,
+          TargetBytesPerWord, MemoryOperand, &stackDst);
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
@@ -3430,7 +3432,7 @@ class MyAssembler: public Assembler {
         = static_cast<OperandType>(va_arg(a, int));
       RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, Operand*);
       footprint += ceiling
-        (RUNTIME_ARRAY_BODY(arguments)[i].size, BytesPerWord);
+        (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
     }
     va_end(a);
 
@@ -3448,7 +3450,7 @@ class MyAssembler: public Assembler {
               RegisterOperand,
               &dst);
       } else {
-        Memory dst(rsp, offset * BytesPerWord);
+        Memory dst(rsp, offset * TargetBytesPerWord);
         apply(Move,
               RUNTIME_ARRAY_BODY(arguments)[i].size,
               RUNTIME_ARRAY_BODY(arguments)[i].type,
@@ -3456,7 +3458,8 @@ class MyAssembler: public Assembler {
               pad(RUNTIME_ARRAY_BODY(arguments)[i].size),
               MemoryOperand,
               &dst);
-        offset += ceiling(RUNTIME_ARRAY_BODY(arguments)[i].size, BytesPerWord);
+        offset += ceiling
+          (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       }
     }
   }
@@ -3466,40 +3469,40 @@ class MyAssembler: public Assembler {
 
     if (UseFramePointer) {
       Register base(rbp);
-      pushR(&c, BytesPerWord, &base);
+      pushR(&c, TargetBytesPerWord, &base);
 
-      apply(Move, BytesPerWord, RegisterOperand, &stack,
-            BytesPerWord, RegisterOperand, &base);
+      apply(Move, TargetBytesPerWord, RegisterOperand, &stack,
+            TargetBytesPerWord, RegisterOperand, &base);
     }
 
-    Constant footprintConstant(resolved(&c, footprint * BytesPerWord));
-    apply(Subtract, BytesPerWord, ConstantOperand, &footprintConstant,
-          BytesPerWord, RegisterOperand, &stack,
-          BytesPerWord, RegisterOperand, &stack);
+    Constant footprintConstant(resolved(&c, footprint * TargetBytesPerWord));
+    apply(Subtract, TargetBytesPerWord, ConstantOperand, &footprintConstant,
+          TargetBytesPerWord, RegisterOperand, &stack,
+          TargetBytesPerWord, RegisterOperand, &stack);
   }
 
   virtual void adjustFrame(unsigned difference) {
     Register stack(rsp);
-    Constant differenceConstant(resolved(&c, difference * BytesPerWord));
-    apply(Subtract, BytesPerWord, ConstantOperand, &differenceConstant,
-          BytesPerWord, RegisterOperand, &stack,
-          BytesPerWord, RegisterOperand, &stack);
+    Constant differenceConstant(resolved(&c, difference * TargetBytesPerWord));
+    apply(Subtract, TargetBytesPerWord, ConstantOperand, &differenceConstant,
+          TargetBytesPerWord, RegisterOperand, &stack,
+          TargetBytesPerWord, RegisterOperand, &stack);
   }
 
   virtual void popFrame(unsigned frameFootprint) {
     if (UseFramePointer) {
       Register base(rbp);
       Register stack(rsp);
-      apply(Move, BytesPerWord, RegisterOperand, &base,
-            BytesPerWord, RegisterOperand, &stack);
+      apply(Move, TargetBytesPerWord, RegisterOperand, &base,
+            TargetBytesPerWord, RegisterOperand, &stack);
 
-      popR(&c, BytesPerWord, &base);
+      popR(&c, TargetBytesPerWord, &base);
     } else {
       Register stack(rsp);
-      Constant footprint(resolved(&c, frameFootprint * BytesPerWord));
-      apply(Add, BytesPerWord, ConstantOperand, &footprint,
-            BytesPerWord, RegisterOperand, &stack,
-            BytesPerWord, RegisterOperand, &stack);
+      Constant footprint(resolved(&c, frameFootprint * TargetBytesPerWord));
+      apply(Add, TargetBytesPerWord, ConstantOperand, &footprint,
+            TargetBytesPerWord, RegisterOperand, &stack,
+            TargetBytesPerWord, RegisterOperand, &stack);
     }
   }
 
@@ -3515,40 +3518,44 @@ class MyAssembler: public Assembler {
         unsigned baseSize = UseFramePointer ? 1 : 0;
 
         Memory returnAddressSrc
-          (rsp, (frameFootprint + baseSize) * BytesPerWord);
-        moveMR(&c, BytesPerWord, &returnAddressSrc, BytesPerWord, &tmp);
+          (rsp, (frameFootprint + baseSize) * TargetBytesPerWord);
+        moveMR(&c, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+               &tmp);
     
         Memory returnAddressDst
-          (rsp, (frameFootprint - offset + baseSize) * BytesPerWord);
-        moveRM(&c, BytesPerWord, &tmp, BytesPerWord, &returnAddressDst);
+          (rsp, (frameFootprint - offset + baseSize) * TargetBytesPerWord);
+        moveRM(&c, TargetBytesPerWord, &tmp, TargetBytesPerWord,
+               &returnAddressDst);
 
         c.client->releaseTemporary(tmp.low);
 
         if (UseFramePointer) {
-          Memory baseSrc(rsp, frameFootprint * BytesPerWord);
+          Memory baseSrc(rsp, frameFootprint * TargetBytesPerWord);
           Register base(rbp);
-          moveMR(&c, BytesPerWord, &baseSrc, BytesPerWord, &base);
+          moveMR(&c, TargetBytesPerWord, &baseSrc, TargetBytesPerWord, &base);
         }
 
         Register stack(rsp);
         Constant footprint
-          (resolved(&c, (frameFootprint - offset + baseSize) * BytesPerWord));
-        addCR(&c, BytesPerWord, &footprint, BytesPerWord, &stack);
+          (resolved
+           (&c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
+
+        addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
         if (returnAddressSurrogate != NoRegister) {
           assert(&c, offset > 0);
 
           Register ras(returnAddressSurrogate);
-          Memory dst(rsp, offset * BytesPerWord);
-          moveRM(&c, BytesPerWord, &ras, BytesPerWord, &dst);
+          Memory dst(rsp, offset * TargetBytesPerWord);
+          moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
 
         if (framePointerSurrogate != NoRegister) {
           assert(&c, offset > 0);
 
           Register fps(framePointerSurrogate);
-          Memory dst(rsp, (offset - 1) * BytesPerWord);
-          moveRM(&c, BytesPerWord, &fps, BytesPerWord, &dst);
+          Memory dst(rsp, (offset - 1) * TargetBytesPerWord);
+          moveRM(&c, TargetBytesPerWord, &fps, TargetBytesPerWord, &dst);
         }
       } else {
         popFrame(frameFootprint);
@@ -3568,15 +3575,15 @@ class MyAssembler: public Assembler {
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       Register returnAddress(rcx);
-      popR(&c, BytesPerWord, &returnAddress);
+      popR(&c, TargetBytesPerWord, &returnAddress);
 
       Register stack(rsp);
       Constant adjustment
         (resolved(&c, (argumentFootprint - StackAlignmentInWords)
-                  * BytesPerWord));
-      addCR(&c, BytesPerWord, &adjustment, BytesPerWord, &stack);
+                  * TargetBytesPerWord));
+      addCR(&c, TargetBytesPerWord, &adjustment, TargetBytesPerWord, &stack);
 
-      jumpR(&c, BytesPerWord, &returnAddress);
+      jumpR(&c, TargetBytesPerWord, &returnAddress);
     } else {
       return_(&c);
     }
@@ -3588,13 +3595,13 @@ class MyAssembler: public Assembler {
     popFrame(frameFootprint);
 
     Register returnAddress(rcx);
-    popR(&c, BytesPerWord, &returnAddress);
+    popR(&c, TargetBytesPerWord, &returnAddress);
 
     Register stack(rsp);
     Memory stackSrc(rbx, stackOffsetFromThread);
-    moveMR(&c, BytesPerWord, &stackSrc, BytesPerWord, &stack);
+    moveMR(&c, TargetBytesPerWord, &stackSrc, TargetBytesPerWord, &stack);
 
-    jumpR(&c, BytesPerWord, &returnAddress);
+    jumpR(&c, TargetBytesPerWord, &returnAddress);
   }
 
   virtual void apply(Operation op) {
@@ -3624,7 +3631,7 @@ class MyAssembler: public Assembler {
   {
     if (isBranch(op)) {
       assert(&c, aSize == bSize);
-      assert(&c, cSize == BytesPerWord);
+      assert(&c, cSize == TargetBytesPerWord);
       assert(&c, cType == ConstantOperand);
 
       arch_->c.branchOperations[branchIndex(&(arch_->c), aType, bType)]
