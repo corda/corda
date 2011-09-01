@@ -9178,7 +9178,7 @@ fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
 }
 
 void
-fixupMethods(Thread* t, object map, BootImage* image, uint8_t* code)
+fixupMethods(Thread* t, object map, BootImage* image UNUSED, uint8_t* code)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
     object c = tripleSecond(t, it.next());
