@@ -42,24 +42,61 @@ namespace vm {
 #ifdef TARGET_BYTES_PER_WORD
 #  if (TARGET_BYTES_PER_WORD == 8)
 #    define TARGET_VW(v) TARGET_V8(v)
+
 typedef uint64_t target_uintptr_t;
 typedef int64_t target_intptr_t;
+
 const unsigned TargetBytesPerWord = 8;
+
+const unsigned TargetThreadTailAddress = 2272;
+const unsigned TargetThreadStackLimit = 2336;
+const unsigned TargetThreadStack = 2224;
+const unsigned TargetThreadIp = 2216;
+const unsigned TargetThreadVirtualCallTarget = 2280;
+const unsigned TargetThreadVirtualCallIndex = 2288;
+
+const unsigned TargetClassFixedSize = 12;
+const unsigned TargetClassArrayElementSize = 14;
+const unsigned TargetClassVtable = 128;
+
+const unsigned TargetFieldOffset = 12;
+
 #  elif (TARGET_BYTES_PER_WORD == 4)
 #    define TARGET_VW(v) TARGET_V4(v)
+
 typedef uint32_t target_uintptr_t;
 typedef int32_t target_intptr_t;
+
 const unsigned TargetBytesPerWord = 4;
+
+const unsigned TargetThreadTailAddress = 2172;
+const unsigned TargetThreadStackLimit = 2204;
+const unsigned TargetThreadStack = 2148;
+const unsigned TargetThreadIp = 2144;
+const unsigned TargetThreadVirtualCallTarget = 2176;
+const unsigned TargetThreadVirtualCallIndex = 2180;
+
+const unsigned TargetClassFixedSize = 8;
+const unsigned TargetClassArrayElementSize = 10;
+const unsigned TargetClassVtable = 68;
+
+const unsigned TargetFieldOffset = 8;
+
 #  else
 #    error
 #  endif
 #else
-typedef uintptr_t target_uintptr_t;
-typedef intptr_t target_intptr_t;
-const unsigned TargetBytesPerWord = BytesPerWord;
+#  error
 #endif
 
 const unsigned TargetBitsPerWord = TargetBytesPerWord * 8;
+
+const uintptr_t TargetPointerMask
+= ((~static_cast<target_uintptr_t>(0)) / TargetBytesPerWord)
+  * TargetBytesPerWord;
+
+const unsigned TargetArrayLength = TargetBytesPerWord;
+const unsigned TargetArrayBody = TargetBytesPerWord * 2;
 
 } // namespace vm
 

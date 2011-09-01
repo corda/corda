@@ -74,13 +74,13 @@ const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / TargetBytesPerWord;
 
 bool
-isInt8(intptr_t v)
+isInt8(target_intptr_t v)
 {
   return v == static_cast<int8_t>(v);
 }
 
 bool
-isInt32(intptr_t v)
+isInt32(target_intptr_t v)
 {
   return v == static_cast<int32_t>(v);
 }
@@ -958,11 +958,11 @@ moveCR2(Context* c, UNUSED unsigned aSize, Assembler::Constant* a,
     maybeRex(c, TargetBytesPerWord, b);
     opcode(c, 0xb8 + regCode(b));
     if (a->value->resolved()) {
-      c->code.appendAddress(a->value->value());
+      c->code.appendTargetAddress(a->value->value());
     } else {
       appendImmediateTask
         (c, a->value, offset(c), TargetBytesPerWord, promiseOffset);
-      c->code.appendAddress(static_cast<uintptr_t>(0));
+      c->code.appendTargetAddress(static_cast<target_uintptr_t>(0));
     }
   }
 }
@@ -3446,7 +3446,7 @@ class MyAssembler: public Assembler {
               RUNTIME_ARRAY_BODY(arguments)[i].size,
               RUNTIME_ARRAY_BODY(arguments)[i].type,
               RUNTIME_ARRAY_BODY(arguments)[i].operand,
-              pad(RUNTIME_ARRAY_BODY(arguments)[i].size),
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord),
               RegisterOperand,
               &dst);
       } else {
@@ -3455,7 +3455,7 @@ class MyAssembler: public Assembler {
               RUNTIME_ARRAY_BODY(arguments)[i].size,
               RUNTIME_ARRAY_BODY(arguments)[i].type,
               RUNTIME_ARRAY_BODY(arguments)[i].operand,
-              pad(RUNTIME_ARRAY_BODY(arguments)[i].size),
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord),
               MemoryOperand,
               &dst);
         offset += ceiling

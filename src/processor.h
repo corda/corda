@@ -122,10 +122,14 @@ class Processor {
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
-                DelayedPromise** addresses, object method) = 0;
+                DelayedPromise** addresses, object method,
+                OffsetResolver* resolver) = 0;
 
   virtual void
   visitRoots(Thread* t, HeapWalker* w) = 0;
+
+  virtual void
+  normalizeVirtualThunks(Thread* t) = 0;
 
   virtual unsigned*
   makeCallTable(Thread* t, HeapWalker* w) = 0;

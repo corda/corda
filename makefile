@@ -165,12 +165,13 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
+target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
+
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
-	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
-	-DTARGET_BYTES_PER_WORD=$(pointer-size)
+	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" $(target-cflags)
 
 ifneq (,$(filter i386 x86_64,$(arch)))
 	ifeq ($(use-frame-pointer),true)
@@ -209,9 +210,11 @@ shared = -shared
 
 openjdk-extra-cflags = -fvisibility=hidden
 
+bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
+
 ifeq ($(build-arch),powerpc)
 	ifneq ($(arch),$(build-arch))
-		cflags += -DTARGET_OPPOSITE_ENDIAN
+		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
 	endif
 endif
 
@@ -223,7 +226,7 @@ ifeq ($(arch),powerpc)
 	pointer-size = 4
 
 	ifneq ($(arch),$(build-arch))
-		cflags += -DTARGET_OPPOSITE_ENDIAN
+		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
 	endif
 
 	ifneq ($(platform),darwin)
@@ -264,7 +267,7 @@ endif
 
 
 ifeq ($(platform),linux)
-	cflags += -DTARGET_PLATFORM_LINUX
+	bootimage-cflags += -DTARGET_PLATFORM_LINUX
 endif
 
 ifeq ($(build-platform),darwin)
@@ -274,7 +277,7 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),darwin)
-	cflags += -DTARGET_PLATFORM_DARWIN
+	bootimage-cflags += -DTARGET_PLATFORM_DARWIN
 
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
@@ -350,7 +353,7 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	cflags += -DTARGET_PLATFORM_WINDOWS
+	bootimage-cflags += -DTARGET_PLATFORM_WINDOWS
 
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
@@ -520,10 +523,12 @@ vm-sources = \
 
 vm-asm-sources = $(src)/$(asm).S
 
+target-asm = $(asm)
+
 ifeq ($(process),compile)
 	vm-sources += \
 		$(src)/compiler.cpp \
-		$(src)/$(asm).cpp
+		$(src)/$(target-asm).cpp
 
 	vm-asm-sources += $(src)/compile-$(asm).S
 endif
@@ -902,6 +907,8 @@ $(bootimage-generator):
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
 		build-bootimage-generator=$(bootimage-generator) \
+		target-cflags="$(bootimage-cflags)" \
+		target-asm=$(asm) \
 		$(bootimage-generator)
 
 $(build-bootimage-generator): \

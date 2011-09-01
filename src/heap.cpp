@@ -529,7 +529,7 @@ class Fixie {
   }
 
   static unsigned maskSize(unsigned size, bool hasMask) {
-    return hasMask * ceiling(size, BytesPerWord) * BytesPerWord;
+    return hasMask * ceiling(size, BitsPerWord) * BytesPerWord;
   }
 
   static unsigned totalSize(unsigned size, bool hasMask) {

@@ -3067,12 +3067,16 @@ class MyProcessor: public Processor {
   }
 
   virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
-                             DelayedPromise**, object)
+                             DelayedPromise**, object, OffsetResolver*)
   {
     abort(s);
   }
 
   virtual void visitRoots(vm::Thread*, HeapWalker*) {
+    abort(s);
+  }
+
+  virtual void normalizeVirtualThunks(vm::Thread*) {
     abort(s);
   }
 

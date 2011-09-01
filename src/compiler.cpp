@@ -469,7 +469,7 @@ class PoolPromise: public Promise {
   virtual int64_t value() {
     if (resolved()) {
       return reinterpret_cast<int64_t>
-        (c->machineCode + pad(c->machineCodeSize)
+        (c->machineCode + pad(c->machineCodeSize, TargetBytesPerWord)
          + (key * TargetBytesPerWord));
     }
     
@@ -6949,15 +6949,15 @@ class MyCompiler: public Compiler {
 
     int i = 0;
     for (ConstantPoolNode* n = c.firstConstant; n; n = n->next) {
-      intptr_t* target = reinterpret_cast<intptr_t*>
-        (c.machineCode + pad(c.machineCodeSize) + i);
+      target_intptr_t* target = reinterpret_cast<target_intptr_t*>
+        (c.machineCode + pad(c.machineCodeSize, TargetBytesPerWord) + i);
 
       if (n->promise->resolved()) {
         *target = n->promise->value();
       } else {
         class Listener: public Promise::Listener {
          public:
-          Listener(intptr_t* target): target(target){ }
+          Listener(target_intptr_t* target): target(target){ }
 
           virtual bool resolve(int64_t value, void** location) {
             *target = value;
@@ -6965,7 +6965,7 @@ class MyCompiler: public Compiler {
             return true;
           }
 
-          intptr_t* target;
+          target_intptr_t* target;
         };
         new (n->promise->listen(sizeof(Listener))) Listener(target);
       }

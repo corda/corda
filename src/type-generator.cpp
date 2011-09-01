@@ -2116,6 +2116,9 @@ writeMap(Output* out, Object* type)
     case Object::Scalar: {
       out->write("Type_");
       out->write(memberTypeEnumName(m));
+      if (memberNoGC(m)) {
+        out->write("_nogc");
+      }
     } break;
 
     case Object::Array: {
