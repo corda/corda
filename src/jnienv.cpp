@@ -3324,11 +3324,15 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   unsigned bootClasspathBufferSize = bcppl + bcpl + bcpal + 3;
   RUNTIME_ARRAY(char, bootClasspathBuffer, bootClasspathBufferSize);
   char* bootClasspathPointer = RUNTIME_ARRAY_BODY(bootClasspathBuffer);
-  local::append(&bootClasspathPointer, bootClasspathPrepend, bcppl,
-                bcpl + bcpal ? PATH_SEPARATOR : 0);
-  local::append(&bootClasspathPointer, bootClasspath, bcpl,
-                bcpal ? PATH_SEPARATOR : 0);
-  local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
+  if (bootClasspathBufferSize > 3) {
+    local::append(&bootClasspathPointer, bootClasspathPrepend, bcppl,
+                  bcpl + bcpal ? PATH_SEPARATOR : 0);
+    local::append(&bootClasspathPointer, bootClasspath, bcpl,
+                  bcpal ? PATH_SEPARATOR : 0);
+    local::append(&bootClasspathPointer, bootClasspathAppend, bcpal, 0);
+  } else {
+    *RUNTIME_ARRAY_BODY(bootClasspathBuffer) = 0;
+  }
 
   Finder* bf = makeFinder
     (s, h, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
