@@ -64,23 +64,13 @@
 
 (type region
   (void* region)
-  (unsigned position))
-
-(pod exceptionHandler
-  (uint16_t start)
-  (uint16_t end)
-  (uint16_t ip)
-  (uint16_t catchType))
+  (uint32_t position))
 
 (type exceptionHandlerTable
-  (array exceptionHandler body))
-
-(pod lineNumber
-  (uint32_t ip)
-  (uint32_t line))
+  (array uint64_t body))
 
 (type lineNumberTable
-  (array lineNumber body))
+  (array uint64_t body))
 
 (type code
   (object pool)
@@ -126,7 +116,7 @@
 
 (type traceElement
   (object method)
-  (int ip))
+  (int32_t ip))
 
 (type treeNode
   (object value)
@@ -155,7 +145,7 @@
   (void* waitTail)
   (object acquireHead)
   (object acquireTail)
-  (unsigned depth))
+  (uint32_t depth))
 
 (type monitorNode
   (void* value)

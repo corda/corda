@@ -12,15 +12,10 @@
 #define BOOTIMAGE_H
 
 #include "common.h"
+#include "target.h"
+#include "machine.h"
 
 namespace vm {
-
-const unsigned BootMask = (~static_cast<unsigned>(0)) / BytesPerWord;
-
-const unsigned BootShift = 32 - log(BytesPerWord);
-
-const unsigned BootFlatConstant = 1 << BootShift;
-const unsigned BootHeapOffset = 1 << (BootShift + 1);
 
 class BootImage {
  public:
@@ -30,14 +25,14 @@ class BootImage {
       start(0), frameSavedOffset(0), length(0)
     { }
 
-    Thunk(unsigned start, unsigned frameSavedOffset, unsigned length):
+    Thunk(uint32_t start, uint32_t frameSavedOffset, uint32_t length):
       start(start), frameSavedOffset(frameSavedOffset), length(length)
     { }
 
-    unsigned start;
-    unsigned frameSavedOffset;
-    unsigned length;
-  };
+    uint32_t start;
+    uint32_t frameSavedOffset;
+    uint32_t length;
+  } PACKED;
 
   class ThunkCollection {
    public:
@@ -47,63 +42,56 @@ class BootImage {
     Thunk aioob;
     Thunk stackOverflow;
     Thunk table;
-  };
+  } PACKED;
 
-  static const unsigned Magic = 0x22377322;
+  static const uint32_t Magic = 0x22377322;
 
-  unsigned magic;
+  uint32_t magic;
 
-  unsigned heapSize;
-  unsigned codeSize;
+  uint32_t heapSize;
+  uint32_t codeSize;
 
-  unsigned bootClassCount;
-  unsigned appClassCount;
-  unsigned stringCount;
-  unsigned callCount;
+  uint32_t bootClassCount;
+  uint32_t appClassCount;
+  uint32_t stringCount;
+  uint32_t callCount;
 
-  unsigned bootLoader;
-  unsigned appLoader;
-  unsigned types;
-  unsigned methodTree;
-  unsigned methodTreeSentinal;
-  unsigned virtualThunks;
+  uint32_t bootLoader;
+  uint32_t appLoader;
+  uint32_t types;
+  uint32_t methodTree;
+  uint32_t methodTreeSentinal;
+  uint32_t virtualThunks;
 
-  uintptr_t codeBase;
+  uint32_t compileMethodCall;
+  uint32_t compileVirtualMethodCall;
+  uint32_t invokeNativeCall;
+  uint32_t throwArrayIndexOutOfBoundsCall;
+  uint32_t throwStackOverflowCall;
 
-  ThunkCollection thunks;
-
-  unsigned compileMethodCall;
-  unsigned compileVirtualMethodCall;
-  unsigned invokeNativeCall;
-  unsigned throwArrayIndexOutOfBoundsCall;
-  unsigned throwStackOverflowCall;
-
-#define THUNK(s) unsigned s##Call;
+#define THUNK(s) uint32_t s##Call;
 #include "thunks.cpp"
 #undef THUNK
+
+  ThunkCollection thunks;
+} PACKED;
+
+class OffsetResolver {
+ public:
+  virtual unsigned fieldOffset(Thread*, object) = 0;
 };
 
-inline unsigned
-codeMapSize(unsigned codeSize)
-{
-  return ceiling(codeSize, BitsPerWord) * BytesPerWord;
-}
+#define NAME(x) Target##x
+#define LABEL(x) target_##x
+#include "bootimage-template.cpp"
+#undef LABEL
+#undef NAME
 
-inline unsigned
-heapMapSize(unsigned heapSize)
-{
-  return ceiling(heapSize, BitsPerWord * BytesPerWord) * BytesPerWord;
-}
-
-inline object
-bootObject(uintptr_t* heap, unsigned offset)
-{
-  if (offset) {
-    return reinterpret_cast<object>(heap + offset - 1);
-  } else {
-    return 0;
-  }
-}
+#define NAME(x) x
+#define LABEL(x) x
+#include "bootimage-template.cpp"
+#undef LABEL
+#undef NAME
 
 } // namespace vm
 

@@ -19,12 +19,6 @@ namespace {
 
 namespace local {
 
-// an object must survive TenureThreshold + 2 garbage collections
-// before being copied to gen2 (must be at least 1):
-const unsigned TenureThreshold = 3;
-
-const unsigned FixieTenureThreshold = TenureThreshold + 2;
-
 const unsigned Top = ~static_cast<unsigned>(0);
 
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
@@ -535,7 +529,7 @@ class Fixie {
   }
 
   static unsigned maskSize(unsigned size, bool hasMask) {
-    return hasMask * ceiling(size, BytesPerWord) * BytesPerWord;
+    return hasMask * ceiling(size, BitsPerWord) * BytesPerWord;
   }
 
   static unsigned totalSize(unsigned size, bool hasMask) {
@@ -546,11 +540,14 @@ class Fixie {
     return totalSize(size, hasMask);
   }
 
+  // be sure to update e.g. TargetFixieSizeInBytes in bootimage.cpp if
+  // you add/remove/change fields in this class:
+
   uint8_t age;
   bool hasMask;
   bool marked;
   bool dirty;
-  unsigned size;
+  uint32_t size;
   Fixie* next;
   Fixie** handle;
   uintptr_t body_[0];

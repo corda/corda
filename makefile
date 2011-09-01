@@ -165,11 +165,13 @@ rdynamic = -rdynamic
 warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 	-Wno-non-virtual-dtor
 
+target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
+
 common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
-	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\"
+	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" $(target-cflags)
 
 ifneq (,$(filter i386 x86_64,$(arch)))
 	ifeq ($(use-frame-pointer),true)
@@ -208,12 +210,24 @@ shared = -shared
 
 openjdk-extra-cflags = -fvisibility=hidden
 
+bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
+
+ifeq ($(build-arch),powerpc)
+	ifneq ($(arch),$(build-arch))
+		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
+	endif
+endif
+
 ifeq ($(arch),i386)
 	pointer-size = 4
 endif
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
+
+	ifneq ($(arch),$(build-arch))
+		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
+	endif
 
 	ifneq ($(platform),darwin)
 		ifneq ($(arch),$(build-arch))
@@ -251,6 +265,11 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+
+ifeq ($(platform),linux)
+	bootimage-cflags += -DTARGET_PLATFORM_LINUX
+endif
+
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
@@ -258,6 +277,8 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),darwin)
+	bootimage-cflags += -DTARGET_PLATFORM_DARWIN
+
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -332,6 +353,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
+	bootimage-cflags += -DTARGET_PLATFORM_WINDOWS
+
 	inc = "$(root)/win32/include"
 	lib = "$(root)/win32/lib"
 
@@ -481,7 +504,8 @@ generated-code = \
 	$(build)/type-constructors.cpp \
 	$(build)/type-initializations.cpp \
 	$(build)/type-java-initializations.cpp \
-	$(build)/type-name-initializations.cpp
+	$(build)/type-name-initializations.cpp \
+	$(build)/type-maps.cpp
 
 vm-depends := $(generated-code) $(wildcard $(src)/*.h)
 
@@ -499,10 +523,12 @@ vm-sources = \
 
 vm-asm-sources = $(src)/$(asm).S
 
+target-asm = $(asm)
+
 ifeq ($(process),compile)
 	vm-sources += \
 		$(src)/compiler.cpp \
-		$(src)/$(asm).cpp
+		$(src)/$(target-asm).cpp
 
 	vm-asm-sources += $(src)/compile-$(asm).S
 endif
@@ -539,16 +565,6 @@ bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
 
 ifeq ($(bootimage),true)
-	ifneq ($(build-arch),$(arch))
-$(error "bootimage cross-builds not yet supported")
-	endif
-
-	ifeq ($(arch),x86_64)
-		ifneq ($(build-platform),$(platform))
-$(error "bootimage cross-builds not yet supported")
-		endif
-	endif
-
 	vm-classpath-object = $(bootimage-object)
 	cflags += -DBOOT_IMAGE=\"bootimageBin\" -DAVIAN_CLASSPATH=\"\"
 else
@@ -891,6 +907,8 @@ $(bootimage-generator):
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
 		build-bootimage-generator=$(bootimage-generator) \
+		target-cflags="$(bootimage-cflags)" \
+		target-asm=$(asm) \
 		$(bootimage-generator)
 
 $(build-bootimage-generator): \

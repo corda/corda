@@ -1253,6 +1253,7 @@ class Machine {
     MonitorMap,
     StringMap,
     ByteArrayMap,
+    PoolMap,
     ClassRuntimeDataTable,
     MethodRuntimeDataTable,
     JNIMethodTable,
@@ -3283,12 +3284,18 @@ methodVirtual(Thread* t, object method)
 }
 
 inline unsigned
-singletonMaskSize(unsigned count)
+singletonMaskSize(unsigned count, unsigned bitsPerWord)
 {
   if (count) {
-    return ceiling(count + 2, BitsPerWord);
+    return ceiling(count + 2, bitsPerWord);
   }
   return 0;
+}
+
+inline unsigned
+singletonMaskSize(unsigned count)
+{
+  return singletonMaskSize(count, BitsPerWord);
 }
 
 inline unsigned
@@ -3316,10 +3323,16 @@ singletonMask(Thread* t, object singleton)
 }
 
 inline void
+singletonMarkObject(uint32_t* mask, unsigned index)
+{
+  mask[(index + 2) / 32]
+    |= (static_cast<uint32_t>(1) << ((index + 2) % 32));
+}
+
+inline void
 singletonMarkObject(Thread* t, object singleton, unsigned index)
 {
-  singletonMask(t, singleton)[(index + 2) / 32]
-    |= (static_cast<uint32_t>(1) << ((index + 2) % 32));
+  singletonMarkObject(singletonMask(t, singleton), index);
 }
 
 inline bool
@@ -3371,9 +3384,15 @@ singletonBit(Thread* t, object singleton, unsigned start, unsigned index)
 }
 
 inline unsigned
+poolMaskSize(unsigned count, unsigned bitsPerWord)
+{
+  return ceiling(count, bitsPerWord);
+}
+
+inline unsigned
 poolMaskSize(unsigned count)
 {
-  return ceiling(count, BitsPerWord);
+  return poolMaskSize(count, BitsPerWord);
 }
 
 inline unsigned
@@ -3764,6 +3783,54 @@ methodClone(Thread* t, object method)
      methodAddendum(t, method),
      methodClass(t, method),
      methodCode(t, method));
+}
+
+inline uint64_t
+exceptionHandler(uint64_t start, uint64_t end, uint64_t ip, uint64_t catchType)
+{
+  return (start << 48) | (end << 32) | (ip << 16) | catchType;
+}
+
+inline unsigned
+exceptionHandlerStart(uint64_t eh)
+{
+  return eh >> 48;
+}
+
+inline unsigned
+exceptionHandlerEnd(uint64_t eh)
+{
+  return (eh >> 32) & 0xFFFF;
+}
+
+inline unsigned
+exceptionHandlerIp(uint64_t eh)
+{
+  return (eh >> 16) & 0xFFFF;
+}
+
+inline unsigned
+exceptionHandlerCatchType(uint64_t eh)
+{
+  return eh & 0xFFFF;
+}
+
+inline uint64_t
+lineNumber(uint64_t ip, uint64_t line)
+{
+  return (ip << 32) | line;
+}
+
+inline unsigned
+lineNumberIp(uint64_t ln)
+{
+  return ln >> 32;
+}
+
+inline unsigned
+lineNumberLine(uint64_t ln)
+{
+  return ln & 0xFFFFFFFF;
 }
 
 inline FILE*

@@ -45,6 +45,8 @@ typedef unsigned __int64 uint64_t;
 
 #  define NO_RETURN __declspec(noreturn)
 
+#  define PACKED
+
 #  define PLATFORM_WINDOWS
 
 #  ifdef _M_IX86
@@ -75,6 +77,8 @@ typedef intptr_t intptr_alias_t;
 #  define UNUSED __attribute__((unused))
 
 #  define NO_RETURN __attribute__((noreturn))
+
+#  define PACKED __attribute__((packed))
 
 #  ifdef __MINGW32__
 #    define PLATFORM_WINDOWS

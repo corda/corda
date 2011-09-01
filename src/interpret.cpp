@@ -665,7 +665,7 @@ store(Thread* t, unsigned index)
          BytesPerWord * 2);
 }
 
-ExceptionHandler*
+uint64_t
 findExceptionHandler(Thread* t, object method, unsigned ip)
 {
   PROTECT(t, method);
@@ -674,7 +674,7 @@ findExceptionHandler(Thread* t, object method, unsigned ip)
       
   if (eht) {
     for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      ExceptionHandler* eh = exceptionHandlerTableBody(t, eht, i);
+      uint64_t eh = exceptionHandlerTableBody(t, eht, i);
 
       if (ip - 1 >= exceptionHandlerStart(eh)
           and ip - 1 < exceptionHandlerEnd(eh))
@@ -708,7 +708,7 @@ findExceptionHandler(Thread* t, object method, unsigned ip)
   return 0;
 }
 
-ExceptionHandler*
+uint64_t
 findExceptionHandler(Thread* t, int frame)
 {
   return findExceptionHandler(t, frameMethod(t, frame), frameIp(t, frame));
@@ -2673,7 +2673,7 @@ interpret3(Thread* t, const int base)
 
   pokeInt(t, t->frame + FrameIpOffset, t->ip);
   for (; frame >= base; popFrame(t)) {
-    ExceptionHandler* eh = findExceptionHandler(t, frame);
+    uint64_t eh = findExceptionHandler(t, frame);
     if (eh) {
       sp = frame + FrameFootprint;
       ip = exceptionHandlerIp(eh);
@@ -3067,12 +3067,16 @@ class MyProcessor: public Processor {
   }
 
   virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
-                             DelayedPromise**, object)
+                             DelayedPromise**, object, OffsetResolver*)
   {
     abort(s);
   }
 
   virtual void visitRoots(vm::Thread*, HeapWalker*) {
+    abort(s);
+  }
+
+  virtual void normalizeVirtualThunks(vm::Thread*) {
     abort(s);
   }
 

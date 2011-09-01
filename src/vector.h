@@ -12,6 +12,7 @@
 #define VECTOR_H
 
 #include "system.h"
+#include "target.h"
 
 namespace vm {
 
@@ -101,6 +102,10 @@ class Vector {
 
   void append4(uint32_t v) {
     append(&v, 4);
+  }
+
+  void appendTargetAddress(target_uintptr_t v) {
+    append(&v, TargetBytesPerWord);
   }
 
   void appendAddress(uintptr_t v) {
