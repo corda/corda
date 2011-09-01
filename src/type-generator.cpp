@@ -790,7 +790,7 @@ read(Input* in, Object* eos, int level)
       }
     } break;
 
-    case ' ': case '\t': case '\n': {
+    case ' ': case '\t': case '\n': case '\r': {
       if (s.first) {
         return String::make(s.first);
       }
