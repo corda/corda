@@ -1452,15 +1452,15 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
-        object name = singletonObject(t, pool, s.read2() - 1);
+        object attributeName = singletonObject(t, pool, s.read2() - 1);
         unsigned length = s.read4();
 
         if (vm::strcmp(reinterpret_cast<const int8_t*>("Code"),
-                       &byteArrayBody(t, name, 0)) == 0)
+                       &byteArrayBody(t, attributeName, 0)) == 0)
         {
           code = parseCode(t, s, pool);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Exceptions"),
-                              &byteArrayBody(t, name, 0)) == 0)
+                              &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
@@ -1473,7 +1473,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
           set(t, addendum, MethodAddendumExceptionTable, body);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("AnnotationDefault"),
-                              &byteArrayBody(t, name, 0)) == 0)
+                              &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
@@ -1485,7 +1485,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
 
           set(t, addendum, MethodAddendumAnnotationDefault, body);          
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
-                              &byteArrayBody(t, name, 0)) == 0)
+                              &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
@@ -1495,7 +1495,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
               singletonObject(t, pool, s.read2() - 1));
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>
                               ("RuntimeVisibleAnnotations"),
-                              &byteArrayBody(t, name, 0)) == 0)
+                              &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
