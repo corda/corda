@@ -974,11 +974,9 @@ handleException(LPEXCEPTION_POINTERS e)
 
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;
+    } else if (system->crashDumpDirectory) {
+      dump(e, system->crashDumpDirectory);
     }
-  }
-
-  if (system->crashDumpDirectory) {
-    dump(e, system->crashDumpDirectory);
   }
 
   return EXCEPTION_CONTINUE_SEARCH;
