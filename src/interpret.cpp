@@ -2772,8 +2772,7 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
       
     case 'J':
     case 'D':
-      pushLong(t, cast<int64_t>(objectArrayBody(t, a, index++),
-                                BytesPerWord));
+      pushLong(t, cast<int64_t>(objectArrayBody(t, a, index++), 8));
       break;
 
     default:

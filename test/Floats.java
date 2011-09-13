@@ -83,7 +83,25 @@ public class Floats {
     }
   }
 
-  public static void main(String[] args) {
+  public static class Rectangle {
+    public double x;
+    public double y;
+    public double width;
+    public double height;
+
+    public void setX(double x) {
+      this.x = x;
+    }
+  }
+
+  public static void main(String[] args) throws Exception {
+    expect(new Double(42.0) == 42.0);
+
+    { Rectangle r = new Rectangle();
+      Rectangle.class.getMethod("setX", double.class).invoke(r, 42.0);
+      expect(r.x == 42.0);
+    }
+
     { double input[] = new double[8];
       double left[] = new double[8];
       double right[] = new double[8];

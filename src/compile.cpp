@@ -8033,8 +8033,7 @@ class ArgumentList {
       
       case 'J':
       case 'D':
-        addLong(cast<int64_t>(objectArrayBody(t, arguments, index++),
-                              BytesPerWord));
+        addLong(cast<int64_t>(objectArrayBody(t, arguments, index++), 8));
         break;
 
       default:

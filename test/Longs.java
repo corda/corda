@@ -65,8 +65,24 @@ public class Longs {
     return x >>> 32;
   }
 
+  public static class Rectangle {
+    public long x;
+    public long y;
+    public long width;
+    public long height;
+
+    public void setX(long x) {
+      this.x = x;
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     expect(volatileLong == getConstant());
+
+    { Rectangle r = new Rectangle();
+      Rectangle.class.getMethod("setX", long.class).invoke(r, 42L);
+      expect(r.x == 42L);
+    }
 
     { long a = 0x1FFFFFFFFL;
       long b = -1;
