@@ -346,14 +346,15 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
   #ifdef PLATFORM_WINDOWS
 
     LARGE_INTEGER fileSize;
-    HANDLE file = CreateFileW((wchar_t *)e->GetStringChars(path, 0), FILE_READ_DATA, FILE_SHARE_READ, 0,
-                              OPEN_EXISTING, 0, 0);
-    e->ReleaseStringChars(path, 0);
+    string_t chars = getChars(e, path);
+    HANDLE file = CreateFileW
+      (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    releaseChars(e, path, chars);
     if (file != INVALID_HANDLE_VALUE)
       GetFileSizeEx(file, &fileSize);
-    else return -1;
+    else return 0;
     CloseHandle(file);
-    return (jlong)fileSize.QuadPart;
+    return static_cast<jlong>(fileSize.QuadPart);
 
   #else
 

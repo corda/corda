@@ -10,6 +10,9 @@ public class Zip {
     for (File file: directory.listFiles()) {
       if (file.isFile()) {
         if (file.getName().endsWith(".jar")) {
+          System.out.println
+            ("found " + file.getAbsolutePath() + " length " + file.length());
+
           return file.getAbsolutePath();
         }
       } else if (file.isDirectory()) {
