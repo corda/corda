@@ -18,7 +18,7 @@ typedef unsigned char uint8_t;
 
 #ifdef BOOT_JAVAHOME
 
-#if (defined __MINGW32__) || (defined _MSC_VER)
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define EXPORT __declspec(dllexport)
 #  define SYMBOL(x) binary_javahome_jar_##x
 #else

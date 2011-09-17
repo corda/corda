@@ -985,11 +985,12 @@ ifeq ($(platform),windows)
 		< "$(openjdk-src)/windows/native/java/net/net_util_md.h" \
 		> $(build)/openjdk/net_util_md.h
 	sed \
-		-e 's/IpPrefix/hide_IpPrefix/' \
-		-e 's/IpSuffix/hide_IpSuffix/' \
-		-e 's/IpDad/hide_IpDad/' \
-		-e 's/ScopeLevel/hide_ScopeLevel/' \
-		-e 's/SCOPE_LEVEL/hide_SCOPE_LEVEL/' \
+		-e 's/\(^#include "net_util.h"\)/\1\n#if (defined _INC_NLDEF) || (defined _WS2DEF_)\n#define HIDE(x) hide_##x\n#else\n#define HIDE(x) x\n#define _WINSOCK2API_\n#endif/' \
+		-e 's/\(IpPrefix[a-zA-Z_]*\)/HIDE(\1)/' \
+		-e 's/\(IpSuffix[a-zA-Z_]*\)/HIDE(\1)/' \
+		-e 's/\(IpDad[a-zA-Z_]*\)/HIDE(\1)/' \
+		-e 's/\(ScopeLevel[a-zA-Z_]*\)/HIDE(\1)/' \
+		-e 's/\(SCOPE_LEVEL[a-zA-Z_]*\)/HIDE(\1)/' \
 		< "$(openjdk-src)/windows/native/java/net/NetworkInterface.h" \
 		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h

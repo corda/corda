@@ -342,15 +342,33 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 {
-  string_t chars = getChars(e, path);
-  if (chars) {
-    STRUCT_STAT s;
-    int r = STAT(chars, &s);
+
+  #ifdef PLATFORM_WINDOWS
+
+    LARGE_INTEGER fileSize;
+    string_t chars = getChars(e, path);
+    HANDLE file = CreateFileW
+      (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
     releaseChars(e, path, chars);
-    if (r == 0) {
-      return s.st_size;
+    if (file != INVALID_HANDLE_VALUE)
+      GetFileSizeEx(file, &fileSize);
+    else return 0;
+    CloseHandle(file);
+    return static_cast<jlong>(fileSize.QuadPart);
+
+  #else
+
+    string_t chars = getChars(e, path);
+    if (chars) {
+      STRUCT_STAT s;
+      int r = STAT(chars, &s);
+      releaseChars(e, path, chars);
+      if (r == 0) {
+        return s.st_size;
+      }
     }
-  }
+
+  #endif
 
   return 0;
 }
