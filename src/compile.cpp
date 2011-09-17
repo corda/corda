@@ -6500,14 +6500,6 @@ simpleFrameMapTableSize(MyThread* t, object method, object map)
   return ceiling(intArrayLength(t, map) * size, 32 + size);
 }
 
-unsigned
-codeSingletonSizeInBytes(MyThread*, unsigned codeSizeInBytes)
-{
-  unsigned count = ceiling(codeSizeInBytes, BytesPerWord);
-  unsigned size = count + singletonMaskSize(count);
-  return pad(SingletonBody + (size * BytesPerWord));
-}
-
 uint8_t*
 finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name,
        unsigned length)
@@ -8751,10 +8743,12 @@ class MyProcessor: public Processor {
       for (object p = arrayBody(t, root(t, CallTable), i);
            p; p = callNodeNext(t, p))
       {
-        table[index++] = callNodeAddress(t, p)
-          - reinterpret_cast<uintptr_t>(codeAllocator.base);
-        table[index++] = w->map()->find(callNodeTarget(t, p))
-          | (static_cast<unsigned>(callNodeFlags(t, p)) << TargetBootShift);
+        table[index++] = targetVW
+          (callNodeAddress(t, p)
+           - reinterpret_cast<uintptr_t>(codeAllocator.base));
+        table[index++] = targetVW
+          (w->map()->find(callNodeTarget(t, p))
+           | (static_cast<unsigned>(callNodeFlags(t, p)) << TargetBootShift));
       }
     }
 
@@ -9128,6 +9122,7 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 
           if (number) {
             *p = reinterpret_cast<uintptr_t>(heap + (number - 1)) | mark;
+            // fprintf(stderr, "fixup %d: %d 0x%x\n", index, static_cast<unsigned>(number), static_cast<unsigned>(*p));
           } else {
             *p = mark;
           }

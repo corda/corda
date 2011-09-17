@@ -265,7 +265,7 @@ targetFieldOffset(Thread* t, object typeMaps, object field)
 
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              uintptr_t* codeMap, const char* className,
+              target_uintptr_t* codeMap, const char* className,
               const char* methodName, const char* methodSpec, object typeMaps)
 {
   PROTECT(t, typeMaps);
@@ -678,16 +678,21 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (flat) {
       offset |= TargetBootFlatConstant;
     }
+    offset = targetVW(offset);
     memcpy(location, &offset, TargetBytesPerWord);
 
     expect(t, reinterpret_cast<intptr_t>(location)
            >= reinterpret_cast<intptr_t>(code));
 
-    markBit(codeMap, reinterpret_cast<intptr_t>(location)
-            - reinterpret_cast<intptr_t>(code));
+    targetMarkBit(codeMap, reinterpret_cast<intptr_t>(location)
+                  - reinterpret_cast<intptr_t>(code));
   }
 
   for (; methods; methods = pairSecond(t, methods)) {
+    intptr_t address = codeCompiled(t, methodCode(t, pairFirst(t, methods)));
+    reinterpret_cast<target_uintptr_t*>(address)[-1]
+      = targetVW(reinterpret_cast<target_uintptr_t*>(address)[-1]);
+
     codeCompiled(t, methodCode(t, pairFirst(t, methods)))
       -= reinterpret_cast<uintptr_t>(code);
   }
@@ -815,21 +820,21 @@ copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
 
   case Type_int16_t: {
     int16_t s; memcpy(&s, src, 2);
-    int16_t d = TARGET_V2(s);
+    int16_t d = targetV2(s);
     memcpy(dst, &d, 2);
   } break;
 
   case Type_int32_t:
   case Type_float: {
     int32_t s; memcpy(&s, src, 4);
-    int32_t d = TARGET_V4(s);
+    int32_t d = targetV4(s);
     memcpy(dst, &d, 4);
   } break;
 
   case Type_int64_t:
   case Type_double: {
     int64_t s; memcpy(&s, src, 8);
-    int64_t d = TARGET_V8(s);
+    int64_t d = targetV8(s);
     memcpy(dst, &d, 8);
   } break;
 
@@ -839,7 +844,7 @@ copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
 
   case Type_intptr_t: {
     intptr_t s; memcpy(&s, src, BytesPerWord);
-    target_intptr_t d = TARGET_VW(s);
+    target_intptr_t d = targetVW(s);
     memcpy(dst, &d, TargetBytesPerWord);
   } break;
 
@@ -946,14 +951,14 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         TypeMap* classMap = reinterpret_cast<TypeMap*>
           (&byteArrayBody(t, array, 0));
 
-        fixedSize = TARGET_V2
+        fixedSize = targetV2
           (classMap->targetFixedSizeInWords * TargetBytesPerWord);
 
         arrayElementSize = classMap->targetArrayElementSizeInBytes;
       } else if (classFixedSize(t, p) == BytesPerWord * 2
                  and classArrayElementSize(t, p) == BytesPerWord)
       {
-        fixedSize = TARGET_V2(TargetBytesPerWord * 2);
+        fixedSize = targetV2(TargetBytesPerWord * 2);
 
         arrayElementSize = TargetBytesPerWord;
       } else {
@@ -974,7 +979,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
     switch (map->kind) {
     case TypeMap::NormalKind:
       if (objectClass(t, p) == type(t, Machine::FieldType)) {
-        uint16_t offset = TARGET_V2(targetFieldOffset(t, typeMaps, p));
+        uint16_t offset = targetV2(targetFieldOffset(t, typeMaps, p));
         memcpy(dst + TargetFieldOffset, &offset, 2);
       }
       break;
@@ -983,7 +988,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
       unsigned maskSize = singletonMaskSize
         (map->targetFixedSizeInWords - 2, TargetBitsPerWord);
 
-      target_uintptr_t targetLength = TARGET_VW
+      target_uintptr_t targetLength = targetVW
         (map->targetFixedSizeInWords - 2 + maskSize);
       memcpy(dst + TargetBytesPerWord, &targetLength, TargetBytesPerWord);
 
@@ -1016,7 +1021,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
       unsigned objectMaskSize = singletonMaskSize
         (map->targetFixedSizeInWords - 2 + poolMaskSize, TargetBitsPerWord);
 
-      target_uintptr_t targetLength = TARGET_VW
+      target_uintptr_t targetLength = targetVW
         (map->targetFixedSizeInWords - 2 + poolMaskSize + objectMaskSize);
       memcpy(dst + TargetBytesPerWord, &targetLength, TargetBytesPerWord);
 
@@ -1080,7 +1085,7 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
 
     unsigned length = ceiling(objectMaskCount(map), 32);
 
-    target_uintptr_t targetLength = TARGET_VW(length);
+    target_uintptr_t targetLength = targetVW(length);
 
     memcpy(dst + TargetBytesPerWord, &targetLength, TargetBytesPerWord);
 
@@ -1143,9 +1148,9 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
         unsigned mark = heap[offset] & (~TargetPointerMask);
         unsigned value = number | (mark << TargetBootShift);
 
-        if (value) markBit(map, offset);
+        if (value) targetMarkBit(map, offset);
 
-        heap[offset] = value;
+        heap[offset] = targetVW(value);
       }
     }
 
@@ -1189,7 +1194,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
                  + TargetFixieHasMask, &hasMask, 1);
 
-          uint32_t targetSize = TARGET_V4(size);
+          uint32_t targetSize = targetV4(size);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
                  + TargetFixieSize, &targetSize, 4);
 
@@ -1255,8 +1260,8 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 }
 
 void
-updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
-                HeapMap* heapTable)
+updateConstants(Thread* t, object constants, uint8_t* code,
+                target_uintptr_t* codeMap, HeapMap* heapTable)
 {
   for (; constants; constants = tripleThird(t, constants)) {
     unsigned target = heapTable->find(tripleFirst(t, constants));
@@ -1272,6 +1277,7 @@ updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
       if (flat) {
         offset |= TargetBootFlatConstant;
       }
+      offset = targetVW(offset);
       memcpy(location, &offset, TargetBytesPerWord);
 
       expect(t, reinterpret_cast<intptr_t>(location)
@@ -1283,8 +1289,8 @@ updateConstants(Thread* t, object constants, uint8_t* code, uintptr_t* codeMap,
       //          - reinterpret_cast<intptr_t>(code)),
       //         static_cast<unsigned>(offset));
 
-      markBit(codeMap, reinterpret_cast<intptr_t>(location)
-              - reinterpret_cast<intptr_t>(code));
+      targetMarkBit(codeMap, reinterpret_cast<intptr_t>(location)
+                    - reinterpret_cast<intptr_t>(code));
     }
   }
 }
@@ -1295,6 +1301,13 @@ offset(object a, uintptr_t* b)
   return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
 }
 
+BootImage::Thunk
+targetThunk(BootImage::Thunk t)
+{
+  return BootImage::Thunk
+    (targetV4(t.start), targetV4(t.frameSavedOffset), targetV4(t.length));
+}
+
 void
 writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
                 unsigned codeCapacity, const char* className,
@@ -1302,7 +1315,7 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
-  uintptr_t* codeMap = static_cast<uintptr_t*>
+  target_uintptr_t* codeMap = static_cast<target_uintptr_t*>
     (t->m->heap->allocate(codeMapSize(codeCapacity)));
   memset(codeMap, 0, codeMapSize(codeCapacity));
 
@@ -1549,8 +1562,8 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
            (t, classLoaderMap(t, root(t, Machine::BootLoader)));
          it.hasMore();)
     {
-      bootClassTable[i++] = heapWalker->map()->find
-        (tripleSecond(t, it.next()));
+      bootClassTable[i++] = targetVW
+        (heapWalker->map()->find(tripleSecond(t, it.next())));
     }
   }
 
@@ -1565,7 +1578,8 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
            (t, classLoaderMap(t, root(t, Machine::AppLoader)));
          it.hasMore();)
     {
-      appClassTable[i++] = heapWalker->map()->find(tripleSecond(t, it.next()));
+      appClassTable[i++] = targetVW
+        (heapWalker->map()->find(tripleSecond(t, it.next())));
     }
   }
 
@@ -1575,8 +1589,9 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 
   { unsigned i = 0;
     for (HashMapIterator it(t, root(t, Machine::StringMap)); it.hasMore();) {
-      stringTable[i++] = heapWalker->map()->find
-        (jreferenceTarget(t, tripleFirst(t, it.next())));
+      stringTable[i++] = targetVW
+        (heapWalker->map()->find
+         (jreferenceTarget(t, tripleFirst(t, it.next()))));
     }
   }
 
@@ -1592,7 +1607,19 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
           image->heapSize, image->codeSize);
 
   if (true) {
-    fwrite(image, sizeof(BootImage), 1, out);
+    { BootImage targetImage;
+
+#define FIELD(name) targetImage.name = targetV4(image->name);
+#include "bootimage-fields.cpp"
+#undef FIELD
+
+#define THUNK_FIELD(name) \
+      targetImage.thunks.name = targetThunk(image->thunks.name);
+#include "bootimage-fields.cpp"
+#undef THUNK_FIELD
+
+      fwrite(&targetImage, sizeof(BootImage), 1, out);
+    }
 
     fwrite(bootClassTable, image->bootClassCount * sizeof(unsigned), 1, out);
     fwrite(appClassTable, image->appClassCount * sizeof(unsigned), 1, out);

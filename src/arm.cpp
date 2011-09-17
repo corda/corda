@@ -161,7 +161,7 @@ inline bool isInt24(target_intptr_t v) { return v == (v & 0xffffff); }
 inline bool isInt32(target_intptr_t v) { return v == static_cast<int32_t>(v); }
 inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 : 0; }
 
-inline bool isOfWidth(long long i, int size) { return static_cast<unsigned long long>(i) >> size == 0; }
+inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
 const unsigned FrameHeaderSize = 1;

@@ -11,6 +11,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#ifndef __STDC_CONSTANT_MACROS
+#  define __STDC_CONSTANT_MACROS
+#endif
+
 #include "stdlib.h"
 #include "stdarg.h"
 #include "stddef.h"

@@ -36,42 +36,16 @@ class BootImage {
 
   class ThunkCollection {
    public:
-    Thunk default_;
-    Thunk defaultVirtual;
-    Thunk native;
-    Thunk aioob;
-    Thunk stackOverflow;
-    Thunk table;
+#define THUNK_FIELD(name) Thunk name;
+#include "bootimage-fields.cpp"
+#undef THUNK_FIELD
   } PACKED;
 
   static const uint32_t Magic = 0x22377322;
 
-  uint32_t magic;
-
-  uint32_t heapSize;
-  uint32_t codeSize;
-
-  uint32_t bootClassCount;
-  uint32_t appClassCount;
-  uint32_t stringCount;
-  uint32_t callCount;
-
-  uint32_t bootLoader;
-  uint32_t appLoader;
-  uint32_t types;
-  uint32_t methodTree;
-  uint32_t methodTreeSentinal;
-  uint32_t virtualThunks;
-
-  uint32_t compileMethodCall;
-  uint32_t compileVirtualMethodCall;
-  uint32_t invokeNativeCall;
-  uint32_t throwArrayIndexOutOfBoundsCall;
-  uint32_t throwStackOverflowCall;
-
-#define THUNK(s) uint32_t s##Call;
-#include "thunks.cpp"
-#undef THUNK
+#define FIELD(name) uint32_t name;
+#include "bootimage-fields.cpp"
+#undef FIELD
 
   ThunkCollection thunks;
 } PACKED;

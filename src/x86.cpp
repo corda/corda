@@ -2947,7 +2947,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void setConstant(void* dst, uint64_t constant) {
-    target_uintptr_t v = TARGET_VW(constant);
+    target_uintptr_t v = targetVW(constant);
     memcpy(dst, &v, TargetBytesPerWord);
   }
 

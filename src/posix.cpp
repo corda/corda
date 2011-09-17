@@ -8,7 +8,9 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#define __STDC_CONSTANT_MACROS
+#ifndef __STDC_CONSTANT_MACROS
+#  define __STDC_CONSTANT_MACROS
+#endif
 
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
