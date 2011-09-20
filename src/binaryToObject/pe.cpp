@@ -207,17 +207,19 @@ writePEObject
   sectionMask |= IMAGE_SCN_MEM_READ;
 
   const char* sectionName;
-  if (writable and executable) {
-    sectionName = ".rwx";
-    sectionMask |= IMAGE_SCN_MEM_WRITE
-      | IMAGE_SCN_MEM_EXECUTE
-      | IMAGE_SCN_CNT_CODE;
-  } else if (executable) {
+  if (writable) {
+    if (executable) {
+      sectionName = ".rwx";
+      sectionMask |= IMAGE_SCN_MEM_WRITE
+        | IMAGE_SCN_MEM_EXECUTE
+        | IMAGE_SCN_CNT_CODE;
+    } else {
+      sectionName = ".data";
+      sectionMask |= IMAGE_SCN_MEM_WRITE;
+    }
+  } else {
     sectionName = ".text";
     sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-  } else {
-    sectionName = ".data";
-    sectionMask |= IMAGE_SCN_MEM_WRITE;
   }
 
   writeObject(data, size, out, startName, endName, sectionName, machine,

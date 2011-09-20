@@ -345,8 +345,10 @@ void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
                  unsigned instructionSize)
 {
-  c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
+  OffsetTask* task = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
     (c->tasks, promise, instructionOffset, instructionSize);
+
+  c->tasks = task;
 }
 
 void

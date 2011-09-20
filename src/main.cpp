@@ -211,7 +211,7 @@ main(int ac, const char** av)
 #endif
 
 #ifdef BOOT_IMAGE
-  ++ vmArgs.nOptions;
+  vmArgs.nOptions += 2;
 #endif
 
 #ifdef BOOT_BUILTINS
@@ -225,7 +225,10 @@ main(int ac, const char** av)
 
 #ifdef BOOT_IMAGE
   vmArgs.options[optionIndex++].optionString
-    = const_cast<char*>("-Davian.bootimage=" BOOT_IMAGE);
+    = const_cast<char*>("-Davian.bootimage=bootimageBin");
+
+  vmArgs.options[optionIndex++].optionString
+    = const_cast<char*>("-Davian.codeimage=codeimageBin");
 #endif
 
 #ifdef BOOT_LIBRARY

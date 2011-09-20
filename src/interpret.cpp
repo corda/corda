@@ -3083,8 +3083,8 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void boot(vm::Thread*, BootImage* image) {
-    expect(s, image == 0);
+  virtual void boot(vm::Thread*, BootImage* image, uint8_t* code) {
+    expect(s, image == 0 and code == 0);
   }
   
 

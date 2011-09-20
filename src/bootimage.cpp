@@ -265,8 +265,8 @@ targetFieldOffset(Thread* t, object typeMaps, object field)
 
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              target_uintptr_t* codeMap, const char* className,
-              const char* methodName, const char* methodSpec, object typeMaps)
+              const char* className, const char* methodName,
+              const char* methodSpec, object typeMaps)
 {
   PROTECT(t, typeMaps);
 
@@ -671,21 +671,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     uint8_t* value = reinterpret_cast<uint8_t*>(addresses->basis->value());
     expect(t, value >= code);
 
-    void* location;
-    bool flat = addresses->listener->resolve
-      (reinterpret_cast<int64_t>(code), &location);
-    target_uintptr_t offset = value - code;
-    if (flat) {
-      offset |= TargetBootFlatConstant;
-    }
-    offset = targetVW(offset);
-    memcpy(location, &offset, TargetBytesPerWord);
-
-    expect(t, reinterpret_cast<intptr_t>(location)
-           >= reinterpret_cast<intptr_t>(code));
-
-    targetMarkBit(codeMap, reinterpret_cast<intptr_t>(location)
-                  - reinterpret_cast<intptr_t>(code));
+    addresses->listener->resolve
+      (targetVW(static_cast<target_intptr_t>(value - code)), 0);
   }
 
   for (; methods; methods = pairSecond(t, methods)) {
@@ -1260,8 +1247,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 }
 
 void
-updateConstants(Thread* t, object constants, uint8_t* code,
-                target_uintptr_t* codeMap, HeapMap* heapTable)
+updateConstants(Thread* t, object constants, HeapMap* heapTable)
 {
   for (; constants; constants = tripleThird(t, constants)) {
     unsigned target = heapTable->find(tripleFirst(t, constants));
@@ -1271,26 +1257,7 @@ updateConstants(Thread* t, object constants, uint8_t* code,
            (pointerValue(t, tripleSecond(t, constants)))->listener;
          pl; pl = pl->next)
     {
-      void* location;
-      bool flat = pl->resolve(0, &location);
-      target_uintptr_t offset = target | TargetBootHeapOffset;
-      if (flat) {
-        offset |= TargetBootFlatConstant;
-      }
-      offset = targetVW(offset);
-      memcpy(location, &offset, TargetBytesPerWord);
-
-      expect(t, reinterpret_cast<intptr_t>(location)
-             >= reinterpret_cast<intptr_t>(code));
-
-      // fprintf(stderr, "mark constant %d %d\n",
-      //         static_cast<unsigned>
-      //         (reinterpret_cast<intptr_t>(location)
-      //          - reinterpret_cast<intptr_t>(code)),
-      //         static_cast<unsigned>(offset));
-
-      targetMarkBit(codeMap, reinterpret_cast<intptr_t>(location)
-                    - reinterpret_cast<intptr_t>(code));
+      pl->resolve((target - 1) * TargetBytesPerWord, 0);
     }
   }
 }
@@ -1309,15 +1276,11 @@ targetThunk(BootImage::Thunk t)
 }
 
 void
-writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
-                unsigned codeCapacity, const char* className,
+writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
+                BootImage* image, uint8_t* code, const char* className,
                 const char* methodName, const char* methodSpec)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
-
-  target_uintptr_t* codeMap = static_cast<target_uintptr_t*>
-    (t->m->heap->allocate(codeMapSize(codeCapacity)));
-  memset(codeMap, 0, codeMapSize(codeCapacity));
 
   object classPoolMap;
   object typeMaps;
@@ -1471,8 +1434,7 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
     }
 
     constants = makeCodeImage
-      (t, &zone, image, code, codeMap, className, methodName, methodSpec,
-       typeMaps);
+      (t, &zone, image, code, className, methodName, methodSpec, typeMaps);
 
     PROTECT(t, constants);
 
@@ -1549,7 +1511,7 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
   HeapWalker* heapWalker = makeHeapImage
     (t, image, heap, heapMap, HeapCapacity, constants, typeMaps);
 
-  updateConstants(t, constants, code, codeMap, heapWalker->map());
+  updateConstants(t, constants, heapWalker->map());
 
   image->bootClassCount = hashMapSize
     (t, classLoaderMap(t, root(t, Machine::BootLoader)));
@@ -1618,50 +1580,53 @@ writeBootImage2(Thread* t, FILE* out, BootImage* image, uint8_t* code,
 #include "bootimage-fields.cpp"
 #undef THUNK_FIELD
 
-      fwrite(&targetImage, sizeof(BootImage), 1, out);
+      fwrite(&targetImage, sizeof(BootImage), 1, bootimageOutput);
     }
 
-    fwrite(bootClassTable, image->bootClassCount * sizeof(unsigned), 1, out);
-    fwrite(appClassTable, image->appClassCount * sizeof(unsigned), 1, out);
-    fwrite(stringTable, image->stringCount * sizeof(unsigned), 1, out);
-    fwrite(callTable, image->callCount * sizeof(unsigned) * 2, 1, out);
+    fwrite(bootClassTable, image->bootClassCount * sizeof(unsigned), 1,
+           bootimageOutput);
+    fwrite(appClassTable, image->appClassCount * sizeof(unsigned), 1,
+           bootimageOutput);
+    fwrite(stringTable, image->stringCount * sizeof(unsigned), 1,
+           bootimageOutput);
+    fwrite(callTable, image->callCount * sizeof(unsigned) * 2, 1,
+           bootimageOutput);
 
-    unsigned offset = (image->bootClassCount * sizeof(unsigned))
+    unsigned offset = sizeof(BootImage) 
+      + (image->bootClassCount * sizeof(unsigned))
       + (image->appClassCount * sizeof(unsigned))
       + (image->stringCount * sizeof(unsigned))
       + (image->callCount * sizeof(unsigned) * 2);
 
     while (offset % TargetBytesPerWord) {
       uint8_t c = 0;
-      fwrite(&c, 1, 1, out);
+      fwrite(&c, 1, 1, bootimageOutput);
       ++ offset;
     }
 
-    fwrite
-      (heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord), 1, out);
+    fwrite(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord), 1,
+           bootimageOutput);
 
-    fwrite(heap, pad(image->heapSize, TargetBytesPerWord), 1, out);
+    fwrite(heap, pad(image->heapSize, TargetBytesPerWord), 1, bootimageOutput);
 
-    fwrite
-      (codeMap, pad(codeMapSize(image->codeSize), TargetBytesPerWord), 1, out);
-
-    fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, out);
+    fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
   }
 }
 
 uint64_t
 writeBootImage(Thread* t, uintptr_t* arguments)
 {
-  FILE* out = reinterpret_cast<FILE*>(arguments[0]);
-  BootImage* image = reinterpret_cast<BootImage*>(arguments[1]);
-  uint8_t* code = reinterpret_cast<uint8_t*>(arguments[2]);
-  unsigned codeCapacity = arguments[3];
+  FILE* bootimageOutput = reinterpret_cast<FILE*>(arguments[0]);
+  FILE* codeOutput = reinterpret_cast<FILE*>(arguments[1]);
+  BootImage* image = reinterpret_cast<BootImage*>(arguments[2]);
+  uint8_t* code = reinterpret_cast<uint8_t*>(arguments[3]);
   const char* className = reinterpret_cast<const char*>(arguments[4]);
   const char* methodName = reinterpret_cast<const char*>(arguments[5]);
   const char* methodSpec = reinterpret_cast<const char*>(arguments[6]);
 
   writeBootImage2
-    (t, out, image, code, codeCapacity, className, methodName, methodSpec);
+    (t, bootimageOutput, codeOutput, image, code, className, methodName,
+     methodSpec);
 
   return 1;
 }
@@ -1671,8 +1636,8 @@ writeBootImage(Thread* t, uintptr_t* arguments)
 int
 main(int ac, const char** av)
 {
-  if (ac < 3 or ac > 6) {
-    fprintf(stderr, "usage: %s <classpath> <output file> "
+  if (ac < 4 or ac > 7) {
+    fprintf(stderr, "usage: %s <classpath> <bootimage file> <code file>"
             "[<class name> [<method name> [<method spec>]]]\n", av[0]);
     return -1;
   }
@@ -1701,23 +1666,30 @@ main(int ac, const char** av)
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
-  FILE* output = vm::fopen(av[2], "wb");
-  if (output == 0) {
+  FILE* bootimageOutput = vm::fopen(av[2], "wb");
+  if (bootimageOutput == 0) {
     fprintf(stderr, "unable to open %s\n", av[2]);    
     return -1;
   }
 
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(output),
+  FILE* codeOutput = vm::fopen(av[3], "wb");
+  if (codeOutput == 0) {
+    fprintf(stderr, "unable to open %s\n", av[3]);    
+    return -1;
+  }
+
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(bootimageOutput),
+                            reinterpret_cast<uintptr_t>(codeOutput),
                             reinterpret_cast<uintptr_t>(&image),
                             reinterpret_cast<uintptr_t>(code),
-                            CodeCapacity,
-                            reinterpret_cast<uintptr_t>(ac > 3 ? av[3] : 0),
                             reinterpret_cast<uintptr_t>(ac > 4 ? av[4] : 0),
-                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0) };
+                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0),
+                            reinterpret_cast<uintptr_t>(ac > 6 ? av[6] : 0) };
 
   run(t, writeBootImage, arguments);
 
-  fclose(output);
+  fclose(codeOutput);
+  fclose(bootimageOutput);
 
   if (t->exception) {
     printTrace(t, t->exception);

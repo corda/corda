@@ -2208,7 +2208,7 @@ boot(Thread* t)
 
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
 
-  m->processor->boot(t, 0);
+  m->processor->boot(t, 0, 0);
 
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
@@ -2537,15 +2537,27 @@ Thread::init()
     }
 
     BootImage* image = 0;
+    uint8_t* code = 0;
     const char* imageFunctionName = findProperty(m, "avian.bootimage");
     if (imageFunctionName) {
-      void* p = m->libraries->resolve(imageFunctionName);
-      if (p) {
-        BootImage* (*function)(unsigned*);
-        memcpy(&function, &p, BytesPerWord);
+      void* imagep = m->libraries->resolve(imageFunctionName);
+      if (imagep) {
+        BootImage* (*imageFunction)(unsigned*);
+        memcpy(&imageFunction, &imagep, BytesPerWord);
 
         unsigned size;
-        image = function(&size);
+        image = imageFunction(&size);
+
+        const char* codeFunctionName = findProperty(m, "avian.codeimage");
+        if (codeFunctionName) {
+          void* codep = m->libraries->resolve(codeFunctionName);
+          if (codep) {
+            uint8_t* (*codeFunction)(unsigned*);
+            memcpy(&codeFunction, &codep, BytesPerWord);
+
+            code = codeFunction(&size);
+          }
+        }
       }
     }
 
@@ -2553,8 +2565,8 @@ Thread::init()
 
     enter(this, ActiveState);
 
-    if (image) {
-      m->processor->boot(this, image);
+    if (image and image) {
+      m->processor->boot(this, image, code);
     } else {
       boot(this);
     }

@@ -33,21 +33,33 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 #ifdef BOOT_IMAGE
 
 #if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
-#  define SYMBOL(x) binary_bootimage_bin_##x
+#  define BOOTIMAGE_SYMBOL(x) binary_bootimage_bin_##x
+#  define CODEIMAGE_SYMBOL(x) binary_codeimage_bin_##x
 #else
-#  define SYMBOL(x) _binary_bootimage_bin_##x
+#  define BOOTIMAGE_SYMBOL(x) _binary_bootimage_bin_##x
+#  define CODEIMAGE_SYMBOL(x) _binary_codeimage_bin_##x
 #endif
 
 extern "C" {
 
-  extern const uint8_t SYMBOL(start)[];
-  extern const uint8_t SYMBOL(end)[];
+  extern const uint8_t BOOTIMAGE_SYMBOL(start)[];
+  extern const uint8_t BOOTIMAGE_SYMBOL(end)[];
 
   EXPORT const uint8_t*
   bootimageBin(unsigned* size)
   {
-    *size = SYMBOL(end) - SYMBOL(start);
-    return SYMBOL(start);
+    *size = BOOTIMAGE_SYMBOL(end) - BOOTIMAGE_SYMBOL(start);
+    return BOOTIMAGE_SYMBOL(start);
+  }
+
+  extern const uint8_t CODEIMAGE_SYMBOL(start)[];
+  extern const uint8_t CODEIMAGE_SYMBOL(end)[];
+
+  EXPORT const uint8_t*
+  codeimageBin(unsigned* size)
+  {
+    *size = CODEIMAGE_SYMBOL(end) - CODEIMAGE_SYMBOL(start);
+    return CODEIMAGE_SYMBOL(start);
   }
 
 }

@@ -92,12 +92,15 @@ typedef int64_t target_intptr_t;
 
 const unsigned TargetBytesPerWord = 8;
 
-const unsigned TargetThreadTailAddress = 2272;
-const unsigned TargetThreadStackLimit = 2336;
-const unsigned TargetThreadStack = 2224;
 const unsigned TargetThreadIp = 2216;
+const unsigned TargetThreadStack = 2224;
+const unsigned TargetThreadTailAddress = 2272;
 const unsigned TargetThreadVirtualCallTarget = 2280;
 const unsigned TargetThreadVirtualCallIndex = 2288;
+const unsigned TargetThreadHeapImage = 2296;
+const unsigned TargetThreadCodeImage = 2304;
+const unsigned TargetThreadThunkTable = 2312;
+const unsigned TargetThreadStackLimit = 2360;
 
 const unsigned TargetClassFixedSize = 12;
 const unsigned TargetClassArrayElementSize = 14;
@@ -119,12 +122,15 @@ typedef int32_t target_intptr_t;
 
 const unsigned TargetBytesPerWord = 4;
 
-const unsigned TargetThreadTailAddress = 2172;
-const unsigned TargetThreadStackLimit = 2204;
-const unsigned TargetThreadStack = 2148;
 const unsigned TargetThreadIp = 2144;
+const unsigned TargetThreadStack = 2148;
+const unsigned TargetThreadTailAddress = 2172;
 const unsigned TargetThreadVirtualCallTarget = 2176;
 const unsigned TargetThreadVirtualCallIndex = 2180;
+const unsigned TargetThreadHeapImage = 2184;
+const unsigned TargetThreadCodeImage = 2188;
+const unsigned TargetThreadThunkTable = 2192;
+const unsigned TargetThreadStackLimit = 2216;
 
 const unsigned TargetClassFixedSize = 8;
 const unsigned TargetClassArrayElementSize = 10;

@@ -135,7 +135,7 @@ class Processor {
   makeCallTable(Thread* t, HeapWalker* w) = 0;
 
   virtual void
-  boot(Thread* t, BootImage* image) = 0;
+  boot(Thread* t, BootImage* image, uint8_t* code) = 0;
 
   virtual void
   callWithCurrentContinuation(Thread* t, object receiver) = 0;

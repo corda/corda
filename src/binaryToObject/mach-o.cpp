@@ -306,7 +306,7 @@ bool
 MAKE_NAME(writeMachO, BITS_PER_WORD, Object)
   (uint8_t* data, unsigned size, FILE* out, const char* startName,
    const char* endName, const char* architecture, unsigned alignment,
-   bool writable, bool)
+   bool writable, bool executable)
 {
   cpu_type_t cpuType;
   cpu_subtype_t cpuSubType;
@@ -330,8 +330,13 @@ MAKE_NAME(writeMachO, BITS_PER_WORD, Object)
   const char* segmentName;
   const char* sectionName;
   if (writable) {
-    segmentName = "__RWX";
-    sectionName = "__rwx";
+    if (executable) {
+      segmentName = "__RWX";
+      sectionName = "__rwx";
+    } else {
+      segmentName = "__DATA";
+      sectionName = "__data";
+    }
   } else {
     segmentName = "__TEXT";
     sectionName = "__text";

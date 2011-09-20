@@ -71,6 +71,20 @@ enum Root {
   RewindMethod
 };
 
+enum ThunkIndex {
+  compileMethodIndex,
+  compileVirtualMethodIndex,
+  invokeNativeIndex,
+  throwArrayIndexOutOfBoundsIndex,
+  throwStackOverflowIndex,
+
+#define THUNK(s) s##Index,
+#include "thunks.cpp"
+#undef THUNK
+
+  dummyIndex
+};
+
 const unsigned RootCount = RewindMethod + 1;
 
 inline bool
@@ -229,6 +243,9 @@ class MyThread: public Thread {
     tailAddress(0),
     virtualCallTarget(0),
     virtualCallIndex(0),
+    heapImage(0),
+    codeImage(0),
+    thunkTable(0),
     trace(0),
     reference(0),
     arch(parent
@@ -252,6 +269,9 @@ class MyThread: public Thread {
   void* tailAddress;
   void* virtualCallTarget;
   uintptr_t virtualCallIndex;
+  uintptr_t* heapImage;
+  uint8_t* codeImage;
+  void** thunkTable;
   CallTrace* trace;
   Reference* reference;
   Assembler::Architecture* arch;
@@ -1310,6 +1330,9 @@ storeLocal(Context* context, unsigned footprint, Compiler::Operand* value,
     (footprint, value, translateLocalIndex(context, footprint, index));
 }
 
+FixedAllocator*
+codeAllocator(MyThread* t);
+
 class Frame {
  public:
   enum StackType {
@@ -1356,9 +1379,8 @@ class Frame {
   }
 
   Compiler::Operand* append(object o) {
-    if (context->bootContext) {
-      BootContext* bc = context->bootContext;
-
+    BootContext* bc = context->bootContext;
+    if (bc) {
       Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
         ListenPromise(t->m->system, bc->zone);
 
@@ -1366,7 +1388,11 @@ class Frame {
       object pointer = makePointer(t, p);
       bc->constants = makeTriple(t, o, pointer, bc->constants);
 
-      return c->promiseConstant(p, Compiler::ObjectType);
+      return c->add
+        (TargetBytesPerWord, c->memory
+          (c->register_(t->arch->thread()), Compiler::AddressType,
+           TargetThreadHeapImage), c->promiseConstant
+         (p, Compiler::AddressType));
     } else {
       for (PoolElement* e = context->objectPool; e; e = e->next) {
         if (o == e->target) {
@@ -1590,7 +1616,20 @@ class Frame {
   }
 
   Compiler::Operand* addressOperand(Promise* p) {
-    return c->promiseConstant(addressPromise(p), Compiler::AddressType);
+    return c->promiseConstant(p, Compiler::AddressType);
+  }
+
+  Compiler::Operand* absoluteAddressOperand(Promise* p) {
+    return context->bootContext
+      ? c->add
+        (TargetBytesPerWord, c->memory
+         (c->register_(t->arch->thread()), Compiler::AddressType,
+          TargetThreadCodeImage), c->promiseConstant
+         (new (context->zone.allocate(sizeof(OffsetPromise)))
+          OffsetPromise
+          (p, - reinterpret_cast<intptr_t>(codeAllocator(t)->base)),
+          Compiler::AddressType))
+      : addressOperand(p);
   }
 
   Compiler::Operand* machineIp(unsigned logicalIp) {
@@ -1865,7 +1904,7 @@ class Frame {
   }
 
   unsigned startSubroutine(unsigned ip, Promise* returnAddress) {
-    pushAddress(addressOperand(returnAddress));
+    pushAddress(absoluteAddressOperand(returnAddress));
 
     Subroutine* subroutine = 0;
     for (Subroutine* s = context->subroutines; s; s = s->listNext) {
@@ -2246,9 +2285,6 @@ tryInitClass(MyThread* t, object class_)
 {
   initClass(t, class_);
 }
-
-FixedAllocator*
-codeAllocator(MyThread* t);
 
 void
 compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
@@ -3288,7 +3324,9 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
   if (useThunk
       or (TailCalls and tailCall and (methodFlags(t, target) & ACC_NATIVE)))
   {
-    flags |= Compiler::Aligned;
+    if (frame->context->bootContext == 0) {
+      flags |= Compiler::Aligned;
+    }
 
     if (TailCalls and tailCall) {
       traceFlags |= TraceElement::TailCall;
@@ -3308,7 +3346,8 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
          methodParameterFootprint(t, target));
 
       c->store
-        (TargetBytesPerWord, frame->addressOperand(returnAddressPromise),
+        (TargetBytesPerWord,
+         frame->absoluteAddressOperand(returnAddressPromise),
          TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           TargetThreadTailAddress));
@@ -5327,12 +5366,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       assert(t, defaultIp < codeLength(t, code));
 
       Compiler::Operand* default_ = frame->addressOperand
-        (c->machineIp(defaultIp));
+        (frame->addressPromise(c->machineIp(defaultIp)));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
       if (pairCount) {
-        Compiler::Operand* start = 0;
+        Promise* start = 0;
         THREAD_RUNTIME_ARRAY(t, uint32_t, ipTable, pairCount);
         for (int32_t i = 0; i < pairCount; ++i) {
           unsigned index = ip + (i * 8);
@@ -5344,19 +5383,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
           Promise* p = c->poolAppend(key);
           if (i == 0) {
-            start = frame->addressOperand(p);
+            start = p;
           }
-          c->poolAppendPromise(frame->addressPromise(c->machineIp(newIp)));
+          c->poolAppendPromise
+            (frame->addressPromise(c->machineIp(newIp)));
         }
         assert(t, start);
 
+        Compiler::Operand* address = c->call
+          (c->constant(getThunk(t, lookUpAddressThunk), Compiler::AddressType),
+           0, 0, TargetBytesPerWord, Compiler::AddressType,
+           4, key, frame->absoluteAddressOperand(start),
+           c->constant(pairCount, Compiler::IntegerType), default_);
+
         c->jmp
-          (c->call
-           (c->constant
-            (getThunk(t, lookUpAddressThunk), Compiler::AddressType),
-            0, 0, TargetBytesPerWord, Compiler::AddressType,
-            4, key, start, c->constant(pairCount, Compiler::IntegerType),
-            default_));
+          (context->bootContext ? c->add
+           (TargetBytesPerWord, c->memory
+            (c->register_(t->arch->thread()), Compiler::AddressType,
+             TargetThreadCodeImage), address)
+           : address);
 
         Compiler::State* state = c->saveState();
 
@@ -5855,7 +5900,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int32_t bottom = codeReadInt32(t, code, ip);
       int32_t top = codeReadInt32(t, code, ip);
         
-      Compiler::Operand* start = 0;
+      Promise* start = 0;
       THREAD_RUNTIME_ARRAY(t, uint32_t, ipTable, top - bottom + 1);
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         unsigned index = ip + (i * 4);
@@ -5867,7 +5912,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         Promise* p = c->poolAppendPromise
           (frame->addressPromise(c->machineIp(newIp)));
         if (i == 0) {
-          start = frame->addressOperand(p);
+          start = p;
         }
       }
       assert(t, start);
@@ -5892,10 +5937,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         = (bottom
            ? c->sub(4, c->constant(bottom, Compiler::IntegerType), key) : key);
 
+      Compiler::Operand* entry = c->memory
+        (frame->absoluteAddressOperand(start), Compiler::AddressType, 0,
+         normalizedKey, TargetBytesPerWord);
+
       c->jmp
         (c->load
-         (TargetBytesPerWord, TargetBytesPerWord, c->memory
-          (start, Compiler::AddressType, 0, normalizedKey, TargetBytesPerWord),
+         (TargetBytesPerWord, TargetBytesPerWord, context->bootContext
+          ? c->add
+          (TargetBytesPerWord, c->memory
+            (c->register_(t->arch->thread()), Compiler::AddressType,
+             TargetThreadCodeImage), entry)
+          : entry,
           TargetBytesPerWord));
 
       Compiler::State* state = c->saveState();
@@ -7105,47 +7158,7 @@ updateCall(MyThread* t, UnaryOperation op, void* returnAddress, void* target)
 }
 
 void*
-compileMethod2(MyThread* t, void* ip)
-{
-  object node = findCallNode(t, ip);
-  object target = callNodeTarget(t, node);
-
-  PROTECT(t, node);
-  PROTECT(t, target);
-
-  t->trace->targetMethod = target;
-
-  THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0);
-
-  compile(t, codeAllocator(t), 0, target);
-
-  uintptr_t address;
-  if ((methodFlags(t, target) & ACC_NATIVE)
-      and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
-  {
-    address = bootNativeThunk(t);
-  } else {
-    address = methodAddress(t, target);
-  }
-  uint8_t* updateIp = static_cast<uint8_t*>(ip);
-
-  UnaryOperation op;
-  if (callNodeFlags(t, node) & TraceElement::LongCall) {
-    if (callNodeFlags(t, node) & TraceElement::TailCall) {
-      op = AlignedLongJump;
-    } else {
-      op = AlignedLongCall;
-    }
-  } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
-    op = AlignedJump;
-  } else {
-    op = AlignedCall;
-  }
-    
-  updateCall(t, op, updateIp, reinterpret_cast<void*>(address));
-
-  return reinterpret_cast<void*>(address);
-}
+compileMethod2(MyThread* t, void* ip);
 
 uint64_t
 compileMethod(MyThread* t)
@@ -8270,7 +8283,7 @@ bool
 isThunkUnsafeStack(MyThread* t, void* ip);
 
 void
-boot(MyThread* t, BootImage* image);
+boot(MyThread* t, BootImage* image, uint8_t* code);
 
 class MyProcessor;
 
@@ -8278,7 +8291,7 @@ MyProcessor*
 processor(MyThread* t);
 
 void
-compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p);
+compileThunks(MyThread* t, Allocator* allocator);
 
 class MyProcessor: public Processor {
  public:
@@ -8312,6 +8325,9 @@ class MyProcessor: public Processor {
     allocator(allocator),
     roots(0),
     bootImage(0),
+    heapImage(0),
+    codeImage(0),
+    codeImageSize(0),
     segFaultHandler(Machine::NullPointerExceptionType,
                     Machine::NullPointerException,
                     FixedSizeOfNullPointerException),
@@ -8321,7 +8337,18 @@ class MyProcessor: public Processor {
     codeAllocator(s, 0, 0),
     callTableSize(0),
     useNativeFeatures(useNativeFeatures)
-  { }
+  {
+    thunkTable[compileMethodIndex] = voidPointer(local::compileMethod);
+    thunkTable[compileVirtualMethodIndex] = voidPointer(compileVirtualMethod);
+    thunkTable[invokeNativeIndex] = voidPointer(invokeNative);
+    thunkTable[throwArrayIndexOutOfBoundsIndex] = voidPointer
+      (throwArrayIndexOutOfBounds);
+    thunkTable[throwStackOverflowIndex] = voidPointer(throwStackOverflow);
+#define THUNK(s) thunkTable[s##Index] = voidPointer(s);
+#include "thunks.cpp"
+#undef THUNK
+    thunkTable[dummyIndex] = 0;
+  }
 
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent)
@@ -8329,7 +8356,10 @@ class MyProcessor: public Processor {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, static_cast<MyThread*>(parent),
                useNativeFeatures);
-    t->init();
+
+    t->heapImage = heapImage;
+    t->codeImage = codeImage;
+    t->thunkTable = thunkTable;
 
     if (false) {
       fprintf(stderr, "stack %d\n",
@@ -8358,6 +8388,8 @@ class MyProcessor: public Processor {
               difference(&(t->virtualCallIndex), t));
       exit(0);
     }
+
+    t->init();
 
     return t;
   }
@@ -8755,15 +8787,15 @@ class MyProcessor: public Processor {
     return table;
   }
 
-  virtual void boot(Thread* t, BootImage* image) {
+  virtual void boot(Thread* t, BootImage* image, uint8_t* code) {
     if (codeAllocator.base == 0) {
       codeAllocator.base = static_cast<uint8_t*>
         (s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
       codeAllocator.capacity = ExecutableAreaSizeInBytes;
     }
 
-    if (image) {
-      local::boot(static_cast<MyThread*>(t), image);
+    if (image and code) {
+      local::boot(static_cast<MyThread*>(t), image, code);
     } else {
       roots = makeArray(t, RootCount);
 
@@ -8777,7 +8809,7 @@ class MyProcessor: public Processor {
           root(t, MethodTreeSentinal));
     }
 
-    local::compileThunks(static_cast<MyThread*>(t), &codeAllocator, this);
+    local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
 
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
@@ -8840,6 +8872,9 @@ class MyProcessor: public Processor {
   Allocator* allocator;
   object roots;
   BootImage* bootImage;
+  uintptr_t* heapImage;
+  uint8_t* codeImage;
+  unsigned codeImageSize;
   SignalHandler segFaultHandler;
   SignalHandler divideByZeroHandler;
   FixedAllocator codeAllocator;
@@ -8847,7 +8882,56 @@ class MyProcessor: public Processor {
   ThunkCollection bootThunks;
   unsigned callTableSize;
   bool useNativeFeatures;
+  void* thunkTable[dummyIndex + 1];
 };
+
+void*
+compileMethod2(MyThread* t, void* ip)
+{
+  object node = findCallNode(t, ip);
+  object target = callNodeTarget(t, node);
+
+  PROTECT(t, node);
+  PROTECT(t, target);
+
+  t->trace->targetMethod = target;
+
+  THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0);
+
+  compile(t, codeAllocator(t), 0, target);
+
+  uintptr_t address;
+  if ((methodFlags(t, target) & ACC_NATIVE)
+      and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
+  {
+    address = bootNativeThunk(t);
+  } else {
+    address = methodAddress(t, target);
+  }
+
+  uint8_t* updateIp = static_cast<uint8_t*>(ip);
+
+  MyProcessor* p = processor(t);
+
+  if (updateIp < p->codeImage or updateIp >= p->codeImage + p->codeImageSize) {
+    UnaryOperation op;
+    if (callNodeFlags(t, node) & TraceElement::LongCall) {
+      if (callNodeFlags(t, node) & TraceElement::TailCall) {
+        op = AlignedLongJump;
+      } else {
+        op = AlignedLongCall;
+      }
+    } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
+      op = AlignedJump;
+    } else {
+      op = AlignedCall;
+    }
+
+    updateCall(t, op, updateIp, reinterpret_cast<void*>(address));
+  }
+
+  return reinterpret_cast<void*>(address);
+}
 
 bool
 isThunk(MyProcessor::ThunkCollection* thunks, void* ip)
@@ -9133,45 +9217,6 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 }
 
 void
-fixupCode(Thread* t, uintptr_t* map, unsigned size, uint8_t* code,
-          uintptr_t* heap)
-{
-  Assembler::Architecture* arch = makeArchitecture(t->m->system, false);
-  arch->acquire();
-
-  for (unsigned word = 0; word < size; ++word) {
-    uintptr_t w = map[word];
-    if (w) {
-      for (unsigned bit = 0; bit < BitsPerWord; ++bit) {
-        if (w & (static_cast<uintptr_t>(1) << bit)) {
-          unsigned index = indexOf(word, bit);
-          uintptr_t oldValue; memcpy(&oldValue, code + index, BytesPerWord);
-          uintptr_t newValue;
-          if (oldValue & BootHeapOffset) {
-            newValue = reinterpret_cast<uintptr_t>
-              (heap + (oldValue & BootMask) - 1);
-
-            // fprintf(stderr, "constant marked %d %d\n",
-            //         index, static_cast<unsigned>(oldValue));
-
-          } else {
-            newValue = reinterpret_cast<uintptr_t>
-              (code + (oldValue & BootMask));
-          }
-          if (oldValue & BootFlatConstant) {
-            memcpy(code + index, &newValue, BytesPerWord);
-          } else {
-            arch->setConstant(code + index, newValue);
-          }
-        }
-      }
-    }
-  }
-
-  arch->release();
-}
-
-void
 fixupMethods(Thread* t, object map, BootImage* image UNUSED, uint8_t* code)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
@@ -9216,7 +9261,7 @@ thunkToThunk(const BootImage::Thunk& thunk, uint8_t* base)
 }
 
 void
-fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
+findThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
   MyProcessor* p = processor(t);
   
@@ -9228,28 +9273,6 @@ fixupThunks(MyThread* t, BootImage* image, uint8_t* code)
   p->bootThunks.stackOverflow
     = thunkToThunk(image->thunks.stackOverflow, code);
   p->bootThunks.table = thunkToThunk(image->thunks.table, code);
-
-  updateCall(t, LongCall, code + image->compileMethodCall,
-             voidPointer(local::compileMethod));
-
-  updateCall(t, LongCall, code + image->compileVirtualMethodCall,
-             voidPointer(local::compileVirtualMethod));
-
-  updateCall(t, LongCall, code + image->invokeNativeCall,
-             voidPointer(invokeNative));
-
-  updateCall(t, LongCall, code + image->throwArrayIndexOutOfBoundsCall,
-             voidPointer(throwArrayIndexOutOfBounds));
-
-  updateCall(t, LongCall, code + image->throwStackOverflowCall,
-             voidPointer(throwStackOverflow));
-
-#define THUNK(s)                                                        \
-  updateCall(t, LongJump, code + image->s##Call, voidPointer(s));
-
-#include "thunks.cpp"
-
-#undef THUNK
 }
 
 void
@@ -9266,7 +9289,7 @@ fixupVirtualThunks(MyThread* t, uint8_t* code)
 }
 
 void
-boot(MyThread* t, BootImage* image)
+boot(MyThread* t, BootImage* image, uint8_t* code)
 {
   assert(t, image->magic == BootImage::Magic);
 
@@ -9277,17 +9300,20 @@ boot(MyThread* t, BootImage* image)
 
   uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
     (padWord(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
+
   unsigned heapMapSizeInWords = ceiling
     (heapMapSize(image->heapSize), BytesPerWord);
   uintptr_t* heap = heapMap + heapMapSizeInWords;
 
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+
+  t->heapImage = p->heapImage = heap;
+
   // fprintf(stderr, "heap from %p to %p\n",
   //         heap, heap + ceiling(image->heapSize, BytesPerWord));
 
-  uintptr_t* codeMap = heap + ceiling(image->heapSize, BytesPerWord);
-  unsigned codeMapSizeInWords = ceiling
-    (codeMapSize(image->codeSize), BytesPerWord);
-  uint8_t* code = reinterpret_cast<uint8_t*>(codeMap + codeMapSizeInWords);
+  t->codeImage = p->codeImage = code;
+  p->codeImageSize = image->codeSize;
 
   // fprintf(stderr, "code from %p to %p\n",
   //         code, code + image->codeSize);
@@ -9303,16 +9329,12 @@ boot(MyThread* t, BootImage* image)
   setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
   setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
 
-  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
-
   p->roots = makeArray(t, RootCount);
   
   setRoot(t, MethodTree, bootObject(heap, image->methodTree));
   setRoot(t, MethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
 
   setRoot(t, VirtualThunks, bootObject(heap, image->virtualThunks));
-
-  fixupCode(t, codeMap, codeMapSizeInWords, code, heap);
 
   syncInstructionCache(code, image->codeSize);
 
@@ -9341,7 +9363,7 @@ boot(MyThread* t, BootImage* image)
           (t, bootClassTable, image->bootClassCount,
            appClassTable, image->appClassCount, heap));
     
-  fixupThunks(t, image, code);
+  findThunks(t, image, code);
 
   fixupVirtualThunks(t, code);
 
@@ -9369,23 +9391,37 @@ thunkToThunk(const MyProcessor::Thunk& thunk, uint8_t* base)
 }
 
 void
-compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
+compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
 {
-  class ThunkContext {
-   public:
-    ThunkContext(MyThread* t, Zone* zone):
-      context(t), promise(t->m->system, zone)
-    { }
+  Assembler* a = c->assembler;
 
-    Context context;
-    ListenPromise promise;
-  };
+  if (processor(t)->bootImage) {
+    Assembler::Memory table(t->arch->thread(), TargetThreadThunkTable);
+    // use Architecture::virtualCallTarget register here as a scratch
+    // register; any register that isn't used to pass arguments would
+    // be acceptable:
+    Assembler::Register tableRegister(t->arch->virtualCallTarget());
+    a->apply(Move, TargetBytesPerWord, MemoryOperand, &table,
+             TargetBytesPerWord, RegisterOperand, &tableRegister);
+    Assembler::Memory proc(tableRegister.low, index * TargetBytesPerWord);
+    a->apply(call ? Call : Jump, TargetBytesPerWord, MemoryOperand, &proc);
+  } else {
+    Assembler::Constant proc
+      (new (c->zone.allocate(sizeof(ResolvedPromise)))
+       ResolvedPromise(reinterpret_cast<intptr_t>(t->thunkTable[index])));
 
-  Zone zone(t->m->system, t->m->heap, 1024);
+    a->apply
+      (call ? LongCall : LongJump, TargetBytesPerWord, ConstantOperand, &proc);
+  }
+}
 
-  ThunkContext defaultContext(t, &zone);
+void
+compileThunks(MyThread* t, Allocator* allocator)
+{
+  MyProcessor* p = processor(t);
 
-  { Assembler* a = defaultContext.context.assembler;
+  { Context context(t);
+    Assembler* a = context.assembler;
     
     a->saveFrame(TargetThreadStack, TargetThreadIp);
 
@@ -9394,8 +9430,7 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
   
-    Assembler::Constant proc(&(defaultContext.promise));
-    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
+    compileCall(t, &context, compileMethodIndex);
 
     a->popFrame(t->arch->alignFrameSize(1));
 
@@ -9403,12 +9438,14 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     a->apply(Jump, TargetBytesPerWord, RegisterOperand, &result);
 
     p->thunks.default_.length = a->endBlock(false)->resolve(0, 0);
+
+    p->thunks.default_.start = finish
+      (t, allocator, a, "default", p->thunks.default_.length);
   }
 
-  ThunkContext defaultVirtualContext(t, &zone);
-
-  { Assembler* a = defaultVirtualContext.context.assembler;
-
+  { Context context(t);
+    Assembler* a = context.assembler;
+    
     Assembler::Register class_(t->arch->virtualCallTarget());
     Assembler::Memory virtualCallTargetSrc
       (t->arch->stack(),
@@ -9437,21 +9474,22 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
 
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
-  
-    Assembler::Constant proc(&(defaultVirtualContext.promise));
-    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
 
+    compileCall(t, &context, compileVirtualMethodIndex);
+  
     a->popFrame(t->arch->alignFrameSize(1));
 
     Assembler::Register result(t->arch->returnLow());
     a->apply(Jump, TargetBytesPerWord, RegisterOperand, &result);
 
     p->thunks.defaultVirtual.length = a->endBlock(false)->resolve(0, 0);
+
+    p->thunks.defaultVirtual.start = finish
+      (t, allocator, a, "defaultVirtual", p->thunks.defaultVirtual.length);
   }
 
-  ThunkContext nativeContext(t, &zone);
-
-  { Assembler* a = nativeContext.context.assembler;
+  { Context context(t);
+    Assembler* a = context.assembler;
 
     a->saveFrame(TargetThreadStack, TargetThreadIp);
 
@@ -9460,19 +9498,20 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
-    Assembler::Constant proc(&(nativeContext.promise));
-    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
+    compileCall(t, &context, invokeNativeIndex);
   
     a->popFrameAndUpdateStackAndReturn
       (t->arch->alignFrameSize(1), TargetThreadStack);
 
     p->thunks.native.length = a->endBlock(false)->resolve(0, 0);
+
+    p->thunks.native.start = finish
+      (t, allocator, a, "native", p->thunks.native.length);
   }
 
-  ThunkContext aioobContext(t, &zone);
+  { Context context(t);
+    Assembler* a = context.assembler;
 
-  { Assembler* a = aioobContext.context.assembler;
-      
     a->saveFrame(TargetThreadStack, TargetThreadIp);
 
     p->thunks.aioob.frameSavedOffset = a->length();
@@ -9480,15 +9519,16 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
-    Assembler::Constant proc(&(aioobContext.promise));
-    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
+    compileCall(t, &context, throwArrayIndexOutOfBoundsIndex);
 
     p->thunks.aioob.length = a->endBlock(false)->resolve(0, 0);
+
+    p->thunks.aioob.start = finish
+      (t, allocator, a, "aioob", p->thunks.aioob.length);
   }
 
-  ThunkContext stackOverflowContext(t, &zone);
-
-  { Assembler* a = stackOverflowContext.context.assembler;
+  { Context context(t);
+    Assembler* a = context.assembler;
       
     a->saveFrame(TargetThreadStack, TargetThreadIp);
 
@@ -9497,133 +9537,69 @@ compileThunks(MyThread* t, Allocator* allocator, MyProcessor* p)
     Assembler::Register thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, RegisterOperand, &thread);
 
-    Assembler::Constant proc(&(stackOverflowContext.promise));
-    a->apply(LongCall, TargetBytesPerWord, ConstantOperand, &proc);
+    compileCall(t, &context, throwStackOverflowIndex);
 
     p->thunks.stackOverflow.length = a->endBlock(false)->resolve(0, 0);
+
+    p->thunks.stackOverflow.start = finish
+      (t, allocator, a, "stackOverflow", p->thunks.stackOverflow.length);
   }
 
-  ThunkContext tableContext(t, &zone);
+  { { Context context(t);
+      Assembler* a = context.assembler;
 
-  { Assembler* a = tableContext.context.assembler;
-  
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+      a->saveFrame(TargetThreadStack, TargetThreadIp);
 
-    p->thunks.table.frameSavedOffset = a->length();
+      p->thunks.table.frameSavedOffset = a->length();
 
-    Assembler::Constant proc(&(tableContext.promise));
-    a->apply(LongJump, TargetBytesPerWord, ConstantOperand, &proc);
+      compileCall(t, &context, dummyIndex, false);
 
-    p->thunks.table.length = a->endBlock(false)->resolve(0, 0);
-  }  
+      p->thunks.table.length = a->endBlock(false)->resolve(0, 0);
 
-  p->thunks.default_.start = finish
-    (t, allocator, defaultContext.context.assembler, "default",
-     p->thunks.default_.length);
+      p->thunks.table.start = static_cast<uint8_t*>
+        (allocator->allocate(p->thunks.table.length * ThunkCount));
+    }
+
+    uint8_t* start = p->thunks.table.start;
+
+#define THUNK(s) {                                                      \
+      Context context(t);                                               \
+      Assembler* a = context.assembler;                                 \
+                                                                        \
+      a->saveFrame(TargetThreadStack, TargetThreadIp);                  \
+                                                                        \
+      p->thunks.table.frameSavedOffset = a->length();                   \
+                                                                        \
+      compileCall(t, &context, s##Index, false);                        \
+                                                                        \
+      expect(t, a->endBlock(false)->resolve(0, 0)                       \
+             <= p->thunks.table.length);                                \
+                                                                        \
+      a->setDestination(start);                                         \
+      a->write();                                                       \
+                                                                        \
+      logCompile(t, start, p->thunks.table.length, 0, #s, 0);           \
+                                                                        \
+      start += p->thunks.table.length;                                  \
+    }
+#include "thunks.cpp"
+#undef THUNK
+  }
 
   BootImage* image = p->bootImage;
-  uint8_t* imageBase = p->codeAllocator.base;
-
-  { void* call;
-    defaultContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(compileMethod)), &call);
-
-    if (image) {
-      image->compileMethodCall = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->thunks.defaultVirtual.start = finish
-    (t, allocator, defaultVirtualContext.context.assembler, "defaultVirtual",
-     p->thunks.defaultVirtual.length);
-
-  { void* call;
-    defaultVirtualContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(compileVirtualMethod)), &call);
-
-    if (image) {
-      image->compileVirtualMethodCall
-        = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->thunks.native.start = finish
-    (t, allocator, nativeContext.context.assembler, "native",
-     p->thunks.native.length);
-
-  { void* call;
-    nativeContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(invokeNative)), &call);
-
-    if (image) {
-      image->invokeNativeCall = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->thunks.aioob.start = finish
-    (t, allocator, aioobContext.context.assembler, "aioob",
-     p->thunks.aioob.length);
-
-  { void* call;
-    aioobContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(throwArrayIndexOutOfBounds)),
-       &call);
-
-    if (image) {
-      image->throwArrayIndexOutOfBoundsCall
-        = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->thunks.stackOverflow.start = finish
-    (t, allocator, stackOverflowContext.context.assembler, "stackOverflow",
-     p->thunks.stackOverflow.length);
-
-  { void* call;
-    stackOverflowContext.promise.listener->resolve
-      (reinterpret_cast<intptr_t>(voidPointer(throwStackOverflow)),
-       &call);
-
-    if (image) {
-      image->throwStackOverflowCall
-        = static_cast<uint8_t*>(call) - imageBase;
-    }
-  }
-
-  p->thunks.table.start = static_cast<uint8_t*>
-    (allocator->allocate(p->thunks.table.length * ThunkCount));
 
   if (image) {
+    uint8_t* imageBase = p->codeAllocator.base;
+
     image->thunks.default_ = thunkToThunk(p->thunks.default_, imageBase);
-    image->thunks.defaultVirtual
-      = thunkToThunk(p->thunks.defaultVirtual, imageBase);
+    image->thunks.defaultVirtual = thunkToThunk
+      (p->thunks.defaultVirtual, imageBase);
     image->thunks.native = thunkToThunk(p->thunks.native, imageBase);
     image->thunks.aioob = thunkToThunk(p->thunks.aioob, imageBase);
-    image->thunks.stackOverflow
-      = thunkToThunk(p->thunks.stackOverflow, imageBase);
+    image->thunks.stackOverflow = thunkToThunk
+      (p->thunks.stackOverflow, imageBase);
     image->thunks.table = thunkToThunk(p->thunks.table, imageBase);
   }
-
-  logCompile(t, p->thunks.table.start, p->thunks.table.length * ThunkCount, 0,
-             "thunkTable", 0);
-
-  uint8_t* start = p->thunks.table.start;
-
-#define THUNK(s)                                                        \
-  tableContext.context.assembler->setDestination(start);                \
-  tableContext.context.assembler->write();                              \
-  start += p->thunks.table.length;                                      \
-  { void* call;                                                         \
-    tableContext.promise.listener->resolve                              \
-      (reinterpret_cast<intptr_t>(voidPointer(s)), &call);              \
-    if (image) {                                                        \
-      image->s##Call = static_cast<uint8_t*>(call) - imageBase;         \
-    }                                                                   \
-  }
-
-#include "thunks.cpp"
-
-#undef THUNK
 }
 
 MyProcessor*

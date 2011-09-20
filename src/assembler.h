@@ -199,6 +199,24 @@ class CombinedPromise: public Promise {
   Promise* high;
 };
 
+class OffsetPromise: public Promise {
+ public:
+  OffsetPromise(Promise* base, int64_t offset):
+    base(base), offset(offset)
+  { }
+
+  virtual int64_t value() {
+    return base->value() + offset;
+  }
+
+  virtual bool resolved() {
+    return base->resolved();
+  }
+
+  Promise* base;
+  int64_t offset;
+};
+
 class ListenPromise: public Promise {
  public:
   ListenPromise(System* s, Allocator* allocator):

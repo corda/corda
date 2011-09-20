@@ -381,12 +381,14 @@ MAKE_NAME(writeElf, BITS_PER_WORD, Object)
 
   const char* sectionName;
   unsigned sectionFlags = SHF_ALLOC;
-  if (writable and executable) {
-    sectionName = ".rwx";
-    sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
-  } else if (writable) {
-    sectionName = ".data";
-    sectionFlags |= SHF_WRITE;
+  if (writable) {
+    if (executable) {
+      sectionName = ".rwx";
+      sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
+    } else {
+      sectionName = ".data";
+      sectionFlags |= SHF_WRITE;
+    }
   } else if (executable) {
     sectionName = ".text";
     sectionFlags |= SHF_EXECINSTR;

@@ -564,11 +564,14 @@ bootimage-generator = $(build)/bootimage-generator
 bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
 
+codeimage-bin = $(build)/codeimage.bin
+codeimage-object = $(build)/codeimage-bin.o
+
 ifeq ($(bootimage),true)
-	vm-classpath-object = $(bootimage-object)
-	cflags += -DBOOT_IMAGE=\"bootimageBin\" -DAVIAN_CLASSPATH=\"\"
+	vm-classpath-objects = $(bootimage-object) $(codeimage-object)
+	cflags += -DBOOT_IMAGE -DAVIAN_CLASSPATH=\"\"
 else
-	vm-classpath-object = $(classpath-object)
+	vm-classpath-objects = $(classpath-object)
 	cflags += -DBOOT_CLASSPATH=\"[classpathJar]\" \
 		-DAVIAN_CLASSPATH=\"[classpathJar]\"
 endif
@@ -870,16 +873,22 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	$(ranlib) $(@)
 
 $(bootimage-bin): $(bootimage-generator)
-	$(<) $(classpath-build) $(@)
+	$(<) $(classpath-build) $(@) $(codeimage-bin)
 
 $(bootimage-object): $(bootimage-bin) $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_bootimage_bin_start \
 		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
-		writable executable
+		writable
+
+$(codeimage-object): $(bootimage-bin) $(converter)
+	@echo "creating $(@)"
+	$(converter) $(codeimage-bin) $(@) _binary_codeimage_bin_start \
+		_binary_codeimage_bin_end $(platform) $(arch) $(pointer-size) \
+		executable
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
-	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
+	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 	$(javahome-object) $(boot-javahome-object)
 
 $(executable): $(executable-objects)
@@ -930,7 +939,7 @@ else
 endif
 
 $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
-		$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-object) \
+		$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 		$(classpath-libraries) $(javahome-object) $(boot-javahome-object)
 	@echo "linking $(@)"
 ifdef msvc
