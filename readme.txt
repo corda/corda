@@ -329,8 +329,9 @@ Embedding
 The following series of commands illustrates how to produce a
 stand-alone executable out of a Java application using Avian.
 
-Note: if you are building on Cygwin, add -mno-cygwin to each of the
-compile and link commands below.
+Note: if you are building on Cygwin, prepend "x86_64-w64-mingw32-" or
+"i686-w64-mingw32-" to the ar, g++, gcc, strip, and dlltool commands
+below (e.g. x86_64-w64-mingw32-gcc).
 
 Step 1: Build Avian, create a new directory, and populate it with the
 VM object files and bootstrap classpath jar.
@@ -550,16 +551,22 @@ Step 5: Run ProGuard with stage1 as input and stage2 as output.
 (note: pass -dontusemixedcaseclassnames to ProGuard when building on
 systems with case-insensitive filesystems such as Windows and OS X)
 
-Step 6: Build the boot image.
+Step 6: Build the boot and code images.
 
- $ ../build/linux-i386-bootimage/bootimage-generator stage2 bootimage.bin
+ $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
+     bootimage.bin codeimage.bin
 
-Step 7: Make an object file out of the boot image.
+Step 7: Make an object file out of the boot and code images.
 
  $ ../build/linux-i386-bootimage/binaryToObject \
      bootimage.bin bootimage-bin.o \
      _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     linux i386 8 writable executable
+     linux i386 8 writable
+
+ $ ../build/linux-i386-bootimage/binaryToObject \
+     codeimage.bin codeimage-bin.o \
+     _binary_codeimage_bin_start _binary_codeimage_bin_end \
+     linux i386 8 executable
 
 Step 8: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
@@ -583,8 +590,10 @@ containing them.  See the previous example for instructions.
 
 #if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
+#  define CODEIMAGE_BIN(x) binary_codeimage_bin_##x
 #else
 #  define BOOTIMAGE_BIN(x) _binary_bootimage_bin_##x
+#  define CODEIMAGE_BIN(x) _binary_codeimage_bin_##x
 #endif
 
 extern "C" {
@@ -599,6 +608,16 @@ extern "C" {
     return BOOTIMAGE_BIN(start);
   }
 
+  extern const uint8_t CODEIMAGE_BIN(start)[];
+  extern const uint8_t CODEIMAGE_BIN(end)[];
+
+  EXPORT const uint8_t*
+  codeimageBin(unsigned* size)
+  {
+    *size = CODEIMAGE_BIN(end) - CODEIMAGE_BIN(start);
+    return CODEIMAGE_BIN(start);
+  }
+
 } // extern "C"
 
 int
@@ -606,7 +625,7 @@ main(int ac, const char** av)
 {
   JavaVMInitArgs vmArgs;
   vmArgs.version = JNI_VERSION_1_2;
-  vmArgs.nOptions = 1;
+  vmArgs.nOptions = 2;
   vmArgs.ignoreUnrecognized = JNI_TRUE;
 
   JavaVMOption options[vmArgs.nOptions];
@@ -614,6 +633,9 @@ main(int ac, const char** av)
 
   options[0].optionString
     = const_cast<char*>("-Davian.bootimage=bootimageBin");
+
+  options[1].optionString
+    = const_cast<char*>("-Davian.codeimage=codeimageBin");
 
   JavaVM* vm;
   void* env;
