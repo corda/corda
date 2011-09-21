@@ -8347,7 +8347,8 @@ class MyProcessor: public Processor {
 #define THUNK(s) thunkTable[s##Index] = voidPointer(s);
 #include "thunks.cpp"
 #undef THUNK
-    thunkTable[dummyIndex] = 0;
+    thunkTable[dummyIndex] = reinterpret_cast<void*>
+      (~static_cast<uintptr_t>(0));
   }
 
   virtual Thread*
@@ -9336,8 +9337,6 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   setRoot(t, VirtualThunks, bootObject(heap, image->virtualThunks));
 
-  syncInstructionCache(code, image->codeSize);
-
   { object map = makeClassMap(t, bootClassTable, image->bootClassCount, heap);
     set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
   }
@@ -9400,11 +9399,14 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
     // use Architecture::virtualCallTarget register here as a scratch
     // register; any register that isn't used to pass arguments would
     // be acceptable:
-    Assembler::Register tableRegister(t->arch->virtualCallTarget());
+    Assembler::Register scratch(t->arch->virtualCallTarget());
     a->apply(Move, TargetBytesPerWord, MemoryOperand, &table,
-             TargetBytesPerWord, RegisterOperand, &tableRegister);
-    Assembler::Memory proc(tableRegister.low, index * TargetBytesPerWord);
-    a->apply(call ? Call : Jump, TargetBytesPerWord, MemoryOperand, &proc);
+             TargetBytesPerWord, RegisterOperand, &scratch);
+    Assembler::Memory proc(scratch.low, index * TargetBytesPerWord);
+    a->apply(Move, TargetBytesPerWord, MemoryOperand, &proc,
+             TargetBytesPerWord, RegisterOperand, &scratch);
+    a->apply
+      (call ? Call : Jump, TargetBytesPerWord, RegisterOperand, &scratch);
   } else {
     Assembler::Constant proc
       (new (c->zone.allocate(sizeof(ResolvedPromise)))

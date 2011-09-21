@@ -1571,6 +1571,10 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
   if (true) {
     { BootImage targetImage;
 
+#ifdef FIELD
+#  undef FIELD
+#endif
+
 #define FIELD(name) targetImage.name = targetV4(image->name);
 #include "bootimage-fields.cpp"
 #undef FIELD
