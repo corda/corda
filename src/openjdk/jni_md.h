@@ -17,7 +17,8 @@
 #  define JNIEXPORT __declspec(dllexport)
 #  define JNICALL __stdcall
 #else // not (defined __MINGW32__) || (defined _MSC_VER)
-#  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNIEXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((used))
 #  define JNICALL
 #endif // not (defined __MINGW32__) || (defined _MSC_VER)
 

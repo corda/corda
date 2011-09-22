@@ -22,7 +22,8 @@ typedef unsigned char uint8_t;
 #  define EXPORT __declspec(dllexport)
 #  define SYMBOL(x) binary_javahome_jar_##x
 #else
-#  define EXPORT __attribute__ ((visibility("default")))
+#  define EXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((used))
 #  define SYMBOL(x) _binary_javahome_jar_##x
 #endif
 

@@ -371,7 +371,8 @@ setting the boot classpath to "[bootJar]".
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
 #else
-#  define EXPORT __attribute__ ((visibility("default")))
+#  define EXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((used))
 #endif
 
 #if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))

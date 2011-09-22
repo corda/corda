@@ -561,7 +561,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("Linux");
 #endif
     } else if (strcmp(chars, "os.version") == 0) {
-#if (defined __APPLE__) && (! defined ARCH_arm)
+#if (defined __APPLE__) && (! defined AVIAN_IOS)
       unsigned size = 32;
       char buffer[size];
 #ifdef ARCH_x86_64

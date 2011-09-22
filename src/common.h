@@ -113,7 +113,8 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
 #  define JNIEXPORT __declspec(dllexport)
 #  define PATH_SEPARATOR ';'
 #else // not PLATFORM_WINDOWS
-#  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNIEXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((used))
 #  define PATH_SEPARATOR ':'
 #endif // not PLATFORM_WINDOWS
 

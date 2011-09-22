@@ -24,7 +24,8 @@
 #else // not (defined __MINGW32__) || (defined _MSC_VER)
 #  define PLATFORM_POSIX
 #  define PATH_SEPARATOR ':'
-#  define JNIEXPORT __attribute__ ((visibility("default")))
+#  define JNIEXPORT __attribute__ ((visibility("default"))) \
+  __attribute__ ((used))
 #endif // not (defined __MINGW32__) || (defined _MSC_VER)
 
 #ifdef _MSC_VER

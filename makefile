@@ -243,7 +243,9 @@ endif
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
-	ifneq ($(build-platform),darwin)
+	ifeq ($(build-platform),darwin)
+		ios = true
+	else
 		cflags += -marm -Wno-psabi
 	endif
 
@@ -265,6 +267,9 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+ifeq ($(ios),true)
+	cflags += -DAVIAN_IOS
+endif
 
 ifeq ($(platform),linux)
 	bootimage-cflags += -DTARGET_PLATFORM_LINUX
