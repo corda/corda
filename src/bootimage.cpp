@@ -1642,7 +1642,7 @@ main(int ac, const char** av)
 {
   if (ac < 4 or ac > 7) {
     fprintf(stderr, "usage: %s <classpath> <bootimage file> <code file>"
-            "[<class name> [<method name> [<method spec>]]]\n", av[0]);
+            " [<class name> [<method name> [<method spec>]]]\n", av[0]);
     return -1;
   }
 
