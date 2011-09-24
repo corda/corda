@@ -1796,13 +1796,17 @@ class FixedAllocator: public Allocator {
     abort(s);
   }
 
-  virtual void* allocate(unsigned size) {
-    unsigned paddedSize = pad(size);
+  void* allocate(unsigned size, unsigned padAlignment) {
+    unsigned paddedSize = pad(size, padAlignment);
     expect(s, offset + paddedSize < capacity);
 
     void* p = base + offset;
     offset += paddedSize;
     return p;
+  }
+
+  virtual void* allocate(unsigned size) {
+    return allocate(size, BytesPerWord);
   }
 
   virtual void free(const void* p, unsigned size) {

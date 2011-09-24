@@ -1242,7 +1242,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
   HeapWalker* w = makeHeapWalker(t, &visitor);
   visitRoots(t, image, w, constants);
   
-  image->heapSize = visitor.position * BytesPerWord;
+  image->heapSize = visitor.position * TargetBytesPerWord;
 
   return w;
 }
