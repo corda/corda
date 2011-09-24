@@ -789,14 +789,14 @@ updateImmediate(System* s, void* dst, int32_t src, unsigned size, bool address)
   switch (size) {
   case 4: {
     int32_t* p = static_cast<int32_t*>(dst);
-    int r = (p[1] >> 21) & 31;
+    int r = (targetV4(p[1]) >> 21) & 31;
 
     if (address) {
-      p[0] = lis(r, ha16(src));
-      p[1] |= (src & 0xFFFF);
+      p[0] = targetV4(lis(r, ha16(src)));
+      p[1] |= targetV4(src & 0xFFFF);
     } else {
-      p[0] = lis(r, src >> 16);
-      p[1] = ori(r, r, src);
+      p[0] = targetV4(lis(r, src >> 16));
+      p[1] = targetV4(ori(r, r, src));
     }
   } break;
 
@@ -2074,6 +2074,10 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual uint32_t floatRegisterMask() {
     return 0;
+  }
+
+  virtual int scratch() {
+    return 31;
   }
 
   virtual int stack() {

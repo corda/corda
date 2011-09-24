@@ -329,6 +329,7 @@ class Assembler {
     virtual uint32_t generalRegisterMask() = 0;
     virtual uint32_t floatRegisterMask() = 0;
 
+    virtual int scratch() = 0;
     virtual int stack() = 0;
     virtual int thread() = 0;
     virtual int returnLow() = 0;

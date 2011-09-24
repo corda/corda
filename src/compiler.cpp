@@ -6953,14 +6953,14 @@ class MyCompiler: public Compiler {
         (c.machineCode + pad(c.machineCodeSize, TargetBytesPerWord) + i);
 
       if (n->promise->resolved()) {
-        *target = n->promise->value();
+        *target = targetVW(n->promise->value());
       } else {
         class Listener: public Promise::Listener {
          public:
           Listener(target_intptr_t* target): target(target){ }
 
           virtual bool resolve(int64_t value, void** location) {
-            *target = value;
+            *target = targetVW(value);
             if (location) *location = target;
             return true;
           }

@@ -8347,8 +8347,14 @@ class MyProcessor: public Processor {
 #define THUNK(s) thunkTable[s##Index] = voidPointer(s);
 #include "thunks.cpp"
 #undef THUNK
+    // Set the dummyIndex entry to a constant which should require the
+    // maximum number of bytes to represent in assembly code
+    // (i.e. can't be represented by a smaller number of bytes and
+    // implicitly sign- or zero-extended).  We'll use this property
+    // later to determine the maximum size of a thunk in the thunk
+    // table.
     thunkTable[dummyIndex] = reinterpret_cast<void*>
-      (~static_cast<uintptr_t>(0));
+      (static_cast<uintptr_t>(UINT64_C(0x5555555555555555)));
   }
 
   virtual Thread*
@@ -9396,10 +9402,7 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
 
   if (processor(t)->bootImage) {
     Assembler::Memory table(t->arch->thread(), TargetThreadThunkTable);
-    // use Architecture::virtualCallTarget register here as a scratch
-    // register; any register that isn't used to pass arguments would
-    // be acceptable:
-    Assembler::Register scratch(t->arch->virtualCallTarget());
+    Assembler::Register scratch(t->arch->scratch());
     a->apply(Move, TargetBytesPerWord, MemoryOperand, &table,
              TargetBytesPerWord, RegisterOperand, &scratch);
     Assembler::Memory proc(scratch.low, index * TargetBytesPerWord);
