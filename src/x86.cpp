@@ -2763,6 +2763,10 @@ class MyArchitecture: public Assembler::Architecture {
     return useSSE(&c) ? FloatRegisterMask : 0;
   }
 
+  virtual int scratch() {
+    return rax;
+  }
+
   virtual int stack() {
     return rsp;
   }

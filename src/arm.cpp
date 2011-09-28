@@ -1847,6 +1847,10 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
+  virtual int scratch() {
+    return 5;
+  }
+
   virtual int stack() {
     return StackRegister;
   }

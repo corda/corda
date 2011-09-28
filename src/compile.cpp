@@ -380,7 +380,7 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
   if (ip < start) {
     return -1;
   } else if (ip < start + static_cast<intptr_t>
-             (compiledSize(start) + BytesPerWord))
+             (compiledSize(start) + TargetBytesPerWord))
   {
     return 0;
   } else {
@@ -6554,10 +6554,11 @@ simpleFrameMapTableSize(MyThread* t, object method, object map)
 }
 
 uint8_t*
-finish(MyThread* t, Allocator* allocator, Assembler* a, const char* name,
+finish(MyThread* t, FixedAllocator* allocator, Assembler* a, const char* name,
        unsigned length)
 {
-  uint8_t* start = static_cast<uint8_t*>(allocator->allocate(pad(length)));
+  uint8_t* start = static_cast<uint8_t*>
+    (allocator->allocate(length, TargetBytesPerWord));
 
   a->setDestination(start);
   a->write();
@@ -6872,10 +6873,11 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   unsigned codeSize = c->resolve
     (allocator->base + allocator->offset + TargetBytesPerWord);
 
-  unsigned total = pad(codeSize) + pad(c->poolSize()) + TargetBytesPerWord;
+  unsigned total = pad(codeSize, TargetBytesPerWord)
+    + pad(c->poolSize(), TargetBytesPerWord) + TargetBytesPerWord;
 
   target_uintptr_t* code = static_cast<target_uintptr_t*>
-    (allocator->allocate(total));
+    (allocator->allocate(total, TargetBytesPerWord));
   code[0] = codeSize;
   uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
 
@@ -8291,7 +8293,7 @@ MyProcessor*
 processor(MyThread* t);
 
 void
-compileThunks(MyThread* t, Allocator* allocator);
+compileThunks(MyThread* t, FixedAllocator* allocator);
 
 class MyProcessor: public Processor {
  public:
@@ -8347,8 +8349,14 @@ class MyProcessor: public Processor {
 #define THUNK(s) thunkTable[s##Index] = voidPointer(s);
 #include "thunks.cpp"
 #undef THUNK
+    // Set the dummyIndex entry to a constant which should require the
+    // maximum number of bytes to represent in assembly code
+    // (i.e. can't be represented by a smaller number of bytes and
+    // implicitly sign- or zero-extended).  We'll use this property
+    // later to determine the maximum size of a thunk in the thunk
+    // table.
     thunkTable[dummyIndex] = reinterpret_cast<void*>
-      (~static_cast<uintptr_t>(0));
+      (static_cast<uintptr_t>(UINT64_C(0x5555555555555555)));
   }
 
   virtual Thread*
@@ -9396,10 +9404,7 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
 
   if (processor(t)->bootImage) {
     Assembler::Memory table(t->arch->thread(), TargetThreadThunkTable);
-    // use Architecture::virtualCallTarget register here as a scratch
-    // register; any register that isn't used to pass arguments would
-    // be acceptable:
-    Assembler::Register scratch(t->arch->virtualCallTarget());
+    Assembler::Register scratch(t->arch->scratch());
     a->apply(Move, TargetBytesPerWord, MemoryOperand, &table,
              TargetBytesPerWord, RegisterOperand, &scratch);
     Assembler::Memory proc(scratch.low, index * TargetBytesPerWord);
@@ -9418,7 +9423,7 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
 }
 
 void
-compileThunks(MyThread* t, Allocator* allocator)
+compileThunks(MyThread* t, FixedAllocator* allocator)
 {
   MyProcessor* p = processor(t);
 
@@ -9559,7 +9564,8 @@ compileThunks(MyThread* t, Allocator* allocator)
       p->thunks.table.length = a->endBlock(false)->resolve(0, 0);
 
       p->thunks.table.start = static_cast<uint8_t*>
-        (allocator->allocate(p->thunks.table.length * ThunkCount));
+        (allocator->allocate
+         (p->thunks.table.length * ThunkCount, TargetBytesPerWord));
     }
 
     uint8_t* start = p->thunks.table.start;
@@ -9678,7 +9684,8 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   *size = a->endBlock(false)->resolve(0, 0);
 
-  uint8_t* start = static_cast<uint8_t*>(codeAllocator(t)->allocate(*size));
+  uint8_t* start = static_cast<uint8_t*>
+    (codeAllocator(t)->allocate(*size, TargetBytesPerWord));
 
   a->setDestination(start);
   a->write();

@@ -496,8 +496,10 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             }
 
             if (fieldFlags(t, field) & ACC_STATIC) {
-              while (targetStaticOffset % targetSize) {
-                ++ targetStaticOffset;
+              unsigned excess = (targetStaticOffset % targetSize)
+                % TargetBytesPerWord;
+              if (excess) {
+                targetStaticOffset += TargetBytesPerWord - excess;
               }
 
               buildStaticOffset = fieldOffset(t, field);
@@ -672,7 +674,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     expect(t, value >= code);
 
     addresses->listener->resolve
-      (targetVW(static_cast<target_intptr_t>(value - code)), 0);
+      (static_cast<target_intptr_t>(value - code), 0);
   }
 
   for (; methods; methods = pairSecond(t, methods)) {
@@ -987,7 +989,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         if (field->type == Type_object) {
           unsigned offset = field->targetOffset / TargetBytesPerWord;
           reinterpret_cast<uint32_t*>(mask)[offset / 32]
-            |= static_cast<uint32_t>(1) << (offset % 32);
+            |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
         }
       }
 
@@ -1027,14 +1029,15 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         switch (field->type) {
         case Type_object:
           reinterpret_cast<uint32_t*>(objectMask)[i / 32]
-            |= static_cast<uint32_t>(1) << (i % 32);
+            |= targetV4(static_cast<uint32_t>(1) << (i % 32));
           break;
 
         case Type_float:
         case Type_double:
           reinterpret_cast<target_uintptr_t*>(poolMask)
             [i / TargetBitsPerWord]
-            |= static_cast<target_uintptr_t>(1) << (i % TargetBitsPerWord);
+            |= targetVW
+            (static_cast<target_uintptr_t>(1) << (i % TargetBitsPerWord));
           break;
 
         default:
@@ -1083,7 +1086,7 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
       if (field->type == Type_object) {
         unsigned offset = field->targetOffset / TargetBytesPerWord;
         reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))
-          [offset / 32] |= static_cast<uint32_t>(1) << (offset % 32);
+          [offset / 32] |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
       }
     }
 
@@ -1092,7 +1095,7 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
     {
       unsigned offset = map->targetFixedSizeInWords;
       reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))
-        [offset / 32] |= static_cast<uint32_t>(1) << (offset % 32);
+        [offset / 32] |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
     }
   } else {
     copy(t, typeMaps, p, dst);
@@ -1241,7 +1244,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
   HeapWalker* w = makeHeapWalker(t, &visitor);
   visitRoots(t, image, w, constants);
   
-  image->heapSize = visitor.position * BytesPerWord;
+  image->heapSize = visitor.position * TargetBytesPerWord;
 
   return w;
 }
@@ -1642,7 +1645,7 @@ main(int ac, const char** av)
 {
   if (ac < 4 or ac > 7) {
     fprintf(stderr, "usage: %s <classpath> <bootimage file> <code file>"
-            "[<class name> [<method name> [<method spec>]]]\n", av[0]);
+            " [<class name> [<method name> [<method spec>]]]\n", av[0]);
     return -1;
   }
 
