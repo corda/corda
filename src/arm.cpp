@@ -156,12 +156,12 @@ inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm
 inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); } 
 inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); } 
 inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); } 
-inline int fldms(int Rn, int Sd, int n) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); }
-inline int fldmd(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, offset<<1); }
-inline int fldmx(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, offset<<1|1); }
-inline int fstms(int Rn, int Sd, int n) { return COXFER(AL, 0, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, offset); }
-inline int fstmd(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, offset<<1); }
-inline int fstmx(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, offset<<1|1); }
+inline int fldms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, count); }
+inline int fldmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1); }
+inline int fldmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1|1); }
+inline int fstms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, count); }
+inline int fstmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1); }
+inline int fstmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1|1); }
 inline int flds(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); };
 inline int fldd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset); };
 inline int fsts(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, offset); };
