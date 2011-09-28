@@ -21,6 +21,10 @@ using namespace vm;
 namespace {
 
 namespace isa {
+// SYSTEM REGISTERS
+const int FPSID = 0x0;
+const int FPSCR = 0x1;
+const int FPEXC = 0x8;
 // INSTRUCTION OPTIONS
 enum CONDITION { EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV };
 enum SHIFTOP { LSL, LSR, ASR, ROR };
@@ -51,6 +55,14 @@ inline int SWI(int cond, int imm)
 { return cond<<28 | 0x0f<<24 | (imm&0xffffff); }
 inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
 { return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
+inline int COOP(int cond, int opcode_1, int CRn, int CRd, int cp_num, int opcode_2, int CRm)
+{ return cond<<28 | 0xe<<24 | opcode_1<<20 | CRn<<16 | CRd<<12 | cp_num<<8 | opcode_2<<5 | CRm; }
+inline int COXFER(int cond, int P, int U, int N, int W, int L, int Rn, int CRd, int cp_num, int offset)
+{ return cond<<28 | 0x6<<25 | P<<24 | U<<23 | N<<22 | W<<21 | L<<20 | Rn<<16 | CRd<<12 | cp_num<<8 | (offset&0xff); }
+inline int COREG(int cond, int opcode_1, int L, int CRn, int Rd, int cp_num, int opcode_2, int CRm)
+{ return cond<<28 | 0xe<<24 | opcode_1<<21 | L<<20 | CRn<<16 | Rd<<12 | cp_num<<8 | opcode_2<<5 | 1<<4 | CRm; }
+inline int COREG2(int cond, int L, int Rn, int Rd, int cp_num, int opcode, int CRm)
+{ return cond<<28 | 0xc4<<20 | L<<20 | Rn<<16 | Rd<<12 | cp_num<<8 | opcode<<4 | CRm;}
 // FIELD CALCULATORS
 inline int calcU(int imm) { return imm >= 0 ? 1 : 0; }
 // INSTRUCTIONS
@@ -115,6 +127,58 @@ inline int ldmfd(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 1, 1, Rn, rl
 inline int stmfd(int Rn, int rlist) { return BLOCKXFER(AL, 1, 0, 0, 1, 0, Rn, rlist); }
 inline int swp(int Rd, int Rm, int Rn) { return SWAP(AL, 0, Rn, Rd, Rm); }
 inline int swpb(int Rd, int Rm, int Rn) { return SWAP(AL, 1, Rn, Rd, Rm); }
+// COPROCESSOR INSTRUCTIONS
+inline int cdp(int coproc, int opcode_1, int CRd, int CRn, int CRm, int opcode_2) { return COOP(AL, opcode_1, CRn, CRd, coproc, opcode_2, CRm); }
+inline int mcr(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 0, CRn, Rd, coproc, opcode_2, CRm); }
+inline int mcrr(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 0, Rn, Rd, coproc, opcode, CRm); }
+inline int mrc(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 1, CRn, Rd, coproc, opcode_2, CRm); }
+inline int mrrc(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 1, Rn, Rd, coproc, opcode, CRm); }
+inline int ldc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 1, Rn, CRd, coproc, offset); }
+inline int ldcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 1, Rn, CRd, coproc, offset); }
+inline int stc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 0, Rn, CRd, coproc, offset); }
+inline int stcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 0, Rn, CRd, coproc, offset); }
+// VFP FLOATING-POINT INSTRUCTIONS
+inline int fmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fadds(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fsubs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fdivs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|8, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 0, Dm); }
+inline int fnmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 2, Dm); } 
+inline int fmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 0, Dm); } 
+inline int fnmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 2, Dm); } 
+inline int fmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 0, Dm); } 
+inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm); } 
+inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); } 
+inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); } 
+inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); } 
+inline int fldms(int Rn, int Sd, int n) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); }
+inline int fldmd(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, offset<<1); }
+inline int fldmx(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, offset<<1|1); }
+inline int fstms(int Rn, int Sd, int n) { return COXFER(AL, 0, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, offset); }
+inline int fstmd(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, offset<<1); }
+inline int fstmx(int Rn, int Dd, int n) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, offset<<1|1); }
+inline int flds(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); };
+inline int fldd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset); };
+inline int fsts(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, offset); };
+inline int fstd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 0, Rn, Dd, 11, offset); };
+inline int fmsr(int Sn, int Rd) { return mcr(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
+inline int fmrs(int Rd, int Sn) { return mrc(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
+inline int fmdlr(int Dn, int Rd) { return mcr(11, 0, Rd, Dn, 0); }
+inline int fmrdl(int Rd, int Dn) { return mrc(11, 0, Rd, Dn, 0); }
+inline int fmdhr(int Dn, int Rd) { return mcr(11, 1, Rd, Dn, 0); }
+inline int fmrdh(int Rd, int Dn) { return mrc(11, 1, Rd, Dn, 0); }
+inline int fmxr(int reg, int Rd) { return mcr(10, 7, Rd, reg, 0); }
+inline int fmrx(int Rd, int reg) { return mrc(10, 7, Rd, reg, 0); }
+inline int fmsrr(int Sm, int Rd, int Rn) { return mcrr(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
+inline int fmrrs(int Rd, int Rn, int Sm) { return mrrc(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
+inline int fmdrr(int Dm, int Rd, int Rn) { return mcrr(11, 1, Rd, Rn, Dm); }
+inline int fmrrd(int Rd, int Rn, int Dm) { return mrrc(11, 1, Rd, Rn, Dm); }
+// FLAG SETTERS
 inline int SETCOND(int ins, int cond) { return ((ins&0x0fffffff) | (cond<<28)); }
 inline int SETS(int ins) { return ins | 1<<20; }
 // PSEUDO-INSTRUCTIONS
