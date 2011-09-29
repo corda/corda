@@ -1002,6 +1002,20 @@ void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   }
 }
 
+void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) {
+    emit(con, fmdrr(0, a->low, a->high));
+    emit(con, fmdrr(1, b->low, b->high));
+    emit(con, fmuld(0, 0, 1));
+    emit(con, fmrrd(t->low, t->high, 0));
+  } else {
+    emit(con, fmsr(0, a->low));
+    emit(con, fmsr(1, b->low));
+    emit(con, fmuls(0, 0, 1));
+    emit(con, fmrs(t->low, 0));
+  }
+}
+
 int
 normalize(Context* c, int offset, int index, unsigned scale, 
           bool* preserveIndex, bool* release)
@@ -1807,6 +1821,8 @@ populateTables(ArchitectureContext* c)
 
   to[index(c, Multiply, R)] = CAST3(multiplyR);
 
+  to[index(c, FloatMultiply, R)] = CAST3(floatMultiplyR);
+
   to[index(c, ShiftLeft, R)] = CAST3(shiftLeftR);
   to[index(c, ShiftLeft, C)] = CAST3(shiftLeftC);
 
@@ -2137,6 +2153,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Or:
     case Xor:
     case Multiply:
+    case FloatMultiply:
       *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       break;
 
@@ -2144,7 +2161,6 @@ class MyArchitecture: public Assembler::Architecture {
     case Remainder:
     case FloatAdd:
     case FloatSubtract:
-    case FloatMultiply:
     case FloatDivide:
     case FloatRemainder:
     case JumpIfFloatEqual:
