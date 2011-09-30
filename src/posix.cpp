@@ -772,13 +772,22 @@ class MySystem: public System {
   }
 
   virtual FileType stat(const char* name, unsigned* length) {
-    struct stat s;
-    int r = ::stat(name, &s);
+    // Ugly Hack Alert: It seems that the Apple iOS Simulator's stat
+    // implementation writes beyond the end of the struct stat we pass
+    // it, which can clobber unrelated parts of the stack.  Perhaps
+    // this is due to some kind of header/library mismatch, but I've
+    // been unable to track it down so far.  The workaround is to give
+    // it 8 words more than it should need, where 8 is a number I just
+    // made up and seems to work.
+    void* array[ceiling(sizeof(struct stat), sizeof(void*)) + 8];
+    struct stat* s = reinterpret_cast<struct stat*>(array);
+
+    int r = ::stat(name, s);
     if (r == 0) {
-      if (S_ISREG(s.st_mode)) {
-        *length = s.st_size;
+      if (S_ISREG(s->st_mode)) {
+        *length = s->st_size;
         return TypeFile;
-      } else if (S_ISDIR(s.st_mode)) {
+      } else if (S_ISDIR(s->st_mode)) {
         *length = 0;
         return TypeDirectory;
       } else {
