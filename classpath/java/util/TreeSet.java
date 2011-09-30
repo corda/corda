@@ -41,6 +41,18 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
       add(item);
     }
   }
+
+  public T first() {
+    if (isEmpty()) throw new NoSuchElementException();
+
+    return set.first().value().value;
+  }
+
+  public T last() {
+    if (isEmpty()) throw new NoSuchElementException();
+
+    return set.last().value().value;
+  }
   
   public Iterator<T> iterator() {
     return new MyIterator<T>(set.first());
