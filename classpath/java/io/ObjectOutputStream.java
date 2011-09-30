@@ -39,7 +39,7 @@ public class ObjectOutputStream extends OutputStream {
   }
 
   public void writeObject(Object o) throws IOException {
-    writeObject(o, new IdentityHashMap(), 0);
+    writeObject(o, new IdentityHashMap(), new int[] {0});
   }
 
   public void writeBoolean(boolean v) {
@@ -87,7 +87,7 @@ public class ObjectOutputStream extends OutputStream {
   }
   
   private void writeObject(Object o, IdentityHashMap<Object, Integer> map,
-                           int nextId)
+                           int[] nextId)
     throws IOException
   {
     if (o == null) {
@@ -95,7 +95,7 @@ public class ObjectOutputStream extends OutputStream {
     } else {
       Integer id = map.get(o);
       if (id == null) {
-        map.put(o, nextId);
+        map.put(o, nextId[0]);
 
         Class c = o.getClass();
         if (c.isArray()) {
@@ -113,7 +113,7 @@ public class ObjectOutputStream extends OutputStream {
   }
 
   private void serializeArray(Object o, IdentityHashMap<Object, Integer> map,
-                              int nextId)
+                              int[] nextId)
     throws IOException
   {
     Class c = o.getClass();
@@ -121,7 +121,7 @@ public class ObjectOutputStream extends OutputStream {
     int length = Array.getLength(o);
 
     out.print("a(");
-    out.print(nextId++);
+    out.print(nextId[0]++);
     out.print(" ");
     out.print(c.getName());
     out.print(" ");
@@ -155,17 +155,17 @@ public class ObjectOutputStream extends OutputStream {
   }
   
   private void serializeObject(Object o, IdentityHashMap<Object, Integer> map,
-                               int nextId)
+                               int[] nextId)
     throws IOException
   {
     Class c = o.getClass();
 
     out.print("l(");
-    out.print(nextId++);
+    out.print(nextId[0]++);
     out.print(" ");
     out.print(c.getName());
 
-    for (Field f: c.getFields()) {
+    for (Field f: c.getAllFields()) {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
         out.print(" ");

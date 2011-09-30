@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Avian Contributors
+/* Copyright (c) 2010-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -355,7 +355,7 @@ class MyClasspath : public Classpath {
 
   MyClasspath(System* s, Allocator* allocator, const char* javaHome,
               const char* embedPrefix):
-    allocator(allocator), ranNetOnLoad(0)
+    allocator(allocator), ranNetOnLoad(0), ranManagementOnLoad(0)
   {
     class StringBuilder {
      public:
@@ -613,6 +613,7 @@ class MyClasspath : public Classpath {
   unsigned zipEntryCsizeField;
   unsigned zipEntryMethodField;
   bool ranNetOnLoad;
+  bool ranManagementOnLoad;
   char buffer[BufferSize];
   JmmInterface jmmInterface;
 };
@@ -1615,6 +1616,9 @@ getBootstrapResources(Thread* t, object, uintptr_t* arguments)
 extern "C" JNIEXPORT jint JNICALL
 net_JNI_OnLoad(JavaVM*, void*);
 
+extern "C" JNIEXPORT jint JNICALL
+management_JNI_OnLoad(JavaVM*, void*);
+
 void JNICALL
 loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
@@ -1643,6 +1647,23 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       }
 
       return;
+    } else if (strcmp(n, "management") == 0) { 
+      bool ran;
+
+      { ACQUIRE(t, t->m->classLock);
+
+        local::MyClasspath* c = static_cast<local::MyClasspath*>
+          (t->m->classpath);
+
+        ran = c->ranManagementOnLoad;
+        c->ranManagementOnLoad = true;
+      }
+
+      if (not ran) {
+        management_JNI_OnLoad(t->m, 0);
+      }
+
+      return;     
     } else if (strcmp(n, "zip") == 0
                or strcmp(n, "nio") == 0)
     {
@@ -2628,6 +2649,16 @@ Avian_sun_misc_Unsafe_putByte__JB
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putShort__JS
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int16_t v = arguments[3];
+
+  *reinterpret_cast<int16_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_putLong__JJ
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2663,6 +2694,15 @@ Avian_sun_misc_Unsafe_getInt__J
   int64_t p; memcpy(&p, arguments + 1, 8);
 
   return *reinterpret_cast<int32_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLong__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int64_t*>(p);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -5099,6 +5139,27 @@ GetVersion(Thread*)
   return JMM_VERSION_1_0;
 }
 
+uint64_t
+getInputArgumentArray(Thread* t, uintptr_t*)
+{
+  object array = makeObjectArray
+    (t, type(t, Machine::StringType), t->m->argumentCount);
+  PROTECT(t, array);
+
+  for (unsigned i = 0; i < t->m->argumentCount; ++i) {
+    object argument = makeString(t, t->m->arguments[i]);
+    set(t, array, ArrayBody + (i * BytesPerWord), argument);
+  }
+
+  return reinterpret_cast<uintptr_t>(makeLocalReference(t, array));
+}
+
+jobjectArray JNICALL
+GetInputArgumentArray(Thread* t)
+{
+  return reinterpret_cast<jobjectArray>(run(t, getInputArgumentArray, 0));
+}
+
 jint JNICALL  
 GetOptionalSupport(Thread*, jmmOptionalSupport* support)
 {
@@ -5184,6 +5245,7 @@ EXPORT(JVM_GetManagement)(jint version)
     interface->GetBoolAttribute = GetBoolAttribute;
     interface->GetMemoryManagers = GetMemoryManagers;
     interface->GetMemoryPools = GetMemoryPools;
+    interface->GetInputArgumentArray = GetInputArgumentArray;
 
     return interface; 
   } else {

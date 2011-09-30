@@ -1,4 +1,4 @@
-/* Copyright (c) 2010, Avian Contributors
+/* Copyright (c) 2010-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -552,6 +552,15 @@ Avian_java_lang_Thread_interrupt
   int64_t peer; memcpy(&peer, arguments, 8);
 
   interrupt(t, reinterpret_cast<Thread*>(peer));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Thread_interrupted
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t peer; memcpy(&peer, arguments, 8);
+
+  return getAndClearInterrupted(t, reinterpret_cast<Thread*>(peer));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

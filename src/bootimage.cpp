@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -23,7 +23,7 @@ using namespace vm;
 
 namespace {
 
-const unsigned HeapCapacity = 128 * 1024 * 1024;
+const unsigned HeapCapacity = 256 * 1024 * 1024;
 
 // Notes on immutable references in the heap image:
 //
@@ -572,7 +572,7 @@ main(int ac, const char** av)
   p->initialize(&image, code, CodeCapacity);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
-    (s, h, f, 0, p, c, 0, 0);
+    (s, h, f, 0, p, c, 0, 0, 0, 0);
   Thread* t = p->makeThread(m, 0, 0);
   
   enter(t, Thread::ActiveState);

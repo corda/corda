@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -98,6 +98,16 @@ class MySystem: public System {
         int r UNUSED = SetEvent(event);
         assert(s, r != 0);
       }
+    }
+
+    virtual bool getAndClearInterrupted() {
+      ACQUIRE(s, mutex);
+
+      bool interrupted = r->interrupted();
+
+      r->setInterrupted(false);
+
+      return interrupted;
     }
 
     virtual void join() {
@@ -237,7 +247,16 @@ class MySystem: public System {
       }
     }
 
-    virtual bool wait(System::Thread* context, int64_t time) {
+    virtual void wait(System::Thread* context, int64_t time) {
+      wait(context, time, false);
+    }
+
+    virtual bool waitAndClearInterrupted(System::Thread* context, int64_t time)
+    {
+      return wait(context, time, true);
+    }
+
+    bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
       Thread* t = static_cast<Thread*>(context);
       assert(s, t);
 
@@ -252,7 +271,9 @@ class MySystem: public System {
         { ACQUIRE(s, t->mutex);
       
           if (t->r->interrupted()) {
-            t->r->setInterrupted(false);
+            if (clearInterrupted) {
+              t->r->setInterrupted(false);
+            }
             return true;
           }
 
@@ -284,7 +305,7 @@ class MySystem: public System {
           t->flags = 0;
 
           interrupted = t->r->interrupted();
-          if (interrupted) {
+          if (interrupted and clearInterrupted) {
             t->r->setInterrupted(false);
           }
         }
@@ -752,6 +773,20 @@ class MySystem: public System {
     return SO_SUFFIX;
   }
 
+  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+    if (strncmp(name, "//", 2) == 0
+        or strncmp(name, "\\\\", 2) == 0
+        or strncmp(name + 1, ":/", 2) == 0
+        or strncmp(name + 1, ":\\", 2) == 0)
+    {
+      return copy(allocator, name);
+    } else {
+      TCHAR buffer[MAX_PATH];
+      GetCurrentDirectory(MAX_PATH, buffer);
+      return append(allocator, buffer, "\\", name);
+    }
+  }
+
   virtual Status load(System::Library** lib,
                       const char* name)
   {
@@ -939,11 +974,9 @@ handleException(LPEXCEPTION_POINTERS e)
 
     if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;
+    } else if (system->crashDumpDirectory) {
+      dump(e, system->crashDumpDirectory);
     }
-  }
-
-  if (system->crashDumpDirectory) {
-    dump(e, system->crashDumpDirectory);
   }
 
   return EXCEPTION_CONTINUE_SEARCH;

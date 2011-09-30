@@ -10,7 +10,7 @@
 
 package java.io;
 
-public class File {
+public class File implements Serializable {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
@@ -118,6 +118,10 @@ public class File {
 
   public String getAbsolutePath() {
     return toAbsolutePath(path);
+  }
+
+  public File getAbsoluteFile() {
+    return new File(getAbsolutePath());
   }
 
   private static native long length(String path);

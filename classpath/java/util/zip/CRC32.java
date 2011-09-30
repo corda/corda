@@ -15,7 +15,7 @@ public class CRC32 {
   private static final int Width = 32;
   private static final int Top = 1 << (Width - 1);
   private static final int InitialRemainder = 0xFFFFFFFF;
-  private static final int ResultXor = 0xFFFFFFFF;
+  private static final long ResultXor = 0xFFFFFFFFL;
 
   private static final int[] table = new int[256];
 
@@ -53,7 +53,7 @@ public class CRC32 {
   }
 
   public long getValue() {
-    return reflect(remainder, Width) ^ ResultXor;
+    return (reflect(remainder, Width) ^ ResultXor) & 0xFFFFFFFFL;
   }
 
   private static int reflect(int x, int n) {

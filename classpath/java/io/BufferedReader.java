@@ -42,7 +42,14 @@ public class BufferedReader extends Reader {
       }
 
       for (int i = position; i < limit; ++i) {
-        if (buffer[i] == '\n') {
+        if(buffer[i] == '\r') {
+          sb.append(buffer, position, i - position);
+          position = i + 1;
+          if(i+1 < limit && buffer[i+1] == '\n') {
+            position = i + 2;
+          }
+          return sb.toString();
+        } else if (buffer[i] == '\n') {
           sb.append(buffer, position, i - position);
           position = i + 1;
           return sb.toString();

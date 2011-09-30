@@ -20,4 +20,8 @@ public class ProtectionDomain {
     this.codeSource = codeSource;
     this.permissions = permissions;
   }
+
+  public CodeSource getCodeSource() {
+    return codeSource;
+  }
 }

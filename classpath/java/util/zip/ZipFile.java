@@ -74,6 +74,9 @@ public class ZipFile {
   }
 
   protected ZipEntry getEntry(EntryFactory factory, String name) {
+    while (name.startsWith("/")) {
+      name = name.substring(1);
+    }
     Integer pointer = index.get(name);
     return (pointer == null ? null : factory.makeEntry(window, pointer));
   }

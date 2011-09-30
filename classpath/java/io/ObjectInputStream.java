@@ -10,6 +10,8 @@
 
 package java.io;
 
+import avian.VMClass;
+
 import java.util.HashMap;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -110,7 +112,7 @@ public class ObjectInputStream extends InputStream {
 
     StringBuilder sb = new StringBuilder();
     int c;
-    while ((c = r.read()) != -1 && ! Character.isWhitespace((char) c)) {
+    while ((c = r.read()) != -1 && ! Character.isWhitespace((char) c) && c != ')') {
       sb.append((char) c);
     }
     if (c != -1) {
@@ -149,7 +151,6 @@ public class ObjectInputStream extends InputStream {
     throws IOException, ClassNotFoundException
   {
     skipSpace(); 
-
     switch (r.read()) {
     case 'a':
       return deserializeArray(map);
@@ -160,7 +161,7 @@ public class ObjectInputStream extends InputStream {
     case 'n':
       return null;
     case 'z':
-      return (readLongToken() == 0);
+      return (readLongToken() != 0);
     case 'b':
       return (byte) readLongToken();
     case 'c':
@@ -203,7 +204,7 @@ public class ObjectInputStream extends InputStream {
     return o;
   }
 
-  private static native Object makeInstance(Class c);
+  private static native Object makeInstance(VMClass c);
 
   private Object deserializeObject(HashMap<Integer, Object> map)
     throws IOException, ClassNotFoundException
@@ -211,11 +212,11 @@ public class ObjectInputStream extends InputStream {
     read('(');
     int id = (int) readLongToken();
     Class c = Class.forName(readStringToken());
-    Object o = makeInstance(c);
+    Object o = makeInstance(c.vmClass);
 
     map.put(id, o);
-  
-    for (Field f: c.getFields()) {
+
+    for (Field f: c.getAllFields()) {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
         try {

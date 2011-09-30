@@ -98,6 +98,10 @@ public class ByteArrayOutputStream extends OutputStream {
     return array;
   }
 
+  public String toString(String encoding) throws UnsupportedEncodingException {
+    return new String(toByteArray(), encoding);
+  }
+
   private static class Cell {
     public byte[] array;
     public int offset;

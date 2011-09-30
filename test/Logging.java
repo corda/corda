@@ -49,8 +49,12 @@ public class Logging {
       StringBuilder sb = new StringBuilder();
       sb.append(r.getLoggerName());
       indent(sb, NAME_WIDTH - r.getLoggerName().length());
-      sb.append(r.getSourceMethodName());
-      indent(sb, METHOD_WIDTH - r.getSourceMethodName().length());
+      String methodName = r.getSourceMethodName();
+      if (methodName == null) {
+        methodName = "<unknown>";
+      }
+      sb.append(methodName);
+      indent(sb, METHOD_WIDTH - methodName.length());
       sb.append(r.getLevel().getName());
       indent(sb, LEVEL_WIDTH - r.getLevel().getName().length());
       sb.append(r.getMessage());

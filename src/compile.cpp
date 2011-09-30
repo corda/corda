@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -2190,6 +2190,9 @@ unwind(MyThread* t)
   object continuation;
   findUnwindTarget(t, &ip, &frame, &stack, &continuation);
 
+  t->trace->targetMethod = 0;
+  t->trace->nativeMethod = 0;
+
   transition(t, ip, stack, continuation, t->trace);
 
   vmJump(ip, frame, stack, t, 0, 0);
@@ -2263,19 +2266,34 @@ resolveMethod(Thread* t, object pair)
      findMethodInClass, Machine::NoSuchMethodErrorType);
 }
 
+bool
+methodAbstract(Thread* t, object method)
+{
+  return methodCode(t, method) == 0
+    and (methodFlags(t, method) & ACC_NATIVE) == 0;
+}
+
 int64_t
 prepareMethodForCall(MyThread* t, object target)
 {
-  if (unresolved(t, methodAddress(t, target))) {
-    PROTECT(t, target);
+  if (methodAbstract(t, target)) {
+    throwNew(t, Machine::AbstractMethodErrorType, "%s.%s%s",
+             &byteArrayBody(t, className(t, methodClass(t, target)), 0),
+             &byteArrayBody(t, methodName(t, target), 0),
+             &byteArrayBody(t, methodSpec(t, target), 0));
+  } else { 
+    if (unresolved(t, methodAddress(t, target))) {
+      PROTECT(t, target);
+      
+      compile(t, codeAllocator(t), 0, target);
+    }
 
-    compile(t, codeAllocator(t), 0, target);
-  }
+    if (methodFlags(t, target) & ACC_NATIVE) {
+      t->trace->nativeMethod = target;
+    }
 
-  if (methodFlags(t, target) & ACC_NATIVE) {
-    t->trace->nativeMethod = target;
+    return methodAddress(t, target);
   }
-  return methodAddress(t, target);
 }
 
 int64_t
@@ -2338,6 +2356,12 @@ findVirtualMethodFromReference(MyThread* t, object pair, object instance)
 
   assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
 
+  return prepareMethodForCall(t, target);
+}
+
+int64_t
+getMethodAddress(MyThread* t, object target)
+{
   return prepareMethodForCall(t, target);
 }
 
@@ -3435,6 +3459,48 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
       Compiler::AddressType,
       2, c->register_(t->arch->thread()), frame->append(pair)),
      reference, isStatic, tailCall);
+}
+
+void
+compileAbstractInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
+                      object target, bool tailCall)
+{
+  unsigned parameterFootprint = methodParameterFootprint(t, target);
+  
+  int returnCode = methodReturnCode(t, target);
+
+  unsigned rSize = resultSize(t, returnCode);
+
+  Compiler::Operand* result = frame->c->stackCall
+    (method,
+     tailCall ? Compiler::TailJump : 0,
+     frame->trace(0, 0),
+     rSize,
+     operandTypeForFieldCode(t, returnCode),
+     parameterFootprint);
+
+  frame->pop(parameterFootprint);
+
+  if (rSize) {
+    pushReturnValue(t, frame, returnCode, result);
+  }    
+}
+
+void
+compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
+                            object target, bool tailCall)
+{
+  Compiler* c = frame->c;
+
+  compileAbstractInvoke
+    (t, frame, c->call
+     (c->constant(getThunk(t, thunk), Compiler::AddressType),
+      0,
+      frame->trace(0, 0),
+      BytesPerWord,
+      Compiler::AddressType,
+      2, c->register_(t->arch->thread()), frame->append(target)),
+     target, tailCall);
 }
 
 void
@@ -4841,7 +4907,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
         bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-        compileDirectInvoke(t, frame, target, tailCall);
+        if (UNLIKELY(methodAbstract(t, target))) {
+          compileDirectAbstractInvoke
+            (t, frame, getMethodAddressThunk, target, tailCall);
+        } else {
+          compileDirectInvoke(t, frame, target, tailCall);
+        }
       } else {
         compileDirectReferenceInvoke
           (t, frame, findSpecialMethodFromReferenceThunk, reference, false,
@@ -5521,18 +5592,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           }
         }
 
-        Compiler::Operand* value = popField(t, frame, fieldCode);
-
-        Compiler::Operand* table;
-
-        if (instruction == putstatic) {
-          PROTECT(t, field);
-
-          table = frame->append(staticTable);
-        } else {
-          table = frame->popObject();
-        }
-
         if (fieldFlags(t, field) & ACC_VOLATILE) {
           if (BytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
@@ -5548,6 +5607,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           } else {
             c->storeStoreBarrier();
           }
+        }
+
+        Compiler::Operand* value = popField(t, frame, fieldCode);
+
+        Compiler::Operand* table;
+
+        if (instruction == putstatic) {
+          PROTECT(t, field);
+
+          table = frame->append(staticTable);
+        } else {
+          table = frame->popObject();
         }
 
         switch (fieldCode) {
@@ -7328,11 +7399,6 @@ invokeNative(MyThread* t)
   uint64_t result = 0;
 
   t->trace->targetMethod = t->trace->nativeMethod;
-  
-  THREAD_RESOURCE0(t, {
-      static_cast<MyThread*>(t)->trace->targetMethod = 0;
-      static_cast<MyThread*>(t)->trace->nativeMethod = 0;
-    });
 
   t->m->classpath->resolveNative(t, t->trace->nativeMethod);
 
@@ -7354,6 +7420,9 @@ invokeNative(MyThread* t)
   stack += t->arch->frameReturnAddressSize();
 
   transition(t, getIp(t), stack, t->continuation, t->trace);
+
+  t->trace->targetMethod = 0;
+  t->trace->nativeMethod = 0;
 
   return result;
 }
@@ -8143,7 +8212,7 @@ class SignalHandler: public System::SignalHandler {
           t->exception = vm::root(t, root);
         }
 
-        printTrace(t, t->exception);
+        //printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);

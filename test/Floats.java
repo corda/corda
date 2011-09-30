@@ -33,7 +33,91 @@ public class Floats {
     return f.field * a;
   }
 
+  private static void subdivide(double src[], int srcoff,
+                                double left[], int leftoff,
+                                double right[], int rightoff)
+  {
+    double x1 = src[srcoff + 0];
+    double y1 = src[srcoff + 1];
+    double ctrlx1 = src[srcoff + 2];
+    double ctrly1 = src[srcoff + 3];
+    double ctrlx2 = src[srcoff + 4];
+    double ctrly2 = src[srcoff + 5];
+    double x2 = src[srcoff + 6];
+    double y2 = src[srcoff + 7];
+    if (left != null) {
+      left[leftoff + 0] = x1;
+      left[leftoff + 1] = y1;
+    }
+    if (right != null) {
+      right[rightoff + 6] = x2;
+      right[rightoff + 7] = y2;
+    }
+    x1 = (x1 + ctrlx1) / 2.0;
+    y1 = (y1 + ctrly1) / 2.0;
+    x2 = (x2 + ctrlx2) / 2.0;
+    y2 = (y2 + ctrly2) / 2.0;
+    double centerx = (ctrlx1 + ctrlx2) / 2.0;
+    double centery = (ctrly1 + ctrly2) / 2.0;
+    ctrlx1 = (x1 + centerx) / 2.0;
+    ctrly1 = (y1 + centery) / 2.0;
+    ctrlx2 = (x2 + centerx) / 2.0;
+    ctrly2 = (y2 + centery) / 2.0;
+    centerx = (ctrlx1 + ctrlx2) / 2.0;
+    centery = (ctrly1 + ctrly2) / 2.0;
+    if (left != null) {
+      left[leftoff + 2] = x1;
+      left[leftoff + 3] = y1;
+      left[leftoff + 4] = ctrlx1;
+      left[leftoff + 5] = ctrly1;
+      left[leftoff + 6] = centerx;
+      left[leftoff + 7] = centery;
+    }
+    if (right != null) {
+      right[rightoff + 0] = centerx;
+      right[rightoff + 1] = centery;
+      right[rightoff + 2] = ctrlx2;
+      right[rightoff + 3] = ctrly2;
+      right[rightoff + 4] = x2;
+      right[rightoff + 5] = y2;
+    }
+  }
+
   public static void main(String[] args) {
+    { double input[] = new double[8];
+      double left[] = new double[8];
+      double right[] = new double[8];
+
+      input[0] = 732.0;
+      input[1] = 952.0;
+      input[2] = 761.0;
+      input[3] = 942.0;
+      input[4] = 786.0;
+      input[5] = 944.0;
+      input[6] = 813.0;
+      input[7] = 939.0;
+
+      subdivide(input, 0, left, 0, right, 0);
+
+      expect(left[0] == 732.0);
+      expect(left[1] == 952.0);
+      expect(left[2] == 746.5);
+      expect(left[3] == 947.0);
+      expect(left[4] == 760.0);
+      expect(left[5] == 945.0);
+      expect(left[6] == 773.25);
+      expect(left[7] == 943.625);
+
+      expect(right[0] == 773.25);
+      expect(right[1] == 943.625);
+      expect(right[2] == 786.5);
+      expect(right[3] == 942.25);
+      expect(right[4] == 799.5);
+      expect(right[5] == 941.5);
+      expect(right[6] == 813.0);
+      expect(right[7] == 939.0);
+    }
+
     expect(multiply(0.5d, 0.5d) == 0.25d);
     expect(multiply(0.5f, 0.5f) == 0.25f);
 

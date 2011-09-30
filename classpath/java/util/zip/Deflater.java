@@ -147,6 +147,10 @@ public class Deflater {
      boolean finish,
      int[] results);
 
+  public void end() {
+    dispose();
+  }
+
   public void dispose() {
     if (peer != 0) {
       dispose(peer);

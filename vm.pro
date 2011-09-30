@@ -62,6 +62,7 @@
 -keep public class java.lang.StackOverflowError
 -keep public class java.lang.NoSuchFieldError
 -keep public class java.lang.NoSuchMethodError
+-keep public class java.lang.AbstractMethodError
 -keep public class java.lang.UnsatisfiedLinkError
 -keep public class java.lang.ExceptionInInitializerError
 -keep public class java.lang.OutOfMemoryError

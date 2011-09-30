@@ -12,4 +12,14 @@ package java.util;
 
 public abstract class AbstractList<T> extends AbstractCollection<T>
   implements List<T>
-{ }
+{
+  protected int modCount;
+
+  public Iterator<T> iterator() {
+    return listIterator();
+  }
+
+  public ListIterator<T> listIterator() {
+    return new Collections.ArrayListIterator(this);
+  }
+}

@@ -127,6 +127,10 @@ public class Inflater {
      byte[] output, int outputOffset, int outputLength,
      int[] results);
 
+  public void end() {
+    dispose();
+  }
+
   public void dispose() {
     if (peer != 0) {
       dispose(peer);

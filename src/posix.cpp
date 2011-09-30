@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -151,6 +151,16 @@ class MySystem: public System {
       expect(s, rv == 0);
     }
 
+    virtual bool getAndClearInterrupted() {
+      ACQUIRE(mutex);
+
+      bool interrupted = r->interrupted();
+
+      r->setInterrupted(false);
+
+      return interrupted;
+    }
+
     virtual void join() {
       int rv UNUSED = pthread_join(thread, 0);
       expect(s, rv == 0);
@@ -276,7 +286,16 @@ class MySystem: public System {
       }
     }
 
-    virtual bool wait(System::Thread* context, int64_t time) {
+    virtual void wait(System::Thread* context, int64_t time) {
+      wait(context, time, false);
+    }
+
+    virtual bool waitAndClearInterrupted(System::Thread* context, int64_t time)
+    {
+      return wait(context, time, true);
+    }
+
+    bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
@@ -288,7 +307,9 @@ class MySystem: public System {
         { ACQUIRE(t->mutex);
       
           if (t->r->interrupted()) {
-            t->r->setInterrupted(false);
+            if (clearInterrupted) {
+              t->r->setInterrupted(false);
+            }
             return true;
           }
 
@@ -319,7 +340,7 @@ class MySystem: public System {
           t->flags = 0;
 
           interrupted = t->r->interrupted();
-          if (interrupted) {
+          if (interrupted and clearInterrupted) {
             t->r->setInterrupted(false);
           }
         }
@@ -774,6 +795,15 @@ class MySystem: public System {
 
   virtual const char* librarySuffix() {
     return SO_SUFFIX;
+  }
+
+  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+    if (name[0] == '/') {
+      return copy(allocator, name);
+    } else {
+      char buffer[PATH_MAX];
+      return append(allocator, getcwd(buffer, PATH_MAX), "/", name);
+    }
   }
 
   virtual Status load(System::Library** lib,

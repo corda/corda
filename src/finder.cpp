@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -18,39 +18,7 @@ using namespace vm;
 namespace {
 
 const bool DebugFind = false;
-
-const char*
-append(Allocator* allocator, const char* a, const char* b, const char* c)
-{
-  unsigned al = strlen(a);
-  unsigned bl = strlen(b);
-  unsigned cl = strlen(c);
-  char* p = static_cast<char*>(allocator->allocate((al + bl + cl) + 1));
-  memcpy(p, a, al);
-  memcpy(p + al, b, bl);
-  memcpy(p + al + bl, c, cl + 1);
-  return p;
-}
-
-const char*
-append(Allocator* allocator, const char* a, const char* b)
-{
-  unsigned al = strlen(a);
-  unsigned bl = strlen(b);
-  char* p = static_cast<char*>(allocator->allocate((al + bl) + 1));
-  memcpy(p, a, al);
-  memcpy(p + al, b, bl + 1);
-  return p;
-}
-
-const char*
-copy(Allocator* allocator, const char* a)
-{
-  unsigned al = strlen(a);
-  char* p = static_cast<char*>(allocator->allocate(al + 1));
-  memcpy(p, a, al + 1);
-  return p;
-}
+const bool DebugStat = false;
 
 class Element {
  public:
@@ -136,9 +104,12 @@ class DirectoryElement: public Element {
   };
 
   DirectoryElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name),
-    urlPrefix_(append(allocator, "file:", name, "/")),
-    sourceUrl_(append(allocator, "file:", name))
+    s(s),
+    allocator(allocator),
+    originalName(name),
+    name(s->toAbsolutePath(allocator, name)),
+    urlPrefix_(append(allocator, "file:", this->name, "/")),
+    sourceUrl_(append(allocator, "file:", this->name))
   { }
 
   virtual Element::Iterator* iterator() {
@@ -168,6 +139,9 @@ class DirectoryElement: public Element {
   virtual System::FileType stat(const char* name, unsigned* length, bool)  {
     const char* file = append(allocator, this->name, "/", name);
     System::FileType type = s->stat(file, length);
+    if (DebugStat) {
+      fprintf(stderr, "stat %s in %s: %d\n", name, this->name, type);
+    }
     allocator->free(file, strlen(file) + 1);
     return type;
   }
@@ -181,6 +155,7 @@ class DirectoryElement: public Element {
   }
 
   virtual void dispose() {
+    allocator->free(originalName, strlen(originalName) + 1);
     allocator->free(name, strlen(name) + 1);
     allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
     allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
@@ -189,6 +164,7 @@ class DirectoryElement: public Element {
 
   System* s;
   Allocator* allocator;
+  const char* originalName;
   const char* name;
   const char* urlPrefix_;
   const char* sourceUrl_;
@@ -454,10 +430,17 @@ class JarElement: public Element {
     unsigned position;
   };
 
-  JarElement(System* s, Allocator* allocator, const char* name):
-    s(s), allocator(allocator), name(name),
-    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
-    sourceUrl_(name ? append(allocator, "file:", name) : 0),
+  JarElement(System* s, Allocator* allocator, const char* name,
+             bool canonicalizePath = true):
+    s(s),
+    allocator(allocator),
+    originalName(name),
+    name(name and canonicalizePath
+         ? s->toAbsolutePath(allocator, name) : name),
+    urlPrefix_(this->name
+               ? append(allocator, "jar:file:", this->name, "!/") : 0),
+    sourceUrl_(this->name
+               ? append(allocator, "file:", this->name) : 0),
     region(0), index(0)
   { }
 
@@ -513,8 +496,12 @@ class JarElement: public Element {
 
     while (*name == '/') name++;
 
-    return (index ? index->stat(name, length, tryDirectory)
-            : System::TypeDoesNotExist);
+    System::FileType type = (index ? index->stat(name, length, tryDirectory)
+                             : System::TypeDoesNotExist);
+    if (DebugStat) {
+      fprintf(stderr, "stat %s in %s: %d\n", name, this->name, type);
+    }
+    return type;
   }
 
   virtual const char* urlPrefix() {
@@ -530,6 +517,9 @@ class JarElement: public Element {
   }
 
   virtual void dispose(unsigned size) {
+    if (originalName != name) {
+      allocator->free(originalName, strlen(originalName) + 1);
+    }
     allocator->free(name, strlen(name) + 1);
     allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
     allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
@@ -544,6 +534,7 @@ class JarElement: public Element {
 
   System* s;
   Allocator* allocator;
+  const char* originalName;
   const char* name;
   const char* urlPrefix_;
   const char* sourceUrl_;
@@ -555,7 +546,7 @@ class BuiltinElement: public JarElement {
  public:
   BuiltinElement(System* s, Allocator* allocator, const char* name,
                  const char* libraryName):
-    JarElement(s, allocator, name),
+    JarElement(s, allocator, name, false),
     libraryName(libraryName ? copy(allocator, libraryName) : 0)
   { }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2010, Avian Contributors
+/* Copyright (c) 2009-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -2439,16 +2439,16 @@ class MyAssembler: public Assembler {
     return arch_;
   }
 
-  virtual void checkStackOverflow(uintptr_t /*handler*/,
-                                  unsigned /*stackLimitOffsetFromThread*/)
+  virtual void checkStackOverflow(uintptr_t handler,
+                                  unsigned stackLimitOffsetFromThread)
   {
-    /*Register stack(StackRegister);
+    Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
     Constant handlerConstant
       (new (c.zone->allocate(sizeof(ResolvedPromise)))
        ResolvedPromise(handler));
     branchRM(&c, JumpIfGreaterOrEqual, BytesPerWord, &stack, &stackLimit,
-             &handlerConstant);*/
+             &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned) {

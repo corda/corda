@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -48,6 +48,7 @@
 #    define SO_SUFFIX ".so"
 #  endif
 #  include "unistd.h"
+#  include "limits.h"
 #  include "sys/time.h"
 #  include "sys/sysctl.h"
 #  include "sys/utsname.h"
@@ -410,8 +411,8 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     execvp(argv[0], argv);
     
     // Error if here
-    char c = errno;
-    ssize_t rv UNUSED = write(msg[1], &c, 1);
+    int val = errno;
+    ssize_t rv UNUSED = write(msg[1], &val, sizeof(val));
     exit(127);
   } break;
     
@@ -424,12 +425,13 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     safeClose(err[1]);
     safeClose(msg[1]);
       
-    char c;
-    int r = read(msg[0], &c, 1);
+    int val;
+    int r = read(msg[0], &val, sizeof(val));
     if(r == -1) {
       throwNewErrno(e, "java/io/IOException");
       return;
     } else if(r) {
+      errno = val;
       throwNewErrno(e, "java/io/IOException");
       return;
     }
@@ -590,7 +592,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
       r = e->NewStringUTF("/tmp");
     } else if (strcmp(chars, "user.dir") == 0) {
-      r = e->NewStringUTF(getenv("PWD"));
+      char buffer[PATH_MAX];
+      r = e->NewStringUTF(getcwd(buffer, PATH_MAX));
     } else if (strcmp(chars, "user.home") == 0) {
       r = e->NewStringUTF(getenv("HOME"));
     }

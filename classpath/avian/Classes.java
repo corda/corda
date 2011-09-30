@@ -26,8 +26,6 @@ public class Classes {
   public static native VMClass defineVMClass
     (ClassLoader loader, byte[] b, int offset, int length);
 
-  public static native VMClass vmClass(Object o);
-
   public static native VMClass primitiveClass(char name);
 
   public static native void initialize(VMClass vmClass);

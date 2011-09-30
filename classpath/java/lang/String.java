@@ -16,10 +16,16 @@ import java.util.Comparator;
 import java.util.Locale;
 import java.io.Serializable;
 import avian.Utf8;
+import avian.Iso88591;
 
 public final class String
   implements Comparable<String>, CharSequence, Serializable
 {
+  private static final String UTF_8_ENCODING = "UTF-8";
+  private static final String ISO_8859_1_ENCODING = "ISO-8859-1";
+  private static final String LATIN_1_ENCODING = "LATIN-1";
+  private static final String DEFAULT_ENCODING = UTF_8_ENCODING;
+
   public static Comparator<String> CASE_INSENSITIVE_ORDER
     = new Comparator<String>() {
     public int compare(String a, String b) {
@@ -52,8 +58,8 @@ public final class String
     throws UnsupportedEncodingException
   {
     this(bytes, offset, length);
-    if (! (charsetName.equalsIgnoreCase("UTF-8")
-           || charsetName.equalsIgnoreCase("ISO-8859-1")))
+    if (! (charsetName.equalsIgnoreCase(UTF_8_ENCODING)
+           || charsetName.equalsIgnoreCase(ISO_8859_1_ENCODING)))
     {
       throw new UnsupportedEncodingException(charsetName);
     }
@@ -421,18 +427,31 @@ public final class String
   }
 
   public byte[] getBytes() {
-    if(data instanceof byte[]) {
-      byte[] b = new byte[length];
-      getBytes(0, length, b, 0);
-      return b;
+    try {
+      return getBytes(DEFAULT_ENCODING);
+    } catch (java.io.UnsupportedEncodingException ex) {
+      throw new RuntimeException(
+        "Default '" + DEFAULT_ENCODING + "' encoding not handled", ex);
     }
-    return Utf8.encode((char[])data, offset, length);
   }
 
   public byte[] getBytes(String format)
     throws java.io.UnsupportedEncodingException
   {
-    return getBytes();
+    if(data instanceof byte[]) {
+      byte[] b = new byte[length];
+      getBytes(0, length, b, 0);
+      return b;
+    }
+    String fmt = format.trim().toUpperCase();
+    if (DEFAULT_ENCODING.equals(fmt)) {
+      return Utf8.encode((char[])data, offset, length);
+    } else if (ISO_8859_1_ENCODING.equals(fmt) || LATIN_1_ENCODING.equals(fmt)) {
+      return Iso88591.encode((char[])data, offset, length);
+    } else {
+      throw new java.io.UnsupportedEncodingException(
+        "Encoding " + format + " not supported");
+    }
   }
 
   public void getChars(int srcOffset, int srcEnd,
