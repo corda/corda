@@ -606,6 +606,33 @@ Avian_java_lang_Thread_yield
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Atomic_getOffset
+(Thread* t, object, uintptr_t* arguments)
+{
+  return fieldOffset
+    (t, jfieldVmField(t, reinterpret_cast<object>(arguments[0])));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Atomic_compareAndSwapObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[0]);
+  int64_t offset; memcpy(&offset, arguments + 1, 8);
+  uintptr_t expect = arguments[3];
+  uintptr_t update = arguments[4];
+
+  bool success = atomicCompareAndSwap
+    (&cast<uintptr_t>(target, offset), expect, update);
+
+  if (success) {
+    mark(t, target, offset);
+  }
+
+  return success;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_Classes_primitiveClass
 (Thread* t, object, uintptr_t* arguments)
 {
