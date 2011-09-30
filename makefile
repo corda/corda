@@ -372,7 +372,8 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
+
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -384,7 +385,6 @@ ifeq ($(platform),windows)
 		strip = x86_64-w64-mingw32-strip --strip-all
 	else
 		build-system = windows
-		cflags += -DTARGET_PLATFORM_WINDOWS
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
 		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
 		openjdk-extra-cflags =
