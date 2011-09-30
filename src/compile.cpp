@@ -8392,6 +8392,12 @@ class MyProcessor: public Processor {
               difference(&(t->virtualCallTarget), t));
       fprintf(stderr, "virtualCallIndex %d\n",
               difference(&(t->virtualCallIndex), t));
+      fprintf(stderr, "heapImage %d\n",
+              difference(&(t->heapImage), t));
+      fprintf(stderr, "codeImage %d\n",
+              difference(&(t->codeImage), t));
+      fprintf(stderr, "thunkTable %d\n",
+              difference(&(t->thunkTable), t));
       exit(0);
     }
 
