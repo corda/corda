@@ -54,7 +54,7 @@ test = test
 
 classpath = avian
 
-test-executable = $(executable)
+test-executable = $(shell pwd)/$(executable)
 boot-classpath = $(classpath-build)
 embed-prefix = /avian-embedded
 
@@ -110,7 +110,7 @@ ifneq ($(openjdk),)
 		boot-javahome-object = $(build)/boot-javahome.o
 	else
 	  options := $(options)-openjdk
-		test-executable = $(executable-dynamic)
+		test-executable = $(shell pwd)/$(executable-dynamic)
 		library-path = \
 			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
