@@ -211,10 +211,12 @@ allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
     includeMembers = false;
     *count += reinterpret_cast<TypeMap*>(&byteArrayBody(t, *array, 0))
       ->fixedFieldCount;
-  } else if (classSuper(t, c)) {
+  } else {
     includeMembers = true;
-    fields = getNonStaticFields
-      (t, typeMaps, classSuper(t, c), fields, count, array);
+    if (classSuper(t, c)) {
+      fields = getNonStaticFields
+        (t, typeMaps, classSuper(t, c), fields, count, array);
+    }
   }
 
   if (classFieldTable(t, c)) {
