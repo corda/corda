@@ -2733,11 +2733,12 @@ class MyAssembler: public Assembler {
 
         assert(&c, jumpTableSize);
 
-        if (needJump(b)) {
+        bool jump = needJump(b);
+        if (jump) {
           write4(dst + dstOffset, ::b(jumpTableSize + TargetBytesPerWord));
         }
 
-        dstOffset += jumpTableSize + TargetBytesPerWord;
+        dstOffset += jumpTableSize + (jump ? TargetBytesPerWord : 0);
       }
 
       unsigned size = b->size - blockOffset;
@@ -2749,7 +2750,7 @@ class MyAssembler: public Assembler {
       dstOffset += size;
     }
     
-    unsigned index = c.code.length();
+    unsigned index = dstOffset;
     assert(&c, index % TargetBytesPerWord == 0);
     for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
       e->address = dst + index;

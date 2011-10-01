@@ -2413,12 +2413,13 @@ class MyAssembler: public Assembler {
           poolSize += TargetBytesPerWord;
         }
 
-        if (needJump(b)) {
+        bool jump = needJump(b);
+        if (jump) {
           write4
             (dst + dstOffset, ::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }
 
-        dstOffset += poolSize + TargetBytesPerWord;
+        dstOffset += poolSize + (jump ? TargetBytesPerWord : 0);
       }
 
       unsigned size = b->size - blockOffset;
