@@ -544,9 +544,9 @@ class Fixie {
   // you add/remove/change fields in this class:
 
   uint8_t age;
-  bool hasMask;
-  bool marked;
-  bool dirty;
+  uint8_t hasMask;
+  uint8_t marked;
+  uint8_t dirty;
   uint32_t size;
   Fixie* next;
   Fixie** handle;
