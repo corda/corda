@@ -2256,6 +2256,9 @@ uintptr_t
 nativeThunk(MyThread* t);
 
 uintptr_t
+bootNativeThunk(MyThread* t);
+
+uintptr_t
 aioobThunk(MyThread* t);
 
 uintptr_t
@@ -8819,9 +8822,9 @@ class MyProcessor: public Processor {
           root(t, MethodTreeSentinal));
       set(t, root(t, MethodTree), TreeNodeRight,
           root(t, MethodTreeSentinal));
-
-      local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
     }
+
+    local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
 
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
@@ -8891,6 +8894,7 @@ class MyProcessor: public Processor {
   SignalHandler divideByZeroHandler;
   FixedAllocator codeAllocator;
   ThunkCollection thunks;
+  ThunkCollection bootThunks;
   unsigned callTableSize;
   bool useNativeFeatures;
   void* thunkTable[dummyIndex + 1];
@@ -8915,7 +8919,7 @@ compileMethod2(MyThread* t, void* ip)
   if ((methodFlags(t, target) & ACC_NATIVE)
       and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
   {
-    address = nativeThunk(t);
+    address = bootNativeThunk(t);
   } else {
     address = methodAddress(t, target);
   }
@@ -8962,7 +8966,7 @@ isThunk(MyThread* t, void* ip)
 {
   MyProcessor* p = processor(t);
 
-  return isThunk(&(p->thunks), ip);
+  return isThunk(&(p->thunks), ip) or isThunk(&(p->bootThunks), ip);
 }
 
 bool
@@ -9026,7 +9030,9 @@ isThunkUnsafeStack(MyThread* t, void* ip)
 {
   MyProcessor* p = processor(t);
 
-  return isThunk(t, ip) and isThunkUnsafeStack(&(p->thunks), ip);
+  return isThunk(t, ip)
+    and (isThunkUnsafeStack(&(p->thunks), ip)
+         or isThunkUnsafeStack(&(p->bootThunks), ip));
 }
 
 object
@@ -9274,14 +9280,14 @@ findThunks(MyThread* t, BootImage* image, uint8_t* code)
 {
   MyProcessor* p = processor(t);
   
-  p->thunks.default_ = thunkToThunk(image->thunks.default_, code);
-  p->thunks.defaultVirtual
+  p->bootThunks.default_ = thunkToThunk(image->thunks.default_, code);
+  p->bootThunks.defaultVirtual
     = thunkToThunk(image->thunks.defaultVirtual, code);
-  p->thunks.native = thunkToThunk(image->thunks.native, code);
-  p->thunks.aioob = thunkToThunk(image->thunks.aioob, code);
-  p->thunks.stackOverflow
+  p->bootThunks.native = thunkToThunk(image->thunks.native, code);
+  p->bootThunks.aioob = thunkToThunk(image->thunks.aioob, code);
+  p->bootThunks.stackOverflow
     = thunkToThunk(image->thunks.stackOverflow, code);
-  p->thunks.table = thunkToThunk(image->thunks.table, code);
+  p->bootThunks.table = thunkToThunk(image->thunks.table, code);
 }
 
 void
@@ -9623,6 +9629,12 @@ defaultThunk(MyThread* t)
 }
 
 uintptr_t
+bootDefaultThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->bootThunks.default_.start);
+}
+
+uintptr_t
 defaultVirtualThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>
@@ -9633,6 +9645,12 @@ uintptr_t
 nativeThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->thunks.native.start);
+}
+
+uintptr_t
+bootNativeThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->bootThunks.native.start);
 }
 
 uintptr_t
@@ -9650,7 +9668,8 @@ stackOverflowThunk(MyThread* t)
 bool
 unresolved(MyThread* t, uintptr_t methodAddress)
 {
-  return methodAddress == defaultThunk(t);
+  return methodAddress == defaultThunk(t)
+    or methodAddress == bootDefaultThunk(t);
 }
 
 uintptr_t
