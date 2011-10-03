@@ -1316,9 +1316,9 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
       bool sawArray = false;
-      Type type;
-      unsigned buildSize;
-      unsigned targetSize;
+      Type type = Type_none;
+      unsigned buildSize = 0;
+      unsigned targetSize = 0;
       for (unsigned j = 1; j < count; ++j) {
         switch (source[j - 1]) {
         case Type_object:
