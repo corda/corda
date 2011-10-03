@@ -2566,7 +2566,7 @@ Thread::init()
 
     enter(this, ActiveState);
 
-    if (image and image) {
+    if (image and code) {
       m->processor->boot(this, image, code);
     } else {
       boot(this);
