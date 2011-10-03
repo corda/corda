@@ -2274,7 +2274,7 @@ uintptr_t
 methodAddress(Thread* t, object method)
 {
   if (methodFlags(t, method) & ACC_NATIVE) {
-    return nativeThunk(static_cast<MyThread*>(t));
+    return bootNativeThunk(static_cast<MyThread*>(t));
   } else {
     return methodCompiled(t, method);
   }
@@ -8826,6 +8826,10 @@ class MyProcessor: public Processor {
 
     local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
 
+    if (not (image and code)) {
+      bootThunks = thunks;
+    }
+
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
            (t->m->system->handleSegFault(&segFaultHandler)));
@@ -8915,20 +8919,22 @@ compileMethod2(MyThread* t, void* ip)
 
   compile(t, codeAllocator(t), 0, target);
 
-  uintptr_t address;
-  if ((methodFlags(t, target) & ACC_NATIVE)
-      and useLongJump(t, reinterpret_cast<uintptr_t>(ip)))
-  {
-    address = bootNativeThunk(t);
-  } else {
-    address = methodAddress(t, target);
-  }
-
   uint8_t* updateIp = static_cast<uint8_t*>(ip);
 
   MyProcessor* p = processor(t);
 
-  if (updateIp < p->codeImage or updateIp >= p->codeImage + p->codeImageSize) {
+  bool updateCaller = updateIp < p->codeImage
+    or updateIp >= p->codeImage + p->codeImageSize;
+
+  uintptr_t address;
+  if (methodFlags(t, target) & ACC_NATIVE) {
+    address = useLongJump(t, reinterpret_cast<uintptr_t>(ip))
+      or (not updateCaller) ? bootNativeThunk(t) : nativeThunk(t);
+  } else {
+    address = methodAddress(t, target);
+  }
+
+  if (updateCaller) {
     UnaryOperation op;
     if (callNodeFlags(t, node) & TraceElement::LongCall) {
       if (callNodeFlags(t, node) & TraceElement::TailCall) {
