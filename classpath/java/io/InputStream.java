@@ -56,7 +56,7 @@ public abstract class InputStream {
   }
 
   public void reset() throws IOException {
-    // ignore
+    throw new IOException("mark/reset not supported");
   }
 
   public boolean markSupported() {
