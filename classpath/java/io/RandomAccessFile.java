@@ -56,6 +56,8 @@ public class RandomAccessFile {
       throw new ArrayIndexOutOfBoundsException();
 
     copy(peer, position, buffer, offset, length);
+
+    position += length;
   }
 
   private static native void copy(long peer, long position, byte[] buffer,
