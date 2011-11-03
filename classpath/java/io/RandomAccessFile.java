@@ -12,25 +12,25 @@ package java.io;
 
 public class RandomAccessFile {
   private long peer;
-  private long length;
+  private File file;
   private long position = 0;
-  
+
   public RandomAccessFile(String name, String mode)
     throws FileNotFoundException
   {
     if (! mode.equals("r")) throw new IllegalArgumentException();
+    file = new File(name);
 
     long[] result = new long[2];
     open(name, result);
     peer = result[0];
-    length = result[1];
   }
 
   private static native void open(String name, long[] result)
     throws FileNotFoundException;
 
   public long length() throws IOException {
-    return length;
+    return file.length();
   }
 
   public long getFilePointer() throws IOException {
@@ -38,7 +38,7 @@ public class RandomAccessFile {
   }
 
   public void seek(long position) throws IOException {
-    if (position < 0 || position > length) throw new IOException();
+    if (position < 0 || position > length()) throw new IOException();
 
     this.position = position;
   }
@@ -50,7 +50,7 @@ public class RandomAccessFile {
 
     if (length == 0) return;
 
-    if (position + length > this.length) throw new EOFException();
+    if (position + length > this.length()) throw new EOFException();
 
     if (offset < 0 || offset + length > buffer.length)
       throw new ArrayIndexOutOfBoundsException();
