@@ -279,6 +279,11 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
   return exitCode;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+  TerminateProcess(reinterpret_cast<HANDLE>(pid), 1);
+}
+
 Locale getLocale() {
   const char* lang = "";
   const char* reg = "";
@@ -464,6 +469,11 @@ Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid, jlong)
   }
   
   return exitCode;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+  kill((pid_t)pid, SIGTERM);
 }
 
 Locale getLocale() {
