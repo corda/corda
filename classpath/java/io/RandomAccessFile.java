@@ -14,23 +14,36 @@ public class RandomAccessFile {
   private long peer;
   private File file;
   private long position = 0;
+  private long length;
 
   public RandomAccessFile(String name, String mode)
     throws FileNotFoundException
   {
     if (! mode.equals("r")) throw new IllegalArgumentException();
     file = new File(name);
+    open();
+  }
 
+  private void open() throws FileNotFoundException {
     long[] result = new long[2];
-    open(name, result);
+    open(file.getPath(), result);
     peer = result[0];
+    length = result[1];
   }
 
   private static native void open(String name, long[] result)
     throws FileNotFoundException;
 
+  private void refresh() throws IOException {
+    if (file.length() != length) {
+      close();
+      open();
+    }
+  }
+
   public long length() throws IOException {
-    return file.length();
+    refresh();
+    return length;
   }
 
   public long getFilePointer() throws IOException {
@@ -50,7 +63,9 @@ public class RandomAccessFile {
 
     if (length == 0) return;
 
-    if (position + length > this.length()) throw new EOFException();
+    if (position + length > this.length) {
+      if (position + length > length()) throw new EOFException();
+    }
 
     if (offset < 0 || offset + length > buffer.length)
       throw new ArrayIndexOutOfBoundsException();
