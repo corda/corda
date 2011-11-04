@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -21,5 +21,21 @@ public abstract class AbstractList<T> extends AbstractCollection<T>
 
   public ListIterator<T> listIterator() {
     return new Collections.ArrayListIterator(this);
+  }
+
+  public int indexOf(Object o) {
+    int i = 0;
+    for (T v: this) {
+      if (o == null) {
+        if (v == null) {
+          return i;
+        }
+      } else if (o.equals(v)) {
+        return i;
+      }
+
+      ++ i;
+    }
+    return -1;
   }
 }
