@@ -319,7 +319,7 @@ ifeq ($(platform),darwin)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		flags = -arch armv6 -isysroot \
-			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/
+			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
 		openjdk-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
