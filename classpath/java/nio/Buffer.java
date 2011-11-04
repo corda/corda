@@ -15,44 +15,49 @@ public abstract class Buffer {
   protected int position;
   protected int limit;
 
-  public int limit() {
+  public final int limit() {
     return limit;
   }
 
-  public int remaining() {
+  public final int remaining() {
     return limit-position;
   }
 
-  public int position() {
+  public final int position() {
     return position;
   }
 
-  public int capacity() {
+  public final int capacity() {
     return capacity;
   }
 
-  public Buffer limit(int newLimit) {
+  public final Buffer limit(int newLimit) {
     limit = newLimit;
     return this;
   }
 
-  public Buffer position(int newPosition) {
+  public final Buffer position(int newPosition) {
     position = newPosition;
     return this;
   }
 
-  public boolean hasRemaining() {
+  public final boolean hasRemaining() {
     return remaining() > 0;
   }
 
-  public Buffer clear() {
+  public final Buffer clear() {
     position = 0;
     limit = capacity;
     return this;
   }
 
-  public Buffer flip() {
+  public final Buffer flip() {
     limit = position;
+    position = 0;
+    return this;
+  }
+
+  public final Buffer rewind() {
     position = 0;
     return this;
   }
