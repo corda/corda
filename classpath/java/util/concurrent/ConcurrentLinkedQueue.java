@@ -25,6 +25,11 @@ public class ConcurrentLinkedQueue<T> {
   private volatile Node<T> head = new Node(null, null);
   private volatile Node<T> tail = head;
 
+  public void clear() {
+    // todo: can we safely make this O(1)?
+    while (poll() != null) { }
+  }
+
   public boolean add(T value) {
     Node<T> n = new Node(value, null);
     while (true) {
