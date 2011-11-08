@@ -146,18 +146,24 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
     case INT64_TYPE: {
-      if (gprIndex + Alignment <= GprCount) { // pass argument on registers
-        if (gprIndex % Alignment) {           // 8-byte alignment
-          memset(gprTable + gprIndex, 0, 4);  // probably not necessary, but for good luck
-          ++gprIndex;
+      if (gprIndex + Alignment <= GprCount) { // pass argument in register(s)
+        if (Alignment == 1
+            and BytesPerWord < 8
+            and gprIndex + Alignment == GprCount)
+        {
+          gprTable[gprIndex++] = arguments[ai];
+          stack[stackIndex++] = arguments[ai + 1];
+        } else {
+          if (gprIndex % Alignment) {
+            ++gprIndex;
+          }
+          
+          memcpy(gprTable + gprIndex, arguments + ai, 8);
+          gprIndex += 8 / BytesPerWord;
         }
-
-        memcpy(gprTable + gprIndex, arguments + ai, 8);
-        gprIndex += 8 / BytesPerWord;
       } else {                                // pass argument on stack
         gprIndex = GprCount;
-        if (stackIndex % Alignment) {         // 8-byte alignment
-          memset(stack + stackIndex, 0, 4);   // probably not necessary, but for good luck
+        if (stackIndex % Alignment) {
           ++stackIndex;
         }
 
