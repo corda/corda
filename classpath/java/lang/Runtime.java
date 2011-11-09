@@ -149,7 +149,9 @@ public class Runtime {
     }
 
     public void destroy() {
-      kill(pid);
+			if (pid != 0) {
+      	kill(pid);
+			}
     }
 
     public InputStream getInputStream() {
