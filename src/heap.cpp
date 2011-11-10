@@ -848,20 +848,13 @@ bitset(Context* c UNUSED, void* o)
 void
 free(Context* c, Fixie** fixies)
 {
-  for (Fixie* p = *fixies; p;) {
-    Fixie* f = p;
-    p = f->next;
+  for (Fixie** p = fixies; *p;) {
+    Fixie* f = *p;
 
     if (f->immortal()) {
-      if (DebugFixies) {
-        fprintf(stderr, "reset immortal fixie %p\n", f);
-      }
-      memset(f->mask(), 0, Fixie::maskSize(f->size, f->hasMask));
-      f->next = 0;
-      f->handle = 0;
-      f->marked = false;
-      f->dirty = false;
+      p = &(f->next);
     } else {
+      *p = f->next;
       if (DebugFixies) {
         fprintf(stderr, "free fixie %p\n", f);
       }
