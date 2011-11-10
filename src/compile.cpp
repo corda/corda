@@ -2011,7 +2011,7 @@ findExceptionHandler(Thread* t, object method, void* ip)
         if (key >= start and key < end) {
           object catchType = arrayBody(t, table, i + 1);
 
-          if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+          if (exceptionMatch(t, catchType, t->exception)) {
             return compiled + intArrayBody(t, index, (i * 3) + 2);
           }
         }
@@ -8249,7 +8249,7 @@ class SignalHandler: public System::SignalHandler {
           t->exception = vm::root(t, root);
         }
 
-        //printTrace(t, t->exception);
+        // printTrace(t, t->exception);
 
         object continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);
@@ -9238,6 +9238,52 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 }
 
 void
+resetClassRuntimeState(Thread* t, object c, uintptr_t* heap, unsigned heapSize)
+{
+  classRuntimeDataIndex(t, c) = 0;
+
+  if (classArrayElementSize(t, c) == 0) {
+    object staticTable = classStaticTable(t, c);
+    if (staticTable) {
+      for (unsigned i = 0; i < singletonCount(t, staticTable); ++i) {
+        if (singletonIsObject(t, staticTable, i)
+            and (reinterpret_cast<uintptr_t*>
+                 (singletonObject(t, staticTable, i)) < heap or
+                 reinterpret_cast<uintptr_t*>
+                 (singletonObject(t, staticTable, i)) > heap + heapSize))
+        {
+          singletonObject(t, staticTable, i) = 0;
+        }
+      }
+    }
+  }
+
+  if (classMethodTable(t, c)) {
+    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
+      object m = arrayBody(t, classMethodTable(t, c), i);
+
+      methodNativeID(t, m) = 0;
+      methodRuntimeDataIndex(t, m) = 0;
+
+      if (methodVmFlags(t, m) & ClassInitFlag) {
+        classVmFlags(t, c) |= NeedInitFlag;
+        classVmFlags(t, c) &= ~InitErrorFlag;
+      }
+    }
+  }
+
+  t->m->processor->initVtable(t, c);
+}
+
+void
+resetRuntimeState(Thread* t, object map, uintptr_t* heap, unsigned heapSize)
+{
+  for (HashMapIterator it(t, map); it.hasMore();) {
+    resetClassRuntimeState(t, tripleSecond(t, it.next()), heap, heapSize);
+  }
+}
+
+void
 fixupMethods(Thread* t, object map, BootImage* image UNUSED, uint8_t* code)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
@@ -9339,7 +9385,11 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   // fprintf(stderr, "code from %p to %p\n",
   //         code, code + image->codeSize);
  
-  fixupHeap(t, heapMap, heapMapSizeInWords, heap);
+  static bool fixed = false;
+
+  if (not fixed) {
+    fixupHeap(t, heapMap, heapMapSizeInWords, heap);
+  }
   
   t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
 
@@ -9384,11 +9434,30 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
     
   findThunks(t, image, code);
 
-  fixupVirtualThunks(t, code);
+  if (fixed) {
+    resetRuntimeState
+      (t, classLoaderMap(t, root(t, Machine::BootLoader)), heap,
+       image->heapSize);
 
-  fixupMethods
-    (t, classLoaderMap(t, root(t, Machine::BootLoader)), image, code);
-  fixupMethods(t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
+    resetRuntimeState
+      (t, classLoaderMap(t, root(t, Machine::AppLoader)), heap,
+       image->heapSize);
+
+    for (unsigned i = 0; i < arrayLength(t, t->m->types); ++i) {
+      resetClassRuntimeState
+        (t, type(t, static_cast<Machine::Type>(i)), heap, image->heapSize);
+    }
+  } else {
+    fixupVirtualThunks(t, code);
+
+    fixupMethods
+      (t, classLoaderMap(t, root(t, Machine::BootLoader)), image, code);
+
+    fixupMethods
+      (t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
+  }
+
+  fixed = true;
 
   setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
 }

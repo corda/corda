@@ -3024,6 +3024,8 @@ boot(Thread* t, uintptr_t*)
   setRoot(t, Machine::OutOfMemoryError,
           makeThrowable(t, Machine::OutOfMemoryErrorType));
 
+  setRoot(t, Machine::Shutdown, makeThrowable(t, Machine::ThrowableType));
+
   setRoot(t, Machine::FinalizerThread, t->m->classpath->makeThread(t, t));
 
   threadDaemon(t, root(t, Machine::FinalizerThread)) = true;

@@ -157,8 +157,7 @@ const unsigned ContinuationFlag = 1 << 11;
 
 // method vmFlags:
 const unsigned ClassInitFlag = 1 << 0;
-const unsigned CompiledFlag = 1 << 1;
-const unsigned ConstructorFlag = 1 << 2;
+const unsigned ConstructorFlag = 1 << 1;
 
 #ifndef JNI_VERSION_1_6
 #define JNI_VERSION_1_6 0x00010006
@@ -1266,6 +1265,7 @@ class Machine {
     ArithmeticException,
     ArrayIndexOutOfBoundsException,
     OutOfMemoryError,
+    Shutdown,
     VirtualFileFinders,
     VirtualFiles
   };
@@ -1322,6 +1322,7 @@ class Machine {
   bool collecting;
   bool triedBuiltinOnLoad;
   bool dumpedHeapOnOOM;
+  bool alive;
   JavaVMVTable javaVMVTable;
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
@@ -1356,6 +1357,9 @@ run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*),
 
 void
 checkDaemon(Thread* t);
+
+object&
+root(Thread* t, Machine::Root root);
 
 extern "C" uint64_t
 vmRun(uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments,
@@ -1507,7 +1511,7 @@ class Thread {
 
       vm::run(t, runThread, 0);
 
-      if (t->exception) {
+      if (t->exception and t->exception != root(t, Machine::Shutdown)) {
         printTrace(t, t->exception);
       }
 
@@ -3182,7 +3186,11 @@ wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      throwNew(t, Machine::InterruptedExceptionType);
+      if (t->m->alive or (t->flags & Thread::DaemonFlag) == 0) {
+        throwNew(t, Machine::InterruptedExceptionType);
+      } else {
+        throw_(t, root(t, Machine::Shutdown));
+      }
     }
   } else {
     throwNew(t, Machine::IllegalMonitorStateExceptionType);
@@ -3254,6 +3262,14 @@ getAndClearInterrupted(Thread* t, Thread* target)
   } else {
     return false;
   }
+}
+
+inline bool
+exceptionMatch(Thread* t, object type, object exception)
+{
+  return type == 0
+    or (exception != root(t, Machine::Shutdown)
+        and instanceOf(t, type, t->exception));
 }
 
 object

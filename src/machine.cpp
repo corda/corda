@@ -138,27 +138,29 @@ dispose(Thread* t, Thread* o, bool remove)
 }
 
 void
-joinAll(Thread* m, Thread* o)
+visitAll(Thread* m, Thread* o, void (*visit)(Thread*, Thread*))
 {
   for (Thread* p = o->child; p;) {
     Thread* child = p;
     p = p->peer;
-    joinAll(m, child);
+    visitAll(m, child, visit);
   }
 
-  join(m, o);
+  visit(m, o);
 }
 
 void
-disposeAll(Thread* m, Thread* o)
+disposeNoRemove(Thread* m, Thread* o)
 {
-  for (Thread* p = o->child; p;) {
-    Thread* child = p;
-    p = p->peer;
-    disposeAll(m, child);
-  }
-
   dispose(m, o, false);
+}
+
+void
+interruptDaemon(Thread* m, Thread* o)
+{
+  if (o->flags & Thread::DaemonFlag) {
+    interrupt(m, o);
+  }
 }
 
 void
@@ -166,7 +168,7 @@ turnOffTheLights(Thread* t)
 {
   expect(t, t->m->liveCount == 1);
 
-  joinAll(t, t->m->rootThread);
+  visitAll(t, t->m->rootThread, join);
 
   enter(t, Thread::ExitState);
 
@@ -215,7 +217,7 @@ turnOffTheLights(Thread* t)
 
   Machine* m = t->m;
 
-  disposeAll(t, t->m->rootThread);
+  visitAll(t, t->m->rootThread, disposeNoRemove);
 
   System* s = m->system;
   Heap* h = m->heap;
@@ -2443,6 +2445,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   collecting(false),
   triedBuiltinOnLoad(false),
   dumpedHeapOnOOM(false),
+  alive(true),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -2693,6 +2696,17 @@ shutDown(Thread* t)
         t->m->stateLock->wait(t->systemThread, 0);      
       }
     }
+  }
+
+  // interrupt daemon threads and tell them to die
+
+  // todo: be more aggressive about killing daemon threads, e.g. at
+  // any GC point, not just at waits/sleeps
+  { ACQUIRE(t, t->m->stateLock);
+
+    t->m->alive = false;
+
+    visitAll(t, t->m->rootThread, interruptDaemon);
   }
 }
 
@@ -3247,9 +3261,7 @@ classInitializer(Thread* t, object class_)
     {
       object o = arrayBody(t, classMethodTable(t, class_), i);
 
-      if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
-                     &byteArrayBody(t, methodName(t, o), 0)) == 0)
-      {
+      if (methodVmFlags(t, o) & ClassInitFlag) {
         return o;
       }               
     }
