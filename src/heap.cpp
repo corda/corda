@@ -560,7 +560,7 @@ fixie(void* body)
 }
 
 void
-free(Context* c, Fixie** fixies);
+free(Context* c, Fixie** fixies, bool resetImmortal = false);
 
 class Context {
  public:
@@ -630,9 +630,9 @@ class Context {
   }
 
   void disposeFixies() {
-    free(this, &tenuredFixies);
-    free(this, &dirtyTenuredFixies);
-    free(this, &fixies);
+    free(this, &tenuredFixies, true);
+    free(this, &dirtyTenuredFixies, true);
+    free(this, &fixies, true);
   }
 
   System* system;
@@ -846,13 +846,25 @@ bitset(Context* c UNUSED, void* o)
 }
 
 void
-free(Context* c, Fixie** fixies)
+free(Context* c, Fixie** fixies, bool resetImmortal)
 {
   for (Fixie** p = fixies; *p;) {
     Fixie* f = *p;
 
     if (f->immortal()) {
-      p = &(f->next);
+      if (resetImmortal) {
+        if (DebugFixies) {
+          fprintf(stderr, "reset immortal fixie %p\n", f);
+        }
+        *p = f->next;
+        memset(f->mask(), 0, Fixie::maskSize(f->size, f->hasMask));
+        f->next = 0;
+        f->handle = 0;
+        f->marked = false;
+        f->dirty = false;
+      } else {      
+        p = &(f->next);
+      }
     } else {
       *p = f->next;
       if (DebugFixies) {
