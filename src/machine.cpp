@@ -3810,15 +3810,15 @@ initClass(Thread* t, object c)
 object
 resolveObjectArrayClass(Thread* t, object loader, object elementClass)
 {
+  PROTECT(t, loader);
+  PROTECT(t, elementClass);
+
   { object arrayClass = classRuntimeDataArrayClass
       (t, getClassRuntimeData(t, elementClass));
     if (arrayClass) {
       return arrayClass;
     }
   }
-
-  PROTECT(t, loader);
-  PROTECT(t, elementClass);
 
   object elementSpec = className(t, elementClass);
   PROTECT(t, elementSpec);
