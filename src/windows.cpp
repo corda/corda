@@ -986,7 +986,7 @@ handleException(LPEXCEPTION_POINTERS e)
 
 namespace vm {
 
-System*
+JNIEXPORT System*
 makeSystem(const char* crashDumpDirectory)
 {
   return new (malloc(sizeof(MySystem))) MySystem(crashDumpDirectory);

@@ -447,6 +447,7 @@ ifeq ($(use-lto),true)
 	ifeq ($(shell expr 4 \< $(gcc-major) \
 			\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
 		optimization-cflags += -flto
+		no-lto = -fno-lto
 		lflags += $(optimization-cflags)
 	endif
 endif
@@ -588,9 +589,7 @@ lflags += $(extra-lflags)
 driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o
 driver-dynamic-objects = \
-	$(build)/main-dynamic.o \
-	$(build)/$(system).o \
-	$(build)/finder.o
+	$(build)/main-dynamic.o
 
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
@@ -958,6 +957,8 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
+# todo: the $(no-lto) flag below is due to odd undefined reference errors on
+# Ubuntu 11.10 which may be fixable without disabling LTO.
 $(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef msvc
@@ -966,7 +967,7 @@ ifdef msvc
 		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 

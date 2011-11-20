@@ -999,7 +999,7 @@ handleSignal(int signal, siginfo_t*, void* context)
 
 namespace vm {
 
-System*
+JNIEXPORT System*
 makeSystem(const char*)
 {
   return new (malloc(sizeof(MySystem))) MySystem();
