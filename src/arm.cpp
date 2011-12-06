@@ -148,14 +148,44 @@ inline int fadds(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, S
 inline int fsubs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
 inline int fdivs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|8, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
 inline int fmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 0, Dm); }
-inline int fnmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 2, Dm); } 
-inline int fmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 0, Dm); } 
-inline int fnmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 2, Dm); } 
-inline int fmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 0, Dm); } 
-inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm); } 
-inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); } 
-inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); } 
-inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); } 
+inline int fnmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 2, Dm); }
+inline int fmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 0, Dm); }
+inline int fnmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 2, Dm); }
+inline int fmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 0, Dm); }
+inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm); }
+inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); }
+inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); }
+inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); }
+inline int fcpys(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0, Sd, 10, 2|Sm&1, Sm); }
+inline int fabss(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0, Sd, 10, 6|Sm&1, Sm); }
+inline int fnegs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 1, Sd, 10, 2|Sm&1, Sm); }
+inline int fsqrts(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 1, Sd, 10, 6|Sm&1, Sm); }
+inline int fcmps(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 4, Sd, 10, 2|Sm&1, Sm); }
+inline int fcmpes(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 4, Sd, 10, 6|Sm&1, Sm); }
+inline int fcmpzs(int Sd) { return COOP(AL, 0xb|Sd&1, 5, Sd, 10, 2|Sm&1, 0); }
+inline int fcmpezs(int Sd) { return COOP(AL, 0xb|Sd&1, 5, Sd, 10, 6|Sm&1, 0); }
+inline int fcvtds(int Dd, int Sm) { return COOP(AL, 0xb|Sd&1, 7, Dd, 10, 6|Sm&1, Sm); }
+inline int fuitos(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 8, Sd, 10, 2|Sm&1, Sm); }
+inline int fsitos(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 8, Sd, 10, 6|Sm&1, Sm); }
+inline int ftouis(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xc, Sd, 10, 2|Sm&1, Sm); }
+inline int ftouizs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xc, Sd, 10, 6|Sm&1, Sm); }
+inline int ftosis(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xd, Sd, 10, 2|Sm&1, Sm); }
+inline int ftosizs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xd, Sd, 10, 6|Sm&1, Sm); }
+inline int fcpyd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 2, Dm); }
+inline int fabsd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 6, Dm); }
+inline int fnegd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 2, Dm); }
+inline int fsqrtd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 6, Dm); }
+inline int fcmpd(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 2, Dm); }
+inline int fcmped(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 6, Dm); }
+inline int fcmpzd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 2, 0); }
+inline int fcmpezd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 6, 0); }
+inline int fcvtsd(int Sd, int Dm) { return COOP(AL, 0xb, 7, Sd, 11, 6, Dm); }
+inline int fuitod(int Dd, int Dm) { return COOP(AL, 0xb, 8, Dd, 11, 2, Dm); }
+inline int fsitod(int Dd, int Dm) { return COOP(AL, 0xb, 8, Dd, 11, 6, Dm); }
+inline int ftouid(int Dd, int Dm) { return COOP(AL, 0xb, 0xc, Dd, 11, 2, Dm); }
+inline int ftouizd(int Dd, int Dm) { return COOP(AL, 0xb, 0xc, Dd, 11, 6, Dm); }
+inline int ftosid(int Dd, int Dm) { return COOP(AL, 0xb, 0xd, Dd, 11, 2, Dm); }
+inline int ftosizd(int Dd, int Dm) { return COOP(AL, 0xb, 0xd, Dd, 11, 6, Dm); }
 inline int fldms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, count); }
 inline int fldmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1); }
 inline int fldmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1|1); }
@@ -200,6 +230,10 @@ inline int ble(int offset) { return SETCOND(b(offset), LE); }
 inline int bge(int offset) { return SETCOND(b(offset), GE); }
 inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
+// HARDWARE FLAGS
+bool vfpSupported() {
+  return true;
+}
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
@@ -227,6 +261,11 @@ inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 :
 
 inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
+
+const uint64_t GPR32_MASK = 0xffff;
+const uint64_t GPR64_MASK = 0xffff0000ffff;
+const uint64_t FPR32_MASK = 0xffff00000;
+const uint64_t FPR64_MASK = 0xffff0000;
 
 const unsigned FrameHeaderSize = 1;
 
@@ -534,6 +573,7 @@ using namespace isa;
 // shortcut functions
 inline void emit(Context* con, int code) { con->code.append4(code); }
 inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
+inline int newTemp(Context* con, unsigned mask) { return con->client->acquireTemporary(mask); }
 inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
 inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
 
@@ -1002,17 +1042,87 @@ void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   }
 }
 
+void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fabsd(b->low, a->low));
+  } else {
+    emit(con, fabss(b->low, a->low));
+  }
+}
+
+void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fnegd(b->low, a->low));
+  } else {
+    emit(con, fnegs(b->low, a->low));
+  }
+}
+
+void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fcvtsd(b->low, a->low));
+  } else {
+    emit(con, fcvtds(b->low, a->low));
+  }
+}
+
+void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
+  int tmp = newTemp(FPR_MASK);
+  if (size == 8) { // double to int
+    emit(con, ftosid(tmp, a->low));
+  } else {         // float to int
+    emit(con, ftosis(tmp, a->low));
+  }                // else thunked
+  emit(con, fmrs(b->low, tmp));
+  freeTemp(con, tmp);
+}
+
+void int2FloatRR(Context* con, unsigned UNUSED, Assembler::Register* a, unsigned size, Assembler::Register* b) {
+  emit(con, fmsr(b->low, a->low));
+  if (size == 8) { // int to double
+    emit(con, fsitod(b->low, b->low));
+  } else {         // int to float
+    emit(con, fsitos(b->low, b->low));
+  }                // else thunked
+}
+
+void floatSqrtRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
+  if (size == 8) { 
+    emit(con, fsqrtd(b->low, a->low));
+  } else {
+    emit(con, fsqrts(b->low, a->low));
+  }
+}
+
+void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) { 
+    emit(con, faddd(t->low, a->low, b->low));
+  } else {
+    emit(con, fadds(t->low, a->low, b->low));
+  }
+}
+
+void floatSubtractR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) { 
+    emit(con, fsubd(t->low, a->low, b->low));
+  } else {
+    emit(con, fsubs(t->low, a->low, b->low));
+  }
+}
+
 void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
-    emit(con, fmdrr(0, a->low, a->high));
-    emit(con, fmdrr(1, b->low, b->high));
-    emit(con, fmuld(0, 0, 1));
-    emit(con, fmrrd(t->low, t->high, 0));
+    emit(con, fmuld(t->low, a->low, b->low));
   } else {
-    emit(con, fmsr(0, a->low));
-    emit(con, fmsr(1, b->low));
-    emit(con, fmuls(0, 0, 1));
-    emit(con, fmrs(t->low, 0));
+    emit(con, fmuls(t->low, a->low, b->low));
+  }
+}
+
+void floatDivideR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) { 
+    emit(con, fdivd(t->low, a->low, b->low));
+  } else {
+    emit(con, fdivs(t->low, a->low, b->low));
   }
 }
 
@@ -1815,13 +1925,23 @@ populateTables(ArchitectureContext* c)
 
   bo[index(c, Negate, R, R)] = CAST2(negateRR);
 
+  bo[index(c, FloatAbsolute, R, R)] = CAST2(floatAbsoluteRR);
+  bo[index(c, FloatNegate, R, R)] = CAST2(floatNegateRR);
+  bo[index(c, Float2Float, R, R)] = CAST2(float2FloatRR);
+  bo[index(c, Float2Int, R, R)] = CAST2(float2IntRR);
+  bo[index(c, Int2Float, R, R)] = CAST2(int2FloatRR);
+  bo[index(c, FloatSquareRoot, R)] = CAST2(floatSqrtRR);
+
   to[index(c, Add, R)] = CAST3(addR);
 
   to[index(c, Subtract, R)] = CAST3(subR);
 
   to[index(c, Multiply, R)] = CAST3(multiplyR);
 
+  to[index(c, FloatAdd, R)] = CAST3(floatAddR);
+  to[index(c, FloatSubtract, R)] = CAST3(floatSubtractR);
   to[index(c, FloatMultiply, R)] = CAST3(floatMultiplyR);
+  to[index(c, FloatDivide, R)] = CAST3(floatDivideR);
 
   to[index(c, ShiftLeft, R)] = CAST3(shiftLeftR);
   to[index(c, ShiftLeft, C)] = CAST3(shiftLeftC);
@@ -1852,15 +1972,15 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned floatRegisterSize() {
-    return 0;
+    return vfpSupported() ? 16 : 0;
   }
 
   virtual uint32_t generalRegisterMask() {
-    return 0xFFFF;
+    return GPR_MASK;
   }
 
   virtual uint32_t floatRegisterMask() {
-    return 0;
+    return vfpSupported() ? FPR_MASK : 0;
   }
 
   virtual int scratch() {
@@ -2062,30 +2182,40 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planSource
   (BinaryOperation op,
-   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned, bool* thunk)
+   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned bSize, bool* thunk)
   {
-    *aTypeMask = ~0;
-    *aRegisterMask = ~static_cast<uint64_t>(0);
-
-    *thunk = false;
+    *aTypeMask = (1 << RegisterOperand);
 
     switch (op) {
-    case Negate:
-      *aTypeMask = (1 << RegisterOperand);
-      break;
-
     case Absolute:
     case FloatAbsolute:
     case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
+      if (vfpSupported()) {
+      } else {
+        *thunk = true;
+      }
+      break;
+
     case Float2Int:
+      if (vfpSupported() && bSize == 4) {
+      } else {
+        *thunk = true;
+      }
+      break;
+
     case Int2Float:
-      *thunk = true;
+      if (vfpSupported() && aSize == 4) {
+      } else {
+        *thunk = true;
+      }
       break;
 
     default:
+      *aRegisterMask = ~static_cast<uint64_t>(0);
+      *thunk = false;
       break;
     }
   }
@@ -2153,7 +2283,6 @@ class MyArchitecture: public Assembler::Architecture {
     case Or:
     case Xor:
     case Multiply:
-    case FloatMultiply:
       *aTypeMask = *bTypeMask = (1 << RegisterOperand);
       break;
 
@@ -2161,6 +2290,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Remainder:
     case FloatAdd:
     case FloatSubtract:
+    case FloatMultiply:
     case FloatDivide:
     case FloatRemainder:
     case JumpIfFloatEqual:
@@ -2173,7 +2303,10 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrUnordered:
     case JumpIfFloatLessOrEqualOrUnordered:
     case JumpIfFloatGreaterOrEqualOrUnordered:
-      *thunk = true;
+      if (vfpSupported()) {
+      } else {
+        *thunk = true;
+      }
       break;
 
     default:
