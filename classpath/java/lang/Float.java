@@ -12,8 +12,10 @@ package java.lang;
 
 public final class Float extends Number {
   public static final Class TYPE = Class.forCanonicalName("F");
-
-  private final float value;
+  private static final int EXP_BIT_MASK = 0x7F800000;
+  private static final int SIGNIF_BIT_MASK = 0x007FFFFF;
+  
+  private final float value;  
 
   public Float(String value) {
     this.value = parseFloat(value);
@@ -87,6 +89,17 @@ public final class Float extends Number {
     } else {
       throw new NumberFormatException(s);
     }
+  }
+  
+  public static int floatToIntBits(float value) {
+    int result = floatToRawIntBits(value);
+    
+    // Check for NaN based on values of bit fields, maximum
+    // exponent and nonzero significand.
+    if (((result & EXP_BIT_MASK) == EXP_BIT_MASK) && (result & SIGNIF_BIT_MASK) != 0) {
+      result = 0x7fc00000;
+    }
+    return result;
   }
 
   public static native int floatToRawIntBits(float value);

@@ -211,5 +211,32 @@ public class Floats {
       double d = (double) z;
       expect(d == 12345.0);
     }
+    
+    {
+      int NaN = 0x7F800001;
+      int result = Float.floatToIntBits(NaN);
+      int expected = 0x7fc00000;
+      System.out.println("NaN integer is: " + result + " and we were expecting it to be: " + expected);
+      expect(result == expected);
+    }
+    
+    {
+      int number = 0x00800001;
+      int result = Float.floatToIntBits(number);
+      System.out.println("Number1 is: " + result);
+      
+      expect(result == number);
+      
+      
+    }
+    
+    {
+      int number = 0x80800003;
+      int result = Float.floatToIntBits(number);
+      System.out.println("Number2 is: " + result);
+      expect(result == number);
+      
+      
+    }
   }
 }
