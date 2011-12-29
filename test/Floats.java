@@ -211,9 +211,18 @@ public class Floats {
       double d = (double) z;
       expect(d == 12345.0);
     }
-    
+
+    // Test floatToIntBits 
     { 
       int orig = 0x7f800001;
+      float NaN = Float.intBitsToFloat(orig);
+      int result = Float.floatToIntBits(NaN);
+      int expected = 0x7fc00000;
+      expect(result == expected);
+    }
+    
+    { 
+      int orig = 0x7f801001;
       float NaN = Float.intBitsToFloat(orig);
       int result = Float.floatToIntBits(NaN);
       int expected = 0x7fc00000;
