@@ -169,7 +169,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this);
+      ::free(this);
     }
 
     pthread_t thread;
@@ -197,7 +197,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       pthread_mutex_destroy(&mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -410,7 +410,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -441,7 +441,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -468,7 +468,7 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -494,7 +494,7 @@ class MySystem: public System {
       if (directory) {
         closedir(directory);
       }
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -541,10 +541,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_);
+        ::free(const_cast<char*>(name_));
       }
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;

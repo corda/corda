@@ -45,6 +45,15 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
+    // todo: There's potentially a leak here on systems where we must
+    // call join on a thread in order to clean up all resources
+    // associated with it.  If a thread has already been zombified by
+    // the time we get here, acquireSystem will return false, which
+    // means we can't safely join it because the System::Thread may
+    // already have been disposed.  In that case, the thread has
+    // already exited (or will soon), but the OS will never free all
+    // its resources because it doesn't know we're completely done
+    // with it.
     if (acquireSystem(t, o)) {
       o->systemThread->join();
       releaseSystem(t, o);
