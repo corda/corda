@@ -1673,13 +1673,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         set(t, addendum, ClassAddendumMethodTable,
             classMethodTable(t, class_));
 
-        unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
+        unsigned oldLength = classMethodTable(t, class_) ?
+          arrayLength(t, classMethodTable(t, class_)) : 0;
+
         object newMethodTable = makeArray
           (t, oldLength + listSize(t, abstractVirtuals));
 
-        memcpy(&arrayBody(t, newMethodTable, 0),
-               &arrayBody(t, classMethodTable(t, class_), 0),
-               oldLength * sizeof(object));
+        if (oldLength) {
+          memcpy(&arrayBody(t, newMethodTable, 0),
+                 &arrayBody(t, classMethodTable(t, class_), 0),
+                 oldLength * sizeof(object));
+        }
 
         mark(t, newMethodTable, ArrayBody, oldLength);
 
