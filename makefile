@@ -246,7 +246,8 @@ ifeq ($(arch),arm)
 	ifeq ($(build-platform),darwin)
 		ios = true
 	else
-		cflags += -marm -Wno-psabi
+		no-psabi = -Wno-psabi
+		cflags += -marm $(no-psabi)
 	endif
 
 	ifneq ($(arch),$(build-arch))
@@ -585,6 +586,8 @@ endif
 
 cflags += $(extra-cflags)
 lflags += $(extra-lflags)
+
+openjdk-cflags += $(extra-cflags)
 
 driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o

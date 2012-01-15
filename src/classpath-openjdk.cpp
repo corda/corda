@@ -2594,15 +2594,25 @@ Avian_sun_misc_Unsafe_compareAndSwapObject
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapLong
-(Thread*, object, uintptr_t* arguments)
+(Thread* t UNUSED, object, uintptr_t* arguments)
 {
   object target = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   uint64_t expect; memcpy(&expect, arguments + 4, 8);
   uint64_t update; memcpy(&update, arguments + 6, 8);
 
+#ifdef AVIAN_HAS_CAS64
   return atomicCompareAndSwap64
     (&cast<uint64_t>(target, offset), expect, update);
+#else
+  ACQUIRE_FIELD_FOR_WRITE(t, local::fieldForOffset(t, target, offset));
+  if (cast<uint64_t>(target, offset) == expect) {
+    cast<uint64_t>(target, offset) = update;
+    return true;
+  } else {
+    return false;
+  }
+#endif
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
