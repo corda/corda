@@ -147,7 +147,7 @@ const unsigned TargetFieldOffset = 8;
 
 const unsigned TargetBitsPerWord = TargetBytesPerWord * 8;
 
-const uintptr_t TargetPointerMask
+const target_uintptr_t TargetPointerMask
 = ((~static_cast<target_uintptr_t>(0)) / TargetBytesPerWord)
   * TargetBytesPerWord;
 

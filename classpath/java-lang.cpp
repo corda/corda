@@ -51,7 +51,9 @@
 #  endif
 #  include "unistd.h"
 #  include "limits.h"
+#  include "signal.h"
 #  include "sys/time.h"
+#  include "sys/types.h"
 #  include "sys/sysctl.h"
 #  include "sys/utsname.h"
 #  include "sys/wait.h"
@@ -281,6 +283,11 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
   return exitCode;
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+  TerminateProcess(reinterpret_cast<HANDLE>(pid), 1);
+}
+
 Locale getLocale() {
   const char* lang = "";
   const char* reg = "";
@@ -466,6 +473,11 @@ Java_java_lang_Runtime_waitFor(JNIEnv*, jclass, jlong pid, jlong)
   }
   
   return exitCode;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+  kill((pid_t)pid, SIGTERM);
 }
 
 Locale getLocale() {

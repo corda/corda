@@ -72,4 +72,7 @@ public abstract class AbstractCollection<T> implements Collection<T> {
 
   public abstract Iterator<T> iterator();
 
+  public String toString() {
+    return Collections.toString(this);
+  }
 }

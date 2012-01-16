@@ -119,7 +119,7 @@ class MySystem: public System {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
-      s->free(this);
+      ::free(this);
     }
 
     HANDLE thread;
@@ -150,7 +150,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       CloseHandle(mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -377,7 +377,7 @@ class MySystem: public System {
     virtual void dispose() {
       assert(s, owner_ == 0);
       CloseHandle(mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -408,7 +408,7 @@ class MySystem: public System {
       bool r UNUSED = TlsFree(key);
       assert(s, r);
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -472,7 +472,7 @@ class MySystem: public System {
       if (handle and handle != INVALID_HANDLE_VALUE) {
         FindClose(handle);
       }
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -523,10 +523,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_);
+        ::free(const_cast<char*>(name_));
       }
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -986,7 +986,7 @@ handleException(LPEXCEPTION_POINTERS e)
 
 namespace vm {
 
-System*
+JNIEXPORT System*
 makeSystem(const char* crashDumpDirectory)
 {
   return new (malloc(sizeof(MySystem))) MySystem(crashDumpDirectory);

@@ -36,6 +36,13 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
     position = 0;
   }
 
+  public ByteBuffer asReadOnlyBuffer() {
+    ByteBuffer b = new ByteBuffer(array, arrayOffset, capacity, true);
+    b.position(position());
+    b.limit(limit());
+    return b;
+  }
+
   public int compareTo(ByteBuffer o) {
     int end = (remaining() < o.remaining() ? remaining() : o.remaining());
 
@@ -157,6 +164,13 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
       | ((array[p + 1] & 0xFF) << 16)
       | ((array[p + 2] & 0xFF) <<  8)
       | ((array[p + 3] & 0xFF));
+  }
+
+  public short getShort(int position) {
+    checkGet(position, 2);
+
+    int p = arrayOffset + position;
+    return (short) (((array[p] & 0xFF) << 8) | ((array[p + 1] & 0xFF)));
   }
 
   public int getInt() {

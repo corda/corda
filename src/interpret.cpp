@@ -698,7 +698,7 @@ findExceptionHandler(Thread* t, object method, unsigned ip)
           }
         }
 
-        if (catchType == 0 or instanceOf(t, catchType, t->exception)) {
+        if (exceptionMatch(t, catchType, t->exception)) {
           return eh;
         }
       }

@@ -255,6 +255,8 @@ atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 #endif
 }
 
+#define AVIAN_HAS_CAS64
+
 inline bool
 atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
 {

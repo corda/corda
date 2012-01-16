@@ -61,6 +61,10 @@ public class File implements Serializable {
     return isFile(path);
   }
   
+  public boolean isAbsolute() {
+    return path.equals(toAbsolutePath(path));
+  }
+  
   private static native boolean canRead(String path);
   
   public boolean canRead() {

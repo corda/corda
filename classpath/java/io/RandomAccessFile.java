@@ -12,16 +12,21 @@ package java.io;
 
 public class RandomAccessFile {
   private long peer;
-  private long length;
+  private File file;
   private long position = 0;
-  
+  private long length;
+
   public RandomAccessFile(String name, String mode)
     throws FileNotFoundException
   {
     if (! mode.equals("r")) throw new IllegalArgumentException();
+    file = new File(name);
+    open();
+  }
 
+  private void open() throws FileNotFoundException {
     long[] result = new long[2];
-    open(name, result);
+    open(file.getPath(), result);
     peer = result[0];
     length = result[1];
   }
@@ -29,7 +34,15 @@ public class RandomAccessFile {
   private static native void open(String name, long[] result)
     throws FileNotFoundException;
 
+  private void refresh() throws IOException {
+    if (file.length() != length) {
+      close();
+      open();
+    }
+  }
+
   public long length() throws IOException {
+    refresh();
     return length;
   }
 
@@ -38,7 +51,7 @@ public class RandomAccessFile {
   }
 
   public void seek(long position) throws IOException {
-    if (position < 0 || position > length) throw new IOException();
+    if (position < 0 || position > length()) throw new IOException();
 
     this.position = position;
   }
@@ -50,12 +63,16 @@ public class RandomAccessFile {
 
     if (length == 0) return;
 
-    if (position + length > this.length) throw new EOFException();
+    if (position + length > this.length) {
+      if (position + length > length()) throw new EOFException();
+    }
 
     if (offset < 0 || offset + length > buffer.length)
       throw new ArrayIndexOutOfBoundsException();
 
     copy(peer, position, buffer, offset, length);
+
+    position += length;
   }
 
   private static native void copy(long peer, long position, byte[] buffer,

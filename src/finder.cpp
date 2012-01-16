@@ -920,7 +920,7 @@ class MyFinder: public Finder {
 
 namespace vm {
 
-Finder*
+JNIEXPORT Finder*
 makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary)
 {
   return new (a->allocate(sizeof(MyFinder))) MyFinder(s, a, path, bootLibrary);

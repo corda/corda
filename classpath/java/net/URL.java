@@ -19,6 +19,8 @@ public final class URL {
   private String host;
   private int port;
   private String file;
+  private String path;
+  private String query;
   private String ref;
 
   public URL(String s) throws MalformedURLException {
@@ -55,6 +57,14 @@ public final class URL {
   public String getRef() {
     return ref;
   }
+  
+  public String getPath() {
+    return path;
+  }
+  
+  public String getQuery() {
+    return query;
+  }
 
   public URLConnection openConnection() throws IOException {
     return handler.openConnection(this);
@@ -90,5 +100,13 @@ public final class URL {
     this.port = port;
     this.file = file;
     this.ref = ref;
+    
+    int q = file.lastIndexOf('?');
+    if (q != -1) {
+      this.query = file.substring(q + 1);
+      this.path = file.substring(0, q);
+    } else {
+      this.path = file;
+    }
   }
 }

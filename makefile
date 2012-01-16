@@ -54,7 +54,7 @@ test = test
 
 classpath = avian
 
-test-executable = $(executable)
+test-executable = $(shell pwd)/$(executable)
 boot-classpath = $(classpath-build)
 embed-prefix = /avian-embedded
 
@@ -110,7 +110,7 @@ ifneq ($(openjdk),)
 		boot-javahome-object = $(build)/boot-javahome.o
 	else
 	  options := $(options)-openjdk
-		test-executable = $(executable-dynamic)
+		test-executable = $(shell pwd)/$(executable-dynamic)
 		library-path = \
 			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
@@ -246,7 +246,8 @@ ifeq ($(arch),arm)
 	ifeq ($(build-platform),darwin)
 		ios = true
 	else
-		cflags += -marm -Wno-psabi
+		no-psabi = -Wno-psabi
+		cflags += -marm $(no-psabi)
 	endif
 
 	ifneq ($(arch),$(build-arch))
@@ -319,7 +320,7 @@ ifeq ($(platform),darwin)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		flags = -arch armv6 -isysroot \
-			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/
+			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
 		openjdk-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
@@ -372,7 +373,8 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
+
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -446,6 +448,7 @@ ifeq ($(use-lto),true)
 	ifeq ($(shell expr 4 \< $(gcc-major) \
 			\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
 		optimization-cflags += -flto
+		no-lto = -fno-lto
 		lflags += $(optimization-cflags)
 	endif
 endif
@@ -584,12 +587,12 @@ endif
 cflags += $(extra-cflags)
 lflags += $(extra-lflags)
 
+openjdk-cflags += $(extra-cflags)
+
 driver-source = $(src)/main.cpp
 driver-object = $(build)/main.o
 driver-dynamic-objects = \
-	$(build)/main-dynamic.o \
-	$(build)/$(system).o \
-	$(build)/finder.o
+	$(build)/main-dynamic.o
 
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
@@ -957,6 +960,8 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
+# todo: the $(no-lto) flag below is due to odd undefined reference errors on
+# Ubuntu 11.10 which may be fixable without disabling LTO.
 $(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef msvc
@@ -965,7 +970,7 @@ ifdef msvc
 		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 

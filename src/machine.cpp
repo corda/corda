@@ -45,6 +45,15 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
+    // todo: There's potentially a leak here on systems where we must
+    // call join on a thread in order to clean up all resources
+    // associated with it.  If a thread has already been zombified by
+    // the time we get here, acquireSystem will return false, which
+    // means we can't safely join it because the System::Thread may
+    // already have been disposed.  In that case, the thread has
+    // already exited (or will soon), but the OS will never free all
+    // its resources because it doesn't know we're completely done
+    // with it.
     if (acquireSystem(t, o)) {
       o->systemThread->join();
       releaseSystem(t, o);
@@ -138,27 +147,29 @@ dispose(Thread* t, Thread* o, bool remove)
 }
 
 void
-joinAll(Thread* m, Thread* o)
+visitAll(Thread* m, Thread* o, void (*visit)(Thread*, Thread*))
 {
   for (Thread* p = o->child; p;) {
     Thread* child = p;
     p = p->peer;
-    joinAll(m, child);
+    visitAll(m, child, visit);
   }
 
-  join(m, o);
+  visit(m, o);
 }
 
 void
-disposeAll(Thread* m, Thread* o)
+disposeNoRemove(Thread* m, Thread* o)
 {
-  for (Thread* p = o->child; p;) {
-    Thread* child = p;
-    p = p->peer;
-    disposeAll(m, child);
-  }
-
   dispose(m, o, false);
+}
+
+void
+interruptDaemon(Thread* m, Thread* o)
+{
+  if (o->flags & Thread::DaemonFlag) {
+    interrupt(m, o);
+  }
 }
 
 void
@@ -166,7 +177,7 @@ turnOffTheLights(Thread* t)
 {
   expect(t, t->m->liveCount == 1);
 
-  joinAll(t, t->m->rootThread);
+  visitAll(t, t->m->rootThread, join);
 
   enter(t, Thread::ExitState);
 
@@ -215,7 +226,7 @@ turnOffTheLights(Thread* t)
 
   Machine* m = t->m;
 
-  disposeAll(t, t->m->rootThread);
+  visitAll(t, t->m->rootThread, disposeNoRemove);
 
   System* s = m->system;
   Heap* h = m->heap;
@@ -1662,13 +1673,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         set(t, addendum, ClassAddendumMethodTable,
             classMethodTable(t, class_));
 
-        unsigned oldLength = arrayLength(t, classMethodTable(t, class_));
+        unsigned oldLength = classMethodTable(t, class_) ?
+          arrayLength(t, classMethodTable(t, class_)) : 0;
+
         object newMethodTable = makeArray
           (t, oldLength + listSize(t, abstractVirtuals));
 
-        memcpy(&arrayBody(t, newMethodTable, 0),
-               &arrayBody(t, classMethodTable(t, class_), 0),
-               oldLength * sizeof(object));
+        if (oldLength) {
+          memcpy(&arrayBody(t, newMethodTable, 0),
+                 &arrayBody(t, classMethodTable(t, class_), 0),
+                 oldLength * sizeof(object));
+        }
 
         mark(t, newMethodTable, ArrayBody, oldLength);
 
@@ -2443,6 +2458,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   collecting(false),
   triedBuiltinOnLoad(false),
   dumpedHeapOnOOM(false),
+  alive(true),
   heapPoolIndex(0)
 {
   heap->setClient(heapClient);
@@ -2566,7 +2582,7 @@ Thread::init()
 
     enter(this, ActiveState);
 
-    if (image and image) {
+    if (image and code) {
       m->processor->boot(this, image, code);
     } else {
       boot(this);
@@ -2693,6 +2709,17 @@ shutDown(Thread* t)
         t->m->stateLock->wait(t->systemThread, 0);      
       }
     }
+  }
+
+  // interrupt daemon threads and tell them to die
+
+  // todo: be more aggressive about killing daemon threads, e.g. at
+  // any GC point, not just at waits/sleeps
+  { ACQUIRE(t, t->m->stateLock);
+
+    t->m->alive = false;
+
+    visitAll(t, t->m->rootThread, interruptDaemon);
   }
 }
 
@@ -3247,9 +3274,7 @@ classInitializer(Thread* t, object class_)
     {
       object o = arrayBody(t, classMethodTable(t, class_), i);
 
-      if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
-                     &byteArrayBody(t, methodName(t, o), 0)) == 0)
-      {
+      if (methodVmFlags(t, o) & ClassInitFlag) {
         return o;
       }               
     }
@@ -3798,15 +3823,15 @@ initClass(Thread* t, object c)
 object
 resolveObjectArrayClass(Thread* t, object loader, object elementClass)
 {
+  PROTECT(t, loader);
+  PROTECT(t, elementClass);
+
   { object arrayClass = classRuntimeDataArrayClass
       (t, getClassRuntimeData(t, elementClass));
     if (arrayClass) {
       return arrayClass;
     }
   }
-
-  PROTECT(t, loader);
-  PROTECT(t, elementClass);
 
   object elementSpec = className(t, elementClass);
   PROTECT(t, elementSpec);

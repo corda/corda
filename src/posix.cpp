@@ -169,7 +169,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      s->free(this);
+      ::free(this);
     }
 
     pthread_t thread;
@@ -197,7 +197,7 @@ class MySystem: public System {
 
     virtual void dispose() {
       pthread_mutex_destroy(&mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -410,7 +410,7 @@ class MySystem: public System {
     virtual void dispose() {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -441,7 +441,7 @@ class MySystem: public System {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -468,7 +468,7 @@ class MySystem: public System {
       if (start_) {
         munmap(start_, length_);
       }
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -494,7 +494,7 @@ class MySystem: public System {
       if (directory) {
         closedir(directory);
       }
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -541,10 +541,10 @@ class MySystem: public System {
       }
 
       if (name_) {
-        s->free(name_);
+        ::free(const_cast<char*>(name_));
       }
 
-      s->free(this);
+      ::free(this);
     }
 
     System* s;
@@ -772,13 +772,22 @@ class MySystem: public System {
   }
 
   virtual FileType stat(const char* name, unsigned* length) {
-    struct stat s;
-    int r = ::stat(name, &s);
+    // Ugly Hack Alert: It seems that the Apple iOS Simulator's stat
+    // implementation writes beyond the end of the struct stat we pass
+    // it, which can clobber unrelated parts of the stack.  Perhaps
+    // this is due to some kind of header/library mismatch, but I've
+    // been unable to track it down so far.  The workaround is to give
+    // it 8 words more than it should need, where 8 is a number I just
+    // made up and seems to work.
+    void* array[ceiling(sizeof(struct stat), sizeof(void*)) + 8];
+    struct stat* s = reinterpret_cast<struct stat*>(array);
+
+    int r = ::stat(name, s);
     if (r == 0) {
-      if (S_ISREG(s.st_mode)) {
-        *length = s.st_size;
+      if (S_ISREG(s->st_mode)) {
+        *length = s->st_size;
         return TypeFile;
-      } else if (S_ISDIR(s.st_mode)) {
+      } else if (S_ISDIR(s->st_mode)) {
         *length = 0;
         return TypeDirectory;
       } else {
@@ -990,7 +999,7 @@ handleSignal(int signal, siginfo_t*, void* context)
 
 namespace vm {
 
-System*
+JNIEXPORT System*
 makeSystem(const char*)
 {
   return new (malloc(sizeof(MySystem))) MySystem();

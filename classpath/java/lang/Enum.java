@@ -14,7 +14,7 @@ import java.lang.reflect.Method;
 
 public abstract class Enum<E extends Enum<E>> implements Comparable<E> {
   private final String name;
-  private final int ordinal;
+  protected final int ordinal;
 
   public Enum(String name, int ordinal) {
     this.name = name;

@@ -2594,15 +2594,25 @@ Avian_sun_misc_Unsafe_compareAndSwapObject
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapLong
-(Thread*, object, uintptr_t* arguments)
+(Thread* t UNUSED, object, uintptr_t* arguments)
 {
   object target = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   uint64_t expect; memcpy(&expect, arguments + 4, 8);
   uint64_t update; memcpy(&update, arguments + 6, 8);
 
+#ifdef AVIAN_HAS_CAS64
   return atomicCompareAndSwap64
     (&cast<uint64_t>(target, offset), expect, update);
+#else
+  ACQUIRE_FIELD_FOR_WRITE(t, local::fieldForOffset(t, target, offset));
+  if (cast<uint64_t>(target, offset) == expect) {
+    cast<uint64_t>(target, offset) = update;
+    return true;
+  } else {
+    return false;
+  }
+#endif
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2747,17 +2757,27 @@ Avian_sun_misc_Unsafe_park
   bool absolute = arguments[1];
   int64_t time; memcpy(&time, arguments + 2, 8);
   
+  int64_t then = t->m->system->now();
+
   if (absolute) {
-    time -= t->m->system->now();
+    time -= then;
     if (time <= 0) {
       return;
     }
+  } else {
+    time /= 1000 * 1000;
   }
 
   monitorAcquire(t, local::interruptLock(t, t->javaThread));
-  while (not (threadUnparked(t, t->javaThread)
-              or monitorWait(t, local::interruptLock(t, t->javaThread), time)))
-  { }
+  while (time > 0
+         and (not (threadUnparked(t, t->javaThread)
+                   or monitorWait
+                   (t, local::interruptLock(t, t->javaThread), time))))
+  {
+    int64_t now = t->m->system->now();
+    time -= now - then;
+    then = now;
+  }
   threadUnparked(t, t->javaThread) = false;
   monitorRelease(t, local::interruptLock(t, t->javaThread));
 }

@@ -122,6 +122,8 @@ public class Runtime {
 
   private static native void load(String name, boolean mapName);
 
+  private static native void kill(long pid);
+
   public native void gc();
 
   public native void exit(int code);
@@ -147,7 +149,9 @@ public class Runtime {
     }
 
     public void destroy() {
-      throw new RuntimeException("not implemented");
+			if (pid != 0) {
+      	kill(pid);
+			}
     }
 
     public InputStream getInputStream() {

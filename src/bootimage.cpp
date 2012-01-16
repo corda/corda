@@ -211,10 +211,12 @@ allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
     includeMembers = false;
     *count += reinterpret_cast<TypeMap*>(&byteArrayBody(t, *array, 0))
       ->fixedFieldCount;
-  } else if (classSuper(t, c)) {
+  } else {
     includeMembers = true;
-    fields = getNonStaticFields
-      (t, typeMaps, classSuper(t, c), fields, count, array);
+    if (classSuper(t, c)) {
+      fields = getNonStaticFields
+        (t, typeMaps, classSuper(t, c), fields, count, array);
+    }
   }
 
   if (classFieldTable(t, c)) {
@@ -1314,9 +1316,9 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
       bool sawArray = false;
-      Type type;
-      unsigned buildSize;
-      unsigned targetSize;
+      Type type = Type_none;
+      unsigned buildSize = 0;
+      unsigned targetSize = 0;
       for (unsigned j = 1; j < count; ++j) {
         switch (source[j - 1]) {
         case Type_object:
