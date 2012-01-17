@@ -156,21 +156,21 @@ inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm
 inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); }
 inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); }
 inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); }
-inline int fcpys(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0, Sd, 10, 2|Sm&1, Sm); }
-inline int fabss(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0, Sd, 10, 6|Sm&1, Sm); }
-inline int fnegs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 1, Sd, 10, 2|Sm&1, Sm); }
-inline int fsqrts(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 1, Sd, 10, 6|Sm&1, Sm); }
-inline int fcmps(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 4, Sd, 10, 2|Sm&1, Sm); }
-inline int fcmpes(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 4, Sd, 10, 6|Sm&1, Sm); }
-inline int fcmpzs(int Sd) { return COOP(AL, 0xb|Sd&1, 5, Sd, 10, 2|Sm&1, 0); }
-inline int fcmpezs(int Sd) { return COOP(AL, 0xb|Sd&1, 5, Sd, 10, 6|Sm&1, 0); }
-inline int fcvtds(int Dd, int Sm) { return COOP(AL, 0xb|Sd&1, 7, Dd, 10, 6|Sm&1, Sm); }
-inline int fuitos(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 8, Sd, 10, 2|Sm&1, Sm); }
-inline int fsitos(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 8, Sd, 10, 6|Sm&1, Sm); }
-inline int ftouis(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xc, Sd, 10, 2|Sm&1, Sm); }
-inline int ftouizs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xc, Sd, 10, 6|Sm&1, Sm); }
-inline int ftosis(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xd, Sd, 10, 2|Sm&1, Sm); }
-inline int ftosizs(int Sd, int Sm) { return COOP(AL, 0xb|Sd&1, 0xd, Sd, 10, 6|Sm&1, Sm); }
+inline int fcpys(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fabss(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fnegs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fsqrts(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fcmps(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fcmpes(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fcmpzs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 2, 0); }
+inline int fcmpezs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 6, 0); }
+inline int fcvtds(int Dd, int Sm) { return COOP(AL, 0xb, 7, Dd, 10, 6|(Sm&1), Sm>>1); }
+inline int fuitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fsitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int ftouis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int ftouizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int ftosis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int ftosizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
 inline int fcpyd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 2, Dm); }
 inline int fabsd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 6, Dm); }
 inline int fnegd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 2, Dm); }
@@ -179,13 +179,13 @@ inline int fcmpd(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 2, Dm); }
 inline int fcmped(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 6, Dm); }
 inline int fcmpzd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 2, 0); }
 inline int fcmpezd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 6, 0); }
-inline int fcvtsd(int Sd, int Dm) { return COOP(AL, 0xb, 7, Sd, 11, 6, Dm); }
-inline int fuitod(int Dd, int Dm) { return COOP(AL, 0xb, 8, Dd, 11, 2, Dm); }
-inline int fsitod(int Dd, int Dm) { return COOP(AL, 0xb, 8, Dd, 11, 6, Dm); }
-inline int ftouid(int Dd, int Dm) { return COOP(AL, 0xb, 0xc, Dd, 11, 2, Dm); }
-inline int ftouizd(int Dd, int Dm) { return COOP(AL, 0xb, 0xc, Dd, 11, 6, Dm); }
-inline int ftosid(int Dd, int Dm) { return COOP(AL, 0xb, 0xd, Dd, 11, 2, Dm); }
-inline int ftosizd(int Dd, int Dm) { return COOP(AL, 0xb, 0xd, Dd, 11, 6, Dm); }
+inline int fcvtsd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 7, Sd>>1, 11, 6, Dm); }
+inline int fuitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 2|(Sm&1), Sm>>1); }
+inline int fsitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 6|(Sm&1), Sm>>1); }
+inline int ftouid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 2, Dm); }
+inline int ftouizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 6, Dm); }
+inline int ftosid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 2, Dm); }
+inline int ftosizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 6, Dm); }
 inline int fldms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, count); }
 inline int fldmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1); }
 inline int fldmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1|1); }
@@ -262,10 +262,8 @@ inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 :
 inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
-const uint64_t GPR32_MASK = 0xffff;
-const uint64_t GPR64_MASK = 0xffff0000ffff;
-const uint64_t FPR32_MASK = 0xffff00000;
-const uint64_t FPR64_MASK = 0xffff0000;
+const uint32_t GPR_MASK = 0xffff;
+const uint32_t FPR_MASK = 0xffff0000;
 
 const unsigned FrameHeaderSize = 1;
 
@@ -1067,7 +1065,7 @@ void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned
 }
 
 void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
-  int tmp = newTemp(FPR_MASK);
+  int tmp = newTemp(con, FPR_MASK);
   if (size == 8) { // double to int
     emit(con, ftosid(tmp, a->low));
   } else {         // float to int
@@ -1930,7 +1928,7 @@ populateTables(ArchitectureContext* c)
   bo[index(c, Float2Float, R, R)] = CAST2(float2FloatRR);
   bo[index(c, Float2Int, R, R)] = CAST2(float2IntRR);
   bo[index(c, Int2Float, R, R)] = CAST2(int2FloatRR);
-  bo[index(c, FloatSquareRoot, R)] = CAST2(floatSqrtRR);
+  bo[index(c, FloatSquareRoot, R, R)] = CAST2(floatSqrtRR);
 
   to[index(c, Add, R)] = CAST3(addR);
 
