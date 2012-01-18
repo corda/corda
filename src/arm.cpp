@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -232,7 +232,7 @@ inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
 // HARDWARE FLAGS
 bool vfpSupported() {
-  return true;
+  return false; // TODO
 }
 }
 
@@ -247,10 +247,10 @@ inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
 inline unsigned hi8(int64_t i) { return lo8(i>>8); }
 
 inline int ha16(int32_t i) { 
-    return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
+  return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
 }
 inline int unha16(int32_t high, int32_t low) {
-    return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
+  return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
 }
 
 inline bool isInt8(target_intptr_t v) { return v == static_cast<int8_t>(v); }
@@ -2183,37 +2183,38 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    unsigned bSize, bool* thunk)
   {
-    *aTypeMask = (1 << RegisterOperand);
+    *thunk = false;
+    *aTypeMask = ~0;
+    *aRegisterMask = ~static_cast<uint64_t>(0);
 
     switch (op) {
+    case Negate:
+      *aTypeMask = (1 << RegisterOperand);
+      break;
+
     case Absolute:
     case FloatAbsolute:
     case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
-      if (vfpSupported()) {
-      } else {
+      if (!vfpSupported()) {
         *thunk = true;
       }
       break;
 
     case Float2Int:
-      if (vfpSupported() && bSize == 4) {
-      } else {
+      if (!vfpSupported() || bSize != 4) {
         *thunk = true;
       }
       break;
 
     case Int2Float:
-      if (vfpSupported() && aSize == 4) {
-      } else {
+      if (!vfpSupported() || aSize != 4) {
         *thunk = true;
       }
       break;
 
     default:
-      *aRegisterMask = ~static_cast<uint64_t>(0);
-      *thunk = false;
       break;
     }
   }
@@ -2301,8 +2302,7 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrUnordered:
     case JumpIfFloatLessOrEqualOrUnordered:
     case JumpIfFloatGreaterOrEqualOrUnordered:
-      if (vfpSupported()) {
-      } else {
+      if (!vfpSupported()) {
         *thunk = true;
       }
       break;
