@@ -20,6 +20,7 @@
 #endif
 
 .globl GLOBAL(vmNativeCall)
+.align 2
 GLOBAL(vmNativeCall):
   /*
     arguments:
@@ -57,6 +58,7 @@ LOCAL(loop):
   ldmfd sp!, {r4-r6, pc} // restore non-volatile regs and return
 
 .globl GLOBAL(vmJump)
+.align 2
 GLOBAL(vmJump):
   mov   lr, r0
   ldr   r0, [sp]
@@ -69,6 +71,7 @@ GLOBAL(vmJump):
 #define CHECKPOINT_STACK 24
 
 .globl GLOBAL(vmRun)
+.align 2
 GLOBAL(vmRun):
   // r0: function
   // r1: arguments
@@ -85,6 +88,7 @@ GLOBAL(vmRun):
   blx   r12
 
 .globl GLOBAL(vmRun_returnAddress)
+.align 2
 GLOBAL(vmRun_returnAddress):
   add   sp, sp, #12
   ldmfd sp!, {r4-r11, lr}
