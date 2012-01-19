@@ -178,7 +178,8 @@ inline Mapping*
 map(JNIEnv* e, string_t path)
 {
   Mapping* result = 0;
-  HANDLE file = CreateFileW(path, FILE_READ_DATA, FILE_SHARE_READ, 0,
+  HANDLE file = CreateFileW(path, FILE_READ_DATA,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE, 0,
                             OPEN_EXISTING, 0, 0);
   if (file != INVALID_HANDLE_VALUE) {
     unsigned size = GetFileSize(file, 0);
