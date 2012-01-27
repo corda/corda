@@ -234,6 +234,7 @@ inline int bhs(int offset) { return SETCOND(b(offset), CS); }
 bool vfpSupported() {
   return false; // TODO
 }
+
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
@@ -262,8 +263,18 @@ inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 :
 inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
+const int N_GPRS = 16;
+const int N_FPRS = 16;
 const uint32_t GPR_MASK = 0xffff;
 const uint32_t FPR_MASK = 0xffff0000;
+
+inline bool isFpr(Assembler::Register* reg) {
+  return reg->low >= N_GPRS;
+}
+
+inline int toFpr(Assembler::Register* reg) {
+  return reg->low - N_GPRS;
+}
 
 const unsigned FrameHeaderSize = 1;
 
@@ -570,10 +581,37 @@ using namespace isa;
 
 // shortcut functions
 inline void emit(Context* con, int code) { con->code.append4(code); }
-inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
-inline int newTemp(Context* con, unsigned mask) { return con->client->acquireTemporary(mask); }
-inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
-inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
+
+inline int newTemp(Context* con) {
+  return con->client->acquireTemporary();
+}
+
+inline int newTemp(Context* con, unsigned mask) {
+  return con->client->acquireTemporary(mask);
+}
+
+inline void freeTemp(Context* con, int r) {
+  con->client->releaseTemporary(r);
+}
+
+inline int64_t getValue(Assembler::Constant* c) {
+  return c->value->value();
+}
+
+inline Assembler::Register makeTemp(Context* con) {
+  Assembler::Register tmp(newTemp(con));
+  return tmp;
+}
+
+inline Assembler::Register makeTemp64(Context* con) {
+  Assembler::Register tmp(newTemp(con), newTemp(con));
+  return tmp;
+}
+
+inline void freeTemp(Context* con, const Assembler::Register& tmp) {
+  if (tmp.low != NoRegister) freeTemp(con, tmp.low);
+  if (tmp.high != NoRegister) freeTemp(con, tmp.high);
+}
 
 inline void
 write4(uint8_t* dst, uint32_t v)
@@ -879,46 +917,59 @@ swapRR(Context* c, unsigned aSize, Assembler::Register* a,
 }
 
 void
-moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
+moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
        unsigned dstSize, Assembler::Register* dst)
 {
+  bool srcIsFpr = isFpr(src);
+  bool dstIsFpr = isFpr(dst);
+  if (srcIsFpr || dstIsFpr) { // floating-point register(s) involved
+    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- %d\n", dst->low, src->low);
+    // FPR to FPR
+    if (srcIsFpr && dstIsFpr) emit(con, fcpys(toFpr(dst), toFpr(src)));
+    // FPR to GPR
+    else if (srcIsFpr)        emit(con, fmrs(dst->low, toFpr(src)));
+    // GPR to FPR
+    else                      emit(con, fmsr(toFpr(dst), src->low));
+    return;
+  }
+
   switch (srcSize) {
   case 1:
-    emit(c, lsli(dst->low, src->low, 24));
-    emit(c, asri(dst->low, dst->low, 24));
+    emit(con, lsli(dst->low, src->low, 24));
+    emit(con, asri(dst->low, dst->low, 24));
     break;
-    
+
   case 2:
-    emit(c, lsli(dst->low, src->low, 16));
-    emit(c, asri(dst->low, dst->low, 16));
+    emit(con, lsli(dst->low, src->low, 16));
+    emit(con, asri(dst->low, dst->low, 16));
     break;
-    
+
   case 4:
   case 8:
     if (srcSize == 4 and dstSize == 8) {
-      moveRR(c, 4, src, 4, dst);
-      emit(c, asri(dst->high, src->low, 31));
+      moveRR(con, 4, src, 4, dst);
+      emit(con, asri(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
       Assembler::Register srcHigh(src->high);
       Assembler::Register dstHigh(dst->high);
 
       if (src->high == dst->low) {
         if (src->low == dst->high) {
-          swapRR(c, 4, src, 4, dst);
+          swapRR(con, 4, src, 4, dst);
         } else {
-          moveRR(c, 4, &srcHigh, 4, &dstHigh);
-          moveRR(c, 4, src, 4, dst);
+          moveRR(con, 4, &srcHigh, 4, &dstHigh);
+          moveRR(con, 4, src, 4, dst);
         }
       } else {
-        moveRR(c, 4, src, 4, dst);
-        moveRR(c, 4, &srcHigh, 4, &dstHigh);
+        moveRR(con, 4, src, 4, dst);
+        moveRR(con, 4, &srcHigh, 4, &dstHigh);
       }
     } else if (src->low != dst->low) {
-      emit(c, mov(dst->low, src->low));
+      emit(con, mov(dst->low, src->low));
     }
     break;
 
-  default: abort(c);
+  default: abort(con);
   }
 }
 
@@ -937,26 +988,32 @@ moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
 }
 
 void
-moveCR2(Context* c, unsigned, Assembler::Constant* src,
-        unsigned dstSize, Assembler::Register* dst, Promise* callOffset)
+moveCR2(Context* con, unsigned size, Assembler::Constant* src,
+        Assembler::Register* dst, Promise* callOffset)
 {
-  if (dstSize <= 4) {
+  if (isFpr(dst)) { // floating-point
+    Assembler::Register tmp = makeTemp(con);
+    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- 0x%llx\n", tmp.low, getValue(src));
+    moveCR2(con, size, src, &tmp, 0);
+    moveRR(con, size, &tmp, size, dst);
+    freeTemp(con, tmp);
+  } else if (size <= 4) {
     if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
-      emit(c, movi(dst->low, lo8(getValue(src))));
+      emit(con, movi(dst->low, lo8(getValue(src))));
     } else {
-      appendConstantPoolEntry(c, src->value, callOffset);
-      emit(c, ldri(dst->low, ProgramCounter, 0));
+      appendConstantPoolEntry(con, src->value, callOffset);
+      emit(con, ldri(dst->low, ProgramCounter, 0));
     }
   } else {
-    abort(c); // todo
+    abort(con); // todo
   }
 }
 
 void
-moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveCR(Context* con, unsigned size, Assembler::Constant* src,
+       unsigned, Assembler::Register* dst)
 {
-  moveCR2(c, srcSize, src, dstSize, dst, 0);
+  moveCR2(con, size, src, dst, 0);
 }
 
 void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
@@ -1096,7 +1153,8 @@ void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   if (size == 8) { 
     emit(con, faddd(t->low, a->low, b->low));
   } else {
-    emit(con, fadds(t->low, a->low, b->low));
+    fprintf(stderr, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ %d <- %d + %d\n", toFpr(t), toFpr(a), toFpr(b));
+    emit(con, fadds(toFpr(t), toFpr(a), toFpr(b)));
   }
 }
 
@@ -1175,71 +1233,91 @@ normalize(Context* c, int offset, int index, unsigned scale,
 }
 
 void
-store(Context* c, unsigned size, Assembler::Register* src,
+store(Context* con, unsigned size, Assembler::Register* src,
       int base, int offset, int index, unsigned scale, bool preserveIndex)
 {
   if (index != NoRegister) {
     bool release;
     int normalized = normalize
-      (c, offset, index, scale, &preserveIndex, &release);
+      (con, offset, index, scale, &preserveIndex, &release);
 
-    switch (size) {
-    case 1:
-      emit(c, strb(src->low, base, normalized));
-      break;
+    if (isFpr(src)) { // floating-point store
+      if (size == 4) {
+        /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr store base-indexed\n");
+        Assembler::Register base_(base),
+                            normalized_(normalized),
+                            absAddr = makeTemp(con);
+        addR(con, size, &base_, &normalized_, &absAddr);
+        emit(con, fsts(toFpr(src), absAddr.low));
+        freeTemp(con, absAddr);
+      }
+      else abort(con);
+    } else {
+      switch (size) {
+      case 1:
+        emit(con, strb(src->low, base, normalized));
+        break;
 
-    case 2:
-      emit(c, strh(src->low, base, normalized));
-      break;
+      case 2:
+        emit(con, strh(src->low, base, normalized));
+        break;
 
-    case 4:
-      emit(c, str(src->low, base, normalized));
-      break;
+      case 4:
+        emit(con, str(src->low, base, normalized));
+        break;
 
-    case 8: {
-      Assembler::Register srcHigh(src->high);
-      store(c, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
-      store(c, 4, src, base, 4, normalized, 1, preserveIndex);
-    } break;
+      case 8: {
+        Assembler::Register srcHigh(src->high);
+        store(con, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
+        store(con, 4, src, base, 4, normalized, 1, preserveIndex);
+      } break;
 
-    default: abort(c);
+      default: abort(con);
+      }
     }
 
-    if (release) c->client->releaseTemporary(normalized);
+    if (release) con->client->releaseTemporary(normalized);
   } else if (size == 8
              or abs(offset) == (abs(offset) & 0xFF)
              or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
   {
-    switch (size) {
-    case 1:
-      emit(c, strbi(src->low, base, offset));
-      break;
+    if (isFpr(src)) {
+      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr store offset -> %d\n", src->low);
+      if (size == 4) emit(con, fsts(toFpr(src), base, offset));
+      else           abort(con);
+    } else {
+      switch (size) {
+      case 1:
+        emit(con, strbi(src->low, base, offset));
+        break;
 
-    case 2:
-      emit(c, strhi(src->low, base, offset));
-      break;
+      case 2:
+        emit(con, strhi(src->low, base, offset));
+        break;
 
-    case 4:
-      emit(c, stri(src->low, base, offset));
-      break;
+      case 4:
+        emit(con, stri(src->low, base, offset));
+        break;
 
-    case 8: {
-      Assembler::Register srcHigh(src->high);
-      store(c, 4, &srcHigh, base, offset, NoRegister, 1, false);
-      store(c, 4, src, base, offset + 4, NoRegister, 1, false);
-    } break;
+      case 8: {
+        Assembler::Register srcHigh(src->high);
+        store(con, 4, &srcHigh, base, offset, NoRegister, 1, false);
+        store(con, 4, src, base, offset + 4, NoRegister, 1, false);
+      } break;
 
-    default: abort(c);
+      default: abort(con);
+      }
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(con->client->acquireTemporary());
     ResolvedPromise offsetPromise(offset);
     Assembler::Constant offsetConstant(&offsetPromise);
-    moveCR(c, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
+    moveCR(con, TargetBytesPerWord, &offsetConstant,
+           TargetBytesPerWord, &tmp);
     
-    store(c, size, src, base, 0, tmp.low, 1, false);
+    store(con, size, src, base, 0, tmp.low, 1, false);
 
-    c->client->releaseTemporary(tmp.low);
+    con->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1270,98 +1348,124 @@ moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
 }
 
 void
-load(Context* c, unsigned srcSize, int base, int offset, int index,
+load(Context* con, unsigned srcSize, int base, int offset, int index,
      unsigned scale, unsigned dstSize, Assembler::Register* dst,
      bool preserveIndex, bool signExtend)
 {
   if (index != NoRegister) {
     bool release;
     int normalized = normalize
-      (c, offset, index, scale, &preserveIndex, &release);
+      (con, offset, index, scale, &preserveIndex, &release);
 
-    switch (srcSize) {
-    case 1:
-      if (signExtend) {
-        emit(c, ldrsb(dst->low, base, normalized));
-      } else {
-        emit(c, ldrb(dst->low, base, normalized));
+    if (isFpr(dst)) { // floating-point store
+      if (srcSize == 4) {
+        /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr load base-indexed\n");
+        Assembler::Register base_(base),
+                            normalized_(normalized),
+                            absAddr = makeTemp(con);
+        addR(con, srcSize, &base_, &normalized_, &absAddr);
+        emit(con, flds(toFpr(dst), absAddr.low));
+        freeTemp(con, absAddr);
       }
-      break;
+      else abort(con);
+    } else {
+      switch (srcSize) {
+      case 1:
+        if (signExtend) {
+          emit(con, ldrsb(dst->low, base, normalized));
+        } else {
+          emit(con, ldrb(dst->low, base, normalized));
+        }
+        break;
 
-    case 2:
-      if (signExtend) {
-        emit(c, ldrsh(dst->low, base, normalized));
-      } else {
-        emit(c, ldrh(dst->low, base, normalized));
+      case 2:
+        if (signExtend) {
+          emit(con, ldrsh(dst->low, base, normalized));
+        } else {
+          emit(con, ldrh(dst->low, base, normalized));
+        }
+        break;
+
+      case 4:
+      case 8: {
+        if (srcSize == 4 and dstSize == 8) {
+          load(con, 4, base, 0, normalized, 1, 4, dst, preserveIndex,
+               false);
+          moveRR(con, 4, dst, 8, dst);
+        } else if (srcSize == 8 and dstSize == 8) {
+          Assembler::Register dstHigh(dst->high);
+          load(con, 4, base, 0, normalized, 1, 4, &dstHigh,
+              preserveIndex, false);
+          load(con, 4, base, 4, normalized, 1, 4, dst, preserveIndex,
+               false);
+        } else {
+          emit(con, ldr(dst->low, base, normalized));
+        }
+      } break;
+
+      default: abort(con);
       }
-      break;
-
-    case 4:
-    case 8: {
-      if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, 0, normalized, 1, 4, dst, preserveIndex, false);
-        moveRR(c, 4, dst, 8, dst);
-      } else if (srcSize == 8 and dstSize == 8) {
-        Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
-        load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
-      } else {
-        emit(c, ldr(dst->low, base, normalized));
-      }
-    } break;
-
-    default: abort(c);
     }
 
-    if (release) c->client->releaseTemporary(normalized);
+    if (release) con->client->releaseTemporary(normalized);
   } else if ((srcSize == 8 and dstSize == 8)
              or abs(offset) == (abs(offset) & 0xFF)
              or (srcSize != 2
                  and (srcSize != 1 or not signExtend)
                  and abs(offset) == (abs(offset) & 0xFFF)))
   {
-    switch (srcSize) {
-    case 1:
-      if (signExtend) {
-        emit(c, ldrsbi(dst->low, base, offset));
-      } else {
-        emit(c, ldrbi(dst->low, base, offset));
+    if (isFpr(dst)) {
+      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr load offset <- %d\n", dst->low);
+      if (srcSize == 4) emit(con, flds(toFpr(dst), base, offset));
+      else           abort(con);
+    } else {
+      switch (srcSize) {
+      case 1:
+        if (signExtend) {
+          emit(con, ldrsbi(dst->low, base, offset));
+        } else {
+          emit(con, ldrbi(dst->low, base, offset));
+        }
+        break;
+
+      case 2:
+        if (signExtend) {
+          emit(con, ldrshi(dst->low, base, offset));
+        } else {
+          emit(con, ldrhi(dst->low, base, offset));
+        }
+        break;
+
+      case 4:
+        emit(con, ldri(dst->low, base, offset));
+        break;
+
+      case 8: {
+        if (dstSize == 8) {
+          Assembler::Register dstHigh(dst->high);
+          load(con, 4, base, offset, NoRegister, 1, 4, &dstHigh, false,
+               false);
+          load(con, 4, base, offset + 4, NoRegister, 1, 4, dst, false,
+               false);
+        } else {
+          emit(con, ldri(dst->low, base, offset));
+        }
+      } break;
+
+      default: abort(con);
       }
-      break;
-
-    case 2:
-      if (signExtend) {
-        emit(c, ldrshi(dst->low, base, offset));
-      } else {
-        emit(c, ldrhi(dst->low, base, offset));
-      }
-      break;
-
-    case 4:
-      emit(c, ldri(dst->low, base, offset));
-      break;
-
-    case 8: {
-      if (dstSize == 8) {
-        Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
-        load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
-      } else {
-        emit(c, ldri(dst->low, base, offset));
-      }
-    } break;
-
-    default: abort(c);
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(con->client->acquireTemporary());
     ResolvedPromise offsetPromise(offset);
     Assembler::Constant offsetConstant(&offsetPromise);
-    moveCR(c, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
+    moveCR(con, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord,
+           &tmp);
     
-    load(c, srcSize, base, 0, tmp.low, 1, dstSize, dst, false, signExtend);
+    load(con, srcSize, base, 0, tmp.low, 1, dstSize, dst, false,
+         signExtend);
 
-    c->client->releaseTemporary(tmp.low);
+    con->client->releaseTemporary(tmp.low);
   }
 }
 
@@ -1773,7 +1877,7 @@ longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == TargetBytesPerWord);
 
   Assembler::Register tmp(4);
-  moveCR2(c, TargetBytesPerWord, target, TargetBytesPerWord, &tmp, offset(c));
+  moveCR2(c, TargetBytesPerWord, target, &tmp, offset(c));
   callR(c, TargetBytesPerWord, &tmp);
 }
 
@@ -1783,7 +1887,7 @@ longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
   assert(c, size == TargetBytesPerWord);
 
   Assembler::Register tmp(4); // a non-arg reg that we don't mind clobbering
-  moveCR2(c, TargetBytesPerWord, target, TargetBytesPerWord, &tmp, offset(c));
+  moveCR2(c, TargetBytesPerWord, target, &tmp, offset(c));
   jumpR(c, TargetBytesPerWord, &tmp);
 }
 
@@ -1970,7 +2074,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned floatRegisterSize() {
-    return vfpSupported() ? 16 : 0;
+    return vfpSupported() ? 4 : 0;
   }
 
   virtual uint32_t generalRegisterMask() {
@@ -2197,19 +2301,31 @@ class MyArchitecture: public Assembler::Architecture {
     case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
-      if (!vfpSupported()) {
+      if (vfpSupported()) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FPR_MASK;
+        *thunk = true;
+      } else {
         *thunk = true;
       }
       break;
 
     case Float2Int:
-      if (!vfpSupported() || bSize != 4) {
+      if (vfpSupported() && bSize == 4 && aSize == 4) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FPR_MASK;
+        *thunk = true;
+      } else {
         *thunk = true;
       }
       break;
 
     case Int2Float:
-      if (!vfpSupported() || aSize != 4) {
+      if (vfpSupported() && aSize == 4 && bSize == 4) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FPR_MASK;
+        *thunk = true;
+      } else {
         *thunk = true;
       }
       break;
@@ -2287,6 +2403,9 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Divide:
     case Remainder:
+      *thunk = true;
+      break;
+
     case FloatAdd:
     case FloatSubtract:
     case FloatMultiply:
@@ -2302,9 +2421,8 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrUnordered:
     case JumpIfFloatLessOrEqualOrUnordered:
     case JumpIfFloatGreaterOrEqualOrUnordered:
-      if (!vfpSupported()) {
-        *thunk = true;
-      }
+      if (vfpSupported()) *thunk = true;
+      else                *thunk = true;
       break;
 
     default:
