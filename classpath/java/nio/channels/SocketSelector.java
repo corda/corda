@@ -106,8 +106,11 @@ class SocketSelector extends Selector {
     return selectedKeys.size();
   }
 
-  public void close() {
-    natClose(state);
+  public synchronized void close() {
+    if (isOpen()) {
+      natClose(state);
+      state = 0;
+    }
   }
 
   private static native long natInit();
