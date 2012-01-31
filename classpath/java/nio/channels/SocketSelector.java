@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.net.Socket;
 
 class SocketSelector extends Selector {
-  protected long state;
+  protected volatile long state;
   protected final Object lock = new Object();
   protected boolean woken = false;
 
@@ -31,7 +31,7 @@ class SocketSelector extends Selector {
 
   public Selector wakeup() {
     synchronized (lock) {
-      if (! woken) {
+      if (isOpen() && (! woken)) {
         woken = true;
 
         natWakeup(state);
@@ -66,6 +66,10 @@ class SocketSelector extends Selector {
   }
 
   public int doSelect(long interval) throws IOException {
+    if (! isOpen()) {
+      throw new ClosedSelectorException();
+    }
+
     selectedKeys.clear();
 
     if (clearWoken()) interval = -1;
@@ -107,9 +111,11 @@ class SocketSelector extends Selector {
   }
 
   public synchronized void close() {
-    if (isOpen()) {
-      natClose(state);
-      state = 0;
+    synchronized (lock) {
+      if (isOpen()) {
+        natClose(state);
+        state = 0;
+      }
     }
   }
 
