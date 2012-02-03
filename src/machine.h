@@ -2041,7 +2041,6 @@ startThread(Thread* t, object javaThread)
     ACQUIRE_RAW(t, t->m->stateLock);
     
     if (t->m->threadCount > t->m->liveCount + ZombieCollectionThreshold) {
-      fprintf(stderr, "hit zombie collection threshold\n");
       collect(t, Heap::MinorCollection);
     }
   }
