@@ -120,6 +120,10 @@ const unsigned ThreadHeapPoolSize = 64;
 const unsigned FixedFootprintThresholdInBytes
 = ThreadHeapPoolSize * ThreadHeapSizeInBytes;
 
+// number of zombie threads which may accumulate before we force a GC
+// to clean them up:
+const unsigned ZombieCollectionThreshold = 16;
+
 enum FieldCode {
   VoidField,
   ByteField,
@@ -1299,6 +1303,7 @@ class Machine {
   unsigned propertyCount;
   const char** arguments;
   unsigned argumentCount;
+  unsigned threadCount;
   unsigned activeCount;
   unsigned liveCount;
   unsigned daemonCount;
@@ -1994,6 +1999,7 @@ addThread(Thread* t, Thread* p)
   assert(t, p->state == Thread::NoState);
 
   p->state = Thread::IdleState;
+  ++ t->m->threadCount;
   ++ t->m->liveCount;
 
   p->peer = p->parent->child;
@@ -2012,6 +2018,7 @@ removeThread(Thread* t, Thread* p)
   assert(t, p->state == Thread::IdleState);
 
   -- t->m->liveCount;
+  -- t->m->threadCount;
 
   t->m->stateLock->notifyAll(t->systemThread);
 
@@ -2020,11 +2027,25 @@ removeThread(Thread* t, Thread* p)
   if (p->javaThread) {
     threadPeer(t, p->javaThread) = 0;
   }
+
+  p->dispose();
 }
 
 inline Thread*
 startThread(Thread* t, object javaThread)
 {
+  { PROTECT(t, javaThread);
+    
+    stress(t);
+
+    ACQUIRE_RAW(t, t->m->stateLock);
+    
+    if (t->m->threadCount > t->m->liveCount + ZombieCollectionThreshold) {
+      fprintf(stderr, "hit zombie collection threshold\n");
+      collect(t, Heap::MinorCollection);
+    }
+  }
+
   Thread* p = t->m->processor->makeThread(t->m, javaThread, t);
 
   addThread(t, p);

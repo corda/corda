@@ -3231,12 +3231,20 @@ EXPORT(JVM_DisableCompiler)(Thread*, jclass)
   // ignore
 }
 
+uint64_t
+jvmStartThread(Thread* t, uintptr_t* arguments)
+{
+  jobject thread = reinterpret_cast<jobject>(arguments[0]);
+
+  return startThread(t, *thread) != 0;
+}
+
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_StartThread)(Thread* t, jobject thread)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(thread) };
 
-  startThread(t, *thread);
+  run(t, jvmStartThread, arguments);
 }
 
 extern "C" JNIEXPORT void JNICALL

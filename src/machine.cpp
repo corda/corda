@@ -229,6 +229,9 @@ turnOffTheLights(Thread* t)
   visitAll(t, t->m->rootThread, disposeNoRemove);
 
   System* s = m->system;
+
+  expect(s, m->threadCount == 0);
+
   Heap* h = m->heap;
   Processor* p = m->processor;
   Classpath* c = m->classpath;
@@ -2435,6 +2438,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   propertyCount(propertyCount),
   arguments(arguments),
   argumentCount(argumentCount),
+  threadCount(0),
   activeCount(0),
   liveCount(0),
   daemonCount(0),
@@ -2653,6 +2657,8 @@ Thread::dispose()
     }
   }
 
+  -- m->threadCount;
+
   m->heap->free(defaultHeap, ThreadHeapSizeInBytes);
 
   m->processor->dispose(this);
@@ -2864,6 +2870,7 @@ enter(Thread* t, Thread::State s)
         INCREMENT(&(t->m->activeCount), 1);
         if (t->state == Thread::NoState) {
           ++ t->m->liveCount;
+          ++ t->m->threadCount;
         }
         t->state = s;
       } break;
