@@ -4402,7 +4402,7 @@ noop()
 } // namespace vm
 
 // for debugging
-void
+JNIEXPORT void
 vmPrintTrace(Thread* t)
 {
   class Visitor: public Processor::StackVisitor {
@@ -4444,7 +4444,7 @@ vmPrintTrace(Thread* t)
 }
 
 // also for debugging
-void*
+JNIEXPORT void*
 vmAddressFromLine(Thread* t, object m, unsigned line)
 {
   object code = methodCode(t, m);
