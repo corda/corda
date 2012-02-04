@@ -45,18 +45,10 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    // todo: There's potentially a leak here on systems where we must
-    // call join on a thread in order to clean up all resources
-    // associated with it.  If a thread has already been zombified by
-    // the time we get here, acquireSystem will return false, which
-    // means we can't safely join it because the System::Thread may
-    // already have been disposed.  In that case, the thread has
-    // already exited (or will soon), but the OS will never free all
-    // its resources because it doesn't know we're completely done
-    // with it.
-    if (acquireSystem(t, o)) {
+    assert(t, o->state != Thread::JoinedState);
+    assert(t, (o->flags & Thread::SystemFlag) == 0);
+    if (o->flags & Thread::JoinFlag) {
       o->systemThread->join();
-      releaseSystem(t, o);
     }
     o->state = Thread::JoinedState;
   }
@@ -257,15 +249,17 @@ killZombies(Thread* t, Thread* o)
     killZombies(t, child);
   }
 
-  switch (o->state) {
-  case Thread::ZombieState:
-    join(t, o);
-    // fall through
-
-  case Thread::JoinedState:
-    dispose(t, o, true);
-
-  default: break;
+  if ((o->flags & Thread::SystemFlag) == 0) {
+    switch (o->state) {
+    case Thread::ZombieState:
+      join(t, o);
+      // fall through
+      
+    case Thread::JoinedState:
+      dispose(t, o, true);
+      
+    default: break;
+    }
   }
 }
 
@@ -2623,23 +2617,7 @@ Thread::exit()
     } else {
       threadPeer(this, javaThread) = 0;
 
-      System::Monitor* myLock = lock;
-      System::Thread* mySystemThread = systemThread;
-
-      { ACQUIRE_RAW(this, m->stateLock);
-
-        while (flags & SystemFlag) {
-          m->stateLock->wait(systemThread, 0);
-        }
-
-        atomicOr(&flags, Thread::DisposeFlag);
-      
-        enter(this, Thread::ZombieState);
-      }
-
-      myLock->dispose();
-
-      mySystemThread->dispose();
+      enter(this, Thread::ZombieState);
     }
   }
 }
@@ -2647,14 +2625,12 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  if ((flags & Thread::DisposeFlag) == 0) {
-    if (lock) {
-      lock->dispose();
-    }
-
-    if (systemThread) {
-      systemThread->dispose();
-    }
+  if (lock) {
+    lock->dispose();
+  }
+  
+  if (systemThread) {
+    systemThread->dispose();
   }
 
   -- m->threadCount;

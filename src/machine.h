@@ -1392,7 +1392,7 @@ class Thread {
   static const unsigned StressFlag = 1 << 4;
   static const unsigned ActiveFlag = 1 << 5;
   static const unsigned SystemFlag = 1 << 6;
-  static const unsigned DisposeFlag = 1 << 7;
+  static const unsigned JoinFlag = 1 << 7;
 
   class Protector {
    public:
@@ -1988,6 +1988,7 @@ runThread(Thread* t, uintptr_t*)
 inline bool
 startThread(Thread* t, Thread* p)
 {
+  p->flags |= Thread::JoinFlag;
   return t->m->system->success(t->m->system->start(&(p->runnable)));
 }
 
@@ -2785,18 +2786,11 @@ void
 addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object));
 
 inline bool
-zombified(Thread* t)
-{
-  return t->state == Thread::ZombieState
-    or t->state == Thread::JoinedState;
-}
-
-inline bool
 acquireSystem(Thread* t, Thread* target)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  if (not zombified(target)) {
+  if (t->state != Thread::JoinedState) {
     atomicOr(&(target->flags), Thread::SystemFlag);
     return true;
   } else {
@@ -2809,7 +2803,7 @@ releaseSystem(Thread* t, Thread* target)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  assert(t, not zombified(target));
+  assert(t, t->state != Thread::JoinedState);
 
   atomicAnd(&(target->flags), ~Thread::SystemFlag);
 }
