@@ -20,10 +20,24 @@ public class Files {
     }
     
   }
+
+  private static void setExecutableTestWithPermissions(boolean executable) {
+    File file = File.createTempFile("avian.", null);
+    file.setExecutable(executable);
+    if (executable) {
+      expect(file.canExecute());
+    } else {
+      // Commented out because this will fail on Windows - both on Avian and on OpenJDK
+      // The implementation for Windows considers canExecute() to be the same as canRead()
+      // expect(!file.canExecute());
+    }
+  }
   
   public static void main(String[] args) {
     isAbsoluteTest(true);
     isAbsoluteTest(false);
+    setExecutableTestWithPermissions(true);
+    setExecutableTestWithPermissions(false);
   }
 
 }
