@@ -32,9 +32,12 @@
 #  define STAT _wstat
 #  define STRUCT_STAT struct _stat
 #  define MKDIR(path, mode) _wmkdir(path)
+#  define CHMOD(path, mode) _wchmod(path, mode)
 #  define UNLINK _wunlink
 #  define RENAME _wrename
 #  define OPEN_MASK O_BINARY
+
+#  define CHECK_X_OK R_OK
 
 #  ifdef _MSC_VER
 #    define S_ISREG(x) ((x) & _S_IFREG)
@@ -67,10 +70,13 @@ typedef wchar_t char_t;
 #  define STAT stat
 #  define STRUCT_STAT struct stat
 #  define MKDIR mkdir
+#  define CHMOD chmod
 #  define CREAT creat
 #  define UNLINK unlink
 #  define RENAME rename
 #  define OPEN_MASK 0
+
+#  define CHECK_X_OK X_OK
 
 #  define GET_CHARS GetStringUTFChars
 #  define RELEASE_CHARS ReleaseStringUTFChars
@@ -442,6 +448,64 @@ Java_java_io_File_canWrite(JNIEnv* e, jclass, jstring path)
   return false;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canExecute(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, CHECK_X_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+#ifndef PLATFORM_WINDOWS
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_setExecutable(JNIEnv* e, jclass, jstring path, jboolean executable, jboolean ownerOnly)
+{
+  string_t chars = getChars(e, path);
+  if(chars) {
+    jboolean v;
+    int mask;
+    if(ownerOnly) {
+      mask = S_IXUSR;
+    } else {
+      mask = S_IXUSR | S_IXGRP | S_IXOTH;
+    }
+
+    STRUCT_STAT s;
+    int r = STAT(chars, &s);
+    if(r == 0) {
+      int mode = s.st_mode;
+      if(executable) {
+        mode |= mask;
+      } else {
+        mode &= ~mask;
+      }
+      if(CHMOD(chars, mode) != 0) {
+        v = false;
+      } else {
+        v = true;
+      }
+    } else {
+      v = false;
+    }
+    releaseChars(e, path, chars);
+    return v;
+  }
+  return false;
+}
+
+#else // ifndef PLATFORM_WINDOWS
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_setExecutable(JNIEnv*, jclass, jstring, jboolean executable, jboolean)
+{
+  return executable;
+}
+
+#endif
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)

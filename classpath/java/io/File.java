@@ -35,6 +35,38 @@ public class File implements Serializable {
     this(parent.getPath() + FileSeparator + child);
   }
 
+  public static File createTempFile(String prefix, String suffix) {
+    return createTempFile(prefix, suffix, null);
+  }
+
+  public static File createTempFile(String prefix, String suffix, File directory) {
+    if(directory == null) {
+      directory = new File(System.getProperty("java.io.tmpdir"));
+    }
+    if(suffix == null) {
+      suffix = ".tmp";
+    }
+    File ret;
+    long state = System.currentTimeMillis();
+
+    do {
+      ret = generateFile(directory, prefix, state, suffix);
+      state *= 7;
+      state += 3;
+    } while(ret == null);
+    ret.createNewFile();
+    return ret;
+  }
+
+  private static File generateFile(File directory, String prefix, long state, String suffix) {
+    File ret = new File(directory, prefix + state + suffix);
+    if(ret.exists()) {
+      return null;
+    } else {
+      return ret;
+    }
+  }
+
   private static String normalize(String path) {
     if ("\\".equals(FileSeparator)) {
       return path.replace('/', '\\');
@@ -75,6 +107,22 @@ public class File implements Serializable {
   
   public boolean canWrite() {
     return canWrite(path);
+  }
+
+  private static native boolean canExecute(String path);
+
+  public boolean canExecute() {
+    return canExecute(path);
+  }
+
+  private static native boolean setExecutable(String path, boolean executable, boolean ownerOnly);
+
+  public boolean setExecutable(boolean executable) {
+    return setExecutable(executable, true);
+  }
+
+  public boolean setExecutable(boolean executable, boolean ownerOnly) {
+    return setExecutable(path, executable, ownerOnly);
   }
   
   public String getName() {
