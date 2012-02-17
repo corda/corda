@@ -199,7 +199,7 @@ assert(System* s, bool v)
 
 #endif // not NDEBUG
 
-System*
+JNIEXPORT System*
 makeSystem(const char* crashDumpDirectory);
 
 } // namespace vm

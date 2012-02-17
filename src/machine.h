@@ -3884,10 +3884,10 @@ errorLog(Thread* t)
 
 } // namespace vm
 
-void
+JNIEXPORT void
 vmPrintTrace(vm::Thread* t);
 
-void*
+JNIEXPORT void*
 vmAddressFromLine(vm::Thread* t, vm::object m, unsigned line);
 
 #endif//MACHINE_H
