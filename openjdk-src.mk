@@ -45,7 +45,6 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/CRC32.c \
 	$(openjdk-src)/share/native/java/util/zip/Deflater.c \
 	$(openjdk-src)/share/native/java/util/zip/Inflater.c \
-	$(openjdk-src)/share/native/java/util/zip/ZipEntry.c \
 	$(openjdk-src)/share/native/java/util/zip/ZipFile.c \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
 	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
@@ -76,6 +75,7 @@ openjdk-headers-classes = \
 	java.lang.Double \
 	java.lang.Float \
 	java.lang.Integer \
+	java.lang.Long \
 	java.lang.Object \
 	java.lang.Package \
 	java.lang.Runtime \
@@ -124,7 +124,7 @@ openjdk-headers-classes = \
 	sun.net.spi.DefaultProxySelector \
 	sun.nio.ch.FileKey \
 	sun.nio.ch.FileChannelImpl \
-	sun.nio.ch.FileDispatcher \
+	sun.nio.ch.FileDispatcherImpl \
 	sun.nio.ch.DatagramChannelImpl \
 	sun.nio.ch.DatagramDispatcher \
 	sun.nio.ch.IOStatus \
@@ -235,6 +235,10 @@ ifeq ($(platform),windows)
 else
 	openjdk-sources += \
 		$(openjdk-src)/solaris/native/common/jdk_util_md.c \
+		$(openjdk-src)/solaris/native/common/jni_util_md.c \
+		$(openjdk-src)/solaris/native/common/deps/syscalls_fp.c \
+		$(openjdk-src)/solaris/native/common/deps/gconf2/gconf_fp.c \
+		$(openjdk-src)/solaris/native/common/deps/glib2/gio_fp.c \
 		$(openjdk-src)/solaris/native/java/io/canonicalize_md.c \
 		$(openjdk-src)/solaris/native/java/io/Console_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileDescriptor_md.c \
@@ -265,7 +269,7 @@ else
 		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramChannelImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramDispatcher.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcher.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcherImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/FileKey.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/IOUtil.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/Net.c \
@@ -276,6 +280,7 @@ else
 		$(openjdk-src)/solaris/native/sun/nio/ch/PollArrayWrapper.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/InheritedChannel.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
+		$(openjdk-src)/solaris/native/sun/nio/fs/UnixNativeDispatcher.c \
 
 	ifeq ($(platform),linux)
 		openjdk-sources += \
@@ -287,6 +292,7 @@ else
 		java.io.UnixFileSystem \
 		sun.nio.ch.InheritedChannel \
 		sun.nio.ch.EPollArrayWrapper \
+		sun.nio.fs.UnixNativeDispatcher \
 
 	openjdk-cflags += "-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
@@ -297,7 +303,12 @@ else
 		"-I$(openjdk-src)/solaris/native/sun/management" \
 		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
-		"-I$(openjdk-src)/solaris/hpi/include"
+		"-I$(openjdk-src)/solaris/hpi/include" \
+		"-I$(openjdk-src)/solaris/native/common/deps" \
+		"-I$(openjdk-src)/solaris/native/common/deps/glib2" \
+		"-I$(openjdk-src)/solaris/native/common/deps/gconf2" \
+		$(shell pkg-config --cflags glib-2.0) \
+		$(shell pkg-config --cflags gconf-2.0)
 endif
 
 openjdk-local-sources = \
