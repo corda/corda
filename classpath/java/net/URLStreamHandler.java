@@ -40,7 +40,7 @@ public abstract class URLStreamHandler {
           host = s.substring(0, colon);
           port = Integer.parseInt(s.substring(colon + 1), slash);
         }
-        s = s.substring(slash + 1);
+        s = s.substring(slash);
       }
     }
 
