@@ -551,12 +551,61 @@ class MyClasspath : public Classpath {
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif // not AVIAN_OPENJDK_SRC
 
-    object assertionLock = resolveField
-      (t, type(t, Machine::ClassLoaderType), "assertionLock",
-       "Ljava/lang/Object;");
+    { object class_ = resolveClass
+        (t, root(t, Machine::BootLoader), "java/util/Properties", true,
+         Machine::NoClassDefFoundErrorType);
 
-    set(t, root(t, Machine::BootLoader), fieldOffset(t, assertionLock),
-        root(t, Machine::BootLoader));
+      PROTECT(t, class_);
+      
+      object instance = makeNew(t, class_);
+
+      PROTECT(t, instance);
+
+      object constructor = resolveMethod(t, class_, "<init>", "()V");
+
+      t->m->processor->invoke(t, constructor, instance);
+
+      t->m->processor->invoke
+        (t, root(t, Machine::BootLoader), "java/lang/System",
+         "setProperties", "(Ljava/util/Properties;)V", 0, instance);
+    }
+
+    { object constructor = resolveMethod
+      (t, type(t, Machine::ClassLoaderType), "<init>",
+       "(Ljava/lang/ClassLoader;)V");
+
+      PROTECT(t, constructor);
+
+      t->m->processor->invoke(t, constructor, root(t, Machine::BootLoader), 0);
+
+      t->m->processor->invoke
+        (t, constructor, root(t, Machine::AppLoader),
+         root(t, Machine::BootLoader));
+    }
+
+    { object assertionLock = resolveField
+        (t, type(t, Machine::ClassLoaderType), "assertionLock",
+         "Ljava/lang/Object;");
+
+      set(t, root(t, Machine::BootLoader), fieldOffset(t, assertionLock),
+          root(t, Machine::BootLoader));
+    }
+
+    { object scl = resolveField
+        (t, type(t, Machine::ClassLoaderType), "scl",
+         "Ljava/lang/ClassLoader;");
+
+      PROTECT(t, scl);
+
+      object sclSet = resolveField
+        (t, type(t, Machine::ClassLoaderType), "sclSet", "Z");
+
+      set(t, classStaticTable(t, type(t, Machine::ClassLoaderType)),
+          fieldOffset(t, scl), root(t, Machine::AppLoader));
+
+      cast<uint8_t>(classStaticTable(t, type(t, Machine::ClassLoaderType)),
+                    fieldOffset(t, sclSet)) = true;
+    }
 
     t->m->processor->invoke
       (t, root(t, Machine::BootLoader), "java/lang/System",
@@ -2622,11 +2671,14 @@ extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_setMemory
 (Thread*, object, uintptr_t* arguments)
 {
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int64_t count; memcpy(&count, arguments + 3, 8);
-  int8_t v = arguments[5];
+  object base = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t count; memcpy(&count, arguments + 4, 8);
+  int8_t v = arguments[6];
 
-  memset(reinterpret_cast<int8_t*>(p), v, count);
+  memset(base
+         ? &cast<int8_t>(base, offset)
+         : reinterpret_cast<int8_t*>(offset), v, count);
 }
 
 extern "C" JNIEXPORT void JNICALL
