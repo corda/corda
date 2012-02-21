@@ -35,11 +35,16 @@ public class File implements Serializable {
     this(parent.getPath() + FileSeparator + child);
   }
 
-  public static File createTempFile(String prefix, String suffix) {
+  public static File createTempFile(String prefix, String suffix)
+    throws IOException
+  {
     return createTempFile(prefix, suffix, null);
   }
 
-  public static File createTempFile(String prefix, String suffix, File directory) {
+  public static File createTempFile(String prefix, String suffix,
+                                    File directory)
+    throws IOException
+  {
     if(directory == null) {
       directory = new File(System.getProperty("java.io.tmpdir"));
     }

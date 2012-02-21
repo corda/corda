@@ -21,7 +21,9 @@ public class Files {
     
   }
 
-  private static void setExecutableTestWithPermissions(boolean executable) {
+  private static void setExecutableTestWithPermissions(boolean executable)
+    throws Exception
+  {
     File file = File.createTempFile("avian.", null);
     file.setExecutable(executable);
     if (executable) {
@@ -33,7 +35,7 @@ public class Files {
     }
   }
   
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     isAbsoluteTest(true);
     isAbsoluteTest(false);
     setExecutableTestWithPermissions(true);
