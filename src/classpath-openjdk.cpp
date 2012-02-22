@@ -5271,9 +5271,11 @@ jboolean JNICALL
 GetBoolAttribute(Thread* t, jmmBoolAttribute attribute)
 {
   const unsigned JMM_THREAD_CPU_TIME = 24;
+  const unsigned JMM_THREAD_ALLOCATED_MEMORY = 25;
 
   switch (attribute) {
   case JMM_THREAD_CPU_TIME:
+  case JMM_THREAD_ALLOCATED_MEMORY:
     return false;
 
   default:
