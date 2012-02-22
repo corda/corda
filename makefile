@@ -480,7 +480,8 @@ ifdef msvc
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
-		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32"
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
+		-DTARGET_BYTES_PER_WORD=$(pointer-size) -DTARGET_PLATFORM_WINDOWS
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
