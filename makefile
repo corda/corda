@@ -51,6 +51,8 @@ test-build = $(build)/test
 src = src
 classpath-src = classpath
 test = test
+win32 ?= $(root)/win32
+win64 ?= $(root)/win64
 
 classpath = avian
 
@@ -361,8 +363,8 @@ endif
 ifeq ($(platform),windows)
 	bootimage-cflags += -DTARGET_PLATFORM_WINDOWS
 
-	inc = "$(root)/win32/include"
-	lib = "$(root)/win32/lib"
+	inc = "$(win32)/include"
+	lib = "$(win32)/lib"
 
 	embed-prefix = c:/avian-embedded
 
@@ -411,8 +413,8 @@ ifeq ($(platform),windows)
 		ar = x86_64-w64-mingw32-ar
 		ranlib = x86_64-w64-mingw32-ranlib
 		strip = x86_64-w64-mingw32-strip
-		inc = "$(root)/win64/include"
-		lib = "$(root)/win64/lib"
+		inc = "$(win64)/include"
+		lib = "$(win64)/lib"
 	endif
 endif
 
@@ -469,7 +471,7 @@ build-ld := $(build-cc)
 
 ifdef msvc
 	windows-java-home := $(shell cygpath -m "$(JAVA_HOME)")
-	zlib := $(shell cygpath -m "$(root)/win32/msvc")
+	zlib := $(shell cygpath -m "$(win32)/msvc")
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
@@ -478,7 +480,8 @@ ifdef msvc
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
-		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32"
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
+		-DTARGET_BYTES_PER_WORD=$(pointer-size) -DTARGET_PLATFORM_WINDOWS
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug

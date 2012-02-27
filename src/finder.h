@@ -173,7 +173,7 @@ class Finder {
   virtual void dispose() = 0;
 };
 
-Finder*
+JNIEXPORT Finder*
 makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary);
 
 Finder*

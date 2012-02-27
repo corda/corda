@@ -324,7 +324,19 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 {
 #ifdef PLATFORM_WINDOWS
-  // todo
+  string_t chars = getChars(e, path);
+  if (chars) {
+    const unsigned BufferSize = MAX_PATH;
+    char_t buffer[BufferSize];
+    DWORD success = GetFullPathNameW(chars, BufferSize, buffer, 0);
+    releaseChars(e, path, chars);
+
+    if (success) {
+      return e->NewString
+        (reinterpret_cast<const jchar*>(buffer), wcslen(buffer));
+    }
+  }
+
   return path;
 #else
   jstring result = path;
