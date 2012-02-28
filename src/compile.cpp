@@ -8037,8 +8037,15 @@ class ArgumentList {
         break;
       
       case 'J':
-      case 'D':
         addLong(va_arg(arguments, uint64_t));
+        break;
+
+      case 'D':
+        addLong(doubleToBits(va_arg(arguments, double)));
+        break;
+
+      case 'F':
+        addInt(floatToBits(va_arg(arguments, double)));
         break;
 
       default:
