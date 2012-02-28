@@ -869,9 +869,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
 
       parsePoolEntry(t, s, index, pool, ci);
       parsePoolEntry(t, s, index, pool, nti);
-        
+
       object class_ = referenceName(t, singletonObject(t, pool, ci));
       object nameAndType = singletonObject(t, pool, nti);
+
       object value = makeReference
           (t, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
@@ -3228,7 +3229,9 @@ isAssignableFrom(Thread* t, object a, object b)
       return isAssignableFrom
         (t, classStaticTable(t, a), classStaticTable(t, b));
     }
-  } else {
+  } else if ((classVmFlags(t, a) & PrimitiveFlag)
+             == (classVmFlags(t, b) & PrimitiveFlag))
+  {
     for (; b; b = classSuper(t, b)) {
       if (b == a) {
         return true;

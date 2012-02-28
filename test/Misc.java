@@ -235,5 +235,7 @@ public class Misc {
     System.out.println(75.62);
     System.out.println(75.62d);
     System.out.println(new char[] { 'h', 'i' });
+
+    expect(! (((Object) new int[0]) instanceof Object[]));
   }
 }
