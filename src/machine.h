@@ -2164,6 +2164,8 @@ hashTaken(Thread*, object o)
 inline unsigned
 baseSize(Thread* t, object o, object class_)
 {
+  assert(t, classFixedSize(t, class_) >= BytesPerWord);
+
   return ceiling(classFixedSize(t, class_), BytesPerWord)
     + ceiling(classArrayElementSize(t, class_)
               * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
