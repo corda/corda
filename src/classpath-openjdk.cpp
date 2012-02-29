@@ -3015,22 +3015,22 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   GetCurrentDirectory(MAX_PATH, buffer);
 
   local::setProperty(t, method, *properties, "user.dir", buffer);
-#else
+#else // not PLATFORM_WINDOWS
   local::setProperty(t, method, *properties, "line.separator", "\n");
   local::setProperty(t, method, *properties, "file.separator", "/");
   local::setProperty(t, method, *properties, "path.separator", ":");
 #  ifdef __APPLE__
   local::setProperty(t, method, *properties, "os.name", "Mac OS X");
-#  else
+#  else // not __APPLE__
   local::setProperty(t, method, *properties, "os.name", "Linux");
-#  endif
+#  endif // not __APPLE__
   local::setProperty(t, method, *properties, "java.io.tmpdir", "/tmp");
   local::setProperty(t, method, *properties, "user.home", getenv("HOME"));
 
   char buffer[PATH_MAX];
   local::setProperty(t, method, *properties, "user.dir",
                      getcwd(buffer, PATH_MAX));
-#endif
+#endif // not PLATFORM_WINDOWS
 
   local::setProperty(t, method, *properties, "java.protocol.handler.pkgs",
                      "avian");
@@ -3045,6 +3045,11 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty
     (t, method, *properties, "sun.boot.library.path",
      static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath);
+
+  local::setProperty
+    (t, method, *properties, "sun.boot.class.path",
+     static_cast<Finder*>
+     (systemClassLoaderFinder(t, root(t, Machine::BootLoader)))->path());
 
   local::setProperty(t, method, *properties, "file.encoding", "ASCII");
 #ifdef ARCH_x86_32
