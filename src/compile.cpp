@@ -8532,7 +8532,7 @@ class MyProcessor: public Processor {
       }
 
       Reference* r = new (t->m->heap->allocate(sizeof(Reference)))
-        Reference(o, &(t->reference));
+        Reference(o, &(t->reference), false);
 
       acquire(t, r);
 

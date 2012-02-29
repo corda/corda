@@ -584,6 +584,16 @@ postVisit(Thread* t, Heap::Visitor* v)
       = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    if (r->weak) {
+      if (m->heap->status(r->target) == Heap::Unreachable) {
+        r->target = 0;
+      } else {
+        v->visit(&(r->target));
+      }
+    }
+  }
 }
 
 void
@@ -4142,7 +4152,9 @@ visitRoots(Machine* m, Heap::Visitor* v)
   }
 
   for (Reference* r = m->jniReferences; r; r = r->next) {
-    v->visit(&(r->target));
+    if (not r->weak) {
+      v->visit(&(r->target));
+    }
   }
 }
 

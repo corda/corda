@@ -1215,11 +1215,12 @@ noop();
 
 class Reference {
  public:
-  Reference(object target, Reference** handle):
+  Reference(object target, Reference** handle, bool weak):
     target(target),
     next(*handle),
     handle(handle),
-    count(0)
+    count(0),
+    weak(weak)
   {
     if (next) {
       next->handle = &next;
@@ -1231,6 +1232,7 @@ class Reference {
   Reference* next;
   Reference** handle;
   unsigned count;
+  bool weak;
 };
 
 class Classpath;
