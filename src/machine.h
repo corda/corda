@@ -2214,7 +2214,7 @@ make(Thread* t, object class_)
 }
 
 object
-makeByteArray(Thread* t, const char* format, va_list a);
+makeByteArray(Thread* t, const char* format, va_list a, int size);
 
 object
 makeByteArray(Thread* t, const char* format, ...);
