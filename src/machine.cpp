@@ -3048,17 +3048,32 @@ popResources(Thread* t)
 }
 
 object
-makeByteArray(Thread* t, const char* format, va_list a)
+makeByteArray(Thread* t, const char* format, va_list a, int size)
+{
+  THREAD_RUNTIME_ARRAY(t, char, buffer, size);
+  
+  int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+  if (r >= 0 and r < size - 1) {
+    object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
+    memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
+           byteArrayLength(t, s));
+    return s;
+  } else {
+    return 0;
+  }
+}
+
+object
+makeByteArray(Thread* t, const char* format, ...)
 {
   int size = 256;
   while (true) {
-    THREAD_RUNTIME_ARRAY(t, char, buffer, size);
-  
-    int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
-    if (r >= 0 and r < size - 1) {
-      object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
-      memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
-             byteArrayLength(t, s));
+    va_list a;
+    va_start(a, format);
+    object s = makeByteArray(t, format, a, size);
+    va_end(a);
+
+    if (s) {
       return s;
     } else {
       size *= 2;
@@ -3067,25 +3082,21 @@ makeByteArray(Thread* t, const char* format, va_list a)
 }
 
 object
-makeByteArray(Thread* t, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
-
-  return s;
-}
-
-object
 makeString(Thread* t, const char* format, ...)
 {
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    object s = makeByteArray(t, format, a, size);
+    va_end(a);
 
-  return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
+    if (s) {
+      return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 int
