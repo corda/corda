@@ -3358,8 +3358,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     *(argumentPointer++) = a->options[i].optionString;
   }
 
-  *m = new (h->allocate(sizeof(Machine)))
-    Machine
+  *m = new (h->allocate(sizeof(Machine))) Machine
     (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions);
 
   *t = p->makeThread(*m, 0, 0);
