@@ -435,6 +435,10 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
             memberFields[memberIndex] = *f;
 
+            while (targetMemberOffset % f->targetSize) {
+              ++ targetMemberOffset;
+            }
+
             targetMemberOffset += f->targetSize;
 
             ++ memberIndex;

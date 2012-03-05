@@ -3058,7 +3058,7 @@ popResources(Thread* t)
 }
 
 object
-makeByteArray(Thread* t, const char* format, va_list a, int size)
+makeByteArrayV(Thread* t, const char* format, va_list a, int size)
 {
   THREAD_RUNTIME_ARRAY(t, char, buffer, size);
   
@@ -3080,7 +3080,7 @@ makeByteArray(Thread* t, const char* format, ...)
   while (true) {
     va_list a;
     va_start(a, format);
-    object s = makeByteArray(t, format, a, size);
+    object s = makeByteArrayV(t, format, a, size);
     va_end(a);
 
     if (s) {
@@ -3098,7 +3098,7 @@ makeString(Thread* t, const char* format, ...)
   while (true) {
     va_list a;
     va_start(a, format);
-    object s = makeByteArray(t, format, a, size);
+    object s = makeByteArrayV(t, format, a, size);
     va_end(a);
 
     if (s) {

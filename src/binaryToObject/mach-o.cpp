@@ -38,7 +38,7 @@
 #define CPU_SUBTYPE_I386_ALL 3
 #define CPU_SUBTYPE_X86_64_ALL CPU_SUBTYPE_I386_ALL
 #define CPU_SUBTYPE_POWERPC_ALL 0
-#define CPU_SUBTYPE_ARM_V6 6
+#define CPU_SUBTYPE_ARM_V7 9 
 
 #if (BITS_PER_WORD == 64)
 #  define Magic MH_MAGIC_64
@@ -321,7 +321,7 @@ MAKE_NAME(writeMachO, BITS_PER_WORD, Object)
     cpuSubType = CPU_SUBTYPE_POWERPC_ALL;
   } else if (strcmp(architecture, "arm") == 0) {
     cpuType = CPU_TYPE_ARM;
-    cpuSubType = CPU_SUBTYPE_ARM_V6;
+    cpuSubType = CPU_SUBTYPE_ARM_V7;
   } else {
     fprintf(stderr, "unsupported architecture: %s\n", architecture);
     return false;

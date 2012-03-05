@@ -2216,7 +2216,7 @@ make(Thread* t, object class_)
 }
 
 object
-makeByteArray(Thread* t, const char* format, va_list a, int size);
+makeByteArrayV(Thread* t, const char* format, va_list a, int size);
 
 object
 makeByteArray(Thread* t, const char* format, ...);
@@ -2642,25 +2642,37 @@ makeThrowable
 }
 
 inline object
-makeThrowable(Thread* t, Machine::Type type, const char* format, va_list a)
+makeThrowableV(Thread* t, Machine::Type type, const char* format, va_list a,
+               int size)
 {
-  object s = makeByteArray(t, format, a);
+  object s = makeByteArrayV(t, format, a, size);
 
-  object message = t->m->classpath->makeString
-    (t, s, 0, byteArrayLength(t, s) - 1);
+  if (s) {
+    object message = t->m->classpath->makeString
+      (t, s, 0, byteArrayLength(t, s) - 1);
 
-  return makeThrowable(t, type, message);
+    return makeThrowable(t, type, message);
+  } else {
+    return 0;
+  }
 }
 
 inline object
 makeThrowable(Thread* t, Machine::Type type, const char* format, ...)
 {
-  va_list a;
-  va_start(a, format);
-  object r = makeThrowable(t, type, format, a);
-  va_end(a);
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    object r = makeThrowableV(t, type, format, a, size);
+    va_end(a);
 
-  return r;
+    if (r) {
+      return r;
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 void
@@ -2696,12 +2708,19 @@ throwNew
 inline void NO_RETURN
 throwNew(Thread* t, Machine::Type type, const char* format, ...)
 {
-  va_list a;
-  va_start(a, format);
-  object r = makeThrowable(t, type, format, a);
-  va_end(a);
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    object r = makeThrowableV(t, type, format, a, size);
+    va_end(a);
 
-  throw_(t, r);
+    if (r) {
+      throw_(t, r);
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 object
