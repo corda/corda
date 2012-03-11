@@ -317,15 +317,22 @@ else
 
 	ifeq ($(platform),darwin)
 		openjdk-sources += \
-			$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c \
 			$(openjdk-src)/solaris/native/java/net/bsd_close.c
+
+		ifeq ($(ios),true)
+			openjdk-local-sources += \
+				$(src)/openjdk/my_java_props_macosx.c
+		else
+			openjdk-sources += \
+				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c
+		endif
 
 		openjdk-cflags += \
 			-DMACOSX
 	endif
 endif
 
-openjdk-local-sources = \
+openjdk-local-sources += \
 	$(src)/openjdk/my_net_util.c \
 	$(src)/openjdk/my_management.c
 

@@ -990,6 +990,18 @@ $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	sed 's/^static jclass ia_class;//' < $(<) > $(build)/openjdk/$(notdir $(<))
+ifeq ($(ios),true)
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c" \
+		> $(build)/openjdk/ProcessEnvironment_md.c
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
+		> $(build)/openjdk/UNIXProcess_md.c
+endif
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@))
@@ -1020,6 +1032,42 @@ ifeq ($(platform),windows)
 		< "$(openjdk-src)/windows/native/java/net/NetworkInterface.h" \
 		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
+endif
+ifeq ($(platform),darwin)
+	mkdir -p $(build)/openjdk/netinet
+	for file in \
+		/usr/include/netinet/ip.h \
+		/usr/include/netinet/in_systm.h \
+		/usr/include/netinet/ip_icmp.h \
+		/usr/include/netinet/in_var.h \
+		/usr/include/netinet/icmp6.h \
+		/usr/include/netinet/ip_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/netinet6
+	for file in \
+		/usr/include/netinet6/in6_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/net
+	for file in \
+		/usr/include/net/if_arp.h; do \
+		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/sys
+	for file in \
+		/usr/include/sys/kern_event.h \
+		/usr/include/sys/sys_domain.h; do \
+		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
+		fi; \
+	done
 endif
 	@touch $(@)
 
