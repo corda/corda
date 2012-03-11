@@ -3289,8 +3289,21 @@ EXPORT(JVM_IsInterrupted)(Thread* t, jobject thread, jboolean clear)
   return run(t, jvmIsInterrupted, arguments);
 }
 
+uint64_t
+jvmHoldsLock(Thread* t, uintptr_t* arguments)
+{
+  object m = objectMonitor(t, *reinterpret_cast<jobject>(arguments[0]), false);
+
+  return m and monitorOwner(t, m) == t;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
-EXPORT(JVM_HoldsLock)(Thread*, jclass, jobject) { abort(); }
+EXPORT(JVM_HoldsLock)(Thread* t, jclass, jobject o)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
+
+  return run(t, jvmHoldsLock, arguments);
+}
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_DumpAllStacks)(Thread*, jclass) { abort(); }
