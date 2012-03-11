@@ -2207,19 +2207,40 @@ pipeAvailable(int fd, int* available)
 }
 
 object
-fieldForOffset(Thread* t, object o, unsigned offset)
+fieldForOffsetInClass(Thread* t, object c, unsigned offset)
 {
-  object table = classFieldTable(t, objectClass(t, o));
-  for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-    object field = objectArrayBody(t, table, i);
-    if ((fieldFlags(t, field) & ACC_STATIC) == 0
-        and fieldOffset(t, field) == offset)
-    {
+  object super = classSuper(t, c);
+  if (super) {
+    object field = fieldForOffsetInClass(t, super, offset);
+    if (field) {
       return field;
     }
   }
-  
-  abort(t);
+
+  object table = classFieldTable(t, c);
+  if (table) {
+    for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+      object field = objectArrayBody(t, table, i);
+      if ((fieldFlags(t, field) & ACC_STATIC) == 0
+          and fieldOffset(t, field) == offset)
+      {
+        return field;
+      }
+    }
+  }
+
+  return 0;
+}
+
+object
+fieldForOffset(Thread* t, object o, unsigned offset)
+{
+  object field = fieldForOffsetInClass(t, objectClass(t, o), offset);
+  if (field) {
+    return field;
+  } else {
+    abort(t);
+  }
 }
 
 } // namespace local
