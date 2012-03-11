@@ -2230,19 +2230,40 @@ pipeAvailable(int fd, int* available)
 }
 
 object
-fieldForOffset(Thread* t, object o, unsigned offset)
+fieldForOffsetInClass(Thread* t, object c, unsigned offset)
 {
-  object table = classFieldTable(t, objectClass(t, o));
-  for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-    object field = objectArrayBody(t, table, i);
-    if ((fieldFlags(t, field) & ACC_STATIC) == 0
-        and fieldOffset(t, field) == offset)
-    {
+  object super = classSuper(t, c);
+  if (super) {
+    object field = fieldForOffsetInClass(t, super, offset);
+    if (field) {
       return field;
     }
   }
-  
-  abort(t);
+
+  object table = classFieldTable(t, c);
+  if (table) {
+    for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+      object field = objectArrayBody(t, table, i);
+      if ((fieldFlags(t, field) & ACC_STATIC) == 0
+          and fieldOffset(t, field) == offset)
+      {
+        return field;
+      }
+    }
+  }
+
+  return 0;
+}
+
+object
+fieldForOffset(Thread* t, object o, unsigned offset)
+{
+  object field = fieldForOffsetInClass(t, objectClass(t, o), offset);
+  if (field) {
+    return field;
+  } else {
+    abort(t);
+  }
 }
 
 } // namespace local
@@ -2646,118 +2667,6 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_allocateMemory
-(Thread* t, object, uintptr_t* arguments)
-{
-  void* p = malloc(arguments[1]);
-  if (p) {
-    return reinterpret_cast<int64_t>(p);
-  } else {
-    throwNew(t, Machine::OutOfMemoryErrorType);
-  }
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_freeMemory
-(Thread*, object, uintptr_t* arguments)
-{
-  void* p = reinterpret_cast<void*>(arguments[1]);
-  if (p) {
-    free(p);
-  }
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_setMemory
-(Thread*, object, uintptr_t* arguments)
-{
-  object base = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  int64_t count; memcpy(&count, arguments + 4, 8);
-  int8_t v = arguments[6];
-
-  memset(base
-         ? &cast<int8_t>(base, offset)
-         : reinterpret_cast<int8_t*>(offset), v, count);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_putByte__JB
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int8_t v = arguments[3];
-
-  *reinterpret_cast<int8_t*>(p) = v;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_putShort__JS
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int16_t v = arguments[3];
-
-  *reinterpret_cast<int16_t*>(p) = v;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_putLong__JJ
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int64_t v; memcpy(&v, arguments + 3, 8);
-
-  *reinterpret_cast<int64_t*>(p) = v;
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_putInt__JI
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int32_t v = arguments[3];
-
-  *reinterpret_cast<int32_t*>(p) = v;
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getByte__J
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-
-  return *reinterpret_cast<int8_t*>(p);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getInt__J
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-
-  return *reinterpret_cast<int32_t*>(p);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getLong__J
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-
-  return *reinterpret_cast<int64_t*>(p);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getFloat__J
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t p; memcpy(&p, arguments + 1, 8);
-
-  return *reinterpret_cast<int32_t*>(p);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_pageSize
 (Thread*, object, uintptr_t*)
 {
@@ -2839,6 +2748,19 @@ Avian_sun_misc_Unsafe_copyMemory
     : reinterpret_cast<uint8_t*>(dstOffset);
 
   memcpy(dst, src, count);
+}
+
+Avian_sun_misc_Unsafe_monitorEnter
+(Thread* t, object, uintptr_t* arguments)
+{
+  acquire(t, reinterpret_cast<object>(arguments[1]));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_monitorExit
+(Thread* t, object, uintptr_t* arguments)
+{
+  release(t, reinterpret_cast<object>(arguments[1]));
 }
 
 namespace {
@@ -3427,8 +3349,21 @@ EXPORT(JVM_IsInterrupted)(Thread* t, jobject thread, jboolean clear)
   return run(t, jvmIsInterrupted, arguments);
 }
 
+uint64_t
+jvmHoldsLock(Thread* t, uintptr_t* arguments)
+{
+  object m = objectMonitor(t, *reinterpret_cast<jobject>(arguments[0]), false);
+
+  return m and monitorOwner(t, m) == t;
+}
+
 extern "C" JNIEXPORT jboolean JNICALL
-EXPORT(JVM_HoldsLock)(Thread*, jclass, jobject) { abort(); }
+EXPORT(JVM_HoldsLock)(Thread* t, jclass, jobject o)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
+
+  return run(t, jvmHoldsLock, arguments);
+}
 
 extern "C" JNIEXPORT void JNICALL
 EXPORT(JVM_DumpAllStacks)(Thread*, jclass) { abort(); }

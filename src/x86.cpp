@@ -1478,7 +1478,8 @@ subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
     opcode(c, 0x83, 0xd8 + regCode(b));
     c->code.append(v);
   } else {
-    abort(c);
+    opcode(c, 0x81, 0xd8 + regCode(b));
+    c->code.append4(v);
   }
 }
 

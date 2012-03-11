@@ -214,6 +214,9 @@ openjdk-extra-cflags = -fvisibility=hidden
 
 bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
+developer-dir := $(shell if test -d /Developer; then echo /Developer; \
+	else echo /Applications/Xcode.app/Contents/Developer; fi)
+
 ifeq ($(build-arch),powerpc)
 	ifneq ($(arch),$(build-arch))
 		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
@@ -254,7 +257,7 @@ ifeq ($(arch),arm)
 
 	ifneq ($(arch),$(build-arch))
 		ifeq ($(platform),darwin)
-			ios-bin = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin
+			ios-bin = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/usr/bin
 			cxx = $(ios-bin)/g++
 			cc = $(ios-bin)/gcc
 			ar = $(ios-bin)/ar
@@ -322,7 +325,7 @@ ifeq ($(platform),darwin)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		flags = -arch armv7 -isysroot \
-			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
+			$(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
 		openjdk-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)

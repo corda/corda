@@ -3809,6 +3809,13 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
   return true;
 }
 
+Compiler::Operand*
+popLongAddress(Frame* frame)
+{
+  return TargetBytesPerWord == 8 ? frame->popLong() : frame->c->load
+    (8, 8, frame->popLong(), TargetBytesPerWord);
+}
+
 bool
 intrinsic(MyThread* t, Frame* frame, object target)
 {
@@ -3836,6 +3843,127 @@ intrinsic(MyThread* t, Frame* frame, object target)
         frame->pushInt(c->fabs(4, frame->popInt()));
         return true;
       }
+    }
+  } else if (UNLIKELY(MATCH(className, "sun/misc/Unsafe"))) {
+    Compiler* c = frame->c;
+    if (MATCH(methodName(t, target), "getByte")
+        and MATCH(methodSpec(t, target), "(J)B"))
+    {
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      frame->pushInt
+        (c->load
+         (1, 1, c->memory(address, Compiler::IntegerType, 0, 0, 1),
+          TargetBytesPerWord));
+      return true;
+    } else if (MATCH(methodName(t, target), "putByte")
+               and MATCH(methodSpec(t, target), "(JB)V"))
+    {
+      Compiler::Operand* value = frame->popInt();
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      c->store
+        (TargetBytesPerWord, value, 1, c->memory
+         (address, Compiler::IntegerType, 0, 0, 1));
+      return true;
+    } else if ((MATCH(methodName(t, target), "getShort")
+                and MATCH(methodSpec(t, target), "(J)S"))
+               or (MATCH(methodName(t, target), "getChar")
+                   and MATCH(methodSpec(t, target), "(J)C")))
+    {
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      frame->pushInt
+        (c->load
+         (2, 2, c->memory(address, Compiler::IntegerType, 0, 0, 1),
+          TargetBytesPerWord));
+      return true;
+    } else if ((MATCH(methodName(t, target), "putShort")
+                and MATCH(methodSpec(t, target), "(JS)V"))
+               or (MATCH(methodName(t, target), "putChar")
+                   and MATCH(methodSpec(t, target), "(JC)V")))
+    {
+      Compiler::Operand* value = frame->popInt();
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      c->store
+        (TargetBytesPerWord, value, 2, c->memory
+         (address, Compiler::IntegerType, 0, 0, 1));
+      return true;
+    } else if ((MATCH(methodName(t, target), "getInt")
+                and MATCH(methodSpec(t, target), "(J)I"))
+               or (MATCH(methodName(t, target), "getFloat")
+                   and MATCH(methodSpec(t, target), "(J)F")))
+    {
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      frame->pushInt
+        (c->load
+         (4, 4, c->memory
+          (address, MATCH(methodName(t, target), "getInt")
+           ? Compiler::IntegerType : Compiler::FloatType, 0, 0, 1),
+          TargetBytesPerWord));
+      return true;
+    } else if ((MATCH(methodName(t, target), "putInt")
+                and MATCH(methodSpec(t, target), "(JI)V"))
+               or (MATCH(methodName(t, target), "putFloat")
+                   and MATCH(methodSpec(t, target), "(JF)V")))
+    {
+      Compiler::Operand* value = frame->popInt();
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      c->store
+        (TargetBytesPerWord, value, 4, c->memory
+         (address, MATCH(methodName(t, target), "putInt")
+           ? Compiler::IntegerType : Compiler::FloatType, 0, 0, 1));
+      return true;
+    } else if ((MATCH(methodName(t, target), "getLong")
+                and MATCH(methodSpec(t, target), "(J)J"))
+               or (MATCH(methodName(t, target), "getDouble")
+                   and MATCH(methodSpec(t, target), "(J)D")))
+    {
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      frame->pushLong
+        (c->load
+         (8, 8, c->memory
+          (address, MATCH(methodName(t, target), "getLong")
+           ? Compiler::IntegerType : Compiler::FloatType, 0, 0, 1),
+          8));
+      return true;
+    } else if ((MATCH(methodName(t, target), "putLong")
+                and MATCH(methodSpec(t, target), "(JJ)V"))
+               or (MATCH(methodName(t, target), "putDouble")
+                   and MATCH(methodSpec(t, target), "(JD)V")))
+    {
+      Compiler::Operand* value = frame->popLong();
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      c->store
+        (8, value, 8, c->memory
+         (address, MATCH(methodName(t, target), "putLong")
+           ? Compiler::IntegerType : Compiler::FloatType, 0, 0, 1));
+      return true;
+    } else if (MATCH(methodName(t, target), "getAddress")
+                and MATCH(methodSpec(t, target), "(J)J"))
+    {
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      frame->pushLong
+        (c->load
+         (TargetBytesPerWord, TargetBytesPerWord,
+          c->memory(address, Compiler::AddressType, 0, 0, 1), 8));
+      return true;
+    } else if (MATCH(methodName(t, target), "putAddress")
+               and MATCH(methodSpec(t, target), "(JJ)V"))
+    {
+      Compiler::Operand* value = frame->popLong();
+      Compiler::Operand* address = popLongAddress(frame);
+      frame->popObject();
+      c->store
+        (8, value, TargetBytesPerWord, c->memory
+         (address, Compiler::AddressType, 0, 0, 1));
+      return true;
     }
   }
   return false;
@@ -5022,43 +5150,45 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       if (LIKELY(target)) {
         assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+          
+        if (not intrinsic(t, frame, target)) {
+          bool tailCall = isTailCall(t, code, ip, context->method, target);
 
-        bool tailCall = isTailCall(t, code, ip, context->method, target);
+          if (LIKELY(methodVirtual(t, target))) {
+            unsigned parameterFootprint = methodParameterFootprint(t, target);
 
-        if (LIKELY(methodVirtual(t, target))) {
-          unsigned parameterFootprint = methodParameterFootprint(t, target);
+            unsigned offset = TargetClassVtable
+              + (methodOffset(t, target) * TargetBytesPerWord);
 
-          unsigned offset = TargetClassVtable
-            + (methodOffset(t, target) * TargetBytesPerWord);
+            Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
 
-          Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
+            unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-          unsigned rSize = resultSize(t, methodReturnCode(t, target));
+            Compiler::Operand* result = c->stackCall
+              (c->memory
+               (c->and_
+                (TargetBytesPerWord, c->constant
+                 (TargetPointerMask, Compiler::IntegerType),
+                 c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
+                Compiler::ObjectType, offset, 0, 1),
+               tailCall ? Compiler::TailJump : 0,
+               frame->trace(0, 0),
+               rSize,
+               operandTypeForFieldCode(t, methodReturnCode(t, target)),
+               parameterFootprint);
 
-          Compiler::Operand* result = c->stackCall
-            (c->memory
-             (c->and_
-              (TargetBytesPerWord, c->constant
-               (TargetPointerMask, Compiler::IntegerType),
-               c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
-              Compiler::ObjectType, offset, 0, 1),
-             tailCall ? Compiler::TailJump : 0,
-             frame->trace(0, 0),
-             rSize,
-             operandTypeForFieldCode(t, methodReturnCode(t, target)),
-             parameterFootprint);
+            frame->pop(parameterFootprint);
 
-          frame->pop(parameterFootprint);
+            if (rSize) {
+              pushReturnValue(t, frame, methodReturnCode(t, target), result);
+            }
+          } else {
+            // OpenJDK generates invokevirtual calls to private methods
+            // (e.g. readObject and writeObject for serialization), so
+            // we must handle such cases here.
 
-          if (rSize) {
-            pushReturnValue(t, frame, methodReturnCode(t, target), result);
+            compileDirectInvoke(t, frame, target, tailCall);          
           }
-        } else {
-          // OpenJDK generates invokevirtual calls to private methods
-          // (e.g. readObject and writeObject for serialization), so
-          // we must handle such cases here.
-
-          compileDirectInvoke(t, frame, target, tailCall);          
         }
       } else {
         PROTECT(t, reference);
@@ -6042,6 +6172,10 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
 int
 resolveIpForwards(Context* context, int start, int end)
 {
+  if (start < 0) {
+    start = 0;
+  }
+
   while (start < end and context->visitTable[start] == 0) {
     ++ start;
   }
@@ -6056,6 +6190,13 @@ resolveIpForwards(Context* context, int start, int end)
 int
 resolveIpBackwards(Context* context, int start, int end)
 {
+  Thread* t = context->thread;
+  if (start >= static_cast<int>
+      (codeLength(t, methodCode(t, context->method))))
+  {
+    start = codeLength(t, methodCode(t, context->method)) - 1;
+  }
+
   while (start >= end and context->visitTable[start] == 0) {
     -- start;
   }
@@ -6139,11 +6280,16 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
          exceptionHandlerEnd(oldHandler));
 
       if (LIKELY(handlerStart >= 0)) {
+        assert(t, handlerStart < static_cast<int>
+               (codeLength(t, methodCode(t, context->method))));
+
         int handlerEnd = resolveIpBackwards
           (context, exceptionHandlerEnd(oldHandler),
            exceptionHandlerStart(oldHandler));
 
         assert(t, handlerEnd >= 0);
+        assert(t, handlerEnd < static_cast<int>
+               (codeLength(t, methodCode(t, context->method))));
 
         intArrayBody(t, newIndex, ni * 3)
           = c->machineIp(handlerStart)->value() - start;

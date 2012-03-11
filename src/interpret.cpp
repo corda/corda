@@ -758,6 +758,8 @@ interpret3(Thread* t, const int base)
   object& exception = t->exception;
   uintptr_t* stack = t->stack;
 
+  code = methodCode(t, frameMethod(t, frame));
+
   if (UNLIKELY(exception)) {
     goto throw_;
   }
