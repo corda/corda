@@ -440,9 +440,14 @@ class MyClasspath : public Classpath {
     PROTECT(t, class_);
 
     object name = makeClassNameString(t, getClassName(t, class_));
+    PROTECT(t, name);
 
-    return vm::makeJclass
-      (t, 0, 0, name, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, class_);
+    object c = allocate(t, FixedSizeOfJclass, true);
+    setObjectClass(t, c, type(t, Machine::JclassType));
+    set(t, c, JclassName, name);
+    set(t, c, JclassVmClass, class_);
+
+    return c;
   }
 
   virtual object
@@ -2299,6 +2304,24 @@ Avian_sun_misc_Unsafe_registerNatives
   // ignore
 }
 
+extern "C" JNIEXPORT void
+Avian_sun_misc_Perf_registerNatives
+(Thread*, object, uintptr_t*)
+{
+  // ignore
+}
+
+extern "C" JNIEXPORT int64_t
+Avian_sun_misc_Perf_createLong
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<int64_t>
+    (t->m->processor->invoke
+     (t, resolveMethod
+      (t, root(t, Machine::BootLoader), "java/nio/ByteBuffer", "allocate",
+       "(I)Ljava/nio/ByteBuffer;"), 0, 8));
+}
+
 extern "C" JNIEXPORT int64_t
 Avian_sun_misc_Unsafe_addressSize
 (Thread*, object, uintptr_t*)
@@ -2750,6 +2773,7 @@ Avian_sun_misc_Unsafe_copyMemory
   memcpy(dst, src, count);
 }
 
+extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_monitorEnter
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -5307,6 +5331,9 @@ EXPORT(JVM_GetVersionInfo)(JNIEnv*, local::jvm_version_info* info, size_t size)
 extern "C" JNIEXPORT jboolean JNICALL
 EXPORT(JVM_CX8Field)(JNIEnv*, jobject*, jfieldID*, jlong, jlong)
 { abort(); }
+
+extern "C" JNIEXPORT void JNICALL
+JVM_SetNativeThreadName(JNIEnv*, jobject, jstring) { abort(); }
 
 } // namespace local
 

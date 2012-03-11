@@ -310,7 +310,8 @@ ifeq ($(platform),darwin)
 	version-script-flag =
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
 	ifneq ($(arch),arm)
-		lflags +=	-framework CoreServices
+		lflags +=	-framework CoreServices -framework SystemConfiguration \
+			-framework Security
 	endif
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
