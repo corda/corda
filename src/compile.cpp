@@ -6172,6 +6172,10 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
 int
 resolveIpForwards(Context* context, int start, int end)
 {
+  if (start < 0) {
+    start = 0;
+  }
+
   while (start < end and context->visitTable[start] == 0) {
     ++ start;
   }
@@ -6186,6 +6190,13 @@ resolveIpForwards(Context* context, int start, int end)
 int
 resolveIpBackwards(Context* context, int start, int end)
 {
+  Thread* t = context->thread;
+  if (start >= static_cast<int>
+      (codeLength(t, methodCode(t, context->method))))
+  {
+    start = codeLength(t, methodCode(t, context->method)) - 1;
+  }
+
   while (start >= end and context->visitTable[start] == 0) {
     -- start;
   }
@@ -6269,11 +6280,16 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
          exceptionHandlerEnd(oldHandler));
 
       if (LIKELY(handlerStart >= 0)) {
+        assert(t, handlerStart < static_cast<int>
+               (codeLength(t, methodCode(t, context->method))));
+
         int handlerEnd = resolveIpBackwards
           (context, exceptionHandlerEnd(oldHandler),
            exceptionHandlerStart(oldHandler));
 
         assert(t, handlerEnd >= 0);
+        assert(t, handlerEnd < static_cast<int>
+               (codeLength(t, methodCode(t, context->method))));
 
         intArrayBody(t, newIndex, ni * 3)
           = c->machineIp(handlerStart)->value() - start;
