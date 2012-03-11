@@ -2694,6 +2694,20 @@ Avian_sun_misc_Unsafe_park
   monitorRelease(t, local::interruptLock(t, t->javaThread));
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_monitorEnter
+(Thread* t, object, uintptr_t* arguments)
+{
+  acquire(t, reinterpret_cast<object>(arguments[1]));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_monitorExit
+(Thread* t, object, uintptr_t* arguments)
+{
+  release(t, reinterpret_cast<object>(arguments[1]));
+}
+
 namespace {
 
 namespace local {
