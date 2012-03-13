@@ -448,6 +448,7 @@ class JarElement: public Element {
              unsigned jarLength):
     s(s),
     allocator(allocator),
+    originalName(0),
     name(0),
     urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
     sourceUrl_(name ? append(allocator, "file:", name) : 0),
@@ -517,12 +518,14 @@ class JarElement: public Element {
   }
 
   virtual void dispose(unsigned size) {
-    if (originalName != name) {
-      allocator->free(originalName, strlen(originalName) + 1);
+    if (name) {
+      if (originalName != name) {
+        allocator->free(originalName, strlen(originalName) + 1);
+      }
+      allocator->free(name, strlen(name) + 1);
+      allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
+      allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     }
-    allocator->free(name, strlen(name) + 1);
-    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
-    allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     if (index) {
       index->dispose();
     }
@@ -906,7 +909,9 @@ class MyFinder: public Finder {
       e = e->next;
       t->dispose();
     }
-    allocator->free(pathString, strlen(pathString) + 1);
+    if (pathString) {
+      allocator->free(pathString, strlen(pathString) + 1);
+    }
     allocator->free(this, sizeof(*this));
   }
 
