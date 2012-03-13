@@ -2678,6 +2678,7 @@ populateTables(ArchitectureContext* c)
 
   bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
   bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(c, MoveZ, C, R)] = CAST2(moveCR);
 
   bo[index(c, Add, R, R)] = CAST2(addRR);
   bo[index(c, Add, C, R)] = CAST2(addCR);
