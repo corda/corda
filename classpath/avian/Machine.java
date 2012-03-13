@@ -10,8 +10,16 @@
 
 package avian;
 
+import sun.misc.Unsafe;
+
 public abstract class Machine {
 
+  private static final Unsafe unsafe = Unsafe.getUnsafe();
+
   public static native void dumpHeap(String outputFile);
+
+  public static Unsafe getUnsafe() {
+    return unsafe;
+  }
 
 }
