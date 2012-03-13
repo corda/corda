@@ -40,6 +40,12 @@ public class Files {
     isAbsoluteTest(false);
     setExecutableTestWithPermissions(true);
     setExecutableTestWithPermissions(false);
+  
+    { File f = new File("test.txt");
+      f.createNewFile();
+      expect(! f.createNewFile());
+      f.delete();
+    }
   }
 
 }

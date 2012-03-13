@@ -42,7 +42,6 @@
 #    define S_IWUSR _S_IWRITE
 #  else
 #    define OPEN _open
-#    define CREAT _creat
 #  endif
 
 #  define O_RDONLY _O_RDONLY
@@ -82,6 +81,8 @@ typedef int socklen_t;
 
 #endif // not PLATFORM_WINDOWS
 
+#define JVM_EEXIST -100
+
 using namespace vm;
 
 namespace {
@@ -96,12 +97,6 @@ OPEN(string_t path, int mask, int mode)
   } else {
     return -1; 
   }
-}
-
-inline int
-CREAT(string_t path, int mode)
-{
-  return OPEN(path, _O_CREAT, mode);
 }
 #endif
 
@@ -4819,7 +4814,12 @@ EXPORT(JVM_NativePath)(char* path)
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
 {
-  return OPEN(path, flags, mode);
+  int r = OPEN(path, flags, mode);
+  if (r == -1) {
+    return errno == EEXIST ? JVM_EEXIST : -1;
+  } else {
+    return r;
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL
