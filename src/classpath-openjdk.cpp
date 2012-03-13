@@ -5263,7 +5263,17 @@ jio_vfprintf(FILE* stream, const char* format, va_list a)
 #ifdef PLATFORM_WINDOWS
 extern "C" JNIEXPORT void* JNICALL
 EXPORT(JVM_GetThreadInterruptEvent)()
-{ abort(); }
+{
+  // hack: We don't want to expose thread interruption implementation
+  // details, so we give the class library a fake event to play with.
+  // This means that threads won't be interruptable when blocked in
+  // Process.waitFor.
+  static HANDLE fake = 0;
+  if (fake == 0) {
+    fake = CreateEvent(0, true, false, 0);
+  }
+  return fake;
+}
 
 namespace { HMODULE jvmHandle = 0; }
 
