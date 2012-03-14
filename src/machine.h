@@ -112,9 +112,6 @@ const unsigned ThreadBackupHeapSizeInBytes = 2 * 1024;
 const unsigned ThreadBackupHeapSizeInWords
 = ThreadBackupHeapSizeInBytes / BytesPerWord;
 
-const unsigned StackSizeInBytes = 128 * 1024;
-const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
-
 const unsigned ThreadHeapPoolSize = 64;
 
 const unsigned FixedFootprintThresholdInBytes
@@ -1281,7 +1278,7 @@ class Machine {
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
           unsigned propertyCount, const char** arguments,
-          unsigned argumentCount);
+          unsigned argumentCount, unsigned stackSizeInBytes);
 
   ~Machine() { 
     dispose();
@@ -1310,6 +1307,7 @@ class Machine {
   unsigned liveCount;
   unsigned daemonCount;
   unsigned fixedFootprint;
+  unsigned stackSizeInBytes;
   System::Local* localThread;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
@@ -1637,6 +1635,12 @@ inline object
 objectClass(Thread*, object o)
 {
   return mask(cast<object>(o, 0));
+}
+
+inline unsigned
+stackSizeInWords(Thread* t)
+{
+  return t->m->stackSizeInBytes / BytesPerWord;
 }
 
 void

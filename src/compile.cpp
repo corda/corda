@@ -8303,7 +8303,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   uintptr_t stackLimit = t->stackLimit;
   uintptr_t stackPosition = reinterpret_cast<uintptr_t>(&t);
   if (stackLimit == 0) {
-    t->stackLimit = stackPosition - StackSizeInBytes;
+    t->stackLimit = stackPosition - t->m->stackSizeInBytes;
   } else if (stackPosition < stackLimit) {
     throwNew(t, Machine::StackOverflowErrorType);
   }

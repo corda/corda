@@ -2425,7 +2425,8 @@ namespace vm {
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
                  const char** properties, unsigned propertyCount,
-                 const char** arguments, unsigned argumentCount):
+                 const char** arguments, unsigned argumentCount,
+                 unsigned stackSizeInBytes):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2448,6 +2449,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   liveCount(0),
   daemonCount(0),
   fixedFootprint(0),
+  stackSizeInBytes(stackSizeInBytes),
   localThread(0),
   stateLock(0),
   heapLock(0),
