@@ -204,15 +204,10 @@ public class File implements Serializable {
     }
   }
 
-  private static native void createNewFile(String path) throws IOException;
+  private static native boolean createNewFile(String path) throws IOException;
 
-  public boolean createNewFile() {
-    try {
-      createNewFile(path);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
+  public boolean createNewFile() throws IOException {
+    return createNewFile(path);
   }
 
   public static native void delete(String path) throws IOException;

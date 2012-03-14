@@ -42,7 +42,6 @@
 #    define S_IWUSR _S_IWRITE
 #  else
 #    define OPEN _open
-#    define CREAT _creat
 #  endif
 
 #  define O_RDONLY _O_RDONLY
@@ -82,6 +81,8 @@ typedef int socklen_t;
 
 #endif // not PLATFORM_WINDOWS
 
+#define JVM_EEXIST -100
+
 using namespace vm;
 
 namespace {
@@ -96,12 +97,6 @@ OPEN(string_t path, int mask, int mode)
   } else {
     return -1; 
   }
-}
-
-inline int
-CREAT(string_t path, int mode)
-{
-  return OPEN(path, _O_CREAT, mode);
 }
 #endif
 
@@ -4902,7 +4897,12 @@ EXPORT(JVM_NativePath)(char* path)
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
 {
-  return OPEN(path, flags, mode);
+  int r = OPEN(path, flags, mode);
+  if (r == -1) {
+    return errno == EEXIST ? JVM_EEXIST : -1;
+  } else {
+    return r;
+  }
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -5354,7 +5354,17 @@ jio_vfprintf(FILE* stream, const char* format, va_list a)
 #ifdef PLATFORM_WINDOWS
 extern "C" JNIEXPORT void* JNICALL
 EXPORT(JVM_GetThreadInterruptEvent)()
-{ abort(); }
+{
+  // hack: We don't want to expose thread interruption implementation
+  // details, so we give the class library a fake event to play with.
+  // This means that threads won't be interruptable when blocked in
+  // Process.waitFor.
+  static HANDLE fake = 0;
+  if (fake == 0) {
+    fake = CreateEvent(0, true, false, 0);
+  }
+  return fake;
+}
 
 namespace { HMODULE jvmHandle = 0; }
 
