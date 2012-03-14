@@ -359,8 +359,6 @@ Avian_sun_misc_Unsafe_setMemory
   int64_t count; memcpy(&count, arguments + 4, 8);
   int8_t value = arguments[6];
 
-  fprintf(stderr, "base %p offset %p count %ld value %d\n", base, reinterpret_cast<int8_t*>(offset), count, value);
-
   PROTECT(t, base);
 
   ACQUIRE(t, t->m->referenceLock);
