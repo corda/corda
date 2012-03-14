@@ -352,13 +352,24 @@ Avian_sun_misc_Unsafe_freeMemory
 
 extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_setMemory
-(Thread*, object, uintptr_t* arguments)
+(Thread* t, object, uintptr_t* arguments)
 {
-  int64_t p; memcpy(&p, arguments + 1, 8);
-  int64_t count; memcpy(&count, arguments + 3, 8);
-  int8_t v = arguments[5];
+  object base = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t count; memcpy(&count, arguments + 4, 8);
+  int8_t value = arguments[6];
 
-  memset(reinterpret_cast<int8_t*>(p), v, count);
+  fprintf(stderr, "base %p offset %p count %ld value %d\n", base, reinterpret_cast<int8_t*>(offset), count, value);
+
+  PROTECT(t, base);
+
+  ACQUIRE(t, t->m->referenceLock);
+
+  if (base) {
+    memset(&cast<int8_t>(base, offset), value, count);
+  } else {
+    memset(reinterpret_cast<int8_t*>(offset), value, count);
+  }
 }
 
 // NB: The following primitive get/put methods are only used by the
