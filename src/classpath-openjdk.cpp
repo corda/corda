@@ -2566,13 +2566,20 @@ Avian_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getBoolean
+Avian_sun_misc_Unsafe_getByte
 (Thread*, object, uintptr_t* arguments)
 {
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<uint8_t>(o, offset);
+  return cast<int8_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getBoolean
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getByte(t, method, arguments);
 }
 
 extern "C" JNIEXPORT void JNICALL
