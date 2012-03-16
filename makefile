@@ -113,8 +113,13 @@ ifneq ($(openjdk),)
 	else
 	  options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
-		library-path = \
-			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		ifeq ($(build-platform),darwin)
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib
+		else
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		endif
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
@@ -308,7 +313,8 @@ ifeq ($(platform),darwin)
 	endif
 
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	lflags = $(common-lflags) -ldl -framework CoreFoundation \
+		-Wl,-compatibility_version,1.0.0
 	ifneq ($(arch),arm)
 		lflags +=	-framework CoreServices -framework SystemConfiguration \
 			-framework Security

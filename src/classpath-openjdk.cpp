@@ -410,6 +410,8 @@ class MyClasspath : public Classpath {
     sb.append(javaHome);
 #ifdef PLATFORM_WINDOWS
     sb.append("/bin");
+#elif defined __APPLE__
+    sb.append("/lib");
 #elif defined ARCH_x86_64
     sb.append("/lib/amd64");
 #else
