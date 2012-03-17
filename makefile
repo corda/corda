@@ -384,7 +384,7 @@ ifeq ($(platform),windows)
 	so-suffix = .dll
 	exe-suffix = .exe
 
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
 
 

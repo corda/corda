@@ -173,6 +173,7 @@ endif
 
 ifeq ($(platform),windows)
 	openjdk-sources += \
+		$(openjdk-src)/windows/native/common/jni_util_md.c \
 		$(openjdk-src)/windows/native/java/io/canonicalize_md.c \
 		$(openjdk-src)/windows/native/java/io/Console_md.c \
 		$(openjdk-src)/windows/native/java/io/FileDescriptor_md.c \
@@ -193,7 +194,6 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
 		$(openjdk-src)/windows/native/java/net/NetworkInterface.c \
 		$(openjdk-src)/windows/native/java/net/NetworkInterface_winXP.c \
-		$(openjdk-src)/windows/native/java/net/NetworkInterface_win9x.c \
 		$(openjdk-src)/windows/native/java/net/SocketInputStream.c \
 		$(openjdk-src)/windows/native/java/net/SocketOutputStream.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
@@ -203,7 +203,6 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramChannelImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileKey.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/IOUtil.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/Net.c \
@@ -211,6 +210,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/ch/SocketChannelImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/SocketDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/WindowsSelectorImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/fs/WindowsNativeDispatcher.c \
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	openjdk-headers-classes += \
@@ -218,6 +218,7 @@ ifeq ($(platform),windows)
 		java.lang.ProcessImpl \
 		sun.io.Win32ErrorMode \
 		sun.nio.ch.WindowsSelectorImpl \
+		sun.nio.fs.WindowsNativeDispatcher \
 
 	openjdk-cflags += \
 		"-I$(openjdk-src)/windows/javavm/export" \
@@ -228,6 +229,9 @@ ifeq ($(platform),windows)
 		"-I$(openjdk-src)/windows/native/sun/nio/ch" \
 		"-I$(openjdk-src)/windows/javavm/include" \
 		"-I$(root)/win32/include" \
+		-DLOCALE_SNAME=0x0000005c \
+		-DLOCALE_SISO3166CTRYNAME2=0x00000068 \
+		-DLOCALE_SISO639LANGNAME2=0x00000067 \
 		-D_JNI_IMPLEMENTATION_ \
 		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
 		-Ds6_words=_s6_words \
