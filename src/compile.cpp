@@ -6216,8 +6216,10 @@ truncateIntArray(Thread* t, object array, unsigned length)
   PROTECT(t, array);
 
   object newArray = makeIntArray(t, length);
-  memcpy(&intArrayBody(t, newArray, 0), &intArrayBody(t, array, 0),
-         length * 4);
+  if (length) {
+    memcpy(&intArrayBody(t, newArray, 0), &intArrayBody(t, array, 0),
+           length * 4);
+  }
 
   return newArray;
 }
@@ -6230,8 +6232,10 @@ truncateArray(Thread* t, object array, unsigned length)
   PROTECT(t, array);
 
   object newArray = makeArray(t, length);
-  memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
-         length * BytesPerWord);
+  if (length) {
+    memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+           length * BytesPerWord);
+  }
 
   return newArray;
 }
@@ -6244,9 +6248,11 @@ truncateLineNumberTable(Thread* t, object table, unsigned length)
   PROTECT(t, table);
 
   object newTable = makeLineNumberTable(t, length);
-  memcpy(&lineNumberTableBody(t, newTable, 0),
-         &lineNumberTableBody(t, table, 0),
-         length * sizeof(uint64_t));
+  if (length) {
+    memcpy(&lineNumberTableBody(t, newTable, 0),
+           &lineNumberTableBody(t, table, 0),
+           length * sizeof(uint64_t));
+  }
 
   return newTable;
 }
