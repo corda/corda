@@ -1538,6 +1538,8 @@ freeZipFileEntry(Thread* t, object method, uintptr_t* arguments)
        (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
        0, file->file, entry->entry);
   }
+
+  t->m->heap->free(entry, sizeof(ZipFile::Entry));
 }
 
 int64_t JNICALL
