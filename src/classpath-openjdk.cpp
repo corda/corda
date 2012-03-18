@@ -3863,7 +3863,7 @@ EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
 }
 
 extern "C" JNIEXPORT jclass JNICALL
-EXPORT(JVM_FindClassFromBootLoader)(Thread* t, const char* name)
+JVM_FindClassFromBootLoader(Thread* t, const char* name)
 {
   return EXPORT(JVM_FindClassFromClassLoader)(t, name, false, 0, false);
 }
@@ -5344,7 +5344,7 @@ EXPORT(JVM_CX8Field)(JNIEnv*, jobject*, jfieldID*, jlong, jlong)
 { abort(); }
 
 extern "C" JNIEXPORT void JNICALL
-JVM_SetNativeThreadName(JNIEnv*, jobject, jstring) { abort(); }
+EXPORT(JVM_SetNativeThreadName)(JNIEnv*, jobject, jstring) { abort(); }
 
 } // namespace local
 

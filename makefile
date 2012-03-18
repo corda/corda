@@ -387,7 +387,6 @@ ifeq ($(platform),windows)
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
 
-
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
 		cxx = x86_64-w64-mingw32-g++ -m32
@@ -425,6 +424,8 @@ ifeq ($(platform),windows)
 		strip = x86_64-w64-mingw32-strip
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
+	else
+		shared += -Wl,--add-stdcall-alias
 	endif
 endif
 

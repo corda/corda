@@ -203,6 +203,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramChannelImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileChannelImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcherImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileKey.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/IOUtil.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/Net.c \
