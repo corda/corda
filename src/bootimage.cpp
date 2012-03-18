@@ -502,10 +502,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             }
 
             if (fieldFlags(t, field) & ACC_STATIC) {
-              unsigned excess = (targetStaticOffset % targetSize)
-                % TargetBytesPerWord;
-              if (excess) {
-                targetStaticOffset += TargetBytesPerWord - excess;
+              while (targetStaticOffset % targetSize) {
+                ++ targetStaticOffset;
               }
 
               buildStaticOffset = fieldOffset(t, field);

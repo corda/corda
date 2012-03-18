@@ -1164,9 +1164,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        unsigned excess = (staticOffset % size) % BytesPerWord;
-        if (excess) {
-          staticOffset += BytesPerWord - excess;
+        while (staticOffset % size) {
+          ++ staticOffset;
         }
 
         fieldOffset(t, field) = staticOffset;
@@ -1205,9 +1204,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
-        unsigned excess = offset % size;
-        if (excess) {
-          offset += BytesPerWord - excess;
+        while (offset % size) {
+          ++ offset;
         }
 
         unsigned value = intArrayBody(t, staticValueTable, i);
