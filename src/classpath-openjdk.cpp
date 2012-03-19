@@ -1747,7 +1747,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
  
   loadLibrary
     (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
-     RUNTIME_ARRAY_BODY(n), not absolute, false);
+     RUNTIME_ARRAY_BODY(n), not absolute, true);
 }
 
 // only safe to call during bootstrap when there's only one thread
