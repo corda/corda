@@ -14,4 +14,8 @@ public abstract class ZipEntry {
   public abstract String getName();
   public abstract int getCompressedSize();
   public abstract int getSize();
+
+  public boolean isDirectory() {
+    return getName().endsWith("/");
+  }
 }
