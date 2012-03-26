@@ -320,12 +320,24 @@ ifeq ($(platform),darwin)
 	so-suffix = .dylib
 	shared = -dynamiclib
 
+	sdk-dir = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs
+
+	ios-version := $(shell if test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
+  elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
+  elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
+  elif test -d $(sdk-dir)/iPhoneOS4.2.sdk; then echo 4.2; \
+  else echo; fi)
+
+ 	ifeq ($(ios-version),)
+  	 x := $(error "couldn't find SDK for iOS version")
+	endif
+
 	ifeq ($(arch),arm)
 		ifeq ($(build-arch),powerpc)
 			converter-cflags += -DOPPOSITE_ENDIAN
 		endif
 		flags = -arch armv7 -isysroot \
-			$(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
+			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
 		openjdk-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
