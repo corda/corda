@@ -472,6 +472,7 @@ ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i586
+	lflags += -march=i586
 endif
 endif
 
