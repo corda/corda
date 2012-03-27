@@ -1671,7 +1671,7 @@ main(int ac, const char** av)
   p->initialize(&image, code, CodeCapacity);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
-    (s, h, f, 0, p, c, 0, 0, 0, 0);
+    (s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
   Thread* t = p->makeThread(m, 0, 0);
   
   enter(t, Thread::ActiveState);
