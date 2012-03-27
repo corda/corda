@@ -1287,6 +1287,9 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
                 BootImage* image, uint8_t* code, const char* className,
                 const char* methodName, const char* methodSpec)
 {
+  setRoot(t, Machine::OutOfMemoryError,
+          make(t, type(t, Machine::OutOfMemoryErrorType)));
+
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
   object classPoolMap;
