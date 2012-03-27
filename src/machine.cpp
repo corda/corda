@@ -2416,6 +2416,38 @@ isInitializing(Thread* t, object c)
   return false;
 }
 
+object
+findInTable(Thread* t, object table, object name, object spec,
+            object& (*getName)(Thread*, object),
+            object& (*getSpec)(Thread*, object))
+{
+  if (table) {
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i);      
+      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
+                     &byteArrayBody(t, name, 0)) == 0 and
+          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
+                     &byteArrayBody(t, spec, 0)) == 0)
+      {
+        return o;
+      }
+    }
+
+//     fprintf(stderr, "%s %s not in\n",
+//             &byteArrayBody(t, name, 0),
+//             &byteArrayBody(t, spec, 0));
+
+//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+//       object o = arrayBody(t, table, i); 
+//       fprintf(stderr, "\t%s %s\n",
+//               &byteArrayBody(t, getName(t, o), 0),
+//               &byteArrayBody(t, getSpec(t, o), 0)); 
+//     }
+  }
+
+  return 0;
+}
+
 } // namespace
 
 namespace vm {
@@ -3884,35 +3916,17 @@ makeObjectArray(Thread* t, object elementClass, unsigned count)
 }
 
 object
-findInTable(Thread* t, object table, object name, object spec,
-            object& (*getName)(Thread*, object),
-            object& (*getSpec)(Thread*, object))
+findFieldInClass(Thread* t, object class_, object name, object spec)
 {
-  if (table) {
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object o = arrayBody(t, table, i);      
-      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
-                     &byteArrayBody(t, name, 0)) == 0 and
-          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
-                     &byteArrayBody(t, spec, 0)) == 0)
-      {
-        return o;
-      }
-    }
+  return findInTable
+    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
+}
 
-//     fprintf(stderr, "%s %s not in\n",
-//             &byteArrayBody(t, name, 0),
-//             &byteArrayBody(t, spec, 0));
-
-//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-//       object o = arrayBody(t, table, i); 
-//       fprintf(stderr, "\t%s %s\n",
-//               &byteArrayBody(t, getName(t, o), 0),
-//               &byteArrayBody(t, getSpec(t, o), 0)); 
-//     }
-  }
-
-  return 0;
+object
+findMethodInClass(Thread* t, object class_, object name, object spec)
+{
+  return findInTable
+    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
 }
 
 object

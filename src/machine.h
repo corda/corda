@@ -2595,16 +2595,7 @@ makeObjectArray(Thread* t, unsigned count)
 }
 
 object
-findInTable(Thread* t, object table, object name, object spec,
-            object& (*getName)(Thread*, object),
-            object& (*getSpec)(Thread*, object));
-
-inline object
-findFieldInClass(Thread* t, object class_, object name, object spec)
-{
-  return findInTable
-    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
-}
+findFieldInClass(Thread* t, object class_, object name, object spec);
 
 inline object
 findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
@@ -2616,12 +2607,8 @@ findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
   return findFieldInClass(t, class_, n, s);
 }
 
-inline object
-findMethodInClass(Thread* t, object class_, object name, object spec)
-{
-  return findInTable
-    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
-}
+object
+findMethodInClass(Thread* t, object class_, object name, object spec);
 
 inline object
 makeThrowable
