@@ -1087,6 +1087,7 @@ $(openjdk-jar-dep):
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/charsets.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)
