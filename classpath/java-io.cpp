@@ -405,7 +405,6 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
   bool result = false;
   string_t chars = getChars(e, path);
   if (chars) {
-    fprintf(stderr, "create file \"%s\"\n", chars);
     if (not exists(chars)) {
       int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0600);
       if (fd == -1) {
