@@ -25,7 +25,7 @@ using namespace vm;
 
 namespace {
 
-const unsigned HeapCapacity = 256 * 1024 * 1024;
+const unsigned HeapCapacity = 512 * 1024 * 1024;
 
 const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
 const unsigned TargetFixieSizeInWords = ceiling
@@ -1667,7 +1667,11 @@ main(int ac, const char** av)
   // in a branch instruction for the target architecture (~32MB on
   // PowerPC and ARM).  When that limitation is removed, we'll be able
   // to specify a capacity as large as we like here:
+#if (defined ARCH_x86_64) || (defined ARCH_x86_32)
+  const unsigned CodeCapacity = 128 * 1024 * 1024;
+#else
   const unsigned CodeCapacity = 30 * 1024 * 1024;
+#endif
 
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   BootImage image;
