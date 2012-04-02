@@ -230,9 +230,11 @@ inline int ble(int offset) { return SETCOND(b(offset), LE); }
 inline int bge(int offset) { return SETCOND(b(offset), GE); }
 inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
+inline int bpl(int offset) { return SETCOND(b(offset), PL); }
+inline int fmstat() { return fmrx(15, FPSCR); }
 // HARDWARE FLAGS
 bool vfpSupported() {
-  return false; // TODO
+  return true; // TODO
 }
 
 }
@@ -1107,8 +1109,10 @@ void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsign
 
 void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
   if (size == 8) {
+    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> invalid 64-bit Scheiße\n");
     emit(con, fnegd(b->low, a->low));
   } else {
+    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- -%d\n", b->low, a->low);
     emit(con, fnegs(b->low, a->low));
   }
 }
@@ -1282,7 +1286,7 @@ store(Context* con, unsigned size, Assembler::Register* src,
              or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
   {
     if (isFpr(src)) {
-      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr store offset -> %d\n", src->low);
+      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> [%d + 0x%x] <- %d\n", base, offset, src->low);
       if (size == 4) emit(con, fsts(toFpr(src), base, offset));
       else           abort(con);
     } else {
@@ -1415,7 +1419,7 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
                  and abs(offset) == (abs(offset) & 0xFFF)))
   {
     if (isFpr(dst)) {
-      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr load offset <- %d\n", dst->low);
+      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- [%d + 0x%x]\n", dst->low, base, offset);
       if (srcSize == 4) emit(con, flds(toFpr(dst), base, offset));
       else           abort(con);
     } else {
@@ -1583,8 +1587,13 @@ compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
 {
   assert(c, aSize == 4 and bSize == 4);
   assert(c, b->low != a->low);
+  assert(c, !(isFpr(a) ^ isFpr(b)));
 
-  emit(c, cmp(b->low, a->low));
+  if (isFpr(a)) {
+    emit(c, fcmps(toFpr(b), toFpr(a)));
+    emit(c, fmstat());
+  }
+  else emit(c, cmp(b->low, a->low));
 }
 
 void
@@ -1593,7 +1602,8 @@ compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
 {
   assert(c, aSize == 4 and bSize == 4);
 
-  if (a->value->resolved() and isOfWidth(a->value->value(), 8)) {
+  if (!isFpr(b) && a->value->resolved() &&
+      isOfWidth(a->value->value(), 8)) {
     emit(c, cmpi(b->low, a->value->value()));
   } else {
     Assembler::Register tmp(c->client->acquireTemporary());
@@ -1632,23 +1642,37 @@ branch(Context* c, TernaryOperation op)
 {
   switch (op) {
   case JumpIfEqual:
+  case JumpIfFloatEqual:
     return beq(0);
-    
+
   case JumpIfNotEqual:
+  case JumpIfFloatNotEqual:
     return bne(0);
-    
+
   case JumpIfLess:
+  case JumpIfFloatLess:
+  case JumpIfFloatLessOrUnordered:
     return blt(0);
-    
+
   case JumpIfGreater:
+  case JumpIfFloatGreater:
     return bgt(0);
-    
+
   case JumpIfLessOrEqual:
+  case JumpIfFloatLessOrEqual:
+  case JumpIfFloatLessOrEqualOrUnordered:
     return ble(0);
-    
+
   case JumpIfGreaterOrEqual:
+  case JumpIfFloatGreaterOrEqual:
     return bge(0);
-    
+
+  case JumpIfFloatGreaterOrUnordered:
+    return bhi(0);
+
+  case JumpIfFloatGreaterOrEqualOrUnordered:
+    return bpl(0);
+ 
   default:
     abort(c);
   }
@@ -1763,10 +1787,12 @@ branchRR(Context* c, TernaryOperation op, unsigned size,
 }
 
 void
-branchCR(Context* c, TernaryOperation op, unsigned size,
+branchCR(Context* con, TernaryOperation op, unsigned size,
          Assembler::Constant* a, Assembler::Register* b,
          Assembler::Constant* target)
 {
+  assert(con, !isFloatBranch(op));
+
   if (size > TargetBytesPerWord) {
     int64_t v = a->value->value();
 
@@ -1778,34 +1804,36 @@ branchCR(Context* c, TernaryOperation op, unsigned size,
 
     Assembler::Register bh(b->high);
 
-    branchLong(c, op, &al, &ah, b, &bh, target, CAST2(compareCR),
+    branchLong(con, op, &al, &ah, b, &bh, target, CAST2(compareCR),
                CAST2(compareCR));
   } else {
-    compareCR(c, size, a, size, b);
-    branch(c, op, target);
+    compareCR(con, size, a, size, b);
+    branch(con, op, target);
   }
 }
 
 void
-branchRM(Context* c, TernaryOperation op, unsigned size,
+branchRM(Context* con, TernaryOperation op, unsigned size,
          Assembler::Register* a, Assembler::Memory* b,
          Assembler::Constant* target)
 {
-  assert(c, size <= TargetBytesPerWord);
+  assert(con, !isFloatBranch(op));
+  assert(con, size <= TargetBytesPerWord);
 
-  compareRM(c, size, a, size, b);
-  branch(c, op, target);
+  compareRM(con, size, a, size, b);
+  branch(con, op, target);
 }
 
 void
-branchCM(Context* c, TernaryOperation op, unsigned size,
+branchCM(Context* con, TernaryOperation op, unsigned size,
          Assembler::Constant* a, Assembler::Memory* b,
          Assembler::Constant* target)
 {
-  assert(c, size <= TargetBytesPerWord);
+  assert(con, !isFloatBranch(op));
+  assert(con, size <= TargetBytesPerWord);
 
-  compareCM(c, size, a, size, b);
-  branch(c, op, target);
+  compareCM(con, size, a, size, b);
+  branch(con, op, target);
 }
 
 ShiftMaskPromise*
@@ -2304,7 +2332,6 @@ class MyArchitecture: public Assembler::Architecture {
       if (vfpSupported()) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = FPR_MASK;
-        *thunk = true;
       } else {
         *thunk = true;
       }
@@ -2314,7 +2341,6 @@ class MyArchitecture: public Assembler::Architecture {
       if (vfpSupported() && bSize == 4 && aSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = FPR_MASK;
-        *thunk = true;
       } else {
         *thunk = true;
       }
@@ -2324,7 +2350,6 @@ class MyArchitecture: public Assembler::Architecture {
       if (vfpSupported() && aSize == 4 && bSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = FPR_MASK;
-        *thunk = true;
       } else {
         *thunk = true;
       }
@@ -2421,8 +2446,12 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrUnordered:
     case JumpIfFloatLessOrEqualOrUnordered:
     case JumpIfFloatGreaterOrEqualOrUnordered:
-      if (vfpSupported()) *thunk = true;
-      else                *thunk = true;
+      if (vfpSupported()) {
+        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = *bRegisterMask = FPR_MASK;
+      } else {
+        *thunk = true;
+      }
       break;
 
     default:
