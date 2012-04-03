@@ -632,13 +632,9 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 }
 
 // System.getEnvironment() implementation
-// TODO: For Win32, replace usage of deprecated _wenviron
-#ifndef PLATFORM_WINDOWS
+// TODO: For Win32, replace usage of deprecated _environ and add Unicode
+// support (neither of which is likely to be of great importance).
 extern char** environ;
-# else
-extern wchar_t** _wenviron;
-const wchar_t** environ = _wenviron;
-#endif
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
   int length;
@@ -649,11 +645,7 @@ Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
                         env->NewStringUTF(""));
 
   for (int i = 0; i < length; i++) {
-#ifndef PLATFORM_WINDOWS
-    jobject varString = env->NewStringUTF(environ[i]); // UTF-8
-#else
-    jobject varString = env->NewString(environ[i]);    // UTF-16
-#endif
+    jobject varString = env->NewStringUTF(environ[i]);
     env->SetObjectArrayElement(stringArray, i, varString);
   }
 
