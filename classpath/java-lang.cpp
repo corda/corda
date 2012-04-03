@@ -631,6 +631,35 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
   return r;
 }
 
+// System.getEnvironment() implementation
+// TODO: For Win32, replace usage of deprecated _wenviron
+#ifndef PLATFORM_WINDOWS
+extern char** environ;
+# else
+extern wchar_t** _wenviron;
+const wchar_t** environ = _wenviron;
+#endif
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
+  int length;
+  for (length = 0; environ[length] != 0; ++length);
+
+  jobjectArray stringArray =
+    env->NewObjectArray(length, env->FindClass("java/lang/String"),
+                        env->NewStringUTF(""));
+
+  for (int i = 0; i < length; i++) {
+#ifndef PLATFORM_WINDOWS
+    jobject varString = env->NewStringUTF(environ[i]); // UTF-8
+#else
+    jobject varString = env->NewString(environ[i]);    // UTF-16
+#endif
+    env->SetObjectArrayElement(stringArray, i, varString);
+  }
+
+  return stringArray;
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_lang_System_currentTimeMillis(JNIEnv*, jclass)
 {
