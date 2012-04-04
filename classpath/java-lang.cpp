@@ -638,7 +638,7 @@ extern char** environ;
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
   int length;
-  for (length = 0; environ[length] != 0; ++length);
+  for (length = 0; environ[length] != 0; ++length) ;
 
   jobjectArray stringArray =
     env->NewObjectArray(length, env->FindClass("java/lang/String"),
