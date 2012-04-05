@@ -25,7 +25,7 @@ using namespace vm;
 
 namespace {
 
-const unsigned HeapCapacity = 256 * 1024 * 1024;
+const unsigned HeapCapacity = 512 * 1024 * 1024;
 
 const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
 const unsigned TargetFixieSizeInWords = ceiling
@@ -1287,6 +1287,9 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
                 BootImage* image, uint8_t* code, const char* className,
                 const char* methodName, const char* methodSpec)
 {
+  setRoot(t, Machine::OutOfMemoryError,
+          make(t, type(t, Machine::OutOfMemoryErrorType)));
+
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
   object classPoolMap;
@@ -1664,14 +1667,18 @@ main(int ac, const char** av)
   // in a branch instruction for the target architecture (~32MB on
   // PowerPC and ARM).  When that limitation is removed, we'll be able
   // to specify a capacity as large as we like here:
+#if (defined ARCH_x86_64) || (defined ARCH_x86_32)
+  const unsigned CodeCapacity = 128 * 1024 * 1024;
+#else
   const unsigned CodeCapacity = 30 * 1024 * 1024;
+#endif
 
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   BootImage image;
   p->initialize(&image, code, CodeCapacity);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
-    (s, h, f, 0, p, c, 0, 0, 0, 0);
+    (s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
   Thread* t = p->makeThread(m, 0, 0);
   
   enter(t, Thread::ActiveState);

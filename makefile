@@ -484,6 +484,7 @@ ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i586
+	lflags += -march=i586
 endif
 endif
 
@@ -1098,6 +1099,7 @@ $(openjdk-jar-dep):
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/charsets.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)
