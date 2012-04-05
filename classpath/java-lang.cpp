@@ -634,7 +634,13 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 // System.getEnvironment() implementation
 // TODO: For Win32, replace usage of deprecated _environ and add Unicode
 // support (neither of which is likely to be of great importance).
+#ifdef AVIAN_IOS
+namespace {
+  const char* environ[] = { 0 };
+}
+#else
 extern char** environ;
+#endif
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
   int length;
