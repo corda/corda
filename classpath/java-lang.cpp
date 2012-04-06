@@ -638,6 +638,9 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
 namespace {
   const char* environ[] = { 0 };
 }
+#elif defined __APPLE__
+#  include <crt_externs.h>
+#  define environ (*_NSGetEnviron())
 #else
 extern char** environ;
 #endif
