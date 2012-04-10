@@ -1777,10 +1777,14 @@ intercept(Thread* t, object c, const char* name, const char* spec,
 
     set(t, runtimeData, MethodRuntimeDataNative, native);
   } else {
-    fprintf(stderr, "unable to find %s%s in %s\n",
-            name, spec, &byteArrayBody(t, className(t, c), 0));
+    // If we can't find the method, just ignore it, since ProGuard may
+    // have stripped it out as unused.  Otherwise, the code below can
+    // be uncommented for debugging purposes.
 
-    abort(t);
+    // fprintf(stderr, "unable to find %s%s in %s\n",
+    //         name, spec, &byteArrayBody(t, className(t, c), 0));
+
+    // abort(t);
   }
 }
 
