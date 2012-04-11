@@ -550,7 +550,12 @@ Step 5: Run ProGuard with stage1 as input and stage2 as output.
      -injars stage1 -outjars stage2 @../vm.pro @hello.pro
 
 (note: pass -dontusemixedcaseclassnames to ProGuard when building on
-systems with case-insensitive filesystems such as Windows and OS X)
+systems with case-insensitive filesystems such as Windows and OS X.
+Also, you'll need to add -ignorewarnings if you use the OpenJDK class
+library since the openjdk-src build does not include all the JARs from
+OpenJDK, and thus ProGuard will not be able to resolve all referenced
+classes.  If you actually plan to use such classes at runtime, you'll
+need to add them to stage1 before running ProGuard.)
 
 Step 6: Build the boot and code images.
 
