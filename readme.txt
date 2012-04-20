@@ -260,7 +260,9 @@ an LZMA-enabled version:
 
 You can reduce the size futher for embedded builds by using ProGuard
 and the supplied openjdk.pro configuration file (see "Embedding with
-ProGuard and a Boot Image" below).  Also see app.mk in
+ProGuard and a Boot Image" below).  Note that you'll still need to use
+vm.pro in that case -- openjdk.pro just adds additional constraints
+specific to the OpenJDK port.  Also see app.mk in
 git://oss.readytalk.com/avian-swt-examples.git for an example of using
 Avian, OpenJDK, ProGuard, and UPX in concert.
 
@@ -364,7 +366,7 @@ method.  Note the bootJar function, which will be called by the VM to
 get a handle to the embedded jar.  We tell the VM about this jar by
 setting the boot classpath to "[bootJar]".
 
- $ cat >main.cpp <<EOF
+ $ cat >embedded-jar-main.cpp <<EOF
 #include "stdint.h"
 #include "jni.h"
 
@@ -445,14 +447,15 @@ EOF
 
 on Linux:
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 on Mac OS X:
- $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+ $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp \
+     -o main.o
 
 on Windows:
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
@@ -547,15 +550,18 @@ EOF
 Step 5: Run ProGuard with stage1 as input and stage2 as output.
 
  $ java -jar ../../proguard4.6/lib/proguard.jar \
-     -injars stage1 -outjars stage2 @../vm.pro @hello.pro
+     -dontusemixedcaseclassnames -injars stage1 -outjars stage2 \
+     @../vm.pro @hello.pro
 
-(note: pass -dontusemixedcaseclassnames to ProGuard when building on
-systems with case-insensitive filesystems such as Windows and OS X.
-Also, you'll need to add -ignorewarnings if you use the OpenJDK class
-library since the openjdk-src build does not include all the JARs from
-OpenJDK, and thus ProGuard will not be able to resolve all referenced
-classes.  If you actually plan to use such classes at runtime, you'll
-need to add them to stage1 before running ProGuard.)
+(note: The -dontusemixedcaseclassnames option is only needed when
+building on systems with case-insensitive filesystems such as Windows
+and OS X.  Also, you'll need to add -ignorewarnings if you use the
+OpenJDK class library since the openjdk-src build does not include all
+the JARs from OpenJDK, and thus ProGuard will not be able to resolve
+all referenced classes.  If you actually plan to use such classes at
+runtime, you'll need to add them to stage1 before running ProGuard.
+Finally, you'll need to add @../openjdk.pro to the above command when
+using the OpenJDK library.)
 
 Step 6: Build the boot and code images.
 
@@ -584,7 +590,7 @@ If our application loaded resources such as images and properties
 files via the classloader, we would also need to embed the jar file
 containing them.  See the previous example for instructions.
 
- $ cat >main.cpp <<EOF
+ $ cat >bootimage-main.cpp <<EOF
 #include "stdint.h"
 #include "jni.h"
 
@@ -679,7 +685,7 @@ main(int ac, const char** av)
 EOF
 
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c bootimage-main.cpp -o main.o
 
 Step 9: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
