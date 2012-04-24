@@ -8,109 +8,60 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "stdint.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "sys/stat.h"
+#include <sys/stat.h>
 #ifdef WIN32
 #include <windows.h>
 #else
-#include "sys/mman.h"
+#include <sys/mman.h>
 #endif
-#include "fcntl.h"
-#include "unistd.h"
+#include <fcntl.h>
+#include <unistd.h>
 
-namespace binaryToObject {
+#include "tools.h"
 
-bool
-writeElf64Object(uint8_t* data, unsigned size, FILE* out,
-                 const char* startName, const char* endName,
-                 const char* architecture, unsigned alignment, bool writable,
-                 bool executable);
+extern "C"
+void __cxa_pure_virtual() {
+  abort();
+}
 
-bool
-writeElf32Object(uint8_t* data, unsigned size, FILE* out,
-                 const char* startName, const char* endName,
-                 const char* architecture, unsigned alignment, bool writable,
-                 bool executable);
+void* operator new(size_t size) {
+  return malloc(size);
+}
 
-bool
-writeMachO64Object(uint8_t* data, unsigned size, FILE* out,
-                   const char* startName, const char* endName,
-                   const char* architecture, unsigned alignment, bool writable,
-                   bool executable);
-
-bool
-writeMachO32Object(uint8_t* data, unsigned size, FILE* out,
-                   const char* startName, const char* endName,
-                   const char* architecture, unsigned alignment, bool writable,
-                   bool executable);
-
-bool
-writePEObject(uint8_t* data, unsigned size, FILE* out, const char* startName,
-              const char* endName, const char* architecture,
-              unsigned alignment, bool writable, bool executable);
-
-} // namespace binaryToObject
+void operator delete(void* mem) {
+  if(mem) {
+    free(mem);
+  }
+}
 
 namespace {
 
+using namespace avian::tools;
+
 bool
 writeObject(uint8_t* data, unsigned size, FILE* out, const char* startName,
-            const char* endName, const char* platform,
+            const char* endName, const char* os,
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
 {
-  using namespace binaryToObject;
+  Platform* platform = Platform::getPlatform(PlatformInfo(os, architecture));
 
-  bool found = false;
-  bool success = false;
-  if (strcmp("linux", platform) == 0) {
-    if (strcmp("x86_64", architecture) == 0) {
-      found = true;
-      success = writeElf64Object
-        (data, size, out, startName, endName, architecture, alignment,
-         writable, executable);
-    } else if (strcmp("i386", architecture) == 0
-               or strcmp("arm", architecture) == 0
-               or strcmp("powerpc", architecture) == 0)
-    {
-      found = true;
-      success = writeElf32Object
-        (data, size, out, startName, endName, architecture, alignment,
-         writable, executable);
-    }
-  } else if (strcmp("darwin", platform) == 0) {
-    if (strcmp("x86_64", architecture) == 0) {
-      found = true;
-      success = writeMachO64Object
-        (data, size, out, startName, endName, architecture, alignment,
-         writable, executable);
-    } else if (strcmp("i386", architecture) == 0
-               or strcmp("powerpc", architecture) == 0
-               or strcmp("arm", architecture) == 0)
-    {
-      found = true;
-      success = writeMachO32Object
-        (data, size, out, startName, endName, architecture, alignment,
-         writable, executable);
-    }
-  } else if (strcmp("windows", platform) == 0
-             and ((strcmp("x86_64", architecture) == 0
-                   or strcmp("i386", architecture) == 0)))
-  {
-    found = true;
-    success = writePEObject
-      (data, size, out, startName, endName, architecture, alignment, writable,
-       executable);
-  }
-
-  if (not found) {
-    fprintf(stderr, "unsupported platform: %s/%s\n", platform, architecture);
+  if(!platform) {
+    fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
     return false;
   }
+
+  ObjectWriter* writer = platform->makeObjectWriter();
+
+  bool success = writer->write(data, size, out, startName, endName, alignment,
+    ObjectWriter::Readable | (writable ? ObjectWriter::Writable : 0) | (executable ? ObjectWriter::Executable : 0));
+
+  writer->dispose();
 
   return success;
 }

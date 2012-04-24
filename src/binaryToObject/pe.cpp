@@ -8,16 +8,20 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "stdint.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "tools.h"
+
+namespace {
 
 #define IMAGE_SIZEOF_SHORT_NAME 8
 
 #define IMAGE_FILE_RELOCS_STRIPPED 1
 #define IMAGE_FILE_LINE_NUMS_STRIPPED 4
 #define IMAGE_FILE_MACHINE_AMD64 0x8664
-#define IMAGE_FILE_MACHINE_I386	0x014c
+#define IMAGE_FILE_MACHINE_I386 0x014c
 #define IMAGE_FILE_32BIT_MACHINE 256
 
 #define IMAGE_SCN_ALIGN_1BYTES 0x100000
@@ -28,8 +32,6 @@
 #define IMAGE_SCN_MEM_READ 0x40000000
 #define IMAGE_SCN_MEM_WRITE 0x80000000
 #define IMAGE_SCN_CNT_CODE 32
-
-namespace {
 
 struct IMAGE_FILE_HEADER {
   uint16_t Machine;
@@ -161,71 +163,89 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   fwrite(endName, 1, endNameLength, out);
 }
 
-} // namespace
+using namespace avian::tools;
 
-namespace binaryToObject {
+template<unsigned BytesPerWord>
+class WindowsPlatform : public Platform {
+public:
 
-bool
-writePEObject
-(uint8_t* data, unsigned size, FILE* out, const char* startName,
- const char* endName, const char* architecture, unsigned alignment,
- bool writable, bool executable)
-{
-  int machine;
-  int machineMask;
-  if (strcmp(architecture, "x86_64") == 0) {
-    machine = IMAGE_FILE_MACHINE_AMD64;
-    machineMask = 0;
-  } else if (strcmp(architecture, "i386") == 0) {
-    machine = IMAGE_FILE_MACHINE_I386;
-    machineMask = IMAGE_FILE_32BIT_MACHINE;
-  } else {
-    fprintf(stderr, "unsupported architecture: %s\n", architecture);
-    return false;
-  }
+  class PEObjectWriter : public ObjectWriter {
+  public:
 
-  int sectionMask;
-  switch (alignment) {
-  case 0:
-  case 1:
-    sectionMask = IMAGE_SCN_ALIGN_1BYTES;
-    break;
-  case 2:
-    sectionMask = IMAGE_SCN_ALIGN_2BYTES;
-    break;
-  case 4:
-    sectionMask = IMAGE_SCN_ALIGN_4BYTES;
-    break;
-  case 8:
-    sectionMask = IMAGE_SCN_ALIGN_8BYTES;
-    break;
-  default:
-    fprintf(stderr, "unsupported alignment: %d\n", alignment);
-    return false;
-  }
+    virtual bool write(uint8_t* data, size_t size, FILE* out,
+                       const char* startName, const char* endName,
+                       unsigned alignment, unsigned accessFlags)
+    {
+      int machine;
+      int machineMask;
 
-  sectionMask |= IMAGE_SCN_MEM_READ;
+      if (BytesPerWord == 8) {
+        machine = IMAGE_FILE_MACHINE_AMD64;
+        machineMask = 0;
+      } else { // if (BytesPerWord == 8)
+        machine = IMAGE_FILE_MACHINE_I386;
+        machineMask = IMAGE_FILE_32BIT_MACHINE;
+      }
 
-  const char* sectionName;
-  if (writable) {
-    if (executable) {
-      sectionName = ".rwx";
-      sectionMask |= IMAGE_SCN_MEM_WRITE
-        | IMAGE_SCN_MEM_EXECUTE
-        | IMAGE_SCN_CNT_CODE;
-    } else {
-      sectionName = ".data";
-      sectionMask |= IMAGE_SCN_MEM_WRITE;
+      int sectionMask;
+      switch (alignment) {
+      case 0:
+      case 1:
+        sectionMask = IMAGE_SCN_ALIGN_1BYTES;
+        break;
+      case 2:
+        sectionMask = IMAGE_SCN_ALIGN_2BYTES;
+        break;
+      case 4:
+        sectionMask = IMAGE_SCN_ALIGN_4BYTES;
+        break;
+      case 8:
+        sectionMask = IMAGE_SCN_ALIGN_8BYTES;
+        break;
+      default:
+        fprintf(stderr, "unsupported alignment: %d\n", alignment);
+        return false;
+      }
+
+      sectionMask |= IMAGE_SCN_MEM_READ;
+
+      const char* sectionName;
+      if (accessFlags & ObjectWriter::Writable) {
+        if (accessFlags & ObjectWriter::Executable) {
+          sectionName = ".rwx";
+          sectionMask |= IMAGE_SCN_MEM_WRITE
+            | IMAGE_SCN_MEM_EXECUTE
+            | IMAGE_SCN_CNT_CODE;
+        } else {
+          sectionName = ".data";
+          sectionMask |= IMAGE_SCN_MEM_WRITE;
+        }
+      } else {
+        sectionName = ".text";
+        sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+      }
+
+      writeObject(data, size, out, startName, endName, sectionName, machine,
+                  machineMask, sectionMask);
+
+      return true;
     }
-  } else {
-    sectionName = ".text";
-    sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+
+    virtual void dispose() {
+      delete this;
+    }
+
+  };
+
+  virtual ObjectWriter* makeObjectWriter() {
+    return new PEObjectWriter();
   }
 
-  writeObject(data, size, out, startName, endName, sectionName, machine,
-              machineMask, sectionMask);
+  WindowsPlatform():
+    Platform(PlatformInfo(PlatformInfo::Windows, BytesPerWord == 4 ? PlatformInfo::x86 : PlatformInfo::x86_64)) {}
+};
 
-  return true;
+WindowsPlatform<4> windows32Platform;
+WindowsPlatform<8> windows64Platform;
+
 }
-
-} // namespace binaryToObject

@@ -334,9 +334,6 @@ ifeq ($(platform),darwin)
 			x := $(error "couldn't find SDK for iOS version")
 		endif
 
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		flags = -arch armv7 -isysroot \
 			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
 		openjdk-extra-cflags += $(flags)
@@ -345,10 +342,11 @@ ifeq ($(platform),darwin)
 		lflags += $(flags)
 	endif
 
+	ifeq ($(build-arch),powerpc)
+		converter-cflags += -DBIG_ENDIAN
+	endif
+
 	ifeq ($(arch),powerpc)
-		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -356,9 +354,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),i386)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -366,9 +361,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),x86_64)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
@@ -614,6 +606,9 @@ driver-object = $(build)/main.o
 driver-dynamic-objects = \
 	$(build)/main-dynamic.o
 
+gdb-plugin-object = $(build)/gdb-plugin.o
+gdb-plugin-source = $(src)/gdb-plugin.cpp
+
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
 
@@ -630,8 +625,8 @@ generator = $(build)/generator
 
 converter-objects = \
 	$(build)/binaryToObject-main.o \
-	$(build)/binaryToObject-elf64.o \
-	$(build)/binaryToObject-elf32.o \
+	$(build)/binaryToObject-tools.o \
+	$(build)/binaryToObject-elf.o \
 	$(build)/binaryToObject-mach-o64.o \
 	$(build)/binaryToObject-mach-o32.o \
 	$(build)/binaryToObject-pe.o
@@ -828,6 +823,9 @@ $(heapwalk-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 $(driver-object): $(driver-source)
 	$(compile-object)
 
+$(gdb-plugin-object): $(gdb-plugin-source)
+	$(compile-object)
+
 $(build)/main-dynamic.o: $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
@@ -843,11 +841,11 @@ $(boot-javahome-object): $(src)/boot-javahome.cpp
 $(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
 	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
-$(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
+$(build)/binaryToObject-tools.o: $(src)/binaryToObject/tools.cpp
+	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
 
-$(build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
+$(build)/binaryToObject-elf.o: $(src)/binaryToObject/elf.cpp
+	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
 
 $(build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
 	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
