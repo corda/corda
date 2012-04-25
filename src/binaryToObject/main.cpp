@@ -56,9 +56,9 @@ writeObject(uint8_t* data, unsigned size, OutputStream* out, const char* startNa
     return false;
   }
 
-  ObjectWriter* writer = platform->makeObjectWriter();
+  ObjectWriter* writer = platform->makeObjectWriter(out);
 
-  bool success = writer->write(data, size, out, startName, endName, alignment,
+  bool success = writer->write(data, size, startName, endName, alignment,
     ObjectWriter::Readable | (writable ? ObjectWriter::Writable : 0) | (executable ? ObjectWriter::Executable : 0));
 
   writer->dispose();

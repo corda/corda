@@ -44,7 +44,7 @@ public:
     Executable = 1 << 2
   };
 
-  virtual bool write(uint8_t* data, size_t size, OutputStream* out,
+  virtual bool write(uint8_t* data, size_t size,
                      const char* startName, const char* endName,
                      unsigned alignment, unsigned accessFlags) = 0;
 
@@ -98,7 +98,7 @@ public:
     first = this;
   }
 
-  virtual ObjectWriter* makeObjectWriter() = 0;
+  virtual ObjectWriter* makeObjectWriter(OutputStream* out) = 0;
 
   static Platform* getPlatform(PlatformInfo info);
 };

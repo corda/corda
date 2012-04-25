@@ -103,13 +103,13 @@ writeObject(const uint8_t* data, unsigned size, OutputStream* out,
     sectionCount, // NumberOfSections
     0, // TimeDateStamp
     sizeof(IMAGE_FILE_HEADER)
-    + sizeof(IMAGE_SECTION_HEADER)
-    + pad(size), // PointerToSymbolTable
+      + sizeof(IMAGE_SECTION_HEADER)
+      + pad(size), // PointerToSymbolTable
     symbolCount, // NumberOfSymbols
     0, // SizeOfOptionalHeader
     IMAGE_FILE_RELOCS_STRIPPED
-    | IMAGE_FILE_LINE_NUMS_STRIPPED
-    | machineMask // Characteristics
+      | IMAGE_FILE_LINE_NUMS_STRIPPED
+      | machineMask // Characteristics
   };
 
   IMAGE_SECTION_HEADER sectionHeader = {
@@ -118,7 +118,7 @@ writeObject(const uint8_t* data, unsigned size, OutputStream* out,
     0, // VirtualAddress
     pad(size), // SizeOfRawData
     sizeof(IMAGE_FILE_HEADER)
-    + sizeof(IMAGE_SECTION_HEADER), // PointerToRawData
+      + sizeof(IMAGE_SECTION_HEADER), // PointerToRawData
     0, // PointerToRelocations
     0, // PointerToLinenumbers
     0, // NumberOfRelocations
@@ -172,7 +172,12 @@ public:
   class PEObjectWriter : public ObjectWriter {
   public:
 
-    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
+    OutputStream* out;
+
+    PEObjectWriter(OutputStream* out):
+      out(out) {}
+
+    virtual bool write(uint8_t* data, size_t size,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {
@@ -237,8 +242,8 @@ public:
 
   };
 
-  virtual ObjectWriter* makeObjectWriter() {
-    return new PEObjectWriter();
+  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
+    return new PEObjectWriter(out);
   }
 
   WindowsPlatform():

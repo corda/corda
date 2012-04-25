@@ -162,11 +162,13 @@ public:
   public:
 
     PlatformInfo::Architecture arch;
+    OutputStream* out;
 
-    ElfObjectWriter(PlatformInfo::Architecture arch):
-      arch(arch) {}
+    ElfObjectWriter(PlatformInfo::Architecture arch, OutputStream* out):
+      arch(arch),
+      out(out) {}
 
-    void writeObject(const uint8_t* data, unsigned size, OutputStream* out,
+    void writeObject(const uint8_t* data, unsigned size,
                      const char* startName, const char* endName,
                      const char* sectionName, unsigned sectionFlags,
                      unsigned alignment, int machine, int encoding)
@@ -334,7 +336,7 @@ public:
       out->writeChunk(&endSymbol, sizeof(endSymbol));
     }
 
-    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
+    virtual bool write(uint8_t* data, size_t size,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {
@@ -374,7 +376,7 @@ public:
         sectionName = ".rodata";
       }
 
-      writeObject(data, size, out, startName, endName, sectionName, sectionFlags,
+      writeObject(data, size, startName, endName, sectionName, sectionFlags,
                   alignment, machine, encoding);
 
       return true;
@@ -388,8 +390,8 @@ public:
   ElfPlatform(PlatformInfo::Architecture arch):
     Platform(PlatformInfo(PlatformInfo::Linux, arch)) {}
 
-  virtual ObjectWriter* makeObjectWriter() {
-    return new ElfObjectWriter(info.arch);
+  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
+    return new ElfObjectWriter(info.arch, out);
   }
 };
 

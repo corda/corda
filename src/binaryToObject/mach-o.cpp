@@ -144,11 +144,13 @@ public:
   public:
 
     PlatformInfo::Architecture arch;
+    OutputStream* out;
 
-    MachOObjectWriter(PlatformInfo::Architecture arch):
-      arch(arch) {}
+    MachOObjectWriter(PlatformInfo::Architecture arch, OutputStream* out):
+      arch(arch),
+      out(out) {}
 
-    void writeObject(const uint8_t* data, unsigned size, OutputStream* out,
+    void writeObject(const uint8_t* data, unsigned size,
                 const char* startName, const char* endName,
                 const char* segmentName, const char* sectionName,
                 unsigned alignment, cpu_type_t cpuType, cpu_subtype_t cpuSubType)
@@ -258,7 +260,7 @@ public:
       out->writeChunk(endName, endNameLength);
     }
 
-    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
+    virtual bool write(uint8_t* data, size_t size,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {
@@ -307,7 +309,7 @@ public:
       myEndName[0] = '_';
       memcpy(myEndName + 1, endName, endNameLength + 1);
 
-      writeObject(data, size, out, myStartName, myEndName, segmentName,
+      writeObject(data, size, myStartName, myEndName, segmentName,
                   sectionName, alignment, cpuType, cpuSubType);
 
       return true;
@@ -321,8 +323,8 @@ public:
   MachOPlatform(PlatformInfo::Architecture arch):
     Platform(PlatformInfo(PlatformInfo::Darwin, arch)) {}
 
-  virtual ObjectWriter* makeObjectWriter() {
-    return new MachOObjectWriter(info.arch);
+  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
+    return new MachOObjectWriter(info.arch, out);
   }
 };
 
