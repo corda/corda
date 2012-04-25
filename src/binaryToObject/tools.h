@@ -15,6 +15,26 @@ namespace avian {
 
 namespace tools {
 
+class OutputStream {
+public:
+  virtual void writeChunk(const void* data, size_t size) = 0;
+  virtual void write(uint8_t byte);
+  virtual void writeRepeat(uint8_t byte, size_t size);
+};
+
+class FileOutputStream : public OutputStream {
+private:
+  FILE* file;
+public:
+  FileOutputStream(const char* name);
+  ~FileOutputStream();
+
+  bool isValid();
+
+  virtual void writeChunk(const void* data, size_t size);
+  virtual void write(uint8_t byte);
+};
+
 class ObjectWriter {
 public:
 
@@ -24,7 +44,7 @@ public:
     Executable = 1 << 2
   };
 
-  virtual bool write(uint8_t* data, size_t size, FILE* out,
+  virtual bool write(uint8_t* data, size_t size, OutputStream* out,
                      const char* startName, const char* endName,
                      unsigned alignment, unsigned accessFlags) = 0;
 

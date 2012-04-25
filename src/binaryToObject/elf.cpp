@@ -166,7 +166,7 @@ public:
     ElfObjectWriter(PlatformInfo::Architecture arch):
       arch(arch) {}
 
-    void writeObject(const uint8_t* data, unsigned size, FILE* out,
+    void writeObject(const uint8_t* data, unsigned size, OutputStream* out,
                      const char* startName, const char* endName,
                      const char* sectionName, unsigned sectionFlags,
                      unsigned alignment, int machine, int encoding)
@@ -311,31 +311,30 @@ public:
       endSymbol.st_other = V1(STV_DEFAULT);
       endSymbol.st_shndx = V2(bodySectionNumber);
 
-      fwrite(&fileHeader, 1, sizeof(fileHeader), out);
-      fwrite(&nullSection, 1, sizeof(nullSection), out);
-      fwrite(&bodySection, 1, sizeof(bodySection), out);
-      fwrite(&sectionStringTableSection, 1, sizeof(sectionStringTableSection),
-             out);
-      fwrite(&stringTableSection, 1, sizeof(stringTableSection), out);
-      fwrite(&symbolTableSection, 1, sizeof(symbolTableSection), out);
+      out->writeChunk(&fileHeader, sizeof(fileHeader));
+      out->writeChunk(&nullSection, sizeof(nullSection));
+      out->writeChunk(&bodySection, sizeof(bodySection));
+      out->writeChunk(&sectionStringTableSection, sizeof(sectionStringTableSection));
+      out->writeChunk(&stringTableSection, sizeof(stringTableSection));
+      out->writeChunk(&symbolTableSection, sizeof(symbolTableSection));
 
-      fwrite(data, 1, size, out);
+      out->writeChunk(data, size);
 
-      fputc(0, out);
-      fwrite(sectionStringTableName, 1, sectionStringTableNameLength, out);
-      fwrite(stringTableName, 1, stringTableNameLength, out);
-      fwrite(symbolTableName, 1, symbolTableNameLength, out);
-      fwrite(sectionName, 1, sectionNameLength, out);
+      out->write(0);
+      out->writeChunk(sectionStringTableName, sectionStringTableNameLength);
+      out->writeChunk(stringTableName, stringTableNameLength);
+      out->writeChunk(symbolTableName, symbolTableNameLength);
+      out->writeChunk(sectionName, sectionNameLength);
 
-      fputc(0, out);
-      fwrite(startName, 1, startNameLength, out);
-      fwrite(endName, 1, endNameLength, out);
+      out->write(0);
+      out->writeChunk(startName, startNameLength);
+      out->writeChunk(endName, endNameLength);
 
-      fwrite(&startSymbol, 1, sizeof(startSymbol), out);
-      fwrite(&endSymbol, 1, sizeof(endSymbol), out);
+      out->writeChunk(&startSymbol, sizeof(startSymbol));
+      out->writeChunk(&endSymbol, sizeof(endSymbol));
     }
 
-    virtual bool write(uint8_t* data, size_t size, FILE* out,
+    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {

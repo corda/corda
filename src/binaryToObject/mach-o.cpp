@@ -148,7 +148,7 @@ public:
     MachOObjectWriter(PlatformInfo::Architecture arch):
       arch(arch) {}
 
-    void writeObject(const uint8_t* data, unsigned size, FILE* out,
+    void writeObject(const uint8_t* data, unsigned size, OutputStream* out,
                 const char* startName, const char* endName,
                 const char* segmentName, const char* sectionName,
                 unsigned alignment, cpu_type_t cpuType, cpu_subtype_t cpuSubType)
@@ -242,22 +242,23 @@ public:
         }
       };
 
-      fwrite(&header, 1, sizeof(header), out);
-      fwrite(&segment, 1, sizeof(segment), out);
-      fwrite(&sect, 1, sizeof(sect), out);
-      fwrite(&symbolTable, 1, sizeof(symbolTable), out);
+      out->writeChunk(&header, sizeof(header));
+      out->writeChunk(&segment, sizeof(segment));
+      out->writeChunk(&sect, sizeof(sect));
+      out->writeChunk(&symbolTable, sizeof(symbolTable));
 
-      fwrite(data, 1, size, out);
-      for (unsigned i = 0; i < pad(size) - size; ++i) fputc(0, out);
+      out->writeChunk(data, size);
+      out->writeRepeat(0, pad(size) - size);
 
-      fwrite(&symbolList, 1, sizeof(symbolList), out);
+      out->writeChunk(&symbolList, sizeof(symbolList));
 
-      fputc(0, out);
-      fwrite(startName, 1, startNameLength, out);
-      fwrite(endName, 1, endNameLength, out);
+      out->write(0);
+
+      out->writeChunk(startName, startNameLength);
+      out->writeChunk(endName, endNameLength);
     }
 
-    virtual bool write(uint8_t* data, size_t size, FILE* out,
+    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {

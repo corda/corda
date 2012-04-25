@@ -19,6 +19,37 @@ namespace avian {
 
 namespace tools {
 
+void OutputStream::write(uint8_t byte) {
+  writeChunk(&byte, 1);
+}
+
+void OutputStream::writeRepeat(uint8_t byte, size_t size) {
+  for(size_t i = 0; i < size; i++) {
+    write(byte);
+  }
+}
+
+FileOutputStream::FileOutputStream(const char* name):
+  file(fopen(name, "wb")) {}
+
+FileOutputStream::~FileOutputStream() {
+  if(file) {
+    fclose(file);
+  }
+}
+
+bool FileOutputStream::isValid() {
+  return file;
+}
+
+void FileOutputStream::writeChunk(const void* data, size_t size) {
+  fwrite(data, size, 1, file);
+}
+
+void FileOutputStream::write(uint8_t byte) {
+  fputc(byte, file);
+}
+
 
 Platform* Platform::first = 0;
 

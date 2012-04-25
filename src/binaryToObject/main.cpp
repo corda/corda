@@ -44,7 +44,7 @@ namespace {
 using namespace avian::tools;
 
 bool
-writeObject(uint8_t* data, unsigned size, FILE* out, const char* startName,
+writeObject(uint8_t* data, unsigned size, OutputStream* out, const char* startName,
             const char* endName, const char* os,
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
@@ -142,13 +142,11 @@ main(int argc, const char** argv)
   bool success = false;
 
   if (data) {
-    FILE* out = fopen(argv[2], "wb");
-    if (out) {
+    FileOutputStream out(argv[2]);
+    if (out.isValid()) {
       success = writeObject
-        (data, size, out, argv[3], argv[4], argv[5], argv[6], alignment,
+        (data, size, &out, argv[3], argv[4], argv[5], argv[6], alignment,
          writable, executable);
-
-      fclose(out);
     } else {
       fprintf(stderr, "unable to open %s\n", argv[2]);
     }

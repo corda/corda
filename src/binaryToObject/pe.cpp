@@ -79,8 +79,10 @@ pad(unsigned n)
   return (n + (4 - 1)) & ~(4 - 1);
 }
 
+using namespace avian::tools;
+
 void
-writeObject(const uint8_t* data, unsigned size, FILE* out,
+writeObject(const uint8_t* data, unsigned size, OutputStream* out,
             const char* startName, const char* endName,
             const char* sectionName, int machine, int machineMask,
             int sectionMask)
@@ -147,23 +149,21 @@ writeObject(const uint8_t* data, unsigned size, FILE* out,
   };
   endSymbol.N.Name.Long = endNameOffset;
 
-  fwrite(&fileHeader, 1, sizeof(fileHeader), out);
-  fwrite(&sectionHeader, 1, sizeof(sectionHeader), out);
+  out->writeChunk(&fileHeader, sizeof(fileHeader));
+  out->writeChunk(&sectionHeader, sizeof(sectionHeader));
 
-  fwrite(data, 1, size, out);
-  for (unsigned i = 0; i < pad(size) - size; ++i) fputc(0, out);
+  out->writeChunk(data, size);
+  out->writeRepeat(0, pad(size) - size);
 
-  fwrite(&startSymbol, 1, sizeof(startSymbol), out);
-  fwrite(&endSymbol, 1, sizeof(endSymbol), out);
+  out->writeChunk(&startSymbol, sizeof(startSymbol));
+  out->writeChunk(&endSymbol, sizeof(endSymbol));
 
   uint32_t symbolTableSize = endNameOffset + endNameLength;
-  fwrite(&symbolTableSize, 1, 4, out);
+  out->writeChunk(&symbolTableSize, 4);
 
-  fwrite(startName, 1, startNameLength, out);
-  fwrite(endName, 1, endNameLength, out);
+  out->writeChunk(startName, startNameLength);
+  out->writeChunk(endName, endNameLength);
 }
-
-using namespace avian::tools;
 
 template<unsigned BytesPerWord>
 class WindowsPlatform : public Platform {
@@ -172,7 +172,7 @@ public:
   class PEObjectWriter : public ObjectWriter {
   public:
 
-    virtual bool write(uint8_t* data, size_t size, FILE* out,
+    virtual bool write(uint8_t* data, size_t size, OutputStream* out,
                        const char* startName, const char* endName,
                        unsigned alignment, unsigned accessFlags)
     {
