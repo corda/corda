@@ -2739,12 +2739,15 @@ Avian_sun_misc_Unsafe_park
     if (time <= 0) {
       return;
     }
-  } else {
-    time /= 1000 * 1000;
+  } else if (time) {
+    // if not absolute, interpret time as nanoseconds, but make sure
+    // it doesn't become zero when we convert to milliseconds, since
+    // zero is interpreted as infinity below
+    time = (time / (1000 * 1000)) + 1;
   }
 
   monitorAcquire(t, local::interruptLock(t, t->javaThread));
-  while (time > 0
+  while (time >= 0
          and (not (threadUnparked(t, t->javaThread)
                    or monitorWait
                    (t, local::interruptLock(t, t->javaThread), time))))
@@ -2752,6 +2755,10 @@ Avian_sun_misc_Unsafe_park
     int64_t now = t->m->system->now();
     time -= now - then;
     then = now;
+    
+    if (time == 0) {
+      break;
+    }
   }
   threadUnparked(t, t->javaThread) = false;
   monitorRelease(t, local::interruptLock(t, t->javaThread));
