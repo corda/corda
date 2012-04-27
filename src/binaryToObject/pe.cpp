@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "tools.h"
 
@@ -81,169 +82,193 @@ pad(unsigned n)
 
 using namespace avian::tools;
 
-void
-writeObject(const uint8_t* data, unsigned size, OutputStream* out,
-            const char* startName, const char* endName,
-            const char* sectionName, int machine, int machineMask,
-            int sectionMask)
-{
-  const unsigned sectionCount = 1;
-  const unsigned symbolCount = 2;
-
-  const unsigned sectionNumber = 1;
-
-  const unsigned startNameLength = strlen(startName) + 1;
-  const unsigned endNameLength = strlen(endName) + 1;
-
-  const unsigned startNameOffset = 4;
-  const unsigned endNameOffset = startNameOffset + startNameLength;
-
-  IMAGE_FILE_HEADER fileHeader = {
-    machine, // Machine
-    sectionCount, // NumberOfSections
-    0, // TimeDateStamp
-    sizeof(IMAGE_FILE_HEADER)
-      + sizeof(IMAGE_SECTION_HEADER)
-      + pad(size), // PointerToSymbolTable
-    symbolCount, // NumberOfSymbols
-    0, // SizeOfOptionalHeader
-    IMAGE_FILE_RELOCS_STRIPPED
-      | IMAGE_FILE_LINE_NUMS_STRIPPED
-      | machineMask // Characteristics
-  };
-
-  IMAGE_SECTION_HEADER sectionHeader = {
-    "", // Name
-    0, // PhysicalAddress
-    0, // VirtualAddress
-    pad(size), // SizeOfRawData
-    sizeof(IMAGE_FILE_HEADER)
-      + sizeof(IMAGE_SECTION_HEADER), // PointerToRawData
-    0, // PointerToRelocations
-    0, // PointerToLinenumbers
-    0, // NumberOfRelocations
-    0, // NumberOfLinenumbers
-    sectionMask // Characteristics
-  };
-
-  strncpy(reinterpret_cast<char*>(sectionHeader.Name), sectionName,
-          sizeof(sectionHeader.Name));
-
-  IMAGE_SYMBOL startSymbol = {
-    { 0 }, // Name
-    0, // Value
-    sectionNumber, // SectionNumber
-    0, // Type
-    2, // StorageClass
-    0, // NumberOfAuxSymbols
-  };
-  startSymbol.N.Name.Long = startNameOffset;
-
-  IMAGE_SYMBOL endSymbol = {
-    { 0 }, // Name
-    size, // Value
-    sectionNumber, // SectionNumber
-    0, // Type
-    2, // StorageClass
-    0, // NumberOfAuxSymbols
-  };
-  endSymbol.N.Name.Long = endNameOffset;
-
-  out->writeChunk(&fileHeader, sizeof(fileHeader));
-  out->writeChunk(&sectionHeader, sizeof(sectionHeader));
-
-  out->writeChunk(data, size);
-  out->writeRepeat(0, pad(size) - size);
-
-  out->writeChunk(&startSymbol, sizeof(startSymbol));
-  out->writeChunk(&endSymbol, sizeof(endSymbol));
-
-  uint32_t symbolTableSize = endNameOffset + endNameLength;
-  out->writeChunk(&symbolTableSize, 4);
-
-  out->writeChunk(startName, startNameLength);
-  out->writeChunk(endName, endNameLength);
-}
-
 template<unsigned BytesPerWord>
 class WindowsPlatform : public Platform {
 public:
 
-  class PEObjectWriter : public ObjectWriter {
+
+  class FileWriter {
   public:
+    unsigned sectionCount;
+    unsigned symbolCount;
+    unsigned dataStart;
+    unsigned dataOffset;
 
-    OutputStream* out;
+    IMAGE_FILE_HEADER header;
 
-    PEObjectWriter(OutputStream* out):
-      out(out) {}
+    StringTable strings;
+    Buffer symbols;
 
-    virtual bool write(uint8_t* data, size_t size,
-                       const char* startName, const char* endName,
-                       unsigned alignment, unsigned accessFlags)
+    FileWriter(unsigned machine, unsigned machineMask, unsigned symbolCount):
+      sectionCount(0),
+      symbolCount(symbolCount),
+      dataStart(sizeof(IMAGE_FILE_HEADER)),
+      dataOffset(0)
     {
-      int machine;
-      int machineMask;
-
-      if (BytesPerWord == 8) {
-        machine = IMAGE_FILE_MACHINE_AMD64;
-        machineMask = 0;
-      } else { // if (BytesPerWord == 8)
-        machine = IMAGE_FILE_MACHINE_I386;
-        machineMask = IMAGE_FILE_32BIT_MACHINE;
-      }
-
-      int sectionMask;
-      switch (alignment) {
-      case 0:
-      case 1:
-        sectionMask = IMAGE_SCN_ALIGN_1BYTES;
-        break;
-      case 2:
-        sectionMask = IMAGE_SCN_ALIGN_2BYTES;
-        break;
-      case 4:
-        sectionMask = IMAGE_SCN_ALIGN_4BYTES;
-        break;
-      case 8:
-        sectionMask = IMAGE_SCN_ALIGN_8BYTES;
-        break;
-      default:
-        fprintf(stderr, "unsupported alignment: %d\n", alignment);
-        return false;
-      }
-
-      sectionMask |= IMAGE_SCN_MEM_READ;
-
-      const char* sectionName;
-      if (accessFlags & ObjectWriter::Writable) {
-        if (accessFlags & ObjectWriter::Executable) {
-          sectionName = ".rwx";
-          sectionMask |= IMAGE_SCN_MEM_WRITE
-            | IMAGE_SCN_MEM_EXECUTE
-            | IMAGE_SCN_CNT_CODE;
-        } else {
-          sectionName = ".data";
-          sectionMask |= IMAGE_SCN_MEM_WRITE;
-        }
-      } else {
-        sectionName = ".text";
-        sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-      }
-
-      writeObject(data, size, out, startName, endName, sectionName, machine,
-                  machineMask, sectionMask);
-
-      return true;
+      header.Machine = machine;
+      // header.NumberOfSections = sectionCount;
+      header.TimeDateStamp = 0;
+      // header.PointerToSymbolTable = sizeof(IMAGE_FILE_HEADER)
+      //   + sizeof(IMAGE_SECTION_HEADER)
+      //   + pad(size);
+      // header.NumberOfSymbols = symbolCount;
+      header.SizeOfOptionalHeader = 0;
+      header.Characteristics = IMAGE_FILE_RELOCS_STRIPPED
+        | IMAGE_FILE_LINE_NUMS_STRIPPED
+        | machineMask;
     }
 
-    virtual void dispose() {
-      delete this;
+    void writeHeader(OutputStream* out) {
+      header.NumberOfSections = sectionCount;
+      header.PointerToSymbolTable = dataStart + dataOffset;
+      printf("symbol table start: 0x%x\n", header.PointerToSymbolTable);
+      dataOffset = pad(dataOffset + symbolCount * sizeof(IMAGE_SYMBOL));
+      printf("string table start: 0x%x\n", dataStart + dataOffset);
+      header.NumberOfSymbols = symbolCount;
+      out->writeChunk(&header, sizeof(IMAGE_FILE_HEADER));
     }
+
+    void addSymbol(String name, unsigned addr, unsigned sectionNumber, unsigned type, unsigned storageClass) {
+      unsigned nameOffset = strings.add(name);
+      IMAGE_SYMBOL symbol = {
+        { 0 }, // Name
+        addr, // Value
+        sectionNumber, // SectionNumber
+        type, // Type
+        storageClass, // StorageClass
+        0, // NumberOfAuxSymbols
+      };
+      symbol.N.Name.Long = nameOffset+4;
+      symbols.write(&symbol, sizeof(IMAGE_SYMBOL));
+    }
+
+    void writeData(OutputStream* out) {
+      out->writeChunk(symbols.data, symbols.length);
+      uint32_t size = strings.length + 4;
+      out->writeChunk(&size, 4);
+      out->writeChunk(strings.data, strings.length);
+    }
+  };
+
+  class SectionWriter {
+  public:
+    FileWriter& file;
+    IMAGE_SECTION_HEADER header;
+    size_t dataSize;
+    size_t finalSize;
+    const uint8_t* data;
+    unsigned dataOffset;
+
+    SectionWriter(
+        FileWriter& file,
+        const char* name,
+        unsigned sectionMask,
+        const uint8_t* data,
+        size_t dataSize):
+
+      file(file),
+      data(data),
+      dataSize(dataSize),
+      finalSize(pad(dataSize))
+    {
+      file.sectionCount++;
+      file.dataStart += sizeof(IMAGE_SECTION_HEADER);
+      strcpy(reinterpret_cast<char*>(header.Name), name);
+      header.Misc.VirtualSize = 0;
+      header.SizeOfRawData = finalSize;
+      // header.PointerToRawData = file.dataOffset;
+      dataOffset = file.dataOffset;
+      file.dataOffset += finalSize;
+      header.PointerToRelocations = 0;
+      header.PointerToLinenumbers = 0;
+      header.NumberOfRelocations = 0;
+      header.NumberOfLinenumbers = 0;
+      header.Characteristics = sectionMask;
+    }
+
+    void writeHeader(OutputStream* out) {
+      header.PointerToRawData = dataOffset + file.dataStart;
+      printf("section %s: data at 0x%x, ending at 0x%x\n", header.Name, header.PointerToRawData, header.PointerToRawData + header.SizeOfRawData);
+      out->writeChunk(&header, sizeof(IMAGE_SECTION_HEADER));
+    }
+
+    void writeData(OutputStream* out) {
+      out->writeChunk(data, dataSize);
+      out->writeRepeat(0, finalSize - dataSize);
+    }
+
 
   };
 
-  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
-    return new PEObjectWriter(out);
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
+
+    int machine;
+    int machineMask;
+
+    if (BytesPerWord == 8) {
+      machine = IMAGE_FILE_MACHINE_AMD64;
+      machineMask = 0;
+    } else { // if (BytesPerWord == 8)
+      machine = IMAGE_FILE_MACHINE_I386;
+      machineMask = IMAGE_FILE_32BIT_MACHINE;
+    }
+
+    int sectionMask;
+    switch (alignment) {
+    case 0:
+    case 1:
+      sectionMask = IMAGE_SCN_ALIGN_1BYTES;
+      break;
+    case 2:
+      sectionMask = IMAGE_SCN_ALIGN_2BYTES;
+      break;
+    case 4:
+      sectionMask = IMAGE_SCN_ALIGN_4BYTES;
+      break;
+    case 8:
+      sectionMask = IMAGE_SCN_ALIGN_8BYTES;
+      break;
+    default:
+      fprintf(stderr, "unsupported alignment: %d\n", alignment);
+      return false;
+    }
+
+    sectionMask |= IMAGE_SCN_MEM_READ;
+
+    const char* sectionName;
+    if (accessFlags & Platform::Writable) {
+      if (accessFlags & Platform::Executable) {
+        sectionName = ".rwx";
+        sectionMask |= IMAGE_SCN_MEM_WRITE
+          | IMAGE_SCN_MEM_EXECUTE
+          | IMAGE_SCN_CNT_CODE;
+      } else {
+        sectionName = ".data";
+        sectionMask |= IMAGE_SCN_MEM_WRITE;
+      }
+    } else {
+      sectionName = ".text";
+      sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    }
+
+    FileWriter file(machine, machineMask, symbols.count);
+
+    SectionWriter section(file, sectionName, sectionMask, data.items, data.count);
+
+    file.writeHeader(out);
+
+    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+      file.addSymbol(sym->name, sym->addr, 1, 0, 2);
+    }
+
+    section.writeHeader(out);
+
+    section.writeData(out);
+
+    file.writeData(out);  
+
+    return true;
+
   }
 
   WindowsPlatform():
@@ -253,4 +278,4 @@ public:
 WindowsPlatform<4> windows32Platform;
 WindowsPlatform<8> windows64Platform;
 
-}
+} // namespace

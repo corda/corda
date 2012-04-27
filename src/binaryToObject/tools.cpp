@@ -19,6 +19,38 @@ namespace avian {
 
 namespace tools {
 
+String::String(const char* text):
+  text(text),
+  length(strlen(text)) {}
+
+Buffer::Buffer():
+  capacity(100),
+  length(0),
+  data((uint8_t*)malloc(capacity)) {}
+
+Buffer::~Buffer() {
+  free(data);
+}
+
+void Buffer::ensure(size_t more) {
+  if(length + more > capacity) {
+    capacity = capacity * 2 + more;
+    data = (uint8_t*)realloc(data, capacity);
+  }
+}
+
+void Buffer::write(const void* d, size_t size) {
+  ensure(size);
+  memcpy(data + length, d, size);
+  length += size;
+}
+
+unsigned StringTable::add(String str) {
+  unsigned offset = Buffer::length;
+  Buffer::write(str.text, str.length + 1);
+  return offset;
+}
+
 void OutputStream::write(uint8_t byte) {
   writeChunk(&byte, 1);
 }

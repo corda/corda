@@ -236,7 +236,6 @@ ifeq ($(arch),powerpc)
 
 	ifneq ($(platform),darwin)
 		ifneq ($(arch),$(build-arch))
-			converter-cflags += -DOPPOSITE_ENDIAN
 			cxx = powerpc-linux-gnu-g++
 			cc = powerpc-linux-gnu-gcc
 			ar = powerpc-linux-gnu-ar
@@ -342,10 +341,6 @@ ifeq ($(platform),darwin)
 		lflags += $(flags)
 	endif
 
-	ifeq ($(build-arch),powerpc)
-		converter-cflags += -DBIG_ENDIAN
-	endif
-
 	ifeq ($(arch),powerpc)
 		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -428,6 +423,7 @@ endif
 
 ifeq ($(mode),debug)
 	optimization-cflags = -O0 -g3
+	converter-cflags += -O0 -g3
 	strip = :
 endif
 ifeq ($(mode),debug-fast)
@@ -606,9 +602,6 @@ driver-object = $(build)/main.o
 driver-dynamic-objects = \
 	$(build)/main-dynamic.o
 
-gdb-plugin-object = $(build)/gdb-plugin.o
-gdb-plugin-source = $(src)/gdb-plugin.cpp
-
 boot-source = $(src)/boot.cpp
 boot-object = $(build)/boot.o
 
@@ -623,7 +616,10 @@ generator-objects = \
 	$(call generator-cpp-objects,$(generator-sources),$(src),$(build))
 generator = $(build)/generator
 
-converter-depends = $(src)/binaryToObject/tools.h
+converter-depends = \
+	$(src)/binaryToObject/tools.h \
+	$(src)/binaryToObject/endianness.h
+
 
 converter-sources = \
 	$(src)/binaryToObject/main.cpp \
@@ -826,9 +822,6 @@ $(heapwalk-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 $(driver-object): $(driver-source)
 	$(compile-object)
 
-$(gdb-plugin-object): $(gdb-plugin-source)
-	$(compile-object)
-
 $(build)/main-dynamic.o: $(driver-source)
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
@@ -846,7 +839,7 @@ $(converter-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $
 	$(build-cxx) $(converter-cflags) -c $(<) -o $(@)
 
 $(converter): $(converter-objects)
-	$(build-cc) $(^) -o $(@)
+	$(build-cc) $(^) -g -o $(@)
 
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 	@echo "creating $(@)"

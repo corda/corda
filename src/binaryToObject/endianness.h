@@ -15,11 +15,12 @@ namespace avian {
 
 namespace endian {
 
-#ifndef BIG_ENDIAN
-const bool LittleEndian = true;
-#else
-const bool LittleEndian = false;
-#endif
+static union {
+  uint32_t i;
+  char c[4];
+} _DetectEndianness = {1};
+
+const bool LittleEndian = _DetectEndianness.c[0] == 1;
 
 template<bool TargetLittleEndian>
 class Endianness {
@@ -57,13 +58,13 @@ public:
       return v;
     } else {
       return
-        ((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF)) |
-        ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00)) |
-        ((static_cast<uint64_t>(v) >> 24) & UINT64_C(0x0000000000FF0000)) |
-        ((static_cast<uint64_t>(v) >>  8) & UINT64_C(0x00000000FF000000)) |
-        ((static_cast<uint64_t>(v) <<  8) & UINT64_C(0x000000FF00000000)) |
-        ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000)) |
-        ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000)) |
+        ((static_cast<uint64_t>(v) >> 56) & (static_cast<uint64_t>(0xff) << 0)) |
+        ((static_cast<uint64_t>(v) >> 40) & (static_cast<uint64_t>(0xff) << 8)) |
+        ((static_cast<uint64_t>(v) >> 24) & (static_cast<uint64_t>(0xff) << 16)) |
+        ((static_cast<uint64_t>(v) >>  8) & (static_cast<uint64_t>(0xff) << 24)) |
+        ((static_cast<uint64_t>(v) <<  8) & (static_cast<uint64_t>(0xff) << 32)) |
+        ((static_cast<uint64_t>(v) << 24) & (static_cast<uint64_t>(0xff) << 40)) |
+        ((static_cast<uint64_t>(v) << 40) & (static_cast<uint64_t>(0xff) << 48)) |
         ((static_cast<uint64_t>(v) << 56));
     }
   }

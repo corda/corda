@@ -35,20 +35,62 @@ public:
   virtual void write(uint8_t byte);
 };
 
-class ObjectWriter {
+class String {
 public:
+  const char* text;
+  size_t length;
 
-  enum AccessFlags {
-    Readable = 1 << 0,
-    Writable = 1 << 1,
-    Executable = 1 << 2
-  };
+  String(const char* text);
+};
 
-  virtual bool write(uint8_t* data, size_t size,
-                     const char* startName, const char* endName,
-                     unsigned alignment, unsigned accessFlags) = 0;
+class SymbolInfo {
+public:
+  unsigned addr;
+  String name;
 
-  virtual void dispose() = 0;
+  inline SymbolInfo(uint64_t addr, const char* name):
+    addr(addr),
+    name(name) {}
+
+  inline SymbolInfo():
+    name("") {}
+};
+
+class Buffer {
+public:
+  size_t capacity;
+  size_t length;
+  uint8_t* data;
+
+  Buffer();
+  ~Buffer();
+
+  void ensure(size_t more);
+  void write(const void* d, size_t size);
+};
+
+class StringTable : public Buffer {
+public:
+  unsigned add(String str);
+};
+
+template<class T>
+class Slice {
+public:
+  T* items;
+  size_t count;
+
+  inline Slice(T* items, size_t count):
+    items(items),
+    count(count) {}
+
+  inline T* begin() {
+    return items;
+  }
+
+  inline T* end() {
+    return items + count;
+  }
 };
 
 class PlatformInfo {
@@ -98,7 +140,12 @@ public:
     first = this;
   }
 
-  virtual ObjectWriter* makeObjectWriter(OutputStream* out) = 0;
+  enum AccessFlags {
+    Writable = 1 << 0,
+    Executable = 1 << 1
+  };
+
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) = 0;
 
   static Platform* getPlatform(PlatformInfo info);
 };

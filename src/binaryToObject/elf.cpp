@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "endianness.h"
 
@@ -119,6 +120,39 @@ using avian::endian::Endianness;
 #define V4 Endianness<TargetLittleEndian>::v4
 #define VANY Endianness<TargetLittleEndian>::vAny
 
+
+unsigned getElfPlatform(PlatformInfo::Architecture arch) {
+  switch(arch) {
+  case PlatformInfo::x86_64:
+    return EM_X86_64;
+  case PlatformInfo::x86:
+    return EM_386;
+  case PlatformInfo::Arm:
+    return EM_ARM;
+  case PlatformInfo::PowerPC:
+    return EM_PPC;
+  }
+  return ~0;
+}
+
+const char* getSectionName(unsigned accessFlags, unsigned& sectionFlags) {
+  sectionFlags = SHF_ALLOC;
+  if (accessFlags & Platform::Writable) {
+    if (accessFlags & Platform::Executable) {
+      sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
+      return ".rwx";
+    } else {
+      sectionFlags |= SHF_WRITE;
+      return ".data";
+    }
+  } else if (accessFlags & Platform::Executable) {
+    sectionFlags |= SHF_EXECINSTR;
+    return ".text";
+  } else {
+    return ".rodata";
+  }
+}
+
 template<class AddrTy, bool TargetLittleEndian = true>
 class ElfPlatform : public Platform {
 public:
@@ -158,240 +192,182 @@ public:
 
   typedef Symbol_Ty<AddrTy> Symbol;
 
-  class ElfObjectWriter : public ObjectWriter {
+  static const unsigned Encoding = TargetLittleEndian ? ELFDATA2LSB : ELFDATA2MSB;
+
+  const unsigned machine;
+
+  ElfPlatform(PlatformInfo::Architecture arch):
+    Platform(PlatformInfo(PlatformInfo::Linux, arch)),
+    machine(getElfPlatform(arch)) {}
+
+  class FileWriter {
   public:
+    unsigned sectionCount;
+    unsigned sectionStringTableSectionNumber;
 
-    PlatformInfo::Architecture arch;
-    OutputStream* out;
+    AddrTy dataOffset;
 
-    ElfObjectWriter(PlatformInfo::Architecture arch, OutputStream* out):
-      arch(arch),
-      out(out) {}
+    FileHeader header;
+    StringTable strings;
 
-    void writeObject(const uint8_t* data, unsigned size,
-                     const char* startName, const char* endName,
-                     const char* sectionName, unsigned sectionFlags,
-                     unsigned alignment, int machine, int encoding)
+    FileWriter(unsigned machine):
+      sectionCount(0),
+      dataOffset(sizeof(FileHeader))
     {
-      const unsigned sectionCount = 5;
-      const unsigned symbolCount = 2;
-
-      const unsigned sectionNameLength = strlen(sectionName) + 1;
-      const unsigned startNameLength = strlen(startName) + 1;
-      const unsigned endNameLength = strlen(endName) + 1;
-
-      const char* const sectionStringTableName = ".shstrtab";
-      const char* const stringTableName = ".strtab";
-      const char* const symbolTableName = ".symtab";
-
-      const unsigned sectionStringTableNameLength
-        = strlen(sectionStringTableName) + 1;
-      const unsigned stringTableNameLength = strlen(stringTableName) + 1;
-      const unsigned symbolTableNameLength = strlen(symbolTableName) + 1;
-
-      const unsigned nullStringOffset = 0;
-
-      const unsigned sectionStringTableNameOffset = nullStringOffset + 1;
-      const unsigned stringTableNameOffset
-        = sectionStringTableNameOffset + sectionStringTableNameLength;
-      const unsigned symbolTableNameOffset
-        = stringTableNameOffset + stringTableNameLength;
-      const unsigned sectionNameOffset
-        = symbolTableNameOffset + symbolTableNameLength;
-      const unsigned sectionStringTableLength
-        = sectionNameOffset + sectionNameLength;
-
-      const unsigned startNameOffset = nullStringOffset + 1;
-      const unsigned endNameOffset = startNameOffset + startNameLength;
-      const unsigned stringTableLength = endNameOffset + endNameLength;
-
-      const unsigned bodySectionNumber = 1;
-      const unsigned sectionStringTableSectionNumber = 2;
-      const unsigned stringTableSectionNumber = 3;
-
-      FileHeader fileHeader;
-      memset(&fileHeader, 0, sizeof(FileHeader));
-      fileHeader.e_ident[EI_MAG0] = V1(ELFMAG0);
-      fileHeader.e_ident[EI_MAG1] = V1(ELFMAG1);
-      fileHeader.e_ident[EI_MAG2] = V1(ELFMAG2);
-      fileHeader.e_ident[EI_MAG3] = V1(ELFMAG3);
-      fileHeader.e_ident[EI_CLASS] = V1(Class);
-      fileHeader.e_ident[EI_DATA] = V1(encoding);
-      fileHeader.e_ident[EI_VERSION] = V1(EV_CURRENT);
-      fileHeader.e_ident[EI_OSABI] = V1(OSABI);
-      fileHeader.e_ident[EI_ABIVERSION] = V1(0);
-      fileHeader.e_type = V2(ET_REL);
-      fileHeader.e_machine = V2(machine);
-      fileHeader.e_version = V4(EV_CURRENT);
-      fileHeader.e_entry = VANY(static_cast<AddrTy>(0));
-      fileHeader.e_phoff = VANY(static_cast<AddrTy>(0));
-      fileHeader.e_shoff = VANY(static_cast<AddrTy>(sizeof(FileHeader)));
-      fileHeader.e_flags = V4(machine == EM_ARM ? 0x04000000 : 0);
-      fileHeader.e_ehsize = V2(sizeof(FileHeader));
-      fileHeader.e_phentsize = V2(0);
-      fileHeader.e_phnum = V2(0);
-      fileHeader.e_shentsize = V2(sizeof(SectionHeader));
-      fileHeader.e_shnum = V2(sectionCount);
-      fileHeader.e_shstrndx = V2(sectionStringTableSectionNumber);
-
-      SectionHeader nullSection;
-      memset(&nullSection, 0, sizeof(SectionHeader));
-
-      SectionHeader bodySection;
-      bodySection.sh_name = V4(sectionNameOffset);
-      bodySection.sh_type = V4(SHT_PROGBITS);
-      bodySection.sh_flags = VANY(static_cast<AddrTy>(sectionFlags));
-      bodySection.sh_addr = VANY(static_cast<AddrTy>(0));
-      unsigned bodySectionOffset
-        = sizeof(FileHeader) + (sizeof(SectionHeader) * sectionCount);
-      bodySection.sh_offset = VANY(static_cast<AddrTy>(bodySectionOffset));
-      unsigned bodySectionSize = size;
-      bodySection.sh_size = VANY(static_cast<AddrTy>(bodySectionSize));
-      bodySection.sh_link = V4(0);
-      bodySection.sh_info = V4(0);
-      bodySection.sh_addralign = VANY(static_cast<AddrTy>(alignment));
-      bodySection.sh_entsize = VANY(static_cast<AddrTy>(0));
-
-      SectionHeader sectionStringTableSection;
-      sectionStringTableSection.sh_name = V4(sectionStringTableNameOffset);
-      sectionStringTableSection.sh_type = V4(SHT_STRTAB);
-      sectionStringTableSection.sh_flags = VANY(static_cast<AddrTy>(0));
-      sectionStringTableSection.sh_addr = VANY(static_cast<AddrTy>(0));
-      unsigned sectionStringTableSectionOffset
-        = bodySectionOffset + bodySectionSize;
-      sectionStringTableSection.sh_offset = VANY(static_cast<AddrTy>(sectionStringTableSectionOffset));
-      unsigned sectionStringTableSectionSize = sectionStringTableLength;
-      sectionStringTableSection.sh_size = VANY(static_cast<AddrTy>(sectionStringTableSectionSize));
-      sectionStringTableSection.sh_link = V4(0);
-      sectionStringTableSection.sh_info = V4(0);
-      sectionStringTableSection.sh_addralign = VANY(static_cast<AddrTy>(1));
-      sectionStringTableSection.sh_entsize = VANY(static_cast<AddrTy>(0));
-
-      SectionHeader stringTableSection;
-      stringTableSection.sh_name = V4(stringTableNameOffset);
-      stringTableSection.sh_type = V4(SHT_STRTAB);
-      stringTableSection.sh_flags = VANY(static_cast<AddrTy>(0));
-      stringTableSection.sh_addr = VANY(static_cast<AddrTy>(0));
-      unsigned stringTableSectionOffset
-        = sectionStringTableSectionOffset + sectionStringTableSectionSize;
-      stringTableSection.sh_offset  = VANY(static_cast<AddrTy>(stringTableSectionOffset));
-      unsigned stringTableSectionSize = stringTableLength;
-      stringTableSection.sh_size = VANY(static_cast<AddrTy>(stringTableSectionSize));
-      stringTableSection.sh_link = V4(0);
-      stringTableSection.sh_info = V4(0);
-      stringTableSection.sh_addralign = VANY(static_cast<AddrTy>(1));
-      stringTableSection.sh_entsize = VANY(static_cast<AddrTy>(0));
-
-      SectionHeader symbolTableSection;
-      symbolTableSection.sh_name = V4(symbolTableNameOffset);
-      symbolTableSection.sh_type = V4(SHT_SYMTAB);
-      symbolTableSection.sh_flags = VANY(static_cast<AddrTy>(0));
-      symbolTableSection.sh_addr = VANY(static_cast<AddrTy>(0));
-      unsigned symbolTableSectionOffset
-        = stringTableSectionOffset + stringTableSectionSize;
-      symbolTableSection.sh_offset = VANY(static_cast<AddrTy>(symbolTableSectionOffset));
-      unsigned symbolTableSectionSize = sizeof(Symbol) * symbolCount;
-      symbolTableSection.sh_size = VANY(static_cast<AddrTy>(symbolTableSectionSize));
-      symbolTableSection.sh_link = V4(stringTableSectionNumber);
-      symbolTableSection.sh_info = V4(0);
-      symbolTableSection.sh_addralign = VANY(static_cast<AddrTy>(Elf::BytesPerWord));
-      symbolTableSection.sh_entsize = VANY(static_cast<AddrTy>(sizeof(Symbol)));
-
-      Symbol startSymbol;
-      startSymbol.st_name = V4(startNameOffset);
-      startSymbol.st_value = VANY(static_cast<AddrTy>(0));
-      startSymbol.st_size = VANY(static_cast<AddrTy>(0));
-      startSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
-      startSymbol.st_other = V1(STV_DEFAULT);
-      startSymbol.st_shndx = V2(bodySectionNumber);
-
-      Symbol endSymbol;
-      endSymbol.st_name = V4(endNameOffset);
-      endSymbol.st_value = VANY(static_cast<AddrTy>(size));
-      endSymbol.st_size = VANY(static_cast<AddrTy>(0));
-      endSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
-      endSymbol.st_other = V1(STV_DEFAULT);
-      endSymbol.st_shndx = V2(bodySectionNumber);
-
-      out->writeChunk(&fileHeader, sizeof(fileHeader));
-      out->writeChunk(&nullSection, sizeof(nullSection));
-      out->writeChunk(&bodySection, sizeof(bodySection));
-      out->writeChunk(&sectionStringTableSection, sizeof(sectionStringTableSection));
-      out->writeChunk(&stringTableSection, sizeof(stringTableSection));
-      out->writeChunk(&symbolTableSection, sizeof(symbolTableSection));
-
-      out->writeChunk(data, size);
-
-      out->write(0);
-      out->writeChunk(sectionStringTableName, sectionStringTableNameLength);
-      out->writeChunk(stringTableName, stringTableNameLength);
-      out->writeChunk(symbolTableName, symbolTableNameLength);
-      out->writeChunk(sectionName, sectionNameLength);
-
-      out->write(0);
-      out->writeChunk(startName, startNameLength);
-      out->writeChunk(endName, endNameLength);
-
-      out->writeChunk(&startSymbol, sizeof(startSymbol));
-      out->writeChunk(&endSymbol, sizeof(endSymbol));
+      memset(&header, 0, sizeof(FileHeader));
+      header.e_ident[EI_MAG0] = V1(ELFMAG0);
+      header.e_ident[EI_MAG1] = V1(ELFMAG1);
+      header.e_ident[EI_MAG2] = V1(ELFMAG2);
+      header.e_ident[EI_MAG3] = V1(ELFMAG3);
+      header.e_ident[EI_CLASS] = V1(Class);
+      header.e_ident[EI_DATA] = V1(Encoding);
+      header.e_ident[EI_VERSION] = V1(EV_CURRENT);
+      header.e_ident[EI_OSABI] = V1(OSABI);
+      header.e_ident[EI_ABIVERSION] = V1(0);
+      header.e_type = V2(ET_REL);
+      header.e_machine = V2(machine);
+      header.e_version = V4(EV_CURRENT);
+      header.e_entry = VANY(static_cast<AddrTy>(0));
+      header.e_phoff = VANY(static_cast<AddrTy>(0));
+      header.e_shoff = VANY(static_cast<AddrTy>(sizeof(FileHeader)));
+      header.e_flags = V4(machine == EM_ARM ? 0x04000000 : 0);
+      header.e_ehsize = V2(sizeof(FileHeader));
+      header.e_phentsize = V2(0);
+      header.e_phnum = V2(0);
+      header.e_shentsize = V2(sizeof(SectionHeader));
     }
 
-    virtual bool write(uint8_t* data, size_t size,
-                       const char* startName, const char* endName,
-                       unsigned alignment, unsigned accessFlags)
-    {
-      int machine;
-      int encoding;
-      if (arch == PlatformInfo::x86_64) {
-        machine = EM_X86_64;
-        encoding = ELFDATA2LSB;
-      } else if (arch == PlatformInfo::x86) {
-        machine = EM_386;
-        encoding = ELFDATA2LSB;
-      } else if (arch == PlatformInfo::Arm) {
-        machine = EM_ARM;
-        encoding = ELFDATA2LSB;
-      } else if (arch == PlatformInfo::PowerPC) {
-        machine = EM_PPC;
-        encoding = ELFDATA2MSB;
-      } else {
-        fprintf(stderr, "unsupported architecture: %s\n", arch);
-        return false;
-      }
-
-      const char* sectionName;
-      unsigned sectionFlags = SHF_ALLOC;
-      if (accessFlags & Writable) {
-        if (accessFlags & Executable) {
-          sectionName = ".rwx";
-          sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
-        } else {
-          sectionName = ".data";
-          sectionFlags |= SHF_WRITE;
-        }
-      } else if (accessFlags & Executable) {
-        sectionName = ".text";
-        sectionFlags |= SHF_EXECINSTR;
-      } else {
-        sectionName = ".rodata";
-      }
-
-      writeObject(data, size, startName, endName, sectionName, sectionFlags,
-                  alignment, machine, encoding);
-
-      return true;
-    }
-
-    virtual void dispose() {
-      delete this;
+    void writeHeader(OutputStream* out) {
+      header.e_shnum = V2(sectionCount);
+      header.e_shstrndx = V2(sectionStringTableSectionNumber);
+      out->writeChunk(&header, sizeof(FileHeader));
     }
   };
 
-  ElfPlatform(PlatformInfo::Architecture arch):
-    Platform(PlatformInfo(PlatformInfo::Linux, arch)) {}
+  class SectionWriter {
+  public:
+    FileWriter& file;
+    String name;
+    SectionHeader header;
+    const size_t* dataSize;
+    const uint8_t* const* data;
 
-  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
-    return new ElfObjectWriter(info.arch, out);
+    SectionWriter(FileWriter& file):
+      file(file),
+      name(""),
+      data(0),
+      dataSize(0)
+    {
+      memset(&header, 0, sizeof(SectionHeader));
+      file.sectionCount++;
+      file.dataOffset += sizeof(SectionHeader);
+      size_t nameOffset = file.strings.add(name);
+      header.sh_name = V4(nameOffset);
+    }
+
+    SectionWriter(
+        FileWriter& file,
+        const char* chname,
+        unsigned type,
+        AddrTy flags,
+        unsigned alignment,
+        AddrTy addr,
+        const uint8_t* const* data,
+        size_t* dataSize,
+        size_t entsize = 0,
+        unsigned link = 0):
+
+      file(file),
+      name(chname),
+      data(data),
+      dataSize(dataSize)
+    {
+      if(strcmp(chname, ".shstrtab") == 0) {
+        file.sectionStringTableSectionNumber = file.sectionCount;
+      }
+      file.sectionCount++;
+      file.dataOffset += sizeof(SectionHeader);
+      size_t nameOffset = file.strings.add(name);
+
+      header.sh_name = V4(nameOffset);
+      header.sh_type = V4(type);
+      header.sh_flags = VANY(flags);
+      header.sh_addr = VANY(addr);
+      // header.sh_offset = VANY(static_cast<AddrTy>(bodySectionOffset));
+      // header.sh_size = VANY(static_cast<AddrTy>(*dataSize));
+      header.sh_link = V4(link);
+      header.sh_info = V4(0);
+      header.sh_addralign = VANY(static_cast<AddrTy>(alignment));
+      header.sh_entsize = VANY(static_cast<AddrTy>(entsize));
+    }
+
+    void writeHeader(OutputStream* out) {
+      if(dataSize) {
+        header.sh_offset = VANY(file.dataOffset);
+        header.sh_size = VANY(static_cast<AddrTy>(*dataSize));
+        file.dataOffset += *dataSize;
+      }
+
+      out->writeChunk(&header, sizeof(SectionHeader));
+    }
+
+    void writeData(OutputStream* out) {
+      if(data) {
+        out->writeChunk(*data, *dataSize);
+      }
+    }
+
+
+  };
+
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
+
+    unsigned sectionFlags;
+    const char* sectionName = getSectionName(accessFlags, sectionFlags);
+
+    StringTable symbolStringTable;
+    Buffer symbolTable;
+
+    FileWriter file(machine);
+
+    const int bodySectionNumber = 1;
+    const int stringTableSectionNumber = 3;
+
+    SectionWriter sections[] = {
+      SectionWriter(file), // null section
+      SectionWriter(file, sectionName, SHT_PROGBITS, sectionFlags, alignment, 0, &data.items, &data.count), // body section
+      SectionWriter(file, ".shstrtab", SHT_STRTAB, 0, 1, 0, &file.strings.data, &file.strings.length),
+      SectionWriter(file, ".strtab", SHT_STRTAB, 0, 1, 0, &symbolStringTable.data, &symbolStringTable.length),
+      SectionWriter(file, ".symtab", SHT_SYMTAB, 0, 8, 0, &symbolTable.data, &symbolTable.length, sizeof(Symbol), stringTableSectionNumber)
+    };
+
+    // for some reason, string tables require a null first element...
+    symbolStringTable.add("");
+
+    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+      size_t nameOffset = symbolStringTable.add(sym->name);
+
+      Symbol symbolStruct;
+      symbolStruct.st_name = V4(nameOffset);
+      symbolStruct.st_value = VANY(static_cast<AddrTy>(sym->addr));
+      symbolStruct.st_size = VANY(static_cast<AddrTy>(0));
+      symbolStruct.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
+      symbolStruct.st_other = V1(STV_DEFAULT);
+      symbolStruct.st_shndx = V2(bodySectionNumber);
+      symbolTable.write(&symbolStruct, sizeof(Symbol));
+    }
+
+    file.writeHeader(out);
+
+    for(int i = 0; i < file.sectionCount; i++) {
+      sections[i].writeHeader(out);
+    }
+
+    for(int i = 0; i < file.sectionCount; i++) {
+      sections[i].writeData(out);
+    }
+
+    return true;
   }
 };
 

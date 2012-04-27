@@ -56,6 +56,14 @@ using avian::endian::Endianness;
 #define V4 Endianness<TargetLittleEndian>::v4
 #define VANY Endianness<TargetLittleEndian>::vAny
 
+inline unsigned
+log(unsigned n)
+{
+  unsigned r = 0;
+  for (unsigned i = 1; i < n; ++r) i <<= 1;
+  return r;
+}
+
 template<class AddrTy, bool TargetLittleEndian = true>
 class MachOPlatform : public Platform {
 public:
@@ -132,200 +140,151 @@ public:
     return (n + (BytesPerWord - 1)) & ~(BytesPerWord - 1);
   }
 
-  static inline unsigned
-  log(unsigned n)
-  {
-    unsigned r = 0;
-    for (unsigned i = 1; i < n; ++r) i <<= 1;
-    return r;
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
+    cpu_type_t cpuType;
+    cpu_subtype_t cpuSubType;
+    switch(info.arch) {
+    case PlatformInfo::x86_64:
+      cpuType = CPU_TYPE_X86_64;
+      cpuSubType = CPU_SUBTYPE_X86_64_ALL;
+      break;
+    case PlatformInfo::x86:
+      cpuType = CPU_TYPE_I386;
+      cpuSubType = CPU_SUBTYPE_I386_ALL;
+      break;
+    case PlatformInfo::PowerPC:
+      cpuType = CPU_TYPE_POWERPC;
+      cpuSubType = CPU_SUBTYPE_POWERPC_ALL;
+      break;
+    case PlatformInfo::Arm:
+      cpuType = CPU_TYPE_ARM;
+      cpuSubType = CPU_SUBTYPE_ARM_V7;
+    default:
+      // should never happen (see MachOPlatform declarations at bottom)
+      fprintf(stderr, "unsupported architecture: %d\n", info.arch);
+      return false;
+    }
+
+    const char* segmentName;
+    const char* sectionName;
+    if (accessFlags & Writable) {
+      if (accessFlags & Executable) {
+        segmentName = "__RWX";
+        sectionName = "__rwx";
+      } else {
+        segmentName = "__DATA";
+        sectionName = "__data";
+      }
+    } else {
+      segmentName = "__TEXT";
+      sectionName = "__text";
+    }
+
+    FileHeader header = {
+      V4(Magic), // magic
+      V4(cpuType),
+      V4(cpuSubType),
+      V4(MH_OBJECT), // filetype,
+      V4(2), // ncmds
+      V4(sizeof(SegmentCommand)
+         + sizeof(Section)
+         + sizeof(SymtabCommand)), // sizeofcmds
+      V4(0) // flags
+    };
+
+    AddrTy finalSize = pad(data.count);
+
+    SegmentCommand segment = {
+      V4(Segment), // cmd
+      V4(sizeof(SegmentCommand) + sizeof(Section)), // cmdsize
+      "", // segname
+      VANY(static_cast<AddrTy>(0)), // vmaddr
+      VANY(static_cast<AddrTy>(finalSize)), // vmsize
+      VANY(static_cast<AddrTy>(sizeof(FileHeader)
+         + sizeof(SegmentCommand)
+         + sizeof(Section)
+         + sizeof(SymtabCommand))), // fileoff
+      VANY(static_cast<AddrTy>(finalSize)), // filesize
+      V4(7), // maxprot
+      V4(7), // initprot
+      V4(1), // nsects
+      V4(0) // flags
+    };
+
+    strncpy(segment.segname, segmentName, sizeof(segment.segname));
+
+    Section sect = {
+      "", // sectname
+      "", // segname
+      VANY(static_cast<AddrTy>(0)), // addr
+      VANY(static_cast<AddrTy>(finalSize)), // size
+      V4(sizeof(FileHeader)
+         + sizeof(SegmentCommand)
+         + sizeof(Section)
+         + sizeof(SymtabCommand)), // offset
+      V4(log(alignment)), // align
+      V4(0), // reloff
+      V4(0), // nreloc
+      V4(S_REGULAR), // flags
+      V4(0), // reserved1
+      V4(0), // reserved2
+    };
+
+    strncpy(sect.segname, segmentName, sizeof(sect.segname));
+    strncpy(sect.sectname, sectionName, sizeof(sect.sectname));
+
+    StringTable strings;
+    strings.add("");
+    Buffer symbolList;
+
+    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+      unsigned offset = strings.length;
+      strings.write("_", 1);
+      strings.add(sym->name);
+      NList symbol = {
+        V4(offset), // n_un
+        V1(N_SECT | N_EXT), // n_type
+        V1(1), // n_sect
+        V2(0), // n_desc
+        VANY(static_cast<AddrTy>(sym->addr)) // n_value
+      };
+      symbolList.write(&symbol, sizeof(NList));
+    }
+
+    SymtabCommand symbolTable = {
+      V4(LC_SYMTAB), // cmd
+      V4(sizeof(SymtabCommand)), // cmdsize
+      V4(sizeof(FileHeader)
+         + sizeof(SegmentCommand)
+         + sizeof(Section)
+         + sizeof(SymtabCommand)
+         + finalSize), // symoff
+      V4(symbols.count), // nsyms
+      V4(sizeof(FileHeader)
+         + sizeof(SegmentCommand)
+         + sizeof(Section)
+         + sizeof(SymtabCommand)
+         + finalSize
+         + (sizeof(NList) * symbols.count)), // stroff
+      V4(strings.length), // strsize
+    };
+
+    out->writeChunk(&header, sizeof(header));
+    out->writeChunk(&segment, sizeof(segment));
+    out->writeChunk(&sect, sizeof(sect));
+    out->writeChunk(&symbolTable, sizeof(symbolTable));
+
+    out->writeChunk(data.items, data.count);
+    out->writeRepeat(0, finalSize - data.count);
+
+    out->writeChunk(symbolList.data, symbolList.length);
+
+    out->writeChunk(strings.data, strings.length);
   }
-
-  class MachOObjectWriter : public ObjectWriter {
-  public:
-
-    PlatformInfo::Architecture arch;
-    OutputStream* out;
-
-    MachOObjectWriter(PlatformInfo::Architecture arch, OutputStream* out):
-      arch(arch),
-      out(out) {}
-
-    void writeObject(const uint8_t* data, unsigned size,
-                const char* startName, const char* endName,
-                const char* segmentName, const char* sectionName,
-                unsigned alignment, cpu_type_t cpuType, cpu_subtype_t cpuSubType)
-    {
-      unsigned startNameLength = strlen(startName) + 1;
-      unsigned endNameLength = strlen(endName) + 1;
-
-      FileHeader header = {
-        V4(Magic), // magic
-        V4(cpuType),
-        V4(cpuSubType),
-        V4(MH_OBJECT), // filetype,
-        V4(2), // ncmds
-        V4(sizeof(SegmentCommand)
-           + sizeof(Section)
-           + sizeof(SymtabCommand)), // sizeofcmds
-        V4(0) // flags
-      };
-
-      SegmentCommand segment = {
-        V4(Segment), // cmd
-        V4(sizeof(SegmentCommand) + sizeof(Section)), // cmdsize
-        "", // segname
-        VANY(static_cast<AddrTy>(0)), // vmaddr
-        VANY(static_cast<AddrTy>(pad(size))), // vmsize
-        VANY(static_cast<AddrTy>(sizeof(FileHeader)
-           + sizeof(SegmentCommand)
-           + sizeof(Section)
-           + sizeof(SymtabCommand))), // fileoff
-        VANY(static_cast<AddrTy>(pad(size))), // filesize
-        V4(7), // maxprot
-        V4(7), // initprot
-        V4(1), // nsects
-        V4(0) // flags
-      };
-
-      strncpy(segment.segname, segmentName, sizeof(segment.segname));
-
-      Section sect = {
-        "", // sectname
-        "", // segname
-        VANY(static_cast<AddrTy>(0)), // addr
-        VANY(static_cast<AddrTy>(pad(size))), // size
-        V4(sizeof(FileHeader)
-           + sizeof(SegmentCommand)
-           + sizeof(Section)
-           + sizeof(SymtabCommand)), // offset
-        V4(log(alignment)), // align
-        V4(0), // reloff
-        V4(0), // nreloc
-        V4(S_REGULAR), // flags
-        V4(0), // reserved1
-        V4(0), // reserved2
-      };
-
-      strncpy(sect.segname, segmentName, sizeof(sect.segname));
-      strncpy(sect.sectname, sectionName, sizeof(sect.sectname));
-
-      SymtabCommand symbolTable = {
-        V4(LC_SYMTAB), // cmd
-        V4(sizeof(SymtabCommand)), // cmdsize
-        V4(sizeof(FileHeader)
-           + sizeof(SegmentCommand)
-           + sizeof(Section)
-           + sizeof(SymtabCommand)
-           + pad(size)), // symoff
-        V4(2), // nsyms
-        V4(sizeof(FileHeader)
-           + sizeof(SegmentCommand)
-           + sizeof(Section)
-           + sizeof(SymtabCommand)
-           + pad(size)
-           + (sizeof(NList) * 2)), // stroff
-        V4(1 + startNameLength + endNameLength), // strsize
-      };
-
-      NList symbolList[] = {
-        {
-          V4(1), // n_un
-          V1(N_SECT | N_EXT), // n_type
-          V1(1), // n_sect
-          V2(0), // n_desc
-          VANY(static_cast<AddrTy>(0)) // n_value
-        },
-        {
-          V4(1 + startNameLength), // n_un
-          V1(N_SECT | N_EXT), // n_type
-          V1(1), // n_sect
-          V2(0), // n_desc
-          VANY(static_cast<AddrTy>(size)) // n_value
-        }
-      };
-
-      out->writeChunk(&header, sizeof(header));
-      out->writeChunk(&segment, sizeof(segment));
-      out->writeChunk(&sect, sizeof(sect));
-      out->writeChunk(&symbolTable, sizeof(symbolTable));
-
-      out->writeChunk(data, size);
-      out->writeRepeat(0, pad(size) - size);
-
-      out->writeChunk(&symbolList, sizeof(symbolList));
-
-      out->write(0);
-
-      out->writeChunk(startName, startNameLength);
-      out->writeChunk(endName, endNameLength);
-    }
-
-    virtual bool write(uint8_t* data, size_t size,
-                       const char* startName, const char* endName,
-                       unsigned alignment, unsigned accessFlags)
-    {
-
-      cpu_type_t cpuType;
-      cpu_subtype_t cpuSubType;
-      if (arch == PlatformInfo::x86_64) {
-        cpuType = CPU_TYPE_X86_64;
-        cpuSubType = CPU_SUBTYPE_X86_64_ALL;
-      } else if (arch == PlatformInfo::x86) {
-        cpuType = CPU_TYPE_I386;
-        cpuSubType = CPU_SUBTYPE_I386_ALL;
-      } else if (arch == PlatformInfo::PowerPC) {
-        cpuType = CPU_TYPE_POWERPC;
-        cpuSubType = CPU_SUBTYPE_POWERPC_ALL;
-      } else if (arch == PlatformInfo::Arm) {
-        cpuType = CPU_TYPE_ARM;
-        cpuSubType = CPU_SUBTYPE_ARM_V7;
-      } else {
-        fprintf(stderr, "unsupported architecture: %d\n", arch);
-        return false;
-      }
-
-      const char* segmentName;
-      const char* sectionName;
-      if (accessFlags & Writable) {
-        if (accessFlags & Executable) {
-          segmentName = "__RWX";
-          sectionName = "__rwx";
-        } else {
-          segmentName = "__DATA";
-          sectionName = "__data";
-        }
-      } else {
-        segmentName = "__TEXT";
-        sectionName = "__text";
-      }
-
-      unsigned startNameLength = strlen(startName);
-      char myStartName[startNameLength + 2];
-      myStartName[0] = '_';
-      memcpy(myStartName + 1, startName, startNameLength + 1);
-
-      unsigned endNameLength = strlen(endName);
-      char myEndName[endNameLength + 2];
-      myEndName[0] = '_';
-      memcpy(myEndName + 1, endName, endNameLength + 1);
-
-      writeObject(data, size, myStartName, myEndName, segmentName,
-                  sectionName, alignment, cpuType, cpuSubType);
-
-      return true;
-    }
-
-    virtual void dispose() {
-      delete this;
-    }
-  };
     
   MachOPlatform(PlatformInfo::Architecture arch):
     Platform(PlatformInfo(PlatformInfo::Darwin, arch)) {}
-
-  virtual ObjectWriter* makeObjectWriter(OutputStream* out) {
-    return new MachOObjectWriter(info.arch, out);
-  }
+    
 };
 
 MachOPlatform<uint32_t> darwinx86Platform(PlatformInfo::x86);

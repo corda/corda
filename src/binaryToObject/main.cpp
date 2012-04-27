@@ -33,18 +33,14 @@ void* operator new(size_t size) {
   return malloc(size);
 }
 
-void operator delete(void* mem) {
-  if(mem) {
-    free(mem);
-  }
-}
+void operator delete(void* mem) { abort(); }
 
 namespace {
 
 using namespace avian::tools;
 
 bool
-writeObject(uint8_t* data, unsigned size, OutputStream* out, const char* startName,
+writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName,
             const char* endName, const char* os,
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
@@ -56,14 +52,16 @@ writeObject(uint8_t* data, unsigned size, OutputStream* out, const char* startNa
     return false;
   }
 
-  ObjectWriter* writer = platform->makeObjectWriter(out);
+  SymbolInfo symbols[2];
+  symbols[0].name = startName;
+  symbols[0].addr = 0;
+  symbols[1].name = endName;
+  symbols[1].addr = size;
 
-  bool success = writer->write(data, size, startName, endName, alignment,
-    ObjectWriter::Readable | (writable ? ObjectWriter::Writable : 0) | (executable ? ObjectWriter::Executable : 0));
+  unsigned accessFlags = (writable ? Platform::Writable : 0) | (executable ? Platform::Executable : 0);
 
-  writer->dispose();
+  return platform->writeObject(out, Slice<SymbolInfo>(symbols, 2), Slice<const uint8_t>(data, size), accessFlags, alignment);
 
-  return success;
 }
 
 void
