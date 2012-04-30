@@ -52,11 +52,10 @@ writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName
     return false;
   }
 
-  SymbolInfo symbols[2];
-  symbols[0].name = startName;
-  symbols[0].addr = 0;
-  symbols[1].name = endName;
-  symbols[1].addr = size;
+  SymbolInfo symbols[] = {
+    SymbolInfo(0, startName),
+    SymbolInfo(size, endName)
+  };
 
   unsigned accessFlags = (writable ? Platform::Writable : 0) | (executable ? Platform::Executable : 0);
 
