@@ -916,7 +916,7 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator):
+$(bootimage-generator): $(bootimage-generator-objects)
 	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
 		platform=$(bootimage-platform) \
