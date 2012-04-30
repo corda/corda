@@ -159,6 +159,7 @@ public:
     case PlatformInfo::Arm:
       cpuType = CPU_TYPE_ARM;
       cpuSubType = CPU_SUBTYPE_ARM_V7;
+      break;
     default:
       // should never happen (see MachOPlatform declarations at bottom)
       fprintf(stderr, "unsupported architecture: %d\n", info.arch);
