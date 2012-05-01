@@ -45,7 +45,7 @@ writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
 {
-  Platform* platform = Platform::getPlatform(PlatformInfo(os, architecture));
+  Platform* platform = Platform::getPlatform(PlatformInfo(PlatformInfo::osFromString(os), PlatformInfo::archFromString(architecture)));
 
   if(!platform) {
     fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);

@@ -11,6 +11,8 @@
 #ifndef AVIAN_TOOLS_H_
 #define AVIAN_TOOLS_H_
 
+#include "environment.h"
+
 namespace avian {
 
 namespace tools {
@@ -96,11 +98,18 @@ public:
 class PlatformInfo {
 public:
   enum OperatingSystem {
-    Linux, Windows, Darwin, UnknownOS
+    Linux = AVIAN_PLATFORM_LINUX,
+    Windows = AVIAN_PLATFORM_WINDOWS,
+    Darwin = AVIAN_PLATFORM_DARWIN,
+    UnknownOS = AVIAN_PLATFORM_UNKNOWN
   };
 
   enum Architecture {
-    x86, x86_64, PowerPC, Arm, UnknownArch
+    x86 = AVIAN_ARCH_X86,
+    x86_64 = AVIAN_ARCH_X86_64,
+    PowerPC = AVIAN_ARCH_POWERPC,
+    Arm = AVIAN_ARCH_ARM,
+    UnknownArch = AVIAN_ARCH_UNKNOWN
   };
 
   const OperatingSystem os;
@@ -112,10 +121,6 @@ public:
   inline PlatformInfo(OperatingSystem os, Architecture arch):
     os(os),
     arch(arch) {}
-
-  inline PlatformInfo(const char* os, const char* arch):
-    os(osFromString(os)),
-    arch(archFromString(arch)) {}
 
   inline bool operator == (const PlatformInfo& other) {
     return os == other.os && arch == other.arch;

@@ -8,6 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "environment.h"
 #include "assembler.h"
 #include "target.h"
 #include "vector.h"
@@ -2816,7 +2817,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2838,7 +2839,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     if (TargetBytesPerWord == 8) return 4; else
 #else
     if (TargetBytesPerWord == 8) return 6; else
@@ -2849,7 +2850,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, TargetBytesPerWord == 8);
     switch (index) {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     case 0:
       return rcx;
     case 1:
