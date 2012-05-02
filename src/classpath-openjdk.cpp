@@ -344,6 +344,9 @@ makeClassNameString(Thread* t, object name)
 void
 interceptFileOperations(Thread*);
 
+void
+clearInterrupted(Thread*);
+
 class MyClasspath : public Classpath {
  public:
   static const unsigned BufferSize = 1024;
@@ -504,6 +507,12 @@ class MyClasspath : public Classpath {
     set(t, thread, ThreadName, name);
 
     return thread;
+  }
+
+  virtual void
+  clearInterrupted(Thread* t)
+  {
+    local::clearInterrupted(t);
   }
 
   virtual void
@@ -2212,6 +2221,14 @@ interruptLock(Thread* t, object thread)
   return threadInterruptLock(t, thread);
 }
 
+void
+clearInterrupted(Thread* t)
+{
+  monitorAcquire(t, local::interruptLock(t, t->javaThread));
+  threadInterrupted(t, t->javaThread) = false;
+  monitorRelease(t, local::interruptLock(t, t->javaThread));
+}
+
 bool
 pipeAvailable(int fd, int* available)
 {
@@ -3350,9 +3367,8 @@ jvmInterrupt(Thread* t, uintptr_t* arguments)
   Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *thread));
   if (p) {
     interrupt(t, p);
-  } else {
-    threadInterrupted(t, *thread) = true;
   }
+  threadInterrupted(t, *thread) = true;
   monitorRelease(t, local::interruptLock(t, *thread));
 
   return 1;

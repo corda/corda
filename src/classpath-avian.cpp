@@ -55,6 +55,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  clearInterrupted(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   runThread(Thread* t)
   {
     object method = resolveMethod
