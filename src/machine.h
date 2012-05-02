@@ -1578,6 +1578,9 @@ class Classpath {
   makeThread(Thread* t, Thread* parent) = 0;
 
   virtual void
+  clearInterrupted(Thread* t) = 0;
+
+  virtual void
   runThread(Thread* t) = 0;
 
   virtual void
@@ -3215,6 +3218,7 @@ wait(Thread* t, object o, int64_t milliseconds)
 
     if (interrupted) {
       if (t->m->alive or (t->flags & Thread::DaemonFlag) == 0) {
+        t->m->classpath->clearInterrupted(t);
         throwNew(t, Machine::InterruptedExceptionType);
       } else {
         throw_(t, root(t, Machine::Shutdown));
