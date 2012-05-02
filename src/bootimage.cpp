@@ -1295,7 +1295,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
   class MyCompilationHandler : public Processor::CompilationHandler {
    public:
-    virtual void compiled(const void* code, unsigned size, unsigned frameSize UNUSED, const char* class_, const char* name, const char* spec) {
+    virtual void compiled(const void* code, unsigned size UNUSED, unsigned frameSize UNUSED, const char* class_, const char* name, const char* spec) {
       size_t classLen = strlen(class_);
       size_t nameLen = strlen(name);
       size_t specLen = strlen(spec);
@@ -1305,7 +1305,6 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
       symbols.add(SymbolInfo(offset, completeName));
       // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
-      free(completeName);
     }
 
     virtual void dispose() {}
@@ -1654,10 +1653,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     //   return false;
     // }
 
-    compilationHandler.symbols.add(SymbolInfo(0, "_binary_codeimage_bin_start"));
-    compilationHandler.symbols.add(SymbolInfo(image->codeSize, "_binary_codeimage_bin_end"));
+    compilationHandler.symbols.add(SymbolInfo(0, strdup("_binary_codeimage_bin_start")));
+    compilationHandler.symbols.add(SymbolInfo(image->codeSize, strdup("_binary_codeimage_bin_end")));
 
     platform->writeObject(codeOutput, Slice<SymbolInfo>(compilationHandler.symbols), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
+
+    for(SymbolInfo* sym = compilationHandler.symbols.begin(); sym != compilationHandler.symbols.end(); sym++) {
+      free(const_cast<void*>((const void*)sym->name.text));
+    }
   }
 }
 

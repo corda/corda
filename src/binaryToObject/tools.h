@@ -44,6 +44,10 @@ public:
   size_t length;
 
   String(const char* text);
+  
+  inline String(const char* text, size_t length):
+    text(text),
+    length(length) {}
 };
 
 class SymbolInfo {
