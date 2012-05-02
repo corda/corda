@@ -241,7 +241,6 @@ ifeq ($(arch),powerpc)
 
 	ifneq ($(platform),darwin)
 		ifneq ($(arch),$(build-arch))
-			converter-cflags += -DOPPOSITE_ENDIAN
 			cxx = powerpc-linux-gnu-g++
 			cc = powerpc-linux-gnu-gcc
 			ar = powerpc-linux-gnu-ar
@@ -341,9 +340,6 @@ ifeq ($(platform),darwin)
 			x := $(error "couldn't find SDK for iOS version")
 		endif
 
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		flags = -arch armv7 -isysroot \
 			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
 		openjdk-extra-cflags += $(flags)
@@ -353,9 +349,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),powerpc)
-		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -363,9 +356,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),i386)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -373,9 +363,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),x86_64)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
@@ -444,6 +431,7 @@ endif
 
 ifeq ($(mode),debug)
 	optimization-cflags = -O0 -g3
+	converter-cflags += -O0 -g3
 	strip = :
 endif
 ifeq ($(mode),debug-fast)
@@ -636,14 +624,20 @@ generator-objects = \
 	$(call generator-cpp-objects,$(generator-sources),$(src),$(build))
 generator = $(build)/generator
 
-converter-objects = \
-	$(build)/binaryToObject-main.o \
-	$(build)/binaryToObject-elf64.o \
-	$(build)/binaryToObject-elf32.o \
-	$(build)/binaryToObject-mach-o64.o \
-	$(build)/binaryToObject-mach-o32.o \
-	$(build)/binaryToObject-pe.o
-converter = $(build)/binaryToObject
+converter-depends = \
+	$(src)/binaryToObject/tools.h \
+	$(src)/binaryToObject/endianness.h
+
+
+converter-sources = \
+	$(src)/binaryToObject/main.cpp \
+	$(src)/binaryToObject/tools.cpp \
+	$(src)/binaryToObject/elf.cpp \
+	$(src)/binaryToObject/mach-o.cpp \
+	$(src)/binaryToObject/pe.cpp
+
+converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
+converter = $(build)/binaryToObject/binaryToObject
 
 static-library = $(build)/lib$(name).a
 executable = $(build)/$(name)${exe-suffix}
@@ -848,26 +842,12 @@ $(boot-object): $(boot-source)
 $(boot-javahome-object): $(src)/boot-javahome.cpp
 	$(compile-object)
 
-$(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
-	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
-
-$(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
-
-$(build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
-
-$(build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
-
-$(build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
-
-$(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
-	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
+$(converter-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $(converter-depends)
+	@mkdir -p $(dir $(@))
+	$(build-cxx) $(converter-cflags) -c $(<) -o $(@)
 
 $(converter): $(converter-objects)
-	$(build-cc) $(^) -o $(@)
+	$(build-cc) $(^) -g -o $(@)
 
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 	@echo "creating $(@)"
