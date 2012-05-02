@@ -226,6 +226,10 @@ ifeq ($(build-arch),powerpc)
 	endif
 endif
 
+ifeq ($(arch),i386)
+	pointer-size = 4
+endif
+
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
