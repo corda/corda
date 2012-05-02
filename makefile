@@ -226,22 +226,6 @@ ifeq ($(build-arch),powerpc)
 	endif
 endif
 
-ifeq ($(target-arch),i386)
-	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86
-endif
-
-ifeq ($(target-arch),x86_64)
-	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86_64
-endif
-
-ifeq ($(target-arch),powerpc)
-	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_POWERPC
-endif
-
-ifeq ($(target-arch),arm)
-	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
-endif
-
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
@@ -718,6 +702,22 @@ endif
 ifeq ($(tails),true)
 	tail-tests = \
 		extra.Tails
+endif
+
+ifeq ($(target-arch),i386)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86
+endif
+
+ifeq ($(target-arch),x86_64)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86_64
+endif
+
+ifeq ($(target-arch),powerpc)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_POWERPC
+endif
+
+ifeq ($(target-arch),arm)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
