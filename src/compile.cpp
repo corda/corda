@@ -6149,25 +6149,7 @@ FILE* compileLog = 0;
 
 void
 logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
-           const char* name, const char* spec)
-{
-  static bool open = false;
-  if (not open) {
-    open = true;
-    const char* path = findProperty(t, "avian.jit.log");
-    if (path) {
-      compileLog = vm::fopen(path, "wb");
-    } else if (DebugCompile) {
-      compileLog = stderr;
-    }
-  }
-
-  if (compileLog) {
-    fprintf(compileLog, "%p %p %s.%s%s\n",
-            code, static_cast<const uint8_t*>(code) + size,
-            class_, name, spec);
-  }
-}
+           const char* name, const char* spec);
 
 int
 resolveIpForwards(Context* context, int start, int end)
@@ -8448,6 +8430,24 @@ processor(MyThread* t);
 void
 compileThunks(MyThread* t, FixedAllocator* allocator);
 
+class CompilationHandlerList {
+public:
+  CompilationHandlerList(CompilationHandlerList* next, Processor::CompilationHandler* handler):
+    next(next),
+    handler(handler) {}
+
+  void dispose(Allocator* allocator) {
+    if(this) {
+      next->dispose(allocator);
+      handler->dispose();
+      allocator->free(this, sizeof(*this));
+    }
+  }
+
+  CompilationHandlerList* next;
+  Processor::CompilationHandler* handler;
+};
+
 class MyProcessor: public Processor {
  public:
   class Thunk {
@@ -8491,7 +8491,8 @@ class MyProcessor: public Processor {
                         FixedSizeOfArithmeticException),
     codeAllocator(s, 0, 0),
     callTableSize(0),
-    useNativeFeatures(useNativeFeatures)
+    useNativeFeatures(useNativeFeatures),
+    compilationHandlers(0)
   {
     thunkTable[compileMethodIndex] = voidPointer(local::compileMethod);
     thunkTable[compileVirtualMethodIndex] = voidPointer(compileVirtualMethod);
@@ -8797,12 +8798,15 @@ class MyProcessor: public Processor {
     t->arch->release();
 
     t->m->heap->free(t, sizeof(*t));
+
   }
 
   virtual void dispose() {
     if (codeAllocator.base) {
       s->freeExecutable(codeAllocator.base, codeAllocator.capacity);
     }
+
+    compilationHandlers->dispose(allocator);
 
     s->handleSegFault(0);
 
@@ -8898,6 +8902,10 @@ class MyProcessor: public Processor {
     bootImage = image;
     codeAllocator.base = code;
     codeAllocator.capacity = capacity;
+  }
+
+  virtual void addCompilationHandler(CompilationHandler* handler) {
+    compilationHandlers = new(allocator->allocate(sizeof(CompilationHandlerList))) CompilationHandlerList(compilationHandlers, handler);
   }
 
   virtual void compileMethod(Thread* vmt, Zone* zone, object* constants,
@@ -9055,7 +9063,35 @@ class MyProcessor: public Processor {
   unsigned callTableSize;
   bool useNativeFeatures;
   void* thunkTable[dummyIndex + 1];
+  CompilationHandlerList* compilationHandlers;
 };
+
+void
+logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
+           const char* name, const char* spec)
+{
+  static bool open = false;
+  if (not open) {
+    open = true;
+    const char* path = findProperty(t, "avian.jit.log");
+    if (path) {
+      compileLog = vm::fopen(path, "wb");
+    } else if (DebugCompile) {
+      compileLog = stderr;
+    }
+  }
+
+  if (compileLog) {
+    fprintf(compileLog, "%p %p %s.%s%s\n",
+            code, static_cast<const uint8_t*>(code) + size,
+            class_, name, spec);
+  }
+
+  MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
+  for(CompilationHandlerList* h = p->compilationHandlers; h; h = h->next) {
+    h->handler->compiled(code, 0, 0, class_, name, spec);
+  }
+}
 
 void*
 compileMethod2(MyThread* t, void* ip)

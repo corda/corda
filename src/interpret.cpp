@@ -3067,6 +3067,10 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
+  virtual void addCompilationHandler(CompilationHandler* handler) {
+    abort(s);
+  }
+
   virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
                              DelayedPromise**, object, OffsetResolver*)
   {

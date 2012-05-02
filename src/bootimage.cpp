@@ -1293,6 +1293,32 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
+  class MyCompilationHandler : public Processor::CompilationHandler {
+   public:
+    virtual void compiled(const void* code, unsigned size, unsigned frameSize UNUSED, const char* class_, const char* name, const char* spec) {
+      size_t classLen = strlen(class_);
+      size_t nameLen = strlen(name);
+      size_t specLen = strlen(spec);
+
+      char* completeName = (char*)malloc(classLen + nameLen + specLen + 2);
+      sprintf(completeName, "%s.%s%s", class_, name, spec);
+      uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
+      symbols.add(SymbolInfo(offset, completeName));
+      // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
+      free(completeName);
+    }
+
+    virtual void dispose() {}
+
+    DynamicArray<SymbolInfo> symbols;
+    uint64_t codeOffset;
+
+    MyCompilationHandler(uint64_t codeOffset):
+      codeOffset(codeOffset) {}
+  } compilationHandler(reinterpret_cast<uint64_t>(code));
+
+  t->m->processor->addCompilationHandler(&compilationHandler);
+
   object classPoolMap;
   object typeMaps;
   object constants;
@@ -1603,7 +1629,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     bootimageOutput->writeChunk(stringTable, image->stringCount * sizeof(unsigned));
     bootimageOutput->writeChunk(callTable, image->callCount * sizeof(unsigned) * 2);
 
-    unsigned offset = sizeof(BootImage) 
+    unsigned offset = sizeof(BootImage)
       + (image->bootClassCount * sizeof(unsigned))
       + (image->appClassCount * sizeof(unsigned))
       + (image->stringCount * sizeof(unsigned))
@@ -1628,15 +1654,10 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     //   return false;
     // }
 
-    const char* const startName = "_binary_codeimage_bin_start";
-    const char* const endName = "_binary_codeimage_bin_end";
+    compilationHandler.symbols.add(SymbolInfo(0, "_binary_codeimage_bin_start"));
+    compilationHandler.symbols.add(SymbolInfo(image->codeSize, "_binary_codeimage_bin_end"));
 
-    SymbolInfo symbols[] = {
-      SymbolInfo(0, startName),
-      SymbolInfo(image->codeSize, endName)
-    };
-
-    platform->writeObject(codeOutput, Slice<SymbolInfo>(symbols, 2), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
+    platform->writeObject(codeOutput, Slice<SymbolInfo>(compilationHandler.symbols), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
   }
 }
 

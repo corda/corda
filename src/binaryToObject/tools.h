@@ -12,6 +12,7 @@
 #define AVIAN_TOOLS_H_
 
 #include "environment.h"
+#include <malloc.h>
 
 namespace avian {
 
@@ -86,12 +87,41 @@ public:
     items(items),
     count(count) {}
 
+  inline Slice(const Slice<T>& copy):
+    items(copy.items),
+    count(copy.count) {}
+
   inline T* begin() {
     return items;
   }
 
   inline T* end() {
     return items + count;
+  }
+};
+
+template<class T>
+class DynamicArray : public Slice<T> {
+public:
+  size_t capacity;
+
+  DynamicArray():
+    Slice<T>((T*)malloc(10 * sizeof(T)), 0),
+    capacity(10) {}
+  ~DynamicArray() {
+    free(Slice<T>::items);
+  }
+
+  void ensure(size_t more) {
+  if(Slice<T>::count + more > capacity) {
+    capacity = capacity * 2 + more;
+    Slice<T>::items = (T*)realloc(Slice<T>::items, capacity * sizeof(T));
+  }
+}
+
+  void add(const T& item) {
+    ensure(1);
+    Slice<T>::items[Slice<T>::count++] = item;
   }
 };
 
