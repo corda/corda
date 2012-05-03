@@ -332,7 +332,8 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_allocateMemory
 (Thread* t, object, uintptr_t* arguments)
 {
-  void* p = malloc(arguments[1]);
+  int64_t size; memcpy(&size, arguments + 1, 8);
+  void* p = malloc(size);
   if (p) {
     return reinterpret_cast<int64_t>(p);
   } else {
@@ -344,9 +345,9 @@ extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_freeMemory
 (Thread*, object, uintptr_t* arguments)
 {
-  void* p = reinterpret_cast<void*>(arguments[1]);
+  int64_t p; memcpy(&p, arguments + 1, 8);
   if (p) {
-    free(p);
+    free(reinterpret_cast<void*>(p));
   }
 }
 
