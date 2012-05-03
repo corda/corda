@@ -557,19 +557,7 @@ Step 6: Build the boot and code images.
  $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
      bootimage.bin codeimage.bin
 
-Step 7: Make an object file out of the boot and code images.
-
- $ ../build/linux-i386-bootimage/binaryToObject \
-     bootimage.bin bootimage-bin.o \
-     _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     linux i386 8 writable
-
- $ ../build/linux-i386-bootimage/binaryToObject \
-     codeimage.bin codeimage-bin.o \
-     _binary_codeimage_bin_start _binary_codeimage_bin_end \
-     linux i386 8 executable
-
-Step 8: Write a driver which starts the VM and runs the desired main
+Step 7: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
 VM to get a handle to the embedded boot image.  We tell the VM about
 this function via the "avian.bootimage" property.

@@ -1604,6 +1604,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
           image->bootClassCount, image->stringCount, image->callCount,
           image->heapSize, image->codeSize);
 
+  Buffer bootimageData;
+
   if (true) {
     { BootImage targetImage;
 
@@ -1620,13 +1622,13 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 #include "bootimage-fields.cpp"
 #undef THUNK_FIELD
 
-      bootimageOutput->writeChunk(&targetImage, sizeof(BootImage));
+      bootimageData.write(&targetImage, sizeof(BootImage));
     }
 
-    bootimageOutput->writeChunk(bootClassTable, image->bootClassCount * sizeof(unsigned));
-    bootimageOutput->writeChunk(appClassTable, image->appClassCount * sizeof(unsigned));
-    bootimageOutput->writeChunk(stringTable, image->stringCount * sizeof(unsigned));
-    bootimageOutput->writeChunk(callTable, image->callCount * sizeof(unsigned) * 2);
+    bootimageData.write(bootClassTable, image->bootClassCount * sizeof(unsigned));
+    bootimageData.write(appClassTable, image->appClassCount * sizeof(unsigned));
+    bootimageData.write(stringTable, image->stringCount * sizeof(unsigned));
+    bootimageData.write(callTable, image->callCount * sizeof(unsigned) * 2);
 
     unsigned offset = sizeof(BootImage)
       + (image->bootClassCount * sizeof(unsigned))
@@ -1636,13 +1638,13 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     while (offset % TargetBytesPerWord) {
       uint8_t c = 0;
-      bootimageOutput->write(c);
+      bootimageData.write(&c, 1);
       ++ offset;
     }
 
-    bootimageOutput->writeChunk(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord));
+    bootimageData.write(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord));
 
-    bootimageOutput->writeChunk(heap, pad(image->heapSize, TargetBytesPerWord));
+    bootimageData.write(heap, pad(image->heapSize, TargetBytesPerWord));
 
     // fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
     
@@ -1652,6 +1654,13 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
     //   return false;
     // }
+
+    SymbolInfo bootimageSymbols[] = {
+      SymbolInfo(0, "_binary_bootimage_bin_start"),
+      SymbolInfo(bootimageData.length, "_binary_bootimage_bin_end")
+    };
+
+    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimageData.data, bootimageData.length), Platform::Writable, TargetBytesPerWord);
 
     compilationHandler.symbols.add(SymbolInfo(0, strdup("_binary_codeimage_bin_start")));
     compilationHandler.symbols.add(SymbolInfo(image->codeSize, strdup("_binary_codeimage_bin_end")));

@@ -576,10 +576,7 @@ bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
 
-bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
-
-codeimage-bin = $(build)/codeimage.bin
 codeimage-object = $(build)/codeimage-bin.o
 
 ifeq ($(bootimage),true)
@@ -910,14 +907,8 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(bootimage-bin): $(bootimage-generator)
-	$(<) $(classpath-build) $(@) $(codeimage-object)
-
-$(bootimage-object): $(bootimage-bin) $(converter)
-	@echo "creating $(@)"
-	$(converter) $(<) $(@) _binary_bootimage_bin_start \
-		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
-		writable
+$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+	$(<) $(classpath-build) $(bootimage-object) $(codeimage-object)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
