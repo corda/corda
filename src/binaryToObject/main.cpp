@@ -18,9 +18,9 @@
 #include <windows.h>
 #else
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 #include <fcntl.h>
-#include <unistd.h>
 
 #include "tools.h"
 
