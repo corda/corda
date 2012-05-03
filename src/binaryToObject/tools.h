@@ -11,8 +11,8 @@
 #ifndef AVIAN_TOOLS_H_
 #define AVIAN_TOOLS_H_
 
+#include <stdlib.h>
 #include "environment.h"
-#include <malloc.h>
 
 namespace avian {
 
