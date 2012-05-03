@@ -22,6 +22,7 @@ target-arch = $(arch)
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
+target-platform = $(platform)
 
 mode = fast
 process = compile
@@ -282,10 +283,6 @@ ifeq ($(ios),true)
 	cflags += -DAVIAN_IOS
 endif
 
-ifeq ($(platform),linux)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
-endif
-
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
@@ -293,8 +290,6 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),darwin)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
-
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -370,8 +365,6 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
-
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
 
@@ -384,7 +377,7 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
@@ -492,7 +485,7 @@ ifdef msvc
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
-		-DTARGET_BYTES_PER_WORD=$(pointer-size) -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
@@ -724,6 +717,18 @@ ifeq ($(target-arch),arm)
 	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
 endif
 
+ifeq ($(target-platform),linux)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
+endif
+
+ifeq ($(target-platform),windows)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+endif
+
+ifeq ($(target-platform),darwin)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
+endif
+
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
@@ -936,10 +941,12 @@ endif
 	$(strip) $(strip-all) $(@)
 
 $(bootimage-generator): $(bootimage-generator-objects)
+	echo arch=$(arch) platform=$(platform)
 	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
+		target-platform=$(platform) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
