@@ -121,9 +121,7 @@ public:
     void writeHeader(OutputStream* out) {
       header.NumberOfSections = sectionCount;
       header.PointerToSymbolTable = dataStart + dataOffset;
-      printf("symbol table start: 0x%x\n", header.PointerToSymbolTable);
       dataOffset = pad(dataOffset + symbolCount * sizeof(IMAGE_SYMBOL));
-      printf("string table start: 0x%x\n", dataStart + dataOffset);
       header.NumberOfSymbols = symbolCount;
       out->writeChunk(&header, sizeof(IMAGE_FILE_HEADER));
     }
@@ -188,7 +186,6 @@ public:
 
     void writeHeader(OutputStream* out) {
       header.PointerToRawData = dataOffset + file.dataStart;
-      printf("section %s: data at 0x%x, ending at 0x%x\n", header.Name, header.PointerToRawData, header.PointerToRawData + header.SizeOfRawData);
       out->writeChunk(&header, sizeof(IMAGE_SECTION_HEADER));
     }
 

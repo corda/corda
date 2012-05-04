@@ -41,6 +41,13 @@ class Processor {
     virtual unsigned count() = 0;
   };
 
+  class CompilationHandler {
+   public:
+    virtual void compiled(const void* code, unsigned size, unsigned frameSize, const char* class_, const char* name, const char* spec) = 0;
+
+    virtual void dispose() = 0;
+  };
+
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;
 
@@ -119,6 +126,9 @@ class Processor {
 
   virtual void
   initialize(BootImage* image, uint8_t* code, unsigned capacity) = 0;
+
+  virtual void
+  addCompilationHandler(CompilationHandler* handler) = 0;
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,

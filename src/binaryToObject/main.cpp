@@ -18,9 +18,9 @@
 #include <windows.h>
 #else
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 #include <fcntl.h>
-#include <unistd.h>
 
 #include "tools.h"
 
@@ -45,18 +45,17 @@ writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
 {
-  Platform* platform = Platform::getPlatform(PlatformInfo(os, architecture));
+  Platform* platform = Platform::getPlatform(PlatformInfo(PlatformInfo::osFromString(os), PlatformInfo::archFromString(architecture)));
 
   if(!platform) {
     fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
     return false;
   }
 
-  SymbolInfo symbols[2];
-  symbols[0].name = startName;
-  symbols[0].addr = 0;
-  symbols[1].name = endName;
-  symbols[1].addr = size;
+  SymbolInfo symbols[] = {
+    SymbolInfo(0, startName),
+    SymbolInfo(size, endName)
+  };
 
   unsigned accessFlags = (writable ? Platform::Writable : 0) | (executable ? Platform::Executable : 0);
 

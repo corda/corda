@@ -18,9 +18,11 @@ build-platform := \
 		| sed 's/^cygwin.*$$/cygwin/')
 
 arch = $(build-arch)
+target-arch = $(arch)
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
+target-platform = $(platform)
 
 mode = fast
 process = compile
@@ -190,8 +192,10 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject \
-	-fno-rtti -fno-exceptions
+converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
+	-fno-rtti -fno-exceptions \
+	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
+	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN
 
 cflags = $(build-cflags)
 
@@ -231,6 +235,7 @@ endif
 ifeq ($(arch),i386)
 	pointer-size = 4
 endif
+
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
@@ -249,9 +254,11 @@ ifeq ($(arch),powerpc)
 		endif
 	endif
 endif
+
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
+
 	ifeq ($(build-platform),darwin)
 		ios = true
 	else
@@ -281,10 +288,6 @@ ifeq ($(ios),true)
 	cflags += -DAVIAN_IOS
 endif
 
-ifeq ($(platform),linux)
-	bootimage-cflags += -DTARGET_PLATFORM_LINUX
-endif
-
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
@@ -292,8 +295,6 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),darwin)
-	bootimage-cflags += -DTARGET_PLATFORM_DARWIN
-
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -371,8 +372,6 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	bootimage-cflags += -DTARGET_PLATFORM_WINDOWS
-
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
 
@@ -385,7 +384,7 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -494,7 +493,7 @@ ifdef msvc
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
-		-DTARGET_BYTES_PER_WORD=$(pointer-size) -DTARGET_PLATFORM_WINDOWS
+		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
@@ -585,10 +584,7 @@ bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
 
-bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
-
-codeimage-bin = $(build)/codeimage.bin
 codeimage-object = $(build)/codeimage-bin.o
 
 ifeq ($(bootimage),true)
@@ -630,13 +626,16 @@ converter-depends = \
 
 
 converter-sources = \
-	$(src)/binaryToObject/main.cpp \
 	$(src)/binaryToObject/tools.cpp \
 	$(src)/binaryToObject/elf.cpp \
 	$(src)/binaryToObject/mach-o.cpp \
 	$(src)/binaryToObject/pe.cpp
 
+converter-tool-sources = \
+	$(src)/binaryToObject/main.cpp
+
 converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
+converter-tool-objects = $(call cpp-objects,$(converter-tool-sources),$(src),$(build))
 converter = $(build)/binaryToObject/binaryToObject
 
 static-library = $(build)/lib$(name).a
@@ -705,6 +704,34 @@ endif
 ifeq ($(tails),true)
 	tail-tests = \
 		extra.Tails
+endif
+
+ifeq ($(target-arch),i386)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86
+endif
+
+ifeq ($(target-arch),x86_64)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86_64
+endif
+
+ifeq ($(target-arch),powerpc)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_POWERPC
+endif
+
+ifeq ($(target-arch),arm)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
+endif
+
+ifeq ($(target-platform),linux)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
+endif
+
+ifeq ($(target-platform),windows)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+endif
+
+ifeq ($(target-platform),darwin)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
@@ -842,11 +869,11 @@ $(boot-object): $(boot-source)
 $(boot-javahome-object): $(src)/boot-javahome.cpp
 	$(compile-object)
 
-$(converter-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $(converter-depends)
+$(converter-objects) $(converter-tool-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $(converter-depends)
 	@mkdir -p $(dir $(@))
 	$(build-cxx) $(converter-cflags) -c $(<) -o $(@)
 
-$(converter): $(converter-objects)
+$(converter): $(converter-objects) $(converter-tool-objects)
 	$(build-cc) $(^) -g -o $(@)
 
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
@@ -888,20 +915,8 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(bootimage-bin): $(bootimage-generator)
-	$(<) $(classpath-build) $(@) $(codeimage-bin)
-
-$(bootimage-object): $(bootimage-bin) $(converter)
-	@echo "creating $(@)"
-	$(converter) $(<) $(@) _binary_bootimage_bin_start \
-		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
-		writable
-
-$(codeimage-object): $(bootimage-bin) $(converter)
-	@echo "creating $(@)"
-	$(converter) $(codeimage-bin) $(@) _binary_codeimage_bin_start \
-		_binary_codeimage_bin_end $(platform) $(arch) $(pointer-size) \
-		executable
+$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+	$(<) $(classpath-build) $(bootimage-object) $(codeimage-object)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
@@ -924,10 +939,13 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator):
+$(bootimage-generator): $(bootimage-generator-objects)
+	echo arch=$(arch) platform=$(platform)
 	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
+		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
+		target-platform=$(platform) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
@@ -938,7 +956,7 @@ $(bootimage-generator):
 
 $(build-bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(classpath-objects) \
-		$(heapwalk-objects) $(bootimage-generator-objects)
+		$(heapwalk-objects) $(bootimage-generator-objects) $(converter-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
