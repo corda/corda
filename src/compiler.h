@@ -184,6 +184,8 @@ class Compiler {
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
 
+  virtual void trap() = 0;
+
   virtual void loadBarrier() = 0;
   virtual void storeStoreBarrier() = 0;
   virtual void storeLoadBarrier() = 0;

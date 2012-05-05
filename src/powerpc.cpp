@@ -130,6 +130,7 @@ inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
 inline int cmpwi(int ra, int i) { return cmpi(0, ra, i); }
 inline int cmplwi(int ra, int i) { return cmpli(0, ra, i); }
+inline int trap() { return 0x7fe00008; } // todo: macro-ify
 }
 
 const int64_t MASK_LO32 = 0x0ffffffff;
@@ -1908,6 +1909,12 @@ return_(Context* c)
 }
 
 void
+trap(Context* c)
+{
+  emit(c, trap());
+}
+
+void
 memoryBarrier(Context* c)
 {
   emit(c, sync(0));
@@ -1923,7 +1930,7 @@ argumentFootprint(unsigned footprint)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
-          unsigned footprint, void* link, void*,
+          unsigned footprint, void* link, bool,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1988,6 +1995,7 @@ populateTables(ArchitectureContext* c)
   zo[LoadBarrier] = memoryBarrier;
   zo[StoreStoreBarrier] = memoryBarrier;
   zo[StoreLoadBarrier] = memoryBarrier;
+  zo[Trap] = trap;
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
@@ -2215,12 +2223,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, link,
-                stackLimit, targetParameterFootprint, ip, stack);
+                mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {

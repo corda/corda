@@ -646,6 +646,12 @@ return_(Context* c)
 }
 
 void
+trap(Context* c)
+{
+  opcode(c, 0xcc);
+}
+
+void
 ignore(Context*)
 { }
 
@@ -2163,8 +2169,8 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, a->low != rdx);
 
   c->client->save(rdx);
-    
-  maybeRex(c, aSize, a, b);
+
+  maybeRex(c, aSize, a, b);    
   opcode(c, 0x99); // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
@@ -2180,8 +2186,8 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, a->low != rdx);
 
   c->client->save(rdx);
-    
-  maybeRex(c, aSize, a, b);
+
+  maybeRex(c, aSize, a, b);    
   opcode(c, 0x99); // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
@@ -2552,7 +2558,7 @@ read4(uint8_t* p)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
-          unsigned footprint, void*, void* stackLimit,
+          unsigned footprint, void*, bool mostRecent,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -2570,6 +2576,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   }
 
   if (instruction <= start) {
+    assert(c, mostRecent);
     *ip = static_cast<void**>(*stack)[0];
     return;
   }
@@ -2579,6 +2586,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     start += (TargetBytesPerWord == 4 ? 3 : 4);
 
     if (instruction <= start or *instruction == 0x5d) {
+      assert(c, mostRecent);
+
       *ip = static_cast<void**>(*stack)[1];
       *stack = static_cast<void**>(*stack) + 1;
       return;
@@ -2590,8 +2599,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     return;
   }
 
-  unsigned offset = footprint + FrameHeaderSize
-    - (stackLimit == *stack ? 1 : 0);
+  unsigned offset = footprint + FrameHeaderSize - (mostRecent ? 1 : 0);
 
   if (TailCalls) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
@@ -2642,6 +2650,7 @@ populateTables(ArchitectureContext* c)
   zo[LoadBarrier] = ignore;
   zo[StoreStoreBarrier] = ignore;
   zo[StoreLoadBarrier] = storeLoadBarrier;
+  zo[Trap] = trap;
 
   uo[index(c, Call, C)] = CAST1(callC);
   uo[index(c, Call, R)] = CAST1(callR);
@@ -2966,12 +2975,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     local::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
-                     link, stackLimit, targetParameterFootprint, ip, stack);
+                     link, mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {

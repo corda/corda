@@ -4576,14 +4576,14 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
   }
 }
 
-class BarrierEvent: public Event {
+class OperationEvent: public Event {
  public:
-  BarrierEvent(Context* c, Operation op):
+  OperationEvent(Context* c, Operation op):
     Event(c), op(op)
   { }
 
   virtual const char* name() {
-    return "BarrierEvent";
+    return "OperationEvent";
   }
 
   virtual void compile(Context* c) {
@@ -4594,9 +4594,10 @@ class BarrierEvent: public Event {
 };
 
 void
-appendBarrier(Context* c, Operation op)
+appendOperation(Context* c, Operation op)
 {
-  append(c, new (c->zone->allocate(sizeof(BarrierEvent))) BarrierEvent(c, op));
+  append
+    (c, new (c->zone->allocate(sizeof(OperationEvent))) OperationEvent(c, op));
 }
 
 class MemoryEvent: public Event {
@@ -6902,16 +6903,20 @@ class MyCompiler: public Compiler {
     return result;
   }
 
+  virtual void trap() {
+    appendOperation(&c, Trap);
+  }
+
   virtual void loadBarrier() {
-    appendBarrier(&c, LoadBarrier);
+    appendOperation(&c, LoadBarrier);
   }
 
   virtual void storeStoreBarrier() {
-    appendBarrier(&c, StoreStoreBarrier);
+    appendOperation(&c, StoreStoreBarrier);
   }
 
   virtual void storeLoadBarrier() {
-    appendBarrier(&c, StoreLoadBarrier);
+    appendOperation(&c, StoreLoadBarrier);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,
