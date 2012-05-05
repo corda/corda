@@ -612,7 +612,7 @@ class MyStackWalker: public Processor::StackWalker {
   }
     
   void next() {
-    expect(t, count_ <= StackSizeInWords);
+    expect(t, count_ <= stackSizeInWords(t));
 
     switch (state) {
     case Continuation:
