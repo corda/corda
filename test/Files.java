@@ -1,4 +1,6 @@
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 
 public class Files {
   private static void expect(boolean v) {
@@ -45,6 +47,32 @@ public class Files {
       f.createNewFile();
       expect(! f.createNewFile());
       f.delete();
+    }
+
+    { File f = new File("test.txt");
+      FileOutputStream out = new FileOutputStream(f);
+      try {
+        byte[] message = "hello, world!\n".getBytes();
+        out.write(message);
+        out.close();
+
+        FileInputStream in = new FileInputStream(f);
+        try {
+          expect(in.available() == message.length);
+          
+          for (int i = 0; i < message.length; ++i) {
+            in.read();
+            expect(in.available() == message.length - i - 1);
+          }
+          
+          expect(in.read() == -1);
+          expect(in.available() == 0);
+        } finally {
+          in.close();
+        }
+      } finally {
+        f.delete();
+      }
     }
   }
 
