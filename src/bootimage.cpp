@@ -1293,15 +1293,17 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   class MyCompilationHandler : public Processor::CompilationHandler {
    public:
     virtual void compiled(const void* code, unsigned size UNUSED, unsigned frameSize UNUSED, const char* class_, const char* name, const char* spec) {
-      size_t classLen = strlen(class_);
-      size_t nameLen = strlen(name);
-      size_t specLen = strlen(spec);
-
-      char* completeName = (char*)malloc(classLen + nameLen + specLen + 2);
-      sprintf(completeName, "%s.%s%s", class_, name, spec);
-      uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
-      symbols.add(SymbolInfo(offset, completeName));
-      // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
+      if (class_ and name and spec) {
+        size_t classLen = strlen(class_);
+        size_t nameLen = strlen(name);
+        size_t specLen = strlen(spec);
+        
+        char* completeName = (char*)malloc(classLen + nameLen + specLen + 2);
+        sprintf(completeName, "%s.%s%s", class_, name, spec);
+        uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
+        symbols.add(SymbolInfo(offset, completeName));
+        // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
+      }
     }
 
     virtual void dispose() {}
