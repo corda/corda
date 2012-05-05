@@ -684,10 +684,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   }
 
   for (; methods; methods = pairSecond(t, methods)) {
-    intptr_t address = codeCompiled(t, methodCode(t, pairFirst(t, methods)));
-    reinterpret_cast<target_uintptr_t*>(address)[-1]
-      = targetVW(reinterpret_cast<target_uintptr_t*>(address)[-1]);
-
     codeCompiled(t, methodCode(t, pairFirst(t, methods)))
       -= reinterpret_cast<uintptr_t>(code);
   }

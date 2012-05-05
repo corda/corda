@@ -176,8 +176,8 @@ class MyThread: public Thread {
       Context(t, ip, stack, continuation, trace),
       t(t),
       link(0),
-      javaStackLimit(0),
-      next(t->traceContext)
+      next(t->traceContext),
+      methodIsMostRecent(false)
     {
       t->traceContext = this;
     }
@@ -186,8 +186,8 @@ class MyThread: public Thread {
       Context(t, t->ip, t->stack, t->continuation, t->trace),
       t(t),
       link(link),
-      javaStackLimit(0),
-      next(t->traceContext)
+      next(t->traceContext),
+      methodIsMostRecent(false)
     {
       t->traceContext = this;
     }
@@ -198,8 +198,8 @@ class MyThread: public Thread {
 
     MyThread* t;
     void* link;
-    void* javaStackLimit;
     TraceContext* next;
+    bool methodIsMostRecent;
   };
 
   static void doTransition(MyThread* t, void* ip, void* stack,
@@ -353,16 +353,16 @@ root(Thread* t, Root root);
 void
 setRoot(Thread* t, Root root, object value);
 
-unsigned
-compiledSize(intptr_t address)
-{
-  return reinterpret_cast<target_uintptr_t*>(address)[-1];
-}
-
 intptr_t
 methodCompiled(Thread* t, object method)
 {
   return codeCompiled(t, methodCode(t, method));
+}
+
+unsigned
+methodCompiledSize(Thread* t, object method)
+{
+  return codeCompiledSize(t, methodCode(t, method));
 }
 
 intptr_t
@@ -374,13 +374,13 @@ compareIpToMethodBounds(Thread* t, intptr_t ip, object method)
     fprintf(stderr, "find %p in (%p,%p)\n",
             reinterpret_cast<void*>(ip),
             reinterpret_cast<void*>(start),
-            reinterpret_cast<void*>(start + compiledSize(start)));
+            reinterpret_cast<void*>(start + methodCompiledSize(t, method)));
   }
 
   if (ip < start) {
     return -1;
   } else if (ip < start + static_cast<intptr_t>
-             (compiledSize(start) + TargetBytesPerWord))
+             (methodCompiledSize(t, method)))
   {
     return 0;
   } else {
@@ -427,19 +427,20 @@ alignedFrameSize(MyThread* t, object method)
 }
 
 void
-nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
+nextFrame(MyThread* t, void** ip, void** sp, object method, object target,
+          bool mostRecent)
 {
   object code = methodCode(t, method);
   intptr_t start = codeCompiled(t, code);
   void* link;
-  void* javaStackLimit;
+  bool methodIsMostRecent;
 
   if (t->traceContext) {
     link = t->traceContext->link;
-    javaStackLimit = t->traceContext->javaStackLimit;
+    methodIsMostRecent = mostRecent and t->traceContext->methodIsMostRecent;
   } else {
     link = 0;
-    javaStackLimit = 0;
+    methodIsMostRecent = false;
   }
 
   // fprintf(stderr, "nextFrame %s.%s%s target %s.%s%s ip %p sp %p\n",
@@ -458,8 +459,8 @@ nextFrame(MyThread* t, void** ip, void** sp, object method, object target)
   //         *ip, *sp);
 
   t->arch->nextFrame
-    (reinterpret_cast<void*>(start), compiledSize(start),
-     alignedFrameSize(t, method), link, javaStackLimit,
+    (reinterpret_cast<void*>(start), codeCompiledSize(t, code),
+     alignedFrameSize(t, method), link, methodIsMostRecent,
      target ? methodParameterFootprint(t, target) : -1, ip, sp);
 
   // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
@@ -514,6 +515,7 @@ class MyStackWalker: public Processor::StackWalker {
     state(Start),
     method_(0),
     target(0),
+    count_(0),
     protector(this)
   {
     if (t->traceContext) {
@@ -538,6 +540,7 @@ class MyStackWalker: public Processor::StackWalker {
     method_(w->method_),
     target(w->target),
     continuation(w->continuation),
+    count_(0),
     protector(this)
   { }
 
@@ -609,13 +612,15 @@ class MyStackWalker: public Processor::StackWalker {
   }
     
   void next() {
+    expect(t, count_ <= StackSizeInWords);
+
     switch (state) {
     case Continuation:
       continuation = continuationNext(t, continuation);
       break;
 
     case Method:
-      nextFrame(t, &ip_, &stack, method_, target);
+      nextFrame(t, &ip_, &stack, method_, target, count_ == 0);
       break;
 
     case NativeMethod:
@@ -624,6 +629,8 @@ class MyStackWalker: public Processor::StackWalker {
     default:
       abort(t);
     }
+
+    ++ count_;
 
     state = Next;
   }
@@ -671,6 +678,7 @@ class MyStackWalker: public Processor::StackWalker {
   object method_;
   object target;
   object continuation;
+  unsigned count_;
   MyProtector protector;
 };
 
@@ -2065,6 +2073,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
   }
 
   object target = t->trace->targetMethod;
+  bool mostRecent = true;
 
   *targetIp = 0;
   while (*targetIp == 0) {
@@ -2075,7 +2084,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
       if (handler) {
         *targetIp = handler;
 
-        nextFrame(t, &ip, &stack, method, target);
+        nextFrame(t, &ip, &stack, method, target, mostRecent);
 
         void** sp = static_cast<void**>(stackForFrame(t, stack, method))
           + t->arch->frameReturnAddressSize();
@@ -2089,7 +2098,7 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
 
         t->exception = 0;
       } else {
-        nextFrame(t, &ip, &stack, method, target);
+        nextFrame(t, &ip, &stack, method, target, mostRecent);
 
         if (t->exception) {
           releaseLock(t, method, stack);
@@ -2137,6 +2146,8 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
         *targetContinuation = continuationNext(t, c);
       }
     }
+
+    mostRecent = false;
   }
 }
 
@@ -2160,6 +2171,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
   object last = 0;
   PROTECT(t, last);
 
+  bool mostRecent = true;
+
   *targetIp = 0;
   while (*targetIp == 0) {
     object method = methodForIp(t, ip);
@@ -2177,7 +2190,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
       }
 
       void* nextIp = ip;
-      nextFrame(t, &nextIp, &stack, method, target);
+      nextFrame(t, &nextIp, &stack, method, target, mostRecent);
 
       void** bottom = static_cast<void**>(stack)
           + t->arch->frameReturnAddressSize();
@@ -2215,6 +2228,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
       *targetStack = static_cast<void**>(stack)
         + t->arch->frameReturnAddressSize();
     }
+
+    mostRecent = false;
   }
 
   expect(t, last);
@@ -4295,6 +4310,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
          0,
          Compiler::VoidType,
          2, c->register_(t->arch->thread()), target);
+
+      if (ip == codeLength(t, code)) {
+        c->trap();
+      }
     } return;
 
     case bipush:
@@ -7005,15 +7024,14 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   // we must acquire the class lock here at the latest
  
   unsigned codeSize = c->resolve
-    (allocator->base + allocator->offset + TargetBytesPerWord);
+    (allocator->base + allocator->offset);
 
   unsigned total = pad(codeSize, TargetBytesPerWord)
-    + pad(c->poolSize(), TargetBytesPerWord) + TargetBytesPerWord;
+    + pad(c->poolSize(), TargetBytesPerWord);
 
   target_uintptr_t* code = static_cast<target_uintptr_t*>
     (allocator->allocate(total, TargetBytesPerWord));
-  code[0] = codeSize;
-  uint8_t* start = reinterpret_cast<uint8_t*>(code + 1);
+  uint8_t* start = reinterpret_cast<uint8_t*>(code);
 
   context->executableAllocator = allocator;
   context->executableStart = code;
@@ -7066,7 +7084,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
 
     code = makeCode
       (t, 0, newExceptionHandlerTable, newLineNumberTable,
-       reinterpret_cast<uintptr_t>(start), codeMaxStack(t, code),
+       reinterpret_cast<uintptr_t>(start), codeSize, codeMaxStack(t, code),
        codeMaxLocals(t, code), 0);
 
     set(t, context->method, MethodCode, code);
@@ -7770,6 +7788,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
   MyThread::CallTrace* trace = t->trace;
   object targetMethod = (trace ? trace->targetMethod : 0);
   object target = targetMethod;
+  bool mostRecent = true;
 
   while (stack) {
     if (targetMethod) {
@@ -7782,7 +7801,7 @@ visitStack(MyThread* t, Heap::Visitor* v)
       PROTECT(t, method);
 
       void* nextIp = ip;
-      nextFrame(t, &nextIp, &stack, method, target);
+      nextFrame(t, &nextIp, &stack, method, target, mostRecent);
 
       visitStackAndLocals(t, v, stack, method, ip);
 
@@ -7803,6 +7822,8 @@ visitStack(MyThread* t, Heap::Visitor* v)
     } else {
       break;
     }
+
+    mostRecent = false;
   }
 }
 
@@ -8837,7 +8858,7 @@ class MyProcessor: public Processor {
           // we caught the thread in Java code - use the register values
           c.ip = ip;
           c.stack = stack;
-          c.javaStackLimit = stack;
+          c.methodIsMostRecent = true;
         } else if (target->transition) {
           // we caught the thread in native code while in the middle
           // of updating the context fields (MyThread::stack, etc.)
@@ -9498,8 +9519,7 @@ fixupMethods(Thread* t, object map, BootImage* image UNUSED, uint8_t* code)
             logCompile
               (static_cast<MyThread*>(t),
                reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
-               reinterpret_cast<uintptr_t*>
-               (methodCompiled(t, method))[-1],
+               methodCompiledSize(t, method),
                reinterpret_cast<char*>
                (&byteArrayBody(t, className(t, methodClass(t, method)), 0)),
                reinterpret_cast<char*>

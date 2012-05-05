@@ -136,6 +136,7 @@ inline int ble(int offset) { return SETCOND(b(offset), LE); }
 inline int bge(int offset) { return SETCOND(b(offset), GE); }
 inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
+inline int bkpt() { return 0xe1200070; } // todo: macro-ify
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
@@ -1617,6 +1618,12 @@ return_(Context* c)
 }
 
 void
+trap(Context* c)
+{
+  emit(c, bkpt());
+}
+
+void
 memoryBarrier(Context*) {}
 
 // END OPERATION COMPILERS
@@ -1629,7 +1636,7 @@ argumentFootprint(unsigned footprint)
 
 void
 nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
-          unsigned footprint, void* link, void*,
+          unsigned footprint, void* link, bool,
           unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1703,6 +1710,7 @@ populateTables(ArchitectureContext* c)
   zo[LoadBarrier] = memoryBarrier;
   zo[StoreStoreBarrier] = memoryBarrier;
   zo[StoreLoadBarrier] = memoryBarrier;
+  zo[Trap] = trap;
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
@@ -1922,12 +1930,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     ::nextFrame(&c, static_cast<uint32_t*>(start), size, footprint, link,
-                stackLimit, targetParameterFootprint, ip, stack);
+                mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {

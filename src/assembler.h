@@ -32,10 +32,11 @@ enum Operation {
   Return,
   LoadBarrier,
   StoreStoreBarrier,
-  StoreLoadBarrier
+  StoreLoadBarrier,
+  Trap
 };
 
-const unsigned OperationCount = StoreLoadBarrier + 1;
+const unsigned OperationCount = Trap + 1;
 
 enum UnaryOperation {
   Call,
@@ -367,7 +368,7 @@ class Assembler {
     virtual unsigned alignFrameSize(unsigned sizeInWords) = 0;
 
     virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                           void* link, void* stackLimit,
+                           void* link, bool mostRecent,
                            unsigned targetParameterFootprint, void** ip,
                            void** stack) = 0;
     virtual void* frameIp(void* stack) = 0;
