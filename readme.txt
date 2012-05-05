@@ -220,11 +220,11 @@ features beyond that subset, you may want to tell Avian to use
 OpenJDK's class library instead.  To do so, specify the directory
 where OpenJDK is installed, e.g.:
 
- $ make openjdk=/usr/lib/jvm/java-6-openjdk
+ $ make openjdk=/usr/lib/jvm/java-7-openjdk
 
 This will build Avian as a conventional JVM (e.g. libjvm.so) which
 loads its boot class library and native libraries (e.g. libjava.so)
-from /usr/lib/jvm/java-6-openjdk/jre at runtime.  To run an
+from /usr/lib/jvm/java-7-openjdk/jre at runtime.  To run an
 application in this configuration, you'll need to make sure the VM is
 in your library search path.  For example:
 
@@ -235,8 +235,8 @@ in your library search path.  For example:
 Alternatively, you can enable a stand-alone build using OpenJDK by
 specifying the location of the OpenJDK source code, e.g.:
 
- $ make openjdk=$(pwd)/../jdk6/build/linux-amd64/j2sdk-image \
-     openjdk-src=$(pwd)/../jdk6/jdk/src
+ $ make openjdk=$(pwd)/../jdk7/build/linux-amd64/j2sdk-image \
+     openjdk-src=$(pwd)/../jdk7/jdk/src
 
 You must ensure that the path specified for openjdk-src does not have
 any spaces in it; make gets confused when dependency paths include
@@ -271,49 +271,42 @@ it on various OSes:
 
   Debian-based Linux:
     # conventional build:
-    apt-get install openjdk-6-jdk
-    make openjdk=/usr/lib/jvm/java-6-openjdk test
+    apt-get install openjdk-7-jdk
+    make openjdk=/usr/lib/jvm/java-7-openjdk test
 
     # stand-alone build:
-    apt-get install openjdk-6-jdk
-    apt-get source openjdk-6-jdk
-    apt-get build-dep openjdk-6-jdk
-    (cd openjdk-6-6b18-1.8.3 && ./debian/rules patch)
-    make openjdk=/usr/lib/jvm/java-6-openjdk \
-      openjdk-src=$(pwd)/openjdk-6-6b18-1.8.3/build/openjdk/jdk/src \
+    apt-get install openjdk-7-jdk
+    apt-get source openjdk-7-jdk
+    apt-get build-dep openjdk-7-jdk
+    (cd openjdk-7-7~b147-2.0 && dpkg-buildpackage)
+    make openjdk=/usr/lib/jvm/java-7-openjdk \
+      openjdk-src=$(pwd)/openjdk-7-7~b147-2.0/build/openjdk/jdk/src \
       test
 
   Mac OS X:
-    # Prerequisite: install MacPorts (http://www.macports.org/)
-    sudo port selfupdate
+    # Prerequisite: build OpenJDK 7 according to
+    # https://wikis.oracle.com/display/OpenJDK/Mac+OS+X+Port
 
     # conventional build:
-    sudo port install openjdk6
-    make openjdk=/opt/local/share/java/openjdk6 test
+    make openjdk=$(pwd)/../jdk7u-dev/build/macosx-amd64/j2sdk-image test
 
     # stand-alone build:
-    sudo port fetch openjdk6
-    sudo port patch openjdk6
-    make openjdk=/opt/local/share/java/openjdk6 \
-      openjdk-src=/opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_ports_java_openjdk6/work/jdk/src \
-      test
+    make openjdk=$(pwd)/../jdk7u-dev/build/macosx-amd64/j2sdk-image \
+      openjdk-src=$(pwd)/../p/jdk7u-dev/jdk/src test
 
   Windows (Cygwin):
+    # Prerequisite: build OpenJDK 7 according to
+    # http://weblogs.java.net/blog/simonis/archive/2011/10/28/yaojowbi-yet-another-openjdk-windows-build-instruction
+
     # conventional build:
-    # Prerequisite: download and install the latest Windows OpenJDK
-    # build from http://www.openscg.com/se/openjdk/
-    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 test
+    make openjdk=$(pwd)/../jdk7u-dev/build/windows-i586/j2sdk-image test
 
     # stand-alone build:
-    # Prerequisite: install OpenSCG build as above, plus the
-    # corresponding source bundle from
-    # http://download.java.net/openjdk/jdk6/promoted/, e.g.:
-    wget http://download.java.net/openjdk/jdk6/promoted/b21/openjdk-6-src-b21-20_jan_2011.tar.gz
-    mkdir openjdk
-    (cd openjdk && tar xzf ../openjdk-6-src-b21-20_jan_2011.tar.gz)
-    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 \
-      openjdk-src=$(pwd)/openjdk/jdk/src \
-      test
+    make openjdk=$(pwd)/../jdk7u-dev/build/windows-i586/j2sdk-image \
+      openjdk-src=$(pwd)/../p/jdk7u-dev/jdk/src test
+
+Currently, only OpenJDK 7 is supported.  Later versions might work,
+but have not yet been tested.
 
 
 Installing
