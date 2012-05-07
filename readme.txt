@@ -664,7 +664,7 @@ EOF
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
      -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
 
-Step 9: Link the objects produced above to produce the final
+Step 8: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
 
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello
