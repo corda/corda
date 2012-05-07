@@ -43,7 +43,7 @@ class Processor {
 
   class CompilationHandler {
    public:
-    virtual void compiled(const void* code, unsigned size, unsigned frameSize, const char* class_, const char* name, const char* spec) = 0;
+    virtual void compiled(const void* code, unsigned size, unsigned frameSize, const char* name) = 0;
 
     virtual void dispose() = 0;
   };

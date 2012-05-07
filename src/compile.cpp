@@ -9093,6 +9093,20 @@ class MyProcessor: public Processor {
   CompilationHandlerList* compilationHandlers;
 };
 
+const char*
+stringOrNull(const char* str) {
+  if(str) {
+    return str;
+  } else {
+    return "(null)";
+  }
+}
+
+size_t
+stringOrNullSize(const char* str) {
+  return strlen(stringOrNull(str));
+}
+
 void
 logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
            const char* name, const char* spec)
@@ -9114,9 +9128,15 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
             class_, name, spec);
   }
 
+  size_t nameLength = stringOrNullSize(class_) + stringOrNullSize(name) + stringOrNullSize(spec) + 2;
+
+  THREAD_RUNTIME_ARRAY(t, char, completeName, nameLength);
+
+  sprintf(RUNTIME_ARRAY_BODY(completeName), "%s.%s%s", stringOrNull(class_), stringOrNull(name), stringOrNull(spec));
+
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
   for(CompilationHandlerList* h = p->compilationHandlers; h; h = h->next) {
-    h->handler->compiled(code, 0, 0, class_, name, spec);
+    h->handler->compiled(code, 0, 0, RUNTIME_ARRAY_BODY(completeName));
   }
 }
 
@@ -9986,7 +10006,15 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
   a->setDestination(start);
   a->write();
 
-  logCompile(t, start, *size, 0, "virtualThunk", 0);
+  const char* const virtualThunkBaseName = "virtualThunk";
+  const size_t virtualThunkBaseNameLength = strlen(virtualThunkBaseName);
+  const size_t maxIntStringLength = 10;
+
+  THREAD_RUNTIME_ARRAY(t, char, virtualThunkName, virtualThunkBaseNameLength + maxIntStringLength);
+
+  sprintf(RUNTIME_ARRAY_BODY(virtualThunkName), "%s%d", virtualThunkBaseName, index);
+
+  logCompile(t, start, *size, 0, virtualThunkName, 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }

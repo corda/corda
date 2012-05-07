@@ -55,7 +55,7 @@ public:
   unsigned addr;
   String name;
 
-  inline SymbolInfo(uint64_t addr, const char* name):
+  inline SymbolInfo(uint64_t addr, const String& name):
     addr(addr),
     name(name) {}
 
