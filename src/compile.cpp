@@ -10000,7 +10000,15 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
   a->setDestination(start);
   a->write();
 
-  logCompile(t, start, *size, 0, "virtualThunk", 0);
+  const char* const virtualThunkBaseName = "virtualThunk";
+  const size_t virtualThunkBaseNameLength = strlen(virtualThunkBaseName);
+  const size_t maxIntStringLength = 10;
+
+  THREAD_RUNTIME_ARRAY(t, char, virtualThunkName, virtualThunkBaseNameLength + maxIntStringLength);
+
+  sprintf(RUNTIME_ARRAY_BODY(virtualThunkName), "%s%d", virtualThunkBaseName, index);
+
+  logCompile(t, start, *size, 0, virtualThunkName, 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }
