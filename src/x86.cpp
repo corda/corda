@@ -157,7 +157,7 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
+    firstBlock(new(zone) MyBlock(0)),
     lastBlock(firstBlock), ac(ac)
   { }
 
@@ -207,8 +207,7 @@ expect(Context* c, bool v)
 ResolvedPromise*
 resolved(Context* c, int64_t value)
 {
-  return new (c->zone->allocate(sizeof(ResolvedPromise)))
-    ResolvedPromise(value);
+  return new(c->zone) ResolvedPromise(value);
 }
 
 class CodePromise: public Promise {
@@ -234,7 +233,7 @@ class CodePromise: public Promise {
 CodePromise*
 codePromise(Context* c, unsigned offset)
 {
-  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
+  return new (c->zone) CodePromise(c, offset);
 }
 
 class Offset: public Promise {
@@ -268,8 +267,7 @@ class Offset: public Promise {
 Promise*
 offset(Context* c)
 {
-  return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
+  return new(c->zone) Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
 }
 
 class Task {
@@ -346,8 +344,8 @@ void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
                  unsigned instructionSize)
 {
-  OffsetTask* task = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset, instructionSize);
+  OffsetTask* task =
+    new(c->zone) OffsetTask(c->tasks, promise, instructionOffset, instructionSize);
 
   c->tasks = task;
 }
@@ -418,7 +416,7 @@ void
 appendImmediateTask(Context* c, Promise* promise, Promise* offset,
                     unsigned size, unsigned promiseOffset = 0)
 {
-  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
+  c->tasks = new(c->zone) ImmediateTask
     (c->tasks, promise, offset, size, promiseOffset);
 }
 
@@ -839,7 +837,7 @@ callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
+  new(c->zone) AlignmentPadding(c, 1, 4);
   callC(c, size, a);
 }
 
@@ -849,8 +847,7 @@ alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == TargetBytesPerWord);
 
   if (TargetBytesPerWord == 8) {
-    new (c->zone->allocate(sizeof(AlignmentPadding)))
-      AlignmentPadding(c, 2, 8);
+    new (c->zone) AlignmentPadding(c, 2, 8);
     longCallC(c, size, a);
   } else {
     alignedCallC(c, size, a);
@@ -860,7 +857,7 @@ alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
 void
 alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
+  new (c->zone) AlignmentPadding(c, 1, 4);
   jumpC(c, size, a);
 }
 
@@ -870,8 +867,7 @@ alignedLongJumpC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == TargetBytesPerWord);
 
   if (TargetBytesPerWord == 8) {
-    new (c->zone->allocate(sizeof(AlignmentPadding)))
-      AlignmentPadding(c, 2, 8);
+    new (c->zone) AlignmentPadding(c, 2, 8);
     longJumpC(c, size, a);
   } else {
     alignedJumpC(c, size, a);
@@ -1296,8 +1292,7 @@ moveAR(Context* c, unsigned aSize, Assembler::Address* a,
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new(c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 void
@@ -3707,8 +3702,7 @@ class MyAssembler: public Assembler {
     MyBlock* b = c.lastBlock;
     b->size = c.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(c.code.length());
+      c.lastBlock = new(c.zone) MyBlock(c.code.length());
     } else {
       c.lastBlock = 0;
     }
@@ -3752,9 +3746,9 @@ Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(local::MyAssembler)))
-    local::MyAssembler(system, allocator, zone,
-                       static_cast<local::MyArchitecture*>(architecture));
+  return
+    new(zone) local::MyAssembler(system, allocator, zone,
+                                 static_cast<local::MyArchitecture*>(architecture));
 }
 
 } // namespace vm

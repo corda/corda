@@ -1389,8 +1389,7 @@ class Frame {
   Compiler::Operand* append(object o) {
     BootContext* bc = context->bootContext;
     if (bc) {
-      Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
-        ListenPromise(t->m->system, bc->zone);
+      Promise* p = new (bc->zone) ListenPromise(t->m->system, bc->zone);
 
       PROTECT(t, o);
       object pointer = makePointer(t, p);
@@ -1408,9 +1407,7 @@ class Frame {
         }
       }
 
-      context->objectPool = new
-        (context->zone.allocate(sizeof(PoolElement)))
-        PoolElement(t, o, context->objectPool);
+      context->objectPool = new(&context->zone) PoolElement(t, o, context->objectPool);
 
       ++ context->objectPoolCount;
 
@@ -1615,8 +1612,7 @@ class Frame {
   Promise* addressPromise(Promise* p) {
     BootContext* bc = context->bootContext;
     if (bc) {
-      bc->addresses = new (bc->zone->allocate(sizeof(DelayedPromise)))
-        DelayedPromise(t->m->system, bc->zone, p, bc->addresses);
+      bc->addresses = new(bc->zone) DelayedPromise(t->m->system, bc->zone, p, bc->addresses);
       return bc->addresses;
     } else {
       return p;
@@ -1633,7 +1629,7 @@ class Frame {
         (TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           TargetThreadCodeImage), c->promiseConstant
-         (new (context->zone.allocate(sizeof(OffsetPromise)))
+         (new(&context->zone)
           OffsetPromise
           (p, - reinterpret_cast<intptr_t>(codeAllocator(t)->base)),
           Compiler::AddressType))
@@ -3417,8 +3413,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
           and (not (TailCalls and tailCall
                     and (methodFlags(t, target) & ACC_NATIVE))))
       {
-        Promise* p = new (bc->zone->allocate(sizeof(ListenPromise)))
-          ListenPromise(t->m->system, bc->zone);
+        Promise* p = new(bc->zone) ListenPromise(t->m->system, bc->zone);
 
         PROTECT(t, target);
         object pointer = makePointer(t, p);
@@ -6636,7 +6631,7 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       }
 
       if (path == 0) {
-        path = new (context->zone.allocate(sizeof(SubroutinePath)))
+        path = new(&context->zone)
           SubroutinePath(call, subroutinePath,
                          makeRootTable(t, &(context->zone), context->method));
       }
@@ -7061,8 +7056,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
          p != bc->addressSentinal;
          p = p->next)
     {
-      p->basis = new (bc->zone->allocate(sizeof(ResolvedPromise)))
-        ResolvedPromise(p->basis->value());
+      p->basis = new(bc->zone) ResolvedPromise(p->basis->value());
     }
   }
 
@@ -9724,8 +9718,7 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
       (call ? Call : Jump, TargetBytesPerWord, RegisterOperand, &scratch);
   } else {
     Assembler::Constant proc
-      (new (c->zone.allocate(sizeof(ResolvedPromise)))
-       ResolvedPromise(reinterpret_cast<intptr_t>(t->thunkTable[index])));
+      (new(&c->zone) ResolvedPromise(reinterpret_cast<intptr_t>(t->thunkTable[index])));
 
     a->apply
       (call ? LongCall : LongJump, TargetBytesPerWord, ConstantOperand, &proc);

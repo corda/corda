@@ -228,7 +228,7 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(this, 0)),
+    firstBlock(new(zone) MyBlock(this, 0)),
     lastBlock(firstBlock), poolOffsetHead(0), poolOffsetTail(0),
     constantPool(0), constantPoolCount(0)
   { }
@@ -346,8 +346,7 @@ class Offset: public Promise {
 Promise*
 offset(Context* c, bool forTrace = false)
 {
-  return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length(), forTrace);
+  return new(c->zone) Offset(c, c->lastBlock, c->code.length(), forTrace);
 }
 
 bool
@@ -414,8 +413,7 @@ class OffsetTask: public Task {
 void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset)
 {
-  c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset);
+  c->tasks = new(c->zone) OffsetTask(c->tasks, promise, instructionOffset);
 }
 
 inline unsigned
@@ -628,17 +626,14 @@ appendConstantPoolEntry(Context* c, Promise* constant, Promise* callOffset)
   if (constant->resolved()) {
     // make a copy, since the original might be allocated on the
     // stack, and we need our copy to live until assembly is complete
-    constant = new (c->zone->allocate(sizeof(ResolvedPromise)))
-      ResolvedPromise(constant->value());
+    constant = new(c->zone) ResolvedPromise(constant->value());
   }
 
-  c->constantPool = new (c->zone->allocate(sizeof(ConstantPoolEntry)))
-    ConstantPoolEntry(c, constant, c->constantPool, callOffset);
+  c->constantPool = new(c->zone) ConstantPoolEntry(c, constant, c->constantPool, callOffset);
 
   ++ c->constantPoolCount;
 
-  PoolOffset* o = new (c->zone->allocate(sizeof(PoolOffset))) PoolOffset
-    (c->lastBlock, c->constantPool, c->code.length() - c->lastBlock->offset);
+  PoolOffset* o = new(c->zone) PoolOffset(c->lastBlock, c->constantPool, c->code.length() - c->lastBlock->offset);
 
   if (DebugPool) {
     fprintf(stderr, "add pool offset %p %d to block %p\n",
@@ -657,8 +652,7 @@ void
 appendPoolEvent(Context* c, MyBlock* b, unsigned offset, PoolOffset* head,
                 PoolOffset* tail)
 {
-  PoolEvent* e = new (c->zone->allocate(sizeof(PoolEvent))) PoolEvent
-    (head, tail, offset);
+  PoolEvent* e = new(c->zone) PoolEvent(head, tail, offset);
 
   if (b->poolEventTail) {
     b->poolEventTail->next = e;
@@ -1522,8 +1516,7 @@ branchCM(Context* c, TernaryOperation op, unsigned size,
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new(c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 void
@@ -2158,9 +2151,7 @@ class MyAssembler: public Assembler {
   {
     Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
-    Constant handlerConstant
-      (new (c.zone->allocate(sizeof(ResolvedPromise)))
-       ResolvedPromise(handler));
+    Constant handlerConstant(new(c.zone) ResolvedPromise(handler));
     branchRM(&c, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
@@ -2465,8 +2456,7 @@ class MyAssembler: public Assembler {
     MyBlock* b = c.lastBlock;
     b->size = c.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(&c, c.code.length());
+      c.lastBlock = new (c.zone) MyBlock(&c, c.code.length());
     } else {
       c.lastBlock = 0;
     }
@@ -2537,8 +2527,7 @@ Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(MyAssembler)))
-    MyAssembler(system, allocator, zone,
+  return new(zone) MyAssembler(system, allocator, zone,
                 static_cast<MyArchitecture*>(architecture));
 }
 

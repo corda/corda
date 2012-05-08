@@ -57,4 +57,8 @@ copy(Allocator* allocator, const char* a)
 
 } // namespace vm
 
+inline void* operator new (size_t size, vm::Allocator* allocator) {
+  return allocator->allocate(size);
+}
+
 #endif//ALLOCATOR_H

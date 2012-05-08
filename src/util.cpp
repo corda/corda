@@ -58,8 +58,7 @@ class TreeContext {
 TreeContext::Path*
 path(TreeContext* c, object node, TreeContext::Path* next)
 {
-  return new (c->zone->allocate(sizeof(TreeContext::Path)))
-    TreeContext::Path(node, next);
+  return new(c->zone) TreeContext::Path(node, next);
 }
 
 inline object
