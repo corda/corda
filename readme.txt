@@ -356,7 +356,7 @@ EOF
 
 Step 3: Make an object file out of the jar.
 
- $ ../build/${platform}-${arch}/binaryToObject boot.jar boot-jar.o \
+ $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar boot-jar.o \
      _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
 
 Step 4: Write a driver which starts the VM and runs the desired main
