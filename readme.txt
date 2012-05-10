@@ -554,8 +554,16 @@ systems with case-insensitive filesystems such as Windows and OS X)
 
 Step 6: Build the boot and code images.
 
- $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
-     bootimage-bin.o codeimage-bin.o
+ $ ../build/linux-i386-bootimage/bootimage-generator
+    -cp stage2 \
+    -bootimage bootimage-bin.o \
+    -codeimage codeimage-bin.o
+
+Note that you can override the default names for the start and end
+symbols in the boot/code image by also passing:
+
+    -bootimage-symbols my_bootimage_start:my_bootimage_end \
+    -codeimage-symbols my_codeimage_start:my_codeimage_end
 
 Step 7: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the

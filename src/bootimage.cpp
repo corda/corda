@@ -1285,7 +1285,9 @@ targetThunk(BootImage::Thunk t)
 void
 writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutput,
                 BootImage* image, uint8_t* code, const char* className,
-                const char* methodName, const char* methodSpec)
+                const char* methodName, const char* methodSpec,
+                const char* bootimageStart, const char* bootimageEnd,
+                const char* codeimageStart, const char* codeimageEnd)
 {
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -1658,14 +1660,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     // }
 
     SymbolInfo bootimageSymbols[] = {
-      SymbolInfo(0, "_binary_bootimage_bin_start"),
-      SymbolInfo(bootimageData.length, "_binary_bootimage_bin_end")
+      SymbolInfo(0, bootimageStart),
+      SymbolInfo(bootimageData.length, bootimageEnd)
     };
 
     platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimageData.data, bootimageData.length), Platform::Writable, TargetBytesPerWord);
 
-    compilationHandler.symbols.add(SymbolInfo(0, "_binary_codeimage_bin_start"));
-    compilationHandler.symbols.add(SymbolInfo(image->codeSize, "_binary_codeimage_bin_end"));
+    compilationHandler.symbols.add(SymbolInfo(0, codeimageStart));
+    compilationHandler.symbols.add(SymbolInfo(image->codeSize, codeimageEnd));
 
     platform->writeObject(codeOutput, Slice<SymbolInfo>(compilationHandler.symbols), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
 
@@ -1686,28 +1688,251 @@ writeBootImage(Thread* t, uintptr_t* arguments)
   const char* methodName = reinterpret_cast<const char*>(arguments[5]);
   const char* methodSpec = reinterpret_cast<const char*>(arguments[6]);
 
+  const char* bootimageStart = reinterpret_cast<const char*>(arguments[7]);
+  const char* bootimageEnd = reinterpret_cast<const char*>(arguments[8]);
+  const char* codeimageStart = reinterpret_cast<const char*>(arguments[9]);
+  const char* codeimageEnd = reinterpret_cast<const char*>(arguments[10]);
+
   writeBootImage2
     (t, bootimageOutput, codeOutput, image, code, className, methodName,
-     methodSpec);
+     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd);
 
   return 1;
 }
+
+class Arg;
+
+class ArgParser {
+public:
+  Arg* first;
+  Arg** last;
+
+  ArgParser():
+    first(0),
+    last(&first) {}
+
+  bool parse(int ac, const char** av);
+  void printUsage(const char* exe);
+};
+
+class Arg {
+public:
+  Arg* next;
+  bool required;
+  const char* name;
+  const char* desc;
+
+  const char* value;
+
+  Arg(ArgParser& parser, bool required, const char* name, const char* desc):
+    next(0),
+    required(required),
+    name(name),
+    desc(desc),
+    value(0)
+  {
+    *parser.last = this;
+    parser.last = &next;
+  }
+};
+
+bool ArgParser::parse(int ac, const char** av) {
+  Arg* state = 0;
+
+  for(int i = 1; i < ac; i++) {
+    if(state) {
+      if(state->value) {
+        fprintf(stderr, "duplicate parameter %s: '%s' and '%s'\n", state->name, state->value, av[i]);
+        return false;
+      }
+      state->value = av[i];
+      state = 0;
+    } else {
+      if(av[i][0] != '-') {
+        fprintf(stderr, "expected -parameter\n");
+        return false;
+      }
+      for(Arg* arg = first; arg; arg = arg->next) {
+        if(strcmp(arg->name,  &av[i][1]) == 0) {
+          state = arg;
+        }
+      }
+      if(!state) {
+        fprintf(stderr, "unrecognized parameter %s\n", av[i]);
+        return false;
+      }
+    }
+  }
+
+  if(state) {
+    fprintf(stderr, "expected argument after -%s\n", state->name);
+    return false;
+  }
+
+  for(Arg* arg = first; arg; arg = arg->next) {
+    if(arg->required && !arg->value) {
+      fprintf(stderr, "expected value for %s\n", arg->name);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void ArgParser::printUsage(const char* exe) {
+  fprintf(stderr, "usage:\n%s \\\n", exe);
+  for(Arg* arg = first; arg; arg = arg->next) {
+    const char* lineEnd = arg->next ? " \\" : "";
+    if(arg->required) {
+      fprintf(stderr, "  -%s\t%s%s\n", arg->name, arg->desc, lineEnd);
+    } else {
+      fprintf(stderr, "  [-%s\t%s]%s\n", arg->name, arg->desc, lineEnd);
+    }
+  }
+}
+
+class Arguments {
+public:
+
+  const char* classpath;
+
+  const char* bootimage;
+  const char* codeimage;
+
+  char* entryClass;
+  char* entryMethod;
+  char* entrySpec;
+
+  char* bootimageStart;
+  char* bootimageEnd;
+
+  char* codeimageStart;
+  char* codeimageEnd;
+
+  bool maybeSplit(const char* src, char*& destA, char*& destB) {
+    if(src) {
+      const char* split = strchr(src, ':');
+      if(!split) {
+        return false;
+      }
+
+      destA = strndup(src, split - src);
+      destB = strdup(split + 1);
+    }
+    return true;
+  }
+
+  Arguments(int ac, const char** av):
+    entryClass(0),
+    entryMethod(0),
+    entrySpec(0),
+    bootimageStart(strdup("_binary_bootimage_bin_start")),
+    bootimageEnd(strdup("_binary_bootimage_bin_end")),
+    codeimageStart(strdup("_binary_codeimage_bin_start")),
+    codeimageEnd(strdup("_binary_codeimage_bin_end"))
+  {
+    ArgParser parser;
+    Arg classpath(parser, true, "cp", "<classpath>");
+    Arg bootimage(parser, true, "bootimage", "<bootimage file>");
+    Arg codeimage(parser, true, "codeimage", "<codeimage file>");
+    Arg entry(parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
+    Arg bootimageSymbols(parser, false, "bootimage-symbols", "<start symbol name>:<end symbol name>");
+    Arg codeimageSymbols(parser, false, "codeimage-symbols", "<start symbol name>:<end symbol name>");
+
+    if(!parser.parse(ac, av)) {
+      parser.printUsage(av[0]);
+      exit(1);
+    }
+
+    this->classpath = classpath.value;
+    this->bootimage = bootimage.value;
+    this->codeimage = codeimage.value;
+
+    if(entry.value) {
+      if(const char* entryClassEnd = strchr(entry.value, '.')) {
+        entryClass = strndup(entry.value, entryClassEnd - entry.value);
+        if(const char* entryMethodEnd = strchr(entryClassEnd, '(')) {
+          entryMethod = strndup(entryClassEnd + 1, entryMethodEnd - entryClassEnd - 1);
+          entrySpec = strdup(entryMethodEnd);
+        } else {
+          entryMethod = strdup(entryClassEnd + 1);
+        }
+      } else {
+        entryClass = strdup(entry.value);
+      }
+    }
+
+    if(!maybeSplit(bootimageSymbols.value, bootimageStart, bootimageEnd) ||
+       !maybeSplit(codeimageSymbols.value, codeimageStart, codeimageEnd))
+    {
+      fprintf(stderr, "wrong format for symbols\n");
+      parser.printUsage(av[0]);
+      exit(1);
+    }
+
+  }
+
+  ~Arguments() {
+    if(entryClass) {
+      free(entryClass);
+    }
+    if(entryMethod) {
+      free(entryMethod);
+    }
+    if(entrySpec) {
+      free(entrySpec);
+    }
+    if(bootimageStart) {
+      free(bootimageStart);
+    }
+    if(bootimageEnd) {
+      free(bootimageEnd);
+    }
+    if(codeimageStart) {
+      free(codeimageStart);
+    }
+    if(codeimageEnd) {
+      free(codeimageEnd);
+    }
+  }
+
+  void dump() {
+    printf(
+      "classpath = %s\n"
+      "bootimage = %s\n"
+      "codeimage = %s\n"
+      "entryClass = %s\n"
+      "entryMethod = %s\n"
+      "entrySpec = %s\n"
+      "bootimageStart = %s\n"
+      "bootimageEnd = %s\n"
+      "codeimageStart = %s\n"
+      "codeimageEnd = %s\n",
+      classpath,
+      bootimage,
+      codeimage,
+      entryClass,
+      entryMethod,
+      entrySpec,
+      bootimageStart,
+      bootimageEnd,
+      codeimageStart,
+      codeimageEnd);
+  }
+};
 
 } // namespace
 
 int
 main(int ac, const char** av)
 {
-  if (ac < 4 or ac > 7) {
-    fprintf(stderr, "usage: %s <classpath> <bootimage file> <code file>"
-            " [<class name> [<method name> [<method spec>]]]\n", av[0]);
-    return -1;
-  }
+  Arguments args(ac, av);
+  // args.dump();
 
   System* s = makeSystem(0);
   Heap* h = makeHeap(s, HeapCapacity * 2);
   Classpath* c = makeClasspath(s, h, AVIAN_JAVA_HOME, AVIAN_EMBED_PREFIX);
-  Finder* f = makeFinder(s, h, av[1], 0);
+  Finder* f = makeFinder(s, h, args.classpath, 0);
   Processor* p = makeProcessor(s, h, false);
 
   // todo: currently, the compiler cannot compile code with jumps or
@@ -1728,25 +1953,31 @@ main(int ac, const char** av)
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
-  FileOutputStream bootimageOutput(av[2]);
+  FileOutputStream bootimageOutput(args.bootimage);
   if (!bootimageOutput.isValid()) {
-    fprintf(stderr, "unable to open %s\n", av[2]);    
+    fprintf(stderr, "unable to open %s\n", args.bootimage);    
     return -1;
   }
 
-  FileOutputStream codeOutput(av[3]);
+  FileOutputStream codeOutput(args.codeimage);
   if (!codeOutput.isValid()) {
-    fprintf(stderr, "unable to open %s\n", av[3]);    
+    fprintf(stderr, "unable to open %s\n", args.codeimage);    
     return -1;
   }
 
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(&bootimageOutput),
-                            reinterpret_cast<uintptr_t>(&codeOutput),
-                            reinterpret_cast<uintptr_t>(&image),
-                            reinterpret_cast<uintptr_t>(code),
-                            reinterpret_cast<uintptr_t>(ac > 4 ? av[4] : 0),
-                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0),
-                            reinterpret_cast<uintptr_t>(ac > 6 ? av[6] : 0) };
+  uintptr_t arguments[] = {
+    reinterpret_cast<uintptr_t>(&bootimageOutput),
+    reinterpret_cast<uintptr_t>(&codeOutput),
+    reinterpret_cast<uintptr_t>(&image),
+    reinterpret_cast<uintptr_t>(code),
+    reinterpret_cast<uintptr_t>(args.entryClass),
+    reinterpret_cast<uintptr_t>(args.entryMethod),
+    reinterpret_cast<uintptr_t>(args.entrySpec),
+    reinterpret_cast<uintptr_t>(args.bootimageStart),
+    reinterpret_cast<uintptr_t>(args.bootimageEnd),
+    reinterpret_cast<uintptr_t>(args.codeimageStart),
+    reinterpret_cast<uintptr_t>(args.codeimageEnd)
+  };
 
   run(t, writeBootImage, arguments);
 
