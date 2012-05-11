@@ -1826,10 +1826,10 @@ public:
     entryClass(0),
     entryMethod(0),
     entrySpec(0),
-    bootimageStart(strdup("_binary_bootimage_bin_start")),
-    bootimageEnd(strdup("_binary_bootimage_bin_end")),
-    codeimageStart(strdup("_binary_codeimage_bin_start")),
-    codeimageEnd(strdup("_binary_codeimage_bin_end"))
+    bootimageStart(0),
+    bootimageEnd(0),
+    codeimageStart(0),
+    codeimageEnd(0)
   {
     ArgParser parser;
     Arg classpath(parser, true, "cp", "<classpath>");
@@ -1868,6 +1868,22 @@ public:
       fprintf(stderr, "wrong format for symbols\n");
       parser.printUsage(av[0]);
       exit(1);
+    }
+
+    if(!bootimageStart) {
+      bootimageStart = strdup("_binary_bootimage_bin_start");
+    }
+
+    if(!bootimageEnd) {
+      bootimageEnd = strdup("_binary_bootimage_bin_end");
+    }
+
+    if(!codeimageStart) {
+      codeimageStart = strdup("_binary_codeimage_bin_start");
+    }
+
+    if(!codeimageEnd) {
+      codeimageEnd = strdup("_binary_codeimage_bin_end");
     }
 
   }
