@@ -54,7 +54,7 @@ Avian can currently target the following platforms:
   Linux (i386, x86_64, ARM, and 32-bit PowerPC)
   Windows (i386 and x86_64)
   Mac OS X (i386, x86_64 and 32-bit PowerPC)
-
+  Apple iOS (i386 and ARM)
 
 Building
 --------
@@ -78,6 +78,7 @@ certain flags described below, all of which are optional.
      arch={i386,x86_64,powerpc,arm} \
      process={compile,interpret} \
      mode={debug,debug-fast,fast,small} \
+     ios={true,false} \
      bootimage={true,false} \
      heapdump={true,false} \
      tails={true,false} \
@@ -93,13 +94,20 @@ certain flags described below, all of which are optional.
       default: output of $(uname -m), normalized in some cases
       (e.g. i686 -> i386)
 
+  * process - choice between pure interpreter or JIT compiler
+      default: compile
+
   * mode - which set of compilation flags to use to determine
     optimization level, debug symbols, and whether to enable
     assertions
       default: fast
 
-  * process - choice between pure interpreter or JIT compiler
-      default: compile
+  * ios - if true, cross-compile for iOS on OS X.  Note that
+    non-jailbroken iOS devices do not allow JIT compilation, so only
+    process=interpret or bootimage=true builds will run on such
+    devices.  See git://oss.readytalk.com/hello-ios.git for an example
+    of an Xcode project for iOS which uses Avian.
+      default: false
 
   * bootimage - if true, create a boot image containing the pre-parsed
     class library and ahead-of-time compiled methods.  This option is
