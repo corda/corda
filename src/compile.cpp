@@ -2368,6 +2368,31 @@ findInterfaceMethodFromInstanceAndReference
   return findInterfaceMethodFromInstance(t, method, instance);
 }
 
+void
+checkMethod(Thread* t, object method, bool shouldBeStatic)
+{
+  if (((methodFlags(t, method) & ACC_STATIC) == 0) == shouldBeStatic) {
+    throwNew(t, Machine::IncompatibleClassChangeErrorType,
+             "expected %s.%s%s to be %s",
+             &byteArrayBody(t, className(t, methodClass(t, method)), 0),
+             &byteArrayBody(t, methodName(t, method), 0),
+             &byteArrayBody(t, methodSpec(t, method), 0),
+             shouldBeStatic ? "static" : "non-static");
+  }
+}
+
+void
+checkField(Thread* t, object field, bool shouldBeStatic)
+{
+  if (((fieldFlags(t, field) & ACC_STATIC) == 0) == shouldBeStatic) {
+    throwNew(t, Machine::IncompatibleClassChangeErrorType,
+             "expected %s.%s to be %s",
+             &byteArrayBody(t, className(t, fieldClass(t, field)), 0),
+             &byteArrayBody(t, fieldName(t, field), 0),
+             shouldBeStatic ? "static" : "non-static");
+  }
+}
+
 int64_t
 findSpecialMethodFromReference(MyThread* t, object pair)
 {
@@ -2380,7 +2405,7 @@ findSpecialMethodFromReference(MyThread* t, object pair)
     target = findVirtualMethod(t, target, classSuper(t, class_));
   }
 
-  assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+  checkMethod(t, target, false);
 
   return prepareMethodForCall(t, target);
 }
@@ -2390,7 +2415,7 @@ findStaticMethodFromReference(MyThread* t, object pair)
 {
   object target = resolveMethod(t, pair);
 
-  assert(t, methodFlags(t, target) & ACC_STATIC);
+  checkMethod(t, target, true);
 
   return prepareMethodForCall(t, target);
 }
@@ -2404,7 +2429,7 @@ findVirtualMethodFromReference(MyThread* t, object pair, object instance)
 
   target = findVirtualMethod(t, target, objectClass(t, instance));
 
-  assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+  checkMethod(t, target, false);
 
   return prepareMethodForCall(t, target);
 }
@@ -4583,7 +4608,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         Compiler::Operand* table;
 
         if (instruction == getstatic) {
-          assert(t, fieldFlags(t, field) & ACC_STATIC);
+          checkField(t, field, true);
 
           PROTECT(t, field);
 
@@ -4603,7 +4628,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
           table = frame->append(classStaticTable(t, fieldClass(t, field)));
         } else {
-          assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+          checkField(t, field, false);
 
           table = frame->popObject();
 
@@ -5048,7 +5073,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       int returnCode;
       bool tailCall;
       if (LIKELY(target)) {
-        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+        checkMethod(t, target, false);
 
         argument = target;
         thunk = findInterfaceMethodFromInstanceThunk;
@@ -5107,7 +5132,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           target = findVirtualMethod(t, target, classSuper(t, class_));
         }
 
-        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
+        checkMethod(t, target, false);
 
         bool tailCall = isTailCall(t, code, ip, context->method, target);
 
@@ -5137,7 +5162,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object target = resolveMethod(t, context->method, index - 1, false);
 
       if (LIKELY(target)) {
-        assert(t, methodFlags(t, target) & ACC_STATIC);
+        checkMethod(t, target, true);
 
         if (not intrinsic(t, frame, target)) {
           bool tailCall = isTailCall(t, code, ip, context->method, target);
@@ -5163,8 +5188,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       object target = resolveMethod(t, context->method, index - 1, false);
 
       if (LIKELY(target)) {
-        assert(t, (methodFlags(t, target) & ACC_STATIC) == 0);
-          
+        checkMethod(t, target, false);
+         
         if (not intrinsic(t, frame, target)) {
           bool tailCall = isTailCall(t, code, ip, context->method, target);
 
@@ -5777,7 +5802,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         object staticTable = 0;
 
         if (instruction == putstatic) {
-          assert(t, fieldFlags(t, field) & ACC_STATIC);
+          checkField(t, field, true);
 
           if (fieldClass(t, field) != methodClass(t, context->method)
               and classNeedsInit(t, fieldClass(t, field)))
@@ -5797,7 +5822,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
           staticTable = classStaticTable(t, fieldClass(t, field));      
         } else {
-          assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+          checkField(t, field, false);
 
           if (inTryBlock(t, code, ip - 3)) {
             c->saveLocals();
