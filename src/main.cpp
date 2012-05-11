@@ -143,6 +143,7 @@ usageAndExit(const char* name)
     (stderr, "usage: %s\n"
      "\t[{-cp|-classpath} <classpath>]\n"
      "\t[-Xmx<maximum heap size>]\n"
+     "\t[-Xss<maximum stack size>]\n"
      "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
      "\t[-Xbootclasspath:<bootstrap classpath>]\n"
      "\t[-Xbootclasspath/a:<classpath to append to bootstrap classpath>]\n"

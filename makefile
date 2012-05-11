@@ -115,8 +115,13 @@ ifneq ($(openjdk),)
 	else
 	  options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
-		library-path = \
-			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		ifeq ($(build-platform),darwin)
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib
+		else
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		endif
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
@@ -308,9 +313,11 @@ ifeq ($(platform),darwin)
 	endif
 
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	lflags = $(common-lflags) -ldl -framework CoreFoundation \
+		-Wl,-compatibility_version,1.0.0
 	ifneq ($(arch),arm)
-		lflags +=	-framework CoreServices
+		lflags +=	-framework CoreServices -framework SystemConfiguration \
+			-framework Security
 	endif
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
@@ -376,9 +383,8 @@ ifeq ($(platform),windows)
 	so-suffix = .dll
 	exe-suffix = .exe
 
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
-
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -417,6 +423,8 @@ ifeq ($(platform),windows)
 		strip = x86_64-w64-mingw32-strip
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
+	else
+		shared += -Wl,--add-stdcall-alias
 	endif
 endif
 
@@ -1003,6 +1011,18 @@ $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	sed 's/^static jclass ia_class;//' < $(<) > $(build)/openjdk/$(notdir $(<))
+ifeq ($(ios),true)
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c" \
+		> $(build)/openjdk/ProcessEnvironment_md.c
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
+		> $(build)/openjdk/UNIXProcess_md.c
+endif
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@))
@@ -1034,6 +1054,42 @@ ifeq ($(platform),windows)
 		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
+ifeq ($(platform),darwin)
+	mkdir -p $(build)/openjdk/netinet
+	for file in \
+		/usr/include/netinet/ip.h \
+		/usr/include/netinet/in_systm.h \
+		/usr/include/netinet/ip_icmp.h \
+		/usr/include/netinet/in_var.h \
+		/usr/include/netinet/icmp6.h \
+		/usr/include/netinet/ip_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/netinet6
+	for file in \
+		/usr/include/netinet6/in6_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/net
+	for file in \
+		/usr/include/net/if_arp.h; do \
+		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/sys
+	for file in \
+		/usr/include/sys/kern_event.h \
+		/usr/include/sys/sys_domain.h; do \
+		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
+		fi; \
+	done
+endif
 	@touch $(@)
 
 $(openjdk-jar-dep):
@@ -1044,6 +1100,7 @@ $(openjdk-jar-dep):
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/charsets.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)

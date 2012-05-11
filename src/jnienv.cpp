@@ -3269,6 +3269,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   local::JavaVMInitArgs* a = static_cast<local::JavaVMInitArgs*>(args);
 
   unsigned heapLimit = 0;
+  unsigned stackLimit = 0;
   const char* bootLibrary = 0;
   const char* classpath = 0;
   const char* javaHome = AVIAN_JAVA_HOME;
@@ -3285,6 +3286,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
       const char* p = a->options[i].optionString + 2;
       if (strncmp(p, "mx", 2) == 0) {
         heapLimit = local::parseSize(p + 2);
+      } else if (strncmp(p, "ss", 2) == 0) {
+        stackLimit = local::parseSize(p + 2);
       } else if (strncmp(p, BOOTCLASSPATH_PREPEND_OPTION ":",
                          sizeof(BOOTCLASSPATH_PREPEND_OPTION)) == 0)
       {
@@ -3327,6 +3330,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   if (heapLimit == 0) heapLimit = 128 * 1024 * 1024;
+
+  if (stackLimit == 0) stackLimit = 128 * 1024;
   
   if (classpath == 0) classpath = ".";
   
@@ -3377,9 +3382,9 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     *(argumentPointer++) = a->options[i].optionString;
   }
 
-  *m = new (h->allocate(sizeof(Machine)))
-    Machine
-    (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions);
+  *m = new (h->allocate(sizeof(Machine))) Machine
+    (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions,
+     stackLimit);
 
   *t = p->makeThread(*m, 0, 0);
 

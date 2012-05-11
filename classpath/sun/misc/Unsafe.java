@@ -11,7 +11,8 @@ public final class Unsafe {
 
   public native long allocateMemory(long bytes);
 
-  public native void setMemory(long address, long count, byte value);
+  public native void setMemory
+    (Object base, long offset, long count, byte value);
 
   public native void freeMemory(long address);
 

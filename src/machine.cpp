@@ -1164,9 +1164,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        unsigned excess = (staticOffset % size) % BytesPerWord;
-        if (excess) {
-          staticOffset += BytesPerWord - excess;
+        while (staticOffset % size) {
+          ++ staticOffset;
         }
 
         fieldOffset(t, field) = staticOffset;
@@ -1205,9 +1204,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
-        unsigned excess = offset % size;
-        if (excess) {
-          offset += BytesPerWord - excess;
+        while (offset % size) {
+          ++ offset;
         }
 
         unsigned value = intArrayBody(t, staticValueTable, i);
@@ -2457,7 +2455,8 @@ namespace vm {
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
                  const char** properties, unsigned propertyCount,
-                 const char** arguments, unsigned argumentCount):
+                 const char** arguments, unsigned argumentCount,
+                 unsigned stackSizeInBytes):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2480,6 +2479,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   liveCount(0),
   daemonCount(0),
   fixedFootprint(0),
+  stackSizeInBytes(stackSizeInBytes),
   localThread(0),
   stateLock(0),
   heapLock(0),

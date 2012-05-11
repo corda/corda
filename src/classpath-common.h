@@ -120,6 +120,16 @@ void
 runOnLoadIfFound(Thread* t, System::Library* library)
 {
   void* p = library->resolve("JNI_OnLoad");
+
+#ifdef PLATFORM_WINDOWS
+  if (p == 0) {
+    p = library->resolve("_JNI_OnLoad@8");
+    if (p == 0) {
+      p = library->resolve("JNI_OnLoad@8");
+    }
+  }
+#endif
+
   if (p) {
     jint (JNICALL * JNI_OnLoad)(Machine*, void*);
     memcpy(&JNI_OnLoad, &p, sizeof(void*));
