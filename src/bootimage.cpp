@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -16,16 +16,18 @@
 #include "stream.h"
 #include "assembler.h"
 #include "target.h"
+#include "binaryToObject/tools.h"
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 using namespace vm;
+using namespace avian::tools;
 
 namespace {
 
-const unsigned HeapCapacity = 256 * 1024 * 1024;
+const unsigned HeapCapacity = 512 * 1024 * 1024;
 
 const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
 const unsigned TargetFixieSizeInWords = ceiling
@@ -435,6 +437,10 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
             memberFields[memberIndex] = *f;
 
+            while (targetMemberOffset % f->targetSize) {
+              ++ targetMemberOffset;
+            }
+
             targetMemberOffset += f->targetSize;
 
             ++ memberIndex;
@@ -498,10 +504,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             }
 
             if (fieldFlags(t, field) & ACC_STATIC) {
-              unsigned excess = (targetStaticOffset % targetSize)
-                % TargetBytesPerWord;
-              if (excess) {
-                targetStaticOffset += TargetBytesPerWord - excess;
+              while (targetStaticOffset % targetSize) {
+                ++ targetStaticOffset;
               }
 
               buildStaticOffset = fieldOffset(t, field);
@@ -680,10 +684,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   }
 
   for (; methods; methods = pairSecond(t, methods)) {
-    intptr_t address = codeCompiled(t, methodCode(t, pairFirst(t, methods)));
-    reinterpret_cast<target_uintptr_t*>(address)[-1]
-      = targetVW(reinterpret_cast<target_uintptr_t*>(address)[-1]);
-
     codeCompiled(t, methodCode(t, pairFirst(t, methods)))
       -= reinterpret_cast<uintptr_t>(code);
   }
@@ -1281,11 +1281,47 @@ targetThunk(BootImage::Thunk t)
 }
 
 void
-writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
+writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutput,
                 BootImage* image, uint8_t* code, const char* className,
-                const char* methodName, const char* methodSpec)
+                const char* methodName, const char* methodSpec,
+                const char* bootimageStart, const char* bootimageEnd,
+                const char* codeimageStart, const char* codeimageEnd)
 {
+  setRoot(t, Machine::OutOfMemoryError,
+          make(t, type(t, Machine::OutOfMemoryErrorType)));
+
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
+
+  class MyCompilationHandler : public Processor::CompilationHandler {
+   public:
+
+    String heapDup(const char* name) {
+      String ret(name);
+      char* n = (char*)heap->allocate(ret.length + 1);
+      memcpy(n, ret.text, ret.length + 1);
+      ret.text = n;
+      return ret;
+    }
+
+    virtual void compiled(const void* code, unsigned size UNUSED, unsigned frameSize UNUSED, const char* name) {
+      uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
+      symbols.add(SymbolInfo(offset, heapDup(name)));
+      // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
+    }
+
+    virtual void dispose() {}
+
+    DynamicArray<SymbolInfo> symbols;
+    uint64_t codeOffset;
+    Heap* heap;
+
+    MyCompilationHandler(uint64_t codeOffset, Heap* heap):
+      codeOffset(codeOffset),
+      heap(heap) {}
+
+  } compilationHandler(reinterpret_cast<uint64_t>(code), t->m->heap);
+
+  t->m->processor->addCompilationHandler(&compilationHandler);
 
   object classPoolMap;
   object typeMaps;
@@ -1573,6 +1609,8 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
           image->bootClassCount, image->stringCount, image->callCount,
           image->heapSize, image->codeSize);
 
+  Buffer bootimageData;
+
   if (true) {
     { BootImage targetImage;
 
@@ -1589,19 +1627,15 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
 #include "bootimage-fields.cpp"
 #undef THUNK_FIELD
 
-      fwrite(&targetImage, sizeof(BootImage), 1, bootimageOutput);
+      bootimageData.write(&targetImage, sizeof(BootImage));
     }
 
-    fwrite(bootClassTable, image->bootClassCount * sizeof(unsigned), 1,
-           bootimageOutput);
-    fwrite(appClassTable, image->appClassCount * sizeof(unsigned), 1,
-           bootimageOutput);
-    fwrite(stringTable, image->stringCount * sizeof(unsigned), 1,
-           bootimageOutput);
-    fwrite(callTable, image->callCount * sizeof(unsigned) * 2, 1,
-           bootimageOutput);
+    bootimageData.write(bootClassTable, image->bootClassCount * sizeof(unsigned));
+    bootimageData.write(appClassTable, image->appClassCount * sizeof(unsigned));
+    bootimageData.write(stringTable, image->stringCount * sizeof(unsigned));
+    bootimageData.write(callTable, image->callCount * sizeof(unsigned) * 2);
 
-    unsigned offset = sizeof(BootImage) 
+    unsigned offset = sizeof(BootImage)
       + (image->bootClassCount * sizeof(unsigned))
       + (image->appClassCount * sizeof(unsigned))
       + (image->stringCount * sizeof(unsigned))
@@ -1609,52 +1643,313 @@ writeBootImage2(Thread* t, FILE* bootimageOutput, FILE* codeOutput,
 
     while (offset % TargetBytesPerWord) {
       uint8_t c = 0;
-      fwrite(&c, 1, 1, bootimageOutput);
+      bootimageData.write(&c, 1);
       ++ offset;
     }
 
-    fwrite(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord), 1,
-           bootimageOutput);
+    bootimageData.write(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord));
 
-    fwrite(heap, pad(image->heapSize, TargetBytesPerWord), 1, bootimageOutput);
+    bootimageData.write(heap, pad(image->heapSize, TargetBytesPerWord));
 
-    fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
+    // fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
+    
+    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::OperatingSystem)AVIAN_TARGET_PLATFORM, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
+
+    // if(!platform) {
+    //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
+    //   return false;
+    // }
+
+    SymbolInfo bootimageSymbols[] = {
+      SymbolInfo(0, bootimageStart),
+      SymbolInfo(bootimageData.length, bootimageEnd)
+    };
+
+    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimageData.data, bootimageData.length), Platform::Writable, TargetBytesPerWord);
+
+    compilationHandler.symbols.add(SymbolInfo(0, codeimageStart));
+    compilationHandler.symbols.add(SymbolInfo(image->codeSize, codeimageEnd));
+
+    platform->writeObject(codeOutput, Slice<SymbolInfo>(compilationHandler.symbols), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
+
+    for(SymbolInfo* sym = compilationHandler.symbols.begin(); sym != compilationHandler.symbols.end() - 2; sym++) {
+      t->m->heap->free(const_cast<void*>((const void*)sym->name.text), sym->name.length + 1);
+    }
   }
 }
 
 uint64_t
 writeBootImage(Thread* t, uintptr_t* arguments)
 {
-  FILE* bootimageOutput = reinterpret_cast<FILE*>(arguments[0]);
-  FILE* codeOutput = reinterpret_cast<FILE*>(arguments[1]);
+  OutputStream* bootimageOutput = reinterpret_cast<OutputStream*>(arguments[0]);
+  OutputStream* codeOutput = reinterpret_cast<OutputStream*>(arguments[1]);
   BootImage* image = reinterpret_cast<BootImage*>(arguments[2]);
   uint8_t* code = reinterpret_cast<uint8_t*>(arguments[3]);
   const char* className = reinterpret_cast<const char*>(arguments[4]);
   const char* methodName = reinterpret_cast<const char*>(arguments[5]);
   const char* methodSpec = reinterpret_cast<const char*>(arguments[6]);
 
+  const char* bootimageStart = reinterpret_cast<const char*>(arguments[7]);
+  const char* bootimageEnd = reinterpret_cast<const char*>(arguments[8]);
+  const char* codeimageStart = reinterpret_cast<const char*>(arguments[9]);
+  const char* codeimageEnd = reinterpret_cast<const char*>(arguments[10]);
+
   writeBootImage2
     (t, bootimageOutput, codeOutput, image, code, className, methodName,
-     methodSpec);
+     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd);
 
   return 1;
 }
+
+class Arg;
+
+class ArgParser {
+public:
+  Arg* first;
+  Arg** last;
+
+  ArgParser():
+    first(0),
+    last(&first) {}
+
+  bool parse(int ac, const char** av);
+  void printUsage(const char* exe);
+};
+
+class Arg {
+public:
+  Arg* next;
+  bool required;
+  const char* name;
+  const char* desc;
+
+  const char* value;
+
+  Arg(ArgParser& parser, bool required, const char* name, const char* desc):
+    next(0),
+    required(required),
+    name(name),
+    desc(desc),
+    value(0)
+  {
+    *parser.last = this;
+    parser.last = &next;
+  }
+};
+
+bool ArgParser::parse(int ac, const char** av) {
+  Arg* state = 0;
+
+  for(int i = 1; i < ac; i++) {
+    if(state) {
+      if(state->value) {
+        fprintf(stderr, "duplicate parameter %s: '%s' and '%s'\n", state->name, state->value, av[i]);
+        return false;
+      }
+      state->value = av[i];
+      state = 0;
+    } else {
+      if(av[i][0] != '-') {
+        fprintf(stderr, "expected -parameter\n");
+        return false;
+      }
+      for(Arg* arg = first; arg; arg = arg->next) {
+        if(strcmp(arg->name,  &av[i][1]) == 0) {
+          state = arg;
+        }
+      }
+      if(!state) {
+        fprintf(stderr, "unrecognized parameter %s\n", av[i]);
+        return false;
+      }
+    }
+  }
+
+  if(state) {
+    fprintf(stderr, "expected argument after -%s\n", state->name);
+    return false;
+  }
+
+  for(Arg* arg = first; arg; arg = arg->next) {
+    if(arg->required && !arg->value) {
+      fprintf(stderr, "expected value for %s\n", arg->name);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+void ArgParser::printUsage(const char* exe) {
+  fprintf(stderr, "usage:\n%s \\\n", exe);
+  for(Arg* arg = first; arg; arg = arg->next) {
+    const char* lineEnd = arg->next ? " \\" : "";
+    if(arg->required) {
+      fprintf(stderr, "  -%s\t%s%s\n", arg->name, arg->desc, lineEnd);
+    } else {
+      fprintf(stderr, "  [-%s\t%s]%s\n", arg->name, arg->desc, lineEnd);
+    }
+  }
+}
+
+class Arguments {
+public:
+
+  const char* classpath;
+
+  const char* bootimage;
+  const char* codeimage;
+
+  char* entryClass;
+  char* entryMethod;
+  char* entrySpec;
+
+  char* bootimageStart;
+  char* bootimageEnd;
+
+  char* codeimageStart;
+  char* codeimageEnd;
+
+  bool maybeSplit(const char* src, char*& destA, char*& destB) {
+    if(src) {
+      const char* split = strchr(src, ':');
+      if(!split) {
+        return false;
+      }
+
+      destA = strndup(src, split - src);
+      destB = strdup(split + 1);
+    }
+    return true;
+  }
+
+  Arguments(int ac, const char** av):
+    entryClass(0),
+    entryMethod(0),
+    entrySpec(0),
+    bootimageStart(0),
+    bootimageEnd(0),
+    codeimageStart(0),
+    codeimageEnd(0)
+  {
+    ArgParser parser;
+    Arg classpath(parser, true, "cp", "<classpath>");
+    Arg bootimage(parser, true, "bootimage", "<bootimage file>");
+    Arg codeimage(parser, true, "codeimage", "<codeimage file>");
+    Arg entry(parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
+    Arg bootimageSymbols(parser, false, "bootimage-symbols", "<start symbol name>:<end symbol name>");
+    Arg codeimageSymbols(parser, false, "codeimage-symbols", "<start symbol name>:<end symbol name>");
+
+    if(!parser.parse(ac, av)) {
+      parser.printUsage(av[0]);
+      exit(1);
+    }
+
+    this->classpath = classpath.value;
+    this->bootimage = bootimage.value;
+    this->codeimage = codeimage.value;
+
+    if(entry.value) {
+      if(const char* entryClassEnd = strchr(entry.value, '.')) {
+        entryClass = strndup(entry.value, entryClassEnd - entry.value);
+        if(const char* entryMethodEnd = strchr(entryClassEnd, '(')) {
+          entryMethod = strndup(entryClassEnd + 1, entryMethodEnd - entryClassEnd - 1);
+          entrySpec = strdup(entryMethodEnd);
+        } else {
+          entryMethod = strdup(entryClassEnd + 1);
+        }
+      } else {
+        entryClass = strdup(entry.value);
+      }
+    }
+
+    if(!maybeSplit(bootimageSymbols.value, bootimageStart, bootimageEnd) ||
+       !maybeSplit(codeimageSymbols.value, codeimageStart, codeimageEnd))
+    {
+      fprintf(stderr, "wrong format for symbols\n");
+      parser.printUsage(av[0]);
+      exit(1);
+    }
+
+    if(!bootimageStart) {
+      bootimageStart = strdup("_binary_bootimage_bin_start");
+    }
+
+    if(!bootimageEnd) {
+      bootimageEnd = strdup("_binary_bootimage_bin_end");
+    }
+
+    if(!codeimageStart) {
+      codeimageStart = strdup("_binary_codeimage_bin_start");
+    }
+
+    if(!codeimageEnd) {
+      codeimageEnd = strdup("_binary_codeimage_bin_end");
+    }
+
+  }
+
+  ~Arguments() {
+    if(entryClass) {
+      free(entryClass);
+    }
+    if(entryMethod) {
+      free(entryMethod);
+    }
+    if(entrySpec) {
+      free(entrySpec);
+    }
+    if(bootimageStart) {
+      free(bootimageStart);
+    }
+    if(bootimageEnd) {
+      free(bootimageEnd);
+    }
+    if(codeimageStart) {
+      free(codeimageStart);
+    }
+    if(codeimageEnd) {
+      free(codeimageEnd);
+    }
+  }
+
+  void dump() {
+    printf(
+      "classpath = %s\n"
+      "bootimage = %s\n"
+      "codeimage = %s\n"
+      "entryClass = %s\n"
+      "entryMethod = %s\n"
+      "entrySpec = %s\n"
+      "bootimageStart = %s\n"
+      "bootimageEnd = %s\n"
+      "codeimageStart = %s\n"
+      "codeimageEnd = %s\n",
+      classpath,
+      bootimage,
+      codeimage,
+      entryClass,
+      entryMethod,
+      entrySpec,
+      bootimageStart,
+      bootimageEnd,
+      codeimageStart,
+      codeimageEnd);
+  }
+};
 
 } // namespace
 
 int
 main(int ac, const char** av)
 {
-  if (ac < 4 or ac > 7) {
-    fprintf(stderr, "usage: %s <classpath> <bootimage file> <code file>"
-            " [<class name> [<method name> [<method spec>]]]\n", av[0]);
-    return -1;
-  }
+  Arguments args(ac, av);
+  // args.dump();
 
   System* s = makeSystem(0);
   Heap* h = makeHeap(s, HeapCapacity * 2);
   Classpath* c = makeClasspath(s, h, AVIAN_JAVA_HOME, AVIAN_EMBED_PREFIX);
-  Finder* f = makeFinder(s, h, av[1], 0);
+  Finder* f = makeFinder(s, h, args.classpath, 0);
   Processor* p = makeProcessor(s, h, false);
 
   // todo: currently, the compiler cannot compile code with jumps or
@@ -1662,43 +1957,50 @@ main(int ac, const char** av)
   // in a branch instruction for the target architecture (~32MB on
   // PowerPC and ARM).  When that limitation is removed, we'll be able
   // to specify a capacity as large as we like here:
+#if (defined ARCH_x86_64) || (defined ARCH_x86_32)
+  const unsigned CodeCapacity = 128 * 1024 * 1024;
+#else
   const unsigned CodeCapacity = 30 * 1024 * 1024;
+#endif
 
   uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
   BootImage image;
   p->initialize(&image, code, CodeCapacity);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
-    (s, h, f, 0, p, c, 0, 0, 0, 0);
+    (s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
   Thread* t = p->makeThread(m, 0, 0);
   
   enter(t, Thread::ActiveState);
   enter(t, Thread::IdleState);
 
-  FILE* bootimageOutput = vm::fopen(av[2], "wb");
-  if (bootimageOutput == 0) {
-    fprintf(stderr, "unable to open %s\n", av[2]);    
+  FileOutputStream bootimageOutput(args.bootimage);
+  if (!bootimageOutput.isValid()) {
+    fprintf(stderr, "unable to open %s\n", args.bootimage);    
     return -1;
   }
 
-  FILE* codeOutput = vm::fopen(av[3], "wb");
-  if (codeOutput == 0) {
-    fprintf(stderr, "unable to open %s\n", av[3]);    
+  FileOutputStream codeOutput(args.codeimage);
+  if (!codeOutput.isValid()) {
+    fprintf(stderr, "unable to open %s\n", args.codeimage);    
     return -1;
   }
 
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(bootimageOutput),
-                            reinterpret_cast<uintptr_t>(codeOutput),
-                            reinterpret_cast<uintptr_t>(&image),
-                            reinterpret_cast<uintptr_t>(code),
-                            reinterpret_cast<uintptr_t>(ac > 4 ? av[4] : 0),
-                            reinterpret_cast<uintptr_t>(ac > 5 ? av[5] : 0),
-                            reinterpret_cast<uintptr_t>(ac > 6 ? av[6] : 0) };
+  uintptr_t arguments[] = {
+    reinterpret_cast<uintptr_t>(&bootimageOutput),
+    reinterpret_cast<uintptr_t>(&codeOutput),
+    reinterpret_cast<uintptr_t>(&image),
+    reinterpret_cast<uintptr_t>(code),
+    reinterpret_cast<uintptr_t>(args.entryClass),
+    reinterpret_cast<uintptr_t>(args.entryMethod),
+    reinterpret_cast<uintptr_t>(args.entrySpec),
+    reinterpret_cast<uintptr_t>(args.bootimageStart),
+    reinterpret_cast<uintptr_t>(args.bootimageEnd),
+    reinterpret_cast<uintptr_t>(args.codeimageStart),
+    reinterpret_cast<uintptr_t>(args.codeimageEnd)
+  };
 
   run(t, writeBootImage, arguments);
-
-  fclose(codeOutput);
-  fclose(bootimageOutput);
 
   if (t->exception) {
     printTrace(t, t->exception);

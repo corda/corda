@@ -45,7 +45,6 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/CRC32.c \
 	$(openjdk-src)/share/native/java/util/zip/Deflater.c \
 	$(openjdk-src)/share/native/java/util/zip/Inflater.c \
-	$(openjdk-src)/share/native/java/util/zip/ZipEntry.c \
 	$(openjdk-src)/share/native/java/util/zip/ZipFile.c \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
 	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
@@ -76,6 +75,7 @@ openjdk-headers-classes = \
 	java.lang.Double \
 	java.lang.Float \
 	java.lang.Integer \
+	java.lang.Long \
 	java.lang.Object \
 	java.lang.Package \
 	java.lang.Runtime \
@@ -124,7 +124,7 @@ openjdk-headers-classes = \
 	sun.net.spi.DefaultProxySelector \
 	sun.nio.ch.FileKey \
 	sun.nio.ch.FileChannelImpl \
-	sun.nio.ch.FileDispatcher \
+	sun.nio.ch.FileDispatcherImpl \
 	sun.nio.ch.DatagramChannelImpl \
 	sun.nio.ch.DatagramDispatcher \
 	sun.nio.ch.IOStatus \
@@ -173,6 +173,7 @@ endif
 
 ifeq ($(platform),windows)
 	openjdk-sources += \
+		$(openjdk-src)/windows/native/common/jni_util_md.c \
 		$(openjdk-src)/windows/native/java/io/canonicalize_md.c \
 		$(openjdk-src)/windows/native/java/io/Console_md.c \
 		$(openjdk-src)/windows/native/java/io/FileDescriptor_md.c \
@@ -193,7 +194,6 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/net/Inet6AddressImpl.c \
 		$(openjdk-src)/windows/native/java/net/NetworkInterface.c \
 		$(openjdk-src)/windows/native/java/net/NetworkInterface_winXP.c \
-		$(openjdk-src)/windows/native/java/net/NetworkInterface_win9x.c \
 		$(openjdk-src)/windows/native/java/net/SocketInputStream.c \
 		$(openjdk-src)/windows/native/java/net/SocketOutputStream.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
@@ -203,7 +203,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramChannelImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/DatagramDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcher.c \
+		$(openjdk-src)/windows/native/sun/nio/ch/FileDispatcherImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/FileKey.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/IOUtil.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/Net.c \
@@ -211,6 +211,7 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/ch/SocketChannelImpl.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/SocketDispatcher.c \
 		$(openjdk-src)/windows/native/sun/nio/ch/WindowsSelectorImpl.c \
+		$(openjdk-src)/windows/native/sun/nio/fs/WindowsNativeDispatcher.c \
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
 	openjdk-headers-classes += \
@@ -218,6 +219,7 @@ ifeq ($(platform),windows)
 		java.lang.ProcessImpl \
 		sun.io.Win32ErrorMode \
 		sun.nio.ch.WindowsSelectorImpl \
+		sun.nio.fs.WindowsNativeDispatcher \
 
 	openjdk-cflags += \
 		"-I$(openjdk-src)/windows/javavm/export" \
@@ -228,6 +230,9 @@ ifeq ($(platform),windows)
 		"-I$(openjdk-src)/windows/native/sun/nio/ch" \
 		"-I$(openjdk-src)/windows/javavm/include" \
 		"-I$(root)/win32/include" \
+		-DLOCALE_SNAME=0x0000005c \
+		-DLOCALE_SISO3166CTRYNAME2=0x00000068 \
+		-DLOCALE_SISO639LANGNAME2=0x00000067 \
 		-D_JNI_IMPLEMENTATION_ \
 		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
 		-Ds6_words=_s6_words \
@@ -235,6 +240,7 @@ ifeq ($(platform),windows)
 else
 	openjdk-sources += \
 		$(openjdk-src)/solaris/native/common/jdk_util_md.c \
+		$(openjdk-src)/solaris/native/common/jni_util_md.c \
 		$(openjdk-src)/solaris/native/java/io/canonicalize_md.c \
 		$(openjdk-src)/solaris/native/java/io/Console_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileDescriptor_md.c \
@@ -265,30 +271,26 @@ else
 		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramChannelImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/DatagramDispatcher.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/FileChannelImpl.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcher.c \
+		$(openjdk-src)/solaris/native/sun/nio/ch/FileDispatcherImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/FileKey.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/IOUtil.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/Net.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/ServerSocketChannelImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/SocketChannelImpl.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/SocketDispatcher.c \
-		$(openjdk-src)/solaris/native/sun/nio/ch/EPollArrayWrapper.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/PollArrayWrapper.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/InheritedChannel.c \
 		$(openjdk-src)/solaris/native/sun/nio/ch/NativeThread.c \
-
-	ifeq ($(platform),linux)
-		openjdk-sources += \
-			$(openjdk-src)/solaris/native/java/net/linux_close.c
-	endif
+		$(openjdk-src)/solaris/native/sun/nio/fs/UnixNativeDispatcher.c \
 
 	openjdk-headers-classes += \
 		java.net.PlainDatagramSocketImpl \
 		java.io.UnixFileSystem \
 		sun.nio.ch.InheritedChannel \
-		sun.nio.ch.EPollArrayWrapper \
+		sun.nio.fs.UnixNativeDispatcher \
 
-	openjdk-cflags += "-I$(openjdk-src)/solaris/javavm/export" \
+	openjdk-cflags += \
+		"-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
 		"-I$(openjdk-src)/solaris/native/java/io" \
 		"-I$(openjdk-src)/solaris/native/java/lang" \
@@ -297,10 +299,45 @@ else
 		"-I$(openjdk-src)/solaris/native/sun/management" \
 		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
-		"-I$(openjdk-src)/solaris/hpi/include"
+		"-I$(openjdk-src)/solaris/hpi/include" \
+		"-I$(openjdk-src)/solaris/native/common/deps"
+
+	ifeq ($(platform),linux)
+		openjdk-sources += \
+			$(openjdk-src)/solaris/native/java/net/linux_close.c \
+			$(openjdk-src)/solaris/native/common/deps/syscalls_fp.c \
+			$(openjdk-src)/solaris/native/common/deps/gconf2/gconf_fp.c \
+			$(openjdk-src)/solaris/native/common/deps/glib2/gio_fp.c \
+			$(openjdk-src)/solaris/native/sun/nio/ch/EPollArrayWrapper.c
+
+		openjdk-headers-classes += \
+			sun.nio.ch.EPollArrayWrapper
+
+		openjdk-cflags += \
+			"-I$(openjdk-src)/solaris/native/common/deps/glib2" \
+			"-I$(openjdk-src)/solaris/native/common/deps/gconf2" \
+			$(shell pkg-config --cflags glib-2.0) \
+			$(shell pkg-config --cflags gconf-2.0)
+	endif
+
+	ifeq ($(platform),darwin)
+		openjdk-sources += \
+			$(openjdk-src)/solaris/native/java/net/bsd_close.c
+
+		ifeq ($(ios),true)
+			openjdk-local-sources += \
+				$(src)/openjdk/my_java_props_macosx.c
+		else
+			openjdk-sources += \
+				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c
+		endif
+
+		openjdk-cflags += \
+			-DMACOSX
+	endif
 endif
 
-openjdk-local-sources = \
+openjdk-local-sources += \
 	$(src)/openjdk/my_net_util.c \
 	$(src)/openjdk/my_management.c
 

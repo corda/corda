@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -326,4 +326,188 @@ Avian_avian_Singleton_getLong
   memcpy(&v, &singletonValue
          (t, reinterpret_cast<object>(arguments[0]), arguments[1]), 8);
   return v;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_allocateMemory
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t size; memcpy(&size, arguments + 1, 8);
+  void* p = malloc(size);
+  if (p) {
+    return reinterpret_cast<int64_t>(p);
+  } else {
+    throwNew(t, Machine::OutOfMemoryErrorType);
+  }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_freeMemory
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  if (p) {
+    free(reinterpret_cast<void*>(p));
+  }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_setMemory
+(Thread* t, object, uintptr_t* arguments)
+{
+  object base = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t count; memcpy(&count, arguments + 4, 8);
+  int8_t value = arguments[6];
+
+  PROTECT(t, base);
+
+  ACQUIRE(t, t->m->referenceLock);
+
+  if (base) {
+    memset(&cast<int8_t>(base, offset), value, count);
+  } else {
+    memset(reinterpret_cast<int8_t*>(offset), value, count);
+  }
+}
+
+// NB: The following primitive get/put methods are only used by the
+// interpreter.  The JIT/AOT compiler implements them as intrinsics,
+// so these versions will be ignored.
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putByte__JB
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int8_t v = arguments[3];
+
+  *reinterpret_cast<int8_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putShort__JS
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int16_t v = arguments[3];
+
+  *reinterpret_cast<int16_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putChar__JC
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putShort__JS(t, method, arguments);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putInt__JI
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int32_t v = arguments[3];
+
+  *reinterpret_cast<int32_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putFloat__JF
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putInt__JI(t, method, arguments);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putLong__JJ
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int64_t v; memcpy(&v, arguments + 3, 8);
+
+  *reinterpret_cast<int64_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putDouble__JD
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putLong__JJ(t, method, arguments);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putAddress__JJ
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+  int64_t v; memcpy(&v, arguments + 3, 8);
+
+  *reinterpret_cast<intptr_t*>(p) = v;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getByte__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int8_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getShort__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int16_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getChar__J
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getShort__J(t, method, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getInt__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int32_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getFloat__J
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getInt__J(t, method, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLong__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<int64_t*>(p);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getDouble__J
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getLong__J(t, method, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getAddress__J
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t p; memcpy(&p, arguments + 1, 8);
+
+  return *reinterpret_cast<intptr_t*>(p);
 }

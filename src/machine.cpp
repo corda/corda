@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -45,18 +45,10 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    // todo: There's potentially a leak here on systems where we must
-    // call join on a thread in order to clean up all resources
-    // associated with it.  If a thread has already been zombified by
-    // the time we get here, acquireSystem will return false, which
-    // means we can't safely join it because the System::Thread may
-    // already have been disposed.  In that case, the thread has
-    // already exited (or will soon), but the OS will never free all
-    // its resources because it doesn't know we're completely done
-    // with it.
-    if (acquireSystem(t, o)) {
+    assert(t, o->state != Thread::JoinedState);
+    assert(t, (o->flags & Thread::SystemFlag) == 0);
+    if (o->flags & Thread::JoinFlag) {
       o->systemThread->join();
-      releaseSystem(t, o);
     }
     o->state = Thread::JoinedState;
   }
@@ -229,6 +221,9 @@ turnOffTheLights(Thread* t)
   visitAll(t, t->m->rootThread, disposeNoRemove);
 
   System* s = m->system;
+
+  expect(s, m->threadCount == 0);
+
   Heap* h = m->heap;
   Processor* p = m->processor;
   Classpath* c = m->classpath;
@@ -254,15 +249,17 @@ killZombies(Thread* t, Thread* o)
     killZombies(t, child);
   }
 
-  switch (o->state) {
-  case Thread::ZombieState:
-    join(t, o);
-    // fall through
-
-  case Thread::JoinedState:
-    dispose(t, o, true);
-
-  default: break;
+  if ((o->flags & Thread::SystemFlag) == 0) {
+    switch (o->state) {
+    case Thread::ZombieState:
+      join(t, o);
+      // fall through
+      
+    case Thread::JoinedState:
+      dispose(t, o, true);
+      
+    default: break;
+    }
   }
 }
 
@@ -587,6 +584,16 @@ postVisit(Thread* t, Heap::Visitor* v)
       = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    if (r->weak) {
+      if (m->heap->status(r->target) == Heap::Unreachable) {
+        r->target = 0;
+      } else {
+        v->visit(&(r->target));
+      }
+    }
+  }
 }
 
 void
@@ -872,9 +879,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
 
       parsePoolEntry(t, s, index, pool, ci);
       parsePoolEntry(t, s, index, pool, nti);
-        
+
       object class_ = referenceName(t, singletonObject(t, pool, ci));
       object nameAndType = singletonObject(t, pool, nti);
+
       object value = makeReference
           (t, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
@@ -1156,9 +1164,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        unsigned excess = (staticOffset % size) % BytesPerWord;
-        if (excess) {
-          staticOffset += BytesPerWord - excess;
+        while (staticOffset % size) {
+          ++ staticOffset;
         }
 
         fieldOffset(t, field) = staticOffset;
@@ -1197,9 +1204,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
-        unsigned excess = offset % size;
-        if (excess) {
-          offset += BytesPerWord - excess;
+        while (offset % size) {
+          ++ offset;
         }
 
         unsigned value = intArrayBody(t, staticValueTable, i);
@@ -1302,7 +1308,7 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  object code = makeCode(t, pool, 0, 0, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -2226,7 +2232,7 @@ boot(Thread* t)
 
   m->processor->boot(t, 0, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
@@ -2410,6 +2416,38 @@ isInitializing(Thread* t, object c)
   return false;
 }
 
+object
+findInTable(Thread* t, object table, object name, object spec,
+            object& (*getName)(Thread*, object),
+            object& (*getSpec)(Thread*, object))
+{
+  if (table) {
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i);      
+      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
+                     &byteArrayBody(t, name, 0)) == 0 and
+          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
+                     &byteArrayBody(t, spec, 0)) == 0)
+      {
+        return o;
+      }
+    }
+
+//     fprintf(stderr, "%s %s not in\n",
+//             &byteArrayBody(t, name, 0),
+//             &byteArrayBody(t, spec, 0));
+
+//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+//       object o = arrayBody(t, table, i); 
+//       fprintf(stderr, "\t%s %s\n",
+//               &byteArrayBody(t, getName(t, o), 0),
+//               &byteArrayBody(t, getSpec(t, o), 0)); 
+//     }
+  }
+
+  return 0;
+}
+
 } // namespace
 
 namespace vm {
@@ -2417,7 +2455,8 @@ namespace vm {
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
                  const char** properties, unsigned propertyCount,
-                 const char** arguments, unsigned argumentCount):
+                 const char** arguments, unsigned argumentCount,
+                 unsigned stackSizeInBytes):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2435,10 +2474,12 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   propertyCount(propertyCount),
   arguments(arguments),
   argumentCount(argumentCount),
+  threadCount(0),
   activeCount(0),
   liveCount(0),
   daemonCount(0),
   fixedFootprint(0),
+  stackSizeInBytes(stackSizeInBytes),
   localThread(0),
   stateLock(0),
   heapLock(0),
@@ -2619,23 +2660,7 @@ Thread::exit()
     } else {
       threadPeer(this, javaThread) = 0;
 
-      System::Monitor* myLock = lock;
-      System::Thread* mySystemThread = systemThread;
-
-      { ACQUIRE_RAW(this, m->stateLock);
-
-        while (flags & SystemFlag) {
-          m->stateLock->wait(systemThread, 0);
-        }
-
-        atomicOr(&flags, Thread::DisposeFlag);
-      
-        enter(this, Thread::ZombieState);
-      }
-
-      myLock->dispose();
-
-      mySystemThread->dispose();
+      enter(this, Thread::ZombieState);
     }
   }
 }
@@ -2643,15 +2668,15 @@ Thread::exit()
 void
 Thread::dispose()
 {
-  if ((flags & Thread::DisposeFlag) == 0) {
-    if (lock) {
-      lock->dispose();
-    }
-
-    if (systemThread) {
-      systemThread->dispose();
-    }
+  if (lock) {
+    lock->dispose();
   }
+  
+  if (systemThread) {
+    systemThread->dispose();
+  }
+
+  -- m->threadCount;
 
   m->heap->free(defaultHeap, ThreadHeapSizeInBytes);
 
@@ -2864,6 +2889,7 @@ enter(Thread* t, Thread::State s)
         INCREMENT(&(t->m->activeCount), 1);
         if (t->state == Thread::NoState) {
           ++ t->m->liveCount;
+          ++ t->m->threadCount;
         }
         t->state = s;
       } break;
@@ -3064,17 +3090,32 @@ popResources(Thread* t)
 }
 
 object
-makeByteArray(Thread* t, const char* format, va_list a)
+makeByteArrayV(Thread* t, const char* format, va_list a, int size)
+{
+  THREAD_RUNTIME_ARRAY(t, char, buffer, size);
+  
+  int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+  if (r >= 0 and r < size - 1) {
+    object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
+    memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
+           byteArrayLength(t, s));
+    return s;
+  } else {
+    return 0;
+  }
+}
+
+object
+makeByteArray(Thread* t, const char* format, ...)
 {
   int size = 256;
   while (true) {
-    THREAD_RUNTIME_ARRAY(t, char, buffer, size);
-  
-    int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
-    if (r >= 0 and r < size - 1) {
-      object s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
-      memcpy(&byteArrayBody(t, s, 0), RUNTIME_ARRAY_BODY(buffer),
-             byteArrayLength(t, s));
+    va_list a;
+    va_start(a, format);
+    object s = makeByteArrayV(t, format, a, size);
+    va_end(a);
+
+    if (s) {
       return s;
     } else {
       size *= 2;
@@ -3083,25 +3124,21 @@ makeByteArray(Thread* t, const char* format, va_list a)
 }
 
 object
-makeByteArray(Thread* t, const char* format, ...)
-{
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
-
-  return s;
-}
-
-object
 makeString(Thread* t, const char* format, ...)
 {
-  va_list a;
-  va_start(a, format);
-  object s = makeByteArray(t, format, a);
-  va_end(a);
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    object s = makeByteArrayV(t, format, a, size);
+    va_end(a);
 
-  return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
+    if (s) {
+      return t->m->classpath->makeString(t, s, 0, byteArrayLength(t, s) - 1);
+    } else {
+      size *= 2;
+    }
+  }
 }
 
 int
@@ -3245,7 +3282,9 @@ isAssignableFrom(Thread* t, object a, object b)
       return isAssignableFrom
         (t, classStaticTable(t, a), classStaticTable(t, b));
     }
-  } else {
+  } else if ((classVmFlags(t, a) & PrimitiveFlag)
+             == (classVmFlags(t, b) & PrimitiveFlag))
+  {
     for (; b; b = classSuper(t, b)) {
       if (b == a) {
         return true;
@@ -3877,35 +3916,17 @@ makeObjectArray(Thread* t, object elementClass, unsigned count)
 }
 
 object
-findInTable(Thread* t, object table, object name, object spec,
-            object& (*getName)(Thread*, object),
-            object& (*getSpec)(Thread*, object))
+findFieldInClass(Thread* t, object class_, object name, object spec)
 {
-  if (table) {
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object o = arrayBody(t, table, i);      
-      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
-                     &byteArrayBody(t, name, 0)) == 0 and
-          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
-                     &byteArrayBody(t, spec, 0)) == 0)
-      {
-        return o;
-      }
-    }
+  return findInTable
+    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
+}
 
-//     fprintf(stderr, "%s %s not in\n",
-//             &byteArrayBody(t, name, 0),
-//             &byteArrayBody(t, spec, 0));
-
-//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-//       object o = arrayBody(t, table, i); 
-//       fprintf(stderr, "\t%s %s\n",
-//               &byteArrayBody(t, getName(t, o), 0),
-//               &byteArrayBody(t, getSpec(t, o), 0)); 
-//     }
-  }
-
-  return 0;
+object
+findMethodInClass(Thread* t, object class_, object name, object spec)
+{
+  return findInTable
+    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
 }
 
 object
@@ -4145,7 +4166,9 @@ visitRoots(Machine* m, Heap::Visitor* v)
   }
 
   for (Reference* r = m->jniReferences; r; r = r->next) {
-    v->visit(&(r->target));
+    if (not r->weak) {
+      v->visit(&(r->target));
+    }
   }
 }
 
@@ -4419,7 +4442,7 @@ noop()
 } // namespace vm
 
 // for debugging
-void
+JNIEXPORT void
 vmPrintTrace(Thread* t)
 {
   class Visitor: public Processor::StackVisitor {
@@ -4461,7 +4484,7 @@ vmPrintTrace(Thread* t)
 }
 
 // also for debugging
-void*
+JNIEXPORT void*
 vmAddressFromLine(Thread* t, object m, unsigned line)
 {
   object code = methodCode(t, m);

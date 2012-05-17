@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -13,7 +13,9 @@ package java.util;
 public class Random {
   private static final long Mask = 0x5DEECE66DL;
 
-  private static long nextSeed = 0;
+  private static final long InitialSeed = 123456789987654321L;
+
+  private static long nextSeed = InitialSeed;
 
   private long seed;
 
@@ -22,7 +24,13 @@ public class Random {
   }
 
   public Random() {
-    setSeed((nextSeed++) ^ System.currentTimeMillis());
+    synchronized (Random.class) {
+      setSeed(nextSeed ^ System.currentTimeMillis());
+      nextSeed *= 123456789987654321L;
+      if (nextSeed == 0) {
+        nextSeed = InitialSeed;
+      }
+    }
   }
 
   public void setSeed(long seed) {

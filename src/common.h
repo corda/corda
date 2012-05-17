@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -56,10 +56,12 @@ typedef unsigned __int64 uint64_t;
 #  ifdef _M_IX86
 typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
+#    define UINT64_C(x) x##LL
 #    define ARCH_x86_32
 #  elif defined _M_X64
 typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
+#    define UINT64_C(x) x##L
 #    define ARCH_x86_64
 #  else
 #    error "unsupported architecture"

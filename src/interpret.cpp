@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -40,7 +40,7 @@ class Thread: public vm::Thread {
   unsigned sp;
   int frame;
   object code;
-  uintptr_t stack[StackSizeInWords];
+  uintptr_t stack[0];
 };
 
 inline void
@@ -50,7 +50,7 @@ pushObject(Thread* t, object o)
     fprintf(stderr, "push object %p at %d\n", o, t->sp);
   }
 
-  assert(t, t->sp + 1 < StackSizeInWords / 2);
+  assert(t, t->sp + 1 < stackSizeInWords(t) / 2);
   t->stack[(t->sp * 2)    ] = ObjectTag;
   t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
   ++ t->sp;
@@ -63,7 +63,7 @@ pushInt(Thread* t, uint32_t v)
     fprintf(stderr, "push int %d at %d\n", v, t->sp);
   }
 
-  assert(t, t->sp + 1 < StackSizeInWords / 2);
+  assert(t, t->sp + 1 < stackSizeInWords(t) / 2);
   t->stack[(t->sp * 2)    ] = IntTag;
   t->stack[(t->sp * 2) + 1] = v;
   ++ t->sp;
@@ -156,7 +156,7 @@ peekObject(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < StackSizeInWords / 2);
+  assert(t, index < stackSizeInWords(t) / 2);
   assert(t, t->stack[index * 2] == ObjectTag);
   return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
 }
@@ -170,7 +170,7 @@ peekInt(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < StackSizeInWords / 2);
+  assert(t, index < stackSizeInWords(t) / 2);
   assert(t, t->stack[index * 2] == IntTag);
   return t->stack[(index * 2) + 1];
 }
@@ -226,7 +226,7 @@ inline object*
 pushReference(Thread* t, object o)
 {
   if (o) {
-    expect(t, t->sp + 1 < StackSizeInWords / 2);
+    expect(t, t->sp + 1 < stackSizeInWords(t) / 2);
     pushObject(t, o);
     return reinterpret_cast<object*>(t->stack + ((t->sp - 1) * 2) + 1);
   } else {
@@ -405,7 +405,7 @@ checkStack(Thread* t, object method)
                + codeMaxLocals(t, methodCode(t, method))
                + FrameFootprint
                + codeMaxStack(t, methodCode(t, method))
-               > StackSizeInWords / 2))
+               > stackSizeInWords(t) / 2))
   {
     throwNew(t, Machine::StackOverflowErrorType);
   }
@@ -757,6 +757,8 @@ interpret3(Thread* t, const int base)
   object& code = t->code;
   object& exception = t->exception;
   uintptr_t* stack = t->stack;
+
+  code = methodCode(t, frameMethod(t, frame));
 
   if (UNLIKELY(exception)) {
     goto throw_;
@@ -2877,7 +2879,7 @@ class MyProcessor: public Processor {
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
   {
-    Thread* t = new (m->heap->allocate(sizeof(Thread)))
+    Thread* t = new (m->heap->allocate(sizeof(Thread) + m->stackSizeInBytes))
       Thread(m, javaThread, parent);
     t->init();
     return t;
@@ -2994,7 +2996,7 @@ class MyProcessor: public Processor {
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-                 > StackSizeInWords / 2))
+                 > stackSizeInWords(t) / 2))
     {
       throwNew(t, Machine::StackOverflowErrorType);
     }
@@ -3018,7 +3020,7 @@ class MyProcessor: public Processor {
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
-                 > StackSizeInWords / 2))
+                 > stackSizeInWords(t) / 2))
     {
       throwNew(t, Machine::StackOverflowErrorType);
     }
@@ -3041,7 +3043,7 @@ class MyProcessor: public Processor {
            or t->state == Thread::ExclusiveState);
 
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
-                 > StackSizeInWords / 2))
+                 > stackSizeInWords(t) / 2))
     {
       throwNew(t, Machine::StackOverflowErrorType);
     }
@@ -3062,6 +3064,10 @@ class MyProcessor: public Processor {
   }
 
   virtual void initialize(BootImage*, uint8_t*, unsigned) {
+    abort(s);
+  }
+
+  virtual void addCompilationHandler(CompilationHandler* handler) {
     abort(s);
   }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -143,6 +143,7 @@ usageAndExit(const char* name)
     (stderr, "usage: %s\n"
      "\t[{-cp|-classpath} <classpath>]\n"
      "\t[-Xmx<maximum heap size>]\n"
+     "\t[-Xss<maximum stack size>]\n"
      "\t[-Xbootclasspath/p:<classpath to prepend to bootstrap classpath>]\n"
      "\t[-Xbootclasspath:<bootstrap classpath>]\n"
      "\t[-Xbootclasspath/a:<classpath to append to bootstrap classpath>]\n"

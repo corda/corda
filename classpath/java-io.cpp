@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -32,9 +32,12 @@
 #  define STAT _wstat
 #  define STRUCT_STAT struct _stat
 #  define MKDIR(path, mode) _wmkdir(path)
+#  define CHMOD(path, mode) _wchmod(path, mode)
 #  define UNLINK _wunlink
 #  define RENAME _wrename
 #  define OPEN_MASK O_BINARY
+
+#  define CHECK_X_OK R_OK
 
 #  ifdef _MSC_VER
 #    define S_ISREG(x) ((x) & _S_IFREG)
@@ -45,7 +48,6 @@
 #    define R_OK 4
 #  else
 #    define OPEN _wopen
-#    define CREAT _wcreat
 #  endif
 
 #  define GET_CHARS GetStringChars
@@ -67,10 +69,12 @@ typedef wchar_t char_t;
 #  define STAT stat
 #  define STRUCT_STAT struct stat
 #  define MKDIR mkdir
-#  define CREAT creat
+#  define CHMOD chmod
 #  define UNLINK unlink
 #  define RENAME rename
 #  define OPEN_MASK 0
+
+#  define CHECK_X_OK X_OK
 
 #  define GET_CHARS GetStringUTFChars
 #  define RELEASE_CHARS ReleaseStringUTFChars
@@ -95,12 +99,6 @@ OPEN(string_t path, int mask, int mode)
   } else {
     return -1; 
   }
-}
-
-inline int
-CREAT(string_t path, int mode)
-{
-  return OPEN(path, _O_CREAT, mode);
 }
 #endif
 
@@ -178,7 +176,8 @@ inline Mapping*
 map(JNIEnv* e, string_t path)
 {
   Mapping* result = 0;
-  HANDLE file = CreateFileW(path, FILE_READ_DATA, FILE_SHARE_READ, 0,
+  HANDLE file = CreateFileW(path, FILE_READ_DATA,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE, 0,
                             OPEN_EXISTING, 0, 0);
   if (file != INVALID_HANDLE_VALUE) {
     unsigned size = GetFileSize(file, 0);
@@ -317,7 +316,19 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 {
 #ifdef PLATFORM_WINDOWS
-  // todo
+  string_t chars = getChars(e, path);
+  if (chars) {
+    const unsigned BufferSize = MAX_PATH;
+    char_t buffer[BufferSize];
+    DWORD success = GetFullPathNameW(chars, BufferSize, buffer, 0);
+    releaseChars(e, path, chars);
+
+    if (success) {
+      return e->NewString
+        (reinterpret_cast<const jchar*>(buffer), wcslen(buffer));
+    }
+  }
+
   return path;
 #else
   jstring result = path;
@@ -388,21 +399,26 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
 {
+  bool result = false;
   string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
-      int fd = CREAT(chars, 0600);
+      int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0600);
       if (fd == -1) {
-        throwNewErrno(e, "java/io/IOException");
+        if (errno != EEXIST) {
+          throwNewErrno(e, "java/io/IOException");
+        }
       } else {
+        result = true;
         doClose(e, fd);
       }
     }
     releaseChars(e, path, chars);
   }
+  return result;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -442,6 +458,64 @@ Java_java_io_File_canWrite(JNIEnv* e, jclass, jstring path)
   return false;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_canExecute(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    int r = ACCESS(chars, CHECK_X_OK);
+    releaseChars(e, path, chars);
+    return (r == 0);
+  }
+  return false;
+}
+
+#ifndef PLATFORM_WINDOWS
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_setExecutable(JNIEnv* e, jclass, jstring path, jboolean executable, jboolean ownerOnly)
+{
+  string_t chars = getChars(e, path);
+  if(chars) {
+    jboolean v;
+    int mask;
+    if(ownerOnly) {
+      mask = S_IXUSR;
+    } else {
+      mask = S_IXUSR | S_IXGRP | S_IXOTH;
+    }
+
+    STRUCT_STAT s;
+    int r = STAT(chars, &s);
+    if(r == 0) {
+      int mode = s.st_mode;
+      if(executable) {
+        mode |= mask;
+      } else {
+        mode &= ~mask;
+      }
+      if(CHMOD(chars, mode) != 0) {
+        v = false;
+      } else {
+        v = true;
+      }
+    } else {
+      v = false;
+    }
+    releaseChars(e, path, chars);
+    return v;
+  }
+  return false;
+}
+
+#else // ifndef PLATFORM_WINDOWS
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_io_File_setExecutable(JNIEnv*, jclass, jstring, jboolean executable, jboolean)
+{
+  return executable;
+}
+
+#endif
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_rename(JNIEnv* e, jclass, jstring old, jstring new_)

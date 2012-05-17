@@ -11,6 +11,7 @@
 
 -keep class java.lang.System {
    private static void initializeSystemClass();
+   public static void setProperties(java.util.Properties);
  }
 
 -keep class java.lang.ClassLoader {
@@ -33,6 +34,11 @@
 
 -keep class java.util.Properties {
    public java.lang.Object setProperty(java.lang.String, java.lang.String);
+   public java.lang.String getProperty(java.lang.String);
+ }
+
+-keep class java.util.Hashtable {
+   public java.lang.Object remove(java.lang.Object);
  }
 
 -keep class avian.OpenJDK {

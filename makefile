@@ -18,9 +18,11 @@ build-platform := \
 		| sed 's/^cygwin.*$$/cygwin/')
 
 arch = $(build-arch)
+target-arch = $(arch)
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
+target-platform = $(platform)
 
 mode = fast
 process = compile
@@ -51,6 +53,8 @@ test-build = $(build)/test
 src = src
 classpath-src = classpath
 test = test
+win32 ?= $(root)/win32
+win64 ?= $(root)/win64
 
 classpath = avian
 
@@ -111,8 +115,13 @@ ifneq ($(openjdk),)
 	else
 	  options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
-		library-path = \
-			$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		ifeq ($(build-platform),darwin)
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib
+		else
+			library-path = \
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+		endif
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
@@ -183,8 +192,10 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject \
-	-fno-rtti -fno-exceptions
+converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
+	-fno-rtti -fno-exceptions \
+	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
+	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN
 
 cflags = $(build-cflags)
 
@@ -212,6 +223,9 @@ openjdk-extra-cflags = -fvisibility=hidden
 
 bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
+developer-dir := $(shell if test -d /Developer; then echo /Developer; \
+	else echo /Applications/Xcode.app/Contents/Developer; fi)
+
 ifeq ($(build-arch),powerpc)
 	ifneq ($(arch),$(build-arch))
 		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
@@ -221,6 +235,7 @@ endif
 ifeq ($(arch),i386)
 	pointer-size = 4
 endif
+
 ifeq ($(arch),powerpc)
 	asm = powerpc
 	pointer-size = 4
@@ -231,7 +246,6 @@ ifeq ($(arch),powerpc)
 
 	ifneq ($(platform),darwin)
 		ifneq ($(arch),$(build-arch))
-			converter-cflags += -DOPPOSITE_ENDIAN
 			cxx = powerpc-linux-gnu-g++
 			cc = powerpc-linux-gnu-gcc
 			ar = powerpc-linux-gnu-ar
@@ -240,9 +254,11 @@ ifeq ($(arch),powerpc)
 		endif
 	endif
 endif
+
 ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
+
 	ifeq ($(build-platform),darwin)
 		ios = true
 	else
@@ -252,7 +268,7 @@ ifeq ($(arch),arm)
 
 	ifneq ($(arch),$(build-arch))
 		ifeq ($(platform),darwin)
-			ios-bin = /Developer/Platforms/iPhoneOS.platform/Developer/usr/bin
+			ios-bin = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/usr/bin
 			cxx = $(ios-bin)/g++
 			cc = $(ios-bin)/gcc
 			ar = $(ios-bin)/ar
@@ -272,10 +288,6 @@ ifeq ($(ios),true)
 	cflags += -DAVIAN_IOS
 endif
 
-ifeq ($(platform),linux)
-	bootimage-cflags += -DTARGET_PLATFORM_LINUX
-endif
-
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
@@ -283,8 +295,6 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),darwin)
-	bootimage-cflags += -DTARGET_PLATFORM_DARWIN
-
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -303,9 +313,11 @@ ifeq ($(platform),darwin)
 	endif
 
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	lflags = $(common-lflags) -ldl -framework CoreFoundation \
+		-Wl,-compatibility_version,1.0.0
 	ifneq ($(arch),arm)
-		lflags +=	-framework CoreServices
+		lflags +=	-framework CoreServices -framework SystemConfiguration \
+			-framework Security
 	endif
 	ifeq ($(bootimage),true)
 		bootimage-lflags = -Wl,-segprot,__RWX,rwx,rwx
@@ -315,12 +327,22 @@ ifeq ($(platform),darwin)
 	so-suffix = .dylib
 	shared = -dynamiclib
 
+	sdk-dir = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs
+
 	ifeq ($(arch),arm)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
+		ios-version := \
+			$(shell if test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
+				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
+				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
+				elif test -d $(sdk-dir)/iPhoneOS4.2.sdk; then echo 4.2; \
+				else echo; fi)
+
+		ifeq ($(ios-version),)
+			x := $(error "couldn't find SDK for iOS version")
 		endif
-		flags = -arch armv6 -isysroot \
-			/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS5.0.sdk/
+
+		flags = -arch armv7 -isysroot \
+			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
 		openjdk-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
@@ -328,9 +350,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),powerpc)
-		ifneq (,$(filter i386 x86_64 arm,$(build-arch)))
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -338,9 +357,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),i386)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
@@ -348,9 +364,6 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),x86_64)
-		ifeq ($(build-arch),powerpc)
-			converter-cflags += -DOPPOSITE_ENDIAN
-		endif
 		openjdk-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
@@ -359,10 +372,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	bootimage-cflags += -DTARGET_PLATFORM_WINDOWS
-
-	inc = "$(root)/win32/include"
-	lib = "$(root)/win32/lib"
+	inc = "$(win32)/include"
+	lib = "$(win32)/lib"
 
 	embed-prefix = c:/avian-embedded
 
@@ -372,9 +383,8 @@ ifeq ($(platform),windows)
 	so-suffix = .dll
 	exe-suffix = .exe
 
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -mwindows -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -DTARGET_PLATFORM_WINDOWS
-
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -411,13 +421,16 @@ ifeq ($(platform),windows)
 		ar = x86_64-w64-mingw32-ar
 		ranlib = x86_64-w64-mingw32-ranlib
 		strip = x86_64-w64-mingw32-strip
-		inc = "$(root)/win64/include"
-		lib = "$(root)/win64/lib"
+		inc = "$(win64)/include"
+		lib = "$(win64)/lib"
+	else
+		shared += -Wl,--add-stdcall-alias
 	endif
 endif
 
 ifeq ($(mode),debug)
 	optimization-cflags = -O0 -g3
+	converter-cflags += -O0 -g3
 	strip = :
 endif
 ifeq ($(mode),debug-fast)
@@ -459,6 +472,7 @@ ifneq ($(platform),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i586
+	lflags += -march=i586
 endif
 endif
 
@@ -469,7 +483,7 @@ build-ld := $(build-cc)
 
 ifdef msvc
 	windows-java-home := $(shell cygpath -m "$(JAVA_HOME)")
-	zlib := $(shell cygpath -m "$(root)/win32/msvc")
+	zlib := $(shell cygpath -m "$(win32)/msvc")
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
@@ -478,7 +492,8 @@ ifdef msvc
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
-		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32"
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
+		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
@@ -569,10 +584,7 @@ bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
 
-bootimage-bin = $(build)/bootimage.bin
 bootimage-object = $(build)/bootimage-bin.o
-
-codeimage-bin = $(build)/codeimage.bin
 codeimage-object = $(build)/codeimage-bin.o
 
 ifeq ($(bootimage),true)
@@ -608,14 +620,23 @@ generator-objects = \
 	$(call generator-cpp-objects,$(generator-sources),$(src),$(build))
 generator = $(build)/generator
 
-converter-objects = \
-	$(build)/binaryToObject-main.o \
-	$(build)/binaryToObject-elf64.o \
-	$(build)/binaryToObject-elf32.o \
-	$(build)/binaryToObject-mach-o64.o \
-	$(build)/binaryToObject-mach-o32.o \
-	$(build)/binaryToObject-pe.o
-converter = $(build)/binaryToObject
+converter-depends = \
+	$(src)/binaryToObject/tools.h \
+	$(src)/binaryToObject/endianness.h
+
+
+converter-sources = \
+	$(src)/binaryToObject/tools.cpp \
+	$(src)/binaryToObject/elf.cpp \
+	$(src)/binaryToObject/mach-o.cpp \
+	$(src)/binaryToObject/pe.cpp
+
+converter-tool-sources = \
+	$(src)/binaryToObject/main.cpp
+
+converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
+converter-tool-objects = $(call cpp-objects,$(converter-tool-sources),$(src),$(build))
+converter = $(build)/binaryToObject/binaryToObject
 
 static-library = $(build)/lib$(name).a
 executable = $(build)/$(name)${exe-suffix}
@@ -683,6 +704,34 @@ endif
 ifeq ($(tails),true)
 	tail-tests = \
 		extra.Tails
+endif
+
+ifeq ($(target-arch),i386)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86
+endif
+
+ifeq ($(target-arch),x86_64)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86_64
+endif
+
+ifeq ($(target-arch),powerpc)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_POWERPC
+endif
+
+ifeq ($(target-arch),arm)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
+endif
+
+ifeq ($(target-platform),linux)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
+endif
+
+ifeq ($(target-platform),windows)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+endif
+
+ifeq ($(target-platform),darwin)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
@@ -820,26 +869,12 @@ $(boot-object): $(boot-source)
 $(boot-javahome-object): $(src)/boot-javahome.cpp
 	$(compile-object)
 
-$(build)/binaryToObject-main.o: $(src)/binaryToObject/main.cpp
-	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
+$(converter-objects) $(converter-tool-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $(converter-depends)
+	@mkdir -p $(dir $(@))
+	$(build-cxx) $(converter-cflags) -c $(<) -o $(@)
 
-$(build)/binaryToObject-elf64.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
-
-$(build)/binaryToObject-elf32.o: $(src)/binaryToObject/elf.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
-
-$(build)/binaryToObject-mach-o64.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=64 -c $(^) -o $(@)
-
-$(build)/binaryToObject-mach-o32.o: $(src)/binaryToObject/mach-o.cpp
-	$(build-cxx) $(converter-cflags) -DBITS_PER_WORD=32 -c $(^) -o $(@)
-
-$(build)/binaryToObject-pe.o: $(src)/binaryToObject/pe.cpp
-	$(build-cxx) $(converter-cflags) -c $(^) -o $(@)
-
-$(converter): $(converter-objects)
-	$(build-cc) $(^) -o $(@)
+$(converter): $(converter-objects) $(converter-tool-objects)
+	$(build-cc) $(^) -g -o $(@)
 
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 	@echo "creating $(@)"
@@ -880,20 +915,10 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(bootimage-bin): $(bootimage-generator)
-	$(<) $(classpath-build) $(@) $(codeimage-bin)
-
-$(bootimage-object): $(bootimage-bin) $(converter)
-	@echo "creating $(@)"
-	$(converter) $(<) $(@) _binary_bootimage_bin_start \
-		_binary_bootimage_bin_end $(platform) $(arch) $(pointer-size) \
-		writable
-
-$(codeimage-object): $(bootimage-bin) $(converter)
-	@echo "creating $(@)"
-	$(converter) $(codeimage-bin) $(@) _binary_codeimage_bin_start \
-		_binary_codeimage_bin_end $(platform) $(arch) $(pointer-size) \
-		executable
+$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
+		-bootimage-symbols _binary_bootimage_bin_start:_binary_bootimage_bin_end \
+		-codeimage-symbols _binary_codeimage_bin_start:_binary_codeimage_bin_end
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
@@ -916,10 +941,13 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(bootimage-generator):
+$(bootimage-generator): $(bootimage-generator-objects)
+	echo arch=$(arch) platform=$(platform)
 	$(MAKE) mode=$(mode) \
 		arch=$(build-arch) \
+		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
+		target-platform=$(platform) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
@@ -930,7 +958,7 @@ $(bootimage-generator):
 
 $(build-bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(classpath-objects) \
-		$(heapwalk-objects) $(bootimage-generator-objects)
+		$(heapwalk-objects) $(bootimage-generator-objects) $(converter-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
@@ -983,6 +1011,18 @@ $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	sed 's/^static jclass ia_class;//' < $(<) > $(build)/openjdk/$(notdir $(<))
+ifeq ($(ios),true)
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c" \
+		> $(build)/openjdk/ProcessEnvironment_md.c
+	sed \
+		-e 's/^#ifndef __APPLE__/#if 1/' \
+		-e 's/^#ifdef __APPLE__/#if 0/' \
+		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
+		> $(build)/openjdk/UNIXProcess_md.c
+endif
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@))
@@ -1014,6 +1054,42 @@ ifeq ($(platform),windows)
 		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
+ifeq ($(platform),darwin)
+	mkdir -p $(build)/openjdk/netinet
+	for file in \
+		/usr/include/netinet/ip.h \
+		/usr/include/netinet/in_systm.h \
+		/usr/include/netinet/ip_icmp.h \
+		/usr/include/netinet/in_var.h \
+		/usr/include/netinet/icmp6.h \
+		/usr/include/netinet/ip_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/netinet6
+	for file in \
+		/usr/include/netinet6/in6_var.h; do \
+		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/net
+	for file in \
+		/usr/include/net/if_arp.h; do \
+		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
+		fi; \
+	done
+	mkdir -p $(build)/openjdk/sys
+	for file in \
+		/usr/include/sys/kern_event.h \
+		/usr/include/sys/sys_domain.h; do \
+		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
+			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
+		fi; \
+	done
+endif
 	@touch $(@)
 
 $(openjdk-jar-dep):
@@ -1024,6 +1100,7 @@ $(openjdk-jar-dep):
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/rt.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jsse.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/jce.jar")" && \
+		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/charsets.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/ext/sunjce_provider.jar")" && \
 		$(jar) xf "$$($(native-path) "$(openjdk)/jre/lib/resources.jar")")
 	@touch $(@)

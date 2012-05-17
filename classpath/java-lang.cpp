@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -629,6 +629,36 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
   }
 
   return r;
+}
+
+// System.getEnvironment() implementation
+// TODO: For Win32, replace usage of deprecated _environ and add Unicode
+// support (neither of which is likely to be of great importance).
+#ifdef AVIAN_IOS
+namespace {
+  const char* environ[] = { 0 };
+}
+#elif defined __APPLE__
+#  include <crt_externs.h>
+#  define environ (*_NSGetEnviron())
+#else
+extern char** environ;
+#endif
+extern "C" JNIEXPORT jobjectArray JNICALL
+Java_java_lang_System_getEnvironment(JNIEnv* env, jclass) {
+  int length;
+  for (length = 0; environ[length] != 0; ++length) ;
+
+  jobjectArray stringArray =
+    env->NewObjectArray(length, env->FindClass("java/lang/String"),
+                        env->NewStringUTF(""));
+
+  for (int i = 0; i < length; i++) {
+    jobject varString = env->NewStringUTF(environ[i]);
+    env->SetObjectArrayElement(stringArray, i, varString);
+  }
+
+  return stringArray;
 }
 
 extern "C" JNIEXPORT jlong JNICALL

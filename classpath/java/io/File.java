@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -33,6 +33,43 @@ public class File implements Serializable {
 
   public File(File parent, String child) {
     this(parent.getPath() + FileSeparator + child);
+  }
+
+  public static File createTempFile(String prefix, String suffix)
+    throws IOException
+  {
+    return createTempFile(prefix, suffix, null);
+  }
+
+  public static File createTempFile(String prefix, String suffix,
+                                    File directory)
+    throws IOException
+  {
+    if(directory == null) {
+      directory = new File(System.getProperty("java.io.tmpdir"));
+    }
+    if(suffix == null) {
+      suffix = ".tmp";
+    }
+    File ret;
+    long state = System.currentTimeMillis();
+
+    do {
+      ret = generateFile(directory, prefix, state, suffix);
+      state *= 7;
+      state += 3;
+    } while(ret == null);
+    ret.createNewFile();
+    return ret;
+  }
+
+  private static File generateFile(File directory, String prefix, long state, String suffix) {
+    File ret = new File(directory, prefix + state + suffix);
+    if(ret.exists()) {
+      return null;
+    } else {
+      return ret;
+    }
   }
 
   private static String normalize(String path) {
@@ -75,6 +112,22 @@ public class File implements Serializable {
   
   public boolean canWrite() {
     return canWrite(path);
+  }
+
+  private static native boolean canExecute(String path);
+
+  public boolean canExecute() {
+    return canExecute(path);
+  }
+
+  private static native boolean setExecutable(String path, boolean executable, boolean ownerOnly);
+
+  public boolean setExecutable(boolean executable) {
+    return setExecutable(executable, true);
+  }
+
+  public boolean setExecutable(boolean executable, boolean ownerOnly) {
+    return setExecutable(path, executable, ownerOnly);
   }
   
   public String getName() {
@@ -151,15 +204,10 @@ public class File implements Serializable {
     }
   }
 
-  private static native void createNewFile(String path) throws IOException;
+  private static native boolean createNewFile(String path) throws IOException;
 
-  public boolean createNewFile() {
-    try {
-      createNewFile(path);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
+  public boolean createNewFile() throws IOException {
+    return createNewFile(path);
   }
 
   public static native void delete(String path) throws IOException;

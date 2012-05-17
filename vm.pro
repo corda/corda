@@ -66,6 +66,7 @@
 -keep public class java.lang.UnsatisfiedLinkError
 -keep public class java.lang.ExceptionInInitializerError
 -keep public class java.lang.OutOfMemoryError
+-keep public class java.lang.IncompatibleClassChangeError
 -keep public class java.lang.reflect.InvocationTargetException
 -keep public class java.io.IOException
 -keep public class java.io.FileNotFoundException

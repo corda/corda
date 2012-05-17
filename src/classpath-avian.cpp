@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -52,6 +52,12 @@ class MyClasspath : public Classpath {
     return vm::makeThread
       (t, 0, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
        root(t, Machine::BootLoader), 0, 0, group, 0);
+  }
+
+  virtual void
+  clearInterrupted(Thread*)
+  {
+    // ignore
   }
 
   virtual void

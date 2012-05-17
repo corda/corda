@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -38,6 +38,7 @@
 #define CONTINUATION_BODY 32
    
 .globl GLOBAL(vmInvoke)
+.align 2
 GLOBAL(vmInvoke):
   /*
     arguments
@@ -84,6 +85,7 @@ LOCAL(vmInvoke_argumentTest):
   blx   r1
 
 .globl GLOBAL(vmInvoke_returnAddress)
+.align 2
 GLOBAL(vmInvoke_returnAddress):
   // restore stack pointer
   ldr   sp, [r8, #THREAD_SCRATCH]
@@ -97,6 +99,7 @@ GLOBAL(vmInvoke_returnAddress):
    str  r5, [r8, #THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
+.align 2
 GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
@@ -174,6 +177,7 @@ LOCAL(vmInvoke_return):
   bx    lr
 
 .globl GLOBAL(vmJumpAndInvoke)
+.align 2
 GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
    //      r0: thread

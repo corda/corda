@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -15,7 +15,7 @@ import java.util.Iterator;
 import java.net.Socket;
 
 class SocketSelector extends Selector {
-  protected long state;
+  protected volatile long state;
   protected final Object lock = new Object();
   protected boolean woken = false;
 
@@ -31,7 +31,7 @@ class SocketSelector extends Selector {
 
   public Selector wakeup() {
     synchronized (lock) {
-      if (! woken) {
+      if (isOpen() && (! woken)) {
         woken = true;
 
         natWakeup(state);
@@ -66,6 +66,10 @@ class SocketSelector extends Selector {
   }
 
   public int doSelect(long interval) throws IOException {
+    if (! isOpen()) {
+      throw new ClosedSelectorException();
+    }
+
     selectedKeys.clear();
 
     if (clearWoken()) interval = -1;
@@ -106,8 +110,13 @@ class SocketSelector extends Selector {
     return selectedKeys.size();
   }
 
-  public void close() {
-    natClose(state);
+  public synchronized void close() {
+    synchronized (lock) {
+      if (isOpen()) {
+        natClose(state);
+        state = 0;
+      }
+    }
   }
 
   private static native long natInit();

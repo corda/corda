@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -17,12 +17,15 @@ import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileDescriptor;
+import java.util.Map;
+import java.util.Hashtable;
 import java.util.Properties;
 
 public abstract class System {
   private static final long NanoTimeBaseInMillis = currentTimeMillis();
   
   private static Property properties;
+  private static Map<String, String> environment;
   
   private static SecurityManager securityManager;
   //   static {
@@ -145,4 +148,37 @@ public abstract class System {
       this.next = next;
     }
   }
+
+  public static String getenv(String name) throws NullPointerException,
+    SecurityException {
+    if (getSecurityManager() != null) { // is this allowed?
+      getSecurityManager().
+        checkPermission(new RuntimePermission("getenv." + name));
+    }
+    return getenv().get(name);
+  }
+
+  public static Map<String, String> getenv() throws SecurityException {
+    if (getSecurityManager() != null) { // is this allowed?
+      getSecurityManager().checkPermission(new RuntimePermission("getenv.*"));
+    }
+
+    if (environment == null) { // build environment table
+      String[] vars = getEnvironment();
+      environment = new Hashtable<String, String>(vars.length);
+      for (String var : vars) { // parse name-value pairs
+        int equalsIndex = var.indexOf('=');
+        // null names and values are forbidden
+        if (equalsIndex != -1 && equalsIndex < var.length() - 1) {
+          environment.put(var.substring(0, equalsIndex),
+                          var.substring(equalsIndex + 1));
+        }
+      }
+    }
+
+    return environment;
+  }
+
+  /** Returns the native process environment. */
+  private static native String[] getEnvironment();
 }

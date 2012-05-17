@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Avian Contributors
+/* Copyright (c) 2009-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -130,6 +130,7 @@ inline int cmpw(int ra, int rb) { return cmp(0, ra, rb); }
 inline int cmplw(int ra, int rb) { return cmpl(0, ra, rb); }
 inline int cmpwi(int ra, int i) { return cmpi(0, ra, i); }
 inline int cmplwi(int ra, int i) { return cmpli(0, ra, i); }
+inline int trap() { return 0x7fe00008; } // todo: macro-ify
 }
 
 const int64_t MASK_LO32 = 0x0ffffffff;
@@ -232,7 +233,7 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(this, 0)),
+    firstBlock(new(zone) MyBlock(this, 0)),
     lastBlock(firstBlock), jumpOffsetHead(0), jumpOffsetTail(0),
     constantPool(0), constantPoolCount(0)
   { }
@@ -348,8 +349,7 @@ class Offset: public Promise {
 Promise*
 offset(Context* c)
 {
-  return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length());
+  return new(c->zone) Offset(c, c->lastBlock, c->code.length());
 }
 
 bool
@@ -467,14 +467,13 @@ void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
                  bool conditional)
 {
-  OffsetTask* task = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset, conditional);
+  OffsetTask* task = new(c->zone) OffsetTask(c->tasks, promise, instructionOffset, conditional);
 
   c->tasks = task;
 
   if (conditional) {
-    JumpOffset* offset = new (c->zone->allocate(sizeof(JumpOffset))) JumpOffset
-      (c->lastBlock, task, c->code.length() - c->lastBlock->offset);
+    JumpOffset* offset =
+      new(c->zone) JumpOffset(c->lastBlock, task, c->code.length() - c->lastBlock->offset);
 
     if (c->lastBlock->jumpOffsetTail) {
       c->lastBlock->jumpOffsetTail->next = offset;
@@ -489,7 +488,7 @@ void
 appendJumpEvent(Context* c, MyBlock* b, unsigned offset, JumpOffset* head,
                 JumpOffset* tail)
 {
-  JumpEvent* e = new (c->zone->allocate(sizeof(JumpEvent))) JumpEvent
+  JumpEvent* e = new(c->zone) JumpEvent
     (head, tail, offset);
 
   if (b->jumpEventTail) {
@@ -857,8 +856,7 @@ void
 appendImmediateTask(Context* c, Promise* promise, Promise* offset,
                     unsigned size, unsigned promiseOffset, bool address)
 {
-  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
-    (c->tasks, promise, offset, size, promiseOffset, address);
+  c->tasks = new(c->zone) ImmediateTask(c->tasks, promise, offset, size, promiseOffset, address);
 }
 
 class ConstantPoolEntry: public Promise {
@@ -889,8 +887,7 @@ class ConstantPoolEntry: public Promise {
 ConstantPoolEntry*
 appendConstantPoolEntry(Context* c, Promise* constant)
 {
-  return new (c->zone->allocate(sizeof(ConstantPoolEntry)))
-    ConstantPoolEntry(c, constant);
+  return new (c->zone) ConstantPoolEntry(c, constant);
 }
 
 void
@@ -1784,8 +1781,7 @@ branchCM(Context* c, TernaryOperation op, unsigned size,
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new (c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 void
@@ -1908,6 +1904,12 @@ return_(Context* c)
 }
 
 void
+trap(Context* c)
+{
+  emit(c, trap());
+}
+
+void
 memoryBarrier(Context* c)
 {
   emit(c, sync(0));
@@ -1923,7 +1925,7 @@ argumentFootprint(unsigned footprint)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
-          unsigned footprint, void* link, void*,
+          unsigned footprint, void* link, bool,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -1988,6 +1990,7 @@ populateTables(ArchitectureContext* c)
   zo[LoadBarrier] = memoryBarrier;
   zo[StoreStoreBarrier] = memoryBarrier;
   zo[StoreLoadBarrier] = memoryBarrier;
+  zo[Trap] = trap;
 
   uo[index(c, LongCall, C)] = CAST1(longCallC);
 
@@ -2215,12 +2218,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     ::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, link,
-                stackLimit, targetParameterFootprint, ip, stack);
+                mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -2454,8 +2457,7 @@ class MyAssembler: public Assembler {
     Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
     Constant handlerConstant
-      (new (c.zone->allocate(sizeof(ResolvedPromise)))
-       ResolvedPromise(handler));
+      (new(c.zone) ResolvedPromise(handler));
     branchRM(&c, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
@@ -2775,8 +2777,7 @@ class MyAssembler: public Assembler {
     MyBlock* b = c.lastBlock;
     b->size = c.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(&c, c.code.length());
+      c.lastBlock = new(c.zone) MyBlock(&c, c.code.length());
     } else {
       c.lastBlock = 0;
     }
@@ -2847,9 +2848,9 @@ Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(MyAssembler)))
-    MyAssembler(system, allocator, zone,
-                static_cast<MyArchitecture*>(architecture));
+  return
+    new(zone) MyAssembler(system, allocator, zone,
+                          static_cast<MyArchitecture*>(architecture));
 }
 
 } // namespace vm

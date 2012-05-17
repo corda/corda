@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -38,9 +38,9 @@ public abstract class URLStreamHandler {
           host = s.substring(0, slash);
         } else {
           host = s.substring(0, colon);
-          port = Integer.parseInt(s.substring(colon + 1), slash);
+          port = Integer.parseInt(s.substring(colon + 1, slash));
         }
-        s = s.substring(slash + 1);
+        s = s.substring(slash);
       }
     }
 

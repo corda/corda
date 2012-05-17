@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -199,7 +199,7 @@ assert(System* s, bool v)
 
 #endif // not NDEBUG
 
-System*
+JNIEXPORT System*
 makeSystem(const char* crashDumpDirectory);
 
 } // namespace vm

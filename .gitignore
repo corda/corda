@@ -5,3 +5,5 @@ build
 .project
 .settings
 bin
+/lib
+/distrib

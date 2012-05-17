@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -145,8 +145,8 @@ public class Thread implements Runnable {
 
   private static native boolean interrupt(long peer);
 
-  public boolean interrupted() {
-    return interrupted(peer);
+  public static boolean interrupted() {
+    return interrupted(currentThread().peer);
   }
 
   private static native boolean interrupted(long peer);

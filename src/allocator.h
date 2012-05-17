@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -56,5 +56,9 @@ copy(Allocator* allocator, const char* a)
 }
 
 } // namespace vm
+
+inline void* operator new (size_t size, vm::Allocator* allocator) {
+  return allocator->allocate(size);
+}
 
 #endif//ALLOCATOR_H

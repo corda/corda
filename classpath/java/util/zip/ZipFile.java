@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -86,7 +86,7 @@ public class ZipFile {
   }
 
   public InputStream getInputStream(ZipEntry entry) throws IOException {
-    int pointer = ((MyEntry) entry).pointer();
+    final int pointer = ((MyEntry) entry).pointer();
     int method = compressionMethod(window, pointer);
     int size = compressedSize(window, pointer);
     InputStream in = new MyInputStream(file, fileData(window, pointer), size);
@@ -99,7 +99,35 @@ public class ZipFile {
       return in;
 
     case Deflated:
-      return new InflaterInputStream(in, new Inflater(true));
+      return new InflaterInputStream(in, new Inflater(true)) {
+        int remaining = uncompressedSize(window, pointer);
+
+        public int read() throws IOException {
+          int c = super.read();
+          if (c >= 0) {
+            -- remaining;
+          }
+          return c;
+        }
+
+        public int read(byte[] buffer) throws IOException {
+          return read(buffer, 0, buffer.length);
+        }
+
+        public int read(byte[] buffer, int offset, int length)
+          throws IOException
+        {
+          int c = super.read(buffer, offset, length);
+          if (c > 0) {
+            remaining -= c;
+          }
+          return c;
+        }
+
+        public int available() {
+          return remaining;
+        }
+      };
 
     default:
       throw new IOException();

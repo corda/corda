@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -39,6 +39,13 @@ class Processor {
     virtual int ip() = 0;
 
     virtual unsigned count() = 0;
+  };
+
+  class CompilationHandler {
+   public:
+    virtual void compiled(const void* code, unsigned size, unsigned frameSize, const char* name) = 0;
+
+    virtual void dispose() = 0;
   };
 
   virtual Thread*
@@ -119,6 +126,9 @@ class Processor {
 
   virtual void
   initialize(BootImage* image, uint8_t* code, unsigned capacity) = 0;
+
+  virtual void
+  addCompilationHandler(CompilationHandler* handler) = 0;
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,

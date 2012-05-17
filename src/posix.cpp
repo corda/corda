@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -122,8 +122,7 @@ pathOfExecutable(System* s, const char** retBuf, unsigned* size)
 
 const bool Verbose = false;
 
-const unsigned Waiting = 1 << 0;
-const unsigned Notified = 1 << 1;
+const unsigned Notified = 1 << 0;
 
 class MySystem: public System {
  public:
@@ -256,7 +255,14 @@ class MySystem: public System {
     }
 
     void append(Thread* t) {
+#ifndef NDEBUG
+      for (Thread* x = first; x; x = x->next) {
+        expect(s, t != x);
+      }
+#endif
+
       if (last) {
+        expect(s, t != last);
         last->next = t;
         last = t;
       } else {
@@ -271,6 +277,7 @@ class MySystem: public System {
           if (current == first) {
             first = t->next;
           } else {
+            expect(s, previous != t->next);
             previous->next = t->next;
           }
 
@@ -286,6 +293,12 @@ class MySystem: public System {
           current = current->next;
         }
       }
+
+#ifndef NDEBUG
+      for (Thread* x = first; x; x = x->next) {
+        expect(s, t != x);
+      }
+#endif
     }
 
     virtual void wait(System::Thread* context, int64_t time) {
@@ -308,12 +321,12 @@ class MySystem: public System {
 
         { ACQUIRE(t->mutex);
       
+          expect(s, (t->flags & Notified) == 0);
+
           interrupted = t->r->interrupted();
           if (interrupted and clearInterrupted) {
             t->r->setInterrupted(false);
           }
-
-          t->flags |= Waiting;
 
           append(t);
 
@@ -343,14 +356,22 @@ class MySystem: public System {
           }
 
           notified = ((t->flags & Notified) != 0);
-        
-          t->flags = 0;
         }
 
         pthread_mutex_lock(&mutex);
 
+        { ACQUIRE(t->mutex);
+          t->flags = 0;
+        }
+
         if (not notified) {
           remove(t);
+        } else {
+#ifndef NDEBUG
+          for (Thread* x = first; x; x = x->next) {
+            expect(s, t != x);
+          }
+#endif
         }
 
         t->next = 0;
@@ -380,6 +401,7 @@ class MySystem: public System {
           Thread* t = first;
           first = first->next;
           if (t == last) {
+            expect(s, first == 0);
             last = 0;
           }
 

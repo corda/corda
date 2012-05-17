@@ -77,6 +77,7 @@
   (object exceptionHandlerTable)
   (object lineNumberTable)
   (intptr_t compiled)
+  (uint32_t compiledSize)
   (uint16_t maxStack)
   (uint16_t maxLocals)
   (array uint8_t body))
@@ -218,6 +219,8 @@
 (type arrayStoreException java/lang/ArrayStoreException)
 
 (type negativeArraySizeException java/lang/NegativeArraySizeException)
+
+(type reflectiveOperationException java/lang/ReflectiveOperationException)
 
 (type classCastException java/lang/ClassCastException)
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -173,7 +173,7 @@ class Finder {
   virtual void dispose() = 0;
 };
 
-Finder*
+JNIEXPORT Finder*
 makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary);
 
 Finder*

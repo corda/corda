@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -81,7 +81,9 @@ public final class URL {
   private static URLStreamHandler findHandler(String protocol)
     throws MalformedURLException
   {
-    if ("resource".equals(protocol)) {
+    if ("http".equals(protocol) || "https".equals(protocol)) {
+      return new avian.http.Handler();
+    } else if ("resource".equals(protocol)) {
       return new avian.resource.Handler();
     } else if ("file".equals(protocol)) {
       return new avian.file.Handler();
