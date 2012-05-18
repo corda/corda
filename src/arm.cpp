@@ -1931,7 +1931,7 @@ return_(Context* c)
 void
 trap(Context* c)
 {
-  emit(c, bkpt());
+  emit(c, bkpt(0));
 }
 
 void
