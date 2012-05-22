@@ -358,7 +358,7 @@ public class Proxy {
     int[] interfaceIndexes = new int[interfaces.length];
     for (int i = 0; i < interfaces.length; ++i) {
       interfaceIndexes[i] = ConstantPool.addClass
-        (pool, interfaces[i].getName());
+        (pool, interfaces[i].getName().replace('.', '/'));
     }
 
     Map<String,avian.VMMethod> virtualMap = new HashMap();

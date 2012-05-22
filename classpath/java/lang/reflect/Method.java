@@ -170,7 +170,7 @@ public class Method<T> extends AccessibleObject implements Member {
   }
 
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
-    if (vmMethod.addendum.annotationTable != null) {
+    if (vmMethod.hasAnnotations()) {
       Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
@@ -183,7 +183,7 @@ public class Method<T> extends AccessibleObject implements Member {
   }
 
   public Annotation[] getAnnotations() {
-    if (vmMethod.addendum.annotationTable != null) {
+    if (vmMethod.hasAnnotations()) {
       Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
