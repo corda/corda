@@ -1651,7 +1651,10 @@ disassembleCode(const char* prefix, uint8_t* code, unsigned length)
       case monitorenter: fprintf(stderr, "monitorenter\n"); break;
       case monitorexit: fprintf(stderr, "monitorexit\n"); break;
 
-      case multianewarray: fprintf(stderr, "multianewarray %04x %02x\n", read16(code, ip), code[ip++]); break;
+      case multianewarray: {
+        unsigned type = read16(code, ip);
+        fprintf(stderr, "multianewarray %04x %02x\n", type, code[ip++]);
+      } break;
 
       case new_: fprintf(stderr, "new %04x\n", read16(code, ip)); break;
 
