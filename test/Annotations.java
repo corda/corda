@@ -1,6 +1,9 @@
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.reflect.Method;
+
+import avian.testing.annotations.Color;
+import avian.testing.annotations.Test;
+import avian.testing.annotations.TestEnum;
+import avian.testing.annotations.TestInteger;
 
 public class Annotations {
   private static void expect(boolean v) {
@@ -18,6 +21,12 @@ public class Annotations {
            .equals(Color.Red));
 
     expect(((TestInteger) m.getAnnotation(TestInteger.class)).value() == 42);
+    
+    expect(m.getAnnotations().length == 3);
+    
+    Method noAnno = Annotations.class.getMethod("noAnnotation");
+    expect(noAnno.getAnnotation(Test.class) == null);
+    expect(noAnno.getAnnotations().length == 0);
   }
 
   @Test("couscous")
@@ -26,24 +35,8 @@ public class Annotations {
   public static void foo() {
     
   }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  private @interface Test {
-    public String value();
+  
+  public static void noAnnotation() {
+    
   }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  private @interface TestEnum {
-    public Color value();
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  private @interface TestInteger {
-    public int value();
-  }
-
-  private static enum Color {
-    Red, Yellow, Blue
-  }
-
 }
