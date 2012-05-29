@@ -223,3 +223,21 @@
 -keep class sun.util.resources.TimeZoneNames
 -keep class sun.text.resources.FormatData
 
+# loaded via reflection from DefaultFileSystemProvider:
+-keep class sun.nio.fs.LinuxFileSystemProvider
+-keep class sun.nio.fs.BsdFileSystemProvider
+
+# loaded via JNI in UnixNativeDispatcher.c:
+-keep class sun.nio.fs.UnixFileAttributes {
+  <fields>;
+}
+-keep class sun.nio.fs.UnixFileStoreAttributes {
+  <fields>;
+}
+-keep class sun.nio.fs.UnixMountEntry {
+  <fields>;
+}
+
+-keep class sun.nio.fs.UnixException {
+   UnixException(int);
+ }

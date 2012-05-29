@@ -685,7 +685,10 @@ vm-classes = \
 	avian/*.class \
 	avian/resource/*.class
 
+test-support-sources = $(shell find $(test)/avian/ -name '*.java')
 test-sources = $(wildcard $(test)/*.java)
+test-sources += $(test-support-sources)
+test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-dep = $(test-build).dep
 
@@ -765,7 +768,7 @@ vg: build
 test: build
 	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
 		$(test-executable) $(mode) "$(test-flags)" \
-		$(call class-names,$(test-build),$(test-classes)) \
+		$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \
 		$(continuation-tests) $(tail-tests)
 
 .PHONY: tarball

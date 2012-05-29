@@ -20,6 +20,8 @@ using namespace vm;
 
 namespace {
 
+const bool DebugClassReader = false;
+
 const unsigned NoByte = 0xFFFF;
 
 #ifdef USE_ATOMIC_OPERATIONS
@@ -813,13 +815,22 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
   switch (s.read1()) {
   case CONSTANT_Integer:
   case CONSTANT_Float: {
-    singletonValue(t, pool, i) = s.read4();
+    uint32_t v = s.read4();
+    singletonValue(t, pool, i) = v;
+
+    if(DebugClassReader) {
+      fprintf(stderr, "    consts[%d] = int/float 0x%x\n", i, v);
+    }
   } return 1;
     
   case CONSTANT_Long:
   case CONSTANT_Double: {
     uint64_t v = s.read8();
     memcpy(&singletonValue(t, pool, i), &v, 8);
+
+    if(DebugClassReader) {
+      fprintf(stderr, "    consts[%d] = long/double <todo>\n", i);
+    }
   } return 2;
 
   case CONSTANT_Utf8: {
@@ -829,6 +840,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
         value = internByteArray(t, value);
       }
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    consts[%d] = utf8 %s\n", i, &byteArrayBody(t, value, 0));
+      }
     }
   } return 1;
 
@@ -839,6 +854,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
         
       object value = makeReference(t, 0, singletonObject(t, pool, si), 0);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    consts[%d] = class <todo>\n", i);
+      }
     }
   } return 1;
 
@@ -852,6 +871,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
         (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    consts[%d] = string <todo>\n", i);
+      }
     }
   } return 1;
 
@@ -867,6 +890,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       object type = singletonObject(t, pool, ti);
       object value = makePair(t, name, type);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    consts[%d] = nameAndType %s%s\n", i, &byteArrayBody(t, name, 0), &byteArrayBody(t, type, 0));
+      }
     }
   } return 1;
 
@@ -886,6 +913,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       object value = makeReference
           (t, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    consts[%d] = method %s.%s%s\n", i, &byteArrayBody(t, class_, 0), &byteArrayBody(t, pairFirst(t, nameAndType), 0), &byteArrayBody(t, pairSecond(t, nameAndType), 0));
+      }
     }
   } return 1;
 
@@ -899,6 +930,10 @@ parsePool(Thread* t, Stream& s)
   unsigned count = s.read2() - 1;
   object pool = makeSingletonOfSize(t, count + poolMaskSize(count));
   PROTECT(t, pool);
+
+  if(DebugClassReader) {
+    fprintf(stderr, "  const pool entries %d\n", count);
+  }
 
   if (count) {
     uint32_t* index = static_cast<uint32_t*>(t->m->heap->allocate(count * 4));
@@ -1299,6 +1334,384 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
   }
 }
 
+uint16_t read16(uint8_t* code, unsigned& ip) {
+  uint16_t a = code[ip++];
+  uint16_t b = code[ip++];
+  return (a << 8) | b;
+}
+
+uint32_t read32(uint8_t* code, unsigned& ip) {
+  uint32_t b = code[ip++];
+  uint32_t a = code[ip++];
+  uint32_t c = code[ip++];
+  uint32_t d = code[ip++];
+  return (a << 24) | (b << 16) | (c << 8) | d;
+}
+
+void
+disassembleCode(const char* prefix, uint8_t* code, unsigned length)
+{
+  unsigned ip = 0;
+
+  while(ip < length) {
+    unsigned instr;
+    fprintf(stderr, "%s%x:\t", prefix, ip);
+    switch (instr = code[ip++]) {
+      case aaload: fprintf(stderr, "aaload\n"); break;
+      case aastore: fprintf(stderr, "aastore\n"); break;
+
+      case aconst_null: fprintf(stderr, "aconst_null\n"); break;
+
+      case aload: fprintf(stderr, "aload %02x\n", code[ip++]); break;
+      case aload_0: fprintf(stderr, "aload_0\n"); break;
+      case aload_1: fprintf(stderr, "aload_1\n"); break;
+      case aload_2: fprintf(stderr, "aload_2\n"); break;
+      case aload_3: fprintf(stderr, "aload_3\n"); break;
+
+      case anewarray: fprintf(stderr, "anewarray %04x\n", read16(code, ip)); break;
+      case areturn: fprintf(stderr, "areturn\n"); break;
+      case arraylength: fprintf(stderr, "arraylength\n"); break;
+
+      case astore: fprintf(stderr, "astore %02x\n", code[ip++]); break;
+      case astore_0: fprintf(stderr, "astore_0\n"); break;
+      case astore_1: fprintf(stderr, "astore_1\n"); break;
+      case astore_2: fprintf(stderr, "astore_2\n"); break;
+      case astore_3: fprintf(stderr, "astore_3\n"); break;
+
+
+      case athrow: fprintf(stderr, "athrow\n"); break;
+      case baload: fprintf(stderr, "baload\n"); break;
+      case bastore: fprintf(stderr, "bastore\n"); break;
+
+      case bipush: fprintf(stderr, "bipush %02x\n", code[ip++]); break;
+      case caload: fprintf(stderr, "caload\n"); break;
+      case castore: fprintf(stderr, "castore\n"); break;
+      case checkcast: fprintf(stderr, "checkcast %04x\n", read16(code, ip)); break;
+      case d2f: fprintf(stderr, "d2f\n"); break;
+      case d2i: fprintf(stderr, "d2i\n"); break;
+      case d2l: fprintf(stderr, "d2l\n"); break;
+      case dadd: fprintf(stderr, "dadd\n"); break;
+      case daload: fprintf(stderr, "daload\n"); break;
+      case dastore: fprintf(stderr, "dastore\n"); break;
+      case dcmpg: fprintf(stderr, "dcmpg\n"); break;
+      case dcmpl: fprintf(stderr, "dcmpl\n"); break;
+      case dconst_0: fprintf(stderr, "dconst_0\n"); break;
+      case dconst_1: fprintf(stderr, "dconst_1\n"); break;
+      case ddiv: fprintf(stderr, "ddiv\n"); break;
+      case dmul: fprintf(stderr, "dmul\n"); break;
+      case dneg: fprintf(stderr, "dneg\n"); break;
+      case vm::drem: fprintf(stderr, "drem\n"); break;
+      case dsub: fprintf(stderr, "dsub\n"); break;
+      case dup: fprintf(stderr, "dup\n"); break;
+      case dup_x1: fprintf(stderr, "dup_x1\n"); break;
+      case dup_x2: fprintf(stderr, "dup_x2\n"); break;
+      case dup2: fprintf(stderr, "dup2\n"); break;
+      case dup2_x1: fprintf(stderr, "dup2_x1\n"); break;
+      case dup2_x2: fprintf(stderr, "dup2_x2\n"); break;
+      case f2d: fprintf(stderr, "f2d\n"); break;
+      case f2i: fprintf(stderr, "f2i\n"); break;
+      case f2l: fprintf(stderr, "f2l\n"); break;
+      case fadd: fprintf(stderr, "fadd\n"); break;
+      case faload: fprintf(stderr, "faload\n"); break;
+      case fastore: fprintf(stderr, "fastore\n"); break;
+      case fcmpg: fprintf(stderr, "fcmpg\n"); break;
+      case fcmpl: fprintf(stderr, "fcmpl\n"); break;
+      case fconst_0: fprintf(stderr, "fconst_0\n"); break;
+      case fconst_1: fprintf(stderr, "fconst_1\n"); break;
+      case fconst_2: fprintf(stderr, "fconst_2\n"); break;
+      case fdiv: fprintf(stderr, "fdiv\n"); break;
+      case fmul: fprintf(stderr, "fmul\n"); break;
+      case fneg: fprintf(stderr, "fneg\n"); break;
+      case frem: fprintf(stderr, "frem\n"); break;
+      case fsub: fprintf(stderr, "fsub\n"); break;
+
+      case getfield: fprintf(stderr, "getfield %04x\n", read16(code, ip)); break;
+      case getstatic: fprintf(stderr, "getstatic %04x\n", read16(code, ip)); break;
+      case goto_: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "goto %04x\n", offset + ip - 3);
+      } break;
+      case goto_w: {
+        int32_t offset = read32(code, ip);
+        fprintf(stderr, "goto_w %08x\n", offset + ip - 5);
+      } break;
+
+      case i2b: fprintf(stderr, "i2b\n"); break;
+      case i2c: fprintf(stderr, "i2c\n"); break;
+      case i2d: fprintf(stderr, "i2d\n"); break;
+      case i2f: fprintf(stderr, "i2f\n"); break;
+      case i2l: fprintf(stderr, "i2l\n"); break;
+      case i2s: fprintf(stderr, "i2s\n"); break;
+      case iadd: fprintf(stderr, "iadd\n"); break;
+      case iaload: fprintf(stderr, "iaload\n"); break;
+      case iand: fprintf(stderr, "iand\n"); break;
+      case iastore: fprintf(stderr, "iastore\n"); break;
+      case iconst_m1: fprintf(stderr, "iconst_m1\n"); break;
+      case iconst_0: fprintf(stderr, "iconst_0\n"); break;
+      case iconst_1: fprintf(stderr, "iconst_1\n"); break;
+      case iconst_2: fprintf(stderr, "iconst_2\n"); break;
+      case iconst_3: fprintf(stderr, "iconst_3\n"); break;
+      case iconst_4: fprintf(stderr, "iconst_4\n"); break;
+      case iconst_5: fprintf(stderr, "iconst_5\n"); break;
+      case idiv: fprintf(stderr, "idiv\n"); break;
+
+      case if_acmpeq: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_acmpeq %04x\n", offset + ip - 3);
+      } break;
+      case if_acmpne: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_acmpne %04x\n", offset + ip - 3);
+      } break;
+      case if_icmpeq: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmpeq %04x\n", offset + ip - 3);
+      } break;
+      case if_icmpne: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmpne %04x\n", offset + ip - 3);
+      } break;
+
+      case if_icmpgt: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmpgt %04x\n", offset + ip - 3);
+      } break;
+      case if_icmpge: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmpge %04x\n", offset + ip - 3);
+      } break;
+      case if_icmplt: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmplt %04x\n", offset + ip - 3);
+      } break;
+      case if_icmple: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "if_icmple %04x\n", offset + ip - 3);
+      } break;
+
+      case ifeq: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifeq %04x\n", offset + ip - 3);
+      } break;
+      case ifne: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifne %04x\n", offset + ip - 3);
+      } break;
+      case ifgt: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifgt %04x\n", offset + ip - 3);
+      } break;
+      case ifge: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifge %04x\n", offset + ip - 3);
+      } break;
+      case iflt: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "iflt %04x\n", offset + ip - 3);
+      } break;
+      case ifle: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifle %04x\n", offset + ip - 3);
+      } break;
+
+      case ifnonnull: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifnonnull %04x\n", offset + ip - 3);
+      } break;
+      case ifnull: {
+        int16_t offset = read16(code, ip);
+        fprintf(stderr, "ifnull %04x\n", offset + ip - 3);
+      } break;
+
+      case iinc: {
+        uint8_t a = code[ip++];
+        uint8_t b = code[ip++];
+        fprintf(stderr, "iinc %02x %02x\n", a, b);
+      } break;
+
+      case iload: fprintf(stderr, "iload %02x\n", code[ip++]); break;
+      case fload: fprintf(stderr, "fload %02x\n", code[ip++]); break;
+
+      case iload_0: fprintf(stderr, "iload_0\n"); break;
+      case fload_0: fprintf(stderr, "fload_0\n"); break;
+      case iload_1: fprintf(stderr, "iload_1\n"); break;
+      case fload_1: fprintf(stderr, "fload_1\n"); break;
+
+      case iload_2: fprintf(stderr, "iload_2\n"); break;
+      case fload_2: fprintf(stderr, "fload_2\n"); break;
+      case iload_3: fprintf(stderr, "iload_3\n"); break;
+      case fload_3: fprintf(stderr, "fload_3\n"); break;
+
+      case imul: fprintf(stderr, "imul\n"); break;
+      case ineg: fprintf(stderr, "ineg\n"); break;
+
+      case instanceof: fprintf(stderr, "instanceof %04x\n", read16(code, ip)); break;
+      case invokeinterface: fprintf(stderr, "invokeinterface %04x\n", read16(code, ip)); break;
+      case invokespecial: fprintf(stderr, "invokespecial %04x\n", read16(code, ip)); break;
+      case invokestatic: fprintf(stderr, "invokestatic %04x\n", read16(code, ip)); break;
+      case invokevirtual: fprintf(stderr, "invokevirtual %04x\n", read16(code, ip)); break;
+
+      case ior: fprintf(stderr, "ior\n"); break;
+      case irem: fprintf(stderr, "irem\n"); break;
+      case ireturn: fprintf(stderr, "ireturn\n"); break;
+      case freturn: fprintf(stderr, "freturn\n"); break;
+      case ishl: fprintf(stderr, "ishl\n"); break;
+      case ishr: fprintf(stderr, "ishr\n"); break;
+
+      case istore: fprintf(stderr, "istore %02x\n", code[ip++]); break;
+      case fstore: fprintf(stderr, "fstore %02x\n", code[ip++]); break;
+
+      case istore_0: fprintf(stderr, "istore_0\n"); break;
+      case fstore_0: fprintf(stderr, "fstore_0\n"); break;
+      case istore_1: fprintf(stderr, "istore_1\n"); break;
+      case fstore_1: fprintf(stderr, "fstore_1\n"); break;
+      case istore_2: fprintf(stderr, "istore_2\n"); break;
+      case fstore_2: fprintf(stderr, "fstore_2\n"); break;
+      case istore_3: fprintf(stderr, "istore_3\n"); break;
+      case fstore_3: fprintf(stderr, "fstore_3\n"); break;
+
+      case isub: fprintf(stderr, "isub\n"); break;
+      case iushr: fprintf(stderr, "iushr\n"); break;
+      case ixor: fprintf(stderr, "ixor\n"); break;
+
+      case jsr: fprintf(stderr, "jsr %04x\n", read16(code, ip)); break;
+      case jsr_w: fprintf(stderr, "jsr_w %08x\n", read32(code, ip)); break;
+
+      case l2d: fprintf(stderr, "l2d\n"); break;
+      case l2f: fprintf(stderr, "l2f\n"); break;
+      case l2i: fprintf(stderr, "l2i\n"); break;
+      case ladd: fprintf(stderr, "ladd\n"); break;
+      case laload: fprintf(stderr, "laload\n"); break;
+
+      case land: fprintf(stderr, "land\n"); break;
+      case lastore: fprintf(stderr, "lastore\n"); break;
+
+      case lcmp: fprintf(stderr, "lcmp\n"); break;
+      case lconst_0: fprintf(stderr, "lconst_0\n"); break;
+      case lconst_1: fprintf(stderr, "lconst_1\n"); break;
+
+      case ldc: fprintf(stderr, "ldc %04x\n", read16(code, ip)); break;
+      case ldc_w: fprintf(stderr, "ldc_w %08x\n", read32(code, ip)); break;
+      case ldc2_w: fprintf(stderr, "ldc2_w %04x\n", read16(code, ip)); break;
+
+      case ldiv_: fprintf(stderr, "ldiv_\n"); break;
+
+      case lload: fprintf(stderr, "lload %02x\n", code[ip++]); break;
+      case dload: fprintf(stderr, "dload %02x\n", code[ip++]); break;
+
+      case lload_0: fprintf(stderr, "lload_0\n"); break;
+      case dload_0: fprintf(stderr, "dload_0\n"); break;
+      case lload_1: fprintf(stderr, "lload_1\n"); break;
+      case dload_1: fprintf(stderr, "dload_1\n"); break;
+      case lload_2: fprintf(stderr, "lload_2\n"); break;
+      case dload_2: fprintf(stderr, "dload_2\n"); break;
+      case lload_3: fprintf(stderr, "lload_3\n"); break;
+      case dload_3: fprintf(stderr, "dload_3\n"); break;
+
+      case lmul: fprintf(stderr, "lmul\n"); break;
+      case lneg: fprintf(stderr, "lneg\n"); break;
+
+      case lookupswitch: {
+        int32_t default_ = read32(code, ip);
+        int32_t pairCount = read32(code, ip);
+        fprintf(stderr, "lookupswitch default: %d pairCount: %d\n", default_, pairCount);
+
+        for (int i = 0; i < pairCount; i++) {
+          int32_t k = read32(code, ip);
+          int32_t d = read32(code, ip);
+          fprintf(stderr, "%s  key: %02x dest: %2x\n", prefix, k, d);
+        }
+      } break;
+
+      case lor: fprintf(stderr, "lor\n"); break;
+      case lrem: fprintf(stderr, "lrem\n"); break;
+      case lreturn: fprintf(stderr, "lreturn\n"); break;
+      case dreturn: fprintf(stderr, "dreturn\n"); break;
+      case lshl: fprintf(stderr, "lshl\n"); break;
+      case lshr: fprintf(stderr, "lshr\n"); break;
+
+      case lstore: fprintf(stderr, "lstore %02x\n", code[ip++]); break;
+      case dstore: fprintf(stderr, "dstore %02x\n", code[ip++]); break;
+
+      case lstore_0: fprintf(stderr, "lstore_0\n"); break;
+      case dstore_0: fprintf(stderr, "dstore_0\n"); break;
+      case lstore_1: fprintf(stderr, "lstore_1\n"); break;
+      case dstore_1: fprintf(stderr, "dstore_1\n"); break;
+      case lstore_2: fprintf(stderr, "lstore_2\n"); break;
+      case dstore_2: fprintf(stderr, "dstore_2\n"); break;
+      case lstore_3: fprintf(stderr, "lstore_3\n"); break;
+      case dstore_3: fprintf(stderr, "dstore_3\n"); break;
+
+      case lsub: fprintf(stderr, "lsub\n"); break;
+      case lushr: fprintf(stderr, "lushr\n"); break;
+      case lxor: fprintf(stderr, "lxor\n"); break;
+
+      case monitorenter: fprintf(stderr, "monitorenter\n"); break;
+      case monitorexit: fprintf(stderr, "monitorexit\n"); break;
+
+      case multianewarray: {
+        unsigned type = read16(code, ip);
+        fprintf(stderr, "multianewarray %04x %02x\n", type, code[ip++]);
+      } break;
+
+      case new_: fprintf(stderr, "new %04x\n", read16(code, ip)); break;
+
+      case newarray: fprintf(stderr, "newarray %02x\n", code[ip++]); break;
+
+      case nop: fprintf(stderr, "nop\n"); break;
+      case pop_: fprintf(stderr, "pop\n"); break;
+      case pop2: fprintf(stderr, "pop2\n"); break;
+
+      case putfield: fprintf(stderr, "putfield %04x\n", read16(code, ip)); break;
+      case putstatic: fprintf(stderr, "putstatic %04x\n", read16(code, ip)); break;
+
+      case ret: fprintf(stderr, "ret %02x\n", code[ip++]); break;
+
+      case return_: fprintf(stderr, "return_\n"); break;
+      case saload: fprintf(stderr, "saload\n"); break;
+      case sastore: fprintf(stderr, "sastore\n"); break;
+
+      case sipush: fprintf(stderr, "sipush %04x\n", read16(code, ip)); break;
+
+      case swap: fprintf(stderr, "swap\n"); break;
+
+      case tableswitch: {
+        int32_t default_ = read32(code, ip);
+        int32_t bottom = read32(code, ip);
+        int32_t top = read32(code, ip);
+        fprintf(stderr, "tableswitch default: %d bottom: %d top: %d\n", default_, bottom, top);
+
+        for (int i = 0; i < top - bottom + 1; i++) {
+          int32_t d = read32(code, ip);
+          fprintf(stderr, "%s  key: %d dest: %2x\n", prefix, i + bottom, d);
+        }
+      } break;
+
+      case wide: {
+        switch (code[ip++]) {
+          case aload: fprintf(stderr, "wide aload %04x\n", read16(code, ip)); break;
+
+          case astore: fprintf(stderr, "wide astore %04x\n", read16(code, ip)); break;
+          case iinc: fprintf(stderr, "wide iinc %04x %04x\n", read16(code, ip), read16(code, ip)); break;
+          case iload: fprintf(stderr, "wide iload %04x\n", read16(code, ip)); break;
+          case istore: fprintf(stderr, "wide istore %04x\n", read16(code, ip)); break;
+          case lload: fprintf(stderr, "wide lload %04x\n", read16(code, ip)); break;
+          case lstore: fprintf(stderr, "wide lstore %04x\n", read16(code, ip)); break;
+          case ret: fprintf(stderr, "wide ret %04x\n", read16(code, ip)); break;
+
+          default: {
+            fprintf(stderr, "unknown wide instruction %02x %04x\n", instr, read16(code, ip));
+          }
+        }
+      } break;
+
+      default: {
+        fprintf(stderr, "unknown instruction %02x\n", instr);
+      }
+    }
+  }
+}
+
 object
 parseCode(Thread* t, Stream& s, object pool)
 {
@@ -1308,9 +1721,17 @@ parseCode(Thread* t, Stream& s, object pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
+  if(DebugClassReader) {
+    fprintf(stderr, "    code: maxStack %d maxLocals %d length %d\n", maxStack, maxLocals, length);
+  }
+
   object code = makeCode(t, pool, 0, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
+
+  if(DebugClassReader) {
+    disassembleCode("      ", &codeBody(t, code, 0), length);
+  }
 
   unsigned ehtLength = s.read2();
   if (ehtLength) {
@@ -1450,6 +1871,11 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   PROTECT(t, newVirtuals);
   
   unsigned count = s.read2();
+
+  if(DebugClassReader) {
+    fprintf(stderr, "  method count %d\n", count);
+  }
+
   if (count) {
     object methodTable = makeArray(t, count);
     PROTECT(t, methodTable);
@@ -1464,6 +1890,12 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
       unsigned flags = s.read2();
       unsigned name = s.read2();
       unsigned spec = s.read2();
+
+      if(DebugClassReader) {
+        fprintf(stderr, "    method flags %d name %d spec %d '%s%s'\n", flags, name, spec, 
+          &byteArrayBody(t, singletonObject(t, pool, name - 1), 0),
+          &byteArrayBody(t, singletonObject(t, pool, spec - 1), 0));
+      }
 
       addendum = 0;
       code = 0;
@@ -3423,8 +3855,11 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
 
   uint32_t magic = s.read4();
   expect(t, magic == 0xCAFEBABE);
-  s.read2(); // minor version
-  s.read2(); // major version
+  unsigned minorVer = s.read2(); // minor version
+  unsigned majorVer = s.read2(); // major version
+  if(DebugClassReader) {
+    fprintf(stderr, "read class (minor %d major %d)\n", minorVer, majorVer);
+  }
 
   object pool = parsePool(t, s);
   PROTECT(t, pool);
@@ -3467,6 +3902,10 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
       |= (classVmFlags(t, sc)
           & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag
              | NeedInitFlag));
+  }
+
+  if(DebugClassReader) {
+    fprintf(stderr, "  flags %d name %d super %d\n", flags, name, super);
   }
   
   parseInterfaceTable(t, s, class_, pool, throwType);
