@@ -340,7 +340,8 @@ class MySystem: public System {
             // milliseconds) is infinity so as to avoid overflow:
             if (time and time < INT64_C(31536000000000000)) {
               int64_t then = s->now() + time;
-              timespec ts = { then / 1000, (then % 1000) * 1000 * 1000 };
+              timespec ts = { static_cast<long>(then / 1000),
+                              static_cast<long>((then % 1000) * 1000 * 1000) };
               int rv UNUSED = pthread_cond_timedwait
                 (&(t->condition), &(t->mutex), &ts);
               expect(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
