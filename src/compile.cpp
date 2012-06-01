@@ -288,14 +288,6 @@ transition(MyThread* t, void* ip, void* stack, object continuation,
   MyThread::doTransition(t, ip, stack, continuation, trace);
 }
 
-unsigned
-parameterOffset(MyThread* t, object method)
-{
-  return methodParameterFootprint(t, method)
-    + t->arch->frameFooterSize()
-    + t->arch->frameReturnAddressSize() - 1;
-}
-
 object
 resolveThisPointer(MyThread* t, void* stack)
 {

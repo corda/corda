@@ -35,14 +35,6 @@ atomicIncrement(uint32_t* p, int v)
 }
 #endif
 
-bool
-find(Thread* t, Thread* o)
-{
-  return (t == o)
-    or (t->peer and find(t->peer, o))
-    or (t->child and find(t->child, o));
-}
-
 void
 join(Thread* t, Thread* o)
 {
@@ -54,28 +46,6 @@ join(Thread* t, Thread* o)
     }
     o->state = Thread::JoinedState;
   }
-}
-
-unsigned
-count(Thread* t, Thread* o)
-{
-  unsigned c = 0;
-
-  if (t != o) ++ c;
-  if (t->peer) c += count(t->peer, o);
-  if (t->child) c += count(t->child, o);
-
-  return c;
-}
-
-Thread**
-fill(Thread* t, Thread* o, Thread** array)
-{
-  if (t != o) *(array++) = t;
-  if (t->peer) array = fill(t->peer, o, array);
-  if (t->child) array = fill(t->child, o, array);
-
-  return array;
 }
 
 void

@@ -138,8 +138,13 @@ endif
 
 input = List
 
-build-cxx = g++
-build-cc = gcc
+ifeq ($(use-clang),true)
+	build-cxx = clang
+	build-cc = clang
+else
+	build-cxx = g++
+	build-cc = gcc
+endif
 
 mflag =
 ifneq ($(platform),darwin)
@@ -195,7 +200,8 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
-	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN
+	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN \
+	-Wall -Wextra -Werror -Wunused-parameter -Winit-self
 
 cflags = $(build-cflags)
 
@@ -446,23 +452,32 @@ ifeq ($(mode),stress-major)
 	strip = :
 endif
 ifeq ($(mode),fast)
-	optimization-cflags = -O3 -g3 -DNDEBUG
+	optimization-cflags = -O4 -g3 -DNDEBUG
 	use-lto = true
 endif
 ifeq ($(mode),small)
-	optimization-cflags = -Os -g3 -DNDEBUG
+	ifeq ($(use-clang),true)
+		optimization-cflags = -Oz -g3 -DNDEBUG
+	else
+		optimization-cflags = -Os -g3 -DNDEBUG
+	endif
 	use-lto = true
 endif
 
 ifeq ($(use-lto),true)
-# only try to use LTO when GCC 4.6.0 or greater is available
-	gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
-	gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
-	ifeq ($(shell expr 4 \< $(gcc-major) \
-			\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
+	ifeq ($(use-clang),true)
 		optimization-cflags += -flto
-		no-lto = -fno-lto
 		lflags += $(optimization-cflags)
+	else
+# only try to use LTO when GCC 4.6.0 or greater is available
+		gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
+		gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
+		ifeq ($(shell expr 4 \< $(gcc-major) \
+				\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
+			optimization-cflags += -flto
+			no-lto = -fno-lto
+			lflags += $(optimization-cflags)
+		endif
 	endif
 endif
 

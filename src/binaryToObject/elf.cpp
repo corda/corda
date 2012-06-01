@@ -131,8 +131,9 @@ unsigned getElfPlatform(PlatformInfo::Architecture arch) {
     return EM_ARM;
   case PlatformInfo::PowerPC:
     return EM_PPC;
+  default:
+    return ~0;
   }
-  return ~0;
 }
 
 const char* getSectionName(unsigned accessFlags, unsigned& sectionFlags) {
@@ -255,8 +256,8 @@ public:
     SectionWriter(FileWriter& file):
       file(file),
       name(""),
-      data(0),
-      dataSize(0)
+      dataSize(0),
+      data(0)
     {
       memset(&header, 0, sizeof(SectionHeader));
       file.sectionCount++;
@@ -279,8 +280,8 @@ public:
 
       file(file),
       name(chname),
-      data(data),
-      dataSize(dataSize)
+      dataSize(dataSize),
+      data(data)
     {
       if(strcmp(chname, ".shstrtab") == 0) {
         file.sectionStringTableSectionNumber = file.sectionCount;
@@ -359,11 +360,11 @@ public:
 
     file.writeHeader(out);
 
-    for(int i = 0; i < file.sectionCount; i++) {
+    for(unsigned i = 0; i < file.sectionCount; i++) {
       sections[i].writeHeader(out);
     }
 
-    for(int i = 0; i < file.sectionCount; i++) {
+    for(unsigned i = 0; i < file.sectionCount; i++) {
       sections[i].writeData(out);
     }
 

@@ -580,27 +580,6 @@ cons(Context* c, void* value, Cell* next)
 }
 
 Cell*
-append(Context* c, Cell* first, Cell* second)
-{
-  if (first) {
-    if (second) {
-      Cell* start = cons(c, first->value, second);
-      Cell* end = start;
-      for (Cell* cell = first->next; cell; cell = cell->next) {
-        Cell* n = cons(c, cell->value, second);
-        end->next = n;
-        end = n;
-      }
-      return start;
-    } else {
-      return first;
-    }
-  } else {
-    return second;
-  }
-}
-
-Cell*
 reverseDestroy(Cell* cell)
 {
   Cell* previous = 0;
@@ -990,25 +969,6 @@ bool
 valid(Read* r)
 {
   return r and r->valid();
-}
-
-bool
-hasBuddy(Context* c, Value* a, Value* b)
-{
-  if (a == b) {
-    return true;
-  }
-
-  int i = 0;
-  for (Value* p = a->buddy; p != a; p = p->buddy) {
-    if (p == b) {
-      return true;
-    }
-    if (++i > 1000) {
-      abort(c);
-    }
-  }
-  return false;
 }
 
 Read*
@@ -5302,15 +5262,16 @@ propagateJunctionSites(Context* c, Event* e)
 
 class SiteRecord {
  public:
-  SiteRecord(Site* site, Value* value):
-    site(site), value(value)
-  { }
-
-  SiteRecord() { }
-
   Site* site;
   Value* value;
 };
+
+void
+init(SiteRecord* r, Site* s, Value* v)
+{
+  r->site = s;
+  r->value = v;
+}
 
 class SiteRecordList {
  public:
@@ -5329,7 +5290,7 @@ freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v)
   assert(c, frozen->index < frozen->capacity);
 
   s->freeze(c, v);
-  new (frozen->records + (frozen->index ++)) SiteRecord(s, v);
+  init(new (frozen->records + (frozen->index ++)) SiteRecord, s, v);
 }
 
 void
@@ -5864,17 +5825,6 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
   }
 
   c->firstBlock = firstBlock;
-}
-
-unsigned
-count(Stack* s)
-{
-  unsigned c = 0;
-  while (s) {
-    ++ c;
-    s = s->next;
-  }
-  return c;
 }
 
 void

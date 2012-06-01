@@ -62,20 +62,23 @@ enum Type {
 
 class Field {
  public:
-  Field() { }
-
-  Field(Type type, unsigned buildOffset, unsigned buildSize,
-        unsigned targetOffset, unsigned targetSize):
-    type(type), buildOffset(buildOffset), buildSize(buildSize),
-    targetOffset(targetOffset), targetSize(targetSize)
-  { }
-
   Type type;
   unsigned buildOffset;
   unsigned buildSize;
   unsigned targetOffset;
   unsigned targetSize;
 };
+
+void
+init(Field* f, Type type, unsigned buildOffset, unsigned buildSize,
+     unsigned targetOffset, unsigned targetSize)
+{
+  f->type = type;
+  f->buildOffset = buildOffset;
+  f->buildSize = buildSize;
+  f->targetOffset = targetOffset;
+  f->targetSize = targetSize;
+}
 
 class TypeMap {
  public:
@@ -397,9 +400,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             map->targetFixedOffsets()[i * BytesPerWord]
               = i * TargetBytesPerWord;
 
-            new (map->fixedFields() + i) Field
-              (types[i], i * BytesPerWord, BytesPerWord,
-               i * TargetBytesPerWord, TargetBytesPerWord);
+            init(new (map->fixedFields() + i) Field, types[i],
+                 i * BytesPerWord, BytesPerWord, i * TargetBytesPerWord,
+                 TargetBytesPerWord);
           }
 
           hashMapInsert
@@ -446,8 +449,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             ++ memberIndex;
           }
         } else {
-          new (memberFields) Field
-            (Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+          init(new (memberFields) Field, Type_object, 0, BytesPerWord, 0,
+               TargetBytesPerWord);
 
           memberIndex = 1;
           buildMemberOffset = BytesPerWord;
@@ -456,12 +459,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         Field staticFields[count + 2];
         
-        new (staticFields) Field
-          (Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+        init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
+             TargetBytesPerWord);
 
-        new (staticFields + 1) Field
-          (Type_intptr_t, BytesPerWord, BytesPerWord, TargetBytesPerWord,
-           TargetBytesPerWord);
+        init(new (staticFields + 1) Field, Type_intptr_t, BytesPerWord,
+             BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
 
         unsigned staticIndex = 2;
         unsigned buildStaticOffset = BytesPerWord * 2;
@@ -510,9 +512,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildStaticOffset = fieldOffset(t, field);
 
-              new (staticFields + staticIndex) Field
-                (type, buildStaticOffset, buildSize, targetStaticOffset,
-                 targetSize);
+              init(new (staticFields + staticIndex) Field, type,
+                   buildStaticOffset, buildSize, targetStaticOffset,
+                   targetSize);
 
               targetStaticOffset += targetSize;
 
@@ -524,9 +526,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildMemberOffset = fieldOffset(t, field);
 
-              new (memberFields + memberIndex) Field
-                (type, buildMemberOffset, buildSize, targetMemberOffset,
-                 targetSize);
+              init(new (memberFields + memberIndex) Field, type,
+                   buildMemberOffset, buildSize, targetMemberOffset,
+                   targetSize);
 
               targetMemberOffset += targetSize;
 
@@ -691,12 +693,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   t->m->processor->normalizeVirtualThunks(t);
 
   return constants;
-}
-
-unsigned
-objectSize(Thread* t, object o)
-{
-  return baseSize(t, o, objectClass(t, o));
 }
 
 void
@@ -1267,12 +1263,6 @@ updateConstants(Thread* t, object constants, HeapMap* heapTable)
   }
 }
 
-unsigned
-offset(object a, uintptr_t* b)
-{
-  return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
-}
-
 BootImage::Thunk
 targetThunk(BootImage::Thunk t)
 {
@@ -1347,7 +1337,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
       Field fields[count];
 
-      new (fields) Field(Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+      init(new (fields) Field, Type_object, 0, BytesPerWord, 0,
+           TargetBytesPerWord);
 
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
@@ -1424,8 +1415,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
             ++ targetOffset;
           }
 
-          new (fields + j) Field
-            (type, buildOffset, buildSize, targetOffset, targetSize);
+          init(new (fields + j) Field, type, buildOffset, buildSize,
+               targetOffset, targetSize);
 
           buildOffset += buildSize;
           targetOffset += targetSize;

@@ -232,16 +232,6 @@ get(object o, unsigned offsetInWords)
 }
 
 unsigned
-objectSize(Thread* t, object o)
-{
-  unsigned n = baseSize(t, o, objectClass(t, o));
-  if (objectExtended(t, o)) {
-    ++ n;
-  }
-  return n;
-}
-
-unsigned
 walk(Context* c, HeapVisitor* v, object p)
 {
   Thread* t = c->thread;

@@ -198,42 +198,10 @@ assert(ArchitectureContext* c, bool v)
 }
 #endif // not NDEBUG
 
-void
-expect(Context* c, bool v)
-{
-  expect(c->s, v);
-}
-
 ResolvedPromise*
 resolved(Context* c, int64_t value)
 {
   return new(c->zone) ResolvedPromise(value);
-}
-
-class CodePromise: public Promise {
- public:
-  CodePromise(Context* c, unsigned offset): c(c), offset(offset) { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>(c->result + offset);
-    }
-    
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->result != 0;
-  }
-
-  Context* c;
-  unsigned offset;
-};
-
-CodePromise*
-codePromise(Context* c, unsigned offset)
-{
-  return new (c->zone) CodePromise(c, offset);
 }
 
 class Offset: public Promise {
@@ -627,14 +595,6 @@ opcode(Context* c, uint8_t op1, uint8_t op2)
 {
   c->code.append(op1);
   c->code.append(op2);
-}
-
-void
-opcode(Context* c, uint8_t op1, uint8_t op2, uint8_t op3)
-{
-  c->code.append(op1);
-  c->code.append(op2);
-  c->code.append(op3);
 }
 
 void

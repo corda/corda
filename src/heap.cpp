@@ -60,7 +60,6 @@ void NO_RETURN abort(Context*);
 void assert(Context*, bool);
 #endif
 
-System* system(Context*);
 void* tryAllocate(Context* c, unsigned size);
 void* allocate(Context* c, unsigned size);
 void free(Context* c, const void* p, unsigned size);
@@ -688,12 +687,6 @@ class Context {
   int64_t totalCollectionTime;
   int64_t totalTime;
 };
-
-inline System*
-system(Context* c)
-{
-  return c->system;
-}
 
 const char*
 segment(Context* c, void* p)

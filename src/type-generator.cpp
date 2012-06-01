@@ -71,12 +71,6 @@ equal(const char* a, const char* b)
 }
 
 inline bool
-startsWith(const char* a, const char* b)
-{
-  return strncmp(a, b, strlen(a)) == 0;
-}
-
-inline bool
 endsWith(const char* a, const char* b)
 {
   unsigned al = strlen(a);
@@ -282,14 +276,6 @@ setCdr(Object* o, Object* v)
 {
   assert(o->type == Object::Pair);
   static_cast<Pair*>(o)->cdr = v;
-}
-
-unsigned
-length(Object* o)
-{
-  unsigned c = 0;
-  for (; o; o = cdr(o)) ++c;
-  return c;
 }
 
 class List {
@@ -1078,53 +1064,6 @@ parseSubdeclaration(Object* t, Object* p, Object* declarations)
   }
 }
 
-bool
-memberEqual(Object* a, Object* b)
-{
-  if (a->type == b->type) {
-    switch (a->type) {
-    case Object::Scalar:
-      return equal(memberTypeName(a), memberTypeName(b))
-        and memberNoAssert(a) == memberNoAssert(b)
-        and memberNoGC(a) == memberNoGC(b);
-
-      // todo: compare array fields
-
-    default: return false;
-    }
-  } else {
-    return false;
-  }
-}
-
-bool
-specEqual(Object* a, Object* b)
-{
-  if (a->type == Object::Type and
-      b->type == Object::Type)
-  {
-    MemberIterator ai(a);
-    MemberIterator bi(b);
-    while (ai.hasMore()) {
-      if (not bi.hasMore()) {
-        return false;
-      }
-
-      if (not memberEqual(ai.next(), bi.next())) {
-        return false;
-      }
-    }
-
-    if (bi.hasMore()) {
-      return false;
-    } else {
-      return true;
-    }
-  } else {
-    return false;
-  }
-}
-
 const char*
 append(const char* a, const char* b, const char* c, const char* d)
 {
@@ -1725,13 +1664,6 @@ writeConstructorInitializations(Output* out, Object* t)
   }
 }
 
-unsigned
-typeMemberCount(Object* o)
-{
-  if (o == 0) return 0;
-  return length(typeMembers(o)) + typeMemberCount(typeSuper(o));
-}
-
 void
 writeInitializerDeclarations(Output* out, Object* declarations)
 {
@@ -1886,17 +1818,6 @@ writeEnums(Output* out, Object* declarations)
   if (wrote) {
     out->write("\n");
   } 
-}
-
-unsigned
-memberCount(Object* o)
-{
-  unsigned c = 0;
-  for (MemberIterator it(o); it.hasMore();) {
-    it.next();
-    ++c;
-  }
-  return c;
 }
 
 unsigned
