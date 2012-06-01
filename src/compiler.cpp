@@ -1578,7 +1578,7 @@ class ConstantSite: public Site {
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (value->resolved()) {
       return vm::snprintf
-        (buffer, bufferSize, "constant %"LLD, value->value());
+        (buffer, bufferSize, "constant %" LLD, value->value());
     } else {
       return vm::snprintf(buffer, bufferSize, "constant unresolved");
     }
@@ -1669,7 +1669,7 @@ class AddressSite: public Site {
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (address->resolved()) {
       return vm::snprintf
-        (buffer, bufferSize, "address %"LLD, address->value());
+        (buffer, bufferSize, "address %" LLD, address->value());
     } else {
       return vm::snprintf(buffer, bufferSize, "address unresolved");
     }

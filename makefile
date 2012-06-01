@@ -139,7 +139,7 @@ endif
 input = List
 
 ifeq ($(use-clang),true)
-	build-cxx = clang
+	build-cxx = clang -std=c++11
 	build-cc = clang
 else
 	build-cxx = g++
