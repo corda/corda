@@ -12,7 +12,7 @@
 #define LZMA_UTIL_H
 
 #include "lzma.h"
-#include "Types.h"
+#include "C/Types.h"
 #include "system.h"
 #include "allocator.h"
 

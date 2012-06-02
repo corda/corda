@@ -71,6 +71,8 @@ ifeq ($(build-platform),cygwin)
 	native-path = cygpath -m
 endif
 
+windows-path = echo
+
 path-separator = :
 
 ifneq (,$(filter mingw32 cygwin,$(build-platform)))
@@ -500,8 +502,9 @@ ld := $(cc)
 build-ld := $(build-cc)
 
 ifdef msvc
-	windows-java-home := $(shell cygpath -m "$(JAVA_HOME)")
-	zlib := $(shell cygpath -m "$(win32)/msvc")
+	windows-path = $(native-path)
+	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
+	zlib := $(shell $(windows-path) "$(win32)/msvc")
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
@@ -512,6 +515,11 @@ ifdef msvc
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
 		-DTARGET_BYTES_PER_WORD=$(pointer-size)
+
+  ifneq ($(lzma),)
+		cflags += -I$(shell $(windows-path) "$(lzma)")
+	endif
+
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
 		-DEFAULTLIB:zlib -MANIFEST -debug
@@ -638,7 +646,7 @@ generator-sources = \
 	$(src)/finder.cpp
 
 ifneq ($(lzma),)
-	common-cflags += -I$(lzma)/C -DAVIAN_USE_LZMA -D_7ZIP_ST
+	common-cflags += -I$(lzma) -DAVIAN_USE_LZMA -D_7ZIP_ST
 
 	vm-sources += \
 		$(src)/lzma-decode.cpp
@@ -673,7 +681,7 @@ ifneq ($(lzma),)
 	lzma-encoder-lzma-sources = $(lzma-encode-sources) $(lzma-decode-sources)
 
 	lzma-encoder-lzma-objects = \
-		$(call c-objects,$(lzma-encoder-lzma-sources),$(lzma)/C,$(build))
+		$(call generator-c-objects,$(lzma-encoder-lzma-sources),$(lzma)/C,$(build))
 
 	lzma-loader = $(build)/lzma/load.o
 endif
@@ -904,7 +912,7 @@ $(test-extra-dep): $(test-extra-sources)
 define compile-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -c $(<) $(call output,$(@))
+	$(cxx) $(cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
 endef
 
 define compile-asm-object
@@ -993,7 +1001,7 @@ $(generator-objects): $(generator-depends)
 $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 	$(compile-generator-object)
 
-$(generator-lzma-objects): $(build)/%-build.o: $(lzma)/C/%.c
+$(build)/%-build.o: $(lzma)/C/%.c
 	$(compile-generator-object)
 
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp

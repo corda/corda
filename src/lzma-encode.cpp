@@ -9,7 +9,7 @@
    details. */
 
 #include "lzma-util.h"
-#include "LzmaEnc.h"
+#include "C/LzmaEnc.h"
 
 using namespace vm;
 

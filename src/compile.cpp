@@ -10022,7 +10022,7 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   sprintf(RUNTIME_ARRAY_BODY(virtualThunkName), "%s%d", virtualThunkBaseName, index);
 
-  logCompile(t, start, *size, 0, virtualThunkName, 0);
+  logCompile(t, start, *size, 0, RUNTIME_ARRAY_BODY(virtualThunkName), 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }

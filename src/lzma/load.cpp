@@ -2,22 +2,31 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-#include <dlfcn.h>
-#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <errno.h>
 
-#include "LzmaDec.h"
+#include "C/LzmaDec.h"
 
-#ifdef __MINGW32__
+#if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
+#  include <io.h>
+#  define open _open
+#  define write _write
+#  define close _close
+#  ifdef _MSC_VER
+#    define S_IRWXU (_S_IREAD | _S_IWRITE)
+#    define and &&
+#  endif
 #else
 #  define EXPORT __attribute__ ((visibility("default")))
+#  include <dlfcn.h>
+#  include <unistd.h>
+#  include <errno.h>
+#  define O_BINARY 0
 #endif
 
-#if defined __MINGW32__ && ! defined __x86_64__
+#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
 #  define SYMBOL(x) binary_exe_##x
 #else
 #  define SYMBOL(x) _binary_exe_##x
@@ -44,6 +53,70 @@ myFree(void*, void* address)
   free(address);
 }
 
+#if (defined __MINGW32__) || (defined _MSC_VER)
+
+void*
+openLibrary(const char* name)
+{
+  return LoadLibrary(name);
+}
+
+void*
+librarySymbol(void* library, const char* name)
+{
+  void* address;
+  FARPROC p = GetProcAddress(static_cast<HMODULE>(library), name);
+  memcpy(&address, &p, sizeof(void*));
+  return address;
+}
+
+const char*
+libraryError(void*)
+{
+  return "unknown error";
+}
+
+const char*
+temporaryFileName(char* buffer, unsigned size)
+{
+  unsigned c = GetTempPathA(size, buffer);
+  if (c) {
+    if (GetTempFileNameA(buffer, "223", 0, buffer + c)) {
+      DeleteFileA(buffer + c);
+      return buffer + c;
+    }
+  }
+  return 0;
+}
+
+#else
+
+void*
+openLibrary(const char* name)
+{
+  return dlopen(name, RTLD_LAZY | RTLD_LOCAL);
+}
+
+void*
+librarySymbol(void* library, const char* name)
+{
+  return dlsym(library, name);
+}
+
+const char*
+libraryError(void*)
+{
+  return dlerror();
+}
+
+const char*
+temporaryFileName(char* buffer, unsigned)
+{
+  return tmpnam(buffer);
+}
+
+#endif
+
 } // namespace
 
 int
@@ -67,28 +140,31 @@ main(int ac, const char** av)
         (out, &outSize, SYMBOL(start) + HeaderSize, &inSize, SYMBOL(start),
          PropHeaderSize, LZMA_FINISH_END, &status, &allocator))
     {
-      char name[L_tmpnam];
-      if (tmpnam(name)) {
-        int file = open(name, O_CREAT | O_EXCL | O_WRONLY, S_IRWXU);
+      const unsigned BufferSize = 1024;
+      char buffer[BufferSize];
+      const char* name = temporaryFileName(buffer, BufferSize);
+      if (name) {
+        int file = open(name, O_CREAT | O_EXCL | O_WRONLY | O_BINARY, S_IRWXU);
         if (file != -1) {
           SizeT result = write(file, out, outSize);
           free(out);
 
           if (close(file) == 0 and outSize == result) {
-            void* library = dlopen(name, RTLD_LAZY | RTLD_GLOBAL);
+            void* library = openLibrary(name);
             unlink(name);
 
             if (library) {
-              void* main = dlsym(library, "main");
+              void* main = librarySymbol(library, "avianMain");
               if (main) {
-                int (*mainFunction)(int, const char**);
+                int (*mainFunction)(const char*, int, const char**);
                 memcpy(&mainFunction, &main, sizeof(void*));
-                return mainFunction(ac, av);
+                return mainFunction(name, ac, av);
               } else {
                 fprintf(stderr, "unable to find main in %s", name);
               }
             } else {
-              fprintf(stderr, "unable to dlopen %s: %s\n", name, dlerror());
+              fprintf(stderr, "unable to load %s: %s\n", name,
+                      libraryError(library));
             }
           } else {
             unlink(name);
