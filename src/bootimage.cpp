@@ -17,6 +17,7 @@
 #include "assembler.h"
 #include "target.h"
 #include "binaryToObject/tools.h"
+#include "lzma.h"
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
@@ -1275,7 +1276,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
                 BootImage* image, uint8_t* code, const char* className,
                 const char* methodName, const char* methodSpec,
                 const char* bootimageStart, const char* bootimageEnd,
-                const char* codeimageStart, const char* codeimageEnd)
+                const char* codeimageStart, const char* codeimageEnd,
+                bool useLZMA)
 {
   setRoot(t, Machine::OutOfMemoryError,
           make(t, type(t, Machine::OutOfMemoryErrorType)));
@@ -1594,6 +1596,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   heapWalker->dispose();
 
   image->magic = BootImage::Magic;
+  image->initialized = 0;
 
   fprintf(stderr, "class count %d string count %d call count %d\n"
           "heap size %d code size %d\n",
@@ -1656,7 +1659,27 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       SymbolInfo(bootimageData.length, bootimageEnd)
     };
 
-    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimageData.data, bootimageData.length), Platform::Writable, TargetBytesPerWord);
+    uint8_t* bootimage;
+    unsigned bootimageLength;
+    if (useLZMA) {
+#ifdef AVIAN_USE_LZMA
+      bootimage = encodeLZMA(t->m->system, t->m->heap, bootimageData.data,
+                             bootimageData.length, &bootimageLength);
+
+      fprintf(stderr, "compressed heap size %d\n", bootimageLength);
+#else
+      abort(t);
+#endif
+    } else {
+      bootimage = bootimageData.data;
+      bootimageLength = bootimageData.length;
+    }
+
+    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimage, bootimageLength), Platform::Writable, TargetBytesPerWord);
+
+    if (useLZMA) {
+      t->m->heap->free(bootimage, bootimageLength);
+    }
 
     compilationHandler.symbols.add(SymbolInfo(0, codeimageStart));
     compilationHandler.symbols.add(SymbolInfo(image->codeSize, codeimageEnd));
@@ -1684,10 +1707,12 @@ writeBootImage(Thread* t, uintptr_t* arguments)
   const char* bootimageEnd = reinterpret_cast<const char*>(arguments[8]);
   const char* codeimageStart = reinterpret_cast<const char*>(arguments[9]);
   const char* codeimageEnd = reinterpret_cast<const char*>(arguments[10]);
+  bool useLZMA = arguments[11];
 
   writeBootImage2
     (t, bootimageOutput, codeOutput, image, code, className, methodName,
-     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd);
+     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd,
+     useLZMA);
 
   return 1;
 }
@@ -1746,7 +1771,11 @@ bool ArgParser::parse(int ac, const char** av) {
       }
       for(Arg* arg = first; arg; arg = arg->next) {
         if(strcmp(arg->name,  &av[i][1]) == 0) {
-          state = arg;
+          if (arg->desc == 0) {
+            arg->value = "true";
+          } else {
+            state = arg;
+          }
         }
       }
       if(!state) {
@@ -1801,6 +1830,8 @@ public:
   char* codeimageStart;
   char* codeimageEnd;
 
+  bool useLZMA;
+
   bool maybeSplit(const char* src, char*& destA, char*& destB) {
     if(src) {
       const char* split = strchr(src, ':');
@@ -1830,6 +1861,7 @@ public:
     Arg entry(parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
     Arg bootimageSymbols(parser, false, "bootimage-symbols", "<start symbol name>:<end symbol name>");
     Arg codeimageSymbols(parser, false, "codeimage-symbols", "<start symbol name>:<end symbol name>");
+    Arg useLZMA(parser, false, "use-lzma", 0);
 
     if(!parser.parse(ac, av)) {
       parser.printUsage(av[0]);
@@ -1839,6 +1871,7 @@ public:
     this->classpath = classpath.value;
     this->bootimage = bootimage.value;
     this->codeimage = codeimage.value;
+    this->useLZMA = useLZMA.value != 0;
 
     if(entry.value) {
       if(const char* entryClassEnd = strchr(entry.value, '.')) {
@@ -1988,7 +2021,8 @@ main(int ac, const char** av)
     reinterpret_cast<uintptr_t>(args.bootimageStart),
     reinterpret_cast<uintptr_t>(args.bootimageEnd),
     reinterpret_cast<uintptr_t>(args.codeimageStart),
-    reinterpret_cast<uintptr_t>(args.codeimageEnd)
+    reinterpret_cast<uintptr_t>(args.codeimageEnd),
+    reinterpret_cast<uintptr_t>(args.useLZMA)
   };
 
   run(t, writeBootImage, arguments);

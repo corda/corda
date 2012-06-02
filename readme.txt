@@ -79,6 +79,7 @@ certain flags described below, all of which are optional.
      arch={i386,x86_64,powerpc,arm} \
      process={compile,interpret} \
      mode={debug,debug-fast,fast,small} \
+     lzma=<lzma source directory> \
      ios={true,false} \
      bootimage={true,false} \
      heapdump={true,false} \
@@ -103,6 +104,13 @@ certain flags described below, all of which are optional.
     optimization level, debug symbols, and whether to enable
     assertions
       default: fast
+
+  * lzma - if set, support use of LZMA to compress embedded JARs and
+    boot images.  The value of this option should be a directory
+    containing a recent LZMA SDK (available at
+    http://www.7-zip.org/sdk.html).  Currently, only version 9.20 of
+    the SDK has been tested, but other versions might work.
+      default: not set
 
   * ios - if true, cross-compile for iOS on OS X.  Note that
     non-jailbroken iOS devices do not allow JIT compilation, so only
@@ -366,8 +374,20 @@ EOF
 
 Step 3: Make an object file out of the jar.
 
- $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar boot-jar.o \
-     _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+ $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar \
+     boot-jar.o _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+
+If you've built Avian using the lzma option, you may optionally
+compress the jar before generating the object:
+
+ $ ../build/$(platform}-${arch}-lzma/lzma/lzma encode boot.jar boot.jar.lzma
+     && ../build/${platform}-${arch}-lzma/binaryToObject/binaryToObject \
+       boot.jar.lzma boot-jar.o _binary_boot_jar_start _binary_boot_jar_end \
+       ${platform} ${arch}
+
+Note that you'll need to specify "-Xbootclasspath:[lzma:bootJar]"
+instead of "-Xbootclasspath:[bootJar]" in the next step if you've used
+LZMA to compress the jar.
 
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to

@@ -1316,6 +1316,7 @@ class Machine {
   System::Monitor* shutdownLock;
   System::Library* libraries;
   FILE* errorLog;
+  BootImage* bootimage;
   object types;
   object roots;
   object finalizers;
@@ -1332,6 +1333,7 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
   unsigned heapPoolIndex;
+  unsigned bootimageSize;
 };
 
 void

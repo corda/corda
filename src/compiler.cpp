@@ -971,6 +971,29 @@ valid(Read* r)
   return r and r->valid();
 }
 
+#ifndef NDEBUG
+
+bool
+hasBuddy(Context* c, Value* a, Value* b)
+{
+  if (a == b) {
+    return true;
+  }
+
+  int i = 0;
+  for (Value* p = a->buddy; p != a; p = p->buddy) {
+    if (p == b) {
+      return true;
+    }
+    if (++i > 1000) {
+      abort(c);
+    }
+  }
+  return false;
+}
+
+#endif // not NDEBUG
+
 Read*
 live(Context* c UNUSED, Value* v)
 {

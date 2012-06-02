@@ -33,6 +33,9 @@ endif
 ifneq ($(mode),fast)
 	options := $(options)-$(mode)
 endif
+ifneq ($(lzma),)
+	options := $(options)-lzma
+endif
 ifeq ($(bootimage),true)
 	options := $(options)-bootimage
 endif
@@ -532,6 +535,7 @@ ifdef msvc
 	strip = :
 endif
 
+c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
@@ -594,7 +598,10 @@ ifeq ($(continuations),true)
 	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
-bootimage-generator-sources = $(src)/bootimage.cpp 
+bootimage-generator-sources = $(src)/bootimage.cpp
+ifneq ($(lzma),)
+	bootimage-generator-sources += $(src)/lzma-encode.cpp
+endif
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
@@ -629,16 +636,61 @@ generator-sources = \
 	$(src)/type-generator.cpp \
 	$(src)/$(build-system).cpp \
 	$(src)/finder.cpp
+
+ifneq ($(lzma),)
+	common-cflags += -I$(lzma)/C -DAVIAN_USE_LZMA -D_7ZIP_ST
+
+	vm-sources += \
+		$(src)/lzma-decode.cpp
+
+	generator-sources += \
+		$(src)/lzma-decode.cpp
+
+	lzma-decode-sources = \
+		$(lzma)/C/LzmaDec.c
+
+	lzma-decode-objects = \
+		$(call c-objects,$(lzma-decode-sources),$(lzma)/C,$(build))
+
+	lzma-encode-sources = \
+		$(lzma)/C/LzmaEnc.c \
+		$(lzma)/C/LzFind.c
+
+	lzma-encode-objects = \
+		$(call c-objects,$(lzma-encode-sources),$(lzma)/C,$(build))
+
+	lzma-encoder = $(build)/lzma/lzma
+
+	lzma-encoder-cflags = -D__STDC_CONSTANT_MACROS -fno-rtti -fno-exceptions \
+		-I$(lzma)/C
+
+	lzma-encoder-sources = \
+		$(src)/lzma/main.cpp
+
+	lzma-encoder-objects = \
+		$(call cpp-objects,$(lzma-encoder-sources),$(src),$(build))
+
+	lzma-encoder-lzma-sources = $(lzma-encode-sources) $(lzma-decode-sources)
+
+	lzma-encoder-lzma-objects = \
+		$(call c-objects,$(lzma-encoder-lzma-sources),$(lzma)/C,$(build))
+
+	lzma-loader = $(build)/lzma/load.o
+endif
+
 generator-cpp-objects = \
 	$(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%-build.o,$(x)))
+generator-c-objects = \
+	$(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-build.o,$(x)))
 generator-objects = \
 	$(call generator-cpp-objects,$(generator-sources),$(src),$(build))
+generator-lzma-objects = \
+	$(call generator-c-objects,$(lzma-decode-sources),$(lzma)/C,$(build))
 generator = $(build)/generator
 
 converter-depends = \
 	$(src)/binaryToObject/tools.h \
 	$(src)/binaryToObject/endianness.h
-
 
 converter-sources = \
 	$(src)/binaryToObject/tools.cpp \
@@ -760,7 +812,7 @@ test-flags = -cp $(build)/test
 test-args = $(test-flags) $(input)
 
 .PHONY: build
-build: $(static-library) $(executable) $(dynamic-library) \
+build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
 	$(executable-dynamic) $(classpath-dep) $(test-dep) $(test-extra-dep)
 
 $(test-dep): $(classpath-dep)
@@ -863,6 +915,9 @@ endef
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
+$(build)/%.o: $(lzma)/C/%.c
+	$(compile-object)
+
 $(vm-asm-objects): $(build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
 
@@ -894,6 +949,16 @@ $(converter-objects) $(converter-tool-objects): $(build)/binaryToObject/%.o: $(s
 $(converter): $(converter-objects) $(converter-tool-objects)
 	$(build-cc) $(^) -g -o $(@)
 
+$(lzma-encoder-objects): $(build)/lzma/%.o: $(src)/lzma/%.cpp
+	@mkdir -p $(dir $(@))
+	$(build-cxx) $(lzma-encoder-cflags) -c $(<) -o $(@)
+
+$(lzma-encoder): $(lzma-encoder-objects) $(lzma-encoder-lzma-objects)
+	$(build-cc) $(^) -g -o $(@)
+
+$(lzma-loader): $(src)/lzma/load.cpp
+	$(compile-object)
+
 $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 	@echo "creating $(@)"
 	(wd=$$(pwd) && \
@@ -916,18 +981,25 @@ $(javahome-object): $(build)/javahome.jar $(converter)
 	$(converter) $(<) $(@) _binary_javahome_jar_start \
 		_binary_javahome_jar_end $(platform) $(arch)
 
-$(generator-objects): $(generator-depends)
-$(generator-objects): $(build)/%-build.o: $(src)/%.cpp
+define compile-generator-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
 		-c $(<) -o $(@)
+endef
+
+$(generator-objects): $(generator-depends)
+$(generator-objects): $(build)/%-build.o: $(src)/%.cpp
+	$(compile-generator-object)
+
+$(generator-lzma-objects): $(build)/%-build.o: $(lzma)/C/%.c
+	$(compile-generator-object)
 
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
 
 $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
-		$(javahome-object) $(boot-javahome-object)
+		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
 	$(ar) cru $(@) $(^)
@@ -940,7 +1012,7 @@ $(bootimage-object) $(codeimage-object): $(bootimage-generator)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
-	$(javahome-object) $(boot-javahome-object)
+	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
@@ -976,7 +1048,8 @@ $(bootimage-generator): $(bootimage-generator-objects)
 
 $(build-bootimage-generator): \
 		$(vm-objects) $(classpath-object) $(classpath-objects) \
-		$(heapwalk-objects) $(bootimage-generator-objects) $(converter-objects)
+		$(heapwalk-objects) $(bootimage-generator-objects) $(converter-objects) \
+		$(lzma-decode-objects) $(lzma-encode-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef msvc
@@ -994,7 +1067,8 @@ endif
 
 $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
 		$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
-		$(classpath-libraries) $(javahome-object) $(boot-javahome-object)
+		$(classpath-libraries) $(javahome-object) $(boot-javahome-object) \
+		$(lzma-decode-objects)
 	@echo "linking $(@)"
 ifdef msvc
 	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
@@ -1020,7 +1094,7 @@ else
 endif
 	$(strip) $(strip-all) $(@)
 
-$(generator): $(generator-objects)
+$(generator): $(generator-objects) $(generator-lzma-objects)
 	@echo "linking $(@)"
 	$(build-ld) $(^) $(build-lflags) -o $(@)
 

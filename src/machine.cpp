@@ -15,6 +15,7 @@
 #include "constants.h"
 #include "processor.h"
 #include "arch.h"
+#include "lzma.h"
 
 using namespace vm;
 
@@ -47,6 +48,40 @@ join(Thread* t, Thread* o)
     o->state = Thread::JoinedState;
   }
 }
+
+#ifndef NDEBUG
+
+bool
+find(Thread* t, Thread* o)
+{
+  return (t == o)
+    or (t->peer and find(t->peer, o))
+    or (t->child and find(t->child, o));
+}
+
+unsigned
+count(Thread* t, Thread* o)
+{
+  unsigned c = 0;
+
+  if (t != o) ++ c;
+  if (t->peer) c += count(t->peer, o);
+  if (t->child) c += count(t->child, o);
+
+  return c;
+}
+
+Thread**
+fill(Thread* t, Thread* o, Thread** array)
+{
+  if (t != o) *(array++) = t;
+  if (t->peer) array = fill(t->peer, o, array);
+  if (t->child) array = fill(t->child, o, array);
+
+  return array;
+}
+
+#endif // not NDEBUG
 
 void
 dispose(Thread* t, Thread* o, bool remove)
@@ -203,8 +238,8 @@ turnOffTheLights(Thread* t)
   Finder* af = m->appFinder;
 
   c->dispose();
-  m->dispose();
   h->disposeFixies();
+  m->dispose();
   p->dispose();
   bf->dispose();
   af->dispose();
@@ -2945,6 +2980,10 @@ Machine::dispose()
     heap->free(heapPool[i], ThreadHeapSizeInBytes);
   }
 
+  if (bootimage) {
+    heap->free(bootimage, bootimageSize);
+  }
+
   heap->free(arguments, sizeof(const char*) * argumentCount);
 
   heap->free(properties, sizeof(const char*) * propertyCount);
@@ -3000,13 +3039,28 @@ Thread::init()
     uint8_t* code = 0;
     const char* imageFunctionName = findProperty(m, "avian.bootimage");
     if (imageFunctionName) {
-      void* imagep = m->libraries->resolve(imageFunctionName);
+      bool lzma = strncmp("lzma:", imageFunctionName, 5) == 0;
+      const char* symbolName
+        = lzma ? imageFunctionName + 5 : imageFunctionName;
+
+      void* imagep = m->libraries->resolve(symbolName);
       if (imagep) {
-        BootImage* (*imageFunction)(unsigned*);
+        uint8_t* (*imageFunction)(unsigned*);
         memcpy(&imageFunction, &imagep, BytesPerWord);
 
         unsigned size;
-        image = imageFunction(&size);
+        uint8_t* imageBytes = imageFunction(&size);
+        if (lzma) {
+#ifdef AVIAN_USE_LZMA
+          m->bootimage = image = reinterpret_cast<BootImage*>
+            (decodeLZMA
+             (m->system, m->heap, imageBytes, size, &(m->bootimageSize)));
+#else
+          abort(this);
+#endif
+        } else {
+          image = reinterpret_cast<BootImage*>(imageBytes);
+        }
 
         const char* codeFunctionName = findProperty(m, "avian.codeimage");
         if (codeFunctionName) {

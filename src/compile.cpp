@@ -9631,9 +9631,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   // fprintf(stderr, "code from %p to %p\n",
   //         code, code + image->codeSize);
  
-  static bool fixed = false;
-
-  if (not fixed) {
+  if (not image->initialized) {
     fixupHeap(t, heapMap, heapMapSizeInWords, heap);
   }
   
@@ -9680,7 +9678,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
     
   findThunks(t, image, code);
 
-  if (fixed) {
+  if (image->initialized) {
     resetRuntimeState
       (t, classLoaderMap(t, root(t, Machine::BootLoader)), heap,
        image->heapSize);
@@ -9703,7 +9701,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
       (t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
   }
 
-  fixed = true;
+  image->initialized = true;
 
   setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
 }
