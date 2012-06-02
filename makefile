@@ -813,7 +813,8 @@ test-args = $(test-flags) $(input)
 
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
-	$(executable-dynamic) $(classpath-dep) $(test-dep) $(test-extra-dep)
+	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
+	$(test-extra-dep)
 
 $(test-dep): $(classpath-dep)
 
