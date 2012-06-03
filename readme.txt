@@ -115,8 +115,8 @@ certain flags described below, all of which are optional.
   * ios - if true, cross-compile for iOS on OS X.  Note that
     non-jailbroken iOS devices do not allow JIT compilation, so only
     process=interpret or bootimage=true builds will run on such
-    devices.  See git://oss.readytalk.com/hello-ios.git for an example
-    of an Xcode project for iOS which uses Avian.
+    devices.  See https://github.com/ReadyTalk/hello-ios for an
+    example of an Xcode project for iOS which uses Avian.
       default: false
 
   * bootimage - if true, create a boot image containing the pre-parsed
