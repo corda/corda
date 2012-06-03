@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 0.5
+version = 0.6
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
@@ -206,7 +206,7 @@ converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
 	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN \
-	-Wall -Wextra -Werror -Wunused-parameter -Winit-self
+	-Wall -Wextra -Werror -Wunused-parameter -Winit-self -Wno-non-virtual-dtor
 
 cflags = $(build-cflags)
 
@@ -457,7 +457,11 @@ ifeq ($(mode),stress-major)
 	strip = :
 endif
 ifeq ($(mode),fast)
-	optimization-cflags = -O4 -g3 -DNDEBUG
+	ifeq ($(use-clang),true)
+		optimization-cflags = -O4 -g3 -DNDEBUG
+	else
+		optimization-cflags = -O3 -g3 -DNDEBUG
+	endif
 	use-lto = true
 endif
 ifeq ($(mode),small)
@@ -925,7 +929,9 @@ $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
 $(build)/%.o: $(lzma)/C/%.c
-	$(compile-object)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(cflags) -Wno-error -c $$($(windows-path) $(<)) $(call output,$(@))
 
 $(vm-asm-objects): $(build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
@@ -1002,7 +1008,10 @@ $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 	$(compile-generator-object)
 
 $(build)/%-build.o: $(lzma)/C/%.c
-	$(compile-generator-object)
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
+		-Wno-error -c $(<) -o $(@)
 
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
