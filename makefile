@@ -326,8 +326,12 @@ ifeq ($(platform),darwin)
 	endif
 
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation \
-		-Wl,-compatibility_version,1.0.0
+	lflags = $(common-lflags) -ldl -framework CoreFoundation
+
+	ifeq (,$(shell ld -v | grep cctools))
+		lflags += -Wl,-compatibility_version,1.0.0
+	endif
+
 	ifneq ($(arch),arm)
 		lflags +=	-framework CoreServices -framework SystemConfiguration \
 			-framework Security
