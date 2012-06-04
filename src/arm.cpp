@@ -57,8 +57,8 @@ inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
 { return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
 inline int COOP(int cond, int opcode_1, int CRn, int CRd, int cp_num, int opcode_2, int CRm)
 { return cond<<28 | 0xe<<24 | opcode_1<<20 | CRn<<16 | CRd<<12 | cp_num<<8 | opcode_2<<5 | CRm; }
-inline int COXFER(int cond, int P, int U, int N, int W, int L, int Rn, int CRd, int cp_num, int offset)
-{ return cond<<28 | 0x6<<25 | P<<24 | U<<23 | N<<22 | W<<21 | L<<20 | Rn<<16 | CRd<<12 | cp_num<<8 | (offset&0xff); }
+inline int COXFER(int cond, int P, int U, int N, int W, int L, int Rn, int CRd, int cp_num, int offset) // offset is in words, not bytes
+{ return cond<<28 | 0x6<<25 | P<<24 | U<<23 | N<<22 | W<<21 | L<<20 | Rn<<16 | CRd<<12 | cp_num<<8 | (offset&0xff)>>2; }
 inline int COREG(int cond, int opcode_1, int L, int CRn, int Rd, int cp_num, int opcode_2, int CRm)
 { return cond<<28 | 0xe<<24 | opcode_1<<21 | L<<20 | CRn<<16 | Rd<<12 | cp_num<<8 | opcode_2<<5 | 1<<4 | CRm; }
 inline int COREG2(int cond, int L, int Rn, int Rd, int cp_num, int opcode, int CRm)
@@ -270,14 +270,17 @@ const int N_GPRS = 16;
 const int N_FPRS = 16;
 const uint32_t GPR_MASK = 0xffff;
 const uint32_t FPR_MASK = 0xffff0000;
+// for source-to-destination masks
+const uint64_t GPR_MASK64 = GPR_MASK | (uint64_t)GPR_MASK << 32;
+// making the following const somehow breaks debug symbol output in GDB
+/* const */ uint64_t FPR_MASK64 = FPR_MASK | (uint64_t)FPR_MASK << 32;
 
 inline bool isFpr(Assembler::Register* reg) {
   return reg->low >= N_GPRS;
 }
 
-inline int toFpr(Assembler::Register* reg) {
-  return reg->low - N_GPRS;
-}
+inline int fpr(Assembler::Register* reg) { return reg->low - N_GPRS; }
+inline int fpr(int reg) { return reg - N_GPRS; }
 
 const unsigned FrameHeaderSize = 1;
 
@@ -584,7 +587,7 @@ using namespace isa;
 inline void emit(Context* con, int code) { con->code.append4(code); }
 
 inline int newTemp(Context* con) {
-  return con->client->acquireTemporary();
+  return con->client->acquireTemporary(GPR_MASK);
 }
 
 inline int newTemp(Context* con, unsigned mask) {
@@ -920,13 +923,12 @@ moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
   bool srcIsFpr = isFpr(src);
   bool dstIsFpr = isFpr(dst);
   if (srcIsFpr || dstIsFpr) { // floating-point register(s) involved
-    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- %d\n", dst->low, src->low);
     // FPR to FPR
-    if (srcIsFpr && dstIsFpr) emit(con, fcpys(toFpr(dst), toFpr(src)));
+    if (srcIsFpr && dstIsFpr) emit(con, fcpys(fpr(dst), fpr(src)));
     // FPR to GPR
-    else if (srcIsFpr)        emit(con, fmrs(dst->low, toFpr(src)));
+    else if (srcIsFpr)        emit(con, fmrs(dst->low, fpr(src)));
     // GPR to FPR
-    else                      emit(con, fmsr(toFpr(dst), src->low));
+    else                      emit(con, fmsr(fpr(dst), src->low));
     return;
   }
 
@@ -990,7 +992,6 @@ moveCR2(Context* con, unsigned size, Assembler::Constant* src,
 {
   if (isFpr(dst)) { // floating-point
     Assembler::Register tmp = makeTemp(con);
-    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- 0x%llx\n", tmp.low, getValue(src));
     moveCR2(con, size, src, &tmp, 0);
     moveRR(con, size, &tmp, size, dst);
     freeTemp(con, tmp);
@@ -1096,88 +1097,86 @@ void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
 
 void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
   if (size == 8) {
-    emit(con, fabsd(b->low, a->low));
+    emit(con, fabsd(fpr(b), fpr(a)));
   } else {
-    emit(con, fabss(b->low, a->low));
+    emit(con, fabss(fpr(b), fpr(a)));
   }
 }
 
 void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
   if (size == 8) {
-    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> invalid 64-bit Scheiße\n");
-    emit(con, fnegd(b->low, a->low));
+    emit(con, fnegd(fpr(b), fpr(a)));
   } else {
-    /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- -%d\n", b->low, a->low);
-    emit(con, fnegs(b->low, a->low));
+    emit(con, fnegs(fpr(b), fpr(a)));
   }
 }
 
 void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
   if (size == 8) {
-    emit(con, fcvtsd(b->low, a->low));
+    emit(con, fcvtsd(fpr(b), fpr(a)));
   } else {
-    emit(con, fcvtds(b->low, a->low));
+    emit(con, fcvtds(fpr(b), fpr(a)));
   }
 }
 
 void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
   int tmp = newTemp(con, FPR_MASK);
+  int ftmp = fpr(tmp);
   if (size == 8) { // double to int
-    emit(con, ftosid(tmp, a->low));
+    emit(con, ftosizd(ftmp, fpr(a)));
   } else {         // float to int
-    emit(con, ftosis(tmp, a->low));
+    emit(con, ftosizs(ftmp, fpr(a)));
   }                // else thunked
-  emit(con, fmrs(b->low, tmp));
+  emit(con, fmrs(b->low, ftmp));
   freeTemp(con, tmp);
 }
 
 void int2FloatRR(Context* con, unsigned UNUSED, Assembler::Register* a, unsigned size, Assembler::Register* b) {
-  emit(con, fmsr(b->low, a->low));
+  emit(con, fmsr(fpr(b), a->low));
   if (size == 8) { // int to double
-    emit(con, fsitod(b->low, b->low));
+    emit(con, fsitod(fpr(b), fpr(b)));
   } else {         // int to float
-    emit(con, fsitos(b->low, b->low));
+    emit(con, fsitos(fpr(b), fpr(b)));
   }                // else thunked
 }
 
 void floatSqrtRR(Context* con, unsigned size, Assembler::Register* a, unsigned UNUSED, Assembler::Register* b) {
-  if (size == 8) { 
-    emit(con, fsqrtd(b->low, a->low));
+  if (size == 8) {
+    emit(con, fsqrtd(fpr(b), fpr(a)));
   } else {
-    emit(con, fsqrts(b->low, a->low));
+    emit(con, fsqrts(fpr(b), fpr(a)));
   }
 }
 
 void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
-  if (size == 8) { 
-    emit(con, faddd(t->low, a->low, b->low));
+  if (size == 8) {
+    emit(con, faddd(fpr(t), fpr(a), fpr(b)));
   } else {
-    fprintf(stderr, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ %d <- %d + %d\n", toFpr(t), toFpr(a), toFpr(b));
-    emit(con, fadds(toFpr(t), toFpr(a), toFpr(b)));
+    emit(con, fadds(fpr(t), fpr(a), fpr(b)));
   }
 }
 
 void floatSubtractR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
-  if (size == 8) { 
-    emit(con, fsubd(t->low, a->low, b->low));
+  if (size == 8) {
+    emit(con, fsubd(fpr(t), fpr(b), fpr(a)));
   } else {
-    emit(con, fsubs(t->low, a->low, b->low));
+    emit(con, fsubs(fpr(t), fpr(b), fpr(a)));
   }
 }
 
 void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
-    emit(con, fmuld(t->low, a->low, b->low));
+    emit(con, fmuld(fpr(t), fpr(a), fpr(b)));
   } else {
-    emit(con, fmuls(t->low, a->low, b->low));
+    emit(con, fmuls(fpr(t), fpr(a), fpr(b)));
   }
 }
 
 void floatDivideR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) { 
-    emit(con, fdivd(t->low, a->low, b->low));
+    emit(con, fdivd(fpr(t), fpr(b), fpr(a)));
   } else {
-    emit(con, fdivs(t->low, a->low, b->low));
+    emit(con, fdivs(fpr(t), fpr(b), fpr(a)));
   }
 }
 
@@ -1242,12 +1241,11 @@ store(Context* con, unsigned size, Assembler::Register* src,
 
     if (isFpr(src)) { // floating-point store
       if (size == 4) {
-        /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr store base-indexed\n");
         Assembler::Register base_(base),
                             normalized_(normalized),
                             absAddr = makeTemp(con);
         addR(con, size, &base_, &normalized_, &absAddr);
-        emit(con, fsts(toFpr(src), absAddr.low));
+        emit(con, fsts(fpr(src), absAddr.low));
         freeTemp(con, absAddr);
       }
       else abort(con);
@@ -1281,8 +1279,7 @@ store(Context* con, unsigned size, Assembler::Register* src,
              or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
   {
     if (isFpr(src)) {
-      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> [%d + 0x%x] <- %d\n", base, offset, src->low);
-      if (size == 4) emit(con, fsts(toFpr(src), base, offset));
+      if (size == 4) emit(con, fsts(fpr(src), base, offset));
       else           abort(con);
     } else {
       switch (size) {
@@ -1358,12 +1355,11 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
 
     if (isFpr(dst)) { // floating-point store
       if (srcSize == 4) {
-        /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> fpr load base-indexed\n");
         Assembler::Register base_(base),
                             normalized_(normalized),
                             absAddr = makeTemp(con);
         addR(con, srcSize, &base_, &normalized_, &absAddr);
-        emit(con, flds(toFpr(dst), absAddr.low));
+        emit(con, flds(fpr(dst), absAddr.low));
         freeTemp(con, absAddr);
       }
       else abort(con);
@@ -1414,8 +1410,7 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
                  and abs(offset) == (abs(offset) & 0xFFF)))
   {
     if (isFpr(dst)) {
-      /**/fprintf(stderr, ">>>>>>>>>>>>>>>>>>>>>>>> %d <- [%d + 0x%x]\n", dst->low, base, offset);
-      if (srcSize == 4) emit(con, flds(toFpr(dst), base, offset));
+      if (srcSize == 4) emit(con, flds(fpr(dst), base, offset));
       else           abort(con);
     } else {
       switch (srcSize) {
@@ -1581,14 +1576,15 @@ compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
   assert(c, aSize == 4 and bSize == 4);
-  assert(c, b->low != a->low);
   assert(c, !(isFpr(a) ^ isFpr(b)));
 
   if (isFpr(a)) {
-    emit(c, fcmps(toFpr(b), toFpr(a)));
+    emit(c, fcmps(fpr(b), fpr(a)));
     emit(c, fmstat());
+  } else {
+    assert(c, b->low != a->low);
+    emit(c, cmp(b->low, a->low));
   }
-  else emit(c, cmp(b->low, a->low));
 }
 
 void
@@ -1699,6 +1695,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
   
   switch (op) {
   case JumpIfEqual:
+  case JumpIfFloatEqual:
     next = c->code.length();
     emit(c, bne(0));
 
@@ -1707,6 +1704,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     break;
 
   case JumpIfNotEqual:
+  case JumpIfFloatNotEqual:
     conditional(c, bne(0), target);
 
     compareSigned(c, 4, al, 4, bl);
@@ -1714,6 +1712,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     break;
 
   case JumpIfLess:
+  case JumpIfFloatLess:
     conditional(c, blt(0), target);
 
     next = c->code.length();
@@ -1724,6 +1723,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     break;
 
   case JumpIfGreater:
+  case JumpIfFloatGreater:
     conditional(c, bgt(0), target);
 
     next = c->code.length();
@@ -1734,6 +1734,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     break;
 
   case JumpIfLessOrEqual:
+  case JumpIfFloatLessOrEqual:
     conditional(c, blt(0), target);
 
     next = c->code.length();
@@ -1744,6 +1745,7 @@ branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
     break;
 
   case JumpIfGreaterOrEqual:
+  case JumpIfFloatGreaterOrEqual:
     conditional(c, bgt(0), target);
 
     next = c->code.length();
@@ -2326,13 +2328,16 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Absolute:
+      *thunk = true;
+      break;
+
     case FloatAbsolute:
     case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
       if (vfpSupported()) {
         *aTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = FPR_MASK;
+        *aRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -2341,7 +2346,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Float2Int:
       if (vfpSupported() && bSize == 4 && aSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = FPR_MASK;
+        *aRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -2350,7 +2355,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Int2Float:
       if (vfpSupported() && aSize == 4 && bSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = FPR_MASK;
+        *aRegisterMask = GPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -2363,8 +2368,8 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void planDestination
   (BinaryOperation op,
-   unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
+   unsigned, uint8_t aTypeMask, uint64_t,
+   unsigned , uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
     *bRegisterMask = ~static_cast<uint64_t>(0);
@@ -2372,6 +2377,26 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Negate:
       *bTypeMask = (1 << RegisterOperand);
+      break;
+
+    case FloatAbsolute:
+    case FloatSquareRoot:
+    case FloatNegate:
+    case Float2Float:
+    case Int2Float:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = FPR_MASK64;
+      break;
+
+    case Float2Int:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = GPR_MASK64;
+      break;
+
+    case Move:
+      if (!(aTypeMask & 1 << RegisterOperand)) {
+        *bTypeMask = 1 << RegisterOperand;
+      }
       break;
 
     default:
@@ -2382,7 +2407,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void planMove
   (unsigned, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
    uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-   uint8_t dstTypeMask, uint64_t)
+   uint8_t dstTypeMask, uint64_t dstRegisterMask)
   {
     *srcTypeMask = ~0;
     *srcRegisterMask = ~static_cast<uint64_t>(0);
@@ -2394,6 +2419,11 @@ class MyArchitecture: public Assembler::Architecture {
       // can't move directly from memory or constant to memory
       *srcTypeMask = 1 << RegisterOperand;
       *tmpTypeMask = 1 << RegisterOperand;
+      *tmpRegisterMask = GPR_MASK64;
+    } else if (dstTypeMask & 1 << RegisterOperand &&
+               dstRegisterMask & FPR_MASK) {
+      *srcTypeMask = *tmpTypeMask = 1 << RegisterOperand |
+                                    1 << MemoryOperand;
       *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }
@@ -2429,6 +2459,7 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Divide:
     case Remainder:
+    case FloatRemainder:
       *thunk = true;
       break;
 
@@ -2436,7 +2467,14 @@ class MyArchitecture: public Assembler::Architecture {
     case FloatSubtract:
     case FloatMultiply:
     case FloatDivide:
-    case FloatRemainder:
+      if (vfpSupported()) {
+        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = *bRegisterMask = FPR_MASK64;
+      } else {
+        *thunk = true;
+      }    
+      break;
+
     case JumpIfFloatEqual:
     case JumpIfFloatNotEqual:
     case JumpIfFloatLess:
@@ -2449,7 +2487,7 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrEqualOrUnordered:
       if (vfpSupported()) {
         *aTypeMask = *bTypeMask = (1 << RegisterOperand);
-        *aRegisterMask = *bRegisterMask = FPR_MASK;
+        *aRegisterMask = *bRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
