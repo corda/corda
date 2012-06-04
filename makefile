@@ -230,6 +230,8 @@ so-suffix = .so
 
 shared = -shared
 
+no-error = -Wno-error
+
 openjdk-extra-cflags = -fvisibility=hidden
 
 bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
@@ -506,6 +508,7 @@ ld := $(cc)
 build-ld := $(build-cc)
 
 ifdef msvc
+	no-error =
 	windows-path = $(native-path)
 	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
 	zlib := $(shell $(windows-path) "$(win32)/msvc")
@@ -931,7 +934,7 @@ $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 $(build)/%.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -Wno-error -c $$($(windows-path) $(<)) $(call output,$(@))
+	$(cxx) $(cflags) $(no-error) -c $$($(windows-path) $(<)) $(call output,$(@))
 
 $(vm-asm-objects): $(build)/%-asm.o: $(src)/%.S
 	$(compile-asm-object)
@@ -1011,7 +1014,7 @@ $(build)/%-build.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
-		-Wno-error -c $(<) -o $(@)
+		$(no-error) -c $(<) -o $(@)
 
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
