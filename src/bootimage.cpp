@@ -17,6 +17,7 @@
 #include "assembler.h"
 #include "target.h"
 #include "binaryToObject/tools.h"
+#include "lzma.h"
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
@@ -62,20 +63,23 @@ enum Type {
 
 class Field {
  public:
-  Field() { }
-
-  Field(Type type, unsigned buildOffset, unsigned buildSize,
-        unsigned targetOffset, unsigned targetSize):
-    type(type), buildOffset(buildOffset), buildSize(buildSize),
-    targetOffset(targetOffset), targetSize(targetSize)
-  { }
-
   Type type;
   unsigned buildOffset;
   unsigned buildSize;
   unsigned targetOffset;
   unsigned targetSize;
 };
+
+void
+init(Field* f, Type type, unsigned buildOffset, unsigned buildSize,
+     unsigned targetOffset, unsigned targetSize)
+{
+  f->type = type;
+  f->buildOffset = buildOffset;
+  f->buildSize = buildSize;
+  f->targetOffset = targetOffset;
+  f->targetSize = targetSize;
+}
 
 class TypeMap {
  public:
@@ -397,9 +401,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             map->targetFixedOffsets()[i * BytesPerWord]
               = i * TargetBytesPerWord;
 
-            new (map->fixedFields() + i) Field
-              (types[i], i * BytesPerWord, BytesPerWord,
-               i * TargetBytesPerWord, TargetBytesPerWord);
+            init(new (map->fixedFields() + i) Field, types[i],
+                 i * BytesPerWord, BytesPerWord, i * TargetBytesPerWord,
+                 TargetBytesPerWord);
           }
 
           hashMapInsert
@@ -446,8 +450,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             ++ memberIndex;
           }
         } else {
-          new (memberFields) Field
-            (Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+          init(new (memberFields) Field, Type_object, 0, BytesPerWord, 0,
+               TargetBytesPerWord);
 
           memberIndex = 1;
           buildMemberOffset = BytesPerWord;
@@ -456,12 +460,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         Field staticFields[count + 2];
         
-        new (staticFields) Field
-          (Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+        init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
+             TargetBytesPerWord);
 
-        new (staticFields + 1) Field
-          (Type_intptr_t, BytesPerWord, BytesPerWord, TargetBytesPerWord,
-           TargetBytesPerWord);
+        init(new (staticFields + 1) Field, Type_intptr_t, BytesPerWord,
+             BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
 
         unsigned staticIndex = 2;
         unsigned buildStaticOffset = BytesPerWord * 2;
@@ -510,9 +513,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildStaticOffset = fieldOffset(t, field);
 
-              new (staticFields + staticIndex) Field
-                (type, buildStaticOffset, buildSize, targetStaticOffset,
-                 targetSize);
+              init(new (staticFields + staticIndex) Field, type,
+                   buildStaticOffset, buildSize, targetStaticOffset,
+                   targetSize);
 
               targetStaticOffset += targetSize;
 
@@ -524,9 +527,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildMemberOffset = fieldOffset(t, field);
 
-              new (memberFields + memberIndex) Field
-                (type, buildMemberOffset, buildSize, targetMemberOffset,
-                 targetSize);
+              init(new (memberFields + memberIndex) Field, type,
+                   buildMemberOffset, buildSize, targetMemberOffset,
+                   targetSize);
 
               targetMemberOffset += targetSize;
 
@@ -691,12 +694,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   t->m->processor->normalizeVirtualThunks(t);
 
   return constants;
-}
-
-unsigned
-objectSize(Thread* t, object o)
-{
-  return baseSize(t, o, objectClass(t, o));
 }
 
 void
@@ -1267,12 +1264,6 @@ updateConstants(Thread* t, object constants, HeapMap* heapTable)
   }
 }
 
-unsigned
-offset(object a, uintptr_t* b)
-{
-  return reinterpret_cast<uintptr_t>(b) - reinterpret_cast<uintptr_t>(a);
-}
-
 BootImage::Thunk
 targetThunk(BootImage::Thunk t)
 {
@@ -1285,7 +1276,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
                 BootImage* image, uint8_t* code, const char* className,
                 const char* methodName, const char* methodSpec,
                 const char* bootimageStart, const char* bootimageEnd,
-                const char* codeimageStart, const char* codeimageEnd)
+                const char* codeimageStart, const char* codeimageEnd,
+                bool useLZMA)
 {
   setRoot(t, Machine::OutOfMemoryError,
           make(t, type(t, Machine::OutOfMemoryErrorType)));
@@ -1347,7 +1339,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
       Field fields[count];
 
-      new (fields) Field(Type_object, 0, BytesPerWord, 0, TargetBytesPerWord);
+      init(new (fields) Field, Type_object, 0, BytesPerWord, 0,
+           TargetBytesPerWord);
 
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
@@ -1424,8 +1417,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
             ++ targetOffset;
           }
 
-          new (fields + j) Field
-            (type, buildOffset, buildSize, targetOffset, targetSize);
+          init(new (fields + j) Field, type, buildOffset, buildSize,
+               targetOffset, targetSize);
 
           buildOffset += buildSize;
           targetOffset += targetSize;
@@ -1603,6 +1596,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   heapWalker->dispose();
 
   image->magic = BootImage::Magic;
+  image->initialized = 0;
 
   fprintf(stderr, "class count %d string count %d call count %d\n"
           "heap size %d code size %d\n",
@@ -1665,7 +1659,27 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       SymbolInfo(bootimageData.length, bootimageEnd)
     };
 
-    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimageData.data, bootimageData.length), Platform::Writable, TargetBytesPerWord);
+    uint8_t* bootimage;
+    unsigned bootimageLength;
+    if (useLZMA) {
+#ifdef AVIAN_USE_LZMA
+      bootimage = encodeLZMA(t->m->system, t->m->heap, bootimageData.data,
+                             bootimageData.length, &bootimageLength);
+
+      fprintf(stderr, "compressed heap size %d\n", bootimageLength);
+#else
+      abort(t);
+#endif
+    } else {
+      bootimage = bootimageData.data;
+      bootimageLength = bootimageData.length;
+    }
+
+    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimage, bootimageLength), Platform::Writable, TargetBytesPerWord);
+
+    if (useLZMA) {
+      t->m->heap->free(bootimage, bootimageLength);
+    }
 
     compilationHandler.symbols.add(SymbolInfo(0, codeimageStart));
     compilationHandler.symbols.add(SymbolInfo(image->codeSize, codeimageEnd));
@@ -1693,10 +1707,12 @@ writeBootImage(Thread* t, uintptr_t* arguments)
   const char* bootimageEnd = reinterpret_cast<const char*>(arguments[8]);
   const char* codeimageStart = reinterpret_cast<const char*>(arguments[9]);
   const char* codeimageEnd = reinterpret_cast<const char*>(arguments[10]);
+  bool useLZMA = arguments[11];
 
   writeBootImage2
     (t, bootimageOutput, codeOutput, image, code, className, methodName,
-     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd);
+     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd,
+     useLZMA);
 
   return 1;
 }
@@ -1755,7 +1771,11 @@ bool ArgParser::parse(int ac, const char** av) {
       }
       for(Arg* arg = first; arg; arg = arg->next) {
         if(strcmp(arg->name,  &av[i][1]) == 0) {
-          state = arg;
+          if (arg->desc == 0) {
+            arg->value = "true";
+          } else {
+            state = arg;
+          }
         }
       }
       if(!state) {
@@ -1810,6 +1830,8 @@ public:
   char* codeimageStart;
   char* codeimageEnd;
 
+  bool useLZMA;
+
   bool maybeSplit(const char* src, char*& destA, char*& destB) {
     if(src) {
       const char* split = strchr(src, ':');
@@ -1839,6 +1861,7 @@ public:
     Arg entry(parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
     Arg bootimageSymbols(parser, false, "bootimage-symbols", "<start symbol name>:<end symbol name>");
     Arg codeimageSymbols(parser, false, "codeimage-symbols", "<start symbol name>:<end symbol name>");
+    Arg useLZMA(parser, false, "use-lzma", 0);
 
     if(!parser.parse(ac, av)) {
       parser.printUsage(av[0]);
@@ -1848,6 +1871,7 @@ public:
     this->classpath = classpath.value;
     this->bootimage = bootimage.value;
     this->codeimage = codeimage.value;
+    this->useLZMA = useLZMA.value != 0;
 
     if(entry.value) {
       if(const char* entryClassEnd = strchr(entry.value, '.')) {
@@ -1997,7 +2021,8 @@ main(int ac, const char** av)
     reinterpret_cast<uintptr_t>(args.bootimageStart),
     reinterpret_cast<uintptr_t>(args.bootimageEnd),
     reinterpret_cast<uintptr_t>(args.codeimageStart),
-    reinterpret_cast<uintptr_t>(args.codeimageEnd)
+    reinterpret_cast<uintptr_t>(args.codeimageEnd),
+    reinterpret_cast<uintptr_t>(args.useLZMA)
   };
 
   run(t, writeBootImage, arguments);

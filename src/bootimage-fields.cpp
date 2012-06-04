@@ -5,6 +5,8 @@
 
 FIELD(magic)
 
+FIELD(initialized)
+
 FIELD(heapSize)
 FIELD(codeSize)
 

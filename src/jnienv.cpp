@@ -252,7 +252,8 @@ NewString(Thread* t, const jchar* chars, jsize size)
 {
   if (chars == 0) return 0;
 
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(chars), size };
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(chars),
+                            static_cast<uintptr_t>(size) };
 
   return reinterpret_cast<jstring>(run(t, newString, arguments));
 }
@@ -311,7 +312,7 @@ DefineClass(Thread* t, const char*, jobject loader, const jbyte* buffer,
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
                             reinterpret_cast<uintptr_t>(buffer),
-                            length };
+                            static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jclass>(run(t, defineClass, arguments));
 }
@@ -1495,7 +1496,7 @@ SetByteField(Thread* t, jobject o, jfieldID field, jbyte v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setByteField, arguments);
 }
@@ -1545,7 +1546,7 @@ SetShortField(Thread* t, jobject o, jfieldID field, jshort v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setShortField, arguments);
 }
@@ -1570,7 +1571,7 @@ SetIntField(Thread* t, jobject o, jfieldID field, jint v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setIntField, arguments);
 }
@@ -1975,7 +1976,7 @@ SetStaticByteField(Thread* t, jobject c, jfieldID field, jbyte v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setStaticByteField, arguments);
 }
@@ -2033,7 +2034,7 @@ SetStaticShortField(Thread* t, jobject c, jfieldID field, jshort v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setStaticShortField, arguments);
 }
@@ -2062,7 +2063,7 @@ SetStaticIntField(Thread* t, jobject c, jfieldID field, jint v)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
                             field,
-                            v };
+                            static_cast<uintptr_t>(v) };
 
   run(t, setStaticIntField, arguments);
 }
@@ -2261,7 +2262,7 @@ newObjectArray(Thread* t, uintptr_t* arguments)
 jobjectArray JNICALL
 NewObjectArray(Thread* t, jsize length, jclass class_, jobject init)
 {
-  uintptr_t arguments[] = { length,
+  uintptr_t arguments[] = { static_cast<uintptr_t>(length),
                             reinterpret_cast<uintptr_t>(class_),
                             reinterpret_cast<uintptr_t>(init) };
 
@@ -2302,7 +2303,7 @@ NewBooleanArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeBooleanArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jbooleanArray>(run(t, newArray, arguments));
 }
@@ -2318,7 +2319,7 @@ NewByteArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeByteArray0)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jbyteArray>(run(t, newArray, arguments));
 }
@@ -2328,7 +2329,7 @@ NewCharArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeCharArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jcharArray>(run(t, newArray, arguments));
 }
@@ -2338,7 +2339,7 @@ NewShortArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeShortArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jshortArray>(run(t, newArray, arguments));
 }
@@ -2348,7 +2349,7 @@ NewIntArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeIntArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jintArray>(run(t, newArray, arguments));
 }
@@ -2358,7 +2359,7 @@ NewLongArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeLongArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jlongArray>(run(t, newArray, arguments));
 }
@@ -2368,7 +2369,7 @@ NewFloatArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeFloatArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jfloatArray>(run(t, newArray, arguments));
 }
@@ -2378,7 +2379,7 @@ NewDoubleArray(Thread* t, jsize length)
 {
   uintptr_t arguments[]
     = { reinterpret_cast<uintptr_t>(voidPointer(makeDoubleArray)),
-        length };
+        static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jdoubleArray>(run(t, newArray, arguments));
 }
@@ -2905,7 +2906,7 @@ RegisterNatives(Thread* t, jclass c, const JNINativeMethod* methods,
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
                             reinterpret_cast<uintptr_t>(methods),
-                            methodCount };
+                            static_cast<uintptr_t>(methodCount) };
 
   return run(t, registerNatives, arguments) ? 0 : -1;
 }

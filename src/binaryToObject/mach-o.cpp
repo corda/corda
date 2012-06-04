@@ -183,14 +183,14 @@ public:
 
     FileHeader header = {
       V4(Magic), // magic
-      V4(cpuType),
-      V4(cpuSubType),
+      static_cast<cpu_type_t>(V4(cpuType)),
+      static_cast<cpu_subtype_t>(V4(cpuSubType)),
       V4(MH_OBJECT), // filetype,
       V4(2), // ncmds
       V4(sizeof(SegmentCommand)
          + sizeof(Section)
          + sizeof(SymtabCommand)), // sizeofcmds
-      V4(0) // flags
+      { V4(0) } // flags
     };
 
     AddrTy finalSize = pad(data.count);
@@ -206,8 +206,8 @@ public:
          + sizeof(Section)
          + sizeof(SymtabCommand))), // fileoff
       VANY(static_cast<AddrTy>(finalSize)), // filesize
-      V4(7), // maxprot
-      V4(7), // initprot
+      static_cast<vm_prot_t>(V4(7)), // maxprot
+      static_cast<vm_prot_t>(V4(7)), // initprot
       V4(1), // nsects
       V4(0) // flags
     };
@@ -243,7 +243,7 @@ public:
       strings.write("_", 1);
       strings.add(sym->name);
       NList symbol = {
-        V4(offset), // n_un
+        { V4(offset) }, // n_un
         V1(N_SECT | N_EXT), // n_type
         V1(1), // n_sect
         V2(0), // n_desc
@@ -281,6 +281,8 @@ public:
     out->writeChunk(symbolList.data, symbolList.length);
 
     out->writeChunk(strings.data, strings.length);
+
+    return true;
   }
     
   MachOPlatform(PlatformInfo::Architecture arch):

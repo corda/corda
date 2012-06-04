@@ -63,6 +63,7 @@ Build requirements include:
 
   * GNU make 3.80 or later
   * GCC 3.4 or later (4.5.1 or later for Windows/x86_64)
+      or LLVM Clang 3.1 or later (see use-clang option below)
   * JDK 1.5 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
@@ -78,11 +79,13 @@ certain flags described below, all of which are optional.
      arch={i386,x86_64,powerpc,arm} \
      process={compile,interpret} \
      mode={debug,debug-fast,fast,small} \
+     lzma=<lzma source directory> \
      ios={true,false} \
      bootimage={true,false} \
      heapdump={true,false} \
      tails={true,false} \
      continuations={true,false} \
+     use-clang={true,false} \
      openjdk=<openjdk installation directory> \
      openjdk-src=<openjdk source directory>
 
@@ -102,11 +105,18 @@ certain flags described below, all of which are optional.
     assertions
       default: fast
 
+  * lzma - if set, support use of LZMA to compress embedded JARs and
+    boot images.  The value of this option should be a directory
+    containing a recent LZMA SDK (available at
+    http://www.7-zip.org/sdk.html).  Currently, only version 9.20 of
+    the SDK has been tested, but other versions might work.
+      default: not set
+
   * ios - if true, cross-compile for iOS on OS X.  Note that
     non-jailbroken iOS devices do not allow JIT compilation, so only
     process=interpret or bootimage=true builds will run on such
-    devices.  See git://oss.readytalk.com/hello-ios.git for an example
-    of an Xcode project for iOS which uses Avian.
+    devices.  See https://github.com/ReadyTalk/hello-ios for an
+    example of an Xcode project for iOS which uses Avian.
       default: false
 
   * bootimage - if true, create a boot image containing the pre-parsed
@@ -132,6 +142,11 @@ certain flags described below, all of which are optional.
     avian.Continuations methods callWithCurrentContinuation and
     dynamicWind.  See Continuations.java for details.  This option is
     only valid for process=compile builds.
+      default: false
+
+  * use-clang - if true, use LLVM's clang instead of GCC to build.
+    Note that this does not currently affect cross compiles, only
+    native builds.
       default: false
 
   * openjdk - if set, use OpenJDK class library instead of the default
@@ -359,8 +374,20 @@ EOF
 
 Step 3: Make an object file out of the jar.
 
- $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar boot-jar.o \
-     _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+ $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar \
+     boot-jar.o _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+
+If you've built Avian using the lzma option, you may optionally
+compress the jar before generating the object:
+
+ $ ../build/$(platform}-${arch}-lzma/lzma/lzma encode boot.jar boot.jar.lzma
+     && ../build/${platform}-${arch}-lzma/binaryToObject/binaryToObject \
+       boot.jar.lzma boot-jar.o _binary_boot_jar_start _binary_boot_jar_end \
+       ${platform} ${arch}
+
+Note that you'll need to specify "-Xbootclasspath:[lzma:bootJar]"
+instead of "-Xbootclasspath:[bootJar]" in the next step if you've used
+LZMA to compress the jar.
 
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to
