@@ -2022,7 +2022,7 @@ main(int ac, const char** av)
     reinterpret_cast<uintptr_t>(args.bootimageEnd),
     reinterpret_cast<uintptr_t>(args.codeimageStart),
     reinterpret_cast<uintptr_t>(args.codeimageEnd),
-    reinterpret_cast<uintptr_t>(args.useLZMA)
+    static_cast<uintptr_t>(args.useLZMA)
   };
 
   run(t, writeBootImage, arguments);
