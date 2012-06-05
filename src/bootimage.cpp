@@ -1769,8 +1769,10 @@ bool ArgParser::parse(int ac, const char** av) {
         fprintf(stderr, "expected -parameter\n");
         return false;
       }
+      bool found = false;
       for(Arg* arg = first; arg; arg = arg->next) {
         if(strcmp(arg->name,  &av[i][1]) == 0) {
+          found = true;
           if (arg->desc == 0) {
             arg->value = "true";
           } else {
@@ -1778,7 +1780,7 @@ bool ArgParser::parse(int ac, const char** av) {
           }
         }
       }
-      if(!state) {
+      if (not found) {
         fprintf(stderr, "unrecognized parameter %s\n", av[i]);
         return false;
       }
@@ -1806,8 +1808,10 @@ void ArgParser::printUsage(const char* exe) {
     const char* lineEnd = arg->next ? " \\" : "";
     if(arg->required) {
       fprintf(stderr, "  -%s\t%s%s\n", arg->name, arg->desc, lineEnd);
-    } else {
+    } else if (arg->desc) {
       fprintf(stderr, "  [-%s\t%s]%s\n", arg->name, arg->desc, lineEnd);
+    } else {
+      fprintf(stderr, "  [-%s]%s\n", arg->name, lineEnd);
     }
   }
 }
