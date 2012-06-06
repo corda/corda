@@ -328,7 +328,7 @@ ifeq ($(platform),darwin)
 	version-script-flag =
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
 
-	ifeq (,$(shell ld -v | grep cctools))
+	ifeq (,$(shell ld -v 2>&1 | grep cctools))
 		lflags += -Wl,-compatibility_version,1.0.0
 	endif
 

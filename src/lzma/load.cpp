@@ -41,6 +41,15 @@ extern "C" {
 
 namespace {
 
+int32_t
+read4(const uint8_t* in)
+{
+  return (static_cast<int32_t>(in[3]) << 24)
+    |    (static_cast<int32_t>(in[2]) << 16)
+    |    (static_cast<int32_t>(in[1]) <<  8)
+    |    (static_cast<int32_t>(in[0])      );
+}
+
 void*
 myAllocate(void*, size_t size)
 {
@@ -127,8 +136,7 @@ main(int ac, const char** av)
 
   SizeT inSize = SYMBOL(end) - SYMBOL(start);
 
-  int32_t outSize32;
-  memcpy(&outSize32, SYMBOL(start) + PropHeaderSize, 4);
+  int32_t outSize32 = read4(SYMBOL(start) + PropHeaderSize);
   SizeT outSize = outSize32;
 
   uint8_t* out = static_cast<uint8_t*>(malloc(outSize));

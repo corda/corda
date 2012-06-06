@@ -13,6 +13,19 @@
 
 using namespace vm;
 
+namespace {
+
+int32_t
+read4(const uint8_t* in)
+{
+  return (static_cast<int32_t>(in[3]) << 24)
+    |    (static_cast<int32_t>(in[2]) << 16)
+    |    (static_cast<int32_t>(in[1]) <<  8)
+    |    (static_cast<int32_t>(in[0])      );
+}
+
+} // namespace
+
 namespace vm {
 
 uint8_t*
@@ -22,8 +35,7 @@ decodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
   const unsigned PropHeaderSize = 5;
   const unsigned HeaderSize = 13;
 
-  int32_t outSize32;
-  memcpy(&outSize32, in + PropHeaderSize, 4);
+  int32_t outSize32 = read4(in + PropHeaderSize);
   expect(s, outSize32 >= 0);
   SizeT outSizeT = outSize32;
 

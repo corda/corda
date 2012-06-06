@@ -17,6 +17,15 @@
 
 namespace {
 
+int32_t
+read4(const uint8_t* in)
+{
+  return (static_cast<int32_t>(in[3]) << 24)
+    |    (static_cast<int32_t>(in[2]) << 16)
+    |    (static_cast<int32_t>(in[1]) <<  8)
+    |    (static_cast<int32_t>(in[0])      );
+}
+
 void*
 myAllocate(void*, size_t size)
 {
@@ -100,8 +109,7 @@ main(int argc, const char** argv)
     if (encode) {
       outSize = size * 2;
     } else {
-      int32_t outSize32;
-      memcpy(&outSize32, data + PropHeaderSize, 4);
+      int32_t outSize32 = read4(data + PropHeaderSize);
       if (outSize32 >= 0) {
         outSize = outSize32;
       } else if (argc == 5) {
