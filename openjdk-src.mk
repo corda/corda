@@ -239,8 +239,7 @@ ifeq ($(platform),windows)
 		-Ds6_bytes=_s6_bytes
 else
 	openjdk-sources += \
-		$(openjdk-src)/solaris/native/common/jdk_util_md.c \
-		$(openjdk-src)/solaris/native/common/jni_util_md.c \
+		$(shell find $(openjdk-src)/solaris/native/common -name '*.c') \
 		$(openjdk-src)/solaris/native/java/io/canonicalize_md.c \
 		$(openjdk-src)/solaris/native/java/io/Console_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileDescriptor_md.c \
@@ -305,9 +304,6 @@ else
 	ifeq ($(platform),linux)
 		openjdk-sources += \
 			$(openjdk-src)/solaris/native/java/net/linux_close.c \
-			$(openjdk-src)/solaris/native/common/deps/syscalls_fp.c \
-			$(openjdk-src)/solaris/native/common/deps/gconf2/gconf_fp.c \
-			$(openjdk-src)/solaris/native/common/deps/glib2/gio_fp.c \
 			$(openjdk-src)/solaris/native/sun/nio/ch/EPollArrayWrapper.c
 
 		openjdk-headers-classes += \
@@ -316,6 +312,8 @@ else
 		openjdk-cflags += \
 			"-I$(openjdk-src)/solaris/native/common/deps/glib2" \
 			"-I$(openjdk-src)/solaris/native/common/deps/gconf2" \
+			"-I$(openjdk-src)/solaris/native/common/deps/fontconfig2" \
+			"-I$(openjdk-src)/solaris/native/common/deps/gtk2" \
 			$(shell pkg-config --cflags glib-2.0) \
 			$(shell pkg-config --cflags gconf-2.0)
 	endif
@@ -341,12 +339,13 @@ openjdk-local-sources += \
 	$(src)/openjdk/my_net_util.c \
 	$(src)/openjdk/my_management.c
 
-c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-openjdk.o,$(x)))
+openjdk-c-objects = \
+	$(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%-openjdk.o,$(x)))
 
 openjdk-objects = \
-	$(call c-objects,$(openjdk-sources),$(openjdk-src),$(build)/openjdk)
+	$(call openjdk-c-objects,$(openjdk-sources),$(openjdk-src),$(build)/openjdk)
 
 openjdk-local-objects = \
-	$(call c-objects,$(openjdk-local-sources),$(src)/openjdk,$(build)/openjdk)
+	$(call openjdk-c-objects,$(openjdk-local-sources),$(src)/openjdk,$(build)/openjdk)
 
 openjdk-headers-dep = $(build)/openjdk/headers.dep

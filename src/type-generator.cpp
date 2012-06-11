@@ -1384,6 +1384,11 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
     out->write(" = ");
     writeOffset(out, offset);
     out->write(";\n\n");
+
+    out->write("#define HAVE_");
+    out->write(capitalize(local::typeName(memberOwner(member))));
+    out->write(capitalize(memberName(member)));
+    out->write(" 1\n\n");
   }
 
   out->write("inline ");
