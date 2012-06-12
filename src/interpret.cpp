@@ -3067,7 +3067,7 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void addCompilationHandler(CompilationHandler* handler) {
+  virtual void addCompilationHandler(CompilationHandler*) {
     abort(s);
   }
 
