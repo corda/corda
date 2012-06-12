@@ -2238,7 +2238,7 @@ makeString(Thread* t, const char* format, ...);
 inline unsigned
 stringLength(Thread* t, object string)
 {
-  return arrayLength(t, stringData(t, string));
+  return charArrayLength(t, stringData(t, string));
 }
 
 inline unsigned
@@ -2250,7 +2250,7 @@ stringOffset(Thread*, object)
 inline object
 makeString(Thread* t, object data, unsigned offset, unsigned length, unsigned)
 {
-  if (offset == 0 and length == arrayLength(t, data)) {
+  if (offset == 0 and length == charArrayLength(t, data)) {
     return makeString(t, data, 0, 0);
   } else {
     PROTECT(t, data);
