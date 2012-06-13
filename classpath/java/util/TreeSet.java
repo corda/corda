@@ -15,7 +15,6 @@ import avian.Cell;
 
 public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
   private PersistentSet<Cell<T>> set;
-  private int size;
 
   public TreeSet(final Comparator<T> comparator) {
     set = new PersistentSet(new Comparator<Cell<T>>() {
@@ -23,7 +22,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
         return comparator.compare(a.value, b.value);
       }
     });
-    size = 0;
   }
 
   public TreeSet() {
@@ -66,7 +64,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {
       set = p.add();
-      ++size;
       return true;
     }
     return false;
@@ -76,7 +73,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
     PersistentSet.Path<Cell<T>> p = set.find(new Cell(value, null));
     if (p.fresh()) {
       set = p.add();
-      ++size;
       return null;
     } else {
       T old = p.value().value;
@@ -100,8 +96,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
     if (p.fresh()) {
       return null;
     } else {
-      --size;
-
       Cell<T> old = p.value();
 
       if (p.value().next != null) {
@@ -119,11 +113,11 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
   }
 
   public int size() {
-    return size;
+    return set.size();
   }
 
   public boolean isEmpty() {
-    return size == 0;
+    return set.size() != 0;
   }
 
   public boolean contains(Object value) {
@@ -132,7 +126,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
 
   public void clear() {
     set = new PersistentSet(set.comparator());
-    size = 0;
   }
 
   private class MyIterator<T> implements java.util.Iterator<T> {
@@ -179,8 +172,6 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
 
     public void remove() {
       if (! canRemove) throw new IllegalStateException();
-
-      --size;
 
       if (prevPrevCell != null && prevPrevCell.next == prevCell) {
         // cell to remove is not the first in the list.
