@@ -1316,6 +1316,7 @@ class Machine {
   System::Monitor* shutdownLock;
   System::Library* libraries;
   FILE* errorLog;
+  BootImage* bootimage;
   object types;
   object roots;
   object finalizers;
@@ -1332,6 +1333,7 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
   unsigned heapPoolIndex;
+  unsigned bootimageSize;
 };
 
 void
@@ -2230,6 +2232,39 @@ makeByteArray(Thread* t, const char* format, ...);
 
 object
 makeString(Thread* t, const char* format, ...);
+
+#ifndef HAVE_StringOffset
+
+inline unsigned
+stringLength(Thread* t, object string)
+{
+  return arrayLength(t, stringData(t, string));
+}
+
+inline unsigned
+stringOffset(Thread*, object)
+{
+  return 0;
+}
+
+inline object
+makeString(Thread* t, object data, unsigned offset, unsigned length, unsigned)
+{
+  if (offset == 0 and length == arrayLength(t, data)) {
+    return makeString(t, data, 0, 0);
+  } else {
+    PROTECT(t, data);
+
+    object array = makeCharArray(t, length);
+
+    memcpy(&charArrayBody(t, array, 0), &charArrayBody(t, data, offset),
+           length * 2);
+
+    return makeString(t, array, 0, 0);
+  }
+}
+
+#endif // not HAVE_StringOffset
 
 int
 stringUTFLength(Thread* t, object string, unsigned start, unsigned length);

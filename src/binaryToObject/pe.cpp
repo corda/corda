@@ -129,11 +129,11 @@ public:
     void addSymbol(String name, unsigned addr, unsigned sectionNumber, unsigned type, unsigned storageClass) {
       unsigned nameOffset = strings.add(name);
       IMAGE_SYMBOL symbol = {
-        { 0 }, // Name
+        { { 0, 0 } }, // Name
         addr, // Value
-        sectionNumber, // SectionNumber
-        type, // Type
-        storageClass, // StorageClass
+        static_cast<int16_t>(sectionNumber), // SectionNumber
+        static_cast<uint16_t>(type), // Type
+        static_cast<uint8_t>(storageClass), // StorageClass
         0, // NumberOfAuxSymbols
       };
       symbol.N.Name.Long = nameOffset+4;
@@ -165,9 +165,9 @@ public:
         size_t dataSize):
 
       file(file),
-      data(data),
       dataSize(dataSize),
-      finalSize(pad(dataSize))
+      finalSize(pad(dataSize)),
+      data(data)
     {
       file.sectionCount++;
       file.dataStart += sizeof(IMAGE_SECTION_HEADER);

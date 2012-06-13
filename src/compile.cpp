@@ -288,14 +288,6 @@ transition(MyThread* t, void* ip, void* stack, object continuation,
   MyThread::doTransition(t, ip, stack, continuation, trace);
 }
 
-unsigned
-parameterOffset(MyThread* t, object method)
-{
-  return methodParameterFootprint(t, method)
-    + t->arch->frameFooterSize()
-    + t->arch->frameReturnAddressSize() - 1;
-}
-
 object
 resolveThisPointer(MyThread* t, void* stack)
 {
@@ -9639,9 +9631,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   // fprintf(stderr, "code from %p to %p\n",
   //         code, code + image->codeSize);
  
-  static bool fixed = false;
-
-  if (not fixed) {
+  if (not image->initialized) {
     fixupHeap(t, heapMap, heapMapSizeInWords, heap);
   }
   
@@ -9688,7 +9678,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
     
   findThunks(t, image, code);
 
-  if (fixed) {
+  if (image->initialized) {
     resetRuntimeState
       (t, classLoaderMap(t, root(t, Machine::BootLoader)), heap,
        image->heapSize);
@@ -9711,7 +9701,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
       (t, classLoaderMap(t, root(t, Machine::AppLoader)), image, code);
   }
 
-  fixed = true;
+  image->initialized = true;
 
   setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
 }
@@ -10032,7 +10022,7 @@ compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   sprintf(RUNTIME_ARRAY_BODY(virtualThunkName), "%s%d", virtualThunkBaseName, index);
 
-  logCompile(t, start, *size, 0, virtualThunkName, 0);
+  logCompile(t, start, *size, 0, RUNTIME_ARRAY_BODY(virtualThunkName), 0);
 
   return reinterpret_cast<uintptr_t>(start);
 }

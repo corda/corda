@@ -562,6 +562,14 @@ class MyClasspath : public Classpath {
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif // not AVIAN_OPENJDK_SRC
 
+    { object assertionLock = resolveField
+        (t, type(t, Machine::ClassLoaderType), "assertionLock",
+         "Ljava/lang/Object;");
+
+      set(t, root(t, Machine::BootLoader), fieldOffset(t, assertionLock),
+          root(t, Machine::BootLoader));
+    }
+
     { object class_ = resolveClass
         (t, root(t, Machine::BootLoader), "java/util/Properties", true,
          Machine::NoClassDefFoundErrorType);
@@ -592,14 +600,6 @@ class MyClasspath : public Classpath {
       t->m->processor->invoke
         (t, constructor, root(t, Machine::AppLoader),
          root(t, Machine::BootLoader));
-    }
-
-    { object assertionLock = resolveField
-        (t, type(t, Machine::ClassLoaderType), "assertionLock",
-         "Ljava/lang/Object;");
-
-      set(t, root(t, Machine::BootLoader), fieldOffset(t, assertionLock),
-          root(t, Machine::BootLoader));
     }
 
     { object scl = resolveField
