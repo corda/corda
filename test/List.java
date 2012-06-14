@@ -131,6 +131,20 @@ public class List {
     expect(l.size() == 2);
   }
 
+  private static void testGrow() {
+    ArrayList<Integer> foo = new ArrayList<Integer>(2);
+    foo.add(0);
+    foo.add(1);
+    foo.add(2); // first grow
+    foo.add(3);
+    foo.add(4); // second grow
+    foo.add(5);
+
+    for (int i = 0; i < foo.size(); i++) {
+      expect(i == foo.get(i));
+    }
+  }
+
   public static void main(String args[]) {
     ArrayList<Integer> l = new ArrayList<Integer>();
     l.add(1); l.add(2); l.add(3); l.add(4); l.add(5);
@@ -155,5 +169,6 @@ public class List {
 
     testIterators2(new ArrayList());
     testIterators2(new LinkedList());
+    testGrow();
   }
 }
