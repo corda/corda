@@ -532,7 +532,7 @@ class MyStackWalker: public Processor::StackWalker {
     method_(w->method_),
     target(w->target),
     continuation(w->continuation),
-    count_(0),
+    count_(w->count_),
     protector(this)
   { }
 
