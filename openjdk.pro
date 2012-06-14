@@ -114,6 +114,9 @@
    private long handle;
  }
 
+-keep class java.net.NetworkInterface {
+   <fields>;
+ }
 -keep class java.net.InetAddress {
    <fields>;
  }
