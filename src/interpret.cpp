@@ -158,7 +158,7 @@ peekObject(Thread* t, unsigned index)
 
   assert(t, index < stackSizeInWords(t) / 2);
   assert(t, t->stack[index * 2] == ObjectTag);
-  return *reinterpret_cast<object*>(t->stack + (index * 2) + 1);
+  return reinterpret_cast<object>(t->stack[(index * 2) + 1]);
 }
 
 inline uint32_t
@@ -2706,7 +2706,8 @@ interpret(Thread* t)
 
   while (true) {
     bool success = false;
-    uintptr_t arguments[] = { base, reinterpret_cast<uintptr_t>(&success) };
+    uintptr_t arguments[] = { static_cast<uintptr_t>(base),
+                              reinterpret_cast<uintptr_t>(&success) };
 
     uint64_t r = run(t, interpret2, arguments);
     if (success) {

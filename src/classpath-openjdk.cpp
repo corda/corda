@@ -2960,10 +2960,10 @@ EXPORT(JVM_ArrayCopy)(Thread* t, jclass, jobject src, jint srcOffset,
                       jobject dst, jint dstOffset, jint length)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(src),
-                            srcOffset,
+                            static_cast<uintptr_t>(srcOffset),
                             reinterpret_cast<uintptr_t>(dst),
-                            dstOffset,
-                            length };
+                            static_cast<uintptr_t>(dstOffset),
+                            static_cast<uintptr_t>(length) };
 
   run(t, jvmArrayCopy, arguments);
 }
@@ -3238,7 +3238,8 @@ jvmGetStackTraceElement(Thread* t, uintptr_t* arguments)
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_GetStackTraceElement)(Thread* t, jobject throwable, jint index)
 {
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(throwable), index };
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(throwable),
+                            static_cast<uintptr_t>(index) };
 
   return reinterpret_cast<jobject>(run(t, jvmGetStackTraceElement, arguments));
 }
@@ -3646,7 +3647,7 @@ extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_GetArrayElement)(Thread* t, jobject array, jint index)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(array),
-                            index };
+                            static_cast<uintptr_t>(index) };
 
   return reinterpret_cast<jobject>(run(t, jvmGetArrayElement, arguments));
 }
@@ -3740,7 +3741,7 @@ extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_NewArray)(Thread* t, jclass elementClass, jint length)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(elementClass),
-                            length };
+                            static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jobject>(run(t, jvmNewArray, arguments));
 }
@@ -3946,7 +3947,7 @@ EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
                             reinterpret_cast<uintptr_t>(data),
-                            length };
+                            static_cast<uintptr_t>(length) };
 
   return reinterpret_cast<jclass>(run(t, jvmDefineClass, arguments));
 }
@@ -4710,7 +4711,8 @@ jvmConstantPoolGetUTF8At(Thread* t, uintptr_t* arguments)
 extern "C" JNIEXPORT jstring JNICALL
 EXPORT(JVM_ConstantPoolGetUTF8At)(Thread* t, jobject, jobject pool, jint index)
 {
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(pool), index };
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(pool),
+                            static_cast<uintptr_t>(index) };
 
   return reinterpret_cast<jstring>
     (run(t, jvmConstantPoolGetUTF8At, arguments));
