@@ -107,6 +107,10 @@ class Processor {
   invokeArray(Thread* t, object method, object this_, object arguments) = 0;
 
   virtual object
+  invokeArray(Thread* t, object method, object this_, const jvalue* arguments)
+  = 0;
+
+  virtual object
   invokeList(Thread* t, object method, object this_, bool indirectObjects,
              va_list arguments) = 0;
 

@@ -632,16 +632,40 @@ NewObject(Thread* t, jclass c, jmethodID m, ...)
 }
 
 uint64_t
+newObjectA(Thread* t, uintptr_t* arguments)
+{
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  jmethodID m = arguments[1];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[2]);
+
+  object o = make(t, jclassVmClass(t, *c));
+  PROTECT(t, o);
+
+  t->m->processor->invokeArray(t, getMethod(t, m), o, a);
+
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, o));
+}
+
+jobject JNICALL
+NewObjectA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return reinterpret_cast<jobject>(run(t, newObjectA, arguments));
+}
+
+uint64_t
 callObjectMethodV(Thread* t, uintptr_t* arguments)
 {
-  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
   jmethodID m = arguments[1];
   va_list* a = reinterpret_cast<va_list*>(arguments[2]);
 
-  object method = getMethod(t, m);
   return reinterpret_cast<uint64_t>
     (makeLocalReference
-     (t, t->m->processor->invokeList(t, method, *o, true, *a)));
+     (t, t->m->processor->invokeList(t, getMethod(t, m), *o, true, *a)));
 }
 
 jobject JNICALL
@@ -668,14 +692,36 @@ CallObjectMethod(Thread* t, jobject o, jmethodID m, ...)
 }
 
 uint64_t
+callObjectMethodA(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jmethodID m = arguments[1];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[2]);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, t->m->processor->invokeArray(t, getMethod(t, m), *o, a)));
+}
+
+jobject JNICALL
+CallObjectMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return reinterpret_cast<jobject>(run(t, callObjectMethodA, arguments));
+}
+
+uint64_t
 callIntMethodV(Thread* t, uintptr_t* arguments)
 {
-  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
   jmethodID m = arguments[1];
   va_list* a = reinterpret_cast<va_list*>(arguments[2]);
 
-  object method = getMethod(t, m);
-  return intValue(t, t->m->processor->invokeList(t, method, *o, true, *a));
+  return intValue
+    (t, t->m->processor->invokeList(t, getMethod(t, m), *o, true, *a));
 }
 
 jboolean JNICALL
@@ -701,6 +747,27 @@ CallBooleanMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callIntMethodA(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jmethodID m = arguments[1];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[2]);
+
+  return intValue
+     (t, t->m->processor->invokeArray(t, getMethod(t, m), *o, a));
+}
+
+jboolean JNICALL
+CallBooleanMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callIntMethodA, arguments) != 0;
+}
+
 jbyte JNICALL
 CallByteMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
@@ -722,6 +789,16 @@ CallByteMethod(Thread* t, jobject o, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jbyte JNICALL
+CallByteMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callIntMethodA, arguments);
 }
 
 jchar JNICALL
@@ -747,6 +824,16 @@ CallCharMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+jchar JNICALL
+CallCharMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callIntMethodA, arguments);
+}
+
 jshort JNICALL
 CallShortMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
@@ -768,6 +855,16 @@ CallShortMethod(Thread* t, jobject o, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jshort JNICALL
+CallShortMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callIntMethodA, arguments);
 }
 
 jint JNICALL
@@ -793,15 +890,25 @@ CallIntMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+jint JNICALL
+CallIntMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callIntMethodA, arguments);
+}
+
 uint64_t
 callLongMethodV(Thread* t, uintptr_t* arguments)
 {
-  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
   jmethodID m = arguments[1];
   va_list* a = reinterpret_cast<va_list*>(arguments[2]);
 
-  object method = getMethod(t, m);
-  return longValue(t, t->m->processor->invokeList(t, method, *o, true, *a));
+  return longValue
+    (t, t->m->processor->invokeList(t, getMethod(t, m), *o, true, *a));
 }
 
 jlong JNICALL
@@ -827,6 +934,27 @@ CallLongMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callLongMethodA(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jmethodID m = arguments[1];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[2]);
+
+  return longValue
+     (t, t->m->processor->invokeArray(t, getMethod(t, m), *o, a));
+}
+
+jlong JNICALL
+CallLongMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callLongMethodA, arguments);
+}
+
 jfloat JNICALL
 CallFloatMethodV(Thread* t, jobject o, jmethodID m, va_list a)
 {
@@ -848,6 +976,16 @@ CallFloatMethod(Thread* t, jobject o, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jfloat JNICALL
+CallFloatMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return bitsToFloat(run(t, callIntMethodA, arguments));
 }
 
 jdouble JNICALL
@@ -873,15 +1011,24 @@ CallDoubleMethod(Thread* t, jobject o, jmethodID m, ...)
   return r;
 }
 
+jdouble JNICALL
+CallDoubleMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  return bitsToDouble(run(t, callLongMethodA, arguments));
+}
+
 uint64_t
 callVoidMethodV(Thread* t, uintptr_t* arguments)
 {
-  jobject o = reinterpret_cast<jclass>(arguments[0]);
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
   jmethodID m = arguments[1];
   va_list* a = reinterpret_cast<va_list*>(arguments[2]);
 
-  object method = getMethod(t, m);
-  t->m->processor->invokeList(t, method, *o, true, *a);
+  t->m->processor->invokeList(t, getMethod(t, m), *o, true, *a);
 
   return 0;
 }
@@ -905,6 +1052,28 @@ CallVoidMethod(Thread* t, jobject o, jmethodID m, ...)
   CallVoidMethodV(t, o, m, a);
 
   va_end(a);
+}
+
+uint64_t
+callVoidMethodA(Thread* t, uintptr_t* arguments)
+{
+  jobject o = reinterpret_cast<jobject>(arguments[0]);
+  jmethodID m = arguments[1];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[2]);
+
+  t->m->processor->invokeArray(t, getMethod(t, m), *o, a);
+
+  return 0;
+}
+
+void JNICALL
+CallVoidMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o),
+                            m,
+                            reinterpret_cast<uintptr_t>(a) };
+
+  run(t, callVoidMethodA, arguments);
 }
 
 object
@@ -952,6 +1121,25 @@ CallStaticObjectMethod(Thread* t, jclass c, jmethodID m, ...)
 }
 
 uint64_t
+callStaticObjectMethodA(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[1]);
+
+  return reinterpret_cast<uint64_t>
+    (makeLocalReference
+     (t, t->m->processor->invokeArray(t, getStaticMethod(t, m), 0, a)));
+}
+
+jobject JNICALL
+CallStaticObjectMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return reinterpret_cast<jobject>(run(t, callStaticObjectMethodA, arguments));
+}
+
+uint64_t
 callStaticIntMethodV(Thread* t, uintptr_t* arguments)
 {
   jmethodID m = arguments[0];
@@ -982,6 +1170,24 @@ CallStaticBooleanMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callStaticIntMethodA(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[1]);
+
+  return intValue
+     (t, t->m->processor->invokeArray(t, getStaticMethod(t, m), 0, a));
+}
+
+jboolean JNICALL
+CallStaticBooleanMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticIntMethodA, arguments) != 0;
+}
+
 jbyte JNICALL
 CallStaticByteMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
@@ -1001,6 +1207,14 @@ CallStaticByteMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jbyte JNICALL
+CallStaticByteMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticIntMethodA, arguments);
 }
 
 jchar JNICALL
@@ -1024,6 +1238,14 @@ CallStaticCharMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+jchar JNICALL
+CallStaticCharMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticIntMethodA, arguments);
+}
+
 jshort JNICALL
 CallStaticShortMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
@@ -1045,6 +1267,14 @@ CallStaticShortMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+jshort JNICALL
+CallStaticShortMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticIntMethodA, arguments);
+}
+
 jint JNICALL
 CallStaticIntMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
@@ -1064,6 +1294,14 @@ CallStaticIntMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jint JNICALL
+CallStaticIntMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticIntMethodA, arguments);
 }
 
 uint64_t
@@ -1097,6 +1335,24 @@ CallStaticLongMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+uint64_t
+callStaticLongMethodA(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[1]);
+
+  return longValue
+     (t, t->m->processor->invokeArray(t, getStaticMethod(t, m), 0, a));
+}
+
+jlong JNICALL
+CallStaticLongMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return run(t, callStaticLongMethodA, arguments);
+}
+
 jfloat JNICALL
 CallStaticFloatMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
@@ -1118,6 +1374,14 @@ CallStaticFloatMethod(Thread* t, jclass c, jmethodID m, ...)
   return r;
 }
 
+jfloat JNICALL
+CallStaticFloatMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return bitsToFloat(run(t, callStaticIntMethodA, arguments));
+}
+
 jdouble JNICALL
 CallStaticDoubleMethodV(Thread* t, jclass, jmethodID m, va_list a)
 {
@@ -1137,6 +1401,14 @@ CallStaticDoubleMethod(Thread* t, jclass c, jmethodID m, ...)
   va_end(a);
 
   return r;
+}
+
+jdouble JNICALL
+CallStaticDoubleMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  return bitsToDouble(run(t, callStaticLongMethodA, arguments));
 }
 
 uint64_t
@@ -1167,6 +1439,25 @@ CallStaticVoidMethod(Thread* t, jclass c, jmethodID m, ...)
   CallStaticVoidMethodV(t, c, m, a);
 
   va_end(a);
+}
+
+uint64_t
+callStaticVoidMethodA(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[0];
+  const jvalue* a = reinterpret_cast<const jvalue*>(arguments[1]);
+
+  t->m->processor->invokeArray(t, getStaticMethod(t, m), 0, a);
+
+  return 0;
+}
+
+void JNICALL
+CallStaticVoidMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
+{
+  uintptr_t arguments[] = { m, reinterpret_cast<uintptr_t>(a) };
+
+  run(t, callStaticVoidMethodA, arguments);
 }
 
 jint
@@ -3105,47 +3396,68 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->GetFieldID = local::GetFieldID;
   envTable->GetMethodID = local::GetMethodID;
   envTable->GetStaticMethodID = local::GetStaticMethodID;
-  envTable->NewObject = local::NewObject;
   envTable->NewObjectV = local::NewObjectV;
+  envTable->NewObjectA = local::NewObjectA;
+  envTable->NewObject = local::NewObject;
   envTable->CallObjectMethodV = local::CallObjectMethodV;
+  envTable->CallObjectMethodA = local::CallObjectMethodA;
   envTable->CallObjectMethod = local::CallObjectMethod;
   envTable->CallBooleanMethodV = local::CallBooleanMethodV;
+  envTable->CallBooleanMethodA = local::CallBooleanMethodA;
   envTable->CallBooleanMethod = local::CallBooleanMethod;
   envTable->CallByteMethodV = local::CallByteMethodV;
+  envTable->CallByteMethodA = local::CallByteMethodA;
   envTable->CallByteMethod = local::CallByteMethod;
   envTable->CallCharMethodV = local::CallCharMethodV;
+  envTable->CallCharMethodA = local::CallCharMethodA;
   envTable->CallCharMethod = local::CallCharMethod;
   envTable->CallShortMethodV = local::CallShortMethodV;
+  envTable->CallShortMethodA = local::CallShortMethodA;
   envTable->CallShortMethod = local::CallShortMethod;
   envTable->CallIntMethodV = local::CallIntMethodV;
+  envTable->CallIntMethodA = local::CallIntMethodA;
   envTable->CallIntMethod = local::CallIntMethod;
   envTable->CallLongMethodV = local::CallLongMethodV;
+  envTable->CallLongMethodA = local::CallLongMethodA;
   envTable->CallLongMethod = local::CallLongMethod;
   envTable->CallFloatMethodV = local::CallFloatMethodV;
+  envTable->CallFloatMethodA = local::CallFloatMethodA;
   envTable->CallFloatMethod = local::CallFloatMethod;
   envTable->CallDoubleMethodV = local::CallDoubleMethodV;
+  envTable->CallDoubleMethodA = local::CallDoubleMethodA;
   envTable->CallDoubleMethod = local::CallDoubleMethod;
   envTable->CallVoidMethodV = local::CallVoidMethodV;
+  envTable->CallVoidMethodA = local::CallVoidMethodA;
   envTable->CallVoidMethod = local::CallVoidMethod;
   envTable->CallStaticObjectMethodV = local::CallStaticObjectMethodV;
+  envTable->CallStaticObjectMethodA = local::CallStaticObjectMethodA;
   envTable->CallStaticObjectMethod = local::CallStaticObjectMethod;
   envTable->CallStaticBooleanMethodV = local::CallStaticBooleanMethodV;
+  envTable->CallStaticBooleanMethodA = local::CallStaticBooleanMethodA;
   envTable->CallStaticBooleanMethod = local::CallStaticBooleanMethod;
   envTable->CallStaticByteMethodV = local::CallStaticByteMethodV;
+  envTable->CallStaticByteMethodA = local::CallStaticByteMethodA;
   envTable->CallStaticByteMethod = local::CallStaticByteMethod;
   envTable->CallStaticCharMethodV = local::CallStaticCharMethodV;
+  envTable->CallStaticCharMethodA = local::CallStaticCharMethodA;
   envTable->CallStaticCharMethod = local::CallStaticCharMethod;
   envTable->CallStaticShortMethodV = local::CallStaticShortMethodV;
+  envTable->CallStaticShortMethodA = local::CallStaticShortMethodA;
   envTable->CallStaticShortMethod = local::CallStaticShortMethod;
   envTable->CallStaticIntMethodV = local::CallStaticIntMethodV;
+  envTable->CallStaticIntMethodA = local::CallStaticIntMethodA;
   envTable->CallStaticIntMethod = local::CallStaticIntMethod;
   envTable->CallStaticLongMethodV = local::CallStaticLongMethodV;
+  envTable->CallStaticLongMethodA = local::CallStaticLongMethodA;
   envTable->CallStaticLongMethod = local::CallStaticLongMethod;
   envTable->CallStaticFloatMethodV = local::CallStaticFloatMethodV;
+  envTable->CallStaticFloatMethodA = local::CallStaticFloatMethodA;
   envTable->CallStaticFloatMethod = local::CallStaticFloatMethod;
   envTable->CallStaticDoubleMethodV = local::CallStaticDoubleMethodV;
+  envTable->CallStaticDoubleMethodA = local::CallStaticDoubleMethodA;
   envTable->CallStaticDoubleMethod = local::CallStaticDoubleMethod;
   envTable->CallStaticVoidMethodV = local::CallStaticVoidMethodV;
+  envTable->CallStaticVoidMethodA = local::CallStaticVoidMethodA;
   envTable->CallStaticVoidMethod = local::CallStaticVoidMethod;
   envTable->GetStaticFieldID = local::GetStaticFieldID;
   envTable->GetObjectField = local::GetObjectField;

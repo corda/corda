@@ -8222,6 +8222,47 @@ class ArgumentList {
   }
 
   ArgumentList(Thread* t, uintptr_t* array, unsigned size, bool* objectMask,
+               object this_, const char* spec, const jvalue* arguments):
+    t(static_cast<MyThread*>(t)),
+    array(array),
+    objectMask(objectMask),
+    size(size),
+    position(0),
+    protector(this)
+  {
+    if (this_) {
+      addObject(this_);
+    }
+
+    unsigned index = 0;
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      switch (*it.next()) {
+      case 'L':
+      case '[': {
+        object* v = arguments[index++].l;
+        addObject(v ? *v : 0);
+      } break;
+      
+      case 'J':
+        addLong(arguments[index++].j);
+        break;
+
+      case 'D':
+        addLong(arguments[index++].d);
+        break;
+
+      case 'F':
+        addLong(arguments[index++].f);
+        break;
+
+      default:
+        addLong(arguments[index++].i);
+        break;        
+      }
+    }
+  }
+
+  ArgumentList(Thread* t, uintptr_t* array, unsigned size, bool* objectMask,
                object this_, const char* spec, object arguments):
     t(static_cast<MyThread*>(t)),
     array(array),
@@ -8757,6 +8798,36 @@ class MyProcessor: public Processor {
       (t, RUNTIME_ARRAY_BODY(array), size, RUNTIME_ARRAY_BODY(objectMask),
        this_, spec, arguments);
     
+    PROTECT(t, method);
+
+    compile(static_cast<MyThread*>(t),
+            local::codeAllocator(static_cast<MyThread*>(t)), 0, method);
+
+    return local::invoke(t, method, &list);
+  }
+
+  virtual object
+  invokeArray(Thread* t, object method, object this_, const jvalue* arguments)
+  {
+    assert(t, t->exception == 0);
+
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+    
+    method = findMethod(t, method, this_);
+
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+
+    unsigned size = methodParameterFootprint(t, method);
+    THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
+    THREAD_RUNTIME_ARRAY(t, bool, objectMask, size);
+    ArgumentList list
+      (t, RUNTIME_ARRAY_BODY(array), size, RUNTIME_ARRAY_BODY(objectMask),
+       this_, spec, arguments);
+
     PROTECT(t, method);
 
     compile(static_cast<MyThread*>(t),

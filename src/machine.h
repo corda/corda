@@ -167,50 +167,6 @@ const unsigned ConstructorFlag = 1 << 1;
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
 
-typedef uint8_t jboolean;
-typedef int8_t jbyte;
-typedef uint16_t jchar;
-typedef int16_t jshort;
-typedef int32_t jint;
-typedef int64_t jlong;
-typedef float jfloat;
-typedef double jdouble;
-
-typedef jint jsize;
-
-typedef object* jobject;
-
-typedef jobject jclass;
-typedef jobject jthrowable;
-typedef jobject jstring;
-typedef jobject jweak;
-
-typedef jobject jarray;
-typedef jarray jbooleanArray;
-typedef jarray jbyteArray;
-typedef jarray jcharArray;
-typedef jarray jshortArray;
-typedef jarray jintArray;
-typedef jarray jlongArray;
-typedef jarray jfloatArray;
-typedef jarray jdoubleArray;
-typedef jarray jobjectArray;
-
-typedef uintptr_t jfieldID;
-typedef uintptr_t jmethodID;
-
-union jvalue {
-  jboolean z;
-  jbyte    b;
-  jchar    c;
-  jshort   s;
-  jint     i;
-  jlong    j;
-  jfloat   f;
-  jdouble  d;
-  jobject  l;
-};
-
 struct JNINativeMethod {
   char* name;
   char* signature;

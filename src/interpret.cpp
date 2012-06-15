@@ -2759,6 +2759,39 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
 }
 
 void
+pushArguments(Thread* t, object this_, const char* spec,
+              const jvalue* arguments)
+{
+  if (this_) {
+    pushObject(t, this_);
+  }
+
+  unsigned index = 0;
+  for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    switch (*it.next()) {
+    case 'L':
+    case '[': {
+      jobject v = arguments[index++].l;
+      pushObject(t, v ? *v : 0);
+    } break;
+      
+    case 'J':
+    case 'D':
+      pushLong(t, arguments[index++].j);
+      break;
+
+    case 'F': {
+      pushFloat(t, arguments[index++].d);
+    } break;
+
+    default:
+      pushInt(t, arguments[index++].i);
+      break;        
+    }
+  }
+}
+
+void
 pushArguments(Thread* t, object this_, const char* spec, object a)
 {
   if (this_) {
@@ -2988,6 +3021,30 @@ class MyProcessor: public Processor {
 
   virtual object
   invokeArray(vm::Thread* vmt, object method, object this_, object arguments)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    assert(t, t->state == Thread::ActiveState
+           or t->state == Thread::ExclusiveState);
+
+    assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
+
+    if (UNLIKELY(t->sp + methodParameterFootprint(t, method) + 1
+                 > stackSizeInWords(t) / 2))
+    {
+      throwNew(t, Machine::StackOverflowErrorType);
+    }
+
+    const char* spec = reinterpret_cast<char*>
+      (&byteArrayBody(t, methodSpec(t, method), 0));
+    pushArguments(t, this_, spec, arguments);
+
+    return ::invoke(t, method);
+  }
+
+  virtual object
+  invokeArray(vm::Thread* vmt, object method, object this_,
+              const jvalue* arguments)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
