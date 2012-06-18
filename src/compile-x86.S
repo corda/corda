@@ -24,7 +24,7 @@
 #ifdef __x86_64__
 
 #define THREAD_STACK 2224
-#define THREAD_SCRATCH 2232
+#define THREAD_SCRATCH 2240
 
 #ifdef AVIAN_USE_FRAME_POINTER
 #  define ALIGNMENT_ADJUSTMENT 0
@@ -300,7 +300,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
 #elif defined __i386__
 
 #define THREAD_STACK 2148
-#define THREAD_SCRATCH 2152
+#define THREAD_SCRATCH 2156
 
 #ifdef AVIAN_USE_FRAME_POINTER
 #  define ALIGNMENT_ADJUSTMENT 0

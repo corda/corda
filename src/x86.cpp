@@ -2524,10 +2524,10 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   // skip stack overflow check, if present:
   if (TargetBytesPerWord == 4) {
     if (*start == 0x39) {
-      start += 11;
+      start += 12;
     }
   } else if (*start == 0x48 and start[1] == 0x39) {
-    start += 12;
+    start += 13;
   }
 
   if (instruction <= start) {

@@ -235,6 +235,7 @@ class MyThread: public Thread {
     Thread(m, javaThread, parent),
     ip(0),
     stack(0),
+    newStack(0),
     scratch(0),
     continuation(0),
     exceptionStackAdjustment(0),
@@ -261,6 +262,7 @@ class MyThread: public Thread {
 
   void* ip;
   void* stack;
+  void* newStack;
   void* scratch;
   object continuation;
   uintptr_t exceptionStackAdjustment;
@@ -7620,10 +7622,10 @@ invokeNative(MyThread* t)
 
   stack += t->arch->frameReturnAddressSize();
 
-  transition(t, getIp(t), stack, t->continuation, t->trace);
-
   t->trace->targetMethod = 0;
   t->trace->nativeMethod = 0;
+
+  t->newStack = stack;
 
   return result;
 }
@@ -9903,7 +9905,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
     compileCall(t, &context, invokeNativeIndex);
   
     a->popFrameAndUpdateStackAndReturn
-      (t->arch->alignFrameSize(1), TargetThreadStack);
+      (t->arch->alignFrameSize(1), TargetThreadNewStack);
 
     p->thunks.native.length = a->endBlock(false)->resolve(0, 0);
 
