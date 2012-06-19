@@ -131,7 +131,7 @@ const unsigned TargetThreadVirtualCallTarget = 2180;
 const unsigned TargetThreadVirtualCallIndex = 2184;
 const unsigned TargetThreadHeapImage = 2188;
 const unsigned TargetThreadCodeImage = 2192;
-const unsigned TargetThreadThunkTable = 2198;
+const unsigned TargetThreadThunkTable = 2196;
 const unsigned TargetThreadStackLimit = 2220;
 
 const unsigned TargetClassFixedSize = 8;
