@@ -11,6 +11,8 @@
 #ifndef TARGET_H
 #define TARGET_H
 
+#include "target-fields.h"
+
 namespace vm {
 
 template <class T>
@@ -90,19 +92,6 @@ targetVW(T v)
 typedef uint64_t target_uintptr_t;
 typedef int64_t target_intptr_t;
 
-const unsigned TargetBytesPerWord = 8;
-
-const unsigned TargetThreadIp = 2216;
-const unsigned TargetThreadStack = 2224;
-const unsigned TargetThreadNewStack = 2232;
-const unsigned TargetThreadTailAddress = 2280;
-const unsigned TargetThreadVirtualCallTarget = 2288;
-const unsigned TargetThreadVirtualCallIndex = 2296;
-const unsigned TargetThreadHeapImage = 2304;
-const unsigned TargetThreadCodeImage = 2312;
-const unsigned TargetThreadThunkTable = 2320;
-const unsigned TargetThreadStackLimit = 2368;
-
 const unsigned TargetClassFixedSize = 12;
 const unsigned TargetClassArrayElementSize = 14;
 const unsigned TargetClassVtable = 128;
@@ -121,19 +110,6 @@ targetVW(T v)
 typedef uint32_t target_uintptr_t;
 typedef int32_t target_intptr_t;
 
-const unsigned TargetBytesPerWord = 4;
-
-const unsigned TargetThreadIp = 2144;
-const unsigned TargetThreadStack = 2148;
-const unsigned TargetThreadNewStack = 2152;
-const unsigned TargetThreadTailAddress = 2176;
-const unsigned TargetThreadVirtualCallTarget = 2180;
-const unsigned TargetThreadVirtualCallIndex = 2184;
-const unsigned TargetThreadHeapImage = 2188;
-const unsigned TargetThreadCodeImage = 2192;
-const unsigned TargetThreadThunkTable = 2196;
-const unsigned TargetThreadStackLimit = 2220;
-
 const unsigned TargetClassFixedSize = 8;
 const unsigned TargetClassArrayElementSize = 10;
 const unsigned TargetClassVtable = 68;
@@ -146,6 +122,8 @@ const unsigned TargetFieldOffset = 8;
 #else
 #  error
 #endif
+
+const unsigned TargetBytesPerWord = TARGET_BYTES_PER_WORD;
 
 const unsigned TargetBitsPerWord = TargetBytesPerWord * 8;
 

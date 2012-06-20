@@ -192,6 +192,8 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" $(target-cflags)
 
+asmflags = $(target-cflags)
+
 ifneq (,$(filter i386 x86_64,$(arch)))
 	ifeq ($(use-frame-pointer),true)
 		common-cflags += -fno-omit-frame-pointer -DAVIAN_USE_FRAME_POINTER

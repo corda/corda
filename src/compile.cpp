@@ -1392,7 +1392,7 @@ class Frame {
       return c->add
         (TargetBytesPerWord, c->memory
           (c->register_(t->arch->thread()), Compiler::AddressType,
-           TargetThreadHeapImage), c->promiseConstant
+           TARGET_THREAD_HEAPIMAGE), c->promiseConstant
          (p, Compiler::AddressType));
     } else {
       for (PoolElement* e = context->objectPool; e; e = e->next) {
@@ -1622,7 +1622,7 @@ class Frame {
       ? c->add
         (TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
-          TargetThreadCodeImage), c->promiseConstant
+          TARGET_THREAD_CODEIMAGE), c->promiseConstant
          (new(&context->zone)
           OffsetPromise
           (p, - reinterpret_cast<intptr_t>(codeAllocator(t)->base)),
@@ -1932,8 +1932,7 @@ class Frame {
     subroutine->handle = c->startSubroutine();
     this->subroutine = subroutine;
 
-    SubroutineCall* call = new
-      (context->zone.allocate(sizeof(SubroutineCall)))
+    SubroutineCall* call = new(&context->zone)
       SubroutineCall(subroutine, returnAddress);
 
     context->eventLog.append(PushSubroutineEvent);
@@ -3380,7 +3379,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
          frame->absoluteAddressOperand(returnAddressPromise),
          TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
-          TargetThreadTailAddress));
+          TARGET_THREAD_TAILADDRESS));
 
       c->exit
         (c->constant
@@ -5563,7 +5562,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           (context->bootContext ? c->add
            (TargetBytesPerWord, c->memory
             (c->register_(t->arch->thread()), Compiler::AddressType,
-             TargetThreadCodeImage), address)
+             TARGET_THREAD_CODEIMAGE), address)
            : address);
 
         Compiler::State* state = c->saveState();
@@ -6110,7 +6109,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
           ? c->add
           (TargetBytesPerWord, c->memory
             (c->register_(t->arch->thread()), Compiler::AddressType,
-             TargetThreadCodeImage), entry)
+             TARGET_THREAD_CODEIMAGE), entry)
           : entry,
           TargetBytesPerWord));
 
@@ -7033,7 +7032,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   // of cycles if another thread compiles the same method in parallel,
   // which might be mitigated by fine-grained, per-method locking):
   c->compile(context->leaf ? 0 : stackOverflowThunk(t),
-             TargetThreadStackLimit);
+             TARGET_THREAD_STACKLIMIT);
 
   // we must acquire the class lock here at the latest
  
@@ -8529,6 +8528,16 @@ public:
   Processor::CompilationHandler* handler;
 };
 
+template<class T, class C>
+int checkConstant(MyThread* t, size_t expected, T C::* field, const char* name) {
+  size_t actual = reinterpret_cast<uint8_t*>(&(t->*field)) - reinterpret_cast<uint8_t*>(t);
+  if(expected != actual) {
+    fprintf(stderr, "constant mismatch (%s): \n\tconstant says: %d\n\tc++ compiler says: %d\n", name, (unsigned) expected, (unsigned) actual);
+    return 1;
+  }
+  return 0;
+}
+
 class MyProcessor: public Processor {
  public:
   class Thunk {
@@ -8605,38 +8614,25 @@ class MyProcessor: public Processor {
     t->codeImage = codeImage;
     t->thunkTable = thunkTable;
 
-    if (false) {
-      fprintf(stderr, "stack %d\n",
-              difference(&(t->stack), t));
-      fprintf(stderr, "scratch %d\n",
-              difference(&(t->scratch), t));
-      fprintf(stderr, "continuation %d\n",
-              difference(&(t->continuation), t));
-      fprintf(stderr, "exception %d\n",
-              difference(&(t->exception), t));
-      fprintf(stderr, "exceptionStackAdjustment %d\n",
-              difference(&(t->exceptionStackAdjustment), t));
-      fprintf(stderr, "exceptionOffset %d\n",
-              difference(&(t->exceptionOffset), t));
-      fprintf(stderr, "exceptionHandler %d\n",
-              difference(&(t->exceptionHandler), t));
-      fprintf(stderr, "tailAddress %d\n",
-              difference(&(t->tailAddress), t));
-      fprintf(stderr, "stackLimit %d\n",
-              difference(&(t->stackLimit), t));
-      fprintf(stderr, "ip %d\n",
-              difference(&(t->ip), t));
-      fprintf(stderr, "virtualCallTarget %d\n",
-              difference(&(t->virtualCallTarget), t));
-      fprintf(stderr, "virtualCallIndex %d\n",
-              difference(&(t->virtualCallIndex), t));
-      fprintf(stderr, "heapImage %d\n",
-              difference(&(t->heapImage), t));
-      fprintf(stderr, "codeImage %d\n",
-              difference(&(t->codeImage), t));
-      fprintf(stderr, "thunkTable %d\n",
-              difference(&(t->thunkTable), t));
-      exit(0);
+    int mismatches =
+      checkConstant(t, TARGET_THREAD_EXCEPTION, &Thread::exception, "TARGET_THREAD_EXCEPTION") +
+      checkConstant(t, TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT, &MyThread::exceptionStackAdjustment, "TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT") +
+      checkConstant(t, TARGET_THREAD_EXCEPTIONOFFSET, &MyThread::exceptionOffset, "TARGET_THREAD_EXCEPTIONOFFSET") +
+      checkConstant(t, TARGET_THREAD_EXCEPTIONHANDLER, &MyThread::exceptionHandler, "TARGET_THREAD_EXCEPTIONHANDLER") +
+      checkConstant(t, TARGET_THREAD_IP, &MyThread::ip, "TARGET_THREAD_IP") +
+      checkConstant(t, TARGET_THREAD_STACK, &MyThread::stack, "TARGET_THREAD_STACK") +
+      checkConstant(t, TARGET_THREAD_NEWSTACK, &MyThread::newStack, "TARGET_THREAD_NEWSTACK") +
+      checkConstant(t, TARGET_THREAD_TAILADDRESS, &MyThread::tailAddress, "TARGET_THREAD_TAILADDRESS") +
+      checkConstant(t, TARGET_THREAD_VIRTUALCALLTARGET, &MyThread::virtualCallTarget, "TARGET_THREAD_VIRTUALCALLTARGET") +
+      checkConstant(t, TARGET_THREAD_VIRTUALCALLINDEX, &MyThread::virtualCallIndex, "TARGET_THREAD_VIRTUALCALLINDEX") +
+      checkConstant(t, TARGET_THREAD_HEAPIMAGE, &MyThread::heapImage, "TARGET_THREAD_HEAPIMAGE") +
+      checkConstant(t, TARGET_THREAD_CODEIMAGE, &MyThread::codeImage, "TARGET_THREAD_CODEIMAGE") +
+      checkConstant(t, TARGET_THREAD_THUNKTABLE, &MyThread::thunkTable, "TARGET_THREAD_THUNKTABLE") +
+      checkConstant(t, TARGET_THREAD_STACKLIMIT, &MyThread::stackLimit, "TARGET_THREAD_STACKLIMIT");
+
+    if(mismatches > 0) {
+      fprintf(stderr, "%d constant mismatches\n", mismatches);
+      abort(t);
     }
 
     t->init();
@@ -9801,7 +9797,7 @@ compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
   Assembler* a = c->assembler;
 
   if (processor(t)->bootImage) {
-    Assembler::Memory table(t->arch->thread(), TargetThreadThunkTable);
+    Assembler::Memory table(t->arch->thread(), TARGET_THREAD_THUNKTABLE);
     Assembler::Register scratch(t->arch->scratch());
     a->apply(Move, TargetBytesPerWord, MemoryOperand, &table,
              TargetBytesPerWord, RegisterOperand, &scratch);
@@ -9827,7 +9823,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   { Context context(t);
     Assembler* a = context.assembler;
     
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+    a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
     p->thunks.default_.frameSavedOffset = a->length();
 
@@ -9860,19 +9856,19 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
              TargetBytesPerWord, RegisterOperand, &class_);
 
     Assembler::Memory virtualCallTargetDst
-      (t->arch->thread(), TargetThreadVirtualCallTarget);
+      (t->arch->thread(), TARGET_THREAD_VIRTUALCALLTARGET);
 
     a->apply(Move, TargetBytesPerWord, RegisterOperand, &class_,
              TargetBytesPerWord, MemoryOperand, &virtualCallTargetDst);
 
     Assembler::Register index(t->arch->virtualCallIndex());
     Assembler::Memory virtualCallIndex
-      (t->arch->thread(), TargetThreadVirtualCallIndex);
+      (t->arch->thread(), TARGET_THREAD_VIRTUALCALLINDEX);
 
     a->apply(Move, TargetBytesPerWord, RegisterOperand, &index,
              TargetBytesPerWord, MemoryOperand, &virtualCallIndex);
     
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+    a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
@@ -9895,7 +9891,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   { Context context(t);
     Assembler* a = context.assembler;
 
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+    a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
     p->thunks.native.frameSavedOffset = a->length();
 
@@ -9905,7 +9901,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
     compileCall(t, &context, invokeNativeIndex);
   
     a->popFrameAndUpdateStackAndReturn
-      (t->arch->alignFrameSize(1), TargetThreadNewStack);
+      (t->arch->alignFrameSize(1), TARGET_THREAD_NEWSTACK);
 
     p->thunks.native.length = a->endBlock(false)->resolve(0, 0);
 
@@ -9916,7 +9912,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   { Context context(t);
     Assembler* a = context.assembler;
 
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+    a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
     p->thunks.aioob.frameSavedOffset = a->length();
 
@@ -9934,7 +9930,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   { Context context(t);
     Assembler* a = context.assembler;
       
-    a->saveFrame(TargetThreadStack, TargetThreadIp);
+    a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
@@ -9952,7 +9948,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   { { Context context(t);
       Assembler* a = context.assembler;
 
-      a->saveFrame(TargetThreadStack, TargetThreadIp);
+      a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);
 
       p->thunks.table.frameSavedOffset = a->length();
 
@@ -9971,7 +9967,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
       Context context(t);                                               \
       Assembler* a = context.assembler;                                 \
                                                                         \
-      a->saveFrame(TargetThreadStack, TargetThreadIp);                  \
+      a->saveFrame(TARGET_THREAD_STACK, TARGET_THREAD_IP);              \
                                                                         \
       p->thunks.table.frameSavedOffset = a->length();                   \
                                                                         \
