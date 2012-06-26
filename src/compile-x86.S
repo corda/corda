@@ -9,6 +9,7 @@
    details. */
 
 #include "types.h"
+#include "target-fields.h"
 
 #define LOCAL(x) .L##x
 
@@ -22,9 +23,6 @@
 .text
 
 #ifdef __x86_64__
-
-#define THREAD_STACK 2224
-#define THREAD_SCRATCH 2240
 
 #ifdef AVIAN_USE_FRAME_POINTER
 #  define ALIGNMENT_ADJUSTMENT 0
@@ -53,7 +51,7 @@ GLOBAL(vmInvoke):
 
    // remember this stack position, since we won't be able to rely on
 	 // %rbp being restored when the call returns
-   movq   %rsp,THREAD_SCRATCH(%rcx)
+   movq   %rsp,TARGET_THREAD_SCRATCH(%rcx)
    
    // save callee-saved registers
    movq   %rbx,0(%rsp)
@@ -90,14 +88,14 @@ LOCAL(vmInvoke_argumentTest):
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
-   movq   THREAD_SCRATCH(%rbx),%rsp
+   movq   TARGET_THREAD_SCRATCH(%rbx),%rsp
 
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
-   movq   $0,THREAD_STACK(%rbx)
+   movq   $0,TARGET_THREAD_STACK(%rbx)
    
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
@@ -188,7 +186,7 @@ GLOBAL(vmInvoke):
    
    // remember this stack position, since we won't be able to rely on
 	 // %rbp being restored when the call returns
-   movq   %rsp,THREAD_SCRATCH(%rdi)
+   movq   %rsp,TARGET_THREAD_SCRATCH(%rdi)
    
    // save callee-saved registers
    movq   %rbx,0(%rsp)
@@ -222,14 +220,14 @@ LOCAL(vmInvoke_argumentTest):
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
-   movq   THREAD_SCRATCH(%rbx),%rsp
+   movq   TARGET_THREAD_SCRATCH(%rbx),%rsp
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
-   movq   $0,THREAD_STACK(%rbx)
+   movq   $0,TARGET_THREAD_STACK(%rbx)
    
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
@@ -299,9 +297,6 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    
 #elif defined __i386__
 
-#define THREAD_STACK 2148
-#define THREAD_SCRATCH 2156
-
 #ifdef AVIAN_USE_FRAME_POINTER
 #  define ALIGNMENT_ADJUSTMENT 0
 #else
@@ -328,7 +323,7 @@ GLOBAL(vmInvoke):
    // remember this stack position, since we won't be able to rely on
 	 // %rbp being restored when the call returns
    movl   8(%ebp),%eax
-   movl   %esp,THREAD_SCRATCH(%eax)
+   movl   %esp,TARGET_THREAD_SCRATCH(%eax)
 
    movl   %ebx,0(%esp)
    movl   %esi,4(%esp)
@@ -360,14 +355,14 @@ LOCAL(vmInvoke_argumentTest):
 .globl GLOBAL(vmInvoke_returnAddress)
 GLOBAL(vmInvoke_returnAddress):
    // restore stack pointer
-   movl   THREAD_SCRATCH(%ebx),%esp
+   movl   TARGET_THREAD_SCRATCH(%ebx),%esp
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
-   movl   $0,THREAD_STACK(%ebx)
+   movl   $0,TARGET_THREAD_STACK(%ebx)
    
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
