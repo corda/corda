@@ -260,5 +260,17 @@ public class Floats {
       int result = Float.floatToIntBits(number);
       expect(result == orig);
     }
+
+    for (int x = 0; x < 1000; ++x) {
+      int m = 100;
+      int n = 200;
+      double array[][] = new double[m][n];
+
+      for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+          array[i][j] = 1234567890.0;
+        }
+      }
+    }
   }
 }

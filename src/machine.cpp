@@ -4889,7 +4889,10 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {
-    object a = makeArray(t, counts[index + 1]);
+    object a = makeArray
+      (t, ceiling
+       (counts[index + 1] * classArrayElementSize(t, class_), BytesPerWord));
+    arrayLength(t, a) = counts[index + 1];
     setObjectClass(t, a, class_);
     set(t, array, ArrayBody + (i * BytesPerWord), a);
     
