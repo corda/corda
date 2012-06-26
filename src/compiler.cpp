@@ -3773,26 +3773,32 @@ class MoveEvent: public Event {
         and srcSelectSize >= dstSize)
     {
       if (dst->target) {
-        if (dstSize > TargetBytesPerWord
-            and src->source->registerSize(c) > TargetBytesPerWord)
-        {
-          apply(c, Move, srcSelectSize, src->source, src->source,
-                dstSize, dst->target, dst->target);
-
-          if (live(c, dst) == 0) {
-            removeSite(c, dst, dst->target);
-            if (dstSize > TargetBytesPerWord) {
-              removeSite(c, dst->nextWord, dst->nextWord->target);
+        if (dstSize > TargetBytesPerWord) {
+          if (src->source->registerSize(c) > TargetBytesPerWord) {
+            apply(c, Move, srcSelectSize, src->source, src->source,
+                  dstSize, dst->target, dst->target);
+            
+            if (live(c, dst) == 0) {
+              removeSite(c, dst, dst->target);
+              if (dstSize > TargetBytesPerWord) {
+                removeSite(c, dst->nextWord, dst->nextWord->target);
+              }
             }
-          }
-        } else {
-          maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
-                    TargetBytesPerWord, dst, dstLowMask);
-          if (dstSize > TargetBytesPerWord) {
+          } else {
+            src->nextWord->source->freeze(c, src->nextWord);
+
+            maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+                      TargetBytesPerWord, dst, dstLowMask);
+
+            src->nextWord->source->thaw(c, src->nextWord);
+
             maybeMove
               (c, Move, TargetBytesPerWord, TargetBytesPerWord, src->nextWord,
                TargetBytesPerWord, dst->nextWord, dstHighMask);
           }
+        } else {
+          maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+                    TargetBytesPerWord, dst, dstLowMask);
         }
       } else {
         Site* low = pickSiteOrMove(c, src, dst, 0, 0);
