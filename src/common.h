@@ -58,11 +58,13 @@ typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
 #    define UINT64_C(x) x##LL
 #    define ARCH_x86_32
+@    define BYTES_PER_WORD 4
 #  elif defined _M_X64
 typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
 #    define UINT64_C(x) x##L
 #    define ARCH_x86_64
+@    define BYTES_PER_WORD 8
 #  else
 #    error "unsupported architecture"
 #  endif
@@ -76,6 +78,8 @@ typedef intptr_t intptr_alias_t;
 #else // not _MSC_VER
 
 #  include "stdint.h"
+
+#  define BYTES_PER_WORD __SIZEOF_POINTER__
 
 #  define LIKELY(v) __builtin_expect((v) != 0, true)
 #  define UNLIKELY(v) __builtin_expect((v) != 0, false)
