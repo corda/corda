@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -16,6 +16,7 @@ public class FileInputStream extends InputStream {
   //   }
 
   private int fd;
+  private int remaining;
 
   public FileInputStream(FileDescriptor fd) {
     this.fd = fd.value;
@@ -23,10 +24,15 @@ public class FileInputStream extends InputStream {
 
   public FileInputStream(String path) throws IOException {
     fd = open(path);
+    remaining = (int) new File(path).length();
   }
 
   public FileInputStream(File file) throws IOException {
     this(file.getPath());
+  }
+
+  public int available() throws IOException {
+    return remaining;
   }
 
   private static native int open(String path) throws IOException;
@@ -39,7 +45,11 @@ public class FileInputStream extends InputStream {
   public static native void close(int fd) throws IOException;
 
   public int read() throws IOException {
-    return read(fd);
+    int c = read(fd);
+    if (c >= 0 && remaining > 0) {
+      -- remaining;
+    }
+    return c;
   }
 
   public int read(byte[] b, int offset, int length) throws IOException {
@@ -51,7 +61,11 @@ public class FileInputStream extends InputStream {
       throw new ArrayIndexOutOfBoundsException();
     }
 
-    return read(fd, b, offset, length);
+    int c = read(fd, b, offset, length);
+    if (c > 0 && remaining > 0) {
+      remaining -= c;
+    }
+    return c;
   }
 
   public void close() throws IOException {

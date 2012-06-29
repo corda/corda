@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Avian Contributors
+/* Copyright (c) 2009-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,11 +8,14 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "stdint.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "endianness.h"
+
+#include "tools.h"
 
 #define EI_NIDENT 16
 
@@ -62,344 +65,317 @@
 
 #define STV_DEFAULT 0
 
-#define ELF64_ST_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
-#define ELF32_ST_INFO(bind, type) ELF64_ST_INFO((bind), (type))
-
-#if (BITS_PER_WORD == 64)
-#  define FileHeader Elf64_Ehdr
-#  define SectionHeader Elf64_Shdr
-#  define Symbol Elf64_Sym
-#  define Class ELFCLASS64
-#  define SYMBOL_INFO ELF64_ST_INFO
-#elif (BITS_PER_WORD == 32)
-#  define FileHeader Elf32_Ehdr
-#  define SectionHeader Elf32_Shdr
-#  define Symbol Elf32_Sym
-#  define Class ELFCLASS32
-#  define SYMBOL_INFO ELF32_ST_INFO
-#else
-#  error
-#endif
+#define SYMBOL_INFO(bind, type) (((bind) << 4) + ((type) & 0xf))
 
 #define OSABI ELFOSABI_SYSV
 
 namespace {
 
-typedef uint16_t Elf64_Half;
-typedef uint32_t Elf64_Word;
-typedef uint64_t Elf64_Addr;
-typedef uint64_t Elf64_Xword;
-typedef uint16_t Elf64_Section;
-typedef uint64_t Elf64_Off;
+using namespace avian::tools;
 
-struct Elf64_Ehdr {
-  unsigned char e_ident[EI_NIDENT];
-  Elf64_Half e_type;
-  Elf64_Half e_machine;
-  Elf64_Word e_version;
-  Elf64_Addr e_entry;
-  Elf64_Off e_phoff;
-  Elf64_Off e_shoff;
-  Elf64_Word e_flags;
-  Elf64_Half e_ehsize;
-  Elf64_Half e_phentsize;
-  Elf64_Half e_phnum;
-  Elf64_Half e_shentsize;
-  Elf64_Half e_shnum;
-  Elf64_Half e_shstrndx;
+template<class AddrTy>
+struct ElfTypes {
+  typedef uint16_t Half;
+  typedef uint32_t Word;
+  typedef AddrTy Addr;
+  typedef uint64_t Xword;
+  typedef uint16_t Section;
+  typedef AddrTy Off;
+  typedef AddrTy XFlags;
+  static const unsigned BytesPerWord = sizeof(AddrTy);
 };
 
-struct Elf64_Shdr {
-  Elf64_Word sh_name;
-  Elf64_Word sh_type;
-  Elf64_Xword sh_flags;
-  Elf64_Addr sh_addr;
-  Elf64_Off sh_offset;
-  Elf64_Xword sh_size;
-  Elf64_Word sh_link;
-  Elf64_Word sh_info;
-  Elf64_Xword sh_addralign;
-  Elf64_Xword sh_entsize;
-};
+template<class AddrTy>
+struct Symbol_Ty;
 
-struct Elf64_Sym {
-  Elf64_Word st_name;
+template<>
+struct Symbol_Ty<uint64_t> {
+  typedef ElfTypes<uint64_t> Elf;
+
+  Elf::Word st_name;
   unsigned char st_info;
   unsigned char st_other;
-  Elf64_Section st_shndx;
-  Elf64_Addr st_value;
-  Elf64_Xword st_size;
+  Elf::Section st_shndx;
+  Elf::Addr st_value;
+  Elf::Xword st_size;
 };
 
-typedef uint16_t Elf32_Half;
-typedef uint32_t Elf32_Word;
-typedef uint32_t Elf32_Addr;
-typedef uint64_t Elf32_Xword;
-typedef uint16_t Elf32_Section;
-typedef uint32_t Elf32_Off;
+template<>
+struct Symbol_Ty<uint32_t> {
+  typedef ElfTypes<uint32_t> Elf;
 
-struct Elf32_Ehdr {
-  unsigned char	e_ident[EI_NIDENT];
-  Elf32_Half e_type;
-  Elf32_Half e_machine;
-  Elf32_Word e_version;
-  Elf32_Addr e_entry;
-  Elf32_Off e_phoff;
-  Elf32_Off e_shoff;
-  Elf32_Word e_flags;
-  Elf32_Half e_ehsize;
-  Elf32_Half e_phentsize;
-  Elf32_Half e_phnum;
-  Elf32_Half e_shentsize;
-  Elf32_Half e_shnum;
-  Elf32_Half e_shstrndx;
-};
-
-struct Elf32_Shdr {
-  Elf32_Word sh_name;
-  Elf32_Word sh_type;
-  Elf32_Word sh_flags;
-  Elf32_Addr sh_addr;
-  Elf32_Off sh_offset;
-  Elf32_Word sh_size;
-  Elf32_Word sh_link;
-  Elf32_Word sh_info;
-  Elf32_Word sh_addralign;
-  Elf32_Word sh_entsize;
-};
-
-struct Elf32_Sym {
-  Elf32_Word st_name;
-  Elf32_Addr st_value;
-  Elf32_Word st_size;
+  Elf::Word st_name;
+  Elf::Addr st_value;
+  Elf::Word st_size;
   unsigned char st_info;
   unsigned char st_other;
-  Elf32_Section st_shndx;
+  Elf::Section st_shndx;
 };
 
-void
-writeObject(const uint8_t* data, unsigned size, FILE* out,
-            const char* startName, const char* endName,
-            const char* sectionName, unsigned sectionFlags,
-            unsigned alignment, int machine, int encoding)
-{
-  const unsigned sectionCount = 5;
-  const unsigned symbolCount = 2;
+using avian::endian::Endianness;
 
-  const unsigned sectionNameLength = strlen(sectionName) + 1;
-  const unsigned startNameLength = strlen(startName) + 1;
-  const unsigned endNameLength = strlen(endName) + 1;
+#define V1 Endianness<TargetLittleEndian>::v1
+#define V2 Endianness<TargetLittleEndian>::v2
+#define V3 Endianness<TargetLittleEndian>::v3
+#define V4 Endianness<TargetLittleEndian>::v4
+#define VANY Endianness<TargetLittleEndian>::vAny
 
-  const char* const sectionStringTableName = ".shstrtab";
-  const char* const stringTableName = ".strtab";
-  const char* const symbolTableName = ".symtab";
 
-  const unsigned sectionStringTableNameLength
-    = strlen(sectionStringTableName) + 1;
-  const unsigned stringTableNameLength = strlen(stringTableName) + 1;
-  const unsigned symbolTableNameLength = strlen(symbolTableName) + 1;
-
-  const unsigned nullStringOffset = 0;
-
-  const unsigned sectionStringTableNameOffset = nullStringOffset + 1;
-  const unsigned stringTableNameOffset
-    = sectionStringTableNameOffset + sectionStringTableNameLength;
-  const unsigned symbolTableNameOffset
-    = stringTableNameOffset + stringTableNameLength;
-  const unsigned sectionNameOffset
-    = symbolTableNameOffset + symbolTableNameLength;
-  const unsigned sectionStringTableLength
-    = sectionNameOffset + sectionNameLength;
-
-  const unsigned startNameOffset = nullStringOffset + 1;
-  const unsigned endNameOffset = startNameOffset + startNameLength;
-  const unsigned stringTableLength = endNameOffset + endNameLength;
-
-  const unsigned bodySectionNumber = 1;
-  const unsigned sectionStringTableSectionNumber = 2;
-  const unsigned stringTableSectionNumber = 3;
-
-  FileHeader fileHeader;
-  memset(&fileHeader, 0, sizeof(FileHeader));
-  fileHeader.e_ident[EI_MAG0] = V1(ELFMAG0);
-  fileHeader.e_ident[EI_MAG1] = V1(ELFMAG1);
-  fileHeader.e_ident[EI_MAG2] = V1(ELFMAG2);
-  fileHeader.e_ident[EI_MAG3] = V1(ELFMAG3);
-  fileHeader.e_ident[EI_CLASS] = V1(Class);
-  fileHeader.e_ident[EI_DATA] = V1(encoding);
-  fileHeader.e_ident[EI_VERSION] = V1(EV_CURRENT);
-  fileHeader.e_ident[EI_OSABI] = V1(OSABI);
-  fileHeader.e_ident[EI_ABIVERSION] = V1(0);
-  fileHeader.e_type = V2(ET_REL);
-  fileHeader.e_machine = V2(machine);
-  fileHeader.e_version = V4(EV_CURRENT);
-  fileHeader.e_entry = VW(0);
-  fileHeader.e_phoff = VW(0);
-  fileHeader.e_shoff = VW(sizeof(FileHeader));
-  fileHeader.e_flags = V4(machine == EM_ARM ? 0x04000000 : 0);
-  fileHeader.e_ehsize = V2(sizeof(FileHeader));
-  fileHeader.e_phentsize = V2(0);
-  fileHeader.e_phnum = V2(0);
-  fileHeader.e_shentsize = V2(sizeof(SectionHeader));
-  fileHeader.e_shnum = V2(sectionCount);
-  fileHeader.e_shstrndx = V2(sectionStringTableSectionNumber);
-
-  SectionHeader nullSection;
-  memset(&nullSection, 0, sizeof(SectionHeader));
-
-  SectionHeader bodySection;
-  bodySection.sh_name = V4(sectionNameOffset);
-  bodySection.sh_type = V4(SHT_PROGBITS);
-  bodySection.sh_flags = VW(sectionFlags);
-  bodySection.sh_addr = VW(0);
-  unsigned bodySectionOffset
-    = sizeof(FileHeader) + (sizeof(SectionHeader) * sectionCount);
-  bodySection.sh_offset = VW(bodySectionOffset);
-  unsigned bodySectionSize = size;
-  bodySection.sh_size = VW(bodySectionSize);
-  bodySection.sh_link = V4(0);
-  bodySection.sh_info = V4(0);
-  bodySection.sh_addralign = VW(alignment);
-  bodySection.sh_entsize = VW(0);
-
-  SectionHeader sectionStringTableSection;
-  sectionStringTableSection.sh_name = V4(sectionStringTableNameOffset);
-  sectionStringTableSection.sh_type = V4(SHT_STRTAB);
-  sectionStringTableSection.sh_flags = VW(0);
-  sectionStringTableSection.sh_addr = VW(0);
-  unsigned sectionStringTableSectionOffset
-    = bodySectionOffset + bodySectionSize;
-  sectionStringTableSection.sh_offset = VW(sectionStringTableSectionOffset);
-  unsigned sectionStringTableSectionSize = sectionStringTableLength;
-  sectionStringTableSection.sh_size = VW(sectionStringTableSectionSize);
-  sectionStringTableSection.sh_link = V4(0);
-  sectionStringTableSection.sh_info = V4(0);
-  sectionStringTableSection.sh_addralign = VW(1);
-  sectionStringTableSection.sh_entsize = VW(0);
-
-  SectionHeader stringTableSection;
-  stringTableSection.sh_name = V4(stringTableNameOffset);
-  stringTableSection.sh_type = V4(SHT_STRTAB);
-  stringTableSection.sh_flags = VW(0);
-  stringTableSection.sh_addr = VW(0);
-  unsigned stringTableSectionOffset
-    = sectionStringTableSectionOffset + sectionStringTableSectionSize;
-  stringTableSection.sh_offset  = VW(stringTableSectionOffset);
-  unsigned stringTableSectionSize = stringTableLength;
-  stringTableSection.sh_size = VW(stringTableSectionSize);
-  stringTableSection.sh_link = V4(0);
-  stringTableSection.sh_info = V4(0);
-  stringTableSection.sh_addralign = VW(1);
-  stringTableSection.sh_entsize = VW(0);
-
-  SectionHeader symbolTableSection;
-  symbolTableSection.sh_name = V4(symbolTableNameOffset);
-  symbolTableSection.sh_type = V4(SHT_SYMTAB);
-  symbolTableSection.sh_flags = VW(0);
-  symbolTableSection.sh_addr = VW(0);
-  unsigned symbolTableSectionOffset
-    = stringTableSectionOffset + stringTableSectionSize;
-  symbolTableSection.sh_offset = VW(symbolTableSectionOffset);
-  unsigned symbolTableSectionSize = sizeof(Symbol) * symbolCount;
-  symbolTableSection.sh_size = VW(symbolTableSectionSize);
-  symbolTableSection.sh_link = V4(stringTableSectionNumber);
-  symbolTableSection.sh_info = V4(0);
-  symbolTableSection.sh_addralign = VW(BITS_PER_WORD / 8);
-  symbolTableSection.sh_entsize = VW(sizeof(Symbol));
-
-  Symbol startSymbol;
-  startSymbol.st_name = V4(startNameOffset);
-  startSymbol.st_value = VW(0);
-  startSymbol.st_size = VW(0);
-  startSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
-  startSymbol.st_other = V1(STV_DEFAULT);
-  startSymbol.st_shndx = V2(bodySectionNumber);
-
-  Symbol endSymbol;
-  endSymbol.st_name = V4(endNameOffset);
-  endSymbol.st_value = VW(size);
-  endSymbol.st_size = VW(0);
-  endSymbol.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
-  endSymbol.st_other = V1(STV_DEFAULT);
-  endSymbol.st_shndx = V2(bodySectionNumber);
-
-  fwrite(&fileHeader, 1, sizeof(fileHeader), out);
-  fwrite(&nullSection, 1, sizeof(nullSection), out);
-  fwrite(&bodySection, 1, sizeof(bodySection), out);
-  fwrite(&sectionStringTableSection, 1, sizeof(sectionStringTableSection),
-         out);
-  fwrite(&stringTableSection, 1, sizeof(stringTableSection), out);
-  fwrite(&symbolTableSection, 1, sizeof(symbolTableSection), out);
-
-  fwrite(data, 1, size, out);
-
-  fputc(0, out);
-  fwrite(sectionStringTableName, 1, sectionStringTableNameLength, out);
-  fwrite(stringTableName, 1, stringTableNameLength, out);
-  fwrite(symbolTableName, 1, symbolTableNameLength, out);
-  fwrite(sectionName, 1, sectionNameLength, out);
-
-  fputc(0, out);
-  fwrite(startName, 1, startNameLength, out);
-  fwrite(endName, 1, endNameLength, out);
-
-  fwrite(&startSymbol, 1, sizeof(startSymbol), out);
-  fwrite(&endSymbol, 1, sizeof(endSymbol), out);
+unsigned getElfPlatform(PlatformInfo::Architecture arch) {
+  switch(arch) {
+  case PlatformInfo::x86_64:
+    return EM_X86_64;
+  case PlatformInfo::x86:
+    return EM_386;
+  case PlatformInfo::Arm:
+    return EM_ARM;
+  case PlatformInfo::PowerPC:
+    return EM_PPC;
+  default:
+    return ~0;
+  }
 }
+
+const char* getSectionName(unsigned accessFlags, unsigned& sectionFlags) {
+  sectionFlags = SHF_ALLOC;
+  if (accessFlags & Platform::Writable) {
+    if (accessFlags & Platform::Executable) {
+      sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
+      return ".rwx";
+    } else {
+      sectionFlags |= SHF_WRITE;
+      return ".data";
+    }
+  } else if (accessFlags & Platform::Executable) {
+    sectionFlags |= SHF_EXECINSTR;
+    return ".text";
+  } else {
+    return ".rodata";
+  }
+}
+
+template<class AddrTy, bool TargetLittleEndian = true>
+class ElfPlatform : public Platform {
+public:
+
+  typedef ElfTypes<AddrTy> Elf;
+  static const unsigned Class = Elf::BytesPerWord / 4;
+
+  struct FileHeader {
+    unsigned char e_ident[EI_NIDENT];
+    typename Elf::Half e_type;
+    typename Elf::Half e_machine;
+    typename Elf::Word e_version;
+    typename Elf::Addr e_entry;
+    typename Elf::Off e_phoff;
+    typename Elf::Off e_shoff;
+    typename Elf::Word e_flags;
+    typename Elf::Half e_ehsize;
+    typename Elf::Half e_phentsize;
+    typename Elf::Half e_phnum;
+    typename Elf::Half e_shentsize;
+    typename Elf::Half e_shnum;
+    typename Elf::Half e_shstrndx;
+  };
+
+  struct SectionHeader {
+    typename Elf::Word sh_name;
+    typename Elf::Word sh_type;
+    typename Elf::XFlags sh_flags;
+    typename Elf::Addr sh_addr;
+    typename Elf::Off sh_offset;
+    typename Elf::Off sh_size;
+    typename Elf::Word sh_link;
+    typename Elf::Word sh_info;
+    typename Elf::Addr sh_addralign;
+    typename Elf::Off sh_entsize;
+  };
+
+  typedef Symbol_Ty<AddrTy> Symbol;
+
+  static const unsigned Encoding = TargetLittleEndian ? ELFDATA2LSB : ELFDATA2MSB;
+
+  const unsigned machine;
+
+  ElfPlatform(PlatformInfo::Architecture arch):
+    Platform(PlatformInfo(PlatformInfo::Linux, arch)),
+    machine(getElfPlatform(arch)) {}
+
+  class FileWriter {
+  public:
+    unsigned sectionCount;
+    unsigned sectionStringTableSectionNumber;
+
+    AddrTy dataOffset;
+
+    FileHeader header;
+    StringTable strings;
+
+    FileWriter(unsigned machine):
+      sectionCount(0),
+      dataOffset(sizeof(FileHeader))
+    {
+      memset(&header, 0, sizeof(FileHeader));
+      header.e_ident[EI_MAG0] = V1(ELFMAG0);
+      header.e_ident[EI_MAG1] = V1(ELFMAG1);
+      header.e_ident[EI_MAG2] = V1(ELFMAG2);
+      header.e_ident[EI_MAG3] = V1(ELFMAG3);
+      header.e_ident[EI_CLASS] = V1(Class);
+      header.e_ident[EI_DATA] = V1(Encoding);
+      header.e_ident[EI_VERSION] = V1(EV_CURRENT);
+      header.e_ident[EI_OSABI] = V1(OSABI);
+      header.e_ident[EI_ABIVERSION] = V1(0);
+      header.e_type = V2(ET_REL);
+      header.e_machine = V2(machine);
+      header.e_version = V4(EV_CURRENT);
+      header.e_entry = VANY(static_cast<AddrTy>(0));
+      header.e_phoff = VANY(static_cast<AddrTy>(0));
+      header.e_shoff = VANY(static_cast<AddrTy>(sizeof(FileHeader)));
+      header.e_flags = V4(machine == EM_ARM ? 0x04000000 : 0);
+      header.e_ehsize = V2(sizeof(FileHeader));
+      header.e_phentsize = V2(0);
+      header.e_phnum = V2(0);
+      header.e_shentsize = V2(sizeof(SectionHeader));
+    }
+
+    void writeHeader(OutputStream* out) {
+      header.e_shnum = V2(sectionCount);
+      header.e_shstrndx = V2(sectionStringTableSectionNumber);
+      out->writeChunk(&header, sizeof(FileHeader));
+    }
+  };
+
+  class SectionWriter {
+  public:
+    FileWriter& file;
+    String name;
+    SectionHeader header;
+    const size_t* dataSize;
+    const uint8_t* const* data;
+
+    SectionWriter(FileWriter& file):
+      file(file),
+      name(""),
+      dataSize(0),
+      data(0)
+    {
+      memset(&header, 0, sizeof(SectionHeader));
+      file.sectionCount++;
+      file.dataOffset += sizeof(SectionHeader);
+      size_t nameOffset = file.strings.add(name);
+      header.sh_name = V4(nameOffset);
+    }
+
+    SectionWriter(
+        FileWriter& file,
+        const char* chname,
+        unsigned type,
+        AddrTy flags,
+        unsigned alignment,
+        AddrTy addr,
+        const uint8_t* const* data,
+        size_t* dataSize,
+        size_t entsize = 0,
+        unsigned link = 0):
+
+      file(file),
+      name(chname),
+      dataSize(dataSize),
+      data(data)
+    {
+      if(strcmp(chname, ".shstrtab") == 0) {
+        file.sectionStringTableSectionNumber = file.sectionCount;
+      }
+      file.sectionCount++;
+      file.dataOffset += sizeof(SectionHeader);
+      size_t nameOffset = file.strings.add(name);
+
+      header.sh_name = V4(nameOffset);
+      header.sh_type = V4(type);
+      header.sh_flags = VANY(flags);
+      header.sh_addr = VANY(addr);
+      // header.sh_offset = VANY(static_cast<AddrTy>(bodySectionOffset));
+      // header.sh_size = VANY(static_cast<AddrTy>(*dataSize));
+      header.sh_link = V4(link);
+      header.sh_info = V4(0);
+      header.sh_addralign = VANY(static_cast<AddrTy>(alignment));
+      header.sh_entsize = VANY(static_cast<AddrTy>(entsize));
+    }
+
+    void writeHeader(OutputStream* out) {
+      if(dataSize) {
+        header.sh_offset = VANY(file.dataOffset);
+        header.sh_size = VANY(static_cast<AddrTy>(*dataSize));
+        file.dataOffset += *dataSize;
+      }
+
+      out->writeChunk(&header, sizeof(SectionHeader));
+    }
+
+    void writeData(OutputStream* out) {
+      if(data) {
+        out->writeChunk(*data, *dataSize);
+      }
+    }
+
+
+  };
+
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
+
+    unsigned sectionFlags;
+    const char* sectionName = getSectionName(accessFlags, sectionFlags);
+
+    StringTable symbolStringTable;
+    Buffer symbolTable;
+
+    FileWriter file(machine);
+
+    const int bodySectionNumber = 1;
+    const int stringTableSectionNumber = 3;
+
+    SectionWriter sections[] = {
+      SectionWriter(file), // null section
+      SectionWriter(file, sectionName, SHT_PROGBITS, sectionFlags, alignment, 0, &data.items, &data.count), // body section
+      SectionWriter(file, ".shstrtab", SHT_STRTAB, 0, 1, 0, &file.strings.data, &file.strings.length),
+      SectionWriter(file, ".strtab", SHT_STRTAB, 0, 1, 0, &symbolStringTable.data, &symbolStringTable.length),
+      SectionWriter(file, ".symtab", SHT_SYMTAB, 0, 8, 0, &symbolTable.data, &symbolTable.length, sizeof(Symbol), stringTableSectionNumber)
+    };
+
+    // for some reason, string tables require a null first element...
+    symbolStringTable.add("");
+
+    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+      size_t nameOffset = symbolStringTable.add(sym->name);
+
+      Symbol symbolStruct;
+      symbolStruct.st_name = V4(nameOffset);
+      symbolStruct.st_value = VANY(static_cast<AddrTy>(sym->addr));
+      symbolStruct.st_size = VANY(static_cast<AddrTy>(0));
+      symbolStruct.st_info = V1(SYMBOL_INFO(STB_GLOBAL, STT_NOTYPE));
+      symbolStruct.st_other = V1(STV_DEFAULT);
+      symbolStruct.st_shndx = V2(bodySectionNumber);
+      symbolTable.write(&symbolStruct, sizeof(Symbol));
+    }
+
+    file.writeHeader(out);
+
+    for(unsigned i = 0; i < file.sectionCount; i++) {
+      sections[i].writeHeader(out);
+    }
+
+    for(unsigned i = 0; i < file.sectionCount; i++) {
+      sections[i].writeData(out);
+    }
+
+    return true;
+  }
+};
+
+ElfPlatform<uint32_t> elfx86Platform(PlatformInfo::x86);
+ElfPlatform<uint32_t> elfArmPlatform(PlatformInfo::Arm);
+ElfPlatform<uint32_t, false> elfPowerPCPlatform(PlatformInfo::PowerPC);
+ElfPlatform<uint64_t> elfx86_64Platform(PlatformInfo::x86_64);
+
 
 } // namespace
-
-#define MACRO_MAKE_NAME(a, b, c) a##b##c
-#define MAKE_NAME(a, b, c) MACRO_MAKE_NAME(a, b, c)
-
-namespace binaryToObject {
-
-bool
-MAKE_NAME(writeElf, BITS_PER_WORD, Object)
-  (uint8_t* data, unsigned size, FILE* out, const char* startName,
-   const char* endName, const char* architecture, unsigned alignment,
-   bool writable, bool executable)
-{
-  int machine;
-  int encoding;
-  if (strcmp(architecture, "x86_64") == 0) {
-    machine = EM_X86_64;
-    encoding = ELFDATA2LSB;
-  } else if (strcmp(architecture, "i386") == 0) {
-    machine = EM_386;
-    encoding = ELFDATA2LSB;
-  } else if (strcmp(architecture, "arm") == 0) {
-    machine = EM_ARM;
-    encoding = ELFDATA2LSB;
-  } else if (strcmp(architecture, "powerpc") == 0) {
-    machine = EM_PPC;
-    encoding = ELFDATA2MSB;
-  } else {
-    fprintf(stderr, "unsupported architecture: %s\n", architecture);
-    return false;
-  }
-
-  const char* sectionName;
-  unsigned sectionFlags = SHF_ALLOC;
-  if (writable) {
-    if (executable) {
-      sectionName = ".rwx";
-      sectionFlags |= SHF_WRITE | SHF_EXECINSTR;
-    } else {
-      sectionName = ".data";
-      sectionFlags |= SHF_WRITE;
-    }
-  } else if (executable) {
-    sectionName = ".text";
-    sectionFlags |= SHF_EXECINSTR;
-  } else {
-    sectionName = ".rodata";
-  }
-
-  writeObject(data, size, out, startName, endName, sectionName, sectionFlags,
-              alignment, machine, encoding);
-
-  return true;
-}
-
-} // namespace binaryToObject

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -112,9 +112,6 @@ const unsigned ThreadBackupHeapSizeInBytes = 2 * 1024;
 const unsigned ThreadBackupHeapSizeInWords
 = ThreadBackupHeapSizeInBytes / BytesPerWord;
 
-const unsigned StackSizeInBytes = 128 * 1024;
-const unsigned StackSizeInWords = StackSizeInBytes / BytesPerWord;
-
 const unsigned ThreadHeapPoolSize = 64;
 
 const unsigned FixedFootprintThresholdInBytes
@@ -169,50 +166,6 @@ const unsigned ConstructorFlag = 1 << 1;
 
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
-
-typedef uint8_t jboolean;
-typedef int8_t jbyte;
-typedef uint16_t jchar;
-typedef int16_t jshort;
-typedef int32_t jint;
-typedef int64_t jlong;
-typedef float jfloat;
-typedef double jdouble;
-
-typedef jint jsize;
-
-typedef object* jobject;
-
-typedef jobject jclass;
-typedef jobject jthrowable;
-typedef jobject jstring;
-typedef jobject jweak;
-
-typedef jobject jarray;
-typedef jarray jbooleanArray;
-typedef jarray jbyteArray;
-typedef jarray jcharArray;
-typedef jarray jshortArray;
-typedef jarray jintArray;
-typedef jarray jlongArray;
-typedef jarray jfloatArray;
-typedef jarray jdoubleArray;
-typedef jarray jobjectArray;
-
-typedef uintptr_t jfieldID;
-typedef uintptr_t jmethodID;
-
-union jvalue {
-  jboolean z;
-  jbyte    b;
-  jchar    c;
-  jshort   s;
-  jint     i;
-  jlong    j;
-  jfloat   f;
-  jdouble  d;
-  jobject  l;
-};
 
 struct JNINativeMethod {
   char* name;
@@ -1281,7 +1234,7 @@ class Machine {
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
           unsigned propertyCount, const char** arguments,
-          unsigned argumentCount);
+          unsigned argumentCount, unsigned stackSizeInBytes);
 
   ~Machine() { 
     dispose();
@@ -1310,6 +1263,7 @@ class Machine {
   unsigned liveCount;
   unsigned daemonCount;
   unsigned fixedFootprint;
+  unsigned stackSizeInBytes;
   System::Local* localThread;
   System::Monitor* stateLock;
   System::Monitor* heapLock;
@@ -1318,6 +1272,7 @@ class Machine {
   System::Monitor* shutdownLock;
   System::Library* libraries;
   FILE* errorLog;
+  BootImage* bootimage;
   object types;
   object roots;
   object finalizers;
@@ -1334,6 +1289,7 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
   unsigned heapPoolIndex;
+  unsigned bootimageSize;
 };
 
 void
@@ -1580,6 +1536,9 @@ class Classpath {
   makeThread(Thread* t, Thread* parent) = 0;
 
   virtual void
+  clearInterrupted(Thread* t) = 0;
+
+  virtual void
   runThread(Thread* t) = 0;
 
   virtual void
@@ -1637,6 +1596,12 @@ inline object
 objectClass(Thread*, object o)
 {
   return mask(cast<object>(o, 0));
+}
+
+inline unsigned
+stackSizeInWords(Thread* t)
+{
+  return t->m->stackSizeInBytes / BytesPerWord;
 }
 
 void
@@ -2224,6 +2189,39 @@ makeByteArray(Thread* t, const char* format, ...);
 object
 makeString(Thread* t, const char* format, ...);
 
+#ifndef HAVE_StringOffset
+
+inline unsigned
+stringLength(Thread* t, object string)
+{
+  return charArrayLength(t, stringData(t, string));
+}
+
+inline unsigned
+stringOffset(Thread*, object)
+{
+  return 0;
+}
+
+inline object
+makeString(Thread* t, object data, unsigned offset, unsigned length, unsigned)
+{
+  if (offset == 0 and length == charArrayLength(t, data)) {
+    return makeString(t, data, 0, 0);
+  } else {
+    PROTECT(t, data);
+
+    object array = makeCharArray(t, length);
+
+    memcpy(&charArrayBody(t, array, 0), &charArrayBody(t, data, offset),
+           length * 2);
+
+    return makeString(t, array, 0, 0);
+  }
+}
+
+#endif // not HAVE_StringOffset
+
 int
 stringUTFLength(Thread* t, object string, unsigned start, unsigned length);
 
@@ -2591,16 +2589,7 @@ makeObjectArray(Thread* t, unsigned count)
 }
 
 object
-findInTable(Thread* t, object table, object name, object spec,
-            object& (*getName)(Thread*, object),
-            object& (*getSpec)(Thread*, object));
-
-inline object
-findFieldInClass(Thread* t, object class_, object name, object spec)
-{
-  return findInTable
-    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
-}
+findFieldInClass(Thread* t, object class_, object name, object spec);
 
 inline object
 findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
@@ -2612,12 +2601,8 @@ findFieldInClass2(Thread* t, object class_, const char* name, const char* spec)
   return findFieldInClass(t, class_, n, s);
 }
 
-inline object
-findMethodInClass(Thread* t, object class_, object name, object spec)
-{
-  return findInTable
-    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
-}
+object
+findMethodInClass(Thread* t, object class_, object name, object spec);
 
 inline object
 makeThrowable
@@ -3224,6 +3209,7 @@ wait(Thread* t, object o, int64_t milliseconds)
 
     if (interrupted) {
       if (t->m->alive or (t->flags & Thread::DaemonFlag) == 0) {
+        t->m->classpath->clearInterrupted(t);
         throwNew(t, Machine::InterruptedExceptionType);
       } else {
         throw_(t, root(t, Machine::Shutdown));

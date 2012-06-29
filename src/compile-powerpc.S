@@ -9,6 +9,7 @@
    details. */
 
 #include "types.h"
+#include "target-fields.h"
 
 .text
 
@@ -28,13 +29,6 @@
 #endif
 
 #define ARGUMENT_BASE BYTES_PER_WORD * LINKAGE_AREA
-      
-#define THREAD_STACK 2148
-#define THREAD_CONTINUATION 2156
-#define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
-#define THREAD_EXCEPTION_OFFSET 2164
-#define THREAD_EXCEPTION_HANDLER 2168
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -121,14 +115,14 @@ GLOBAL(vmInvoke_returnAddress):
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
    li   r5,0
-   stw  r5,THREAD_STACK(r13)
+   stw  r5,TARGET_THREAD_STACK(r13)
    
 .globl GLOBAL(vmInvoke_safeStack)
 GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
-   lwz  r5,THREAD_CONTINUATION(r13)
+   lwz  r5,TARGET_THREAD_CONTINUATION(r13)
    cmplwi r5,0
    beq  LOCAL(vmInvoke_exit)
 
@@ -171,10 +165,10 @@ LOCAL(vmInvoke_getPC):
    stw  r7,0(r1)
 
    lwz  r7,CONTINUATION_NEXT(r5)
-   stw  r7,THREAD_CONTINUATION(r13)
+   stw  r7,TARGET_THREAD_CONTINUATION(r13)
 
    // call the continuation unless we're handling an exception
-   lwz  r7,THREAD_EXCEPTION(r13)
+   lwz  r7,TARGET_THREAD_EXCEPTION(r13)
    cmpwi r7,0
    bne  LOCAL(vmInvoke_handleException)
    lwz  r7,CONTINUATION_ADDRESS(r5)
@@ -184,15 +178,15 @@ LOCAL(vmInvoke_getPC):
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
    li   r8,0
-   stw  r8,THREAD_EXCEPTION(r13)
-   lwz  r8,THREAD_EXCEPTION_STACK_ADJUSTMENT(r13)
+   stw  r8,TARGET_THREAD_EXCEPTION(r13)
+   lwz  r8,TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT(r13)
    lwz  r9,0(r1)
    subfic r8,r8,0
    stwux r9,r1,r8
-   lwz  r8,THREAD_EXCEPTION_OFFSET(r13)
+   lwz  r8,TARGET_THREAD_EXCEPTIONOFFSET(r13)
    stwx r7,r1,r8
 
-   lwz  r7,THREAD_EXCEPTION_HANDLER(r13)
+   lwz  r7,TARGET_THREAD_EXCEPTIONHANDLER(r13)
    mtctr r7
    bctr
 

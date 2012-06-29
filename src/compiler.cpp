@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -576,28 +576,7 @@ count(Cell* c)
 Cell*
 cons(Context* c, void* value, Cell* next)
 {
-  return new (c->zone->allocate(sizeof(Cell))) Cell(next, value);
-}
-
-Cell*
-append(Context* c, Cell* first, Cell* second)
-{
-  if (first) {
-    if (second) {
-      Cell* start = cons(c, first->value, second);
-      Cell* end = start;
-      for (Cell* cell = first->next; cell; cell = cell->next) {
-        Cell* n = cons(c, cell->value, second);
-        end->next = n;
-        end = n;
-      }
-      return start;
-    } else {
-      return first;
-    }
-  } else {
-    return second;
-  }
+  return new (c->zone) Cell(next, value);
 }
 
 Cell*
@@ -648,7 +627,7 @@ Link*
 link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
      Link* nextSuccessor, ForkState* forkState)
 {
-  return new (c->zone->allocate(sizeof(Link))) Link
+  return new(c->zone) Link
     (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
 }
 
@@ -992,6 +971,8 @@ valid(Read* r)
   return r and r->valid();
 }
 
+#ifndef NDEBUG
+
 bool
 hasBuddy(Context* c, Value* a, Value* b)
 {
@@ -1010,6 +991,8 @@ hasBuddy(Context* c, Value* a, Value* b)
   }
   return false;
 }
+
+#endif // not NDEBUG
 
 Read*
 live(Context* c UNUSED, Value* v)
@@ -1602,15 +1585,13 @@ constantSite(Context* c, Promise* value);
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new(c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 CombinedPromise*
 combinedPromise(Context* c, Promise* low, Promise* high)
 {
-  return new (c->zone->allocate(sizeof(CombinedPromise)))
-    CombinedPromise(low, high);
+  return new(c->zone) CombinedPromise(low, high);
 }
 
 class ConstantSite: public Site {
@@ -1620,7 +1601,7 @@ class ConstantSite: public Site {
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (value->resolved()) {
       return vm::snprintf
-        (buffer, bufferSize, "constant %"LLD, value->value());
+        (buffer, bufferSize, "constant %" LLD, value->value());
     } else {
       return vm::snprintf(buffer, bufferSize, "constant unresolved");
     }
@@ -1686,14 +1667,13 @@ class ConstantSite: public Site {
 ConstantSite*
 constantSite(Context* c, Promise* value)
 {
-  return new (c->zone->allocate(sizeof(ConstantSite))) ConstantSite(value);
+  return new(c->zone) ConstantSite(value);
 }
 
 ResolvedPromise*
 resolved(Context* c, int64_t value)
 {
-  return new (c->zone->allocate(sizeof(ResolvedPromise)))
-    ResolvedPromise(value);
+  return new(c->zone) ResolvedPromise(value);
 }
 
 ConstantSite*
@@ -1712,7 +1692,7 @@ class AddressSite: public Site {
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
     if (address->resolved()) {
       return vm::snprintf
-        (buffer, bufferSize, "address %"LLD, address->value());
+        (buffer, bufferSize, "address %" LLD, address->value());
     } else {
       return vm::snprintf(buffer, bufferSize, "address unresolved");
     }
@@ -1776,7 +1756,7 @@ class AddressSite: public Site {
 AddressSite*
 addressSite(Context* c, Promise* address)
 {
-  return new (c->zone->allocate(sizeof(AddressSite))) AddressSite(address);
+  return new(c->zone) AddressSite(address);
 }
 
 RegisterSite*
@@ -1978,15 +1958,13 @@ registerSite(Context* c, int number)
   assert(c, (1 << number) & (c->arch->generalRegisterMask()
                              | c->arch->floatRegisterMask()));
 
-  return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(1 << number, number);
+  return new(c->zone) RegisterSite(1 << number, number);
 }
 
 RegisterSite*
 freeRegisterSite(Context* c, uint32_t mask)
 {
-  return new (c->zone->allocate(sizeof(RegisterSite)))
-    RegisterSite(mask, NoRegister);
+  return new(c->zone) RegisterSite(mask, NoRegister);
 }
 
 MemorySite*
@@ -2219,8 +2197,7 @@ class MemorySite: public Site {
 MemorySite*
 memorySite(Context* c, int base, int offset, int index, unsigned scale)
 {
-  return new (c->zone->allocate(sizeof(MemorySite)))
-    MemorySite(base, offset, index, scale);
+  return new(c->zone) MemorySite(base, offset, index, scale);
 }
 
 MemorySite*
@@ -2341,8 +2318,7 @@ read(Context* c, const SiteMask& mask, Value* successor = 0)
 {
   assert(c, (mask.typeMask != 1 << MemoryOperand) or mask.frameIndex >= 0);
 
-  return new (c->zone->allocate(sizeof(SingleRead)))
-    SingleRead(mask, successor);
+  return new(c->zone) SingleRead(mask, successor);
 }
 
 bool
@@ -2762,7 +2738,7 @@ class MultiRead: public Read {
 MultiRead*
 multiRead(Context* c)
 {
-  return new (c->zone->allocate(sizeof(MultiRead))) MultiRead;
+  return new(c->zone) MultiRead;
 }
 
 class StubRead: public Read {
@@ -2811,7 +2787,7 @@ class StubRead: public Read {
 StubRead*
 stubRead(Context* c)
 {
-  return new (c->zone->allocate(sizeof(StubRead))) StubRead;
+  return new(c->zone) StubRead;
 }
 
 Site*
@@ -3121,15 +3097,13 @@ clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
 CodePromise*
 codePromise(Context* c, Event* e)
 {
-  return e->promises = new (c->zone->allocate(sizeof(CodePromise)))
-    CodePromise(c, e->promises);
+  return e->promises = new(c->zone) CodePromise(c, e->promises);
 }
 
 CodePromise*
 codePromise(Context* c, Promise* offset)
 {
-  return new (c->zone->allocate(sizeof(CodePromise)))
-    CodePromise(c, offset);
+  return new (c->zone) CodePromise(c, offset);
 }
 
 void
@@ -3467,7 +3441,7 @@ appendCall(Context* c, Value* address, unsigned flags,
            Stack* argumentStack, unsigned argumentCount,
            unsigned stackArgumentFootprint)
 {
-  append(c, new (c->zone->allocate(sizeof(CallEvent)))
+  append(c, new(c->zone)
          CallEvent(c, address, flags, traceHandler, result,
                    resultSize, argumentStack, argumentCount,
                    stackArgumentFootprint));
@@ -3515,8 +3489,7 @@ class ReturnEvent: public Event {
 void
 appendReturn(Context* c, unsigned size, Value* value)
 {
-  append(c, new (c->zone->allocate(sizeof(ReturnEvent)))
-         ReturnEvent(c, size, value));
+  append(c, new(c->zone) ReturnEvent(c, size, value));
 }
 
 void
@@ -3714,7 +3687,7 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
 Value*
 value(Context* c, ValueType type, Site* site = 0, Site* target = 0)
 {
-  return new (c->zone->allocate(sizeof(Value))) Value(site, target, type);
+  return new(c->zone) Value(site, target, type);
 }
 
 void
@@ -3800,26 +3773,32 @@ class MoveEvent: public Event {
         and srcSelectSize >= dstSize)
     {
       if (dst->target) {
-        if (dstSize > TargetBytesPerWord
-            and src->source->registerSize(c) > TargetBytesPerWord)
-        {
-          apply(c, Move, srcSelectSize, src->source, src->source,
-                dstSize, dst->target, dst->target);
-
-          if (live(c, dst) == 0) {
-            removeSite(c, dst, dst->target);
-            if (dstSize > TargetBytesPerWord) {
-              removeSite(c, dst->nextWord, dst->nextWord->target);
+        if (dstSize > TargetBytesPerWord) {
+          if (src->source->registerSize(c) > TargetBytesPerWord) {
+            apply(c, Move, srcSelectSize, src->source, src->source,
+                  dstSize, dst->target, dst->target);
+            
+            if (live(c, dst) == 0) {
+              removeSite(c, dst, dst->target);
+              if (dstSize > TargetBytesPerWord) {
+                removeSite(c, dst->nextWord, dst->nextWord->target);
+              }
             }
-          }
-        } else {
-          maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
-                    TargetBytesPerWord, dst, dstLowMask);
-          if (dstSize > TargetBytesPerWord) {
+          } else {
+            src->nextWord->source->freeze(c, src->nextWord);
+
+            maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+                      TargetBytesPerWord, dst, dstLowMask);
+
+            src->nextWord->source->thaw(c, src->nextWord);
+
             maybeMove
               (c, Move, TargetBytesPerWord, TargetBytesPerWord, src->nextWord,
                TargetBytesPerWord, dst->nextWord, dstHighMask);
           }
+        } else {
+          maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+                    TargetBytesPerWord, dst, dstLowMask);
         }
       } else {
         Site* low = pickSiteOrMove(c, src, dst, 0, 0);
@@ -3914,7 +3893,7 @@ appendMove(Context* c, BinaryOperation type, unsigned srcSize,
 
   assert(c, not thunk);
 
-  append(c, new (c->zone->allocate(sizeof(MoveEvent)))
+  append(c, new(c->zone)
          MoveEvent
          (c, type, srcSize, srcSelectSize, src, dstSize, dst,
           SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
@@ -4173,7 +4152,7 @@ snapshot(Context* c, Value* value, Snapshot* next)
             value, value->buddy, buffer);
   }
 
-  return new (c->zone->allocate(sizeof(Snapshot))) Snapshot(c, value, next);
+  return new(c->zone) Snapshot(c, value, next);
 }
 
 Snapshot*
@@ -4189,8 +4168,7 @@ makeSnapshots(Context* c, Value* value, Snapshot* next)
 Stack*
 stack(Context* c, Value* value, Stack* next)
 {
-  return new (c->zone->allocate(sizeof(Stack)))
-    Stack(next ? next->index + 1 : 0, value, next);
+  return new(c->zone) Stack(next ? next->index + 1 : 0, value, next);
 }
 
 Value*
@@ -4450,7 +4428,7 @@ appendCombine(Context* c, TernaryOperation type,
        resultSize, argumentStack, stackSize, 0);
   } else {
     append
-      (c, new (c->zone->allocate(sizeof(CombineEvent)))
+      (c, new(c->zone)
        CombineEvent
        (c, type,
         firstSize, first,
@@ -4568,7 +4546,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
        0, 0, result, resultSize, argumentStack,
        ceiling(firstSize, TargetBytesPerWord), 0);
   } else {
-    append(c, new (c->zone->allocate(sizeof(TranslateEvent)))
+    append(c, new(c->zone)
            TranslateEvent
            (c, type, firstSize, first, resultSize, result,
             SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
@@ -4576,14 +4554,14 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
   }
 }
 
-class BarrierEvent: public Event {
+class OperationEvent: public Event {
  public:
-  BarrierEvent(Context* c, Operation op):
+  OperationEvent(Context* c, Operation op):
     Event(c), op(op)
   { }
 
   virtual const char* name() {
-    return "BarrierEvent";
+    return "OperationEvent";
   }
 
   virtual void compile(Context* c) {
@@ -4594,9 +4572,10 @@ class BarrierEvent: public Event {
 };
 
 void
-appendBarrier(Context* c, Operation op)
+appendOperation(Context* c, Operation op)
 {
-  append(c, new (c->zone->allocate(sizeof(BarrierEvent))) BarrierEvent(c, op));
+  append
+    (c, new(c->zone) OperationEvent(c, op));
 }
 
 class MemoryEvent: public Event {
@@ -4676,7 +4655,7 @@ void
 appendMemory(Context* c, Value* base, int displacement, Value* index,
              unsigned scale, Value* result)
 {
-  append(c, new (c->zone->allocate(sizeof(MemoryEvent)))
+  append(c, new(c->zone)
          MemoryEvent(c, base, displacement, index, scale, result));
 }
 
@@ -4907,7 +4886,7 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
                  result, address);
   } else {
     append
-      (c, new (c->zone->allocate(sizeof(BranchEvent)))
+      (c, new(c->zone)
        BranchEvent
        (c, type, size, first, second, address,
         SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
@@ -4971,8 +4950,7 @@ void
 appendJump(Context* c, UnaryOperation type, Value* address, bool exit = false,
            bool cleanLocals = false)
 {
-  append(c, new (c->zone->allocate(sizeof(JumpEvent)))
-         JumpEvent(c, type, address, exit, cleanLocals));
+  append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
 }
 
 class BoundsCheckEvent: public Event {
@@ -5050,8 +5028,7 @@ void
 appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
                   Value* index, intptr_t handler)
 {
-  append(c, new (c->zone->allocate(sizeof(BoundsCheckEvent)))
-         BoundsCheckEvent(c, object, lengthOffset, index, handler));
+  append(c, new(c->zone) BoundsCheckEvent(c, object, lengthOffset, index, handler));
 }
 
 class FrameSiteEvent: public Event {
@@ -5077,8 +5054,7 @@ class FrameSiteEvent: public Event {
 void
 appendFrameSite(Context* c, Value* value, int index)
 {
-  append(c, new (c->zone->allocate(sizeof(FrameSiteEvent)))
-         FrameSiteEvent(c, value, index));
+  append(c, new(c->zone) FrameSiteEvent(c, value, index));
 }
 
 unsigned
@@ -5156,8 +5132,7 @@ class BuddyEvent: public Event {
 void
 appendBuddy(Context* c, Value* original, Value* buddy)
 {
-  append(c, new (c->zone->allocate(sizeof(BuddyEvent)))
-         BuddyEvent(c, original, buddy));
+  append(c, new(c->zone) BuddyEvent(c, original, buddy));
 }
 
 class SaveLocalsEvent: public Event {
@@ -5182,8 +5157,7 @@ class SaveLocalsEvent: public Event {
 void
 appendSaveLocals(Context* c)
 {
-  append(c, new (c->zone->allocate(sizeof(SaveLocalsEvent)))
-         SaveLocalsEvent(c));
+  append(c, new(c->zone) SaveLocalsEvent(c));
 }
 
 class DummyEvent: public Event {
@@ -5209,7 +5183,7 @@ appendDummy(Context* c)
   c->stack = i->stack;
   c->locals = i->locals;
 
-  append(c, new (c->zone->allocate(sizeof(DummyEvent))) DummyEvent(c));
+  append(c, new(c->zone) DummyEvent(c));
 
   c->stack = stack;
   c->locals = locals;  
@@ -5317,15 +5291,16 @@ propagateJunctionSites(Context* c, Event* e)
 
 class SiteRecord {
  public:
-  SiteRecord(Site* site, Value* value):
-    site(site), value(value)
-  { }
-
-  SiteRecord() { }
-
   Site* site;
   Value* value;
 };
+
+void
+init(SiteRecord* r, Site* s, Value* v)
+{
+  r->site = s;
+  r->value = v;
+}
 
 class SiteRecordList {
  public:
@@ -5344,7 +5319,7 @@ freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v)
   assert(c, frozen->index < frozen->capacity);
 
   s->freeze(c, v);
-  new (frozen->records + (frozen->index ++)) SiteRecord(s, v);
+  init(new (frozen->records + (frozen->index ++)) SiteRecord, s, v);
 }
 
 void
@@ -5745,7 +5720,7 @@ class Block {
 Block*
 block(Context* c, Event* head)
 {
-  return new (c->zone->allocate(sizeof(Block))) Block(head);
+  return new(c->zone) Block(head);
 }
 
 void
@@ -5879,17 +5854,6 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
   }
 
   c->firstBlock = firstBlock;
-}
-
-unsigned
-count(Stack* s)
-{
-  unsigned c = 0;
-  while (s) {
-    ++ c;
-    s = s->next;
-  }
-  return c;
 }
 
 void
@@ -6056,8 +6020,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Subroutine* startSubroutine() {
-    return c.subroutine = new (c.zone->allocate(sizeof(MySubroutine)))
-      MySubroutine;
+    return c.subroutine = new(c.zone) MySubroutine;
   }
 
   virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
@@ -6198,7 +6161,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
-    return new (c.zone->allocate(sizeof(IpPromise))) IpPromise(&c, logicalIp);
+    return new(c.zone) IpPromise(&c, logicalIp);
   }
 
   virtual Promise* poolAppend(intptr_t value) {
@@ -6206,12 +6169,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* poolAppendPromise(Promise* value) {
-    Promise* p = new (c.zone->allocate(sizeof(PoolPromise)))
-      PoolPromise(&c, c.constantCount);
+    Promise* p = new(c.zone) PoolPromise(&c, c.constantCount);
 
-    ConstantPoolNode* constant
-      = new (c.zone->allocate(sizeof(ConstantPoolNode)))
-      ConstantPoolNode(value);
+    ConstantPoolNode* constant = new (c.zone) ConstantPoolNode(value);
 
     if (c.firstConstant) {
       c.lastConstant->next = constant;
@@ -6902,16 +6862,20 @@ class MyCompiler: public Compiler {
     return result;
   }
 
+  virtual void trap() {
+    appendOperation(&c, Trap);
+  }
+
   virtual void loadBarrier() {
-    appendBarrier(&c, LoadBarrier);
+    appendOperation(&c, LoadBarrier);
   }
 
   virtual void storeStoreBarrier() {
-    appendBarrier(&c, StoreStoreBarrier);
+    appendOperation(&c, StoreStoreBarrier);
   }
 
   virtual void storeLoadBarrier() {
-    appendBarrier(&c, StoreLoadBarrier);
+    appendOperation(&c, StoreLoadBarrier);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,
@@ -6992,8 +6956,7 @@ Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
              Compiler::Client* client)
 {
-  return new (zone->allocate(sizeof(local::MyCompiler)))
-    local::MyCompiler(system, assembler, zone, client);
+  return new(zone) local::MyCompiler(system, assembler, zone, client);
 }
 
 } // namespace vm

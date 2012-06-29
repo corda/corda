@@ -11,6 +11,7 @@
 
 -keep class java.lang.System {
    private static void initializeSystemClass();
+   public static void setProperties(java.util.Properties);
  }
 
 -keep class java.lang.ClassLoader {
@@ -33,6 +34,11 @@
 
 -keep class java.util.Properties {
    public java.lang.Object setProperty(java.lang.String, java.lang.String);
+   public java.lang.String getProperty(java.lang.String);
+ }
+
+-keep class java.util.Hashtable {
+   public java.lang.Object remove(java.lang.Object);
  }
 
 -keep class avian.OpenJDK {
@@ -108,6 +114,9 @@
    private long handle;
  }
 
+-keep class java.net.NetworkInterface {
+   <fields>;
+ }
 -keep class java.net.InetAddress {
    <fields>;
  }
@@ -217,3 +226,21 @@
 -keep class sun.util.resources.TimeZoneNames
 -keep class sun.text.resources.FormatData
 
+# loaded via reflection from DefaultFileSystemProvider:
+-keep class sun.nio.fs.LinuxFileSystemProvider
+-keep class sun.nio.fs.BsdFileSystemProvider
+
+# loaded via JNI in UnixNativeDispatcher.c:
+-keep class sun.nio.fs.UnixFileAttributes {
+  <fields>;
+}
+-keep class sun.nio.fs.UnixFileStoreAttributes {
+  <fields>;
+}
+-keep class sun.nio.fs.UnixMountEntry {
+  <fields>;
+}
+
+-keep class sun.nio.fs.UnixException {
+   UnixException(int);
+ }

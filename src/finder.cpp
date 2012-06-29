@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -12,6 +12,7 @@
 #include "system.h"
 #include "tokenizer.h"
 #include "finder.h"
+#include "lzma.h"
 
 using namespace vm;
 
@@ -173,11 +174,12 @@ class DirectoryElement: public Element {
 class PointerRegion: public System::Region {
  public:
   PointerRegion(System* s, Allocator* allocator, const uint8_t* start,
-                size_t length):
+                size_t length, bool freePointer = false):
     s(s),
     allocator(allocator),
     start_(start),
-    length_(length)
+    length_(length),
+    freePointer(freePointer)
   { }
 
   virtual const uint8_t* start() {
@@ -189,6 +191,9 @@ class PointerRegion: public System::Region {
   }
 
   virtual void dispose() {
+    if (freePointer) {
+      allocator->free(start_, length_);
+    }
     allocator->free(this, sizeof(*this));
   }
 
@@ -196,6 +201,7 @@ class PointerRegion: public System::Region {
   Allocator* allocator;
   const uint8_t* start_;
   size_t length_;
+  bool freePointer;
 };
 
 class DataRegion: public System::Region {
@@ -448,6 +454,7 @@ class JarElement: public Element {
              unsigned jarLength):
     s(s),
     allocator(allocator),
+    originalName(0),
     name(0),
     urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
     sourceUrl_(name ? append(allocator, "file:", name) : 0),
@@ -517,12 +524,14 @@ class JarElement: public Element {
   }
 
   virtual void dispose(unsigned size) {
-    if (originalName != name) {
-      allocator->free(originalName, strlen(originalName) + 1);
+    if (name) {
+      if (originalName != name) {
+        allocator->free(originalName, strlen(originalName) + 1);
+      }
+      allocator->free(name, strlen(name) + 1);
+      allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
+      allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     }
-    allocator->free(name, strlen(name) + 1);
-    allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
-    allocator->free(sourceUrl_, strlen(sourceUrl_) + 1);
     if (index) {
       index->dispose();
     }
@@ -553,7 +562,10 @@ class BuiltinElement: public JarElement {
   virtual void init() {
     if (index == 0) {
       if (s->success(s->load(&library, libraryName))) {
-        void* p = library->resolve(name);
+        bool lzma = strncmp("lzma:", name, 5) == 0;
+        const char* symbolName = lzma ? name + 5 : name;
+
+        void* p = library->resolve(symbolName);
         if (p) {
           uint8_t* (*function)(unsigned*);
           memcpy(&function, &p, BytesPerWord);
@@ -561,10 +573,29 @@ class BuiltinElement: public JarElement {
           unsigned size;
           uint8_t* data = function(&size);
           if (data) {
+            bool freePointer;
+            if (lzma) {
+#ifdef AVIAN_USE_LZMA
+              unsigned outSize;
+              data = decodeLZMA(s, allocator, data, size, &outSize);
+              size = outSize;
+              freePointer = true;
+#else
+              abort(s);
+#endif
+            } else {
+              freePointer = false;
+            }
             region = new (allocator->allocate(sizeof(PointerRegion)))
-              PointerRegion(s, allocator, data, size);
+              PointerRegion(s, allocator, data, size, freePointer);
             index = JarIndex::open(s, allocator, region);
+          } else if (DebugFind) {
+            fprintf(stderr, "%s in %s returned null\n", symbolName,
+                    libraryName);
           }
+        } else if (DebugFind) {
+          fprintf(stderr, "unable to find %s in %s\n", symbolName,
+                  libraryName);
         }
       }
     }
@@ -906,7 +937,9 @@ class MyFinder: public Finder {
       e = e->next;
       t->dispose();
     }
-    allocator->free(pathString, strlen(pathString) + 1);
+    if (pathString) {
+      allocator->free(pathString, strlen(pathString) + 1);
+    }
     allocator->free(this, sizeof(*this));
   }
 

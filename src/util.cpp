@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -58,8 +58,7 @@ class TreeContext {
 TreeContext::Path*
 path(TreeContext* c, object node, TreeContext::Path* next)
 {
-  return new (c->zone->allocate(sizeof(TreeContext::Path)))
-    TreeContext::Path(node, next);
+  return new(c->zone) TreeContext::Path(node, next);
 }
 
 inline object

@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -120,6 +120,16 @@ void
 runOnLoadIfFound(Thread* t, System::Library* library)
 {
   void* p = library->resolve("JNI_OnLoad");
+
+#ifdef PLATFORM_WINDOWS
+  if (p == 0) {
+    p = library->resolve("_JNI_OnLoad@8");
+    if (p == 0) {
+      p = library->resolve("JNI_OnLoad@8");
+    }
+  }
+#endif
+
   if (p) {
     jint (JNICALL * JNI_OnLoad)(Machine*, void*);
     memcpy(&JNI_OnLoad, &p, sizeof(void*));

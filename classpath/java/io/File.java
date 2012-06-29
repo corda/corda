@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -35,11 +35,16 @@ public class File implements Serializable {
     this(parent.getPath() + FileSeparator + child);
   }
 
-  public static File createTempFile(String prefix, String suffix) {
+  public static File createTempFile(String prefix, String suffix)
+    throws IOException
+  {
     return createTempFile(prefix, suffix, null);
   }
 
-  public static File createTempFile(String prefix, String suffix, File directory) {
+  public static File createTempFile(String prefix, String suffix,
+                                    File directory)
+    throws IOException
+  {
     if(directory == null) {
       directory = new File(System.getProperty("java.io.tmpdir"));
     }
@@ -199,15 +204,10 @@ public class File implements Serializable {
     }
   }
 
-  private static native void createNewFile(String path) throws IOException;
+  private static native boolean createNewFile(String path) throws IOException;
 
-  public boolean createNewFile() {
-    try {
-      createNewFile(path);
-      return true;
-    } catch (IOException e) {
-      return false;
-    }
+  public boolean createNewFile() throws IOException {
+    return createNewFile(path);
   }
 
   public static native void delete(String path) throws IOException;

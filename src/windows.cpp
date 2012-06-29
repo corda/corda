@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -215,6 +215,12 @@ class MySystem: public System {
     }
 
     void append(Thread* t) {
+#ifndef NDEBUG
+      for (Thread* x = first; x; x = x->next) {
+        expect(s, t != x);
+      }
+#endif
+
       if (last) {
         last->next = t;
         last = t;
@@ -245,6 +251,12 @@ class MySystem: public System {
           current = current->next;
         }
       }
+
+#ifndef NDEBUG
+      for (Thread* x = first; x; x = x->next) {
+        expect(s, t != x);
+      }
+#endif
     }
 
     virtual void wait(System::Thread* context, int64_t time) {
@@ -269,6 +281,8 @@ class MySystem: public System {
         int r UNUSED;
 
         { ACQUIRE(s, t->mutex);
+
+          expect(s, (t->flags & Notified) == 0);
 
           interrupted = t->r->interrupted();
           if (interrupted and clearInterrupted) {
@@ -306,15 +320,23 @@ class MySystem: public System {
           }
 
           notified = ((t->flags & Notified) != 0);
-        
-          t->flags = 0;
         }
 
         r = WaitForSingleObject(mutex, INFINITE);
         assert(s, r == WAIT_OBJECT_0);
 
+        { ACQUIRE(s, t->mutex);
+          t->flags = 0;
+        }
+
         if (not notified) {
           remove(t);
+        } else {
+#ifndef NDEBUG
+          for (Thread* x = first; x; x = x->next) {
+            expect(s, t != x);
+          }
+#endif
         }
 
         t->next = 0;
@@ -346,6 +368,7 @@ class MySystem: public System {
           Thread* t = first;
           first = first->next;
           if (t == last) {
+            expect(s, first == 0);
             last = 0;
           }
 

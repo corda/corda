@@ -54,7 +54,7 @@ Avian can currently target the following platforms:
   Linux (i386, x86_64, ARM, and 32-bit PowerPC)
   Windows (i386 and x86_64)
   Mac OS X (i386, x86_64 and 32-bit PowerPC)
-
+  Apple iOS (i386 and ARM)
 
 Building
 --------
@@ -63,6 +63,7 @@ Build requirements include:
 
   * GNU make 3.80 or later
   * GCC 3.4 or later (4.5.1 or later for Windows/x86_64)
+      or LLVM Clang 3.1 or later (see use-clang option below)
   * JDK 1.5 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
@@ -78,10 +79,13 @@ certain flags described below, all of which are optional.
      arch={i386,x86_64,powerpc,arm} \
      process={compile,interpret} \
      mode={debug,debug-fast,fast,small} \
+     lzma=<lzma source directory> \
+     ios={true,false} \
      bootimage={true,false} \
      heapdump={true,false} \
      tails={true,false} \
      continuations={true,false} \
+     use-clang={true,false} \
      openjdk=<openjdk installation directory> \
      openjdk-src=<openjdk source directory>
 
@@ -93,13 +97,27 @@ certain flags described below, all of which are optional.
       default: output of $(uname -m), normalized in some cases
       (e.g. i686 -> i386)
 
+  * process - choice between pure interpreter or JIT compiler
+      default: compile
+
   * mode - which set of compilation flags to use to determine
     optimization level, debug symbols, and whether to enable
     assertions
       default: fast
 
-  * process - choice between pure interpreter or JIT compiler
-      default: compile
+  * lzma - if set, support use of LZMA to compress embedded JARs and
+    boot images.  The value of this option should be a directory
+    containing a recent LZMA SDK (available at
+    http://www.7-zip.org/sdk.html).  Currently, only version 9.20 of
+    the SDK has been tested, but other versions might work.
+      default: not set
+
+  * ios - if true, cross-compile for iOS on OS X.  Note that
+    non-jailbroken iOS devices do not allow JIT compilation, so only
+    process=interpret or bootimage=true builds will run on such
+    devices.  See https://github.com/ReadyTalk/hello-ios for an
+    example of an Xcode project for iOS which uses Avian.
+      default: false
 
   * bootimage - if true, create a boot image containing the pre-parsed
     class library and ahead-of-time compiled methods.  This option is
@@ -124,6 +142,11 @@ certain flags described below, all of which are optional.
     avian.Continuations methods callWithCurrentContinuation and
     dynamicWind.  See Continuations.java for details.  This option is
     only valid for process=compile builds.
+      default: false
+
+  * use-clang - if true, use LLVM's clang instead of GCC to build.
+    Note that this does not currently affect cross compiles, only
+    native builds.
       default: false
 
   * openjdk - if set, use OpenJDK class library instead of the default
@@ -220,11 +243,11 @@ features beyond that subset, you may want to tell Avian to use
 OpenJDK's class library instead.  To do so, specify the directory
 where OpenJDK is installed, e.g.:
 
- $ make openjdk=/usr/lib/jvm/java-6-openjdk
+ $ make openjdk=/usr/lib/jvm/java-7-openjdk
 
 This will build Avian as a conventional JVM (e.g. libjvm.so) which
 loads its boot class library and native libraries (e.g. libjava.so)
-from /usr/lib/jvm/java-6-openjdk/jre at runtime.  To run an
+from /usr/lib/jvm/java-7-openjdk/jre at runtime.  To run an
 application in this configuration, you'll need to make sure the VM is
 in your library search path.  For example:
 
@@ -235,8 +258,8 @@ in your library search path.  For example:
 Alternatively, you can enable a stand-alone build using OpenJDK by
 specifying the location of the OpenJDK source code, e.g.:
 
- $ make openjdk=$(pwd)/../jdk6/build/linux-amd64/j2sdk-image \
-     openjdk-src=$(pwd)/../jdk6/jdk/src
+ $ make openjdk=$(pwd)/../jdk7/build/linux-amd64/j2sdk-image \
+     openjdk-src=$(pwd)/../jdk7/jdk/src
 
 You must ensure that the path specified for openjdk-src does not have
 any spaces in it; make gets confused when dependency paths include
@@ -260,7 +283,9 @@ an LZMA-enabled version:
 
 You can reduce the size futher for embedded builds by using ProGuard
 and the supplied openjdk.pro configuration file (see "Embedding with
-ProGuard and a Boot Image" below).  Also see app.mk in
+ProGuard and a Boot Image" below).  Note that you'll still need to use
+vm.pro in that case -- openjdk.pro just adds additional constraints
+specific to the OpenJDK port.  Also see app.mk in
 git://oss.readytalk.com/avian-swt-examples.git for an example of using
 Avian, OpenJDK, ProGuard, and UPX in concert.
 
@@ -269,49 +294,42 @@ it on various OSes:
 
   Debian-based Linux:
     # conventional build:
-    apt-get install openjdk-6-jdk
-    make openjdk=/usr/lib/jvm/java-6-openjdk test
+    apt-get install openjdk-7-jdk
+    make openjdk=/usr/lib/jvm/java-7-openjdk test
 
     # stand-alone build:
-    apt-get install openjdk-6-jdk
-    apt-get source openjdk-6-jdk
-    apt-get build-dep openjdk-6-jdk
-    (cd openjdk-6-6b18-1.8.3 && ./debian/rules patch)
-    make openjdk=/usr/lib/jvm/java-6-openjdk \
-      openjdk-src=$(pwd)/openjdk-6-6b18-1.8.3/build/openjdk/jdk/src \
+    apt-get install openjdk-7-jdk
+    apt-get source openjdk-7-jdk
+    apt-get build-dep openjdk-7-jdk
+    (cd openjdk-7-7~b147-2.0 && dpkg-buildpackage)
+    make openjdk=/usr/lib/jvm/java-7-openjdk \
+      openjdk-src=$(pwd)/openjdk-7-7~b147-2.0/build/openjdk/jdk/src \
       test
 
   Mac OS X:
-    # Prerequisite: install MacPorts (http://www.macports.org/)
-    sudo port selfupdate
+    # Prerequisite: build OpenJDK 7 according to
+    # https://wikis.oracle.com/display/OpenJDK/Mac+OS+X+Port
 
     # conventional build:
-    sudo port install openjdk6
-    make openjdk=/opt/local/share/java/openjdk6 test
+    make openjdk=$(pwd)/../jdk7u-dev/build/macosx-amd64/j2sdk-image test
 
     # stand-alone build:
-    sudo port fetch openjdk6
-    sudo port patch openjdk6
-    make openjdk=/opt/local/share/java/openjdk6 \
-      openjdk-src=/opt/local/var/macports/build/_opt_local_var_macports_sources_rsync.macports.org_release_ports_java_openjdk6/work/jdk/src \
-      test
+    make openjdk=$(pwd)/../jdk7u-dev/build/macosx-amd64/j2sdk-image \
+      openjdk-src=$(pwd)/../p/jdk7u-dev/jdk/src test
 
   Windows (Cygwin):
+    # Prerequisite: build OpenJDK 7 according to
+    # http://weblogs.java.net/blog/simonis/archive/2011/10/28/yaojowbi-yet-another-openjdk-windows-build-instruction
+
     # conventional build:
-    # Prerequisite: download and install the latest Windows OpenJDK
-    # build from http://www.openscg.com/se/openjdk/
-    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 test
+    make openjdk=$(pwd)/../jdk7u-dev/build/windows-i586/j2sdk-image test
 
     # stand-alone build:
-    # Prerequisite: install OpenSCG build as above, plus the
-    # corresponding source bundle from
-    # http://download.java.net/openjdk/jdk6/promoted/, e.g.:
-    wget http://download.java.net/openjdk/jdk6/promoted/b21/openjdk-6-src-b21-20_jan_2011.tar.gz
-    mkdir openjdk
-    (cd openjdk && tar xzf ../openjdk-6-src-b21-20_jan_2011.tar.gz)
-    make openjdk=/cygdrive/c/OpenSCG/openjdk-6.21 \
-      openjdk-src=$(pwd)/openjdk/jdk/src \
-      test
+    make openjdk=$(pwd)/../jdk7u-dev/build/windows-i586/j2sdk-image \
+      openjdk-src=$(pwd)/../p/jdk7u-dev/jdk/src test
+
+Currently, only OpenJDK 7 is supported.  Later versions might work,
+but have not yet been tested.
 
 
 Installing
@@ -356,15 +374,27 @@ EOF
 
 Step 3: Make an object file out of the jar.
 
- $ ../build/${platform}-${arch}/binaryToObject boot.jar boot-jar.o \
-     _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+ $ ../build/${platform}-${arch}/binaryToObject/binaryToObject boot.jar \
+     boot-jar.o _binary_boot_jar_start _binary_boot_jar_end ${platform} ${arch}
+
+If you've built Avian using the lzma option, you may optionally
+compress the jar before generating the object:
+
+ $ ../build/$(platform}-${arch}-lzma/lzma/lzma encode boot.jar boot.jar.lzma
+     && ../build/${platform}-${arch}-lzma/binaryToObject/binaryToObject \
+       boot.jar.lzma boot-jar.o _binary_boot_jar_start _binary_boot_jar_end \
+       ${platform} ${arch}
+
+Note that you'll need to specify "-Xbootclasspath:[lzma:bootJar]"
+instead of "-Xbootclasspath:[bootJar]" in the next step if you've used
+LZMA to compress the jar.
 
 Step 4: Write a driver which starts the VM and runs the desired main
 method.  Note the bootJar function, which will be called by the VM to
 get a handle to the embedded jar.  We tell the VM about this jar by
 setting the boot classpath to "[bootJar]".
 
- $ cat >main.cpp <<EOF
+ $ cat >embedded-jar-main.cpp <<EOF
 #include "stdint.h"
 #include "jni.h"
 
@@ -445,14 +475,15 @@ EOF
 
 on Linux:
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 on Mac OS X:
- $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+ $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp \
+     -o main.o
 
 on Windows:
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 Step 5: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
@@ -547,29 +578,33 @@ EOF
 Step 5: Run ProGuard with stage1 as input and stage2 as output.
 
  $ java -jar ../../proguard4.6/lib/proguard.jar \
-     -injars stage1 -outjars stage2 @../vm.pro @hello.pro
+     -dontusemixedcaseclassnames -injars stage1 -outjars stage2 \
+     @../vm.pro @hello.pro
 
-(note: pass -dontusemixedcaseclassnames to ProGuard when building on
-systems with case-insensitive filesystems such as Windows and OS X)
+(note: The -dontusemixedcaseclassnames option is only needed when
+building on systems with case-insensitive filesystems such as Windows
+and OS X.  Also, you'll need to add -ignorewarnings if you use the
+OpenJDK class library since the openjdk-src build does not include all
+the JARs from OpenJDK, and thus ProGuard will not be able to resolve
+all referenced classes.  If you actually plan to use such classes at
+runtime, you'll need to add them to stage1 before running ProGuard.
+Finally, you'll need to add @../openjdk.pro to the above command when
+using the OpenJDK library.)
 
 Step 6: Build the boot and code images.
 
- $ ../build/linux-i386-bootimage/bootimage-generator stage2 \
-     bootimage.bin codeimage.bin
+ $ ../build/linux-i386-bootimage/bootimage-generator
+    -cp stage2 \
+    -bootimage bootimage-bin.o \
+    -codeimage codeimage-bin.o
 
-Step 7: Make an object file out of the boot and code images.
+Note that you can override the default names for the start and end
+symbols in the boot/code image by also passing:
 
- $ ../build/linux-i386-bootimage/binaryToObject \
-     bootimage.bin bootimage-bin.o \
-     _binary_bootimage_bin_start _binary_bootimage_bin_end \
-     linux i386 8 writable
+    -bootimage-symbols my_bootimage_start:my_bootimage_end \
+    -codeimage-symbols my_codeimage_start:my_codeimage_end
 
- $ ../build/linux-i386-bootimage/binaryToObject \
-     codeimage.bin codeimage-bin.o \
-     _binary_codeimage_bin_start _binary_codeimage_bin_end \
-     linux i386 8 executable
-
-Step 8: Write a driver which starts the VM and runs the desired main
+Step 7: Write a driver which starts the VM and runs the desired main
 method.  Note the bootimageBin function, which will be called by the
 VM to get a handle to the embedded boot image.  We tell the VM about
 this function via the "avian.bootimage" property.
@@ -579,7 +614,7 @@ If our application loaded resources such as images and properties
 files via the classloader, we would also need to embed the jar file
 containing them.  See the previous example for instructions.
 
- $ cat >main.cpp <<EOF
+ $ cat >bootimage-main.cpp <<EOF
 #include "stdint.h"
 #include "jni.h"
 
@@ -674,9 +709,9 @@ main(int ac, const char** av)
 EOF
 
  $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
-     -D_JNI_IMPLEMENTATION_ -c main.cpp -o main.o
+     -D_JNI_IMPLEMENTATION_ -c bootimage-main.cpp -o main.o
 
-Step 9: Link the objects produced above to produce the final
+Step 8: Link the objects produced above to produce the final
 executable, and optionally strip its symbols.
 
  $ g++ -rdynamic *.o -ldl -lpthread -lz -o hello

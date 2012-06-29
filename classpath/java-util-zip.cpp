@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -76,7 +76,9 @@ Java_java_util_zip_Inflater_inflate
 
   int r = inflate(s, Z_SYNC_FLUSH);
   jint resultArray[3]
-    = { r, inputLength - s->avail_in, outputLength - s->avail_out };
+    = { r,
+        static_cast<jint>(inputLength - s->avail_in),
+        static_cast<jint>(outputLength - s->avail_out) };
 
   free(in);
 
@@ -147,7 +149,9 @@ Java_java_util_zip_Deflater_deflate
 
   int r = deflate(s, finish ? Z_FINISH : Z_NO_FLUSH);
   jint resultArray[3]
-    = { r, inputLength - s->avail_in, outputLength - s->avail_out };
+    = { r,
+        static_cast<jint>(inputLength - s->avail_in),
+        static_cast<jint>(outputLength - s->avail_out) };
 
   free(in);
 

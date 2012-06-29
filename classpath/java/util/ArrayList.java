@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Avian Contributors
+/* Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -29,14 +29,15 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
     addAll(source);
   }
 
-  private void grow() {
-    if (array == null || size >= array.length) {
-      resize(array == null ? MinimumCapacity : array.length * 2);
+  private void grow(int newSize) {
+    if (array == null || newSize > array.length) {
+      resize(Math.max(newSize, array == null
+                      ? MinimumCapacity : array.length * 2));
     }
   }
 
-  private void shrink() {
-    if (array.length / 2 >= MinimumCapacity && size <= array.length / 3) {
+  private void shrink(int newSize) {
+    if (array.length / 2 >= MinimumCapacity && newSize <= array.length / 3) {
       resize(array.length / 2);
     }
   }
@@ -74,16 +75,15 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
   }
 
   public void add(int index, T element) {
-    size = Math.max(size+1, index+1);
-    grow();
+    int newSize = Math.max(size+1, index+1);
+    grow(newSize);
+    size = newSize;
     System.arraycopy(array, index, array, index+1, size-index-1);
     array[index] = element;
   }
 
   public boolean add(T element) {
-    ++ size;
-    grow();
-    array[size - 1] = element;
+    add(size, element);
     return true;
   }
 
@@ -137,8 +137,9 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
       System.arraycopy(array, index + 1, array, index, size - index);
     }
 
-    -- size;
-    shrink();
+    int newSize = size - 1;
+    shrink(newSize);
+    size = newSize;
 
     return v;
   }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -15,6 +15,7 @@
 #include "constants.h"
 #include "processor.h"
 #include "arch.h"
+#include "lzma.h"
 
 using namespace vm;
 
@@ -35,14 +36,6 @@ atomicIncrement(uint32_t* p, int v)
 }
 #endif
 
-bool
-find(Thread* t, Thread* o)
-{
-  return (t == o)
-    or (t->peer and find(t->peer, o))
-    or (t->child and find(t->child, o));
-}
-
 void
 join(Thread* t, Thread* o)
 {
@@ -54,6 +47,16 @@ join(Thread* t, Thread* o)
     }
     o->state = Thread::JoinedState;
   }
+}
+
+#ifndef NDEBUG
+
+bool
+find(Thread* t, Thread* o)
+{
+  return (t == o)
+    or (t->peer and find(t->peer, o))
+    or (t->child and find(t->child, o));
 }
 
 unsigned
@@ -77,6 +80,8 @@ fill(Thread* t, Thread* o, Thread** array)
 
   return array;
 }
+
+#endif // not NDEBUG
 
 void
 dispose(Thread* t, Thread* o, bool remove)
@@ -233,8 +238,8 @@ turnOffTheLights(Thread* t)
   Finder* af = m->appFinder;
 
   c->dispose();
-  m->dispose();
   h->disposeFixies();
+  m->dispose();
   p->dispose();
   bf->dispose();
   af->dispose();
@@ -1199,9 +1204,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        unsigned excess = (staticOffset % size) % BytesPerWord;
-        if (excess) {
-          staticOffset += BytesPerWord - excess;
+        while (staticOffset % size) {
+          ++ staticOffset;
         }
 
         fieldOffset(t, field) = staticOffset;
@@ -1240,9 +1244,8 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
-        unsigned excess = offset % size;
-        if (excess) {
-          offset += BytesPerWord - excess;
+        while (offset % size) {
+          ++ offset;
         }
 
         unsigned value = intArrayBody(t, staticValueTable, i);
@@ -1727,7 +1730,7 @@ parseCode(Thread* t, Stream& s, object pool)
     fprintf(stderr, "    code: maxStack %d maxLocals %d length %d\n", maxStack, maxLocals, length);
   }
 
-  object code = makeCode(t, pool, 0, 0, 0, maxStack, maxLocals, length);
+  object code = makeCode(t, pool, 0, 0, 0, 0, maxStack, maxLocals, length);
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -2666,7 +2669,7 @@ boot(Thread* t)
 
   m->processor->boot(t, 0, 0);
 
-  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 1);
+  { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1);
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
@@ -2850,6 +2853,38 @@ isInitializing(Thread* t, object c)
   return false;
 }
 
+object
+findInTable(Thread* t, object table, object name, object spec,
+            object& (*getName)(Thread*, object),
+            object& (*getSpec)(Thread*, object))
+{
+  if (table) {
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      object o = arrayBody(t, table, i);      
+      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
+                     &byteArrayBody(t, name, 0)) == 0 and
+          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
+                     &byteArrayBody(t, spec, 0)) == 0)
+      {
+        return o;
+      }
+    }
+
+//     fprintf(stderr, "%s %s not in\n",
+//             &byteArrayBody(t, name, 0),
+//             &byteArrayBody(t, spec, 0));
+
+//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+//       object o = arrayBody(t, table, i); 
+//       fprintf(stderr, "\t%s %s\n",
+//               &byteArrayBody(t, getName(t, o), 0),
+//               &byteArrayBody(t, getSpec(t, o), 0)); 
+//     }
+  }
+
+  return 0;
+}
+
 } // namespace
 
 namespace vm {
@@ -2857,7 +2892,8 @@ namespace vm {
 Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
                  Finder* appFinder, Processor* processor, Classpath* classpath,
                  const char** properties, unsigned propertyCount,
-                 const char** arguments, unsigned argumentCount):
+                 const char** arguments, unsigned argumentCount,
+                 unsigned stackSizeInBytes):
   vtable(&javaVMVTable),
   system(system),
   heapClient(new (heap->allocate(sizeof(HeapClient)))
@@ -2880,6 +2916,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   liveCount(0),
   daemonCount(0),
   fixedFootprint(0),
+  stackSizeInBytes(stackSizeInBytes),
   localThread(0),
   stateLock(0),
   heapLock(0),
@@ -2888,6 +2925,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   shutdownLock(0),
   libraries(0),
   errorLog(0),
+  bootimage(0),
   types(0),
   roots(0),
   finalizers(0),
@@ -2941,6 +2979,10 @@ Machine::dispose()
 
   for (unsigned i = 0; i < heapPoolIndex; ++i) {
     heap->free(heapPool[i], ThreadHeapSizeInBytes);
+  }
+
+  if (bootimage) {
+    heap->free(bootimage, bootimageSize);
   }
 
   heap->free(arguments, sizeof(const char*) * argumentCount);
@@ -2998,13 +3040,28 @@ Thread::init()
     uint8_t* code = 0;
     const char* imageFunctionName = findProperty(m, "avian.bootimage");
     if (imageFunctionName) {
-      void* imagep = m->libraries->resolve(imageFunctionName);
+      bool lzma = strncmp("lzma:", imageFunctionName, 5) == 0;
+      const char* symbolName
+        = lzma ? imageFunctionName + 5 : imageFunctionName;
+
+      void* imagep = m->libraries->resolve(symbolName);
       if (imagep) {
-        BootImage* (*imageFunction)(unsigned*);
+        uint8_t* (*imageFunction)(unsigned*);
         memcpy(&imageFunction, &imagep, BytesPerWord);
 
         unsigned size;
-        image = imageFunction(&size);
+        uint8_t* imageBytes = imageFunction(&size);
+        if (lzma) {
+#ifdef AVIAN_USE_LZMA
+          m->bootimage = image = reinterpret_cast<BootImage*>
+            (decodeLZMA
+             (m->system, m->heap, imageBytes, size, &(m->bootimageSize)));
+#else
+          abort(this);
+#endif
+        } else {
+          image = reinterpret_cast<BootImage*>(imageBytes);
+        }
 
         const char* codeFunctionName = findProperty(m, "avian.codeimage");
         if (codeFunctionName) {
@@ -4323,35 +4380,17 @@ makeObjectArray(Thread* t, object elementClass, unsigned count)
 }
 
 object
-findInTable(Thread* t, object table, object name, object spec,
-            object& (*getName)(Thread*, object),
-            object& (*getSpec)(Thread*, object))
+findFieldInClass(Thread* t, object class_, object name, object spec)
 {
-  if (table) {
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object o = arrayBody(t, table, i);      
-      if (vm::strcmp(&byteArrayBody(t, getName(t, o), 0),
-                     &byteArrayBody(t, name, 0)) == 0 and
-          vm::strcmp(&byteArrayBody(t, getSpec(t, o), 0),
-                     &byteArrayBody(t, spec, 0)) == 0)
-      {
-        return o;
-      }
-    }
+  return findInTable
+    (t, classFieldTable(t, class_), name, spec, fieldName, fieldSpec);
+}
 
-//     fprintf(stderr, "%s %s not in\n",
-//             &byteArrayBody(t, name, 0),
-//             &byteArrayBody(t, spec, 0));
-
-//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-//       object o = arrayBody(t, table, i); 
-//       fprintf(stderr, "\t%s %s\n",
-//               &byteArrayBody(t, getName(t, o), 0),
-//               &byteArrayBody(t, getSpec(t, o), 0)); 
-//     }
-  }
-
-  return 0;
+object
+findMethodInClass(Thread* t, object class_, object name, object spec)
+{
+  return findInTable
+    (t, classMethodTable(t, class_), name, spec, methodName, methodSpec);
 }
 
 object
@@ -4850,7 +4889,10 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {
-    object a = makeArray(t, counts[index + 1]);
+    object a = makeArray
+      (t, ceiling
+       (counts[index + 1] * classArrayElementSize(t, class_), BytesPerWord));
+    arrayLength(t, a) = counts[index + 1];
     setObjectClass(t, a, class_);
     set(t, array, ArrayBody + (i * BytesPerWord), a);
     

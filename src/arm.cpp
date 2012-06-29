@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -21,6 +21,10 @@ using namespace vm;
 namespace {
 
 namespace isa {
+// SYSTEM REGISTERS
+const int FPSID = 0x0;
+const int FPSCR = 0x1;
+const int FPEXC = 0x8;
 // INSTRUCTION OPTIONS
 enum CONDITION { EQ, NE, CS, CC, MI, PL, VS, VC, HI, LS, GE, LT, GT, LE, AL, NV };
 enum SHIFTOP { LSL, LSR, ASR, ROR };
@@ -51,6 +55,14 @@ inline int SWI(int cond, int imm)
 { return cond<<28 | 0x0f<<24 | (imm&0xffffff); }
 inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
 { return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
+inline int COOP(int cond, int opcode_1, int CRn, int CRd, int cp_num, int opcode_2, int CRm)
+{ return cond<<28 | 0xe<<24 | opcode_1<<20 | CRn<<16 | CRd<<12 | cp_num<<8 | opcode_2<<5 | CRm; }
+inline int COXFER(int cond, int P, int U, int N, int W, int L, int Rn, int CRd, int cp_num, int offset) // offset is in words, not bytes
+{ return cond<<28 | 0x6<<25 | P<<24 | U<<23 | N<<22 | W<<21 | L<<20 | Rn<<16 | CRd<<12 | cp_num<<8 | (offset&0xff)>>2; }
+inline int COREG(int cond, int opcode_1, int L, int CRn, int Rd, int cp_num, int opcode_2, int CRm)
+{ return cond<<28 | 0xe<<24 | opcode_1<<21 | L<<20 | CRn<<16 | Rd<<12 | cp_num<<8 | opcode_2<<5 | 1<<4 | CRm; }
+inline int COREG2(int cond, int L, int Rn, int Rd, int cp_num, int opcode, int CRm)
+{ return cond<<28 | 0xc4<<20 | L<<20 | Rn<<16 | Rd<<12 | cp_num<<8 | opcode<<4 | CRm;}
 // FIELD CALCULATORS
 inline int calcU(int imm) { return imm >= 0 ? 1 : 0; }
 // INSTRUCTIONS
@@ -115,6 +127,99 @@ inline int ldmfd(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 1, 1, Rn, rl
 inline int stmfd(int Rn, int rlist) { return BLOCKXFER(AL, 1, 0, 0, 1, 0, Rn, rlist); }
 inline int swp(int Rd, int Rm, int Rn) { return SWAP(AL, 0, Rn, Rd, Rm); }
 inline int swpb(int Rd, int Rm, int Rn) { return SWAP(AL, 1, Rn, Rd, Rm); }
+// breakpoint instruction, this really has its own instruction format
+inline int bkpt(int16_t immed) { return 0xe1200070 | (((unsigned)immed & 0xffff) >> 4 << 8) | (immed & 0xf); }
+// COPROCESSOR INSTRUCTIONS
+inline int cdp(int coproc, int opcode_1, int CRd, int CRn, int CRm, int opcode_2) { return COOP(AL, opcode_1, CRn, CRd, coproc, opcode_2, CRm); }
+inline int mcr(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 0, CRn, Rd, coproc, opcode_2, CRm); }
+inline int mcrr(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 0, Rn, Rd, coproc, opcode, CRm); }
+inline int mrc(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 1, CRn, Rd, coproc, opcode_2, CRm); }
+inline int mrrc(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 1, Rn, Rd, coproc, opcode, CRm); }
+inline int ldc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 1, Rn, CRd, coproc, offset); }
+inline int ldcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 1, Rn, CRd, coproc, offset); }
+inline int stc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 0, Rn, CRd, coproc, offset); }
+inline int stcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 0, Rn, CRd, coproc, offset); }
+// VFP FLOATING-POINT INSTRUCTIONS
+inline int fmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fnmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fadds(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fsubs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
+inline int fdivs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|8, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
+inline int fmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 0, Dm); }
+inline int fnmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 2, Dm); }
+inline int fmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 0, Dm); }
+inline int fnmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 2, Dm); }
+inline int fmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 0, Dm); }
+inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm); }
+inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); }
+inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); }
+inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); }
+inline int fcpys(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fabss(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fnegs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fsqrts(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fcmps(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fcmpes(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fcmpzs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 2, 0); }
+inline int fcmpezs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 6, 0); }
+inline int fcvtds(int Dd, int Sm) { return COOP(AL, 0xb, 7, Dd, 10, 6|(Sm&1), Sm>>1); }
+inline int fuitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int fsitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int ftouis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int ftouizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int ftosis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
+inline int ftosizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
+inline int fcpyd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 2, Dm); }
+inline int fabsd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 6, Dm); }
+inline int fnegd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 2, Dm); }
+inline int fsqrtd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 6, Dm); }
+// double-precision comparison instructions
+inline int fcmpd(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 2, Dm); }
+inline int fcmped(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 6, Dm); }
+inline int fcmpzd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 2, 0); }
+inline int fcmpezd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 6, 0); }
+// double-precision conversion instructions
+inline int fcvtsd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 7, Sd>>1, 11, 6, Dm); }
+inline int fuitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 2|(Sm&1), Sm>>1); }
+inline int fsitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 6|(Sm&1), Sm>>1); }
+inline int ftouid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 2, Dm); }
+inline int ftouizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 6, Dm); }
+inline int ftosid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 2, Dm); }
+inline int ftosizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 6, Dm); }
+// these are the multiple load/store analogs for VFP, useless for now
+inline int fldms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, count); }
+inline int fldmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1); }
+inline int fldmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1|1); }
+inline int fstms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, count); }
+inline int fstmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1); }
+inline int fstmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1|1); }
+// single load/store instructions for both precision types
+inline int flds(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); };
+inline int fldd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset); };
+inline int fsts(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, offset); };
+inline int fstd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 0, Rn, Dd, 11, offset); };
+// move between GPRs and FPRs
+inline int fmsr(int Sn, int Rd) { return mcr(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
+inline int fmrs(int Rd, int Sn) { return mrc(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
+/* move to/from the low/high parts of double-precision registers,
+   seemingly redundant */
+inline int fmdlr(int Dn, int Rd) { return mcr(11, 0, Rd, Dn, 0); }
+inline int fmrdl(int Rd, int Dn) { return mrc(11, 0, Rd, Dn, 0); }
+inline int fmdhr(int Dn, int Rd) { return mcr(11, 1, Rd, Dn, 0); }
+inline int fmrdh(int Rd, int Dn) { return mrc(11, 1, Rd, Dn, 0); }
+// move to/from VFP system registers
+inline int fmxr(int reg, int Rd) { return mcr(10, 7, Rd, reg, 0); }
+inline int fmrx(int Rd, int reg) { return mrc(10, 7, Rd, reg, 0); }
+// these move around pairs of single-precision registers
+inline int fmsrr(int Sm, int Rd, int Rn) { return mcrr(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
+inline int fmrrs(int Rd, int Rn, int Sm) { return mrrc(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
+inline int fmdrr(int Dm, int Rd, int Rn) { return mcrr(11, 1, Rd, Rn, Dm); }
+inline int fmrrd(int Rd, int Rn, int Dm) { return mrrc(11, 1, Rd, Rn, Dm); }
+// FLAG SETTERS
 inline int SETCOND(int ins, int cond) { return ((ins&0x0fffffff) | (cond<<28)); }
 inline int SETS(int ins) { return ins | 1<<20; }
 // PSEUDO-INSTRUCTIONS
@@ -136,6 +241,12 @@ inline int ble(int offset) { return SETCOND(b(offset), LE); }
 inline int bge(int offset) { return SETCOND(b(offset), GE); }
 inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
+inline int bpl(int offset) { return SETCOND(b(offset), PL); }
+inline int fmstat() { return fmrx(15, FPSCR); }
+// HARDWARE FLAGS
+bool vfpSupported() {
+  return true; // TODO
+}
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
@@ -149,10 +260,10 @@ inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
 inline unsigned hi8(int64_t i) { return lo8(i>>8); }
 
 inline int ha16(int32_t i) { 
-    return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
+  return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
 }
 inline int unha16(int32_t high, int32_t low) {
-    return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
+  return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
 }
 
 inline bool isInt8(target_intptr_t v) { return v == static_cast<int8_t>(v); }
@@ -163,6 +274,24 @@ inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 :
 
 inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
 inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
+
+const int N_GPRS = 16;
+const int N_FPRS = 16;
+const uint32_t GPR_MASK = 0xffff;
+const uint32_t FPR_MASK = 0xffff0000;
+// for source-to-destination masks
+const uint64_t GPR_MASK64 = GPR_MASK | (uint64_t)GPR_MASK << 32;
+// making the following const somehow breaks debug symbol output in GDB
+/* const */ uint64_t FPR_MASK64 = FPR_MASK | (uint64_t)FPR_MASK << 32;
+
+inline bool isFpr(Assembler::Register* reg) {
+  return reg->low >= N_GPRS;
+}
+
+inline int fpr64(int reg) { return reg - N_GPRS; }
+inline int fpr64(Assembler::Register* reg) { return fpr64(reg->low); }
+inline int fpr32(int reg) { return fpr64(reg) << 1; }
+inline int fpr32(Assembler::Register* reg) { return fpr64(reg) << 1; }
 
 const unsigned FrameHeaderSize = 1;
 
@@ -227,7 +356,7 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(this, 0)),
+    firstBlock(new(zone) MyBlock(this, 0)),
     lastBlock(firstBlock), poolOffsetHead(0), poolOffsetTail(0),
     constantPool(0), constantPoolCount(0)
   { }
@@ -250,7 +379,7 @@ class Task {
  public:
   Task(Task* next): next(next) { }
 
-  virtual void run(Context* c) = 0;
+  virtual void run(Context* con) = 0;
 
   Task* next;
 };
@@ -287,41 +416,41 @@ class ArchitectureContext {
 };
 
 inline void NO_RETURN
-abort(Context* c)
+abort(Context* con)
 {
-  abort(c->s);
+  abort(con->s);
 }
 
 inline void NO_RETURN
-abort(ArchitectureContext* c)
+abort(ArchitectureContext* con)
 {
-  abort(c->s);
+  abort(con->s);
 }
 
 #ifndef NDEBUG
 inline void
-assert(Context* c, bool v)
+assert(Context* con, bool v)
 {
-  assert(c->s, v);
+  assert(con->s, v);
 }
 
 inline void
-assert(ArchitectureContext* c, bool v)
+assert(ArchitectureContext* con, bool v)
 {
-  assert(c->s, v);
+  assert(con->s, v);
 }
 #endif // not NDEBUG
 
 inline void
-expect(Context* c, bool v)
+expect(Context* con, bool v)
 {
-  expect(c->s, v);
+  expect(con->s, v);
 }
 
 class Offset: public Promise {
  public:
-  Offset(Context* c, MyBlock* block, unsigned offset, bool forTrace):
-    c(c), block(block), offset(offset), forTrace(forTrace)
+  Offset(Context* con, MyBlock* block, unsigned offset, bool forTrace):
+    con(con), block(block), offset(offset), forTrace(forTrace)
   { }
 
   virtual bool resolved() {
@@ -329,24 +458,23 @@ class Offset: public Promise {
   }
   
   virtual int64_t value() {
-    assert(c, resolved());
+    assert(con, resolved());
 
     unsigned o = offset - block->offset;
     return block->start + padding
       (block, forTrace ? o - TargetBytesPerWord : o) + o;
   }
 
-  Context* c;
+  Context* con;
   MyBlock* block;
   unsigned offset;
   bool forTrace;
 };
 
 Promise*
-offset(Context* c, bool forTrace = false)
+offset(Context* con, bool forTrace = false)
 {
-  return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length(), forTrace);
+  return new(con->zone) Offset(con, con->lastBlock, con->code.length(), forTrace);
 }
 
 bool
@@ -396,13 +524,13 @@ class OffsetTask: public Task {
     instructionOffset(instructionOffset)
   { }
 
-  virtual void run(Context* c) {
+  virtual void run(Context* con) {
     if (promise->resolved()) {
       updateOffset
-        (c->s, c->result + instructionOffset->value(), promise->value());
+        (con->s, con->result + instructionOffset->value(), promise->value());
     } else {
       new (promise->listen(sizeof(OffsetListener)))
-        OffsetListener(c->s, c->result + instructionOffset->value());
+        OffsetListener(con->s, con->result + instructionOffset->value());
     }
   }
 
@@ -411,10 +539,9 @@ class OffsetTask: public Task {
 };
 
 void
-appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset)
+appendOffsetTask(Context* con, Promise* promise, Promise* instructionOffset)
 {
-  c->tasks = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset);
+  con->tasks = new(con->zone) OffsetTask(con->tasks, promise, instructionOffset);
 }
 
 inline unsigned
@@ -447,17 +574,17 @@ isFloatBranch(TernaryOperation op)
 }
 
 inline unsigned
-index(ArchitectureContext* c UNUSED,
+index(ArchitectureContext* con UNUSED,
       TernaryOperation operation,
       OperandType operand1)
 {
-  assert(c, not isBranch(operation));
+  assert(con, not isBranch(operation));
 
   return operation + (NonBranchTernaryOperationCount * operand1);
 }
 
 unsigned
-branchIndex(ArchitectureContext* c UNUSED, OperandType operand1,
+branchIndex(ArchitectureContext* con UNUSED, OperandType operand1,
             OperandType operand2)
 {
   return operand1 + (OperandTypeCount * operand2);
@@ -469,9 +596,37 @@ using namespace isa;
 
 // shortcut functions
 inline void emit(Context* con, int code) { con->code.append4(code); }
-inline int newTemp(Context* con) { return con->client->acquireTemporary(); }
-inline void freeTemp(Context* con, int r) { con->client->releaseTemporary(r); }
-inline int64_t getValue(Assembler::Constant* c) { return c->value->value(); }
+
+inline int newTemp(Context* con) {
+  return con->client->acquireTemporary(GPR_MASK);
+}
+
+inline int newTemp(Context* con, unsigned mask) {
+  return con->client->acquireTemporary(mask);
+}
+
+inline void freeTemp(Context* con, int r) {
+  con->client->releaseTemporary(r);
+}
+
+inline int64_t getValue(Assembler::Constant* con) {
+  return con->value->value();
+}
+
+inline Assembler::Register makeTemp(Context* con) {
+  Assembler::Register tmp(newTemp(con));
+  return tmp;
+}
+
+inline Assembler::Register makeTemp64(Context* con) {
+  Assembler::Register tmp(newTemp(con), newTemp(con));
+  return tmp;
+}
+
+inline void freeTemp(Context* con, const Assembler::Register& tmp) {
+  if (tmp.low != NoRegister) freeTemp(con, tmp.low);
+  if (tmp.high != NoRegister) freeTemp(con, tmp.high);
+}
 
 inline void
 write4(uint8_t* dst, uint32_t v)
@@ -549,14 +704,14 @@ void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant
 
 class ConstantPoolEntry: public Promise {
  public:
-  ConstantPoolEntry(Context* c, Promise* constant, ConstantPoolEntry* next,
+  ConstantPoolEntry(Context* con, Promise* constant, ConstantPoolEntry* next,
                     Promise* callOffset):
-    c(c), constant(constant), next(next), callOffset(callOffset),
+    con(con), constant(constant), next(next), callOffset(callOffset),
     address(0)
   { }
 
   virtual int64_t value() {
-    assert(c, resolved());
+    assert(con, resolved());
 
     return reinterpret_cast<int64_t>(address);
   }
@@ -565,7 +720,7 @@ class ConstantPoolEntry: public Promise {
     return address != 0;
   }
 
-  Context* c;
+  Context* con;
   Promise* constant;
   ConstantPoolEntry* next;
   Promise* callOffset;
@@ -622,42 +777,38 @@ class PoolEvent {
 };
 
 void
-appendConstantPoolEntry(Context* c, Promise* constant, Promise* callOffset)
+appendConstantPoolEntry(Context* con, Promise* constant, Promise* callOffset)
 {
   if (constant->resolved()) {
     // make a copy, since the original might be allocated on the
     // stack, and we need our copy to live until assembly is complete
-    constant = new (c->zone->allocate(sizeof(ResolvedPromise)))
-      ResolvedPromise(constant->value());
+    constant = new(con->zone) ResolvedPromise(constant->value());
   }
 
-  c->constantPool = new (c->zone->allocate(sizeof(ConstantPoolEntry)))
-    ConstantPoolEntry(c, constant, c->constantPool, callOffset);
+  con->constantPool = new(con->zone) ConstantPoolEntry(con, constant, con->constantPool, callOffset);
 
-  ++ c->constantPoolCount;
+  ++ con->constantPoolCount;
 
-  PoolOffset* o = new (c->zone->allocate(sizeof(PoolOffset))) PoolOffset
-    (c->lastBlock, c->constantPool, c->code.length() - c->lastBlock->offset);
+  PoolOffset* o = new(con->zone) PoolOffset(con->lastBlock, con->constantPool, con->code.length() - con->lastBlock->offset);
 
   if (DebugPool) {
     fprintf(stderr, "add pool offset %p %d to block %p\n",
-            o, o->offset, c->lastBlock);
+            o, o->offset, con->lastBlock);
   }
 
-  if (c->lastBlock->poolOffsetTail) {
-    c->lastBlock->poolOffsetTail->next = o;
+  if (con->lastBlock->poolOffsetTail) {
+    con->lastBlock->poolOffsetTail->next = o;
   } else {
-    c->lastBlock->poolOffsetHead = o;
+    con->lastBlock->poolOffsetHead = o;
   }
-  c->lastBlock->poolOffsetTail = o;
+  con->lastBlock->poolOffsetTail = o;
 }
 
 void
-appendPoolEvent(Context* c, MyBlock* b, unsigned offset, PoolOffset* head,
+appendPoolEvent(Context* con, MyBlock* b, unsigned offset, PoolOffset* head,
                 PoolOffset* tail)
 {
-  PoolEvent* e = new (c->zone->allocate(sizeof(PoolEvent))) PoolEvent
-    (head, tail, offset);
+  PoolEvent* e = new(con->zone) PoolEvent(head, tail, offset);
 
   if (b->poolEventTail) {
     b->poolEventTail->next = e;
@@ -695,24 +846,24 @@ padding(MyBlock* b, unsigned offset)
 void
 resolve(MyBlock* b)
 {
-  Context* c = b->context;
+  Context* con = b->context;
 
   if (b->poolOffsetHead) {
-    if (c->poolOffsetTail) {
-      c->poolOffsetTail->next = b->poolOffsetHead;
+    if (con->poolOffsetTail) {
+      con->poolOffsetTail->next = b->poolOffsetHead;
     } else {
-      c->poolOffsetHead = b->poolOffsetHead;
+      con->poolOffsetHead = b->poolOffsetHead;
     }
-    c->poolOffsetTail = b->poolOffsetTail;
+    con->poolOffsetTail = b->poolOffsetTail;
   }
 
-  if (c->poolOffsetHead) {
+  if (con->poolOffsetHead) {
     bool append;
     if (b->next == 0 or b->next->poolEventHead) {
       append = true;
     } else {
       int32_t v = (b->start + b->size + b->next->size + TargetBytesPerWord - 8)
-        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->start);
+        - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
 
       append = (v != (v & PoolOffsetMask));
 
@@ -723,138 +874,170 @@ resolve(MyBlock* b)
                 b->next->size);
         fprintf(stderr,
                 "offset %p %d is of distance %d to next block; append? %d\n",
-                c->poolOffsetHead, c->poolOffsetHead->offset, v, append);
+                con->poolOffsetHead, con->poolOffsetHead->offset, v, append);
       }
     }
 
     if (append) {
 #ifndef NDEBUG
       int32_t v = (b->start + b->size - 8)
-        - (c->poolOffsetHead->offset + c->poolOffsetHead->block->start);
+        - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
       
-      expect(c, v == (v & PoolOffsetMask));
+      expect(con, v == (v & PoolOffsetMask));
 #endif // not NDEBUG
 
-      appendPoolEvent(c, b, b->size, c->poolOffsetHead, c->poolOffsetTail);
+      appendPoolEvent(con, b, b->size, con->poolOffsetHead, con->poolOffsetTail);
 
       if (DebugPool) {
-        for (PoolOffset* o = c->poolOffsetHead; o; o = o->next) {
+        for (PoolOffset* o = con->poolOffsetHead; o; o = o->next) {
           fprintf(stderr,
                   "include %p %d in pool event %p at offset %d in block %p\n",
                   o, o->offset, b->poolEventTail, b->size, b);
         }
       }
 
-      c->poolOffsetHead = 0;
-      c->poolOffsetTail = 0;
+      con->poolOffsetHead = 0;
+      con->poolOffsetTail = 0;
     }
   }
 }
 
 void
-jumpR(Context* c, unsigned size UNUSED, Assembler::Register* target)
+jumpR(Context* con, unsigned size UNUSED, Assembler::Register* target)
 {
-  assert(c, size == TargetBytesPerWord);
-  emit(c, bx(target->low));
+  assert(con, size == TargetBytesPerWord);
+  emit(con, bx(target->low));
 }
 
 void
-moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
+moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
        unsigned dstSize, Assembler::Register* dst);
 
 void
-swapRR(Context* c, unsigned aSize, Assembler::Register* a,
+swapRR(Context* con, unsigned aSize, Assembler::Register* a,
        unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == TargetBytesPerWord);
-  assert(c, bSize == TargetBytesPerWord);
+  assert(con, aSize == TargetBytesPerWord);
+  assert(con, bSize == TargetBytesPerWord);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveRR(c, aSize, a, bSize, &tmp);
-  moveRR(c, bSize, b, aSize, a);
-  moveRR(c, bSize, &tmp, bSize, b);
-  c->client->releaseTemporary(tmp.low);
+  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  moveRR(con, aSize, a, bSize, &tmp);
+  moveRR(con, bSize, b, aSize, a);
+  moveRR(con, bSize, &tmp, bSize, b);
+  con->client->releaseTemporary(tmp.low);
 }
 
 void
-moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
+moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
        unsigned dstSize, Assembler::Register* dst)
 {
+  bool srcIsFpr = isFpr(src);
+  bool dstIsFpr = isFpr(dst);
+  if (srcIsFpr || dstIsFpr) {   // FPR(s) involved
+    assert(con, srcSize == dstSize);
+    const bool dprec = srcSize == 8;
+    if (srcIsFpr && dstIsFpr) { // FPR to FPR
+      if (dprec) emit(con, fcpyd(fpr64(dst), fpr64(src))); // double
+      else       emit(con, fcpys(fpr32(dst), fpr32(src))); // single
+    } else if (srcIsFpr) {      // FPR to GPR
+      if (dprec) emit(con, fmrrd(dst->low, dst->high, fpr64(src)));
+      else       emit(con, fmrs(dst->low, fpr32(src)));
+    } else {                    // GPR to FPR
+      if (dprec) emit(con, fmdrr(fpr64(dst->low), src->low, src->high));
+      else       emit(con, fmsr(fpr32(dst), src->low));
+    }
+    return;
+  }
+
   switch (srcSize) {
   case 1:
-    emit(c, lsli(dst->low, src->low, 24));
-    emit(c, asri(dst->low, dst->low, 24));
+    emit(con, lsli(dst->low, src->low, 24));
+    emit(con, asri(dst->low, dst->low, 24));
     break;
-    
+
   case 2:
-    emit(c, lsli(dst->low, src->low, 16));
-    emit(c, asri(dst->low, dst->low, 16));
+    emit(con, lsli(dst->low, src->low, 16));
+    emit(con, asri(dst->low, dst->low, 16));
     break;
-    
+
   case 4:
   case 8:
     if (srcSize == 4 and dstSize == 8) {
-      moveRR(c, 4, src, 4, dst);
-      emit(c, asri(dst->high, src->low, 31));
+      moveRR(con, 4, src, 4, dst);
+      emit(con, asri(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
       Assembler::Register srcHigh(src->high);
       Assembler::Register dstHigh(dst->high);
 
       if (src->high == dst->low) {
         if (src->low == dst->high) {
-          swapRR(c, 4, src, 4, dst);
+          swapRR(con, 4, src, 4, dst);
         } else {
-          moveRR(c, 4, &srcHigh, 4, &dstHigh);
-          moveRR(c, 4, src, 4, dst);
+          moveRR(con, 4, &srcHigh, 4, &dstHigh);
+          moveRR(con, 4, src, 4, dst);
         }
       } else {
-        moveRR(c, 4, src, 4, dst);
-        moveRR(c, 4, &srcHigh, 4, &dstHigh);
+        moveRR(con, 4, src, 4, dst);
+        moveRR(con, 4, &srcHigh, 4, &dstHigh);
       }
     } else if (src->low != dst->low) {
-      emit(c, mov(dst->low, src->low));
+      emit(con, mov(dst->low, src->low));
     }
     break;
 
-  default: abort(c);
+  default: abort(con);
   }
 }
 
 void
-moveZRR(Context* c, unsigned srcSize, Assembler::Register* src,
+moveZRR(Context* con, unsigned srcSize, Assembler::Register* src,
         unsigned, Assembler::Register* dst)
 {
   switch (srcSize) {
   case 2:
-    emit(c, lsli(dst->low, src->low, 16));
-    emit(c, lsri(dst->low, dst->low, 16));
+    emit(con, lsli(dst->low, src->low, 16));
+    emit(con, lsri(dst->low, dst->low, 16));
     break;
 
-  default: abort(c);
+  default: abort(con);
   }
 }
 
+void moveCR(Context* con, unsigned size, Assembler::Constant* src,
+            unsigned, Assembler::Register* dst);
+
 void
-moveCR2(Context* c, unsigned, Assembler::Constant* src,
-        unsigned dstSize, Assembler::Register* dst, Promise* callOffset)
+moveCR2(Context* con, unsigned size, Assembler::Constant* src,
+        Assembler::Register* dst, Promise* callOffset)
 {
-  if (dstSize <= 4) {
-    if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
-      emit(c, movi(dst->low, lo8(getValue(src))));
-    } else {
-      appendConstantPoolEntry(c, src->value, callOffset);
-      emit(c, ldri(dst->low, ProgramCounter, 0));
-    }
+  if (isFpr(dst)) { // floating-point
+    Assembler::Register tmp = size > 4 ? makeTemp64(con) :
+                                         makeTemp(con);
+    moveCR(con, size, src, size, &tmp);
+    moveRR(con, size, &tmp, size, dst);
+    freeTemp(con, tmp);
+  } else if (size > 4) { 
+    uint64_t value = (uint64_t)src->value->value();
+    ResolvedPromise loBits(value & MASK_LO32);
+    Assembler::Constant srcLo(&loBits);
+    ResolvedPromise hiBits(value >> 32); 
+    Assembler::Constant srcHi(&hiBits);
+    Assembler::Register dstHi(dst->high);
+    moveCR(con, 4, &srcLo, 4, dst);
+    moveCR(con, 4, &srcHi, 4, &dstHi);
+  } else if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
+    emit(con, movi(dst->low, lo8(getValue(src)))); // fits in immediate
   } else {
-    abort(c); // todo
+    appendConstantPoolEntry(con, src->value, callOffset);
+    emit(con, ldri(dst->low, ProgramCounter, 0)); // load 32 bits
   }
 }
 
 void
-moveCR(Context* c, unsigned srcSize, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveCR(Context* con, unsigned size, Assembler::Constant* src,
+       unsigned, Assembler::Register* dst)
 {
-  moveCR2(c, srcSize, src, dstSize, dst, 0);
+  moveCR2(con, size, src, dst, 0);
 }
 
 void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
@@ -876,52 +1059,52 @@ void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
 }
 
 void
-addC(Context* c, unsigned size, Assembler::Constant* a,
+addC(Context* con, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
   int32_t v = a->value->value();
   if (v) {
     if (v > 0 and v < 256) {
-      emit(c, addi(dst->low, b->low, v));
+      emit(con, addi(dst->low, b->low, v));
     } else if (v > 0 and v < 1024 and v % 4 == 0) {
-      emit(c, addi(dst->low, b->low, v >> 2, 15));
+      emit(con, addi(dst->low, b->low, v >> 2, 15));
     } else {
       // todo
-      abort(c);
+      abort(con);
     }
   } else {
-    moveRR(c, size, b, size, dst);
+    moveRR(con, size, b, size, dst);
   }
 }
 
 void
-subC(Context* c, unsigned size, Assembler::Constant* a,
+subC(Context* con, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
   int32_t v = a->value->value();
   if (v) {
     if (v > 0 and v < 256) {
-      emit(c, subi(dst->low, b->low, v));
+      emit(con, subi(dst->low, b->low, v));
     } else if (v > 0 and v < 1024 and v % 4 == 0) {
-      emit(c, subi(dst->low, b->low, v >> 2, 15));
+      emit(con, subi(dst->low, b->low, v >> 2, 15));
     } else {
       // todo
-      abort(c);
+      abort(con);
     }
   } else {
-    moveRR(c, size, b, size, dst);
+    moveRR(con, size, b, size, dst);
   }
 }
 
 void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
-    int tmpLow  = useTemporaries ? con->client->acquireTemporary() : t->low;
-    int tmpHigh = useTemporaries ? con->client->acquireTemporary() : t->high;
+    int tmpLow  = useTemporaries ? con->client->acquireTemporary(GPR_MASK) : t->low;
+    int tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK) : t->high;
 
     emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
     emit(con, mla(tmpHigh, a->low, b->high, tmpHigh));
@@ -938,13 +1121,98 @@ void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   }
 }
 
+void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fabsd(fpr64(b), fpr64(a)));
+  } else {
+    emit(con, fabss(fpr32(b), fpr32(a)));
+  }
+}
+
+void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fnegd(fpr64(b), fpr64(a)));
+  } else {
+    emit(con, fnegs(fpr32(b), fpr32(a)));
+  }
+}
+
+void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fcvtsd(fpr32(b), fpr64(a)));
+  } else {
+    emit(con, fcvtds(fpr64(b), fpr32(a)));
+  }
+}
+
+void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+  int tmp = newTemp(con, FPR_MASK);
+  int ftmp = fpr32(tmp);
+  if (size == 8) { // double to int
+    emit(con, ftosizd(ftmp, fpr64(a)));
+  } else {         // float to int
+    emit(con, ftosizs(ftmp, fpr32(a)));
+  }                // else thunked
+  emit(con, fmrs(b->low, ftmp));
+  freeTemp(con, tmp);
+}
+
+void int2FloatRR(Context* con, unsigned, Assembler::Register* a, unsigned size, Assembler::Register* b) {
+  emit(con, fmsr(fpr32(b), a->low));
+  if (size == 8) { // int to double
+    emit(con, fsitod(fpr64(b), fpr32(b)));
+  } else {         // int to float
+    emit(con, fsitos(fpr32(b), fpr32(b)));
+  }                // else thunked
+}
+
+void floatSqrtRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+  if (size == 8) {
+    emit(con, fsqrtd(fpr64(b), fpr64(a)));
+  } else {
+    emit(con, fsqrts(fpr32(b), fpr32(a)));
+  }
+}
+
+void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) {
+    emit(con, faddd(fpr64(t), fpr64(a), fpr64(b)));
+  } else {
+    emit(con, fadds(fpr32(t), fpr32(a), fpr32(b)));
+  }
+}
+
+void floatSubtractR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) {
+    emit(con, fsubd(fpr64(t), fpr64(b), fpr64(a)));
+  } else {
+    emit(con, fsubs(fpr32(t), fpr32(b), fpr32(a)));
+  }
+}
+
+void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) {
+    emit(con, fmuld(fpr64(t), fpr64(a), fpr64(b)));
+  } else {
+    emit(con, fmuls(fpr32(t), fpr32(a), fpr32(b)));
+  }
+}
+
+void floatDivideR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+  if (size == 8) { 
+    emit(con, fdivd(fpr64(t), fpr64(b), fpr64(a)));
+  } else {
+    emit(con, fdivs(fpr32(t), fpr32(b), fpr32(a)));
+  }
+}
+
 int
-normalize(Context* c, int offset, int index, unsigned scale, 
+normalize(Context* con, int offset, int index, unsigned scale, 
           bool* preserveIndex, bool* release)
 {
   if (offset != 0 or scale != 1) {
     Assembler::Register normalizedIndex
-      (*preserveIndex ? c->client->acquireTemporary() : index);
+      (*preserveIndex ? con->client->acquireTemporary(GPR_MASK) : index);
     
     if (*preserveIndex) {
       *release = true;
@@ -961,7 +1229,7 @@ normalize(Context* c, int offset, int index, unsigned scale,
       ResolvedPromise scalePromise(log(scale));
       Assembler::Constant scaleConstant(&scalePromise);
       
-      shiftLeftC(c, TargetBytesPerWord, &scaleConstant,
+      shiftLeftC(con, TargetBytesPerWord, &scaleConstant,
                  &unscaledIndex, &normalizedIndex);
 
       scaled = normalizedIndex.low;
@@ -975,10 +1243,10 @@ normalize(Context* c, int offset, int index, unsigned scale,
       ResolvedPromise offsetPromise(offset);
       Assembler::Constant offsetConstant(&offsetPromise);
 
-      Assembler::Register tmp(c->client->acquireTemporary());
-      moveCR(c, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
-      addR(c, TargetBytesPerWord, &tmp, &untranslatedIndex, &normalizedIndex);
-      c->client->releaseTemporary(tmp.low);
+      Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+      moveCR(con, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
+      addR(con, TargetBytesPerWord, &tmp, &untranslatedIndex, &normalizedIndex);
+      con->client->releaseTemporary(tmp.low);
     }
 
     return normalizedIndex.low;
@@ -989,222 +1257,270 @@ normalize(Context* c, int offset, int index, unsigned scale,
 }
 
 void
-store(Context* c, unsigned size, Assembler::Register* src,
+store(Context* con, unsigned size, Assembler::Register* src,
       int base, int offset, int index, unsigned scale, bool preserveIndex)
 {
   if (index != NoRegister) {
     bool release;
     int normalized = normalize
-      (c, offset, index, scale, &preserveIndex, &release);
+      (con, offset, index, scale, &preserveIndex, &release);
 
-    switch (size) {
-    case 1:
-      emit(c, strb(src->low, base, normalized));
-      break;
+    if (!isFpr(src)) { // GPR store
+      switch (size) {
+      case 1:
+        emit(con, strb(src->low, base, normalized));
+        break;
 
-    case 2:
-      emit(c, strh(src->low, base, normalized));
-      break;
+      case 2:
+        emit(con, strh(src->low, base, normalized));
+        break;
 
-    case 4:
-      emit(c, str(src->low, base, normalized));
-      break;
+      case 4:
+        emit(con, str(src->low, base, normalized));
+        break;
 
-    case 8: {
-      Assembler::Register srcHigh(src->high);
-      store(c, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
-      store(c, 4, src, base, 4, normalized, 1, preserveIndex);
-    } break;
+      case 8: { // split into 2 32-bit stores
+        Assembler::Register srcHigh(src->high);
+        store(con, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
+        store(con, 4, src, base, 4, normalized, 1, preserveIndex);
+      } break;
 
-    default: abort(c);
+      default: abort(con);
+      }
+    } else { // FPR store
+      Assembler::Register base_(base),
+                          normalized_(normalized),
+                          absAddr = makeTemp(con);
+      // FPR stores have only bases, so we must add the index
+      addR(con, TargetBytesPerWord, &base_, &normalized_, &absAddr);
+      // double-precision
+      if (size == 8) emit(con, fstd(fpr64(src), absAddr.low));
+      // single-precision
+      else           emit(con, fsts(fpr32(src), absAddr.low));
+      freeTemp(con, absAddr);
     }
 
-    if (release) c->client->releaseTemporary(normalized);
+    if (release) con->client->releaseTemporary(normalized);
   } else if (size == 8
              or abs(offset) == (abs(offset) & 0xFF)
              or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
   {
-    switch (size) {
-    case 1:
-      emit(c, strbi(src->low, base, offset));
-      break;
+    if (!isFpr(src)) { // GPR store
+      switch (size) {
+      case 1:
+        emit(con, strbi(src->low, base, offset));
+        break;
 
-    case 2:
-      emit(c, strhi(src->low, base, offset));
-      break;
+      case 2:
+        emit(con, strhi(src->low, base, offset));
+        break;
 
-    case 4:
-      emit(c, stri(src->low, base, offset));
-      break;
+      case 4:
+        emit(con, stri(src->low, base, offset));
+        break;
 
-    case 8: {
-      Assembler::Register srcHigh(src->high);
-      store(c, 4, &srcHigh, base, offset, NoRegister, 1, false);
-      store(c, 4, src, base, offset + 4, NoRegister, 1, false);
-    } break;
+      case 8: { // split into 2 32-bit stores
+        Assembler::Register srcHigh(src->high);
+        store(con, 4, &srcHigh, base, offset, NoRegister, 1, false);
+        store(con, 4, src, base, offset + 4, NoRegister, 1, false);
+      } break;
 
-    default: abort(c);
+      default: abort(con);
+      }
+    } else { // FPR store
+      // double-precision
+      if (size == 8) emit(con, fstd(fpr64(src), base, offset));
+      // single-precision
+      else           emit(con, fsts(fpr32(src), base, offset));
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
     Assembler::Constant offsetConstant(&offsetPromise);
-    moveCR(c, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
+    moveCR(con, TargetBytesPerWord, &offsetConstant,
+           TargetBytesPerWord, &tmp);
     
-    store(c, size, src, base, 0, tmp.low, 1, false);
+    store(con, size, src, base, 0, tmp.low, 1, false);
 
-    c->client->releaseTemporary(tmp.low);
+    con->client->releaseTemporary(tmp.low);
   }
 }
 
 void
-moveRM(Context* c, unsigned srcSize, Assembler::Register* src,
+moveRM(Context* con, unsigned srcSize, Assembler::Register* src,
        unsigned dstSize UNUSED, Assembler::Memory* dst)
 {
-  assert(c, srcSize == dstSize);
+  assert(con, srcSize == dstSize);
 
-  store(c, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
+  store(con, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
 }
 
 void
-moveAndUpdateRM(Context* c, unsigned srcSize UNUSED, Assembler::Register* src,
+moveAndUpdateRM(Context* con, unsigned srcSize UNUSED, Assembler::Register* src,
                 unsigned dstSize UNUSED, Assembler::Memory* dst)
 {
-  assert(c, srcSize == TargetBytesPerWord);
-  assert(c, dstSize == TargetBytesPerWord);
+  assert(con, srcSize == TargetBytesPerWord);
+  assert(con, dstSize == TargetBytesPerWord);
 
   if (dst->index == NoRegister) {
-    emit(c, stri(src->low, dst->base, dst->offset, dst->offset ? 1 : 0));
+    emit(con, stri(src->low, dst->base, dst->offset, dst->offset ? 1 : 0));
   } else {
-    assert(c, dst->offset == 0);
-    assert(c, dst->scale == 1);
+    assert(con, dst->offset == 0);
+    assert(con, dst->scale == 1);
     
-    emit(c, str(src->low, dst->base, dst->index, 1));
+    emit(con, str(src->low, dst->base, dst->index, 1));
   }
 }
 
 void
-load(Context* c, unsigned srcSize, int base, int offset, int index,
+load(Context* con, unsigned srcSize, int base, int offset, int index,
      unsigned scale, unsigned dstSize, Assembler::Register* dst,
      bool preserveIndex, bool signExtend)
 {
   if (index != NoRegister) {
     bool release;
     int normalized = normalize
-      (c, offset, index, scale, &preserveIndex, &release);
+      (con, offset, index, scale, &preserveIndex, &release);
 
-    switch (srcSize) {
-    case 1:
-      if (signExtend) {
-        emit(c, ldrsb(dst->low, base, normalized));
-      } else {
-        emit(c, ldrb(dst->low, base, normalized));
+    if (!isFpr(dst)) { // GPR load
+      switch (srcSize) {
+      case 1:
+        if (signExtend) {
+          emit(con, ldrsb(dst->low, base, normalized));
+        } else {
+          emit(con, ldrb(dst->low, base, normalized));
+        }
+        break;
+
+      case 2:
+        if (signExtend) {
+          emit(con, ldrsh(dst->low, base, normalized));
+        } else {
+          emit(con, ldrh(dst->low, base, normalized));
+        }
+        break;
+
+      case 4:
+      case 8: {
+        if (srcSize == 4 and dstSize == 8) {
+          load(con, 4, base, 0, normalized, 1, 4, dst, preserveIndex,
+               false);
+          moveRR(con, 4, dst, 8, dst);
+        } else if (srcSize == 8 and dstSize == 8) {
+          Assembler::Register dstHigh(dst->high);
+          load(con, 4, base, 0, normalized, 1, 4, &dstHigh,
+              preserveIndex, false);
+          load(con, 4, base, 4, normalized, 1, 4, dst, preserveIndex,
+               false);
+        } else {
+          emit(con, ldr(dst->low, base, normalized));
+        }
+      } break;
+
+      default: abort(con);
       }
-      break;
-
-    case 2:
-      if (signExtend) {
-        emit(c, ldrsh(dst->low, base, normalized));
-      } else {
-        emit(c, ldrh(dst->low, base, normalized));
-      }
-      break;
-
-    case 4:
-    case 8: {
-      if (srcSize == 4 and dstSize == 8) {
-        load(c, 4, base, 0, normalized, 1, 4, dst, preserveIndex, false);
-        moveRR(c, 4, dst, 8, dst);
-      } else if (srcSize == 8 and dstSize == 8) {
-        Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, 0, normalized, 1, 4, &dstHigh, preserveIndex, false);
-        load(c, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
-      } else {
-        emit(c, ldr(dst->low, base, normalized));
-      }
-    } break;
-
-    default: abort(c);
+    } else { // FPR load
+      Assembler::Register base_(base),
+                          normalized_(normalized),
+                          absAddr = makeTemp(con);
+      // VFP loads only have bases, so we must add the index
+      addR(con, TargetBytesPerWord, &base_, &normalized_, &absAddr);
+      // double-precision
+      if (srcSize == 8) emit(con, fldd(fpr64(dst), absAddr.low));
+      // single-precision
+      else              emit(con, flds(fpr32(dst), absAddr.low));
+      freeTemp(con, absAddr);
     }
 
-    if (release) c->client->releaseTemporary(normalized);
+    if (release) con->client->releaseTemporary(normalized);
   } else if ((srcSize == 8 and dstSize == 8)
              or abs(offset) == (abs(offset) & 0xFF)
              or (srcSize != 2
                  and (srcSize != 1 or not signExtend)
                  and abs(offset) == (abs(offset) & 0xFFF)))
   {
-    switch (srcSize) {
-    case 1:
-      if (signExtend) {
-        emit(c, ldrsbi(dst->low, base, offset));
-      } else {
-        emit(c, ldrbi(dst->low, base, offset));
+    if (!isFpr(dst)) { // GPR load
+      switch (srcSize) {
+      case 1:
+        if (signExtend) {
+          emit(con, ldrsbi(dst->low, base, offset));
+        } else {
+          emit(con, ldrbi(dst->low, base, offset));
+        }
+        break;
+
+      case 2:
+        if (signExtend) {
+          emit(con, ldrshi(dst->low, base, offset));
+        } else {
+          emit(con, ldrhi(dst->low, base, offset));
+        }
+        break;
+
+      case 4:
+        emit(con, ldri(dst->low, base, offset));
+        break;
+
+      case 8: {
+        if (dstSize == 8) {
+          Assembler::Register dstHigh(dst->high);
+          load(con, 4, base, offset, NoRegister, 1, 4, &dstHigh, false,
+               false);
+          load(con, 4, base, offset + 4, NoRegister, 1, 4, dst, false,
+               false);
+        } else {
+          emit(con, ldri(dst->low, base, offset));
+        }
+      } break;
+
+      default: abort(con);
       }
-      break;
-
-    case 2:
-      if (signExtend) {
-        emit(c, ldrshi(dst->low, base, offset));
-      } else {
-        emit(c, ldrhi(dst->low, base, offset));
-      }
-      break;
-
-    case 4:
-      emit(c, ldri(dst->low, base, offset));
-      break;
-
-    case 8: {
-      if (dstSize == 8) {
-        Assembler::Register dstHigh(dst->high);
-        load(c, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
-        load(c, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
-      } else {
-        emit(c, ldri(dst->low, base, offset));
-      }
-    } break;
-
-    default: abort(c);
+    } else { // FPR load
+      // double-precision
+      if (srcSize == 8) emit(con, fldd(fpr64(dst), base, offset));
+      // single-precision
+      else              emit(con, flds(fpr32(dst), base, offset));
     }
   } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
+    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
     Assembler::Constant offsetConstant(&offsetPromise);
-    moveCR(c, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
+    moveCR(con, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord,
+           &tmp);
     
-    load(c, srcSize, base, 0, tmp.low, 1, dstSize, dst, false, signExtend);
+    load(con, srcSize, base, 0, tmp.low, 1, dstSize, dst, false,
+         signExtend);
 
-    c->client->releaseTemporary(tmp.low);
+    con->client->releaseTemporary(tmp.low);
   }
 }
 
 void
-moveMR(Context* c, unsigned srcSize, Assembler::Memory* src,
+moveMR(Context* con, unsigned srcSize, Assembler::Memory* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  load(c, srcSize, src->base, src->offset, src->index, src->scale,
+  load(con, srcSize, src->base, src->offset, src->index, src->scale,
        dstSize, dst, true, true);
 }
 
 void
-moveZMR(Context* c, unsigned srcSize, Assembler::Memory* src,
+moveZMR(Context* con, unsigned srcSize, Assembler::Memory* src,
         unsigned dstSize, Assembler::Register* dst)
 {
-  load(c, srcSize, src->base, src->offset, src->index, src->scale,
+  load(con, srcSize, src->base, src->offset, src->index, src->scale,
        dstSize, dst, true, false);
 }
 
 void
-andR(Context* c, unsigned size, Assembler::Register* a,
+andR(Context* con, unsigned size, Assembler::Register* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) emit(c, and_(dst->high, a->high, b->high));
-  emit(c, and_(dst->low, a->low, b->low));
+  if (size == 8) emit(con, and_(dst->high, a->high, b->high));
+  emit(con, and_(dst->low, a->low, b->low));
 }
 
 void
-andC(Context* c, unsigned size, Assembler::Constant* a,
+andC(Context* con, unsigned size, Assembler::Constant* a,
      Assembler::Register* b, Assembler::Register* dst)
 {
   int64_t v = a->value->value();
@@ -1219,15 +1535,15 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
     Assembler::Register bh(b->high);
     Assembler::Register dh(dst->high);
 
-    andC(c, 4, &al, b, dst);
-    andC(c, 4, &ah, &bh, &dh);
+    andC(con, 4, &al, b, dst);
+    andC(con, 4, &ah, &bh, &dh);
   } else {
     uint32_t v32 = static_cast<uint32_t>(v);
     if (v32 != 0xFFFFFFFF) {
       if ((v32 & 0xFFFFFF00) == 0xFFFFFF00) {
-        emit(c, bici(dst->low, b->low, (~(v32 & 0xFF)) & 0xFF));
+        emit(con, bici(dst->low, b->low, (~(v32 & 0xFF)) & 0xFF));
       } else if ((v32 & 0xFFFFFF00) == 0) {
-        emit(c, andi(dst->low, b->low, v32 & 0xFF));
+        emit(con, andi(dst->low, b->low, v32 & 0xFF));
       } else {
         // todo: there are other cases we can handle in one
         // instruction
@@ -1235,28 +1551,28 @@ andC(Context* c, unsigned size, Assembler::Constant* a,
         bool useTemporary = b->low == dst->low;
         Assembler::Register tmp(dst->low);
         if (useTemporary) {
-          tmp.low = c->client->acquireTemporary();
+          tmp.low = con->client->acquireTemporary(GPR_MASK);
         }
 
-        moveCR(c, 4, a, 4, &tmp);
-        andR(c, 4, b, &tmp, dst);
+        moveCR(con, 4, a, 4, &tmp);
+        andR(con, 4, b, &tmp, dst);
         
         if (useTemporary) {
-          c->client->releaseTemporary(tmp.low);
+          con->client->releaseTemporary(tmp.low);
         }
       }
     } else {
-      moveRR(c, size, b, size, dst);
+      moveRR(con, size, b, size, dst);
     }
   }
 }
 
 void
-orR(Context* c, unsigned size, Assembler::Register* a,
+orR(Context* con, unsigned size, Assembler::Register* a,
     Assembler::Register* b, Assembler::Register* dst)
 {
-  if (size == 8) emit(c, orr(dst->high, a->high, b->high));
-  emit(c, orr(dst->low, a->low, b->low));
+  if (size == 8) emit(con, orr(dst->high, a->high, b->high));
+  emit(con, orr(dst->low, a->low, b->low));
 }
 
 void
@@ -1268,215 +1584,246 @@ xorR(Context* con, unsigned size, Assembler::Register* a,
 }
 
 void
-moveAR2(Context* c, unsigned srcSize, Assembler::Address* src,
+moveAR2(Context* con, unsigned srcSize, Assembler::Address* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  assert(c, srcSize == 4 and dstSize == 4);
+  assert(con, srcSize == 4 and dstSize == 4);
 
   Assembler::Constant constant(src->address);
-  moveCR(c, srcSize, &constant, dstSize, dst);
+  moveCR(con, srcSize, &constant, dstSize, dst);
 
   Assembler::Memory memory(dst->low, 0, -1, 0);
-  moveMR(c, dstSize, &memory, dstSize, dst);
+  moveMR(con, dstSize, &memory, dstSize, dst);
 }
 
 void
-moveAR(Context* c, unsigned srcSize, Assembler::Address* src,
+moveAR(Context* con, unsigned srcSize, Assembler::Address* src,
        unsigned dstSize, Assembler::Register* dst)
 {
-  moveAR2(c, srcSize, src, dstSize, dst);
+  moveAR2(con, srcSize, src, dstSize, dst);
 }
 
 void
-compareRR(Context* c, unsigned aSize UNUSED, Assembler::Register* a,
+compareRR(Context* con, unsigned aSize, Assembler::Register* a,
           unsigned bSize UNUSED, Assembler::Register* b)
 {
-  assert(c, aSize == 4 and bSize == 4);
-  assert(c, b->low != a->low);
+  assert(con, !(isFpr(a) ^ isFpr(b))); // regs must be of the same type
 
-  emit(c, cmp(b->low, a->low));
-}
-
-void
-compareCR(Context* c, unsigned aSize, Assembler::Constant* a,
-          unsigned bSize, Assembler::Register* b)
-{
-  assert(c, aSize == 4 and bSize == 4);
-
-  if (a->value->resolved() and isOfWidth(a->value->value(), 8)) {
-    emit(c, cmpi(b->low, a->value->value()));
-  } else {
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, aSize, a, bSize, &tmp);
-    compareRR(c, bSize, &tmp, bSize, b);
-    c->client->releaseTemporary(tmp.low);
+  if (!isFpr(a)) { // GPR compare
+    assert(con, aSize == 4 && bSize == 4);
+    /**///assert(con, b->low != a->low);
+    emit(con, cmp(b->low, a->low));
+  } else {         // FPR compare
+    assert(con, aSize == bSize);
+    if (aSize == 8) emit(con, fcmpd(fpr64(b), fpr64(a))); // double
+    else            emit(con, fcmps(fpr32(b), fpr32(a))); // single
+    emit(con, fmstat());
   }
 }
 
 void
-compareCM(Context* c, unsigned aSize, Assembler::Constant* a,
-          unsigned bSize, Assembler::Memory* b)
+compareCR(Context* con, unsigned aSize, Assembler::Constant* a,
+          unsigned bSize, Assembler::Register* b)
 {
-  assert(c, aSize == 4 and bSize == 4);
+  assert(con, aSize == 4 and bSize == 4);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveMR(c, bSize, b, bSize, &tmp);
-  compareCR(c, aSize, a, bSize, &tmp);
-  c->client->releaseTemporary(tmp.low);
+  if (!isFpr(b) && a->value->resolved() &&
+      isOfWidth(a->value->value(), 8)) {
+    emit(con, cmpi(b->low, a->value->value()));
+  } else {
+    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    moveCR(con, aSize, a, bSize, &tmp);
+    compareRR(con, bSize, &tmp, bSize, b);
+    con->client->releaseTemporary(tmp.low);
+  }
 }
 
 void
-compareRM(Context* c, unsigned aSize, Assembler::Register* a,
+compareCM(Context* con, unsigned aSize, Assembler::Constant* a,
           unsigned bSize, Assembler::Memory* b)
 {
-  assert(c, aSize == 4 and bSize == 4);
+  assert(con, aSize == 4 and bSize == 4);
 
-  Assembler::Register tmp(c->client->acquireTemporary());
-  moveMR(c, bSize, b, bSize, &tmp);
-  compareRR(c, aSize, a, bSize, &tmp);
-  c->client->releaseTemporary(tmp.low);
+  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  moveMR(con, bSize, b, bSize, &tmp);
+  compareCR(con, aSize, a, bSize, &tmp);
+  con->client->releaseTemporary(tmp.low);
+}
+
+void
+compareRM(Context* con, unsigned aSize, Assembler::Register* a,
+          unsigned bSize, Assembler::Memory* b)
+{
+  assert(con, aSize == 4 and bSize == 4);
+
+  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  moveMR(con, bSize, b, bSize, &tmp);
+  compareRR(con, aSize, a, bSize, &tmp);
+  con->client->releaseTemporary(tmp.low);
 }
 
 int32_t
-branch(Context* c, TernaryOperation op)
+branch(Context* con, TernaryOperation op)
 {
   switch (op) {
   case JumpIfEqual:
+  case JumpIfFloatEqual:
     return beq(0);
-    
+
   case JumpIfNotEqual:
+  case JumpIfFloatNotEqual:
     return bne(0);
-    
+
   case JumpIfLess:
+  case JumpIfFloatLess:
+  case JumpIfFloatLessOrUnordered:
     return blt(0);
-    
+
   case JumpIfGreater:
+  case JumpIfFloatGreater:
     return bgt(0);
-    
+
   case JumpIfLessOrEqual:
+  case JumpIfFloatLessOrEqual:
+  case JumpIfFloatLessOrEqualOrUnordered:
     return ble(0);
-    
+
   case JumpIfGreaterOrEqual:
+  case JumpIfFloatGreaterOrEqual:
     return bge(0);
-    
+
+  case JumpIfFloatGreaterOrUnordered:
+    return bhi(0);
+
+  case JumpIfFloatGreaterOrEqualOrUnordered:
+    return bpl(0);
+ 
   default:
-    abort(c);
+    abort(con);
   }
 }
 
 void
-conditional(Context* c, int32_t branch, Assembler::Constant* target)
+conditional(Context* con, int32_t branch, Assembler::Constant* target)
 {
-  appendOffsetTask(c, target->value, offset(c));
-  emit(c, branch);
+  appendOffsetTask(con, target->value, offset(con));
+  emit(con, branch);
 }
 
 void
-branch(Context* c, TernaryOperation op, Assembler::Constant* target)
+branch(Context* con, TernaryOperation op, Assembler::Constant* target)
 {
-  conditional(c, branch(c, op), target);
+  conditional(con, branch(con, op), target);
 }
 
 void
-branchLong(Context* c, TernaryOperation op, Assembler::Operand* al,
+branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
            Assembler::Operand* ah, Assembler::Operand* bl,
            Assembler::Operand* bh, Assembler::Constant* target,
            BinaryOperationType compareSigned,
            BinaryOperationType compareUnsigned)
 {
-  compareSigned(c, 4, ah, 4, bh);
+  compareSigned(con, 4, ah, 4, bh);
 
   unsigned next = 0;
   
   switch (op) {
   case JumpIfEqual:
-    next = c->code.length();
-    emit(c, bne(0));
+  case JumpIfFloatEqual:
+    next = con->code.length();
+    emit(con, bne(0));
 
-    compareSigned(c, 4, al, 4, bl);
-    conditional(c, beq(0), target);
+    compareSigned(con, 4, al, 4, bl);
+    conditional(con, beq(0), target);
     break;
 
   case JumpIfNotEqual:
-    conditional(c, bne(0), target);
+  case JumpIfFloatNotEqual:
+    conditional(con, bne(0), target);
 
-    compareSigned(c, 4, al, 4, bl);
-    conditional(c, bne(0), target);
+    compareSigned(con, 4, al, 4, bl);
+    conditional(con, bne(0), target);
     break;
 
   case JumpIfLess:
-    conditional(c, blt(0), target);
+  case JumpIfFloatLess:
+    conditional(con, blt(0), target);
 
-    next = c->code.length();
-    emit(c, bgt(0));
+    next = con->code.length();
+    emit(con, bgt(0));
 
-    compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, blo(0), target);
+    compareUnsigned(con, 4, al, 4, bl);
+    conditional(con, blo(0), target);
     break;
 
   case JumpIfGreater:
-    conditional(c, bgt(0), target);
+  case JumpIfFloatGreater:
+    conditional(con, bgt(0), target);
 
-    next = c->code.length();
-    emit(c, blt(0));
+    next = con->code.length();
+    emit(con, blt(0));
 
-    compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, bhi(0), target);
+    compareUnsigned(con, 4, al, 4, bl);
+    conditional(con, bhi(0), target);
     break;
 
   case JumpIfLessOrEqual:
-    conditional(c, blt(0), target);
+  case JumpIfFloatLessOrEqual:
+    conditional(con, blt(0), target);
 
-    next = c->code.length();
-    emit(c, bgt(0));
+    next = con->code.length();
+    emit(con, bgt(0));
 
-    compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, bls(0), target);
+    compareUnsigned(con, 4, al, 4, bl);
+    conditional(con, bls(0), target);
     break;
 
   case JumpIfGreaterOrEqual:
-    conditional(c, bgt(0), target);
+  case JumpIfFloatGreaterOrEqual:
+    conditional(con, bgt(0), target);
 
-    next = c->code.length();
-    emit(c, blt(0));
+    next = con->code.length();
+    emit(con, blt(0));
 
-    compareUnsigned(c, 4, al, 4, bl);
-    conditional(c, bhs(0), target);
+    compareUnsigned(con, 4, al, 4, bl);
+    conditional(con, bhs(0), target);
     break;
 
   default:
-    abort(c);
+    abort(con);
   }
 
   if (next) {
     updateOffset
-      (c->s, c->code.data + next, reinterpret_cast<intptr_t>
-       (c->code.data + c->code.length()));
+      (con->s, con->code.data + next, reinterpret_cast<intptr_t>
+       (con->code.data + con->code.length()));
   }
 }
 
 void
-branchRR(Context* c, TernaryOperation op, unsigned size,
+branchRR(Context* con, TernaryOperation op, unsigned size,
          Assembler::Register* a, Assembler::Register* b,
          Assembler::Constant* target)
 {
-  if (size > TargetBytesPerWord) {
+  if (!isFpr(a) && size > TargetBytesPerWord) {
     Assembler::Register ah(a->high);
     Assembler::Register bh(b->high);
 
-    branchLong(c, op, a, &ah, b, &bh, target, CAST2(compareRR),
+    branchLong(con, op, a, &ah, b, &bh, target, CAST2(compareRR),
                CAST2(compareRR));
   } else {
-    compareRR(c, size, a, size, b);
-    branch(c, op, target);
+    compareRR(con, size, a, size, b);
+    branch(con, op, target);
   }
 }
 
 void
-branchCR(Context* c, TernaryOperation op, unsigned size,
+branchCR(Context* con, TernaryOperation op, unsigned size,
          Assembler::Constant* a, Assembler::Register* b,
          Assembler::Constant* target)
 {
+  assert(con, !isFloatBranch(op));
+
   if (size > TargetBytesPerWord) {
     int64_t v = a->value->value();
 
@@ -1488,132 +1835,139 @@ branchCR(Context* c, TernaryOperation op, unsigned size,
 
     Assembler::Register bh(b->high);
 
-    branchLong(c, op, &al, &ah, b, &bh, target, CAST2(compareCR),
+    branchLong(con, op, &al, &ah, b, &bh, target, CAST2(compareCR),
                CAST2(compareCR));
   } else {
-    compareCR(c, size, a, size, b);
-    branch(c, op, target);
+    compareCR(con, size, a, size, b);
+    branch(con, op, target);
   }
 }
 
 void
-branchRM(Context* c, TernaryOperation op, unsigned size,
+branchRM(Context* con, TernaryOperation op, unsigned size,
          Assembler::Register* a, Assembler::Memory* b,
          Assembler::Constant* target)
 {
-  assert(c, size <= TargetBytesPerWord);
+  assert(con, !isFloatBranch(op));
+  assert(con, size <= TargetBytesPerWord);
 
-  compareRM(c, size, a, size, b);
-  branch(c, op, target);
+  compareRM(con, size, a, size, b);
+  branch(con, op, target);
 }
 
 void
-branchCM(Context* c, TernaryOperation op, unsigned size,
+branchCM(Context* con, TernaryOperation op, unsigned size,
          Assembler::Constant* a, Assembler::Memory* b,
          Assembler::Constant* target)
 {
-  assert(c, size <= TargetBytesPerWord);
+  assert(con, !isFloatBranch(op));
+  assert(con, size <= TargetBytesPerWord);
 
-  compareCM(c, size, a, size, b);
-  branch(c, op, target);
+  compareCM(con, size, a, size, b);
+  branch(con, op, target);
 }
 
 ShiftMaskPromise*
-shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
+shiftMaskPromise(Context* con, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new(con->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 void
-moveCM(Context* c, unsigned srcSize, Assembler::Constant* src,
+moveCM(Context* con, unsigned srcSize, Assembler::Constant* src,
        unsigned dstSize, Assembler::Memory* dst)
 {
   switch (dstSize) {
   case 8: {
     Assembler::Constant srcHigh
-      (shiftMaskPromise(c, src->value, 32, 0xFFFFFFFF));
+      (shiftMaskPromise(con, src->value, 32, 0xFFFFFFFF));
     Assembler::Constant srcLow
-      (shiftMaskPromise(c, src->value, 0, 0xFFFFFFFF));
+      (shiftMaskPromise(con, src->value, 0, 0xFFFFFFFF));
     
     Assembler::Memory dstLow
       (dst->base, dst->offset + 4, dst->index, dst->scale);
     
-    moveCM(c, 4, &srcLow, 4, &dstLow);
-    moveCM(c, 4, &srcHigh, 4, dst);
+    moveCM(con, 4, &srcLow, 4, &dstLow);
+    moveCM(con, 4, &srcHigh, 4, dst);
   } break;
 
   default:
-    Assembler::Register tmp(c->client->acquireTemporary());
-    moveCR(c, srcSize, src, dstSize, &tmp);
-    moveRM(c, dstSize, &tmp, dstSize, dst);
-    c->client->releaseTemporary(tmp.low);
+    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    moveCR(con, srcSize, src, dstSize, &tmp);
+    moveRM(con, dstSize, &tmp, dstSize, dst);
+    con->client->releaseTemporary(tmp.low);
   }
 }
 
 void
-negateRR(Context* c, unsigned srcSize, Assembler::Register* src,
+negateRR(Context* con, unsigned srcSize, Assembler::Register* src,
          unsigned dstSize UNUSED, Assembler::Register* dst)
 {
-  assert(c, srcSize == dstSize);
+  assert(con, srcSize == dstSize);
 
-  emit(c, mvn(dst->low, src->low));
-  emit(c, SETS(addi(dst->low, dst->low, 1)));
+  emit(con, mvn(dst->low, src->low));
+  emit(con, SETS(addi(dst->low, dst->low, 1)));
   if (srcSize == 8) {
-    emit(c, mvn(dst->high, src->high));
-    emit(c, adci(dst->high, dst->high, 0));
+    emit(con, mvn(dst->high, src->high));
+    emit(con, adci(dst->high, dst->high, 0));
   }
 }
 
 void
-callR(Context* c, unsigned size UNUSED, Assembler::Register* target)
+callR(Context* con, unsigned size UNUSED, Assembler::Register* target)
 {
-  assert(c, size == TargetBytesPerWord);
-  emit(c, blx(target->low));
+  assert(con, size == TargetBytesPerWord);
+  emit(con, blx(target->low));
 }
 
 void
-callC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+callC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
-  appendOffsetTask(c, target->value, offset(c));
-  emit(c, bl(0));
+  appendOffsetTask(con, target->value, offset(con));
+  emit(con, bl(0));
 }
 
 void
-longCallC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+longCallC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
   Assembler::Register tmp(4);
-  moveCR2(c, TargetBytesPerWord, target, TargetBytesPerWord, &tmp, offset(c));
-  callR(c, TargetBytesPerWord, &tmp);
+  moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
+  callR(con, TargetBytesPerWord, &tmp);
 }
 
 void
-longJumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+longJumpC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
   Assembler::Register tmp(4); // a non-arg reg that we don't mind clobbering
-  moveCR2(c, TargetBytesPerWord, target, TargetBytesPerWord, &tmp, offset(c));
-  jumpR(c, TargetBytesPerWord, &tmp);
+  moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
+  jumpR(con, TargetBytesPerWord, &tmp);
 }
 
 void
-jumpC(Context* c, unsigned size UNUSED, Assembler::Constant* target)
+jumpC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
 {
-  assert(c, size == TargetBytesPerWord);
+  assert(con, size == TargetBytesPerWord);
 
-  appendOffsetTask(c, target->value, offset(c));
-  emit(c, b(0));
+  appendOffsetTask(con, target->value, offset(con));
+  emit(con, b(0));
 }
 
 void
-return_(Context* c)
+return_(Context* con)
 {
-  emit(c, bx(LinkRegister));
+  emit(con, bx(LinkRegister));
+}
+
+void
+trap(Context* con)
+{
+  emit(con, bkpt(0));
 }
 
 void
@@ -1628,12 +1982,12 @@ argumentFootprint(unsigned footprint)
 }
 
 void
-nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
-          unsigned footprint, void* link, void*,
+nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
+          unsigned footprint, void* link, bool,
           unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
 {
-  assert(c, *ip >= start);
-  assert(c, *ip <= start + (size / TargetBytesPerWord));
+  assert(con, *ip >= start);
+  assert(con, *ip <= start + (size / TargetBytesPerWord));
 
   uint32_t* instruction = static_cast<uint32_t*>(*ip);
 
@@ -1674,7 +2028,7 @@ nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
       switch (rotation) {
       case  0: offset -= value / TargetBytesPerWord; break;
       case 15: offset -= value; break;
-      default: abort(c);
+      default: abort(con);
       }
     }
 
@@ -1686,101 +2040,114 @@ nextFrame(ArchitectureContext* c, uint32_t* start, unsigned size UNUSED,
 }
 
 void
-populateTables(ArchitectureContext* c)
+populateTables(ArchitectureContext* con)
 {
   const OperandType C = ConstantOperand;
   const OperandType A = AddressOperand;
   const OperandType R = RegisterOperand;
   const OperandType M = MemoryOperand;
 
-  OperationType* zo = c->operations;
-  UnaryOperationType* uo = c->unaryOperations;
-  BinaryOperationType* bo = c->binaryOperations;
-  TernaryOperationType* to = c->ternaryOperations;
-  BranchOperationType* bro = c->branchOperations;
+  OperationType* zo = con->operations;
+  UnaryOperationType* uo = con->unaryOperations;
+  BinaryOperationType* bo = con->binaryOperations;
+  TernaryOperationType* to = con->ternaryOperations;
+  BranchOperationType* bro = con->branchOperations;
 
   zo[Return] = return_;
   zo[LoadBarrier] = memoryBarrier;
   zo[StoreStoreBarrier] = memoryBarrier;
   zo[StoreLoadBarrier] = memoryBarrier;
+  zo[Trap] = trap;
 
-  uo[index(c, LongCall, C)] = CAST1(longCallC);
+  uo[index(con, LongCall, C)] = CAST1(longCallC);
 
-  uo[index(c, AlignedLongCall, C)] = CAST1(longCallC);
+  uo[index(con, AlignedLongCall, C)] = CAST1(longCallC);
 
-  uo[index(c, LongJump, C)] = CAST1(longJumpC);
+  uo[index(con, LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(c, AlignedLongJump, C)] = CAST1(longJumpC);
+  uo[index(con, AlignedLongJump, C)] = CAST1(longJumpC);
 
-  uo[index(c, Jump, R)] = CAST1(jumpR);
-  uo[index(c, Jump, C)] = CAST1(jumpC);
+  uo[index(con, Jump, R)] = CAST1(jumpR);
+  uo[index(con, Jump, C)] = CAST1(jumpC);
 
-  uo[index(c, AlignedJump, R)] = CAST1(jumpR);
-  uo[index(c, AlignedJump, C)] = CAST1(jumpC);
+  uo[index(con, AlignedJump, R)] = CAST1(jumpR);
+  uo[index(con, AlignedJump, C)] = CAST1(jumpC);
 
-  uo[index(c, Call, C)] = CAST1(callC);
-  uo[index(c, Call, R)] = CAST1(callR);
+  uo[index(con, Call, C)] = CAST1(callC);
+  uo[index(con, Call, R)] = CAST1(callR);
 
-  uo[index(c, AlignedCall, C)] = CAST1(callC);
-  uo[index(c, AlignedCall, R)] = CAST1(callR);
+  uo[index(con, AlignedCall, C)] = CAST1(callC);
+  uo[index(con, AlignedCall, R)] = CAST1(callR);
 
-  bo[index(c, Move, R, R)] = CAST2(moveRR);
-  bo[index(c, Move, C, R)] = CAST2(moveCR);
-  bo[index(c, Move, C, M)] = CAST2(moveCM);
-  bo[index(c, Move, M, R)] = CAST2(moveMR);
-  bo[index(c, Move, R, M)] = CAST2(moveRM);
-  bo[index(c, Move, A, R)] = CAST2(moveAR);
+  bo[index(con, Move, R, R)] = CAST2(moveRR);
+  bo[index(con, Move, C, R)] = CAST2(moveCR);
+  bo[index(con, Move, C, M)] = CAST2(moveCM);
+  bo[index(con, Move, M, R)] = CAST2(moveMR);
+  bo[index(con, Move, R, M)] = CAST2(moveRM);
+  bo[index(con, Move, A, R)] = CAST2(moveAR);
 
-  bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
-  bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
-  bo[index(c, MoveZ, C, R)] = CAST2(moveCR);
+  bo[index(con, MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(con, MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(con, MoveZ, C, R)] = CAST2(moveCR);
 
-  bo[index(c, Negate, R, R)] = CAST2(negateRR);
+  bo[index(con, Negate, R, R)] = CAST2(negateRR);
 
-  to[index(c, Add, R)] = CAST3(addR);
+  bo[index(con, FloatAbsolute, R, R)] = CAST2(floatAbsoluteRR);
+  bo[index(con, FloatNegate, R, R)] = CAST2(floatNegateRR);
+  bo[index(con, Float2Float, R, R)] = CAST2(float2FloatRR);
+  bo[index(con, Float2Int, R, R)] = CAST2(float2IntRR);
+  bo[index(con, Int2Float, R, R)] = CAST2(int2FloatRR);
+  bo[index(con, FloatSquareRoot, R, R)] = CAST2(floatSqrtRR);
 
-  to[index(c, Subtract, R)] = CAST3(subR);
+  to[index(con, Add, R)] = CAST3(addR);
 
-  to[index(c, Multiply, R)] = CAST3(multiplyR);
+  to[index(con, Subtract, R)] = CAST3(subR);
 
-  to[index(c, ShiftLeft, R)] = CAST3(shiftLeftR);
-  to[index(c, ShiftLeft, C)] = CAST3(shiftLeftC);
+  to[index(con, Multiply, R)] = CAST3(multiplyR);
 
-  to[index(c, ShiftRight, R)] = CAST3(shiftRightR);
-  to[index(c, ShiftRight, C)] = CAST3(shiftRightC);
+  to[index(con, FloatAdd, R)] = CAST3(floatAddR);
+  to[index(con, FloatSubtract, R)] = CAST3(floatSubtractR);
+  to[index(con, FloatMultiply, R)] = CAST3(floatMultiplyR);
+  to[index(con, FloatDivide, R)] = CAST3(floatDivideR);
 
-  to[index(c, UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
-  to[index(c, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
+  to[index(con, ShiftLeft, R)] = CAST3(shiftLeftR);
+  to[index(con, ShiftLeft, C)] = CAST3(shiftLeftC);
 
-  to[index(c, And, R)] = CAST3(andR);
-  to[index(c, And, C)] = CAST3(andC);
+  to[index(con, ShiftRight, R)] = CAST3(shiftRightR);
+  to[index(con, ShiftRight, C)] = CAST3(shiftRightC);
 
-  to[index(c, Or, R)] = CAST3(orR);
+  to[index(con, UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
+  to[index(con, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
 
-  to[index(c, Xor, R)] = CAST3(xorR);
+  to[index(con, And, R)] = CAST3(andR);
+  to[index(con, And, C)] = CAST3(andC);
 
-  bro[branchIndex(c, R, R)] = CAST_BRANCH(branchRR);
-  bro[branchIndex(c, C, R)] = CAST_BRANCH(branchCR);
-  bro[branchIndex(c, C, M)] = CAST_BRANCH(branchCM);
-  bro[branchIndex(c, R, M)] = CAST_BRANCH(branchRM);
+  to[index(con, Or, R)] = CAST3(orR);
+
+  to[index(con, Xor, R)] = CAST3(xorR);
+
+  bro[branchIndex(con, R, R)] = CAST_BRANCH(branchRR);
+  bro[branchIndex(con, C, R)] = CAST_BRANCH(branchCR);
+  bro[branchIndex(con, C, M)] = CAST_BRANCH(branchCM);
+  bro[branchIndex(con, R, M)] = CAST_BRANCH(branchRM);
 }
 
 class MyArchitecture: public Assembler::Architecture {
  public:
-  MyArchitecture(System* system): c(system), referenceCount(0) {
-    populateTables(&c);
+  MyArchitecture(System* system): con(system), referenceCount(0) {
+    populateTables(&con);
   }
 
   virtual unsigned floatRegisterSize() {
-    return 0;
+    return vfpSupported() ? 8 : 0;
   }
 
   virtual uint32_t generalRegisterMask() {
-    return 0xFFFF;
+    return GPR_MASK;
   }
 
   virtual uint32_t floatRegisterMask() {
-    return 0;
+    return vfpSupported() ? FPR_MASK : 0;
   }
 
   virtual int scratch() {
@@ -1861,7 +2228,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual int argumentRegister(unsigned index) {
-    assert(&c, index < argumentRegisterCount());
+    assert(&con, index < argumentRegisterCount());
 
     return index;
   }
@@ -1891,7 +2258,7 @@ class MyArchitecture: public Assembler::Architecture {
     case Jump:
     case AlignedCall:
     case AlignedJump: {
-      updateOffset(c.s, static_cast<uint8_t*>(returnAddress) - 4,
+      updateOffset(con.s, static_cast<uint8_t*>(returnAddress) - 4,
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
 
@@ -1904,7 +2271,7 @@ class MyArchitecture: public Assembler::Architecture {
         = newTarget;
     } break;
 
-    default: abort(&c);
+    default: abort(&con);
     }
   }
 
@@ -1922,12 +2289,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    ::nextFrame(&c, static_cast<uint32_t*>(start), size, footprint, link,
-                stackLimit, targetParameterFootprint, ip, stack);
+    ::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
+                mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -1982,27 +2349,51 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planSource
   (BinaryOperation op,
-   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned, bool* thunk)
+   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned bSize, bool* thunk)
   {
+    *thunk = false;
     *aTypeMask = ~0;
     *aRegisterMask = ~static_cast<uint64_t>(0);
-
-    *thunk = false;
 
     switch (op) {
     case Negate:
       *aTypeMask = (1 << RegisterOperand);
+      *aRegisterMask = GPR_MASK64;
       break;
 
     case Absolute:
+      *thunk = true;
+      break;
+
     case FloatAbsolute:
     case FloatSquareRoot:
     case FloatNegate:
     case Float2Float:
+      if (vfpSupported()) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FPR_MASK64;
+      } else {
+        *thunk = true;
+      }
+      break;
+
     case Float2Int:
+      if (vfpSupported() && bSize == 4) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = FPR_MASK64;
+      } else {
+        *thunk = true;
+      }
+      break;
+
     case Int2Float:
-      *thunk = true;
+      if (vfpSupported() && aSize == 4) {
+        *aTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = GPR_MASK64;
+      } else {
+        *thunk = true;
+      }
       break;
 
     default:
@@ -2012,8 +2403,8 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void planDestination
   (BinaryOperation op,
-   unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
+   unsigned, uint8_t aTypeMask, uint64_t,
+   unsigned , uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
     *bRegisterMask = ~static_cast<uint64_t>(0);
@@ -2021,6 +2412,27 @@ class MyArchitecture: public Assembler::Architecture {
     switch (op) {
     case Negate:
       *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = GPR_MASK64;
+      break;
+
+    case FloatAbsolute:
+    case FloatSquareRoot:
+    case FloatNegate:
+    case Float2Float:
+    case Int2Float:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = FPR_MASK64;
+      break;
+
+    case Float2Int:
+      *bTypeMask = (1 << RegisterOperand);
+      *bRegisterMask = GPR_MASK64;
+      break;
+
+    case Move:
+      if (!(aTypeMask & 1 << RegisterOperand)) {
+        *bTypeMask = 1 << RegisterOperand;
+      }
       break;
 
     default:
@@ -2031,7 +2443,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void planMove
   (unsigned, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
    uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-   uint8_t dstTypeMask, uint64_t)
+   uint8_t dstTypeMask, uint64_t dstRegisterMask)
   {
     *srcTypeMask = ~0;
     *srcRegisterMask = ~static_cast<uint64_t>(0);
@@ -2043,6 +2455,12 @@ class MyArchitecture: public Assembler::Architecture {
       // can't move directly from memory or constant to memory
       *srcTypeMask = 1 << RegisterOperand;
       *tmpTypeMask = 1 << RegisterOperand;
+      *tmpRegisterMask = GPR_MASK64;
+    } else if (vfpSupported() &&
+               dstTypeMask & 1 << RegisterOperand &&
+               dstRegisterMask & FPR_MASK) {
+      *srcTypeMask = *tmpTypeMask = 1 << RegisterOperand |
+                                    1 << MemoryOperand;
       *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }
@@ -2054,10 +2472,10 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    *aRegisterMask = GPR_MASK64;
 
     *bTypeMask = (1 << RegisterOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    *bRegisterMask = GPR_MASK64;
 
     *thunk = false;
 
@@ -2078,11 +2496,22 @@ class MyArchitecture: public Assembler::Architecture {
 
     case Divide:
     case Remainder:
+    case FloatRemainder:
+      *thunk = true;
+      break;
+
     case FloatAdd:
     case FloatSubtract:
     case FloatMultiply:
     case FloatDivide:
-    case FloatRemainder:
+      if (vfpSupported()) {
+        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = *bRegisterMask = FPR_MASK64;
+      } else {
+        *thunk = true;
+      }    
+      break;
+
     case JumpIfFloatEqual:
     case JumpIfFloatNotEqual:
     case JumpIfFloatLess:
@@ -2093,7 +2522,12 @@ class MyArchitecture: public Assembler::Architecture {
     case JumpIfFloatGreaterOrUnordered:
     case JumpIfFloatLessOrEqualOrUnordered:
     case JumpIfFloatGreaterOrEqualOrUnordered:
-      *thunk = true;
+      if (vfpSupported()) {
+        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aRegisterMask = *bRegisterMask = FPR_MASK64;
+      } else {
+        *thunk = true;
+      }
       break;
 
     default:
@@ -2122,23 +2556,23 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void release() {
     if (-- referenceCount == 0) {
-      c.s->free(this);
+      con.s->free(this);
     }
   }
 
-  ArchitectureContext c;
+  ArchitectureContext con;
   unsigned referenceCount;
 };
 
 class MyAssembler: public Assembler {
  public:
   MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
-    c(s, a, zone), arch_(arch)
+    con(s, a, zone), arch_(arch)
   { }
 
   virtual void setClient(Client* client) {
-    assert(&c, c.client == 0);
-    c.client = client;
+    assert(&con, con.client == 0);
+    con.client = client;
   }
 
   virtual Architecture* arch() {
@@ -2150,21 +2584,19 @@ class MyAssembler: public Assembler {
   {
     Register stack(StackRegister);
     Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
-    Constant handlerConstant
-      (new (c.zone->allocate(sizeof(ResolvedPromise)))
-       ResolvedPromise(handler));
-    branchRM(&c, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
+    Constant handlerConstant(new(con.zone) ResolvedPromise(handler));
+    branchRM(&con, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) {
     Register link(LinkRegister);
     Memory linkDst(ThreadRegister, ipOffset);
-    moveRM(&c, TargetBytesPerWord, &link, TargetBytesPerWord, &linkDst);
+    moveRM(&con, TargetBytesPerWord, &link, TargetBytesPerWord, &linkDst);
 
     Register stack(StackRegister);
     Memory stackDst(ThreadRegister, stackOffset);
-    moveRM(&c, TargetBytesPerWord, &stack, TargetBytesPerWord, &stackDst);
+    moveRM(&con, TargetBytesPerWord, &stack, TargetBytesPerWord, &stackDst);
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
@@ -2215,17 +2647,17 @@ class MyAssembler: public Assembler {
     // larger frames may require multiple subtract/add instructions
     // to allocate/deallocate, and nextFrame will need to be taught
     // how to handle them:
-    assert(&c, footprint < 256);
+    assert(&con, footprint < 256);
 
     Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     Constant footprintConstant(&footprintPromise);
-    subC(&c, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+    subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
     Register returnAddress(LinkRegister);
     Memory returnAddressDst
       (StackRegister, (footprint - 1) * TargetBytesPerWord);
-    moveRM(&c, TargetBytesPerWord, &returnAddress, TargetBytesPerWord,
+    moveRM(&con, TargetBytesPerWord, &returnAddress, TargetBytesPerWord,
            &returnAddressDst);
   }
 
@@ -2233,7 +2665,7 @@ class MyAssembler: public Assembler {
     Register stack(StackRegister);
     ResolvedPromise differencePromise(difference * TargetBytesPerWord);
     Constant differenceConstant(&differencePromise);
-    subC(&c, TargetBytesPerWord, &differenceConstant, &stack, &stack);
+    subC(&con, TargetBytesPerWord, &differenceConstant, &stack, &stack);
   }
 
   virtual void popFrame(unsigned footprint) {
@@ -2242,13 +2674,13 @@ class MyAssembler: public Assembler {
     Register returnAddress(LinkRegister);
     Memory returnAddressSrc
       (StackRegister, (footprint - 1) * TargetBytesPerWord);
-    moveMR(&c, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+    moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
            &returnAddress);
     
     Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     Constant footprintConstant(&footprintPromise);
-    addC(&c, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+    addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
   }
 
   virtual void popFrameForTailCall(unsigned footprint,
@@ -2256,7 +2688,7 @@ class MyAssembler: public Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate UNUSED)
   {
-    assert(&c, framePointerSurrogate == NoRegister);
+    assert(&con, framePointerSurrogate == NoRegister);
 
     if (TailCalls) {
       if (offset) {
@@ -2265,27 +2697,27 @@ class MyAssembler: public Assembler {
         Register link(LinkRegister);
         Memory returnAddressSrc
           (StackRegister, (footprint - 1) * TargetBytesPerWord);
-        moveMR(&c, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+        moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
                &link);
     
         Register stack(StackRegister);
         ResolvedPromise footprintPromise
           ((footprint - offset) * TargetBytesPerWord);
         Constant footprintConstant(&footprintPromise);
-        addC(&c, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+        addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
         if (returnAddressSurrogate != NoRegister) {
-          assert(&c, offset > 0);
+          assert(&con, offset > 0);
 
           Register ras(returnAddressSurrogate);
           Memory dst(StackRegister, (offset - 1) * TargetBytesPerWord);
-          moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
+          moveRM(&con, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
       } else {
         popFrame(footprint);
       }
     } else {
-      abort(&c);
+      abort(&con);
     }
   }
 
@@ -2294,8 +2726,8 @@ class MyAssembler: public Assembler {
   {
     popFrame(frameFootprint);
 
-    assert(&c, argumentFootprint >= StackAlignmentInWords);
-    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
+    assert(&con, argumentFootprint >= StackAlignmentInWords);
+    assert(&con, (argumentFootprint % StackAlignmentInWords) == 0);
 
     unsigned offset;
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
@@ -2304,12 +2736,12 @@ class MyAssembler: public Assembler {
       Register stack(StackRegister);
       ResolvedPromise adjustmentPromise(offset * TargetBytesPerWord);
       Constant adjustment(&adjustmentPromise);
-      addC(&c, TargetBytesPerWord, &adjustment, &stack, &stack);
+      addC(&con, TargetBytesPerWord, &adjustment, &stack, &stack);
     } else {
       offset = 0;
     }
 
-    return_(&c);
+    return_(&con);
   }
 
   virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
@@ -2319,28 +2751,28 @@ class MyAssembler: public Assembler {
 
     Register stack(StackRegister);
     Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
-    moveMR(&c, TargetBytesPerWord, &newStackSrc, TargetBytesPerWord, &stack);
+    moveMR(&con, TargetBytesPerWord, &newStackSrc, TargetBytesPerWord, &stack);
 
-    return_(&c);
+    return_(&con);
   }
 
   virtual void apply(Operation op) {
-    arch_->c.operations[op](&c);
+    arch_->con.operations[op](&con);
   }
 
   virtual void apply(UnaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand)
   {
-    arch_->c.unaryOperations[index(&(arch_->c), op, aType)]
-      (&c, aSize, aOperand);
+    arch_->con.unaryOperations[index(&(arch_->con), op, aType)]
+      (&con, aSize, aOperand);
   }
 
   virtual void apply(BinaryOperation op,
                      unsigned aSize, OperandType aType, Operand* aOperand,
                      unsigned bSize, OperandType bType, Operand* bOperand)
   {
-    arch_->c.binaryOperations[index(&(arch_->c), op, aType, bType)]
-      (&c, aSize, aOperand, bSize, bOperand);
+    arch_->con.binaryOperations[index(&(arch_->con), op, aType, bType)]
+      (&con, aSize, aOperand, bSize, bOperand);
   }
 
   virtual void apply(TernaryOperation op,
@@ -2351,30 +2783,30 @@ class MyAssembler: public Assembler {
                      Operand* cOperand)
   {
     if (isBranch(op)) {
-      assert(&c, aSize == bSize);
-      assert(&c, cSize == TargetBytesPerWord);
-      assert(&c, cType == ConstantOperand);
+      assert(&con, aSize == bSize);
+      assert(&con, cSize == TargetBytesPerWord);
+      assert(&con, cType == ConstantOperand);
 
-      arch_->c.branchOperations[branchIndex(&(arch_->c), aType, bType)]
-        (&c, op, aSize, aOperand, bOperand, cOperand);
+      arch_->con.branchOperations[branchIndex(&(arch_->con), aType, bType)]
+        (&con, op, aSize, aOperand, bOperand, cOperand);
     } else {
-      assert(&c, bSize == cSize);
-      assert(&c, bType == RegisterOperand);
-      assert(&c, cType == RegisterOperand);
+      assert(&con, bSize == cSize);
+      assert(&con, bType == RegisterOperand);
+      assert(&con, cType == RegisterOperand);
       
-      arch_->c.ternaryOperations[index(&(arch_->c), op, aType)]
-        (&c, bSize, aOperand, bOperand, cOperand);
+      arch_->con.ternaryOperations[index(&(arch_->con), op, aType)]
+        (&con, bSize, aOperand, bOperand, cOperand);
     }
   }
 
   virtual void setDestination(uint8_t* dst) {
-    c.result = dst;
+    con.result = dst;
   }
 
   virtual void write() {
-    uint8_t* dst = c.result;
+    uint8_t* dst = con.result;
     unsigned dstOffset = 0;
-    for (MyBlock* b = c.firstBlock; b; b = b->next) {
+    for (MyBlock* b = con.firstBlock; b; b = b->next) {
       if (DebugPool) {
         fprintf(stderr, "write block %p\n", b);
       }
@@ -2382,7 +2814,7 @@ class MyAssembler: public Assembler {
       unsigned blockOffset = 0;
       for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
         unsigned size = e->offset - blockOffset;
-        memcpy(dst + dstOffset, c.code.data + b->offset + blockOffset, size);
+        memcpy(dst + dstOffset, con.code.data + b->offset + blockOffset, size);
         blockOffset = e->offset;
         dstOffset += size;
 
@@ -2405,7 +2837,7 @@ class MyAssembler: public Assembler {
             + padding(o->block, o->offset) + o->offset;
 
           int32_t v = (entry - 8) - instruction;
-          expect(&c, v == (v & PoolOffsetMask));
+          expect(&con, v == (v & PoolOffsetMask));
 
           int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
           *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
@@ -2425,22 +2857,22 @@ class MyAssembler: public Assembler {
       unsigned size = b->size - blockOffset;
 
       memcpy(dst + dstOffset,
-             c.code.data + b->offset + blockOffset,
+             con.code.data + b->offset + blockOffset,
              size);
 
       dstOffset += size;
     }
 
-    for (Task* t = c.tasks; t; t = t->next) {
-      t->run(&c);
+    for (Task* t = con.tasks; t; t = t->next) {
+      t->run(&con);
     }
 
-    for (ConstantPoolEntry* e = c.constantPool; e; e = e->next) {
+    for (ConstantPoolEntry* e = con.constantPool; e; e = e->next) {
       if (e->constant->resolved()) {
         *static_cast<target_uintptr_t*>(e->address) = e->constant->value();
       } else {
         new (e->constant->listen(sizeof(ConstantPoolListener)))
-          ConstantPoolListener(c.s, static_cast<target_uintptr_t*>(e->address),
+          ConstantPoolListener(con.s, static_cast<target_uintptr_t*>(e->address),
                                e->callOffset
                                ? dst + e->callOffset->value() + 8
                                : 0);
@@ -2450,31 +2882,30 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset(bool forTrace) {
-    return ::offset(&c, forTrace);
+    return ::offset(&con, forTrace);
   }
 
   virtual Block* endBlock(bool startNew) {
-    MyBlock* b = c.lastBlock;
-    b->size = c.code.length() - b->offset;
+    MyBlock* b = con.lastBlock;
+    b->size = con.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(&c, c.code.length());
+      con.lastBlock = new (con.zone) MyBlock(&con, con.code.length());
     } else {
-      c.lastBlock = 0;
+      con.lastBlock = 0;
     }
     return b;
   }
 
   virtual void endEvent() {
-    MyBlock* b = c.lastBlock;
-    unsigned thisEventOffset = c.code.length() - b->offset;
+    MyBlock* b = con.lastBlock;
+    unsigned thisEventOffset = con.code.length() - b->offset;
     if (b->poolOffsetHead) {
       int32_t v = (thisEventOffset + TargetBytesPerWord - 8)
         - b->poolOffsetHead->offset;
 
       if (v > 0 and v != (v & PoolOffsetMask)) {
         appendPoolEvent
-          (&c, b, b->lastEventOffset, b->poolOffsetHead,
+          (&con, b, b->lastEventOffset, b->poolOffsetHead,
            b->lastPoolOffsetTail);
 
         if (DebugPool) {
@@ -2500,7 +2931,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual unsigned length() {
-    return c.code.length();
+    return con.code.length();
   }
 
   virtual unsigned footerSize() {
@@ -2508,10 +2939,10 @@ class MyAssembler: public Assembler {
   }
 
   virtual void dispose() {
-    c.code.dispose();
+    con.code.dispose();
   }
 
-  Context c;
+  Context con;
   MyArchitecture* arch_;
 };
 
@@ -2529,8 +2960,7 @@ Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(MyAssembler)))
-    MyAssembler(system, allocator, zone,
+  return new(zone) MyAssembler(system, allocator, zone,
                 static_cast<MyArchitecture*>(architecture));
 }
 

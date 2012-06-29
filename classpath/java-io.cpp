@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -48,7 +48,6 @@
 #    define R_OK 4
 #  else
 #    define OPEN _wopen
-#    define CREAT _wcreat
 #  endif
 
 #  define GET_CHARS GetStringChars
@@ -71,7 +70,6 @@ typedef wchar_t char_t;
 #  define STRUCT_STAT struct stat
 #  define MKDIR mkdir
 #  define CHMOD chmod
-#  define CREAT creat
 #  define UNLINK unlink
 #  define RENAME rename
 #  define OPEN_MASK 0
@@ -101,12 +99,6 @@ OPEN(string_t path, int mask, int mode)
   } else {
     return -1; 
   }
-}
-
-inline int
-CREAT(string_t path, int mode)
-{
-  return OPEN(path, _O_CREAT, mode);
 }
 #endif
 
@@ -407,21 +399,26 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" JNIEXPORT jboolean JNICALL
 Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
 {
+  bool result = false;
   string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
-      int fd = CREAT(chars, 0600);
+      int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0600);
       if (fd == -1) {
-        throwNewErrno(e, "java/io/IOException");
+        if (errno != EEXIST) {
+          throwNewErrno(e, "java/io/IOException");
+        }
       } else {
+        result = true;
         doClose(e, fd);
       }
     }
     releaseChars(e, path, chars);
   }
+  return result;
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -183,6 +183,8 @@ class Compiler {
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
+
+  virtual void trap() = 0;
 
   virtual void loadBarrier() = 0;
   virtual void storeStoreBarrier() = 0;

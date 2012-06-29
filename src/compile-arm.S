@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2011, Avian Contributors
+/* Copyright (c) 2010-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -9,6 +9,7 @@
    details. */
 
 #include "types.h"
+#include "target-fields.h"
 
 .text
 
@@ -21,14 +22,6 @@
 #else
 #  define GLOBAL(x) x   
 #endif
-
-#define THREAD_STACK 2148
-#define THREAD_SCRATCH 2152
-#define THREAD_CONTINUATION 2156
-#define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2160
-#define THREAD_EXCEPTION_OFFSET 2164
-#define THREAD_EXCEPTION_HANDLER 2168
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -57,7 +50,7 @@ GLOBAL(vmInvoke):
   ldr   r4, [sp, #4]
   str   r4, [sp, #-4]!
 
-  str   sp, [r0, #THREAD_SCRATCH]
+  str   sp, [r0, #TARGET_THREAD_SCRATCH]
 
   // align stack, if necessary
   eor   r4, sp, r3
@@ -88,7 +81,7 @@ LOCAL(vmInvoke_argumentTest):
 .align 2
 GLOBAL(vmInvoke_returnAddress):
   // restore stack pointer
-  ldr   sp, [r8, #THREAD_SCRATCH]
+  ldr   sp, [r8, #TARGET_THREAD_SCRATCH]
    
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
@@ -96,7 +89,7 @@ GLOBAL(vmInvoke_returnAddress):
    // a reliable stack trace from a thread that might be interrupted at
    // any point in its execution.
    mov  r5, #0
-   str  r5, [r8, #THREAD_STACK]
+   str  r5, [r8, #TARGET_THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
 .align 2
@@ -104,7 +97,7 @@ GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
    // call the next continuation, if any
-   ldr  r5,[r8,#THREAD_CONTINUATION]
+   ldr  r5,[r8,#TARGET_THREAD_CONTINUATION]
    cmp  r5,#0
    beq  LOCAL(vmInvoke_exit)
 
@@ -138,10 +131,10 @@ LOCAL(vmInvoke_getAddress):
    str  r11,[sp,r7]
 
    ldr  r7,[r5,#CONTINUATION_NEXT]
-   str  r7,[r8,#THREAD_CONTINUATION]
+   str  r7,[r8,#TARGET_THREAD_CONTINUATION]
 
    // call the continuation unless we're handling an exception
-   ldr  r7,[r8,#THREAD_EXCEPTION]
+   ldr  r7,[r8,#TARGET_THREAD_EXCEPTION]
    cmp  r7,#0
    bne  LOCAL(vmInvoke_handleException)
    ldr  r7,[r5,#CONTINUATION_ADDRESS]
@@ -150,22 +143,22 @@ LOCAL(vmInvoke_getAddress):
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
    mov  r11,#0
-   str  r11,[r8,#THREAD_EXCEPTION]
-   ldr  r11,[r8,#THREAD_EXCEPTION_STACK_ADJUSTMENT]
+   str  r11,[r8,#TARGET_THREAD_EXCEPTION]
+   ldr  r11,[r8,#TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT]
    ldr  r9,[sp]
    neg  r11,r11
    str  r9,[sp,r11]!
-   ldr  r11,[r8,#THREAD_EXCEPTION_OFFSET]
+   ldr  r11,[r8,#TARGET_THREAD_EXCEPTIONOFFSET]
    str  r7,[sp,r11]
 
-   ldr  r7,[r8,#THREAD_EXCEPTION_HANDLER]
+   ldr  r7,[r8,#TARGET_THREAD_EXCEPTIONHANDLER]
    bx   r7
 
 LOCAL(vmInvoke_exit):
 #endif // AVIAN_CONTINUATIONS
 
   mov   ip, #0
-  str   ip, [r8, #THREAD_STACK]
+  str   ip, [r8, #TARGET_THREAD_STACK]
 
   // restore return type
   ldr   ip, [sp], #4

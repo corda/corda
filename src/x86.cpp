@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,6 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "environment.h"
 #include "assembler.h"
 #include "target.h"
 #include "vector.h"
@@ -156,7 +157,7 @@ class Context {
  public:
   Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
     s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new (zone->allocate(sizeof(MyBlock))) MyBlock(0)),
+    firstBlock(new(zone) MyBlock(0)),
     lastBlock(firstBlock), ac(ac)
   { }
 
@@ -197,43 +198,10 @@ assert(ArchitectureContext* c, bool v)
 }
 #endif // not NDEBUG
 
-void
-expect(Context* c, bool v)
-{
-  expect(c->s, v);
-}
-
 ResolvedPromise*
 resolved(Context* c, int64_t value)
 {
-  return new (c->zone->allocate(sizeof(ResolvedPromise)))
-    ResolvedPromise(value);
-}
-
-class CodePromise: public Promise {
- public:
-  CodePromise(Context* c, unsigned offset): c(c), offset(offset) { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>(c->result + offset);
-    }
-    
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->result != 0;
-  }
-
-  Context* c;
-  unsigned offset;
-};
-
-CodePromise*
-codePromise(Context* c, unsigned offset)
-{
-  return new (c->zone->allocate(sizeof(CodePromise))) CodePromise(c, offset);
+  return new(c->zone) ResolvedPromise(value);
 }
 
 class Offset: public Promise {
@@ -267,8 +235,7 @@ class Offset: public Promise {
 Promise*
 offset(Context* c)
 {
-  return new (c->zone->allocate(sizeof(Offset)))
-    Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
+  return new(c->zone) Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
 }
 
 class Task {
@@ -345,8 +312,8 @@ void
 appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
                  unsigned instructionSize)
 {
-  OffsetTask* task = new (c->zone->allocate(sizeof(OffsetTask))) OffsetTask
-    (c->tasks, promise, instructionOffset, instructionSize);
+  OffsetTask* task =
+    new(c->zone) OffsetTask(c->tasks, promise, instructionOffset, instructionSize);
 
   c->tasks = task;
 }
@@ -417,7 +384,7 @@ void
 appendImmediateTask(Context* c, Promise* promise, Promise* offset,
                     unsigned size, unsigned promiseOffset = 0)
 {
-  c->tasks = new (c->zone->allocate(sizeof(ImmediateTask))) ImmediateTask
+  c->tasks = new(c->zone) ImmediateTask
     (c->tasks, promise, offset, size, promiseOffset);
 }
 
@@ -631,17 +598,15 @@ opcode(Context* c, uint8_t op1, uint8_t op2)
 }
 
 void
-opcode(Context* c, uint8_t op1, uint8_t op2, uint8_t op3)
-{
-  c->code.append(op1);
-  c->code.append(op2);
-  c->code.append(op3);
-}
-
-void
 return_(Context* c)
 {
   opcode(c, 0xc3);
+}
+
+void
+trap(Context* c)
+{
+  opcode(c, 0xcc);
 }
 
 void
@@ -832,7 +797,7 @@ callM(Context* c, unsigned size UNUSED, Assembler::Memory* a)
 void
 alignedCallC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
+  new(c->zone) AlignmentPadding(c, 1, 4);
   callC(c, size, a);
 }
 
@@ -842,8 +807,7 @@ alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == TargetBytesPerWord);
 
   if (TargetBytesPerWord == 8) {
-    new (c->zone->allocate(sizeof(AlignmentPadding)))
-      AlignmentPadding(c, 2, 8);
+    new (c->zone) AlignmentPadding(c, 2, 8);
     longCallC(c, size, a);
   } else {
     alignedCallC(c, size, a);
@@ -853,7 +817,7 @@ alignedLongCallC(Context* c, unsigned size, Assembler::Constant* a)
 void
 alignedJumpC(Context* c, unsigned size, Assembler::Constant* a)
 {
-  new (c->zone->allocate(sizeof(AlignmentPadding))) AlignmentPadding(c, 1, 4);
+  new (c->zone) AlignmentPadding(c, 1, 4);
   jumpC(c, size, a);
 }
 
@@ -863,8 +827,7 @@ alignedLongJumpC(Context* c, unsigned size, Assembler::Constant* a)
   assert(c, size == TargetBytesPerWord);
 
   if (TargetBytesPerWord == 8) {
-    new (c->zone->allocate(sizeof(AlignmentPadding)))
-      AlignmentPadding(c, 2, 8);
+    new (c->zone) AlignmentPadding(c, 2, 8);
     longJumpC(c, size, a);
   } else {
     alignedJumpC(c, size, a);
@@ -1289,8 +1252,7 @@ moveAR(Context* c, unsigned aSize, Assembler::Address* a,
 ShiftMaskPromise*
 shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
 {
-  return new (c->zone->allocate(sizeof(ShiftMaskPromise)))
-    ShiftMaskPromise(base, shift, mask);
+  return new(c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
 void
@@ -1478,7 +1440,8 @@ subtractBorrowCR(Context* c, unsigned size UNUSED, Assembler::Constant* a,
     opcode(c, 0x83, 0xd8 + regCode(b));
     c->code.append(v);
   } else {
-    abort(c);
+    opcode(c, 0x81, 0xd8 + regCode(b));
+    c->code.append4(v);
   }
 }
 
@@ -2161,8 +2124,8 @@ divideRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, a->low != rdx);
 
   c->client->save(rdx);
-    
-  maybeRex(c, aSize, a, b);
+
+  maybeRex(c, aSize, a, b);    
   opcode(c, 0x99); // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
@@ -2178,8 +2141,8 @@ remainderRR(Context* c, unsigned aSize, Assembler::Register* a,
   assert(c, a->low != rdx);
 
   c->client->save(rdx);
-    
-  maybeRex(c, aSize, a, b);
+
+  maybeRex(c, aSize, a, b);    
   opcode(c, 0x99); // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
@@ -2550,7 +2513,7 @@ read4(uint8_t* p)
 
 void
 nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
-          unsigned footprint, void*, void* stackLimit,
+          unsigned footprint, void*, bool mostRecent,
           unsigned targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
@@ -2561,13 +2524,14 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   // skip stack overflow check, if present:
   if (TargetBytesPerWord == 4) {
     if (*start == 0x39) {
-      start += 11;
+      start += 12;
     }
   } else if (*start == 0x48 and start[1] == 0x39) {
-    start += 12;
+    start += 13;
   }
 
   if (instruction <= start) {
+    assert(c, mostRecent);
     *ip = static_cast<void**>(*stack)[0];
     return;
   }
@@ -2577,6 +2541,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     start += (TargetBytesPerWord == 4 ? 3 : 4);
 
     if (instruction <= start or *instruction == 0x5d) {
+      assert(c, mostRecent);
+
       *ip = static_cast<void**>(*stack)[1];
       *stack = static_cast<void**>(*stack) + 1;
       return;
@@ -2588,8 +2554,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     return;
   }
 
-  unsigned offset = footprint + FrameHeaderSize
-    - (stackLimit == *stack ? 1 : 0);
+  unsigned offset = footprint + FrameHeaderSize - (mostRecent ? 1 : 0);
 
   if (TailCalls) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
@@ -2640,6 +2605,7 @@ populateTables(ArchitectureContext* c)
   zo[LoadBarrier] = ignore;
   zo[StoreStoreBarrier] = ignore;
   zo[StoreLoadBarrier] = storeLoadBarrier;
+  zo[Trap] = trap;
 
   uo[index(c, Call, C)] = CAST1(callC);
   uo[index(c, Call, R)] = CAST1(callR);
@@ -2677,6 +2643,7 @@ populateTables(ArchitectureContext* c)
 
   bo[index(c, MoveZ, R, R)] = CAST2(moveZRR);
   bo[index(c, MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(c, MoveZ, C, R)] = CAST2(moveCR);
 
   bo[index(c, Add, R, R)] = CAST2(addRR);
   bo[index(c, Add, C, R)] = CAST2(addCR);
@@ -2814,7 +2781,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2836,7 +2803,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     if (TargetBytesPerWord == 8) return 4; else
 #else
     if (TargetBytesPerWord == 8) return 6; else
@@ -2847,7 +2814,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, TargetBytesPerWord == 8);
     switch (index) {
-#ifdef TARGET_PLATFORM_WINDOWS
+#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
     case 0:
       return rcx;
     case 1:
@@ -2963,12 +2930,12 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, void* stackLimit,
+                         void* link, bool mostRecent,
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
     local::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
-                     link, stackLimit, targetParameterFootprint, ip, stack);
+                     link, mostRecent, targetParameterFootprint, ip, stack);
   }
 
   virtual void* frameIp(void* stack) {
@@ -3695,8 +3662,7 @@ class MyAssembler: public Assembler {
     MyBlock* b = c.lastBlock;
     b->size = c.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new (c.zone->allocate(sizeof(MyBlock)))
-        MyBlock(c.code.length());
+      c.lastBlock = new(c.zone) MyBlock(c.code.length());
     } else {
       c.lastBlock = 0;
     }
@@ -3740,9 +3706,9 @@ Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new (zone->allocate(sizeof(local::MyAssembler)))
-    local::MyAssembler(system, allocator, zone,
-                       static_cast<local::MyArchitecture*>(architecture));
+  return
+    new(zone) local::MyAssembler(system, allocator, zone,
+                                 static_cast<local::MyArchitecture*>(architecture));
 }
 
 } // namespace vm

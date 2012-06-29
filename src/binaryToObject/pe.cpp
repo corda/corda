@@ -1,4 +1,4 @@
-/* Copyright (c) 2009, Avian Contributors
+/* Copyright (c) 2009-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -8,16 +8,21 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "stdint.h"
-#include "stdio.h"
-#include "string.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "tools.h"
+
+namespace {
 
 #define IMAGE_SIZEOF_SHORT_NAME 8
 
 #define IMAGE_FILE_RELOCS_STRIPPED 1
 #define IMAGE_FILE_LINE_NUMS_STRIPPED 4
 #define IMAGE_FILE_MACHINE_AMD64 0x8664
-#define IMAGE_FILE_MACHINE_I386	0x014c
+#define IMAGE_FILE_MACHINE_I386 0x014c
 #define IMAGE_FILE_32BIT_MACHINE 256
 
 #define IMAGE_SCN_ALIGN_1BYTES 0x100000
@@ -28,8 +33,6 @@
 #define IMAGE_SCN_MEM_READ 0x40000000
 #define IMAGE_SCN_MEM_WRITE 0x80000000
 #define IMAGE_SCN_CNT_CODE 32
-
-namespace {
 
 struct IMAGE_FILE_HEADER {
   uint16_t Machine;
@@ -77,155 +80,199 @@ pad(unsigned n)
   return (n + (4 - 1)) & ~(4 - 1);
 }
 
-void
-writeObject(const uint8_t* data, unsigned size, FILE* out,
-            const char* startName, const char* endName,
-            const char* sectionName, int machine, int machineMask,
-            int sectionMask)
-{
-  const unsigned sectionCount = 1;
-  const unsigned symbolCount = 2;
+using namespace avian::tools;
 
-  const unsigned sectionNumber = 1;
+template<unsigned BytesPerWord>
+class WindowsPlatform : public Platform {
+public:
 
-  const unsigned startNameLength = strlen(startName) + 1;
-  const unsigned endNameLength = strlen(endName) + 1;
 
-  const unsigned startNameOffset = 4;
-  const unsigned endNameOffset = startNameOffset + startNameLength;
+  class FileWriter {
+  public:
+    unsigned sectionCount;
+    unsigned symbolCount;
+    unsigned dataStart;
+    unsigned dataOffset;
 
-  IMAGE_FILE_HEADER fileHeader = {
-    machine, // Machine
-    sectionCount, // NumberOfSections
-    0, // TimeDateStamp
-    sizeof(IMAGE_FILE_HEADER)
-    + sizeof(IMAGE_SECTION_HEADER)
-    + pad(size), // PointerToSymbolTable
-    symbolCount, // NumberOfSymbols
-    0, // SizeOfOptionalHeader
-    IMAGE_FILE_RELOCS_STRIPPED
-    | IMAGE_FILE_LINE_NUMS_STRIPPED
-    | machineMask // Characteristics
+    IMAGE_FILE_HEADER header;
+
+    StringTable strings;
+    Buffer symbols;
+
+    FileWriter(unsigned machine, unsigned machineMask, unsigned symbolCount):
+      sectionCount(0),
+      symbolCount(symbolCount),
+      dataStart(sizeof(IMAGE_FILE_HEADER)),
+      dataOffset(0)
+    {
+      header.Machine = machine;
+      // header.NumberOfSections = sectionCount;
+      header.TimeDateStamp = 0;
+      // header.PointerToSymbolTable = sizeof(IMAGE_FILE_HEADER)
+      //   + sizeof(IMAGE_SECTION_HEADER)
+      //   + pad(size);
+      // header.NumberOfSymbols = symbolCount;
+      header.SizeOfOptionalHeader = 0;
+      header.Characteristics = IMAGE_FILE_RELOCS_STRIPPED
+        | IMAGE_FILE_LINE_NUMS_STRIPPED
+        | machineMask;
+    }
+
+    void writeHeader(OutputStream* out) {
+      header.NumberOfSections = sectionCount;
+      header.PointerToSymbolTable = dataStart + dataOffset;
+      dataOffset = pad(dataOffset + symbolCount * sizeof(IMAGE_SYMBOL));
+      header.NumberOfSymbols = symbolCount;
+      out->writeChunk(&header, sizeof(IMAGE_FILE_HEADER));
+    }
+
+    void addSymbol(String name, unsigned addr, unsigned sectionNumber, unsigned type, unsigned storageClass) {
+      unsigned nameOffset = strings.add(name);
+      IMAGE_SYMBOL symbol = {
+        { { 0, 0 } }, // Name
+        addr, // Value
+        static_cast<int16_t>(sectionNumber), // SectionNumber
+        static_cast<uint16_t>(type), // Type
+        static_cast<uint8_t>(storageClass), // StorageClass
+        0, // NumberOfAuxSymbols
+      };
+      symbol.N.Name.Long = nameOffset+4;
+      symbols.write(&symbol, sizeof(IMAGE_SYMBOL));
+    }
+
+    void writeData(OutputStream* out) {
+      out->writeChunk(symbols.data, symbols.length);
+      uint32_t size = strings.length + 4;
+      out->writeChunk(&size, 4);
+      out->writeChunk(strings.data, strings.length);
+    }
   };
 
-  IMAGE_SECTION_HEADER sectionHeader = {
-    "", // Name
-    0, // PhysicalAddress
-    0, // VirtualAddress
-    pad(size), // SizeOfRawData
-    sizeof(IMAGE_FILE_HEADER)
-    + sizeof(IMAGE_SECTION_HEADER), // PointerToRawData
-    0, // PointerToRelocations
-    0, // PointerToLinenumbers
-    0, // NumberOfRelocations
-    0, // NumberOfLinenumbers
-    sectionMask // Characteristics
+  class SectionWriter {
+  public:
+    FileWriter& file;
+    IMAGE_SECTION_HEADER header;
+    size_t dataSize;
+    size_t finalSize;
+    const uint8_t* data;
+    unsigned dataOffset;
+
+    SectionWriter(
+        FileWriter& file,
+        const char* name,
+        unsigned sectionMask,
+        const uint8_t* data,
+        size_t dataSize):
+
+      file(file),
+      dataSize(dataSize),
+      finalSize(pad(dataSize)),
+      data(data)
+    {
+      file.sectionCount++;
+      file.dataStart += sizeof(IMAGE_SECTION_HEADER);
+      strcpy(reinterpret_cast<char*>(header.Name), name);
+      header.Misc.VirtualSize = 0;
+      header.SizeOfRawData = finalSize;
+      // header.PointerToRawData = file.dataOffset;
+      dataOffset = file.dataOffset;
+      file.dataOffset += finalSize;
+      header.PointerToRelocations = 0;
+      header.PointerToLinenumbers = 0;
+      header.NumberOfRelocations = 0;
+      header.NumberOfLinenumbers = 0;
+      header.Characteristics = sectionMask;
+    }
+
+    void writeHeader(OutputStream* out) {
+      header.PointerToRawData = dataOffset + file.dataStart;
+      out->writeChunk(&header, sizeof(IMAGE_SECTION_HEADER));
+    }
+
+    void writeData(OutputStream* out) {
+      out->writeChunk(data, dataSize);
+      out->writeRepeat(0, finalSize - dataSize);
+    }
+
+
   };
 
-  strncpy(reinterpret_cast<char*>(sectionHeader.Name), sectionName,
-          sizeof(sectionHeader.Name));
+  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
 
-  IMAGE_SYMBOL startSymbol = {
-    { 0 }, // Name
-    0, // Value
-    sectionNumber, // SectionNumber
-    0, // Type
-    2, // StorageClass
-    0, // NumberOfAuxSymbols
-  };
-  startSymbol.N.Name.Long = startNameOffset;
+    int machine;
+    int machineMask;
 
-  IMAGE_SYMBOL endSymbol = {
-    { 0 }, // Name
-    size, // Value
-    sectionNumber, // SectionNumber
-    0, // Type
-    2, // StorageClass
-    0, // NumberOfAuxSymbols
-  };
-  endSymbol.N.Name.Long = endNameOffset;
+    if (BytesPerWord == 8) {
+      machine = IMAGE_FILE_MACHINE_AMD64;
+      machineMask = 0;
+    } else { // if (BytesPerWord == 8)
+      machine = IMAGE_FILE_MACHINE_I386;
+      machineMask = IMAGE_FILE_32BIT_MACHINE;
+    }
 
-  fwrite(&fileHeader, 1, sizeof(fileHeader), out);
-  fwrite(&sectionHeader, 1, sizeof(sectionHeader), out);
+    int sectionMask;
+    switch (alignment) {
+    case 0:
+    case 1:
+      sectionMask = IMAGE_SCN_ALIGN_1BYTES;
+      break;
+    case 2:
+      sectionMask = IMAGE_SCN_ALIGN_2BYTES;
+      break;
+    case 4:
+      sectionMask = IMAGE_SCN_ALIGN_4BYTES;
+      break;
+    case 8:
+      sectionMask = IMAGE_SCN_ALIGN_8BYTES;
+      break;
+    default:
+      fprintf(stderr, "unsupported alignment: %d\n", alignment);
+      return false;
+    }
 
-  fwrite(data, 1, size, out);
-  for (unsigned i = 0; i < pad(size) - size; ++i) fputc(0, out);
+    sectionMask |= IMAGE_SCN_MEM_READ;
 
-  fwrite(&startSymbol, 1, sizeof(startSymbol), out);
-  fwrite(&endSymbol, 1, sizeof(endSymbol), out);
+    const char* sectionName;
+    if (accessFlags & Platform::Writable) {
+      if (accessFlags & Platform::Executable) {
+        sectionName = ".rwx";
+        sectionMask |= IMAGE_SCN_MEM_WRITE
+          | IMAGE_SCN_MEM_EXECUTE
+          | IMAGE_SCN_CNT_CODE;
+      } else {
+        sectionName = ".data";
+        sectionMask |= IMAGE_SCN_MEM_WRITE;
+      }
+    } else {
+      sectionName = ".text";
+      sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    }
 
-  uint32_t symbolTableSize = endNameOffset + endNameLength;
-  fwrite(&symbolTableSize, 1, 4, out);
+    FileWriter file(machine, machineMask, symbols.count);
 
-  fwrite(startName, 1, startNameLength, out);
-  fwrite(endName, 1, endNameLength, out);
-}
+    SectionWriter section(file, sectionName, sectionMask, data.items, data.count);
+
+    file.writeHeader(out);
+
+    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+      file.addSymbol(sym->name, sym->addr, 1, 0, 2);
+    }
+
+    section.writeHeader(out);
+
+    section.writeData(out);
+
+    file.writeData(out);  
+
+    return true;
+
+  }
+
+  WindowsPlatform():
+    Platform(PlatformInfo(PlatformInfo::Windows, BytesPerWord == 4 ? PlatformInfo::x86 : PlatformInfo::x86_64)) {}
+};
+
+WindowsPlatform<4> windows32Platform;
+WindowsPlatform<8> windows64Platform;
 
 } // namespace
-
-namespace binaryToObject {
-
-bool
-writePEObject
-(uint8_t* data, unsigned size, FILE* out, const char* startName,
- const char* endName, const char* architecture, unsigned alignment,
- bool writable, bool executable)
-{
-  int machine;
-  int machineMask;
-  if (strcmp(architecture, "x86_64") == 0) {
-    machine = IMAGE_FILE_MACHINE_AMD64;
-    machineMask = 0;
-  } else if (strcmp(architecture, "i386") == 0) {
-    machine = IMAGE_FILE_MACHINE_I386;
-    machineMask = IMAGE_FILE_32BIT_MACHINE;
-  } else {
-    fprintf(stderr, "unsupported architecture: %s\n", architecture);
-    return false;
-  }
-
-  int sectionMask;
-  switch (alignment) {
-  case 0:
-  case 1:
-    sectionMask = IMAGE_SCN_ALIGN_1BYTES;
-    break;
-  case 2:
-    sectionMask = IMAGE_SCN_ALIGN_2BYTES;
-    break;
-  case 4:
-    sectionMask = IMAGE_SCN_ALIGN_4BYTES;
-    break;
-  case 8:
-    sectionMask = IMAGE_SCN_ALIGN_8BYTES;
-    break;
-  default:
-    fprintf(stderr, "unsupported alignment: %d\n", alignment);
-    return false;
-  }
-
-  sectionMask |= IMAGE_SCN_MEM_READ;
-
-  const char* sectionName;
-  if (writable) {
-    if (executable) {
-      sectionName = ".rwx";
-      sectionMask |= IMAGE_SCN_MEM_WRITE
-        | IMAGE_SCN_MEM_EXECUTE
-        | IMAGE_SCN_CNT_CODE;
-    } else {
-      sectionName = ".data";
-      sectionMask |= IMAGE_SCN_MEM_WRITE;
-    }
-  } else {
-    sectionName = ".text";
-    sectionMask |= IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-  }
-
-  writeObject(data, size, out, startName, endName, sectionName, machine,
-              machineMask, sectionMask);
-
-  return true;
-}
-
-} // namespace binaryToObject

@@ -73,8 +73,6 @@ typedef unsigned __int64 uint64_t;
 
 #endif // not _MSC_VER
 
-namespace {
-
 inline void
 throwNew(JNIEnv* e, const char* class_, const char* message, ...)
 {
@@ -148,8 +146,5 @@ class RuntimeArray {
 #  define RUNTIME_ARRAY_BODY(name) name
 
 #endif // not _MSC_VER
-
-
-} // namespace
 
 #endif//JNI_UTIL

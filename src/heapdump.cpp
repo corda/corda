@@ -34,7 +34,11 @@ write1(FILE* out, uint8_t v)
 void
 write4(FILE* out, uint32_t v)
 {
-  uint8_t b[] = { v >> 24, (v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF };
+  uint8_t b[] = { static_cast<uint8_t>( v >> 24        ),
+                  static_cast<uint8_t>((v >> 16) & 0xFF),
+                  static_cast<uint8_t>((v >>  8) & 0xFF),
+                  static_cast<uint8_t>( v        & 0xFF) };
+
   size_t n UNUSED = fwrite(b, 4, 1, out);
 }
 
