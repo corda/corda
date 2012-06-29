@@ -182,4 +182,12 @@ public class BitSet implements Serializable, Cloneable {
     return nextBit(fromIndex, true);
   }
 
+  public int cardinality() {
+    int numSetBits = 0;
+    for (int i = nextSetBit(0); i >= 0; i = nextSetBit(i+1)) {
+      ++numSetBits;
+    }
+    
+    return numSetBits;
+  }
 }

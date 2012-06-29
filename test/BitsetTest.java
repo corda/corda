@@ -14,16 +14,19 @@ public class BitsetTest {
     assertTrue("bit 5 is set", bits.get(5));
     assertTrue("bit 0 is not set", !bits.get(0));
     assertTrue("bit 16 is not set", !bits.get(16));
+    assertCardinality(bits, 2);
     
     bits.and(other);
     
     assertTrue("bit 5 is set", bits.get(5));
     assertTrue("bit 1 is not set", !bits.get(1));
+    assertCardinality(bits, 1);
     
     bits.set(100);
     
     assertTrue("bit 100 is set", bits.get(100));
     assertTrue("bit 101 is not set", !bits.get(101));
+    assertCardinality(bits, 2);
     
     other.set(101);
     
@@ -38,6 +41,7 @@ public class BitsetTest {
     assertEquals("second bit is 100 from 100", 100, bits.nextSetBit(100));
     assertEquals("third bit is 101", 101, bits.nextSetBit(101));
     assertEquals("there is no 4th bit", -1, bits.nextSetBit(102));
+    assertCardinality(bits, 3);
     
     assertEquals("first empty bit is 0", 0, bits.nextClearBit(0));
     assertEquals("after 5, 6 is empty", 6, bits.nextClearBit(5));
@@ -59,6 +63,10 @@ public class BitsetTest {
     } else {
       throw new RuntimeException("Error:"+msg+" expected:"+expected+", actual:"+actual);
     }
+  }
+  
+  static void assertCardinality(BitSet set, int expectedCardinality) {
+    assertEquals("Checking cardinality", expectedCardinality, set.cardinality());
   }
   
 }
