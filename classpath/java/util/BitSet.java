@@ -80,6 +80,30 @@ public class BitSet implements Serializable, Cloneable {
       bits[i] ^= otherBits.bits[i];
     }
   }
+  
+  public void flip(int index) {
+    flip(index, index+1);
+  }
+  
+  public void flip(int fromIndex, int toIndex) {
+    if (fromIndex > toIndex || fromIndex < 0 || toIndex < 0) {
+      throw new IndexOutOfBoundsException();
+    } else if (fromIndex != toIndex) {
+      int basePartition = longPosition(fromIndex);
+      int lastPartition = longPosition(toIndex - 1); //range is [fromIndex, toIndex)
+      int numPartitionsToTraverse = lastPartition - basePartition + 1;
+      enlarge(lastPartition);
+      
+      int currentFirstIndex = fromIndex;
+      for (int i = 0; i < numPartitionsToTraverse; ++i) {
+        int currentToIndex = Math.min(toIndex, (basePartition + i + 1) * BITS_PER_LONG);
+        int currentRange = currentToIndex - currentFirstIndex;
+        long mask = (((1L << currentRange) - 1L) << (currentFirstIndex % BITS_PER_LONG));
+        bits[i + basePartition] ^= mask;
+        currentFirstIndex = currentToIndex;
+      }
+    }
+  }
 
   private void enlarge(int newSize) {
     if (bits == null || bits.length < newSize) {
