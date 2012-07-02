@@ -14,16 +14,19 @@ public class BitsetTest {
     assertTrue("bit 5 is set", bits.get(5));
     assertTrue("bit 0 is not set", !bits.get(0));
     assertTrue("bit 16 is not set", !bits.get(16));
+    assertCardinality(bits, 2);
     
     bits.and(other);
     
     assertTrue("bit 5 is set", bits.get(5));
     assertTrue("bit 1 is not set", !bits.get(1));
+    assertCardinality(bits, 1);
     
     bits.set(100);
     
     assertTrue("bit 100 is set", bits.get(100));
     assertTrue("bit 101 is not set", !bits.get(101));
+    assertCardinality(bits, 2);
     
     other.set(101);
     
@@ -38,11 +41,39 @@ public class BitsetTest {
     assertEquals("second bit is 100 from 100", 100, bits.nextSetBit(100));
     assertEquals("third bit is 101", 101, bits.nextSetBit(101));
     assertEquals("there is no 4th bit", -1, bits.nextSetBit(102));
+    assertCardinality(bits, 3);
     
     assertEquals("first empty bit is 0", 0, bits.nextClearBit(0));
     assertEquals("after 5, 6 is empty", 6, bits.nextClearBit(5));
     assertEquals("after 100, 102 is empty", 102, bits.nextClearBit(100));
     
+    testFlip();
+  }
+  
+  private static void testFlip() {
+    /* simple case */
+    BitSet bitset = new BitSet();
+    bitset.set(0);
+    bitset.flip(0, 0);
+    assertTrue("Should not be flipped with 0 length range", bitset.get(0));
+    bitset.flip(0, 1);
+    assertTrue("Should be false with range of one", !bitset.get(0));
+    bitset.flip(0);
+    assertTrue("Should be true again", bitset.get(0));
+    
+    /* need to grow */
+    bitset.flip(1000);
+    assertTrue("1000 should be true", bitset.get(1000));
+    assertTrue("1001 should be false", !bitset.get(1001));
+    assertTrue("999 should be false", !bitset.get(999));
+    
+    /* Range over 2 segments */
+    bitset.flip(60, 70);
+    assertTrue("59 should be false", !bitset.get(59));
+    for (int i=60; i < 70; ++i) {
+      assertTrue(i + " should be true", bitset.get(i));
+    }
+    assertTrue("70 should be false", !bitset.get(70));
   }
   
   static void assertTrue(String msg, boolean flag) {
@@ -59,6 +90,10 @@ public class BitsetTest {
     } else {
       throw new RuntimeException("Error:"+msg+" expected:"+expected+", actual:"+actual);
     }
+  }
+  
+  static void assertCardinality(BitSet set, int expectedCardinality) {
+    assertEquals("Checking cardinality", expectedCardinality, set.cardinality());
   }
   
 }
