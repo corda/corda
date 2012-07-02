@@ -107,7 +107,6 @@ public class EnumSet<T extends Enum<T>> extends AbstractSet<T> {
     private int currentIndex = 0;
     private boolean removeAllowed = false;
     
-    @Override
     public T next() {
       if (!hasNext()) {
         throw new NoSuchElementException("EnumSet has no more elements");
@@ -121,7 +120,6 @@ public class EnumSet<T extends Enum<T>> extends AbstractSet<T> {
       return element;
     }
 
-    @Override
     public boolean hasNext() {
       int indexOfNextValue = nextIndex();
       if (indexOfNextValue >= 0) {
@@ -131,7 +129,6 @@ public class EnumSet<T extends Enum<T>> extends AbstractSet<T> {
       }
     }
 
-    @Override
     public void remove() {
       //TODO
       if (!removeAllowed) {
