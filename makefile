@@ -407,12 +407,12 @@ ifeq ($(platform),windows)
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
-		cxx = x86_64-w64-mingw32-g++ -m32
-		cc = x86_64-w64-mingw32-gcc -m32
-		dlltool = x86_64-w64-mingw32-dlltool -mi386 --as-flags=--32 
-		ar = x86_64-w64-mingw32-ar
-		ranlib = x86_64-w64-mingw32-ranlib
-		strip = x86_64-w64-mingw32-strip --strip-all
+		cxx = i686-w64-mingw32-g++ -m32
+		cc = i686-w64-mingw32-gcc -m32
+		dlltool = i686-w64-mingw32-dlltool -mi386 --as-flags=--32 
+		ar = i686-w64-mingw32-ar
+		ranlib = i686-w64-mingw32-ranlib
+		strip = i686-w64-mingw32-strip --strip-all
 	else
 		build-system = windows
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
