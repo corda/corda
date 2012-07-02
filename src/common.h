@@ -58,7 +58,7 @@ typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
 #    define UINT64_C(x) x##LL
 #    define ARCH_x86_32
-@    define BYTES_PER_WORD 4
+#    define BYTES_PER_WORD 4
 #  elif defined _M_X64
 typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
