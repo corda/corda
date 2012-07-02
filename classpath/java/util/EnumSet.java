@@ -130,7 +130,6 @@ public class EnumSet<T extends Enum<T>> extends AbstractSet<T> {
     }
 
     public void remove() {
-      //TODO
       if (!removeAllowed) {
         throw new IllegalStateException("Cannot remove from this iterator in this state");
       }
