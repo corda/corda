@@ -257,7 +257,7 @@ setTcpNoDelay(JNIEnv* e, int d, bool on)
 }
 
 void
-doListen(JNIEnv* e, int s, sockaddr_in* address)
+doBind(JNIEnv* e, int s, sockaddr_in* address)
 {
   int opt = 1;
   int r = ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
@@ -272,8 +272,12 @@ doListen(JNIEnv* e, int s, sockaddr_in* address)
     throwIOException(e);
     return;
   }
+}
 
-  r = ::listen(s, 100);
+void
+doListen(JNIEnv* e, int s)
+{
+  int r = ::listen(s, 100);
   if (r != 0) {
     throwIOException(e);
   }
@@ -344,9 +348,9 @@ doWrite(int fd, const void* buffer, size_t count)
 }
 
 int
-makeSocket(JNIEnv* e)
+makeSocket(JNIEnv* e, int type = SOCK_STREAM, int protocol = IPPROTO_TCP)
 {
-  int s = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  int s = ::socket(AF_INET, type, protocol);
   if (s < 0) {
     throwIOException(e);
     return s;
@@ -378,7 +382,28 @@ Java_java_nio_channels_ServerSocketChannel_natDoListen(JNIEnv *e,
   init(e, &address, host, port);
   if (e->ExceptionCheck()) return 0;
 
-  ::doListen(e, s, &address);
+  ::doBind(e, s, &address);
+  if (e->ExceptionCheck()) return 0;
+
+  ::doListen(e, s);
+  return s;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_nio_channels_DatagramChannel_bind(JNIEnv *e,
+                                            jclass,
+                                            jstring host,
+                                            jint port)
+{
+  int s = makeSocket(e, SOCK_DGRAM, IPPROTO_UDP);
+  if (s < 0) return s;
+  if (e->ExceptionCheck()) return 0;
+  
+  sockaddr_in address;
+  init(e, &address, host, port);
+  if (e->ExceptionCheck()) return 0;
+
+  ::doBind(e, s, &address);
   return s;
 }
 
@@ -389,6 +414,16 @@ Java_java_nio_channels_SocketChannel_configureBlocking(JNIEnv *e,
                                                        jboolean blocking)
 {
   setBlocking(e, socket, blocking);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_java_nio_channels_DatagramChannel_configureBlocking(JNIEnv* e,
+                                                         jclass c,
+                                                         jint socket,
+                                                         jboolean blocking)
+{
+  return Java_java_nio_channels_SocketChannel_configureBlocking
+    (e, c, socket, blocking);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -419,6 +454,24 @@ Java_java_nio_channels_SocketChannel_natDoConnect(JNIEnv *e,
   
   jboolean connected = ::doConnect(e, s, &address);
   e->SetBooleanArrayRegion(retVal, 0, 1, &connected);
+  
+  return s;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_java_nio_channels_DatagramChannel_connect(JNIEnv *e,
+                                               jclass,
+                                               jstring host,
+                                               jint port)
+{
+  int s = makeSocket(e, SOCK_DGRAM, IPPROTO_UDP);
+  if (e->ExceptionCheck()) return 0;
+
+  sockaddr_in address;
+  init(e, &address, host, port);
+  if (e->ExceptionCheck()) return 0;
+  
+  ::doConnect(e, s, &address);
   
   return s;
 }
@@ -476,6 +529,19 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 }
 
 extern "C" JNIEXPORT jint JNICALL
+Java_java_nio_channels_DatagramChannel_read(JNIEnv* e,
+                                            jclass c,
+                                            jint socket,
+                                            jbyteArray buffer,
+                                            jint offset,
+                                            jint length,
+                                            jboolean blocking)
+{
+  return Java_java_nio_channels_SocketChannel_natRead
+    (e, c, socket, buffer, offset, length, blocking);
+}
+
+extern "C" JNIEXPORT jint JNICALL
 Java_java_nio_channels_SocketChannel_natWrite(JNIEnv *e,
 					      jclass,
 					      jint socket,
@@ -515,6 +581,18 @@ Java_java_nio_channels_SocketChannel_natWrite(JNIEnv *e,
   return r;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_java_nio_channels_DatagramChannel_write(JNIEnv* e,
+                                             jclass c,
+                                             jint socket,
+                                             jbyteArray buffer,
+                                             jint offset,
+                                             jint length,
+                                             jboolean blocking)
+{
+  return Java_java_nio_channels_SocketChannel_natWrite
+    (e, c, socket, buffer, offset, length, blocking);
+}
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_nio_channels_SocketChannel_natThrowWriteError(JNIEnv *e,
@@ -554,18 +632,29 @@ class Pipe {
     address.sin_family = AF_INET;
     address.sin_port = 0;
     address.sin_addr.s_addr = inet_addr("127.0.0.1"); //INADDR_LOOPBACK;
+
     listener_ = makeSocket(e);
+    if (e->ExceptionCheck()) return;
+
     setBlocking(e, listener_, false);
-    ::doListen(e, listener_, &address);
+
+    ::doBind(e, listener_, &address);
+    if (e->ExceptionCheck()) return;
+
+    ::doListen(e, listener_);
+    if (e->ExceptionCheck()) return;
 
     socklen_t length = sizeof(sockaddr_in);
     int r = getsockname(listener_, reinterpret_cast<sockaddr*>(&address),
                         &length);
     if (r) {
       throwIOException(e);
+      return;
     }
 
     writer_ = makeSocket(e);
+    if (e->ExceptionCheck()) return;
+
     setBlocking(e, writer_, true);
     connected_ = ::doConnect(e, writer_, &address);
   }
@@ -663,6 +752,7 @@ Java_java_nio_channels_SocketSelector_natInit(JNIEnv* e, jclass)
   void *mem = malloc(sizeof(SelectorState));
   if (mem) {
     SelectorState *s = new (mem) SelectorState(e);
+    if (e->ExceptionCheck()) return 0;
 
     if (s) {
       FD_ZERO(&(s->read));
