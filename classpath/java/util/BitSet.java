@@ -97,8 +97,7 @@ public class BitSet implements Serializable, Cloneable {
       int currentFirstIndex = fromIndex;
       for (int i = 0; i < numPartitionsToTraverse; ++i) {
         int currentToIndex = Math.min(toIndex, (basePartition + i + 1) * BITS_PER_LONG);
-        int currentRange = currentToIndex - currentFirstIndex;
-        long mask = (((1L << currentRange) - 1L) << (currentFirstIndex % BITS_PER_LONG));
+        long mask = getTrueMask(currentFirstIndex, currentToIndex);
         bits[i + basePartition] ^= mask;
         currentFirstIndex = currentToIndex;
       }
@@ -113,6 +112,11 @@ public class BitSet implements Serializable, Cloneable {
       }
       bits = newBits;
     }
+  }
+
+  private long getTrueMask(int fromIndex, int toIndex) {
+    int currentRange = toIndex - fromIndex;
+    return (((1L << currentRange) - 1L) << (fromIndex % BITS_PER_LONG));
   }
 
   public void clear(int index) {
@@ -137,8 +141,18 @@ public class BitSet implements Serializable, Cloneable {
   }
 
   public void set(int start, int end) {
-    for (int i = start; i < end; i++) {
-      set(i);
+    //TODO remove copypasta
+    int basePartition = longPosition(start);
+    int lastPartition = longPosition(end - 1); //range is [fromIndex, toIndex)
+    int numPartitionsToTraverse = lastPartition - basePartition + 1;
+    enlarge(lastPartition);
+
+    int currentFirstIndex = start;
+    for (int i = 0; i < numPartitionsToTraverse; ++i) {
+      int currentToIndex = Math.min(end, (basePartition + i + 1) * BITS_PER_LONG);
+      long mask = getTrueMask(currentFirstIndex, currentToIndex);
+      bits[i + basePartition] |= mask;
+      currentFirstIndex = currentToIndex;
     }
   }
 
