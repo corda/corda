@@ -48,6 +48,10 @@ public class BitsetTest {
     assertEquals("after 100, 102 is empty", 102, bits.nextClearBit(100));
     
     testFlip();
+
+    BitSet expandingSet = new BitSet();
+    //should force us to have 3 partitions.
+    expandingSet.set(128);
   }
   
   private static void testFlip() {

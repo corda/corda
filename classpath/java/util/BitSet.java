@@ -105,9 +105,9 @@ public class BitSet implements Serializable, Cloneable {
     }
   }
 
-  private void enlarge(int newSize) {
-    if (bits == null || bits.length < newSize) {
-      long[] newBits = new long[newSize + 1];
+  private void enlarge(int newPartition) {
+    if (bits == null || bits.length < (newPartition + 1)) {
+      long[] newBits = new long[newPartition + 1];
       if (bits != null) {
         System.arraycopy(bits, 0, newBits, 0, bits.length);
       }
