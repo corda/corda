@@ -8249,15 +8249,15 @@ class ArgumentList {
         break;
 
       case 'D':
-        addLong(arguments[index++].d);
+        addLong(doubleToBits(arguments[index++].d));
         break;
 
       case 'F':
-        addLong(arguments[index++].f);
+        addInt(floatToBits(arguments[index++].f));
         break;
 
       default:
-        addLong(arguments[index++].i);
+        addInt(arguments[index++].i);
         break;        
       }
     }
