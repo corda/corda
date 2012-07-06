@@ -1816,6 +1816,15 @@ void ArgParser::printUsage(const char* exe) {
   }
 }
 
+char*
+myStrndup(const char* src, unsigned length)
+{
+  char* s = static_cast<char*>(malloc(length + 1));
+  memcpy(s, src, length);
+  s[length] = 0;
+  return s;
+}
+
 class Arguments {
 public:
 
@@ -1843,7 +1852,7 @@ public:
         return false;
       }
 
-      destA = strndup(src, split - src);
+      destA = myStrndup(src, split - src);
       destB = strdup(split + 1);
     }
     return true;
@@ -1879,9 +1888,9 @@ public:
 
     if(entry.value) {
       if(const char* entryClassEnd = strchr(entry.value, '.')) {
-        entryClass = strndup(entry.value, entryClassEnd - entry.value);
+        entryClass = myStrndup(entry.value, entryClassEnd - entry.value);
         if(const char* entryMethodEnd = strchr(entryClassEnd, '(')) {
-          entryMethod = strndup(entryClassEnd + 1, entryMethodEnd - entryClassEnd - 1);
+          entryMethod = myStrndup(entryClassEnd + 1, entryMethodEnd - entryClassEnd - 1);
           entrySpec = strdup(entryMethodEnd);
         } else {
           entryMethod = strdup(entryClassEnd + 1);
