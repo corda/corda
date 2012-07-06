@@ -85,23 +85,6 @@ public class BitSet implements Serializable, Cloneable {
       bits[i] ^= otherBits.bits[i];
     }
   }
-  
-  public void flip(int index) {
-    flip(index, index+1);
-  }
-  
-  public void flip(int fromIndex, int toIndex) {
-    if (fromIndex > toIndex || fromIndex < 0 || toIndex < 0) {
-      throw new IndexOutOfBoundsException();
-    } else if (fromIndex != toIndex) {
-      MaskInfoIterator iter = new MaskInfoIterator(fromIndex, toIndex);
-      enlarge(iter.getLastPartition());
-      while (iter.hasNext()) {
-        MaskInfo info = iter.next();
-        bits[info.partitionIndex] ^= info.mask;
-      }
-    }
-  }
 
   private void enlarge(int newPartition) {
     if (bits == null || bits.length < (newPartition + 1)) {
@@ -113,19 +96,29 @@ public class BitSet implements Serializable, Cloneable {
     }
   }
 
-  public void clear(int index) {
-    int pos = longPosition(index);
-    if (pos < bits.length) {
-      bits[pos] &= (MASK ^ bitPosition(index));
-    }
-  }
-
   public boolean get(int index) {
     int pos = longPosition(index);
     if (pos < bits.length) {
       return (bits[pos] & bitPosition(index)) != 0;
     }
     return false;
+  }
+
+  public void flip(int index) {
+    flip(index, index+1);
+  }
+
+  public void flip(int fromIndex, int toIndex) {
+    if (fromIndex > toIndex || fromIndex < 0 || toIndex < 0) {
+      throw new IndexOutOfBoundsException();
+    } else if (fromIndex != toIndex) {
+      MaskInfoIterator iter = new MaskInfoIterator(fromIndex, toIndex);
+      enlarge(iter.getLastPartition());
+      while (iter.hasNext()) {
+        MaskInfo info = iter.next();
+        bits[info.partitionIndex] ^= info.mask;
+      }
+    }
   }
 
   public void set(int index) {
@@ -143,9 +136,18 @@ public class BitSet implements Serializable, Cloneable {
     }
   }
 
+  public void clear(int index) {
+    int pos = longPosition(index);
+    if (pos < bits.length) {
+      bits[pos] &= (MASK ^ bitPosition(index));
+    }
+  }
+
   public void clear(int start, int end) {
-    for (int i = start; i < end; i++) {
-      clear(i);
+    MaskInfoIterator iter = new MaskInfoIterator(start, end);
+    while (iter.hasNext()) {
+      MaskInfo info = iter.next();
+      bits[info.partitionIndex] &= (MASK ^ info.mask);
     }
   }
 
