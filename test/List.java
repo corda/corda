@@ -145,6 +145,24 @@ public class List {
     }
   }
 
+  private static void testRemove() {
+    ArrayList<String> foo = new ArrayList<String>(2);
+    foo.add("Uno");
+    foo.add("Dos");
+    foo.add("Tres");
+    foo.add("Cuatro");
+
+    ArrayList<String> fooToRemove = new ArrayList<String>(2);
+    fooToRemove.add(foo.get(0));
+    fooToRemove.add(foo.get(1));
+
+    for (String s : fooToRemove) {
+      foo.remove(s);
+    }
+
+    expect(foo.size() == 2);
+  }
+
   public static void main(String args[]) {
     ArrayList<Integer> l = new ArrayList<Integer>();
     l.add(1); l.add(2); l.add(3); l.add(4); l.add(5);
@@ -170,5 +188,6 @@ public class List {
     testIterators2(new ArrayList());
     testIterators2(new LinkedList());
     testGrow();
+    testRemove();
   }
 }

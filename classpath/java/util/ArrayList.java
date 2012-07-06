@@ -131,13 +131,14 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
   public T remove(int index) {
     T v = get(index);
 
-    if (index == size - 1) {
+    int newSize = size - 1;
+
+    if (index == newSize) {
       array[index] = null;
     } else {
-      System.arraycopy(array, index + 1, array, index, size - index);
+      System.arraycopy(array, index + 1, array, index, newSize - index);
     }
 
-    int newSize = size - 1;
     shrink(newSize);
     size = newSize;
 
