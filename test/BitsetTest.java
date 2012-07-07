@@ -96,6 +96,13 @@ public class BitsetTest {
     assertTrue("bit 2 should be 0", !bitset.get(2));
     assertTrue("bit 3 should be 1", bitset.get(3));
     assertCardinality(bitset, 17);
+
+    bitset = new BitSet(70);
+    bitset.flip(0, 65);
+    for (int i=0; i < 65; ++i) {
+      assertTrue("bit " + i + " should be set", bitset.get(i));
+    }
+    assertTrue("bit 65 should not be set", !bitset.get(65));
   }
   
   static void assertTrue(String msg, boolean flag) {
