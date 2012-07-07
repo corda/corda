@@ -48,6 +48,7 @@ public class BitsetTest {
     assertEquals("after 100, 102 is empty", 102, bits.nextClearBit(100));
     
     testFlip();
+    testClear();
 
     BitSet expandingSet = new BitSet();
     //should force us to have 3 partitions.
@@ -78,6 +79,30 @@ public class BitsetTest {
       assertTrue(i + " should be true", bitset.get(i));
     }
     assertTrue("70 should be false", !bitset.get(70));
+  }
+
+  private static void testClear() {
+    BitSet bitset = new BitSet();
+    bitset.set(0, 20);
+    assertCardinality(bitset, 20);
+
+    bitset.clear(1);
+    assertTrue("bit 1 should be 0", !bitset.get(1));
+    assertCardinality(bitset, 19);
+
+    bitset.clear(0, 3);
+    assertTrue("bit 0 should be 0", !bitset.get(0));
+    assertTrue("bit 1 should be 0", !bitset.get(1));
+    assertTrue("bit 2 should be 0", !bitset.get(2));
+    assertTrue("bit 3 should be 1", bitset.get(3));
+    assertCardinality(bitset, 17);
+
+    bitset = new BitSet(70);
+    bitset.flip(0, 65);
+    for (int i=0; i < 65; ++i) {
+      assertTrue("bit " + i + " should be set", bitset.get(i));
+    }
+    assertTrue("bit 65 should not be set", !bitset.get(65));
   }
   
   static void assertTrue(String msg, boolean flag) {

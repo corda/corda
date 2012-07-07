@@ -32,6 +32,11 @@ public class BitSet implements Serializable, Cloneable {
     return 1L << (index % BITS_PER_LONG);
   }
 
+  private static long getTrueMask(int fromIndex, int toIndex) {
+    int currentRange = toIndex - fromIndex;
+    return (MASK >>> (BITS_PER_LONG - currentRange)) << (fromIndex % BITS_PER_LONG);
+  }
+
   public BitSet(int bitLength) {
     if (bitLength % BITS_PER_LONG == 0) {
       enlarge(longPosition(bitLength));
@@ -80,30 +85,6 @@ public class BitSet implements Serializable, Cloneable {
       bits[i] ^= otherBits.bits[i];
     }
   }
-  
-  public void flip(int index) {
-    flip(index, index+1);
-  }
-  
-  public void flip(int fromIndex, int toIndex) {
-    if (fromIndex > toIndex || fromIndex < 0 || toIndex < 0) {
-      throw new IndexOutOfBoundsException();
-    } else if (fromIndex != toIndex) {
-      int basePartition = longPosition(fromIndex);
-      int lastPartition = longPosition(toIndex - 1); //range is [fromIndex, toIndex)
-      int numPartitionsToTraverse = lastPartition - basePartition + 1;
-      enlarge(lastPartition);
-      
-      int currentFirstIndex = fromIndex;
-      for (int i = 0; i < numPartitionsToTraverse; ++i) {
-        int currentToIndex = Math.min(toIndex, (basePartition + i + 1) * BITS_PER_LONG);
-        int currentRange = currentToIndex - currentFirstIndex;
-        long mask = (((1L << currentRange) - 1L) << (currentFirstIndex % BITS_PER_LONG));
-        bits[i + basePartition] ^= mask;
-        currentFirstIndex = currentToIndex;
-      }
-    }
-  }
 
   private void enlarge(int newPartition) {
     if (bits == null || bits.length < (newPartition + 1)) {
@@ -115,19 +96,29 @@ public class BitSet implements Serializable, Cloneable {
     }
   }
 
-  public void clear(int index) {
-    int pos = longPosition(index);
-    if (pos < bits.length) {
-      bits[pos] &= (MASK ^ bitPosition(index));
-    }
-  }
-
   public boolean get(int index) {
     int pos = longPosition(index);
     if (pos < bits.length) {
       return (bits[pos] & bitPosition(index)) != 0;
     }
     return false;
+  }
+
+  public void flip(int index) {
+    flip(index, index+1);
+  }
+
+  public void flip(int fromIndex, int toIndex) {
+    if (fromIndex > toIndex || fromIndex < 0 || toIndex < 0) {
+      throw new IndexOutOfBoundsException();
+    } else if (fromIndex != toIndex) {
+      MaskInfoIterator iter = new MaskInfoIterator(fromIndex, toIndex);
+      enlarge(iter.getLastPartition());
+      while (iter.hasNext()) {
+        MaskInfo info = iter.next();
+        bits[info.partitionIndex] ^= info.mask;
+      }
+    }
   }
 
   public void set(int index) {
@@ -137,14 +128,26 @@ public class BitSet implements Serializable, Cloneable {
   }
 
   public void set(int start, int end) {
-    for (int i = start; i < end; i++) {
-      set(i);
+    MaskInfoIterator iter = new MaskInfoIterator(start, end);
+    enlarge(iter.getLastPartition());
+    while (iter.hasNext()) {
+      MaskInfo info = iter.next();
+      bits[info.partitionIndex] |= info.mask;
+    }
+  }
+
+  public void clear(int index) {
+    int pos = longPosition(index);
+    if (pos < bits.length) {
+      bits[pos] &= (MASK ^ bitPosition(index));
     }
   }
 
   public void clear(int start, int end) {
-    for (int i = start; i < end; i++) {
-      clear(i);
+    MaskInfoIterator iter = new MaskInfoIterator(start, end);
+    while (iter.hasNext()) {
+      MaskInfo info = iter.next();
+      bits[info.partitionIndex] &= (MASK ^ info.mask);
     }
   }
 
@@ -213,5 +216,52 @@ public class BitSet implements Serializable, Cloneable {
     }
     
     return numSetBits;
+  }
+
+  private static class MaskInfoIterator implements Iterator<MaskInfo> {
+    private int basePartition;
+    private int numPartitionsToTraverse;
+    private int currentPartitionOffset;
+    private int toIndex;
+    private int currentFirstIndex;
+
+    public MaskInfoIterator(int fromIndex, int toIndex) {
+      this.basePartition = longPosition(fromIndex);
+      this.numPartitionsToTraverse = longPosition(toIndex - 1) - basePartition + 1;
+      this.currentPartitionOffset = 0;
+      this.toIndex = toIndex;
+      this.currentFirstIndex = fromIndex;
+    }
+
+    public MaskInfo next() {
+      int currentToIndex = Math.min(toIndex, (basePartition + currentPartitionOffset + 1) * BITS_PER_LONG);
+      long mask = getTrueMask(currentFirstIndex, currentToIndex);
+      MaskInfo info = new MaskInfo(mask, basePartition + currentPartitionOffset);
+      currentFirstIndex = currentToIndex;
+      currentPartitionOffset++;
+      return info;
+    }
+
+    public boolean hasNext() {
+      return currentPartitionOffset < numPartitionsToTraverse;
+    }
+
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+
+    public int getLastPartition() {
+      return basePartition + numPartitionsToTraverse - 1;
+    }
+  }
+
+  private static class MaskInfo {
+    public long mask;
+    public int partitionIndex;
+
+    public MaskInfo(long mask, int partitionIndex) {
+      this.mask = mask;
+      this.partitionIndex = partitionIndex;
+    }
   }
 }
