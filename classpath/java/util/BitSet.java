@@ -34,11 +34,7 @@ public class BitSet implements Serializable, Cloneable {
 
   private static long getTrueMask(int fromIndex, int toIndex) {
     int currentRange = toIndex - fromIndex;
-    if (currentRange == 64) {
-      return MASK;
-    } else {
-      return (((1L << currentRange) - 1L) << (fromIndex % BITS_PER_LONG));
-    }
+    return (MASK >>> (BITS_PER_LONG - currentRange)) << (fromIndex % BITS_PER_LONG);
   }
 
   public BitSet(int bitLength) {
