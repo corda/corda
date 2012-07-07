@@ -53,7 +53,7 @@ public class EnumSet<T extends Enum<T>> extends AbstractSet<T> {
   
   public static <T extends Enum<T>>EnumSet<T> allOf(Class<T> elementType) {
     EnumSet<T> enumSet = createEmptyEnumSet(elementType);
-    addAllElementsToSet(Arrays.asList(elementType.getEnumConstants()), enumSet);
+    enumSet.bitset.set(0, elementType.getEnumConstants().length);
     
     return enumSet;
   }
