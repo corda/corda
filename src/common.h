@@ -145,7 +145,11 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
 #    define LLD "I64d"
 #    define ULD "I64x"
 #  else
-#    define LLD "ld"
+#    ifdef __APPLE__
+#      define LLD "lld"
+#    else
+#      define LLD "ld"
+#    endif
 #    define ULD "lu"
 #  endif
 #else
