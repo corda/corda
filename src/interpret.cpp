@@ -2819,6 +2819,7 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
   }
 }
 
+/*
 inline unsigned
 returnCode(Thread* t, object method)
 {
@@ -2827,6 +2828,7 @@ returnCode(Thread* t, object method)
   while (*s and *s != ')') ++ s;
   return fieldCode(t, s[1]);
 }
+*/
 
 object
 invoke(Thread* t, object method)
