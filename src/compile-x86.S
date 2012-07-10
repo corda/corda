@@ -151,7 +151,7 @@ LOCAL(vmJumpAndInvoke_argumentLoop):
    addq   $8,%r11
 
 LOCAL(vmJumpAndInvoke_argumentTest):
-   cmpq   %9,%r11
+   cmpq   %r9,%r11
    jb     LOCAL(vmJumpAndInvoke_argumentLoop)
 
    // the arguments have been copied, so we can set the real stack
