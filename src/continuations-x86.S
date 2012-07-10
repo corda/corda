@@ -90,7 +90,7 @@ LOCAL(vmInvoke_handleException):
 LOCAL(vmInvoke_exit):
 
 #elif defined __i386__
-   
+
 #define THREAD_CONTINUATION 2160
 #define THREAD_EXCEPTION 44
 #define THREAD_EXCEPTION_STACK_ADJUSTMENT 2164
@@ -103,6 +103,12 @@ LOCAL(vmInvoke_exit):
 #define CONTINUATION_FRAME_POINTER_OFFSET 24
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
+   
+#ifdef AVIAN_USE_FRAME_POINTER
+#  define CONTINUATION_ALIGNMENT_PADDING 8
+#else
+#  define CONTINUATION_ALIGNMENT_PADDING 12
+#endif
 
    // call the next continuation, if any
    movl   THREAD_CONTINUATION(%ebx),%ecx
@@ -113,7 +119,7 @@ LOCAL(vmInvoke_exit):
    // plus stack alignment padding
    movl   CONTINUATION_LENGTH(%ecx),%esi
    shll   $2,%esi
-   leal   8(%esi),%esi
+   leal   CONTINUATION_ALIGNMENT_PADDING(%esi),%esi
    subl   %esi,%esp
    
    // copy the continuation body into the frame
