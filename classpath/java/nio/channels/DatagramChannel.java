@@ -16,6 +16,8 @@ import java.net.SocketAddress;
 import java.net.InetSocketAddress;
 import java.net.ProtocolFamily;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.DatagramSocket;
 import java.net.StandardProtocolFamily;
 
 public class DatagramChannel extends SelectableChannel
@@ -26,7 +28,7 @@ public class DatagramChannel extends SelectableChannel
   private int socket = InvalidSocket;
   private boolean blocking = true;
 
-  public DatagramChannel configureBlocking(boolean v) throws IOException {
+  public SelectableChannel configureBlocking(boolean v) throws IOException {
     blocking = v;
     if (socket != InvalidSocket) {
       configureBlocking(socket, v);
@@ -52,6 +54,16 @@ public class DatagramChannel extends SelectableChannel
     } else {
       throw new UnsupportedOperationException();
     }
+  }
+
+  public static DatagramChannel open()
+    throws IOException
+  {
+    return open(StandardProtocolFamily.INET);
+  }
+
+  public DatagramSocket socket() {
+    return new Handle();
   }
 
   public DatagramChannel bind(SocketAddress address) throws IOException {
@@ -97,19 +109,59 @@ public class DatagramChannel extends SelectableChannel
   }
 
   public int read(ByteBuffer b) throws IOException {
-    if (b.remaining() == 0) return 0;
+    int p = b.position();
+    receive(b);
+    return b.position() - p;
+  }
+
+  public SocketAddress receive(ByteBuffer b) throws IOException {
+    if (b.remaining() == 0) return null;
 
     byte[] array = b.array();
     if (array == null) throw new NullPointerException();
 
-    int c = read
-      (socket, array, b.arrayOffset() + b.position(), b.remaining(), blocking);
+    int[] address = new int[2];
+
+    int c = receive
+      (socket, array, b.arrayOffset() + b.position(), b.remaining(), blocking,
+       address);
 
     if (c > 0) {
       b.position(b.position() + c);
+
+      return new InetSocketAddress(ipv4ToString(address[0]), address[1]);
+    } else {
+      return null;
+    }
+  }
+
+  private static String ipv4ToString(int address) {
+    StringBuilder sb = new StringBuilder();
+
+    sb.append( address >> 24        ).append('.')
+      .append((address >> 16) & 0xFF).append('.')
+      .append((address >>  8) & 0xFF).append('.')
+      .append( address        & 0xFF);
+
+    return sb.toString();
+  }
+
+  public class Handle extends DatagramSocket {
+    public SocketAddress getRemoteSocketAddress() {
+      throw new UnsupportedOperationException();
     }
 
-    return c;
+    public void bind(SocketAddress address) throws SocketException {
+      try {
+        DatagramChannel.this.bind(address);
+      } catch (SocketException e) {
+        throw e;
+      } catch (IOException e) {
+        SocketException se = new SocketException();
+        se.initCause(e);
+        throw se;
+      }
+    }
   }
 
   private static native void configureBlocking(int socket, boolean blocking)
@@ -121,7 +173,8 @@ public class DatagramChannel extends SelectableChannel
   private static native int write(int socket, byte[] array, int offset,
                                   int length, boolean blocking)
     throws IOException;
-  private static native int read(int socket, byte[] array, int offset,
-                                 int length, boolean blocking)
+  private static native int receive(int socket, byte[] array, int offset,
+                                    int length, boolean blocking,
+                                    int[] address)
     throws IOException;
 }

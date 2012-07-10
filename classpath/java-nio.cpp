@@ -338,6 +338,26 @@ doRead(int fd, void* buffer, size_t count)
 }
 
 int
+doRecv(int fd, void* buffer, size_t count, int32_t* host, int32_t* port)
+{
+  sockaddr address;
+  socklen_t length = sizeof(address);
+  int r = recvfrom
+    (fd, static_cast<char*>(buffer), count, 0, &address, &length);
+  
+  if (r > 0) {
+    sockaddr_in a; memcpy(&a, &address, length);
+    *host = ntohl(a.sin_addr.s_addr);
+    *port = ntohs(a.sin_port);
+  } else {
+    *host = 0;
+    *port = 0;
+  }
+
+  return r;
+}
+
+int
 doWrite(int fd, const void* buffer, size_t count)
 {
 #ifdef PLATFORM_WINDOWS
@@ -529,16 +549,54 @@ Java_java_nio_channels_SocketChannel_natRead(JNIEnv *e,
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_java_nio_channels_DatagramChannel_read(JNIEnv* e,
-                                            jclass c,
-                                            jint socket,
-                                            jbyteArray buffer,
-                                            jint offset,
-                                            jint length,
-                                            jboolean blocking)
+Java_java_nio_channels_DatagramChannel_receive(JNIEnv* e,
+                                               jclass,
+                                               jint socket,
+                                               jbyteArray buffer,
+                                               jint offset,
+                                               jint length,
+                                               jboolean blocking,
+                                               jintArray address)
 {
-  return Java_java_nio_channels_SocketChannel_natRead
-    (e, c, socket, buffer, offset, length, blocking);
+  int r;
+  int32_t host;
+  int32_t port;
+  if (blocking) {
+    uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+    if (buf) {
+      r = ::doRecv(socket, buf, length, &host, &port);
+      if (r > 0) {
+        e->SetByteArrayRegion
+          (buffer, offset, r, reinterpret_cast<jbyte*>(buf));
+      }
+      free(buf);
+    } else {
+      return 0;
+    }
+  } else {
+    jboolean isCopy;
+    uint8_t* buf = static_cast<uint8_t*>
+      (e->GetPrimitiveArrayCritical(buffer, &isCopy));
+
+    r = ::doRecv(socket, buf + offset, length, &host, &port);
+
+    e->ReleasePrimitiveArrayCritical(buffer, buf, 0);
+  }
+
+  if (r < 0) {
+    if (eagain()) {
+      return 0;
+    } else {
+      throwIOException(e);
+    }
+  } else if (r == 0) {
+    return -1;
+  } else {
+    e->SetIntArrayRegion(address, 0, 1, &host);
+    e->SetIntArrayRegion(address, 1, 1, &port);
+  }
+
+  return r;
 }
 
 extern "C" JNIEXPORT jint JNICALL

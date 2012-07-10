@@ -27,15 +27,15 @@ public class Datagrams {
     final SocketAddress Address = new InetSocketAddress(Hostname, Port);
     final byte[] Message = "hello, world!".getBytes();
 
-    DatagramChannel out = DatagramChannel.open(StandardProtocolFamily.INET);
+    DatagramChannel out = DatagramChannel.open();
     try {
       out.configureBlocking(false);
       out.connect(Address);
     
-      DatagramChannel in = DatagramChannel.open(StandardProtocolFamily.INET);
+      DatagramChannel in = DatagramChannel.open();
       try {
         in.configureBlocking(false);
-        in.bind(Address);
+        in.socket().bind(Address);
 
         Selector selector = Selector.open();
         try {
@@ -60,7 +60,7 @@ public class Datagrams {
 
             case 1: {
               if (inKey.isReadable()) {
-                in.read(inBuffer);
+                in.receive(inBuffer);
                 if (! inBuffer.hasRemaining()) {
                   expect(equal(inBuffer.array(),
                                inBuffer.arrayOffset(),
