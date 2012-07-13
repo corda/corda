@@ -117,7 +117,7 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
   }
 
   public boolean isEmpty() {
-    return set.size() != 0;
+    return set.size() == 0;
   }
 
   public boolean contains(Object value) {
