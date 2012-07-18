@@ -5,6 +5,7 @@ version = 0.6
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
+	| sed 's/^x86pc$$/i386/' \
 	| sed 's/^arm.*$$/arm/' \
 	| sed 's/ppc/powerpc/')
 
@@ -307,6 +308,24 @@ ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
 	build-lflags += -framework CoreFoundation
+endif
+
+ifeq ($(platform),qnx)
+	target-platform = linux
+	cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+	lflags = $(common-lflags) -lsocket
+	ifeq ($(build-platform),qnx)
+		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+		build-lflags = $(common-lflags)
+	else
+		prefix = i486-pc-nto-qnx6.5.0-
+	endif
+	cxx = $(prefix)g++
+	cc = $(prefix)gcc
+	ar = $(prefix)ar
+	ranlib = $(prefix)ranlib
+	strip = $(prefix)strip
+	rdynamic = -Wl,--export-dynamic
 endif
 
 ifeq ($(platform),darwin)
@@ -994,7 +1013,7 @@ $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 $(classpath-object): $(build)/classpath.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
-		_binary_classpath_jar_end $(platform) $(arch)
+		_binary_classpath_jar_end $(target-platform) $(arch)
 
 $(build)/javahome.jar:
 	@echo "creating $(@)"
@@ -1005,7 +1024,7 @@ $(build)/javahome.jar:
 $(javahome-object): $(build)/javahome.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_javahome_jar_start \
-		_binary_javahome_jar_end $(platform) $(arch)
+		_binary_javahome_jar_end $(target-platform) $(arch)
 
 define compile-generator-object
 	@echo "compiling $(@)"
@@ -1066,7 +1085,7 @@ $(bootimage-generator): $(bootimage-generator-objects)
 		arch=$(build-arch) \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
-		target-platform=$(platform) \
+		target-platform=$(target-platform) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \

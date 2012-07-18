@@ -64,6 +64,12 @@
 #    define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
+#  elif (defined __QNX__)
+#    define IP_REGISTER(context) (context->uc_mcontext.cpu.eip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.cpu.esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.cpu.ebx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.cpu.ecx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.cpu.ebp)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])

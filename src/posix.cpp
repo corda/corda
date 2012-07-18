@@ -28,7 +28,7 @@
 #include "unistd.h"
 #include "pthread.h"
 #include "signal.h"
-#include "sys/ucontext.h"
+#include "ucontext.h"
 #include "stdint.h"
 #include "dirent.h"
 #include "sched.h"
