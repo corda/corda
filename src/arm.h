@@ -44,7 +44,12 @@
   THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
 #  define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
-#else // not __APPLE__
+#elif (defined __QNX__)
+#  define IP_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_PC])
+#  define STACK_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_SP])
+#  define THREAD_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_IP])
+#  define LINK_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_LR])
+#else
 #  define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
 #  define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
 #  define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)

@@ -318,7 +318,11 @@ ifeq ($(platform),qnx)
 		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 		build-lflags = $(common-lflags)
 	else
-		prefix = i486-pc-nto-qnx6.5.0-
+		ifeq ($(arch),i386)
+			prefix = i486-pc-nto-qnx6.5.0-
+		else
+			prefix = arm-unknown-nto-qnx6.5.0-
+		endif
 	endif
 	cxx = $(prefix)g++
 	cc = $(prefix)gcc
