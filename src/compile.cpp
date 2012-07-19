@@ -5527,12 +5527,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
-      Compiler::Operand* default_ = frame->addressOperand
-        (frame->addressPromise(c->machineIp(defaultIp)));
-
       int32_t pairCount = codeReadInt32(t, code, ip);
 
       if (pairCount) {
+        Compiler::Operand* default_ = frame->addressOperand
+          (frame->addressPromise(c->machineIp(defaultIp)));
+
         Promise* start = 0;
         THREAD_RUNTIME_ARRAY(t, uint32_t, ipTable, pairCount);
         for (int32_t i = 0; i < pairCount; ++i) {
@@ -5574,7 +5574,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
         }
       } else {
         // a switch statement with no cases, apparently
-        c->jmp(default_);
+        c->jmp(frame->machineIp(defaultIp));
       }
 
       ip = defaultIp;
