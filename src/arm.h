@@ -45,8 +45,6 @@
 #  define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
 #elif (defined __QNX__)
-#  include "arm/smpxchg.h"
-
 #  define IP_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_PC])
 #  define STACK_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_SP])
 #  define THREAD_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_IP])
@@ -119,8 +117,6 @@ atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef __APPLE__
   return OSAtomicCompareAndSwap32(old, new_, reinterpret_cast<int32_t*>(p));
-#elif (defined __QNX__)
-  return old == _smp_cmpxchg(p, old, new_);
 #else
   int r = __kernel_cmpxchg(static_cast<int>(old), static_cast<int>(new_), reinterpret_cast<int*>(p));
   return (!r ? true : false);
@@ -151,7 +147,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   const unsigned VfpCount = 16;
   uintptr_t vfpTable[VfpCount];
   unsigned vfpIndex = 0;
-  unsigned vfpBackfillIndex UNUSED = 0;
+  unsigned vfpBackfillIndex = 0;
 
   uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
