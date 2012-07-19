@@ -14,7 +14,10 @@
 
 #ifdef __APPLE__
 #  include "CoreFoundation/CoreFoundation.h"
+#  include "sys/ucontext.h"
 #  undef assert
+#else
+#  include "ucontext.h"
 #endif
 
 #include "sys/mman.h"
@@ -28,7 +31,6 @@
 #include "unistd.h"
 #include "pthread.h"
 #include "signal.h"
-#include "ucontext.h"
 #include "stdint.h"
 #include "dirent.h"
 #include "sched.h"
