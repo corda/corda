@@ -147,7 +147,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   const unsigned VfpCount = 16;
   uintptr_t vfpTable[VfpCount];
   unsigned vfpIndex = 0;
-  unsigned vfpBackfillIndex = 0;
+  unsigned vfpBackfillIndex UNUSED = 0;
 
   uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
