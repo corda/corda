@@ -42,21 +42,21 @@ public class Arrays {
     }
   }
 
-  public static <T> int hashCode(T[] array) {
+  public static int hashCode(Object[] array) {
     int hc = 823347;
-    for(T t : array) {
-      hc += t.hashCode();
+    for(Object o : array) {
+      hc += o.hashCode();
       hc *= 3;
     }
     return hc;
   }
 
-  public static <T> boolean equals(T[] a, T[] b) {
+  public static boolean equals(Object[] a, Object[] b) {
     if(a.length != b.length) {
       return false;
     }
     for(int i = 0; i < a.length; i++) {
-      if(!a[i].equals(b[i])) {
+      if(!equal(a[i], b[i])) {
         return false;
       }
     }
