@@ -77,5 +77,22 @@ public class Arrays {
       array[0] = Integer.valueOf(42);
       expect(array[0].intValue() == 42);
     }
+
+    { Object[] a = new Object[3];
+      Object[] b = new Object[3];
+
+      expect(java.util.Arrays.equals(a, b));
+      a[0] = new Object();
+      expect(! java.util.Arrays.equals(a, b));
+      expect(! java.util.Arrays.equals(b, new Object[4]));
+      expect(! java.util.Arrays.equals(b, null));
+      expect(! java.util.Arrays.equals(a, b));
+      expect(java.util.Arrays.equals(null, null));
+      b[0] = a[0];
+      expect(java.util.Arrays.equals(a, b));
+
+      java.util.Arrays.hashCode(a);
+      java.util.Arrays.hashCode(null);
+    }
   }
 }
