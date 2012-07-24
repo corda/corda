@@ -593,8 +593,8 @@ Java_java_nio_channels_DatagramChannel_receive(JNIEnv* e,
   } else if (r == 0) {
     return -1;
   } else {
-    e->SetIntArrayRegion(address, 0, 1, &host);
-    e->SetIntArrayRegion(address, 1, 1, &port);
+    jint jhost = host; e->SetIntArrayRegion(address, 0, 1, &jhost);
+    jint jport = port; e->SetIntArrayRegion(address, 1, 1, &jport);
   }
 
   return r;
