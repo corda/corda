@@ -85,8 +85,8 @@ public class Arrays {
       a[0] = new Object();
       expect(! java.util.Arrays.equals(a, b));
       expect(! java.util.Arrays.equals(b, new Object[4]));
-      expect(! java.util.Arrays.equals(b, null));
-      expect(! java.util.Arrays.equals(a, b));
+      expect(! java.util.Arrays.equals(a, null));
+      expect(! java.util.Arrays.equals(null, b));
       expect(java.util.Arrays.equals(null, null));
       b[0] = a[0];
       expect(java.util.Arrays.equals(a, b));
