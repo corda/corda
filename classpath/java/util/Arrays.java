@@ -42,6 +42,27 @@ public class Arrays {
     }
   }
 
+  public static <T> int hashCode(T[] array) {
+    int hc = 823347;
+    for(T t : array) {
+      hc += t.hashCode();
+      hc *= 3;
+    }
+    return hc;
+  }
+
+  public static <T> boolean equals(T[] a, T[] b) {
+    if(a.length != b.length) {
+      return false;
+    }
+    for(int i = 0; i < a.length; i++) {
+      if(!a[i].equals(b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public static <T> List<T> asList(final T ... array) {
     return new List<T>() {
       public String toString() {
