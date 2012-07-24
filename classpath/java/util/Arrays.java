@@ -42,6 +42,37 @@ public class Arrays {
     }
   }
 
+  public static int hashCode(Object[] array) {
+    if(array == null) {
+      return 9023;
+    }
+
+    int hc = 823347;
+    for(Object o : array) {
+      hc += o != null ? o.hashCode() : 54267;
+      hc *= 3;
+    }
+    return hc;
+  }
+
+  public static boolean equals(Object[] a, Object[] b) {
+    if(a == b) {
+      return true;
+    }
+    if(a == null || b == null) {
+      return false;
+    }
+    if(a.length != b.length) {
+      return false;
+    }
+    for(int i = 0; i < a.length; i++) {
+      if(!equal(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   public static <T> List<T> asList(final T ... array) {
     return new List<T>() {
       public String toString() {
