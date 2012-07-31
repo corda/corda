@@ -74,6 +74,12 @@ public class Files {
         f.delete();
       }
     }
+
+    expect(new File("foo/bar").getParent().equals("foo"));
+    expect(new File("foo/bar/").getParent().equals("foo"));
+    expect(new File("foo/bar//").getParent().equals("foo"));
+
+    expect(new File("foo/nonexistent-directory").listFiles() == null);
   }
 
 }
