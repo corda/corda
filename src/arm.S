@@ -9,6 +9,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "types.h"
+   
 .text
 
 #define LOCAL(x) .L##x
@@ -29,14 +31,18 @@ GLOBAL(vmNativeCall):
     r2             : memoryTable
     r3             : memoryCount
     [sp, #0] -> r6 : gprTable
+    [sp, #4] -> r7 : vfpTable
+    [sp, #8] -> r8 : returnType
   */
   mov   ip, sp           // save stack frame
-  stmfd sp!, {r4-r6, lr} // save clobbered non-volatile regs
+  stmfd sp!, {r4-r8, lr} // save clobbered non-volatile regs
 
   // mv args into non-volatile regs
   mov   r4, r0
   mov   r5, r1
   ldr   r6, [ip]
+  ldr   r7, [ip, #4]
+  ldr   r8, [ip, #8]
 
   // setup stack arguments if necessary
   sub   sp, sp, r5 // allocate stack
@@ -51,11 +57,28 @@ LOCAL(loop):
   // setup argument registers if necessary
   tst     r6, r6
   ldmneia r6, {r0-r3}
+#if defined(__VFP_FP__) && (! defined(__SOFTFP__))
+  // and VFP registers
+  vldmia  r7, {d0-d8}
+#endif
 
   blx   r4         // call function
   add   sp, sp, r5 // deallocate stack
 
-  ldmfd sp!, {r4-r6, pc} // restore non-volatile regs and return
+#if defined(__VFP_FP__) && (! defined(__SOFTFP__))
+  cmp   r8,#FLOAT_TYPE
+  bne   LOCAL(double)
+  fmrs  r0,s0
+  b     LOCAL(exit)
+
+LOCAL(double):
+  cmp   r8,#DOUBLE_TYPE
+  bne   LOCAL(exit)
+  fmrrd r0,r1,d0   
+#endif
+   
+LOCAL(exit):
+  ldmfd sp!, {r4-r8, pc} // restore non-volatile regs and return
 
 .globl GLOBAL(vmJump)
 .align 2

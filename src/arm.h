@@ -60,7 +60,8 @@
 
 extern "C" uint64_t
 vmNativeCall(void* function, unsigned stackTotal, void* memoryTable,
-             unsigned memoryCount, void* gprTable);
+             unsigned memoryCount, void* gprTable, void* vfpTable,
+             unsigned returnType);
 
 namespace vm {
 
@@ -131,7 +132,7 @@ atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 inline uint64_t
 dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
             unsigned argumentCount, unsigned argumentsSize UNUSED,
-            unsigned returnType UNUSED)
+            unsigned returnType)
 {
 #ifdef __APPLE__
   const unsigned Alignment = 1;
@@ -143,6 +144,10 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
 
+  const unsigned VfpCount = 16;
+  uintptr_t vfpTable[VfpCount];
+  unsigned vfpIndex = 0;
+
   uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
 
@@ -150,6 +155,36 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   for (unsigned ati = 0; ati < argumentCount; ++ ati) {
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
+#if (defined(__VFP_FP__) && !defined(__SOFTFP__))
+      {
+        if (vfpIndex + Alignment <= VfpCount) {
+          if (vfpIndex % Alignment) {
+            ++ vfpIndex;
+          }
+          
+          memcpy(vfpTable + vfpIndex, arguments + ai, 8);
+          vfpIndex += 8 / BytesPerWord;
+        } else {
+          vfpIndex = VfpCount;
+          if (stackIndex % Alignment) {
+            ++ stackIndex;
+          }
+
+          memcpy(stack + stackIndex, arguments + ai, 8);
+          stackIndex += 8 / BytesPerWord;
+        }
+        ai += 8 / BytesPerWord;
+      } break;
+
+    case FLOAT_TYPE:
+      if (vfpIndex < VfpCount) {
+        vfpTable[vfpIndex++] = arguments[ai];
+      } else {
+        stack[stackIndex++] = arguments[ai];
+      }
+      ++ ai;
+      break;
+#endif
     case INT64_TYPE: {
       if (gprIndex + Alignment <= GprCount) { // pass argument in register(s)
         if (Alignment == 1
@@ -193,11 +228,16 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     memset(gprTable + gprIndex, 0, (GprCount-gprIndex)*4);
     gprIndex = GprCount;
   }
+  if (vfpIndex < VfpCount) {
+    memset(vfpTable + vfpIndex, 0, (VfpCount-vfpIndex)*4);
+    vfpIndex = VfpCount;
+  }
 
   unsigned stackSize = stackIndex*BytesPerWord + ((stackIndex & 1) << 2);
   return vmNativeCall
     (function, stackSize, stack, stackIndex * BytesPerWord,
-     (gprIndex ? gprTable : 0));
+     (gprIndex ? gprTable : 0),
+     (vfpIndex ? vfpTable : 0), returnType);
 }
 
 } // namespace vm
