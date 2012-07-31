@@ -3166,7 +3166,7 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose(vm::Thread* t) {
-    t->m->heap->free(t, sizeof(Thread));
+    t->m->heap->free(t, sizeof(Thread) + t->m->stackSizeInBytes);
   }
 
   virtual void dispose() {
