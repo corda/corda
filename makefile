@@ -86,6 +86,8 @@ ifeq ($(build-platform),darwin)
 	library-path-variable = DYLD_LIBRARY_PATH
 endif
 
+library-path = $(library-path-variable)=$(test-build)
+
 ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
 	ifeq ($(arch),x86_64)
@@ -123,10 +125,10 @@ ifneq ($(openjdk),)
 		test-executable = $(shell pwd)/$(executable-dynamic)
 		ifeq ($(build-platform),darwin)
 			library-path = \
-				$(library-path-variable)=$(build):$(openjdk)/jre/lib
+				$(library-path-variable)=$(test-build):$(build):$(openjdk)/jre/lib
 		else
 			library-path = \
-				$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+				$(library-path-variable)=$(test-build):$(build):$(openjdk)/jre/lib/$(openjdk-arch)
 		endif
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
@@ -148,8 +150,8 @@ ifeq ($(use-clang),true)
 	build-cxx = clang -std=c++11
 	build-cc = clang
 else
-	build-cxx = g++
-	build-cc = gcc
+	build-cxx = g++-4.7
+	build-cc = gcc-4.7
 endif
 
 mflag =
@@ -187,7 +189,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
-common-cflags = $(warnings) -fno-rtti -fno-exceptions \
+common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
@@ -800,9 +802,12 @@ vm-classes = \
 
 test-support-sources = $(shell find $(test)/avian/ -name '*.java')
 test-sources = $(wildcard $(test)/*.java)
+test-cpp-sources = $(wildcard $(test)/*.cpp)
 test-sources += $(test-support-sources)
 test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
+test-cpp-objects = $(call cpp-objects,$(test-cpp-sources),$(test),$(test-build))
+test-library = $(test-build)/libtest.so
 test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
@@ -927,7 +932,7 @@ $(classpath-dep): $(classpath-sources)
 $(test-build)/%.class: $(test)/%.java
 	@echo $(<)
 
-$(test-dep): $(test-sources)
+$(test-dep): $(test-sources) $(test-library)
 	@echo "compiling test classes"
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
@@ -961,6 +966,19 @@ endef
 
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
+
+$(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
+	$(compile-object)
+
+$(test-library): $(test-cpp-objects)
+	@echo "linking $(@)"
+ifdef msvc
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(test-build)/$(name).lib -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
+else
+	$(ld) $(^) $(shared) $(lflags) -o $(@)
+endif
 
 $(build)/%.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
