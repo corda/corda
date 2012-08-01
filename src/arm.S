@@ -59,7 +59,7 @@ LOCAL(loop):
   ldmneia r6, {r0-r3}
 #if defined(__VFP_FP__) && (! defined(__SOFTFP__))
   // and VFP registers
-  vldmia  r7, {d0-d8}
+  vldmia  r7, {d0-d7}
 #endif
 
   blx   r4         // call function
