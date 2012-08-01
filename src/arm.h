@@ -147,6 +147,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   const unsigned VfpCount = 16;
   uintptr_t vfpTable[VfpCount];
   unsigned vfpIndex = 0;
+  unsigned vfpBackfillIndex = 0;
 
   uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
@@ -159,6 +160,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
       {
         if (vfpIndex + Alignment <= VfpCount) {
           if (vfpIndex % Alignment) {
+            vfpBackfillIndex = vfpIndex;
             ++ vfpIndex;
           }
           
@@ -177,7 +179,10 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
       } break;
 
     case FLOAT_TYPE:
-      if (vfpIndex < VfpCount) {
+      if (vfpBackfillIndex) {
+        vfpTable[vfpBackfillIndex] = arguments[ai];
+        vfpBackfillIndex = 0;
+      } else if (vfpIndex < VfpCount) {
         vfpTable[vfpIndex++] = arguments[ai];
       } else {
         stack[stackIndex++] = arguments[ai];
