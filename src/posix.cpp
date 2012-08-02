@@ -627,7 +627,7 @@ class MySystem: public System {
   }
 
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-#if (! defined __APPLE__) && (defined __x86_64__)
+#ifdef MAP_32BIT
     // map to the lower 32 bits of memory when possible so as to avoid
     // expensive relative jumps
     const unsigned Extra = MAP_32BIT;

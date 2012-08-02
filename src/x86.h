@@ -123,6 +123,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #    define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
+#  elif (defined __FreeBSD__)
+#    define IP_REGISTER(context) (context->uc_mcontext.mc_rip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.mc_rsp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_rbx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.mc_rcx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_rbp)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])

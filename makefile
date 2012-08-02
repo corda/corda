@@ -6,6 +6,7 @@ version = 0.6
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
 	| sed 's/^x86pc$$/i386/' \
+	| sed 's/amd64/x86_64/' \
 	| sed 's/^arm.*$$/arm/' \
 	| sed 's/ppc/powerpc/')
 
