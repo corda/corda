@@ -821,7 +821,7 @@ test-sources += $(test-support-sources)
 test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-cpp-objects = $(call cpp-objects,$(test-cpp-sources),$(test),$(test-build))
-test-library = $(test-build)/libtest.so
+test-library = $(test-build)/$(so-prefix)test$(so-suffix)
 test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
