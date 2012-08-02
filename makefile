@@ -150,8 +150,8 @@ ifeq ($(use-clang),true)
 	build-cxx = clang -std=c++11
 	build-cc = clang
 else
-	build-cxx = g++-4.7
-	build-cc = gcc-4.7
+	build-cxx = g++
+	build-cc = gcc
 endif
 
 mflag =
