@@ -86,7 +86,7 @@ ifeq ($(build-platform),darwin)
 	library-path-variable = DYLD_LIBRARY_PATH
 endif
 
-library-path = $(library-path-variable)=$(test-build)
+library-path = $(library-path-variable)=$(build)
 
 ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
@@ -125,10 +125,10 @@ ifneq ($(openjdk),)
 		test-executable = $(shell pwd)/$(executable-dynamic)
 		ifeq ($(build-platform),darwin)
 			library-path = \
-				$(library-path-variable)=$(test-build):$(build):$(openjdk)/jre/lib
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib
 		else
 			library-path = \
-				$(library-path-variable)=$(test-build):$(build):$(openjdk)/jre/lib/$(openjdk-arch)
+				$(library-path-variable)=$(build):$(openjdk)/jre/lib/$(openjdk-arch)
 		endif
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
@@ -821,7 +821,7 @@ test-sources += $(test-support-sources)
 test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
 test-cpp-objects = $(call cpp-objects,$(test-cpp-sources),$(test),$(test-build))
-test-library = $(test-build)/$(so-prefix)test$(so-suffix)
+test-library = $(build)/$(so-prefix)test$(so-suffix)
 test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
