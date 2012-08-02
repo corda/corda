@@ -3002,6 +3002,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty(t, method, *properties, "path.separator", ":");
 #  ifdef __APPLE__
   local::setProperty(t, method, *properties, "os.name", "Mac OS X");
+#  elif defined __FreeBSD__
+  local::setProperty(t, method, *properties, "os.name", "FreeBSD");
 #  else // not __APPLE__
   local::setProperty(t, method, *properties, "os.name", "Linux");
 #  endif // not __APPLE__

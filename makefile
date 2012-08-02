@@ -334,6 +334,16 @@ ifeq ($(platform),qnx)
 	rdynamic = -Wl,--export-dynamic
 endif
 
+ifeq ($(platform),freebsd)
+# There is no -ldl on FreeBSD
+	build-lflags = $(common-lflags) -lz -lpthread
+	lflags = $(common-lflags) -lpthread
+# include/freebsd instead of include/linux
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+		"-I$(JAVA_HOME)/include/freebsd" -I$(src) -pthread
+	cflags = $(build-cflags)
+endif
+
 ifeq ($(platform),darwin)
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
@@ -853,6 +863,10 @@ endif
 
 ifeq ($(target-platform),darwin)
 	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
+endif
+
+ifeq ($(target-platform),freebsd)
+	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_FREEBSD
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))

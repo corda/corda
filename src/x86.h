@@ -70,6 +70,12 @@
 #    define THREAD_REGISTER(context) (context->uc_mcontext.cpu.ebx)
 #    define LINK_REGISTER(context) (context->uc_mcontext.cpu.ecx)
 #    define FRAME_REGISTER(context) (context->uc_mcontext.cpu.ebp)
+#  elif (defined __FreeBSD__)
+#    define IP_REGISTER(context) (context->uc_mcontext.mc_eip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.mc_esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_ebx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.mc_ecx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_ebp)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])

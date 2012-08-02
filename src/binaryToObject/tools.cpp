@@ -92,6 +92,8 @@ PlatformInfo::OperatingSystem PlatformInfo::osFromString(const char* os) {
     return Windows;
   } else if(strcmp(os, "darwin") == 0) {
     return Darwin;
+  } else if(strcmp(os, "freebsd") == 0) {
+    return FreeBSD;
   } else {
     return UnknownOS;
   }
@@ -123,3 +125,4 @@ Platform* Platform::getPlatform(PlatformInfo info) {
 } // namespace tools
 
 } // namespace avian
+

@@ -197,8 +197,8 @@ public:
 
   const unsigned machine;
 
-  ElfPlatform(PlatformInfo::Architecture arch):
-    Platform(PlatformInfo(PlatformInfo::Linux, arch)),
+  ElfPlatform(PlatformInfo::OperatingSystem os, PlatformInfo::Architecture arch):
+    Platform(PlatformInfo(os, arch)),
     machine(getElfPlatform(arch)) {}
 
   class FileWriter {
@@ -372,10 +372,15 @@ public:
   }
 };
 
-ElfPlatform<uint32_t> elfx86Platform(PlatformInfo::x86);
-ElfPlatform<uint32_t> elfArmPlatform(PlatformInfo::Arm);
-ElfPlatform<uint32_t, false> elfPowerPCPlatform(PlatformInfo::PowerPC);
-ElfPlatform<uint64_t> elfx86_64Platform(PlatformInfo::x86_64);
+ElfPlatform<uint32_t> elfLinuxX86Platform(PlatformInfo::Linux, PlatformInfo::x86);
+ElfPlatform<uint32_t> elfLinuxArmPlatform(PlatformInfo::Linux, PlatformInfo::Arm);
+ElfPlatform<uint32_t, false> elfLinuxPowerPCPlatform(PlatformInfo::Linux, PlatformInfo::PowerPC);
+ElfPlatform<uint64_t> elfLinuxX86_64Platform(PlatformInfo::Linux, PlatformInfo::x86_64);
+
+ElfPlatform<uint32_t> elfFreeBSDx86Platform(PlatformInfo::FreeBSD, PlatformInfo::x86);
+ElfPlatform<uint32_t> elfFreeBSDArmPlatform(PlatformInfo::FreeBSD, PlatformInfo::Arm);
+ElfPlatform<uint32_t, false> elfFreeBSDPowerPCPlatform(PlatformInfo::FreeBSD, PlatformInfo::PowerPC);
+ElfPlatform<uint64_t> elfFreeBSDx86_64Platform(PlatformInfo::FreeBSD, PlatformInfo::x86_64);
 
 
 } // namespace

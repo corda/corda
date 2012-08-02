@@ -135,6 +135,7 @@ public:
     Linux = AVIAN_PLATFORM_LINUX,
     Windows = AVIAN_PLATFORM_WINDOWS,
     Darwin = AVIAN_PLATFORM_DARWIN,
+    FreeBSD = AVIAN_PLATFORM_FREEBSD,
     UnknownOS = AVIAN_PLATFORM_UNKNOWN
   };
 
@@ -194,3 +195,4 @@ public:
 } // namespace avian
 
 #endif
+

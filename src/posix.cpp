@@ -17,6 +17,9 @@
 #  include "sys/ucontext.h"
 #  undef assert
 #else
+#  if defined __FreeBSD__
+#    include "limits.h"
+#  endif
 #  include "ucontext.h"
 #endif
 
@@ -797,6 +800,13 @@ class MySystem: public System {
   }
 
   virtual FileType stat(const char* name, unsigned* length) {
+#ifdef __FreeBSD__
+    // Now the hack below causes the error "Dereferencing type-punned
+    // pointer will break strict aliasing rules", so another workaround
+    // is needed...
+    struct stat ss;
+    struct stat* s = &ss;
+#else
     // Ugly Hack Alert: It seems that the Apple iOS Simulator's stat
     // implementation writes beyond the end of the struct stat we pass
     // it, which can clobber unrelated parts of the stack.  Perhaps
@@ -806,6 +816,7 @@ class MySystem: public System {
     // made up and seems to work.
     void* array[ceiling(sizeof(struct stat), sizeof(void*)) + 8];
     struct stat* s = reinterpret_cast<struct stat*>(array);
+#endif
 
     int r = ::stat(name, s);
     if (r == 0) {

@@ -578,6 +578,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "os.name") == 0) {
 #ifdef __APPLE__
       r = e->NewStringUTF("Mac OS X");
+#elif defined __FreeBSD__
+      r = e->NewStringUTF("FreeBSD");
 #else
       r = e->NewStringUTF("Linux");
 #endif
