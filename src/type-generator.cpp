@@ -2207,5 +2207,7 @@ main(int ac, char** av)
     local::writeMaps(&out, declarations);
   }
 
+  out.write("\n");
+
   return 0;
 }
