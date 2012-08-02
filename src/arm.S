@@ -1,4 +1,4 @@
-/* arm.S: JNI gluecode for ARM/Linux
+/* arm.S: JNI gluecode for ARM
    Copyright (c) 2008-2011, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software

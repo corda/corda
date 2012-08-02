@@ -2781,7 +2781,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned frameFootprint(unsigned footprint) {
-#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
+#if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
     return max(footprint, StackAlignmentInWords);
 #else
     return max(footprint > argumentRegisterCount() ?
@@ -2803,7 +2803,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentRegisterCount() {
-#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
+#if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
     if (TargetBytesPerWord == 8) return 4; else
 #else
     if (TargetBytesPerWord == 8) return 6; else
@@ -2814,7 +2814,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int argumentRegister(unsigned index) {
     assert(&c, TargetBytesPerWord == 8);
     switch (index) {
-#if AVIAN_TARGET_PLATFORM == AVIAN_PLATFORM_WINDOWS
+#if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
     case 0:
       return rcx;
     case 1:

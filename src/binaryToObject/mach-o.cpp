@@ -286,7 +286,7 @@ public:
   }
     
   MachOPlatform(PlatformInfo::Architecture arch):
-    Platform(PlatformInfo(PlatformInfo::Darwin, arch)) {}
+    Platform(PlatformInfo(PlatformInfo::MachO, arch)) {}
     
 };
 

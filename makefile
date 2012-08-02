@@ -24,7 +24,6 @@ target-arch = $(arch)
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
-target-platform = $(platform)
 
 mode = fast
 process = compile
@@ -165,6 +164,8 @@ ifneq ($(platform),darwin)
 	endif
 endif
 
+target-format = elf
+
 cxx = $(build-cxx) $(mflag)
 cc = $(build-cc) $(mflag)
 
@@ -211,7 +212,7 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
-	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN \
+	-DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_UNKNOWN \
 	-Wall -Wextra -Werror -Wunused-parameter -Winit-self -Wno-non-virtual-dtor
 
 cflags = $(build-cflags)
@@ -314,7 +315,6 @@ ifeq ($(build-platform),darwin)
 endif
 
 ifeq ($(platform),qnx)
-	target-platform = linux
 	cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	lflags = $(common-lflags) -lsocket
 	ifeq ($(build-platform),qnx)
@@ -346,6 +346,7 @@ ifeq ($(platform),freebsd)
 endif
 
 ifeq ($(platform),darwin)
+	target-format = macho
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -427,6 +428,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
+	target-format = pe
+
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
 
@@ -854,20 +857,16 @@ ifeq ($(target-arch),arm)
 	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
 endif
 
-ifeq ($(target-platform),linux)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
+ifeq ($(target-format),elf)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_ELF
 endif
 
-ifeq ($(target-platform),windows)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+ifeq ($(target-format),pe)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_PE
 endif
 
-ifeq ($(target-platform),darwin)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
-endif
-
-ifeq ($(target-platform),freebsd)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_FREEBSD
+ifeq ($(target-format),macho)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_MACHO
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
@@ -1050,7 +1049,7 @@ $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 $(classpath-object): $(build)/classpath.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
-		_binary_classpath_jar_end $(target-platform) $(arch)
+		_binary_classpath_jar_end $(target-format) $(arch)
 
 $(build)/javahome.jar:
 	@echo "creating $(@)"
@@ -1061,7 +1060,7 @@ $(build)/javahome.jar:
 $(javahome-object): $(build)/javahome.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_javahome_jar_start \
-		_binary_javahome_jar_end $(target-platform) $(arch)
+		_binary_javahome_jar_end $(target-format) $(arch)
 
 define compile-generator-object
 	@echo "compiling $(@)"
@@ -1122,7 +1121,7 @@ $(bootimage-generator): $(bootimage-generator-objects)
 		arch=$(build-arch) \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
-		target-platform=$(target-platform) \
+		target-format=$(target-format) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \

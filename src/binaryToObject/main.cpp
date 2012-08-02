@@ -41,14 +41,14 @@ using namespace avian::tools;
 
 bool
 writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName,
-            const char* endName, const char* os,
+            const char* endName, const char* format,
             const char* architecture, unsigned alignment, bool writable,
             bool executable)
 {
-  Platform* platform = Platform::getPlatform(PlatformInfo(PlatformInfo::osFromString(os), PlatformInfo::archFromString(architecture)));
+  Platform* platform = Platform::getPlatform(PlatformInfo(PlatformInfo::formatFromString(format), PlatformInfo::archFromString(architecture)));
 
   if(!platform) {
-    fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
+    fprintf(stderr, "unsupported platform: %s/%s\n", format, architecture);
     return false;
   }
 

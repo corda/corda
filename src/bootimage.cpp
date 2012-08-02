@@ -1647,7 +1647,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     // fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
     
-    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::OperatingSystem)AVIAN_TARGET_PLATFORM, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
+    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
 
     // if(!platform) {
     //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
