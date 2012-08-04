@@ -45,6 +45,9 @@
 #  define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
 #elif (defined __QNX__)
+#  include "arm/smpxchg.h"
+#  include "sys/mman.h"
+
 #  define IP_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_PC])
 #  define STACK_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_SP])
 #  define THREAD_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_IP])
@@ -100,6 +103,8 @@ syncInstructionCache(const void* start, unsigned size)
 {
 #ifdef __APPLE__
   sys_icache_invalidate(const_cast<void*>(start), size);
+#elif (defined __QNX__)
+  msync(const_cast<void*>(start), size, MS_INVALIDATE_ICACHE);
 #else
   __clear_cache
     (const_cast<void*>(start),
@@ -117,6 +122,8 @@ atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef __APPLE__
   return OSAtomicCompareAndSwap32(old, new_, reinterpret_cast<int32_t*>(p));
+#elif (defined __QNX__)
+  return old == _smp_cmpxchg(p, old, new_);
 #else
   int r = __kernel_cmpxchg(static_cast<int>(old), static_cast<int>(new_), reinterpret_cast<int*>(p));
   return (!r ? true : false);
@@ -156,7 +163,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   for (unsigned ati = 0; ati < argumentCount; ++ ati) {
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
-#if (defined(__VFP_FP__) && !defined(__SOFTFP__))
+#if (defined(__VFP_FP__) && !defined(__SOFTFP__)) && !defined(__QNX__)
       {
         if (vfpIndex + Alignment <= VfpCount) {
           if (vfpIndex % Alignment) {
