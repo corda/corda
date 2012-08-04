@@ -417,6 +417,8 @@ class MyClasspath : public Classpath {
     sb.append("/lib");
 #elif defined ARCH_x86_64
     sb.append("/lib/amd64");
+#elif defined ARCH_arm
+    sb.append("/lib/arm");
 #else
     // todo: handle other architectures
     sb.append("/lib/i386");
