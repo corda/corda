@@ -87,12 +87,12 @@ public class Arrays {
       expect(! java.util.Arrays.equals(b, new Object[4]));
       expect(! java.util.Arrays.equals(a, null));
       expect(! java.util.Arrays.equals(null, b));
-      expect(java.util.Arrays.equals(null, null));
+      expect(java.util.Arrays.equals((Object[])null, (Object[])null));
       b[0] = a[0];
       expect(java.util.Arrays.equals(a, b));
 
       java.util.Arrays.hashCode(a);
-      java.util.Arrays.hashCode(null);
+      java.util.Arrays.hashCode((Object[])null);
     }
   }
 }
