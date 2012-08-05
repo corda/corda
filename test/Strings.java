@@ -66,7 +66,7 @@ public class Strings {
               throw new RuntimeException();
             }
           }
-        });
+        }, "UTF-8");
 
     char[] buffer = new char[2];
     int offset = 0;
