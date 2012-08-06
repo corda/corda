@@ -114,8 +114,8 @@ mainClass(const char* jar)
     unsigned length;
     while (readLine(region->start(), region->length(), &start, &length)) {
       const unsigned PrefixLength = 12;
-      if (strncmp("Main-Class: ", reinterpret_cast<const char*>
-                  (region->start() + start), PrefixLength) == 0)
+      if (strncasecmp("Main-Class: ", reinterpret_cast<const char*>
+                      (region->start() + start), PrefixLength) == 0)
       {
         result = static_cast<char*>(malloc(length + 1 - PrefixLength));
         memcpy(result, region->start() + start + PrefixLength,
