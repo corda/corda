@@ -534,7 +534,7 @@ class MyClasspath : public Classpath {
   virtual void
   resolveNative(Thread* t, object method)
   {
-    if (strcmp(reinterpret_cast<const int8_t*>("sun/font/FontManager"),
+    if (strcmp(reinterpret_cast<const int8_t*>("sun/font/SunFontManager"),
                &byteArrayBody(t, className(t, methodClass(t, method)), 0)) == 0
         and strcmp(reinterpret_cast<const int8_t*>("initIDs"),
                    &byteArrayBody(t, methodName(t, method), 0)) == 0
