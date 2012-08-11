@@ -72,12 +72,16 @@ public class File implements Serializable {
     }
   }
 
-  private static String normalize(String path) {
-    if ("\\".equals(FileSeparator)) {
-      return path.replace('/', '\\');
-    } else {
-      return path;
+  private static String stripSeparators(String p) {
+    while (p.endsWith(FileSeparator)) {
+      p = p.substring(0, p.length() - 1);
     }
+    return p;
+  }
+
+  private static String normalize(String path) {
+    return stripSeparators
+      ("\\".equals(FileSeparator) ? path.replace('/', '\\') : path);
   }
 
   public static native boolean rename(String old, String new_);
@@ -148,13 +152,9 @@ public class File implements Serializable {
   }
 
   public String getParent() {
-    String p = path;
-    while (p.endsWith(FileSeparator)) {
-      p = p.substring(0, p.length() - 1);
-    }
-    int index = p.lastIndexOf(FileSeparator);
+    int index = path.lastIndexOf(FileSeparator);
     if (index >= 0) {
-      return p.substring(0, index);
+      return normalize(path.substring(0, index));
     } else {
       return null;
     }    
