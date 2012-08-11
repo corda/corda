@@ -139,5 +139,12 @@ public class Strings {
 
     testDecode(false);
     testDecode(true);
+
+    expect
+      (java.text.MessageFormat.format
+       ("{0} enjoy {1} {2}.  do {4}?  {4} do?",
+        "I", "grape", "nuts", "foobar",
+        new Object() { public String toString() { return "you"; } })
+       .equals("I enjoy grape nuts.  do you?  you do?"));
   }
 }
