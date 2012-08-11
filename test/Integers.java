@@ -20,7 +20,7 @@ public class Integers {
     return m;
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     { int foo = 1028;
       foo -= 1023;
       expect(foo == 5);
@@ -266,5 +266,49 @@ public class Integers {
     expect((y + 0x8000) == (-11760768 + 0x8000));
 
     expect(Math.min(796, 1069) == 796);
+
+    { int b = 1;
+      expect((b << 32) == 1); }
+
+    { int b = 0xFFFFFFFF;
+      expect((b >>> -1) == 1); }
+
+    { int b = 0x10000000;
+      expect((b >> -31) == 0x8000000); }
+
+    { int b = 1; int s = 32;
+      expect((b << s) == 1); }
+
+    { int b = 0xFFFFFFFF; int s = -1;
+      expect((b >>> s) == 1); }
+
+    { int b = 0x10000000; int s = -31;
+      expect((b >> s) == 0x8000000); }
+
+    { int b = 0xBE;
+      expect((b & 0xFF) == 0xBE); }
+
+    { int b = 0xBE;
+      expect((b >>> 0) == 0xBE); }
+
+    { int b = 0xBE;
+      expect((b >> 0) == 0xBE); }
+
+    { int b = 0xBE;
+      expect((b << 0) == 0xBE); }
+
+    { int b = 0xBE;
+      expect(((b >>> 0) & 0xFF) == 0xBE); }
+
+    { java.io.ByteArrayOutputStream bout = new java.io.ByteArrayOutputStream();
+      java.io.DataOutputStream dout = new java.io.DataOutputStream(bout);
+      dout.writeInt(0xCAFEBABE);
+      dout.flush();
+      byte[] array = bout.toByteArray();
+      expect((array[0] & 0xFF) == 0xCA);
+      expect((array[1] & 0xFF) == 0xFE);
+      expect((array[2] & 0xFF) == 0xBA);
+      expect((array[3] & 0xFF) == 0xBE);
+    }
   }
 }

@@ -634,72 +634,118 @@ write4(uint8_t* dst, uint32_t v)
   memcpy(dst, &v, 4);
 }
 
+void
+andC(Context* con, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst);
+
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con);
-    emit(con, lsl(tmp1, b->high, a->low));
-    emit(con, rsbi(tmp2, a->low, 32));
+    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    ResolvedPromise maskPromise(0x3F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp3);
+    andC(con, 4, &mask, a, &dst);
+    emit(con, lsl(tmp1, b->high, tmp3));
+    emit(con, rsbi(tmp2, tmp3, 32));
     emit(con, orrsh(tmp1, tmp1, b->low, tmp2, LSR));
-    emit(con, SETS(subi(t->high, a->low, 32)));
+    emit(con, SETS(subi(t->high, tmp3, 32)));
     emit(con, SETCOND(mov(t->high, tmp1), MI));
     emit(con, SETCOND(lsl(t->high, b->low, t->high), PL));
-    emit(con, lsl(t->low, b->low, a->low));
-    freeTemp(con, tmp1); freeTemp(con, tmp2);
+    emit(con, lsl(t->low, b->low, tmp3));
+    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
   } else {
-    emit(con, lsl(t->low, b->low, a->low));
+    int tmp = newTemp(con);
+    ResolvedPromise maskPromise(0x1F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp);
+    andC(con, size, &mask, a, &dst);
+    emit(con, lsl(t->low, b->low, tmp));
+    freeTemp(con, tmp);
   }
 }
+
+void
+moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
+       unsigned dstSize, Assembler::Register* dst);
 
 void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, lsli(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, lsli(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con);
-    emit(con, lsr(tmp1, b->low, a->low));
-    emit(con, rsbi(tmp2, a->low, 32));
+    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    ResolvedPromise maskPromise(0x3F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp3);
+    andC(con, 4, &mask, a, &dst);
+    emit(con, lsr(tmp1, b->low, tmp3));
+    emit(con, rsbi(tmp2, tmp3, 32));
     emit(con, orrsh(tmp1, tmp1, b->high, tmp2, LSL));
-    emit(con, SETS(subi(t->low, a->low, 32)));
+    emit(con, SETS(subi(t->low, tmp3, 32)));
     emit(con, SETCOND(mov(t->low, tmp1), MI));
     emit(con, SETCOND(asr(t->low, b->high, t->low), PL));
-    emit(con, asr(t->high, b->high, a->low));
-    freeTemp(con, tmp1); freeTemp(con, tmp2);
+    emit(con, asr(t->high, b->high, tmp3));
+    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
   } else {
-    emit(con, asr(t->low, b->low, a->low));
+    int tmp = newTemp(con);
+    ResolvedPromise maskPromise(0x1F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp);
+    andC(con, size, &mask, a, &dst);
+    emit(con, asr(t->low, b->low, tmp));
+    freeTemp(con, tmp);
   }
 }
 
 void shiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, asri(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, asri(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
-  emit(con, lsr(t->low, b->low, a->low));
+  int tmpShift = newTemp(con);
+  ResolvedPromise maskPromise(size == 8 ? 0x3F : 0x1F);
+  Assembler::Constant mask(&maskPromise);
+  Assembler::Register dst(tmpShift);
+  andC(con, 4, &mask, a, &dst);
+  emit(con, lsr(t->low, b->low, tmpShift));
   if (size == 8) {
     int tmpHi = newTemp(con), tmpLo = newTemp(con);
-    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
+    emit(con, SETS(rsbi(tmpHi, tmpShift, 32)));
     emit(con, lsl(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
-    emit(con, addi(tmpHi, a->low, -32));
+    emit(con, addi(tmpHi, tmpShift, -32));
     emit(con, lsr(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
-    emit(con, lsr(t->high, b->high, a->low));
+    emit(con, lsr(t->high, b->high, tmpShift));
     freeTemp(con, tmpHi); freeTemp(con, tmpLo);
   }
+  freeTemp(con, tmpShift);
 }
 
 void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, lsri(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, lsri(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 class ConstantPoolEntry: public Promise {
@@ -908,10 +954,6 @@ jumpR(Context* con, unsigned size UNUSED, Assembler::Register* target)
   assert(con, size == TargetBytesPerWord);
   emit(con, bx(target->low));
 }
-
-void
-moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst);
 
 void
 swapRR(Context* con, unsigned aSize, Assembler::Register* a,

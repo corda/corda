@@ -1930,14 +1930,14 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
-    pushInt(t, a << b);
+    pushInt(t, a << (b & 0x1F));
   } goto loop;
 
   case ishr: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
-    pushInt(t, a >> b);
+    pushInt(t, a >> (b & 0x1F));
   } goto loop;
 
   case istore:
@@ -1976,7 +1976,7 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     uint32_t a = popInt(t);
     
-    pushInt(t, a >> b);
+    pushInt(t, a >> (b & 0x1F));
   } goto loop;
 
   case ixor: {
@@ -2238,14 +2238,14 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     int64_t a = popLong(t);
     
-    pushLong(t, a << b);
+    pushLong(t, a << (b & 0x3F));
   } goto loop;
 
   case lshr: {
     int32_t b = popInt(t);
     int64_t a = popLong(t);
     
-    pushLong(t, a >> b);
+    pushLong(t, a >> (b & 0x3F));
   } goto loop;
 
   case lstore:
@@ -2284,7 +2284,7 @@ interpret3(Thread* t, const int base)
     int64_t b = popInt(t);
     uint64_t a = popLong(t);
     
-    pushLong(t, a >> b);
+    pushLong(t, a >> (b & 0x3F));
   } goto loop;
 
   case lxor: {
