@@ -871,6 +871,13 @@ class MemberIterator {
       return true;
     } else {
       while (types) {
+        if (member) {
+          assert(member->type == Object::Scalar);
+          offset_ = ((offset_ + size_) + (BytesPerWord - 1))
+            & ~(BytesPerWord - 1);
+          member = 0;
+        }
+
         type = car(types);
         members = typeMembers(type);
         types = cdr(types);
