@@ -103,6 +103,12 @@ class Processor {
   virtual void
   disposeLocalReference(Thread* t, object* r) = 0;
 
+  virtual bool
+  pushLocalFrame(Thread* t, unsigned capacity) = 0;
+
+  virtual void
+  popLocalFrame(Thread* t) = 0;
+
   virtual object
   invokeArray(Thread* t, object method, object this_, object arguments) = 0;
 

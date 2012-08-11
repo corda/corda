@@ -2397,13 +2397,6 @@ Avian_sun_misc_Unsafe_staticFieldOffset
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_arrayBaseOffset
-(Thread*, object, uintptr_t*)
-{
-  return BytesPerWord * 2;
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_arrayIndexScale
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2520,6 +2513,14 @@ Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
   return cast<int64_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
+    (t, method, arguments);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2785,32 +2786,6 @@ Avian_sun_misc_Unsafe_park
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_copyMemory
-(Thread* t, object, uintptr_t* arguments)
-{
-  object srcBase = reinterpret_cast<object>(arguments[1]);
-  int64_t srcOffset; memcpy(&srcOffset, arguments + 2, 8);
-  object dstBase = reinterpret_cast<object>(arguments[4]);
-  int64_t dstOffset; memcpy(&dstOffset, arguments + 5, 8);
-  int64_t count; memcpy(&count, arguments + 7, 8);
-
-  PROTECT(t, srcBase);
-  PROTECT(t, dstBase);
-
-  ACQUIRE(t, t->m->referenceLock);
-
-  void* src = srcBase
-    ? &cast<uint8_t>(srcBase, srcOffset)
-    : reinterpret_cast<uint8_t*>(srcOffset);
-
-  void* dst = dstBase
-    ? &cast<uint8_t>(dstBase, dstOffset)
-    : reinterpret_cast<uint8_t*>(dstOffset);
-
-  memcpy(dst, src, count);
-}
-
-extern "C" JNIEXPORT void JNICALL
 Avian_sun_misc_Unsafe_monitorEnter
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -3022,6 +2997,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
 
   local::setProperty(t, method, *properties, "java.vm.vendor",
                      "Avian Contributors");
+
+  local::setProperty(t, method, *properties, "java.vm.name","Avian");
 
   local::setProperty
     (t, method, *properties, "java.home",

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,13 +10,22 @@
 
 package java.nio;
 
-public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
-  private final byte[] array;
-  private int arrayOffset;
+public abstract class ByteBuffer
+  extends Buffer
+  implements Comparable<ByteBuffer>
+{
   private final boolean readOnly;
 
+  protected ByteBuffer(boolean readOnly) {
+    this.readOnly = readOnly;
+  }
+
   public static ByteBuffer allocate(int capacity) {
-    return new ByteBuffer(new byte[capacity], 0, capacity, false);
+    return new ArrayByteBuffer(new byte[capacity], 0, capacity, false);
+  }
+
+  public static ByteBuffer allocateDirect(int capacity) {
+    return FixedArrayByteBuffer.make(capacity);
   }
 
   public static ByteBuffer wrap(byte[] array) {
@@ -24,23 +33,51 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
   }
 
   public static ByteBuffer wrap(byte[] array, int offset, int length) {
-    return new ByteBuffer(array, offset, length, false);
+    return new ArrayByteBuffer(array, offset, length, false);
   }
 
-  private ByteBuffer(byte[] array, int offset, int length, boolean readOnly) {
-    this.array = array;
-    this.readOnly = readOnly;
-    arrayOffset = offset;
-    capacity = length;
-    limit = capacity;
-    position = 0;
+  public abstract ByteBuffer asReadOnlyBuffer();
+
+  public abstract ByteBuffer slice();
+
+  protected abstract void doPut(int offset, byte val);
+
+  public abstract ByteBuffer put(byte[] arr, int offset, int len);
+
+  protected abstract byte doGet(int offset);
+
+  public abstract ByteBuffer get(byte[] dst, int offset, int length);
+
+  public boolean hasArray() {
+    return false;
   }
 
-  public ByteBuffer asReadOnlyBuffer() {
-    ByteBuffer b = new ByteBuffer(array, arrayOffset, capacity, true);
-    b.position(position());
-    b.limit(limit());
-    return b;
+  public ByteBuffer compact() {
+    if (position != 0) {
+      ByteBuffer b = slice();
+      position = 0;
+      put(b);
+    }
+
+    position = remaining();
+    limit(capacity());
+    
+    return this;
+  }
+
+  public ByteBuffer put(ByteBuffer src) {
+    if (src.hasArray()) {
+      checkPut(position, src.remaining());
+
+      put(src.array(), src.arrayOffset() + src.position, src.remaining());
+      src.position(src.position() + src.remaining());
+
+      return this;
+    } else {
+      byte[] buffer = new byte[src.remaining()];
+      src.get(buffer);
+      return put(buffer);
+    }
   }
 
   public int compareTo(ByteBuffer o) {
@@ -60,37 +97,22 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
   }
 
   public byte[] array() {
-    return array;
-  }
-
-  public ByteBuffer slice() {
-    return new ByteBuffer(array, arrayOffset + position, remaining(), true);
+    throw new UnsupportedOperationException();
   }
 
   public int arrayOffset() {
-    return arrayOffset;
+    throw new UnsupportedOperationException();
   }
 
-  public ByteBuffer compact() {
-    if (position != 0) {
-      System.arraycopy(array, arrayOffset+position, array, arrayOffset, remaining());
-    }
-    position=remaining();
-    limit(capacity());
-    
+  public ByteBuffer put(int offset, byte val) {
+    checkPut(offset, 1);
+    doPut(offset, val);
     return this;
   }
 
   public ByteBuffer put(byte val) {
-    checkPut(1);
-    array[arrayOffset+(position++)] = val;
-    return this;
-  }
-
-  public ByteBuffer put(ByteBuffer src) {
-    checkPut(src.remaining());
-    put(src.array, src.arrayOffset + src.position, src.remaining());
-    src.position += src.remaining();
+    put(position, val);
+    ++ position;
     return this;
   }
 
@@ -98,125 +120,122 @@ public class ByteBuffer extends Buffer implements Comparable<ByteBuffer> {
     return put(arr, 0, arr.length);
   }
 
-  public ByteBuffer put(byte[] arr, int offset, int len) {
-    checkPut(len);
-    System.arraycopy(arr, offset, array, arrayOffset+position, len);
-    position += len;
+  public ByteBuffer putLong(int position, long val) {
+    checkPut(position, 8);
+
+    doPut(position    , (byte) ((val >> 56) & 0xff));
+    doPut(position + 1, (byte) ((val >> 48) & 0xff));
+    doPut(position + 2, (byte) ((val >> 40) & 0xff));
+    doPut(position + 3, (byte) ((val >> 32) & 0xff));
+    doPut(position + 4, (byte) ((val >> 24) & 0xff));
+    doPut(position + 5, (byte) ((val >> 16) & 0xff));
+    doPut(position + 6, (byte) ((val >>  8) & 0xff));
+    doPut(position + 7, (byte) ((val      ) & 0xff));
+    
     return this;
   }
 
   public ByteBuffer putInt(int position, int val) {
     checkPut(position, 4);
-    array[arrayOffset+position]   = (byte)((val >> 24) & 0xff);
-    array[arrayOffset+position+1] = (byte)((val >> 16) & 0xff);
-    array[arrayOffset+position+2] = (byte)((val >>  8) & 0xff);
-    array[arrayOffset+position+3] = (byte)((val      ) & 0xff);
+
+    doPut(position    , (byte) ((val >> 24) & 0xff));
+    doPut(position + 1, (byte) ((val >> 16) & 0xff));
+    doPut(position + 2, (byte) ((val >>  8) & 0xff));
+    doPut(position + 3, (byte) ((val      ) & 0xff));
+
+    return this;
+  }
+
+  public ByteBuffer putShort(int position, short val) {
+    checkPut(position, 2);
+
+    doPut(position    , (byte) ((val >> 8) & 0xff));
+    doPut(position + 1, (byte) ((val     ) & 0xff));
+
+    return this;
+  }
+
+  public ByteBuffer putLong(long val) {
+    putLong(position, val);
+    position += 8;
     return this;
   }
 
   public ByteBuffer putInt(int val) {
-    checkPut(4);
     putInt(position, val);
     position += 4;
     return this;
   }
 
   public ByteBuffer putShort(short val) {
-    checkPut(2);
-    put((byte)((val >> 8) & 0xff));
-    put((byte)(val & 0xff));
+    putShort(position, val);
+    position += 2;
     return this;
   }
 
-  public ByteBuffer putLong(long val) {
-    checkPut(8);
-    putInt((int)(val >> 32));
-    putInt((int)val);
-    return this;
-  }
-
-  public byte get() {
-    checkGet(1);
-    return array[arrayOffset+(position++)];
+  public byte get(int position) {
+    checkGet(position, 1);
+    return doGet(position);
   }
 
   public ByteBuffer get(byte[] dst) {
     return get(dst, 0, dst.length);
   }
 
-  public ByteBuffer get(byte[] dst, int offset, int length) {
-    checkGet(length);
-    System.arraycopy(array, arrayOffset + position, dst, offset, length);
-    position += length;
-    return this;
-  }
+  public long getLong(int position) {
+    checkGet(position, 8);
 
-  public byte get(int position) {
-    checkGet(position, 1);
-    return array[arrayOffset+position];
+    return (((long) (doGet(position    ) & 0xFF)) << 56)
+      |    (((long) (doGet(position + 1) & 0xFF)) << 48)
+      |    (((long) (doGet(position + 2) & 0xFF)) << 40)
+      |    (((long) (doGet(position + 3) & 0xFF)) << 32)
+      |    (((long) (doGet(position + 4) & 0xFF)) << 24)
+      |    (((long) (doGet(position + 5) & 0xFF)) << 16)
+      |    (((long) (doGet(position + 6) & 0xFF)) <<  8)
+      |    (((long) (doGet(position + 7) & 0xFF))      );
   }
 
   public int getInt(int position) {
     checkGet(position, 4);
 
-    int p = arrayOffset + position;
-    return ((array[p] & 0xFF) << 24)
-      | ((array[p + 1] & 0xFF) << 16)
-      | ((array[p + 2] & 0xFF) <<  8)
-      | ((array[p + 3] & 0xFF));
+    return (((int) (doGet(position    ) & 0xFF)) << 24)
+      |    (((int) (doGet(position + 1) & 0xFF)) << 16)
+      |    (((int) (doGet(position + 2) & 0xFF)) <<  8)
+      |    (((int) (doGet(position + 3) & 0xFF))      );
   }
 
   public short getShort(int position) {
     checkGet(position, 2);
 
-    int p = arrayOffset + position;
-    return (short) (((array[p] & 0xFF) << 8) | ((array[p + 1] & 0xFF)));
-  }
-
-  public int getInt() {
-    checkGet(4);
-    int i = get() << 24;
-    i |= (get() & 0xff) << 16;
-    i |= (get() & 0xff) << 8;
-    i |= (get() & 0xff);
-    return i;
-  }
-
-  public short getShort() {
-    checkGet(2);
-    short s = (short)(get() << 8);
-    s |= get() & 0xff;
-    return s;
+    return (short) ((  ((int) (doGet(position    ) & 0xFF)) << 8)
+                    | (((int) (doGet(position + 1) & 0xFF))     ));
   }
 
   public long getLong() {
-    checkGet(8);
-    long l = (long)getInt() << 32;
-    l |= (long)getInt() & 0xffffffffL;
-    return l;
+    long r = getLong(position);
+    position += 8;
+    return r;
   }
 
-  private void checkPut(int amount) {
-    if (readOnly) throw new ReadOnlyBufferException();
-    if (amount > limit-position) throw new IndexOutOfBoundsException();
+  public int getInt() {
+    int r = getInt(position);
+    position += 4;
+    return r;
   }
 
-  private void checkPut(int position, int amount) {
+  public short getShort() {
+    short r = getShort(position);
+    position += 2;
+    return r;
+  }
+
+  protected void checkPut(int position, int amount) {
     if (readOnly) throw new ReadOnlyBufferException();
     if (position < 0 || position+amount > limit)
       throw new IndexOutOfBoundsException();
   }
 
-  private void checkGet(int amount) {
+  protected void checkGet(int position, int amount) {
     if (amount > limit-position) throw new IndexOutOfBoundsException();
-  }
-
-  private void checkGet(int position, int amount) {
-    if (position < 0 || position+amount > limit)
-      throw new IndexOutOfBoundsException();
-  }
-
-  public String toString() {
-    return "(ByteBuffer with array: " + array + " arrayOffset: " + arrayOffset + " position: " + position + " remaining; " + remaining() + ")";
   }
 }

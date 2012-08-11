@@ -36,3 +36,18 @@ Java_JNI_addMix
   return a1 + a2 + a3 + a4 + a5 + a6 + a7 + a8 + a9 + a10 + a11 + a12 + a13
     + a14 + a15 + a16 + a17 + a18 + a19 + a20;
 }
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_Buffers_allocateNative(JNIEnv* e, jclass, jint capacity)
+{
+  void* p = allocate(e, capacity);
+  if (p == 0) return 0;
+
+  return e->NewDirectByteBuffer(p, capacity);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_Buffers_freeNative(JNIEnv* e, jclass, jobject b)
+{
+  free(e->GetDirectBufferAddress(b));
+}

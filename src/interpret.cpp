@@ -28,18 +28,31 @@ const unsigned FrameFootprint = 4;
 
 class Thread: public vm::Thread {
  public:
+  class ReferenceFrame {
+   public:
+    ReferenceFrame(ReferenceFrame* next, unsigned sp):
+      next(next),
+      sp(sp)
+    { }
+
+    ReferenceFrame* next;
+    unsigned sp;
+  };
+
   Thread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
     ip(0),
     sp(0),
     frame(-1),
-    code(0)
+    code(0),
+    referenceFrame(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
+  ReferenceFrame* referenceFrame;
   uintptr_t stack[0];
 };
 
@@ -3008,6 +3021,34 @@ class MyProcessor: public Processor {
     if (r) {
       *r = 0;
     }
+  }
+
+  virtual bool
+  pushLocalFrame(vm::Thread* vmt, unsigned capacity)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    if (t->sp + capacity < stackSizeInWords(t) / 2) {
+      t->referenceFrame = new
+        (t->m->heap->allocate(sizeof(Thread::ReferenceFrame)))
+        Thread::ReferenceFrame(t->referenceFrame, t->sp);
+    
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  virtual void
+  popLocalFrame(vm::Thread* vmt)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    Thread::ReferenceFrame* f = t->referenceFrame;
+    t->referenceFrame = f->next;
+    t->sp = f->sp;
+
+    t->m->heap->free(f, sizeof(Thread::ReferenceFrame));
   }
 
   virtual object

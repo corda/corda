@@ -202,6 +202,17 @@ class MyThread: public Thread {
     bool methodIsMostRecent;
   };
 
+  class ReferenceFrame {
+   public:
+    ReferenceFrame(ReferenceFrame* next, Reference* reference):
+      next(next),
+      reference(reference)
+    { }
+
+    ReferenceFrame* next;
+    Reference* reference;
+  };
+
   static void doTransition(MyThread* t, void* ip, void* stack,
                            object continuation, MyThread::CallTrace* trace)
   {
@@ -255,6 +266,7 @@ class MyThread: public Thread {
     transition(0),
     traceContext(0),
     stackLimit(0),
+    referenceFrame(0),
     methodLockIsClean(true)
   {
     arch->acquire();
@@ -280,6 +292,7 @@ class MyThread: public Thread {
   Context* transition;
   TraceContext* traceContext;
   uintptr_t stackLimit;
+  ReferenceFrame* referenceFrame;
   bool methodLockIsClean;
 };
 
@@ -8776,6 +8789,32 @@ class MyProcessor: public Processor {
     if (r) {
       release(t, reinterpret_cast<Reference*>(r));
     }
+  }
+
+  virtual bool
+  pushLocalFrame(Thread* vmt, unsigned)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    t->referenceFrame = new
+      (t->m->heap->allocate(sizeof(MyThread::ReferenceFrame)))
+      MyThread::ReferenceFrame(t->referenceFrame, t->reference);
+    
+    return true;
+  }
+
+  virtual void
+  popLocalFrame(Thread* vmt)
+  {
+    MyThread* t = static_cast<MyThread*>(vmt);
+
+    MyThread::ReferenceFrame* f = t->referenceFrame;
+    t->referenceFrame = f->next;
+    while (t->reference != f->reference) {
+      vm::dispose(t, t->reference);
+    }
+
+    t->m->heap->free(f, sizeof(MyThread::ReferenceFrame));
   }
 
   virtual object

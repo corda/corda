@@ -47,4 +47,14 @@ public final class Unsafe {
   public native long getAddress(long address);
 
   public native void putAddress(long address, long x);
+
+  public native int arrayBaseOffset(Class arrayClass);
+
+  public native void copyMemory(Object srcBase, long srcOffset,
+                                Object destBase, long destOffset,
+                                long count);
+
+  public void copyMemory(long src, long dst, long count) {
+    copyMemory(null, src, null, dst, count);
+  }
 }

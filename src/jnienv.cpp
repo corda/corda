@@ -407,24 +407,6 @@ ExceptionCheck(Thread* t)
   return t->exception != 0;
 }
 
-jobject JNICALL
-NewDirectByteBuffer(Thread*, void*, jlong)
-{
-  return 0;
-}
-
-void* JNICALL
-GetDirectBufferAddress(Thread*, jobject)
-{
-  return 0;
-}
-
-jlong JNICALL
-GetDirectBufferCapacity(Thread*, jobject)
-{
-  return -1;
-}
-
 uint64_t
 getObjectClass(Thread* t, uintptr_t* arguments)
 {
@@ -439,7 +421,7 @@ GetObjectClass(Thread* t, jobject o)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
 
-  return reinterpret_cast<jobject>(run(t, getObjectClass, arguments));
+  return reinterpret_cast<jclass>(run(t, getObjectClass, arguments));
 }
 
 uint64_t
@@ -3154,6 +3136,8 @@ GetPrimitiveArrayCritical(Thread* t, jarray array, jboolean* isCopy)
     *isCopy = true;
   }
 
+  expect(t, *array);
+
   return reinterpret_cast<uintptr_t*>(*array) + 2;
 }
 
@@ -3274,6 +3258,66 @@ IsSameObject(Thread* t, jobject a, jobject b)
   } else {
     return a == b;
   }
+}
+
+uint64_t
+pushLocalFrame(Thread* t, uintptr_t* arguments)
+{
+  if (t->m->processor->pushLocalFrame(t, arguments[0])) {
+    return 1;
+  } else {
+    throw_(t, root(t, Machine::OutOfMemoryError));
+  }
+}
+
+jint JNICALL
+PushLocalFrame(Thread* t, jint capacity)
+{
+  uintptr_t arguments[] = { static_cast<uintptr_t>(capacity) };
+
+  return run(t, pushLocalFrame, arguments) ? 0 : -1;
+}
+
+uint64_t
+popLocalFrame(Thread* t, uintptr_t* arguments)
+{
+  object result = *reinterpret_cast<jobject>(arguments[0]);
+  PROTECT(t, result);
+
+  t->m->processor->popLocalFrame(t);
+  
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, result));
+}
+
+jobject JNICALL
+PopLocalFrame(Thread* t, jobject result)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(result) };
+
+  return reinterpret_cast<jobject>(run(t, popLocalFrame, arguments));
+}
+
+jobject JNICALL
+NewDirectByteBuffer(Thread* t, void* p, jlong capacity)
+{
+  jclass c = FindClass(t, "java/nio/DirectByteBuffer");
+  return NewObject(t, c, GetMethodID(t, c, "<init>", "(JI)V"),
+                   reinterpret_cast<jlong>(p),
+                   static_cast<jint>(capacity));
+}
+
+void* JNICALL
+GetDirectBufferAddress(Thread* t, jobject b)
+{
+  return reinterpret_cast<void*>
+    (GetLongField(t, b, GetFieldID(t, GetObjectClass(t, b), "address", "J")));
+}
+
+jlong JNICALL
+GetDirectBufferCapacity(Thread* t, jobject b)
+{
+  return GetIntField
+    (t, b, GetFieldID(t, GetObjectClass(t, b), "capacity", "I"));
 }
 
 struct JavaVMOption {
@@ -3556,6 +3600,8 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->MonitorExit = local::MonitorExit;
   envTable->GetJavaVM = local::GetJavaVM;
   envTable->IsSameObject = local::IsSameObject;
+  envTable->PushLocalFrame = local::PushLocalFrame;
+  envTable->PopLocalFrame = local::PopLocalFrame;
 }
 
 } // namespace vm
