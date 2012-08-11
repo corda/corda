@@ -3521,9 +3521,9 @@ extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_ClassLoaderDepth)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jstring JNICALL
-EXPORT(JVM_GetSystemPackage)(Thread*, jstring)
+EXPORT(JVM_GetSystemPackage)(Thread*, jstring s)
 {
-  return 0;
+  return s;
 }
 
 uint64_t
