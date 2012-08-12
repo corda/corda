@@ -2590,7 +2590,7 @@ doubleToInt(int64_t a)
   double f = bitsToDouble(a);
   switch (fpclassify(f)) {
   case FP_NAN: return 0;
-  case FP_INFINITE: return isinf(f) == 1 ? INT32_MAX : INT32_MIN;
+  case FP_INFINITE: return signbit(f) ? INT32_MIN : INT32_MAX;
   default: return f >= INT32_MAX ? INT32_MAX
       : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
   }
@@ -2602,7 +2602,7 @@ doubleToLong(int64_t a)
   double f = bitsToDouble(a);
   switch (fpclassify(f)) {
   case FP_NAN: return 0;
-  case FP_INFINITE: return isinf(f) == 1 ? INT64_MAX : INT64_MIN;
+  case FP_INFINITE: return signbit(f) ? INT64_MIN : INT64_MAX;
   default: return f >= INT64_MAX ? INT64_MAX
       : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f));
   }
@@ -2750,7 +2750,7 @@ floatToInt(int32_t a)
   float f = bitsToFloat(a);
   switch (fpclassify(f)) {
   case FP_NAN: return 0;
-  case FP_INFINITE: return isinf(f) == 1 ? INT32_MAX : INT32_MIN;
+  case FP_INFINITE: return signbit(f) ? INT32_MIN : INT32_MAX;
   default: return f >= INT32_MAX ? INT32_MAX
       : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
   }
@@ -2762,7 +2762,7 @@ floatToLong(int32_t a)
   float f = bitsToFloat(a);
   switch (fpclassify(f)) {
   case FP_NAN: return 0;
-  case FP_INFINITE: return isinf(f) == 1 ? INT64_MAX : INT64_MIN;
+  case FP_INFINITE: return signbit(f) ? INT64_MIN : INT64_MAX;
   default: return static_cast<int64_t>(f);
   }
 }
