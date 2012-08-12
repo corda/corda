@@ -3309,6 +3309,10 @@ jvmSleep(Thread* t, uintptr_t* arguments)
 {
   jlong milliseconds; memcpy(&milliseconds, arguments, sizeof(jlong));
 
+  if (milliseconds <= 0) {
+    milliseconds = 1;
+  }
+
   if (threadSleepLock(t, t->javaThread) == 0) {
     object lock = makeJobject(t);
     set(t, t->javaThread, ThreadSleepLock, lock);
