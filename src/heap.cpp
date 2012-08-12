@@ -463,12 +463,15 @@ class Segment {
 
 class Fixie {
  public:
+  static const unsigned HasMask = 1 << 0;
+  static const unsigned Marked = 1 << 1;
+  static const unsigned Dirty = 1 << 2;
+  static const unsigned Dead = 1 << 3;
+
   Fixie(Context* c, unsigned size, bool hasMask, Fixie** handle,
         bool immortal):
     age(immortal ? FixieTenureThreshold + 1 : 0),
-    hasMask(hasMask),
-    marked(false),
-    dirty(false),
+    flags(hasMask ? HasMask : 0),
     size(size),
     next(0),
     handle(0)
@@ -536,16 +539,54 @@ class Fixie {
   }
 
   unsigned totalSize() {
-    return totalSize(size, hasMask);
+    return totalSize(size, hasMask());
+  }
+
+  bool hasMask() {
+    return (flags & HasMask) != 0;
+  }
+
+  bool marked() {
+    return (flags & Marked) != 0;
+  }
+
+  void marked(bool v) {
+    if (v) {
+      flags |= Marked;
+    } else {
+      flags &= ~Marked;
+    }
+  }
+
+  bool dirty() {
+    return (flags & Dirty) != 0;
+  }
+
+  void dirty(bool v) {
+    if (v) {
+      flags |= Dirty;
+    } else {
+      flags &= ~Dirty;
+    }
+  }
+
+  bool dead() {
+    return (flags & Dead) != 0;
+  }
+
+  void dead(bool v) {
+    if (v) {
+      flags |= Dead;
+    } else {
+      flags &= ~Dead;
+    }
   }
 
   // be sure to update e.g. TargetFixieSizeInBytes in bootimage.cpp if
   // you add/remove/change fields in this class:
 
-  uint8_t age;
-  uint8_t hasMask;
-  uint8_t marked;
-  uint8_t dirty;
+  uint16_t age;
+  uint16_t flags;
   uint32_t size;
   Fixie* next;
   Fixie** handle;
@@ -850,11 +891,11 @@ free(Context* c, Fixie** fixies, bool resetImmortal)
           fprintf(stderr, "reset immortal fixie %p\n", f);
         }
         *p = f->next;
-        memset(f->mask(), 0, Fixie::maskSize(f->size, f->hasMask));
+        memset(f->mask(), 0, Fixie::maskSize(f->size, f->hasMask()));
         f->next = 0;
         f->handle = 0;
-        f->marked = false;
-        f->dirty = false;
+        f->marked(false);
+        f->dirty(false);
       } else {      
         p = &(f->next);
       }
@@ -866,6 +907,28 @@ free(Context* c, Fixie** fixies, bool resetImmortal)
       free(c, f, f->totalSize());
     }
   }
+}
+
+void
+kill(Fixie* fixies)
+{
+  for (Fixie* f = fixies; f; f = f->next) {
+    if (! f->immortal()) {
+      f->dead(true);
+    }
+  }
+}
+
+void
+killFixies(Context* c)
+{
+  assert(c, c->markedFixies == 0);
+
+  if (c->mode == Heap::MajorCollection) {
+    kill(c->tenuredFixies);
+    kill(c->dirtyTenuredFixies);
+  }
+  kill(c->fixies);
 }
 
 void
@@ -898,14 +961,14 @@ sweepFixies(Context* c)
 
     if (f->age >= FixieTenureThreshold) {
       if (DebugFixies) {
-        fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty);
+        fprintf(stderr, "tenure fixie %p (dirty: %d)\n", f, f->dirty());
       }
 
       if (not f->immortal()) {
         c->tenuredFixieFootprint += f->totalSize();
       }
 
-      if (f->dirty) {
+      if (f->dirty()) {
         f->add(c, &(c->dirtyTenuredFixies));
       } else {
         f->add(c, &(c->tenuredFixies));
@@ -916,7 +979,7 @@ sweepFixies(Context* c)
       f->add(c, &(c->fixies));
     }
 
-    f->marked = false;
+    f->marked(false);
   }
 
   c->tenuredFixieCeiling = max
@@ -1006,14 +1069,14 @@ update3(Context* c, void* o, bool* needsVisit)
 {
   if (c->client->isFixed(o)) {
     Fixie* f = fixie(o);
-    if ((not f->marked)
+    if ((not f->marked())
         and (c->mode == Heap::MajorCollection
              or f->age < FixieTenureThreshold))
     {
       if (DebugFixies) {
         fprintf(stderr, "mark fixie %p\n", f);
       }
-      f->marked = true;
+      f->marked(true);
       f->move(c, &(c->markedFixies));
     }
     *needsVisit = false;
@@ -1044,13 +1107,13 @@ update2(Context* c, void* o, bool* needsVisit)
 void
 markDirty(Context* c, Fixie* f)
 {
-  if (not f->dirty) {
+  if (not f->dirty()) {
 #ifdef USE_ATOMIC_OPERATIONS
     ACQUIRE(c->lock);
 #endif
 
-    if (not f->dirty) {
-      f->dirty = true;
+    if (not f->dirty()) {
+      f->dirty(true);
       f->move(c, &(c->dirtyTenuredFixies));
     }
   }
@@ -1059,8 +1122,8 @@ markDirty(Context* c, Fixie* f)
 void
 markClean(Context* c, Fixie* f)
 {
-  if (f->dirty) {
-    f->dirty = false;
+  if (f->dirty()) {
+    f->dirty(false);
     if (f->immortal()) {
       f->remove(c);
     } else {
@@ -1090,7 +1153,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
   {
     if (target and c->client->isFixed(target)) {
       Fixie* f = fixie(target);
-      assert(c, offset == 0 or f->hasMask);
+      assert(c, offset == 0 or f->hasMask());
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
         if (DebugFixies) {
@@ -1098,7 +1161,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
                   f, offset, f->body() + offset, result);
         }
 
-        f->dirty = true;
+        f->dirty(true);
         markBit(f->mask(), offset);
       }
     } else if (seg->contains(p)) {
@@ -1871,7 +1934,7 @@ class MyHeap: public Heap {
 
       if (c.client->isFixed(p)) {
         Fixie* f = fixie(p);
-        assert(&c, offset == 0 or f->hasMask);
+        assert(&c, offset == 0 or f->hasMask());
 
         bool dirty = false;
         for (unsigned i = 0; i < count; ++i) {
@@ -1946,11 +2009,22 @@ class MyHeap: public Heap {
     }
   }
 
+  virtual void postVisit() {
+    killFixies(&c);
+  }
+
   virtual Status status(void* p) {
     p = mask(p);
 
     if (p == 0) {
       return Null;
+    } else if (c.client->isFixed(p)) {
+      Fixie* f = fixie(p);
+      return f->dead()
+        ? Unreachable
+        : (static_cast<unsigned>(f->age + 1) < FixieTenureThreshold
+           ? Reachable
+           : Tenured);
     } else if (c.nextGen1.contains(p)) {
       return Reachable;
     } else if (c.nextGen2.contains(p)

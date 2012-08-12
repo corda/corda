@@ -34,7 +34,7 @@ const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
 const unsigned TargetFixieSizeInWords = ceiling
   (TargetFixieSizeInBytes, TargetBytesPerWord);
 const unsigned TargetFixieAge = 0;
-const unsigned TargetFixieHasMask = 1;
+const unsigned TargetFixieFlags = 2;
 const unsigned TargetFixieSize = 4;
 
 const bool DebugNativeTarget = false;
@@ -441,11 +441,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
             memberFields[memberIndex] = *f;
 
-            while (targetMemberOffset % f->targetSize) {
-              ++ targetMemberOffset;
-            }
-
-            targetMemberOffset += f->targetSize;
+            targetMemberOffset = f->targetOffset + f->targetSize;
 
             ++ memberIndex;
           }
@@ -539,8 +535,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             targetMemberOffset = pad(targetMemberOffset, TargetBytesPerWord);
           }
         }
-
-        // if (strcmp(name, "avian/VMClass.class") == 0) trap();
 
         if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
           object array = makeByteArray
@@ -1175,13 +1169,13 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 
           memset(heap + position, 0, TargetFixieSizeInBytes);
 
-          uint8_t age = FixieTenureThreshold + 1;
+          uint16_t age = targetV2(FixieTenureThreshold + 1);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieAge, &age, 1);
+                 + TargetFixieAge, &age, 2);
 
-          uint8_t hasMask = true;
+          uint16_t flags = targetV2(1);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieHasMask, &hasMask, 1);
+                 + TargetFixieFlags, &flags, 2);
 
           uint32_t targetSize = targetV4(size);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)

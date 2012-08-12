@@ -2690,6 +2690,8 @@ class HeapClient: public Heap::Client {
   virtual void visitRoots(Heap::Visitor* v) {
     ::visitRoots(m, v);
 
+    m->heap->postVisit();
+
     postVisit(m->rootThread, v);
   }
 

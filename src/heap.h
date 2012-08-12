@@ -69,6 +69,7 @@ class Heap: public Allocator {
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;
   virtual void* follow(void* p) = 0;
+  virtual void postVisit() = 0;
   virtual Status status(void* p) = 0;
   virtual CollectionType collectionType() = 0;
   virtual void disposeFixies() = 0;
