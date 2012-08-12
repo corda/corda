@@ -795,7 +795,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
-		$(classpath-src)/avian/resource/Handler.java
+		$(classpath-src)/avian/avian_vm_resource/Handler.java
 
 	ifneq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \

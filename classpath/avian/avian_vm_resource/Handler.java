@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package avian.resource;
+package avian.avian_vm_resource;
 
 import java.net.URL;
 import java.net.URLStreamHandler;
