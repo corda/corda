@@ -28,8 +28,14 @@ public class MessageFormat extends Format {
   public StringBuffer format(Object[] args, StringBuffer target,
                              FieldPosition p)
   {
-    // todo
-    return target.append(pattern);
+    // todo: handle other format substitutions and escapes, and make
+    // this more efficient:
+    String result = pattern;
+    int length = args.length;
+    for (int i = 0; i < length; i++) {
+      result = result.replace("{" + i + "}", String.valueOf(args[i]));
+    }
+    return target.append(result);
   }
 
   public StringBuffer format(Object args, StringBuffer target, FieldPosition p)
