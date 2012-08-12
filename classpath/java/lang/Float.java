@@ -14,6 +14,10 @@ public final class Float extends Number {
   public static final Class TYPE = Class.forCanonicalName("F");
   private static final int EXP_BIT_MASK = 0x7F800000;
   private static final int SIGNIF_BIT_MASK = 0x007FFFFF;
+
+  public static final float NEGATIVE_INFINITY = -1.0f / 0.0f;
+  public static final float POSITIVE_INFINITY =  1.0f / 0.0f;
+  public static final float NaN =  0.0f / 0.0f;
   
   private final float value;  
 

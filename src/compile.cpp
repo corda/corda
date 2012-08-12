@@ -2587,13 +2587,25 @@ doubleToFloat(int64_t a)
 int64_t
 doubleToInt(int64_t a)
 {
-  return static_cast<int32_t>(bitsToDouble(a));
+  double f = bitsToDouble(a);
+  switch (fpclassify(f)) {
+  case FP_NAN: return 0;
+  case FP_INFINITE: return isinf(f) == 1 ? INT32_MAX : INT32_MIN;
+  default: return f >= INT32_MAX ? INT32_MAX
+      : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
+  }
 }
 
 int64_t
 doubleToLong(int64_t a)
 {
-  return static_cast<int64_t>(bitsToDouble(a));
+  double f = bitsToDouble(a);
+  switch (fpclassify(f)) {
+  case FP_NAN: return 0;
+  case FP_INFINITE: return isinf(f) == 1 ? INT64_MAX : INT64_MIN;
+  default: return f >= INT64_MAX ? INT64_MAX
+      : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f));
+  }
 }
 
 uint64_t
@@ -2735,13 +2747,24 @@ floatToDouble(int32_t a)
 int64_t
 floatToInt(int32_t a)
 {
-  return static_cast<int32_t>(bitsToFloat(a));
+  float f = bitsToFloat(a);
+  switch (fpclassify(f)) {
+  case FP_NAN: return 0;
+  case FP_INFINITE: return isinf(f) == 1 ? INT32_MAX : INT32_MIN;
+  default: return f >= INT32_MAX ? INT32_MAX
+      : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
+  }
 }
 
 int64_t
 floatToLong(int32_t a)
 {
-  return static_cast<int64_t>(bitsToFloat(a));
+  float f = bitsToFloat(a);
+  switch (fpclassify(f)) {
+  case FP_NAN: return 0;
+  case FP_INFINITE: return isinf(f) == 1 ? INT64_MAX : INT64_MIN;
+  default: return static_cast<int64_t>(f);
+  }
 }
 
 uint64_t

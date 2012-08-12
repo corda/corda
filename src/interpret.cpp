@@ -1078,11 +1078,28 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case d2i: {
-    pushInt(t, static_cast<int32_t>(popDouble(t)));
+    double f = popDouble(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushInt(t, 0); break;
+    case FP_INFINITE: pushInt(t, isinf(f) == 1 ? INT32_MAX : INT32_MIN); break;
+    default: pushInt
+        (t,  f >= INT32_MAX ? INT32_MAX
+         : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+      break;
+    }
   } goto loop;
 
   case d2l: {
-    pushLong(t, static_cast<int64_t>(popDouble(t)));
+    double f = popDouble(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushLong(t, 0); break;
+    case FP_INFINITE: pushLong(t, isinf(f) == 1 ? INT64_MAX : INT64_MIN);
+      break;
+    default: pushLong
+        (t,  f >= INT64_MAX ? INT64_MAX
+         : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f)));
+      break;
+    }
   } goto loop;
 
   case dadd: {
@@ -1278,11 +1295,24 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case f2i: {
-    pushInt(t, static_cast<int32_t>(popFloat(t)));
+    float f = popFloat(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushInt(t, 0); break;
+    case FP_INFINITE: pushInt(t, isinf(f) == 1 ? INT32_MAX : INT32_MIN); break;
+    default: pushInt(t, f >= INT32_MAX ? INT32_MAX
+                     : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+      break;
+    }
   } goto loop;
 
   case f2l: {
-    pushLong(t, static_cast<int64_t>(popFloat(t)));
+    float f = popFloat(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushLong(t, 0); break;
+    case FP_INFINITE: pushLong(t, isinf(f) == 1 ? INT64_MAX : INT64_MIN);
+      break;
+    default: pushLong(t, static_cast<int64_t>(f)); break;
+    }
   } goto loop;
 
   case fadd: {

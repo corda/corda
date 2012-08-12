@@ -2379,7 +2379,11 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Float2Int:
-      if (vfpSupported() && bSize == 4) {
+      // todo: Java requires different semantics than SSE for
+      // converting floats to integers, we we need to either use
+      // thunks or produce inline machine code which handles edge
+      // cases properly.
+      if (false && vfpSupported() && bSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = FPR_MASK64;
       } else {

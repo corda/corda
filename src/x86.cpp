@@ -3064,7 +3064,11 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Float2Int:
-      if (useSSE(&c) and bSize <= TargetBytesPerWord) {
+      // todo: Java requires different semantics than SSE for
+      // converting floats to integers, we we need to either use
+      // thunks or produce inline machine code which handles edge
+      // cases properly.
+      if (false and useSSE(&c) and bSize <= TargetBytesPerWord) {
         *aTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
         *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
