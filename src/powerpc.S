@@ -136,9 +136,18 @@ LOCAL(call):
 
 LOCAL(float):
    cmpwi r14,FLOAT_TYPE
-   beq  LOCAL(copy)
+   bne  LOCAL(double)
+   stfs f1,32(r19)
+   lwz  r4,32(r19)
+   b    LOCAL(exit)
+LOCAL(double):
    cmpwi r14,DOUBLE_TYPE
-   beq  LOCAL(copy)
+   bne  LOCAL(int64)
+   stfd f1,32(r19)
+   lwz  r3,32(r19)
+   lwz  r4,36(r19)
+   b    LOCAL(exit)
+LOCAL(int64):   
    cmpwi r14,INT64_TYPE
    beq  LOCAL(exit)
    mr   r4,r3
