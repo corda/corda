@@ -2164,7 +2164,9 @@ doShift(Context* c, UNUSED void (*shift)
     c->client->save(rcx);
 
     Assembler::Register cx(rcx);
-    moveCR(c, 4, a, 4, &cx);
+    ResolvedPromise promise(v & 0x3F);
+    Assembler::Constant masked(&promise);
+    moveCR(c, 4, &masked, 4, &cx);
     shift(c, aSize, &cx, bSize, b);
   } else {
     maybeRex(c, bSize, b);
@@ -2183,9 +2185,16 @@ void
 shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
             unsigned bSize, Assembler::Register* b)
 {
-  assert(c, a->low == rcx);
-  
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    if (a->low != rcx) {
+      c->client->save(rcx);
+      Assembler::Register cx(rcx);
+      ResolvedPromise promise(0x3F);
+      Assembler::Constant mask(&promise);
+      moveRR(c, 4, a, 4, &cx);
+      andCR(c, 4, &mask, 4, &cx);
+    }
+
     // shld
     opcode(c, 0x0f, 0xa5);
     modrm(c, 0xc0, b->high, b->low);
@@ -2204,6 +2213,8 @@ shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     moveRR(c, 4, b, 4, &bh); // 2 bytes
     xorRR(c, 4, b, 4, b); // 2 bytes
   } else {
+    assert(c, a->low == rcx);  
+
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xe0 + regCode(b));
   }
@@ -2220,8 +2231,16 @@ void
 shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
              unsigned bSize, Assembler::Register* b)
 {
-  assert(c, a->low == rcx);
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    if (a->low != rcx) {
+      c->client->save(rcx);
+      Assembler::Register cx(rcx);
+      ResolvedPromise promise(0x3F);
+      Assembler::Constant mask(&promise);
+      moveRR(c, 4, a, 4, &cx);
+      andCR(c, 4, &mask, 4, &cx);
+    }
+
     // shrd
     opcode(c, 0x0f, 0xad);
     modrm(c, 0xc0, b->low, b->high);
@@ -2243,6 +2262,8 @@ shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     opcode(c, 0xc1, 0xf8 + b->high);
     c->code.append(31);
   } else {
+    assert(c, a->low == rcx);
+
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xf8 + regCode(b));
   }
@@ -2259,9 +2280,16 @@ void
 unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
                      unsigned bSize, Assembler::Register* b)
 {
-  assert(c, a->low == rcx);
-
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    if (a->low != rcx) {
+      c->client->save(rcx);
+      Assembler::Register cx(rcx);
+      ResolvedPromise promise(0x3F);
+      Assembler::Constant mask(&promise);
+      moveRR(c, 4, a, 4, &cx);
+      andCR(c, 4, &mask, 4, &cx);
+    }
+
     // shrd
     opcode(c, 0x0f, 0xad);
     modrm(c, 0xc0, b->low, b->high);
@@ -2280,6 +2308,8 @@ unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
     moveRR(c, 4, &bh, 4, b); // 2 bytes
     xorRR(c, 4, &bh, 4, &bh); // 2 bytes
   } else {
+    assert(c, a->low == rcx);
+
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xe8 + regCode(b));
   }
@@ -3232,7 +3262,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void planSource
   (TernaryOperation op,
    unsigned aSize, uint8_t *aTypeMask, uint64_t *aRegisterMask,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
    unsigned, bool* thunk)
   {
     *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
@@ -3302,10 +3332,16 @@ class MyArchitecture: public Assembler::Architecture {
     case ShiftLeft:
     case ShiftRight:
     case UnsignedShiftRight: {
-      *aRegisterMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
-        | (static_cast<uint64_t>(1) << rcx);
-      const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
-      *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+      if (TargetBytesPerWord == 4 and bSize == 8) {
+        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
+        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+      } else {
+        *aRegisterMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
+          | (static_cast<uint64_t>(1) << rcx);
+        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
+        *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+      }
     } break;
 
     case JumpIfFloatEqual:

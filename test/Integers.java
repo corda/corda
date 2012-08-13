@@ -262,8 +262,8 @@ public class Integers {
       expect(bytesPerLine == 24);
     }
 
-    int y = -11760768;
-    expect((y + 0x8000) == (-11760768 + 0x8000));
+    { int y = -11760768;
+      expect((y + 0x8000) == (-11760768 + 0x8000)); }
 
     expect(Math.min(796, 1069) == 796);
 
@@ -299,5 +299,20 @@ public class Integers {
 
     { int b = 0xBE;
       expect(((b >>> 0) & 0xFF) == 0xBE); }
+
+    { int b = 0xBE; int x = 0xFF;
+      expect((b & x) == 0xBE); }
+
+    { int b = 0xBE; int x = 0;
+      expect((b >>> x) == 0xBE); }
+
+    { int b = 0xBE; int x = 0;
+      expect((b >> x) == 0xBE); }
+
+    { int b = 0xBE; int x = 0;
+      expect((b << x) == 0xBE); }
+
+    { int b = 0xBE; int x = 0; int y = 0xFF;
+      expect(((b >>> x) & y) == 0xBE); }
   }
 }

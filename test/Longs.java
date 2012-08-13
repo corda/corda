@@ -355,6 +355,36 @@ public class Longs {
 
     { long b = 0x10000000000L; int s = -63;
       expect((b >> s) == 0x8000000000L); }
+
+    { long b = 0xBEL;
+      expect((b & 0xFF) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b >>> 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b >> 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b << 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect(((b >>> 0) & 0xFF) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0xFF;
+      expect((b & x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b >>> x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b >> x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b << x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0; int y = 0xFF;
+      expect(((b >>> x) & y) == 0xBEL); }
   }
 
 }
