@@ -172,9 +172,11 @@ main(int ac, const char** av)
     if (strcmp(av[i], "-cp") == 0
         or strcmp(av[i], "-classpath") == 0)
     {
+      if (i + 1 == ac) usageAndExit(av[0]);
       classpath = av[++i];
     } else if (strcmp(av[i], "-jar") == 0)
     {
+      if (i + 1 == ac) usageAndExit(av[0]);
       jar = av[++i];
     } else if (strncmp(av[i], "-X", 2) == 0
                or strncmp(av[i], "-D", 2) == 0)
