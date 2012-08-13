@@ -2396,7 +2396,7 @@ class MyArchitecture: public Assembler::Architecture {
   {
     *thunk = false;
     *aTypeMask = ~0;
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    *aRegisterMask = GPR_MASK64;
 
     switch (op) {
     case Negate:
@@ -2453,7 +2453,7 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned , uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    *bRegisterMask = GPR_MASK64;
 
     switch (op) {
     case Negate:
@@ -2584,7 +2584,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void planDestination
   (TernaryOperation op,
    unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t, const uint64_t,
+   unsigned, uint8_t, const uint64_t bRegisterMask,
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
   {
     if (isBranch(op)) {
@@ -2592,7 +2592,7 @@ class MyArchitecture: public Assembler::Architecture {
       *cRegisterMask = 0;
     } else {
       *cTypeMask = (1 << RegisterOperand);
-      *cRegisterMask = ~static_cast<uint64_t>(0);
+      *cRegisterMask = bRegisterMask;
     }
   }
 
