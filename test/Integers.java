@@ -299,16 +299,5 @@ public class Integers {
 
     { int b = 0xBE;
       expect(((b >>> 0) & 0xFF) == 0xBE); }
-
-    { java.io.ByteArrayOutputStream bout = new java.io.ByteArrayOutputStream();
-      java.io.DataOutputStream dout = new java.io.DataOutputStream(bout);
-      dout.writeInt(0xCAFEBABE);
-      dout.flush();
-      byte[] array = bout.toByteArray();
-      expect((array[0] & 0xFF) == 0xCA);
-      expect((array[1] & 0xFF) == 0xFE);
-      expect((array[2] & 0xFF) == 0xBA);
-      expect((array[3] & 0xFF) == 0xBE);
-    }
   }
 }
