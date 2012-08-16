@@ -173,6 +173,10 @@ public abstract class ByteBuffer
     return this;
   }
 
+  public byte get() {
+    return get(position++);
+  }
+
   public byte get(int position) {
     checkGet(position, 1);
     return doGet(position);
