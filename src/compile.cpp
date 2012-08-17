@@ -5064,21 +5064,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned ip,
 
       object argument;
       Thunk thunk;
-      TraceElement* trace;
       if (LIKELY(class_)) {
         argument = class_;
         thunk = instanceOf64Thunk;
-        trace = 0;
       } else {
         argument = makePair(t, context->method, reference);
         thunk = instanceOfFromReferenceThunk;
-        trace = frame->trace(0, 0);
       }
 
       frame->pushInt
         (c->call
          (c->constant(getThunk(t, thunk), Compiler::AddressType),
-          0, trace, 4, Compiler::IntegerType,
+          0, frame->trace(0, 0), 4, Compiler::IntegerType,
           3, c->register_(t->arch->thread()), frame->append(argument),
           instance));
     } break;
