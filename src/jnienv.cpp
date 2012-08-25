@@ -45,8 +45,6 @@ DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
   if (t) {
-    expect(t, t != m->rootThread);
-
     m->localThread->set(0);
 
     ACQUIRE_RAW(t, t->m->stateLock);
