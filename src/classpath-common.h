@@ -278,7 +278,7 @@ makeStackTraceElement(Thread* t, object e)
   THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_));
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, class_, 0)));
-  class_ = makeString(t, "%s", s);
+  class_ = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
   object method = methodName(t, traceElementMethod(t, e));
   PROTECT(t, method);
