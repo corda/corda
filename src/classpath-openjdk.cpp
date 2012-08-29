@@ -4684,7 +4684,7 @@ jvmConstantPoolGetDoubleAt(Thread* t, uintptr_t* arguments)
   jobject pool = reinterpret_cast<jobject>(arguments[0]);
   jint index = arguments[1];
 
-  double v; memcpy(&singletonValue(t, *pool, index - 1), &v, 8);
+  double v; memcpy(&v, &singletonValue(t, *pool, index - 1), 8);
 
   return doubleToBits(v);
 }
