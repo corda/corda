@@ -3983,6 +3983,17 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
   return real;
 }
 
+uint64_t
+runParseClass(Thread* t, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
+  Machine::Type throwType = static_cast<Machine::Type>(arguments[2]);
+
+  return reinterpret_cast<uintptr_t>
+    (parseClass(t, loader, region->start(), region->length(), throwType));
+}
+
 object
 resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
                    Machine::Type throwType)
@@ -4028,9 +4039,24 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
         { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
+          uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
+                                    reinterpret_cast<uintptr_t>(region),
+                                    static_cast<uintptr_t>(throwType) };
+
           // parse class file
-          class_ = parseClass
-            (t, loader, region->start(), region->length(), throwType);
+          class_ = reinterpret_cast<object>
+            (runRaw(t, runParseClass, arguments));
+
+          if (UNLIKELY(t->exception)) {
+            if (throw_) {
+              object e = t->exception;
+              t->exception = 0;
+              vm::throw_(t, e);
+            } else {
+              t->exception = 0;
+              return 0;
+            }
+          }
         }
 
         if (Verbose) {
