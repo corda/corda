@@ -623,6 +623,13 @@ class MyClasspath : public Classpath {
     t->m->processor->invoke
       (t, root(t, Machine::BootLoader), "java/lang/System",
        "initializeSystemClass", "()V", 0);
+
+    t->m->processor->invoke
+      (t, root(t, Machine::BootLoader), "sun/misc/Launcher",
+       "getLauncher", "()Lsun/misc/Launcher;", 0);
+
+    set(t, t->javaThread, ThreadContextClassLoader,
+        root(t, Machine::AppLoader));
   }
 
   virtual const char*
