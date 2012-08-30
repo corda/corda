@@ -1867,6 +1867,10 @@ class MyHeap: public Heap {
     c.immortalHeapEnd = start + sizeInWords;
   }
 
+  virtual unsigned limit() {
+    return c.limit;
+  }
+
   virtual bool limitExceeded() {
     return c.count > c.limit;
   }

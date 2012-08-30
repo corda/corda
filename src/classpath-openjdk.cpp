@@ -3116,7 +3116,7 @@ EXPORT(JVM_FreeMemory)()
 extern "C" JNIEXPORT jlong JNICALL
 EXPORT(JVM_MaxMemory)()
 {
-  return 0;
+  return local::globalMachine->heap->limit();
 }
 
 extern "C" JNIEXPORT jint JNICALL
