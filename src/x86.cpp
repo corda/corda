@@ -2186,9 +2186,9 @@ shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
             unsigned bSize, Assembler::Register* b)
 {
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    Assembler::Register cx(rcx);
     if (a->low != rcx) {
       c->client->save(rcx);
-      Assembler::Register cx(rcx);
       ResolvedPromise promise(0x3F);
       Assembler::Constant mask(&promise);
       moveRR(c, 4, a, 4, &cx);
@@ -2204,7 +2204,7 @@ shiftLeftRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, a);
+    compareCR(c, aSize, &constant, aSize, &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 2);
@@ -2232,9 +2232,9 @@ shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
              unsigned bSize, Assembler::Register* b)
 {
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    Assembler::Register cx(rcx);
     if (a->low != rcx) {
       c->client->save(rcx);
-      Assembler::Register cx(rcx);
       ResolvedPromise promise(0x3F);
       Assembler::Constant mask(&promise);
       moveRR(c, 4, a, 4, &cx);
@@ -2250,7 +2250,7 @@ shiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, a);
+    compareCR(c, aSize, &constant, aSize, &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 3);
@@ -2281,9 +2281,9 @@ unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
                      unsigned bSize, Assembler::Register* b)
 {
   if (TargetBytesPerWord == 4 and bSize == 8) {
+    Assembler::Register cx(rcx);
     if (a->low != rcx) {
       c->client->save(rcx);
-      Assembler::Register cx(rcx);
       ResolvedPromise promise(0x3F);
       Assembler::Constant mask(&promise);
       moveRR(c, 4, a, 4, &cx);
@@ -2299,7 +2299,7 @@ unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, Assembler::Register* a,
 
     ResolvedPromise promise(32);
     Assembler::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, a);
+    compareCR(c, aSize, &constant, aSize, &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 2);

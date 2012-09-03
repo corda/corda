@@ -385,6 +385,10 @@ public class Longs {
 
     { long b = 0xBEL; int x = 0; int y = 0xFF;
       expect(((b >>> x) & y) == 0xBEL); }
+
+    { long b = 0xFFFFFFFFFFFFFFFFL; int s = 20;
+      expect((b >>> -s) == 0xFFFFF);
+    }
   }
 
 }
