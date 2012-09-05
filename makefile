@@ -223,6 +223,7 @@ build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
 
+soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
 version-script-flag = -Wl,--version-script=openjdk.ld
 
 build-system = posix
@@ -1160,7 +1161,8 @@ ifdef msvc
 		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(^) $(version-script-flag)	$(shared) $(lflags) $(bootimage-lflags) \
+	$(ld) $(^) $(version-script-flag) $(soname-flag) \
+		$(shared) $(lflags) $(bootimage-lflags) \
 		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
