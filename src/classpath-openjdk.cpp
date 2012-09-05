@@ -3006,6 +3006,12 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
                      "Avian Contributors");
 
   local::setProperty(t, method, *properties, "java.vm.name","Avian");
+#ifdef AVIAN_VERSION
+  local::setProperty(t, method, *properties, "java.vm.version",AVIAN_VERSION);
+#endif
+#ifdef AVIAN_INFO
+  local::setProperty(t, method, *properties, "java.vm.info",AVIAN_INFO);
+#endif
 
   local::setProperty
     (t, method, *properties, "java.home",
