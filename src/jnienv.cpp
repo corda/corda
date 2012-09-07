@@ -45,17 +45,23 @@ DetachCurrentThread(Machine* m)
 {
   Thread* t = static_cast<Thread*>(m->localThread->get());
   if (t) {
-    m->localThread->set(0);
+    // todo: detaching the root thread seems to cause stability
+    // problems which I haven't yet had a chance to investigate
+    // thoroughly.  Meanwhile, we just ignore requests to detach it,
+    // which leaks a bit of memory but should be harmless otherwise.
+    if (m->rootThread != t) {
+      m->localThread->set(0);
 
-    ACQUIRE_RAW(t, t->m->stateLock);
+      ACQUIRE_RAW(t, t->m->stateLock);
 
-    enter(t, Thread::ActiveState);
+      enter(t, Thread::ActiveState);
 
-    threadPeer(t, t->javaThread) = 0;
+      threadPeer(t, t->javaThread) = 0;
 
-    enter(t, Thread::ZombieState);
+      enter(t, Thread::ZombieState);
 
-    t->state = Thread::JoinedState;
+      t->state = Thread::JoinedState;
+    }
 
     return 0;
   } else {
