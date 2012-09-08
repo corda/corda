@@ -3627,6 +3627,13 @@ JNI_GetDefaultJavaVMInitArgs(void*)
 }
 
 extern "C" JNIEXPORT jint JNICALL
+JNI_GetCreatedJavaVMs(Machine**, jsize, jsize*)
+{
+  // todo
+  return -1;
+}
+
+extern "C" JNIEXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
   local::JavaVMInitArgs* a = static_cast<local::JavaVMInitArgs*>(args);
