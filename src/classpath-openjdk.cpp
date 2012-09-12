@@ -2292,11 +2292,28 @@ fieldForOffsetInClass(Thread* t, object c, unsigned offset)
 object
 fieldForOffset(Thread* t, object o, unsigned offset)
 {
-  object field = fieldForOffsetInClass(t, objectClass(t, o), offset);
-  if (field) {
-    return field;
-  } else {
+  object c = objectClass(t, o);
+  if (classVmFlags(t, c) & SingletonFlag) {
+    c = singletonObject(t, o, 0);
+    object table = classFieldTable(t, c);
+    if (table) {
+      for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+        object field = objectArrayBody(t, table, i);
+        if ((fieldFlags(t, field) & ACC_STATIC)
+            and fieldOffset(t, field) == offset)
+        {
+          return field;
+        }
+      }
+    }
     abort(t);
+  } else {
+    object field = fieldForOffsetInClass(t, c, offset);
+    if (field) {
+      return field;
+    } else {
+      abort(t);
+    }
   }
 }
 
