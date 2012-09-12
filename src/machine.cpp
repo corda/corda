@@ -273,6 +273,8 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
+  expect(t, t->criticalLevel == 0);
+
   unsigned n = t->heapOffset + t->heapIndex + t->backupHeapIndex;
 
   for (Thread* c = t->child; c; c = c->peer) {
@@ -591,6 +593,8 @@ postVisit(Thread* t, Heap::Visitor* v)
       = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
+
+  m->heap->postVisit();
 
   for (Reference* r = m->jniReferences; r; r = r->next) {
     if (r->weak) {
@@ -2692,8 +2696,6 @@ class HeapClient: public Heap::Client {
 
   virtual void visitRoots(Heap::Visitor* v) {
     ::visitRoots(m, v);
-
-    m->heap->postVisit();
 
     postVisit(m->rootThread, v);
   }
