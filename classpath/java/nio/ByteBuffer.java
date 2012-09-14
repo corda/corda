@@ -53,13 +53,15 @@ public abstract class ByteBuffer
   }
 
   public ByteBuffer compact() {
+    int remaining = remaining();
+
     if (position != 0) {
       ByteBuffer b = slice();
       position = 0;
       put(b);
     }
 
-    position = remaining();
+    position = remaining;
     limit(capacity());
     
     return this;

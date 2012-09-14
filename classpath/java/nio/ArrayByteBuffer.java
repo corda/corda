@@ -31,6 +31,10 @@ class ArrayByteBuffer extends ByteBuffer {
     return b;
   }
 
+  public boolean hasArray() {
+    return true;
+  }
+
   public byte[] array() {
     return array;
   }
@@ -49,9 +53,10 @@ class ArrayByteBuffer extends ByteBuffer {
   }
 
   public ByteBuffer put(ByteBuffer src) {
-    checkPut(position, src.remaining());
-    src.get(array, arrayOffset + position, src.remaining());
-    position += src.remaining();
+    int length = src.remaining();
+    checkPut(position, length);
+    src.get(array, arrayOffset + position, length);
+    position += length;
     return this;
   }
 
