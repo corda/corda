@@ -3801,7 +3801,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
                    unsigned index, unsigned dimensions);
 
 object
-getCaller(Thread* t, unsigned target);
+getCaller(Thread* t, unsigned target, bool skipMethodInvoke = false);
 
 object
 defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);

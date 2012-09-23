@@ -3802,7 +3802,7 @@ EXPORT(JVM_GetCallerClass)(Thread* t, int target)
 {
   ENTER(t, Thread::ActiveState);
 
-  object method = getCaller(t, target);
+  object method = getCaller(t, target, true);
 
   return method ? makeLocalReference
     (t, getJClass(t, methodClass(t, method))) : 0;
@@ -4568,6 +4568,14 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
 
   unsigned returnCode = methodReturnCode(t, vmMethod);
 
+  THREAD_RESOURCE0(t, {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = makeThrowable
+          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+      }
+    });
+
   object result;
   if (args) {
     result = t->m->processor->invokeArray
@@ -4605,6 +4613,14 @@ jvmNewInstanceFromConstructor(Thread* t, uintptr_t* arguments)
     (t, classMethodTable
      (t, jclassVmClass(t, jconstructorClazz(t, *constructor))),
       jconstructorSlot(t, *constructor));
+
+  THREAD_RESOURCE0(t, {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = makeThrowable
+          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+      }
+    });
 
   if (args) {
     t->m->processor->invokeArray(t, method, instance, *args);

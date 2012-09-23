@@ -4839,15 +4839,27 @@ parseUtf8(Thread* t, const char* data, unsigned length)
 }
 
 object
-getCaller(Thread* t, unsigned target)
+getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 {
   class Visitor: public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, unsigned target):
-      t(t), method(0), count(0), target(target)
+    Visitor(Thread* t, unsigned target, bool skipMethodInvoke):
+      t(t), method(0), count(0), target(target),
+      skipMethodInvoke(skipMethodInvoke)
     { }
 
     virtual bool visit(Processor::StackWalker* walker) {
+      if (skipMethodInvoke
+          and methodClass
+          (t, walker->method()) == type(t, Machine::JmethodType)
+          and strcmp
+          (&byteArrayBody(t, methodName(t, walker->method()), 0),
+           reinterpret_cast<const int8_t*>("invoke"))
+          == 0)
+      {
+        return true;
+      }
+
       if (count == target) {
         method = walker->method();
         return false;
@@ -4861,7 +4873,8 @@ getCaller(Thread* t, unsigned target)
     object method;
     unsigned count;
     unsigned target;
-  } v(t, target);
+    bool skipMethodInvoke;
+    } v(t, target, skipMethodInvoke);
 
   t->m->processor->walkStack(t, &v);
 
