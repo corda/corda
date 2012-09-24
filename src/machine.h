@@ -1206,6 +1206,7 @@ class Machine {
     BootLoader,
     AppLoader,
     BootstrapClassMap,
+    PackageMap,
     FindLoadedClassMethod,
     LoadClassMethod,
     MonitorMap,
@@ -1549,6 +1550,9 @@ class Classpath {
 
   virtual const char*
   bootClasspath() = 0;
+
+  virtual void
+  updatePackageMap(Thread* t, object class_) = 0;
 
   virtual void
   dispose() = 0;

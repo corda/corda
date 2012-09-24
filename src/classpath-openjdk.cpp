@@ -639,6 +639,47 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  updatePackageMap(Thread* t, object class_)
+  {
+    PROTECT(t, class_);
+
+    if (root(t, Machine::PackageMap) == 0) {
+      setRoot(t, Machine::PackageMap, makeHashMap(t, 0, 0));
+    }
+
+    object className = vm::className(t, class_);
+    if ('[' != byteArrayBody(t, className, 0)) {
+      THREAD_RUNTIME_ARRAY
+        (t, char, packageName, byteArrayLength(t, className));
+
+      char* s = reinterpret_cast<char*>(&byteArrayBody(t, className, 0));
+      char* p = strrchr(s, '/');
+
+      if (p) {
+        int length = (p - s) + 1;
+        memcpy(RUNTIME_ARRAY_BODY(packageName),
+               &byteArrayBody(t, className, 0),
+               length);
+        RUNTIME_ARRAY_BODY(packageName)[length] = 0;
+
+        object key = vm::makeByteArray(t, "%s", packageName);
+
+        hashMapRemove
+          (t, root(t, Machine::PackageMap), key, byteArrayHash,
+           byteArrayEqual);
+
+        object source = classSource(t, class_);
+        if (source == 0) {
+          source = vm::makeByteArray(t, "avian-dummy-package-source");
+        }
+
+        hashMapInsert
+          (t, root(t, Machine::PackageMap), key, source, byteArrayHash);
+      }
+    }
+  }
+
+  virtual void
   dispose()
   { 
     allocator->free(this, sizeof(*this));
@@ -3531,10 +3572,37 @@ EXPORT(JVM_ClassDepth)(Thread*, jstring) { abort(); }
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_ClassLoaderDepth)(Thread*) { abort(); }
 
-extern "C" JNIEXPORT jstring JNICALL
-EXPORT(JVM_GetSystemPackage)(Thread*, jstring s)
+uint64_t
+jvmGetSystemPackage(Thread* t, uintptr_t* arguments)
 {
-  return s;
+  jstring s = reinterpret_cast<jstring>(arguments[0]);
+
+  ACQUIRE(t, t->m->classLock);
+
+  THREAD_RUNTIME_ARRAY(t, char, chars, stringLength(t, *s) + 1);
+  stringChars(t, *s, RUNTIME_ARRAY_BODY(chars));
+
+  object key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
+
+  object array = hashMapFind
+    (t, root(t, Machine::PackageMap), key, byteArrayHash, byteArrayEqual);
+
+  if (array) {
+    return reinterpret_cast<uintptr_t>
+      (makeLocalReference
+       (t, t->m->classpath->makeString
+        (t, array, 0, byteArrayLength(t, array))));
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+EXPORT(JVM_GetSystemPackage)(Thread* t, jstring s)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(s) };
+
+  return reinterpret_cast<jstring>(run(t, jvmGetSystemPackage, arguments));
 }
 
 uint64_t

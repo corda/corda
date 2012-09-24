@@ -4099,6 +4099,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
     if (class_) {
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
+
+      t->m->classpath->updatePackageMap(t, class_);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
