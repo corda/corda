@@ -62,7 +62,12 @@ LOCAL(loop):
   vldmia  r7, {d0-d7}
 #endif
 
+#if defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__)
+  mov   lr, pc
+  bx    r4
+#else
   blx   r4         // call function
+#endif
   add   sp, sp, r5 // deallocate stack
 
 #if defined(__VFP_FP__) && (! defined(__SOFTFP__)) && (! defined(__QNX__))
@@ -108,7 +113,12 @@ GLOBAL(vmRun):
   mov   r12, r0
   ldr   r0, [r2, #CHECKPOINT_THREAD]
 
+#if defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__)
+  mov   lr, pc
+  bx    r12
+#else
   blx   r12
+#endif
 
 .globl GLOBAL(vmRun_returnAddress)
 .align 2

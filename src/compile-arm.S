@@ -75,7 +75,12 @@ LOCAL(vmInvoke_argumentTest):
   mov   r8, r0
 
   // load and call function address
+#if defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__)
+  mov   lr, pc
+  bx    r1
+#else
   blx   r1
+#endif
 
 .globl GLOBAL(vmInvoke_returnAddress)
 .align 2
@@ -228,5 +233,9 @@ LOCAL(vmJumpAndInvoke_getAddress_word):
 #else // not AVIAN_CONTINUATIONS
    // vmJumpAndInvoke should only be called when continuations are
    // enabled
+#if defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__)
+   // TODO: armv4 do not have bkpt
+#else
    bkpt
+#endif
 #endif // not AVIAN_CONTINUATIONS
