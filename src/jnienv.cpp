@@ -431,12 +431,14 @@ GetObjectClass(Thread* t, jobject o)
 uint64_t
 getSuperclass(Thread* t, uintptr_t* arguments)
 {
-  jclass c = reinterpret_cast<jclass>(arguments[0]);
-
-  object super = classSuper(t, jclassVmClass(t, *c));
-
-  return super ? reinterpret_cast<uint64_t>
-    (makeLocalReference(t, getJClass(t, super))) : 0;
+  object class_ = jclassVmClass(t, *reinterpret_cast<jclass>(arguments[0]));
+  if (classFlags(t, class_) & ACC_INTERFACE) {
+    return 0;
+  } else {
+    object super = classSuper(t, class_);
+    return super ? reinterpret_cast<uint64_t>
+      (makeLocalReference(t, getJClass(t, super))) : 0;
+  }
 }
 
 jclass JNICALL

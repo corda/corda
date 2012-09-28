@@ -2378,10 +2378,13 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Class_getSuperclass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object super = classSuper
-    (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
-
-  return super ? reinterpret_cast<int64_t>(getJClass(t, super)) : 0;
+  object class_ = jclassVmClass(t, reinterpret_cast<object>(arguments[0]));
+  if (classFlags(t, class_) & ACC_INTERFACE) {
+    return 0;
+  } else {
+    object super = classSuper(t, class_);
+    return super ? reinterpret_cast<int64_t>(getJClass(t, super)) : 0;
+  }
 }
 
 extern "C" JNIEXPORT void
