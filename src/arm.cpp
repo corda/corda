@@ -245,7 +245,17 @@ inline int bpl(int offset) { return SETCOND(b(offset), PL); }
 inline int fmstat() { return fmrx(15, FPSCR); }
 // HARDWARE FLAGS
 bool vfpSupported() {
-  return true; // TODO
+  // TODO: Use at runtime detection
+#if defined(__ARM_PCS_VFP)  
+  // armhf
+  return true;
+#else
+  // armel
+  // TODO: allow VFP use for -mfloat-abi=softfp armel builds.
+  // GCC -mfloat-abi=softfp flag allows use of VFP while remaining compatible
+  // with soft-float code. 
+  return false;
+#endif
 }
 }
 

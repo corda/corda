@@ -163,7 +163,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   for (unsigned ati = 0; ati < argumentCount; ++ ati) {
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
-#if (defined(__VFP_FP__) && !defined(__SOFTFP__)) && !defined(__QNX__)
+#if defined(__ARM_PCS_VFP)
       {
         if (vfpIndex + Alignment <= VfpCount) {
           if (vfpIndex % Alignment) {

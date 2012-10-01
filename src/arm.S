@@ -57,7 +57,7 @@ LOCAL(loop):
   // setup argument registers if necessary
   tst     r6, r6
   ldmneia r6, {r0-r3}
-#if defined(__VFP_FP__) && (! defined(__SOFTFP__)) && (! defined(__QNX__))
+#if defined(__ARM_PCS_VFP)
   // and VFP registers
   vldmia  r7, {d0-d7}
 #endif
@@ -70,7 +70,7 @@ LOCAL(loop):
 #endif
   add   sp, sp, r5 // deallocate stack
 
-#if defined(__VFP_FP__) && (! defined(__SOFTFP__)) && (! defined(__QNX__))
+#if defined(__ARM_PCS_VFP)
   cmp   r8,#FLOAT_TYPE
   bne   LOCAL(double)
   fmrs  r0,s0
