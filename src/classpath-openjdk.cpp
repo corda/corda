@@ -349,48 +349,66 @@ clearInterrupted(Thread*);
 
 class MyClasspath : public Classpath {
  public:
-  static const unsigned BufferSize = 1024;
-
   MyClasspath(System* s, Allocator* allocator, const char* javaHome,
               const char* embedPrefix):
     allocator(allocator), ranNetOnLoad(0), ranManagementOnLoad(0)
   {
     class StringBuilder {
      public:
-      StringBuilder(System* s, char* pointer, unsigned remaining):
-        s(s), pointer(pointer), remaining(remaining)
+      StringBuilder(System* s, Allocator* allocator):
+        s(s),
+        allocator(allocator),
+        bufferSize(1024),
+        buffer(static_cast<char*>(allocator->allocate(bufferSize))),
+        offset(0)
       { }
+
+      void ensure(unsigned capacity) {
+        if (capacity > bufferSize) {
+          unsigned size = max(bufferSize * 2, capacity);
+          char* b = static_cast<char*>(allocator->allocate(size));
+
+          if (offset) {
+            memcpy(b, buffer, offset);
+          }
+
+          allocator->free(buffer, bufferSize);
+          
+          buffer = b;
+          bufferSize = size;
+        }
+      }
 
       void append(const char* append) {
         unsigned length = strlen(append);
-        expect(s, remaining > length);
+        ensure(offset + length + 1);
   
-        strncpy(pointer, append, remaining);
+        strncpy(buffer + offset, append, length + 1);
         
-        remaining -= length;
-        pointer += length;
+        offset += length;
       }
 
       void append(char c) {
-        assert(s, remaining > 1);
+        ensure(2);
         
-        pointer[0] = c;
-        pointer[1] = 0;
+        buffer[offset] = c;
+        buffer[offset + 1] = 0;
 
-        -- remaining;
-        ++ pointer;
+        ++ offset;
       }
 
       System* s;
-      char* pointer;
-      unsigned remaining;
-    } sb(s, buffer, BufferSize);
+      Allocator* allocator;
+      unsigned bufferSize;
+      char* buffer;
+      unsigned offset;
+    } sb(s, allocator);
 
-    this->javaHome = sb.pointer;
+    unsigned javaHomeOffset = sb.offset;
     sb.append(javaHome);
     sb.append('\0');
 
-    this->classpath = sb.pointer;
+    unsigned classpathOffset = sb.offset;
     sb.append(AVIAN_CLASSPATH);
     sb.append(s->pathSeparator());
     sb.append(javaHome);
@@ -409,7 +427,7 @@ class MyClasspath : public Classpath {
     sb.append("/lib/resources.jar");
     sb.append('\0');
 
-    this->libraryPath = sb.pointer;
+    unsigned libraryPathOffset = sb.offset;
     sb.append(javaHome);
 #ifdef PLATFORM_WINDOWS
     sb.append("/bin");
@@ -424,16 +442,24 @@ class MyClasspath : public Classpath {
     sb.append("/lib/i386");
 #endif
     sb.append('\0');
-    
-    this->tzMappings = sb.pointer;
+
+    unsigned tzMappingsOffset = sb.offset;
     sb.append(javaHome);
     sb.append("/lib/tzmappings");
-    this->tzMappingsLength = sb.pointer - tzMappings;
+    this->tzMappingsLength = sb.offset - tzMappingsOffset;
     sb.append('\0');
 
-    this->embedPrefix = sb.pointer;
+    unsigned embedPrefixOffset = sb.offset;
     sb.append(embedPrefix);
-    this->embedPrefixLength = sb.pointer - this->embedPrefix;
+    this->embedPrefixLength = sb.offset - embedPrefixOffset;
+
+    this->javaHome = sb.buffer + javaHomeOffset;
+    this->classpath = sb.buffer + classpathOffset;
+    this->libraryPath = sb.buffer + libraryPathOffset;
+    this->tzMappings = sb.buffer + tzMappingsOffset;
+    this->embedPrefix = sb.buffer + embedPrefixOffset;
+    this->buffer = sb.buffer;
+    this->bufferSize = sb.bufferSize;
   }
 
   virtual object
@@ -682,6 +708,7 @@ class MyClasspath : public Classpath {
   virtual void
   dispose()
   { 
+    allocator->free(buffer, bufferSize);
     allocator->free(this, sizeof(*this));
   }
 
@@ -691,6 +718,8 @@ class MyClasspath : public Classpath {
   const char* libraryPath;
   const char* tzMappings;
   const char* embedPrefix;
+  char* buffer;
+  unsigned bufferSize;
   unsigned tzMappingsLength;
   unsigned embedPrefixLength;
   unsigned filePathField;
@@ -705,7 +734,6 @@ class MyClasspath : public Classpath {
   unsigned zipEntryMethodField;
   bool ranNetOnLoad;
   bool ranManagementOnLoad;
-  char buffer[BufferSize];
   JmmInterface jmmInterface;
 };
 
