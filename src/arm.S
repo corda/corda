@@ -56,7 +56,11 @@ LOCAL(loop):
 
   // setup argument registers if necessary
   tst     r6, r6
+#ifdef __clang__
+  ldmiane r6, {r0-r3}
+#else
   ldmneia r6, {r0-r3}
+#endif
 #if defined(__ARM_PCS_VFP)
   // and VFP registers
   vldmia  r7, {d0-d7}

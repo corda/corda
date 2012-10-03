@@ -291,8 +291,13 @@ ifeq ($(arch),arm)
 	ifneq ($(arch),$(build-arch))
 		ifeq ($(platform),darwin)
 			ios-bin = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/usr/bin
-			cxx = $(ios-bin)/g++
-			cc = $(ios-bin)/gcc
+			ifeq ($(use-clang),true)
+				cxx = clang -std=c++11
+				cc = clang
+			else
+				cxx = $(ios-bin)/g++
+				cc = $(ios-bin)/gcc
+			endif
 			ar = $(ios-bin)/ar
 			ranlib = $(ios-bin)/ranlib
 			strip = $(ios-bin)/strip
@@ -312,8 +317,10 @@ endif
 
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
+	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/ \
+		-Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
+	soname-flag =
 endif
 
 ifeq ($(platform),qnx)
@@ -389,7 +396,8 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),arm)
 		ios-version := \
-			$(shell if test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
+			$(shell if test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
+				elif test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
 				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
 				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
 				elif test -d $(sdk-dir)/iPhoneOS4.2.sdk; then echo 4.2; \
