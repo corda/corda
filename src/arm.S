@@ -56,7 +56,7 @@ LOCAL(loop):
 
   // setup argument registers if necessary
   tst     r6, r6
-#ifdef __clang__
+#if (defined __APPLE__) && (defined __clang_major__) && (__clang_major__ >= 4)
   ldmiane r6, {r0-r3}
 #else
   ldmneia r6, {r0-r3}
