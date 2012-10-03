@@ -241,9 +241,8 @@ newString(Thread* t, uintptr_t* arguments)
   const jchar* chars = reinterpret_cast<const jchar*>(arguments[0]);
   jsize size = arguments[1];
 
-  object a = 0;
+  object a = makeCharArray(t, size);
   if (size) {
-    a = makeCharArray(t, size);
     memcpy(&charArrayBody(t, a, 0), chars, size * sizeof(jchar));
   }
 
