@@ -37,6 +37,26 @@ Java_JNI_addMix
     + a14 + a15 + a16 + a17 + a18 + a19 + a20;
 }
 
+extern "C" JNIEXPORT jfloat JNICALL
+Java_JNI_doEcho__F(JNIEnv* e, jclass c, jfloat f)
+{
+  jvalue value;
+  value.f = f;
+  jvalue array[] = { value };
+  return e->CallStaticFloatMethodA
+    (c, e->GetStaticMethodID(c, "echo", "(F)F"), array);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_JNI_doEcho__D(JNIEnv* e, jclass c, jdouble f)
+{
+  jvalue value;
+  value.d = f;
+  jvalue array[] = { value };
+  return e->CallStaticDoubleMethodA
+    (c, e->GetStaticMethodID(c, "echo", "(D)D"), array);
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 Java_Buffers_allocateNative(JNIEnv* e, jclass, jint capacity)
 {

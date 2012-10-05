@@ -7,6 +7,18 @@ public class JNI {
     if (! v) throw new RuntimeException();
   }
 
+  private static float echo(float f) {
+    return f;
+  }
+
+  private static native float doEcho(float f);
+
+  private static double echo(double f) {
+    return f;
+  }
+
+  private static native double doEcho(double f);
+
   private static native double addDoubles
     (double a1, double a2, double a3, double a4, double a5, double a6,
      double a7, double a8, double a9, double a10, double a11, double a12,
@@ -40,5 +52,8 @@ public class JNI {
            (1.0f, 2.0d, 3.0f, 4.0d, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f,
             12.0f, 13.0f, 14.0f, 15.0f, 16.0d, 17.0f, 18.0f, 19.0f, 20.0f)
            == 210.0d);
+
+    expect(doEcho(42.0f) == 42.0f);
+    expect(doEcho(42.0d) == 42.0d);
   }
 }

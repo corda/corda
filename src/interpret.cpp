@@ -2823,7 +2823,7 @@ pushArguments(Thread* t, object this_, const char* spec,
       break;
 
     case 'F': {
-      pushFloat(t, arguments[index++].d);
+      pushFloat(t, arguments[index++].f);
     } break;
 
     default:
