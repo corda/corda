@@ -1077,6 +1077,7 @@ update3(Context* c, void* o, bool* needsVisit)
         fprintf(stderr, "mark fixie %p\n", f);
       }
       f->marked(true);
+      f->dead(false);
       f->move(c, &(c->markedFixies));
     }
     *needsVisit = false;

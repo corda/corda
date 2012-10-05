@@ -474,6 +474,25 @@ referenceTargetReachable(Thread* t, Heap::Visitor* v, object* p)
   }
 }
 
+bool
+isFinalizable(Thread* t, object o)
+{
+  return t->m->heap->status(o) == Heap::Unreachable
+    and (classVmFlags
+         (t, static_cast<object>(t->m->heap->follow(objectClass(t, o))))
+         & HasFinalizerFlag);
+}
+
+void
+clearTargetIfFinalizable(Thread* t, object r)
+{
+  if (isFinalizable
+      (t, static_cast<object>(t->m->heap->follow(jreferenceTarget(t, r)))))
+  {
+    jreferenceTarget(t, r) = 0;
+  }
+}
+
 void
 postVisit(Thread* t, Heap::Visitor* v)
 {
@@ -481,6 +500,30 @@ postVisit(Thread* t, Heap::Visitor* v)
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
   assert(t, m->finalizeQueue == 0);
+
+  m->heap->postVisit();
+
+  for (object p = m->weakReferences; p;) {
+    object r = static_cast<object>(m->heap->follow(p));
+    p = jreferenceVmNext(t, r);
+    clearTargetIfFinalizable(t, r);
+  }
+
+  if (major) {
+    for (object p = m->tenuredWeakReferences; p;) {
+      object r = static_cast<object>(m->heap->follow(p));
+      p = jreferenceVmNext(t, r);
+      clearTargetIfFinalizable(t, r);
+    }
+  }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    if (r->weak and isFinalizable
+        (t, static_cast<object>(t->m->heap->follow(r->target))))
+    {
+      r->target = 0;
+    }
+  }
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
@@ -593,8 +636,6 @@ postVisit(Thread* t, Heap::Visitor* v)
       = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
-
-  m->heap->postVisit();
 
   for (Reference* r = m->jniReferences; r; r = r->next) {
     if (r->weak) {
