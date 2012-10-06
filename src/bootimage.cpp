@@ -310,7 +310,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
-      // fprintf(stderr, "%.*s\n", nameSize - 6, name);
+      // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
       object c = resolveSystemClass
         (t, root(t, Machine::BootLoader),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
@@ -412,8 +412,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              objectHash);
         }
       }
-     
-      // if (strcmp(name, "java/lang/System$Property.class") == 0) trap();
 
       { object array = 0;
         PROTECT(t, array);
@@ -454,7 +452,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           targetMemberOffset = TargetBytesPerWord;
         }
 
-        Field staticFields[count + 2];
+        const unsigned StaticHeader = 3;
+
+        Field staticFields[count + StaticHeader];
         
         init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
              TargetBytesPerWord);
@@ -462,9 +462,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         init(new (staticFields + 1) Field, Type_intptr_t, BytesPerWord,
              BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
 
-        unsigned staticIndex = 2;
-        unsigned buildStaticOffset = BytesPerWord * 2;
-        unsigned targetStaticOffset = TargetBytesPerWord * 2;
+        init(new (staticFields + 2) Field, Type_object, BytesPerWord * 2,
+             BytesPerWord, TargetBytesPerWord * 2, TargetBytesPerWord);
+
+        unsigned staticIndex = StaticHeader;
+        unsigned buildStaticOffset = BytesPerWord * StaticHeader;
+        unsigned targetStaticOffset = TargetBytesPerWord * StaticHeader;
 
         for (unsigned i = 0; i < vectorSize(t, fields); ++i) {
           object field = vectorBody(t, fields, i);
@@ -535,7 +538,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             targetMemberOffset = pad(targetMemberOffset, TargetBytesPerWord);
           }
         }
-
+     
         if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
           object array = makeByteArray
             (t, TypeMap::sizeInBytes
@@ -594,7 +597,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
-      // fprintf(stderr, "%.*s\n", nameSize - 6, name);
+      // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
       object c = resolveSystemClass
         (t, root(t, Machine::BootLoader),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
