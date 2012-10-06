@@ -2296,6 +2296,11 @@ updateClassTables(Thread* t, object newClass, object oldClass)
     }
   }
 
+  object staticTable = classStaticTable(t, newClass);
+  if (staticTable) {
+    set(t, staticTable, SingletonBody, newClass);
+  }
+
   if (classFlags(t, newClass) & ACC_INTERFACE) {
     object virtualTable = classVirtualTable(t, newClass);
     if (virtualTable) {
