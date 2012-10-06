@@ -155,7 +155,7 @@ Avian_java_lang_Runtime_exit
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_getContentLength
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -179,7 +179,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_open
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_open
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -200,7 +200,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_available
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_available
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -211,7 +211,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_available
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_read__JI
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -226,7 +226,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_read__JI
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_read__JI_3BII
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI_3BII
 (Thread* t, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -251,7 +251,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_read__JI_3BII
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_close
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_close
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);

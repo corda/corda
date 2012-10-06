@@ -602,7 +602,7 @@ class BuiltinElement: public JarElement {
   }
 
   virtual const char* urlPrefix() {
-    return "avian_vm_resource:";
+    return "avianvmresource:";
   }
 
   virtual const char* sourceUrl() {
