@@ -5679,7 +5679,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           uint32_t newIp = base + codeReadInt32(t, code, index);
           assert(t, newIp < codeLength(t, code));
 
-          RUNTIME_ARRAY_BODY(ipTable)[i] = newIp;
+          ipTable[i] = newIp;
 
           Promise* p = c->poolAppend(key);
           if (i == 0) {
@@ -6205,7 +6205,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         uint32_t newIp = base + codeReadInt32(t, code, index);
         assert(t, newIp < codeLength(t, code));
 
-        RUNTIME_ARRAY_BODY(ipTable)[i] = newIp;
+        ipTable[i] = newIp;
 
         Promise* p = c->poolAppendPromise
           (frame->addressPromise(c->machineIp(newIp)));
