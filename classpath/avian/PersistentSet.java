@@ -252,7 +252,7 @@ public class PersistentSet <T> implements Iterable <T> {
             }
             ancestors.next = new Cell(n, ancestors.next);
 
-            sibling = ancestors.value.right;
+            sibling = ancestors.value.right = new Node(ancestors.value.right);
           }
 
           if (! (sibling.left.red || sibling.right.red)) {
@@ -303,7 +303,7 @@ public class PersistentSet <T> implements Iterable <T> {
             }
             ancestors.next = new Cell(n, ancestors.next);
 
-            sibling = ancestors.value.left;
+            sibling = ancestors.value.left = new Node(ancestors.value.left);
           }
 
           if (! (sibling.right.red || sibling.left.red)) {
