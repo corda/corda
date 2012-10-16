@@ -42,7 +42,7 @@
  }
 
 -keep class avian.OpenJDK {
-   public static java.security.ProtectionDomain getProtectionDomain();
+   <methods>;
  }
 
 -keepclassmembers public class java.security.PrivilegedAction {
