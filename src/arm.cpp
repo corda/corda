@@ -49,12 +49,6 @@ inline int XFER2(int cond, int P, int U, int W, int L, int Rn, int Rd, int S, in
 { return cond<<28 | P<<24 | U<<23 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | 1<<7 | S<<6 | H<<5 | 1<<4 | Rm; }
 inline int XFER2I(int cond, int P, int U, int W, int L, int Rn, int Rd, int offsetH, int S, int H, int offsetL)
 { return cond<<28 | P<<24 | U<<23 | 1<<22 | W<<21 | L<<20 | Rn<<16 | Rd<<12 | offsetH<<8 | 1<<7 | S<<6 | H<<5 | 1<<4 | (offsetL&0xf); }
-inline int BLOCKXFER(int cond, int P, int U, int S, int W, int L, int Rn, int rlist)
-{ return cond<<28 | 4<<25 | P<<24 | U<<23 | S<<22 | W<<21 | L<<20 | Rn<<16 | rlist; }
-inline int SWI(int cond, int imm)
-{ return cond<<28 | 0x0f<<24 | (imm&0xffffff); }
-inline int SWAP(int cond, int B, int Rn, int Rd, int Rm)
-{ return cond<<28 | 1<<24 | B<<22 | Rn<<16 | Rd<<12 | 9<<4 | Rm; }
 inline int COOP(int cond, int opcode_1, int CRn, int CRd, int cp_num, int opcode_2, int CRm)
 { return cond<<28 | 0xe<<24 | opcode_1<<20 | CRn<<16 | CRd<<12 | cp_num<<8 | opcode_2<<5 | CRm; }
 inline int COXFER(int cond, int P, int U, int N, int W, int L, int Rn, int CRd, int cp_num, int offset) // offset is in words, not bytes
@@ -71,41 +65,29 @@ inline int b(int offset) { return BRANCH(AL, 0, offset); }
 inline int bl(int offset) { return BRANCH(AL, 1, offset); }
 inline int bx(int Rm) { return BRANCHX(AL, 0, Rm); }
 inline int blx(int Rm) { return BRANCHX(AL, 1, Rm); }
-inline int swi(int imm) { return SWI(AL, imm); }
 inline int and_(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x0, 0, Rn, Rd, shift, Sh, Rm); }
 inline int eor(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x1, 0, Rn, Rd, shift, Sh, Rm); }
-inline int sub(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x2, 0, Rn, Rd, shift, Sh, Rm); }
 inline int rsb(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x3, 0, Rn, Rd, shift, Sh, Rm); }
 inline int add(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x4, 0, Rn, Rd, shift, Sh, Rm); }
 inline int adc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x5, 0, Rn, Rd, shift, Sh, Rm); }
-inline int sbc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x6, 0, Rn, Rd, shift, Sh, Rm); }
 inline int rsc(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x7, 0, Rn, Rd, shift, Sh, Rm); }
-inline int tst(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x8, 1, Rn, 0, shift, Sh, Rm); }
-inline int teq(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0x9, 1, Rn, 0, shift, Sh, Rm); }
 inline int cmp(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xa, 1, Rn, 0, shift, Sh, Rm); }
-inline int cmn(int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xb, 1, Rn, 0, shift, Sh, Rm); }
 inline int orr(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xc, 0, Rn, Rd, shift, Sh, Rm); }
 inline int mov(int Rd, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xd, 0, 0, Rd, shift, Sh, Rm); }
-inline int bic(int Rd, int Rn, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xe, 0, Rn, Rd, shift, Sh, Rm); }
 inline int mvn(int Rd, int Rm, int Sh=0, int shift=0) { return DATA(AL, 0xf, 0, 0, Rd, shift, Sh, Rm); }
 inline int andi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x0, 0, Rn, Rd, rot, imm); }
-inline int eori(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x1, 0, Rn, Rd, rot, imm); }
 inline int subi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x2, 0, Rn, Rd, rot, imm); }
 inline int rsbi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x3, 0, Rn, Rd, rot, imm); }
 inline int addi(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x4, 0, Rn, Rd, rot, imm); }
 inline int adci(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0x5, 0, Rn, Rd, rot, imm); }
 inline int bici(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xe, 0, Rn, Rd, rot, imm); }
 inline int cmpi(int Rn, int imm, int rot=0) { return DATAI(AL, 0xa, 1, Rn, 0, rot, imm); }
-inline int orri(int Rd, int Rn, int imm, int rot=0) { return DATAI(AL, 0xc, 0, Rn, Rd, rot, imm); }
 inline int movi(int Rd, int imm, int rot=0) { return DATAI(AL, 0xd, 0, 0, Rd, rot, imm); }
 inline int orrsh(int Rd, int Rn, int Rm, int Rs, int Sh) { return DATAS(AL, 0xc, 0, Rn, Rd, Rs, Sh, Rm); }
 inline int movsh(int Rd, int Rm, int Rs, int Sh) { return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm); }
 inline int mul(int Rd, int Rm, int Rs) { return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm); }
 inline int mla(int Rd, int Rm, int Rs, int Rn) { return MULTIPLY(AL, 1, 0, Rd, Rn, Rs, Rm); }
 inline int umull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 4, 0, RdHi, RdLo, Rs, Rm); }
-inline int umlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 5, 0, RdHi, RdLo, Rs, Rm); }
-inline int smull(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 6, 0, RdHi, RdLo, Rs, Rm); }
-inline int smlal(int RdLo, int RdHi, int Rm, int Rs) { return MULTIPLY(AL, 7, 0, RdHi, RdLo, Rs, Rm); }
 inline int ldr(int Rd, int Rn, int Rm, int W=0) { return XFER(AL, 1, 1, 0, W, 1, Rn, Rd, 0, 0, Rm); }
 inline int ldri(int Rd, int Rn, int imm, int W=0) { return XFERI(AL, 1, calcU(imm), 0, W, 1, Rn, Rd, abs(imm)); }
 inline int ldrb(int Rd, int Rn, int Rm) { return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm); }
@@ -122,39 +104,19 @@ inline int ldrsh(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 
 inline int ldrshi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 1, Rn, Rd, abs(imm)>>4 & 0xf, 1, 1, abs(imm)&0xf); }
 inline int ldrsb(int Rd, int Rn, int Rm) { return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 0, Rm); }
 inline int ldrsbi(int Rd, int Rn, int imm) { return XFER2I(AL, 1, calcU(imm), 0, 1, Rn, Rd, abs(imm)>>4 & 0xf, 1, 0, abs(imm)&0xf); }
-inline int pop(int Rd) { return XFERI(AL, 0, 1, 0, 0, 1, 13, Rd, 4); }
-inline int ldmfd(int Rn, int rlist) { return BLOCKXFER(AL, 0, 1, 0, 1, 1, Rn, rlist); }
-inline int stmfd(int Rn, int rlist) { return BLOCKXFER(AL, 1, 0, 0, 1, 0, Rn, rlist); }
-inline int swp(int Rd, int Rm, int Rn) { return SWAP(AL, 0, Rn, Rd, Rm); }
-inline int swpb(int Rd, int Rm, int Rn) { return SWAP(AL, 1, Rn, Rd, Rm); }
 // breakpoint instruction, this really has its own instruction format
 inline int bkpt(int16_t immed) { return 0xe1200070 | (((unsigned)immed & 0xffff) >> 4 << 8) | (immed & 0xf); }
 // COPROCESSOR INSTRUCTIONS
-inline int cdp(int coproc, int opcode_1, int CRd, int CRn, int CRm, int opcode_2) { return COOP(AL, opcode_1, CRn, CRd, coproc, opcode_2, CRm); }
 inline int mcr(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 0, CRn, Rd, coproc, opcode_2, CRm); }
 inline int mcrr(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 0, Rn, Rd, coproc, opcode, CRm); }
 inline int mrc(int coproc, int opcode_1, int Rd, int CRn, int CRm, int opcode_2=0) { return COREG(AL, opcode_1, 1, CRn, Rd, coproc, opcode_2, CRm); }
 inline int mrrc(int coproc, int opcode, int Rd, int Rn, int CRm) { return COREG2(AL, 1, Rn, Rd, coproc, opcode, CRm); }
-inline int ldc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 1, Rn, CRd, coproc, offset); }
-inline int ldcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 1, Rn, CRd, coproc, offset); }
-inline int stc(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 0, W, 0, Rn, CRd, coproc, offset); }
-inline int stcl(int coproc, int CRd, int Rn, int offset=0, int W=0) { return COXFER(AL, 1, 1, 1, W, 0, Rn, CRd, coproc, offset); }
 // VFP FLOATING-POINT INSTRUCTIONS
-inline int fmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
-inline int fnmacs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
-inline int fmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
-inline int fnmscs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|1, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
 inline int fmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
-inline int fnmuls(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|2, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
 inline int fadds(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
 inline int fsubs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|3, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1)|2, Sm>>1); }
 inline int fdivs(int Sd, int Sn, int Sm) { return COOP(AL, (Sd&1)<<2|8, Sn>>1, Sd>>1, 10, (Sn&1)<<2|(Sm&1), Sm>>1); }
-inline int fmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 0, Dm); }
-inline int fnmacd(int Dd, int Dn, int Dm) { return COOP(AL, 0, Dn, Dd, 11, 2, Dm); }
-inline int fmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 0, Dm); }
-inline int fnmscd(int Dd, int Dn, int Dm) { return COOP(AL, 1, Dn, Dd, 11, 2, Dm); }
 inline int fmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 0, Dm); }
-inline int fnmuld(int Dd, int Dn, int Dm) { return COOP(AL, 2, Dn, Dd, 11, 2, Dm); }
 inline int faddd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 0, Dm); }
 inline int fsubd(int Dd, int Dn, int Dm) { return COOP(AL, 3, Dn, Dd, 11, 2, Dm); }
 inline int fdivd(int Dd, int Dn, int Dm) { return COOP(AL, 8, Dn, Dd, 11, 0, Dm); }
@@ -163,15 +125,8 @@ inline int fabss(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0, Sd>>1, 10, 
 inline int fnegs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
 inline int fsqrts(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 1, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
 inline int fcmps(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
-inline int fcmpes(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 4, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
-inline int fcmpzs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 2, 0); }
-inline int fcmpezs(int Sd) { return COOP(AL, 0xb|(Sd&1)<<2, 5, Sd>>1, 10, 6, 0); }
 inline int fcvtds(int Dd, int Sm) { return COOP(AL, 0xb, 7, Dd, 10, 6|(Sm&1), Sm>>1); }
-inline int fuitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
 inline int fsitos(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 8, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
-inline int ftouis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
-inline int ftouizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
-inline int ftosis(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 2|(Sm&1), Sm>>1); }
 inline int ftosizs(int Sd, int Sm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 10, 6|(Sm&1), Sm>>1); }
 inline int fcpyd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 2, Dm); }
 inline int fabsd(int Dd, int Dm) { return COOP(AL, 0xb, 0, Dd, 11, 6, Dm); }
@@ -179,24 +134,10 @@ inline int fnegd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 2, Dm); }
 inline int fsqrtd(int Dd, int Dm) { return COOP(AL, 0xb, 1, Dd, 11, 6, Dm); }
 // double-precision comparison instructions
 inline int fcmpd(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 2, Dm); }
-inline int fcmped(int Dd, int Dm) { return COOP(AL, 0xb, 4, Dd, 11, 6, Dm); }
-inline int fcmpzd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 2, 0); }
-inline int fcmpezd(int Dd) { return COOP(AL, 0xb, 5, Dd, 11, 6, 0); }
 // double-precision conversion instructions
 inline int fcvtsd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 7, Sd>>1, 11, 6, Dm); }
-inline int fuitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 2|(Sm&1), Sm>>1); }
 inline int fsitod(int Dd, int Sm) { return COOP(AL, 0xb, 8, Dd, 11, 6|(Sm&1), Sm>>1); }
-inline int ftouid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 2, Dm); }
-inline int ftouizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xc, Sd>>1, 11, 6, Dm); }
-inline int ftosid(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 2, Dm); }
 inline int ftosizd(int Sd, int Dm) { return COOP(AL, 0xb|(Sd&1)<<2, 0xd, Sd>>1, 11, 6, Dm); }
-// these are the multiple load/store analogs for VFP, useless for now
-inline int fldms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, count); }
-inline int fldmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1); }
-inline int fldmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 1, Rn, Dd, 11, count<<1|1); }
-inline int fstms(int Rn, int Sd, int count) { return COXFER(AL, 0, 1, Sd&1, 0, 0, Rn, Sd>>1, 10, count); }
-inline int fstmd(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1); }
-inline int fstmx(int Rn, int Dd, int count) { return COXFER(AL, 0, 1, 0, 0, 0, Rn, Dd, 11, count<<1|1); }
 // single load/store instructions for both precision types
 inline int flds(int Sd, int Rn, int offset=0) { return COXFER(AL, 1, 1, Sd&1, 0, 1, Rn, Sd>>1, 10, offset); };
 inline int fldd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset); };
@@ -205,32 +146,21 @@ inline int fstd(int Dd, int Rn, int offset=0) { return COXFER(AL, 1, 1, 0, 0, 0,
 // move between GPRs and FPRs
 inline int fmsr(int Sn, int Rd) { return mcr(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
 inline int fmrs(int Rd, int Sn) { return mrc(10, 0, Rd, Sn>>1, 0, (Sn&1)<<2); }
-/* move to/from the low/high parts of double-precision registers,
-   seemingly redundant */
-inline int fmdlr(int Dn, int Rd) { return mcr(11, 0, Rd, Dn, 0); }
-inline int fmrdl(int Rd, int Dn) { return mrc(11, 0, Rd, Dn, 0); }
-inline int fmdhr(int Dn, int Rd) { return mcr(11, 1, Rd, Dn, 0); }
-inline int fmrdh(int Rd, int Dn) { return mrc(11, 1, Rd, Dn, 0); }
 // move to/from VFP system registers
-inline int fmxr(int reg, int Rd) { return mcr(10, 7, Rd, reg, 0); }
 inline int fmrx(int Rd, int reg) { return mrc(10, 7, Rd, reg, 0); }
 // these move around pairs of single-precision registers
-inline int fmsrr(int Sm, int Rd, int Rn) { return mcrr(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
-inline int fmrrs(int Rd, int Rn, int Sm) { return mrrc(10, 1 | ((Sm&1)<<1), Rd, Rn, Sm>>1); }
 inline int fmdrr(int Dm, int Rd, int Rn) { return mcrr(11, 1, Rd, Rn, Dm); }
 inline int fmrrd(int Rd, int Rn, int Dm) { return mrrc(11, 1, Rd, Rn, Dm); }
 // FLAG SETTERS
 inline int SETCOND(int ins, int cond) { return ((ins&0x0fffffff) | (cond<<28)); }
 inline int SETS(int ins) { return ins | 1<<20; }
 // PSEUDO-INSTRUCTIONS
-inline int nop() { return mov(0, 0); }
 inline int lsl(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, LSL); }
 inline int lsli(int Rd, int Rm, int imm) { return mov(Rd, Rm, LSL, imm); }
 inline int lsr(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, LSR); }
 inline int lsri(int Rd, int Rm, int imm) { return mov(Rd, Rm, LSR, imm); }
 inline int asr(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, ASR); }
 inline int asri(int Rd, int Rm, int imm) { return mov(Rd, Rm, ASR, imm); }
-inline int ror(int Rd, int Rm, int Rs) { return movsh(Rd, Rm, Rs, ROR); }
 inline int beq(int offset) { return SETCOND(b(offset), EQ); }
 inline int bne(int offset) { return SETCOND(b(offset), NE); }
 inline int bls(int offset) { return SETCOND(b(offset), LS); }
@@ -245,35 +175,26 @@ inline int bpl(int offset) { return SETCOND(b(offset), PL); }
 inline int fmstat() { return fmrx(15, FPSCR); }
 // HARDWARE FLAGS
 bool vfpSupported() {
-  return true; // TODO
+  // TODO: Use at runtime detection
+#if defined(__ARM_PCS_VFP)  
+  // armhf
+  return true;
+#else
+  // armel
+  // TODO: allow VFP use for -mfloat-abi=softfp armel builds.
+  // GCC -mfloat-abi=softfp flag allows use of VFP while remaining compatible
+  // with soft-float code. 
+  return false;
+#endif
 }
 }
 
 const uint64_t MASK_LO32 = 0xffffffff;
 const unsigned MASK_LO16 = 0xffff;
 const unsigned MASK_LO8  = 0xff;
-inline unsigned lo32(int64_t i) { return (unsigned)(i&MASK_LO32); }
-inline unsigned hi32(int64_t i) { return (unsigned)(i>>32); }
-inline unsigned lo16(int64_t i) { return (unsigned)(i&MASK_LO16); }
-inline unsigned hi16(int64_t i) { return lo16(i>>16); }
 inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
-inline unsigned hi8(int64_t i) { return lo8(i>>8); }
-
-inline int ha16(int32_t i) { 
-  return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
-}
-inline int unha16(int32_t high, int32_t low) {
-  return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
-}
-
-inline bool isInt8(target_intptr_t v) { return v == static_cast<int8_t>(v); }
-inline bool isInt16(target_intptr_t v) { return v == static_cast<int16_t>(v); }
-inline bool isInt24(target_intptr_t v) { return v == (v & 0xffffff); }
-inline bool isInt32(target_intptr_t v) { return v == static_cast<int32_t>(v); }
-inline int carry16(target_intptr_t v) { return static_cast<int16_t>(v) < 0 ? 1 : 0; }
 
 inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
-inline bool isOfWidth(int i, int size) { return static_cast<unsigned>(i) >> size == 0; }
 
 const int N_GPRS = 16;
 const int N_FPRS = 16;
@@ -567,7 +488,7 @@ isBranch(TernaryOperation op)
   return op > FloatMin;
 }
 
-bool
+bool UNUSED
 isFloatBranch(TernaryOperation op)
 {
   return op > JumpIfNotEqual;
@@ -634,72 +555,118 @@ write4(uint8_t* dst, uint32_t v)
   memcpy(dst, &v, 4);
 }
 
+void
+andC(Context* con, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst);
+
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con);
-    emit(con, lsl(tmp1, b->high, a->low));
-    emit(con, rsbi(tmp2, a->low, 32));
+    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    ResolvedPromise maskPromise(0x3F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp3);
+    andC(con, 4, &mask, a, &dst);
+    emit(con, lsl(tmp1, b->high, tmp3));
+    emit(con, rsbi(tmp2, tmp3, 32));
     emit(con, orrsh(tmp1, tmp1, b->low, tmp2, LSR));
-    emit(con, SETS(subi(t->high, a->low, 32)));
+    emit(con, SETS(subi(t->high, tmp3, 32)));
     emit(con, SETCOND(mov(t->high, tmp1), MI));
     emit(con, SETCOND(lsl(t->high, b->low, t->high), PL));
-    emit(con, lsl(t->low, b->low, a->low));
-    freeTemp(con, tmp1); freeTemp(con, tmp2);
+    emit(con, lsl(t->low, b->low, tmp3));
+    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
   } else {
-    emit(con, lsl(t->low, b->low, a->low));
+    int tmp = newTemp(con);
+    ResolvedPromise maskPromise(0x1F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp);
+    andC(con, size, &mask, a, &dst);
+    emit(con, lsl(t->low, b->low, tmp));
+    freeTemp(con, tmp);
   }
 }
+
+void
+moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
+       unsigned dstSize, Assembler::Register* dst);
 
 void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, lsli(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, lsli(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con);
-    emit(con, lsr(tmp1, b->low, a->low));
-    emit(con, rsbi(tmp2, a->low, 32));
+    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    ResolvedPromise maskPromise(0x3F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp3);
+    andC(con, 4, &mask, a, &dst);
+    emit(con, lsr(tmp1, b->low, tmp3));
+    emit(con, rsbi(tmp2, tmp3, 32));
     emit(con, orrsh(tmp1, tmp1, b->high, tmp2, LSL));
-    emit(con, SETS(subi(t->low, a->low, 32)));
+    emit(con, SETS(subi(t->low, tmp3, 32)));
     emit(con, SETCOND(mov(t->low, tmp1), MI));
     emit(con, SETCOND(asr(t->low, b->high, t->low), PL));
-    emit(con, asr(t->high, b->high, a->low));
-    freeTemp(con, tmp1); freeTemp(con, tmp2);
+    emit(con, asr(t->high, b->high, tmp3));
+    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
   } else {
-    emit(con, asr(t->low, b->low, a->low));
+    int tmp = newTemp(con);
+    ResolvedPromise maskPromise(0x1F);
+    Assembler::Constant mask(&maskPromise);
+    Assembler::Register dst(tmp);
+    andC(con, size, &mask, a, &dst);
+    emit(con, asr(t->low, b->low, tmp));
+    freeTemp(con, tmp);
   }
 }
 
 void shiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, asri(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, asri(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
-  emit(con, lsr(t->low, b->low, a->low));
+  int tmpShift = newTemp(con);
+  ResolvedPromise maskPromise(size == 8 ? 0x3F : 0x1F);
+  Assembler::Constant mask(&maskPromise);
+  Assembler::Register dst(tmpShift);
+  andC(con, 4, &mask, a, &dst);
+  emit(con, lsr(t->low, b->low, tmpShift));
   if (size == 8) {
     int tmpHi = newTemp(con), tmpLo = newTemp(con);
-    emit(con, SETS(rsbi(tmpHi, a->low, 32)));
+    emit(con, SETS(rsbi(tmpHi, tmpShift, 32)));
     emit(con, lsl(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
-    emit(con, addi(tmpHi, a->low, -32));
+    emit(con, addi(tmpHi, tmpShift, -32));
     emit(con, lsr(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
-    emit(con, lsr(t->high, b->high, a->low));
+    emit(con, lsr(t->high, b->high, tmpShift));
     freeTemp(con, tmpHi); freeTemp(con, tmpLo);
   }
+  freeTemp(con, tmpShift);
 }
 
 void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
-  emit(con, lsri(t->low, b->low, getValue(a)));
+  if (getValue(a) & 0x1F) {
+    emit(con, lsri(t->low, b->low, getValue(a) & 0x1F));
+  } else {
+    moveRR(con, size, b, size, t);
+  }
 }
 
 class ConstantPoolEntry: public Promise {
@@ -908,10 +875,6 @@ jumpR(Context* con, unsigned size UNUSED, Assembler::Register* target)
   assert(con, size == TargetBytesPerWord);
   emit(con, bx(target->low));
 }
-
-void
-moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst);
 
 void
 swapRR(Context* con, unsigned aSize, Assembler::Register* a,
@@ -1353,23 +1316,6 @@ moveRM(Context* con, unsigned srcSize, Assembler::Register* src,
   assert(con, srcSize == dstSize);
 
   store(con, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
-}
-
-void
-moveAndUpdateRM(Context* con, unsigned srcSize UNUSED, Assembler::Register* src,
-                unsigned dstSize UNUSED, Assembler::Memory* dst)
-{
-  assert(con, srcSize == TargetBytesPerWord);
-  assert(con, dstSize == TargetBytesPerWord);
-
-  if (dst->index == NoRegister) {
-    emit(con, stri(src->low, dst->base, dst->offset, dst->offset ? 1 : 0));
-  } else {
-    assert(con, dst->offset == 0);
-    assert(con, dst->scale == 1);
-    
-    emit(con, str(src->low, dst->base, dst->index, 1));
-  }
 }
 
 void
@@ -2354,7 +2300,7 @@ class MyArchitecture: public Assembler::Architecture {
   {
     *thunk = false;
     *aTypeMask = ~0;
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    *aRegisterMask = GPR_MASK64;
 
     switch (op) {
     case Negate:
@@ -2379,7 +2325,11 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case Float2Int:
-      if (vfpSupported() && bSize == 4) {
+      // todo: Java requires different semantics than SSE for
+      // converting floats to integers, we we need to either use
+      // thunks or produce inline machine code which handles edge
+      // cases properly.
+      if (false && vfpSupported() && bSize == 4) {
         *aTypeMask = (1 << RegisterOperand);
         *aRegisterMask = FPR_MASK64;
       } else {
@@ -2407,7 +2357,7 @@ class MyArchitecture: public Assembler::Architecture {
    unsigned , uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
     *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    *bRegisterMask = GPR_MASK64;
 
     switch (op) {
     case Negate:
@@ -2538,7 +2488,7 @@ class MyArchitecture: public Assembler::Architecture {
   virtual void planDestination
   (TernaryOperation op,
    unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t, const uint64_t,
+   unsigned, uint8_t, const uint64_t bRegisterMask,
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
   {
     if (isBranch(op)) {
@@ -2546,7 +2496,7 @@ class MyArchitecture: public Assembler::Architecture {
       *cRegisterMask = 0;
     } else {
       *cTypeMask = (1 << RegisterOperand);
-      *cRegisterMask = ~static_cast<uint64_t>(0);
+      *cRegisterMask = bRegisterMask;
     }
   }
 

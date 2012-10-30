@@ -85,15 +85,23 @@ void FileOutputStream::write(uint8_t byte) {
 
 Platform* Platform::first = 0;
 
-PlatformInfo::OperatingSystem PlatformInfo::osFromString(const char* os) {
-  if(strcmp(os, "linux") == 0) {
-    return Linux;
-  } else if(strcmp(os, "windows") == 0) {
-    return Windows;
-  } else if(strcmp(os, "darwin") == 0) {
-    return Darwin;
+PlatformInfo::Format PlatformInfo::formatFromString(const char* format) {
+  if (strcmp(format, "elf") == 0
+      or strcmp(format, "linux") == 0
+      or strcmp(format, "freebsd") == 0
+      or strcmp(format, "qnx") == 0)
+  {
+    return Elf;
+  } else if (strcmp(format, "pe") == 0
+             or strcmp(format, "windows") == 0)
+  {
+    return Pe;
+  } else if (strcmp(format, "macho") == 0
+             or strcmp(format, "darwin") == 0)
+  {
+    return MachO;
   } else {
-    return UnknownOS;
+    return UnknownFormat;
   }
 }
 
@@ -123,3 +131,4 @@ Platform* Platform::getPlatform(PlatformInfo info) {
 } // namespace tools
 
 } // namespace avian
+

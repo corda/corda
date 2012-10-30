@@ -64,6 +64,18 @@
 #    define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
+#  elif (defined __QNX__)
+#    define IP_REGISTER(context) (context->uc_mcontext.cpu.eip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.cpu.esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.cpu.ebx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.cpu.ecx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.cpu.ebp)
+#  elif (defined __FreeBSD__)
+#    define IP_REGISTER(context) (context->uc_mcontext.mc_eip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.mc_esp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_ebx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.mc_ecx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_ebp)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
@@ -111,6 +123,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
 #    define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
+#  elif (defined __FreeBSD__)
+#    define IP_REGISTER(context) (context->uc_mcontext.mc_rip)
+#    define STACK_REGISTER(context) (context->uc_mcontext.mc_rsp)
+#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_rbx)
+#    define LINK_REGISTER(context) (context->uc_mcontext.mc_rcx)
+#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_rbp)
 #  else
 #    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
 #    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])

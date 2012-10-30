@@ -114,8 +114,8 @@ mainClass(const char* jar)
     unsigned length;
     while (readLine(region->start(), region->length(), &start, &length)) {
       const unsigned PrefixLength = 12;
-      if (strncmp("Main-Class: ", reinterpret_cast<const char*>
-                  (region->start() + start), PrefixLength) == 0)
+      if (strncasecmp("Main-Class: ", reinterpret_cast<const char*>
+                      (region->start() + start), PrefixLength) == 0)
       {
         result = static_cast<char*>(malloc(length + 1 - PrefixLength));
         memcpy(result, region->start() + start + PrefixLength,
@@ -172,9 +172,11 @@ main(int ac, const char** av)
     if (strcmp(av[i], "-cp") == 0
         or strcmp(av[i], "-classpath") == 0)
     {
+      if (i + 1 == ac) usageAndExit(av[0]);
       classpath = av[++i];
     } else if (strcmp(av[i], "-jar") == 0)
     {
+      if (i + 1 == ac) usageAndExit(av[0]);
       jar = av[++i];
     } else if (strncmp(av[i], "-X", 2) == 0
                or strncmp(av[i], "-D", 2) == 0)

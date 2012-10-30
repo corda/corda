@@ -273,6 +273,8 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
+  expect(t, t->criticalLevel == 0);
+
   unsigned n = t->heapOffset + t->heapIndex + t->backupHeapIndex;
 
   for (Thread* c = t->child; c; c = c->peer) {
@@ -472,6 +474,25 @@ referenceTargetReachable(Thread* t, Heap::Visitor* v, object* p)
   }
 }
 
+bool
+isFinalizable(Thread* t, object o)
+{
+  return t->m->heap->status(o) == Heap::Unreachable
+    and (classVmFlags
+         (t, static_cast<object>(t->m->heap->follow(objectClass(t, o))))
+         & HasFinalizerFlag);
+}
+
+void
+clearTargetIfFinalizable(Thread* t, object r)
+{
+  if (isFinalizable
+      (t, static_cast<object>(t->m->heap->follow(jreferenceTarget(t, r)))))
+  {
+    jreferenceTarget(t, r) = 0;
+  }
+}
+
 void
 postVisit(Thread* t, Heap::Visitor* v)
 {
@@ -479,6 +500,30 @@ postVisit(Thread* t, Heap::Visitor* v)
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
   assert(t, m->finalizeQueue == 0);
+
+  m->heap->postVisit();
+
+  for (object p = m->weakReferences; p;) {
+    object r = static_cast<object>(m->heap->follow(p));
+    p = jreferenceVmNext(t, r);
+    clearTargetIfFinalizable(t, r);
+  }
+
+  if (major) {
+    for (object p = m->tenuredWeakReferences; p;) {
+      object r = static_cast<object>(m->heap->follow(p));
+      p = jreferenceVmNext(t, r);
+      clearTargetIfFinalizable(t, r);
+    }
+  }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    if (r->weak and isFinalizable
+        (t, static_cast<object>(t->m->heap->follow(r->target))))
+    {
+      r->target = 0;
+    }
+  }
 
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
@@ -1128,7 +1173,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned count = s.read2();
   if (count) {
-    unsigned staticOffset = BytesPerWord * 2;
+    unsigned staticOffset = BytesPerWord * 3;
     unsigned staticCount = 0;
   
     object fieldTable = makeArray(t, count);
@@ -1242,7 +1287,10 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       uint8_t* body = reinterpret_cast<uint8_t*>
         (&singletonBody(t, staticTable, 0));
 
-      for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
+      memcpy(body, &class_, BytesPerWord);
+      singletonMarkObject(t, staticTable, 0);
+
+      for (unsigned i = 0, offset = BytesPerWord; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
         while (offset % size) {
           ++ offset;
@@ -2246,6 +2294,11 @@ updateClassTables(Thread* t, object newClass, object oldClass)
     for (unsigned i = 0; i < arrayLength(t, fieldTable); ++i) {
       set(t, arrayBody(t, fieldTable, i), FieldClass, newClass);
     }
+  }
+
+  object staticTable = classStaticTable(t, newClass);
+  if (staticTable) {
+    set(t, staticTable, SingletonBody, newClass);
   }
 
   if (classFlags(t, newClass) & ACC_INTERFACE) {
@@ -3667,34 +3720,32 @@ stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
   assert(t, static_cast<unsigned>
          (stringUTFLength(t, string, start, length)) == charsLength);
 
-  if (length) {
-    object data = stringData(t, string);
-    if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {    
-      memcpy(chars,
-             &byteArrayBody(t, data, stringOffset(t, string) + start),
-             length);
-      chars[length] = 0; 
-    } else {
-      int j = 0;
-      for (unsigned i = 0; i < length; ++i) {
-        uint16_t c = charArrayBody
-          (t, data, stringOffset(t, string) + start + i);
-        if(!c) {                // null char
-          chars[j++] = 0;
-        } else if (c < 0x80) {  // ASCII char
-          chars[j++] = static_cast<char>(c);
-        } else if (c < 0x800) { // two-byte char
-          chars[j++] = static_cast<char>(0x0c0 | (c >> 6));
-          chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
-        } else {                // three-byte char
-          chars[j++] = static_cast<char>(0x0e0 | ((c >> 12) & 0x0f));
-          chars[j++] = static_cast<char>(0x080 | ((c >> 6) & 0x03f));
-          chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
-        }
+  object data = stringData(t, string);
+  if (objectClass(t, data) == type(t, Machine::ByteArrayType)) {    
+    memcpy(chars,
+           &byteArrayBody(t, data, stringOffset(t, string) + start),
+           length);
+    chars[length] = 0; 
+  } else {
+    int j = 0;
+    for (unsigned i = 0; i < length; ++i) {
+      uint16_t c = charArrayBody
+        (t, data, stringOffset(t, string) + start + i);
+      if(!c) {                // null char
+        chars[j++] = 0;
+      } else if (c < 0x80) {  // ASCII char
+        chars[j++] = static_cast<char>(c);
+      } else if (c < 0x800) { // two-byte char
+        chars[j++] = static_cast<char>(0x0c0 | (c >> 6));
+        chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
+      } else {                // three-byte char
+        chars[j++] = static_cast<char>(0x0e0 | ((c >> 12) & 0x0f));
+        chars[j++] = static_cast<char>(0x080 | ((c >> 6) & 0x03f));
+        chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
       }
-      chars[j] = 0;
-    }    
-  }
+    }
+    chars[j] = 0;
+  }    
 }
 
 uint64_t
@@ -3983,6 +4034,17 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
   return real;
 }
 
+uint64_t
+runParseClass(Thread* t, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
+  Machine::Type throwType = static_cast<Machine::Type>(arguments[2]);
+
+  return reinterpret_cast<uintptr_t>
+    (parseClass(t, loader, region->start(), region->length(), throwType));
+}
+
 object
 resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
                    Machine::Type throwType)
@@ -4028,9 +4090,24 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
         { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
+          uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
+                                    reinterpret_cast<uintptr_t>(region),
+                                    static_cast<uintptr_t>(throwType) };
+
           // parse class file
-          class_ = parseClass
-            (t, loader, region->start(), region->length(), throwType);
+          class_ = reinterpret_cast<object>
+            (runRaw(t, runParseClass, arguments));
+
+          if (UNLIKELY(t->exception)) {
+            if (throw_) {
+              object e = t->exception;
+              t->exception = 0;
+              vm::throw_(t, e);
+            } else {
+              t->exception = 0;
+              return 0;
+            }
+          }
         }
 
         if (Verbose) {
@@ -4068,6 +4145,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
     if (class_) {
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
+
+      t->m->classpath->updatePackageMap(t, class_);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
@@ -4808,15 +4887,27 @@ parseUtf8(Thread* t, const char* data, unsigned length)
 }
 
 object
-getCaller(Thread* t, unsigned target)
+getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 {
   class Visitor: public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, unsigned target):
-      t(t), method(0), count(0), target(target)
+    Visitor(Thread* t, unsigned target, bool skipMethodInvoke):
+      t(t), method(0), count(0), target(target),
+      skipMethodInvoke(skipMethodInvoke)
     { }
 
     virtual bool visit(Processor::StackWalker* walker) {
+      if (skipMethodInvoke
+          and methodClass
+          (t, walker->method()) == type(t, Machine::JmethodType)
+          and strcmp
+          (&byteArrayBody(t, methodName(t, walker->method()), 0),
+           reinterpret_cast<const int8_t*>("invoke"))
+          == 0)
+      {
+        return true;
+      }
+
       if (count == target) {
         method = walker->method();
         return false;
@@ -4830,7 +4921,8 @@ getCaller(Thread* t, unsigned target)
     object method;
     unsigned count;
     unsigned target;
-  } v(t, target);
+    bool skipMethodInvoke;
+    } v(t, target, skipMethodInvoke);
 
   t->m->processor->walkStack(t, &v);
 

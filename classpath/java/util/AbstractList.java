@@ -15,6 +15,11 @@ public abstract class AbstractList<T> extends AbstractCollection<T>
 {
   protected int modCount;
 
+  public boolean add(T o) {
+    add(size(), o);
+    return true;
+  }
+
   public Iterator<T> iterator() {
     return listIterator();
   }

@@ -20,10 +20,13 @@ class Zone: public Allocator {
  public:
   class Segment {
    public:
-    Segment(Segment* next, unsigned size): next(next), size(size) { }
+    Segment(Segment* next, unsigned size):
+      next(next), size(size), position(0)
+    { }
 
     Segment* next;
     uintptr_t size;
+    uintptr_t position;
     uint8_t data[0];
   };
 
@@ -31,7 +34,6 @@ class Zone: public Allocator {
     s(s),
     allocator(allocator),
     segment(0),
-    position(0),
     minimumFootprint(minimumFootprint < sizeof(Segment) ? 0 :
                      minimumFootprint - sizeof(Segment))
   { }
@@ -55,7 +57,7 @@ class Zone: public Allocator {
   }
 
   bool tryEnsure(unsigned space) {
-    if (segment == 0 or position + space > segment->size) {
+    if (segment == 0 or segment->position + space > segment->size) {
       unsigned size = padToPage
         (max
          (space, max
@@ -72,26 +74,24 @@ class Zone: public Allocator {
       }
 
       segment = new (p) Segment(segment, size - sizeof(Segment));
-      position = 0;
     }
     return true;
   }
 
   void ensure(unsigned space) {
-    if (segment == 0 or position + space > segment->size) {
+    if (segment == 0 or segment->position + space > segment->size) {
       unsigned size = padToPage(space + sizeof(Segment));
 
       segment = new (allocator->allocate(size))
         Segment(segment, size - sizeof(Segment));
-      position = 0;
     }
   }
 
   virtual void* tryAllocate(unsigned size) {
     size = pad(size);
     if (tryEnsure(size)) {
-      void* r = segment->data + position;
-      position += size;
+      void* r = segment->data + segment->position;
+      segment->position += size;
       return r;
     } else {
       return 0;
@@ -99,15 +99,39 @@ class Zone: public Allocator {
   }
 
   virtual void* allocate(unsigned size) {
+    size = pad(size);
     void* p = tryAllocate(size);
     if (p) {
       return p;
     } else {
       ensure(size);
-      void* r = segment->data + position;
-      position += size;
+      void* r = segment->data + segment->position;
+      segment->position += size;
       return r;
     }
+  }
+
+  void* peek(unsigned size) {
+    size = pad(size);
+    Segment* s = segment;
+    while (s->position < size) {
+      size -= s->position;
+      s = s->next;
+    }
+    return s->data + (s->position - size);
+  }
+
+  void pop(unsigned size) {
+    size = pad(size);
+    Segment* s = segment;
+    while (s->position < size) {
+      size -= s->position;
+      Segment* next = s->next;
+      allocator->free(s, sizeof(Segment) + s->size);
+      s = next;
+    }
+    s->position -= size;
+    segment = s;
   }
 
   virtual void free(const void*, unsigned) {
@@ -119,7 +143,6 @@ class Zone: public Allocator {
   Allocator* allocator;
   void* context;
   Segment* segment;
-  unsigned position;
   unsigned minimumFootprint;
 };
 

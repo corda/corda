@@ -59,6 +59,7 @@ class Heap: public Allocator {
 
   virtual void setClient(Client* client) = 0;
   virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) = 0;
+  virtual unsigned limit() = 0;
   virtual bool limitExceeded() = 0;
   virtual void collect(CollectionType type, unsigned footprint) = 0;
   virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
@@ -69,6 +70,7 @@ class Heap: public Allocator {
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;
   virtual void* follow(void* p) = 0;
+  virtual void postVisit() = 0;
   virtual Status status(void* p) = 0;
   virtual CollectionType collectionType() = 0;
   virtual void disposeFixies() = 0;

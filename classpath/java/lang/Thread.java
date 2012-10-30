@@ -156,6 +156,10 @@ public class Thread implements Runnable {
   }
 
   public static void sleep(long milliseconds) throws InterruptedException {
+    if (milliseconds <= 0) {
+      milliseconds = 1;
+    }
+
     Thread t = currentThread();
     if (t.sleepLock == null) {
       t.sleepLock = new Object();

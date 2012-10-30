@@ -672,6 +672,10 @@ write4(uint8_t* dst, uint32_t v)
   memcpy(dst, &v, 4);
 }
 
+void
+andC(Context* c, unsigned size, Assembler::Constant* a,
+     Assembler::Register* b, Assembler::Register* dst);
+
 void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
 {
   if(size == 8) {
@@ -683,25 +687,36 @@ void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::
     emit(con, addi(tmp->high, a->low, -32));
     emit(con, slw(tmp->low, b->low, tmp->high));
     emit(con, or_(t->high, t->high, tmp->low));
+    emit(con, slw(t->low, b->low, a->low));
     freeTemp(con, tmp->high); freeTemp(con, tmp->low);
+  } else {
+    emit(con, slw(t->low, b->low, a->low));
   }
-  emit(con, slw(t->low, b->low, a->low));
 }
+
+void
+moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
+       unsigned dstSize, Assembler::Register* dst);
 
 void shiftLeftC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   int sh = getValue(a);
   if (size == 8) {
-    if (sh < 32) {
-      emit(con, rlwinm(t->high,b->high,sh,0,31-sh));
-      emit(con, rlwimi(t->high,b->low,sh,32-sh,31));
-      emit(con, slwi(t->low, b->low, sh));
+    sh &= 0x3F;
+    if (sh) {
+      if (sh < 32) {
+        emit(con, rlwinm(t->high,b->high,sh,0,31-sh));
+        emit(con, rlwimi(t->high,b->low,sh,32-sh,31));
+        emit(con, slwi(t->low, b->low, sh));
+      } else {
+        emit(con, rlwinm(t->high,b->low,sh-32,0,63-sh));
+        emit(con, li(t->low,0));
+      }
     } else {
-      emit(con, rlwinm(t->high,b->low,sh-32,0,63-sh));
-      emit(con, li(t->low,0));
+      moveRR(con, size, b, size, t);
     }
   } else {
-    emit(con, slwi(t->low, b->low, sh));
+    emit(con, slwi(t->low, b->low, sh & 0x1F));
   }
 }
 
@@ -728,16 +743,21 @@ void shiftRightC(Context* con, unsigned size, Assembler::Constant* a, Assembler:
 {
   int sh = getValue(a);
   if(size == 8) {
-    if (sh < 32) {
-      emit(con, rlwinm(t->low,b->low,32-sh,sh,31));
-      emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
-      emit(con, srawi(t->high,b->high,sh));
+    sh &= 0x3F;
+    if (sh) {
+      if (sh < 32) {
+        emit(con, rlwinm(t->low,b->low,32-sh,sh,31));
+        emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
+        emit(con, srawi(t->high,b->high,sh));
+      } else {
+        emit(con, srawi(t->high,b->high,31));
+        emit(con, srawi(t->low,b->high,sh-32));
+      }
     } else {
-      emit(con, srawi(t->high,b->high,31));
-      emit(con, srawi(t->low,b->high,sh-32));
+      moveRR(con, size, b, size, t);
     }
   } else {
-    emit(con, srawi(t->low, b->low, sh));
+    emit(con, srawi(t->low, b->low, sh & 0x1F));
   }
 }
 
@@ -757,28 +777,32 @@ void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, As
   }
 }
 
-void
-moveRR(Context* c, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst);
-
 void unsignedShiftRightC(Context* con, unsigned size, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
 {
   int sh = getValue(a);
   if (size == 8) {
-    if (sh == 32) {
-      Assembler::Register high(b->high);
-      moveRR(con, 4, &high, 4, t);
-      emit(con, li(t->high,0));
-    } else if (sh < 32) {
-      emit(con, srwi(t->low, b->low, sh));
-      emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
-      emit(con, rlwinm(t->high,b->high,32-sh,sh,31));
+    if (sh & 0x3F) {
+      if (sh == 32) {
+        Assembler::Register high(b->high);
+        moveRR(con, 4, &high, 4, t);
+        emit(con, li(t->high,0));
+      } else if (sh < 32) {
+        emit(con, srwi(t->low, b->low, sh));
+        emit(con, rlwimi(t->low,b->high,32-sh,0,sh-1));
+        emit(con, rlwinm(t->high,b->high,32-sh,sh,31));
+      } else {
+        emit(con, rlwinm(t->low,b->high,64-sh,sh-32,31));
+        emit(con, li(t->high,0));
+      }
     } else {
-      emit(con, rlwinm(t->low,b->high,64-sh,sh-32,31));
-      emit(con, li(t->high,0));
+      moveRR(con, size, b, size, t);
     }
   } else {
-    emit(con, srwi(t->low, b->low, sh));
+    if (sh & 0x1F) {
+      emit(con, srwi(t->low, b->low, sh & 0x1F));
+    } else {
+      moveRR(con, size, b, size, t);
+    }
   }
 }
 

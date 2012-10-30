@@ -5,6 +5,8 @@ version = 0.6
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
+	| sed 's/^x86pc$$/i386/' \
+	| sed 's/amd64/x86_64/' \
 	| sed 's/^arm.*$$/arm/' \
 	| sed 's/ppc/powerpc/')
 
@@ -22,7 +24,6 @@ target-arch = $(arch)
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 platform = $(bootimage-platform)
-target-platform = $(platform)
 
 mode = fast
 process = compile
@@ -84,6 +85,8 @@ library-path-variable = LD_LIBRARY_PATH
 ifeq ($(build-platform),darwin)
 	library-path-variable = DYLD_LIBRARY_PATH
 endif
+
+library-path = $(library-path-variable)=$(build)
 
 ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
@@ -161,6 +164,8 @@ ifneq ($(platform),darwin)
 	endif
 endif
 
+target-format = elf
+
 cxx = $(build-cxx) $(mflag)
 cc = $(build-cc) $(mflag)
 
@@ -186,9 +191,10 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
-common-cflags = $(warnings) -fno-rtti -fno-exceptions \
+common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
 	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
+	-DAVIAN_INFO="\"$(info)\"" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" $(target-cflags)
 
@@ -207,7 +213,7 @@ build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
-	-DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_UNKNOWN \
+	-DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_UNKNOWN \
 	-Wall -Wextra -Werror -Wunused-parameter -Winit-self -Wno-non-virtual-dtor
 
 cflags = $(build-cflags)
@@ -218,6 +224,7 @@ build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
 
+soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
 version-script-flag = -Wl,--version-script=openjdk.ld
 
 build-system = posix
@@ -284,8 +291,13 @@ ifeq ($(arch),arm)
 	ifneq ($(arch),$(build-arch))
 		ifeq ($(platform),darwin)
 			ios-bin = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/usr/bin
-			cxx = $(ios-bin)/g++
-			cc = $(ios-bin)/gcc
+			ifeq ($(use-clang),true)
+				cxx = clang -std=c++11
+				cc = clang
+			else
+				cxx = $(ios-bin)/g++
+				cc = $(ios-bin)/gcc
+			endif
 			ar = $(ios-bin)/ar
 			ranlib = $(ios-bin)/ranlib
 			strip = $(ios-bin)/strip
@@ -305,11 +317,45 @@ endif
 
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/
+	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/ \
+		-Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
+	soname-flag =
+endif
+
+ifeq ($(platform),qnx)
+	cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+	lflags = $(common-lflags) -lsocket
+	ifeq ($(build-platform),qnx)
+		build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
+		build-lflags = $(common-lflags)
+	else
+		ifeq ($(arch),i386)
+			prefix = i486-pc-nto-qnx6.5.0-
+		else
+			prefix = arm-unknown-nto-qnx6.5.0-
+		endif
+	endif
+	cxx = $(prefix)g++
+	cc = $(prefix)gcc
+	ar = $(prefix)ar
+	ranlib = $(prefix)ranlib
+	strip = $(prefix)strip
+	rdynamic = -Wl,--export-dynamic
+endif
+
+ifeq ($(platform),freebsd)
+# There is no -ldl on FreeBSD
+	build-lflags = $(common-lflags) -lz -lpthread
+	lflags = $(common-lflags) -lpthread
+# include/freebsd instead of include/linux
+	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
+		"-I$(JAVA_HOME)/include/freebsd" -I$(src) -pthread
+	cflags = $(build-cflags)
 endif
 
 ifeq ($(platform),darwin)
+	target-format = macho
 	ifeq (${OSX_SDK_SYSROOT},)
 		OSX_SDK_SYSROOT = 10.4u
 	endif
@@ -350,7 +396,8 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),arm)
 		ios-version := \
-			$(shell if test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
+			$(shell if test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
+				elif test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
 				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
 				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
 				elif test -d $(sdk-dir)/iPhoneOS4.2.sdk; then echo 4.2; \
@@ -391,6 +438,8 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
+	target-format = pe
+
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
 
@@ -527,7 +576,8 @@ ifdef msvc
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
-		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I"$(build)" \
+		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I$(classpath-src) \
+		-I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
 		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 
@@ -756,7 +806,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
-		$(classpath-src)/avian/resource/Handler.java
+		$(classpath-src)/avian/avianvmresource/Handler.java
 
 	ifneq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
@@ -777,9 +827,12 @@ vm-classes = \
 
 test-support-sources = $(shell find $(test)/avian/ -name '*.java')
 test-sources = $(wildcard $(test)/*.java)
+test-cpp-sources = $(wildcard $(test)/*.cpp)
 test-sources += $(test-support-sources)
 test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
 test-classes = $(call java-classes,$(test-sources),$(test),$(test-build))
+test-cpp-objects = $(call cpp-objects,$(test-cpp-sources),$(test),$(test-build))
+test-library = $(build)/$(so-prefix)test$(so-suffix)
 test-dep = $(test-build).dep
 
 test-extra-sources = $(wildcard $(test)/extra/*.java)
@@ -815,22 +868,22 @@ ifeq ($(target-arch),arm)
 	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
 endif
 
-ifeq ($(target-platform),linux)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_LINUX
+ifeq ($(target-format),elf)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_ELF
 endif
 
-ifeq ($(target-platform),windows)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_WINDOWS
+ifeq ($(target-format),pe)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_PE
 endif
 
-ifeq ($(target-platform),darwin)
-	cflags += -DAVIAN_TARGET_PLATFORM=AVIAN_PLATFORM_DARWIN
+ifeq ($(target-format),macho)
+	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_MACHO
 endif
 
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
-test-flags = -cp $(build)/test
+test-flags = -Djava.library.path=$(build) -cp $(build)/test
 
 test-args = $(test-flags) $(input)
 
@@ -904,7 +957,7 @@ $(classpath-dep): $(classpath-sources)
 $(test-build)/%.class: $(test)/%.java
 	@echo $(<)
 
-$(test-dep): $(test-sources)
+$(test-dep): $(test-sources) $(test-library)
 	@echo "compiling test classes"
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
@@ -938,6 +991,19 @@ endef
 
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
+
+$(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
+	$(compile-object)
+
+$(test-library): $(test-cpp-objects)
+	@echo "linking $(@)"
+ifdef msvc
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(test-build)/$(name).lib -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
+else
+	$(ld) $(^) $(shared) $(lflags) -o $(@)
+endif
 
 $(build)/%.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
@@ -994,7 +1060,7 @@ $(build)/classpath.jar: $(classpath-dep) $(classpath-jar-dep)
 $(classpath-object): $(build)/classpath.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_classpath_jar_start \
-		_binary_classpath_jar_end $(platform) $(arch)
+		_binary_classpath_jar_end $(target-format) $(arch)
 
 $(build)/javahome.jar:
 	@echo "creating $(@)"
@@ -1005,7 +1071,7 @@ $(build)/javahome.jar:
 $(javahome-object): $(build)/javahome.jar $(converter)
 	@echo "creating $(@)"
 	$(converter) $(<) $(@) _binary_javahome_jar_start \
-		_binary_javahome_jar_end $(platform) $(arch)
+		_binary_javahome_jar_end $(target-format) $(arch)
 
 define compile-generator-object
 	@echo "compiling $(@)"
@@ -1066,7 +1132,7 @@ $(bootimage-generator): $(bootimage-generator-objects)
 		arch=$(build-arch) \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
-		target-platform=$(platform) \
+		target-format=$(target-format) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \
@@ -1104,7 +1170,8 @@ ifdef msvc
 		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
-	$(ld) $(^) $(version-script-flag)	$(shared) $(lflags) $(bootimage-lflags) \
+	$(ld) $(^) $(version-script-flag) $(soname-flag) \
+		$(shared) $(lflags) $(bootimage-lflags) \
 		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)

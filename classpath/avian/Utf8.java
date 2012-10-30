@@ -50,9 +50,18 @@ public class Utf8 {
     while (i < offset+length) {
       int x = s8[i++];
       if ((x & 0x080) == 0x0) {          // 1 byte char
-        if (x == 0) ++i;                 // 2 byte null char
+        if (x == 0) {                    // 2 byte null char
+          if (i == offset + length) {
+            return null;
+          }
+          ++ i;
+        }
         cram(buf, j++, x);
       } else if ((x & 0x0e0) == 0x0c0) { // 2 byte char
+        if (i == offset + length) {
+          return null;
+        }
+
         if (!isMultiByte) {
           buf = widen(buf, j, length-1);
           isMultiByte = true;
@@ -60,6 +69,10 @@ public class Utf8 {
         int y = s8[i++];
         cram(buf, j++, ((x & 0x1f) << 6) | (y & 0x3f));
       } else if ((x & 0x0f0) == 0x0e0) { // 3 byte char
+        if (i + 1 >= offset + length) {
+          return null;
+        }
+
         if (!isMultiByte) {
           buf = widen(buf, j, length-2);
           isMultiByte = true;
@@ -74,8 +87,13 @@ public class Utf8 {
 
   public static char[] decode16(byte[] s8, int offset, int length) {
     Object decoded = decode(s8, offset, length);
-    if (decoded instanceof char[]) return (char[])decoded;
-    return (char[])widen(decoded, length, length);
+    if (decoded == null) {
+      return null;
+    } else if (decoded instanceof char[]) {
+      return (char[])decoded;
+    } else {
+      return (char[])widen(decoded, length, length);
+    }
   }
 
   private static void cram(Object data, int index, int val) {

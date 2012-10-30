@@ -155,7 +155,7 @@ Avian_java_lang_Runtime_exit
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_getContentLength
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -179,7 +179,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_getContentLength
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_open
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_open
 (Thread* t, object, uintptr_t* arguments)
 {
   object path = reinterpret_cast<object>(*arguments);
@@ -200,7 +200,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_open
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_available
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_available
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -211,7 +211,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_available
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_read__JI
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -226,7 +226,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_read__JI
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_read__JI_3BII
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI_3BII
 (Thread* t, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -251,7 +251,7 @@ Avian_avian_resource_Handler_00024ResourceInputStream_read__JI_3BII
 }
 
 extern "C" JNIEXPORT void JNICALL
-Avian_avian_resource_Handler_00024ResourceInputStream_close
+Avian_avian_avianvmresource_Handler_00024ResourceInputStream_close
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t peer; memcpy(&peer, arguments, 8);
@@ -510,4 +510,56 @@ Avian_sun_misc_Unsafe_getAddress__J
   int64_t p; memcpy(&p, arguments + 1, 8);
 
   return *reinterpret_cast<intptr_t*>(p);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_copyMemory
+(Thread* t, object, uintptr_t* arguments)
+{
+  object srcBase = reinterpret_cast<object>(arguments[1]);
+  int64_t srcOffset; memcpy(&srcOffset, arguments + 2, 8);
+  object dstBase = reinterpret_cast<object>(arguments[4]);
+  int64_t dstOffset; memcpy(&dstOffset, arguments + 5, 8);
+  int64_t count; memcpy(&count, arguments + 7, 8);
+
+  PROTECT(t, srcBase);
+  PROTECT(t, dstBase);
+
+  ACQUIRE(t, t->m->referenceLock);
+
+  void* src = srcBase
+    ? &cast<uint8_t>(srcBase, srcOffset)
+    : reinterpret_cast<uint8_t*>(srcOffset);
+
+  void* dst = dstBase
+    ? &cast<uint8_t>(dstBase, dstOffset)
+    : reinterpret_cast<uint8_t*>(dstOffset);
+
+  memcpy(dst, src, count);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_arrayBaseOffset
+(Thread*, object, uintptr_t*)
+{
+  return ArrayBody;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_nio_FixedArrayByteBuffer_allocateFixed
+(Thread* t, object, uintptr_t* arguments)
+{
+  int capacity = arguments[0];
+  object address = reinterpret_cast<object>(arguments[1]);
+  PROTECT(t, address);
+
+  object array = allocate3
+    (t, t->m->heap, Machine::FixedAllocation, ArrayBody + capacity, false);
+
+  setObjectClass(t, array, type(t, Machine::ByteArrayType));
+  byteArrayLength(t, array) = capacity;
+
+  longArrayBody(t, address, 0) = reinterpret_cast<intptr_t>(array) + ArrayBody;
+
+  return reinterpret_cast<intptr_t>(array);
 }

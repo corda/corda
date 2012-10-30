@@ -131,11 +131,11 @@ public:
 
 class PlatformInfo {
 public:
-  enum OperatingSystem {
-    Linux = AVIAN_PLATFORM_LINUX,
-    Windows = AVIAN_PLATFORM_WINDOWS,
-    Darwin = AVIAN_PLATFORM_DARWIN,
-    UnknownOS = AVIAN_PLATFORM_UNKNOWN
+  enum Format {
+    Elf = AVIAN_FORMAT_ELF,
+    Pe = AVIAN_FORMAT_PE,
+    MachO = AVIAN_FORMAT_MACHO,
+    UnknownFormat = AVIAN_FORMAT_UNKNOWN
   };
 
   enum Architecture {
@@ -146,18 +146,18 @@ public:
     UnknownArch = AVIAN_ARCH_UNKNOWN
   };
 
-  const OperatingSystem os;
+  const Format format;
   const Architecture arch;
 
-  static OperatingSystem osFromString(const char* os);
+  static Format formatFromString(const char* format);
   static Architecture archFromString(const char* arch);
 
-  inline PlatformInfo(OperatingSystem os, Architecture arch):
-    os(os),
+  inline PlatformInfo(Format format, Architecture arch):
+    format(format),
     arch(arch) {}
 
   inline bool operator == (const PlatformInfo& other) {
-    return os == other.os && arch == other.arch;
+    return format == other.format && arch == other.arch;
   }
 
   inline bool isLittleEndian() {
@@ -194,3 +194,4 @@ public:
 } // namespace avian
 
 #endif
+

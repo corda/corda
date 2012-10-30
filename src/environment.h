@@ -11,18 +11,18 @@
 #ifndef AVIAN_ENVIRONMENT_H
 #define AVIAN_ENVIRONMENT_H
 
-#ifndef AVIAN_TARGET_PLATFORM
-#error build system should have defined AVIAN_TARGET_PLATFORM
+#ifndef AVIAN_TARGET_FORMAT
+#error build system should have defined AVIAN_TARGET_FORMAT
 #endif
 
 #ifndef AVIAN_TARGET_ARCH
 #error build system should have defined AVIAN_TARGET_ARCH
 #endif
 
-#define AVIAN_PLATFORM_UNKNOWN 0
-#define AVIAN_PLATFORM_LINUX 1
-#define AVIAN_PLATFORM_WINDOWS 2
-#define AVIAN_PLATFORM_DARWIN 3
+#define AVIAN_FORMAT_UNKNOWN 0
+#define AVIAN_FORMAT_ELF 1
+#define AVIAN_FORMAT_PE 2
+#define AVIAN_FORMAT_MACHO 3
 
 #define AVIAN_ARCH_UNKNOWN 0
 #define AVIAN_ARCH_X86 (1 << 8)
@@ -31,3 +31,4 @@
 #define AVIAN_ARCH_POWERPC (4 << 8)
 
 #endif
+

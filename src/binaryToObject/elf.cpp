@@ -198,7 +198,7 @@ public:
   const unsigned machine;
 
   ElfPlatform(PlatformInfo::Architecture arch):
-    Platform(PlatformInfo(PlatformInfo::Linux, arch)),
+    Platform(PlatformInfo(PlatformInfo::Elf, arch)),
     machine(getElfPlatform(arch)) {}
 
   class FileWriter {
@@ -372,10 +372,9 @@ public:
   }
 };
 
-ElfPlatform<uint32_t> elfx86Platform(PlatformInfo::x86);
+ElfPlatform<uint32_t> elfX86Platform(PlatformInfo::x86);
 ElfPlatform<uint32_t> elfArmPlatform(PlatformInfo::Arm);
 ElfPlatform<uint32_t, false> elfPowerPCPlatform(PlatformInfo::PowerPC);
-ElfPlatform<uint64_t> elfx86_64Platform(PlatformInfo::x86_64);
-
+ElfPlatform<uint64_t> elfX86_64Platform(PlatformInfo::x86_64);
 
 } // namespace

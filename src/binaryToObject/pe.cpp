@@ -269,7 +269,7 @@ public:
   }
 
   WindowsPlatform():
-    Platform(PlatformInfo(PlatformInfo::Windows, BytesPerWord == 4 ? PlatformInfo::x86 : PlatformInfo::x86_64)) {}
+    Platform(PlatformInfo(PlatformInfo::Pe, BytesPerWord == 4 ? PlatformInfo::x86 : PlatformInfo::x86_64)) {}
 };
 
 WindowsPlatform<4> windows32Platform;

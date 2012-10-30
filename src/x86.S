@@ -315,7 +315,7 @@ LOCAL(sse):
    movq   32(%rax),%xmm4
    movq   40(%rax),%xmm5
    movq   48(%rax),%xmm6
-   movq   64(%rax),%xmm7
+   movq   56(%rax),%xmm7
 
 LOCAL(call):
    call   *-48(%rbp)

@@ -272,5 +272,62 @@ public class Floats {
         }
       }
     }
+
+    { double v = Double.NaN;
+      expect(0 == (int) v); }
+
+    { double v = Double.NEGATIVE_INFINITY;
+      expect(Integer.MIN_VALUE == (int) v); }
+
+    { double v = Long.MIN_VALUE;
+      expect(Integer.MIN_VALUE == (int) v); }
+
+    { double v = Double.POSITIVE_INFINITY;
+      expect(Integer.MAX_VALUE == (int) v); }
+
+    { double v = Long.MAX_VALUE;
+      expect(Integer.MAX_VALUE == (int) v); }
+
+    { float v = Float.NaN;
+      expect(0 == (int) v); }
+
+    { float v = Float.NEGATIVE_INFINITY;
+      expect(Integer.MIN_VALUE == (int) v); }
+
+    { float v = Integer.MIN_VALUE;
+      expect(Integer.MIN_VALUE == (int) v); }
+
+    { float v = Float.POSITIVE_INFINITY;
+      expect(Integer.MAX_VALUE == (int) v); }
+
+    { float v = Integer.MAX_VALUE;
+      expect(Integer.MAX_VALUE == (int) v); }
+
+    { double v = Double.NaN;
+      expect(0 == (long) v); }
+
+    { double v = Double.NEGATIVE_INFINITY;
+      expect(Long.MIN_VALUE == (long) v); }
+
+    { double v = Long.MIN_VALUE;
+      expect(Long.MIN_VALUE == (long) v); }
+
+    { double v = Double.POSITIVE_INFINITY;
+      expect(Long.MAX_VALUE == (long) v); }
+
+    { double v = Long.MAX_VALUE;
+      expect(Long.MAX_VALUE == (long) v); }
+
+    { float v = Float.NaN;
+      expect(0 == (long) v); }
+
+    { float v = Float.NEGATIVE_INFINITY;
+      expect(Long.MIN_VALUE == (long) v); }
+
+    { float v = Integer.MIN_VALUE;
+      expect(Integer.MIN_VALUE == (long) v); }
+
+    { float v = Float.POSITIVE_INFINITY;
+      expect(Long.MAX_VALUE == (long) v); }
   }
 }

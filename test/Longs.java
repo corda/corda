@@ -337,6 +337,58 @@ public class Longs {
       expect(z[0] == 337192406);
       expect(z[1] == -437261072);
     }
+
+    { long b = 1;
+      expect((b << 64) == 1); }
+
+    { long b = 0xFFFFFFFFFFFFFFFFL;
+      expect((b >>> -1) == 1); }
+
+    { long b = 0x10000000000L;
+      expect((b >> -63) == 0x8000000000L); }
+
+    { long b = 1; int s = 64;
+      expect((b << s) == 1); }
+
+    { long b = 0xFFFFFFFFFFFFFFFFL; int s = -1;
+      expect((b >>> s) == 1); }
+
+    { long b = 0x10000000000L; int s = -63;
+      expect((b >> s) == 0x8000000000L); }
+
+    { long b = 0xBEL;
+      expect((b & 0xFF) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b >>> 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b >> 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect((b << 0) == 0xBEL); }
+
+    { long b = 0xBEL;
+      expect(((b >>> 0) & 0xFF) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0xFF;
+      expect((b & x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b >>> x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b >> x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0;
+      expect((b << x) == 0xBEL); }
+
+    { long b = 0xBEL; int x = 0; int y = 0xFF;
+      expect(((b >>> x) & y) == 0xBEL); }
+
+    { long b = 0xFFFFFFFFFFFFFFFFL; int s = 20;
+      expect((b >>> -s) == 0xFFFFF);
+    }
   }
 
 }

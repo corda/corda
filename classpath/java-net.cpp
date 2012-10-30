@@ -16,6 +16,8 @@
 #  define ONLY_ON_WINDOWS(x) x
 #else
 #  include <netdb.h>
+#  include <sys/socket.h>
+#  include <netinet/in.h>
 #  define ONLY_ON_WINDOWS(x)
 #endif
 

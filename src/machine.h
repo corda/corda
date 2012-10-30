@@ -1206,6 +1206,7 @@ class Machine {
     BootLoader,
     AppLoader,
     BootstrapClassMap,
+    PackageMap,
     FindLoadedClassMethod,
     LoadClassMethod,
     MonitorMap,
@@ -1549,6 +1550,9 @@ class Classpath {
 
   virtual const char*
   bootClasspath() = 0;
+
+  virtual void
+  updatePackageMap(Thread* t, object class_) = 0;
 
   virtual void
   dispose() = 0;
@@ -3801,7 +3805,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
                    unsigned index, unsigned dimensions);
 
 object
-getCaller(Thread* t, unsigned target);
+getCaller(Thread* t, unsigned target, bool skipMethodInvoke = false);
 
 object
 defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);

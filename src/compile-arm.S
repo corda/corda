@@ -75,7 +75,12 @@ LOCAL(vmInvoke_argumentTest):
   mov   r8, r0
 
   // load and call function address
+#if defined(__ARM_ARCH_4__) || defined(__ARM_ARCH_4T__)
+  mov   lr, pc
+  bx    r1
+#else
   blx   r1
+#endif
 
 .globl GLOBAL(vmInvoke_returnAddress)
 .align 2
@@ -123,11 +128,18 @@ LOCAL(vmInvoke_continuationTest):
    ble  LOCAL(vmInvoke_continuationLoop)
 
    ldr  r7,[r5,#CONTINUATION_RETURN_ADDRESS_OFFSET]
+#ifdef __APPLE__
+   movw r11, :lower16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmInvoke_getAddress)+8))
+   movt r11, :upper16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmInvoke_getAddress)+8))
+LOCAL(vmInvoke_getAddress):
+   add  r11, pc, r11
+#else // not __APPLE__
    ldr  r10,LOCAL(vmInvoke_returnAddress_word)
    ldr  r11,LOCAL(vmInvoke_getAddress_word)
 LOCAL(vmInvoke_getAddress):
    add  r11,pc,r11
    ldr  r11,[r11,r10]
+#endif // not __APPLE__
    str  r11,[sp,r7]
 
    ldr  r7,[r5,#CONTINUATION_NEXT]
@@ -210,23 +222,34 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    mov  sp,r2
    
    // set return address to vmInvoke_returnAddress
+#ifdef __APPLE__
+   movw r11, :lower16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmJumpAndInvoke_getAddress)+8))
+   movt r11, :upper16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmJumpAndInvoke_getAddress)+8))
+LOCAL(vmJumpAndInvoke_getAddress):
+   add  r11, pc, r11
+#else // not __APPLE__
+
    ldr  r10,LOCAL(vmInvoke_returnAddress_word)
    ldr  r11,LOCAL(vmJumpAndInvoke_getAddress_word)
 LOCAL(vmJumpAndInvoke_getAddress):
    add  r11,pc,r11
+#endif // not __APPLE__
    ldr  lr,[r11,r10]
 
    bx   r1
 
+#ifndef __APPLE__
 LOCAL(vmInvoke_returnAddress_word):
    .word GLOBAL(vmInvoke_returnAddress)(GOT)
 LOCAL(vmInvoke_getAddress_word):
    .word _GLOBAL_OFFSET_TABLE_-(LOCAL(vmInvoke_getAddress)+8)
 LOCAL(vmJumpAndInvoke_getAddress_word):
    .word _GLOBAL_OFFSET_TABLE_-(LOCAL(vmJumpAndInvoke_getAddress)+8)
+#endif // not __APPLE__
    
 #else // not AVIAN_CONTINUATIONS
    // vmJumpAndInvoke should only be called when continuations are
-   // enabled
-   bkpt
+   // enabled, so we force a crash if we reach here:
+   mov  r1,#0
+   ldr  r1,[r1]
 #endif // not AVIAN_CONTINUATIONS

@@ -402,7 +402,16 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     return;
   }
   
+#ifdef __QNX__
+  // fork(2) doesn't work in multithreaded QNX programs.  See
+  // http://www.qnx.com/developers/docs/6.4.1/neutrino/getting_started/s1_procs.html
+  pid_t pid = vfork();
+#else
+  // We might be able to just use vfork on all UNIX-style systems, but
+  // the manual makes it sound dangerous due to the shared
+  // parent/child address space, so we use fork if we can.
   pid_t pid = fork();
+#endif
   switch(pid){
   case -1: // error
     throwNewErrno(e, "java/io/IOException");
@@ -569,6 +578,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "os.name") == 0) {
 #ifdef __APPLE__
       r = e->NewStringUTF("Mac OS X");
+#elif defined __FreeBSD__
+      r = e->NewStringUTF("FreeBSD");
 #else
       r = e->NewStringUTF("Linux");
 #endif

@@ -28,18 +28,31 @@ const unsigned FrameFootprint = 4;
 
 class Thread: public vm::Thread {
  public:
+  class ReferenceFrame {
+   public:
+    ReferenceFrame(ReferenceFrame* next, unsigned sp):
+      next(next),
+      sp(sp)
+    { }
+
+    ReferenceFrame* next;
+    unsigned sp;
+  };
+
   Thread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
     ip(0),
     sp(0),
     frame(-1),
-    code(0)
+    code(0),
+    referenceFrame(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
+  ReferenceFrame* referenceFrame;
   uintptr_t stack[0];
 };
 
@@ -1065,11 +1078,27 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case d2i: {
-    pushInt(t, static_cast<int32_t>(popDouble(t)));
+    double f = popDouble(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushInt(t, 0); break;
+    case FP_INFINITE: pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX); break;
+    default: pushInt
+        (t,  f >= INT32_MAX ? INT32_MAX
+         : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+      break;
+    }
   } goto loop;
 
   case d2l: {
-    pushLong(t, static_cast<int64_t>(popDouble(t)));
+    double f = popDouble(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushLong(t, 0); break;
+    case FP_INFINITE: pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX); break;
+    default: pushLong
+        (t,  f >= INT64_MAX ? INT64_MAX
+         : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f)));
+      break;
+    }
   } goto loop;
 
   case dadd: {
@@ -1265,11 +1294,24 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case f2i: {
-    pushInt(t, static_cast<int32_t>(popFloat(t)));
+    float f = popFloat(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushInt(t, 0); break;
+    case FP_INFINITE: pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX); break;
+    default: pushInt(t, f >= INT32_MAX ? INT32_MAX
+                     : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+      break;
+    }
   } goto loop;
 
   case f2l: {
-    pushLong(t, static_cast<int64_t>(popFloat(t)));
+    float f = popFloat(t);
+    switch (fpclassify(f)) {
+    case FP_NAN: pushLong(t, 0); break;
+    case FP_INFINITE: pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX);
+      break;
+    default: pushLong(t, static_cast<int64_t>(f)); break;
+    }
   } goto loop;
 
   case fadd: {
@@ -1888,14 +1930,14 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
-    pushInt(t, a << b);
+    pushInt(t, a << (b & 0x1F));
   } goto loop;
 
   case ishr: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
     
-    pushInt(t, a >> b);
+    pushInt(t, a >> (b & 0x1F));
   } goto loop;
 
   case istore:
@@ -1934,7 +1976,7 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     uint32_t a = popInt(t);
     
-    pushInt(t, a >> b);
+    pushInt(t, a >> (b & 0x1F));
   } goto loop;
 
   case ixor: {
@@ -2196,14 +2238,14 @@ interpret3(Thread* t, const int base)
     int32_t b = popInt(t);
     int64_t a = popLong(t);
     
-    pushLong(t, a << b);
+    pushLong(t, a << (b & 0x3F));
   } goto loop;
 
   case lshr: {
     int32_t b = popInt(t);
     int64_t a = popLong(t);
     
-    pushLong(t, a >> b);
+    pushLong(t, a >> (b & 0x3F));
   } goto loop;
 
   case lstore:
@@ -2242,7 +2284,7 @@ interpret3(Thread* t, const int base)
     int64_t b = popInt(t);
     uint64_t a = popLong(t);
     
-    pushLong(t, a >> b);
+    pushLong(t, a >> (b & 0x3F));
   } goto loop;
 
   case lxor: {
@@ -2781,7 +2823,7 @@ pushArguments(Thread* t, object this_, const char* spec,
       break;
 
     case 'F': {
-      pushFloat(t, arguments[index++].d);
+      pushFloat(t, arguments[index++].f);
     } break;
 
     default:
@@ -3010,6 +3052,34 @@ class MyProcessor: public Processor {
     }
   }
 
+  virtual bool
+  pushLocalFrame(vm::Thread* vmt, unsigned capacity)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    if (t->sp + capacity < stackSizeInWords(t) / 2) {
+      t->referenceFrame = new
+        (t->m->heap->allocate(sizeof(Thread::ReferenceFrame)))
+        Thread::ReferenceFrame(t->referenceFrame, t->sp);
+    
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  virtual void
+  popLocalFrame(vm::Thread* vmt)
+  {
+    Thread* t = static_cast<Thread*>(vmt);
+
+    Thread::ReferenceFrame* f = t->referenceFrame;
+    t->referenceFrame = f->next;
+    t->sp = f->sp;
+
+    t->m->heap->free(f, sizeof(Thread::ReferenceFrame));
+  }
+
   virtual object
   invokeArray(vm::Thread* vmt, object method, object this_, object arguments)
   {
@@ -3166,7 +3236,7 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose(vm::Thread* t) {
-    t->m->heap->free(t, sizeof(Thread));
+    t->m->heap->free(t, sizeof(Thread) + t->m->stackSizeInBytes);
   }
 
   virtual void dispose() {

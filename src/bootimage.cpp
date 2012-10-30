@@ -34,7 +34,7 @@ const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
 const unsigned TargetFixieSizeInWords = ceiling
   (TargetFixieSizeInBytes, TargetBytesPerWord);
 const unsigned TargetFixieAge = 0;
-const unsigned TargetFixieHasMask = 1;
+const unsigned TargetFixieFlags = 2;
 const unsigned TargetFixieSize = 4;
 
 const bool DebugNativeTarget = false;
@@ -310,7 +310,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
-      // fprintf(stderr, "%.*s\n", nameSize - 6, name);
+      // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
       object c = resolveSystemClass
         (t, root(t, Machine::BootLoader),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
@@ -412,8 +412,6 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              objectHash);
         }
       }
-     
-      // if (strcmp(name, "java/lang/System$Property.class") == 0) trap();
 
       { object array = 0;
         PROTECT(t, array);
@@ -441,11 +439,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
             memberFields[memberIndex] = *f;
 
-            while (targetMemberOffset % f->targetSize) {
-              ++ targetMemberOffset;
-            }
-
-            targetMemberOffset += f->targetSize;
+            targetMemberOffset = f->targetOffset + f->targetSize;
 
             ++ memberIndex;
           }
@@ -458,7 +452,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           targetMemberOffset = TargetBytesPerWord;
         }
 
-        Field staticFields[count + 2];
+        const unsigned StaticHeader = 3;
+
+        Field staticFields[count + StaticHeader];
         
         init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
              TargetBytesPerWord);
@@ -466,9 +462,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         init(new (staticFields + 1) Field, Type_intptr_t, BytesPerWord,
              BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
 
-        unsigned staticIndex = 2;
-        unsigned buildStaticOffset = BytesPerWord * 2;
-        unsigned targetStaticOffset = TargetBytesPerWord * 2;
+        init(new (staticFields + 2) Field, Type_object, BytesPerWord * 2,
+             BytesPerWord, TargetBytesPerWord * 2, TargetBytesPerWord);
+
+        unsigned staticIndex = StaticHeader;
+        unsigned buildStaticOffset = BytesPerWord * StaticHeader;
+        unsigned targetStaticOffset = TargetBytesPerWord * StaticHeader;
 
         for (unsigned i = 0; i < vectorSize(t, fields); ++i) {
           object field = vectorBody(t, fields, i);
@@ -539,9 +538,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             targetMemberOffset = pad(targetMemberOffset, TargetBytesPerWord);
           }
         }
-
-        // if (strcmp(name, "avian/VMClass.class") == 0) trap();
-
+     
         if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
           object array = makeByteArray
             (t, TypeMap::sizeInBytes
@@ -600,7 +597,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
-      // fprintf(stderr, "%.*s\n", nameSize - 6, name);
+      // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
       object c = resolveSystemClass
         (t, root(t, Machine::BootLoader),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
@@ -1175,13 +1172,13 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 
           memset(heap + position, 0, TargetFixieSizeInBytes);
 
-          uint8_t age = FixieTenureThreshold + 1;
+          uint16_t age = targetV2(FixieTenureThreshold + 1);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieAge, &age, 1);
+                 + TargetFixieAge, &age, 2);
 
-          uint8_t hasMask = true;
+          uint16_t flags = targetV2(1);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieHasMask, &hasMask, 1);
+                 + TargetFixieFlags, &flags, 2);
 
           uint32_t targetSize = targetV4(size);
           memcpy(reinterpret_cast<uint8_t*>(heap + position)
@@ -1647,7 +1644,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     // fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
     
-    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::OperatingSystem)AVIAN_TARGET_PLATFORM, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
+    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
 
     // if(!platform) {
     //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);

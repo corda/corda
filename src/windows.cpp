@@ -876,7 +876,7 @@ class MySystem: public System {
   virtual void abort() {
     // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
     // generate a debug dump for
-    *static_cast<int*>(0) = 0;
+    *static_cast<volatile int*>(0) = 0;
   }
 
   virtual void dispose() {
@@ -929,7 +929,7 @@ dump(LPEXCEPTION_POINTERS e, const char* directory)
       char name[MAX_PATH];
       _timeb tb;
       FTIME(&tb);
-      vm::snprintf(name, MAX_PATH, "%s\\crash-%"LLD".mdmp", directory,
+      vm::snprintf(name, MAX_PATH, "%s\\crash-%" LLD ".mdmp", directory,
                    (static_cast<int64_t>(tb.time) * 1000)
                    + static_cast<int64_t>(tb.millitm));
 

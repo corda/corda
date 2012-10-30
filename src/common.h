@@ -25,6 +25,8 @@
 
 #ifdef _MSC_VER
 
+#include "float.h"
+
 // don't complain about using 'this' in member initializers:
 #  pragma warning(disable:4355)
 
@@ -36,6 +38,34 @@ typedef int int32_t;
 typedef unsigned int uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
+
+#define strncasecmp _strnicmp
+
+#define FP_NAN 0
+#define FP_INFINITE 1
+#define FP_UNDEF 2
+
+inline int fpclassify(double d) {
+
+	switch(_fpclass(d)) {
+		case _FPCLASS_SNAN:
+		case _FPCLASS_QNAN:
+			return FP_NAN;
+		case _FPCLASS_PINF:
+		case _FPCLASS_NINF:
+			return FP_INFINITE;
+	}
+	return FP_UNDEF;
+}
+
+#define INT32_MIN    ((int32_t) _I32_MIN)
+#define INT32_MAX    _I32_MAX
+#define INT64_MIN    ((int64_t) _I64_MIN)
+#define INT64_MAX    _I64_MAX
+
+inline int signbit(double d) {
+	return _copysign(1.0, d) < 0;
+}
 
 #  define not !
 #  define or ||

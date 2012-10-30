@@ -89,6 +89,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  updatePackageMap(Thread*, object)
+  {
+    // ignore
+  }
+
+  virtual void
   dispose()
   {
     allocator->free(this, sizeof(*this));

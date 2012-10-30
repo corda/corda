@@ -32,13 +32,13 @@ class Tokenizer {
   { }
 
   bool hasMore() {
-    while (*s == delimiter and s != limit) ++s;
-    return *s != 0 and s != limit;
+    while (s != limit and *s == delimiter) ++s;
+    return s != limit and *s != 0;
   }
 
   Token next() {
     const char* p = s;
-    while (*s and *s != delimiter and s != limit) ++s;
+    while (s != limit and *s and *s != delimiter) ++s;
     return Token(p, s - p);
   }
 

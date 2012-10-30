@@ -42,7 +42,7 @@
  }
 
 -keep class avian.OpenJDK {
-   public static java.security.ProtectionDomain getProtectionDomain();
+   <methods>;
  }
 
 -keepclassmembers public class java.security.PrivilegedAction {
@@ -208,7 +208,7 @@
 -keep class sun.nio.cs.UTF_8
 
 # loaded reflectively to handle embedded resources:
--keep class avian.resource.Handler
+-keep class avian.avianvmresource.Handler
 
 # refered to symbolically in MethodAccessorGenerator:
 -keep class sun.reflect.MethodAccessorImpl {
@@ -244,3 +244,5 @@
 -keep class sun.nio.fs.UnixException {
    UnixException(int);
  }
+
+-keep class sun.net.www.protocol.jar.Handler

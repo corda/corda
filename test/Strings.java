@@ -21,7 +21,66 @@ public class Strings {
     return true;
   }
 
-  public static void main(String[] args) {
+  private static void testDecode(final boolean prematureEOS) throws Exception {
+    java.io.Reader r = new java.io.InputStreamReader
+      (new java.io.InputStream() {
+          int state = 0;
+
+          public int read() {
+            throw new UnsupportedOperationException();
+          }
+
+          public int read(byte[] b, int offset, int length) {
+            if (length == 0) return 0;
+
+            switch (state) {
+            case 0:
+              b[offset] = (byte) 0xc2;
+              state = 1;
+              return 1;
+
+            case 1:
+              b[offset] = (byte) 0xae;
+              state = 2;
+              return 1;
+
+            case 2:
+              b[offset] = (byte) 0xea;
+              state = 3;
+              return 1;
+
+            case 3:
+              b[offset] = (byte) 0xba;
+              state = prematureEOS ? 5 : 4;
+              return 1;
+
+            case 4:
+              b[offset] = (byte) 0xaf;
+              state = 5;
+              return 1;
+
+            case 5:
+              return -1;
+
+            default:
+              throw new RuntimeException();
+            }
+          }
+        }, "UTF-8");
+
+    char[] buffer = new char[2];
+    int offset = 0;
+    while (offset < buffer.length) {
+      int c = r.read(buffer, offset, buffer.length - offset);
+      if (c == -1) break;
+      offset += c;
+    }
+
+    expect(new String(buffer, 0, offset).equals
+           (prematureEOS ? "\u00ae\ufffd" : "\u00ae\uaeaf"));
+  }
+
+  public static void main(String[] args) throws Exception {
     expect(new String(new byte[] { 99, 111, 109, 46, 101, 99, 111, 118, 97,
                                    116, 101, 46, 110, 97, 116, 46, 98, 117,
                                    115, 46, 83, 121, 109, 98, 111, 108 })
@@ -77,5 +136,15 @@ public class Strings {
     expect(Character.forDigit(Character.digit('b', 16), 16) == 'b');
     expect(Character.forDigit(Character.digit('f', 16), 16) == 'f');
     expect(Character.forDigit(Character.digit('z', 36), 36) == 'z');
+
+    testDecode(false);
+    testDecode(true);
+
+    expect
+      (java.text.MessageFormat.format
+       ("{0} enjoy {1} {2}.  do {4}?  {4} do?",
+        "I", "grape", "nuts", "foobar",
+        new Object() { public String toString() { return "you"; } })
+       .equals("I enjoy grape nuts.  do you?  you do?"));
   }
 }

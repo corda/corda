@@ -196,7 +196,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     } break;
 
     case DOUBLE_TYPE: {
-      if (fprIndex + (8 / BytesPerWord) <= FprCount) {
+      if (fprIndex + 1 <= FprCount) {
         memcpy(fprTable + fprIndex, arguments + ai, 8);
         ++ fprIndex;
         SKIP(gprIndex, 8 / BytesPerWord);
