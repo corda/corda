@@ -10,7 +10,7 @@
 
 package java.io;
 
-public abstract class Reader {
+public abstract class Reader implements Closeable {
   public int read() throws IOException {
     char[] buffer = new char[1];
     int c = read(buffer);

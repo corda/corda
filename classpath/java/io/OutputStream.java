@@ -10,7 +10,7 @@
 
 package java.io;
 
-public abstract class OutputStream {
+public abstract class OutputStream implements Closeable, Flushable {
   public abstract void write(int c) throws IOException;
 
   public void write(byte[] buffer) throws IOException {

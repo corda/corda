@@ -10,7 +10,7 @@
 
 package java.io;
 
-public abstract class Writer {
+public abstract class Writer implements Closeable, Flushable {
   public void write(int c) throws IOException {
     char[] buffer = new char[] { (char) c };
     write(buffer);
