@@ -62,6 +62,10 @@ public final class Integer extends Number implements Comparable<Integer> {
     return Long.toString(((long) v) & 0xFFFFFFFFL, 16);
   }
 
+  public static String toOctalString(int v) {
+    return Long.toString(((long) v) & 0xFFFFFFFFL, 8);
+  }
+
   public static String toBinaryString(int v) {
     return Long.toString(((long) v) & 0xFFFFFFFFL, 2);
   }

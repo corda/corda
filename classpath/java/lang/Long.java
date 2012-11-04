@@ -94,6 +94,14 @@ public final class Long extends Number implements Comparable<Long> {
     return toString(v, 16);
   }
 
+  public static String toOctalString(long v) {
+    return toString(v, 8);
+  }
+
+  public static String toBinaryString(long v) {
+    return toString(v, 2);
+  }
+
   public byte byteValue() {
     return (byte) value;
   }
