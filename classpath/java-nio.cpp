@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -1015,3 +1015,15 @@ Java_java_nio_channels_SocketSelector_natUpdateReadySet(JNIEnv *, jclass,
 }
 
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_nio_ByteOrder_isNativeBigEndian(JNIEnv *, jclass)
+{
+  union {
+    uint32_t i;
+    char c[4];
+  } u = {0x01020304};
+
+  if (u.c[0] == 1)
+    return JNI_TRUE;
+  return JNI_FALSE;
+}
