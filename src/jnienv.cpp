@@ -3345,11 +3345,11 @@ parseSize(const char* s)
   RUNTIME_ARRAY(char, buffer, length + 1);
   if (length == 0) {
     return 0;
-  } else if (s[length - 1] == 'k') {
+  } else if (s[length - 1] == 'k' or s[length - 1] == 'K') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
     RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024;
-  } else if (s[length - 1] == 'm') {
+  } else if (s[length - 1] == 'm' or s[length - 1] == 'M') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
     RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024;
