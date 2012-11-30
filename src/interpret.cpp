@@ -92,7 +92,7 @@ inline void
 pushLong(Thread* t, uint64_t v)
 {
   if (DebugStack) {
-    fprintf(stderr, "push long %"LLD" at %d\n", v, t->sp);
+    fprintf(stderr, "push long %" LLD " at %d\n", v, t->sp);
   }
 
   pushInt(t, v >> 32);
@@ -123,7 +123,7 @@ inline uint32_t
 popInt(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop int %"ULD" at %d\n",
+    fprintf(stderr, "pop int %" ULD " at %d\n",
             t->stack[((t->sp - 1) * 2) + 1],
             t->sp - 1);
   }
@@ -142,7 +142,7 @@ inline uint64_t
 popLong(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop long %"LLD" at %d\n",
+    fprintf(stderr, "pop long %" LLD " at %d\n",
             (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
             t->sp - 2);
@@ -178,7 +178,7 @@ inline uint32_t
 peekInt(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek int %"ULD" at %d\n",
+    fprintf(stderr, "peek int %" ULD " at %d\n",
             t->stack[(index * 2) + 1],
             index);
   }
@@ -192,7 +192,7 @@ inline uint64_t
 peekLong(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek long %"LLD" at %d\n",
+    fprintf(stderr, "peek long %" LLD " at %d\n",
             (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
             index);
@@ -228,7 +228,7 @@ inline void
 pokeLong(Thread* t, unsigned index, uint64_t value)
 {
   if (DebugStack) {
-    fprintf(stderr, "poke long %"LLD" at %d\n", value, index);
+    fprintf(stderr, "poke long %" LLD " at %d\n", value, index);
   }
 
   pokeInt(t, index, value >> 32);
@@ -461,7 +461,7 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
   case DoubleField:
   case LongField:
     if (DebugRun) {
-      fprintf(stderr, "result: %"LLD"\n", result);
+      fprintf(stderr, "result: %" LLD "\n", result);
     }
     pushLong(t, result);
     break;
