@@ -496,6 +496,10 @@ ifeq ($(platform),windows)
 	else
 		shared += -Wl,--add-stdcall-alias
 	endif
+	
+	embed = $(build-embed)/embed.exe
+	embed-loader = $(build-embed-loader)/embed-loader.exe
+	embed-loader-o = $(build-embed)/embed-loader.o
 endif
 
 ifeq ($(mode),debug)
@@ -639,6 +643,15 @@ vm-sources = \
 vm-asm-sources = $(src)/$(asm).S
 
 target-asm = $(asm)
+
+build-embed = $(build)/embed
+build-embed-loader = $(build)/embed-loader
+
+embed-loader-sources = $(src)/embedded-loader.cpp
+embed-loader-objects = $(call cpp-objects,$(embed-loader-sources),$(src),$(build-embed-loader))
+
+embed-sources = $(src)/embed.cpp
+embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 
 ifeq ($(process),compile)
 	vm-sources += \
@@ -890,7 +903,7 @@ test-args = $(test-flags) $(input)
 .PHONY: build
 build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
 	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
-	$(test-extra-dep)
+	$(test-extra-dep) $(embed)
 
 $(test-dep): $(classpath-dep)
 
@@ -1003,6 +1016,38 @@ ifdef msvc
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
 else
 	$(ld) $(^) $(shared) $(lflags) -o $(@)
+endif
+
+ifdef embed
+$(embed): $(embed-objects) $(embed-loader-o)
+	@echo "building $(embed)"
+	$(build-cxx) $(^) -mwindows -mconsole -static -o $(@)
+	
+$(build-embed)/%.o: $(src)/%.cpp
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(build-cxx) -D_UNICODE -DUNICODE -c $(<) -o $(@)
+		
+$(embed-loader-o): $(embed-loader) $(converter)
+	@mkdir -p $(dir $(@))
+	$(converter) $(<) $(@) _binary_loader_start \
+		_binary_loader_end $(target-format) $(arch)
+
+$(embed-loader): $(embed-loader-objects) $(static-library)
+	@mkdir -p $(dir $(@))
+	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
+	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(dir $(@))/*.o
+	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
+	$(cxx) $(addsuffix .exp,$(basename $(@))) $(dir $(@))/*.o -L../win32/lib -lmingwthrd -lm -lz -lws2_32 -liphlpapi \
+		-mwindows -mconsole -static -o $(@)
+	strip --strip-all $(@)
+
+$(build-embed-loader)/%.o: $(src)/%.cpp
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/win32 \
+		-D_JNI_IMPLEMENTATION_ -c $(<) -o $(@)
+		
 endif
 
 $(build)/%.o: $(lzma)/C/%.c
