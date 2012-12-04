@@ -173,6 +173,8 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
+      pthread_mutex_destroy(&mutex);
+      pthread_cond_destroy(&condition);
       ::free(this);
     }
 
