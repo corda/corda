@@ -74,12 +74,12 @@ bool mkStringSection(std::vector<wchar_t>* stringSection, const std::vector<std:
 
 void writeStringResources(HANDLE hDest, const std::vector<std::wstring>& strings)
 {
-	for(int i = 0; i < strings.size(); i += 16)
+	for(unsigned i = 0; i < strings.size(); i += 16)
 	{
 		std::vector<wchar_t> stringSection;
 
 		if(mkStringSection(&stringSection, strings, i, std::min<int>(i + 15, strings.size() - 1)))
-			UpdateResourceW(hDest, RT_STRING, MAKEINTRESOURCE((i >> 4) + 1), LANG_NEUTRAL, &stringSection.at(0), sizeof(wchar_t) * stringSection.size());
+                  UpdateResourceW(hDest, reinterpret_cast<LPCWSTR>(RT_STRING), reinterpret_cast<LPCWSTR>(MAKEINTRESOURCE((i >> 4) + 1)), LANG_NEUTRAL, &stringSection.at(0), sizeof(wchar_t) * stringSection.size());
 	}
 }
 
@@ -104,7 +104,7 @@ int wmain(int argc, wchar_t* argv[])
 		
 		std::vector<char> jarFile;
 		readFile(&jarFile, classesName);
-		UpdateResourceW(hDest, RT_RCDATA, _T(RESID_BOOT_JAR), LANG_NEUTRAL, &jarFile.at(0), jarFile.size());
+		UpdateResourceW(hDest, reinterpret_cast<LPCWSTR>(RT_RCDATA), RESID_BOOT_JAR, LANG_NEUTRAL, &jarFile.at(0), jarFile.size());
 		
 		EndUpdateResource(hDest, FALSE);
 	}
@@ -113,6 +113,7 @@ int wmain(int argc, wchar_t* argv[])
 	return 0;
 }
 
+#ifndef _MSC_VER
 extern "C" int _CRT_glob;
 extern "C" void __wgetmainargs(int*, wchar_t***, wchar_t***, int, int*);
 
@@ -123,3 +124,4 @@ int main()
 	__wgetmainargs(&argc, &argv, &enpv, _CRT_glob, &si);
 	return wmain(argc, argv);
 }
+#endif

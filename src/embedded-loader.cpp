@@ -15,20 +15,25 @@
 #include "embed.h"
 #include "jni.h"
 
-
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define EXPORT __declspec(dllexport)
+#  ifdef _MSC_VER
+#    define not !
+#  endif
 #else
 #  define EXPORT __attribute__ ((visibility("default"))) \
   __attribute__ ((used))
 #endif
 
 extern "C" {
+  // since we aren't linking against libstdc++, we must implement this   
+  // ourselves:
+  void __cxa_pure_virtual(void) { abort(); }
 
   EXPORT const uint8_t*
   bootJar(unsigned* size)
   {
-    if(HRSRC hResInfo = FindResource(NULL, _T(RESID_BOOT_JAR), RT_RCDATA))
+    if(HRSRC hResInfo = FindResourceW(NULL, RESID_BOOT_JAR, reinterpret_cast<LPCWSTR>(RT_RCDATA)))
     {
       if(HGLOBAL hRes = LoadResource(NULL, hResInfo))
       {
@@ -44,7 +49,7 @@ extern "C" {
   }
 } // extern "C"
 
-static bool getMainClass(char* pName, int maxLen)
+static void getMainClass(char* pName, int maxLen)
 {
   if(0 == LoadString(NULL, RESID_MAIN_CLASS, pName, maxLen))
   {
@@ -61,7 +66,7 @@ main(int ac, const char** av)
   vmArgs.nOptions = 1;
   vmArgs.ignoreUnrecognized = JNI_TRUE;
 
-  JavaVMOption options[vmArgs.nOptions];
+  JavaVMOption options[1];
   vmArgs.options = options;
 
   options[0].optionString = const_cast<char*>("-Xbootclasspath:[bootJar]");

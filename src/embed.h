@@ -12,6 +12,6 @@
 #define EMBED_H
 
 #define RESID_MAIN_CLASS 100
-#define RESID_BOOT_JAR "BOOT.JAR"
+#define RESID_BOOT_JAR L"BOOT.JAR"
 
 #endif

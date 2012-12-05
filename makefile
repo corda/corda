@@ -568,7 +568,10 @@ as := $(cc)
 ld := $(cc)
 build-ld := $(build-cc)
 
+static = -static
+
 ifdef msvc
+  static =
 	no-error =
 	windows-path = $(native-path)
 	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
@@ -591,7 +594,7 @@ ifdef msvc
 
 	shared = -dll
 	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
-		-DEFAULTLIB:zlib -MANIFEST -debug
+		-DEFAULTLIB:zlib -DEFAULTLIB:user32 -MANIFEST -debug
 	output = -Fo$(1)
 
 	ifeq ($(mode),debug)
@@ -1021,12 +1024,18 @@ endif
 ifdef embed
 $(embed): $(embed-objects) $(embed-loader-o)
 	@echo "building $(embed)"
-	$(cxx) $(^) -mwindows -mconsole -static -o $(@)
+ifdef msvc
+	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+else
+	$(cxx) $(^) $(lflags) $(static) $(call output,$(@))
+endif
 
 $(build-embed)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) -D_UNICODE -DUNICODE -c $(<) -o $(@)
+	$(cxx) $(cflags) -c $(<) $(call output,$(@))
 
 $(embed-loader-o): $(embed-loader) $(converter)
 	@mkdir -p $(dir $(@))
@@ -1036,17 +1045,22 @@ $(embed-loader-o): $(embed-loader) $(converter)
 $(embed-loader): $(embed-loader-objects) $(static-library)
 	@mkdir -p $(dir $(@))
 	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
+ifdef msvc
+	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) -PDB:$(@).pdb \
+		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
+	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+else
 	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(dir $(@))/*.o
 	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
-	$(cxx) $(addsuffix .exp,$(basename $(@))) $(dir $(@))/*.o -L../win32/lib -lmingwthrd -lm -lz -lws2_32 -liphlpapi \
-		-mwindows -mconsole -static -o $(@)
-	strip --strip-all $(@)
+	$(ld) $(addsuffix .exp,$(basename $(@))) $(dir $(@))/*.o \
+		$(lflags) $(bootimage-lflags) -o $(@)
+endif
+	$(strip) $(strip-all) $(@)
 
 $(build-embed-loader)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/win32 \
-		-D_JNI_IMPLEMENTATION_ -c $(<) -o $(@)
+	$(cxx) $(cflags) -c $(<) $(call output,$(@))
 endif
 
 $(build)/%.o: $(lzma)/C/%.c
