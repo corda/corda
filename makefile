@@ -496,7 +496,7 @@ ifeq ($(platform),windows)
 	else
 		shared += -Wl,--add-stdcall-alias
 	endif
-	
+
 	embed = $(build-embed)/embed.exe
 	embed-loader = $(build-embed-loader)/embed-loader.exe
 	embed-loader-o = $(build-embed)/embed-loader.o
@@ -1021,13 +1021,13 @@ endif
 ifdef embed
 $(embed): $(embed-objects) $(embed-loader-o)
 	@echo "building $(embed)"
-	$(build-cxx) $(^) -mwindows -mconsole -static -o $(@)
-	
+	$(cxx) $(^) -mwindows -mconsole -static -o $(@)
+
 $(build-embed)/%.o: $(src)/%.cpp
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(build-cxx) -D_UNICODE -DUNICODE -c $(<) -o $(@)
-		
+	$(cxx) -D_UNICODE -DUNICODE -c $(<) -o $(@)
+
 $(embed-loader-o): $(embed-loader) $(converter)
 	@mkdir -p $(dir $(@))
 	$(converter) $(<) $(@) _binary_loader_start \
@@ -1047,7 +1047,6 @@ $(build-embed-loader)/%.o: $(src)/%.cpp
 	@mkdir -p $(dir $(@))
 	$(cxx) -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/win32 \
 		-D_JNI_IMPLEMENTATION_ -c $(<) -o $(@)
-		
 endif
 
 $(build)/%.o: $(lzma)/C/%.c

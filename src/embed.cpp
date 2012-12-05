@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <Windows.h>
+#include <windows.h>
 #include <tchar.h>
 #include <stdio.h>
 #include <stdint.h>
