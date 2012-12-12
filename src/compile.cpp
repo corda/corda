@@ -879,7 +879,7 @@ class TraceElement: public TraceHandler {
     flags(flags),
     watch(false)
   {
-    memset(map, 0, mapSize * BytesPerWord);
+    memset(map, 0xFF, mapSize * BytesPerWord);
   }
 
   virtual void handleTrace(Promise* address, unsigned argumentIndex) {

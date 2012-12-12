@@ -15,6 +15,23 @@ public class Subroutine {
     if (! v) throw new RuntimeException();
   }
 
+  private static void stackMap(Object x) {
+    while (true) {
+      try {
+        try {
+          System.gc();
+        } catch (DummyException e) {
+          // ignore
+        } finally {
+          x.toString();
+        }
+        break;
+      } catch (DummyException e) {
+        // ignore
+      }
+    }
+  }
+
   private static byte[] makeTestCode(List pool) throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Stream.write2(out, 1); // max stack
@@ -292,6 +309,8 @@ public class Subroutine {
 
     makeTestClass().getMethod("test", new Class[0]).invoke
       (null, new Object[0]);
+
+    stackMap(new Object());
   }
 
   private static class DummyException extends RuntimeException { }
