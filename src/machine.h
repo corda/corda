@@ -1536,6 +1536,18 @@ class Classpath {
   virtual object
   makeThread(Thread* t, Thread* parent) = 0;
 
+  virtual object
+  makeJMethod(Thread* t, object vmMethod) = 0;
+
+  virtual object
+  getVMMethod(Thread* t, object jmethod) = 0;
+
+  virtual object
+  makeJField(Thread* t, object vmField) = 0;
+
+  virtual object
+  getVMField(Thread* t, object jfield) = 0;
+
   virtual void
   clearInterrupted(Thread* t) = 0;
 

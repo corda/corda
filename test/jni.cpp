@@ -57,6 +57,50 @@ Java_JNI_doEcho__D(JNIEnv* e, jclass c, jdouble f)
     (c, e->GetStaticMethodID(c, "echo", "(D)D"), array);
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_JNI_fromReflectedMethod(JNIEnv* e, jclass, jobject method)
+{
+  return reinterpret_cast<uintptr_t>(e->FromReflectedMethod(method));
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_JNI_toReflectedMethod(JNIEnv* e, jclass, jclass c, jlong id,
+                           jboolean isStatic)
+{
+  return e->ToReflectedMethod(c, reinterpret_cast<jmethodID>(id), isStatic);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_JNI_callStaticIntMethod(JNIEnv* e, jclass, jclass c, jlong id)
+{
+  return e->CallStaticIntMethod(c, reinterpret_cast<jmethodID>(id));
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_JNI_newObject(JNIEnv* e, jclass, jclass c, jlong id)
+{
+  return e->NewObject(c, reinterpret_cast<jmethodID>(id));
+}
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_JNI_fromReflectedField(JNIEnv* e, jclass, jobject field)
+{
+  return reinterpret_cast<uintptr_t>(e->FromReflectedField(field));
+}
+
+extern "C" JNIEXPORT jobject JNICALL
+Java_JNI_toReflectedField(JNIEnv* e, jclass, jclass c, jlong id,
+                          jboolean isStatic)
+{
+  return e->ToReflectedField(c, reinterpret_cast<jfieldID>(id), isStatic);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_JNI_getStaticIntField(JNIEnv* e, jclass, jclass c, jlong id)
+{
+  return e->GetStaticIntField(c, reinterpret_cast<jfieldID>(id));
+}
+
 extern "C" JNIEXPORT jobject JNICALL
 Java_Buffers_allocateNative(JNIEnv* e, jclass, jint capacity)
 {

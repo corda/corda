@@ -3155,6 +3155,82 @@ ReleasePrimitiveArrayCritical(Thread* t, jarray, void*, jint)
 }
 
 uint64_t
+fromReflectedMethod(Thread* t, uintptr_t* arguments)
+{
+  jobject m = reinterpret_cast<jobject>(arguments[0]);
+
+  return methodID(t, t->m->classpath->getVMMethod(t, *m));
+}
+
+jmethodID JNICALL
+FromReflectedMethod(Thread* t, jobject method)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(method) };
+
+  return reinterpret_cast<jmethodID>(run(t, fromReflectedMethod, arguments));
+}
+
+uint64_t
+toReflectedMethod(Thread* t, uintptr_t* arguments)
+{
+  jmethodID m = arguments[1];
+  jboolean isStatic = arguments[2];
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, t->m->classpath->makeJMethod
+      (t, isStatic ? getStaticMethod(t, m) : getMethod(t, m))));
+}
+
+jobject JNICALL
+ToReflectedMethod(Thread* t, jclass c, jmethodID method, jboolean isStatic)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(method),
+                            static_cast<uintptr_t>(isStatic) };
+
+  return reinterpret_cast<jobject>(run(t, toReflectedMethod, arguments));
+}
+
+uint64_t
+fromReflectedField(Thread* t, uintptr_t* arguments)
+{
+  jobject f = reinterpret_cast<jobject>(arguments[0]);
+
+  return fieldID(t, t->m->classpath->getVMField(t, *f));
+}
+
+jfieldID JNICALL
+FromReflectedField(Thread* t, jobject field)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(field) };
+
+  return reinterpret_cast<jfieldID>(run(t, fromReflectedField, arguments));
+}
+
+uint64_t
+toReflectedField(Thread* t, uintptr_t* arguments)
+{
+  jfieldID f = arguments[1];
+  jboolean isStatic = arguments[2];
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, t->m->classpath->makeJField
+      (t, isStatic ? getStaticField(t, f) : getField(t, f))));
+}
+
+jobject JNICALL
+ToReflectedField(Thread* t, jclass c, jfieldID field, jboolean isStatic)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
+                            reinterpret_cast<uintptr_t>(field),
+                            static_cast<uintptr_t>(isStatic) };
+
+  return reinterpret_cast<jobject>(run(t, toReflectedField, arguments));
+}
+
+uint64_t
 registerNatives(Thread* t, uintptr_t* arguments)
 {
   jclass c = reinterpret_cast<jclass>(arguments[0]);
@@ -3607,6 +3683,10 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->IsSameObject = local::IsSameObject;
   envTable->PushLocalFrame = local::PushLocalFrame;
   envTable->PopLocalFrame = local::PopLocalFrame;
+  envTable->FromReflectedMethod = local::FromReflectedMethod;
+  envTable->ToReflectedMethod = local::ToReflectedMethod;
+  envTable->FromReflectedField = local::FromReflectedField;
+  envTable->ToReflectedField = local::ToReflectedField;
 }
 
 } // namespace vm

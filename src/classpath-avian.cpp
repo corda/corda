@@ -54,6 +54,37 @@ class MyClasspath : public Classpath {
        root(t, Machine::BootLoader), 0, 0, group, 0);
   }
 
+  virtual object
+  makeJMethod(Thread* t, object vmMethod)
+  {
+    PROTECT(t, vmMethod);
+
+    object jmethod = makeJmethod(t, vmMethod, false);
+
+    return byteArrayBody(t, methodName(t, vmMethod), 0) == '<'
+      ? makeJconstructor(t, jmethod) : jmethod;
+  }
+
+  virtual object
+  getVMMethod(Thread* t, object jmethod)
+  {
+    return objectClass(t, jmethod) == type(t, Machine::JmethodType)
+      ? jmethodVmMethod(t, jmethod)
+      : jmethodVmMethod(t, jconstructorMethod(t, jmethod));
+  }
+
+  virtual object
+  makeJField(Thread* t, object vmField)
+  {
+    return makeJfield(t, vmField, false);
+  }
+
+  virtual object
+  getVMField(Thread* t, object jfield)
+  {
+    return jfieldVmField(t, jfield);
+  }
+
   virtual void
   clearInterrupted(Thread*)
   {
