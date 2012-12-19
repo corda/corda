@@ -3167,7 +3167,7 @@ FromReflectedMethod(Thread* t, jobject method)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(method) };
 
-  return reinterpret_cast<jmethodID>(run(t, fromReflectedMethod, arguments));
+  return static_cast<jmethodID>(run(t, fromReflectedMethod, arguments));
 }
 
 uint64_t
@@ -3205,7 +3205,7 @@ FromReflectedField(Thread* t, jobject field)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(field) };
 
-  return reinterpret_cast<jfieldID>(run(t, fromReflectedField, arguments));
+  return static_cast<jfieldID>(run(t, fromReflectedField, arguments));
 }
 
 uint64_t
