@@ -3186,7 +3186,7 @@ jobject JNICALL
 ToReflectedMethod(Thread* t, jclass c, jmethodID method, jboolean isStatic)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
-                            reinterpret_cast<uintptr_t>(method),
+                            static_cast<uintptr_t>(method),
                             static_cast<uintptr_t>(isStatic) };
 
   return reinterpret_cast<jobject>(run(t, toReflectedMethod, arguments));
@@ -3224,7 +3224,7 @@ jobject JNICALL
 ToReflectedField(Thread* t, jclass c, jfieldID field, jboolean isStatic)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c),
-                            reinterpret_cast<uintptr_t>(field),
+                            static_cast<uintptr_t>(field),
                             static_cast<uintptr_t>(isStatic) };
 
   return reinterpret_cast<jobject>(run(t, toReflectedField, arguments));
