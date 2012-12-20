@@ -102,6 +102,12 @@ Java_JNI_getStaticIntField(JNIEnv* e, jclass, jclass c, jlong id)
 }
 
 extern "C" JNIEXPORT jobject JNICALL
+Java_JNI_testLocalRef(JNIEnv* e, jclass, jobject o)
+{
+  return e->NewLocalRef(o);
+}
+
+extern "C" JNIEXPORT jobject JNICALL
 Java_Buffers_allocateNative(JNIEnv* e, jclass, jint capacity)
 {
   void* p = allocate(e, capacity);

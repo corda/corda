@@ -396,6 +396,14 @@ Throw(Thread* t, jthrowable throwable)
   return 0;
 }
 
+jobject JNICALL
+NewLocalRef(Thread* t, jobject o)
+{  
+  ENTER(t, Thread::ActiveState);
+
+  return makeLocalReference(t, *o);
+}
+
 void JNICALL
 DeleteLocalRef(Thread* t, jobject r)
 {
@@ -3513,6 +3521,7 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
   envTable->NewDirectByteBuffer = local::NewDirectByteBuffer;
   envTable->GetDirectBufferAddress = local::GetDirectBufferAddress;
   envTable->GetDirectBufferCapacity = local::GetDirectBufferCapacity;
+  envTable->NewLocalRef = local::NewLocalRef;
   envTable->DeleteLocalRef = local::DeleteLocalRef;
   envTable->GetObjectClass = local::GetObjectClass;
   envTable->GetSuperclass = local::GetSuperclass;
