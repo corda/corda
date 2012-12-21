@@ -3370,12 +3370,21 @@ PushLocalFrame(Thread* t, jint capacity)
 uint64_t
 popLocalFrame(Thread* t, uintptr_t* arguments)
 {
-  object result = *reinterpret_cast<jobject>(arguments[0]);
-  PROTECT(t, result);
+  uint64_t r;
+  jobject presult = reinterpret_cast<jobject>(arguments[0]);
+  if(presult != NULL) {
+    object result = *presult;
+    PROTECT(t, result);
 
-  t->m->processor->popLocalFrame(t);
-  
-  return reinterpret_cast<uint64_t>(makeLocalReference(t, result));
+    t->m->processor->popLocalFrame(t);
+
+    r = reinterpret_cast<uint64_t>(makeLocalReference(t, result));
+  } else {
+    t->m->processor->popLocalFrame(t);
+    r = 0;
+  }
+
+  return r;
 }
 
 jobject JNICALL
