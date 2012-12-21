@@ -439,17 +439,20 @@ class MyClasspath : public Classpath {
     unsigned libraryPathOffset = sb.offset;
     sb.append(javaHome);
 #ifdef PLATFORM_WINDOWS
-    sb.append("/bin");
+#  define LIB_DIR "/bin"
 #elif defined __APPLE__
-    sb.append("/lib");
+#  define LIB_DIR "/lib"
 #elif defined ARCH_x86_64
-    sb.append("/lib/amd64");
+#  define LIB_DIR "/lib/amd64"
 #elif defined ARCH_arm
-    sb.append("/lib/arm");
+#  define LIB_DIR "/lib/arm"
 #else
     // todo: handle other architectures
-    sb.append("/lib/i386");
+#  define LIB_DIR "/lib/i386"
 #endif
+    sb.append(LIB_DIR ":");
+    sb.append(javaHome);
+    sb.append(LIB_DIR "/xawt");
     sb.append('\0');
 
     unsigned tzMappingsOffset = sb.offset;
@@ -635,6 +638,7 @@ class MyClasspath : public Classpath {
 #else // not AVIAN_OPENJDK_SRC
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
+    loadLibrary(t, libraryPath, "mawt", true, true);
 #endif // not AVIAN_OPENJDK_SRC
 
     { object assertionLock = resolveField

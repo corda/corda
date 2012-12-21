@@ -57,6 +57,8 @@ public class JNI {
 
   private static native int getStaticIntField(Class c, long id);
 
+  private static native Object testLocalRef(Object o);
+
   public static int method242() { return 242; }
   
   public static final int field950 = 950;
@@ -106,5 +108,9 @@ public class JNI {
            (JNI.class, fromReflectedField
             (JNI.class.getField("field950")), true)
            .getName().equals("field950"));
+
+    { Object o = new Object();
+      expect(testLocalRef(o) == o);
+    }
   }
 }
