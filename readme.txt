@@ -12,13 +12,13 @@ on Mac OS X:
  $ build/darwin-i386/avian -cp build/darwin-i386/test Hello
  
 on Windows (MSYS):
- $ git clone git://oss.readytalk.com/win32.git ../win32
+ $ git clone git@github.com:ReadyTalk/win32.git ../win32
  $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
 on Windows (Cygwin):
- $ git clone git://oss.readytalk.com/win32.git ../win32
+ $ git clone git@github.com:ReadyTalk/win32.git ../win32
  $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
  $ make
  $ build/windows-i386/avian -cp build/windows-i386/test Hello
@@ -191,13 +191,13 @@ Installing Cygwin:
 You may also find our win32 repository useful: (run this from the
 directory containing the avian directory)
 
-  $ git clone git://oss.readytalk.com/win32.git
+  $ git clone git@github.com:ReadyTalk/win32.git
 
 This gives you the Windows JNI headers, zlib headers and library, and
 a few other useful libraries like OpenSSL, libjpeg, and libpng.
 There's also a win64 repository for 64-bit builds:
 
-  $ git clone git://oss.readytalk.com/win64.git
+  $ git clone git@github.com:ReadyTalk/win64.git
 
 
 Building with the Microsoft Visual C++ Compiler
