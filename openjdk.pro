@@ -14,6 +14,10 @@
    public static void setProperties(java.util.Properties);
  }
 
+-keep class sun.misc.Launcher {
+   public static sun.misc.Launcher getLauncher();
+ }
+
 -keep class java.lang.ClassLoader {
    private static java.lang.ClassLoader scl;
    private static boolean sclSet;
