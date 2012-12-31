@@ -151,8 +151,8 @@ public class Thread implements Runnable {
 
   private static native boolean interrupted(long peer);
 
-  public static boolean isInterrupted() {
-    return currentThread().interrupted;
+  public boolean isInterrupted() {
+    return interrupted;
   }
 
   public static void sleep(long milliseconds) throws InterruptedException {
