@@ -1,7 +1,7 @@
 Avian - A lightweight Java Virtual Machine (JVM)
 ================================================
 
-[![Build Status](https://travis-ci.org/ReadyTalk/avian.png?branch=master)](https://travis-ci.org/ReadyTalk/avian)
+[![Build Status](https://travis-ci.org/terekcampbell/avian.png?branch=master)](https://travis-ci.org/terekcampbell/avian)
 
 Quick Start
 -----------
