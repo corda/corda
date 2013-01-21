@@ -792,6 +792,44 @@ Java_java_lang_Math_tan(JNIEnv*, jclass, jdouble val)
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_asin(JNIEnv*, jclass, jdouble val)
+{
+  return asin(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_acos(JNIEnv*, jclass, jdouble val)
+{
+  return acos(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_atan(JNIEnv*, jclass, jdouble val)
+{
+  return atan(val);
+}
+
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_sinh(JNIEnv*, jclass, jdouble val)
+{
+  return sinh(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_cosh(JNIEnv*, jclass, jdouble val)
+{
+  return cosh(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_tanh(JNIEnv*, jclass, jdouble val)
+{
+  return tanh(val);
+}
+
+
+extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_sqrt(JNIEnv*, jclass, jdouble val)
 {
   return sqrt(val);

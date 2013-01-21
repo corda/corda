@@ -56,6 +56,12 @@ public class RandomAccessFile {
     this.position = position;
   }
 
+  public int skipBytes(int count) throws IOException {
+    if (position + count > length()) throw new IOException();
+    this.position = position + count;
+    return count;
+  }
+
   public void readFully(byte[] buffer, int offset, int length)
     throws IOException
   {
