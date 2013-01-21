@@ -786,6 +786,12 @@ Java_java_lang_Math_cos(JNIEnv*, jclass, jdouble val)
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_tan(JNIEnv*, jclass, jdouble val)
+{
+  return tan(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_sqrt(JNIEnv*, jclass, jdouble val)
 {
   return sqrt(val);
@@ -795,6 +801,12 @@ extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_pow(JNIEnv*, jclass, jdouble val, jdouble exp)
 {
   return pow(val, exp);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_log(JNIEnv*, jclass, jdouble val)
+{
+  return log(val);
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
