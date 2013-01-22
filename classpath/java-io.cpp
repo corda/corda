@@ -155,68 +155,8 @@ doWrite(JNIEnv* e, jint fd, const jbyte* data, jint length)
   }
 }
 
+
 #ifdef PLATFORM_WINDOWS
-
-class Mapping {
- public:
-  Mapping(uint8_t* start, size_t length, HANDLE mapping, HANDLE file):
-    start(start),
-    length(length),
-    mapping(mapping),
-    file(file)
-  { }
-
-  uint8_t* start;
-  size_t length;
-  HANDLE mapping;
-  HANDLE file;
-};
-
-inline Mapping*
-map(JNIEnv* e, string_t path)
-{
-  Mapping* result = 0;
-  HANDLE file = CreateFileW(path, FILE_READ_DATA,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE, 0,
-                            OPEN_EXISTING, 0, 0);
-  if (file != INVALID_HANDLE_VALUE) {
-    unsigned size = GetFileSize(file, 0);
-    if (size != INVALID_FILE_SIZE) {
-      HANDLE mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, size, 0);
-      if (mapping) {
-        void* data = MapViewOfFile(mapping, FILE_MAP_READ, 0, 0, 0);
-        if (data) {
-          void* p = allocate(e, sizeof(Mapping));
-          if (not e->ExceptionCheck()) {
-            result = new (p)
-              Mapping(static_cast<uint8_t*>(data), size, file, mapping);
-          }   
-        }
-
-        if (result == 0) {
-          CloseHandle(mapping);
-        }
-      }
-    }
-
-    if (result == 0) {
-      CloseHandle(file);
-    }
-  }
-  if (result == 0 and not e->ExceptionCheck()) {
-    throwNew(e, "java/io/IOException", "%d", GetLastError());
-  }
-  return result;
-}
-
-inline void
-unmap(JNIEnv*, Mapping* mapping)
-{
-  UnmapViewOfFile(mapping->start);
-  CloseHandle(mapping->mapping);
-  CloseHandle(mapping->file);
-  free(mapping);
-}
 
 class Directory {
  public:
@@ -250,50 +190,8 @@ class Directory {
 
 #else // not PLATFORM_WINDOWS
 
-class Mapping {
- public:
-  Mapping(uint8_t* start, size_t length):
-    start(start),
-    length(length)
-  { }
-
-  uint8_t* start;
-  size_t length;
-};
-
-inline Mapping*
-map(JNIEnv* e, string_t path)
-{
-  Mapping* result = 0;
-  int fd = open(path, O_RDONLY);
-  if (fd != -1) {
-    struct stat s;
-    int r = fstat(fd, &s);
-    if (r != -1) {
-      void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-      if (data) {
-        void* p = allocate(e, sizeof(Mapping));
-        if (not e->ExceptionCheck()) {
-          result = new (p) Mapping(static_cast<uint8_t*>(data), s.st_size);
-        }
-      }
-    }
-    close(fd);
-  }
-  if (result == 0 and not e->ExceptionCheck()) {
-    throwNewErrno(e, "java/io/IOException");
-  }
-  return result;
-}
-
-inline void
-unmap(JNIEnv*, Mapping* mapping)
-{
-  munmap(mapping->start, mapping->length);
-  free(mapping);
-}
-
 #endif // not PLATFORM_WINDOWS
+
 
 } // namespace
 
@@ -785,35 +683,54 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    Mapping* mapping = map(e, chars);
+    int fd = ::open((const char*)chars, O_RDONLY);
+	releaseChars(e, path, chars);
+	if (fd == -1) {
+      throwNewErrno(e, "java/io/IOException");
+	  return;
+    }
+	struct ::stat fileStats;
+	if(::fstat(fd, &fileStats) == -1) {
+	  ::close(fd);
+      throwNewErrno(e, "java/io/IOException");
+	  return;
+    }
 
-    jlong peer = reinterpret_cast<jlong>(mapping);
+    jlong peer = fd;
     e->SetLongArrayRegion(result, 0, 1, &peer);
 
-    jlong length = (mapping ? mapping->length : 0);
+    jlong length = fileStats.st_size;
     e->SetLongArrayRegion(result, 1, 1, &length);
-
-    releaseChars(e, path, chars);
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
-Java_java_io_RandomAccessFile_copy(JNIEnv* e, jclass, jlong peer,
+extern "C" JNIEXPORT jint JNICALL
+Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
                                    jlong position, jbyteArray buffer,
                                    int offset, int length)
 {
+  int fd = (int)peer;
+  if(::lseek(fd, position, SEEK_SET) == -1) {
+	throwNewErrno(e, "java/io/IOException");
+	return -1;
+  }
+  
   uint8_t* dst = reinterpret_cast<uint8_t*>
     (e->GetPrimitiveArrayCritical(buffer, 0));
-
-  memcpy(dst + offset,
-         reinterpret_cast<Mapping*>(peer)->start + position,
-         length);
-
+  ssize_t bytesRead = ::read(fd, dst + offset, length);
   e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
+  
+  if(bytesRead == -1) {
+	throwNewErrno(e, "java/io/IOException");
+	return -1;
+  }
+  
+  return (jint)bytesRead;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_io_RandomAccessFile_close(JNIEnv* e, jclass, jlong peer)
+Java_java_io_RandomAccessFile_close(JNIEnv*/* e*/, jclass, jlong peer)
 {
-  unmap(e, reinterpret_cast<Mapping*>(peer));
+  int fd = (int)peer;
+  ::close(fd);
 }
