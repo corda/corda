@@ -108,7 +108,8 @@ public class RandomAccessFile {
     int n = 0;
     do {
       int count = readBytes(peer, position, b, off + n, len - n);
-      if (count < 0)
+      position += count;
+      if (count == 0)
         throw new EOFException();
       n += count;
     } while (n < len);
