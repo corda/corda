@@ -353,6 +353,21 @@ ifeq ($(platform),freebsd)
 		"-I$(JAVA_HOME)/include/freebsd" -I$(src) -pthread
 	cflags = $(build-cflags)
 endif
+ifeq ($(platform),android)
+    asm = arm
+	pointer-size = 4
+	no-psabi = -Wno-psabi
+	toolchain = $(ANDROID_NDK)/toolchains/arm-linux-androideabi-4.7/prebuilt/linux-x86/
+	cflags = -std=gnu++0x -I$(ANDROID_NDK)/platforms/android-5/arch-arm/usr/include \
+	-I$(toolchain)/lib/gcc/arm-linux-androideabi/4.7/include $(common-cflags) 
+	cflags += -marm $(no-psabi)
+	
+	cxx = $(toolchain)/bin/arm-linux-androideabi-g++
+	cc = $(toolchain)/bin/arm-linux-androideabi-gcc
+	ar = $(toolchain)/bin/arm-linux-androideabi-ar
+	ranlib = $(toolchain)/bin/arm-linux-androideabi-ranlib
+	strip = $(toolchain)/bin/arm-linux-androideabi-strip
+endif
 
 ifeq ($(platform),darwin)
 	target-format = macho

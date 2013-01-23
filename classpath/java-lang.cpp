@@ -54,7 +54,9 @@
 #  include "signal.h"
 #  include "sys/time.h"
 #  include "sys/types.h"
+# ifndef __ANDROID__
 #  include "sys/sysctl.h"
+# endif
 #  include "sys/utsname.h"
 #  include "sys/wait.h"
 
