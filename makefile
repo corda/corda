@@ -365,26 +365,27 @@ ifeq ($(platform),android)
 	endif
 
 	build-cflags = $(common-cflags) -I$(src)
+	build-lflags = -lz -lpthread
 	ifeq ($(subst cygwin,windows,$(subst mingw32,windows,$(build-platform))),windows)
 		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 		build-system = windows
 		build-cxx = i686-w64-mingw32-g++
 		build-cc = i686-w64-mingw32-gcc
-		build-lflags = -lz -lpthread
 		sysroot = "$$(cygpath -w "$(ndk)/platforms/android-5/arch-arm")"
 		build-cflags += "-I$(JAVA_HOME)/include/win32"
 	else
-		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))-$(build-arch)
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))-*
 		sysroot = $(ndk)/platforms/android-5/arch-arm
 		build-cflags += "-I$(JAVA_HOME)/include/linux"
 	endif
 	toolchain = $(ndk)/toolchains/arm-linux-androideabi-4.7/prebuilt/$(toolchain-host-platform)
 	cflags = "-I$(sysroot)/usr/include" "-I$(JAVA_HOME)/include/linux" $(common-cflags) "-I$(src)" -std=c++11 -marm $(no-psabi)
-	lflags = $(common-lflags) -ldl
+	lflags = "-L$(sysroot)/usr/lib" $(common-lflags) -ldl
 	use-lto = false
 	
 	cxx = $(toolchain)/bin/arm-linux-androideabi-g++ --sysroot="$(sysroot)"
 	cc = $(toolchain)/bin/arm-linux-androideabi-gcc --sysroot="$(sysroot)"
+	as = $(toolchain)/bin/arm-linux-androideabi-as --sysroot="$(sysroot)"
 	ar = $(toolchain)/bin/arm-linux-androideabi-ar
 	ranlib = $(toolchain)/bin/arm-linux-androideabi-ranlib
 	strip = $(toolchain)/bin/arm-linux-androideabi-strip
