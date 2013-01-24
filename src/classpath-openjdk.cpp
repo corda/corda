@@ -4795,6 +4795,59 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
     instance = 0;
   }
 
+  if ((args == 0 ? 0 : objectArrayLength(t, *args))
+      != methodParameterCount(t, vmMethod))
+  {
+    throwNew(t, Machine::IllegalArgumentExceptionType);
+  }
+
+  if (methodParameterCount(t, vmMethod)) {
+    PROTECT(t, vmMethod);
+
+    unsigned specLength = byteArrayLength(t, methodSpec(t, vmMethod));
+    THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
+    memcpy(spec, &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
+    unsigned i = 0;
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      object type;
+      bool objectType = false;
+      const char* p = it.next();
+      switch (*p) {
+      case 'Z': type = vm::type(t, Machine::BooleanType); break;
+      case 'B': type = vm::type(t, Machine::ByteType); break;
+      case 'S': type = vm::type(t, Machine::ShortType); break;
+      case 'C': type = vm::type(t, Machine::CharType); break;
+      case 'I': type = vm::type(t, Machine::IntType); break;
+      case 'F': type = vm::type(t, Machine::FloatType); break;
+      case 'J': type = vm::type(t, Machine::LongType); break;
+      case 'D': type = vm::type(t, Machine::DoubleType); break;
+
+      case 'L': ++ p;
+      case '[': {
+        objectType = true;
+        unsigned nameLength = it.s - p;
+        THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
+        memcpy(name, p, nameLength - 1);
+        name[nameLength - 1] = 0;
+        type = resolveClass
+          (t, classLoader(t, methodClass(t, vmMethod)), name);
+      } break;
+
+      default:
+        abort();
+      }
+
+      object arg = objectArrayBody(t, *args, i++);
+      if ((arg == 0 and (not objectType))
+          or (arg and (not instanceOf(t, type, arg))))
+      {
+        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+
+        throwNew(t, Machine::IllegalArgumentExceptionType);
+      }
+    }
+  }
+
   unsigned returnCode = methodReturnCode(t, vmMethod);
 
   THREAD_RESOURCE0(t, {
