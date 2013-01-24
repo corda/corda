@@ -746,7 +746,20 @@ class MyClasspath : public Classpath {
            byteArrayEqual);
 
         object source = classSource(t, class_);
-        if (source == 0) {
+        if (source) {
+          // note that we strip the "file:" prefix, since
+          // Package.defineSystemPackage expects an unadorned
+          // filename:
+          const unsigned PrefixLength = 5;
+          unsigned sourceNameLength = byteArrayLength(t, source)
+            - PrefixLength;
+          THREAD_RUNTIME_ARRAY(t, char, sourceName, sourceNameLength);
+          memcpy(RUNTIME_ARRAY_BODY(sourceName),
+                 &byteArrayBody(t, source, PrefixLength),
+                 sourceNameLength);
+
+          source = vm::makeByteArray(t, "%s", sourceName);
+        } else {
           source = vm::makeByteArray(t, "avian-dummy-package-source");
         }
 
