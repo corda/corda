@@ -17,16 +17,16 @@
 #  include "CoreFoundation/CoreFoundation.h"
 #  include "sys/ucontext.h"
 #  undef assert
-#elif defined __ANDROID__
+#elif defined(__ANDROID__)
 #  include <asm/sigcontext.h>       /* for sigcontext */
 #  include <asm/signal.h>           /* for stack_t */
-typedef struct ucontext {
-        unsigned long uc_flags;
-        struct ucontext *uc_link;
-        stack_t uc_stack;
-        struct sigcontext uc_mcontext;
-        unsigned long uc_sigmask;
-} ucontext_t;
+   typedef struct ucontext {
+     unsigned long uc_flags;
+     struct ucontext *uc_link;
+     stack_t uc_stack;
+     struct sigcontext uc_mcontext;
+     unsigned long uc_sigmask;
+   } ucontext_t;
 #else
 #  if defined __FreeBSD__
 #    include "limits.h"

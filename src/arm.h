@@ -98,6 +98,10 @@ loadMemoryBarrier()
   memoryBarrier();
 }
 
+#if defined(__ANDROID__)
+// http://code.google.com/p/android/issues/detail?id=1803
+extern "C" void __clear_cache (void *beg __attribute__((__unused__)), void *end __attribute__((__unused__)));
+#endif
 inline void
 syncInstructionCache(const void* start, unsigned size)
 {

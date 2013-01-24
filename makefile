@@ -357,13 +357,34 @@ ifeq ($(platform),android)
     asm = arm
 	pointer-size = 4
 	no-psabi = -Wno-psabi
-	toolchain = $(ANDROID_NDK)/toolchains/arm-linux-androideabi-4.7/prebuilt/linux-x86/
-	cflags = -std=gnu++0x -I$(ANDROID_NDK)/platforms/android-5/arch-arm/usr/include \
-	-I$(toolchain)/lib/gcc/arm-linux-androideabi/4.7/include $(common-cflags) 
-	cflags += -marm $(no-psabi)
+	use-lto = false
+	ifeq ($(build-platform),cygwin)
+		ndk = "$$(cygpath -u "$(ANDROID_NDK)")"
+	else
+		ndk = $(ANDROID_NDK)
+	endif
+
+	build-cflags = $(common-cflags) -I$(src)
+	ifeq ($(subst cygwin,windows,$(subst mingw32,windows,$(build-platform))),windows)
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
+		build-system = windows
+		build-cxx = i686-w64-mingw32-g++
+		build-cc = i686-w64-mingw32-gcc
+		build-lflags = -lz -lpthread
+		sysroot = "$$(cygpath -w "$(ndk)/platforms/android-5/arch-arm")"
+		build-cflags += "-I$(JAVA_HOME)/include/win32"
+	else
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))-$(build-arch)
+		sysroot = $(ndk)/platforms/android-5/arch-arm
+		build-cflags += "-I$(JAVA_HOME)/include/linux"
+	endif
+	toolchain = $(ndk)/toolchains/arm-linux-androideabi-4.7/prebuilt/$(toolchain-host-platform)
+	cflags = "-I$(sysroot)/usr/include" "-I$(JAVA_HOME)/include/linux" $(common-cflags) "-I$(src)" -std=c++11 -marm $(no-psabi)
+	lflags = $(common-lflags) -ldl
+	use-lto = false
 	
-	cxx = $(toolchain)/bin/arm-linux-androideabi-g++
-	cc = $(toolchain)/bin/arm-linux-androideabi-gcc
+	cxx = $(toolchain)/bin/arm-linux-androideabi-g++ --sysroot="$(sysroot)"
+	cc = $(toolchain)/bin/arm-linux-androideabi-gcc --sysroot="$(sysroot)"
 	ar = $(toolchain)/bin/arm-linux-androideabi-ar
 	ranlib = $(toolchain)/bin/arm-linux-androideabi-ranlib
 	strip = $(toolchain)/bin/arm-linux-androideabi-strip
@@ -540,7 +561,9 @@ ifeq ($(mode),fast)
 	else
 		optimization-cflags = -O3 -g3 -DNDEBUG
 	endif
-	use-lto = true
+	ifeq ($(use-lto),)
+		use-lto = true
+	endif
 endif
 ifeq ($(mode),small)
 	ifeq ($(use-clang),true)
@@ -548,7 +571,9 @@ ifeq ($(mode),small)
 	else
 		optimization-cflags = -Os -g3 -DNDEBUG
 	endif
-	use-lto = true
+	ifeq ($(use-lto),)
+		use-lto = true
+	endif
 endif
 
 ifeq ($(use-lto),true)
