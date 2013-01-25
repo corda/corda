@@ -46,7 +46,8 @@
 
 #  define O_RDONLY _O_RDONLY
 
-#  ifdef AVIAN_OPENJDK_SRC
+#  if (defined AVIAN_OPENJDK_SRC) \
+  || ((defined __x86_64__) && (defined __MINGW32__))
 #    define EXPORT(x) x
 #  else
 #    define EXPORT(x) _##x
@@ -450,9 +451,14 @@ class MyClasspath : public Classpath {
     // todo: handle other architectures
 #  define LIB_DIR "/lib/i386"
 #endif
+    
+#ifdef PLATFORM_WINDOWS
+    sb.append(LIB_DIR);
+#else
     sb.append(LIB_DIR ":");
     sb.append(javaHome);
     sb.append(LIB_DIR "/xawt");
+#endif
     sb.append('\0');
 
     unsigned tzMappingsOffset = sb.offset;
@@ -638,7 +644,9 @@ class MyClasspath : public Classpath {
 #else // not AVIAN_OPENJDK_SRC
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
+#  ifndef PLATFORM_WINDOWS
     loadLibrary(t, libraryPath, "mawt", true, true);
+#  endif
 #endif // not AVIAN_OPENJDK_SRC
 
     { object assertionLock = resolveField
