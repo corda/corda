@@ -17,8 +17,14 @@
 
 #include "embed.h"
 
-extern "C" const uint8_t binary_loader_start[];
-extern "C" const uint8_t binary_loader_end[];
+#ifdef __x86_64__
+#  define BINARY_LOADER(x) _binary_loader_##x
+#else
+#  define BINARY_LOADER(x) binary_loader_##x
+#endif
+
+extern "C" const uint8_t BINARY_LOADER(start)[];
+extern "C" const uint8_t BINARY_LOADER(end)[];
 
 __declspec(noreturn)
 void printUsage(const wchar_t* executableName)
@@ -31,8 +37,8 @@ void writeDestinationFile(const wchar_t* filename)
 {
 	if(FILE* file = _wfopen(filename, L"wb"))
 	{
-		size_t count = binary_loader_end - binary_loader_start;
-		if(count == fwrite(binary_loader_start, sizeof(binary_loader_start[0]), count, file))
+		size_t count = BINARY_LOADER(end) - BINARY_LOADER(start);
+		if(count == fwrite(BINARY_LOADER(start), sizeof(BINARY_LOADER(start)[0]), count, file))
 		{
 			fclose(file);
 			return;
