@@ -365,7 +365,7 @@ ifeq ($(platform),android)
 	endif
 
 	build-cflags = $(common-cflags) -I$(src)
-	build-lflags = -lz -lpthread
+	#build-lflags = -lz -lpthread -ldl
 	ifeq ($(subst cygwin,windows,$(subst mingw32,windows,$(build-platform))),windows)
 		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
 		build-system = windows
