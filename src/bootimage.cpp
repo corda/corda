@@ -1992,9 +1992,10 @@ main(int ac, const char** av)
   // PowerPC and ARM).  When that limitation is removed, we'll be able
   // to specify a capacity as large as we like here:
 #if (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64) \
-  || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_32)
+  || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
   const unsigned CodeCapacity = 128 * 1024 * 1024;
 #else
+#  error "wtf?"
   const unsigned CodeCapacity = 30 * 1024 * 1024;
 #endif
 
