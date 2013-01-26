@@ -644,6 +644,9 @@ Java_java_io_FileOutputStream_open(JNIEnv* e, jclass, jstring path, jboolean app
     return -1;
   }
 }
+#ifdef __ANDROID__
+#include <android/log.h>
+#endif
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_FileOutputStream_write__II(JNIEnv* e, jclass, jint fd, jint c)
@@ -657,13 +660,18 @@ Java_java_io_FileOutputStream_write__I_3BII
 (JNIEnv* e, jclass, jint fd, jbyteArray b, jint offset, jint length)
 {
   jbyte* data = static_cast<jbyte*>(malloc(length));
+
   if (data == 0) {
     throwNew(e, "java/lang/OutOfMemoryError", 0);
     return;    
   }
 
   e->GetByteArrayRegion(b, offset, length, data);
-
+  #ifdef __ANDROID__
+  if(fd == 1)   {
+     __android_log_print(ANDROID_LOG_WARN, "net.osmand:native", "%.*s",length, data);
+  }
+  #endif
   if (not e->ExceptionCheck()) {
     doWrite(e, fd, data, length);
   }
