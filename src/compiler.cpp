@@ -2003,6 +2003,13 @@ class MemorySite: public Site {
     }
   }
 
+  bool conflicts(const SiteMask& mask) {
+    return (mask.typeMask & (1 << RegisterOperand)) != 0
+      and (((1 << base) & mask.registerMask) == 0
+           or (index != NoRegister
+               and ((1 << index) & mask.registerMask) == 0));
+  }
+
   virtual bool match(Context* c, const SiteMask& mask) {
     assert(c, acquired);
 
@@ -4574,8 +4581,20 @@ class OperationEvent: public Event {
 void
 appendOperation(Context* c, Operation op)
 {
-  append
-    (c, new(c->zone) OperationEvent(c, op));
+  append(c, new(c->zone) OperationEvent(c, op));
+}
+
+void
+moveIfConflict(Context* c, Value* v, MemorySite* s)
+{
+  if (v->reads) {
+    SiteMask mask(1 << RegisterOperand, ~0, AnyFrameIndex);
+    v->reads->intersect(&mask);
+    if (s->conflicts(mask)) {
+      maybeMove(c, v->reads, true, false);
+      removeSite(c, v, s);
+    }
+  }
 }
 
 class MemoryEvent: public Event {
@@ -4626,22 +4645,24 @@ class MemoryEvent: public Event {
       popRead(c, this, index);
     }
 
-    Site* site = memorySite
+    MemorySite* site = memorySite
       (c, baseRegister, displacement, indexRegister, scale);
 
-    Site* low;
+    MemorySite* low;
     if (result->nextWord != result) {
-      Site* high = site->copyHigh(c);
-      low = site->copyLow(c);
+      MemorySite* high = static_cast<MemorySite*>(site->copyHigh(c));
+      low = static_cast<MemorySite*>(site->copyLow(c));
 
       result->nextWord->target = high;
       addSite(c, result->nextWord, high);
+      moveIfConflict(c, result->nextWord, high);
     } else {
       low = site;
     }
 
     result->target = low;
     addSite(c, result, low);
+    moveIfConflict(c, result, low);
   }
 
   Value* base;
