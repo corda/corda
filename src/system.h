@@ -97,13 +97,11 @@ class System {
     virtual void disposeAll() = 0;
   };
 
-#if !defined(AVIAN_AOT_ONLY)
   class SignalHandler {
    public:
     virtual bool handleSignal(void** ip, void** frame, void** stack, 
                               void** thread) = 0;
   };
-#endif
 
   class MonitorResource {
    public:
@@ -132,12 +130,10 @@ class System {
   virtual Status make(Mutex**) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
-#if !defined(AVIAN_AOT_ONLY)
   virtual Status handleSegFault(SignalHandler* handler) = 0;
   virtual Status handleDivideByZero(SignalHandler* handler) = 0;
   virtual Status visit(Thread* thread, Thread* target,
                        ThreadVisitor* visitor) = 0;
-#endif
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

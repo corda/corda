@@ -80,8 +80,8 @@ namespace {
     snprintf(errStr, 9, "%d", (int) err);
     return errStr;
     
-	//TODO:
-	// The better way to do this, if I could figure out how to convert LPTSTR to char*
+    #pragma message("TODO")
+    // The better way to do this, if I could figure out how to convert LPTSTR to char*
     //char* errStr;
     //LPTSTR s;
     //if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
@@ -390,7 +390,7 @@ Locale getLocale() {
 
   return Locale(lang, reg);
 #else
-  //TODO: CultureInfo.CurrentCulture
+  #pragma message("TODO: CultureInfo.CurrentCulture")
   return Locale("en", "US");
 #endif
 }
@@ -596,8 +596,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
 #  else
-      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
-	  //Windows.Storage.ApplicationData.Current.TemporaryFolder
+      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.Storage.ApplicationData.Current.TemporaryFolder")
       r = 0;
 #  endif
     } else if (strcmp(chars, "user.dir") == 0) {
@@ -606,8 +605,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       GetCurrentDirectory(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
 #  else
-      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
-	  //Windows.ApplicationModel.Package.Current.InstalledLocation
+      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
       r = 0;
 #  endif
     } else if (strcmp(chars, "user.home") == 0) {
@@ -621,8 +619,7 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
         r = 0;
       }
 #    else
-      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
-	  //Windows.Storage.KnownFolders.DocumentsLibrary;
+      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.Storage.KnownFolders.DocumentsLibrary")
       r = 0;
 #    endif
 #  else

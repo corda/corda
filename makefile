@@ -642,6 +642,7 @@ ifeq ($(platform),wp8)
 	use-lto = false
 	supports_avian_executable = false
 	process = compile
+	aot_only = true
 	ifneq ($(process),compile)
 		options := -$(process)
 	endif
