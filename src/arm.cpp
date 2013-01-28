@@ -18,7 +18,7 @@
 
 using namespace vm;
 
-namespace {
+namespace local {
 
 namespace isa {
 // SYSTEM REGISTERS
@@ -252,7 +252,7 @@ class MyBlock: public Assembler::Block {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
 
-    ::resolve(this);
+    local::resolve(this);
 
     return start + size + padding(this, size);
   }
@@ -2150,7 +2150,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return ::argumentFootprint(footprint);
+    return local::argumentFootprint(footprint);
   }
 
   virtual bool argumentAlignment() {
@@ -2239,7 +2239,7 @@ class MyArchitecture: public Assembler::Architecture {
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    ::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
+    local::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
                 mostRecent, targetParameterFootprint, ip, stack);
   }
 
@@ -2550,11 +2550,12 @@ class MyAssembler: public Assembler {
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
-    struct {
+    struct Argument {
       unsigned size;
       OperandType type;
       Operand* operand;
-    } arguments[argumentCount];
+    };
+    Argument* arguments = new Argument[argumentCount];
 
     va_list a; va_start(a, argumentCount);
     unsigned footprint = 0;
@@ -2589,6 +2590,9 @@ class MyAssembler: public Assembler {
         offset += ceiling(arguments[i].size, TargetBytesPerWord);
       }
     }
+
+    delete[] arguments;
+    arguments = 0;
   }
 
   virtual void allocateFrame(unsigned footprint) {
@@ -2798,7 +2802,7 @@ class MyAssembler: public Assembler {
         bool jump = needJump(b);
         if (jump) {
           write4
-            (dst + dstOffset, ::b((poolSize + TargetBytesPerWord - 8) >> 2));
+            (dst + dstOffset, isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }
 
         dstOffset += poolSize + (jump ? TargetBytesPerWord : 0);
@@ -2832,7 +2836,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset(bool forTrace) {
-    return ::offset(&con, forTrace);
+    return local::offset(&con, forTrace);
   }
 
   virtual Block* endBlock(bool startNew) {
@@ -2903,15 +2907,15 @@ namespace vm {
 Assembler::Architecture*
 makeArchitecture(System* system, bool)
 {
-  return new (allocate(system, sizeof(MyArchitecture))) MyArchitecture(system);
+  return new (allocate(system, sizeof(local::MyArchitecture))) local::MyArchitecture(system);
 }
 
 Assembler*
 makeAssembler(System* system, Allocator* allocator, Zone* zone,
               Assembler::Architecture* architecture)
 {
-  return new(zone) MyAssembler(system, allocator, zone,
-                static_cast<MyArchitecture*>(architecture));
+  return new(zone) local::MyAssembler(system, allocator, zone,
+                static_cast<local::MyArchitecture*>(architecture));
 }
 
 } // namespace vm

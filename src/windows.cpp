@@ -114,17 +114,15 @@ class MutexResource {
   HANDLE m;
 };
 
-#if !defined(AVIAN_AOT_ONLY)
 const unsigned SegFaultIndex = 0;
 const unsigned DivideByZeroIndex = 1;
 
 const unsigned HandlerCount = 2;
-#endif
 
 class MySystem;
 MySystem* system;
 
-#if !defined(AVIAN_AOT_ONLY)
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e);
 #endif
@@ -628,7 +626,7 @@ class MySystem: public System {
   };
 
   MySystem(const char* crashDumpDirectory):
-#if !defined(AVIAN_AOT_ONLY)
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     oldHandler(0),
 #endif
     crashDumpDirectory(crashDumpDirectory)
@@ -636,14 +634,12 @@ class MySystem: public System {
     expect(this, system == 0);
     system = this;
 
-#if !defined(AVIAN_AOT_ONLY)
     memset(handlers, 0, sizeof(handlers));
-#endif
 
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
   }
-#if !defined(AVIAN_AOT_ONLY)
+
   bool findHandler() {
     for (unsigned i = 0; i < HandlerCount; ++i) {
       if (handlers[i]) return true;
@@ -651,31 +647,38 @@ class MySystem: public System {
     return false;
   }
 
-  //TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx
   int registerHandler(System::SignalHandler* handler, int index) {
     if (handler) {
       handlers[index] = handler;
-      
+
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       if (oldHandler == 0) {
-#ifdef ARCH_x86_32
+#  ifdef ARCH_x86_32
         oldHandler = SetUnhandledExceptionFilter(handleException);
-#elif defined ARCH_x86_64
+#  elif defined ARCH_x86_64
         AddVectoredExceptionHandler(1, handleException);
         oldHandler = reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(1);
-#endif
+#  endif
       }
+#else
+        #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
+#endif
 
       return 0;
     } else if (handlers[index]) {
       handlers[index] = 0;
 
       if (not findHandler()) {
-#ifdef ARCH_x86_32
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#  ifdef ARCH_x86_32
         SetUnhandledExceptionFilter(oldHandler);
         oldHandler = 0;
-#elif defined ARCH_x86_64
+#  elif defined ARCH_x86_64
         // do nothing, handlers are never "unregistered" anyway
-#endif        
+#  endif
+#else
+        #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
+#endif
       }
 
       return 0;
@@ -683,7 +686,7 @@ class MySystem: public System {
       return 1;
     }
   }
-#endif
+
   virtual void* tryAllocate(unsigned sizeInBytes) {
     return malloc(sizeInBytes);
   }
@@ -742,7 +745,6 @@ class MySystem: public System {
     return 0;
   }
 
-#if !defined(AVIAN_AOT_ONLY)
   virtual Status handleSegFault(SignalHandler* handler) {
     return registerHandler(handler, SegFaultIndex);
   }
@@ -754,6 +756,7 @@ class MySystem: public System {
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     assert(this, st != sTarget);
 
     Thread* target = static_cast<Thread*>(sTarget);
@@ -769,15 +772,15 @@ class MySystem: public System {
       rv = GetThreadContext(target->thread, &context);
 
       if (rv) {
-#ifdef ARCH_x86_32
+#  ifdef ARCH_x86_32
         visitor->visit(reinterpret_cast<void*>(context.Eip),
                        reinterpret_cast<void*>(context.Ebp),
                        reinterpret_cast<void*>(context.Esp));
-#elif defined ARCH_x86_64
+#  elif defined ARCH_x86_64
         visitor->visit(reinterpret_cast<void*>(context.Rip),
                        reinterpret_cast<void*>(context.Rbp),
                        reinterpret_cast<void*>(context.Rsp));
-#endif
+#  endif
         success = true;
       }
 
@@ -786,8 +789,11 @@ class MySystem: public System {
     }
 
     return (success ? 0 : 1);
-  }
+#else
+    #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
+    return false;
 #endif
+  }
 
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size, unsigned returnType)
@@ -917,8 +923,7 @@ class MySystem: public System {
       return append(allocator, buffer, "\\", name);
     }
 #else
-    //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
-    //Windows.ApplicationModel.Package.Current.InstalledLocation
+    #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
     return name;
 #endif
   }
@@ -1017,14 +1022,14 @@ class MySystem: public System {
   }
 
   HANDLE mutex;
-#if !defined(AVIAN_AOT_ONLY)
   SignalHandler* handlers[HandlerCount];
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
 #endif
   const char* crashDumpDirectory;
 };
 
-#if !defined(AVIAN_AOT_ONLY)
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 
 #pragma pack(push,4)
 struct MINIDUMP_EXCEPTION_INFORMATION {
