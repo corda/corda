@@ -1995,7 +1995,6 @@ main(int ac, const char** av)
   || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
   const unsigned CodeCapacity = 128 * 1024 * 1024;
 #else
-#  error "wtf?"
   const unsigned CodeCapacity = 30 * 1024 * 1024;
 #endif
 
