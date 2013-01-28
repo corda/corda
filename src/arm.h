@@ -116,7 +116,7 @@ loadMemoryBarrier()
 #endif
 }
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
 
 #if defined(__ANDROID__)
 // http://code.google.com/p/android/issues/detail?id=1803
@@ -136,7 +136,7 @@ syncInstructionCache(const void* start, unsigned size)
 #endif
 }
 
-#endif // AVIAN_PROCESS_compile
+#endif // AVIAN_AOT_ONLY
 
 #ifndef __APPLE__
 typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);

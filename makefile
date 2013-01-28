@@ -51,7 +51,8 @@ ifeq ($(continuations),true)
 endif
 
 root := $(shell (cd .. && pwd))
-build = $(build-prefix)build/$(platform)-$(arch)$(options)
+build = build/$(platform)-$(arch)$(options)
+host-build-root = $(build)/host
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
@@ -135,7 +136,7 @@ ifneq ($(openjdk),)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
-  classpath = openjdk
+	classpath = openjdk
 	boot-classpath := "$(boot-classpath)$(path-separator)$$($(native-path) "$(openjdk)/jre/lib/rt.jar")"
 	build-javahome = $(openjdk)/jre
 endif
@@ -640,7 +641,7 @@ ifeq ($(platform),wp8)
 	ms_cl_compiler = wp8
 	use-lto = false
 	supports_avian_executable = false
-	process = interpret
+	process = compile
 	ifneq ($(process),compile)
 		options := -$(process)
 	endif
@@ -918,6 +919,9 @@ ifeq ($(process),compile)
 	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
 endif
 cflags += -DAVIAN_PROCESS_$(process)
+ifdef aot_only
+	cflags += -DAVIAN_AOT_ONLY
+endif
 
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(build))
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(build))
@@ -1430,7 +1434,7 @@ else
 endif
 
 $(bootimage-object) $(codeimage-object): $(bootimage-generator)
-	@echo "generating bootimage and codeimage binaries using $(<)"
+	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
 		-codeimage-symbols $(codeimage-symbols)
@@ -1459,9 +1463,9 @@ endif
 	$(strip) $(strip-all) $(@)
 
 $(bootimage-generator): $(bootimage-generator-objects)
-	echo arch=$(arch) platform=$(platform)
+	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
 	$(MAKE) mode=$(mode) \
-		build-prefix=$(build)/host/ \
+		build=$(host-build-root) \
 		arch=$(build-arch) \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \

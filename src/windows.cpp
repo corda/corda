@@ -114,7 +114,7 @@ class MutexResource {
   HANDLE m;
 };
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
 const unsigned SegFaultIndex = 0;
 const unsigned DivideByZeroIndex = 1;
 
@@ -124,7 +124,7 @@ const unsigned HandlerCount = 2;
 class MySystem;
 MySystem* system;
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
 LONG CALLBACK
 handleException(LPEXCEPTION_POINTERS e);
 #endif
@@ -628,7 +628,7 @@ class MySystem: public System {
   };
 
   MySystem(const char* crashDumpDirectory):
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
     oldHandler(0),
 #endif
     crashDumpDirectory(crashDumpDirectory)
@@ -636,14 +636,14 @@ class MySystem: public System {
     expect(this, system == 0);
     system = this;
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
     memset(handlers, 0, sizeof(handlers));
 #endif
 
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
   }
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   bool findHandler() {
     for (unsigned i = 0; i < HandlerCount; ++i) {
       if (handlers[i]) return true;
@@ -692,7 +692,7 @@ class MySystem: public System {
     if (p) ::free(const_cast<void*>(p));
   }
 
-  #if defined(AVIAN_PROCESS_compile)
+  #if !defined(AVIAN_AOT_ONLY)
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
     return VirtualAlloc
       (0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -742,7 +742,7 @@ class MySystem: public System {
     return 0;
   }
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   virtual Status handleSegFault(SignalHandler* handler) {
     return registerHandler(handler, SegFaultIndex);
   }
@@ -1017,14 +1017,14 @@ class MySystem: public System {
   }
 
   HANDLE mutex;
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   SignalHandler* handlers[HandlerCount];
   LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
 #endif
   const char* crashDumpDirectory;
 };
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
 
 #pragma pack(push,4)
 struct MINIDUMP_EXCEPTION_INFORMATION {

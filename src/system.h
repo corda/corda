@@ -97,7 +97,7 @@ class System {
     virtual void disposeAll() = 0;
   };
 
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   class SignalHandler {
    public:
     virtual bool handleSignal(void** ip, void** frame, void** stack, 
@@ -123,7 +123,7 @@ class System {
   virtual bool success(Status) = 0;
   virtual void* tryAllocate(unsigned sizeInBytes) = 0;
   virtual void free(const void* p) = 0;
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) = 0;
   virtual void freeExecutable(const void* p, unsigned sizeInBytes) = 0;
 #endif
@@ -132,7 +132,7 @@ class System {
   virtual Status make(Mutex**) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
-#if defined(AVIAN_PROCESS_compile)
+#if !defined(AVIAN_AOT_ONLY)
   virtual Status handleSegFault(SignalHandler* handler) = 0;
   virtual Status handleDivideByZero(SignalHandler* handler) = 0;
   virtual Status visit(Thread* thread, Thread* target,
