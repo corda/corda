@@ -62,6 +62,16 @@
 
 #endif // not PLATFORM_WINDOWS
 
+#ifndef WINAPI_FAMILY
+#  ifndef WINAPI_PARTITION_DESKTOP
+#    define WINAPI_PARTITION_DESKTOP 1
+#  endif
+
+#  ifndef WINAPI_FAMILY_PARTITION
+#    define WINAPI_FAMILY_PARTITION(x) (x)
+#  endif
+#endif // WINAPI_FAMILY
+
 namespace {
 #ifdef PLATFORM_WINDOWS
   char* getErrorStr(DWORD err){
@@ -70,7 +80,8 @@ namespace {
     snprintf(errStr, 9, "%d", (int) err);
     return errStr;
     
-    // The better way to do this, if I could figure out how to convert LPTSTR to char*
+	//TODO:
+	// The better way to do this, if I could figure out how to convert LPTSTR to char*
     //char* errStr;
     //LPTSTR s;
     //if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
@@ -83,6 +94,7 @@ namespace {
     //return errStr;
   }
 
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   void makePipe(JNIEnv* e, HANDLE p[2])
   {
     SECURITY_ATTRIBUTES sa;
@@ -95,6 +107,7 @@ namespace {
       throwNew(e, "java/io/IOException", getErrorStr(GetLastError()));
     }
   }
+#endif
   
   int descriptor(JNIEnv* e, HANDLE h)
   {
@@ -196,7 +209,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
 {
-  
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   int size = 0;
   for (int i = 0; i < e->GetArrayLength(command); ++i){
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
@@ -267,11 +280,15 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   e->SetLongArrayRegion(process, 0, 1, &pid);
   jlong tid = reinterpret_cast<jlong>(pi.hThread);  
   e->SetLongArrayRegion(process, 1, 1, &tid);
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+#endif
 }
 
 extern "C" JNIEXPORT jint JNICALL 
 Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
 {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   DWORD exitCode;
   WaitForSingleObject(reinterpret_cast<HANDLE>(pid), INFINITE);
   BOOL success = GetExitCodeProcess(reinterpret_cast<HANDLE>(pid), &exitCode);
@@ -283,14 +300,23 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
   CloseHandle(reinterpret_cast<HANDLE>(tid));
 
   return exitCode;
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+  return -1;
+#endif
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+Java_java_lang_Runtime_kill(JNIEnv* e UNUSED, jclass, jlong pid) {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   TerminateProcess(reinterpret_cast<HANDLE>(pid), 1);
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+#endif
 }
 
 Locale getLocale() {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   const char* lang = "";
   const char* reg = "";
   unsigned langid = GetUserDefaultUILanguage();
@@ -362,8 +388,11 @@ Locale getLocale() {
     default: lang = "en";
   }
 
-  Locale locale(lang, reg);
-  return locale;
+  return Locale(lang, reg);
+#else
+  //TODO: CultureInfo.CurrentCulture
+  return Locale("en", "US");
+#endif
 }
 #else
 extern "C" JNIEXPORT void JNICALL 
@@ -531,8 +560,15 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("\\");
     } else if (strcmp(chars, "os.name") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       r = e->NewStringUTF("Windows");
+#  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
+      r = e->NewStringUTF("Windows Phone");
+#  else
+      r = e->NewStringUTF("Windows RT");
+#  endif
     } else if (strcmp(chars, "os.version") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       unsigned size = 32;
       RUNTIME_ARRAY(char, buffer, size);
       OSVERSIONINFO OSversion;
@@ -540,6 +576,10 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       ::GetVersionEx(&OSversion);
       snprintf(RUNTIME_ARRAY_BODY(buffer), size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
       r = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
+#  else
+      // Currently there is no alternative on WinRT/WP8
+      r = e->NewStringUTF("8.0");
+#  endif
     } else if (strcmp(chars, "os.arch") == 0) {
 #ifdef ARCH_x86_32
       r = e->NewStringUTF("x86");
@@ -551,15 +591,28 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("arm");
 #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
+#  else
+      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
+	  //Windows.Storage.ApplicationData.Current.TemporaryFolder
+      r = 0;
+#  endif
     } else if (strcmp(chars, "user.dir") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       TCHAR buffer[MAX_PATH];
       GetCurrentDirectory(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
+#  else
+      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
+	  //Windows.ApplicationModel.Package.Current.InstalledLocation
+      r = 0;
+#  endif
     } else if (strcmp(chars, "user.home") == 0) {
 #  ifdef _MSC_VER
+#    if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       WCHAR buffer[MAX_PATH];
       size_t needed;
       if (_wgetenv_s(&needed, buffer, MAX_PATH, L"USERPROFILE") == 0) {
@@ -567,6 +620,11 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       } else {
         r = 0;
       }
+#    else
+      //TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/
+	  //Windows.Storage.KnownFolders.DocumentsLibrary;
+      r = 0;
+#    endif
 #  else
       LPWSTR home = _wgetenv(L"USERPROFILE");
       r = e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
@@ -654,6 +712,9 @@ namespace {
 #elif defined __APPLE__
 #  include <crt_externs.h>
 #  define environ (*_NSGetEnviron())
+#elif defined(WINAPI_FAMILY) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+// WinRT/WP8 does not provide alternative for environment variables
+char* environ[] = { 0 };
 #else
 extern char** environ;
 #endif

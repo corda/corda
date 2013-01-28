@@ -342,7 +342,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         unsigned count = s.read2() - 1;
         if (count) {
-          Type types[count + 2];
+          Type* types = new Type[count + 2];
           types[0] = Type_object;
           types[1] = Type_intptr_t;
 
@@ -410,6 +410,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             (t, typeMaps, hashMapFind
              (t, root(t, Machine::PoolMap), c, objectHash, objectEqual), array,
              objectHash);
+
+          delete[] types;
+          types = 0;
         }
       }
 
@@ -420,7 +423,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         object fields = allFields(t, typeMaps, c, &count, &array);
         PROTECT(t, fields);
 
-        Field memberFields[count + 1];
+        Field* memberFields = new Field[count + 1];
 
         unsigned memberIndex;
         unsigned buildMemberOffset;
@@ -454,7 +457,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         const unsigned StaticHeader = 3;
 
-        Field staticFields[count + StaticHeader];
+        Field* staticFields = new Field[count + StaticHeader];
         
         init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
              TargetBytesPerWord);
@@ -586,6 +589,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           hashMapInsert
             (t, typeMaps, classStaticTable(t, c), array, objectHash);
         }
+
+        delete[] memberFields;
+        memberFields = 0;
+
+        delete[] staticFields;
+        staticFields = 0;
       }
     }
   }
@@ -1334,7 +1343,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       }
       ++ count;
 
-      Field fields[count];
+      Field* fields = new Field[count];
 
       init(new (fields) Field, Type_object, 0, BytesPerWord, 0,
            TargetBytesPerWord);
@@ -1462,6 +1471,9 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       hashMapInsert
         (t, typeMaps, vm::type(t, static_cast<Machine::Type>(i)), array,
          objectHash);
+
+      delete[] fields;
+      fields = 0;
     }
 
     constants = makeCodeImage
@@ -1646,10 +1658,10 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     
     Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
 
-    // if(!platform) {
-    //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
-    //   return false;
-    // }
+    if(!platform) {
+      fprintf(stderr, "unsupported platform: target-format = %d / target-arch = %d\n", AVIAN_TARGET_FORMAT, AVIAN_TARGET_ARCH);
+      abort();
+    }
 
     SymbolInfo bootimageSymbols[] = {
       SymbolInfo(0, bootimageStart),
@@ -1768,7 +1780,7 @@ bool ArgParser::parse(int ac, const char** av) {
       }
       bool found = false;
       for(Arg* arg = first; arg; arg = arg->next) {
-        if(strcmp(arg->name,  &av[i][1]) == 0) {
+        if(::strcmp(arg->name, &av[i][1]) == 0) {
           found = true;
           if (arg->desc == 0) {
             arg->value = "true";
@@ -1905,20 +1917,26 @@ public:
       exit(1);
     }
 
+#   if AVIAN_TARGET_FORMAT != AVIAN_FORMAT_PE
+#     define SYMBOL_PREFIX "_"
+#   else
+#     define SYMBOL_PREFIX
+#   endif
+
     if(!bootimageStart) {
-      bootimageStart = strdup("_binary_bootimage_bin_start");
+      bootimageStart = strdup(SYMBOL_PREFIX"binary_bootimage_bin_start");
     }
 
     if(!bootimageEnd) {
-      bootimageEnd = strdup("_binary_bootimage_bin_end");
+      bootimageEnd = strdup(SYMBOL_PREFIX"binary_bootimage_bin_end");
     }
 
     if(!codeimageStart) {
-      codeimageStart = strdup("_binary_codeimage_bin_start");
+      codeimageStart = strdup(SYMBOL_PREFIX"binary_codeimage_bin_start");
     }
 
     if(!codeimageEnd) {
-      codeimageEnd = strdup("_binary_codeimage_bin_end");
+      codeimageEnd = strdup(SYMBOL_PREFIX"binary_codeimage_bin_end");
     }
 
   }

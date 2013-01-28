@@ -83,6 +83,16 @@ typedef char char_t;
 
 #endif // not PLATFORM_WINDOWS
 
+#ifndef WINAPI_FAMILY
+#  ifndef WINAPI_PARTITION_DESKTOP
+#    define WINAPI_PARTITION_DESKTOP 1
+#  endif
+
+#  ifndef WINAPI_FAMILY_PARTITION
+#    define WINAPI_FAMILY_PARTITION(x) (x)
+#  endif
+#endif // WINAPI_FAMILY
+
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 typedef const char_t* string_t;
@@ -214,6 +224,7 @@ extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 {
 #ifdef PLATFORM_WINDOWS
+# if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   string_t chars = getChars(e, path);
   if (chars) {
     const unsigned BufferSize = MAX_PATH;
@@ -228,6 +239,11 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
   }
 
   return path;
+# else
+  // WinRT has no concept of full paths
+  throwNewErrno(e, "java/io/IOException");
+  return path;
+# endif
 #else
   jstring result = path;
   string_t chars = getChars(e, path);
@@ -256,11 +272,24 @@ Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 
     LARGE_INTEGER fileSize;
     string_t chars = getChars(e, path);
+    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     HANDLE file = CreateFileW
       (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+    #else
+    HANDLE file = CreateFile2
+      (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+    #endif
     releaseChars(e, path, chars);
     if (file != INVALID_HANDLE_VALUE)
+    {
+      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       GetFileSizeEx(file, &fileSize);
+      #else
+      FILE_STANDARD_INFO info;
+      if(GetFileInformationByHandleEx(file,  FileStandardInfo, &info, sizeof(info)))
+        fileSize = info.EndOfFile;
+      #endif
+    }
     else return 0;
     CloseHandle(file);
     return static_cast<jlong>(fileSize.QuadPart);
@@ -496,7 +525,11 @@ Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
     releaseChars(e, path, chars);
 
     Directory* d = new (malloc(sizeof(Directory))) Directory;
+    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     d->handle = FindFirstFileW(RUNTIME_ARRAY_BODY(buffer), &(d->data));
+    #else
+	d->handle = FindFirstFileExW(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, NULL, 0);
+    #endif
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
       d = 0;
@@ -725,7 +758,11 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
   
   uint8_t* dst = reinterpret_cast<uint8_t*>
     (e->GetPrimitiveArrayCritical(buffer, 0));
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   ssize_t bytesRead = ::read(fd, dst + offset, length);
+#else
+  auto bytesRead = ::read(fd, dst + offset, length);
+#endif
   e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
   
   if(bytesRead == -1) {
@@ -737,7 +774,7 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_io_RandomAccessFile_close(JNIEnv*/* e*/, jclass, jlong peer)
+Java_java_io_RandomAccessFile_close(JNIEnv* /* e*/, jclass, jlong peer)
 {
   int fd = (int)peer;
   ::close(fd);

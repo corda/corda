@@ -97,11 +97,13 @@ class System {
     virtual void disposeAll() = 0;
   };
 
+#if defined(AVIAN_PROCESS_compile)
   class SignalHandler {
    public:
     virtual bool handleSignal(void** ip, void** frame, void** stack, 
                               void** thread) = 0;
   };
+#endif
 
   class MonitorResource {
    public:
@@ -121,17 +123,21 @@ class System {
   virtual bool success(Status) = 0;
   virtual void* tryAllocate(unsigned sizeInBytes) = 0;
   virtual void free(const void* p) = 0;
+#if defined(AVIAN_PROCESS_compile)
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) = 0;
   virtual void freeExecutable(const void* p, unsigned sizeInBytes) = 0;
+#endif
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Mutex**) = 0;
   virtual Status make(Monitor**) = 0;
   virtual Status make(Local**) = 0;
+#if defined(AVIAN_PROCESS_compile)
   virtual Status handleSegFault(SignalHandler* handler) = 0;
   virtual Status handleDivideByZero(SignalHandler* handler) = 0;
   virtual Status visit(Thread* thread, Thread* target,
                        ThreadVisitor* visitor) = 0;
+#endif
   virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
                         unsigned count, unsigned size,
                         unsigned returnType) = 0;

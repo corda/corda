@@ -94,7 +94,13 @@ typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
 #    define UINT64_C(x) x##L
 #    define ARCH_x86_64
-@    define BYTES_PER_WORD 8
+#    define BYTES_PER_WORD 8
+#  elif defined _M_ARM_FP
+typedef int32_t intptr_t;
+typedef uint32_t uintptr_t;
+#    define UINT64_C(x) x##LL
+#    define ARCH_arm
+#    define BYTES_PER_WORD 4
 #  else
 #    error "unsupported architecture"
 #  endif
