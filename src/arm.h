@@ -71,32 +71,52 @@ namespace vm {
 inline void
 trap()
 {
+#ifdef _MSC_VER
+  __debugbreak();
+#else
   asm("bkpt");
+#endif
 }
 
+#ifndef _MSC_VER
 inline void
 memoryBarrier()
 {
   asm("nop");
 }
+#endif
 
 inline void
 storeStoreMemoryBarrier()
 {
+#ifdef _MSC_VER
+  _ReadWriteBarrier();
+#else
   memoryBarrier();
+#endif
 }
 
 inline void
 storeLoadMemoryBarrier()
 {
+#ifdef _MSC_VER
+  MemoryBarrier();
+#else
   memoryBarrier();
+#endif
 }
 
 inline void
 loadMemoryBarrier()
 {
+#ifdef _MSC_VER
+  _ReadWriteBarrier();
+#else
   memoryBarrier();
+#endif
 }
+
+#if defined(AVIAN_PROCESS_compile)
 
 #if defined(__ANDROID__)
 // http://code.google.com/p/android/issues/detail?id=1803
@@ -115,6 +135,8 @@ syncInstructionCache(const void* start, unsigned size)
      const_cast<uint8_t*>(static_cast<const uint8_t*>(start) + size));
 #endif
 }
+
+#endif // AVIAN_PROCESS_compile
 
 #ifndef __APPLE__
 typedef int (__kernel_cmpxchg_t)(int oldval, int newval, int *ptr);
@@ -160,7 +182,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   unsigned vfpIndex = 0;
   unsigned vfpBackfillIndex UNUSED = 0;
 
-  uintptr_t stack[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
+  uintptr_t* stack = new uintptr_t[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
   unsigned stackIndex = 0;
 
   unsigned ai = 0;
@@ -250,10 +272,12 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   }
 
   unsigned stackSize = stackIndex*BytesPerWord + ((stackIndex & 1) << 2);
-  return vmNativeCall
+  auto retVal = vmNativeCall
     (function, stackSize, stack, stackIndex * BytesPerWord,
      (gprIndex ? gprTable : 0),
      (vfpIndex ? vfpTable : 0), returnType);
+  delete[] stack;
+  return retVal;
 }
 
 } // namespace vm
