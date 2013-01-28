@@ -541,6 +541,28 @@ Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
   }
 }
 
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    #ifdef PLATFORM_WINDOWS
+    #  error "Implementation of last modified :)"
+    #else
+      struct stat st;
+       if (stat(chars, &st)) {
+        return 0;
+      } else {
+        return (static_cast<jlong>(st.st_mtim.tv_sec) * 1000) +
+        (static_cast<jlong>(st.st_mtim.tv_nsec) / (1000*1000));
+      }
+      
+    #endif
+  } else {
+    return 0;
+  }
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_java_io_File_readDir(JNIEnv* e, jclass, jlong handle)
 {
