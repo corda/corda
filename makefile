@@ -666,7 +666,7 @@ ifeq ($(platform),wp8)
 		as = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\armasm.exe")"
 		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\cl.exe")"
 		ld = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\link.exe")"
-		asmflags = -machine ARM -32
+		asmflags = $(target-cflags) -machine ARM -32
 		asm-output = -o $(1)
 		asm-input = $(1)
 		machine_type = ARM
@@ -678,6 +678,7 @@ ifeq ($(platform),wp8)
 		vc_arch =
 		w8kit_arch = x86
 		deps_arch = x86
+		asmflags = $(target-cflags) -safeseh
 		as = "$$(cygpath -u "$(WP80_SDK)\bin\ml.exe")"
 		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\cl.exe")"
 		ld = "$$(cygpath -u "$(WP80_SDK)\bin\link.exe")"
@@ -705,12 +706,31 @@ ifeq ($(platform),wp8)
 
 	common-lflags = $(classpath-lflags)
 
+	ifeq ($(mode),debug)
+		build-type = Debug
+	endif
+	ifeq ($(mode),debug-fast)
+		build-type = Debug
+	endif
+	ifeq ($(mode),stress_major)
+		build-type = Release
+	endif
+	ifeq ($(mode),fast)
+		build-type = Release
+	endif
+	ifeq ($(mode),fast)
+		build-type = Release
+	endif
+	ifeq ($(mode),small)
+		build-type = Release
+	endif
+
 	arflags = -MACHINE:$(machine_type)
 	lflags = $(common-lflags) -nologo \
 		-MACHINE:$(machine_type) \
 		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" -LIBPATH:"$(MSVC_ROOT)\lib$(vc_arch)" \
 		ws2_32.lib \
-		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\ThreadEmulation.lib")"
+		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")"
 
 	cc = $(cxx)
 	asm-format = masm
@@ -1508,8 +1528,8 @@ $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
 		$(lzma-decode-objects)
 	@echo "linking $(@)"
 ifdef ms_cl_compiler
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(build)/$(name).lib $(manifest-flags)
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(subst .dll,.pdb,$(@)) \
+		-IMPLIB:$(subst .dll,.lib,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);2"
 endif
