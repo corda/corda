@@ -1917,26 +1917,20 @@ public:
       exit(1);
     }
 
-#   if AVIAN_TARGET_FORMAT != AVIAN_FORMAT_PE
-#     define SYMBOL_PREFIX "_"
-#   else
-#     define SYMBOL_PREFIX
-#   endif
-
     if(!bootimageStart) {
-      bootimageStart = strdup(SYMBOL_PREFIX"binary_bootimage_bin_start");
+      bootimageStart = strdup("_binary_bootimage_bin_start");
     }
 
     if(!bootimageEnd) {
-      bootimageEnd = strdup(SYMBOL_PREFIX"binary_bootimage_bin_end");
+      bootimageEnd = strdup("_binary_bootimage_bin_end");
     }
 
     if(!codeimageStart) {
-      codeimageStart = strdup(SYMBOL_PREFIX"binary_codeimage_bin_start");
+      codeimageStart = strdup("_binary_codeimage_bin_start");
     }
 
     if(!codeimageEnd) {
-      codeimageEnd = strdup(SYMBOL_PREFIX"binary_codeimage_bin_end");
+      codeimageEnd = strdup("_binary_codeimage_bin_end");
     }
 
   }

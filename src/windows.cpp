@@ -34,10 +34,10 @@
   WaitForSingleObjectEx((hHandle), (dwMilliseconds), FALSE)
 
 #define CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName) \
-  CreateEventEx((lpEventAttributes), (lpName), ((bManualReset)?CREATE_EVENT_MANUAL_RESET:0)|((bInitialState)?CREATE_EVENT_INITIAL_SET:0), EVENT_MODIFY_STATE)
+  CreateEventEx((lpEventAttributes), (lpName), ((bManualReset)?CREATE_EVENT_MANUAL_RESET:0)|((bInitialState)?CREATE_EVENT_INITIAL_SET:0), EVENT_ALL_ACCESS)
 
 #define CreateMutex(lpEventAttributes, bInitialOwner, lpName) \
-  CreateMutexEx((lpEventAttributes), (lpName), (bInitialOwner)?CREATE_MUTEX_INITIAL_OWNER:0, MUTEX_MODIFY_STATE)
+  CreateMutexEx((lpEventAttributes), (lpName), (bInitialOwner)?CREATE_MUTEX_INITIAL_OWNER:0, MUTEX_ALL_ACCESS)
 
 #include "thread-emulation.h"
 

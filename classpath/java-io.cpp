@@ -547,7 +547,8 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
   string_t chars = getChars(e, path);
   if (chars) {
     #ifdef PLATFORM_WINDOWS
-    #  error "Implementation of last modified :)"
+    #  pragma message("Implementation of last modified")
+	  return 0;
     #else
       struct stat st;
        if (stat(chars, &st)) {
