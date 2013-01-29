@@ -618,7 +618,7 @@ ifeq ($(platform),wp8)
 		# Environment variable WP8_SDK not found. It should be something like
 		# "C:\Program Files[ (x86)]\Microsoft Visual Studio 11.0\VC\WPSDK\WP80"
 		# TODO: Lookup in SOFTWARE\Microsoft\Microsoft SDKs\WindowsPhone\v8.0
-		WP80_SDK = C:\$(programFiles)\Microsoft Visual Studio 11.0\VC\WPSDK\WP80
+		WP80_SDK = $(MSVS_ROOT)\VC\WPSDK\WP80
 	endif
 	ifeq ($(WP80_KIT),)
 		# Environment variable WP8_KIT not found. It should be something like
@@ -670,8 +670,6 @@ ifeq ($(platform),wp8)
 		asm-output = -o $(1)
 		asm-input = $(1)
 		machine_type = ARM
-		bootimage-symbols = binary_bootimage_bin_start:binary_bootimage_bin_end
-		codeimage-symbols = binary_codeimage_bin_start:binary_codeimage_bin_end
 	endif
 	ifeq ($(arch),i386)
 		wp8_arch =
