@@ -9339,11 +9339,15 @@ class MyProcessor: public Processor {
           root(t, MethodTreeSentinal));
     }
 
+#ifdef AVIAN_AOT_ONLY
+    thunks = bootThunks;
+#else
     local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
 
     if (not (image and code)) {
       bootThunks = thunks;
     }
+#endif
 
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success
