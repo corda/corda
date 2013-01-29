@@ -12,7 +12,7 @@
 
 	AREA text, CODE, ARM
 	
-	EXPORT vmNativeCall [FUNC]
+	EXPORT vmNativeCall
 vmNativeCall
 		;  arguments:
 		;  r0 -> r4       : function
@@ -48,7 +48,7 @@ loop
 
 		ldmfd sp!, {r4-r6, pc} ; restore non-volatile regs and return
 
-	EXPORT vmJump [FUNC]
+	EXPORT vmJump
 vmJump
 		mov   lr, r0
 		ldr   r0, [sp]
@@ -60,7 +60,7 @@ vmJump
 CHECKPOINT_THREAD EQU 4
 CHECKPOINT_STACK EQU 24
 
-	EXPORT vmRun [FUNC]
+	EXPORT vmRun
 vmRun
 		; r0: function
 		; r1: arguments
@@ -76,13 +76,13 @@ vmRun
 
 		blx   r12
 
-	EXPORT vmRun_returnAddress [FUNC]
+	EXPORT vmRun_returnAddress
 vmRun_returnAddress
 		add   sp, sp, #12
 		ldmfd sp!, {r4-r11, lr}
 		bx    lr
 
-	EXPORT vmTrap [FUNC]
+	EXPORT vmTrap
 vmTrap
 		bkpt 3
 
