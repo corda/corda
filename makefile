@@ -50,6 +50,7 @@ ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
 
+aot-only = false
 root := $(shell (cd .. && pwd))
 build = build/$(platform)-$(arch)$(options)
 host-build-root = $(build)/host
@@ -539,7 +540,6 @@ ifeq ($(platform),windows)
 	lib = "$(win32)/lib"
 
 	embed-prefix = c:/avian-embedded
-
 	system = windows
 
 	so-prefix =
@@ -642,7 +642,7 @@ ifeq ($(platform),wp8)
 	use-lto = false
 	supports_avian_executable = false
 	process = compile
-	aot_only = true
+	aot-only = true
 	ifneq ($(process),compile)
 		options := -$(process)
 	endif
@@ -676,11 +676,16 @@ ifeq ($(platform),wp8)
 		vc_arch =
 		w8kit_arch = x86
 		deps_arch = x86
-		asmflags = $(target-cflags) -safeseh
+		asmflags = $(target-cflags) -safeseh -nologo -Gd
 		as = "$$(cygpath -u "$(WP80_SDK)\bin\ml.exe")"
 		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\cl.exe")"
 		ld = "$$(cygpath -u "$(WP80_SDK)\bin\link.exe")"
-		asmflags += -nologo
+		ifeq ($(mode),debug)
+			asmflags += -Zd
+		endif
+		ifeq ($(mode),debug-fast)
+			asmflags += -Zd
+		endif
 		asm-output = $(output)
 		machine_type = X86
 	endif
@@ -700,7 +705,8 @@ ifeq ($(platform),wp8)
 		-Fd$(build)/$(name).pdb -I"$(shell $(windows-path) "$(wp8)/include")" -I$(src) -I$(classpath-src) \
 		-I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
-		-DTARGET_BYTES_PER_WORD=$(pointer-size)
+		-DTARGET_BYTES_PER_WORD=$(pointer-size) \
+		-Gd
 
 	common-lflags = $(classpath-lflags)
 
@@ -783,6 +789,52 @@ ifeq ($(platform),wp8)
 	strip = :
 endif
 
+ifdef msvc
+	no-error =
+	windows-path = $(native-path)
+	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
+	zlib := $(shell $(windows-path) "$(win32)/msvc")
+	ms_cl_compiler = regular
+	cxx = "$(msvc)/BIN/cl.exe"
+	cc = $(cxx)
+	ld = "$(msvc)/BIN/link.exe"
+	mt = "mt.exe"
+	manifest-flags = -MANIFEST -MANIFESTFILE:$(@).manifest
+	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
+		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
+		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
+		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I$(classpath-src) \
+		-I"$(build)" \
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
+		-DTARGET_BYTES_PER_WORD=$(pointer-size)
+
+	ifneq ($(lzma),)
+		cflags += -I$(shell $(windows-path) "$(lzma)")
+	endif
+
+	shared = -dll
+	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
+		-DEFAULTLIB:zlib -DEFAULTLIB:user32 -MANIFEST -debug
+	output = -Fo$(1)
+
+	ifeq ($(mode),debug)
+		cflags += -Od -Zi -MDd
+	endif
+	ifeq ($(mode),debug-fast)
+		cflags += -Od -Zi -DNDEBUG
+	endif
+	ifeq ($(mode),fast)
+		cflags += -O2 -GL -Zi -DNDEBUG
+		lflags += -LTCG
+	endif
+	ifeq ($(mode),small)
+		cflags += -O1s -Zi -GL -DNDEBUG
+		lflags += -LTCG
+	endif
+
+	strip = :
+endif
+
 ifeq ($(mode),debug)
 	optimization-cflags = $(cflags_debug)
 	converter-cflags += $(cflags_debug)
@@ -842,51 +894,6 @@ endif
 endif
 endif
 
-ifdef msvc
-	no-error =
-	windows-path = $(native-path)
-	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
-	zlib := $(shell $(windows-path) "$(win32)/msvc")
-	cxx = "$(msvc)/BIN/cl.exe"
-	cc = $(cxx)
-	ld = "$(msvc)/BIN/link.exe"
-	mt = "mt.exe"
-	manifest-flags = -MANIFEST -MANIFESTFILE:$(@).manifest
-	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
-		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
-		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
-		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I$(classpath-src) \
-		-I"$(build)" \
-		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
-		-DTARGET_BYTES_PER_WORD=$(pointer-size)
-
-	ifneq ($(lzma),)
-		cflags += -I$(shell $(windows-path) "$(lzma)")
-	endif
-
-	shared = -dll
-	lflags = -nologo -LIBPATH:"$(zlib)/lib" -DEFAULTLIB:ws2_32 \
-		-DEFAULTLIB:zlib -DEFAULTLIB:user32 -MANIFEST -debug
-	output = -Fo$(1)
-
-	ifeq ($(mode),debug)
-		cflags += -Od -Zi -MDd
-	endif
-	ifeq ($(mode),debug-fast)
-		cflags += -Od -Zi -DNDEBUG
-	endif
-	ifeq ($(mode),fast)
-		cflags += -O2 -GL -Zi -DNDEBUG
-		lflags += -LTCG
-	endif
-	ifeq ($(mode),small)
-		cflags += -O1s -Zi -GL -DNDEBUG
-		lflags += -LTCG
-	endif
-
-	strip = :
-endif
-
 build-cflags += -DAVIAN_HOST_TARGET
 
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
@@ -938,7 +945,7 @@ ifeq ($(process),compile)
 	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
 endif
 cflags += -DAVIAN_PROCESS_$(process)
-ifdef aot_only
+ifeq ($(aot-only),true)
 	cflags += -DAVIAN_AOT_ONLY
 endif
 
@@ -1488,6 +1495,7 @@ $(bootimage-generator): $(bootimage-generator-objects)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
+		aot-only=false \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
 		target-format=$(target-format) \
