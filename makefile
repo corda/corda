@@ -593,8 +593,8 @@ ifeq ($(platform),windows)
 		shared += -Wl,--add-stdcall-alias
 	endif
 
-	embed = $(build-embed)/embed.exe
-	embed-loader = $(build-embed-loader)/embed-loader.exe
+	embed = $(build-embed)/embed$(exe-suffix)
+	embed-loader = $(build-embed-loader)/embed-loader$(exe-suffix)
 	embed-loader-o = $(build-embed)/embed-loader.o
 endif
 
@@ -657,6 +657,7 @@ ifeq ($(platform),wp8)
 	so-prefix =
 	so-suffix = .dll
 	exe-suffix = .exe
+	manifest-flags = -MANIFEST:NO
 
 	ifeq ($(arch),arm)
 		wp8_arch = \x86_arm
@@ -696,8 +697,9 @@ ifeq ($(platform),wp8)
 	build-lflags = -lz -lpthread
 
 	cflags = -nologo \
+		-AI"$(WP80_KIT)\Windows Metadata" \
 		-I"$(WP80_SDK)\include" -I"$(WP80_KIT)\Include" -I"$(WP80_KIT)\Include\minwin" -I"$(WP80_KIT)\Include\mincore" \
-		-DWINAPI_FAMILY=WINAPI_FAMILY_PHONE_APP \
+		-DWINAPI_FAMILY=WINAPI_FAMILY_PHONE_APP -D_USRDLL -D_WINDLL \
 		-DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
@@ -735,6 +737,11 @@ ifeq ($(platform),wp8)
 		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" -LIBPATH:"$(MSVC_ROOT)\lib$(vc_arch)" \
 		ws2_32.lib \
 		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")"
+	lflags += -NXCOMPAT -DYNAMICBASE -SUBSYSTEM:CONSOLE -TLBID:1
+	lflags += -NODEFAULTLIB:"ole32.lib" WindowsPhoneCore.lib
+	lflags += -WINMD -WINMDFILE:$(subst $(so-suffix),.winmd,$(@))
+	#lflags += -WINMD:NO
+	#lflags += -APPCONTAINER
 
 	cc = $(cxx)
 	asm-format = masm
@@ -750,6 +757,7 @@ ifeq ($(platform),wp8)
 	endif
 	output = -Fo$(1)
 
+	#TODO: -MT or -ZW?
 	cflags_debug = -Od -Zi -MDd
 	cflags_debug_fast = -Od -Zi -MDd
 	cflags_stress = -O0 -g3 -MD
@@ -1079,10 +1087,10 @@ converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
 converter-tool-objects = $(call cpp-objects,$(converter-tool-sources),$(src),$(build))
 converter = $(build)/binaryToObject/binaryToObject
 
-static-library = $(build)/$(static-prefix)$(name)${static-suffix}
+static-library = $(build)/$(static-prefix)$(name)$(static-suffix)
 executable = $(build)/$(name)${exe-suffix}
 dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
-executable-dynamic = $(build)/$(name)-dynamic${exe-suffix}
+executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
@@ -1307,7 +1315,8 @@ $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 $(test-library): $(test-cpp-objects)
 	@echo "linking $(@)"
 ifdef ms_cl_compiler
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(so-suffix),.pdb,$(@)) \
 		-IMPLIB:$(test-build)/$(name).lib $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);2"
@@ -1320,8 +1329,8 @@ ifdef embed
 $(embed): $(embed-objects) $(embed-loader-o)
 	@echo "building $(embed)"
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib $(manifest-flags)
+	$(ld) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
@@ -1343,8 +1352,8 @@ $(embed-loader): $(embed-loader-objects) $(static-library)
 	@mkdir -p $(dir $(@))
 	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib $(manifest-flags)
+	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
@@ -1475,8 +1484,8 @@ $(executable): $(executable-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(executable-objects) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib $(manifest-flags)
+	$(ld) $(lflags) $(executable-objects) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
@@ -1514,8 +1523,8 @@ $(build-bootimage-generator): \
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib $(manifest-flags)
+	$(ld) $(bootimage-generator-lflags) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
@@ -1534,8 +1543,9 @@ $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
 		$(lzma-decode-objects)
 	@echo "linking $(@)"
 ifdef ms_cl_compiler
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(subst .dll,.pdb,$(@)) \
-		-IMPLIB:$(subst .dll,.lib,$(@)) $(manifest-flags)
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(so-suffix),.pdb,$(@)) \
+		-IMPLIB:$(subst $(so-suffix),.lib,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);2"
 endif
@@ -1552,8 +1562,8 @@ $(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef ms_cl_compiler
 	$(ld) $(lflags) -LIBPATH:$(build) -DEFAULTLIB:$(name) \
-		-PDB:$(@).pdb -IMPLIB:$(@).lib $(driver-dynamic-objects) \
-		-out:$(@) $(manifest-flags)
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@))
+		$(driver-dynamic-objects) -out:$(@) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
