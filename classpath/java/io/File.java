@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -15,6 +15,11 @@ public class File implements Serializable {
     = System.getProperty("file.separator");
 
   public static final String separator = FileSeparator;
+
+  private static final String PathSeparator
+    = System.getProperty("path.separator");
+
+  public static final String pathSeparator = PathSeparator;
 
   //   static {
   //     System.loadLibrary("natives");
