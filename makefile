@@ -734,14 +734,12 @@ ifeq ($(platform),wp8)
 	arflags = -MACHINE:$(machine_type)
 	lflags = $(common-lflags) -nologo \
 		-MACHINE:$(machine_type) \
-		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" -LIBPATH:"$(MSVC_ROOT)\lib$(vc_arch)" \
+		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WP80_SDK)\lib$(vc_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" \
 		ws2_32.lib \
 		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")"
 	lflags += -NXCOMPAT -DYNAMICBASE -SUBSYSTEM:CONSOLE -TLBID:1
-	lflags += -NODEFAULTLIB:"ole32.lib" WindowsPhoneCore.lib
-	lflags += -WINMD -WINMDFILE:$(subst $(so-suffix),.winmd,$(@))
-	#lflags += -WINMD:NO
-	#lflags += -APPCONTAINER
+	lflags += -NODEFAULTLIB:"ole32.lib" -NODEFAULTLIB:"kernel32.lib"
+	lflags += PhoneAppModelHost.lib WindowsPhoneCore.lib -WINMD -WINMDFILE:$(subst $(so-suffix),.winmd,$(@))
 
 	cc = $(cxx)
 	asm-format = masm
