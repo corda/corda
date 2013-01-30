@@ -17,6 +17,11 @@
 #include "arch.h"
 #include "lzma.h"
 
+#if defined(PLATFORM_WINDOWS)
+#  define WIN32_LEAN_AND_MEAN
+#  include <Windows.h>
+#endif
+
 using namespace vm;
 
 namespace {
@@ -4741,18 +4746,33 @@ printTrace(Thread* t, object exception)
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
       fprintf(errorLog(t), "caused by: ");
+#if defined(PLATFORM_WINDOWS)
+      OutputDebugStringA("caused by: ");
+#endif
     }
 
     fprintf(errorLog(t), "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
-  
+#if defined(PLATFORM_WINDOWS)
+    OutputDebugStringA((const CHAR*)&byteArrayBody
+            (t, className(t, objectClass(t, e)), 0));
+#endif
+
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
       THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
       fprintf(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
+#if defined(PLATFORM_WINDOWS)
+      OutputDebugStringA(": ");
+      OutputDebugStringA(RUNTIME_ARRAY_BODY(message));
+      OutputDebugStringA("\n");
+#endif
     } else {
       fprintf(errorLog(t), "\n");
+#if defined(PLATFORM_WINDOWS)
+      OutputDebugStringA("\n");
+#endif
     }
 
     object trace = throwableTrace(t, e);
@@ -4767,16 +4787,35 @@ printTrace(Thread* t, object exception)
           (t, traceElementMethod(t, e), traceElementIp(t, e));
 
         fprintf(errorLog(t), "  at %s.%s ", class_, method);
+#if defined(PLATFORM_WINDOWS)
+        OutputDebugStringA("  at ");
+        OutputDebugStringA((const CHAR*)class_);
+        OutputDebugStringA(".");
+        OutputDebugStringA((const CHAR*)method);
+        OutputDebugStringA(" ");
+#endif
 
         switch (line) {
         case NativeLine:
           fprintf(errorLog(t), "(native)\n");
+#if defined(PLATFORM_WINDOWS)
+          OutputDebugStringA("(native)\n");
+#endif
           break;
         case UnknownLine:
           fprintf(errorLog(t), "(unknown line)\n");
+#if defined(PLATFORM_WINDOWS)
+          OutputDebugStringA("(unknown line)\n");
+#endif
           break;
         default:
           fprintf(errorLog(t), "(line %d)\n", line);
+#if defined(PLATFORM_WINDOWS)
+          OutputDebugStringA("(line ");
+		  char buf[35];
+		  OutputDebugStringA(itoa(line, buf, 10));
+          OutputDebugStringA(")\n");
+#endif
         }
       }
     }
