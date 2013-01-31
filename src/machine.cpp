@@ -3023,7 +3023,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, bootstrapProperty)))
+      (system->load(&libraries, bootstrapPropertyDup)))
   {
     system->abort();
   }
