@@ -3008,6 +3008,13 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
 
   populateJNITables(&javaVMVTable, &jniEnvVTable);
 
+  const char* bootstrapProperty = strdup(findProperty(this, BOOTSTRAP_PROPERTY));
+  const char* bootstrapPropertyEnd = bootstrapProperty + (bootstrapProperty ? strlen(bootstrapProperty) : 0);
+  char* codeLibraryName = (char*)bootstrapProperty;
+  char* codeLibraryNameEnd = 0;
+  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
+    *codeLibraryNameEnd = 0;
+
   if (not system->success(system->make(&localThread)) or
       not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -3015,10 +3022,24 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, findProperty(this, "avian.bootstrap"))))
+      (system->load(&libraries, bootstrapProperty)))
   {
     system->abort();
   }
+
+  System::Library* additionalLibrary = 0;
+  while (codeLibraryNameEnd && codeLibraryNameEnd + 1 < bootstrapPropertyEnd) {
+    codeLibraryName = codeLibraryNameEnd + 1;
+    codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator());
+    if (codeLibraryNameEnd)
+      *codeLibraryNameEnd = 0;
+
+    if (!system->success(system->load(&additionalLibrary, codeLibraryName)))
+      system->abort();
+    libraries->setNext(additionalLibrary);
+  }
+
+  free((void*)bootstrapProperty);
 }
 
 void
