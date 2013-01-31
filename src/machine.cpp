@@ -3011,7 +3011,7 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
   const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
   const char* bootstrapPropertyEnd = bootstrapProperty + (bootstrapProperty ? strlen(bootstrapProperty) : 0);
-  char* codeLibraryName = (char*)bootstrapProperty;
+  char* codeLibraryName = (char*)bootstrapPropertyDup;
   char* codeLibraryNameEnd = 0;
   if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
     *codeLibraryNameEnd = 0;
