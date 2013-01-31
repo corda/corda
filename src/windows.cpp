@@ -924,7 +924,7 @@ class MySystem: public System {
     }
 #else
     #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
-    return name;
+    return copy(allocator, name);
 #endif
   }
 
