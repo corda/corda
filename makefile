@@ -667,10 +667,12 @@ ifeq ($(platform),wp8)
 		as = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\armasm.exe")"
 		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\cl.exe")"
 		ld = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\link.exe")"
-		asmflags = $(target-cflags) -machine ARM -32
+		asmflags = -machine ARM -32
 		asm-output = -o $(1)
 		asm-input = $(1)
 		machine_type = ARM
+		bootimage-symbols = binary_bootimage_bin_start:binary_bootimage_bin_end
+		codeimage-symbols = binary_codeimage_bin_start:binary_codeimage_bin_end
 	endif
 	ifeq ($(arch),i386)
 		wp8_arch =
