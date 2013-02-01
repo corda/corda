@@ -289,7 +289,8 @@ extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 {
   #ifdef PLATFORM_WINDOWS
-
+    // Option: without opening file
+    // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364946(v=vs.85).aspx
     string_t chars = getChars(e, path);
     if(chars) {
       LARGE_INTEGER fileSize;
@@ -575,6 +576,8 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
   string_t chars = getChars(e, path);
   if (chars) {
     #ifdef PLATFORM_WINDOWS
+      // Option: without opening file
+      // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364946(v=vs.85).aspx
       #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       HANDLE hFile = CreateFileW
         (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
