@@ -240,6 +240,13 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 
   return path;
 # else
+// This could have worked, if GetFileInformationByHandleEx() returned volume information also
+// There is a chance to get it, or using GetFullPathName, that is claimed to be unsupported
+// or from System.IO.Path.GetFullPath(), but it's CLR and I see no way of calling it from
+// C++/CX code
+// Best wishes to everyone who will win this fight,
+// Alexey Pelykh
+/*
   string_t chars = getChars(e, path);
   if(chars) {
     LARGE_INTEGER fileSize;
@@ -263,6 +270,7 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
     return e->NewString
       (reinterpret_cast<const jchar*>(pInfo->FileName), pInfo->FileNameLength / sizeof(WCHAR));
   }
+*/
   return path;
 # endif
 #else
