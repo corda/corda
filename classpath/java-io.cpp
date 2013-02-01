@@ -739,6 +739,9 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
 {
   string_t chars = getChars(e, path);
   if (chars) {
+    jlong peer = 0;
+    jlong length = 0;
+    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     int fd = ::open((const char*)chars, O_RDONLY);
 	releaseChars(e, path, chars);
 	if (fd == -1) {
@@ -751,11 +754,27 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
       throwNewErrno(e, "java/io/IOException");
 	  return;
     }
+    peer = fd;
+    length = fileStats.st_size;
+    #else
+    HANDLE hFile = CreateFile2
+      (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+      throwNewErrno(e, "java/io/IOException");
+      return;
+    }
 
-    jlong peer = fd;
+    FILE_STANDARD_INFO info;
+    if(!GetFileInformationByHandleEx(hFile,  FileStandardInfo, &info, sizeof(info))) {
+      throwNewErrno(e, "java/io/IOException");
+      return;
+    }
+
+    peer = (jlong)hFile;
+    length = info.EndOfFile.QuadPart;
+    #endif
+
     e->SetLongArrayRegion(result, 0, 1, &peer);
-
-    jlong length = fileStats.st_size;
     e->SetLongArrayRegion(result, 1, 1, &length);
   }
 }
@@ -765,6 +784,7 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
                                    jlong position, jbyteArray buffer,
                                    int offset, int length)
 {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   int fd = (int)peer;
   if(::lseek(fd, position, SEEK_SET) == -1) {
 	throwNewErrno(e, "java/io/IOException");
@@ -773,24 +793,45 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
   
   uint8_t* dst = reinterpret_cast<uint8_t*>
     (e->GetPrimitiveArrayCritical(buffer, 0));
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
   ssize_t bytesRead = ::read(fd, dst + offset, length);
-#else
-  auto bytesRead = ::read(fd, dst + offset, length);
-#endif
   e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
   
   if(bytesRead == -1) {
 	throwNewErrno(e, "java/io/IOException");
 	return -1;
   }
-  
+#else
+  HANDLE hFile = (HANDLE)peer;
+  LARGE_INTEGER lPos;
+  lPos.QuadPart = position;
+  if(!SetFilePointerEx(hFile, lPos, nullptr, FILE_BEGIN)) {
+	throwNewErrno(e, "java/io/IOException");
+	return -1;
+  }
+
+  uint8_t* dst = reinterpret_cast<uint8_t*>
+    (e->GetPrimitiveArrayCritical(buffer, 0));
+
+  DWORD bytesRead = 0;
+  if(!ReadFile(hFile, dst + offset, length, &bytesRead, nullptr)) {
+      throwNewErrno(e, "java/io/IOException");
+      return -1;
+  }
+  e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
+#endif
+
   return (jint)bytesRead;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_RandomAccessFile_close(JNIEnv* /* e*/, jclass, jlong peer)
 {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   int fd = (int)peer;
   ::close(fd);
+#else
+  HANDLE hFile = (HANDLE)peer;
+  CloseHandle(hFile);
+#endif
 }
