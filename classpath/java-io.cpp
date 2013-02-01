@@ -240,8 +240,8 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 
   return path;
 # else
-  // WinRT has no concept of full paths
-  throwNewErrno(e, "java/io/IOException");
+  // WinRT has no concept of full paths, so any file
+  // accessed should already have full path, or it has explicit origin
   return path;
 # endif
 #else
