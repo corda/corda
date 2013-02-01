@@ -240,8 +240,29 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 
   return path;
 # else
-  // WinRT has no concept of full paths, so any file
-  // accessed should already have full path, or it has explicit origin
+  string_t chars = getChars(e, path);
+  if(chars) {
+    LARGE_INTEGER fileSize;
+    HANDLE file = CreateFile2
+      (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+    releaseChars(e, path, chars);
+
+    if (file == INVALID_HANDLE_VALUE)
+      return path;
+
+    uint8_t buffer[sizeof(FILE_NAME_INFO) + sizeof(WCHAR)*MAX_PATH];
+    memset(&buffer[0], 0, sizeof(buffer));
+    FILE_NAME_INFO* pInfo = reinterpret_cast<FILE_NAME_INFO*>(&buffer[0]);
+    if(!GetFileInformationByHandleEx(file, FileNameInfo, pInfo, sizeof(buffer)))
+    {
+      CloseHandle(file);
+      return path;
+    }
+    CloseHandle(file);
+
+    return e->NewString
+      (reinterpret_cast<const jchar*>(pInfo->FileName), pInfo->FileNameLength / sizeof(WCHAR));
+  }
   return path;
 # endif
 #else
@@ -267,33 +288,40 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_length(JNIEnv* e, jclass, jstring path)
 {
-
   #ifdef PLATFORM_WINDOWS
 
-    LARGE_INTEGER fileSize;
     string_t chars = getChars(e, path);
-    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HANDLE file = CreateFileW
-      (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    #else
-    HANDLE file = CreateFile2
-      (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
-    #endif
-    releaseChars(e, path, chars);
-    if (file != INVALID_HANDLE_VALUE)
-    {
+    if(chars) {
+      LARGE_INTEGER fileSize;
       #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      GetFileSizeEx(file, &fileSize);
+      HANDLE file = CreateFileW
+        (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+      #else
+      HANDLE file = CreateFile2
+        (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+      #endif
+      releaseChars(e, path, chars);
+      if (file == INVALID_HANDLE_VALUE)
+        return 0;
+      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+      if(!GetFileSizeEx(file, &fileSize))
+      {
+        CloseHandle(file);
+        return 0;
+      }
       #else
       FILE_STANDARD_INFO info;
-      if(GetFileInformationByHandleEx(file,  FileStandardInfo, &info, sizeof(info)))
-        fileSize = info.EndOfFile;
+      if(!GetFileInformationByHandleEx(file,  FileStandardInfo, &info, sizeof(info)))
+      {
+        CloseHandle(file);
+        return 0;
+      }
+      fileSize = info.EndOfFile;
       #endif
-    }
-    else return 0;
-    CloseHandle(file);
-    return static_cast<jlong>(fileSize.QuadPart);
 
+      CloseHandle(file);
+      return static_cast<jlong>(fileSize.QuadPart);
+    }
   #else
 
     string_t chars = getChars(e, path);
@@ -547,21 +575,52 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
   string_t chars = getChars(e, path);
   if (chars) {
     #ifdef PLATFORM_WINDOWS
-    #  pragma message("Implementation of last modified")
-	  return 0;
-    #else
-      struct stat st;
-       if (stat(chars, &st)) {
+      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+      HANDLE hFile = CreateFileW
+        (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+      #else
+      HANDLE hFile = CreateFile2
+        (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+      #endif
+      releaseChars(e, path, chars);
+      if (hFile == INVALID_HANDLE_VALUE)
         return 0;
-      } else {
-        return (static_cast<jlong>(st.st_mtim.tv_sec) * 1000) +
-        (static_cast<jlong>(st.st_mtim.tv_nsec) / (1000*1000));
+      LARGE_INTEGER fileDate, filetimeToUnixEpochAdjustment;
+      filetimeToUnixEpochAdjustment.QuadPart = 11644473600000L * 10000L;
+      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+      FILETIME fileLastWriteTime;
+      if (!GetFileTime(hFile, 0, 0, &fileLastWriteTime))
+      {
+        CloseHandle(hFile);
+        return 0;
+      }
+      fileDate.HighPart = fileLastWriteTime.dwHighDateTime;
+      fileDate.LowPart = fileLastWriteTime.dwLowDateTime;
+      #else
+      FILE_BASIC_INFO fileInfo;
+      if (!GetFileInformationByHandleEx(hFile,  FileBasicInfo, &fileInfo, sizeof(fileInfo)))
+      {
+        CloseHandle(hFile);
+        return 0;
+      }
+      fileDate = fileInfo.ChangeTime;
+      #endif
+      CloseHandle(hFile);
+      fileDate.QuadPart -= filetimeToUnixEpochAdjustment.QuadPart;
+      return fileDate.QuadPart / 10000000L;
+    #else
+      struct stat fileStat;
+      if (stat(chars, &fileStat) == -1) {
+        releaseChars(e, path, chars);
+        return 0;
       }
       
+      return (static_cast<jlong>(st.st_mtim.tv_sec) * 1000) +
+        (static_cast<jlong>(st.st_mtim.tv_nsec) / (1000*1000));
     #endif
-  } else {
-    return 0;
   }
+
+  return 0;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -766,6 +825,7 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
 
     FILE_STANDARD_INFO info;
     if(!GetFileInformationByHandleEx(hFile,  FileStandardInfo, &info, sizeof(info))) {
+      CloseHandle(hFile);
       throwNewErrno(e, "java/io/IOException");
       return;
     }
