@@ -55,6 +55,15 @@
 
 typedef wchar_t char_t;
 
+#if defined(WINAPI_FAMILY)
+#if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
+#include "avian-interop.h"
+#define SKIP_OPERATOR_NEW
+
+#endif
+#endif
+
 #else // not PLATFORM_WINDOWS
 
 #  include <dirent.h>
@@ -93,7 +102,9 @@ typedef char char_t;
 #  endif
 #endif // WINAPI_FAMILY
 
+#if !defined(SKIP_OPERATOR_NEW)
 inline void* operator new(size_t, void* p) throw() { return p; }
+#endif
 
 typedef const char_t* string_t;
 
@@ -240,37 +251,16 @@ Java_java_io_File_toAbsolutePath(JNIEnv* e UNUSED, jclass, jstring path)
 
   return path;
 # else
-// This could have worked, if GetFileInformationByHandleEx() returned volume information also
-// There is a chance to get it, or using GetFullPathName, that is claimed to be unsupported
-// or from System.IO.Path.GetFullPath(), but it's CLR and I see no way of calling it from
-// C++/CX code
-// Best wishes to everyone who will win this fight,
-// Alexey Pelykh
-/*
   string_t chars = getChars(e, path);
   if(chars) {
-    LARGE_INTEGER fileSize;
-    HANDLE file = CreateFile2
-      (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
+    std::wstring partialPath = chars;
     releaseChars(e, path, chars);
 
-    if (file == INVALID_HANDLE_VALUE)
-      return path;
-
-    uint8_t buffer[sizeof(FILE_NAME_INFO) + sizeof(WCHAR)*MAX_PATH];
-    memset(&buffer[0], 0, sizeof(buffer));
-    FILE_NAME_INFO* pInfo = reinterpret_cast<FILE_NAME_INFO*>(&buffer[0]);
-    if(!GetFileInformationByHandleEx(file, FileNameInfo, pInfo, sizeof(buffer)))
-    {
-      CloseHandle(file);
-      return path;
-    }
-    CloseHandle(file);
+    std::wstring fullPath = AvianInterop::GetFullPath(partialPath);
 
     return e->NewString
-      (reinterpret_cast<const jchar*>(pInfo->FileName), pInfo->FileNameLength / sizeof(WCHAR));
+      (reinterpret_cast<const jchar*>(fullPath.c_str()), fullPath.length());
   }
-*/
   return path;
 # endif
 #else
