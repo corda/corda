@@ -108,7 +108,7 @@ Lfloat:
 Ldouble:
 	cmp ecx,offset DOUBLE_TYPE
 	jne Lexit
-	fstp ds:dword ptr[8+ebp]
+	fstp ds:qword ptr[8+ebp]
 	mov eax,ds:dword ptr[8+ebp]
 	mov edx,ds:dword ptr[12+ebp]
 
