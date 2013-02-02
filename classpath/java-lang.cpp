@@ -70,6 +70,12 @@
 #  ifndef WINAPI_FAMILY_PARTITION
 #    define WINAPI_FAMILY_PARTITION(x) (x)
 #  endif
+#else
+#  if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
+#    include "avian-interop.h"
+
+#  endif
 #endif // WINAPI_FAMILY
 
 namespace {
@@ -401,8 +407,20 @@ Locale getLocale() {
 
   return Locale(lang, reg);
 #else
-  #pragma message("TODO: CultureInfo.CurrentCulture")
-  return Locale("en", "US");
+  std::wstring culture = AvianInterop::GetCurrentUICulture();
+  char* cultureName = strdup(std::string(culture.begin(), culture.end()).c_str());
+  char* delimiter = strchr(cultureName, '-');
+  if(!delimiter)
+  {
+    free(cultureName);
+    return Locale("en", "US");
+  }
+  const char* lang = cultureName;
+  const char* reg = delimiter + 1;
+  *delimiter = 0;
+  Locale locale(lang, reg);
+  free(cultureName);
+  return locale;
 #endif
 }
 #else
@@ -607,8 +625,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
 #  else
-      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.Storage.ApplicationData.Current.TemporaryFolder")
-      r = 0;
+      std::wstring tmpDir = AvianInterop::GetTemporaryFolder();
+      r = e->NewString((const jchar*)tmpDir.c_str(), tmpDir.length());
 #  endif
     } else if (strcmp(chars, "user.dir") == 0) {
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -616,8 +634,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       GetCurrentDirectory(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
 #  else
-      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
-      r = 0;
+      std::wstring userDir = AvianInterop::GetInstalledLocation();
+      r = e->NewString((const jchar*)userDir.c_str(), userDir.length());
 #  endif
     } else if (strcmp(chars, "user.home") == 0) {
 #  ifdef _MSC_VER
@@ -630,8 +648,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
         r = 0;
       }
 #    else
-      #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.Storage.KnownFolders.DocumentsLibrary")
-      r = 0;
+      std::wstring userHome = AvianInterop::GetDocumentsLibraryLocation();
+      r = e->NewString((const jchar*)userHome.c_str(), userHome.length());
 #    endif
 #  else
       LPWSTR home = _wgetenv(L"USERPROFILE");
