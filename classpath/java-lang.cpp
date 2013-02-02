@@ -74,25 +74,36 @@
 
 namespace {
 #ifdef PLATFORM_WINDOWS
-  char* getErrorStr(DWORD err){
-    // The poor man's error string, just print the error code 
-    char * errStr = (char*) malloc(9 * sizeof(char));
-    snprintf(errStr, 9, "%d", (int) err);
+
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  char* getErrorStr(DWORD err) {
+    LPSTR errorStr = 0;
+    if(!FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, err, LANG_SYSTEM_DEFAULT, (LPSTR)&errorStr, 0, 0))
+    {
+      char* errStr = (char*) malloc(9 * sizeof(char));
+      snprintf(errStr, 9, "%d", (int) err);
+      return errStr;
+    }
+    char* errStr = strdup(errorStr);
+    LocalFree(errorStr);
     return errStr;
-    
-    #pragma message("TODO")
-    // The better way to do this, if I could figure out how to convert LPTSTR to char*
-    //char* errStr;
-    //LPTSTR s;
-    //if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-    //                 FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, &s, 0, NULL) == 0)
-    //{
-    //  errStr.Format("Unknown error occurred (%08x)", err);
-    //} else {
-    //  errStr = s;
-    //}
-    //return errStr;
   }
+#else
+  char* getErrorStr(DWORD err) {
+    LPSTR errorStr = (LPSTR)malloc(4096); //NOTE: something constant
+    if(!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, err, LANG_SYSTEM_DEFAULT, errorStr, 0, 0))
+    {
+      free(errorStr);
+
+      char* errStr = (char*) malloc(9 * sizeof(char));
+      snprintf(errStr, 9, "%d", (int) err);
+      return errStr;
+    }
+    char* errStr = strdup(errorStr);
+    free(errorStr);
+    return errStr;
+  }
+#endif
 
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   void makePipe(JNIEnv* e, HANDLE p[2])
