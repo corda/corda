@@ -705,12 +705,12 @@ ifeq ($(platform),wp8)
 		-DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
-		-I"$(shell $(windows-path) "$(wp8)/zlib/upstream")" \
-		-Fd$(build)/$(name).pdb -I"$(shell $(windows-path) "$(wp8)/include")" -I$(src) -I$(classpath-src) \
+		-I"$(shell $(windows-path) "$(wp8)/zlib/upstream")" -I"$(shell $(windows-path) "$(wp8)/interop/avian-interop-client")" \
+		-I"$(shell $(windows-path) "$(wp8)/include")" -I$(src) -I$(classpath-src) \
 		-I"$(build)" \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
 		-DTARGET_BYTES_PER_WORD=$(pointer-size) \
-		-Gd
+		-Gd -EHsc
 
 	common-lflags = $(classpath-lflags)
 
@@ -738,7 +738,8 @@ ifeq ($(platform),wp8)
 		-MACHINE:$(machine_type) \
 		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WP80_SDK)\lib$(vc_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" \
 		ws2_32.lib \
-		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")"
+		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")" \
+		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\AvianInteropClient.lib")"
 	lflags += -NXCOMPAT -DYNAMICBASE -SUBSYSTEM:CONSOLE -TLBID:1
 	lflags += -NODEFAULTLIB:"ole32.lib" -NODEFAULTLIB:"kernel32.lib"
 	lflags += PhoneAppModelHost.lib WindowsPhoneCore.lib -WINMD -WINMDFILE:$(subst $(so-suffix),.winmd,$(@))
