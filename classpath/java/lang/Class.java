@@ -37,7 +37,8 @@ import java.security.Permissions;
 import java.security.AllPermission;
 
 public final class Class <T> implements Type, AnnotatedElement {
-  private static final int PrimitiveFlag = 1 << 5;
+  private static final int PrimitiveFlag = 1 <<  5;
+  private static final int EnumFlag      = 1 << 14;
 
   public final VMClass vmClass;
 
@@ -555,6 +556,10 @@ public final class Class <T> implements Type, AnnotatedElement {
     return (vmClass.vmFlags & PrimitiveFlag) != 0;
   }
 
+  public boolean isEnum() {
+    return getSuperclass() == Enum.class && (vmClass.flags & EnumFlag) != 0;
+  }
+
   public URL getResource(String path) {
     if (! path.startsWith("/")) {
       String name = new String
@@ -626,7 +631,7 @@ public final class Class <T> implements Type, AnnotatedElement {
     for (VMClass c = vmClass; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
         Classes.link(c, c.loader);
-        
+
         Object[] table = (Object[]) c.addendum.annotationTable;
         for (int i = 0; i < table.length; ++i) {
           Object[] a = (Object[]) table[i];
