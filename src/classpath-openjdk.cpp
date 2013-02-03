@@ -2376,6 +2376,8 @@ makeJmethod(Thread* t, object vmMethod, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
@@ -2443,6 +2445,8 @@ makeJconstructor(Thread* t, object vmMethod, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
@@ -2508,6 +2512,8 @@ makeJfield(Thread* t, object vmField, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
