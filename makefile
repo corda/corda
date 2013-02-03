@@ -1248,6 +1248,11 @@ javadoc:
 
 .PHONY: clean
 clean:
+	@echo "removing $(build)"
+	rm -rf $(build)
+
+.PHONY: clean-all
+clean-all:
 	@echo "removing build"
 	rm -rf build
 
