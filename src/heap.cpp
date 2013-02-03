@@ -1895,21 +1895,43 @@ class MyHeap: public Heap {
     local::collect(&c);
   }
 
-  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
-                              bool objectMask, unsigned* totalInBytes)
+  void* tryAllocateFixed(Allocator* allocator, unsigned sizeInWords,
+                         bool objectMask, unsigned* totalInBytes,
+                         Fixie** handle, bool immortal)
   {
-    *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes))
-            Fixie(&c, sizeInWords, objectMask, &(c.fixies), false))->body();
+    *totalInBytes = 0;
+
+    if (limitExceeded()) {
+      return 0;
+    }
+
+    unsigned total = Fixie::totalSize(sizeInWords, objectMask);
+    void* p = allocator->tryAllocate(total);
+    if (p == 0) {
+      return 0;
+    } else if (limitExceeded()) {
+      allocator->free(p, total);
+      return 0;
+    } else {
+      *totalInBytes = total;
+      return (new (p) Fixie(&c, sizeInWords, objectMask, handle, immortal))
+        ->body();
+    }
   }
 
-  virtual void* allocateImmortalFixed(Allocator* allocator,
-                                      unsigned sizeInWords, bool objectMask,
-                                      unsigned* totalInBytes)
+  virtual void* tryAllocateFixed(Allocator* allocator, unsigned sizeInWords,
+                                 bool objectMask, unsigned* totalInBytes)
   {
-    *totalInBytes = Fixie::totalSize(sizeInWords, objectMask);
-    return (new (allocator->allocate(*totalInBytes))
-            Fixie(&c, sizeInWords, objectMask, 0, true))->body();
+    return tryAllocateFixed
+      (allocator, sizeInWords, objectMask, totalInBytes, &(c.fixies), false);
+  }
+
+  virtual void* tryAllocateImmortalFixed(Allocator* allocator,
+                                         unsigned sizeInWords, bool objectMask,
+                                         unsigned* totalInBytes)
+  {
+    return tryAllocateFixed
+      (allocator, sizeInWords, objectMask, totalInBytes, 0, true);
   }
 
   bool needsMark(void* p) {

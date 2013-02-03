@@ -3531,7 +3531,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   } while (type == Machine::MovableAllocation
            and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
            > ThreadHeapSizeInWords);
-  
+
   switch (type) {
   case Machine::MovableAllocation: {
     return allocateSmall(t, sizeInBytes);
@@ -3540,29 +3540,37 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   case Machine::FixedAllocation: {
     unsigned total;
     object o = static_cast<object>
-      (t->m->heap->allocateFixed
+      (t->m->heap->tryAllocateFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
-    memset(o, 0, sizeInBytes);
+    if (o) {
+      memset(o, 0, sizeInBytes);
 
-    alias(o, 0) = FixedMark;
-
-    t->m->fixedFootprint += total;
-
-    return o;
+      alias(o, 0) = FixedMark;
+      
+      t->m->fixedFootprint += total;
+      
+      return o;
+    } else {
+      throw_(t, root(t, Machine::OutOfMemoryError));
+    }
   }
 
   case Machine::ImmortalAllocation: {
     unsigned total;
     object o = static_cast<object>
-      (t->m->heap->allocateImmortalFixed
+      (t->m->heap->tryAllocateImmortalFixed
        (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
 
-    memset(o, 0, sizeInBytes);
+    if (o) {
+      memset(o, 0, sizeInBytes);
 
-    alias(o, 0) = FixedMark;
+      alias(o, 0) = FixedMark;
 
-    return o;
+      return o;
+    } else {
+      throw_(t, root(t, Machine::OutOfMemoryError));
+    }
   }
 
   default: abort(t);

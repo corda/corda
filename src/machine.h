@@ -1784,8 +1784,8 @@ class FixedAllocator: public Allocator {
     s(s), base(base), offset(0), capacity(capacity)
   { }
 
-  virtual void* tryAllocate(unsigned) {
-    abort(s);
+  virtual void* tryAllocate(unsigned size) {
+    return allocate(size);
   }
 
   void* allocate(unsigned size, unsigned padAlignment) {
