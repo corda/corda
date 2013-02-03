@@ -3519,7 +3519,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       break;
     }
 
-    if (t->heap == 0) {
+    if (t->heap == 0 or t->m->heap->limitExceeded()) {
       //     fprintf(stderr, "gc");
       //     vmPrintTrace(t);
       collect(t, Heap::MinorCollection);
