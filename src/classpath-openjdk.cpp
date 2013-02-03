@@ -604,15 +604,21 @@ class MyClasspath : public Classpath {
   virtual void
   runThread(Thread* t)
   {
+    // force monitor creation so we don't get an OutOfMemory error
+    // later when we try to acquire it:
+    objectMonitor(t, t->javaThread, true);
+
+    THREAD_RESOURCE0(t, {
+        vm::acquire(t, t->javaThread);
+        t->flags &= ~Thread::ActiveFlag;
+        vm::notifyAll(t, t->javaThread);
+        vm::release(t, t->javaThread);
+    });
+
     object method = resolveMethod
       (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
 
     t->m->processor->invoke(t, method, t->javaThread);
-
-    acquire(t, t->javaThread);
-    t->flags &= ~Thread::ActiveFlag;
-    notifyAll(t, t->javaThread);
-    release(t, t->javaThread);
   }
 
   virtual void
