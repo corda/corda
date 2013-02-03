@@ -2526,6 +2526,9 @@ object
 parseUtf8(Thread* t, const char* data, unsigned length);
 
 object
+parseUtf8(Thread* t, object array);
+
+object
 parseClass(Thread* t, object loader, const uint8_t* data, unsigned length,
            Machine::Type throwType = Machine::NoClassDefFoundErrorType);
 

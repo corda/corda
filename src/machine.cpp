@@ -727,7 +727,7 @@ finalizeObject(Thread* t, object o, const char* name)
 }
 
 unsigned
-readByte(Stream& s, unsigned* value)
+readByte(AbstractStream& s, unsigned* value)
 {
   if (*value == NoByte) {
     return s.read1();
@@ -739,8 +739,9 @@ readByte(Stream& s, unsigned* value)
 }
 
 object
-parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
-                  unsigned sourceIndex, unsigned byteA, unsigned byteB)
+parseUtf8NonAscii(Thread* t, AbstractStream& s, object bytesSoFar,
+                  unsigned byteCount, unsigned sourceIndex, unsigned byteA,
+                  unsigned byteB)
 {
   PROTECT(t, bytesSoFar);
   
@@ -792,7 +793,7 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
 }
 
 object
-parseUtf8(Thread* t, Stream& s, unsigned length)
+parseUtf8(Thread* t, AbstractStream& s, unsigned length)
 {
   object value = makeByteArray(t, length + 1);
   unsigned vi = 0;
@@ -827,6 +828,14 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
     value = v;
   }
   
+  return value;
+}
+
+object
+makeByteArray(Thread* t, Stream& s, unsigned length)
+{
+  object value = makeByteArray(t, length + 1);
+  s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
   return value;
 }
 
@@ -885,10 +894,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
 
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
-      object value = parseUtf8(t, s, s.read2());
-      if (objectClass(t, value) == type(t, Machine::ByteArrayType)) {
-        value = internByteArray(t, value);
-      }
+      object value = internByteArray(t, makeByteArray(t, s, s.read2()));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
@@ -916,7 +922,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
         
-      object value = singletonObject(t, pool, si);
+      object value = parseUtf8(t, singletonObject(t, pool, si));
       value = t->m->classpath->makeString
         (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
@@ -4884,6 +4890,62 @@ parseUtf8(Thread* t, const char* data, unsigned length)
   Stream s(&client, reinterpret_cast<const uint8_t*>(data), length);
 
   return ::parseUtf8(t, s, length);
+}
+
+object
+parseUtf8(Thread* t, object array)
+{
+  for (unsigned i = 0; i < byteArrayLength(t, array) - 1; ++i) {
+    if (byteArrayBody(t, array, i) & 0x80) {
+      goto slow_path;
+    }
+  }
+
+  return array;
+
+ slow_path:
+  class Client: public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void handleError() {
+      //      vm::abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  class MyStream: public AbstractStream {
+   public:
+    class MyProtector: public Thread::Protector {
+     public:
+      MyProtector(Thread* t, MyStream* s):
+        Protector(t), s(s)
+      { }
+
+      virtual void visit(Heap::Visitor* v) {
+        v->visit(&(s->array));
+      }
+
+      MyStream* s;
+    };
+
+    MyStream(Thread* t, Client* client, object array):
+      AbstractStream(client, byteArrayLength(t, array) - 1),
+      array(array),
+      protector(t, this)
+    { }
+
+    virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
+      memcpy(dst, &byteArrayBody(protector.t, array, offset), size);
+    }
+
+    object array;
+    MyProtector protector;
+  } s(t, &client, array);
+
+  return ::parseUtf8(t, s, byteArrayLength(t, array) - 1);
 }
 
 object

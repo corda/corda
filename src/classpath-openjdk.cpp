@@ -504,6 +504,8 @@ class MyClasspath : public Classpath {
       
       object charArray = makeCharArray(t, length);
       for (int i = 0; i < length; ++i) {
+        expect(t, (byteArrayBody(t, array, offset + i) & 0x80) == 0);
+
         charArrayBody(t, charArray, i) = byteArrayBody(t, array, offset + i);
       }
 
@@ -5039,7 +5041,7 @@ jvmConstantPoolGetUTF8At(Thread* t, uintptr_t* arguments)
   jobject pool = reinterpret_cast<jobject>(arguments[0]);
   jint index = arguments[1];
 
-  object array = singletonObject(t, *pool, index - 1);
+  object array = parseUtf8(t, singletonObject(t, *pool, index - 1));
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference

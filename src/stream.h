@@ -15,15 +15,15 @@
 
 namespace vm {
 
-class Stream {
+class AbstractStream {
  public:
   class Client {
    public:
     virtual void handleError() = 0;
   };
 
-  Stream(Client* client, const uint8_t* data, unsigned size):
-    client(client), data(data), size(size), position_(0)
+  AbstractStream(Client* client, unsigned size):
+    client(client), size(size), position_(0)
   { }
 
   unsigned position() {
@@ -42,13 +42,13 @@ class Stream {
     }
   }
 
-  void read(uint8_t* data, unsigned size) {
+  void read(uint8_t* dst, unsigned size) {
     if (size > this->size - position_) {
-      memset(data, 0, size);
+      memset(dst, 0, size);
 
       client->handleError();
     } else {
-      memcpy(data, this->data + position_, size);
+      copy(dst, position_, size);
       position_ += size;
     }
   }
@@ -85,11 +85,27 @@ class Stream {
     return read8();
   }
 
+ protected:
+  virtual void copy(uint8_t* dst, unsigned offset, unsigned size) = 0;
+
  private:
   Client* client;
-  const uint8_t* data;
   unsigned size;
   unsigned position_;
+};
+
+class Stream: public AbstractStream {
+ public:
+  Stream(Client* client, const uint8_t* data, unsigned size):
+    AbstractStream(client, size), data(data)
+  { }
+
+ private:
+  virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
+    memcpy(dst, data + offset, size);
+  }
+
+  const uint8_t* data;
 };
 
 } // namespace vm
