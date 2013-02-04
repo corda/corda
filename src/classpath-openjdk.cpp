@@ -756,6 +756,7 @@ class MyClasspath : public Classpath {
         RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
         object key = vm::makeByteArray(t, "%s", packageName);
+        PROTECT(t, key);
 
         hashMapRemove
           (t, root(t, Machine::PackageMap), key, byteArrayHash,
