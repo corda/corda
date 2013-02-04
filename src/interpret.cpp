@@ -2321,7 +2321,7 @@ interpret3(Thread* t, const int base)
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
 
-    int32_t* counts = new int32_t[dimensions];
+    RUNTIME_ARRAY(int32_t, counts, dimensions);
     for (int i = dimensions - 1; i >= 0; --i) {
       counts[i] = popInt(t);
       if (UNLIKELY(counts[i] < 0)) {
@@ -2338,9 +2338,6 @@ interpret3(Thread* t, const int base)
     populateMultiArray(t, array, counts, 0, dimensions);
 
     pushObject(t, array);
-
-    delete[] counts;
-    counts = 0;
   } goto loop;
 
   case new_: {

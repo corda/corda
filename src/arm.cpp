@@ -2555,7 +2555,7 @@ class MyAssembler: public Assembler {
       OperandType type;
       Operand* operand;
     };
-    Argument* arguments = new Argument[argumentCount];
+    RUNTIME_ARRAY(Argument, arguments, argumentCount);
 
     va_list a; va_start(a, argumentCount);
     unsigned footprint = 0;
@@ -2590,9 +2590,6 @@ class MyAssembler: public Assembler {
         offset += ceiling(arguments[i].size, TargetBytesPerWord);
       }
     }
-
-    delete[] arguments;
-    arguments = 0;
   }
 
   virtual void allocateFrame(unsigned footprint) {

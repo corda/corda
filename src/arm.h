@@ -182,7 +182,7 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   unsigned vfpIndex = 0;
   unsigned vfpBackfillIndex UNUSED = 0;
 
-  uintptr_t* stack = new uintptr_t[(argumentCount * 8) / BytesPerWord]; // is > argumentSize to account for padding
+  RUNTIME_ARRAY(uintptr_t, stack, (argumentCount * 8) / BytesPerWord); // is > argumentSize to account for padding
   unsigned stackIndex = 0;
 
   unsigned ai = 0;
@@ -272,12 +272,10 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
   }
 
   unsigned stackSize = stackIndex*BytesPerWord + ((stackIndex & 1) << 2);
-  auto retVal = vmNativeCall
+  return vmNativeCall
     (function, stackSize, stack, stackIndex * BytesPerWord,
      (gprIndex ? gprTable : 0),
      (vfpIndex ? vfpTable : 0), returnType);
-  delete[] stack;
-  return retVal;
 }
 
 } // namespace vm
