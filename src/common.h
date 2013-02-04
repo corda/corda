@@ -243,6 +243,10 @@ class RuntimeArray {
     free(body);
   }
 
+  T& operator[] (const unsigned index) {
+    return body[index];
+  }
+
   T* body;
 };
 
