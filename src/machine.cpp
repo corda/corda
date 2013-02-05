@@ -3458,6 +3458,8 @@ object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           unsigned sizeInBytes, bool objectMask)
 {
+  expect(t, t->criticalLevel == 0);
+
   if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
     expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
            <= ThreadBackupHeapSizeInWords);
