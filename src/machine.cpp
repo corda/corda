@@ -4760,6 +4760,27 @@ visitRoots(Machine* m, Heap::Visitor* v)
 }
 
 void
+logTrace(FILE* f, const char* fmt, ...)
+{
+    va_list a;
+    va_start(a, fmt);
+#ifdef PLATFORM_WINDOWS
+    const unsigned length = _vscprintf(fmt, a);
+#else
+    const unsigned length = vsnprintf(0, 0, fmt, a);
+#endif
+    RUNTIME_ARRAY(char, buffer, length + 1);
+    vsnprintf(&buffer[0], length, fmt, a);
+    buffer[length] = 0;
+    va_end(a);
+
+    ::fprintf(f, "%s", &buffer[0]);
+#ifdef PLATFORM_WINDOWS
+    ::OutputDebugStringA(&buffer[0]);
+#endif
+}
+
+void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
@@ -4768,34 +4789,19 @@ printTrace(Thread* t, object exception)
 
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
-      fprintf(errorLog(t), "caused by: ");
-#if defined(PLATFORM_WINDOWS)
-      OutputDebugStringA("caused by: ");
-#endif
+      logTrace(errorLog(t), "caused by: ");
     }
 
-    fprintf(errorLog(t), "%s", &byteArrayBody
+    logTrace(errorLog(t), "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
-#if defined(PLATFORM_WINDOWS)
-    OutputDebugStringA((const CHAR*)&byteArrayBody
-            (t, className(t, objectClass(t, e)), 0));
-#endif
 
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
       THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
-      fprintf(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
-#if defined(PLATFORM_WINDOWS)
-      OutputDebugStringA(": ");
-      OutputDebugStringA(RUNTIME_ARRAY_BODY(message));
-      OutputDebugStringA("\n");
-#endif
+      logTrace(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
-      fprintf(errorLog(t), "\n");
-#if defined(PLATFORM_WINDOWS)
-      OutputDebugStringA("\n");
-#endif
+      logTrace(errorLog(t), "\n");
     }
 
     object trace = throwableTrace(t, e);
@@ -4809,36 +4815,17 @@ printTrace(Thread* t, object exception)
         int line = t->m->processor->lineNumber
           (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-        fprintf(errorLog(t), "  at %s.%s ", class_, method);
-#if defined(PLATFORM_WINDOWS)
-        OutputDebugStringA("  at ");
-        OutputDebugStringA((const CHAR*)class_);
-        OutputDebugStringA(".");
-        OutputDebugStringA((const CHAR*)method);
-        OutputDebugStringA(" ");
-#endif
+        logTrace(errorLog(t), "  at %s.%s ", class_, method);
 
         switch (line) {
         case NativeLine:
-          fprintf(errorLog(t), "(native)\n");
-#if defined(PLATFORM_WINDOWS)
-          OutputDebugStringA("(native)\n");
-#endif
+          logTrace(errorLog(t), "(native)\n");
           break;
         case UnknownLine:
-          fprintf(errorLog(t), "(unknown line)\n");
-#if defined(PLATFORM_WINDOWS)
-          OutputDebugStringA("(unknown line)\n");
-#endif
+          logTrace(errorLog(t), "(unknown line)\n");
           break;
         default:
-          fprintf(errorLog(t), "(line %d)\n", line);
-#if defined(PLATFORM_WINDOWS)
-          OutputDebugStringA("(line ");
-		  char buf[35];
-		  OutputDebugStringA(itoa(line, buf, 10));
-          OutputDebugStringA(")\n");
-#endif
+          logTrace(errorLog(t), "(line %d)\n", line);
         }
       }
     }
@@ -4848,7 +4835,7 @@ printTrace(Thread* t, object exception)
     }
   }
 
-  fflush(errorLog(t));
+  ::fflush(errorLog(t));
 }
 
 object
