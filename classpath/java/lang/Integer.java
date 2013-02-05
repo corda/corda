@@ -1,4 +1,4 @@
-/* Copyright (c) 2008, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -92,6 +92,27 @@ public final class Integer extends Number implements Comparable<Integer> {
 
   public double doubleValue() {
     return (double) value;
+  }
+
+  public static int signum(int v) {
+    if (v == 0)     return  0;
+    else if (v > 0) return  1;
+    else            return -1;
+  }
+
+  // See http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+  public static int bitCount(int v) {
+    v = v - ((v >> 1) & 0x55555555);
+    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
+  }
+
+  public static int reverseBytes(int v) {
+    int byte3 =  v >>> 24;
+    int byte2 = (v >>> 8) & 0xFF00;
+    int byte1 = (v <<  8) & 0xFF00;
+    int byte0 =  v << 24;
+    return (byte0 | byte1 | byte2 | byte3);
   }
 
   public static int parseInt(String s) {

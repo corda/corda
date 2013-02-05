@@ -1991,7 +1991,8 @@ main(int ac, const char** av)
   // in a branch instruction for the target architecture (~32MB on
   // PowerPC and ARM).  When that limitation is removed, we'll be able
   // to specify a capacity as large as we like here:
-#if (defined ARCH_x86_64) || (defined ARCH_x86_32)
+#if (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64) \
+  || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
   const unsigned CodeCapacity = 128 * 1024 * 1024;
 #else
   const unsigned CodeCapacity = 30 * 1024 * 1024;

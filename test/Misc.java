@@ -1,4 +1,12 @@
 public class Misc {
+  private static class μClass {
+    public int μField;
+
+    public void μMethod(int i) {
+      μField = i;
+    }
+  }
+
   private interface Bar {
     public int baz();
   }
@@ -237,5 +245,10 @@ public class Misc {
     System.out.println(new char[] { 'h', 'i' });
 
     expect(! (((Object) new int[0]) instanceof Object[]));
+
+    { μClass μInstance = new μClass();
+      μInstance.μMethod(8933);
+      expect(μInstance.μField == 8933);
+    }
   }
 }

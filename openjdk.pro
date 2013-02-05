@@ -14,6 +14,10 @@
    public static void setProperties(java.util.Properties);
  }
 
+-keep class sun.misc.Launcher {
+   public static sun.misc.Launcher getLauncher();
+ }
+
 -keep class java.lang.ClassLoader {
    private static java.lang.ClassLoader scl;
    private static boolean sclSet;
@@ -246,3 +250,39 @@
  }
 
 -keep class sun.net.www.protocol.jar.Handler
+
+# These concurrent classes refer to certain members reflectively in their static initializers
+-keepclassmembers class java.util.concurrent.ConcurrentHashMap$HashEntry {
+	*** next;
+}
+
+-keepclassmembers class java.util.concurrent.CopyOnWriteArrayList {
+	*** lock;
+}
+
+-keepclassmembers class java.util.concurrent.CountDownLatch {
+	*** allocationSpinLock;
+}
+
+-keepclassmembers class java.util.concurrent.PriorityBlockingQueue {
+	*** allocationSpinLock;
+}
+
+-keepclassmembers class java.util.concurrent.SynchronousQueue$TransferStack {
+	*** head;
+}
+
+-keepclassmembers class java.util.concurrent.ConcurrentLinkedQueue {
+	*** head;
+	*** tail;
+}
+
+-keepclassmembers class java.util.concurrent.ConcurrentLinkedQueue$Node {
+	*** item;
+	*** next;
+}
+
+-keepclassmembers class java.util.concurrent.SynchronousQueue$TransferStack$SNode {
+	*** match;
+	*** next;
+}

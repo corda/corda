@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -124,6 +124,12 @@ public final class Long extends Number implements Comparable<Long> {
 
   public double doubleValue() {
     return (double) value;
+  }
+
+  public static int signum(long v) {
+    if (v == 0)     return  0;
+    else if (v > 0) return  1;
+    else            return -1;
   }
 
   private static long pow(long a, long b) {

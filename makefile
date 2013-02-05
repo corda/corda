@@ -1158,7 +1158,8 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
 
-$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+$(bootimage-object) $(codeimage-object): $(bootimage-generator) \
+		$(build)/classpath.jar
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols _binary_bootimage_bin_start:_binary_bootimage_bin_end \
 		-codeimage-symbols _binary_codeimage_bin_start:_binary_codeimage_bin_end

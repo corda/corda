@@ -672,6 +672,8 @@ class Event {
 
   virtual bool allExits() { return false; }
 
+  virtual Local* locals() { return localsBefore; }
+
   Event* next;
   Stack* stackBefore;
   Local* localsBefore;
@@ -2001,6 +2003,13 @@ class MemorySite: public Site {
     } else {
       return MemoryCopyCost;
     }
+  }
+
+  bool conflicts(const SiteMask& mask) {
+    return (mask.typeMask & (1 << RegisterOperand)) != 0
+      and (((1 << base) & mask.registerMask) == 0
+           or (index != NoRegister
+               and ((1 << index) & mask.registerMask) == 0));
   }
 
   virtual bool match(Context* c, const SiteMask& mask) {
@@ -4574,8 +4583,20 @@ class OperationEvent: public Event {
 void
 appendOperation(Context* c, Operation op)
 {
-  append
-    (c, new(c->zone) OperationEvent(c, op));
+  append(c, new(c->zone) OperationEvent(c, op));
+}
+
+void
+moveIfConflict(Context* c, Value* v, MemorySite* s)
+{
+  if (v->reads) {
+    SiteMask mask(1 << RegisterOperand, ~0, AnyFrameIndex);
+    v->reads->intersect(&mask);
+    if (s->conflicts(mask)) {
+      maybeMove(c, v->reads, true, false);
+      removeSite(c, v, s);
+    }
+  }
 }
 
 class MemoryEvent: public Event {
@@ -4626,22 +4647,24 @@ class MemoryEvent: public Event {
       popRead(c, this, index);
     }
 
-    Site* site = memorySite
+    MemorySite* site = memorySite
       (c, baseRegister, displacement, indexRegister, scale);
 
-    Site* low;
+    MemorySite* low;
     if (result->nextWord != result) {
-      Site* high = site->copyHigh(c);
-      low = site->copyLow(c);
+      MemorySite* high = static_cast<MemorySite*>(site->copyHigh(c));
+      low = static_cast<MemorySite*>(site->copyLow(c));
 
       result->nextWord->target = high;
       addSite(c, result->nextWord, high);
+      moveIfConflict(c, result->nextWord, high);
     } else {
       low = site;
     }
 
     result->target = low;
     addSite(c, result, low);
+    moveIfConflict(c, result, low);
   }
 
   Value* base;
@@ -5162,8 +5185,9 @@ appendSaveLocals(Context* c)
 
 class DummyEvent: public Event {
  public:
-  DummyEvent(Context* c):
-    Event(c)
+  DummyEvent(Context* c, Local* locals):
+  Event(c),
+  locals_(locals)
   { }
 
   virtual const char* name() {
@@ -5171,6 +5195,12 @@ class DummyEvent: public Event {
   }
 
   virtual void compile(Context*) { }
+
+  virtual Local* locals() {
+    return locals_;
+  }
+
+  Local* locals_;
 };
 
 void
@@ -5183,7 +5213,7 @@ appendDummy(Context* c)
   c->stack = i->stack;
   c->locals = i->locals;
 
-  append(c, new(c->zone) DummyEvent(c));
+  append(c, new(c->zone) DummyEvent(c, locals));
 
   c->stack = stack;
   c->locals = locals;  
@@ -6428,14 +6458,14 @@ class MyCompiler: public Compiler {
 
     Event* e = c.logicalCode[logicalIp]->firstEvent;
     for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
-      Local* local = e->localsBefore + i;
+      Local* local = e->locals() + i;
       if (local->value) {
         initLocal
           (1, i, local->value->type == ValueGeneral ? IntegerType : FloatType);
       }
     }
 
-    linkLocals(&c, e->localsBefore, newLocals);
+    linkLocals(&c, e->locals(), newLocals);
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {

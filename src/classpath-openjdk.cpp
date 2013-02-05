@@ -46,7 +46,8 @@
 
 #  define O_RDONLY _O_RDONLY
 
-#  ifdef AVIAN_OPENJDK_SRC
+#  if (defined AVIAN_OPENJDK_SRC) \
+  || ((defined __x86_64__) && (defined __MINGW32__))
 #    define EXPORT(x) x
 #  else
 #    define EXPORT(x) _##x
@@ -450,9 +451,14 @@ class MyClasspath : public Classpath {
     // todo: handle other architectures
 #  define LIB_DIR "/lib/i386"
 #endif
+    
+#ifdef PLATFORM_WINDOWS
+    sb.append(LIB_DIR);
+#else
     sb.append(LIB_DIR ":");
     sb.append(javaHome);
     sb.append(LIB_DIR "/xawt");
+#endif
     sb.append('\0');
 
     unsigned tzMappingsOffset = sb.offset;
@@ -498,6 +504,8 @@ class MyClasspath : public Classpath {
       
       object charArray = makeCharArray(t, length);
       for (int i = 0; i < length; ++i) {
+        expect(t, (byteArrayBody(t, array, offset + i) & 0x80) == 0);
+
         charArrayBody(t, charArray, i) = byteArrayBody(t, array, offset + i);
       }
 
@@ -596,15 +604,21 @@ class MyClasspath : public Classpath {
   virtual void
   runThread(Thread* t)
   {
+    // force monitor creation so we don't get an OutOfMemory error
+    // later when we try to acquire it:
+    objectMonitor(t, t->javaThread, true);
+
+    THREAD_RESOURCE0(t, {
+        vm::acquire(t, t->javaThread);
+        t->flags &= ~Thread::ActiveFlag;
+        vm::notifyAll(t, t->javaThread);
+        vm::release(t, t->javaThread);
+    });
+
     object method = resolveMethod
       (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
 
     t->m->processor->invoke(t, method, t->javaThread);
-
-    acquire(t, t->javaThread);
-    t->flags &= ~Thread::ActiveFlag;
-    notifyAll(t, t->javaThread);
-    release(t, t->javaThread);
   }
 
   virtual void
@@ -638,7 +652,9 @@ class MyClasspath : public Classpath {
 #else // not AVIAN_OPENJDK_SRC
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
+#  ifndef PLATFORM_WINDOWS
     loadLibrary(t, libraryPath, "mawt", true, true);
+#  endif
 #endif // not AVIAN_OPENJDK_SRC
 
     { object assertionLock = resolveField
@@ -740,13 +756,27 @@ class MyClasspath : public Classpath {
         RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
         object key = vm::makeByteArray(t, "%s", packageName);
+        PROTECT(t, key);
 
         hashMapRemove
           (t, root(t, Machine::PackageMap), key, byteArrayHash,
            byteArrayEqual);
 
         object source = classSource(t, class_);
-        if (source == 0) {
+        if (source) {
+          // note that we strip the "file:" prefix, since
+          // Package.defineSystemPackage expects an unadorned
+          // filename:
+          const unsigned PrefixLength = 5;
+          unsigned sourceNameLength = byteArrayLength(t, source)
+            - PrefixLength;
+          THREAD_RUNTIME_ARRAY(t, char, sourceName, sourceNameLength);
+          memcpy(RUNTIME_ARRAY_BODY(sourceName),
+                 &byteArrayBody(t, source, PrefixLength),
+                 sourceNameLength);
+
+          source = vm::makeByteArray(t, "%s", sourceName);
+        } else {
           source = vm::makeByteArray(t, "avian-dummy-package-source");
         }
 
@@ -2347,6 +2377,8 @@ makeJmethod(Thread* t, object vmMethod, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
@@ -2414,6 +2446,8 @@ makeJconstructor(Thread* t, object vmMethod, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
@@ -2479,6 +2513,8 @@ makeJfield(Thread* t, object vmField, int index)
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
+      PROTECT(t, addendum);
+
       signature = t->m->classpath->makeString
         (t, signature, 0, byteArrayLength(t, signature) - 1);
     }
@@ -4782,6 +4818,59 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
     instance = 0;
   }
 
+  if ((args == 0 ? 0 : objectArrayLength(t, *args))
+      != methodParameterCount(t, vmMethod))
+  {
+    throwNew(t, Machine::IllegalArgumentExceptionType);
+  }
+
+  if (methodParameterCount(t, vmMethod)) {
+    PROTECT(t, vmMethod);
+
+    unsigned specLength = byteArrayLength(t, methodSpec(t, vmMethod));
+    THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
+    memcpy(spec, &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
+    unsigned i = 0;
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      object type;
+      bool objectType = false;
+      const char* p = it.next();
+      switch (*p) {
+      case 'Z': type = vm::type(t, Machine::BooleanType); break;
+      case 'B': type = vm::type(t, Machine::ByteType); break;
+      case 'S': type = vm::type(t, Machine::ShortType); break;
+      case 'C': type = vm::type(t, Machine::CharType); break;
+      case 'I': type = vm::type(t, Machine::IntType); break;
+      case 'F': type = vm::type(t, Machine::FloatType); break;
+      case 'J': type = vm::type(t, Machine::LongType); break;
+      case 'D': type = vm::type(t, Machine::DoubleType); break;
+
+      case 'L': ++ p;
+      case '[': {
+        objectType = true;
+        unsigned nameLength = it.s - p;
+        THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
+        memcpy(name, p, nameLength - 1);
+        name[nameLength - 1] = 0;
+        type = resolveClass
+          (t, classLoader(t, methodClass(t, vmMethod)), name);
+      } break;
+
+      default:
+        abort();
+      }
+
+      object arg = objectArrayBody(t, *args, i++);
+      if ((arg == 0 and (not objectType))
+          or (arg and (not instanceOf(t, type, arg))))
+      {
+        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+
+        throwNew(t, Machine::IllegalArgumentExceptionType);
+      }
+    }
+  }
+
   unsigned returnCode = methodReturnCode(t, vmMethod);
 
   THREAD_RESOURCE0(t, {
@@ -4965,7 +5054,7 @@ jvmConstantPoolGetUTF8At(Thread* t, uintptr_t* arguments)
   jobject pool = reinterpret_cast<jobject>(arguments[0]);
   jint index = arguments[1];
 
-  object array = singletonObject(t, *pool, index - 1);
+  object array = parseUtf8(t, singletonObject(t, *pool, index - 1));
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference

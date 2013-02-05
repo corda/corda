@@ -1,0 +1,2 @@
+language: cpp
+script: "make test"
