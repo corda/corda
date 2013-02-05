@@ -196,6 +196,8 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/net/NetworkInterface_winXP.c \
 		$(openjdk-src)/windows/native/java/net/SocketInputStream.c \
 		$(openjdk-src)/windows/native/java/net/SocketOutputStream.c \
+		$(openjdk-src)/windows/native/java/net/TwoStacksPlainDatagramSocketImpl.c \
+		$(openjdk-src)/windows/native/java/net/TwoStacksPlainSocketImpl.c \
 		$(openjdk-src)/windows/native/java/util/WindowsPreferences.c \
 		$(openjdk-src)/windows/native/java/util/logging.c \
 		$(openjdk-src)/windows/native/java/util/TimeZone_md.c \
@@ -216,6 +218,9 @@ ifeq ($(platform),windows)
 
 	openjdk-headers-classes += \
 		java.net.DualStackPlainSocketImpl \
+		java.net.SocketImpl \
+		java.net.TwoStacksPlainDatagramSocketImpl \
+		java.net.TwoStacksPlainSocketImpl \
 		java.lang.ProcessImpl \
 		sun.io.Win32ErrorMode \
 		sun.nio.ch.WindowsSelectorImpl \
