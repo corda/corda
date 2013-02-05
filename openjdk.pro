@@ -141,6 +141,24 @@
    <fields>;
  }
 
+-keepclassmembers class java.net.TwoStacksPlainSocketImpl {
+  *** fd1;
+  *** lastfd;
+}
+
+-keepclassmembers class java.net.AbstractPlainSocketImpl {
+  *** timeout;
+  *** trafficClass;
+}
+
+-keepclassmembers class java.net.SocketImpl {
+  *** serverSocket;
+  *** fd;
+  *** address;
+  *** port;
+  *** localport;
+}
+
 -keepclassmembers class java.io.FileInputStream {
    private java.io.FileDescriptor fd;   
  }
