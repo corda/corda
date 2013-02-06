@@ -179,7 +179,7 @@ dlltool = dlltool
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
-javac = "$(JAVA_HOME)/bin/javac"
+javac = "$(JAVA_HOME)/bin/javac" -encoding UTF-8
 javah = "$(JAVA_HOME)/bin/javah"
 jar = "$(JAVA_HOME)/bin/jar"
 strip = strip
@@ -433,7 +433,7 @@ ifeq ($(platform),android)
 	lflags = "-L$(sysroot)/usr/lib" $(common-lflags) -llog
 	target-format = elf
 	use-lto = false
-	
+
 	ifeq ($(arch),arm)
 		cflags += -marm -march=$(android-arm-arch) -ftree-vectorize -ffast-math -mfloat-abi=softfp
 	endif
