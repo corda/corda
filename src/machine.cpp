@@ -4769,10 +4769,13 @@ logTrace(FILE* f, const char* fmt, ...)
 #else
     const unsigned length = vsnprintf(0, 0, fmt, a);
 #endif
-    RUNTIME_ARRAY(char, buffer, length + 1);
-    vsnprintf(&buffer[0], length, fmt, a);
-    buffer[length] = 0;
     va_end(a);
+
+    RUNTIME_ARRAY(char, buffer, length + 1);
+    va_start(a, fmt);
+    vsnprintf(&buffer[0], length + 1, fmt, a);
+    va_end(a);
+    buffer[length] = 0;
 
     ::fprintf(f, "%s", &buffer[0]);
 #ifdef PLATFORM_WINDOWS
