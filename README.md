@@ -28,6 +28,11 @@ Quick Start
     $ make
     $ build/windows-i386/avian -cp build/windows-i386/test Hello
 
+#### on FreeBSD:
+    $ export JAVA_HOME=/usr/local/openjdk7 # or wherever you have the JDK installed
+    $ gmake
+    $ build/freebsd-x86_64/avian -cp build/freebsd-x86_64/test Hello
+
 Adjust JAVA_HOME according to your system, but be sure to use forward
 slashes in the path.
 
@@ -56,6 +61,7 @@ Avian can currently target the following platforms:
   * Windows (i386 and x86_64)
   * Mac OS X (i386, x86_64 and 32-bit PowerPC)
   * Apple iOS (i386 and ARM)
+  * FreeBSD (i386, x86_64)
 
 
 Building
@@ -77,7 +83,7 @@ The build is directed by a single makefile and may be influenced via
 certain flags described below, all of which are optional.
 
     $ make \
-        platform={linux,windows,darwin} \
+        platform={linux,windows,darwin,freebsd} \
         arch={i386,x86_64,powerpc,arm} \
         process={compile,interpret} \
         mode={debug,debug-fast,fast,small} \
