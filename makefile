@@ -1246,13 +1246,13 @@ javadoc:
 		-header "Avian v$(version)" \
 		-bottom "<a href=\"http://oss.readytalk.com/avian/\">http://oss.readytalk.com/avian</a>"
 
-.PHONY: clean
-clean:
+.PHONY: clean-current
+clean-current:
 	@echo "removing $(build)"
 	rm -rf $(build)
 
-.PHONY: clean-all
-clean-all:
+.PHONY: clean
+clean:
 	@echo "removing build"
 	rm -rf build
 
