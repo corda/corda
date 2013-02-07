@@ -802,7 +802,11 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     jlong peer = 0;
     jlong length = 0;
     #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    #if defined(PLATFORM_WINDOWS)
+    int fd = ::_wopen(chars, O_RDONLY);
+    #else
     int fd = ::open((const char*)chars, O_RDONLY);
+    #endif
 	releaseChars(e, path, chars);
 	if (fd == -1) {
       throwNewErrno(e, "java/io/IOException");
