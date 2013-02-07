@@ -803,9 +803,9 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     jlong length = 0;
     #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     #if defined(PLATFORM_WINDOWS)
-    int fd = ::_wopen(chars, O_RDONLY);
+    int fd = ::_wopen(chars, O_RDONLY | OPEN_MASK);
     #else
-    int fd = ::open((const char*)chars, O_RDONLY);
+    int fd = ::open((const char*)chars, O_RDONLY | OPEN_MASK);
     #endif
 	releaseChars(e, path, chars);
 	if (fd == -1) {
