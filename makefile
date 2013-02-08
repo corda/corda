@@ -1245,7 +1245,7 @@ ifdef msvc
 		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) -Wl,-rpath=\$$ORIGIN -z origin -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
