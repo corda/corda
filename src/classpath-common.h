@@ -221,7 +221,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     THREAD_RUNTIME_ARRAY(t, char, fullName, fullNameLength + 1);
 
     snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
-             "%*s/%s", token.length, token.s, name);
+             "%.*s/%s", token.length, token.s, name);
 
     lib = loadLibrary(t, RUNTIME_ARRAY_BODY(fullName));
     if (lib) break;
