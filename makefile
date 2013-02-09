@@ -641,14 +641,9 @@ ifeq ($(platform),wp8)
 	ms_cl_compiler = wp8
 	use-lto = false
 	supports_avian_executable = false
-	process = compile
 	aot-only = true
-	ifneq ($(process),compile)
-		options := -$(process)
-	endif
-	bootimage = true
-	ifeq ($(bootimage),true)
-		options := $(options)-bootimage
+	ifneq ($(bootimage),true)
+		$(error Windows Phone 8 target requires bootimage=true)
 	endif
 	system = windows
 	build-system = windows
