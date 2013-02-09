@@ -643,7 +643,7 @@ ifeq ($(platform),wp8)
 	supports_avian_executable = false
 	aot-only = true
 	ifneq ($(bootimage),true)
-		$(error Windows Phone 8 target requires bootimage=true)
+		x := $(error Windows Phone 8 target requires bootimage=true)
 	endif
 	system = windows
 	build-system = windows
