@@ -221,15 +221,9 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
   } MAKE_NAME(resource_)(name);
 
 #ifdef _MSC_VER
-#  pragma warning( push )
 #  pragma warning( disable : 4291 )
 #endif
-
 inline void* operator new(size_t, void* p) throw() { return p; }
-
-#ifdef _MSC_VER
-#  pragma warning( pop )
-#endif
 
 namespace vm {
 
