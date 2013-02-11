@@ -14,7 +14,7 @@
 namespace avian {
 namespace codegen {
 
-vm::Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures UNUSED) {
+Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures UNUSED) {
 #ifndef AVIAN_TARGET_ARCH
   #error "Must specify native target!"
 #endif

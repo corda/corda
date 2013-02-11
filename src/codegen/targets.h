@@ -16,11 +16,11 @@
 namespace avian {
 namespace codegen {
 
-vm::Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures);
+Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures);
 
-vm::Assembler::Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
-vm::Assembler::Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
-vm::Assembler::Architecture* makeArchitecturePowerpc(vm::System* system, bool useNativeFeatures);
+Assembler::Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
+Assembler::Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
+Assembler::Architecture* makeArchitecturePowerpc(vm::System* system, bool useNativeFeatures);
 
 } // namespace codegen
 } // namespace avian

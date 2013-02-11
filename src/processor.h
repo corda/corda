@@ -18,9 +18,13 @@
 #include "heapwalk.h"
 #include "zone.h"
 
-namespace vm {
-
+namespace avian {
+namespace codegen {
 class DelayedPromise;
+}
+}
+
+namespace vm {
 
 class Processor {
  public:
@@ -143,7 +147,7 @@ class Processor {
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
-                DelayedPromise** addresses, object method,
+                avian::codegen::DelayedPromise** addresses, object method,
                 OffsetResolver* resolver) = 0;
 
   virtual void

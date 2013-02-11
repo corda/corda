@@ -15,7 +15,8 @@
 #include "zone.h"
 #include "assembler.h"
 
-namespace vm {
+namespace avian {
+namespace codegen {
 
 class TraceHandler {
  public:
@@ -26,10 +27,10 @@ class Compiler {
  public:
   class Client {
    public:
-    virtual intptr_t getThunk(UnaryOperation op, unsigned size) = 0;
-    virtual intptr_t getThunk(BinaryOperation op, unsigned size,
+    virtual intptr_t getThunk(lir::UnaryOperation op, unsigned size) = 0;
+    virtual intptr_t getThunk(lir::BinaryOperation op, unsigned size,
                               unsigned resultSize) = 0;
-    virtual intptr_t getThunk(TernaryOperation op, unsigned size,
+    virtual intptr_t getThunk(lir::TernaryOperation op, unsigned size,
                               unsigned resultSize, bool* threadParameter) = 0;
   };
   
@@ -200,9 +201,10 @@ class Compiler {
 };
 
 Compiler*
-makeCompiler(System* system, Assembler* assembler, Zone* zone,
+makeCompiler(vm::System* system, Assembler* assembler, vm::Zone* zone,
              Compiler::Client* client);
 
-} // namespace vm
+} // namespace codegen
+} // namespace avian
 
 #endif//COMPILER_H

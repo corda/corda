@@ -15,6 +15,7 @@
 #include "util/runtime-array.h"
 
 using namespace vm;
+using namespace avian::codegen;
 
 namespace {
 
@@ -64,16 +65,16 @@ class Snapshot;
 void NO_RETURN abort(Context*);
 
 void
-apply(Context* c, UnaryOperation op,
+apply(Context* c, lir::UnaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High);
 
 void
-apply(Context* c, BinaryOperation op,
+apply(Context* c, lir::BinaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High);
 
 void
-apply(Context* c, TernaryOperation op,
+apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
@@ -130,9 +131,9 @@ class Site {
 
   virtual bool frozen(Context*) { return false; }
 
-  virtual OperandType type(Context*) = 0;
+  virtual lir::OperandType type(Context*) = 0;
 
-  virtual void asAssemblerOperand(Context*, Site*, Assembler::Operand*) = 0;
+  virtual void asAssemblerOperand(Context*, Site*, lir::Operand*) = 0;
 
   virtual Site* copy(Context*) = 0;
 
@@ -320,7 +321,7 @@ intersect(const SiteMask& a, const SiteMask& b)
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site, Site* target, ValueType type):
+  Value(Site* site, Site* target, lir::ValueType type):
     reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
     nextWord(this), home(NoFrameIndex), type(type), wordIndex(0)
   { }
@@ -333,7 +334,7 @@ class Value: public Compiler::Operand {
   Value* buddy;
   Value* nextWord;
   int16_t home;
-  ValueType type;
+  lir::ValueType type;
   uint8_t wordIndex;
 };
 
@@ -1279,16 +1280,16 @@ class Target {
 
   Target(): cost(Impossible) { }
 
-  Target(int index, OperandType type, unsigned cost):
+  Target(int index, lir::OperandType type, unsigned cost):
     index(index), type(type), cost(cost)
   { }
 
   int16_t index;
-  OperandType type;
+  lir::OperandType type;
   uint8_t cost;
 };
 
-ValueType
+lir::ValueType
 valueType(Context* c, Compiler::OperandType type)
 {
   switch (type) {
@@ -1296,9 +1297,9 @@ valueType(Context* c, Compiler::OperandType type)
   case Compiler::AddressType:
   case Compiler::IntegerType:
   case Compiler::VoidType:
-    return ValueGeneral;
+    return lir::ValueGeneral;
   case Compiler::FloatType:
-    return ValueFloat;
+    return lir::ValueFloat;
   default:
     abort(c);
   }
@@ -1344,7 +1345,7 @@ pickRegisterTarget(Context* c, int i, Value* v, uint32_t mask, int* target,
   if ((1 << i) & mask) {
     RegisterResource* r = c->registerResources + i;
     unsigned myCost = resourceCost
-      (c, v, r, 1 << RegisterOperand, 1 << i, NoFrameIndex, costCalculator)
+      (c, v, r, 1 << lir::RegisterOperand, 1 << i, NoFrameIndex, costCalculator)
       + Target::MinimumRegisterCost;
 
     if ((static_cast<uint32_t>(1) << i) == mask) {
@@ -1362,7 +1363,7 @@ int
 pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost,
                    CostCalculator* costCalculator = 0)
 {
-  int target = NoRegister;
+  int target = lir::NoRegister;
   *cost = Target::Impossible;
 
   if (mask & c->arch->generalRegisterMask()) {
@@ -1394,14 +1395,14 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask,
 {
   unsigned cost;
   int number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
-  return Target(number, RegisterOperand, cost);
+  return Target(number, lir::RegisterOperand, cost);
 }
 
 unsigned
 frameCost(Context* c, Value* v, int frameIndex, CostCalculator* costCalculator)
 {
   return resourceCost
-    (c, v, c->frameResources + frameIndex, 1 << MemoryOperand, 0, frameIndex,
+    (c, v, c->frameResources + frameIndex, 1 << lir::MemoryOperand, 0, frameIndex,
      costCalculator)
     + Target::MinimumFrameCost;
 }
@@ -1415,7 +1416,7 @@ pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
   do {
     if (p->home >= 0) {
       Target mine
-        (p->home, MemoryOperand, frameCost(c, v, p->home, costCalculator));
+        (p->home, lir::MemoryOperand, frameCost(c, v, p->home, costCalculator));
 
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
@@ -1436,7 +1437,7 @@ pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
 
   unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
-    Target mine(i, MemoryOperand, frameCost(c, v, i, costCalculator));
+    Target mine(i, lir::MemoryOperand, frameCost(c, v, i, costCalculator));
     if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -1452,7 +1453,7 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
            unsigned registerPenalty, Target best,
            CostCalculator* costCalculator)
 {
-  if (mask.typeMask & (1 << RegisterOperand)) {
+  if (mask.typeMask & (1 << lir::RegisterOperand)) {
     Target mine = pickRegisterTarget
       (c, value, mask.registerMask, costCalculator);
 
@@ -1464,9 +1465,9 @@ pickTarget(Context* c, Value* value, const SiteMask& mask,
     }
   }
 
-  if (mask.typeMask & (1 << MemoryOperand)) {
+  if (mask.typeMask & (1 << lir::MemoryOperand)) {
     if (mask.frameIndex >= 0) {
-      Target mine(mask.frameIndex, MemoryOperand,
+      Target mine(mask.frameIndex, lir::MemoryOperand,
                   frameCost(c, value, mask.frameIndex, costCalculator));
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
@@ -1497,12 +1498,12 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   Value* value = read->value;
 
   uint32_t registerMask
-    = (value->type == ValueFloat ? ~0 : c->arch->generalRegisterMask());
+    = (value->type == lir::ValueFloat ? ~0 : c->arch->generalRegisterMask());
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
-  if (value->type == ValueFloat) {
+  if (value->type == lir::ValueFloat) {
     uint32_t floatMask = mask.registerMask & c->arch->floatRegisterMask();
     if (floatMask) {
       mask.registerMask = floatMask;
@@ -1616,7 +1617,7 @@ class ConstantSite: public Site {
   }
 
   virtual bool match(Context*, const SiteMask& mask) {
-    return mask.typeMask & (1 << ConstantOperand);
+    return mask.typeMask & (1 << lir::ConstantOperand);
   }
 
   virtual bool loneMatch(Context*, const SiteMask&) {
@@ -1624,21 +1625,21 @@ class ConstantSite: public Site {
   }
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned) {
-    return s->type(c) == ConstantOperand;
+    return s->type(c) == lir::ConstantOperand;
   }
 
-  virtual OperandType type(Context*) {
-    return ConstantOperand;
+  virtual lir::OperandType type(Context*) {
+    return lir::ConstantOperand;
   }
 
   virtual void asAssemblerOperand(Context* c, Site* high,
-                                  Assembler::Operand* result)
+                                  lir::Operand* result)
   {
     Promise* v = value;
     if (high != this) {
       v = combinedPromise(c, value, static_cast<ConstantSite*>(high)->value);
     }
-    new (result) Assembler::Constant(v);
+    new (result) lir::Constant(v);
   }
 
   virtual Site* copy(Context* c) {
@@ -1658,11 +1659,11 @@ class ConstantSite: public Site {
   }
 
   virtual SiteMask mask(Context*) {
-    return SiteMask(1 << ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context*, unsigned) {
-    return SiteMask(1 << ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
   }
 
   Promise* value;
@@ -1707,7 +1708,7 @@ class AddressSite: public Site {
   }
 
   virtual bool match(Context*, const SiteMask& mask) {
-    return mask.typeMask & (1 << AddressOperand);
+    return mask.typeMask & (1 << lir::AddressOperand);
   }
 
   virtual bool loneMatch(Context*, const SiteMask&) {
@@ -1718,16 +1719,16 @@ class AddressSite: public Site {
     abort(c);
   }
 
-  virtual OperandType type(Context*) {
-    return AddressOperand;
+  virtual lir::OperandType type(Context*) {
+    return lir::AddressOperand;
   }
 
   virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
-                                  Assembler::Operand* result)
+                                  lir::Operand* result)
   {
     assert(c, high == this);
 
-    new (result) Assembler::Address(address);
+    new (result) lir::Address(address);
   }
 
   virtual Site* copy(Context* c) {
@@ -1747,7 +1748,7 @@ class AddressSite: public Site {
   }
 
   virtual SiteMask mask(Context*) {
-    return SiteMask(1 << AddressOperand, 0, NoFrameIndex);
+    return SiteMask(1 << lir::AddressOperand, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned) {
@@ -1773,7 +1774,7 @@ class RegisterSite: public Site {
   { }
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
-    if (number != NoRegister) {
+    if (number != lir::NoRegister) {
       return vm::snprintf(buffer, bufferSize, "%p register %d", this, number);
     } else {
       return vm::snprintf(buffer, bufferSize,
@@ -1782,11 +1783,11 @@ class RegisterSite: public Site {
   }
 
   virtual unsigned copyCost(Context* c, Site* s) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     if (s and
         (this == s or
-         (s->type(c) == RegisterOperand
+         (s->type(c) == lir::RegisterOperand
           and (static_cast<RegisterSite*>(s)->mask_ & (1 << number)))))
     {
       return 0;
@@ -1796,9 +1797,9 @@ class RegisterSite: public Site {
   }
 
   virtual bool match(Context* c UNUSED, const SiteMask& mask) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
-    if ((mask.typeMask & (1 << RegisterOperand))) {
+    if ((mask.typeMask & (1 << lir::RegisterOperand))) {
       return ((static_cast<uint64_t>(1) << number) & mask.registerMask);
     } else {
       return false;
@@ -1806,9 +1807,9 @@ class RegisterSite: public Site {
   }
 
   virtual bool loneMatch(Context* c UNUSED, const SiteMask& mask) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
-    if ((mask.typeMask & (1 << RegisterOperand))) {
+    if ((mask.typeMask & (1 << lir::RegisterOperand))) {
       return ((static_cast<uint64_t>(1) << number) == mask.registerMask);
     } else {
       return false;
@@ -1816,16 +1817,16 @@ class RegisterSite: public Site {
   }
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
-    if (s->type(c) != RegisterOperand) {
+    if (s->type(c) != lir::RegisterOperand) {
       return false;
     }
 
     RegisterSite* rs = static_cast<RegisterSite*>(s);
     unsigned size = rs->registerSize(c);
     if (size > TargetBytesPerWord) {
-      assert(c, number != NoRegister);
+      assert(c, number != lir::NoRegister);
       return number == rs->number;
     } else {
       uint32_t mask = c->arch->generalRegisterMask();
@@ -1835,8 +1836,8 @@ class RegisterSite: public Site {
 
   virtual void acquire(Context* c, Value* v) {
     Target target;
-    if (number != NoRegister) {
-      target = Target(number, RegisterOperand, 0);
+    if (number != lir::NoRegister) {
+      target = Target(number, lir::RegisterOperand, 0);
     } else {
       target = pickRegisterTarget(c, v, mask_);
       expect(c, target.cost < Target::Impossible);
@@ -1849,53 +1850,53 @@ class RegisterSite: public Site {
   }
 
   virtual void release(Context* c, Value* v) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     local::release(c, c->registerResources + number, v, this);
   }
 
   virtual void freeze(Context* c, Value* v) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     c->registerResources[number].freeze(c, v);
   }
 
   virtual void thaw(Context* c, Value* v) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     c->registerResources[number].thaw(c, v);
   }
 
   virtual bool frozen(Context* c UNUSED) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     return c->registerResources[number].freezeCount != 0;
   }
 
-  virtual OperandType type(Context*) {
-    return RegisterOperand;
+  virtual lir::OperandType type(Context*) {
+    return lir::RegisterOperand;
   }
 
   virtual void asAssemblerOperand(Context* c UNUSED, Site* high,
-                                  Assembler::Operand* result)
+                                  lir::Operand* result)
   {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     int highNumber;
     if (high != this) {
       highNumber = static_cast<RegisterSite*>(high)->number;
-      assert(c, highNumber != NoRegister);
+      assert(c, highNumber != lir::NoRegister);
     } else {
-      highNumber = NoRegister;
+      highNumber = lir::NoRegister;
     }
 
-    new (result) Assembler::Register(number, highNumber);
+    new (result) lir::Register(number, highNumber);
   }
 
   virtual Site* copy(Context* c) {
     uint32_t mask;
     
-    if (number != NoRegister) {
+    if (number != lir::NoRegister) {
       mask = 1 << number;
     } else {
       mask = mask_;
@@ -1913,30 +1914,30 @@ class RegisterSite: public Site {
   }
 
   virtual Site* makeNextWord(Context* c, unsigned) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
     assert(c, ((1 << number) & c->arch->generalRegisterMask()));
 
     return freeRegisterSite(c, c->arch->generalRegisterMask());    
   }
 
   virtual SiteMask mask(Context* c UNUSED) {
-    return SiteMask(1 << RegisterOperand, mask_, NoFrameIndex);
+    return SiteMask(1 << lir::RegisterOperand, mask_, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     if (registerSize(c) > TargetBytesPerWord) {
       return SiteMask
-        (1 << RegisterOperand, number, NoFrameIndex);
+        (1 << lir::RegisterOperand, number, NoFrameIndex);
     } else {
       return SiteMask
-        (1 << RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
+        (1 << lir::RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
     }
   }
 
   virtual unsigned registerSize(Context* c) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     if ((1 << number) & c->arch->floatRegisterMask()) {
       return c->arch->floatRegisterSize();
@@ -1946,7 +1947,7 @@ class RegisterSite: public Site {
   }
 
   virtual unsigned registerMask(Context* c UNUSED) {
-    assert(c, number != NoRegister);
+    assert(c, number != lir::NoRegister);
 
     return 1 << number;
   }
@@ -1968,11 +1969,11 @@ registerSite(Context* c, int number)
 RegisterSite*
 freeRegisterSite(Context* c, uint32_t mask)
 {
-  return new(c->zone) RegisterSite(mask, NoRegister);
+  return new(c->zone) RegisterSite(mask, lir::NoRegister);
 }
 
 MemorySite*
-memorySite(Context* c, int base, int offset = 0, int index = NoRegister,
+memorySite(Context* c, int base, int offset = 0, int index = lir::NoRegister,
            unsigned scale = 1);
 
 class MemorySite: public Site {
@@ -1995,7 +1996,7 @@ class MemorySite: public Site {
 
     if (s and
         (this == s or
-         (s->type(c) == MemoryOperand
+         (s->type(c) == lir::MemoryOperand
           and static_cast<MemorySite*>(s)->base == base
           and static_cast<MemorySite*>(s)->offset == offset
           and static_cast<MemorySite*>(s)->index == index
@@ -2008,19 +2009,19 @@ class MemorySite: public Site {
   }
 
   bool conflicts(const SiteMask& mask) {
-    return (mask.typeMask & (1 << RegisterOperand)) != 0
+    return (mask.typeMask & (1 << lir::RegisterOperand)) != 0
       and (((1 << base) & mask.registerMask) == 0
-           or (index != NoRegister
+           or (index != lir::NoRegister
                and ((1 << index) & mask.registerMask) == 0));
   }
 
   virtual bool match(Context* c, const SiteMask& mask) {
     assert(c, acquired);
 
-    if (mask.typeMask & (1 << MemoryOperand)) {
+    if (mask.typeMask & (1 << lir::MemoryOperand)) {
       if (mask.frameIndex >= 0) {
         if (base == c->arch->stack()) {
-          assert(c, index == NoRegister);
+          assert(c, index == lir::NoRegister);
           return static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
             == offset;
         } else {
@@ -2037,9 +2038,9 @@ class MemorySite: public Site {
   virtual bool loneMatch(Context* c, const SiteMask& mask) {
     assert(c, acquired);
 
-    if (mask.typeMask & (1 << MemoryOperand)) {
+    if (mask.typeMask & (1 << lir::MemoryOperand)) {
       if (base == c->arch->stack()) {
-        assert(c, index == NoRegister);
+        assert(c, index == lir::NoRegister);
 
         if (mask.frameIndex == AnyFrameIndex) {
           return false;
@@ -2052,7 +2053,7 @@ class MemorySite: public Site {
   }
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned index) {
-    if (s->type(c) == MemoryOperand) {
+    if (s->type(c) == lir::MemoryOperand) {
       MemorySite* ms = static_cast<MemorySite*>(s);
       return ms->base == this->base
         and ((index == 1 and ms->offset == static_cast<int>
@@ -2068,12 +2069,12 @@ class MemorySite: public Site {
 
   virtual void acquire(Context* c, Value* v) {
     increment(c, c->registerResources + base);
-    if (index != NoRegister) {
+    if (index != lir::NoRegister) {
       increment(c, c->registerResources + index);
     }
 
     if (base == c->arch->stack()) {
-      assert(c, index == NoRegister);
+      assert(c, index == lir::NoRegister);
       assert
         (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
@@ -2086,7 +2087,7 @@ class MemorySite: public Site {
 
   virtual void release(Context* c, Value* v) {
     if (base == c->arch->stack()) {
-      assert(c, index == NoRegister);
+      assert(c, index == lir::NoRegister);
       assert
         (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
@@ -2095,7 +2096,7 @@ class MemorySite: public Site {
     }
 
     decrement(c, c->registerResources + base);
-    if (index != NoRegister) {
+    if (index != lir::NoRegister) {
       decrement(c, c->registerResources + index);
     }
 
@@ -2107,7 +2108,7 @@ class MemorySite: public Site {
       c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
     } else {
       increment(c, c->registerResources + base);
-      if (index != NoRegister) {
+      if (index != lir::NoRegister) {
         increment(c, c->registerResources + index);
       }
     }
@@ -2118,7 +2119,7 @@ class MemorySite: public Site {
       c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
     } else {
       decrement(c, c->registerResources + base);
-      if (index != NoRegister) {
+      if (index != lir::NoRegister) {
         decrement(c, c->registerResources + index);
       }
     }
@@ -2129,12 +2130,12 @@ class MemorySite: public Site {
       and c->frameResources[offsetToFrameIndex(c, offset)].freezeCount != 0;
   }
 
-  virtual OperandType type(Context*) {
-    return MemoryOperand;
+  virtual lir::OperandType type(Context*) {
+    return lir::MemoryOperand;
   }
 
   virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
-                                  Assembler::Operand* result)
+                                  lir::Operand* result)
   {
     // todo: endianness?
     assert(c, high == this
@@ -2146,7 +2147,7 @@ class MemorySite: public Site {
 
     assert(c, acquired);
 
-    new (result) Assembler::Memory(base, offset, index, scale);
+    new (result) lir::Memory(base, offset, index, scale);
   }
 
   virtual Site* copy(Context* c) {
@@ -2177,7 +2178,7 @@ class MemorySite: public Site {
   }
 
   virtual SiteMask mask(Context* c) {
-    return SiteMask(1 << MemoryOperand, 0, (base == c->arch->stack())
+    return SiteMask(1 << lir::MemoryOperand, 0, (base == c->arch->stack())
                     ? static_cast<int>(offsetToFrameIndex(c, offset))
                     : NoFrameIndex);
   }
@@ -2185,13 +2186,13 @@ class MemorySite: public Site {
   virtual SiteMask nextWordMask(Context* c, unsigned index) {
     int frameIndex;
     if (base == c->arch->stack()) {
-      assert(c, this->index == NoRegister);
+      assert(c, this->index == lir::NoRegister);
       frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
         + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
     } else {
       frameIndex = NoFrameIndex;
     }
-    return SiteMask(1 << MemoryOperand, 0, frameIndex);
+    return SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
   }
 
   virtual bool isVolatile(Context* c) {
@@ -2216,7 +2217,7 @@ frameSite(Context* c, int frameIndex)
 {
   assert(c, frameIndex >= 0);
   return memorySite
-    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex), NoRegister, 0);
+    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex), lir::NoRegister, 0);
 }
 
 void
@@ -2278,7 +2279,7 @@ pickTargetSite(Context* c, Read* read, bool intersectRead = false,
 
   expect(c, target.cost < Target::Impossible);
 
-  if (target.type == MemoryOperand) {
+  if (target.type == lir::MemoryOperand) {
     return frameSite(c, target.index);
   } else {
     return registerSite(c, target.index);
@@ -2327,7 +2328,7 @@ class SingleRead: public Read {
 SingleRead*
 read(Context* c, const SiteMask& mask, Value* successor = 0)
 {
-  assert(c, (mask.typeMask != 1 << MemoryOperand) or mask.frameIndex >= 0);
+  assert(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
 
   return new(c->zone) SingleRead(mask, successor);
 }
@@ -2630,21 +2631,21 @@ SiteMask
 generalRegisterMask(Context* c)
 {
   return SiteMask
-    (1 << RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
+    (1 << lir::RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
 }
 
 SiteMask
 generalRegisterOrConstantMask(Context* c)
 {
   return SiteMask
-    ((1 << RegisterOperand) | (1 << ConstantOperand),
+    ((1 << lir::RegisterOperand) | (1 << lir::ConstantOperand),
      c->arch->generalRegisterMask(), NoFrameIndex);
 }
 
 SiteMask
 fixedRegisterMask(int number)
 {
-  return SiteMask(1 << RegisterOperand, 1 << number, NoFrameIndex);
+  return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
 }
 
 class MultiRead: public Read {
@@ -2884,10 +2885,10 @@ bool
 acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
 {
   if (acceptMatch(c, s, read, mask) and (not s->frozen(c))) {
-    if (s->type(c) == RegisterOperand) {
+    if (s->type(c) == lir::RegisterOperand) {
       return c->availableGeneralRegisterCount > ResolveRegisterReserveCount;
     } else {
-      assert(c, s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)));
+      assert(c, s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
 
       return isHome(read->value, offsetToFrameIndex
                     (c, static_cast<MemorySite*>(s)->offset));
@@ -2923,19 +2924,19 @@ move(Context* c, Value* value, Site* src, Site* dst)
   }
 
   if (srcSize == dstSize) {
-    apply(c, Move, srcSize, src, src, dstSize, dst, dst);
+    apply(c, lir::Move, srcSize, src, src, dstSize, dst, dst);
   } else if (srcSize > TargetBytesPerWord) {
     Site* low, *high, *other = pickSiteOrGrow(c, value, dst, &low, &high);
     other->freeze(c, value->nextWord);
 
-    apply(c, Move, srcSize, src, src, srcSize, low, high);
+    apply(c, lir::Move, srcSize, src, src, srcSize, low, high);
 
     other->thaw(c, value->nextWord);
   } else {
     Site* low, *high, *other = pickSiteOrMove(c, value, src, &low, &high);
     other->freeze(c, value->nextWord);
 
-    apply(c, Move, dstSize, low, high, dstSize, dst, dst);
+    apply(c, lir::Move, dstSize, low, high, dstSize, dst, dst);
 
     other->thaw(c, value->nextWord);
   }
@@ -2946,12 +2947,12 @@ move(Context* c, Value* value, Site* src, Site* dst)
 
 void
 asAssemblerOperand(Context* c, Site* low, Site* high,
-                   Assembler::Operand* result)
+                   lir::Operand* result)
 {
   low->asAssemblerOperand(c, high, result);
 }
 
-class OperandUnion: public Assembler::Operand {
+class OperandUnion: public lir::Operand {
   // must be large enough and aligned properly to hold any operand
   // type (we'd use an actual union type here, except that classes
   // with constructors cannot be used in a union):
@@ -2959,37 +2960,39 @@ class OperandUnion: public Assembler::Operand {
 };
 
 void
-apply(Context* c, UnaryOperation op,
+apply(Context* c, lir::UnaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High)
 {
   assert(c, s1Low->type(c) == s1High->type(c));
 
-  OperandType s1Type = s1Low->type(c);
+  lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  c->assembler->apply(op, s1Size, s1Type, &s1Union);
+  c->assembler->apply(op,
+    OperandInfo(s1Size, s1Type, &s1Union));
 }
 
 void
-apply(Context* c, BinaryOperation op,
+apply(Context* c, lir::BinaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High)
 {
   assert(c, s1Low->type(c) == s1High->type(c));
   assert(c, s2Low->type(c) == s2High->type(c));
 
-  OperandType s1Type = s1Low->type(c);
+  lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  OperandType s2Type = s2Low->type(c);
+  lir::OperandType s2Type = s2Low->type(c);
   OperandUnion s2Union; asAssemblerOperand(c, s2Low, s2High, &s2Union);
 
-  c->assembler->apply(op, s1Size, s1Type, &s1Union,
-                      s2Size, s2Type, &s2Union);
+  c->assembler->apply(op,
+    OperandInfo(s1Size, s1Type, &s1Union),
+    OperandInfo(s2Size, s2Type, &s2Union));
 }
 
 void
-apply(Context* c, TernaryOperation op,
+apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High)
@@ -2998,18 +3001,19 @@ apply(Context* c, TernaryOperation op,
   assert(c, s2Low->type(c) == s2High->type(c));
   assert(c, s3Low->type(c) == s3High->type(c));
 
-  OperandType s1Type = s1Low->type(c);
+  lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  OperandType s2Type = s2Low->type(c);
+  lir::OperandType s2Type = s2Low->type(c);
   OperandUnion s2Union; asAssemblerOperand(c, s2Low, s2High, &s2Union);
 
-  OperandType s3Type = s3Low->type(c);
+  lir::OperandType s3Type = s3Low->type(c);
   OperandUnion s3Union; asAssemblerOperand(c, s3Low, s3High, &s3Union);
 
-  c->assembler->apply(op, s1Size, s1Type, &s1Union,
-                      s2Size, s2Type, &s2Union,
-                      s3Size, s3Type, &s3Union);
+  c->assembler->apply(op,
+    OperandInfo(s1Size, s1Type, &s1Union),
+    OperandInfo(s2Size, s2Type, &s2Union),
+    OperandInfo(s3Size, s3Type, &s3Union));
 }
 
 void
@@ -3072,13 +3076,13 @@ clean(Context* c, Value* v, unsigned popIndex)
 {
   for (SiteIterator it(c, v); it.hasMore();) {
     Site* s = it.next();
-    if (not (s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex))
+    if (not (s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex))
              and offsetToFrameIndex
              (c, static_cast<MemorySite*>(s)->offset)
              >= popIndex))
     {
       if (false and
-          s->match(c, SiteMask(1 << MemoryOperand, 0, AnyFrameIndex)))
+          s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)))
       {
         char buffer[256]; s->toString(c, buffer, 256);
         fprintf(stderr, "remove %s from %p at %d pop offset 0x%x\n",
@@ -3132,7 +3136,7 @@ saveLocals(Context* c, Event* e)
       }
 
       addRead(c, e, local->value, SiteMask
-              (1 << MemoryOperand, 0, local::frameIndex(c, li)));
+              (1 << lir::MemoryOperand, 0, local::frameIndex(c, li)));
     }
   }
 }
@@ -3198,7 +3202,7 @@ class CallEvent: public Event {
             fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
           }
 
-          targetMask = SiteMask(1 << MemoryOperand, 0, frameIndex);
+          targetMask = SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
         }
 
         addRead(c, this, s->value, targetMask);
@@ -3221,7 +3225,7 @@ class CallEvent: public Event {
       uint8_t typeMask;
       uint64_t planRegisterMask;
       c->arch->plan
-        ((flags & Compiler::Aligned) ? AlignedCall : Call, TargetBytesPerWord,
+        ((flags & Compiler::Aligned) ? lir::AlignedCall : lir::Call, TargetBytesPerWord,
          &typeMask, &planRegisterMask, &thunk);
 
       assert(c, not thunk);
@@ -3290,7 +3294,7 @@ class CallEvent: public Event {
             framePointerSurrogate = v;
             addRead(c, this, v, generalRegisterMask(c));
           } else {
-            addRead(c, this, v, SiteMask(1 << MemoryOperand, 0, frameIndex));
+            addRead(c, this, v, SiteMask(1 << lir::MemoryOperand, 0, frameIndex));
           }
         }
       }
@@ -3321,7 +3325,7 @@ class CallEvent: public Event {
           }
 
           addRead(c, this, stack->value, SiteMask
-                  (1 << MemoryOperand, 0, logicalIndex));
+                  (1 << lir::MemoryOperand, 0, logicalIndex));
         }
 
         stack = stack->next;
@@ -3336,25 +3340,25 @@ class CallEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    UnaryOperation op;
+    lir::UnaryOperation op;
 
     if (TailCalls and (flags & Compiler::TailJump)) {
       if (flags & Compiler::LongJumpOrCall) {
         if (flags & Compiler::Aligned) {
-          op = AlignedLongJump;
+          op = lir::AlignedLongJump;
         } else {
-          op = LongJump;
+          op = lir::LongJump;
         }
       } else if (flags & Compiler::Aligned) {
-        op = AlignedJump;
+        op = lir::AlignedJump;
       } else {
-        op = Jump;
+        op = lir::Jump;
       }
 
       assert(c, returnAddressSurrogate == 0
-             or returnAddressSurrogate->source->type(c) == RegisterOperand);
+             or returnAddressSurrogate->source->type(c) == lir::RegisterOperand);
       assert(c, framePointerSurrogate == 0
-             or framePointerSurrogate->source->type(c) == RegisterOperand);
+             or framePointerSurrogate->source->type(c) == lir::RegisterOperand);
 
       int ras;
       if (returnAddressSurrogate) {
@@ -3363,7 +3367,7 @@ class CallEvent: public Event {
         ras = static_cast<RegisterSite*>
           (returnAddressSurrogate->source)->number;
       } else {
-        ras = NoRegister;
+        ras = lir::NoRegister;
       }
 
       int fps;
@@ -3373,7 +3377,7 @@ class CallEvent: public Event {
         fps = static_cast<RegisterSite*>
           (framePointerSurrogate->source)->number;
       } else {
-        fps = NoRegister;
+        fps = lir::NoRegister;
       }
 
       int offset
@@ -3383,14 +3387,14 @@ class CallEvent: public Event {
       c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
     } else if (flags & Compiler::LongJumpOrCall) {
       if (flags & Compiler::Aligned) {
-        op = AlignedLongCall;
+        op = lir::AlignedLongCall;
       } else {
-        op = LongCall;
+        op = lir::LongCall;
       }
     } else if (flags & Compiler::Aligned) {
-      op = AlignedCall;
+      op = lir::AlignedCall;
     } else {
-      op = Call;
+      op = lir::Call;
     }
 
     apply(c, op, TargetBytesPerWord, address->source, address->source);
@@ -3504,7 +3508,7 @@ appendReturn(Context* c, unsigned size, Value* value)
 }
 
 void
-maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
+maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
           const SiteMask& dstMask)
 {
@@ -3526,10 +3530,10 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
   if (cost) {
     // todo: let c->arch->planMove decide this:
-    bool useTemporary = ((target->type(c) == MemoryOperand
-                          and src->source->type(c) == MemoryOperand)
+    bool useTemporary = ((target->type(c) == lir::MemoryOperand
+                          and src->source->type(c) == lir::MemoryOperand)
                          or (srcSelectSize < dstSize
-                             and target->type(c) != RegisterOperand));
+                             and target->type(c) != lir::RegisterOperand));
 
     src->source->freeze(c, src);
 
@@ -3539,7 +3543,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
     bool addOffset = srcSize != srcSelectSize
       and c->arch->bigEndian()
-      and src->source->type(c) == MemoryOperand;
+      and src->source->type(c) == lir::MemoryOperand;
 
     if (addOffset) {
       static_cast<MemorySite*>(src->source)->offset
@@ -3575,12 +3579,12 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
       c->arch->planSource(type, dstSize, &srcTypeMask, &srcRegisterMask,
                           dstSize, &thunk);
 
-      if (src->type == ValueGeneral) {
+      if (src->type == lir::ValueGeneral) {
         srcRegisterMask &= c->arch->generalRegisterMask();
       }
 
       assert(c, thunk == 0);
-      assert(c, dstMask.typeMask & srcTypeMask & (1 << RegisterOperand));
+      assert(c, dstMask.typeMask & srcTypeMask & (1 << lir::RegisterOperand));
 
       Site* tmpTarget = freeRegisterSite
         (c, dstMask.registerMask & srcRegisterMask);
@@ -3617,7 +3621,7 @@ maybeMove(Context* c, BinaryOperation type, unsigned srcSize,
 
         tmpTarget->freeze(c, dst);
 
-        apply(c, Move, dstSize, tmpTarget, tmpTarget, dstSize, target, target);
+        apply(c, lir::Move, dstSize, tmpTarget, tmpTarget, dstSize, target, target);
 
         tmpTarget->thaw(c, dst);
 
@@ -3696,7 +3700,7 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
 }
 
 Value*
-value(Context* c, ValueType type, Site* site = 0, Site* target = 0)
+value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0)
 {
   return new(c->zone) Value(site, target, type);
 }
@@ -3735,7 +3739,7 @@ maybeSplit(Context* c, Value* v)
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, BinaryOperation type, unsigned srcSize,
+  MoveEvent(Context* c, lir::BinaryOperation type, unsigned srcSize,
             unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
             const SiteMask& srcLowMask, const SiteMask& srcHighMask):
     Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
@@ -3786,7 +3790,7 @@ class MoveEvent: public Event {
       if (dst->target) {
         if (dstSize > TargetBytesPerWord) {
           if (src->source->registerSize(c) > TargetBytesPerWord) {
-            apply(c, Move, srcSelectSize, src->source, src->source,
+            apply(c, lir::Move, srcSelectSize, src->source, src->source,
                   dstSize, dst->target, dst->target);
             
             if (live(c, dst) == 0) {
@@ -3798,17 +3802,17 @@ class MoveEvent: public Event {
           } else {
             src->nextWord->source->freeze(c, src->nextWord);
 
-            maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+            maybeMove(c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src,
                       TargetBytesPerWord, dst, dstLowMask);
 
             src->nextWord->source->thaw(c, src->nextWord);
 
             maybeMove
-              (c, Move, TargetBytesPerWord, TargetBytesPerWord, src->nextWord,
+              (c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src->nextWord,
                TargetBytesPerWord, dst->nextWord, dstHighMask);
           }
         } else {
-          maybeMove(c, Move, TargetBytesPerWord, TargetBytesPerWord, src,
+          maybeMove(c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src,
                     TargetBytesPerWord, dst, dstLowMask);
         }
       } else {
@@ -3827,7 +3831,7 @@ class MoveEvent: public Event {
       assert(c, srcSelectSize == TargetBytesPerWord);
 
       if (dst->nextWord->target or live(c, dst->nextWord)) {
-        assert(c, dstLowMask.typeMask & (1 << RegisterOperand));
+        assert(c, dstLowMask.typeMask & (1 << lir::RegisterOperand));
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
 
@@ -3844,14 +3848,14 @@ class MoveEvent: public Event {
                   srcb, dstb, src);
         }
 
-        apply(c, Move, TargetBytesPerWord, src->source, src->source,
+        apply(c, lir::Move, TargetBytesPerWord, src->source, src->source,
               TargetBytesPerWord, low, low);
 
         low->thaw(c, dst);
 
         src->source->thaw(c, src);
 
-        assert(c, dstHighMask.typeMask & (1 << RegisterOperand));
+        assert(c, dstHighMask.typeMask & (1 << lir::RegisterOperand));
 
         Site* high = freeRegisterSite(c, dstHighMask.registerMask);
 
@@ -3868,7 +3872,7 @@ class MoveEvent: public Event {
                   srcb, dstb, dst, dst->nextWord);
         }
 
-        apply(c, Move, TargetBytesPerWord, low, low, dstSize, low, high);
+        apply(c, lir::Move, TargetBytesPerWord, low, low, dstSize, low, high);
 
         high->thaw(c, dst->nextWord);
 
@@ -3883,7 +3887,7 @@ class MoveEvent: public Event {
     }
   }
 
-  BinaryOperation type;
+  lir::BinaryOperation type;
   unsigned srcSize;
   unsigned srcSelectSize;
   Value* src;
@@ -3892,7 +3896,7 @@ class MoveEvent: public Event {
 };
 
 void
-appendMove(Context* c, BinaryOperation type, unsigned srcSize,
+appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
            unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst)
 {
   bool thunk;
@@ -3916,7 +3920,7 @@ findConstantSite(Context* c, Value* v)
 {
   for (SiteIterator it(c, v); it.hasMore();) {
     Site* s = it.next();
-    if (s->type(c) == ConstantOperand) {
+    if (s->type(c) == lir::ConstantOperand) {
       return static_cast<ConstantSite*>(s);
     }
   }
@@ -3985,7 +3989,7 @@ thawSource(Context* c, unsigned size, Value* v)
 
 class CombineEvent: public Event {
  public:
-  CombineEvent(Context* c, TernaryOperation type,
+  CombineEvent(Context* c, lir::TernaryOperation type,
                unsigned firstSize, Value* first,
                unsigned secondSize, Value* second,
                unsigned resultSize, Value* result,
@@ -4084,7 +4088,7 @@ class CombineEvent: public Event {
     }
   }
 
-  TernaryOperation type;
+  lir::TernaryOperation type;
   unsigned firstSize;
   Value* first;
   unsigned secondSize;
@@ -4390,14 +4394,14 @@ register_(Context* c, int number)
                              | c->arch->floatRegisterMask()));
 
   Site* s = registerSite(c, number);
-  ValueType type = ((1 << number) & c->arch->floatRegisterMask())
-    ? ValueFloat: ValueGeneral;
+  lir::ValueType type = ((1 << number) & c->arch->floatRegisterMask())
+    ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
 }
 
 void
-appendCombine(Context* c, TernaryOperation type,
+appendCombine(Context* c, lir::TernaryOperation type,
               unsigned firstSize, Value* first,
               unsigned secondSize, Value* second,
               unsigned resultSize, Value* result)
@@ -4435,7 +4439,7 @@ appendCombine(Context* c, TernaryOperation type,
     c->stack = oldStack;
 
     appendCall
-      (c, value(c, ValueGeneral, constantSite(c, handler)), 0, 0, result,
+      (c, value(c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result,
        resultSize, argumentStack, stackSize, 0);
   } else {
     append
@@ -4454,7 +4458,7 @@ appendCombine(Context* c, TernaryOperation type,
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, BinaryOperation type, unsigned valueSize,
+  TranslateEvent(Context* c, lir::BinaryOperation type, unsigned valueSize,
                  Value* value, unsigned resultSize, Value* result,
                  const SiteMask& valueLowMask,
                  const SiteMask& valueHighMask):
@@ -4521,7 +4525,7 @@ class TranslateEvent: public Event {
     }
   }
 
-  BinaryOperation type;
+  lir::BinaryOperation type;
   unsigned valueSize;
   unsigned resultSize;
   Value* value;
@@ -4532,7 +4536,7 @@ class TranslateEvent: public Event {
 };
 
 void
-appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
+appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                 Value* first, unsigned resultSize, Value* result)
 {
   bool thunk;
@@ -4552,7 +4556,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
 
     appendCall
       (c, value
-       (c, ValueGeneral, constantSite
+       (c, lir::ValueGeneral, constantSite
         (c, c->client->getThunk(type, firstSize, resultSize))),
        0, 0, result, resultSize, argumentStack,
        ceilingDivide(firstSize, TargetBytesPerWord), 0);
@@ -4567,7 +4571,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
 
 class OperationEvent: public Event {
  public:
-  OperationEvent(Context* c, Operation op):
+  OperationEvent(Context* c, lir::Operation op):
     Event(c), op(op)
   { }
 
@@ -4579,11 +4583,11 @@ class OperationEvent: public Event {
     c->assembler->apply(op);
   }
 
-  Operation op;
+  lir::Operation op;
 };
 
 void
-appendOperation(Context* c, Operation op)
+appendOperation(Context* c, lir::Operation op)
 {
   append(c, new(c->zone) OperationEvent(c, op));
 }
@@ -4592,7 +4596,7 @@ void
 moveIfConflict(Context* c, Value* v, MemorySite* s)
 {
   if (v->reads) {
-    SiteMask mask(1 << RegisterOperand, ~0, AnyFrameIndex);
+    SiteMask mask(1 << lir::RegisterOperand, ~0, AnyFrameIndex);
     v->reads->intersect(&mask);
     if (s->conflicts(mask)) {
       maybeMove(c, v->reads, true, false);
@@ -4626,23 +4630,23 @@ class MemoryEvent: public Event {
       ConstantSite* constant = findConstantSite(c, index);
 
       if (constant) {
-        indexRegister = NoRegister;
+        indexRegister = lir::NoRegister;
         displacement += (constant->value->value() * scale);
         scale = 1;
       } else {
-        assert(c, index->source->type(c) == RegisterOperand);
+        assert(c, index->source->type(c) == lir::RegisterOperand);
         indexRegister = static_cast<RegisterSite*>(index->source)->number;
       }
     } else {
-      indexRegister = NoRegister;
+      indexRegister = lir::NoRegister;
     }
-    assert(c, base->source->type(c) == RegisterOperand);
+    assert(c, base->source->type(c) == lir::RegisterOperand);
     int baseRegister = static_cast<RegisterSite*>(base->source)->number;
 
     popRead(c, this, base);
     if (index) {
-      if (TargetBytesPerWord == 8 and indexRegister != NoRegister) {
-        apply(c, Move, 4, index->source, index->source,
+      if (TargetBytesPerWord == 8 and indexRegister != lir::NoRegister) {
+        apply(c, lir::Move, 4, index->source, index->source,
               8, index->source, index->source);
       }
 
@@ -4701,59 +4705,59 @@ unordered(double a, double b)
 }
 
 bool
-shouldJump(Context* c, TernaryOperation type, unsigned size, int64_t b,
+shouldJump(Context* c, lir::TernaryOperation type, unsigned size, int64_t b,
            int64_t a)
 {
   switch (type) {
-  case JumpIfEqual:
+  case lir::JumpIfEqual:
     return a == b;
 
-  case JumpIfNotEqual:
+  case lir::JumpIfNotEqual:
     return a != b;
 
-  case JumpIfLess:
+  case lir::JumpIfLess:
     return a < b;
 
-  case JumpIfGreater:
+  case lir::JumpIfGreater:
     return a > b;
 
-  case JumpIfLessOrEqual:
+  case lir::JumpIfLessOrEqual:
     return a <= b;
 
-  case JumpIfGreaterOrEqual:
+  case lir::JumpIfGreaterOrEqual:
     return a >= b;
 
-  case JumpIfFloatEqual:
+  case lir::JumpIfFloatEqual:
     return asFloat(size, a) == asFloat(size, b);
 
-  case JumpIfFloatNotEqual:
+  case lir::JumpIfFloatNotEqual:
     return asFloat(size, a) != asFloat(size, b);
 
-  case JumpIfFloatLess:
+  case lir::JumpIfFloatLess:
     return asFloat(size, a) < asFloat(size, b);
 
-  case JumpIfFloatGreater:
+  case lir::JumpIfFloatGreater:
     return asFloat(size, a) > asFloat(size, b);
 
-  case JumpIfFloatLessOrEqual:
+  case lir::JumpIfFloatLessOrEqual:
     return asFloat(size, a) <= asFloat(size, b);
 
-  case JumpIfFloatGreaterOrEqual:
+  case lir::JumpIfFloatGreaterOrEqual:
     return asFloat(size, a) >= asFloat(size, b);
 
-  case JumpIfFloatLessOrUnordered:
+  case lir::JumpIfFloatLessOrUnordered:
     return asFloat(size, a) < asFloat(size, b)
       or unordered(asFloat(size, a), asFloat(size, b));
 
-  case JumpIfFloatGreaterOrUnordered:
+  case lir::JumpIfFloatGreaterOrUnordered:
     return asFloat(size, a) > asFloat(size, b)
       or unordered(asFloat(size, a), asFloat(size, b));
 
-  case JumpIfFloatLessOrEqualOrUnordered:
+  case lir::JumpIfFloatLessOrEqualOrUnordered:
     return asFloat(size, a) <= asFloat(size, b)
       or unordered(asFloat(size, a), asFloat(size, b));
 
-  case JumpIfFloatGreaterOrEqualOrUnordered:
+  case lir::JumpIfFloatGreaterOrEqualOrUnordered:
     return asFloat(size, a) >= asFloat(size, b)
       or unordered(asFloat(size, a), asFloat(size, b));
 
@@ -4762,31 +4766,31 @@ shouldJump(Context* c, TernaryOperation type, unsigned size, int64_t b,
   }
 }
 
-TernaryOperation
-thunkBranch(Context* c, TernaryOperation type)
+lir::TernaryOperation
+thunkBranch(Context* c, lir::TernaryOperation type)
 {
   switch (type) {
-  case JumpIfFloatEqual:
-    return JumpIfEqual;
+  case lir::JumpIfFloatEqual:
+    return lir::JumpIfEqual;
 
-  case JumpIfFloatNotEqual:
-    return JumpIfNotEqual;
+  case lir::JumpIfFloatNotEqual:
+    return lir::JumpIfNotEqual;
 
-  case JumpIfFloatLess:
-  case JumpIfFloatLessOrUnordered:
-    return JumpIfLess;
+  case lir::JumpIfFloatLess:
+  case lir::JumpIfFloatLessOrUnordered:
+    return lir::JumpIfLess;
 
-  case JumpIfFloatGreater:
-  case JumpIfFloatGreaterOrUnordered:
-    return JumpIfGreater;
+  case lir::JumpIfFloatGreater:
+  case lir::JumpIfFloatGreaterOrUnordered:
+    return lir::JumpIfGreater;
 
-  case JumpIfFloatLessOrEqual:
-  case JumpIfFloatLessOrEqualOrUnordered:
-    return JumpIfLessOrEqual;
+  case lir::JumpIfFloatLessOrEqual:
+  case lir::JumpIfFloatLessOrEqualOrUnordered:
+    return lir::JumpIfLessOrEqual;
 
-  case JumpIfFloatGreaterOrEqual:
-  case JumpIfFloatGreaterOrEqualOrUnordered:
-    return JumpIfGreaterOrEqual;
+  case lir::JumpIfFloatGreaterOrEqual:
+  case lir::JumpIfFloatGreaterOrEqualOrUnordered:
+    return lir::JumpIfGreaterOrEqual;
 
   default:
     abort(c);
@@ -4795,7 +4799,7 @@ thunkBranch(Context* c, TernaryOperation type)
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, TernaryOperation type, unsigned size,
+  BranchEvent(Context* c, lir::TernaryOperation type, unsigned size,
               Value* first, Value* second, Value* address,
               const SiteMask& firstLowMask,
               const SiteMask& firstHighMask,
@@ -4840,7 +4844,7 @@ class BranchEvent: public Event {
         }
 
         if (shouldJump(c, type, size, firstValue, secondValue)) {
-          apply(c, Jump, TargetBytesPerWord, address->source, address->source);
+          apply(c, lir::Jump, TargetBytesPerWord, address->source, address->source);
         }      
       } else {
         freezeSource(c, size, first);
@@ -4864,7 +4868,7 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
-  TernaryOperation type;
+  lir::TernaryOperation type;
   unsigned size;
   Value* first;
   Value* second;
@@ -4872,7 +4876,7 @@ class BranchEvent: public Event {
 };
 
 void
-appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
+appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first,
              Value* second, Value* address)
 {
   bool thunk;
@@ -4900,14 +4904,14 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
-    Value* result = value(c, ValueGeneral);
+    Value* result = value(c, lir::ValueGeneral);
     appendCall
       (c, value
-       (c, ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
+       (c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
        argumentStack, ceilingDivide(size, TargetBytesPerWord) * 2, 0);
 
     appendBranch(c, thunkBranch(c, type), 4, value
-                 (c, ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
+                 (c, lir::ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
                  result, address);
   } else {
     append
@@ -4923,7 +4927,7 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
 
 class JumpEvent: public Event {
  public:
-  JumpEvent(Context* c, UnaryOperation type, Value* address, bool exit,
+  JumpEvent(Context* c, lir::UnaryOperation type, Value* address, bool exit,
             bool cleanLocals):
     Event(c), type(type), address(address), exit(exit),
     cleanLocals(cleanLocals)
@@ -4965,14 +4969,14 @@ class JumpEvent: public Event {
     return exit or unreachable(this);
   }
 
-  UnaryOperation type;
+  lir::UnaryOperation type;
   Value* address;
   bool exit;
   bool cleanLocals;
 };
 
 void
-appendJump(Context* c, UnaryOperation type, Value* address, bool exit = false,
+appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit = false,
            bool cleanLocals = false)
 {
   append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
@@ -5001,22 +5005,25 @@ class BoundsCheckEvent: public Event {
 
     if (constant) {
       if (constant->value->value() < 0) {
-        Assembler::Constant handlerConstant(resolved(c, handler));
-        a->apply(Call, TargetBytesPerWord, ConstantOperand, &handlerConstant);
+        lir::Constant handlerConstant(resolved(c, handler));
+        a->apply(lir::Call,
+          OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
       }
     } else {
       outOfBoundsPromise = codePromise(c, static_cast<Promise*>(0));
 
       ConstantSite zero(resolved(c, 0));
       ConstantSite oob(outOfBoundsPromise);
-      apply(c, JumpIfLess, 4, &zero, &zero, 4, index->source, index->source,
-            TargetBytesPerWord, &oob, &oob);
+      apply(c, lir::JumpIfLess,
+        4, &zero, &zero,
+        4, index->source, index->source,
+        TargetBytesPerWord, &oob, &oob);
     }
 
     if (constant == 0 or constant->value->value() >= 0) {
-      assert(c, object->source->type(c) == RegisterOperand);
+      assert(c, object->source->type(c) == lir::RegisterOperand);
       MemorySite length(static_cast<RegisterSite*>(object->source)->number,
-                        lengthOffset, NoRegister, 1);
+                        lengthOffset, lir::NoRegister, 1);
       length.acquired = true;
 
       CodePromise* nextPromise = codePromise(c, static_cast<Promise*>(0));
@@ -5024,8 +5031,10 @@ class BoundsCheckEvent: public Event {
       freezeSource(c, TargetBytesPerWord, index);
 
       ConstantSite next(nextPromise);
-      apply(c, JumpIfGreater, 4, index->source, index->source, 4, &length,
-            &length, TargetBytesPerWord, &next, &next);
+      apply(c, lir::JumpIfGreater,
+        4, index->source,
+        index->source, 4, &length,
+        &length, TargetBytesPerWord, &next, &next);
 
       thawSource(c, TargetBytesPerWord, index);
 
@@ -5033,8 +5042,9 @@ class BoundsCheckEvent: public Event {
         outOfBoundsPromise->offset = a->offset();
       }
 
-      Assembler::Constant handlerConstant(resolved(c, handler));
-      a->apply(Call, TargetBytesPerWord, ConstantOperand, &handlerConstant);
+      lir::Constant handlerConstant(resolved(c, handler));
+      a->apply(lir::Call,
+        OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
 
       nextPromise->offset = a->offset();
     }
@@ -5400,7 +5410,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
                 buffer, v, el.localIndex, frameIndex(c, &el));
       }
       
-      Value dummy(0, 0, ValueGeneral);
+      Value dummy(0, 0, lir::ValueGeneral);
       addSite(c, &dummy, s);
       removeSite(c, &dummy, s);
       freeze(c, frozen, s, 0);
@@ -5420,7 +5430,7 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+      SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
                     c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
@@ -5454,7 +5464,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << RegisterOperand) | (1 << MemoryOperand),
+      SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
                     c->arch->generalRegisterMask(), AnyFrameIndex);
 
       Site* s = pickSourceSite
@@ -6057,7 +6067,7 @@ class MyCompiler: public Compiler {
 
   virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
     appendSaveLocals(&c);
-    appendJump(&c, Jump, static_cast<Value*>(address), false, true);
+    appendJump(&c, lir::Jump, static_cast<Value*>(address), false, true);
     static_cast<MySubroutine*>(subroutine)->forkState = local::saveState(&c);
   }
 
@@ -6216,17 +6226,17 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* constant(int64_t value, OperandType type) {
+  virtual Operand* constant(int64_t value, Compiler::OperandType type) {
     return promiseConstant(resolved(&c, value), type);
   }
 
-  virtual Operand* promiseConstant(Promise* value, OperandType type) {
+  virtual Operand* promiseConstant(Promise* value, Compiler::OperandType type) {
     return local::value
       (&c, valueType(&c, type), local::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, ValueGeneral, local::addressSite(&c, address));
+    return value(&c, lir::ValueGeneral, local::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -6254,7 +6264,7 @@ class MyCompiler: public Compiler {
   virtual void push(unsigned footprint UNUSED) {
     assert(&c, footprint == 1);
 
-    Value* v = value(&c, ValueGeneral);
+    Value* v = value(&c, lir::ValueGeneral);
     Stack* s = local::stack(&c, v, c.stack);
 
     v->home = frameIndex(&c, s->index + c.localFootprint);
@@ -6280,7 +6290,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pushed() {
-    Value* v = value(&c, ValueGeneral);
+    Value* v = value(&c, lir::ValueGeneral);
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
@@ -6463,7 +6473,7 @@ class MyCompiler: public Compiler {
       Local* local = e->locals() + i;
       if (local->value) {
         initLocal
-          (1, i, local->value->type == ValueGeneral ? IntegerType : FloatType);
+          (1, i, local->value->type == lir::ValueGeneral ? IntegerType : FloatType);
       }
     }
 
@@ -6492,7 +6502,7 @@ class MyCompiler: public Compiler {
   virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
                      Operand* dst)
   {
-    appendMove(&c, Move, srcSize, srcSize, static_cast<Value*>(src),
+    appendMove(&c, lir::Move, srcSize, srcSize, static_cast<Value*>(src),
                dstSize, static_cast<Value*>(dst));
   }
 
@@ -6502,7 +6512,7 @@ class MyCompiler: public Compiler {
     assert(&c, dstSize >= TargetBytesPerWord);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, Move, srcSize, srcSelectSize, static_cast<Value*>(src),
+    appendMove(&c, lir::Move, srcSize, srcSelectSize, static_cast<Value*>(src),
                dstSize, dst);
     return dst;
   }
@@ -6513,7 +6523,7 @@ class MyCompiler: public Compiler {
     assert(&c, dstSize >= TargetBytesPerWord);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
+    appendMove(&c, lir::MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
                dstSize, dst);
     return dst;
   }
@@ -6521,140 +6531,140 @@ class MyCompiler: public Compiler {
   virtual void jumpIfEqual(unsigned size, Operand* a, Operand* b,
                            Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfNotEqual(unsigned size, Operand* a, Operand* b,
                               Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfNotEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfNotEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfLess(unsigned size, Operand* a, Operand* b,
                           Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfLess, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfLess, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfGreater(unsigned size, Operand* a, Operand* b,
                              Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfGreater, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfGreater, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfLessOrEqual(unsigned size, Operand* a, Operand* b,
                                  Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfLessOrEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfLessOrEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfGreaterOrEqual(unsigned size, Operand* a, Operand* b,
                                     Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
 
-    appendBranch(&c, JumpIfGreaterOrEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfGreaterOrEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatEqual(unsigned size, Operand* a, Operand* b,
                            Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatNotEqual(unsigned size, Operand* a, Operand* b,
                                    Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatNotEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatNotEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatLess(unsigned size, Operand* a, Operand* b,
                                Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatLess, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatLess, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatGreater(unsigned size, Operand* a, Operand* b,
                                   Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatGreater, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatGreater, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatLessOrEqual(unsigned size, Operand* a, Operand* b,
                                  Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatLessOrEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatLessOrEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatGreaterOrEqual(unsigned size, Operand* a, Operand* b,
                                     Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatGreaterOrEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatGreaterOrEqual, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatLessOrUnordered(unsigned size, Operand* a,
                                           Operand* b, Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatLessOrUnordered, size, static_cast<Value*>(a),
+    appendBranch(&c, lir::JumpIfFloatLessOrUnordered, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
   }
 
   virtual void jumpIfFloatGreaterOrUnordered(unsigned size, Operand* a,
                                              Operand* b, Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatGreaterOrUnordered, size,
+    appendBranch(&c, lir::JumpIfFloatGreaterOrUnordered, size,
                  static_cast<Value*>(a), static_cast<Value*>(b),
                  static_cast<Value*>(address));
   }
@@ -6662,10 +6672,10 @@ class MyCompiler: public Compiler {
   virtual void jumpIfFloatLessOrEqualOrUnordered(unsigned size, Operand* a,
                                                  Operand* b, Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatLessOrEqualOrUnordered, size,
+    appendBranch(&c, lir::JumpIfFloatLessOrEqualOrUnordered, size,
                  static_cast<Value*>(a), static_cast<Value*>(b),
                  static_cast<Value*>(address));
   }
@@ -6674,240 +6684,239 @@ class MyCompiler: public Compiler {
                                                     Operand* b,
                                                     Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
 
-    appendBranch(&c, JumpIfFloatGreaterOrEqualOrUnordered, size,
+    appendBranch(&c, lir::JumpIfFloatGreaterOrEqualOrUnordered, size,
                  static_cast<Value*>(a), static_cast<Value*>(b),
                  static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
-    appendJump(&c, Jump, static_cast<Value*>(address));
+    appendJump(&c, lir::Jump, static_cast<Value*>(address));
   }
 
   virtual void exit(Operand* address) {
-    appendJump(&c, Jump, static_cast<Value*>(address), true);
+    appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
   }
 
   virtual Operand* add(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Add, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Add, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Subtract, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Subtract, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Multiply, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Multiply, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Divide, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Divide, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral
-           and static_cast<Value*>(b)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Remainder, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
+           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Remainder, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* fadd(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
-    appendCombine(&c, FloatAdd, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
+    appendCombine(&c, lir::FloatAdd, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* fsub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
-    appendCombine(&c, FloatSubtract, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
+    appendCombine(&c, lir::FloatSubtract, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* fmul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = ValueFloat;
-    appendCombine(&c, FloatMultiply, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
+    appendCombine(&c, lir::FloatMultiply, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* fdiv(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    appendCombine(&c, FloatDivide, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    appendCombine(&c, lir::FloatDivide, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* frem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat
-           and static_cast<Value*>(b)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    appendCombine(&c, FloatRemainder, size, static_cast<Value*>(a),
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
+           and static_cast<Value*>(b)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    appendCombine(&c, lir::FloatRemainder, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, ShiftLeft, TargetBytesPerWord, static_cast<Value*>(a),
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::ShiftLeft, TargetBytesPerWord, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, ShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::ShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
     appendCombine
-      (&c, UnsignedShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
+      (&c, lir::UnsignedShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
        size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, And, size, static_cast<Value*>(a),
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::And, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Or, size, static_cast<Value*>(a),
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Or, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendCombine(&c, Xor, size, static_cast<Value*>(a),
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendCombine(&c, lir::Xor, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
   virtual Operand* neg(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendTranslate(&c, Negate, size, static_cast<Value*>(a), size, result);
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendTranslate(&c, lir::Negate, size, static_cast<Value*>(a), size, result);
     return result;
   }
 
   virtual Operand* fneg(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
-    appendTranslate
-      (&c, FloatNegate, size, static_cast<Value*>(a), size, result);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
+    appendTranslate(&c, lir::FloatNegate, size, static_cast<Value*>(a), size, result);
     return result;
   }
 
   virtual Operand* abs(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueGeneral);
-    appendTranslate(&c, Absolute, size, static_cast<Value*>(a), size, result);
+  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueGeneral);
+    appendTranslate(&c, lir::Absolute, size, static_cast<Value*>(a), size, result);
     return result;
   }
 
   virtual Operand* fabs(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
     appendTranslate
-      (&c, FloatAbsolute, size, static_cast<Value*>(a), size, result);
+      (&c, lir::FloatAbsolute, size, static_cast<Value*>(a), size, result);
     return result;
   }
 
   virtual Operand* fsqrt(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
     appendTranslate
-      (&c, FloatSquareRoot, size, static_cast<Value*>(a), size, result);
+      (&c, lir::FloatSquareRoot, size, static_cast<Value*>(a), size, result);
     return result;
   }
   
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
-    Value* result = value(&c, ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueFloat);
     appendTranslate
-      (&c, Float2Float, aSize, static_cast<Value*>(a), resSize, result);
+      (&c, lir::Float2Float, aSize, static_cast<Value*>(a), resSize, result);
     return result;
   }
   
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueFloat);
-    Value* result = value(&c, ValueGeneral);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
+    Value* result = value(&c, lir::ValueGeneral);
     appendTranslate
-      (&c, Float2Int, aSize, static_cast<Value*>(a), resSize, result);
+      (&c, lir::Float2Int, aSize, static_cast<Value*>(a), resSize, result);
     return result;
   }
   
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == ValueGeneral);
-    Value* result = value(&c, ValueFloat);
+    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
+    Value* result = value(&c, lir::ValueFloat);
     appendTranslate
-      (&c, Int2Float, aSize, static_cast<Value*>(a), resSize, result);
+      (&c, lir::Int2Float, aSize, static_cast<Value*>(a), resSize, result);
     return result;
   }
 
   virtual void trap() {
-    appendOperation(&c, Trap);
+    appendOperation(&c, lir::Trap);
   }
 
   virtual void loadBarrier() {
-    appendOperation(&c, LoadBarrier);
+    appendOperation(&c, lir::LoadBarrier);
   }
 
   virtual void storeStoreBarrier() {
-    appendOperation(&c, StoreStoreBarrier);
+    appendOperation(&c, lir::StoreStoreBarrier);
   }
 
   virtual void storeLoadBarrier() {
-    appendOperation(&c, StoreLoadBarrier);
+    appendOperation(&c, lir::StoreLoadBarrier);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,
@@ -6982,7 +6991,8 @@ class MyCompiler: public Compiler {
 
 } // namespace
 
-namespace vm {
+namespace avian {
+namespace codegen {
 
 Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
@@ -6991,4 +7001,5 @@ makeCompiler(System* system, Assembler* assembler, Zone* zone,
   return new(zone) local::MyCompiler(system, assembler, zone, client);
 }
 
-} // namespace vm
+} // namespace codegen
+} // namespace avian
