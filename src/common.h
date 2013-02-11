@@ -350,7 +350,7 @@ padWord(uintptr_t n)
 }
 
 inline unsigned
-ceiling(unsigned n, unsigned d)
+ceilingDivide(unsigned n, unsigned d)
 {
   return (n + d - 1) / d;
 }

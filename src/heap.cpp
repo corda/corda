@@ -223,7 +223,7 @@ class Segment {
                                   unsigned scale, unsigned bitsPerRecord)
     {
       unsigned result
-        = ceiling(ceiling(capacity, scale) * bitsPerRecord, BitsPerWord);
+        = ceilingDivide(ceilingDivide(capacity, scale) * bitsPerRecord, BitsPerWord);
       assert(c, result);
       return result;
     }
@@ -531,7 +531,7 @@ class Fixie {
   }
 
   static unsigned maskSize(unsigned size, bool hasMask) {
-    return hasMask * ceiling(size, BitsPerWord) * BytesPerWord;
+    return hasMask * ceilingDivide(size, BitsPerWord) * BytesPerWord;
   }
 
   static unsigned totalSize(unsigned size, bool hasMask) {

@@ -9,13 +9,13 @@ const unsigned NAME(BootHeapOffset) = 1 << (NAME(BootShift) + 1);
 inline unsigned
 LABEL(codeMapSize)(unsigned codeSize)
 {
-  return ceiling(codeSize, TargetBitsPerWord) * TargetBytesPerWord;
+  return ceilingDivide(codeSize, TargetBitsPerWord) * TargetBytesPerWord;
 }
 
 inline unsigned
 LABEL(heapMapSize)(unsigned heapSize)
 {
-  return ceiling(heapSize, TargetBitsPerWord * TargetBytesPerWord)
+  return ceilingDivide(heapSize, TargetBitsPerWord * TargetBytesPerWord)
     * TargetBytesPerWord;
 }
 

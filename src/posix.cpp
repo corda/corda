@@ -816,7 +816,7 @@ class MySystem: public System {
     // been unable to track it down so far.  The workaround is to give
     // it 8 words more than it should need, where 8 is a number I just
     // made up and seems to work.
-    void* array[ceiling(sizeof(struct stat), sizeof(void*)) + 8];
+    void* array[ceilingDivide(sizeof(struct stat), sizeof(void*)) + 8];
     struct stat* s = reinterpret_cast<struct stat*>(array);
 #endif
 

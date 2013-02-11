@@ -1818,7 +1818,7 @@ class FixedAllocator: public Allocator {
 inline bool
 ensure(Thread* t, unsigned sizeInBytes)
 {
-  if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+  if (t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
       > ThreadHeapSizeInWords)
   {
     if (sizeInBytes <= ThreadBackupHeapSizeInBytes) {
@@ -1845,11 +1845,11 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
-  assert(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+  assert(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
          <= ThreadHeapSizeInWords);
 
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
-  t->heapIndex += ceiling(sizeInBytes, BytesPerWord);
+  t->heapIndex += ceilingDivide(sizeInBytes, BytesPerWord);
   return o;
 }
 
@@ -1858,7 +1858,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
   stress(t);
 
-  if (UNLIKELY(t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+  if (UNLIKELY(t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
                > ThreadHeapSizeInWords
                or t->m->exclusive))
   {
@@ -2149,8 +2149,8 @@ baseSize(Thread* t, object o, object class_)
 {
   assert(t, classFixedSize(t, class_) >= BytesPerWord);
 
-  return ceiling(classFixedSize(t, class_), BytesPerWord)
-    + ceiling(classArrayElementSize(t, class_)
+  return ceilingDivide(classFixedSize(t, class_), BytesPerWord)
+    + ceilingDivide(classArrayElementSize(t, class_)
               * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
               BytesPerWord);
 }
@@ -3349,7 +3349,7 @@ inline unsigned
 singletonMaskSize(unsigned count, unsigned bitsPerWord)
 {
   if (count) {
-    return ceiling(count + 2, bitsPerWord);
+    return ceilingDivide(count + 2, bitsPerWord);
   }
   return 0;
 }
@@ -3365,7 +3365,7 @@ singletonMaskSize(Thread* t, object singleton)
 {
   unsigned length = singletonLength(t, singleton);
   if (length) {
-    return ceiling(length + 2, BitsPerWord + 1);
+    return ceilingDivide(length + 2, BitsPerWord + 1);
   }
   return 0;
 }
@@ -3448,7 +3448,7 @@ singletonBit(Thread* t, object singleton, unsigned start, unsigned index)
 inline unsigned
 poolMaskSize(unsigned count, unsigned bitsPerWord)
 {
-  return ceiling(count, bitsPerWord);
+  return ceilingDivide(count, bitsPerWord);
 }
 
 inline unsigned
@@ -3460,7 +3460,7 @@ poolMaskSize(unsigned count)
 inline unsigned
 poolMaskSize(Thread* t, object pool)
 {
-  return ceiling(singletonCount(t, pool), BitsPerWord + 1);
+  return ceilingDivide(singletonCount(t, pool), BitsPerWord + 1);
 }
 
 inline unsigned

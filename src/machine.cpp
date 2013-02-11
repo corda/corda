@@ -307,9 +307,9 @@ bool
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
      unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
-  unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
+  unsigned fixedSizeInWords = ceilingDivide(fixedSize, BytesPerWord);
   unsigned arrayElementSizeInWords
-    = ceiling(arrayElementSize, BytesPerWord);
+    = ceilingDivide(arrayElementSize, BytesPerWord);
 
   for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
@@ -1286,7 +1286,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassFieldTable, fieldTable);
 
     if (staticCount) {
-      unsigned footprint = ceiling(staticOffset - (BytesPerWord * 2),
+      unsigned footprint = ceilingDivide(staticOffset - (BytesPerWord * 2),
                                    BytesPerWord);
       object staticTable = makeSingletonOfSize(t, footprint);
 
@@ -1357,7 +1357,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         classObjectMask(t, classSuper(t, class_)));
   } else {
     object mask = makeIntArray
-      (t, ceiling(classFixedSize(t, class_), 32 * BytesPerWord));
+      (t, ceilingDivide(classFixedSize(t, class_), 32 * BytesPerWord));
     intArrayBody(t, mask, 0) = 1;
 
     object superMask = 0;
@@ -1366,7 +1366,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       if (superMask) {
         memcpy(&intArrayBody(t, mask, 0),
                &intArrayBody(t, superMask, 0),
-               ceiling(classFixedSize(t, classSuper(t, class_)),
+               ceilingDivide(classFixedSize(t, classSuper(t, class_)),
                        32 * BytesPerWord)
                * 4);
       }
@@ -3449,7 +3449,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
   return allocate3
     (t, t->m->heap,
-     ceiling(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
+     ceilingDivide(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
      Machine::FixedAllocation : Machine::MovableAllocation,
      sizeInBytes, objectMask);
 }
@@ -3461,15 +3461,15 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   expect(t, t->criticalLevel == 0);
 
   if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
-    expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
+    expect(t,  t->backupHeapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadBackupHeapSizeInWords);
     
     object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
-    t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
+    t->backupHeapIndex += ceilingDivide(sizeInBytes, BytesPerWord);
     cast<object>(o, 0) = 0;
     return o;
   } else if (UNLIKELY(t->flags & Thread::TracingFlag)) {
-    expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+    expect(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
   }
@@ -3489,7 +3489,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   do {
     switch (type) {
     case Machine::MovableAllocation:
-      if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+      if (t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
           > ThreadHeapSizeInWords)
       {
         t->heap = 0;
@@ -3531,7 +3531,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       throw_(t, root(t, Machine::OutOfMemoryError));
     }
   } while (type == Machine::MovableAllocation
-           and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           and t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            > ThreadHeapSizeInWords);
 
   switch (type) {
@@ -3543,7 +3543,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->tryAllocateFixed
-       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask, &total));
 
     if (o) {
       memset(o, 0, sizeInBytes);
@@ -3562,7 +3562,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     unsigned total;
     object o = static_cast<object>
       (t->m->heap->tryAllocateImmortalFixed
-       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask, &total));
 
     if (o) {
       memset(o, 0, sizeInBytes);
@@ -5054,7 +5054,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
 
   for (int32_t i = 0; i < counts[index]; ++i) {
     object a = makeArray
-      (t, ceiling
+      (t, ceilingDivide
        (counts[index + 1] * classArrayElementSize(t, class_), BytesPerWord));
     arrayLength(t, a) = counts[index + 1];
     setObjectClass(t, a, class_);

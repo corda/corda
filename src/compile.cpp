@@ -940,7 +940,7 @@ frameMapSizeInBits(MyThread* t, object method)
 unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
-  return ceiling(frameMapSizeInBits(t, method), BitsPerWord);
+  return ceilingDivide(frameMapSizeInBits(t, method), BitsPerWord);
 }
 
 uint16_t*
@@ -6928,7 +6928,7 @@ unsigned
 simpleFrameMapTableSize(MyThread* t, object method, object map)
 {
   int size = frameMapSizeInBits(t, method);
-  return ceiling(intArrayLength(t, map) * size, 32 + size);
+  return ceilingDivide(intArrayLength(t, map) * size, 32 + size);
 }
 
 uint8_t*
@@ -6965,7 +6965,7 @@ copyFrameMap(int32_t* dst, uintptr_t* src, unsigned mapSizeInBits,
 {
   if (DebugFrameMaps) {
     fprintf(stderr, "  orig roots at ip %3d: ", p->ip);
-    printSet(src, ceiling(mapSizeInBits, BitsPerWord));
+    printSet(src, ceilingDivide(mapSizeInBits, BitsPerWord));
     print(subroutinePath);
     fprintf(stderr, "\n");
 
@@ -7068,7 +7068,7 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
   unsigned indexOffset = sizeof(FrameMapTableHeader);
   unsigned mapsOffset = indexOffset
     + (elementCount * sizeof(FrameMapTableIndexElement));
-  unsigned pathsOffset = mapsOffset + (ceiling(mapCount * mapSize, 32) * 4);
+  unsigned pathsOffset = mapsOffset + (ceilingDivide(mapCount * mapSize, 32) * 4);
 
   object table = makeByteArray(t, pathsOffset + pathFootprint);
   
@@ -7143,7 +7143,7 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
             sizeof(SubroutineTrace*), compareSubroutineTracePointers);
 
       for (unsigned i = 0; i < p->subroutineTraceCount; ++i) {
-        assert(t, mapsOffset + ceiling(nextMapIndex + mapSize, 32) * 4
+        assert(t, mapsOffset + ceilingDivide(nextMapIndex + mapSize, 32) * 4
                <= pathsOffset);
 
         copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset),
@@ -7155,7 +7155,7 @@ makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
     } else {
       pathIndex = 0;
 
-      assert(t, mapsOffset + ceiling(nextMapIndex + mapSize, 32) * 4
+      assert(t, mapsOffset + ceilingDivide(nextMapIndex + mapSize, 32) * 4
              <= pathsOffset);
 
       copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset), p->map,
@@ -7185,7 +7185,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
 {
   unsigned mapSize = frameMapSizeInBits(t, context->method);
   object table = makeIntArray
-    (t, elementCount + ceiling(elementCount * mapSize, 32));
+    (t, elementCount + ceilingDivide(elementCount * mapSize, 32));
 
   assert(t, intArrayLength(t, table) == elementCount
          + simpleFrameMapTableSize(t, context->method, table));
@@ -7196,7 +7196,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
     intArrayBody(t, table, i) = static_cast<intptr_t>(p->address->value())
       - reinterpret_cast<intptr_t>(start);
 
-    assert(t, elementCount + ceiling((i + 1) * mapSize, 32)
+    assert(t, elementCount + ceilingDivide((i + 1) * mapSize, 32)
            <= intArrayLength(t, table));
 
     if (mapSize) {
@@ -9925,7 +9925,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   uintptr_t* heapMap = reinterpret_cast<uintptr_t*>
     (padWord(reinterpret_cast<uintptr_t>(callTable + (image->callCount * 2))));
 
-  unsigned heapMapSizeInWords = ceiling
+  unsigned heapMapSizeInWords = ceilingDivide
     (heapMapSize(image->heapSize), BytesPerWord);
   uintptr_t* heap = heapMap + heapMapSizeInWords;
 
@@ -9934,7 +9934,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   t->heapImage = p->heapImage = heap;
 
   // fprintf(stderr, "heap from %p to %p\n",
-  //         heap, heap + ceiling(image->heapSize, BytesPerWord));
+  //         heap, heap + ceilingDivide(image->heapSize, BytesPerWord));
 
   t->codeImage = p->codeImage = code;
   p->codeImageSize = image->codeSize;

@@ -3444,7 +3444,7 @@ class MyAssembler: public Assembler {
       RUNTIME_ARRAY_BODY(arguments)[i].type
         = static_cast<OperandType>(va_arg(a, int));
       RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, Operand*);
-      footprint += ceiling
+      footprint += ceilingDivide
         (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
     }
     va_end(a);
@@ -3471,7 +3471,7 @@ class MyAssembler: public Assembler {
               pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord),
               MemoryOperand,
               &dst);
-        offset += ceiling
+        offset += ceilingDivide
           (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       }
     }

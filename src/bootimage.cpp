@@ -542,11 +542,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
           object array = makeByteArray
             (t, TypeMap::sizeInBytes
-             (ceiling(classFixedSize(t, c), BytesPerWord), memberIndex));
+             (ceilingDivide(classFixedSize(t, c), BytesPerWord), memberIndex));
 
           TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-            (ceiling(classFixedSize(t, c), BytesPerWord),
-             ceiling(targetMemberOffset, TargetBytesPerWord), memberIndex);
+            (ceilingDivide(classFixedSize(t, c), BytesPerWord),
+             ceilingDivide(targetMemberOffset, TargetBytesPerWord), memberIndex);
 
           for (unsigned i = 0; i < memberIndex; ++i) {
             Field* f = memberFields + i;
@@ -569,7 +569,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
           TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
             (singletonCount(t, classStaticTable(t, c)) + 2,
-             ceiling(targetStaticOffset, TargetBytesPerWord), staticIndex,
+             ceilingDivide(targetStaticOffset, TargetBytesPerWord), staticIndex,
              TypeMap::SingletonKind);
 
           for (unsigned i = 0; i < staticIndex; ++i) {
@@ -739,7 +739,7 @@ targetSize(Thread* t, object typeMaps, object p)
 
   if (map->targetArrayElementSizeInBytes) {
     return map->targetFixedSizeInWords
-      + ceiling(map->targetArrayElementSizeInBytes
+      + ceilingDivide(map->targetArrayElementSizeInBytes
                 * cast<uintptr_t>
                 (p, (map->buildFixedSizeInWords - 1) * BytesPerWord),
                 TargetBytesPerWord);
@@ -1069,7 +1069,7 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
 
     memset(dst, 0, TargetBytesPerWord);
 
-    unsigned length = ceiling(objectMaskCount(map), 32);
+    unsigned length = ceilingDivide(objectMaskCount(map), 32);
 
     target_uintptr_t targetLength = targetVW(length);
 
@@ -1164,7 +1164,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 
           target_uintptr_t* dst = heap + position + TargetFixieSizeInWords;
 
-          unsigned maskSize = ceiling(size, TargetBitsPerWord);
+          unsigned maskSize = ceilingDivide(size, TargetBitsPerWord);
 
           unsigned total = TargetFixieSizeInWords + size + maskSize;
 
@@ -1440,11 +1440,11 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
       object array = makeByteArray
         (t, TypeMap::sizeInBytes
-         (ceiling(buildOffset, BytesPerWord), fixedFieldCount));
+         (ceilingDivide(buildOffset, BytesPerWord), fixedFieldCount));
 
       TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-        (ceiling(buildOffset, BytesPerWord),
-         ceiling(targetOffset, TargetBytesPerWord),
+        (ceilingDivide(buildOffset, BytesPerWord),
+         ceilingDivide(targetOffset, TargetBytesPerWord),
          fixedFieldCount, TypeMap::NormalKind, buildArrayElementSize,
          targetArrayElementSize, arrayElementType);
 

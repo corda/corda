@@ -2238,7 +2238,7 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual unsigned alignFrameSize(unsigned sizeInWords) {
     const unsigned alignment = StackAlignmentInWords;
-    return (ceiling(sizeInWords + FrameFooterSize, alignment) * alignment);
+    return (ceilingDivide(sizeInWords + FrameFooterSize, alignment) * alignment);
   }
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
@@ -2513,7 +2513,7 @@ class MyAssembler: public Assembler {
       arguments[i].size = va_arg(a, unsigned);
       arguments[i].type = static_cast<OperandType>(va_arg(a, int));
       arguments[i].operand = va_arg(a, Operand*);
-      footprint += ceiling(arguments[i].size, TargetBytesPerWord);
+      footprint += ceilingDivide(arguments[i].size, TargetBytesPerWord);
     }
     va_end(a);
 
@@ -2529,7 +2529,7 @@ class MyAssembler: public Assembler {
               pad(arguments[i].size, TargetBytesPerWord), RegisterOperand,
               &dst);
 
-        offset += ceiling(arguments[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(arguments[i].size, TargetBytesPerWord);
       } else {
         Memory dst
           (ThreadRegister, (offset + FrameFooterSize) * TargetBytesPerWord);
@@ -2538,7 +2538,7 @@ class MyAssembler: public Assembler {
               arguments[i].size, arguments[i].type, arguments[i].operand,
               pad(arguments[i].size, TargetBytesPerWord), MemoryOperand, &dst);
 
-        offset += ceiling(arguments[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(arguments[i].size, TargetBytesPerWord);
       }
     }
   }

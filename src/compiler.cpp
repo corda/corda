@@ -4417,11 +4417,11 @@ appendCombine(Context* c, TernaryOperation type,
     intptr_t handler = c->client->getThunk
       (type, firstSize, resultSize, &threadParameter);
 
-    unsigned stackSize = ceiling(secondSize, TargetBytesPerWord)
-      + ceiling(firstSize, TargetBytesPerWord);
+    unsigned stackSize = ceilingDivide(secondSize, TargetBytesPerWord)
+      + ceilingDivide(firstSize, TargetBytesPerWord);
 
-    local::push(c, ceiling(secondSize, TargetBytesPerWord), second);
-    local::push(c, ceiling(firstSize, TargetBytesPerWord), first);
+    local::push(c, ceilingDivide(secondSize, TargetBytesPerWord), second);
+    local::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
 
     if (threadParameter) {
       ++ stackSize;
@@ -4543,7 +4543,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    local::push(c, ceiling(firstSize, TargetBytesPerWord), first);
+    local::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4553,7 +4553,7 @@ appendTranslate(Context* c, BinaryOperation type, unsigned firstSize,
        (c, ValueGeneral, constantSite
         (c, c->client->getThunk(type, firstSize, resultSize))),
        0, 0, result, resultSize, argumentStack,
-       ceiling(firstSize, TargetBytesPerWord), 0);
+       ceilingDivide(firstSize, TargetBytesPerWord), 0);
   } else {
     append(c, new(c->zone)
            TranslateEvent
@@ -4892,8 +4892,8 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
 
     assert(c, not threadParameter);
 
-    local::push(c, ceiling(size, TargetBytesPerWord), second);
-    local::push(c, ceiling(size, TargetBytesPerWord), first);
+    local::push(c, ceilingDivide(size, TargetBytesPerWord), second);
+    local::push(c, ceilingDivide(size, TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4902,7 +4902,7 @@ appendBranch(Context* c, TernaryOperation type, unsigned size, Value* first,
     appendCall
       (c, value
        (c, ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
-       argumentStack, ceiling(size, TargetBytesPerWord) * 2, 0);
+       argumentStack, ceilingDivide(size, TargetBytesPerWord) * 2, 0);
 
     appendBranch(c, thunkBranch(c, type), 4, value
                  (c, ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
