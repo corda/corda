@@ -13,6 +13,8 @@
 #include "target.h"
 #include "vector.h"
 
+#include "util/runtime-array.h"
+
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 #define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)

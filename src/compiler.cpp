@@ -12,6 +12,8 @@
 #include "assembler.h"
 #include "target.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace {

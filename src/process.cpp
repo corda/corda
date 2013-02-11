@@ -10,6 +10,8 @@
 
 #include "process.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace {

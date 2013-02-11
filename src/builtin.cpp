@@ -13,6 +13,8 @@
 #include "processor.h"
 #include "util.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace {

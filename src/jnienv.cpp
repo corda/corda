@@ -14,6 +14,8 @@
 #include "processor.h"
 #include "constants.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace {

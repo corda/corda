@@ -14,6 +14,8 @@
 #include "finder.h"
 #include "lzma.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace {

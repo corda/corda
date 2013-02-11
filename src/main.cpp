@@ -16,6 +16,8 @@
 #include "system.h"
 #include "finder.h"
 
+#include "util/runtime-array.h"
+
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PATH_SEPARATOR ';'
 #else
@@ -28,28 +30,6 @@
 #  define or ||
 #  define and &&
 #  define xor ^
-
-template <class T>
-class RuntimeArray {
- public:
-  RuntimeArray(unsigned size):
-    body(static_cast<T*>(malloc(size * sizeof(T))))
-  { }
-
-  ~RuntimeArray() {
-    free(body);
-  }
-
-  T* body;
-};
-
-#  define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
-#  define RUNTIME_ARRAY_BODY(name) name.body
-
-#else // not _MSC_VER
-
-#  define RUNTIME_ARRAY(type, name, size) type name[size];
-#  define RUNTIME_ARRAY_BODY(name) name
 
 #endif // not _MSC_VER
 

@@ -17,6 +17,8 @@
 #include "compiler.h"
 #include "arch.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 extern "C" uint64_t

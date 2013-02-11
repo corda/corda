@@ -226,23 +226,6 @@ alias(void* p, unsigned offset)
 
 #ifdef _MSC_VER
 
-template <class T>
-class RuntimeArray {
- public:
-  RuntimeArray(unsigned size):
-    body(static_cast<T*>(malloc(size * sizeof(T))))
-  { }
-
-  ~RuntimeArray() {
-    free(body);
-  }
-
-  T* body;
-};
-
-#  define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
-#  define RUNTIME_ARRAY_BODY(name) name.body
-
 inline int
 vsnprintf(char* dst, size_t size, const char* format, va_list a)
 {
@@ -271,9 +254,6 @@ fopen(const char* name, const char* mode)
 }
 
 #else // not _MSC_VER
-
-#  define RUNTIME_ARRAY(type, name, size) type name[size];
-#  define RUNTIME_ARRAY_BODY(name) name
 
 inline int
 vsnprintf(char* dst, size_t size, const char* format, va_list a)

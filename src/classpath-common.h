@@ -13,6 +13,8 @@
 
 #include "tokenizer.h"
 
+#include "util/runtime-array.h"
+
 namespace vm {
 
 object
