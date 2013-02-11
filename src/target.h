@@ -12,6 +12,7 @@
 #define TARGET_H
 
 #include "target-fields.h"
+#include "common.h"
 
 namespace vm {
 

@@ -10,11 +10,11 @@
 
 #include "machine.h"
 #include "util.h"
-#include "vector.h"
+#include "alloc-vector.h"
 #include "process.h"
-#include "assembler.h"
 #include "target.h"
-#include "compiler.h"
+#include "codegen/assembler.h"
+#include "codegen/compiler.h"
 #include "arch.h"
 
 #include "util/runtime-array.h"

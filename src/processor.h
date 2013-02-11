@@ -17,9 +17,10 @@
 #include "bootimage.h"
 #include "heapwalk.h"
 #include "zone.h"
-#include "assembler.h"
 
 namespace vm {
+
+class DelayedPromise;
 
 class Processor {
  public:

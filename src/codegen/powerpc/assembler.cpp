@@ -9,7 +9,7 @@
    details. */
 
 #include "assembler.h"
-#include "vector.h"
+#include "alloc-vector.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)

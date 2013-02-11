@@ -629,7 +629,7 @@ generated-code = \
 	$(build)/type-name-initializations.cpp \
 	$(build)/type-maps.cpp
 
-vm-depends := $(generated-code) $(wildcard $(src)/*.h)
+vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h)
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -658,8 +658,8 @@ embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 
 ifeq ($(process),compile)
 	vm-sources += \
-		$(src)/compiler.cpp \
-		$(src)/$(target-asm).cpp
+		$(src)/codegen/compiler.cpp \
+		$(src)/codegen/$(target-asm)/assembler.cpp
 
 	vm-asm-sources += $(src)/compile-$(asm).S
 endif

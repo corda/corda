@@ -9,9 +9,10 @@
    details. */
 
 #include "environment.h"
-#include "assembler.h"
 #include "target.h"
-#include "vector.h"
+#include "alloc-vector.h"
+
+#include "codegen/assembler.h"
 
 #include "util/runtime-array.h"
 
