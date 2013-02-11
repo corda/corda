@@ -2763,7 +2763,7 @@ class HeapClient: public Heap::Client {
   virtual unsigned sizeInWords(void* p) {
     Thread* t = m->rootThread;
 
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
 
     unsigned n = baseSize(t, o, static_cast<object>
                           (m->heap->follow(objectClass(t, o))));
@@ -2778,7 +2778,7 @@ class HeapClient: public Heap::Client {
   virtual unsigned copiedSizeInWords(void* p) {
     Thread* t = m->rootThread;
 
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
     assert(t, not objectFixed(t, o));
 
     unsigned n = baseSize(t, o, static_cast<object>
@@ -2794,7 +2794,7 @@ class HeapClient: public Heap::Client {
   virtual void copy(void* srcp, void* dstp) {
     Thread* t = m->rootThread;
 
-    object src = static_cast<object>(m->heap->follow(mask(srcp)));
+    object src = static_cast<object>(m->heap->follow(maskAlignedPointer(srcp)));
     assert(t, not objectFixed(t, src));
 
     object class_ = static_cast<object>
@@ -2815,7 +2815,7 @@ class HeapClient: public Heap::Client {
   }
 
   virtual void walk(void* p, Heap::Walker* w) {
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
     ::walk(m->rootThread, w, o, 0);
   }
 

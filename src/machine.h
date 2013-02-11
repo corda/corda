@@ -1611,7 +1611,7 @@ typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 inline object
 objectClass(Thread*, object o)
 {
-  return mask(cast<object>(o, 0));
+  return maskAlignedPointer(cast<object>(o, 0));
 }
 
 inline unsigned

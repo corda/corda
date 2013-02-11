@@ -483,7 +483,7 @@ cast(void* p, unsigned offset)
 
 template <class T>
 inline T*
-mask(T* p)
+maskAlignedPointer(T* p)
 {
   return reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(p) & PointerMask);
 }

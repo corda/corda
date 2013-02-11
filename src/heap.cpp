@@ -80,7 +80,7 @@ markBitAtomic(uintptr_t* map, unsigned i)
 inline void*
 get(void* o, unsigned offsetInWords)
 {
-  return mask(cast<void*>(o, offsetInWords * BytesPerWord));
+  return maskAlignedPointer(cast<void*>(o, offsetInWords * BytesPerWord));
 }
 
 inline void**
@@ -1179,12 +1179,12 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
 void*
 update(Context* c, void** p, void* target, unsigned offset, bool* needsVisit)
 {
-  if (mask(*p) == 0) {
+  if (maskAlignedPointer(*p) == 0) {
     *needsVisit = false;
     return 0;
   }
 
-  void* result = update2(c, mask(*p), needsVisit);
+  void* result = update2(c, maskAlignedPointer(*p), needsVisit);
 
   if (result) {
     updateHeapMap(c, p, target, offset, result);
@@ -1297,20 +1297,20 @@ bitsetNext(Context* c, uintptr_t* p)
 void
 collect(Context* c, void** p, void* target, unsigned offset)
 {
-  void* original = mask(*p);
+  void* original = maskAlignedPointer(*p);
   void* parent_ = 0;
   
   if (Debug) {
     fprintf(stderr, "update %p (%s) at %p (%s)\n",
-            mask(*p), segment(c, *p), p, segment(c, p));
+            maskAlignedPointer(*p), segment(c, *p), p, segment(c, p));
   }
 
   bool needsVisit;
-  local::set(p, update(c, mask(p), target, offset, &needsVisit));
+  local::set(p, update(c, maskAlignedPointer(p), target, offset, &needsVisit));
 
   if (Debug) {
     fprintf(stderr, "  result: %p (%s) (visit? %d)\n",
-            mask(*p), segment(c, *p), needsVisit);
+            maskAlignedPointer(*p), segment(c, *p), needsVisit);
   }
 
   if (not needsVisit) return;
@@ -1966,10 +1966,10 @@ class MyHeap: public Heap {
         bool dirty = false;
         for (unsigned i = 0; i < count; ++i) {
           void** target = static_cast<void**>(p) + offset + i;
-          if (targetNeedsMark(mask(*target))) {
+          if (targetNeedsMark(maskAlignedPointer(*target))) {
             if (DebugFixies) {
               fprintf(stderr, "dirty fixie %p at %d (%p): %p\n",
-                      f, offset, f->body() + offset, mask(*target));
+                      f, offset, f->body() + offset, maskAlignedPointer(*target));
             }
 
             dirty = true;
@@ -1994,7 +1994,7 @@ class MyHeap: public Heap {
 
         for (unsigned i = 0; i < count; ++i) {
           void** target = static_cast<void**>(p) + offset + i;
-          if (targetNeedsMark(mask(*target))) {
+          if (targetNeedsMark(maskAlignedPointer(*target))) {
 #ifdef USE_ATOMIC_OPERATIONS
             map->markAtomic(target);
 #else
@@ -2041,7 +2041,7 @@ class MyHeap: public Heap {
   }
 
   virtual Status status(void* p) {
-    p = mask(p);
+    p = maskAlignedPointer(p);
 
     if (p == 0) {
       return Null;
