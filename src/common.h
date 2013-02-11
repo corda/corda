@@ -476,7 +476,7 @@ getBits(T* map, unsigned bitsPerRecord, unsigned index)
 
 template <class T>
 inline T&
-cast(void* p, unsigned offset)
+fieldAtOffset(void* p, unsigned offset)
 {
   return *reinterpret_cast<T*>(static_cast<uint8_t*>(p) + offset);
 }

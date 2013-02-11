@@ -232,7 +232,7 @@ GetArrayLength(Thread* t, jarray array)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<uintptr_t>(*array, BytesPerWord);
+  return fieldAtOffset<uintptr_t>(*array, BytesPerWord);
 }
 
 uint64_t
@@ -271,7 +271,7 @@ newStringUTF(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>
     (makeLocalReference
      (t, t->m->classpath->makeString
-      (t, array, 0, cast<uintptr_t>(array, BytesPerWord) - 1)));
+      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1)));
 }
 
 jstring JNICALL
@@ -1532,7 +1532,7 @@ getObjectField(Thread* t, uintptr_t* arguments)
   ACQUIRE_FIELD_FOR_READ(t, field);
 
   return reinterpret_cast<uintptr_t>
-    (makeLocalReference(t, cast<object>(*o, fieldOffset(t, field))));
+    (makeLocalReference(t, fieldAtOffset<object>(*o, fieldOffset(t, field))));
 }
 
 jobject JNICALL
@@ -1553,7 +1553,7 @@ getBooleanField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jboolean>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jboolean>(*o, fieldOffset(t, field));
 }
 
 jboolean JNICALL
@@ -1574,7 +1574,7 @@ getByteField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jbyte>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jbyte>(*o, fieldOffset(t, field));
 }
 
 jbyte JNICALL
@@ -1595,7 +1595,7 @@ getCharField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jchar>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jchar>(*o, fieldOffset(t, field));
 }
 
 jchar JNICALL
@@ -1616,7 +1616,7 @@ getShortField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jshort>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jshort>(*o, fieldOffset(t, field));
 }
 
 jshort JNICALL
@@ -1637,7 +1637,7 @@ getIntField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jint>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jint>(*o, fieldOffset(t, field));
 }
 
 jint JNICALL
@@ -1658,7 +1658,7 @@ getLongField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jlong>(*o, fieldOffset(t, field));
+  return fieldAtOffset<jlong>(*o, fieldOffset(t, field));
 }
 
 jlong JNICALL
@@ -1679,7 +1679,7 @@ getFloatField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return floatToBits(cast<jfloat>(*o, fieldOffset(t, field)));
+  return floatToBits(fieldAtOffset<jfloat>(*o, fieldOffset(t, field)));
 }
 
 jfloat JNICALL
@@ -1700,7 +1700,7 @@ getDoubleField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return doubleToBits(cast<jdouble>(*o, fieldOffset(t, field)));
+  return doubleToBits(fieldAtOffset<jdouble>(*o, fieldOffset(t, field)));
 }
 
 jdouble JNICALL
@@ -1747,7 +1747,7 @@ setBooleanField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  cast<jboolean>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jboolean>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1772,7 +1772,7 @@ setByteField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jbyte>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jbyte>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1797,7 +1797,7 @@ setCharField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jchar>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jchar>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1822,7 +1822,7 @@ setShortField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jshort>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jshort>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1847,7 +1847,7 @@ setIntField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jint>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jint>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1872,7 +1872,7 @@ setLongField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jlong>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jlong>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1898,7 +1898,7 @@ setFloatField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jfloat>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jfloat>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1923,7 +1923,7 @@ setDoubleField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jdouble>(*o, fieldOffset(t, field)) = v;
+  fieldAtOffset<jdouble>(*o, fieldOffset(t, field)) = v;
   
   return 1;
 }
@@ -1965,7 +1965,7 @@ getStaticObjectField(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
-     (t, cast<object>
+     (t, fieldAtOffset<object>
       (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field))));
 }
 
@@ -1990,7 +1990,7 @@ getStaticBooleanField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jboolean>
+  return fieldAtOffset<jboolean>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2015,7 +2015,7 @@ getStaticByteField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jbyte>
+  return fieldAtOffset<jbyte>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2040,7 +2040,7 @@ getStaticCharField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jchar>
+  return fieldAtOffset<jchar>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2065,7 +2065,7 @@ getStaticShortField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jshort>
+  return fieldAtOffset<jshort>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2090,7 +2090,7 @@ getStaticIntField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jint>
+  return fieldAtOffset<jint>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2115,7 +2115,7 @@ getStaticLongField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return cast<jlong>
+  return fieldAtOffset<jlong>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
 }
 
@@ -2141,7 +2141,7 @@ getStaticFloatField(Thread* t, uintptr_t* arguments)
   ACQUIRE_FIELD_FOR_READ(t, field);
 
   return floatToBits
-    (cast<jfloat>
+    (fieldAtOffset<jfloat>
      (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)));
 }
 
@@ -2167,7 +2167,7 @@ getStaticDoubleField(Thread* t, uintptr_t* arguments)
   ACQUIRE_FIELD_FOR_READ(t, field);
 
   return doubleToBits
-    (cast<jdouble>
+    (fieldAtOffset<jdouble>
      (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)));
 }
 
@@ -2222,7 +2222,7 @@ setStaticBooleanField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  cast<jboolean>
+  fieldAtOffset<jboolean>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2251,7 +2251,7 @@ setStaticByteField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jbyte>
+  fieldAtOffset<jbyte>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2280,7 +2280,7 @@ setStaticCharField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jchar>
+  fieldAtOffset<jchar>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2309,7 +2309,7 @@ setStaticShortField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jshort>
+  fieldAtOffset<jshort>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2338,7 +2338,7 @@ setStaticIntField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jint>
+  fieldAtOffset<jint>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2367,7 +2367,7 @@ setStaticLongField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jlong>
+  fieldAtOffset<jlong>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2397,7 +2397,7 @@ setStaticFloatField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jfloat>
+  fieldAtOffset<jfloat>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;
@@ -2426,7 +2426,7 @@ setStaticDoubleField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
   
-  cast<jdouble>
+  fieldAtOffset<jdouble>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
   
   return 1;

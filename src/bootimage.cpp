@@ -740,7 +740,7 @@ targetSize(Thread* t, object typeMaps, object p)
   if (map->targetArrayElementSizeInBytes) {
     return map->targetFixedSizeInWords
       + ceilingDivide(map->targetArrayElementSizeInBytes
-                * cast<uintptr_t>
+                * fieldAtOffset<uintptr_t>
                 (p, (map->buildFixedSizeInWords - 1) * BytesPerWord),
                 TargetBytesPerWord);
   } else {
@@ -888,7 +888,7 @@ nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
 
   if (map->targetArrayElementSizeInBytes) {
     unsigned fixedSize = map->buildFixedSizeInWords * BytesPerWord;
-    unsigned count = cast<uintptr_t>(src, fixedSize - BytesPerWord);
+    unsigned count = fieldAtOffset<uintptr_t>(src, fixedSize - BytesPerWord);
 
     for (unsigned i = 0; i < count; ++i) {
       if (not nonObjectsEqual
@@ -919,7 +919,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
 
   if (map->targetArrayElementSizeInBytes) {
     unsigned fixedSize = map->buildFixedSizeInWords * BytesPerWord;
-    unsigned count = cast<uintptr_t>(p, fixedSize - BytesPerWord);
+    unsigned count = fieldAtOffset<uintptr_t>(p, fixedSize - BytesPerWord);
 
     for (unsigned i = 0; i < count; ++i) {
       copy(t, src + fixedSize + (i * map->buildArrayElementSizeInBytes),

@@ -1611,7 +1611,7 @@ typedef uint64_t (JNICALL *FastNativeFunction)(Thread*, object, uintptr_t*);
 inline object
 objectClass(Thread*, object o)
 {
-  return maskAlignedPointer(cast<object>(o, 0));
+  return maskAlignedPointer(fieldAtOffset<object>(o, 0));
 }
 
 inline unsigned
@@ -1883,18 +1883,18 @@ mark(Thread* t, object o, unsigned offset)
 inline void
 set(Thread* t, object target, unsigned offset, object value)
 {
-  cast<object>(target, offset) = value;
+  fieldAtOffset<object>(target, offset) = value;
   mark(t, target, offset);
 }
 
 inline void
 setObjectClass(Thread*, object o, object value)
 {
-  cast<object>(o, 0)
+  fieldAtOffset<object>(o, 0)
     = reinterpret_cast<object>
     (reinterpret_cast<intptr_alias_t>(value)
      | (reinterpret_cast<intptr_alias_t>
-        (cast<object>(o, 0)) & (~PointerMask)));
+        (fieldAtOffset<object>(o, 0)) & (~PointerMask)));
 }
 
 inline const char*
@@ -2151,7 +2151,7 @@ baseSize(Thread* t, object o, object class_)
 
   return ceilingDivide(classFixedSize(t, class_), BytesPerWord)
     + ceilingDivide(classArrayElementSize(t, class_)
-              * cast<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
+              * fieldAtOffset<uintptr_t>(o, classFixedSize(t, class_) - BytesPerWord),
               BytesPerWord);
 }
 
@@ -2290,7 +2290,7 @@ inline uintptr_t&
 extendedWord(Thread* t UNUSED, object o, unsigned baseSize)
 {
   assert(t, objectExtended(t, o));
-  return cast<uintptr_t>(o, baseSize * BytesPerWord);
+  return fieldAtOffset<uintptr_t>(o, baseSize * BytesPerWord);
 }
 
 inline unsigned
@@ -2792,7 +2792,7 @@ objectArrayLength(Thread* t UNUSED, object array)
 {
   assert(t, classFixedSize(t, objectClass(t, array)) == BytesPerWord * 2);
   assert(t, classArrayElementSize(t, objectClass(t, array)) == BytesPerWord);
-  return cast<uintptr_t>(array, BytesPerWord);
+  return fieldAtOffset<uintptr_t>(array, BytesPerWord);
 }
 
 inline object&
@@ -2803,7 +2803,7 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
   assert(t, classObjectMask(t, objectClass(t, array))
          == classObjectMask(t, arrayBody
                             (t, t->m->types, Machine::ArrayType)));
-  return cast<object>(array, ArrayBody + (index * BytesPerWord));
+  return fieldAtOffset<object>(array, ArrayBody + (index * BytesPerWord));
 }
 
 unsigned
@@ -2839,7 +2839,7 @@ inline bool
 atomicCompareAndSwapObject(Thread* t, object target, unsigned offset,
                            object old, object new_)
 {
-  if (atomicCompareAndSwap(&cast<uintptr_t>(target, offset),
+  if (atomicCompareAndSwap(&fieldAtOffset<uintptr_t>(target, offset),
                            reinterpret_cast<uintptr_t>(old),
                            reinterpret_cast<uintptr_t>(new_)))
   {
@@ -3473,7 +3473,7 @@ inline object
 resolveClassInObject(Thread* t, object loader, object container,
                      unsigned classOffset, bool throw_ = true)
 {
-  object o = cast<object>(container, classOffset);
+  object o = fieldAtOffset<object>(container, classOffset);
 
   loadMemoryBarrier();  
 

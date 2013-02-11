@@ -80,13 +80,13 @@ markBitAtomic(uintptr_t* map, unsigned i)
 inline void*
 get(void* o, unsigned offsetInWords)
 {
-  return maskAlignedPointer(cast<void*>(o, offsetInWords * BytesPerWord));
+  return maskAlignedPointer(fieldAtOffset<void*>(o, offsetInWords * BytesPerWord));
 }
 
 inline void**
 getp(void* o, unsigned offsetInWords)
 {
-  return &cast<void*>(o, offsetInWords * BytesPerWord);
+  return &fieldAtOffset<void*>(o, offsetInWords * BytesPerWord);
 }
 
 inline void
@@ -862,21 +862,21 @@ inline void*
 follow(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
-  return cast<void*>(o, 0);
+  return fieldAtOffset<void*>(o, 0);
 }
 
 inline void*&
 parent(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
-  return cast<void*>(o, BytesPerWord);
+  return fieldAtOffset<void*>(o, BytesPerWord);
 }
 
 inline uintptr_t*
 bitset(Context* c UNUSED, void* o)
 {
   assert(c, wasCollected(c, o));
-  return &cast<uintptr_t>(o, BytesPerWord * 2);
+  return &fieldAtOffset<uintptr_t>(o, BytesPerWord * 2);
 }
 
 void
@@ -1059,7 +1059,7 @@ copy(Context* c, void* o)
   }
 
   // leave a pointer to the copy in the original
-  cast<void*>(o, 0) = r;
+  fieldAtOffset<void*>(o, 0) = r;
 
   return r;
 }

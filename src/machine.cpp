@@ -924,7 +924,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
         
       object value = parseUtf8(t, singletonObject(t, pool, si));
       value = t->m->classpath->makeString
-        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
+        (t, value, 0, fieldAtOffset<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
@@ -3466,7 +3466,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     
     object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
     t->backupHeapIndex += ceilingDivide(sizeInBytes, BytesPerWord);
-    cast<object>(o, 0) = 0;
+    fieldAtOffset<object>(o, 0) = 0;
     return o;
   } else if (UNLIKELY(t->flags & Thread::TracingFlag)) {
     expect(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
@@ -4670,7 +4670,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     unsigned arrayElementSize = classArrayElementSize(t, class_);
     unsigned arrayLength
       = (arrayElementSize ?
-         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+         fieldAtOffset<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
     THREAD_RUNTIME_ARRAY(t, uint32_t, mask, intArrayLength(t, objectMask));
     memcpy(RUNTIME_ARRAY_BODY(mask), &intArrayBody(t, objectMask, 0),

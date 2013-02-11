@@ -250,21 +250,21 @@ Avian_java_lang_reflect_Field_getPrimitive
 
   switch (code) {
   case ByteField: 
-    return cast<int8_t>(instance, offset);
+    return fieldAtOffset<int8_t>(instance, offset);
   case BooleanField: 
-    return cast<uint8_t>(instance, offset);
+    return fieldAtOffset<uint8_t>(instance, offset);
   case CharField: 
-    return cast<uint16_t>(instance, offset);
+    return fieldAtOffset<uint16_t>(instance, offset);
   case ShortField: 
-    return cast<int16_t>(instance, offset);
+    return fieldAtOffset<int16_t>(instance, offset);
   case IntField: 
-    return cast<int32_t>(instance, offset);
+    return fieldAtOffset<int32_t>(instance, offset);
   case LongField: 
-    return cast<int64_t>(instance, offset);
+    return fieldAtOffset<int64_t>(instance, offset);
   case FloatField: 
-    return cast<uint32_t>(instance, offset);
+    return fieldAtOffset<uint32_t>(instance, offset);
   case DoubleField: 
-    return cast<uint64_t>(instance, offset);
+    return fieldAtOffset<uint64_t>(instance, offset);
   default:
     abort(t);
   }
@@ -277,7 +277,7 @@ Avian_java_lang_reflect_Field_getObject
   object instance = reinterpret_cast<object>(arguments[0]);
   int offset = arguments[1];
 
-  return reinterpret_cast<int64_t>(cast<object>(instance, offset));
+  return reinterpret_cast<int64_t>(fieldAtOffset<object>(instance, offset));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -291,28 +291,28 @@ Avian_java_lang_reflect_Field_setPrimitive
 
   switch (code) {
   case ByteField:
-    cast<int8_t>(instance, offset) = static_cast<int8_t>(value);
+    fieldAtOffset<int8_t>(instance, offset) = static_cast<int8_t>(value);
     break;
   case BooleanField:
-    cast<uint8_t>(instance, offset) = static_cast<uint8_t>(value);
+    fieldAtOffset<uint8_t>(instance, offset) = static_cast<uint8_t>(value);
     break;
   case CharField:
-    cast<uint16_t>(instance, offset) = static_cast<uint16_t>(value);
+    fieldAtOffset<uint16_t>(instance, offset) = static_cast<uint16_t>(value);
     break;
   case ShortField:
-    cast<int16_t>(instance, offset) = static_cast<int16_t>(value);
+    fieldAtOffset<int16_t>(instance, offset) = static_cast<int16_t>(value);
     break;
   case IntField: 
-    cast<int32_t>(instance, offset) = static_cast<int32_t>(value);
+    fieldAtOffset<int32_t>(instance, offset) = static_cast<int32_t>(value);
     break;
   case LongField: 
-    cast<int64_t>(instance, offset) = static_cast<int64_t>(value);
+    fieldAtOffset<int64_t>(instance, offset) = static_cast<int64_t>(value);
     break;
   case FloatField: 
-    cast<uint32_t>(instance, offset) = static_cast<uint32_t>(value);
+    fieldAtOffset<uint32_t>(instance, offset) = static_cast<uint32_t>(value);
     break;
   case DoubleField: 
-    cast<uint64_t>(instance, offset) = static_cast<uint64_t>(value);
+    fieldAtOffset<uint64_t>(instance, offset) = static_cast<uint64_t>(value);
     break;
   default:
     abort(t);
@@ -379,7 +379,7 @@ Avian_java_lang_reflect_Array_getLength
     unsigned elementSize = classArrayElementSize(t, objectClass(t, array));
 
     if (LIKELY(elementSize)) {
-      return cast<uintptr_t>(array, BytesPerWord);
+      return fieldAtOffset<uintptr_t>(array, BytesPerWord);
     } else {
       throwNew(t, Machine::IllegalArgumentExceptionType);
     }
@@ -666,7 +666,7 @@ Avian_avian_Atomic_compareAndSwapObject
   uintptr_t update = arguments[4];
 
   bool success = atomicCompareAndSwap
-    (&cast<uintptr_t>(target, offset), expect, update);
+    (&fieldAtOffset<uintptr_t>(target, offset), expect, update);
 
   if (success) {
     mark(t, target, offset);

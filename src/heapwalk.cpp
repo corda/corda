@@ -228,7 +228,7 @@ inline object
 get(object o, unsigned offsetInWords)
 {
   return static_cast<object>
-    (mask(cast<void*>(o, offsetInWords * BytesPerWord)));
+    (mask(fieldAtOffset<void*>(o, offsetInWords * BytesPerWord)));
 }
 
 unsigned

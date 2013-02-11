@@ -365,7 +365,7 @@ Avian_sun_misc_Unsafe_setMemory
   ACQUIRE(t, t->m->referenceLock);
 
   if (base) {
-    memset(&cast<int8_t>(base, offset), value, count);
+    memset(&fieldAtOffset<int8_t>(base, offset), value, count);
   } else {
     memset(reinterpret_cast<int8_t*>(offset), value, count);
   }
@@ -528,11 +528,11 @@ Avian_sun_misc_Unsafe_copyMemory
   ACQUIRE(t, t->m->referenceLock);
 
   void* src = srcBase
-    ? &cast<uint8_t>(srcBase, srcOffset)
+    ? &fieldAtOffset<uint8_t>(srcBase, srcOffset)
     : reinterpret_cast<uint8_t*>(srcOffset);
 
   void* dst = dstBase
-    ? &cast<uint8_t>(dstBase, dstOffset)
+    ? &fieldAtOffset<uint8_t>(dstBase, dstOffset)
     : reinterpret_cast<uint8_t*>(dstOffset);
 
   memcpy(dst, src, count);

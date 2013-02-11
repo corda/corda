@@ -3047,22 +3047,22 @@ getFieldValue(Thread* t, object target, object field)
   switch (fieldCode(t, field)) {
   case ByteField:
   case BooleanField:
-    return cast<int8_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int8_t>(target, fieldOffset(t, field));
 
   case CharField:
   case ShortField:
-    return cast<int16_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int16_t>(target, fieldOffset(t, field));
 
   case FloatField:
   case IntField:
-    return cast<int32_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int32_t>(target, fieldOffset(t, field));
 
   case DoubleField:
   case LongField:
-    return cast<int64_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int64_t>(target, fieldOffset(t, field));
 
   case ObjectField:
-    return cast<intptr_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<intptr_t>(target, fieldOffset(t, field));
 
   default:
     abort(t);
@@ -3105,7 +3105,7 @@ setStaticLongFieldValueFromReference(MyThread* t, object pair, uint64_t value)
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  cast<int64_t>
+  fieldAtOffset<int64_t>
     (classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field)) = value;
 }
 
@@ -3120,7 +3120,7 @@ setLongFieldValueFromReference(MyThread* t, object pair, object instance,
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  cast<int64_t>(instance, fieldOffset(t, field)) = value;
+  fieldAtOffset<int64_t>(instance, fieldOffset(t, field)) = value;
 }
 
 void
@@ -3160,17 +3160,17 @@ setFieldValue(MyThread* t, object target, object field, uint32_t value)
   switch (fieldCode(t, field)) {
   case ByteField:
   case BooleanField:
-    cast<int8_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int8_t>(target, fieldOffset(t, field)) = value;
     break;
 
   case CharField:
   case ShortField:
-    cast<int16_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int16_t>(target, fieldOffset(t, field)) = value;
     break;
 
   case FloatField:
   case IntField:
-    cast<int32_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int32_t>(target, fieldOffset(t, field)) = value;
     break;
 
   default:
@@ -8498,11 +8498,11 @@ class ArgumentList {
       
       case 'J':
       case 'D':
-        addLong(cast<int64_t>(objectArrayBody(t, arguments, index++), 8));
+        addLong(fieldAtOffset<int64_t>(objectArrayBody(t, arguments, index++), 8));
         break;
 
       default:
-        addInt(cast<int32_t>(objectArrayBody(t, arguments, index++),
+        addInt(fieldAtOffset<int32_t>(objectArrayBody(t, arguments, index++),
                              BytesPerWord));
         break;
       }

@@ -709,7 +709,7 @@ class MyClasspath : public Classpath {
       set(t, classStaticTable(t, type(t, Machine::ClassLoaderType)),
           fieldOffset(t, scl), root(t, Machine::AppLoader));
 
-      cast<uint8_t>(classStaticTable(t, type(t, Machine::ClassLoaderType)),
+      fieldAtOffset<uint8_t>(classStaticTable(t, type(t, Machine::ClassLoaderType)),
                     fieldOffset(t, sclSet)) = true;
     }
 
@@ -950,7 +950,7 @@ getFileAttributes
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = cast<object>(file, cp->filePathField);
+  object path = fieldAtOffset<object>(file, cp->filePathField);
 
   THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
@@ -999,7 +999,7 @@ checkFileAccess
 
   object file = reinterpret_cast<object>(arguments[1]);
   unsigned mask = arguments[2];
-  object path = cast<object>(file, cp->filePathField);
+  object path = fieldAtOffset<object>(file, cp->filePathField);
 
   THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
@@ -1045,7 +1045,7 @@ getFileLength
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = cast<object>(file, cp->filePathField);
+  object path = fieldAtOffset<object>(file, cp->filePathField);
 
   THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
@@ -1131,8 +1131,8 @@ openFile(Thread* t, object method, uintptr_t* arguments)
     set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
         region);
 
-    cast<int32_t>
-      (cast<object>
+    fieldAtOffset<int32_t>
+      (fieldAtOffset<object>
        (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField)
       = index + VirtualFileBase;
   } else {
@@ -1150,8 +1150,8 @@ readByteFromFile(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int fd = cast<int32_t>
-    (cast<object>
+  int fd = fieldAtOffset<int32_t>
+    (fieldAtOffset<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
@@ -1191,8 +1191,8 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int fd = cast<int32_t>
-    (cast<object>
+  int fd = fieldAtOffset<int32_t>
+    (fieldAtOffset<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
@@ -1243,8 +1243,8 @@ skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int fd = cast<int32_t>
-    (cast<object>
+  int fd = fieldAtOffset<int32_t>
+    (fieldAtOffset<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
@@ -1284,8 +1284,8 @@ availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int fd = cast<int32_t>
-    (cast<object>
+  int fd = fieldAtOffset<int32_t>
+    (fieldAtOffset<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
@@ -1317,8 +1317,8 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int fd = cast<int32_t>
-    (cast<object>
+  int fd = fieldAtOffset<int32_t>
+    (fieldAtOffset<object>
      (this_, cp->fileInputStreamFdField), cp->fileDescriptorFdField);
 
   if (fd >= VirtualFileBase) {
@@ -1623,15 +1623,15 @@ initializeZipEntryFields(Thread* t, object method, uintptr_t* arguments)
 
     set(t, this_, cp->zipEntryNameField, name);
 
-    cast<int64_t>(this_, cp->zipEntryTimeField)
+    fieldAtOffset<int64_t>(this_, cp->zipEntryTimeField)
       = fileTime(entry->start);
-    cast<int64_t>(this_, cp->zipEntryCrcField)
+    fieldAtOffset<int64_t>(this_, cp->zipEntryCrcField)
       = fileCRC(entry->start);
-    cast<int64_t>(this_, cp->zipEntrySizeField)
+    fieldAtOffset<int64_t>(this_, cp->zipEntrySizeField)
       = uncompressedSize(entry->start);
-    cast<int64_t>(this_, cp->zipEntryCsizeField)
+    fieldAtOffset<int64_t>(this_, cp->zipEntryCsizeField)
       = compressedSize(entry->start);
-    cast<int64_t>(this_, cp->zipEntryMethodField)
+    fieldAtOffset<int64_t>(this_, cp->zipEntryMethodField)
       = compressionMethod(entry->start);
   } else {
     t->m->processor->invoke
@@ -1771,7 +1771,7 @@ getJarFileMetaInfEntryNames(Thread* t, object method, uintptr_t* arguments)
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  int64_t peer = cast<int64_t>(this_, cp->zipFileJzfileField);
+  int64_t peer = fieldAtOffset<int64_t>(this_, cp->zipFileJzfileField);
   ZipFile* file = reinterpret_cast<ZipFile*>(peer);
   if (file->region) {
     return 0;
@@ -2839,7 +2839,7 @@ Avian_sun_misc_Unsafe_getObject
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<uintptr_t>(o, offset);
+  return fieldAtOffset<uintptr_t>(o, offset);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2860,7 +2860,7 @@ Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<int16_t>(o, offset);
+  return fieldAtOffset<int16_t>(o, offset);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2870,7 +2870,7 @@ Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<int32_t>(o, offset);
+  return fieldAtOffset<int32_t>(o, offset);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2880,7 +2880,7 @@ Avian_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<int32_t>(o, offset);
+  return fieldAtOffset<int32_t>(o, offset);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2890,7 +2890,7 @@ Avian_sun_misc_Unsafe_getIntVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  int32_t result = cast<int32_t>(o, offset);
+  int32_t result = fieldAtOffset<int32_t>(o, offset);
   loadMemoryBarrier();
   return result;
 }
@@ -2902,7 +2902,7 @@ Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<int64_t>(o, offset);
+  return fieldAtOffset<int64_t>(o, offset);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2928,7 +2928,7 @@ Avian_sun_misc_Unsafe_getLongVolatile
     acquire(t, field);        
   }
 
-  int64_t result = cast<int64_t>(o, offset);
+  int64_t result = fieldAtOffset<int64_t>(o, offset);
 
   if (BytesPerWord < 8) {
     release(t, field);        
@@ -2947,7 +2947,7 @@ Avian_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int8_t value = arguments[4];
 
-  cast<int8_t>(o, offset) = value;
+  fieldAtOffset<int8_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2958,7 +2958,7 @@ Avian_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int16_t value = arguments[4];
 
-  cast<int16_t>(o, offset) = value;
+  fieldAtOffset<int16_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2969,7 +2969,7 @@ Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int32_t value = arguments[4];
 
-  cast<int32_t>(o, offset) = value;
+  fieldAtOffset<int32_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -2980,7 +2980,7 @@ Avian_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int32_t value = arguments[4];
 
-  cast<int32_t>(o, offset) = value;
+  fieldAtOffset<int32_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -2990,7 +2990,7 @@ Avian_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  return cast<int8_t>(o, offset);
+  return fieldAtOffset<int8_t>(o, offset);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -3009,7 +3009,7 @@ Avian_sun_misc_Unsafe_putBoolean__Ljava_lang_Object_2JZ
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   uint8_t value = arguments[4];
 
-  cast<uint8_t>(o, offset) = value;
+  fieldAtOffset<uint8_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -3020,7 +3020,7 @@ Avian_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int64_t value; memcpy(&value, arguments + 4, 8);
 
-  cast<int64_t>(o, offset) = value;
+  fieldAtOffset<int64_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -3030,7 +3030,7 @@ Avian_sun_misc_Unsafe_getObjectVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   
-  uintptr_t value = cast<uintptr_t>(o, offset);
+  uintptr_t value = fieldAtOffset<uintptr_t>(o, offset);
   loadMemoryBarrier();
   return value;
 }
@@ -3065,7 +3065,7 @@ Avian_sun_misc_Unsafe_compareAndSwapInt
   uint32_t update = arguments[5];
 
   return atomicCompareAndSwap32
-    (&cast<uint32_t>(target, offset), expect, update);
+    (&fieldAtOffset<uint32_t>(target, offset), expect, update);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -3078,7 +3078,7 @@ Avian_sun_misc_Unsafe_compareAndSwapObject
   uintptr_t update = arguments[5];
 
   bool success = atomicCompareAndSwap
-    (&cast<uintptr_t>(target, offset), expect, update);
+    (&fieldAtOffset<uintptr_t>(target, offset), expect, update);
 
   if (success) {
     mark(t, target, offset);
@@ -3098,11 +3098,11 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
 
 #ifdef AVIAN_HAS_CAS64
   return atomicCompareAndSwap64
-    (&cast<uint64_t>(target, offset), expect, update);
+    (&fieldAtOffset<uint64_t>(target, offset), expect, update);
 #else
   ACQUIRE_FIELD_FOR_WRITE(t, local::fieldForOffset(t, target, offset));
-  if (cast<uint64_t>(target, offset) == expect) {
-    cast<uint64_t>(target, offset) = update;
+  if (fieldAtOffset<uint64_t>(target, offset) == expect) {
+    fieldAtOffset<uint64_t>(target, offset) = update;
     return true;
   } else {
     return false;
@@ -3999,7 +3999,7 @@ EXPORT(JVM_GetArrayLength)(Thread* t, jobject array)
 {
   ENTER(t, Thread::ActiveState);
 
-  return cast<uintptr_t>(*array, BytesPerWord);
+  return fieldAtOffset<uintptr_t>(*array, BytesPerWord);
 }
 
 uint64_t
@@ -4012,40 +4012,40 @@ jvmGetArrayElement(Thread* t, uintptr_t* arguments)
   case 'Z':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeBoolean(t, cast<int8_t>(*array, ArrayBody + index))));
+       (t, makeBoolean(t, fieldAtOffset<int8_t>(*array, ArrayBody + index))));
   case 'B':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeByte(t, cast<int8_t>(*array, ArrayBody + index))));
+       (t, makeByte(t, fieldAtOffset<int8_t>(*array, ArrayBody + index))));
   case 'C':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeChar(t, cast<int16_t>(*array, ArrayBody + (index * 2)))));
+       (t, makeChar(t, fieldAtOffset<int16_t>(*array, ArrayBody + (index * 2)))));
   case 'S':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeShort(t, cast<int16_t>(*array, ArrayBody + (index * 2)))));
+       (t, makeShort(t, fieldAtOffset<int16_t>(*array, ArrayBody + (index * 2)))));
   case 'I':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeInt(t, cast<int32_t>(*array, ArrayBody + (index * 4)))));
+       (t, makeInt(t, fieldAtOffset<int32_t>(*array, ArrayBody + (index * 4)))));
   case 'F':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeFloat(t, cast<int32_t>(*array, ArrayBody + (index * 4)))));
+       (t, makeFloat(t, fieldAtOffset<int32_t>(*array, ArrayBody + (index * 4)))));
   case 'J':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeLong(t, cast<int64_t>(*array, ArrayBody + (index * 8)))));
+       (t, makeLong(t, fieldAtOffset<int64_t>(*array, ArrayBody + (index * 8)))));
   case 'D':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, makeDouble(t, cast<int64_t>(*array, ArrayBody + (index * 8)))));
+       (t, makeDouble(t, fieldAtOffset<int64_t>(*array, ArrayBody + (index * 8)))));
   case 'L':
   case '[':
     return reinterpret_cast<intptr_t>
       (makeLocalReference
-       (t, cast<object>(*array, ArrayBody + (index * BytesPerWord))));
+       (t, fieldAtOffset<object>(*array, ArrayBody + (index * BytesPerWord))));
   default:
     abort(t);
   }
@@ -4071,28 +4071,28 @@ EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
 
   switch (byteArrayBody(t, className(t, objectClass(t, *array)), 1)) {
   case 'Z':
-    cast<int8_t>(*array, ArrayBody + index) = booleanValue(t, *value);
+    fieldAtOffset<int8_t>(*array, ArrayBody + index) = booleanValue(t, *value);
     break;
   case 'B':
-    cast<int8_t>(*array, ArrayBody + index) = byteValue(t, *value);
+    fieldAtOffset<int8_t>(*array, ArrayBody + index) = byteValue(t, *value);
     break;
   case 'C':
-    cast<int16_t>(*array, ArrayBody + (index * 2)) = charValue(t, *value);
+    fieldAtOffset<int16_t>(*array, ArrayBody + (index * 2)) = charValue(t, *value);
     break;
   case 'S':
-    cast<int16_t>(*array, ArrayBody + (index * 2)) = shortValue(t, *value);
+    fieldAtOffset<int16_t>(*array, ArrayBody + (index * 2)) = shortValue(t, *value);
     break;
   case 'I':
-    cast<int32_t>(*array, ArrayBody + (index * 4)) = intValue(t, *value);
+    fieldAtOffset<int32_t>(*array, ArrayBody + (index * 4)) = intValue(t, *value);
     break;
   case 'F':
-    cast<int32_t>(*array, ArrayBody + (index * 4)) = floatValue(t, *value);
+    fieldAtOffset<int32_t>(*array, ArrayBody + (index * 4)) = floatValue(t, *value);
     break;
   case 'J':
-    cast<int64_t>(*array, ArrayBody + (index * 8)) = longValue(t, *value);
+    fieldAtOffset<int64_t>(*array, ArrayBody + (index * 8)) = longValue(t, *value);
     break;
   case 'D':
-    cast<int64_t>(*array, ArrayBody + (index * 8)) = doubleValue(t, *value);
+    fieldAtOffset<int64_t>(*array, ArrayBody + (index * 8)) = doubleValue(t, *value);
     break;
   case 'L':
   case '[':
@@ -5059,7 +5059,7 @@ jvmConstantPoolGetUTF8At(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>
     (makeLocalReference
      (t, t->m->classpath->makeString
-      (t, array, 0, cast<uintptr_t>(array, BytesPerWord) - 1)));
+      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1)));
 }
 
 extern "C" JNIEXPORT jstring JNICALL
