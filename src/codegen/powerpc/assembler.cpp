@@ -23,26 +23,26 @@ namespace {
 namespace isa {
 // INSTRUCTION FORMATS
 inline int D(int op, int rt, int ra, int d) { return op<<26|rt<<21|ra<<16|(d & 0xFFFF); }
-inline int DS(int op, int rt, int ra, int ds, int xo) { return op<<26|rt<<21|ra<<16|ds<<2|xo; }
+// inline int DS(int op, int rt, int ra, int ds, int xo) { return op<<26|rt<<21|ra<<16|ds<<2|xo; }
 inline int I(int op, int li, int aa, int lk) { return op<<26|(li & 0x3FFFFFC)|aa<<1|lk; }
 inline int B(int op, int bo, int bi, int bd, int aa, int lk) { return op<<26|bo<<21|bi<<16|(bd & 0xFFFC)|aa<<1|lk; }
-inline int SC(int op, int lev) { return op<<26|lev<<5|2; }
+// inline int SC(int op, int lev) { return op<<26|lev<<5|2; }
 inline int X(int op, int rt, int ra, int rb, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|xo<<1|rc; }
 inline int XL(int op, int bt, int ba, int bb, int xo, int lk) { return op<<26|bt<<21|ba<<16|bb<<11|xo<<1|lk; }
 inline int XFX(int op, int rt, int spr, int xo) { return op<<26|rt<<21|((spr >> 5) | ((spr << 5) & 0x3E0))<<11|xo<<1; }
-inline int XFL(int op, int flm, int frb, int xo, int rc) { return op<<26|flm<<17|frb<<11|xo<<1|rc; }
-inline int XS(int op, int rs, int ra, int sh, int xo, int sh2, int rc) { return op<<26|rs<<21|ra<<16|sh<<11|xo<<2|sh2<<1|rc; }
+// inline int XFL(int op, int flm, int frb, int xo, int rc) { return op<<26|flm<<17|frb<<11|xo<<1|rc; }
+// inline int XS(int op, int rs, int ra, int sh, int xo, int sh2, int rc) { return op<<26|rs<<21|ra<<16|sh<<11|xo<<2|sh2<<1|rc; }
 inline int XO(int op, int rt, int ra, int rb, int oe, int xo, int rc) { return op<<26|rt<<21|ra<<16|rb<<11|oe<<10|xo<<1|rc; }
-inline int A(int op, int frt, int fra, int frb, int frc, int xo, int rc) { return op<<26|frt<<21|fra<<16|frb<<11|frc<<6|xo<<1|rc; }
+// inline int A(int op, int frt, int fra, int frb, int frc, int xo, int rc) { return op<<26|frt<<21|fra<<16|frb<<11|frc<<6|xo<<1|rc; }
 inline int M(int op, int rs, int ra, int rb, int mb, int me, int rc) { return op<<26|rs<<21|ra<<16|rb<<11|mb<<6|me<<1|rc; }
-inline int MD(int op, int rs, int ra, int sh, int mb, int xo, int sh2, int rc) { return op<<26|rs<<21|ra<<16|sh<<11|mb<<5|xo<<2|sh2<<1|rc; }
-inline int MDS(int op, int rs, int ra, int rb, int mb, int xo, int rc) { return op<<26|rs<<21|ra<<16|rb<<11|mb<<5|xo<<1|rc; }
+// inline int MD(int op, int rs, int ra, int sh, int mb, int xo, int sh2, int rc) { return op<<26|rs<<21|ra<<16|sh<<11|mb<<5|xo<<2|sh2<<1|rc; }
+// inline int MDS(int op, int rs, int ra, int rb, int mb, int xo, int rc) { return op<<26|rs<<21|ra<<16|rb<<11|mb<<5|xo<<1|rc; }
 // INSTRUCTIONS
 inline int lbz(int rt, int ra, int i) { return D(34, rt, ra, i); }
 inline int lbzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 87, 0); }
 inline int lha(int rt, int ra, int i) { return D(42, rt, ra, i); }
 inline int lhax(int rt, int ra, int rb) { return X(31, rt, ra, rb, 343, 0); }
-inline int lhz(int rt, int ra, int i) { return D(40, rt, ra, i); }
+// inline int lhz(int rt, int ra, int i) { return D(40, rt, ra, i); }
 inline int lhzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 279, 0); }
 inline int lwz(int rt, int ra, int i) { return D(32, rt, ra, i); }
 inline int lwzx(int rt, int ra, int rb) { return X(31, rt, ra, rb, 23, 0); }
@@ -66,13 +66,13 @@ inline int subfe(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 136, 0);
 inline int subfic(int rt, int ra, int i) { return D(8, rt, ra, i); }
 inline int subfze(int rt, int ra) { return XO(31, rt, ra, 0, 0, 200, 0); }
 inline int mullw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 235, 0); }
-inline int mulhw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
+// inline int mulhw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 75, 0); }
 inline int mulhwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 11, 0); }
-inline int mulli(int rt, int ra, int i) { return D(7, rt, ra, i); }
+// inline int mulli(int rt, int ra, int i) { return D(7, rt, ra, i); }
 inline int divw(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 491, 0); }
-inline int divwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 459, 0); }
-inline int divd(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 489, 0); }
-inline int divdu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 457, 0); }
+// inline int divwu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 459, 0); }
+// inline int divd(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 489, 0); }
+// inline int divdu(int rt, int ra, int rb) { return XO(31, rt, ra, rb, 0, 457, 0); }
 inline int neg(int rt, int ra) { return XO(31, rt, ra, 0, 0, 104, 0); }
 inline int and_(int rt, int ra, int rb) { return X(31, ra, rt, rb, 28, 0); }
 inline int andi(int rt, int ra, int i) { return D(28, ra, rt, i); }
@@ -86,7 +86,7 @@ inline int xoris(int rt, int ra, int i) { return D(27, rt, ra, i); }
 inline int rlwinm(int rt, int ra, int i, int mb, int me) { return M(21, ra, rt, i, mb, me, 0); }
 inline int rlwimi(int rt, int ra, int i, int mb, int me) { return M(20, ra, rt, i, mb, me, 0); }
 inline int slw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 24, 0); }
-inline int sld(int rt, int ra, int rb) { return X(31, ra, rt, rb, 27, 0); }
+// inline int sld(int rt, int ra, int rb) { return X(31, ra, rt, rb, 27, 0); }
 inline int srw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 536, 0); }
 inline int sraw(int rt, int ra, int sh) { return X(31, ra, rt, sh, 792, 0); }
 inline int srawi(int rt, int ra, int sh) { return X(31, ra, rt, sh, 824, 0); }
@@ -109,10 +109,10 @@ inline int li(int rt, int i) { return addi(rt, 0, i); }
 inline int lis(int rt, int i) { return addis(rt, 0, i); }
 inline int slwi(int rt, int ra, int i) { return rlwinm(rt, ra, i, 0, 31-i); }
 inline int srwi(int rt, int ra, int i) { return rlwinm(rt, ra, 32-i, i, 31); }
-inline int sub(int rt, int ra, int rb) { return subf(rt, rb, ra); }
-inline int subc(int rt, int ra, int rb) { return subfc(rt, rb, ra); }
-inline int subi(int rt, int ra, int i) { return addi(rt, ra, -i); }
-inline int subis(int rt, int ra, int i) { return addis(rt, ra, -i); }
+// inline int sub(int rt, int ra, int rb) { return subf(rt, rb, ra); }
+// inline int subc(int rt, int ra, int rb) { return subfc(rt, rb, ra); }
+// inline int subi(int rt, int ra, int i) { return addi(rt, ra, -i); }
+// inline int subis(int rt, int ra, int i) { return addis(rt, ra, -i); }
 inline int mr(int rt, int ra) { return or_(rt, ra, ra); }
 inline int mflr(int rx) { return mfspr(rx, 8); }
 inline int mtlr(int rx) { return mtspr(8, rx); }
@@ -136,12 +136,12 @@ inline int trap() { return 0x7fe00008; } // todo: macro-ify
 const int64_t MASK_LO32 = 0x0ffffffff;
 const int     MASK_LO16 = 0x0ffff;
 const int     MASK_LO8  = 0x0ff;
-inline int lo32(int64_t i) { return (int)(i & MASK_LO32); }
-inline int hi32(int64_t i) { return lo32(i >> 32); }
+// inline int lo32(int64_t i) { return (int)(i & MASK_LO32); }
+// inline int hi32(int64_t i) { return lo32(i >> 32); }
 inline int lo16(int64_t i) { return (int)(i & MASK_LO16); }
 inline int hi16(int64_t i) { return lo16(i >> 16); }
-inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
-inline int hi8(int64_t i) { return lo8(i >> 8); }
+// inline int lo8(int64_t i) { return (int)(i & MASK_LO8); }
+// inline int hi8(int64_t i) { return lo8(i >> 8); }
 
 inline int ha16(int32_t i) { 
     return ((i >> 16) + ((i & 0x8000) ? 1 : 0)) & 0xffff;
@@ -632,12 +632,6 @@ bool
 isBranch(TernaryOperation op)
 {
   return op > FloatMin;
-}
-
-bool
-isFloatBranch(TernaryOperation op)
-{
-  return op > JumpIfNotEqual;
 }
 
 inline unsigned
