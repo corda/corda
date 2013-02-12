@@ -239,6 +239,8 @@ so-suffix = .so
 
 shared = -shared
 
+rpath = -Wl,-rpath=\$$ORIGIN
+
 no-error = -Wno-error
 
 openjdk-extra-cflags = -fvisibility=hidden
@@ -391,6 +393,7 @@ ifeq ($(platform),darwin)
 	strip-all = -S -x
 	so-suffix = .dylib
 	shared = -dynamiclib
+	rpath =
 
 	sdk-dir = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs
 
@@ -450,6 +453,7 @@ ifeq ($(platform),windows)
 	so-prefix =
 	so-suffix = .dll
 	exe-suffix = .exe
+	rpath =
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
@@ -1245,7 +1249,7 @@ ifdef msvc
 		-MANIFESTFILE:$(@).manifest
 	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
 else
-	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) -Wl,-rpath=\$$ORIGIN -z origin -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) $(rpath) -z origin -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
