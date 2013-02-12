@@ -17,13 +17,17 @@
 
 namespace {
 
-#define IMAGE_SIZEOF_SHORT_NAME 8
+// --- winnt.h ----
+#define IMAGE_SIZEOF_SHORT_NAME              8
 
-#define IMAGE_FILE_RELOCS_STRIPPED 1
-#define IMAGE_FILE_LINE_NUMS_STRIPPED 4
-#define IMAGE_FILE_MACHINE_AMD64 0x8664
-#define IMAGE_FILE_MACHINE_I386 0x014c
-#define IMAGE_FILE_32BIT_MACHINE 256
+#define IMAGE_FILE_RELOCS_STRIPPED           0x0001  // Relocation info stripped from file.
+#define IMAGE_FILE_LINE_NUMS_STRIPPED        0x0004  // Line nunbers stripped from file.
+#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
+#define IMAGE_FILE_MACHINE_I386              0x014c  // Intel 386.
+#define IMAGE_FILE_MACHINE_ARM               0x01c0  // ARM Little-Endian
+#define IMAGE_FILE_MACHINE_THUMB             0x01c2  // ARM Thumb/Thumb-2 Little-Endian
+#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian
+#define IMAGE_FILE_32BIT_MACHINE             0x0100  // 32 bit word machine.
 
 #define IMAGE_SCN_ALIGN_1BYTES 0x100000
 #define IMAGE_SCN_ALIGN_2BYTES 0x200000
@@ -73,6 +77,7 @@ struct IMAGE_SYMBOL {
   uint8_t StorageClass;
   uint8_t NumberOfAuxSymbols;
 } __attribute__((packed));
+// --- winnt.h ----
 
 inline unsigned
 pad(unsigned n)
@@ -82,7 +87,7 @@ pad(unsigned n)
 
 using namespace avian::tools;
 
-template<unsigned BytesPerWord>
+template<unsigned BytesPerWord, PlatformInfo::Architecture Architecture>
 class WindowsPlatform : public Platform {
 public:
 
@@ -202,11 +207,14 @@ public:
     int machine;
     int machineMask;
 
-    if (BytesPerWord == 8) {
+    if (Architecture == PlatformInfo::x86_64) {
       machine = IMAGE_FILE_MACHINE_AMD64;
       machineMask = 0;
-    } else { // if (BytesPerWord == 8)
+    } else if (Architecture == PlatformInfo::x86) {
       machine = IMAGE_FILE_MACHINE_I386;
+      machineMask = IMAGE_FILE_32BIT_MACHINE;
+    } else if (Architecture == PlatformInfo::Arm) {
+      machine = IMAGE_FILE_MACHINE_ARMNT;
       machineMask = IMAGE_FILE_32BIT_MACHINE;
     }
 
@@ -269,10 +277,11 @@ public:
   }
 
   WindowsPlatform():
-    Platform(PlatformInfo(PlatformInfo::Pe, BytesPerWord == 4 ? PlatformInfo::x86 : PlatformInfo::x86_64)) {}
+    Platform(PlatformInfo(PlatformInfo::Pe, Architecture)) {}
 };
 
-WindowsPlatform<4> windows32Platform;
-WindowsPlatform<8> windows64Platform;
+WindowsPlatform<4, PlatformInfo::x86> windows32Platform;
+WindowsPlatform<8, PlatformInfo::x86_64> windows64Platform;
+WindowsPlatform<4, PlatformInfo::Arm> windowsRtPlatform; // Windows Phone 8 and Windows RT
 
 } // namespace

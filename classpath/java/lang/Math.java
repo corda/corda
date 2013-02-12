@@ -93,6 +93,12 @@ public final class Math {
 
   public static native double tan(double v);
 
+  public static native double cosh(double v);
+
+  public static native double sinh(double v);
+
+  public static native double tanh(double v);
+
   public static native double acos(double v);
 
   public static native double asin(double v);

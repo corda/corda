@@ -342,7 +342,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         unsigned count = s.read2() - 1;
         if (count) {
-          Type types[count + 2];
+          RUNTIME_ARRAY(Type, types, count + 2);
           types[0] = Type_object;
           types[1] = Type_intptr_t;
 
@@ -420,7 +420,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         object fields = allFields(t, typeMaps, c, &count, &array);
         PROTECT(t, fields);
 
-        Field memberFields[count + 1];
+        RUNTIME_ARRAY(Field, memberFields, count + 1);
 
         unsigned memberIndex;
         unsigned buildMemberOffset;
@@ -444,7 +444,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             ++ memberIndex;
           }
         } else {
-          init(new (memberFields) Field, Type_object, 0, BytesPerWord, 0,
+          init(new (&memberFields[0]) Field, Type_object, 0, BytesPerWord, 0,
                TargetBytesPerWord);
 
           memberIndex = 1;
@@ -454,15 +454,15 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         const unsigned StaticHeader = 3;
 
-        Field staticFields[count + StaticHeader];
+        RUNTIME_ARRAY(Field, staticFields, count + StaticHeader);
         
-        init(new (staticFields) Field, Type_object, 0, BytesPerWord, 0,
+        init(new (&staticFields[0]) Field, Type_object, 0, BytesPerWord, 0,
              TargetBytesPerWord);
 
-        init(new (staticFields + 1) Field, Type_intptr_t, BytesPerWord,
+        init(new (&staticFields[1]) Field, Type_intptr_t, BytesPerWord,
              BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
 
-        init(new (staticFields + 2) Field, Type_object, BytesPerWord * 2,
+        init(new (&staticFields[2]) Field, Type_object, BytesPerWord * 2,
              BytesPerWord, TargetBytesPerWord * 2, TargetBytesPerWord);
 
         unsigned staticIndex = StaticHeader;
@@ -512,7 +512,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildStaticOffset = fieldOffset(t, field);
 
-              init(new (staticFields + staticIndex) Field, type,
+              init(new (&staticFields[staticIndex]) Field, type,
                    buildStaticOffset, buildSize, targetStaticOffset,
                    targetSize);
 
@@ -526,7 +526,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildMemberOffset = fieldOffset(t, field);
 
-              init(new (memberFields + memberIndex) Field, type,
+              init(new (&memberFields[memberIndex]) Field, type,
                    buildMemberOffset, buildSize, targetMemberOffset,
                    targetSize);
 
@@ -549,7 +549,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              ceiling(targetMemberOffset, TargetBytesPerWord), memberIndex);
 
           for (unsigned i = 0; i < memberIndex; ++i) {
-            Field* f = memberFields + i;
+            Field* f = &memberFields[i];
 
             expect(t, f->buildOffset
                    < map->buildFixedSizeInWords * BytesPerWord);
@@ -573,7 +573,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              TypeMap::SingletonKind);
 
           for (unsigned i = 0; i < staticIndex; ++i) {
-            Field* f = staticFields + i;
+            Field* f = &staticFields[i];
 
             expect(t, f->buildOffset
                    < map->buildFixedSizeInWords * BytesPerWord);
@@ -1334,9 +1334,9 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       }
       ++ count;
 
-      Field fields[count];
+      RUNTIME_ARRAY(Field, fields, count);
 
-      init(new (fields) Field, Type_object, 0, BytesPerWord, 0,
+      init(new (&fields[0]) Field, Type_object, 0, BytesPerWord, 0,
            TargetBytesPerWord);
 
       unsigned buildOffset = BytesPerWord;
@@ -1414,7 +1414,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
             ++ targetOffset;
           }
 
-          init(new (fields + j) Field, type, buildOffset, buildSize,
+          init(new (&fields[j]) Field, type, buildOffset, buildSize,
                targetOffset, targetSize);
 
           buildOffset += buildSize;
@@ -1449,7 +1449,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
          targetArrayElementSize, arrayElementType);
 
       for (unsigned j = 0; j < fixedFieldCount; ++j) {
-        Field* f = fields + j;
+        Field* f = &fields[j];
 
         expect(t, f->buildOffset
                < map->buildFixedSizeInWords * BytesPerWord);
@@ -1646,10 +1646,10 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     
     Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
 
-    // if(!platform) {
-    //   fprintf(stderr, "unsupported platform: %s/%s\n", os, architecture);
-    //   return false;
-    // }
+    if(!platform) {
+      fprintf(stderr, "unsupported platform: target-format = %d / target-arch = %d\n", AVIAN_TARGET_FORMAT, AVIAN_TARGET_ARCH);
+      abort();
+    }
 
     SymbolInfo bootimageSymbols[] = {
       SymbolInfo(0, bootimageStart),
@@ -1768,7 +1768,7 @@ bool ArgParser::parse(int ac, const char** av) {
       }
       bool found = false;
       for(Arg* arg = first; arg; arg = arg->next) {
-        if(strcmp(arg->name,  &av[i][1]) == 0) {
+        if(::strcmp(arg->name, &av[i][1]) == 0) {
           found = true;
           if (arg->desc == 0) {
             arg->value = "true";

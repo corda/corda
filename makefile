@@ -50,8 +50,10 @@ ifeq ($(continuations),true)
 	options := $(options)-continuations
 endif
 
+aot-only = false
 root := $(shell (cd .. && pwd))
 build = build/$(platform)-$(arch)$(options)
+host-build-root = $(build)/host
 classpath-build = $(build)/classpath
 test-build = $(build)/test
 src = src
@@ -59,6 +61,8 @@ classpath-src = classpath
 test = test
 win32 ?= $(root)/win32
 win64 ?= $(root)/win64
+winrt ?= $(root)/winrt
+wp8 ?= $(root)/wp8
 
 classpath = avian
 
@@ -133,7 +137,7 @@ ifneq ($(openjdk),)
 		javahome = "$$($(native-path) "$(openjdk)/jre")"
 	endif
 
-  classpath = openjdk
+	classpath = openjdk
 	boot-classpath := "$(boot-classpath)$(path-separator)$$($(native-path) "$(openjdk)/jre/lib/rt.jar")"
 	build-javahome = $(openjdk)/jre
 endif
@@ -183,6 +187,18 @@ strip-all = --strip-all
 
 rdynamic = -rdynamic
 
+cflags_debug = -O0 -g3
+cflags_debug_fast = -O0 -g3
+cflags_stress = -O0 -g3
+cflags_stress_major = -O0 -g3
+ifeq ($(use-clang),true)
+	cflags_fast = -O4 -g3
+	cflags_small = -Oz -g3
+else
+	cflags_fast = -O3 -g3
+	cflags_small = -Os -g3
+endif
+
 # note that we suppress the non-virtual-dtor warning because we never
 # use the delete operator, which means we don't need virtual
 # destructors:
@@ -198,7 +214,7 @@ common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 	-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" $(target-cflags)
 
-asmflags = $(target-cflags)
+asmflags = $(target-cflags) -I$(src)
 
 ifneq (,$(filter i386 x86_64,$(arch)))
 	ifeq ($(use-frame-pointer),true)
@@ -237,6 +253,18 @@ pointer-size = 8
 so-prefix = lib
 so-suffix = .so
 
+static-prefix = lib
+static-suffix = .a
+
+output = -o $(1)
+asm-output = -o $(1)
+asm-input = -c $(1)
+asm-format = S
+as = $(cc)
+ld = $(cxx)
+build-ld = $(build-cc)
+
+static = -static
 shared = -shared
 
 rpath = -Wl,-rpath=\$$ORIGIN
@@ -246,6 +274,8 @@ no-error = -Wno-error
 openjdk-extra-cflags = -fvisibility=hidden
 
 bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
+bootimage-symbols = _binary_bootimage_bin_start:_binary_bootimage_bin_end
+codeimage-symbols = _binary_codeimage_bin_start:_binary_codeimage_bin_end
 
 developer-dir := $(shell if test -d /Developer; then echo /Developer; \
 	else echo /Applications/Xcode.app/Contents/Developer; fi)
@@ -355,6 +385,70 @@ ifeq ($(platform),freebsd)
 		"-I$(JAVA_HOME)/include/freebsd" -I$(src) -pthread
 	cflags = $(build-cflags)
 endif
+ifeq ($(platform),android)
+    ifeq ($(build-platform),cygwin)
+		ndk = "$$(cygpath -u "$(ANDROID_NDK)")"
+	else
+		ndk = $(ANDROID_NDK)
+	endif
+
+	ifeq ($(android-version),)
+		android-version = 5
+	endif
+
+	ifeq ($(android-toolchain),)
+		android-toolchain = 4.7
+	endif
+
+	ifeq ($(arch),arm)
+		android-toolchain-name = arm-linux-androideabi
+		android-toolchain-prefix = arm-linux-androideabi-
+	endif
+	ifeq ($(arch),i386)
+		android-toolchain-name = x86
+		android-toolchain-prefix = i686-linux-android-
+	endif
+
+	ifeq ($(android-arm-arch),)
+		android-arm-arch = armv5
+	endif
+
+	options := $(options)-api$(android-version)-$(android-toolchain)-$(android-arm-arch)
+
+	build-cflags = $(common-cflags) -I$(src)
+	build-lflags = -lz -lpthread
+	ifeq ($(subst cygwin,windows,$(subst mingw32,windows,$(build-platform))),windows)
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
+		build-system = windows
+		build-cxx = i686-w64-mingw32-g++
+		build-cc = i686-w64-mingw32-gcc
+		sysroot = "$$(cygpath -w "$(ndk)/platforms/android-$(android-version)/arch-arm")"
+		build-cflags += "-I$(JAVA_HOME)/include/win32"
+	else
+		toolchain-host-platform = $(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))-*
+		sysroot = $(ndk)/platforms/android-$(android-version)/arch-arm
+		build-cflags += "-I$(JAVA_HOME)/include/linux"
+		build-lflags += -ldl
+	endif
+	toolchain = $(ndk)/toolchains/$(android-toolchain-name)-$(android-toolchain)/prebuilt/$(toolchain-host-platform)
+	cflags = "-I$(sysroot)/usr/include" "-I$(JAVA_HOME)/include/linux" $(common-cflags) "-I$(src)" -std=c++11 $(no-psabi)
+	lflags = "-L$(sysroot)/usr/lib" $(common-lflags) -llog
+	target-format = elf
+	use-lto = false
+	
+	ifeq ($(arch),arm)
+		cflags += -marm -march=$(android-arm-arch) -ftree-vectorize -ffast-math -mfloat-abi=softfp
+	endif
+	ifeq ($(arch),i386)
+	endif
+
+	cxx = $(toolchain)/bin/$(android-toolchain-prefix)g++ --sysroot="$(sysroot)"
+	cc = $(toolchain)/bin/$(android-toolchain-prefix)gcc --sysroot="$(sysroot)"
+	as = $(cxx)
+	ar = $(toolchain)/bin/$(android-toolchain-prefix)ar
+	ranlib = $(toolchain)/bin/$(android-toolchain-prefix)ranlib
+	strip = $(toolchain)/bin/$(android-toolchain-prefix)strip
+endif
 
 ifeq ($(platform),darwin)
 	target-format = macho
@@ -441,13 +535,14 @@ ifeq ($(platform),darwin)
 endif
 
 ifeq ($(platform),windows)
-	target-format = pe
+	ifeq ($(target-format),)
+		target-format = pe
+	endif
 
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
 
 	embed-prefix = c:/avian-embedded
-
 	system = windows
 
 	so-prefix =
@@ -455,7 +550,8 @@ ifeq ($(platform),windows)
 	exe-suffix = .exe
 	rpath =
 
-	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mwindows -mconsole
+	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mconsole
+	bootimage-generator-lflags = -static-libstdc++ -static-libgcc
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
@@ -501,89 +597,217 @@ ifeq ($(platform),windows)
 		shared += -Wl,--add-stdcall-alias
 	endif
 
-	embed = $(build-embed)/embed.exe
-	embed-loader = $(build-embed-loader)/embed-loader.exe
+	embed = $(build-embed)/embed$(exe-suffix)
+	embed-loader = $(build-embed-loader)/embed-loader$(exe-suffix)
 	embed-loader-o = $(build-embed)/embed-loader.o
 endif
 
-ifeq ($(mode),debug)
-	optimization-cflags = -O0 -g3
-	converter-cflags += -O0 -g3
-	strip = :
-endif
-ifeq ($(mode),debug-fast)
-	optimization-cflags = -O0 -g3 -DNDEBUG
-	strip = :
-endif
-ifeq ($(mode),stress)
-	optimization-cflags = -O0 -g3 -DVM_STRESS
-	strip = :
-endif
-ifeq ($(mode),stress-major)
-	optimization-cflags = -O0 -g3 -DVM_STRESS -DVM_STRESS_MAJOR
-	strip = :
-endif
-ifeq ($(mode),fast)
-	ifeq ($(use-clang),true)
-		optimization-cflags = -O4 -g3 -DNDEBUG
+ifeq ($(platform),wp8)
+	ifeq ($(shell uname -s | grep -i -c WOW64),1)
+		programFiles = Program Files (x86)
 	else
-		optimization-cflags = -O3 -g3 -DNDEBUG
+		programFiles = Program Files
 	endif
-	use-lto = true
-endif
-ifeq ($(mode),small)
-	ifeq ($(use-clang),true)
-		optimization-cflags = -Oz -g3 -DNDEBUG
+	ifeq ($(MSVS_ROOT),)
+		# Environment variable MSVS_ROOT not found. It should be something like
+		# "C:\$(programFiles)\Microsoft Visual Studio 11.0"
+		MSVS_ROOT = C:\$(programFiles)\Microsoft Visual Studio 11.0
+	endif
+	ifeq ($(MSVC_ROOT),)
+		# Environment variable MSVC_ROOT not found. It should be something like
+		# "C:\$(programFiles)\Microsoft Visual Studio 11.0\VC"
+		MSVC_ROOT = $(MSVS_ROOT)\VC
+	endif
+	ifeq ($(WP80_SDK),)
+		# Environment variable WP8_SDK not found. It should be something like
+		# "C:\Program Files[ (x86)]\Microsoft Visual Studio 11.0\VC\WPSDK\WP80"
+		# TODO: Lookup in SOFTWARE\Microsoft\Microsoft SDKs\WindowsPhone\v8.0
+		WP80_SDK = $(MSVS_ROOT)\VC\WPSDK\WP80
+	endif
+	ifeq ($(WP80_KIT),)
+		# Environment variable WP8_KIT not found. It should be something like
+		# "c:\Program Files[ (x86)]\Windows Phone Kits\8.0"
+		# TODO: Lookup in SOFTWARE\Microsoft\Microsoft SDKs\WindowsPhone\v8.0
+		WP80_KIT = C:\$(programFiles)\Windows Phone Kits\8.0
+	endif
+	ifeq ($(WIN8_KIT),)
+		# Environment variable WIN8_KIT not found. It should be something like
+		# "c:\Program Files[ (x86)]\Windows Kits\8.0"
+		WIN8_KIT = C:\$(programFiles)\Windows Kits\8.0
+	endif
+	ifeq ($(build-platform),cygwin)
+		windows-path = cygpath -w
 	else
-		optimization-cflags = -Os -g3 -DNDEBUG
+		windows-path = $(native-path)
 	endif
-	use-lto = true
-endif
+	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
+	target-format = pe
+	ms_cl_compiler = wp8
+	use-lto = false
+	supports_avian_executable = false
+	aot-only = true
+	ifneq ($(bootimage),true)
+		x := $(error Windows Phone 8 target requires bootimage=true)
+	endif
+	system = windows
+	build-system = windows
+	static-prefix =
+	static-suffix = .lib
+	so-prefix =
+	so-suffix = .dll
+	exe-suffix = .exe
+	manifest-flags = -MANIFEST:NO
 
-ifeq ($(use-lto),true)
-	ifeq ($(use-clang),true)
-		optimization-cflags += -flto
-		lflags += $(optimization-cflags)
-	else
-# only try to use LTO when GCC 4.6.0 or greater is available
-		gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
-		gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
-		ifeq ($(shell expr 4 \< $(gcc-major) \
-				\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
-			optimization-cflags += -flto
-			no-lto = -fno-lto
-			lflags += $(optimization-cflags)
+	ifeq ($(arch),arm)
+		wp8_arch = \x86_arm
+		vc_arch = \arm
+		w8kit_arch = arm
+		deps_arch = ARM
+		as = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\armasm.exe")"
+		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\cl.exe")"
+		ld = "$$(cygpath -u "$(WP80_SDK)\bin\x86_arm\link.exe")"
+		asmflags = -machine ARM -32
+		asm-output = -o $(1)
+		asm-input = $(1)
+		machine_type = ARM
+		bootimage-symbols = binary_bootimage_bin_start:binary_bootimage_bin_end
+		codeimage-symbols = binary_codeimage_bin_start:binary_codeimage_bin_end
+	endif
+	ifeq ($(arch),i386)
+		wp8_arch =
+		vc_arch =
+		w8kit_arch = x86
+		deps_arch = x86
+		asmflags = $(target-cflags) -safeseh -nologo -Gd
+		as = "$$(cygpath -u "$(WP80_SDK)\bin\ml.exe")"
+		cxx = "$$(cygpath -u "$(WP80_SDK)\bin\cl.exe")"
+		ld = "$$(cygpath -u "$(WP80_SDK)\bin\link.exe")"
+		ifeq ($(mode),debug)
+			asmflags += -Zd
 		endif
+		ifeq ($(mode),debug-fast)
+			asmflags += -Zd
+		endif
+		asm-output = $(output)
+		machine_type = X86
 	endif
+
+	PATH := $(shell cygpath -u "$(MSVS_ROOT)\Common7\IDE"):$(shell cygpath -u "$(WP80_SDK)\bin$(wp8_arch)"):$(shell cygpath -u "$(WP80_SDK)\bin"):${PATH}
+
+	build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
+	build-lflags = -lz -lpthread
+
+	cflags = -nologo \
+		-AI"$(WP80_KIT)\Windows Metadata" \
+		-I"$(WP80_SDK)\include" -I"$(WP80_KIT)\Include" -I"$(WP80_KIT)\Include\minwin" -I"$(WP80_KIT)\Include\mincore" \
+		-DWINAPI_FAMILY=WINAPI_FAMILY_PHONE_APP -D_USRDLL -D_WINDLL \
+		-DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
+		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
+		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
+		-I"$(shell $(windows-path) "$(wp8)/zlib/upstream")" -I"$(shell $(windows-path) "$(wp8)/interop/avian-interop-client")" \
+		-I"$(shell $(windows-path) "$(wp8)/include")" -I$(src) -I$(classpath-src) \
+		-I"$(build)" \
+		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
+		-DTARGET_BYTES_PER_WORD=$(pointer-size) \
+		-Gd -EHsc
+
+	common-lflags = $(classpath-lflags)
+
+	ifeq ($(mode),debug)
+		build-type = Debug
+	endif
+	ifeq ($(mode),debug-fast)
+		build-type = Debug
+	endif
+	ifeq ($(mode),stress_major)
+		build-type = Release
+	endif
+	ifeq ($(mode),fast)
+		build-type = Release
+	endif
+	ifeq ($(mode),fast)
+		build-type = Release
+	endif
+	ifeq ($(mode),small)
+		build-type = Release
+	endif
+
+	arflags = -MACHINE:$(machine_type)
+	lflags = $(common-lflags) -nologo \
+		-MACHINE:$(machine_type) \
+		-LIBPATH:"$(WP80_KIT)\lib\$(w8kit_arch)" -LIBPATH:"$(WP80_SDK)\lib$(vc_arch)" -LIBPATH:"$(WIN8_KIT)\Lib\win8\um\$(w8kit_arch)" \
+		ws2_32.lib \
+		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\zlib.lib")" "$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\ThreadEmulation.lib")" \
+		"$(shell $(windows-path) "$(wp8)\lib\$(deps_arch)\$(build-type)\AvianInteropClient.lib")"
+	lflags += -NXCOMPAT -DYNAMICBASE -SUBSYSTEM:CONSOLE -TLBID:1
+	lflags += -NODEFAULTLIB:"ole32.lib" -NODEFAULTLIB:"kernel32.lib"
+	lflags += PhoneAppModelHost.lib WindowsPhoneCore.lib -WINMD -WINMDFILE:$(subst $(so-suffix),.winmd,$(@))
+
+	cc = $(cxx)
+	asm-format = masm
+	shared = -dll
+	ar = "$$(cygpath -u "$(WP80_SDK)\bin\lib.exe")"
+	arflags += -nologo
+	ifeq ($(build-platform),cygwin)
+		build-cxx = i686-w64-mingw32-g++
+		build-cc = i686-w64-mingw32-gcc
+		dlltool = i686-w64-mingw32-dlltool
+		ranlib =
+		strip =
+	endif
+	output = -Fo$(1)
+
+	#TODO: -MT or -ZW?
+	cflags_debug = -Od -Zi -MDd
+	cflags_debug_fast = -Od -Zi -MDd
+	cflags_stress = -O0 -g3 -MD
+	cflags_stress_major = -O0 -g3 -MD
+	cflags_fast = -O2 -Zi -MD
+	cflags_small = -O1s -Zi -MD
+	# -GL [whole program optimization] in 'fast' and 'small' breaks compilation for some reason
+
+	ifeq ($(mode),debug)
+		cflags +=
+		lflags +=
+	endif
+	ifeq ($(mode),debug-fast)
+		cflags += -DNDEBUG
+		lflags +=
+	endif
+	ifeq ($(mode),stress_major)
+		cflags +=
+		lflags +=
+	endif
+	ifeq ($(mode),fast)
+		cflags +=
+		lflags +=
+	endif
+	# -LTCG is needed only if -GL is used
+	ifeq ($(mode),fast)
+		cflags += -DNDEBUG
+		lflags += -LTCG
+		arflags +=
+	endif
+	ifeq ($(mode),small)
+		cflags += -DNDEBUG
+		lflags += -LTCG
+		arflags +=
+	endif
+
+	strip = :
 endif
-
-cflags += $(optimization-cflags)
-
-ifneq ($(platform),darwin)
-ifeq ($(arch),i386)
-# this is necessary to support __sync_bool_compare_and_swap:
-	cflags += -march=i586
-	lflags += -march=i586
-endif
-endif
-
-output = -o $(1)
-as := $(cc)
-ld := $(cc)
-build-ld := $(build-cc)
-
-static = -static
 
 ifdef msvc
-  static =
 	no-error =
 	windows-path = $(native-path)
 	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
 	zlib := $(shell $(windows-path) "$(win32)/msvc")
+	ms_cl_compiler = regular
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
 	mt = "mt.exe"
+	manifest-flags = -MANIFEST -MANIFESTFILE:$(@).manifest
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
@@ -592,7 +816,7 @@ ifdef msvc
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
 		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 
-  ifneq ($(lzma),)
+	ifneq ($(lzma),)
 		cflags += -I$(shell $(windows-path) "$(lzma)")
 	endif
 
@@ -619,9 +843,70 @@ ifdef msvc
 	strip = :
 endif
 
+ifeq ($(mode),debug)
+	optimization-cflags = $(cflags_debug)
+	converter-cflags += $(cflags_debug)
+	strip = :
+endif
+ifeq ($(mode),debug-fast)
+	optimization-cflags = $(cflags_debug_fast) -DNDEBUG
+	strip = :
+endif
+ifeq ($(mode),stress)
+	optimization-cflags = $(cflags_stress) -DVM_STRESS
+	strip = :
+endif
+ifeq ($(mode),stress-major)
+	optimization-cflags = $(cflags_stress_major) -DVM_STRESS -DVM_STRESS_MAJOR
+	strip = :
+endif
+ifeq ($(mode),fast)
+	optimization-cflags = $(cflags_fast) -DNDEBUG
+	ifeq ($(use-lto),)
+		use-lto = true
+	endif
+endif
+ifeq ($(mode),small)
+	optimization-cflags = $(cflags_small) -DNDEBUG
+	ifeq ($(use-lto),)
+		use-lto = true
+	endif
+endif
+
+ifeq ($(use-lto),true)
+	ifeq ($(use-clang),true)
+		optimization-cflags += -flto
+		lflags += $(optimization-cflags)
+	else
+# only try to use LTO when GCC 4.6.0 or greater is available
+		gcc-major := $(shell $(cc) -dumpversion | cut -f1 -d.)
+		gcc-minor := $(shell $(cc) -dumpversion | cut -f2 -d.)
+		ifeq ($(shell expr 4 \< $(gcc-major) \
+				\| \( 4 \<= $(gcc-major) \& 6 \<= $(gcc-minor) \)),1)
+			optimization-cflags += -flto
+			no-lto = -fno-lto
+			lflags += $(optimization-cflags)
+		endif
+	endif
+endif
+
+cflags += $(optimization-cflags)
+
+ifndef ms_cl_compiler
+ifneq ($(platform),darwin)
+ifeq ($(arch),i386)
+# this is necessary to support __sync_bool_compare_and_swap:
+	cflags += -march=i586
+	lflags += -march=i586
+endif
+endif
+endif
+
+build-cflags += -DAVIAN_HOST_TARGET
+
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
-asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.S,$(3)/%-asm.o,$(x)))
+asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.$(asm-format),$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 
 generated-code = \
@@ -647,7 +932,7 @@ vm-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/process.cpp
 
-vm-asm-sources = $(src)/$(asm).S
+vm-asm-sources = $(src)/$(asm).$(asm-format)
 
 target-asm = $(asm)
 
@@ -665,7 +950,11 @@ ifeq ($(process),compile)
 		$(src)/compiler.cpp \
 		$(src)/$(target-asm).cpp
 
-	vm-asm-sources += $(src)/compile-$(asm).S
+	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
+endif
+cflags += -DAVIAN_PROCESS_$(process)
+ifeq ($(aot-only),true)
+	cflags += -DAVIAN_AOT_ONLY
 endif
 
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(build))
@@ -798,10 +1087,10 @@ converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
 converter-tool-objects = $(call cpp-objects,$(converter-tool-sources),$(src),$(build))
 converter = $(build)/binaryToObject/binaryToObject
 
-static-library = $(build)/lib$(name).a
+static-library = $(build)/$(static-prefix)$(name)$(static-suffix)
 executable = $(build)/$(name)${exe-suffix}
 dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
-executable-dynamic = $(build)/$(name)-dynamic${exe-suffix}
+executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
@@ -908,9 +1197,15 @@ test-flags = -Djava.library.path=$(build) -cp $(build)/test
 test-args = $(test-flags) $(input)
 
 .PHONY: build
+ifneq ($(supports_avian_executable),false)
 build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
 	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
 	$(test-extra-dep) $(embed)
+else
+build: $(static-library) $(dynamic-library) $(lzma-loader) \
+	$(lzma-encoder) $(classpath-dep) $(test-dep) \
+	$(test-extra-dep) $(embed)
+endif
 
 $(test-dep): $(classpath-dep)
 
@@ -952,10 +1247,17 @@ javadoc:
 
 .PHONY: clean
 clean:
+	@echo "removing $(build)"
+	rm -rf $(build)
+
+.PHONY: clean-all
+clean-all:
 	@echo "removing build"
 	rm -rf build
 
-$(build)/compile-x86-asm.o: $(src)/continuations-x86.S
+ifeq ($(continuations),true)
+$(build)/compile-x86-asm.o: $(src)/continuations-x86.$(asm-format)
+endif
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
@@ -1006,7 +1308,7 @@ endef
 define compile-asm-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(as) -I$(src) $(asmflags) -c $(<) -o $(@)
+	$(as) $(asmflags) $(call asm-output,$(@)) $(call asm-input,$(<))
 endef
 
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -1017,10 +1319,13 @@ $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 
 $(test-library): $(test-cpp-objects)
 	@echo "linking $(@)"
-ifdef msvc
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(test-build)/$(name).lib -MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
+ifdef ms_cl_compiler
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(so-suffix),.pdb,$(@)) \
+		-IMPLIB:$(test-build)/$(name).lib $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);2"
+endif
 else
 	$(ld) $(^) $(shared) $(lflags) -o $(@)
 endif
@@ -1028,10 +1333,12 @@ endif
 ifdef embed
 $(embed): $(embed-objects) $(embed-loader-o)
 	@echo "building $(embed)"
-ifdef msvc
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+ifdef ms_cl_compiler
+	$(ld) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
 else
 	$(cxx) $(^) $(lflags) $(static) $(call output,$(@))
 endif
@@ -1049,10 +1356,12 @@ $(embed-loader-o): $(embed-loader) $(converter)
 $(embed-loader): $(embed-loader-objects) $(static-library)
 	@mkdir -p $(dir $(@))
 	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
-ifdef msvc
-	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+ifdef ms_cl_compiler
+	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
 else
 	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(dir $(@))/*.o
 	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
@@ -1072,7 +1381,7 @@ $(build)/%.o: $(lzma)/C/%.c
 	@mkdir -p $(dir $(@))
 	$(cxx) $(cflags) $(no-error) -c $$($(windows-path) $(<)) $(call output,$(@))
 
-$(vm-asm-objects): $(build)/%-asm.o: $(src)/%.S
+$(vm-asm-objects): $(build)/%-asm.o: $(src)/%.$(asm-format)
 	$(compile-asm-object)
 
 $(bootimage-generator-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -1159,14 +1468,18 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 	@echo "creating $(@)"
 	rm -rf $(@)
+ifdef ms_cl_compiler
+	$(ar) $(arflags) $(^) -out:$(@)
+else
 	$(ar) cru $(@) $(^)
 	$(ranlib) $(@)
+endif
 
-$(bootimage-object) $(codeimage-object): $(bootimage-generator) \
-		$(build)/classpath.jar
+$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
-		-bootimage-symbols _binary_bootimage_bin_start:_binary_bootimage_bin_end \
-		-codeimage-symbols _binary_codeimage_bin_start:_binary_codeimage_bin_end
+		-bootimage-symbols $(bootimage-symbols) \
+		-codeimage-symbols $(codeimage-symbols)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
@@ -1175,10 +1488,12 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
-ifdef msvc
-	$(ld) $(lflags) $(executable-objects) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(@).lib -MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+ifdef ms_cl_compiler
+	$(ld) $(lflags) $(executable-objects) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
 else
 	$(dlltool) -z $(@).def $(executable-objects)
 	$(dlltool) -d $(@).def -e $(@).exp
@@ -1190,9 +1505,11 @@ endif
 	$(strip) $(strip-all) $(@)
 
 $(bootimage-generator): $(bootimage-generator-objects)
-	echo arch=$(arch) platform=$(platform)
+	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
 	$(MAKE) mode=$(mode) \
+		build=$(host-build-root) \
 		arch=$(build-arch) \
+		aot-only=false \
 		target-arch=$(arch) \
 		platform=$(bootimage-platform) \
 		target-format=$(target-format) \
@@ -1210,17 +1527,19 @@ $(build-bootimage-generator): \
 		$(lzma-decode-objects) $(lzma-encode-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
-ifdef msvc
-	$(ld) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb -IMPLIB:$(@).lib \
-		-MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+ifdef ms_cl_compiler
+	$(ld) $(bootimage-generator-lflags) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
 else
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(^) $(lflags) -o $(@)
+	$(ld) $(@).exp $(^) $(bootimage-generator-lflags) $(lflags) -o $(@)
 endif
 else
-	$(ld) $(^) $(rdynamic) $(lflags) -o $(@)
+	$(ld) $(^) $(rdynamic) $(bootimage-generator-lflags) $(lflags) -o $(@)
 endif
 
 $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
@@ -1228,10 +1547,13 @@ $(dynamic-library): $(vm-objects) $(dynamic-object) $(classpath-objects) \
 		$(classpath-libraries) $(javahome-object) $(boot-javahome-object) \
 		$(lzma-decode-objects)
 	@echo "linking $(@)"
-ifdef msvc
-	$(ld) $(shared) $(lflags) $(^) -out:$(@) -PDB:$(@).pdb \
-		-IMPLIB:$(build)/$(name).lib -MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);2"
+ifdef ms_cl_compiler
+	$(ld) $(shared) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(so-suffix),.pdb,$(@)) \
+		-IMPLIB:$(subst $(so-suffix),.lib,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);2"
+endif
 else
 	$(ld) $(^) $(version-script-flag) $(soname-flag) \
 		$(shared) $(lflags) $(bootimage-lflags) \
@@ -1243,11 +1565,13 @@ endif
 # Ubuntu 11.10 which may be fixable without disabling LTO.
 $(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
-ifdef msvc
+ifdef ms_cl_compiler
 	$(ld) $(lflags) -LIBPATH:$(build) -DEFAULTLIB:$(name) \
-		-PDB:$(@).pdb -IMPLIB:$(@).lib $(driver-dynamic-objects) -out:$(@) \
-		-MANIFESTFILE:$(@).manifest
-	$(mt) -manifest $(@).manifest -outputresource:"$(@);1"
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@))
+		$(driver-dynamic-objects) -out:$(@) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
 else
 	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) $(rpath) -z origin -o $(@)
 endif

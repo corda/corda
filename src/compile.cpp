@@ -7389,8 +7389,9 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   {
     trap();
   }
-
+#if !defined(AVIAN_AOT_ONLY)
   syncInstructionCache(start, codeSize);
+#endif
 }
 
 void
@@ -9152,7 +9153,9 @@ class MyProcessor: public Processor {
 
   virtual void dispose() {
     if (codeAllocator.base) {
+#if !defined(AVIAN_AOT_ONLY)
       s->freeExecutable(codeAllocator.base, codeAllocator.capacity);
+#endif
     }
 
     compilationHandlers->dispose(allocator);
@@ -9313,11 +9316,13 @@ class MyProcessor: public Processor {
   }
 
   virtual void boot(Thread* t, BootImage* image, uint8_t* code) {
+#if !defined(AVIAN_AOT_ONLY)
     if (codeAllocator.base == 0) {
       codeAllocator.base = static_cast<uint8_t*>
         (s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
       codeAllocator.capacity = ExecutableAreaSizeInBytes;
     }
+#endif
 
     if (image and code) {
       local::boot(static_cast<MyThread*>(t), image, code);
@@ -9334,11 +9339,15 @@ class MyProcessor: public Processor {
           root(t, MethodTreeSentinal));
     }
 
+#ifdef AVIAN_AOT_ONLY
+    thunks = bootThunks;
+#else
     local::compileThunks(static_cast<MyThread*>(t), &codeAllocator);
 
     if (not (image and code)) {
       bootThunks = thunks;
     }
+#endif
 
     segFaultHandler.m = t->m;
     expect(t, t->m->system->success

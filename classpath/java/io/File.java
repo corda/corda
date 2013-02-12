@@ -294,11 +294,18 @@ public class File implements Serializable {
     }
   }
 
+  public long lastModified() {
+    return lastModified(path);
+  }
   private static native long openDir(String path);
+
+  private static native long lastModified(String path);
 
   private static native String readDir(long handle);
 
   private static native long closeDir(long handle);
+
+
 
   private static class Pair {
     public final String value;

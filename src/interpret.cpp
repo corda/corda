@@ -18,7 +18,7 @@
 
 using namespace vm;
 
-namespace {
+namespace local {
 
 const unsigned FrameBaseOffset = 0;
 const unsigned FrameNextOffset = 1;
@@ -2321,7 +2321,7 @@ interpret3(Thread* t, const int base)
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
 
-    int32_t counts[dimensions];
+    RUNTIME_ARRAY(int32_t, counts, dimensions);
     for (int i = dimensions - 1; i >= 0; --i) {
       counts[i] = popInt(t);
       if (UNLIKELY(counts[i] < 0)) {
@@ -3100,7 +3100,7 @@ class MyProcessor: public Processor {
       (&byteArrayBody(t, methodSpec(t, method), 0));
     pushArguments(t, this_, spec, arguments);
 
-    return ::invoke(t, method);
+    return local::invoke(t, method);
   }
 
   virtual object
@@ -3124,7 +3124,7 @@ class MyProcessor: public Processor {
       (&byteArrayBody(t, methodSpec(t, method), 0));
     pushArguments(t, this_, spec, arguments);
 
-    return ::invoke(t, method);
+    return local::invoke(t, method);
   }
 
   virtual object
@@ -3148,7 +3148,7 @@ class MyProcessor: public Processor {
       (&byteArrayBody(t, methodSpec(t, method), 0));
     pushArguments(t, this_, spec, indirectObjects, arguments);
 
-    return ::invoke(t, method);
+    return local::invoke(t, method);
   }
 
   virtual object
@@ -3174,7 +3174,7 @@ class MyProcessor: public Processor {
 
     assert(t, ((methodFlags(t, method) & ACC_STATIC) == 0) xor (this_ == 0));
 
-    return ::invoke(t, method);
+    return local::invoke(t, method);
   }
 
   virtual object getStackTrace(vm::Thread* t, vm::Thread*) {
@@ -3254,8 +3254,8 @@ namespace vm {
 Processor*
 makeProcessor(System* system, Allocator* allocator, bool)
 {
-  return new (allocator->allocate(sizeof(MyProcessor)))
-    MyProcessor(system, allocator);
+  return new (allocator->allocate(sizeof(local::MyProcessor)))
+    local::MyProcessor(system, allocator);
 }
 
 } // namespace vm

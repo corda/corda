@@ -10,6 +10,8 @@
 
 package java.io;
 
+import java.lang.IllegalArgumentException;
+
 public class RandomAccessFile {
   private long peer;
   private File file;
@@ -56,26 +58,68 @@ public class RandomAccessFile {
     this.position = position;
   }
 
-  public void readFully(byte[] buffer, int offset, int length)
-    throws IOException
-  {
-    if (peer == 0) throw new IOException();
-
-    if (length == 0) return;
-
-    if (position + length > this.length) {
-      if (position + length > length()) throw new EOFException();
-    }
-
-    if (offset < 0 || offset + length > buffer.length)
+  public int skipBytes(int count) throws IOException {
+    if (position + count > length()) throw new IOException();
+    this.position = position + count;
+    return count;
+  }
+  
+  public int read(byte b[], int off, int len) throws IOException {
+    if(b == null)
+	  throw new IllegalArgumentException();
+    if (peer == 0)
+	  throw new IOException();
+	if(len == 0)
+	  return 0;
+	if (position + len > this.length)
+      throw new EOFException();
+	if (off < 0 || off + len > b.length)
       throw new ArrayIndexOutOfBoundsException();
-
-    copy(peer, position, buffer, offset, length);
-
-    position += length;
+    int bytesRead = readBytes(peer, position, b, off, len);
+	position += bytesRead;
+	return bytesRead;
+  }
+  
+  public int read(byte b[]) throws IOException {
+    if(b == null)
+	  throw new IllegalArgumentException();
+    if (peer == 0)
+	  throw new IOException();
+	if(b.length == 0)
+	  return 0;
+	if (position + b.length > this.length)
+      throw new EOFException();
+    int bytesRead = readBytes(peer, position, b, 0, b.length);
+	position += bytesRead;
+	return bytesRead;
   }
 
-  private static native void copy(long peer, long position, byte[] buffer,
+  public void readFully(byte b[], int off, int len) throws IOException {
+    if(b == null)
+	  throw new IllegalArgumentException();
+    if (peer == 0)
+	  throw new IOException();
+	if(len == 0)
+	  return;
+	if (position + len > this.length)
+      throw new EOFException();
+	if (off < 0 || off + len > b.length)
+      throw new ArrayIndexOutOfBoundsException();
+    int n = 0;
+    do {
+      int count = readBytes(peer, position, b, off + n, len - n);
+      position += count;
+      if (count == 0)
+        throw new EOFException();
+      n += count;
+    } while (n < len);
+  }
+  
+  public void readFully(byte b[]) throws IOException {
+    readFully(b, 0, b.length);
+  }
+
+  private static native int readBytes(long peer, long position, byte[] buffer,
                                   int offset, int length);
 
   public void close() throws IOException {

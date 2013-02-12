@@ -121,8 +121,10 @@ class System {
   virtual bool success(Status) = 0;
   virtual void* tryAllocate(unsigned sizeInBytes) = 0;
   virtual void free(const void* p) = 0;
+#if !defined(AVIAN_AOT_ONLY)
   virtual void* tryAllocateExecutable(unsigned sizeInBytes) = 0;
   virtual void freeExecutable(const void* p, unsigned sizeInBytes) = 0;
+#endif
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Mutex**) = 0;

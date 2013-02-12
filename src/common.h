@@ -94,7 +94,13 @@ typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
 #    define UINT64_C(x) x##L
 #    define ARCH_x86_64
-@    define BYTES_PER_WORD 8
+#    define BYTES_PER_WORD 8
+#  elif defined _M_ARM_FP
+typedef int32_t intptr_t;
+typedef uint32_t uintptr_t;
+#    define UINT64_C(x) x##LL
+#    define ARCH_arm
+#    define BYTES_PER_WORD 4
 #  else
 #    error "unsupported architecture"
 #  endif
@@ -214,6 +220,9 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
     type name;                                                          \
   } MAKE_NAME(resource_)(name);
 
+#ifdef _MSC_VER
+#  pragma warning( disable : 4291 )
+#endif
 inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
@@ -235,6 +244,10 @@ class RuntimeArray {
 
   ~RuntimeArray() {
     free(body);
+  }
+
+  T& operator[] (const unsigned index) {
+    return body[index];
   }
 
   T* body;

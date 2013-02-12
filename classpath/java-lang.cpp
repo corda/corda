@@ -54,33 +54,64 @@
 #  include "signal.h"
 #  include "sys/time.h"
 #  include "sys/types.h"
+# ifndef __ANDROID__
 #  include "sys/sysctl.h"
+# endif
 #  include "sys/utsname.h"
 #  include "sys/wait.h"
 
 #endif // not PLATFORM_WINDOWS
 
+#ifndef WINAPI_FAMILY
+#  ifndef WINAPI_PARTITION_DESKTOP
+#    define WINAPI_PARTITION_DESKTOP 1
+#  endif
+
+#  ifndef WINAPI_FAMILY_PARTITION
+#    define WINAPI_FAMILY_PARTITION(x) (x)
+#  endif
+#else
+#  if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+
+#    include "avian-interop.h"
+
+#  endif
+#endif // WINAPI_FAMILY
+
 namespace {
 #ifdef PLATFORM_WINDOWS
-  char* getErrorStr(DWORD err){
-    // The poor man's error string, just print the error code 
-    char * errStr = (char*) malloc(9 * sizeof(char));
-    snprintf(errStr, 9, "%d", (int) err);
-    return errStr;
-    
-    // The better way to do this, if I could figure out how to convert LPTSTR to char*
-    //char* errStr;
-    //LPTSTR s;
-    //if(FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
-    //                 FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, 0, &s, 0, NULL) == 0)
-    //{
-    //  errStr.Format("Unknown error occurred (%08x)", err);
-    //} else {
-    //  errStr = s;
-    //}
-    //return errStr;
-  }
 
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+  char* getErrorStr(DWORD err) {
+    LPSTR errorStr = 0;
+    if(!FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, err, LANG_SYSTEM_DEFAULT, (LPSTR)&errorStr, 0, 0))
+    {
+      char* errStr = (char*) malloc(9 * sizeof(char));
+      snprintf(errStr, 9, "%d", (int) err);
+      return errStr;
+    }
+    char* errStr = strdup(errorStr);
+    LocalFree(errorStr);
+    return errStr;
+  }
+#else
+  char* getErrorStr(DWORD err) {
+    LPSTR errorStr = (LPSTR)malloc(4096); //NOTE: something constant
+    if(!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 0, err, LANG_SYSTEM_DEFAULT, errorStr, 0, 0))
+    {
+      free(errorStr);
+
+      char* errStr = (char*) malloc(9 * sizeof(char));
+      snprintf(errStr, 9, "%d", (int) err);
+      return errStr;
+    }
+    char* errStr = strdup(errorStr);
+    free(errorStr);
+    return errStr;
+  }
+#endif
+
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   void makePipe(JNIEnv* e, HANDLE p[2])
   {
     SECURITY_ATTRIBUTES sa;
@@ -93,6 +124,7 @@ namespace {
       throwNew(e, "java/io/IOException", getErrorStr(GetLastError()));
     }
   }
+#endif
   
   int descriptor(JNIEnv* e, HANDLE h)
   {
@@ -194,7 +226,7 @@ extern "C" JNIEXPORT void JNICALL
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
 {
-  
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   int size = 0;
   for (int i = 0; i < e->GetArrayLength(command); ++i){
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
@@ -265,11 +297,15 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   e->SetLongArrayRegion(process, 0, 1, &pid);
   jlong tid = reinterpret_cast<jlong>(pi.hThread);  
   e->SetLongArrayRegion(process, 1, 1, &tid);
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+#endif
 }
 
 extern "C" JNIEXPORT jint JNICALL 
 Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
 {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   DWORD exitCode;
   WaitForSingleObject(reinterpret_cast<HANDLE>(pid), INFINITE);
   BOOL success = GetExitCodeProcess(reinterpret_cast<HANDLE>(pid), &exitCode);
@@ -281,14 +317,23 @@ Java_java_lang_Runtime_waitFor(JNIEnv* e, jclass, jlong pid, jlong tid)
   CloseHandle(reinterpret_cast<HANDLE>(tid));
 
   return exitCode;
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+  return -1;
+#endif
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_java_lang_Runtime_kill(JNIEnv*, jclass, jlong pid) {
+Java_java_lang_Runtime_kill(JNIEnv* e UNUSED, jclass, jlong pid) {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   TerminateProcess(reinterpret_cast<HANDLE>(pid), 1);
+#else
+  throwNew(e, "java/io/Exception", strdup("Not supported on WinRT/WinPhone8"));
+#endif
 }
 
 Locale getLocale() {
+#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   const char* lang = "";
   const char* reg = "";
   unsigned langid = GetUserDefaultUILanguage();
@@ -360,8 +405,23 @@ Locale getLocale() {
     default: lang = "en";
   }
 
+  return Locale(lang, reg);
+#else
+  std::wstring culture = AvianInterop::GetCurrentUICulture();
+  char* cultureName = strdup(std::string(culture.begin(), culture.end()).c_str());
+  char* delimiter = strchr(cultureName, '-');
+  if(!delimiter)
+  {
+    free(cultureName);
+    return Locale("en", "US");
+  }
+  const char* lang = cultureName;
+  const char* reg = delimiter + 1;
+  *delimiter = 0;
   Locale locale(lang, reg);
+  free(cultureName);
   return locale;
+#endif
 }
 #else
 extern "C" JNIEXPORT void JNICALL 
@@ -529,8 +589,15 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("\\");
     } else if (strcmp(chars, "os.name") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       r = e->NewStringUTF("Windows");
+#  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
+      r = e->NewStringUTF("Windows Phone");
+#  else
+      r = e->NewStringUTF("Windows RT");
+#  endif
     } else if (strcmp(chars, "os.version") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       unsigned size = 32;
       RUNTIME_ARRAY(char, buffer, size);
       OSVERSIONINFO OSversion;
@@ -538,6 +605,10 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       ::GetVersionEx(&OSversion);
       snprintf(RUNTIME_ARRAY_BODY(buffer), size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
       r = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
+#  else
+      // Currently there is no alternative on WinRT/WP8
+      r = e->NewStringUTF("8.0");
+#  endif
     } else if (strcmp(chars, "os.arch") == 0) {
 #ifdef ARCH_x86_32
       r = e->NewStringUTF("x86");
@@ -549,15 +620,26 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("arm");
 #endif
     } else if (strcmp(chars, "java.io.tmpdir") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       TCHAR buffer[MAX_PATH];
       GetTempPath(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
+#  else
+      std::wstring tmpDir = AvianInterop::GetTemporaryFolder();
+      r = e->NewString((const jchar*)tmpDir.c_str(), tmpDir.length());
+#  endif
     } else if (strcmp(chars, "user.dir") == 0) {
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       TCHAR buffer[MAX_PATH];
       GetCurrentDirectory(MAX_PATH, buffer);
       r = e->NewStringUTF(buffer);
+#  else
+      std::wstring userDir = AvianInterop::GetInstalledLocation();
+      r = e->NewString((const jchar*)userDir.c_str(), userDir.length());
+#  endif
     } else if (strcmp(chars, "user.home") == 0) {
 #  ifdef _MSC_VER
+#    if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       WCHAR buffer[MAX_PATH];
       size_t needed;
       if (_wgetenv_s(&needed, buffer, MAX_PATH, L"USERPROFILE") == 0) {
@@ -565,6 +647,10 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       } else {
         r = 0;
       }
+#    else
+      std::wstring userHome = AvianInterop::GetDocumentsLibraryLocation();
+      r = e->NewString((const jchar*)userHome.c_str(), userHome.length());
+#    endif
 #  else
       LPWSTR home = _wgetenv(L"USERPROFILE");
       r = e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
@@ -652,6 +738,9 @@ namespace {
 #elif defined __APPLE__
 #  include <crt_externs.h>
 #  define environ (*_NSGetEnviron())
+#elif defined(WINAPI_FAMILY) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+// WinRT/WP8 does not provide alternative for environment variables
+char* environ[] = { 0 };
 #else
 extern char** environ;
 #endif
@@ -786,6 +875,54 @@ Java_java_lang_Math_cos(JNIEnv*, jclass, jdouble val)
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_tan(JNIEnv*, jclass, jdouble val)
+{
+  return tan(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_asin(JNIEnv*, jclass, jdouble val)
+{
+  return asin(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_acos(JNIEnv*, jclass, jdouble val)
+{
+  return acos(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_atan(JNIEnv*, jclass, jdouble val)
+{
+  return atan(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_atan2(JNIEnv*, jclass, jdouble y, jdouble x)
+{
+  return atan2(y, x);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_sinh(JNIEnv*, jclass, jdouble val)
+{
+  return sinh(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_cosh(JNIEnv*, jclass, jdouble val)
+{
+  return cosh(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_tanh(JNIEnv*, jclass, jdouble val)
+{
+  return tanh(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_sqrt(JNIEnv*, jclass, jdouble val)
 {
   return sqrt(val);
@@ -795,6 +932,12 @@ extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_pow(JNIEnv*, jclass, jdouble val, jdouble exp)
 {
   return pow(val, exp);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_log(JNIEnv*, jclass, jdouble val)
+{
+  return log(val);
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
