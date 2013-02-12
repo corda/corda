@@ -160,9 +160,11 @@ GetStringRegion(Thread* t, jstring s, jsize start, jsize length, jchar* dst)
 const jchar* JNICALL
 GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
 {
-  if ((t->criticalLevel ++) == 0) {
+  if (t->criticalLevel == 0) {
     enter(t, Thread::ActiveState);
   }
+
+  ++ t->criticalLevel;
 
   if (isCopy) {
     *isCopy = true;
@@ -3141,9 +3143,11 @@ SetDoubleArrayRegion(Thread* t, jdoubleArray array, jint offset, jint length,
 void* JNICALL
 GetPrimitiveArrayCritical(Thread* t, jarray array, jboolean* isCopy)
 {
-  if ((t->criticalLevel ++) == 0) {
+  if (t->criticalLevel == 0) {
     enter(t, Thread::ActiveState);
   }
+
+  ++ t->criticalLevel;
   
   if (isCopy) {
     *isCopy = true;
