@@ -20,6 +20,8 @@
 namespace avian {
 namespace codegen {
 
+class RegisterFile;
+
 class OperandInfo {
 public:
   const unsigned size;
@@ -66,8 +68,7 @@ class Assembler {
    public:
     virtual unsigned floatRegisterSize() = 0;
 
-    virtual uint32_t generalRegisterMask() = 0;
-    virtual uint32_t floatRegisterMask() = 0;
+    virtual const RegisterFile* registerFile() = 0;
 
     virtual int scratch() = 0;
     virtual int stack() = 0;

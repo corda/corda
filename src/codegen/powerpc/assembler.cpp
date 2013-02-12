@@ -9,6 +9,8 @@
    details. */
 
 #include "codegen/assembler.h"
+#include "codegen/registers.h"
+
 #include "alloc-vector.h"
 #include "util/abort.h"
 
@@ -152,6 +154,8 @@ inline int ha16(int32_t i) {
 inline int unha16(int32_t high, int32_t low) {
     return ((high - ((low & 0x8000) ? 1 : 0)) << 16) | low; 
 }
+
+const RegisterFile MyRegisterFile(0xFFFFFFFF, 0);
 
 inline bool
 isInt16(target_intptr_t v)
@@ -2061,12 +2065,8 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
-  virtual uint32_t generalRegisterMask() {
-    return 0xFFFFFFFF;
-  }
-
-  virtual uint32_t floatRegisterMask() {
-    return 0;
+  virtual const RegisterFile* registerFile() {
+    return &MyRegisterFile;
   }
 
   virtual int scratch() {

@@ -8,10 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "codegen/assembler.h"
+#include "codegen/registers.h"
+
 #include "alloc-vector.h"
 #include "util/abort.h"
-
-#include "codegen/assembler.h"
 
 #include "util/runtime-array.h"
 
@@ -209,6 +210,9 @@ const uint32_t FPR_MASK = 0xffff0000;
 const uint64_t GPR_MASK64 = GPR_MASK | (uint64_t)GPR_MASK << 32;
 // making the following const somehow breaks debug symbol output in GDB
 /* const */ uint64_t FPR_MASK64 = FPR_MASK | (uint64_t)FPR_MASK << 32;
+
+const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
+const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
 
 inline bool isFpr(lir::Register* reg) {
   return reg->low >= N_GPRS;
@@ -2057,12 +2061,8 @@ class MyArchitecture: public Assembler::Architecture {
     return vfpSupported() ? 8 : 0;
   }
 
-  virtual uint32_t generalRegisterMask() {
-    return GPR_MASK;
-  }
-
-  virtual uint32_t floatRegisterMask() {
-    return vfpSupported() ? FPR_MASK : 0;
+  virtual const RegisterFile* registerFile() {
+    return vfpSupported() ? &MyRegisterFileWithFloats : &MyRegisterFileWithoutFloats;
   }
 
   virtual int scratch() {

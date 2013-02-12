@@ -13,6 +13,7 @@
 #include "alloc-vector.h"
 
 #include "codegen/assembler.h"
+#include "codegen/registers.h"
 
 #include "util/runtime-array.h"
 #include "util/abort.h"
@@ -71,6 +72,8 @@ const unsigned GeneralRegisterMask
 
 const unsigned FloatRegisterMask
 = TargetBytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
+
+const RegisterFile MyRegisterFile(GeneralRegisterMask, FloatRegisterMask);
 
 const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
@@ -2714,7 +2717,8 @@ populateTables(ArchitectureContext* c)
 class MyArchitecture: public Assembler::Architecture {
  public:
   MyArchitecture(System* system, bool useNativeFeatures):
-    c(system, useNativeFeatures), referenceCount(0)
+    c(system, useNativeFeatures),
+    referenceCount(0)
   {
     populateTables(&c);
   }
@@ -2726,13 +2730,9 @@ class MyArchitecture: public Assembler::Architecture {
       return 0;
     }
   }
-  
-  virtual uint32_t generalRegisterMask() {
-    return GeneralRegisterMask;
-  }
-  
-  virtual uint32_t floatRegisterMask() {
-    return useSSE(&c) ? FloatRegisterMask : 0;
+
+  virtual const RegisterFile* registerFile() {
+    return &MyRegisterFile;
   }
 
   virtual int scratch() {

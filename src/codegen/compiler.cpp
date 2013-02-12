@@ -8,11 +8,13 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "compiler.h"
-#include "assembler.h"
 #include "target.h"
 
 #include "util/runtime-array.h"
+
+#include "codegen/compiler.h"
+#include "codegen/assembler.h"
+#include "codegen/regalloc.h"
 
 using namespace vm;
 using namespace avian::codegen;
@@ -338,30 +340,6 @@ class Value: public Compiler::Operand {
   uint8_t wordIndex;
 };
 
-uint32_t
-registerMask(Assembler::Architecture* arch)
-{
-  return arch->generalRegisterMask() | arch->floatRegisterMask();
-}
-
-unsigned
-maskStart(uint32_t mask)
-{
-  for (int i = 0; i <= 31; ++i) {
-    if (mask & (1 << i)) return i;
-  }
-  return 32;
-}
-
-unsigned
-maskLimit(uint32_t mask)
-{
-  for (int i = 31; i >= 0; --i) {
-    if (mask & (1 << i)) return i + 1;
-  }
-  return 0;
-}
-
 class Context {
  public:
   Context(System* system, Assembler* assembler, Zone* zone,
@@ -376,15 +354,11 @@ class Context {
     saved(0),
     predecessor(0),
     logicalCode(0),
-    registerStart(maskStart(registerMask(arch))),
-    registerLimit(maskLimit(registerMask(arch))),
-    generalRegisterStart(maskStart(arch->generalRegisterMask())),
-    generalRegisterLimit(maskLimit(arch->generalRegisterMask())),
-    floatRegisterStart(maskStart(arch->floatRegisterMask())),
-    floatRegisterLimit(maskLimit(arch->floatRegisterMask())),
+    regFile(arch->registerFile()),
+    regAlloc(system, arch->registerFile()),
     registerResources
     (static_cast<RegisterResource*>
-     (zone->allocate(sizeof(RegisterResource) * registerLimit))),
+     (zone->allocate(sizeof(RegisterResource) * regFile->allRegisters.limit))),
     frameResources(0),
     acquiredResources(0),
     firstConstant(0),
@@ -402,16 +376,16 @@ class Context {
     localFootprint(0),
     machineCodeSize(0),
     alignedFrameSize(0),
-    availableGeneralRegisterCount(generalRegisterLimit - generalRegisterStart)
+    availableGeneralRegisterCount(regFile->generalRegisters.limit - regFile->generalRegisters.start)
   {
-    for (unsigned i = generalRegisterStart; i < generalRegisterLimit; ++i) {
+    for (unsigned i = regFile->generalRegisters.start; i < regFile->generalRegisters.limit; ++i) {
       new (registerResources + i) RegisterResource(arch->reserved(i));
 
       if (registerResources[i].reserved) {
         -- availableGeneralRegisterCount;
       }
     }
-    for (unsigned i = floatRegisterStart; i < floatRegisterLimit; ++i) {
+    for (unsigned i = regFile->floatRegisters.start; i < regFile->floatRegisters.limit; ++i) {
       new (registerResources + i) RegisterResource(arch->reserved(i));
     }
   }
@@ -426,12 +400,8 @@ class Context {
   Cell* saved;
   Event* predecessor;
   LogicalInstruction** logicalCode;
-  uint8_t registerStart;
-  uint8_t registerLimit;
-  uint8_t generalRegisterStart;
-  uint8_t generalRegisterLimit;
-  uint8_t floatRegisterStart;
-  uint8_t floatRegisterLimit;
+  const RegisterFile* regFile;
+  regalloc::RegisterAllocator regAlloc;
   RegisterResource* registerResources;
   FrameResource* frameResources;
   Resource* acquiredResources;
@@ -1158,7 +1128,7 @@ increment(Context* c, RegisterResource* r)
     ++ r->referenceCount;
 
     if (r->referenceCount == 1
-        and ((1 << r->index(c)) & c->arch->generalRegisterMask()))
+        and ((1 << r->index(c)) & c->regFile->generalRegisters.mask))
     {
       decrementAvailableGeneralRegisterCount(c);
     }
@@ -1179,7 +1149,7 @@ decrement(Context* c, RegisterResource* r)
     -- r->referenceCount;
 
     if (r->referenceCount == 0
-        and ((1 << r->index(c)) & c->arch->generalRegisterMask()))
+        and ((1 << r->index(c)) & c->regFile->generalRegisters.mask))
     {
       incrementAvailableGeneralRegisterCount(c);
     }
@@ -1204,7 +1174,7 @@ RegisterResource::freeze(Context* c, Value* v)
     freezeResource(c, this, v);
 
     if (freezeCount == 1
-        and ((1 << index(c)) & c->arch->generalRegisterMask()))
+        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
     {
       decrementAvailableGeneralRegisterCount(c);
     }
@@ -1239,7 +1209,7 @@ RegisterResource::thaw(Context* c, Value* v)
     thawResource(c, this, v);
 
     if (freezeCount == 0
-        and ((1 << index(c)) & c->arch->generalRegisterMask()))
+        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
     {
       incrementAvailableGeneralRegisterCount(c);
     }
@@ -1291,20 +1261,18 @@ valueType(Context* c, Compiler::OperandType type)
 
 class CostCalculator {
  public:
-  virtual unsigned cost(Context* c, uint8_t typeMask, uint32_t registerMask,
-                        int frameIndex) = 0;
+  virtual unsigned cost(Context* c, SiteMask mask) = 0;
 };
 
 unsigned
-resourceCost(Context* c, Value* v, Resource* r, uint8_t typeMask,
-             uint32_t registerMask, int frameIndex,
+resourceCost(Context* c, Value* v, Resource* r, SiteMask mask,
              CostCalculator* costCalculator)
 {
   if (r->reserved or r->freezeCount or r->referenceCount) {
     return Target::Impossible;
   } else {    
-    unsigned baseCost = costCalculator ? costCalculator->cost
-      (c, typeMask, registerMask, frameIndex) : 0;
+    unsigned baseCost =
+      costCalculator ? costCalculator->cost(c, mask) : 0;
 
     if (r->value) {
       assert(c, findSite(c, r->value, r->site));
@@ -1329,7 +1297,7 @@ pickRegisterTarget(Context* c, int i, Value* v, uint32_t mask, int* target,
   if ((1 << i) & mask) {
     RegisterResource* r = c->registerResources + i;
     unsigned myCost = resourceCost
-      (c, v, r, 1 << lir::RegisterOperand, 1 << i, NoFrameIndex, costCalculator)
+      (c, v, r, SiteMask(1 << lir::RegisterOperand, 1 << i, NoFrameIndex), costCalculator)
       + Target::MinimumRegisterCost;
 
     if ((static_cast<uint32_t>(1) << i) == mask) {
@@ -1350,9 +1318,9 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost,
   int target = lir::NoRegister;
   *cost = Target::Impossible;
 
-  if (mask & c->arch->generalRegisterMask()) {
-    for (int i = c->generalRegisterLimit - 1;
-         i >= c->generalRegisterStart; --i)
+  if (mask & c->regFile->generalRegisters.mask) {
+    for (int i = c->regFile->generalRegisters.limit - 1;
+         i >= c->regFile->generalRegisters.start; --i)
     {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
@@ -1360,9 +1328,9 @@ pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost,
     }
   }
 
-  if (mask & c->arch->floatRegisterMask()) {
-    for (int i = c->floatRegisterStart;
-         i < static_cast<int>(c->floatRegisterLimit); ++i)
+  if (mask & c->regFile->floatRegisters.mask) {
+    for (int i = c->regFile->floatRegisters.start;
+         i < static_cast<int>(c->regFile->floatRegisters.limit); ++i)
     {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
@@ -1386,7 +1354,7 @@ unsigned
 frameCost(Context* c, Value* v, int frameIndex, CostCalculator* costCalculator)
 {
   return resourceCost
-    (c, v, c->frameResources + frameIndex, 1 << lir::MemoryOperand, 0, frameIndex,
+    (c, v, c->frameResources + frameIndex, SiteMask(1 << lir::MemoryOperand, 0, frameIndex),
      costCalculator)
     + Target::MinimumFrameCost;
 }
@@ -1482,13 +1450,13 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   Value* value = read->value;
 
   uint32_t registerMask
-    = (value->type == lir::ValueFloat ? ~0 : c->arch->generalRegisterMask());
+    = (value->type == lir::ValueFloat ? ~0 : c->regFile->generalRegisters.mask);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
   if (value->type == lir::ValueFloat) {
-    uint32_t floatMask = mask.registerMask & c->arch->floatRegisterMask();
+    uint32_t floatMask = mask.registerMask & c->regFile->floatRegisters.mask;
     if (floatMask) {
       mask.registerMask = floatMask;
     }
@@ -1813,7 +1781,7 @@ class RegisterSite: public Site {
       assert(c, number != lir::NoRegister);
       return number == rs->number;
     } else {
-      uint32_t mask = c->arch->generalRegisterMask();
+      uint32_t mask = c->regFile->generalRegisters.mask;
       return ((1 << number) & mask) and ((1 << rs->number) & mask);
     }
   }
@@ -1899,9 +1867,9 @@ class RegisterSite: public Site {
 
   virtual Site* makeNextWord(Context* c, unsigned) {
     assert(c, number != lir::NoRegister);
-    assert(c, ((1 << number) & c->arch->generalRegisterMask()));
+    assert(c, ((1 << number) & c->regFile->generalRegisters.mask));
 
-    return freeRegisterSite(c, c->arch->generalRegisterMask());    
+    return freeRegisterSite(c, c->regFile->generalRegisters.mask);    
   }
 
   virtual SiteMask mask(Context* c UNUSED) {
@@ -1916,14 +1884,14 @@ class RegisterSite: public Site {
         (1 << lir::RegisterOperand, number, NoFrameIndex);
     } else {
       return SiteMask
-        (1 << lir::RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
+        (1 << lir::RegisterOperand, c->regFile->generalRegisters.mask, NoFrameIndex);
     }
   }
 
   virtual unsigned registerSize(Context* c) {
     assert(c, number != lir::NoRegister);
 
-    if ((1 << number) & c->arch->floatRegisterMask()) {
+    if ((1 << number) & c->regFile->floatRegisters.mask) {
       return c->arch->floatRegisterSize();
     } else {
       return TargetBytesPerWord;
@@ -1944,8 +1912,8 @@ RegisterSite*
 registerSite(Context* c, int number)
 {
   assert(c, number >= 0);
-  assert(c, (1 << number) & (c->arch->generalRegisterMask()
-                             | c->arch->floatRegisterMask()));
+  assert(c, (1 << number) & (c->regFile->generalRegisters.mask
+                             | c->regFile->floatRegisters.mask));
 
   return new(c->zone) RegisterSite(1 << number, number);
 }
@@ -2382,8 +2350,7 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       includeNextWord(includeNextWord)
     { }
 
-    virtual unsigned cost(Context* c, uint8_t typeMask, uint32_t registerMask,
-                          int frameIndex)
+    virtual unsigned cost(Context* c, SiteMask dstMask)
     {
       uint8_t srcTypeMask;
       uint64_t srcRegisterMask;
@@ -2392,10 +2359,9 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       c->arch->planMove
         (size, &srcTypeMask, &srcRegisterMask,
          &tmpTypeMask, &tmpRegisterMask,
-         typeMask, registerMask);
+         dstMask.typeMask, dstMask.registerMask);
 
       SiteMask srcMask(srcTypeMask, srcRegisterMask, AnyFrameIndex);
-      SiteMask dstMask(typeMask, registerMask, frameIndex);
       for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
         Site* s = it.next();
         if (s->match(c, srcMask) or s->match(c, dstMask)) {
@@ -2615,7 +2581,7 @@ SiteMask
 generalRegisterMask(Context* c)
 {
   return SiteMask
-    (1 << lir::RegisterOperand, c->arch->generalRegisterMask(), NoFrameIndex);
+    (1 << lir::RegisterOperand, c->regFile->generalRegisters.mask, NoFrameIndex);
 }
 
 SiteMask
@@ -2623,7 +2589,7 @@ generalRegisterOrConstantMask(Context* c)
 {
   return SiteMask
     ((1 << lir::RegisterOperand) | (1 << lir::ConstantOperand),
-     c->arch->generalRegisterMask(), NoFrameIndex);
+     c->regFile->generalRegisters.mask, NoFrameIndex);
 }
 
 SiteMask
@@ -3143,7 +3109,7 @@ class CallEvent: public Event {
     resultSize(resultSize),
     stackArgumentFootprint(stackArgumentFootprint)
   {
-    uint32_t registerMask = c->arch->generalRegisterMask();
+    uint32_t registerMask = c->regFile->generalRegisters.mask;
 
     if (argumentCount) {
       assert(c, (flags & Compiler::TailJump) == 0);
@@ -3564,7 +3530,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
                           dstSize, &thunk);
 
       if (src->type == lir::ValueGeneral) {
-        srcRegisterMask &= c->arch->generalRegisterMask();
+        srcRegisterMask &= c->regFile->generalRegisters.mask;
       }
 
       assert(c, thunk == 0);
@@ -4374,11 +4340,11 @@ loadLocal(Context* c, unsigned footprint, unsigned index)
 Value*
 register_(Context* c, int number)
 {
-  assert(c, (1 << number) & (c->arch->generalRegisterMask()
-                             | c->arch->floatRegisterMask()));
+  assert(c, (1 << number) & (c->regFile->generalRegisters.mask
+                             | c->regFile->floatRegisters.mask));
 
   Site* s = registerSite(c, number);
-  lir::ValueType type = ((1 << number) & c->arch->floatRegisterMask())
+  lir::ValueType type = ((1 << number) & c->regFile->floatRegisters.mask)
     ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
@@ -5415,7 +5381,7 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
-                    c->arch->generalRegisterMask(), AnyFrameIndex);
+                    c->regFile->generalRegisters.mask, AnyFrameIndex);
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, true, false, true, acceptForResolve);
@@ -5449,7 +5415,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
-                    c->arch->generalRegisterMask(), AnyFrameIndex);
+                    c->regFile->generalRegisters.mask, AnyFrameIndex);
 
       Site* s = pickSourceSite
         (c, r, 0, 0, &mask, false, true, true, acceptForResolve);

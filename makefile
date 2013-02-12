@@ -953,6 +953,8 @@ embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 ifeq ($(process),compile)
 	vm-sources += \
 		$(src)/codegen/compiler.cpp \
+		$(src)/codegen/regalloc.cpp \
+		$(src)/codegen/registers.cpp \
 		$(src)/codegen/targets.cpp
 
 	ifeq ($(codegen-targets),native)
