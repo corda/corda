@@ -647,7 +647,7 @@ invokeNative(Thread* t, object method)
     { THREAD_RESOURCE0(t, popFrame(static_cast<Thread*>(t)));
 
       unsigned footprint = methodParameterFootprint(t, method);
-      RUNTIME_ARRAY(uintptr_t, args, footprint);
+      THREAD_RUNTIME_ARRAY(t, uintptr_t, args, footprint);
       unsigned sp = frameBase(t, t->frame);
       unsigned argOffset = 0;
       if ((methodFlags(t, method) & ACC_STATIC) == 0) {
@@ -2321,7 +2321,7 @@ interpret3(Thread* t, const int base)
     object class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
 
-    RUNTIME_ARRAY(int32_t, counts, dimensions);
+    THREAD_RUNTIME_ARRAY(t, int32_t, counts, dimensions);
     for (int i = dimensions - 1; i >= 0; --i) {
       counts[i] = popInt(t);
       if (UNLIKELY(counts[i] < 0)) {

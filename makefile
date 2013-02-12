@@ -179,7 +179,7 @@ dlltool = dlltool
 vg = nice valgrind --num-callers=32 --db-attach=yes --freelist-vol=100000000
 vg += --leak-check=full --suppressions=valgrind.supp
 db = gdb --args
-javac = "$(JAVA_HOME)/bin/javac"
+javac = "$(JAVA_HOME)/bin/javac" -encoding UTF-8
 javah = "$(JAVA_HOME)/bin/javah"
 jar = "$(JAVA_HOME)/bin/jar"
 strip = strip
@@ -435,7 +435,7 @@ ifeq ($(platform),android)
 	lflags = "-L$(sysroot)/usr/lib" $(common-lflags) -llog
 	target-format = elf
 	use-lto = false
-	
+
 	ifeq ($(arch),arm)
 		cflags += -marm -march=$(android-arm-arch) -ftree-vectorize -ffast-math -mfloat-abi=softfp
 	endif
@@ -1245,6 +1245,11 @@ javadoc:
 		-header "Avian v$(version)" \
 		-bottom "<a href=\"http://oss.readytalk.com/avian/\">http://oss.readytalk.com/avian</a>"
 
+.PHONY: clean-current
+clean-current:
+	@echo "removing $(build)"
+	rm -rf $(build)
+
 .PHONY: clean
 clean:
 	@echo "removing $(build)"
@@ -1475,7 +1480,8 @@ else
 	$(ranlib) $(@)
 endif
 
-$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+$(bootimage-object) $(codeimage-object): $(bootimage-generator) \
+		$(openjdk-jar-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \

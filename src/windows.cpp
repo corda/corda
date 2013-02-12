@@ -803,17 +803,15 @@ class MySystem: public System {
 
   virtual Status map(System::Region** region, const char* name) {
     Status status = 1;
+    size_t nameLen = strlen(name) * 2;
+    RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HANDLE file = CreateFile(name, FILE_READ_DATA, FILE_SHARE_READ, 0,
-                             OPEN_EXISTING, 0, 0);
+    HANDLE file = CreateFileW(wideName, FILE_READ_DATA, FILE_SHARE_READ, 0,
+    OPEN_EXISTING, 0, 0);
 #else
-    size_t nameLen = strlen(name);
-    wchar_t* wideName = new wchar_t[nameLen + 1];
-    size_t convertedChars = 0;
-    mbstowcs_s(&convertedChars, wideName, nameLen + 1, name, nameLen);
     HANDLE file = CreateFile2(wideName, GENERIC_READ, FILE_SHARE_READ,
                              OPEN_EXISTING, 0);
-    delete[] wideName;
 #endif
     if (file != INVALID_HANDLE_VALUE) {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -882,21 +880,21 @@ class MySystem: public System {
   }
 
   virtual FileType stat(const char* name, unsigned* length) {
-    struct _stat s;
-    int r = _stat(name, &s);
-    if (r == 0) {
-      if (S_ISREG(s.st_mode)) {
-        *length = s.st_size;
-        return TypeFile;
-      } else if (S_ISDIR(s.st_mode)) {
-        *length = 0;
+    size_t nameLen = strlen(name) * 2;
+    RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (GetFileAttributesExW
+        (wideName, GetFileExInfoStandard, &data))
+    {
+      if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         return TypeDirectory;
       } else {
-        *length = 0;
-        return TypeUnknown;
+        *length = (data.nFileSizeHigh * static_cast<int64_t>(MAXDWORD + 1))
+          + data.nFileSizeLow;
+        return TypeFile;
       }
     } else {
-      *length = 0;
       return TypeDoesNotExist;
     }
   }
@@ -934,15 +932,14 @@ class MySystem: public System {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (name) {
+      size_t nameLen = nameLength * 2;
+      RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
+      MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
+
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      handle = LoadLibrary(name);
+      handle = LoadLibraryW(wideName);
 #else
-      size_t nameLen = strlen(name);
-      wchar_t* wideName = new wchar_t[nameLen + 1];
-	  size_t convertedChars = 0;
-      mbstowcs_s(&convertedChars, wideName, nameLen + 1, name, nameLen);
       handle = LoadPackagedLibrary(wideName, 0);
-      delete[] wideName;
 #endif
     } else {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)

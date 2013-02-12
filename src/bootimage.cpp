@@ -342,7 +342,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         unsigned count = s.read2() - 1;
         if (count) {
-          RUNTIME_ARRAY(Type, types, count + 2);
+          THREAD_RUNTIME_ARRAY(t, Type, types, count + 2);
           types[0] = Type_object;
           types[1] = Type_intptr_t;
 
@@ -420,7 +420,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         object fields = allFields(t, typeMaps, c, &count, &array);
         PROTECT(t, fields);
 
-        RUNTIME_ARRAY(Field, memberFields, count + 1);
+        THREAD_RUNTIME_ARRAY(t, Field, memberFields, count + 1);
 
         unsigned memberIndex;
         unsigned buildMemberOffset;
@@ -454,7 +454,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         const unsigned StaticHeader = 3;
 
-        RUNTIME_ARRAY(Field, staticFields, count + StaticHeader);
+        THREAD_RUNTIME_ARRAY(t, Field, staticFields, count + StaticHeader);
         
         init(new (&staticFields[0]) Field, Type_object, 0, BytesPerWord, 0,
              TargetBytesPerWord);
@@ -1334,7 +1334,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       }
       ++ count;
 
-      RUNTIME_ARRAY(Field, fields, count);
+      THREAD_RUNTIME_ARRAY(t, Field, fields, count);
 
       init(new (&fields[0]) Field, Type_object, 0, BytesPerWord, 0,
            TargetBytesPerWord);
