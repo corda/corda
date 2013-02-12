@@ -10,6 +10,7 @@
 
 #include "codegen/assembler.h"
 #include "alloc-vector.h"
+#include "util/abort.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -293,36 +294,12 @@ class ArchitectureContext {
   [lir::BranchOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
 };
 
-inline void NO_RETURN
-abort(Context* c)
-{
-  abort(c->s);
+inline Aborter* getAborter(Context* con) {
+  return con->s;
 }
 
-inline void NO_RETURN
-abort(ArchitectureContext* c)
-{
-  abort(c->s);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Context* c, bool v)
-{
-  assert(c->s, v);
-}
-
-inline void
-assert(ArchitectureContext* c, bool v)
-{
-  assert(c->s, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Context* c, bool v)
-{
-  expect(c->s, v);
+inline Aborter* getAborter(ArchitectureContext* con) {
+  return con->s;
 }
 
 class Offset: public Promise {

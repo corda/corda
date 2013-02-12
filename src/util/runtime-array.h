@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef UTIL_RUNTIME_ARRAY_H
-#define UTIL_RUNTIME_ARRAY_H
+#ifndef AVIAN_UTIL_RUNTIME_ARRAY_H
+#define AVIAN_UTIL_RUNTIME_ARRAY_H
 
 #ifdef _MSC_VER
 
@@ -37,4 +37,4 @@ class RuntimeArray {
 
 #endif
 
-#endif
+#endif // AVIAN_UTIL_RUNTIME_ARRAY_H

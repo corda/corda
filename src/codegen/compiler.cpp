@@ -62,8 +62,6 @@ class StubRead;
 class Block;
 class Snapshot;
 
-void NO_RETURN abort(Context*);
-
 void
 apply(Context* c, lir::UnaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High);
@@ -78,6 +76,8 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
+
+inline Aborter* getAborter(Context* c);
 
 class Cell {
  public:
@@ -453,6 +453,10 @@ class Context {
   unsigned availableGeneralRegisterCount;
 };
 
+inline Aborter* getAborter(Context* c) {
+  return c->system;
+}
+
 unsigned
 RegisterResource::index(Context* c)
 {
@@ -544,26 +548,6 @@ class IpPromise: public Promise {
   Context* c;
   int logicalIp;
 };
-
-inline void NO_RETURN
-abort(Context* c)
-{
-  abort(c->system);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Context* c, bool v)
-{
-  assert(c->system, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Context* c, bool v)
-{
-  expect(c->system, v);
-}
 
 unsigned
 count(Cell* c)

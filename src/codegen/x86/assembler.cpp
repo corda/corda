@@ -15,6 +15,7 @@
 #include "codegen/assembler.h"
 
 #include "util/runtime-array.h"
+#include "util/abort.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -176,31 +177,13 @@ class Context {
   ArchitectureContext* ac;
 };
 
-void NO_RETURN
-abort(Context* c)
-{
-  abort(c->s);
+Aborter* getAborter(Context* c) {
+  return c->s;
 }
 
-void NO_RETURN
-abort(ArchitectureContext* c)
-{
-  abort(c->s);
+Aborter* getAborter(ArchitectureContext* c) {
+  return c->s;
 }
-
-#ifndef NDEBUG
-void
-assert(Context* c, bool v)
-{
-  assert(c->s, v);
-}
-
-void
-assert(ArchitectureContext* c, bool v)
-{
-  assert(c->s, v);
-}
-#endif // not NDEBUG
 
 ResolvedPromise*
 resolved(Context* c, int64_t value)

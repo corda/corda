@@ -13,10 +13,11 @@
 
 #include "common.h"
 #include "allocator.h"
+#include "util/abort.h"
 
 namespace vm {
 
-class System {
+class System : public Aborter {
  public:
   typedef intptr_t Status;
 
@@ -150,7 +151,6 @@ class System {
   virtual int64_t now() = 0;
   virtual void yield() = 0;
   virtual void exit(int code) = 0;
-  virtual void abort() = 0;
   virtual void dispose() = 0;
 };
 
@@ -165,11 +165,8 @@ allocate(System* s, unsigned size)
 #define ACQUIRE_MONITOR(t, m) \
   System::MonitorResource MAKE_NAME(monitorResource_) (t, m)
 
-inline void NO_RETURN
-abort(System* s)
-{
-  s->abort(); // this should not return
-  ::abort();
+inline Aborter* getAborter(System* s) {
+  return s;
 }
 
 inline void NO_RETURN
@@ -178,28 +175,22 @@ sysAbort(System* s)
   abort(s);
 }
 
-inline void
-expect(System* s, bool v)
-{
-  if (UNLIKELY(not v)) abort(s);
-}
+// #ifdef NDEBUG
 
-#ifdef NDEBUG
+// # define assert(a, b)
+// # define vm_assert(a, b)
 
-# define assert(a, b)
-# define vm_assert(a, b)
+// #else // not NDEBUG
 
-#else // not NDEBUG
+// inline void
+// assert(System* s, bool v)
+// {
+//   expect(s, v);
+// }
 
-inline void
-assert(System* s, bool v)
-{
-  expect(s, v);
-}
+// # define vm_assert(a, b) vm::assert(a, b)
 
-# define vm_assert(a, b) vm::assert(a, b)
-
-#endif // not NDEBUG
+// #endif // not NDEBUG
 
 JNIEXPORT System*
 makeSystem(const char* crashDumpDirectory);

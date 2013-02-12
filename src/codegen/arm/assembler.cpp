@@ -9,6 +9,7 @@
    details. */
 
 #include "alloc-vector.h"
+#include "util/abort.h"
 
 #include "codegen/assembler.h"
 
@@ -340,36 +341,12 @@ class ArchitectureContext {
   [lir::BranchOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
 };
 
-inline void NO_RETURN
-abort(Context* con)
-{
-  abort(con->s);
+inline Aborter* getAborter(Context* con) {
+  return con->s;
 }
 
-inline void NO_RETURN
-abort(ArchitectureContext* con)
-{
-  abort(con->s);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Context* con, bool v)
-{
-  assert(con->s, v);
-}
-
-inline void
-assert(ArchitectureContext* con, bool v)
-{
-  assert(con->s, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Context* con, bool v)
-{
-  expect(con->s, v);
+inline Aborter* getAborter(ArchitectureContext* con) {
+  return con->s;
 }
 
 class Offset: public Promise {
