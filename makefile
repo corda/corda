@@ -267,7 +267,7 @@ build-ld = $(build-cc)
 static = -static
 shared = -shared
 
-rpath = -Wl,-rpath=\$$ORIGIN
+rpath = -Wl,-rpath=\$$ORIGIN -Wl,-z,origin
 
 no-error = -Wno-error
 
@@ -1573,7 +1573,7 @@ ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
 else
-	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) $(rpath) -z origin -o $(@)
+	$(ld) $(driver-dynamic-objects) -L$(build) -ljvm $(lflags) $(no-lto) $(rpath) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
