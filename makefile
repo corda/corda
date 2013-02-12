@@ -1476,7 +1476,8 @@ else
 	$(ranlib) $(@)
 endif
 
-$(bootimage-object) $(codeimage-object): $(bootimage-generator)
+$(bootimage-object) $(codeimage-object): $(bootimage-generator) \
+		$(openjdk-jar-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
