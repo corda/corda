@@ -3387,6 +3387,8 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual Assembler* makeAssembler(Allocator* allocator, Zone* zone);
+
   virtual void acquire() {
     ++ referenceCount;
   }
@@ -3732,26 +3734,23 @@ class MyAssembler: public Assembler {
   MyArchitecture* arch_;
 };
 
+Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
+  return
+    new(zone) MyAssembler(c.s, allocator, zone, this);
+}
+
 } // namespace local
 
 } // namespace
 
-namespace vm {
+namespace avian {
+namespace codegen {
 
-Assembler::Architecture*
-makeArchitecture(System* system, bool useNativeFeatures)
+Assembler::Architecture* makeArchitectureX86(System* system, bool useNativeFeatures)
 {
   return new (allocate(system, sizeof(local::MyArchitecture)))
     local::MyArchitecture(system, useNativeFeatures);
 }
 
-Assembler*
-makeAssembler(System* system, Allocator* allocator, Zone* zone,
-              Assembler::Architecture* architecture)
-{
-  return
-    new(zone) local::MyAssembler(system, allocator, zone,
-                                 static_cast<local::MyArchitecture*>(architecture));
-}
-
-} // namespace vm
+} // namespace codegen
+} // namespace avian

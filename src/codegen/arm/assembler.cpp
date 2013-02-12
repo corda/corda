@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "assembler.h"
+#include "codegen/assembler.h"
 #include "alloc-vector.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
@@ -2500,6 +2500,8 @@ class MyArchitecture: public Assembler::Architecture {
     }
   }
 
+  virtual Assembler* makeAssembler(Allocator* allocator, Zone* zone);
+
   virtual void acquire() {
     ++ referenceCount;
   }
@@ -2896,22 +2898,20 @@ class MyAssembler: public Assembler {
   MyArchitecture* arch_;
 };
 
+Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
+  return new(zone) MyAssembler(this->con.s, allocator, zone, this);
+}
+
 } // namespace
 
-namespace vm {
+namespace avian {
+namespace codegen {
 
 Assembler::Architecture*
-makeArchitecture(System* system, bool)
+makeArchitectureArm(System* system, bool)
 {
   return new (allocate(system, sizeof(MyArchitecture))) MyArchitecture(system);
 }
 
-Assembler*
-makeAssembler(System* system, Allocator* allocator, Zone* zone,
-              Assembler::Architecture* architecture)
-{
-  return new(zone) MyAssembler(system, allocator, zone,
-                static_cast<MyArchitecture*>(architecture));
-}
-
-} // namespace vm
+} // namespace codegen
+} // namespace avian

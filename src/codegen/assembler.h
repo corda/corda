@@ -408,7 +408,9 @@ class Assembler {
     (TernaryOperation op,
      unsigned aSize, uint8_t aTypeMask, uint64_t aRegisterMask,
      unsigned bSize, uint8_t bTypeMask, uint64_t bRegisterMask,
-     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask) = 0; 
+     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask) = 0;
+
+    virtual Assembler* makeAssembler(Allocator*, Zone*) = 0;
 
     virtual void acquire() = 0;
     virtual void release() = 0;
@@ -465,13 +467,6 @@ class Assembler {
 
   virtual void dispose() = 0;
 };
-
-Assembler::Architecture*
-makeArchitecture(System* system, bool useNativeFeatures);
-
-Assembler*
-makeAssembler(System* system, Allocator* allocator, Zone* zone,
-              Assembler::Architecture* architecture);
 
 } // namespace vm
 

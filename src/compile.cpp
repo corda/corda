@@ -15,6 +15,7 @@
 #include "target.h"
 #include "codegen/assembler.h"
 #include "codegen/compiler.h"
+#include "codegen/targets.h"
 #include "arch.h"
 
 #include "util/runtime-array.h"
@@ -264,7 +265,7 @@ class MyThread: public Thread {
     reference(0),
     arch(parent
          ? parent->arch
-         : makeArchitecture(m->system, useNativeFeatures)),
+         : avian::codegen::makeArchitectureNative(m->system, useNativeFeatures)),
     transition(0),
     traceContext(0),
     stackLimit(0),
@@ -1225,7 +1226,7 @@ class Context {
   Context(MyThread* t, BootContext* bootContext, object method):
     thread(t),
     zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
-    assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
+    assembler(t->arch->makeAssembler(t->m->heap, &zone)),
     client(t),
     compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
     method(method),
@@ -1251,7 +1252,7 @@ class Context {
   Context(MyThread* t):
     thread(t),
     zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
-    assembler(makeAssembler(t->m->system, t->m->heap, &zone, t->arch)),
+    assembler(t->arch->makeAssembler(t->m->heap, &zone)),
     client(t),
     compiler(0),
     method(0),
