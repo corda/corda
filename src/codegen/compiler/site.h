@@ -11,6 +11,9 @@
 #ifndef AVIAN_CODEGEN_COMPILER_SITE_H
 #define AVIAN_CODEGEN_COMPILER_SITE_H
 
+#include "codegen/compiler/value.h"
+#include "codegen/compiler/context.h"
+
 namespace avian {
 namespace codegen {
 namespace compiler {
@@ -182,6 +185,60 @@ class ConstantSite: public Site {
 
   Promise* value;
 };
+
+Site* addressSite(Context* c, Promise* address);
+
+class RegisterSite: public Site {
+ public:
+  RegisterSite(uint32_t mask, int number);
+
+  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
+
+  virtual unsigned copyCost(Context* c, Site* s);
+
+  virtual bool match(Context* c UNUSED, const SiteMask& mask);
+
+  virtual bool loneMatch(Context* c UNUSED, const SiteMask& mask);
+
+  virtual bool matchNextWord(Context* c, Site* s, unsigned);
+
+  virtual void acquire(Context* c, Value* v);
+
+  virtual void release(Context* c, Value* v);
+
+  virtual void freeze(Context* c, Value* v);
+
+  virtual void thaw(Context* c, Value* v);
+
+  virtual bool frozen(Context* c UNUSED);
+
+  virtual lir::OperandType type(Context*);
+
+  virtual void asAssemblerOperand(Context* c UNUSED, Site* high,
+                                  lir::Operand* result);
+
+  virtual Site* copy(Context* c);
+
+  virtual Site* copyLow(Context* c);
+
+  virtual Site* copyHigh(Context* c);
+
+  virtual Site* makeNextWord(Context* c, unsigned);
+
+  virtual SiteMask mask(Context* c UNUSED);
+
+  virtual SiteMask nextWordMask(Context* c, unsigned);
+
+  virtual unsigned registerSize(Context* c);
+
+  virtual unsigned registerMask(Context* c UNUSED);
+
+  uint32_t mask_;
+  int number;
+};
+
+Site* registerSite(Context* c, int number);
+Site* freeRegisterSite(Context* c, uint32_t mask);
 
 } // namespace compiler
 } // namespace codegen

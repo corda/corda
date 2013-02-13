@@ -12,8 +12,9 @@
 #define AVIAN_CODEGEN_COMPILER_CONTEXT_H
 
 #include "codegen/assembler.h"
-#include "codegen/regalloc.h"
 #include "codegen/compiler.h"
+
+#include "codegen/compiler/regalloc.h"
 
 namespace avian {
 namespace codegen {
@@ -51,7 +52,7 @@ class Context {
   Event* predecessor;
   LogicalInstruction** logicalCode;
   const RegisterFile* regFile;
-  regalloc::RegisterAllocator regAlloc;
+  RegisterAllocator regAlloc;
   RegisterResource* registerResources;
   FrameResource* frameResources;
   Resource* acquiredResources;

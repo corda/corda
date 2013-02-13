@@ -66,6 +66,10 @@ class FrameResource: public Resource {
   virtual unsigned index(Context*);
 };
 
+void acquire(Context* c, Resource* resource, Value* value, Site* site);
+
+void release(Context* c, Resource* resource, Value* value, Site* site);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

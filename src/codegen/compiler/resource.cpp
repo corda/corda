@@ -10,12 +10,16 @@
 
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/resource.h"
+#include "codegen/compiler/value.h"
 
 namespace avian {
 namespace codegen {
 namespace compiler {
 
 const bool DebugResources = false;
+
+
+void steal(Context* c, Resource* r, Value* thief);
 
 void decrementAvailableGeneralRegisterCount(Context* c) {
   assert(c, c->availableGeneralRegisterCount);
@@ -152,6 +156,68 @@ unsigned FrameResource::toString(Context* c, char* buffer, unsigned bufferSize) 
 
 unsigned FrameResource::index(Context* c) {
   return this - c->frameResources;
+}
+
+
+void acquire(Context* c, Resource* resource, Value* value, Site* site) {
+  assert(c, value);
+  assert(c, site);
+
+  if (not resource->reserved) {
+    if (DebugResources) {
+      char buffer[256]; resource->toString(c, buffer, 256);
+      fprintf(stderr, "%p acquire %s\n", value, buffer);
+    }
+
+    if (resource->value) {
+      assert(c, resource->value->findSite(resource->site));
+      assert(c, not value->findSite(resource->site));
+
+      steal(c, resource, value);
+    }
+
+    if (c->acquiredResources) {
+      c->acquiredResources->previousAcquired = resource;
+      resource->nextAcquired = c->acquiredResources;        
+    }
+    c->acquiredResources = resource;
+
+    resource->value = value;
+    resource->site = site;
+  }
+}
+
+void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED) {
+  if (not resource->reserved) {
+    if (DebugResources) {
+      char buffer[256]; resource->toString(c, buffer, 256);
+      fprintf(stderr, "%p release %s\n", resource->value, buffer);
+    }
+
+    assert(c, resource->value);
+    assert(c, resource->site);
+
+    assert(c, resource->value->isBuddyOf(value));
+    assert(c, site == resource->site);
+
+    Resource* next = resource->nextAcquired;
+    if (next) {
+      next->previousAcquired = resource->previousAcquired;
+      resource->nextAcquired = 0;
+    }
+
+    Resource* previous = resource->previousAcquired;
+    if (previous) {
+      previous->nextAcquired = next;
+      resource->previousAcquired = 0;
+    } else {
+      assert(c, c->acquiredResources == resource);
+      c->acquiredResources = next;
+    }
+    
+    resource->value = 0;
+    resource->site = 0;
+  }
 }
 
 

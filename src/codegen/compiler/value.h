@@ -13,6 +13,8 @@
 
 #include "codegen/lir.h"
 
+#include "codegen/compiler.h"
+
 namespace avian {
 namespace codegen {
 namespace compiler {
@@ -25,11 +27,6 @@ const int NoFrameIndex = -1;
 
 class Value: public Compiler::Operand {
  public:
-  Value(Site* site, Site* target, lir::ValueType type):
-    reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    nextWord(this), home(NoFrameIndex), type(type), wordIndex(0)
-  { }
-  
   Read* reads;
   Read* lastRead;
   Site* sites;
@@ -40,6 +37,12 @@ class Value: public Compiler::Operand {
   int16_t home;
   lir::ValueType type;
   uint8_t wordIndex;
+
+  Value(Site* site, Site* target, lir::ValueType type);
+
+  bool findSite(Site* site);
+
+  bool isBuddyOf(Value* b);
 };
 
 } // namespace compiler
