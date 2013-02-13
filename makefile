@@ -923,7 +923,7 @@ generated-code = \
 	$(build)/type-name-initializations.cpp \
 	$(build)/type-maps.cpp
 
-vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h)
+vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h) $(wildcard $(src)/codegen/compiler/*.h)
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -954,6 +954,8 @@ ifeq ($(process),compile)
 	vm-sources += \
 		$(src)/codegen/compiler.cpp \
 		$(src)/codegen/regalloc.cpp \
+		$(src)/codegen/compiler/context.cpp \
+		$(src)/codegen/compiler/resource.cpp \
 		$(src)/codegen/registers.cpp \
 		$(src)/codegen/targets.cpp
 

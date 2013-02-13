@@ -16,12 +16,15 @@
 #include "codegen/assembler.h"
 #include "codegen/regalloc.h"
 
+#include "codegen/compiler/context.h"
+#include "codegen/compiler/resource.h"
+#include "codegen/compiler/value.h"
+
 using namespace vm;
-using namespace avian::codegen;
 
-namespace {
-
-namespace local {
+namespace avian {
+namespace codegen {
+namespace compiler {
 
 const bool DebugAppend = false;
 const bool DebugCompile = false;
@@ -32,9 +35,6 @@ const bool DebugReads = false;
 const bool DebugSites = false;
 const bool DebugMoves = false;
 const bool DebugBuddies = false;
-
-const int AnyFrameIndex = -2;
-const int NoFrameIndex = -1;
 
 const unsigned StealRegisterReserveCount = 2;
 
@@ -48,8 +48,6 @@ const unsigned ConstantCopyCost = 3;
 const unsigned MemoryCopyCost = 4;
 const unsigned CopyPenalty = 10;
 
-class Context;
-class Value;
 class Stack;
 class Site;
 class ConstantSite;
@@ -78,8 +76,6 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
-
-inline Aborter* getAborter(Context* c);
 
 class Cell {
  public:
@@ -221,58 +217,6 @@ class LogicalInstruction {
   int index;
 };
 
-class Resource {
- public:
-  Resource(bool reserved = false):
-    value(0), site(0), previousAcquired(0), nextAcquired(0), freezeCount(0),
-    referenceCount(0), reserved(reserved)
-  { }
-
-  virtual void freeze(Context*, Value*) = 0;
-
-  virtual void thaw(Context*, Value*) = 0;
-
-  virtual unsigned toString(Context*, char*, unsigned) = 0;
-
-  Value* value;
-  Site* site;
-  Resource* previousAcquired;
-  Resource* nextAcquired;
-  uint8_t freezeCount;
-  uint8_t referenceCount;
-  bool reserved;
-};
-
-class RegisterResource: public Resource {
- public:
-  RegisterResource(bool reserved):
-    Resource(reserved)
-  { }
-
-  virtual void freeze(Context*, Value*);
-
-  virtual void thaw(Context*, Value*);
-
-  virtual unsigned toString(Context* c, char* buffer, unsigned bufferSize) {
-    return vm::snprintf(buffer, bufferSize, "register %d", index(c));
-  }
-
-  virtual unsigned index(Context*);
-};
-
-class FrameResource: public Resource {
- public:
-  virtual void freeze(Context*, Value*);
-
-  virtual void thaw(Context*, Value*);
-
-  virtual unsigned toString(Context* c, char* buffer, unsigned bufferSize) {
-    return vm::snprintf(buffer, bufferSize, "frame %d", index(c));
-  }
-
-  virtual unsigned index(Context*);
-};
-
 class ConstantPoolNode {
  public:
   ConstantPoolNode(Promise* promise): promise(promise), next(0) { }
@@ -319,124 +263,6 @@ intersect(const SiteMask& a, const SiteMask& b)
 {
   return SiteMask(a.typeMask & b.typeMask, a.registerMask & b.registerMask,
                   intersectFrameIndexes(a.frameIndex, b.frameIndex));
-}
-
-class Value: public Compiler::Operand {
- public:
-  Value(Site* site, Site* target, lir::ValueType type):
-    reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-    nextWord(this), home(NoFrameIndex), type(type), wordIndex(0)
-  { }
-  
-  Read* reads;
-  Read* lastRead;
-  Site* sites;
-  Site* source;
-  Site* target;
-  Value* buddy;
-  Value* nextWord;
-  int16_t home;
-  lir::ValueType type;
-  uint8_t wordIndex;
-};
-
-class Context {
- public:
-  Context(System* system, Assembler* assembler, Zone* zone,
-          Compiler::Client* client):
-    system(system),
-    assembler(assembler),
-    arch(assembler->arch()),
-    zone(zone),
-    client(client),
-    stack(0),
-    locals(0),
-    saved(0),
-    predecessor(0),
-    logicalCode(0),
-    regFile(arch->registerFile()),
-    regAlloc(system, arch->registerFile()),
-    registerResources
-    (static_cast<RegisterResource*>
-     (zone->allocate(sizeof(RegisterResource) * regFile->allRegisters.limit))),
-    frameResources(0),
-    acquiredResources(0),
-    firstConstant(0),
-    lastConstant(0),
-    machineCode(0),
-    firstEvent(0),
-    lastEvent(0),
-    forkState(0),
-    subroutine(0),
-    firstBlock(0),
-    logicalIp(-1),
-    constantCount(0),
-    logicalCodeLength(0),
-    parameterFootprint(0),
-    localFootprint(0),
-    machineCodeSize(0),
-    alignedFrameSize(0),
-    availableGeneralRegisterCount(regFile->generalRegisters.limit - regFile->generalRegisters.start)
-  {
-    for (unsigned i = regFile->generalRegisters.start; i < regFile->generalRegisters.limit; ++i) {
-      new (registerResources + i) RegisterResource(arch->reserved(i));
-
-      if (registerResources[i].reserved) {
-        -- availableGeneralRegisterCount;
-      }
-    }
-    for (unsigned i = regFile->floatRegisters.start; i < regFile->floatRegisters.limit; ++i) {
-      new (registerResources + i) RegisterResource(arch->reserved(i));
-    }
-  }
-
-  System* system;
-  Assembler* assembler;
-  Assembler::Architecture* arch;
-  Zone* zone;
-  Compiler::Client* client;
-  Stack* stack;
-  Local* locals;
-  Cell* saved;
-  Event* predecessor;
-  LogicalInstruction** logicalCode;
-  const RegisterFile* regFile;
-  regalloc::RegisterAllocator regAlloc;
-  RegisterResource* registerResources;
-  FrameResource* frameResources;
-  Resource* acquiredResources;
-  ConstantPoolNode* firstConstant;
-  ConstantPoolNode* lastConstant;
-  uint8_t* machineCode;
-  Event* firstEvent;
-  Event* lastEvent;
-  ForkState* forkState;
-  MySubroutine* subroutine;
-  Block* firstBlock;
-  int logicalIp;
-  unsigned constantCount;
-  unsigned logicalCodeLength;
-  unsigned parameterFootprint;
-  unsigned localFootprint;
-  unsigned machineCodeSize;
-  unsigned alignedFrameSize;
-  unsigned availableGeneralRegisterCount;
-};
-
-inline Aborter* getAborter(Context* c) {
-  return c->system;
-}
-
-unsigned
-RegisterResource::index(Context* c)
-{
-  return this - c->registerResources;
-}
-
-unsigned
-FrameResource::index(Context* c)
-{
-  return this - c->frameResources;
 }
 
 class PoolPromise: public Promise {
@@ -1093,135 +919,6 @@ addBuddy(Value* original, Value* buddy)
   }
 }
 
-void
-decrementAvailableGeneralRegisterCount(Context* c)
-{
-  assert(c, c->availableGeneralRegisterCount);
-  -- c->availableGeneralRegisterCount;
-  
-  if (DebugResources) {
-    fprintf(stderr, "%d registers available\n",
-            c->availableGeneralRegisterCount);
-  }
-}
-
-void
-incrementAvailableGeneralRegisterCount(Context* c)
-{
-  ++ c->availableGeneralRegisterCount;
-
-  if (DebugResources) {
-    fprintf(stderr, "%d registers available\n",
-            c->availableGeneralRegisterCount);
-  }
-}
-
-void
-increment(Context* c, RegisterResource* r)
-{
-  if (not r->reserved) {
-    if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "increment %s to %d\n", buffer, r->referenceCount + 1);
-    }
-
-    ++ r->referenceCount;
-
-    if (r->referenceCount == 1
-        and ((1 << r->index(c)) & c->regFile->generalRegisters.mask))
-    {
-      decrementAvailableGeneralRegisterCount(c);
-    }
-  }
-}
-
-void
-decrement(Context* c, RegisterResource* r)
-{
-  if (not r->reserved) {
-    if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "decrement %s to %d\n", buffer, r->referenceCount - 1);
-    }
-
-    assert(c, r->referenceCount > 0);
-
-    -- r->referenceCount;
-
-    if (r->referenceCount == 0
-        and ((1 << r->index(c)) & c->regFile->generalRegisters.mask))
-    {
-      incrementAvailableGeneralRegisterCount(c);
-    }
-  }
-}
-
-void
-freezeResource(Context* c, Resource* r, Value* v)
-{
-  if (DebugResources) {
-    char buffer[256]; r->toString(c, buffer, 256);
-    fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
-  }
-    
-  ++ r->freezeCount;
-}
-
-void
-RegisterResource::freeze(Context* c, Value* v)
-{
-  if (not reserved) {
-    freezeResource(c, this, v);
-
-    if (freezeCount == 1
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
-    {
-      decrementAvailableGeneralRegisterCount(c);
-    }
-  }
-}
-
-void
-FrameResource::freeze(Context* c, Value* v)
-{
-  freezeResource(c, this, v);
-}
-
-void
-thawResource(Context* c, Resource* r, Value* v)
-{
-  if (not r->reserved) {
-    if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
-      fprintf(stderr, "%p thaw %s to %d\n", v, buffer, r->freezeCount - 1);
-    }
-
-    assert(c, r->freezeCount);
-
-    -- r->freezeCount;
-  }
-}
-
-void
-RegisterResource::thaw(Context* c, Value* v)
-{
-  if (not reserved) {
-    thawResource(c, this, v);
-
-    if (freezeCount == 0
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
-    {
-      incrementAvailableGeneralRegisterCount(c);
-    }
-  }
-}
-
-void
-FrameResource::thaw(Context* c, Value* v)
-{
-  thawResource(c, this, v);
-}
-
 class Target {
  public:
   static const unsigned MinimumRegisterCost = 0;
@@ -1796,7 +1493,7 @@ class RegisterSite: public Site {
     }
 
     RegisterResource* resource = c->registerResources + target.index;
-    local::acquire(c, resource, v, this);
+    compiler::acquire(c, resource, v, this);
 
     number = target.index;
   }
@@ -1804,7 +1501,7 @@ class RegisterSite: public Site {
   virtual void release(Context* c, Value* v) {
     assert(c, number != lir::NoRegister);
 
-    local::release(c, c->registerResources + number, v, this);
+    compiler::release(c, c->registerResources + number, v, this);
   }
 
   virtual void freeze(Context* c, Value* v) {
@@ -2020,9 +1717,9 @@ class MemorySite: public Site {
   }
 
   virtual void acquire(Context* c, Value* v) {
-    increment(c, c->registerResources + base);
+    c->registerResources[base].increment(c);
     if (index != lir::NoRegister) {
-      increment(c, c->registerResources + index);
+      c->registerResources[index].increment(c);
     }
 
     if (base == c->arch->stack()) {
@@ -2030,7 +1727,7 @@ class MemorySite: public Site {
       assert
         (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
-      local::acquire
+      compiler::acquire
         (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
 
@@ -2043,13 +1740,13 @@ class MemorySite: public Site {
       assert
         (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
-      local::release
+      compiler::release
         (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
     }
 
-    decrement(c, c->registerResources + base);
+    c->registerResources[base].decrement(c);
     if (index != lir::NoRegister) {
-      decrement(c, c->registerResources + index);
+      c->registerResources[index].decrement(c);
     }
 
     acquired = false;
@@ -2059,9 +1756,9 @@ class MemorySite: public Site {
     if (base == c->arch->stack()) {
       c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
     } else {
-      increment(c, c->registerResources + base);
+      c->registerResources[base].increment(c);
       if (index != lir::NoRegister) {
-        increment(c, c->registerResources + index);
+        c->registerResources[index].increment(c);
       }
     }
   }
@@ -2070,9 +1767,9 @@ class MemorySite: public Site {
     if (base == c->arch->stack()) {
       c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
     } else {
-      decrement(c, c->registerResources + base);
+      c->registerResources[base].decrement(c);
       if (index != lir::NoRegister) {
-        decrement(c, c->registerResources + index);
+        c->registerResources[index].decrement(c);
       }
     }
   }
@@ -2245,7 +1942,7 @@ class SingleRead: public Read {
   { }
 
   virtual bool intersect(SiteMask* mask, unsigned) {
-    *mask = local::intersect(*mask, this->mask);
+    *mask = compiler::intersect(*mask, this->mask);
 
     return true;
   }
@@ -3082,11 +2779,11 @@ saveLocals(Context* c, Event* e)
     if (local->value) {
       if (DebugReads) {
         fprintf(stderr, "local save read %p at %d of %d\n",
-                local->value, local::frameIndex(c, li), totalFrameSize(c));
+                local->value, compiler::frameIndex(c, li), totalFrameSize(c));
       }
 
       addRead(c, e, local->value, SiteMask
-              (1 << lir::MemoryOperand, 0, local::frameIndex(c, li)));
+              (1 << lir::MemoryOperand, 0, compiler::frameIndex(c, li)));
     }
   }
 }
@@ -3266,7 +2963,7 @@ class CallEvent: public Event {
 
       while (stack) {
         if (stack->value) {
-          unsigned logicalIndex = local::frameIndex
+          unsigned logicalIndex = compiler::frameIndex
             (c, stack->index + c->localFootprint);
 
           if (DebugReads) {
@@ -4376,13 +4073,13 @@ appendCombine(Context* c, lir::TernaryOperation type,
     unsigned stackSize = ceilingDivide(secondSize, TargetBytesPerWord)
       + ceilingDivide(firstSize, TargetBytesPerWord);
 
-    local::push(c, ceilingDivide(secondSize, TargetBytesPerWord), second);
-    local::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(secondSize, TargetBytesPerWord), second);
+    compiler::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
 
     if (threadParameter) {
       ++ stackSize;
 
-      local::push(c, 1, register_(c, c->arch->thread()));
+      compiler::push(c, 1, register_(c, c->arch->thread()));
     }
 
     Stack* argumentStack = c->stack;
@@ -4499,7 +4196,7 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    local::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -4848,8 +4545,8 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
 
     assert(c, not threadParameter);
 
-    local::push(c, ceilingDivide(size, TargetBytesPerWord), second);
-    local::push(c, ceilingDivide(size, TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(size, TargetBytesPerWord), second);
+    compiler::push(c, ceilingDivide(size, TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -5209,7 +4906,7 @@ append(Context* c, Event* e)
               e->logicalInstruction->index);
     }
 
-    Link* link = local::link
+    Link* link = compiler::link
       (c, p, e->predecessors, e, p->successors, c->forkState);
     e->predecessors = link;
     p->successors = link;
@@ -5840,7 +5537,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
       block->assemblerBlock = a->endBlock(e->next != 0);
 
       if (e->next) {
-        block = local::block(c, e->next);
+        block = compiler::block(c, e->next);
       }
     }
   }
@@ -5969,12 +5666,12 @@ class Client: public Assembler::Client {
     int r = pickRegisterTarget(c, 0, mask, &cost);
     expect(c, cost < Target::Impossible);
     save(r);
-    increment(c, c->registerResources + r);
+    c->registerResources[r].increment(c);
     return r;
   }
 
   virtual void releaseTemporary(int r) {
-    decrement(c, c->registerResources + r);
+    c->registerResources[r].decrement(c);
   }
 
   virtual void save(int r) {
@@ -6002,13 +5699,13 @@ class MyCompiler: public Compiler {
   }
 
   virtual State* saveState() {
-    State* s = local::saveState(&c);
+    State* s = compiler::saveState(&c);
     restoreState(s);
     return s;
   }
 
   virtual void restoreState(State* state) {
-    local::restoreState(&c, static_cast<ForkState*>(state));
+    compiler::restoreState(&c, static_cast<ForkState*>(state));
   }
 
   virtual Subroutine* startSubroutine() {
@@ -6018,7 +5715,7 @@ class MyCompiler: public Compiler {
   virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
     appendSaveLocals(&c);
     appendJump(&c, lir::Jump, static_cast<Value*>(address), false, true);
-    static_cast<MySubroutine*>(subroutine)->forkState = local::saveState(&c);
+    static_cast<MySubroutine*>(subroutine)->forkState = compiler::saveState(&c);
   }
 
   virtual void linkSubroutine(Subroutine* subroutine) {
@@ -6085,7 +5782,7 @@ class MyCompiler: public Compiler {
       p->stackAfter = c.stack;
       p->localsAfter = c.locals;
 
-      Link* link = local::link
+      Link* link = compiler::link
         (&c, p, e->predecessors, e, p->successors, c.forkState);
       e->predecessors = link;
       p->successors = link;
@@ -6181,12 +5878,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* promiseConstant(Promise* value, Compiler::OperandType type) {
-    return local::value
-      (&c, valueType(&c, type), local::constantSite(&c, value));
+    return compiler::value
+      (&c, valueType(&c, type), compiler::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, lir::ValueGeneral, local::addressSite(&c, address));
+    return value(&c, lir::ValueGeneral, compiler::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -6204,7 +5901,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* register_(int number) {
-    return local::register_(&c, number);
+    return compiler::register_(&c, number);
   }
 
   Promise* machineIp() {
@@ -6215,14 +5912,14 @@ class MyCompiler: public Compiler {
     assert(&c, footprint == 1);
 
     Value* v = value(&c, lir::ValueGeneral);
-    Stack* s = local::stack(&c, v, c.stack);
+    Stack* s = compiler::stack(&c, v, c.stack);
 
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
 
   virtual void push(unsigned footprint, Operand* value) {
-    local::push(&c, footprint, static_cast<Value*>(value));
+    compiler::push(&c, footprint, static_cast<Value*>(value));
   }
 
   virtual void save(unsigned footprint, Operand* value) {
@@ -6236,7 +5933,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* pop(unsigned footprint) {
-    return local::pop(&c, footprint);
+    return compiler::pop(&c, footprint);
   }
 
   virtual void pushed() {
@@ -6245,7 +5942,7 @@ class MyCompiler: public Compiler {
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
 
-    Stack* s = local::stack(&c, v, c.stack);
+    Stack* s = compiler::stack(&c, v, c.stack);
     v->home = frameIndex(&c, s->index + c.localFootprint);
     c.stack = s;
   }
@@ -6340,7 +6037,7 @@ class MyCompiler: public Compiler {
 
     Stack* argumentStack = c.stack;
     for (int i = index - 1; i >= 0; --i) {
-      argumentStack = local::stack
+      argumentStack = compiler::stack
         (&c, RUNTIME_ARRAY_BODY(arguments)[i], argumentStack);
     }
 
@@ -6431,11 +6128,11 @@ class MyCompiler: public Compiler {
   }
 
   virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    local::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
+    compiler::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
   }
 
   virtual Operand* loadLocal(unsigned footprint, unsigned index) {
-    return local::loadLocal(&c, footprint, index);
+    return compiler::loadLocal(&c, footprint, index);
   }
 
   virtual void saveLocals() {
@@ -6872,7 +6569,7 @@ class MyCompiler: public Compiler {
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset)
   {
-    local::compile(&c, stackOverflowHandler, stackLimitOffset);
+    compiler::compile(&c, stackOverflowHandler, stackLimitOffset);
   }
 
   virtual unsigned resolve(uint8_t* dst) {
@@ -6934,21 +6631,16 @@ class MyCompiler: public Compiler {
   }
 
   Context c;
-  local::Client client;
+  compiler::Client client;
 };
 
-} // namespace local
-
-} // namespace
-
-namespace avian {
-namespace codegen {
+} // namespace compiler
 
 Compiler*
 makeCompiler(System* system, Assembler* assembler, Zone* zone,
              Compiler::Client* client)
 {
-  return new(zone) local::MyCompiler(system, assembler, zone, client);
+  return new(zone) compiler::MyCompiler(system, assembler, zone, client);
 }
 
 } // namespace codegen
