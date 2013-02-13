@@ -14,7 +14,7 @@
 #include "machine.h"
 #include "util.h"
 #include "stream.h"
-#include "assembler.h"
+#include "codegen/assembler.h"
 #include "target.h"
 #include "binaryToObject/tools.h"
 #include "lzma.h"
@@ -31,7 +31,7 @@ namespace {
 const unsigned HeapCapacity = 512 * 1024 * 1024;
 
 const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
-const unsigned TargetFixieSizeInWords = ceiling
+const unsigned TargetFixieSizeInWords = ceilingDivide
   (TargetFixieSizeInBytes, TargetBytesPerWord);
 const unsigned TargetFixieAge = 0;
 const unsigned TargetFixieFlags = 2;
@@ -787,7 +787,7 @@ targetSize(Thread* t, object typeMaps, object referer, unsigned refererOffset,
   {
     return (TargetBytesPerWord * 2)
       + pad
-      (ceiling
+      (ceilingDivide
        (objectMaskCount
         (classTypeMap(t, typeMaps, referer)), 32) * 4, TargetBytesPerWord);
   } else {
