@@ -19,6 +19,7 @@
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/resource.h"
 #include "codegen/compiler/value.h"
+#include "codegen/compiler/site.h"
 
 using namespace vm;
 
@@ -41,12 +42,6 @@ const unsigned StealRegisterReserveCount = 2;
 // this should be equal to the largest number of registers used by a
 // compare instruction:
 const unsigned ResolveRegisterReserveCount = (TargetBytesPerWord == 8 ? 2 : 4);
-
-const unsigned RegisterCopyCost = 1;
-const unsigned AddressCopyCost = 2;
-const unsigned ConstantCopyCost = 3;
-const unsigned MemoryCopyCost = 4;
-const unsigned CopyPenalty = 10;
 
 class Stack;
 class Site;
@@ -88,70 +83,6 @@ class Cell {
 class Local {
  public:
   Value* value;
-};
-
-class SiteMask {
- public:
-  SiteMask(): typeMask(~0), registerMask(~0), frameIndex(AnyFrameIndex) { }
-
-  SiteMask(uint8_t typeMask, uint32_t registerMask, int frameIndex):
-    typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
-  { }
-
-  uint8_t typeMask;
-  uint32_t registerMask;
-  int frameIndex;
-};
-
-class Site {
- public:
-  Site(): next(0) { }
-  
-  virtual Site* readTarget(Context*, Read*) { return this; }
-
-  virtual unsigned toString(Context*, char*, unsigned) = 0;
-
-  virtual unsigned copyCost(Context*, Site*) = 0;
-
-  virtual bool match(Context*, const SiteMask&) = 0;
-
-  virtual bool loneMatch(Context*, const SiteMask&) = 0;
-
-  virtual bool matchNextWord(Context*, Site*, unsigned) = 0;
-  
-  virtual void acquire(Context*, Value*) { }
-
-  virtual void release(Context*, Value*) { }
-
-  virtual void freeze(Context*, Value*) { }
-
-  virtual void thaw(Context*, Value*) { }
-
-  virtual bool frozen(Context*) { return false; }
-
-  virtual lir::OperandType type(Context*) = 0;
-
-  virtual void asAssemblerOperand(Context*, Site*, lir::Operand*) = 0;
-
-  virtual Site* copy(Context*) = 0;
-
-  virtual Site* copyLow(Context*) = 0;
-
-  virtual Site* copyHigh(Context*) = 0;
-
-  virtual Site* makeNextWord(Context*, unsigned) = 0;
-
-  virtual SiteMask mask(Context*) = 0;
-
-  virtual SiteMask nextWordMask(Context*, unsigned) = 0;
-
-  virtual unsigned registerSize(Context*) { return TargetBytesPerWord; }
-
-  virtual unsigned registerMask(Context*) { return 0; }
-
-  virtual bool isVolatile(Context*) { return false; }
-
-  Site* next;
 };
 
 class Stack {
@@ -585,84 +516,6 @@ frameIndex(Context* c, FrameIterator::Element* element)
 {
   return frameIndex(c, element->localIndex);
 }
-
-class SiteIterator {
- public:
-  SiteIterator(Context* c, Value* v, bool includeBuddies = true,
-               bool includeNextWord = true):
-    c(c),
-    originalValue(v),
-    currentValue(v),
-    includeBuddies(includeBuddies),
-    includeNextWord(includeNextWord),
-    pass(0),
-    next_(findNext(&(v->sites))),
-    previous(0)
-  { }
-
-  Site** findNext(Site** p) {
-    while (true) {
-      if (*p) {
-        if (pass == 0 or (*p)->registerSize(c) > TargetBytesPerWord) {
-          return p;
-        } else {
-          p = &((*p)->next);
-        }
-      } else {
-        if (includeBuddies) {
-          Value* v = currentValue->buddy;
-          if (v != originalValue) {
-            currentValue = v;
-            p = &(v->sites);
-            continue;
-          }
-        }
-
-        if (includeNextWord and pass == 0) {
-          Value* v = originalValue->nextWord;
-          if (v != originalValue) {
-            pass = 1;
-            originalValue = v;
-            currentValue = v;
-            p = &(v->sites);
-            continue;
-          }
-        }
-
-        return 0;
-      }
-    }
-  }
-
-  bool hasMore() {
-    if (previous) {
-      next_ = findNext(&((*previous)->next));
-      previous = 0;
-    }
-    return next_ != 0;
-  }
-
-  Site* next() {
-    previous = next_;
-    return *previous;
-  }
-
-  void remove(Context* c) {
-    (*previous)->release(c, originalValue);
-    *previous = (*previous)->next;
-    next_ = findNext(previous);
-    previous = 0;
-  }
-
-  Context* c;
-  Value* originalValue;
-  Value* currentValue;
-  bool includeBuddies;
-  bool includeNextWord;
-  uint8_t pass;
-  Site** next_;
-  Site** previous;
-};
 
 bool
 hasSite(Context* c, Value* v)
@@ -1233,107 +1086,18 @@ acquire(Context* c, Resource* resource, Value* value, Site* site);
 void
 release(Context* c, Resource* resource, Value* value, Site* site);
 
-ConstantSite*
-constantSite(Context* c, Promise* value);
-
-ShiftMaskPromise*
-shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask)
-{
+Promise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask) {
   return new(c->zone) ShiftMaskPromise(base, shift, mask);
 }
 
-CombinedPromise*
-combinedPromise(Context* c, Promise* low, Promise* high)
-{
+Promise* combinedPromise(Context* c, Promise* low, Promise* high) {
   return new(c->zone) CombinedPromise(low, high);
 }
 
-class ConstantSite: public Site {
- public:
-  ConstantSite(Promise* value): value(value) { }
-
-  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
-    if (value->resolved()) {
-      return vm::snprintf
-        (buffer, bufferSize, "constant %" LLD, value->value());
-    } else {
-      return vm::snprintf(buffer, bufferSize, "constant unresolved");
-    }
-  }
-
-  virtual unsigned copyCost(Context*, Site* s) {
-    return (s == this ? 0 : ConstantCopyCost);
-  }
-
-  virtual bool match(Context*, const SiteMask& mask) {
-    return mask.typeMask & (1 << lir::ConstantOperand);
-  }
-
-  virtual bool loneMatch(Context*, const SiteMask&) {
-    return true;
-  }
-
-  virtual bool matchNextWord(Context* c, Site* s, unsigned) {
-    return s->type(c) == lir::ConstantOperand;
-  }
-
-  virtual lir::OperandType type(Context*) {
-    return lir::ConstantOperand;
-  }
-
-  virtual void asAssemblerOperand(Context* c, Site* high,
-                                  lir::Operand* result)
-  {
-    Promise* v = value;
-    if (high != this) {
-      v = combinedPromise(c, value, static_cast<ConstantSite*>(high)->value);
-    }
-    new (result) lir::Constant(v);
-  }
-
-  virtual Site* copy(Context* c) {
-    return constantSite(c, value);
-  }
-
-  virtual Site* copyLow(Context* c) {
-    return constantSite(c, shiftMaskPromise(c, value, 0, 0xFFFFFFFF));
-  }
-
-  virtual Site* copyHigh(Context* c) {
-    return constantSite(c, shiftMaskPromise(c, value, 32, 0xFFFFFFFF));
-  }
-
-  virtual Site* makeNextWord(Context* c, unsigned) {
-    abort(c);
-  }
-
-  virtual SiteMask mask(Context*) {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
-  }
-
-  virtual SiteMask nextWordMask(Context*, unsigned) {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
-  }
-
-  Promise* value;
-};
-
-ConstantSite*
-constantSite(Context* c, Promise* value)
-{
-  return new(c->zone) ConstantSite(value);
-}
-
-ResolvedPromise*
+Promise*
 resolved(Context* c, int64_t value)
 {
   return new(c->zone) ResolvedPromise(value);
-}
-
-ConstantSite*
-constantSite(Context* c, int64_t value)
-{
-  return constantSite(c, resolved(c, value));
 }
 
 AddressSite*

@@ -59,6 +59,14 @@ void thawResource(Context* c, Resource* r, Value* v) {
 }
 
 
+Resource::Resource(bool reserved):
+  value(0), site(0), previousAcquired(0), nextAcquired(0), freezeCount(0),
+  referenceCount(0), reserved(reserved)
+{ }
+
+RegisterResource::RegisterResource(bool reserved):
+  Resource(reserved)
+{ }
 
 void RegisterResource::freeze(Context* c, Value* v) {
   if (not reserved) {

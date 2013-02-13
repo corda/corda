@@ -11,21 +11,17 @@
 #ifndef AVIAN_CODEGEN_COMPILER_RESOURCE_H
 #define AVIAN_CODEGEN_COMPILER_RESOURCE_H
 
-#include "codegen/compiler/context.h"
-
 namespace avian {
 namespace codegen {
 namespace compiler {
 
+class Context;
 class Value;
 class Site;
 
 class Resource {
  public:
-  Resource(bool reserved = false):
-    value(0), site(0), previousAcquired(0), nextAcquired(0), freezeCount(0),
-    referenceCount(0), reserved(reserved)
-  { }
+  Resource(bool reserved = false);
 
   virtual void freeze(Context*, Value*) = 0;
 
@@ -44,9 +40,7 @@ class Resource {
 
 class RegisterResource: public Resource {
  public:
-  RegisterResource(bool reserved):
-    Resource(reserved)
-  { }
+  RegisterResource(bool reserved);
 
   virtual void freeze(Context*, Value*);
 
