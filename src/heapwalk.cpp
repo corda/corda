@@ -228,7 +228,8 @@ inline object
 get(object o, unsigned offsetInWords)
 {
   return static_cast<object>
-    (mask(fieldAtOffset<void*>(o, offsetInWords * BytesPerWord)));
+    (maskAlignedPointer
+     (fieldAtOffset<void*>(o, offsetInWords * BytesPerWord)));
 }
 
 unsigned
@@ -297,7 +298,8 @@ class MyHeapWalker: public HeapWalker {
       Visitor(Context* c, HeapVisitor* v): c(c), v(v) { }
 
       virtual void visit(void* p) {
-        walk(c, v, static_cast<object>(mask(*static_cast<void**>(p))));
+        walk(c, v, static_cast<object>
+             (maskAlignedPointer(*static_cast<void**>(p))));
       }
 
       Context* c;
