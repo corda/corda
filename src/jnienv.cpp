@@ -162,9 +162,11 @@ GetStringRegion(Thread* t, jstring s, jsize start, jsize length, jchar* dst)
 const jchar* JNICALL
 GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
 {
-  if ((t->criticalLevel ++) == 0) {
+  if (t->criticalLevel == 0) {
     enter(t, Thread::ActiveState);
   }
+
+  ++ t->criticalLevel;
 
   if (isCopy) {
     *isCopy = true;
@@ -3143,9 +3145,11 @@ SetDoubleArrayRegion(Thread* t, jdoubleArray array, jint offset, jint length,
 void* JNICALL
 GetPrimitiveArrayCritical(Thread* t, jarray array, jboolean* isCopy)
 {
-  if ((t->criticalLevel ++) == 0) {
+  if (t->criticalLevel == 0) {
     enter(t, Thread::ActiveState);
   }
+
+  ++ t->criticalLevel;
   
   if (isCopy) {
     *isCopy = true;
@@ -3711,16 +3715,6 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 } // namespace vm
 
-#define BOOTSTRAP_PROPERTY "avian.bootstrap"
-#define CRASHDIR_PROPERTY "avian.crash.dir"
-#define EMBED_PREFIX_PROPERTY "avian.embed.prefix"
-#define CLASSPATH_PROPERTY "java.class.path"
-#define JAVA_HOME_PROPERTY "java.home"
-#define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
-#define BOOTCLASSPATH_OPTION "bootclasspath"
-#define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
-#define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
-
 extern "C" JNIEXPORT jint JNICALL
 JNI_GetDefaultJavaVMInitArgs(void*)
 {
@@ -3741,7 +3735,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 
   unsigned heapLimit = 0;
   unsigned stackLimit = 0;
-  const char* bootLibrary = 0;
+  const char* bootLibraries = 0;
   const char* classpath = 0;
   const char* javaHome = AVIAN_JAVA_HOME;
   const char* embedPrefix = AVIAN_EMBED_PREFIX;
@@ -3777,7 +3771,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
       if (strncmp(p, BOOTSTRAP_PROPERTY "=",
                   sizeof(BOOTSTRAP_PROPERTY)) == 0)
       {
-        bootLibrary = p + sizeof(BOOTSTRAP_PROPERTY);
+        bootLibraries = p + sizeof(BOOTSTRAP_PROPERTY);
       } else if (strncmp(p, CRASHDIR_PROPERTY "=",
                          sizeof(CRASHDIR_PROPERTY)) == 0)
       {
@@ -3831,9 +3825,16 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     *RUNTIME_ARRAY_BODY(bootClasspathBuffer) = 0;
   }
 
+  char* bootLibrary = bootLibraries ? strdup(bootLibraries) : 0;
+  char* bootLibraryEnd = bootLibrary ? strchr(bootLibrary, PATH_SEPARATOR) : 0;
+  if(bootLibraryEnd)
+    *bootLibraryEnd = 0;
+
   Finder* bf = makeFinder
     (s, h, RUNTIME_ARRAY_BODY(bootClasspathBuffer), bootLibrary);
   Finder* af = makeFinder(s, h, classpath, bootLibrary);
+  if(bootLibrary)
+    free(bootLibrary);
   Processor* p = makeProcessor(s, h, true);
 
   const char** properties = static_cast<const char**>

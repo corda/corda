@@ -249,12 +249,11 @@ where OpenJDK is installed, e.g.:
 
 This will build Avian as a conventional JVM (e.g. libjvm.so) which
 loads its boot class library and native libraries (e.g. libjava.so)
-from _/usr/lib/jvm/java-7-openjdk/jre_ at runtime.  To run an
-application in this configuration, you'll need to make sure the VM is
-in your library search path.  For example:
+from _/usr/lib/jvm/java-7-openjdk/jre_ at runtime.  In this configuration,
+OpenJDK needs to remain installed for Avian to work, and you can run
+applications like this:
 
-    $ LD_LIBRARY_PATH=build/linux-x86_64-openjdk \
-        build/linux-x86_64-openjdk/avian-dynamic -cp /path/to/my/application \
+    $ build/linux-x86_64-openjdk/avian-dynamic -cp /path/to/my/application \
         com.example.MyApplication
 
 Alternatively, you can enable a stand-alone build using OpenJDK by

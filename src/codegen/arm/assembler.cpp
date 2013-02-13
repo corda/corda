@@ -8,8 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/assembler.h"
 #include "alloc-vector.h"
+
+#include "codegen/assembler.h"
+
+#include "util/runtime-array.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -18,7 +21,7 @@
 
 using namespace vm;
 
-namespace {
+namespace local {
 
 namespace isa {
 // SYSTEM REGISTERS
@@ -252,7 +255,7 @@ class MyBlock: public Assembler::Block {
     this->start = start;
     this->next = static_cast<MyBlock*>(next);
 
-    ::resolve(this);
+    local::resolve(this);
 
     return start + size + padding(this, size);
   }
@@ -2150,7 +2153,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return ::argumentFootprint(footprint);
+    return local::argumentFootprint(footprint);
   }
 
   virtual bool argumentAlignment() {
@@ -2239,7 +2242,7 @@ class MyArchitecture: public Assembler::Architecture {
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    ::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
+    local::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
                 mostRecent, targetParameterFootprint, ip, stack);
   }
 
@@ -2552,19 +2555,20 @@ class MyAssembler: public Assembler {
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
-    struct {
+    struct Argument {
       unsigned size;
       OperandType type;
       Operand* operand;
-    } arguments[argumentCount];
+    };
+    RUNTIME_ARRAY(Argument, arguments, argumentCount);
 
     va_list a; va_start(a, argumentCount);
     unsigned footprint = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
-      arguments[i].size = va_arg(a, unsigned);
-      arguments[i].type = static_cast<OperandType>(va_arg(a, int));
-      arguments[i].operand = va_arg(a, Operand*);
-      footprint += ceilingDivide(arguments[i].size, TargetBytesPerWord);
+      RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
+      RUNTIME_ARRAY_BODY(arguments)[i].type = static_cast<OperandType>(va_arg(a, int));
+      RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, Operand*);
+      footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
     }
     va_end(a);
 
@@ -2576,19 +2580,23 @@ class MyAssembler: public Assembler {
         Register dst(arch_->argumentRegister(i));
 
         apply(Move,
-              arguments[i].size, arguments[i].type, arguments[i].operand,
-              pad(arguments[i].size, TargetBytesPerWord), RegisterOperand,
+              RUNTIME_ARRAY_BODY(arguments)[i].size,
+              RUNTIME_ARRAY_BODY(arguments)[i].type,
+              RUNTIME_ARRAY_BODY(arguments)[i].operand,
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), RegisterOperand,
               &dst);
 
-        offset += ceilingDivide(arguments[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       } else {
         Memory dst(StackRegister, offset * TargetBytesPerWord);
 
         apply(Move,
-              arguments[i].size, arguments[i].type, arguments[i].operand,
-              pad(arguments[i].size, TargetBytesPerWord), MemoryOperand, &dst);
+              RUNTIME_ARRAY_BODY(arguments)[i].size,
+              RUNTIME_ARRAY_BODY(arguments)[i].type,
+              RUNTIME_ARRAY_BODY(arguments)[i].operand,
+              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), MemoryOperand, &dst);
 
-        offset += ceilingDivide(arguments[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       }
     }
   }
@@ -2800,7 +2808,7 @@ class MyAssembler: public Assembler {
         bool jump = needJump(b);
         if (jump) {
           write4
-            (dst + dstOffset, ::b((poolSize + TargetBytesPerWord - 8) >> 2));
+            (dst + dstOffset, isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }
 
         dstOffset += poolSize + (jump ? TargetBytesPerWord : 0);
@@ -2834,7 +2842,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset(bool forTrace) {
-    return ::offset(&con, forTrace);
+    return local::offset(&con, forTrace);
   }
 
   virtual Block* endBlock(bool startNew) {
@@ -2910,7 +2918,7 @@ namespace codegen {
 Assembler::Architecture*
 makeArchitectureArm(System* system, bool)
 {
-  return new (allocate(system, sizeof(MyArchitecture))) MyArchitecture(system);
+  return new (allocate(system, sizeof(local::MyArchitecture))) local::MyArchitecture(system);
 }
 
 } // namespace codegen

@@ -71,6 +71,7 @@
 -keep public class java.io.IOException
 -keep public class java.io.FileNotFoundException
 -keep public class java.net.SocketException
+-keep public class java.util.Locale
 
 # ClassLoader.getSystemClassloader() depends on the existence of this class:
 

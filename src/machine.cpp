@@ -19,6 +19,11 @@
 
 #include "util/runtime-array.h"
 
+#if defined(PLATFORM_WINDOWS)
+#  define WIN32_LEAN_AND_MEAN
+#  include <Windows.h>
+#endif
+
 using namespace vm;
 
 namespace {
@@ -3005,6 +3010,14 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
 
   populateJNITables(&javaVMVTable, &jniEnvVTable);
 
+  const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
+  const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
+  const char* bootstrapPropertyEnd = bootstrapPropertyDup + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
+  char* codeLibraryName = (char*)bootstrapPropertyDup;
+  char* codeLibraryNameEnd = 0;
+  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
+    *codeLibraryNameEnd = 0;
+
   if (not system->success(system->make(&localThread)) or
       not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -3012,10 +3025,25 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, findProperty(this, "avian.bootstrap"))))
+      (system->load(&libraries, bootstrapPropertyDup)))
   {
     system->abort();
   }
+
+  System::Library* additionalLibrary = 0;
+  while (codeLibraryNameEnd && codeLibraryNameEnd + 1 < bootstrapPropertyEnd) {
+    codeLibraryName = codeLibraryNameEnd + 1;
+    codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator());
+    if (codeLibraryNameEnd)
+      *codeLibraryNameEnd = 0;
+
+    if (!system->success(system->load(&additionalLibrary, codeLibraryName)))
+      system->abort();
+    libraries->setNext(additionalLibrary);
+  }
+
+  if(bootstrapPropertyDup)
+    free((void*)bootstrapPropertyDup);
 }
 
 void
@@ -4734,6 +4762,30 @@ visitRoots(Machine* m, Heap::Visitor* v)
 }
 
 void
+logTrace(FILE* f, const char* fmt, ...)
+{
+    va_list a;
+    va_start(a, fmt);
+#ifdef PLATFORM_WINDOWS
+    const unsigned length = _vscprintf(fmt, a);
+#else
+    const unsigned length = vsnprintf(0, 0, fmt, a);
+#endif
+    va_end(a);
+
+    RUNTIME_ARRAY(char, buffer, length + 1);
+    va_start(a, fmt);
+    vsnprintf(&buffer[0], length + 1, fmt, a);
+    va_end(a);
+    buffer[length] = 0;
+
+    ::fprintf(f, "%s", &buffer[0]);
+#ifdef PLATFORM_WINDOWS
+    ::OutputDebugStringA(&buffer[0]);
+#endif
+}
+
+void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
@@ -4742,19 +4794,19 @@ printTrace(Thread* t, object exception)
 
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
-      fprintf(errorLog(t), "caused by: ");
+      logTrace(errorLog(t), "caused by: ");
     }
 
-    fprintf(errorLog(t), "%s", &byteArrayBody
+    logTrace(errorLog(t), "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
-  
+
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
       THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
-      fprintf(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
+      logTrace(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
-      fprintf(errorLog(t), "\n");
+      logTrace(errorLog(t), "\n");
     }
 
     object trace = throwableTrace(t, e);
@@ -4768,17 +4820,17 @@ printTrace(Thread* t, object exception)
         int line = t->m->processor->lineNumber
           (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-        fprintf(errorLog(t), "  at %s.%s ", class_, method);
+        logTrace(errorLog(t), "  at %s.%s ", class_, method);
 
         switch (line) {
         case NativeLine:
-          fprintf(errorLog(t), "(native)\n");
+          logTrace(errorLog(t), "(native)\n");
           break;
         case UnknownLine:
-          fprintf(errorLog(t), "(unknown line)\n");
+          logTrace(errorLog(t), "(unknown line)\n");
           break;
         default:
-          fprintf(errorLog(t), "(line %d)\n", line);
+          logTrace(errorLog(t), "(line %d)\n", line);
         }
       }
     }
@@ -4788,7 +4840,7 @@ printTrace(Thread* t, object exception)
     }
   }
 
-  fflush(errorLog(t));
+  ::fflush(errorLog(t));
 }
 
 object
