@@ -8,9 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "alloc-vector.h"
-
 #include "codegen/assembler.h"
+#include "codegen/registers.h"
+
+#include "alloc-vector.h"
+#include "util/abort.h"
 
 #include "util/runtime-array.h"
 
@@ -20,6 +22,7 @@
 #define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
 using namespace vm;
+using namespace avian::codegen;
 
 namespace local {
 
@@ -208,14 +211,17 @@ const uint64_t GPR_MASK64 = GPR_MASK | (uint64_t)GPR_MASK << 32;
 // making the following const somehow breaks debug symbol output in GDB
 /* const */ uint64_t FPR_MASK64 = FPR_MASK | (uint64_t)FPR_MASK << 32;
 
-inline bool isFpr(Assembler::Register* reg) {
+const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
+const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
+
+inline bool isFpr(lir::Register* reg) {
   return reg->low >= N_GPRS;
 }
 
 inline int fpr64(int reg) { return reg - N_GPRS; }
-inline int fpr64(Assembler::Register* reg) { return fpr64(reg->low); }
+inline int fpr64(lir::Register* reg) { return fpr64(reg->low); }
 inline int fpr32(int reg) { return fpr64(reg) << 1; }
-inline int fpr32(Assembler::Register* reg) { return fpr64(reg) << 1; }
+inline int fpr32(lir::Register* reg) { return fpr64(reg) << 1; }
 
 const unsigned FrameHeaderSize = 1;
 
@@ -310,65 +316,41 @@ class Task {
 
 typedef void (*OperationType)(Context*);
 
-typedef void (*UnaryOperationType)(Context*, unsigned, Assembler::Operand*);
+typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
 
 typedef void (*BinaryOperationType)
-(Context*, unsigned, Assembler::Operand*, unsigned, Assembler::Operand*);
+(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
 
 typedef void (*TernaryOperationType)
-(Context*, unsigned, Assembler::Operand*, Assembler::Operand*,
- Assembler::Operand*);
+(Context*, unsigned, lir::Operand*, lir::Operand*,
+ lir::Operand*);
 
 typedef void (*BranchOperationType)
-(Context*, TernaryOperation, unsigned, Assembler::Operand*,
- Assembler::Operand*, Assembler::Operand*);
+(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
+ lir::Operand*, lir::Operand*);
 
 class ArchitectureContext {
  public:
   ArchitectureContext(System* s): s(s) { }
 
   System* s;
-  OperationType operations[OperationCount];
-  UnaryOperationType unaryOperations[UnaryOperationCount
-                                     * OperandTypeCount];
+  OperationType operations[lir::OperationCount];
+  UnaryOperationType unaryOperations[lir::UnaryOperationCount
+                                     * lir::OperandTypeCount];
   BinaryOperationType binaryOperations
-  [BinaryOperationCount * OperandTypeCount * OperandTypeCount];
+  [lir::BinaryOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
   TernaryOperationType ternaryOperations
-  [NonBranchTernaryOperationCount * OperandTypeCount];
+  [lir::NonBranchTernaryOperationCount * lir::OperandTypeCount];
   BranchOperationType branchOperations
-  [BranchOperationCount * OperandTypeCount * OperandTypeCount];
+  [lir::BranchOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
 };
 
-inline void NO_RETURN
-abort(Context* con)
-{
-  abort(con->s);
+inline Aborter* getAborter(Context* con) {
+  return con->s;
 }
 
-inline void NO_RETURN
-abort(ArchitectureContext* con)
-{
-  abort(con->s);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Context* con, bool v)
-{
-  assert(con->s, v);
-}
-
-inline void
-assert(ArchitectureContext* con, bool v)
-{
-  assert(con->s, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Context* con, bool v)
-{
-  expect(con->s, v);
+inline Aborter* getAborter(ArchitectureContext* con) {
+  return con->s;
 }
 
 class Offset: public Promise {
@@ -469,49 +451,37 @@ appendOffsetTask(Context* con, Promise* promise, Promise* instructionOffset)
 }
 
 inline unsigned
-index(ArchitectureContext*, UnaryOperation operation, OperandType operand)
+index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand)
 {
-  return operation + (UnaryOperationCount * operand);
+  return operation + (lir::UnaryOperationCount * operand);
 }
 
 inline unsigned
 index(ArchitectureContext*,
-      BinaryOperation operation,
-      OperandType operand1,
-      OperandType operand2)
+      lir::BinaryOperation operation,
+      lir::OperandType operand1,
+      lir::OperandType operand2)
 {
   return operation
-    + (BinaryOperationCount * operand1)
-    + (BinaryOperationCount * OperandTypeCount * operand2);
-}
-
-bool
-isBranch(TernaryOperation op)
-{
-  return op > FloatMin;
-}
-
-bool UNUSED
-isFloatBranch(TernaryOperation op)
-{
-  return op > JumpIfNotEqual;
+    + (lir::BinaryOperationCount * operand1)
+    + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
 }
 
 inline unsigned
 index(ArchitectureContext* con UNUSED,
-      TernaryOperation operation,
-      OperandType operand1)
+      lir::TernaryOperation operation,
+      lir::OperandType operand1)
 {
   assert(con, not isBranch(operation));
 
-  return operation + (NonBranchTernaryOperationCount * operand1);
+  return operation + (lir::NonBranchTernaryOperationCount * operand1);
 }
 
 unsigned
-branchIndex(ArchitectureContext* con UNUSED, OperandType operand1,
-            OperandType operand2)
+branchIndex(ArchitectureContext* con UNUSED, lir::OperandType operand1,
+            lir::OperandType operand2)
 {
-  return operand1 + (OperandTypeCount * operand2);
+  return operand1 + (lir::OperandTypeCount * operand2);
 }
 
 // BEGIN OPERATION COMPILERS
@@ -533,23 +503,23 @@ inline void freeTemp(Context* con, int r) {
   con->client->releaseTemporary(r);
 }
 
-inline int64_t getValue(Assembler::Constant* con) {
+inline int64_t getValue(lir::Constant* con) {
   return con->value->value();
 }
 
-inline Assembler::Register makeTemp(Context* con) {
-  Assembler::Register tmp(newTemp(con));
+inline lir::Register makeTemp(Context* con) {
+  lir::Register tmp(newTemp(con));
   return tmp;
 }
 
-inline Assembler::Register makeTemp64(Context* con) {
-  Assembler::Register tmp(newTemp(con), newTemp(con));
+inline lir::Register makeTemp64(Context* con) {
+  lir::Register tmp(newTemp(con), newTemp(con));
   return tmp;
 }
 
-inline void freeTemp(Context* con, const Assembler::Register& tmp) {
-  if (tmp.low != NoRegister) freeTemp(con, tmp.low);
-  if (tmp.high != NoRegister) freeTemp(con, tmp.high);
+inline void freeTemp(Context* con, const lir::Register& tmp) {
+  if (tmp.low != lir::NoRegister) freeTemp(con, tmp.low);
+  if (tmp.high != lir::NoRegister) freeTemp(con, tmp.high);
 }
 
 inline void
@@ -559,16 +529,16 @@ write4(uint8_t* dst, uint32_t v)
 }
 
 void
-andC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst);
+andC(Context* con, unsigned size, lir::Constant* a,
+     lir::Register* b, lir::Register* dst);
 
-void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
+void shiftLeftR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
 {
   if (size == 8) {
     int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
     ResolvedPromise maskPromise(0x3F);
-    Assembler::Constant mask(&maskPromise);
-    Assembler::Register dst(tmp3);
+    lir::Constant mask(&maskPromise);
+    lir::Register dst(tmp3);
     andC(con, 4, &mask, a, &dst);
     emit(con, lsl(tmp1, b->high, tmp3));
     emit(con, rsbi(tmp2, tmp3, 32));
@@ -581,8 +551,8 @@ void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::
   } else {
     int tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
-    Assembler::Constant mask(&maskPromise);
-    Assembler::Register dst(tmp);
+    lir::Constant mask(&maskPromise);
+    lir::Register dst(tmp);
     andC(con, size, &mask, a, &dst);
     emit(con, lsl(t->low, b->low, tmp));
     freeTemp(con, tmp);
@@ -590,10 +560,10 @@ void shiftLeftR(Context* con, unsigned size, Assembler::Register* a, Assembler::
 }
 
 void
-moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst);
+moveRR(Context* con, unsigned srcSize, lir::Register* src,
+       unsigned dstSize, lir::Register* dst);
 
-void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void shiftLeftC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -603,13 +573,13 @@ void shiftLeftC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Asse
   }
 }
 
-void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
+void shiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
 {
   if (size == 8) {
     int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
     ResolvedPromise maskPromise(0x3F);
-    Assembler::Constant mask(&maskPromise);
-    Assembler::Register dst(tmp3);
+    lir::Constant mask(&maskPromise);
+    lir::Register dst(tmp3);
     andC(con, 4, &mask, a, &dst);
     emit(con, lsr(tmp1, b->low, tmp3));
     emit(con, rsbi(tmp2, tmp3, 32));
@@ -622,15 +592,15 @@ void shiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler:
   } else {
     int tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
-    Assembler::Constant mask(&maskPromise);
-    Assembler::Register dst(tmp);
+    lir::Constant mask(&maskPromise);
+    lir::Register dst(tmp);
     andC(con, size, &mask, a, &dst);
     emit(con, asr(t->low, b->low, tmp));
     freeTemp(con, tmp);
   }
 }
 
-void shiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void shiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -640,12 +610,12 @@ void shiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Ass
   }
 }
 
-void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t)
+void unsignedShiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
 {
   int tmpShift = newTemp(con);
   ResolvedPromise maskPromise(size == 8 ? 0x3F : 0x1F);
-  Assembler::Constant mask(&maskPromise);
-  Assembler::Register dst(tmpShift);
+  lir::Constant mask(&maskPromise);
+  lir::Register dst(tmpShift);
   andC(con, 4, &mask, a, &dst);
   emit(con, lsr(t->low, b->low, tmpShift));
   if (size == 8) {
@@ -662,7 +632,7 @@ void unsignedShiftRightR(Context* con, unsigned size, Assembler::Register* a, As
   freeTemp(con, tmpShift);
 }
 
-void unsignedShiftRightC(Context* con, unsigned size UNUSED, Assembler::Constant* a, Assembler::Register* b, Assembler::Register* t)
+void unsignedShiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
   assert(con, size == TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -873,20 +843,20 @@ resolve(MyBlock* b)
 }
 
 void
-jumpR(Context* con, unsigned size UNUSED, Assembler::Register* target)
+jumpR(Context* con, unsigned size UNUSED, lir::Register* target)
 {
   assert(con, size == TargetBytesPerWord);
   emit(con, bx(target->low));
 }
 
 void
-swapRR(Context* con, unsigned aSize, Assembler::Register* a,
-       unsigned bSize, Assembler::Register* b)
+swapRR(Context* con, unsigned aSize, lir::Register* a,
+       unsigned bSize, lir::Register* b)
 {
   assert(con, aSize == TargetBytesPerWord);
   assert(con, bSize == TargetBytesPerWord);
 
-  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveRR(con, aSize, a, bSize, &tmp);
   moveRR(con, bSize, b, aSize, a);
   moveRR(con, bSize, &tmp, bSize, b);
@@ -894,8 +864,8 @@ swapRR(Context* con, unsigned aSize, Assembler::Register* a,
 }
 
 void
-moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveRR(Context* con, unsigned srcSize, lir::Register* src,
+       unsigned dstSize, lir::Register* dst)
 {
   bool srcIsFpr = isFpr(src);
   bool dstIsFpr = isFpr(dst);
@@ -932,8 +902,8 @@ moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
       moveRR(con, 4, src, 4, dst);
       emit(con, asri(dst->high, src->low, 31));
     } else if (srcSize == 8 and dstSize == 8) {
-      Assembler::Register srcHigh(src->high);
-      Assembler::Register dstHigh(dst->high);
+      lir::Register srcHigh(src->high);
+      lir::Register dstHigh(dst->high);
 
       if (src->high == dst->low) {
         if (src->low == dst->high) {
@@ -956,8 +926,8 @@ moveRR(Context* con, unsigned srcSize, Assembler::Register* src,
 }
 
 void
-moveZRR(Context* con, unsigned srcSize, Assembler::Register* src,
-        unsigned, Assembler::Register* dst)
+moveZRR(Context* con, unsigned srcSize, lir::Register* src,
+        unsigned, lir::Register* dst)
 {
   switch (srcSize) {
   case 2:
@@ -969,15 +939,15 @@ moveZRR(Context* con, unsigned srcSize, Assembler::Register* src,
   }
 }
 
-void moveCR(Context* con, unsigned size, Assembler::Constant* src,
-            unsigned, Assembler::Register* dst);
+void moveCR(Context* con, unsigned size, lir::Constant* src,
+            unsigned, lir::Register* dst);
 
 void
-moveCR2(Context* con, unsigned size, Assembler::Constant* src,
-        Assembler::Register* dst, Promise* callOffset)
+moveCR2(Context* con, unsigned size, lir::Constant* src,
+        lir::Register* dst, Promise* callOffset)
 {
   if (isFpr(dst)) { // floating-point
-    Assembler::Register tmp = size > 4 ? makeTemp64(con) :
+    lir::Register tmp = size > 4 ? makeTemp64(con) :
                                          makeTemp(con);
     moveCR(con, size, src, size, &tmp);
     moveRR(con, size, &tmp, size, dst);
@@ -985,10 +955,10 @@ moveCR2(Context* con, unsigned size, Assembler::Constant* src,
   } else if (size > 4) { 
     uint64_t value = (uint64_t)src->value->value();
     ResolvedPromise loBits(value & MASK_LO32);
-    Assembler::Constant srcLo(&loBits);
+    lir::Constant srcLo(&loBits);
     ResolvedPromise hiBits(value >> 32); 
-    Assembler::Constant srcHi(&hiBits);
-    Assembler::Register dstHi(dst->high);
+    lir::Constant srcHi(&hiBits);
+    lir::Register dstHi(dst->high);
     moveCR(con, 4, &srcLo, 4, dst);
     moveCR(con, 4, &srcHi, 4, &dstHi);
   } else if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
@@ -1000,13 +970,13 @@ moveCR2(Context* con, unsigned size, Assembler::Constant* src,
 }
 
 void
-moveCR(Context* con, unsigned size, Assembler::Constant* src,
-       unsigned, Assembler::Register* dst)
+moveCR(Context* con, unsigned size, lir::Constant* src,
+       unsigned, lir::Register* dst)
 {
   moveCR2(con, size, src, dst, 0);
 }
 
-void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void addR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     emit(con, SETS(add(t->low, a->low, b->low)));
     emit(con, adc(t->high, a->high, b->high));
@@ -1015,7 +985,7 @@ void addR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
   }
 }
 
-void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void subR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     emit(con, SETS(rsb(t->low, a->low, b->low)));
     emit(con, rsc(t->high, a->high, b->high));
@@ -1025,8 +995,8 @@ void subR(Context* con, unsigned size, Assembler::Register* a, Assembler::Regist
 }
 
 void
-addC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
+addC(Context* con, unsigned size, lir::Constant* a,
+     lir::Register* b, lir::Register* dst)
 {
   assert(con, size == TargetBytesPerWord);
 
@@ -1046,8 +1016,8 @@ addC(Context* con, unsigned size, Assembler::Constant* a,
 }
 
 void
-subC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
+subC(Context* con, unsigned size, lir::Constant* a,
+     lir::Register* b, lir::Register* dst)
 {
   assert(con, size == TargetBytesPerWord);
 
@@ -1066,7 +1036,7 @@ subC(Context* con, unsigned size, Assembler::Constant* a,
   }
 }
 
-void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void multiplyR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
     int tmpLow  = useTemporaries ? con->client->acquireTemporary(GPR_MASK) : t->low;
@@ -1087,7 +1057,7 @@ void multiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   }
 }
 
-void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+void floatAbsoluteRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
   if (size == 8) {
     emit(con, fabsd(fpr64(b), fpr64(a)));
   } else {
@@ -1095,7 +1065,7 @@ void floatAbsoluteRR(Context* con, unsigned size, Assembler::Register* a, unsign
   }
 }
 
-void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+void floatNegateRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
   if (size == 8) {
     emit(con, fnegd(fpr64(b), fpr64(a)));
   } else {
@@ -1103,7 +1073,7 @@ void floatNegateRR(Context* con, unsigned size, Assembler::Register* a, unsigned
   }
 }
 
-void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+void float2FloatRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
   if (size == 8) {
     emit(con, fcvtsd(fpr32(b), fpr64(a)));
   } else {
@@ -1111,7 +1081,7 @@ void float2FloatRR(Context* con, unsigned size, Assembler::Register* a, unsigned
   }
 }
 
-void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+void float2IntRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
   int tmp = newTemp(con, FPR_MASK);
   int ftmp = fpr32(tmp);
   if (size == 8) { // double to int
@@ -1123,7 +1093,7 @@ void float2IntRR(Context* con, unsigned size, Assembler::Register* a, unsigned, 
   freeTemp(con, tmp);
 }
 
-void int2FloatRR(Context* con, unsigned, Assembler::Register* a, unsigned size, Assembler::Register* b) {
+void int2FloatRR(Context* con, unsigned, lir::Register* a, unsigned size, lir::Register* b) {
   emit(con, fmsr(fpr32(b), a->low));
   if (size == 8) { // int to double
     emit(con, fsitod(fpr64(b), fpr32(b)));
@@ -1132,7 +1102,7 @@ void int2FloatRR(Context* con, unsigned, Assembler::Register* a, unsigned size, 
   }                // else thunked
 }
 
-void floatSqrtRR(Context* con, unsigned size, Assembler::Register* a, unsigned, Assembler::Register* b) {
+void floatSqrtRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
   if (size == 8) {
     emit(con, fsqrtd(fpr64(b), fpr64(a)));
   } else {
@@ -1140,7 +1110,7 @@ void floatSqrtRR(Context* con, unsigned size, Assembler::Register* a, unsigned, 
   }
 }
 
-void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void floatAddR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     emit(con, faddd(fpr64(t), fpr64(a), fpr64(b)));
   } else {
@@ -1148,7 +1118,7 @@ void floatAddR(Context* con, unsigned size, Assembler::Register* a, Assembler::R
   }
 }
 
-void floatSubtractR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void floatSubtractR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     emit(con, fsubd(fpr64(t), fpr64(b), fpr64(a)));
   } else {
@@ -1156,7 +1126,7 @@ void floatSubtractR(Context* con, unsigned size, Assembler::Register* a, Assembl
   }
 }
 
-void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void floatMultiplyR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) {
     emit(con, fmuld(fpr64(t), fpr64(a), fpr64(b)));
   } else {
@@ -1164,7 +1134,7 @@ void floatMultiplyR(Context* con, unsigned size, Assembler::Register* a, Assembl
   }
 }
 
-void floatDivideR(Context* con, unsigned size, Assembler::Register* a, Assembler::Register* b, Assembler::Register* t) {
+void floatDivideR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
   if (size == 8) { 
     emit(con, fdivd(fpr64(t), fpr64(b), fpr64(a)));
   } else {
@@ -1177,7 +1147,7 @@ normalize(Context* con, int offset, int index, unsigned scale,
           bool* preserveIndex, bool* release)
 {
   if (offset != 0 or scale != 1) {
-    Assembler::Register normalizedIndex
+    lir::Register normalizedIndex
       (*preserveIndex ? con->client->acquireTemporary(GPR_MASK) : index);
     
     if (*preserveIndex) {
@@ -1190,10 +1160,10 @@ normalize(Context* con, int offset, int index, unsigned scale,
     int scaled;
 
     if (scale != 1) {
-      Assembler::Register unscaledIndex(index);
+      lir::Register unscaledIndex(index);
 
       ResolvedPromise scalePromise(log(scale));
-      Assembler::Constant scaleConstant(&scalePromise);
+      lir::Constant scaleConstant(&scalePromise);
       
       shiftLeftC(con, TargetBytesPerWord, &scaleConstant,
                  &unscaledIndex, &normalizedIndex);
@@ -1204,12 +1174,12 @@ normalize(Context* con, int offset, int index, unsigned scale,
     }
 
     if (offset != 0) {
-      Assembler::Register untranslatedIndex(scaled);
+      lir::Register untranslatedIndex(scaled);
 
       ResolvedPromise offsetPromise(offset);
-      Assembler::Constant offsetConstant(&offsetPromise);
+      lir::Constant offsetConstant(&offsetPromise);
 
-      Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+      lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
       moveCR(con, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord, &tmp);
       addR(con, TargetBytesPerWord, &tmp, &untranslatedIndex, &normalizedIndex);
       con->client->releaseTemporary(tmp.low);
@@ -1223,10 +1193,10 @@ normalize(Context* con, int offset, int index, unsigned scale,
 }
 
 void
-store(Context* con, unsigned size, Assembler::Register* src,
+store(Context* con, unsigned size, lir::Register* src,
       int base, int offset, int index, unsigned scale, bool preserveIndex)
 {
-  if (index != NoRegister) {
+  if (index != lir::NoRegister) {
     bool release;
     int normalized = normalize
       (con, offset, index, scale, &preserveIndex, &release);
@@ -1246,7 +1216,7 @@ store(Context* con, unsigned size, Assembler::Register* src,
         break;
 
       case 8: { // split into 2 32-bit stores
-        Assembler::Register srcHigh(src->high);
+        lir::Register srcHigh(src->high);
         store(con, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
         store(con, 4, src, base, 4, normalized, 1, preserveIndex);
       } break;
@@ -1254,7 +1224,7 @@ store(Context* con, unsigned size, Assembler::Register* src,
       default: abort(con);
       }
     } else { // FPR store
-      Assembler::Register base_(base),
+      lir::Register base_(base),
                           normalized_(normalized),
                           absAddr = makeTemp(con);
       // FPR stores have only bases, so we must add the index
@@ -1286,9 +1256,9 @@ store(Context* con, unsigned size, Assembler::Register* src,
         break;
 
       case 8: { // split into 2 32-bit stores
-        Assembler::Register srcHigh(src->high);
-        store(con, 4, &srcHigh, base, offset, NoRegister, 1, false);
-        store(con, 4, src, base, offset + 4, NoRegister, 1, false);
+        lir::Register srcHigh(src->high);
+        store(con, 4, &srcHigh, base, offset, lir::NoRegister, 1, false);
+        store(con, 4, src, base, offset + 4, lir::NoRegister, 1, false);
       } break;
 
       default: abort(con);
@@ -1300,9 +1270,9 @@ store(Context* con, unsigned size, Assembler::Register* src,
       else           emit(con, fsts(fpr32(src), base, offset));
     }
   } else {
-    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
-    Assembler::Constant offsetConstant(&offsetPromise);
+    lir::Constant offsetConstant(&offsetPromise);
     moveCR(con, TargetBytesPerWord, &offsetConstant,
            TargetBytesPerWord, &tmp);
     
@@ -1313,8 +1283,8 @@ store(Context* con, unsigned size, Assembler::Register* src,
 }
 
 void
-moveRM(Context* con, unsigned srcSize, Assembler::Register* src,
-       unsigned dstSize UNUSED, Assembler::Memory* dst)
+moveRM(Context* con, unsigned srcSize, lir::Register* src,
+       unsigned dstSize UNUSED, lir::Memory* dst)
 {
   assert(con, srcSize == dstSize);
 
@@ -1323,10 +1293,10 @@ moveRM(Context* con, unsigned srcSize, Assembler::Register* src,
 
 void
 load(Context* con, unsigned srcSize, int base, int offset, int index,
-     unsigned scale, unsigned dstSize, Assembler::Register* dst,
+     unsigned scale, unsigned dstSize, lir::Register* dst,
      bool preserveIndex, bool signExtend)
 {
-  if (index != NoRegister) {
+  if (index != lir::NoRegister) {
     bool release;
     int normalized = normalize
       (con, offset, index, scale, &preserveIndex, &release);
@@ -1356,7 +1326,7 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
                false);
           moveRR(con, 4, dst, 8, dst);
         } else if (srcSize == 8 and dstSize == 8) {
-          Assembler::Register dstHigh(dst->high);
+          lir::Register dstHigh(dst->high);
           load(con, 4, base, 0, normalized, 1, 4, &dstHigh,
               preserveIndex, false);
           load(con, 4, base, 4, normalized, 1, 4, dst, preserveIndex,
@@ -1369,7 +1339,7 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
       default: abort(con);
       }
     } else { // FPR load
-      Assembler::Register base_(base),
+      lir::Register base_(base),
                           normalized_(normalized),
                           absAddr = makeTemp(con);
       // VFP loads only have bases, so we must add the index
@@ -1412,10 +1382,10 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
 
       case 8: {
         if (dstSize == 8) {
-          Assembler::Register dstHigh(dst->high);
-          load(con, 4, base, offset, NoRegister, 1, 4, &dstHigh, false,
+          lir::Register dstHigh(dst->high);
+          load(con, 4, base, offset, lir::NoRegister, 1, 4, &dstHigh, false,
                false);
-          load(con, 4, base, offset + 4, NoRegister, 1, 4, dst, false,
+          load(con, 4, base, offset + 4, lir::NoRegister, 1, 4, dst, false,
                false);
         } else {
           emit(con, ldri(dst->low, base, offset));
@@ -1431,9 +1401,9 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
       else              emit(con, flds(fpr32(dst), base, offset));
     }
   } else {
-    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
-    Assembler::Constant offsetConstant(&offsetPromise);
+    lir::Constant offsetConstant(&offsetPromise);
     moveCR(con, TargetBytesPerWord, &offsetConstant, TargetBytesPerWord,
            &tmp);
     
@@ -1445,44 +1415,44 @@ load(Context* con, unsigned srcSize, int base, int offset, int index,
 }
 
 void
-moveMR(Context* con, unsigned srcSize, Assembler::Memory* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveMR(Context* con, unsigned srcSize, lir::Memory* src,
+       unsigned dstSize, lir::Register* dst)
 {
   load(con, srcSize, src->base, src->offset, src->index, src->scale,
        dstSize, dst, true, true);
 }
 
 void
-moveZMR(Context* con, unsigned srcSize, Assembler::Memory* src,
-        unsigned dstSize, Assembler::Register* dst)
+moveZMR(Context* con, unsigned srcSize, lir::Memory* src,
+        unsigned dstSize, lir::Register* dst)
 {
   load(con, srcSize, src->base, src->offset, src->index, src->scale,
        dstSize, dst, true, false);
 }
 
 void
-andR(Context* con, unsigned size, Assembler::Register* a,
-     Assembler::Register* b, Assembler::Register* dst)
+andR(Context* con, unsigned size, lir::Register* a,
+     lir::Register* b, lir::Register* dst)
 {
   if (size == 8) emit(con, and_(dst->high, a->high, b->high));
   emit(con, and_(dst->low, a->low, b->low));
 }
 
 void
-andC(Context* con, unsigned size, Assembler::Constant* a,
-     Assembler::Register* b, Assembler::Register* dst)
+andC(Context* con, unsigned size, lir::Constant* a,
+     lir::Register* b, lir::Register* dst)
 {
   int64_t v = a->value->value();
 
   if (size == 8) {
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
-    Assembler::Constant ah(&high);
+    lir::Constant ah(&high);
 
     ResolvedPromise low(v & 0xFFFFFFFF);
-    Assembler::Constant al(&low);
+    lir::Constant al(&low);
 
-    Assembler::Register bh(b->high);
-    Assembler::Register dh(dst->high);
+    lir::Register bh(b->high);
+    lir::Register dh(dst->high);
 
     andC(con, 4, &al, b, dst);
     andC(con, 4, &ah, &bh, &dh);
@@ -1498,7 +1468,7 @@ andC(Context* con, unsigned size, Assembler::Constant* a,
         // instruction
 
         bool useTemporary = b->low == dst->low;
-        Assembler::Register tmp(dst->low);
+        lir::Register tmp(dst->low);
         if (useTemporary) {
           tmp.low = con->client->acquireTemporary(GPR_MASK);
         }
@@ -1517,44 +1487,44 @@ andC(Context* con, unsigned size, Assembler::Constant* a,
 }
 
 void
-orR(Context* con, unsigned size, Assembler::Register* a,
-    Assembler::Register* b, Assembler::Register* dst)
+orR(Context* con, unsigned size, lir::Register* a,
+    lir::Register* b, lir::Register* dst)
 {
   if (size == 8) emit(con, orr(dst->high, a->high, b->high));
   emit(con, orr(dst->low, a->low, b->low));
 }
 
 void
-xorR(Context* con, unsigned size, Assembler::Register* a,
-     Assembler::Register* b, Assembler::Register* dst)
+xorR(Context* con, unsigned size, lir::Register* a,
+     lir::Register* b, lir::Register* dst)
 {
   if (size == 8) emit(con, eor(dst->high, a->high, b->high));
   emit(con, eor(dst->low, a->low, b->low));
 }
 
 void
-moveAR2(Context* con, unsigned srcSize, Assembler::Address* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveAR2(Context* con, unsigned srcSize, lir::Address* src,
+       unsigned dstSize, lir::Register* dst)
 {
   assert(con, srcSize == 4 and dstSize == 4);
 
-  Assembler::Constant constant(src->address);
+  lir::Constant constant(src->address);
   moveCR(con, srcSize, &constant, dstSize, dst);
 
-  Assembler::Memory memory(dst->low, 0, -1, 0);
+  lir::Memory memory(dst->low, 0, -1, 0);
   moveMR(con, dstSize, &memory, dstSize, dst);
 }
 
 void
-moveAR(Context* con, unsigned srcSize, Assembler::Address* src,
-       unsigned dstSize, Assembler::Register* dst)
+moveAR(Context* con, unsigned srcSize, lir::Address* src,
+       unsigned dstSize, lir::Register* dst)
 {
   moveAR2(con, srcSize, src, dstSize, dst);
 }
 
 void
-compareRR(Context* con, unsigned aSize, Assembler::Register* a,
-          unsigned bSize UNUSED, Assembler::Register* b)
+compareRR(Context* con, unsigned aSize, lir::Register* a,
+          unsigned bSize UNUSED, lir::Register* b)
 {
   assert(con, !(isFpr(a) ^ isFpr(b))); // regs must be of the same type
 
@@ -1571,8 +1541,8 @@ compareRR(Context* con, unsigned aSize, Assembler::Register* a,
 }
 
 void
-compareCR(Context* con, unsigned aSize, Assembler::Constant* a,
-          unsigned bSize, Assembler::Register* b)
+compareCR(Context* con, unsigned aSize, lir::Constant* a,
+          unsigned bSize, lir::Register* b)
 {
   assert(con, aSize == 4 and bSize == 4);
 
@@ -1580,7 +1550,7 @@ compareCR(Context* con, unsigned aSize, Assembler::Constant* a,
       isOfWidth(a->value->value(), 8)) {
     emit(con, cmpi(b->low, a->value->value()));
   } else {
-    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     moveCR(con, aSize, a, bSize, &tmp);
     compareRR(con, bSize, &tmp, bSize, b);
     con->client->releaseTemporary(tmp.low);
@@ -1588,63 +1558,63 @@ compareCR(Context* con, unsigned aSize, Assembler::Constant* a,
 }
 
 void
-compareCM(Context* con, unsigned aSize, Assembler::Constant* a,
-          unsigned bSize, Assembler::Memory* b)
+compareCM(Context* con, unsigned aSize, lir::Constant* a,
+          unsigned bSize, lir::Memory* b)
 {
   assert(con, aSize == 4 and bSize == 4);
 
-  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveMR(con, bSize, b, bSize, &tmp);
   compareCR(con, aSize, a, bSize, &tmp);
   con->client->releaseTemporary(tmp.low);
 }
 
 void
-compareRM(Context* con, unsigned aSize, Assembler::Register* a,
-          unsigned bSize, Assembler::Memory* b)
+compareRM(Context* con, unsigned aSize, lir::Register* a,
+          unsigned bSize, lir::Memory* b)
 {
   assert(con, aSize == 4 and bSize == 4);
 
-  Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+  lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveMR(con, bSize, b, bSize, &tmp);
   compareRR(con, aSize, a, bSize, &tmp);
   con->client->releaseTemporary(tmp.low);
 }
 
 int32_t
-branch(Context* con, TernaryOperation op)
+branch(Context* con, lir::TernaryOperation op)
 {
   switch (op) {
-  case JumpIfEqual:
-  case JumpIfFloatEqual:
+  case lir::JumpIfEqual:
+  case lir::JumpIfFloatEqual:
     return beq(0);
 
-  case JumpIfNotEqual:
-  case JumpIfFloatNotEqual:
+  case lir::JumpIfNotEqual:
+  case lir::JumpIfFloatNotEqual:
     return bne(0);
 
-  case JumpIfLess:
-  case JumpIfFloatLess:
-  case JumpIfFloatLessOrUnordered:
+  case lir::JumpIfLess:
+  case lir::JumpIfFloatLess:
+  case lir::JumpIfFloatLessOrUnordered:
     return blt(0);
 
-  case JumpIfGreater:
-  case JumpIfFloatGreater:
+  case lir::JumpIfGreater:
+  case lir::JumpIfFloatGreater:
     return bgt(0);
 
-  case JumpIfLessOrEqual:
-  case JumpIfFloatLessOrEqual:
-  case JumpIfFloatLessOrEqualOrUnordered:
+  case lir::JumpIfLessOrEqual:
+  case lir::JumpIfFloatLessOrEqual:
+  case lir::JumpIfFloatLessOrEqualOrUnordered:
     return ble(0);
 
-  case JumpIfGreaterOrEqual:
-  case JumpIfFloatGreaterOrEqual:
+  case lir::JumpIfGreaterOrEqual:
+  case lir::JumpIfFloatGreaterOrEqual:
     return bge(0);
 
-  case JumpIfFloatGreaterOrUnordered:
+  case lir::JumpIfFloatGreaterOrUnordered:
     return bhi(0);
 
-  case JumpIfFloatGreaterOrEqualOrUnordered:
+  case lir::JumpIfFloatGreaterOrEqualOrUnordered:
     return bpl(0);
  
   default:
@@ -1653,22 +1623,22 @@ branch(Context* con, TernaryOperation op)
 }
 
 void
-conditional(Context* con, int32_t branch, Assembler::Constant* target)
+conditional(Context* con, int32_t branch, lir::Constant* target)
 {
   appendOffsetTask(con, target->value, offset(con));
   emit(con, branch);
 }
 
 void
-branch(Context* con, TernaryOperation op, Assembler::Constant* target)
+branch(Context* con, lir::TernaryOperation op, lir::Constant* target)
 {
   conditional(con, branch(con, op), target);
 }
 
 void
-branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
-           Assembler::Operand* ah, Assembler::Operand* bl,
-           Assembler::Operand* bh, Assembler::Constant* target,
+branchLong(Context* con, lir::TernaryOperation op, lir::Operand* al,
+           lir::Operand* ah, lir::Operand* bl,
+           lir::Operand* bh, lir::Constant* target,
            BinaryOperationType compareSigned,
            BinaryOperationType compareUnsigned)
 {
@@ -1677,8 +1647,8 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
   unsigned next = 0;
   
   switch (op) {
-  case JumpIfEqual:
-  case JumpIfFloatEqual:
+  case lir::JumpIfEqual:
+  case lir::JumpIfFloatEqual:
     next = con->code.length();
     emit(con, bne(0));
 
@@ -1686,16 +1656,16 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
     conditional(con, beq(0), target);
     break;
 
-  case JumpIfNotEqual:
-  case JumpIfFloatNotEqual:
+  case lir::JumpIfNotEqual:
+  case lir::JumpIfFloatNotEqual:
     conditional(con, bne(0), target);
 
     compareSigned(con, 4, al, 4, bl);
     conditional(con, bne(0), target);
     break;
 
-  case JumpIfLess:
-  case JumpIfFloatLess:
+  case lir::JumpIfLess:
+  case lir::JumpIfFloatLess:
     conditional(con, blt(0), target);
 
     next = con->code.length();
@@ -1705,8 +1675,8 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
     conditional(con, blo(0), target);
     break;
 
-  case JumpIfGreater:
-  case JumpIfFloatGreater:
+  case lir::JumpIfGreater:
+  case lir::JumpIfFloatGreater:
     conditional(con, bgt(0), target);
 
     next = con->code.length();
@@ -1716,8 +1686,8 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
     conditional(con, bhi(0), target);
     break;
 
-  case JumpIfLessOrEqual:
-  case JumpIfFloatLessOrEqual:
+  case lir::JumpIfLessOrEqual:
+  case lir::JumpIfFloatLessOrEqual:
     conditional(con, blt(0), target);
 
     next = con->code.length();
@@ -1727,8 +1697,8 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
     conditional(con, bls(0), target);
     break;
 
-  case JumpIfGreaterOrEqual:
-  case JumpIfFloatGreaterOrEqual:
+  case lir::JumpIfGreaterOrEqual:
+  case lir::JumpIfFloatGreaterOrEqual:
     conditional(con, bgt(0), target);
 
     next = con->code.length();
@@ -1750,13 +1720,13 @@ branchLong(Context* con, TernaryOperation op, Assembler::Operand* al,
 }
 
 void
-branchRR(Context* con, TernaryOperation op, unsigned size,
-         Assembler::Register* a, Assembler::Register* b,
-         Assembler::Constant* target)
+branchRR(Context* con, lir::TernaryOperation op, unsigned size,
+         lir::Register* a, lir::Register* b,
+         lir::Constant* target)
 {
   if (!isFpr(a) && size > TargetBytesPerWord) {
-    Assembler::Register ah(a->high);
-    Assembler::Register bh(b->high);
+    lir::Register ah(a->high);
+    lir::Register bh(b->high);
 
     branchLong(con, op, a, &ah, b, &bh, target, CAST2(compareRR),
                CAST2(compareRR));
@@ -1767,9 +1737,9 @@ branchRR(Context* con, TernaryOperation op, unsigned size,
 }
 
 void
-branchCR(Context* con, TernaryOperation op, unsigned size,
-         Assembler::Constant* a, Assembler::Register* b,
-         Assembler::Constant* target)
+branchCR(Context* con, lir::TernaryOperation op, unsigned size,
+         lir::Constant* a, lir::Register* b,
+         lir::Constant* target)
 {
   assert(con, !isFloatBranch(op));
 
@@ -1777,12 +1747,12 @@ branchCR(Context* con, TernaryOperation op, unsigned size,
     int64_t v = a->value->value();
 
     ResolvedPromise low(v & ~static_cast<target_uintptr_t>(0));
-    Assembler::Constant al(&low);
+    lir::Constant al(&low);
 
     ResolvedPromise high((v >> 32) & ~static_cast<target_uintptr_t>(0));
-    Assembler::Constant ah(&high);
+    lir::Constant ah(&high);
 
-    Assembler::Register bh(b->high);
+    lir::Register bh(b->high);
 
     branchLong(con, op, &al, &ah, b, &bh, target, CAST2(compareCR),
                CAST2(compareCR));
@@ -1793,9 +1763,9 @@ branchCR(Context* con, TernaryOperation op, unsigned size,
 }
 
 void
-branchRM(Context* con, TernaryOperation op, unsigned size,
-         Assembler::Register* a, Assembler::Memory* b,
-         Assembler::Constant* target)
+branchRM(Context* con, lir::TernaryOperation op, unsigned size,
+         lir::Register* a, lir::Memory* b,
+         lir::Constant* target)
 {
   assert(con, !isFloatBranch(op));
   assert(con, size <= TargetBytesPerWord);
@@ -1805,9 +1775,9 @@ branchRM(Context* con, TernaryOperation op, unsigned size,
 }
 
 void
-branchCM(Context* con, TernaryOperation op, unsigned size,
-         Assembler::Constant* a, Assembler::Memory* b,
-         Assembler::Constant* target)
+branchCM(Context* con, lir::TernaryOperation op, unsigned size,
+         lir::Constant* a, lir::Memory* b,
+         lir::Constant* target)
 {
   assert(con, !isFloatBranch(op));
   assert(con, size <= TargetBytesPerWord);
@@ -1823,17 +1793,17 @@ shiftMaskPromise(Context* con, Promise* base, unsigned shift, int64_t mask)
 }
 
 void
-moveCM(Context* con, unsigned srcSize, Assembler::Constant* src,
-       unsigned dstSize, Assembler::Memory* dst)
+moveCM(Context* con, unsigned srcSize, lir::Constant* src,
+       unsigned dstSize, lir::Memory* dst)
 {
   switch (dstSize) {
   case 8: {
-    Assembler::Constant srcHigh
+    lir::Constant srcHigh
       (shiftMaskPromise(con, src->value, 32, 0xFFFFFFFF));
-    Assembler::Constant srcLow
+    lir::Constant srcLow
       (shiftMaskPromise(con, src->value, 0, 0xFFFFFFFF));
     
-    Assembler::Memory dstLow
+    lir::Memory dstLow
       (dst->base, dst->offset + 4, dst->index, dst->scale);
     
     moveCM(con, 4, &srcLow, 4, &dstLow);
@@ -1841,7 +1811,7 @@ moveCM(Context* con, unsigned srcSize, Assembler::Constant* src,
   } break;
 
   default:
-    Assembler::Register tmp(con->client->acquireTemporary(GPR_MASK));
+    lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     moveCR(con, srcSize, src, dstSize, &tmp);
     moveRM(con, dstSize, &tmp, dstSize, dst);
     con->client->releaseTemporary(tmp.low);
@@ -1849,8 +1819,8 @@ moveCM(Context* con, unsigned srcSize, Assembler::Constant* src,
 }
 
 void
-negateRR(Context* con, unsigned srcSize, Assembler::Register* src,
-         unsigned dstSize UNUSED, Assembler::Register* dst)
+negateRR(Context* con, unsigned srcSize, lir::Register* src,
+         unsigned dstSize UNUSED, lir::Register* dst)
 {
   assert(con, srcSize == dstSize);
 
@@ -1863,14 +1833,14 @@ negateRR(Context* con, unsigned srcSize, Assembler::Register* src,
 }
 
 void
-callR(Context* con, unsigned size UNUSED, Assembler::Register* target)
+callR(Context* con, unsigned size UNUSED, lir::Register* target)
 {
   assert(con, size == TargetBytesPerWord);
   emit(con, blx(target->low));
 }
 
 void
-callC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
+callC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
@@ -1879,27 +1849,27 @@ callC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
 }
 
 void
-longCallC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
+longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
-  Assembler::Register tmp(4);
+  lir::Register tmp(4);
   moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
   callR(con, TargetBytesPerWord, &tmp);
 }
 
 void
-longJumpC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
+longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
-  Assembler::Register tmp(4); // a non-arg reg that we don't mind clobbering
+  lir::Register tmp(4); // a non-arg reg that we don't mind clobbering
   moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
   jumpR(con, TargetBytesPerWord, &tmp);
 }
 
 void
-jumpC(Context* con, unsigned size UNUSED, Assembler::Constant* target)
+jumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
@@ -1991,10 +1961,10 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
 void
 populateTables(ArchitectureContext* con)
 {
-  const OperandType C = ConstantOperand;
-  const OperandType A = AddressOperand;
-  const OperandType R = RegisterOperand;
-  const OperandType M = MemoryOperand;
+  const lir::OperandType C = lir::ConstantOperand;
+  const lir::OperandType A = lir::AddressOperand;
+  const lir::OperandType R = lir::RegisterOperand;
+  const lir::OperandType M = lir::MemoryOperand;
 
   OperationType* zo = con->operations;
   UnaryOperationType* uo = con->unaryOperations;
@@ -2002,78 +1972,78 @@ populateTables(ArchitectureContext* con)
   TernaryOperationType* to = con->ternaryOperations;
   BranchOperationType* bro = con->branchOperations;
 
-  zo[Return] = return_;
-  zo[LoadBarrier] = memoryBarrier;
-  zo[StoreStoreBarrier] = memoryBarrier;
-  zo[StoreLoadBarrier] = memoryBarrier;
-  zo[Trap] = trap;
+  zo[lir::Return] = return_;
+  zo[lir::LoadBarrier] = memoryBarrier;
+  zo[lir::StoreStoreBarrier] = memoryBarrier;
+  zo[lir::StoreLoadBarrier] = memoryBarrier;
+  zo[lir::Trap] = trap;
 
-  uo[index(con, LongCall, C)] = CAST1(longCallC);
+  uo[index(con, lir::LongCall, C)] = CAST1(longCallC);
 
-  uo[index(con, AlignedLongCall, C)] = CAST1(longCallC);
+  uo[index(con, lir::AlignedLongCall, C)] = CAST1(longCallC);
 
-  uo[index(con, LongJump, C)] = CAST1(longJumpC);
+  uo[index(con, lir::LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(con, AlignedLongJump, C)] = CAST1(longJumpC);
+  uo[index(con, lir::AlignedLongJump, C)] = CAST1(longJumpC);
 
-  uo[index(con, Jump, R)] = CAST1(jumpR);
-  uo[index(con, Jump, C)] = CAST1(jumpC);
+  uo[index(con, lir::Jump, R)] = CAST1(jumpR);
+  uo[index(con, lir::Jump, C)] = CAST1(jumpC);
 
-  uo[index(con, AlignedJump, R)] = CAST1(jumpR);
-  uo[index(con, AlignedJump, C)] = CAST1(jumpC);
+  uo[index(con, lir::AlignedJump, R)] = CAST1(jumpR);
+  uo[index(con, lir::AlignedJump, C)] = CAST1(jumpC);
 
-  uo[index(con, Call, C)] = CAST1(callC);
-  uo[index(con, Call, R)] = CAST1(callR);
+  uo[index(con, lir::Call, C)] = CAST1(callC);
+  uo[index(con, lir::Call, R)] = CAST1(callR);
 
-  uo[index(con, AlignedCall, C)] = CAST1(callC);
-  uo[index(con, AlignedCall, R)] = CAST1(callR);
+  uo[index(con, lir::AlignedCall, C)] = CAST1(callC);
+  uo[index(con, lir::AlignedCall, R)] = CAST1(callR);
 
-  bo[index(con, Move, R, R)] = CAST2(moveRR);
-  bo[index(con, Move, C, R)] = CAST2(moveCR);
-  bo[index(con, Move, C, M)] = CAST2(moveCM);
-  bo[index(con, Move, M, R)] = CAST2(moveMR);
-  bo[index(con, Move, R, M)] = CAST2(moveRM);
-  bo[index(con, Move, A, R)] = CAST2(moveAR);
+  bo[index(con, lir::Move, R, R)] = CAST2(moveRR);
+  bo[index(con, lir::Move, C, R)] = CAST2(moveCR);
+  bo[index(con, lir::Move, C, M)] = CAST2(moveCM);
+  bo[index(con, lir::Move, M, R)] = CAST2(moveMR);
+  bo[index(con, lir::Move, R, M)] = CAST2(moveRM);
+  bo[index(con, lir::Move, A, R)] = CAST2(moveAR);
 
-  bo[index(con, MoveZ, R, R)] = CAST2(moveZRR);
-  bo[index(con, MoveZ, M, R)] = CAST2(moveZMR);
-  bo[index(con, MoveZ, C, R)] = CAST2(moveCR);
+  bo[index(con, lir::MoveZ, R, R)] = CAST2(moveZRR);
+  bo[index(con, lir::MoveZ, M, R)] = CAST2(moveZMR);
+  bo[index(con, lir::MoveZ, C, R)] = CAST2(moveCR);
 
-  bo[index(con, Negate, R, R)] = CAST2(negateRR);
+  bo[index(con, lir::Negate, R, R)] = CAST2(negateRR);
 
-  bo[index(con, FloatAbsolute, R, R)] = CAST2(floatAbsoluteRR);
-  bo[index(con, FloatNegate, R, R)] = CAST2(floatNegateRR);
-  bo[index(con, Float2Float, R, R)] = CAST2(float2FloatRR);
-  bo[index(con, Float2Int, R, R)] = CAST2(float2IntRR);
-  bo[index(con, Int2Float, R, R)] = CAST2(int2FloatRR);
-  bo[index(con, FloatSquareRoot, R, R)] = CAST2(floatSqrtRR);
+  bo[index(con, lir::FloatAbsolute, R, R)] = CAST2(floatAbsoluteRR);
+  bo[index(con, lir::FloatNegate, R, R)] = CAST2(floatNegateRR);
+  bo[index(con, lir::Float2Float, R, R)] = CAST2(float2FloatRR);
+  bo[index(con, lir::Float2Int, R, R)] = CAST2(float2IntRR);
+  bo[index(con, lir::Int2Float, R, R)] = CAST2(int2FloatRR);
+  bo[index(con, lir::FloatSquareRoot, R, R)] = CAST2(floatSqrtRR);
 
-  to[index(con, Add, R)] = CAST3(addR);
+  to[index(con, lir::Add, R)] = CAST3(addR);
 
-  to[index(con, Subtract, R)] = CAST3(subR);
+  to[index(con, lir::Subtract, R)] = CAST3(subR);
 
-  to[index(con, Multiply, R)] = CAST3(multiplyR);
+  to[index(con, lir::Multiply, R)] = CAST3(multiplyR);
 
-  to[index(con, FloatAdd, R)] = CAST3(floatAddR);
-  to[index(con, FloatSubtract, R)] = CAST3(floatSubtractR);
-  to[index(con, FloatMultiply, R)] = CAST3(floatMultiplyR);
-  to[index(con, FloatDivide, R)] = CAST3(floatDivideR);
+  to[index(con, lir::FloatAdd, R)] = CAST3(floatAddR);
+  to[index(con, lir::FloatSubtract, R)] = CAST3(floatSubtractR);
+  to[index(con, lir::FloatMultiply, R)] = CAST3(floatMultiplyR);
+  to[index(con, lir::FloatDivide, R)] = CAST3(floatDivideR);
 
-  to[index(con, ShiftLeft, R)] = CAST3(shiftLeftR);
-  to[index(con, ShiftLeft, C)] = CAST3(shiftLeftC);
+  to[index(con, lir::ShiftLeft, R)] = CAST3(shiftLeftR);
+  to[index(con, lir::ShiftLeft, C)] = CAST3(shiftLeftC);
 
-  to[index(con, ShiftRight, R)] = CAST3(shiftRightR);
-  to[index(con, ShiftRight, C)] = CAST3(shiftRightC);
+  to[index(con, lir::ShiftRight, R)] = CAST3(shiftRightR);
+  to[index(con, lir::ShiftRight, C)] = CAST3(shiftRightC);
 
-  to[index(con, UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
-  to[index(con, UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
+  to[index(con, lir::UnsignedShiftRight, R)] = CAST3(unsignedShiftRightR);
+  to[index(con, lir::UnsignedShiftRight, C)] = CAST3(unsignedShiftRightC);
 
-  to[index(con, And, R)] = CAST3(andR);
-  to[index(con, And, C)] = CAST3(andC);
+  to[index(con, lir::And, R)] = CAST3(andR);
+  to[index(con, lir::And, C)] = CAST3(andC);
 
-  to[index(con, Or, R)] = CAST3(orR);
+  to[index(con, lir::Or, R)] = CAST3(orR);
 
-  to[index(con, Xor, R)] = CAST3(xorR);
+  to[index(con, lir::Xor, R)] = CAST3(xorR);
 
   bro[branchIndex(con, R, R)] = CAST_BRANCH(branchRR);
   bro[branchIndex(con, C, R)] = CAST_BRANCH(branchCR);
@@ -2091,12 +2061,8 @@ class MyArchitecture: public Assembler::Architecture {
     return vfpSupported() ? 8 : 0;
   }
 
-  virtual uint32_t generalRegisterMask() {
-    return GPR_MASK;
-  }
-
-  virtual uint32_t floatRegisterMask() {
-    return vfpSupported() ? FPR_MASK : 0;
+  virtual const RegisterFile* registerFile() {
+    return vfpSupported() ? &MyRegisterFileWithFloats : &MyRegisterFileWithoutFloats;
   }
 
   virtual int scratch() {
@@ -2198,23 +2164,23 @@ class MyArchitecture: public Assembler::Architecture {
           - reinterpret_cast<uint8_t*>(instruction)));
   }
 
-  virtual void updateCall(UnaryOperation op UNUSED,
+  virtual void updateCall(lir::UnaryOperation op UNUSED,
                           void* returnAddress,
                           void* newTarget)
   {
     switch (op) {
-    case Call:
-    case Jump:
-    case AlignedCall:
-    case AlignedJump: {
+    case lir::Call:
+    case lir::Jump:
+    case lir::AlignedCall:
+    case lir::AlignedJump: {
       updateOffset(con.s, static_cast<uint8_t*>(returnAddress) - 4,
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
 
-    case LongCall:
-    case LongJump:
-    case AlignedLongCall:
-    case AlignedLongJump: {
+    case lir::LongCall:
+    case lir::LongJump:
+    case lir::AlignedLongCall:
+    case lir::AlignedLongJump: {
       uint32_t* p = static_cast<uint32_t*>(returnAddress) - 2;
       *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
         = newTarget;
@@ -2270,34 +2236,34 @@ class MyArchitecture: public Assembler::Architecture {
     return 0;
   }
 
-  virtual BinaryOperation hasBinaryIntrinsic(Thread*, object) {
-  	return NoBinaryOperation;
+  virtual lir::BinaryOperation hasBinaryIntrinsic(Thread*, object) {
+  	return lir::NoBinaryOperation;
   }
   
-  virtual TernaryOperation hasTernaryIntrinsic(Thread*, object) {
-  	return NoTernaryOperation;
+  virtual lir::TernaryOperation hasTernaryIntrinsic(Thread*, object) {
+  	return lir::NoTernaryOperation;
   }
   
-  virtual bool alwaysCondensed(BinaryOperation) {
+  virtual bool alwaysCondensed(lir::BinaryOperation) {
     return false;
   }
   
-  virtual bool alwaysCondensed(TernaryOperation) {
+  virtual bool alwaysCondensed(lir::TernaryOperation) {
     return false;
   }
   
   virtual void plan
-  (UnaryOperation,
+  (lir::UnaryOperation,
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    bool* thunk)
   {
-    *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
+    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
     *aRegisterMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }
 
   virtual void planSource
-  (BinaryOperation op,
+  (lir::BinaryOperation op,
    unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    unsigned bSize, bool* thunk)
   {
@@ -2306,43 +2272,43 @@ class MyArchitecture: public Assembler::Architecture {
     *aRegisterMask = GPR_MASK64;
 
     switch (op) {
-    case Negate:
-      *aTypeMask = (1 << RegisterOperand);
+    case lir::Negate:
+      *aTypeMask = (1 << lir::RegisterOperand);
       *aRegisterMask = GPR_MASK64;
       break;
 
-    case Absolute:
+    case lir::Absolute:
       *thunk = true;
       break;
 
-    case FloatAbsolute:
-    case FloatSquareRoot:
-    case FloatNegate:
-    case Float2Float:
+    case lir::FloatAbsolute:
+    case lir::FloatSquareRoot:
+    case lir::FloatNegate:
+    case lir::Float2Float:
       if (vfpSupported()) {
-        *aTypeMask = (1 << RegisterOperand);
+        *aTypeMask = (1 << lir::RegisterOperand);
         *aRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
       break;
 
-    case Float2Int:
+    case lir::Float2Int:
       // todo: Java requires different semantics than SSE for
       // converting floats to integers, we we need to either use
       // thunks or produce inline machine code which handles edge
       // cases properly.
       if (false && vfpSupported() && bSize == 4) {
-        *aTypeMask = (1 << RegisterOperand);
+        *aTypeMask = (1 << lir::RegisterOperand);
         *aRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
       break;
 
-    case Int2Float:
+    case lir::Int2Float:
       if (vfpSupported() && aSize == 4) {
-        *aTypeMask = (1 << RegisterOperand);
+        *aTypeMask = (1 << lir::RegisterOperand);
         *aRegisterMask = GPR_MASK64;
       } else {
         *thunk = true;
@@ -2355,36 +2321,36 @@ class MyArchitecture: public Assembler::Architecture {
   }
   
   virtual void planDestination
-  (BinaryOperation op,
+  (lir::BinaryOperation op,
    unsigned, uint8_t aTypeMask, uint64_t,
    unsigned , uint8_t* bTypeMask, uint64_t* bRegisterMask)
   {
-    *bTypeMask = (1 << RegisterOperand) | (1 << MemoryOperand);
+    *bTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
     *bRegisterMask = GPR_MASK64;
 
     switch (op) {
-    case Negate:
-      *bTypeMask = (1 << RegisterOperand);
+    case lir::Negate:
+      *bTypeMask = (1 << lir::RegisterOperand);
       *bRegisterMask = GPR_MASK64;
       break;
 
-    case FloatAbsolute:
-    case FloatSquareRoot:
-    case FloatNegate:
-    case Float2Float:
-    case Int2Float:
-      *bTypeMask = (1 << RegisterOperand);
+    case lir::FloatAbsolute:
+    case lir::FloatSquareRoot:
+    case lir::FloatNegate:
+    case lir::Float2Float:
+    case lir::Int2Float:
+      *bTypeMask = (1 << lir::RegisterOperand);
       *bRegisterMask = FPR_MASK64;
       break;
 
-    case Float2Int:
-      *bTypeMask = (1 << RegisterOperand);
+    case lir::Float2Int:
+      *bTypeMask = (1 << lir::RegisterOperand);
       *bRegisterMask = GPR_MASK64;
       break;
 
-    case Move:
-      if (!(aTypeMask & 1 << RegisterOperand)) {
-        *bTypeMask = 1 << RegisterOperand;
+    case lir::Move:
+      if (!(aTypeMask & 1 << lir::RegisterOperand)) {
+        *bTypeMask = 1 << lir::RegisterOperand;
       }
       break;
 
@@ -2404,79 +2370,79 @@ class MyArchitecture: public Assembler::Architecture {
     *tmpTypeMask = 0;
     *tmpRegisterMask = 0;
 
-    if (dstTypeMask & (1 << MemoryOperand)) {
+    if (dstTypeMask & (1 << lir::MemoryOperand)) {
       // can't move directly from memory or constant to memory
-      *srcTypeMask = 1 << RegisterOperand;
-      *tmpTypeMask = 1 << RegisterOperand;
+      *srcTypeMask = 1 << lir::RegisterOperand;
+      *tmpTypeMask = 1 << lir::RegisterOperand;
       *tmpRegisterMask = GPR_MASK64;
     } else if (vfpSupported() &&
-               dstTypeMask & 1 << RegisterOperand &&
+               dstTypeMask & 1 << lir::RegisterOperand &&
                dstRegisterMask & FPR_MASK) {
-      *srcTypeMask = *tmpTypeMask = 1 << RegisterOperand |
-                                    1 << MemoryOperand;
+      *srcTypeMask = *tmpTypeMask = 1 << lir::RegisterOperand |
+                                    1 << lir::MemoryOperand;
       *tmpRegisterMask = ~static_cast<uint64_t>(0);
     }
   }
 
   virtual void planSource
-  (TernaryOperation op,
+  (lir::TernaryOperation op,
    unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
    unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
    unsigned, bool* thunk)
   {
-    *aTypeMask = (1 << RegisterOperand) | (1 << ConstantOperand);
+    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
     *aRegisterMask = GPR_MASK64;
 
-    *bTypeMask = (1 << RegisterOperand);
+    *bTypeMask = (1 << lir::RegisterOperand);
     *bRegisterMask = GPR_MASK64;
 
     *thunk = false;
 
     switch (op) {
-    case ShiftLeft:
-    case ShiftRight:
-    case UnsignedShiftRight:
-      if (bSize == 8) *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+    case lir::ShiftLeft:
+    case lir::ShiftRight:
+    case lir::UnsignedShiftRight:
+      if (bSize == 8) *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
       break;
 
-    case Add:
-    case Subtract:
-    case Or:
-    case Xor:
-    case Multiply:
-      *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+    case lir::Add:
+    case lir::Subtract:
+    case lir::Or:
+    case lir::Xor:
+    case lir::Multiply:
+      *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
       break;
 
-    case Divide:
-    case Remainder:
-    case FloatRemainder:
+    case lir::Divide:
+    case lir::Remainder:
+    case lir::FloatRemainder:
       *thunk = true;
       break;
 
-    case FloatAdd:
-    case FloatSubtract:
-    case FloatMultiply:
-    case FloatDivide:
+    case lir::FloatAdd:
+    case lir::FloatSubtract:
+    case lir::FloatMultiply:
+    case lir::FloatDivide:
       if (vfpSupported()) {
-        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
         *aRegisterMask = *bRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }    
       break;
 
-    case JumpIfFloatEqual:
-    case JumpIfFloatNotEqual:
-    case JumpIfFloatLess:
-    case JumpIfFloatGreater:
-    case JumpIfFloatLessOrEqual:
-    case JumpIfFloatGreaterOrEqual:
-    case JumpIfFloatLessOrUnordered:
-    case JumpIfFloatGreaterOrUnordered:
-    case JumpIfFloatLessOrEqualOrUnordered:
-    case JumpIfFloatGreaterOrEqualOrUnordered:
+    case lir::JumpIfFloatEqual:
+    case lir::JumpIfFloatNotEqual:
+    case lir::JumpIfFloatLess:
+    case lir::JumpIfFloatGreater:
+    case lir::JumpIfFloatLessOrEqual:
+    case lir::JumpIfFloatGreaterOrEqual:
+    case lir::JumpIfFloatLessOrUnordered:
+    case lir::JumpIfFloatGreaterOrUnordered:
+    case lir::JumpIfFloatLessOrEqualOrUnordered:
+    case lir::JumpIfFloatGreaterOrEqualOrUnordered:
       if (vfpSupported()) {
-        *aTypeMask = *bTypeMask = (1 << RegisterOperand);
+        *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
         *aRegisterMask = *bRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
@@ -2489,16 +2455,16 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planDestination
-  (TernaryOperation op,
+  (lir::TernaryOperation op,
    unsigned, uint8_t, uint64_t,
    unsigned, uint8_t, const uint64_t bRegisterMask,
    unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
   {
     if (isBranch(op)) {
-      *cTypeMask = (1 << ConstantOperand);
+      *cTypeMask = (1 << lir::ConstantOperand);
       *cRegisterMask = 0;
     } else {
-      *cTypeMask = (1 << RegisterOperand);
+      *cTypeMask = (1 << lir::RegisterOperand);
       *cRegisterMask = bRegisterMask;
     }
   }
@@ -2537,28 +2503,28 @@ class MyAssembler: public Assembler {
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread)
   {
-    Register stack(StackRegister);
-    Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
-    Constant handlerConstant(new(con.zone) ResolvedPromise(handler));
-    branchRM(&con, JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
+    lir::Register stack(StackRegister);
+    lir::Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
+    lir::Constant handlerConstant(new(con.zone) ResolvedPromise(handler));
+    branchRM(&con, lir::JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
 
   virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) {
-    Register link(LinkRegister);
-    Memory linkDst(ThreadRegister, ipOffset);
+    lir::Register link(LinkRegister);
+    lir::Memory linkDst(ThreadRegister, ipOffset);
     moveRM(&con, TargetBytesPerWord, &link, TargetBytesPerWord, &linkDst);
 
-    Register stack(StackRegister);
-    Memory stackDst(ThreadRegister, stackOffset);
+    lir::Register stack(StackRegister);
+    lir::Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&con, TargetBytesPerWord, &stack, TargetBytesPerWord, &stackDst);
   }
 
   virtual void pushFrame(unsigned argumentCount, ...) {
     struct Argument {
       unsigned size;
-      OperandType type;
-      Operand* operand;
+      lir::OperandType type;
+      lir::Operand* operand;
     };
     RUNTIME_ARRAY(Argument, arguments, argumentCount);
 
@@ -2566,8 +2532,8 @@ class MyAssembler: public Assembler {
     unsigned footprint = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
-      RUNTIME_ARRAY_BODY(arguments)[i].type = static_cast<OperandType>(va_arg(a, int));
-      RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, Operand*);
+      RUNTIME_ARRAY_BODY(arguments)[i].type = static_cast<lir::OperandType>(va_arg(a, int));
+      RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, lir::Operand*);
       footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
     }
     va_end(a);
@@ -2577,24 +2543,27 @@ class MyAssembler: public Assembler {
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
-        Register dst(arch_->argumentRegister(i));
+        lir::Register dst(arch_->argumentRegister(i));
 
-        apply(Move,
-              RUNTIME_ARRAY_BODY(arguments)[i].size,
-              RUNTIME_ARRAY_BODY(arguments)[i].type,
-              RUNTIME_ARRAY_BODY(arguments)[i].operand,
-              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), RegisterOperand,
-              &dst);
+        apply(lir::Move,
+              OperandInfo(
+                RUNTIME_ARRAY_BODY(arguments)[i].size,
+                RUNTIME_ARRAY_BODY(arguments)[i].type,
+                RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(
+                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), lir::RegisterOperand, &dst));
 
         offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       } else {
-        Memory dst(StackRegister, offset * TargetBytesPerWord);
+        lir::Memory dst(StackRegister, offset * TargetBytesPerWord);
 
-        apply(Move,
-              RUNTIME_ARRAY_BODY(arguments)[i].size,
-              RUNTIME_ARRAY_BODY(arguments)[i].type,
-              RUNTIME_ARRAY_BODY(arguments)[i].operand,
-              pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), MemoryOperand, &dst);
+        apply(lir::Move,
+              OperandInfo(
+                RUNTIME_ARRAY_BODY(arguments)[i].size,
+                RUNTIME_ARRAY_BODY(arguments)[i].type,
+                RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(
+                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), lir::MemoryOperand, &dst));
 
         offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
       }
@@ -2609,37 +2578,37 @@ class MyAssembler: public Assembler {
     // how to handle them:
     assert(&con, footprint < 256);
 
-    Register stack(StackRegister);
+    lir::Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
-    Constant footprintConstant(&footprintPromise);
+    lir::Constant footprintConstant(&footprintPromise);
     subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
-    Register returnAddress(LinkRegister);
-    Memory returnAddressDst
+    lir::Register returnAddress(LinkRegister);
+    lir::Memory returnAddressDst
       (StackRegister, (footprint - 1) * TargetBytesPerWord);
     moveRM(&con, TargetBytesPerWord, &returnAddress, TargetBytesPerWord,
            &returnAddressDst);
   }
 
   virtual void adjustFrame(unsigned difference) {
-    Register stack(StackRegister);
+    lir::Register stack(StackRegister);
     ResolvedPromise differencePromise(difference * TargetBytesPerWord);
-    Constant differenceConstant(&differencePromise);
+    lir::Constant differenceConstant(&differencePromise);
     subC(&con, TargetBytesPerWord, &differenceConstant, &stack, &stack);
   }
 
   virtual void popFrame(unsigned footprint) {
     footprint += FrameHeaderSize;
 
-    Register returnAddress(LinkRegister);
-    Memory returnAddressSrc
+    lir::Register returnAddress(LinkRegister);
+    lir::Memory returnAddressSrc
       (StackRegister, (footprint - 1) * TargetBytesPerWord);
     moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
            &returnAddress);
     
-    Register stack(StackRegister);
+    lir::Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
-    Constant footprintConstant(&footprintPromise);
+    lir::Constant footprintConstant(&footprintPromise);
     addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
   }
 
@@ -2648,29 +2617,29 @@ class MyAssembler: public Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate UNUSED)
   {
-    assert(&con, framePointerSurrogate == NoRegister);
+    assert(&con, framePointerSurrogate == lir::NoRegister);
 
     if (TailCalls) {
       if (offset) {
         footprint += FrameHeaderSize;
 
-        Register link(LinkRegister);
-        Memory returnAddressSrc
+        lir::Register link(LinkRegister);
+        lir::Memory returnAddressSrc
           (StackRegister, (footprint - 1) * TargetBytesPerWord);
         moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
                &link);
     
-        Register stack(StackRegister);
+        lir::Register stack(StackRegister);
         ResolvedPromise footprintPromise
           ((footprint - offset) * TargetBytesPerWord);
-        Constant footprintConstant(&footprintPromise);
+        lir::Constant footprintConstant(&footprintPromise);
         addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
-        if (returnAddressSurrogate != NoRegister) {
+        if (returnAddressSurrogate != lir::NoRegister) {
           assert(&con, offset > 0);
 
-          Register ras(returnAddressSurrogate);
-          Memory dst(StackRegister, (offset - 1) * TargetBytesPerWord);
+          lir::Register ras(returnAddressSurrogate);
+          lir::Memory dst(StackRegister, (offset - 1) * TargetBytesPerWord);
           moveRM(&con, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
       } else {
@@ -2693,9 +2662,9 @@ class MyAssembler: public Assembler {
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       offset = argumentFootprint - StackAlignmentInWords;
 
-      Register stack(StackRegister);
+      lir::Register stack(StackRegister);
       ResolvedPromise adjustmentPromise(offset * TargetBytesPerWord);
-      Constant adjustment(&adjustmentPromise);
+      lir::Constant adjustment(&adjustmentPromise);
       addC(&con, TargetBytesPerWord, &adjustment, &stack, &stack);
     } else {
       offset = 0;
@@ -2709,53 +2678,45 @@ class MyAssembler: public Assembler {
   {
     popFrame(frameFootprint);
 
-    Register stack(StackRegister);
-    Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
+    lir::Register stack(StackRegister);
+    lir::Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
     moveMR(&con, TargetBytesPerWord, &newStackSrc, TargetBytesPerWord, &stack);
 
     return_(&con);
   }
 
-  virtual void apply(Operation op) {
+  virtual void apply(lir::Operation op) {
     arch_->con.operations[op](&con);
   }
 
-  virtual void apply(UnaryOperation op,
-                     unsigned aSize, OperandType aType, Operand* aOperand)
+  virtual void apply(lir::UnaryOperation op, OperandInfo a)
   {
-    arch_->con.unaryOperations[index(&(arch_->con), op, aType)]
-      (&con, aSize, aOperand);
+    arch_->con.unaryOperations[index(&(arch_->con), op, a.type)]
+      (&con, a.size, a.operand);
   }
 
-  virtual void apply(BinaryOperation op,
-                     unsigned aSize, OperandType aType, Operand* aOperand,
-                     unsigned bSize, OperandType bType, Operand* bOperand)
+  virtual void apply(lir::BinaryOperation op, OperandInfo a, OperandInfo b)
   {
-    arch_->con.binaryOperations[index(&(arch_->con), op, aType, bType)]
-      (&con, aSize, aOperand, bSize, bOperand);
+    arch_->con.binaryOperations[index(&(arch_->con), op, a.type, b.type)]
+      (&con, a.size, a.operand, b.size, b.operand);
   }
 
-  virtual void apply(TernaryOperation op,
-                     unsigned aSize, OperandType aType, Operand* aOperand,
-                     unsigned bSize, OperandType bType UNUSED,
-                     Operand* bOperand,
-                     unsigned cSize UNUSED, OperandType cType UNUSED,
-                     Operand* cOperand)
+  virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c)
   {
     if (isBranch(op)) {
-      assert(&con, aSize == bSize);
-      assert(&con, cSize == TargetBytesPerWord);
-      assert(&con, cType == ConstantOperand);
+      assert(&con, a.size == b.size);
+      assert(&con, c.size == TargetBytesPerWord);
+      assert(&con, c.type == lir::ConstantOperand);
 
-      arch_->con.branchOperations[branchIndex(&(arch_->con), aType, bType)]
-        (&con, op, aSize, aOperand, bOperand, cOperand);
+      arch_->con.branchOperations[branchIndex(&(arch_->con), a.type, b.type)]
+        (&con, op, a.size, a.operand, b.operand, c.operand);
     } else {
-      assert(&con, bSize == cSize);
-      assert(&con, bType == RegisterOperand);
-      assert(&con, cType == RegisterOperand);
+      assert(&con, b.size == c.size);
+      assert(&con, b.type == lir::RegisterOperand);
+      assert(&con, c.type == lir::RegisterOperand);
       
-      arch_->con.ternaryOperations[index(&(arch_->con), op, aType)]
-        (&con, bSize, aOperand, bOperand, cOperand);
+      arch_->con.ternaryOperations[index(&(arch_->con), op, a.type)]
+        (&con, b.size, a.operand, b.operand, c.operand);
     }
   }
 

@@ -55,10 +55,7 @@ class MutexLock {
 
 class Context;
 
-void NO_RETURN abort(Context*);
-#ifndef NDEBUG
-void assert(Context*, bool);
-#endif
+Aborter* getAborter(Context* c);
 
 void* tryAllocate(Context* c, unsigned size);
 void* allocate(Context* c, unsigned size);
@@ -745,19 +742,9 @@ segment(Context* c, void* p)
   }
 }
 
-inline void NO_RETURN
-abort(Context* c)
-{
-  abort(c->system);
+inline Aborter* getAborter(Context* c) {
+  return c->system;
 }
-
-#ifndef NDEBUG
-inline void
-assert(Context* c, bool v)
-{
-  assert(c->system, v);
-}
-#endif
 
 inline unsigned
 minimumNextGen1Capacity(Context* c)

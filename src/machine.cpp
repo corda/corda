@@ -3966,7 +3966,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
     Client(Thread* t): t(t) { }
 
     virtual void NO_RETURN handleError() {
-      vm::abort(t);
+      abort(t);
     }
 
    private:
@@ -4853,11 +4853,11 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
-        vm_assert(t, trace);
+        assert(t, trace);
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
-      vm_assert(t, index < objectArrayLength(t, trace));
+      assert(t, index < objectArrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;

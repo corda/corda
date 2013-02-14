@@ -1761,24 +1761,8 @@ class RawMonitorResource: public Thread::Resource {
   System::Monitor* m;
 };
 
-inline void NO_RETURN
-abort(Thread* t)
-{
-  abort(t->m->system);
-}
-
-#ifndef NDEBUG
-inline void
-assert(Thread* t, bool v)
-{
-  assert(t->m->system, v);
-}
-#endif // not NDEBUG
-
-inline void
-expect(Thread* t, bool v)
-{
-  expect(t->m->system, v);
+inline Aborter* getAborter(Thread* t) {
+  return t->m->system;
 }
 
 class FixedAllocator: public Allocator {
