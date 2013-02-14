@@ -50,6 +50,61 @@ void Value::addSite(Context* c, Site* s) {
   }
 }
 
+
+void Value::grow(Context* c) {
+  assert(c, this->nextWord == this);
+
+  Value* next = value(c, this->type);
+  this->nextWord = next;
+  next->nextWord = this;
+  next->wordIndex = 1;
+}
+
+
+void Value::maybeSplit(Context* c) {
+  if (this->nextWord == this) {
+    this->split(c);
+  }
+}
+
+void Value::split(Context* c) {
+  this->grow(c);
+  for (SiteIterator it(c, this); it.hasMore();) {
+    Site* s = it.next();
+    this->removeSite(c, s);
+    
+    this->addSite(c, s->copyLow(c));
+    this->nextWord->addSite(c, s->copyHigh(c));
+  }
+}
+
+void Value::removeSite(Context* c, Site* s) {
+  for (SiteIterator it(c, this); it.hasMore();) {
+    if (s == it.next()) {
+      if (DebugSites) {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "remove site %s from %p\n", buffer, this);
+      }
+      it.remove(c);
+      break;
+    }
+  }
+  if (DebugSites) {
+    fprintf(stderr, "%p has more: %d\n", this, this->hasSite(c));
+  }
+  assert(c, not this->findSite(s));
+}
+
+bool Value::hasSite(Context* c) {
+  SiteIterator it(c, this);
+  return it.hasMore();
+}
+
+
+Value* value(Context* c, lir::ValueType type, Site* site, Site* target) {
+  return new(c->zone) Value(site, target, type);
+}
+
 } // namespace regalloc
 } // namespace codegen
 } // namespace avian

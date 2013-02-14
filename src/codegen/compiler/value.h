@@ -47,7 +47,20 @@ class Value: public Compiler::Operand {
   bool isBuddyOf(Value* b);
 
   void addSite(Context* c, Site* s);
+
+  void grow(Context* c);
+
+  void maybeSplit(Context* c);
+
+  void split(Context* c);
+
+  void removeSite(Context* c, Site* s);
+
+  bool hasSite(Context* c);
 };
+
+
+Value* value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0);
 
 } // namespace compiler
 } // namespace codegen

@@ -61,6 +61,14 @@ Read* live(Context* c UNUSED, Value* v);
 
 void popRead(Context* c, Event* e UNUSED, Value* v);
 
+void
+maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
+          unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
+          const SiteMask& dstMask);
+Site*
+pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
+               unsigned index);
+
 Event::Event(Context* c):
   next(0), stackBefore(c->stack), localsBefore(c->locals),
   stackAfter(0), localsAfter(0), promises(0), reads(0),
@@ -491,6 +499,184 @@ class ReturnEvent: public Event {
 
 void appendReturn(Context* c, unsigned size, Value* value) {
   append(c, new(c->zone) ReturnEvent(c, size, value));
+}
+
+class MoveEvent: public Event {
+ public:
+  MoveEvent(Context* c, lir::BinaryOperation type, unsigned srcSize,
+            unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
+            const SiteMask& srcLowMask, const SiteMask& srcHighMask):
+    Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
+    src(src), dstSize(dstSize), dst(dst)
+  {
+    assert(c, srcSelectSize <= srcSize);
+
+    bool noop = srcSelectSize >= dstSize;
+    
+    if (dstSize > vm::TargetBytesPerWord) {
+      dst->grow(c);
+    }
+
+    if (srcSelectSize > vm::TargetBytesPerWord) {
+      src->maybeSplit(c);
+    }
+
+    this->addReads(c, src, srcSelectSize, srcLowMask, noop ? dst : 0,
+             srcHighMask,
+             noop and dstSize > vm::TargetBytesPerWord ? dst->nextWord : 0);
+  }
+
+  virtual const char* name() {
+    return "MoveEvent";
+  }
+
+  virtual void compile(Context* c) {
+    uint8_t dstTypeMask;
+    uint64_t dstRegisterMask;
+
+    c->arch->planDestination
+      (type,
+       srcSelectSize,
+       1 << src->source->type(c), 
+       (static_cast<uint64_t>(src->nextWord->source->registerMask(c)) << 32)
+       | static_cast<uint64_t>(src->source->registerMask(c)),
+       dstSize,
+       &dstTypeMask,
+       &dstRegisterMask);
+
+    SiteMask dstLowMask(dstTypeMask, dstRegisterMask, AnyFrameIndex);
+    SiteMask dstHighMask(dstTypeMask, dstRegisterMask >> 32, AnyFrameIndex);
+
+    if (srcSelectSize >= vm::TargetBytesPerWord
+        and dstSize >= vm::TargetBytesPerWord
+        and srcSelectSize >= dstSize)
+    {
+      if (dst->target) {
+        if (dstSize > vm::TargetBytesPerWord) {
+          if (src->source->registerSize(c) > vm::TargetBytesPerWord) {
+            apply(c, lir::Move, srcSelectSize, src->source, src->source,
+                  dstSize, dst->target, dst->target);
+            
+            if (live(c, dst) == 0) {
+              dst->removeSite(c, dst->target);
+              if (dstSize > vm::TargetBytesPerWord) {
+                dst->nextWord->removeSite(c, dst->nextWord->target);
+              }
+            }
+          } else {
+            src->nextWord->source->freeze(c, src->nextWord);
+
+            maybeMove(c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, src,
+                      vm::TargetBytesPerWord, dst, dstLowMask);
+
+            src->nextWord->source->thaw(c, src->nextWord);
+
+            maybeMove
+              (c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, src->nextWord,
+               vm::TargetBytesPerWord, dst->nextWord, dstHighMask);
+          }
+        } else {
+          maybeMove(c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, src,
+                    vm::TargetBytesPerWord, dst, dstLowMask);
+        }
+      } else {
+        Site* low = pickSiteOrMove(c, src, dst, 0, 0);
+        if (dstSize > vm::TargetBytesPerWord) {
+          pickSiteOrMove(c, src->nextWord, dst->nextWord, low, 1);
+        }
+      }
+    } else if (srcSelectSize <= vm::TargetBytesPerWord
+               and dstSize <= vm::TargetBytesPerWord)
+    {
+      maybeMove(c, type, srcSize, srcSelectSize, src, dstSize, dst,
+                dstLowMask);
+    } else {
+      assert(c, srcSize == vm::TargetBytesPerWord);
+      assert(c, srcSelectSize == vm::TargetBytesPerWord);
+
+      if (dst->nextWord->target or live(c, dst->nextWord)) {
+        assert(c, dstLowMask.typeMask & (1 << lir::RegisterOperand));
+
+        Site* low = freeRegisterSite(c, dstLowMask.registerMask);
+
+        src->source->freeze(c, src);
+
+        dst->addSite(c, low);
+
+        low->freeze(c, dst);
+          
+        if (DebugMoves) {
+          char srcb[256]; src->source->toString(c, srcb, 256);
+          char dstb[256]; low->toString(c, dstb, 256);
+          fprintf(stderr, "move %s to %s for %p\n",
+                  srcb, dstb, src);
+        }
+
+        apply(c, lir::Move, vm::TargetBytesPerWord, src->source, src->source,
+              vm::TargetBytesPerWord, low, low);
+
+        low->thaw(c, dst);
+
+        src->source->thaw(c, src);
+
+        assert(c, dstHighMask.typeMask & (1 << lir::RegisterOperand));
+
+        Site* high = freeRegisterSite(c, dstHighMask.registerMask);
+
+        low->freeze(c, dst);
+
+        dst->nextWord->addSite(c, high);
+
+        high->freeze(c, dst->nextWord);
+        
+        if (DebugMoves) {
+          char srcb[256]; low->toString(c, srcb, 256);
+          char dstb[256]; high->toString(c, dstb, 256);
+          fprintf(stderr, "extend %s to %s for %p %p\n",
+                  srcb, dstb, dst, dst->nextWord);
+        }
+
+        apply(c, lir::Move, vm::TargetBytesPerWord, low, low, dstSize, low, high);
+
+        high->thaw(c, dst->nextWord);
+
+        low->thaw(c, dst);
+      } else {
+        pickSiteOrMove(c, src, dst, 0, 0);
+      }
+    }
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+  }
+
+  lir::BinaryOperation type;
+  unsigned srcSize;
+  unsigned srcSelectSize;
+  Value* src;
+  unsigned dstSize;
+  Value* dst;
+};
+
+void
+appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
+           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst)
+{
+  bool thunk;
+  uint8_t srcTypeMask;
+  uint64_t srcRegisterMask;
+
+  c->arch->planSource
+    (type, srcSelectSize, &srcTypeMask, &srcRegisterMask, dstSize, &thunk);
+
+  assert(c, not thunk);
+
+  append(c, new(c->zone)
+         MoveEvent
+         (c, type, srcSize, srcSelectSize, src, dstSize, dst,
+          SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
+          SiteMask(srcTypeMask, srcRegisterMask >> 32, AnyFrameIndex)));
 }
 
 } // namespace compiler

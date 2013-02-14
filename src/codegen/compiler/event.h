@@ -23,6 +23,7 @@ class Site;
 class StubRead;
 
 const bool DebugReads = false;
+const bool DebugMoves = false;
 
 class Event {
  public:
@@ -116,6 +117,10 @@ appendCall(Context* c, Value* address, unsigned flags,
 
 void
 appendReturn(Context* c, unsigned size, Value* value);
+
+void
+appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
+           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst);
 
 } // namespace compiler
 } // namespace codegen

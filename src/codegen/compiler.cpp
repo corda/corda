@@ -36,7 +36,6 @@ const bool DebugCompile = false;
 const bool DebugResources = false;
 const bool DebugFrame = false;
 const bool DebugControl = false;
-const bool DebugMoves = false;
 const bool DebugBuddies = false;
 
 const unsigned StealRegisterReserveCount = 2;
@@ -334,13 +333,6 @@ frameIndex(Context* c, FrameIterator::Element* element)
 }
 
 bool
-hasSite(Context* c, Value* v)
-{
-  SiteIterator it(c, v);
-  return it.hasMore();
-}
-
-bool
 uniqueSite(Context* c, Value* v, Site* s)
 {
   SiteIterator it(c, v);
@@ -363,25 +355,6 @@ uniqueSite(Context* c, Value* v, Site* s)
     assert(c, p == s);
     return true;
   }
-}
-
-void
-removeSite(Context* c, Value* v, Site* s)
-{
-  for (SiteIterator it(c, v); it.hasMore();) {
-    if (s == it.next()) {
-      if (DebugSites) {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "remove site %s from %p\n", buffer, v);
-      }
-      it.remove(c);
-      break;
-    }
-  }
-  if (DebugSites) {
-    fprintf(stderr, "%p has more: %d\n", v, hasSite(c, v));
-  }
-  assert(c, not v->findSite(s));
 }
 
 void
@@ -873,7 +846,7 @@ steal(Context* c, Resource* r, Value* thief)
     r->site->thaw(c, r->value);
   }
 
-  removeSite(c, r->value, r->site);
+  r->value->removeSite(c, r->site);
 }
 
 SiteMask
@@ -1238,7 +1211,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
       // pick a temporary register which is valid as both a
       // destination and a source for the moves we need to perform:
       
-      removeSite(c, dst, target);
+      dst->removeSite(c, target);
 
       bool thunk;
       uint8_t srcTypeMask;
@@ -1294,7 +1267,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
         tmpTarget->thaw(c, dst);
 
         if (isStore) {
-          removeSite(c, dst, tmpTarget);
+          dst->removeSite(c, tmpTarget);
         }
       }
     }
@@ -1315,7 +1288,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
   }
 
   if (isStore) {
-    removeSite(c, dst, target);
+    dst->removeSite(c, target);
   }
 }
 
@@ -1358,229 +1331,13 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
     addBuddy(src, dst);
 
     if (src->source->isVolatile(c)) {
-      removeSite(c, src, src->source);
+      src->removeSite(c, src->source);
     }
 
     return s;
   } else {
     return 0;
   }
-}
-
-Value*
-value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0)
-{
-  return new(c->zone) Value(site, target, type);
-}
-
-void
-grow(Context* c, Value* v)
-{
-  assert(c, v->nextWord == v);
-
-  Value* next = value(c, v->type);
-  v->nextWord = next;
-  next->nextWord = v;
-  next->wordIndex = 1;
-}
-
-void
-split(Context* c, Value* v)
-{
-  grow(c, v);
-  for (SiteIterator it(c, v); it.hasMore();) {
-    Site* s = it.next();
-    removeSite(c, v, s);
-    
-    v->addSite(c, s->copyLow(c));
-    v->nextWord->addSite(c, s->copyHigh(c));
-  }
-}
-
-void
-maybeSplit(Context* c, Value* v)
-{
-  if (v->nextWord == v) {
-    split(c, v);
-  }
-}
-
-class MoveEvent: public Event {
- public:
-  MoveEvent(Context* c, lir::BinaryOperation type, unsigned srcSize,
-            unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
-            const SiteMask& srcLowMask, const SiteMask& srcHighMask):
-    Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
-    src(src), dstSize(dstSize), dst(dst)
-  {
-    assert(c, srcSelectSize <= srcSize);
-
-    bool noop = srcSelectSize >= dstSize;
-    
-    if (dstSize > TargetBytesPerWord) {
-      grow(c, dst);
-    }
-
-    if (srcSelectSize > TargetBytesPerWord) {
-      maybeSplit(c, src);
-    }
-
-    this->addReads(c, src, srcSelectSize, srcLowMask, noop ? dst : 0,
-             srcHighMask,
-             noop and dstSize > TargetBytesPerWord ? dst->nextWord : 0);
-  }
-
-  virtual const char* name() {
-    return "MoveEvent";
-  }
-
-  virtual void compile(Context* c) {
-    uint8_t dstTypeMask;
-    uint64_t dstRegisterMask;
-
-    c->arch->planDestination
-      (type,
-       srcSelectSize,
-       1 << src->source->type(c), 
-       (static_cast<uint64_t>(src->nextWord->source->registerMask(c)) << 32)
-       | static_cast<uint64_t>(src->source->registerMask(c)),
-       dstSize,
-       &dstTypeMask,
-       &dstRegisterMask);
-
-    SiteMask dstLowMask(dstTypeMask, dstRegisterMask, AnyFrameIndex);
-    SiteMask dstHighMask(dstTypeMask, dstRegisterMask >> 32, AnyFrameIndex);
-
-    if (srcSelectSize >= TargetBytesPerWord
-        and dstSize >= TargetBytesPerWord
-        and srcSelectSize >= dstSize)
-    {
-      if (dst->target) {
-        if (dstSize > TargetBytesPerWord) {
-          if (src->source->registerSize(c) > TargetBytesPerWord) {
-            apply(c, lir::Move, srcSelectSize, src->source, src->source,
-                  dstSize, dst->target, dst->target);
-            
-            if (live(c, dst) == 0) {
-              removeSite(c, dst, dst->target);
-              if (dstSize > TargetBytesPerWord) {
-                removeSite(c, dst->nextWord, dst->nextWord->target);
-              }
-            }
-          } else {
-            src->nextWord->source->freeze(c, src->nextWord);
-
-            maybeMove(c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src,
-                      TargetBytesPerWord, dst, dstLowMask);
-
-            src->nextWord->source->thaw(c, src->nextWord);
-
-            maybeMove
-              (c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src->nextWord,
-               TargetBytesPerWord, dst->nextWord, dstHighMask);
-          }
-        } else {
-          maybeMove(c, lir::Move, TargetBytesPerWord, TargetBytesPerWord, src,
-                    TargetBytesPerWord, dst, dstLowMask);
-        }
-      } else {
-        Site* low = pickSiteOrMove(c, src, dst, 0, 0);
-        if (dstSize > TargetBytesPerWord) {
-          pickSiteOrMove(c, src->nextWord, dst->nextWord, low, 1);
-        }
-      }
-    } else if (srcSelectSize <= TargetBytesPerWord
-               and dstSize <= TargetBytesPerWord)
-    {
-      maybeMove(c, type, srcSize, srcSelectSize, src, dstSize, dst,
-                dstLowMask);
-    } else {
-      assert(c, srcSize == TargetBytesPerWord);
-      assert(c, srcSelectSize == TargetBytesPerWord);
-
-      if (dst->nextWord->target or live(c, dst->nextWord)) {
-        assert(c, dstLowMask.typeMask & (1 << lir::RegisterOperand));
-
-        Site* low = freeRegisterSite(c, dstLowMask.registerMask);
-
-        src->source->freeze(c, src);
-
-        dst->addSite(c, low);
-
-        low->freeze(c, dst);
-          
-        if (DebugMoves) {
-          char srcb[256]; src->source->toString(c, srcb, 256);
-          char dstb[256]; low->toString(c, dstb, 256);
-          fprintf(stderr, "move %s to %s for %p\n",
-                  srcb, dstb, src);
-        }
-
-        apply(c, lir::Move, TargetBytesPerWord, src->source, src->source,
-              TargetBytesPerWord, low, low);
-
-        low->thaw(c, dst);
-
-        src->source->thaw(c, src);
-
-        assert(c, dstHighMask.typeMask & (1 << lir::RegisterOperand));
-
-        Site* high = freeRegisterSite(c, dstHighMask.registerMask);
-
-        low->freeze(c, dst);
-
-        dst->nextWord->addSite(c, high);
-
-        high->freeze(c, dst->nextWord);
-        
-        if (DebugMoves) {
-          char srcb[256]; low->toString(c, srcb, 256);
-          char dstb[256]; high->toString(c, dstb, 256);
-          fprintf(stderr, "extend %s to %s for %p %p\n",
-                  srcb, dstb, dst, dst->nextWord);
-        }
-
-        apply(c, lir::Move, TargetBytesPerWord, low, low, dstSize, low, high);
-
-        high->thaw(c, dst->nextWord);
-
-        low->thaw(c, dst);
-      } else {
-        pickSiteOrMove(c, src, dst, 0, 0);
-      }
-    }
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-  }
-
-  lir::BinaryOperation type;
-  unsigned srcSize;
-  unsigned srcSelectSize;
-  Value* src;
-  unsigned dstSize;
-  Value* dst;
-};
-
-void
-appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst)
-{
-  bool thunk;
-  uint8_t srcTypeMask;
-  uint64_t srcRegisterMask;
-
-  c->arch->planSource
-    (type, srcSelectSize, &srcTypeMask, &srcRegisterMask, dstSize, &thunk);
-
-  assert(c, not thunk);
-
-  append(c, new(c->zone)
-         MoveEvent
-         (c, type, srcSize, srcSelectSize, src, dstSize, dst,
-          SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
-          SiteMask(srcTypeMask, srcRegisterMask >> 32, AnyFrameIndex)));
 }
 
 ConstantSite*
@@ -1630,7 +1387,7 @@ getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
     result->addSite(c, s);
   }
 
-  removeSite(c, v, s);
+  v->removeSite(c, s);
 
   s->freeze(c, v);
 
@@ -1672,7 +1429,7 @@ class CombineEvent: public Event {
     this->addReads(c, first, firstSize, firstLowMask, firstHighMask);
 
     if (resultSize > TargetBytesPerWord) {
-      grow(c, result);
+      result->grow(c);
     }
 
     bool condensed = c->arch->alwaysCondensed(type);
@@ -1896,7 +1653,7 @@ push(Context* c, unsigned footprint, Value* v)
     assert(c, footprint == 2);
 
     if (TargetBytesPerWord == 4) {
-      maybeSplit(c, low);
+      low->maybeSplit(c);
       high = pushWord(c, low->nextWord);
     } else {
       high = pushWord(c, 0);
@@ -2136,7 +1893,7 @@ class TranslateEvent: public Event {
     bool condensed = c->arch->alwaysCondensed(type);
 
     if (resultSize > TargetBytesPerWord) {
-      grow(c, result);
+      result->grow(c);
     }
 
     this->addReads(c, value, valueSize, valueLowMask, condensed ? result : 0,
@@ -2268,7 +2025,7 @@ moveIfConflict(Context* c, Value* v, MemorySite* s)
     v->reads->intersect(&mask);
     if (s->conflicts(mask)) {
       maybeMove(c, v->reads, true, false);
-      removeSite(c, v, s);
+      v->removeSite(c, s);
     }
   }
 }
@@ -2818,7 +2575,7 @@ class BuddyEvent: public Event {
       fprintf(stderr, "original %p buddy %p\n", original, buddy);
     }
 
-    assert(c, hasSite(c, original));
+    assert(c, original->hasSite(c));
 
     assert(c, original);
     assert(c, buddy);
@@ -2952,7 +2709,7 @@ readSource(Context* c, Read* r)
     fprintf(stderr, "read source for %p from %s\n", v, buffer);
   }
 
-  if (not hasSite(c, v)) {
+  if (not v->hasSite(c)) {
     if (DebugReads) {
       fprintf(stderr, "no sites found for %p\n", v);
     }
@@ -3080,7 +2837,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
       
       Value dummy(0, 0, lir::ValueGeneral);
       dummy.addSite(c, s);
-      removeSite(c, &dummy, s);
+      dummy.removeSite(c, s);
       freeze(c, frozen, s, 0);
     }
   }
