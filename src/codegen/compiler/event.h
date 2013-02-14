@@ -151,6 +151,9 @@ void
 appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
                   Value* index, intptr_t handler);
 
+void
+appendFrameSite(Context* c, Value* value, int index);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

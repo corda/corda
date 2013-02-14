@@ -1578,6 +1578,33 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
   append(c, new(c->zone) BoundsCheckEvent(c, object, lengthOffset, index, handler));
 }
 
+
+class FrameSiteEvent: public Event {
+ public:
+  FrameSiteEvent(Context* c, Value* value, int index):
+    Event(c), value(value), index(index)
+  { }
+
+  virtual const char* name() {
+    return "FrameSiteEvent";
+  }
+
+  virtual void compile(Context* c) {
+    if (live(c, value)) {
+      value->addSite(c, frameSite(c, index));
+    }
+  }
+
+  Value* value;
+  int index;
+};
+
+void
+appendFrameSite(Context* c, Value* value, int index)
+{
+  append(c, new(c->zone) FrameSiteEvent(c, value, index));
+}
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

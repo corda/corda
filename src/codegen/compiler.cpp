@@ -1414,32 +1414,6 @@ register_(Context* c, int number)
   return value(c, type, s, s);
 }
 
-class FrameSiteEvent: public Event {
- public:
-  FrameSiteEvent(Context* c, Value* value, int index):
-    Event(c), value(value), index(index)
-  { }
-
-  virtual const char* name() {
-    return "FrameSiteEvent";
-  }
-
-  virtual void compile(Context* c) {
-    if (live(c, value)) {
-      value->addSite(c, frameSite(c, index));
-    }
-  }
-
-  Value* value;
-  int index;
-};
-
-void
-appendFrameSite(Context* c, Value* value, int index)
-{
-  append(c, new(c->zone) FrameSiteEvent(c, value, index));
-}
-
 unsigned
 frameFootprint(Context* c, Stack* s)
 {
