@@ -959,6 +959,8 @@ ifeq ($(process),compile)
 		$(src)/codegen/compiler/regalloc.cpp \
 		$(src)/codegen/compiler/value.cpp \
 		$(src)/codegen/compiler/read.cpp \
+		$(src)/codegen/compiler/event.cpp \
+		$(src)/codegen/compiler/promise.cpp \
 		$(src)/codegen/registers.cpp \
 		$(src)/codegen/targets.cpp
 

@@ -36,6 +36,10 @@ class SiteMask {
 
   SiteMask intersectionWith(const SiteMask& b);
 
+  static SiteMask fixedRegisterMask(int number) {
+    return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
+  }
+
   uint8_t typeMask;
   uint32_t registerMask;
   int frameIndex;
@@ -83,7 +87,7 @@ class Site {
 
   virtual SiteMask nextWordMask(Context*, unsigned) = 0;
 
-  virtual unsigned registerSize(Context*) { return vm::TargetBytesPerWord; }
+  virtual unsigned registerSize(Context*);
 
   virtual unsigned registerMask(Context*) { return 0; }
 

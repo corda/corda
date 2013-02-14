@@ -111,6 +111,8 @@ class StubRead: public Read {
   bool valid_;
 };
 
+SingleRead* read(Context* c, const SiteMask& mask, Value* successor = 0);
+
 
 } // namespace compiler
 } // namespace codegen

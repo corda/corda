@@ -178,6 +178,14 @@ Read* StubRead::next(Context*) {
   return next_;
 }
 
+
+
+SingleRead* read(Context* c, const SiteMask& mask, Value* successor) {
+  assert(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
+
+  return new(c->zone) SingleRead(mask, successor);
+}
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

@@ -109,6 +109,12 @@ void SiteIterator::remove(Context* c) {
 
 
 
+unsigned Site::registerSize(Context*) {
+  return vm::TargetBytesPerWord;
+}
+
+
+
 Site* constantSite(Context* c, Promise* value) {
   return new(c->zone) ConstantSite(value);
 }

@@ -38,6 +38,18 @@ bool Value::isBuddyOf(Value* b) {
   return false;
 }
 
+void Value::addSite(Context* c, Site* s) {
+  if (not this->findSite(s)) {
+    if (DebugSites) {
+      char buffer[256]; s->toString(c, buffer, 256);
+      fprintf(stderr, "add site %s to %p\n", buffer, this);
+    }
+    s->acquire(c, this);
+    s->next = this->sites;
+    this->sites = s;
+  }
+}
+
 } // namespace regalloc
 } // namespace codegen
 } // namespace avian

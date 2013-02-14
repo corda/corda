@@ -25,6 +25,8 @@ class Site;
 const int AnyFrameIndex = -2;
 const int NoFrameIndex = -1;
 
+const bool DebugSites = false;
+
 class Value: public Compiler::Operand {
  public:
   Read* reads;
@@ -43,6 +45,8 @@ class Value: public Compiler::Operand {
   bool findSite(Site* site);
 
   bool isBuddyOf(Value* b);
+
+  void addSite(Context* c, Site* s);
 };
 
 } // namespace compiler
