@@ -1494,6 +1494,90 @@ void appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit,
   append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
 }
 
+class BoundsCheckEvent: public Event {
+ public:
+  BoundsCheckEvent(Context* c, Value* object, unsigned lengthOffset,
+                   Value* index, intptr_t handler):
+    Event(c), object(object), lengthOffset(lengthOffset), index(index),
+    handler(handler)
+  {
+    this->addRead(c, object, generalRegisterMask(c));
+    this->addRead(c, index, generalRegisterOrConstantMask(c));
+  }
+
+  virtual const char* name() {
+    return "BoundsCheckEvent";
+  }
+
+  virtual void compile(Context* c) {
+    Assembler* a = c->assembler;
+
+    ConstantSite* constant = findConstantSite(c, index);
+    CodePromise* outOfBoundsPromise = 0;
+
+    if (constant) {
+      if (constant->value->value() < 0) {
+        lir::Constant handlerConstant(resolvedPromise(c, handler));
+        a->apply(lir::Call,
+          OperandInfo(vm::TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
+      }
+    } else {
+      outOfBoundsPromise = compiler::codePromise(c, static_cast<Promise*>(0));
+
+      ConstantSite zero(resolvedPromise(c, 0));
+      ConstantSite oob(outOfBoundsPromise);
+      apply(c, lir::JumpIfLess,
+        4, &zero, &zero,
+        4, index->source, index->source,
+        vm::TargetBytesPerWord, &oob, &oob);
+    }
+
+    if (constant == 0 or constant->value->value() >= 0) {
+      assert(c, object->source->type(c) == lir::RegisterOperand);
+      MemorySite length(static_cast<RegisterSite*>(object->source)->number,
+                        lengthOffset, lir::NoRegister, 1);
+      length.acquired = true;
+
+      CodePromise* nextPromise = compiler::codePromise(c, static_cast<Promise*>(0));
+
+      freezeSource(c, vm::TargetBytesPerWord, index);
+
+      ConstantSite next(nextPromise);
+      apply(c, lir::JumpIfGreater,
+        4, index->source,
+        index->source, 4, &length,
+        &length, vm::TargetBytesPerWord, &next, &next);
+
+      thawSource(c, vm::TargetBytesPerWord, index);
+
+      if (constant == 0) {
+        outOfBoundsPromise->offset = a->offset();
+      }
+
+      lir::Constant handlerConstant(resolvedPromise(c, handler));
+      a->apply(lir::Call,
+        OperandInfo(vm::TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
+
+      nextPromise->offset = a->offset();
+    }
+
+    popRead(c, this, object);
+    popRead(c, this, index);
+  }
+
+  Value* object;
+  unsigned lengthOffset;
+  Value* index;
+  intptr_t handler;
+};
+
+void
+appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
+                  Value* index, intptr_t handler)
+{
+  append(c, new(c->zone) BoundsCheckEvent(c, object, lengthOffset, index, handler));
+}
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

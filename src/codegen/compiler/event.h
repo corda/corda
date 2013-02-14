@@ -147,6 +147,10 @@ void
 appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit = false,
            bool cleanLocals = false);
 
+void
+appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
+                  Value* index, intptr_t handler);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

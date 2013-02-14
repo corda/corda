@@ -14,6 +14,7 @@
 
 #include "codegen/compiler.h"
 #include "codegen/assembler.h"
+#include "codegen/promise.h"
 
 #include "codegen/compiler/regalloc.h"
 #include "codegen/compiler/context.h"
@@ -356,18 +357,6 @@ valueType(Context* c, Compiler::OperandType type)
   default:
     abort(c);
   }
-}
-
-Promise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask) {
-  return new(c->zone) ShiftMaskPromise(base, shift, mask);
-}
-
-Promise* combinedPromise(Context* c, Promise* low, Promise* high) {
-  return new(c->zone) CombinedPromise(low, high);
-}
-
-Promise* resolved(Context* c, int64_t value) {
-  return new(c->zone) ResolvedPromise(value);
 }
 
 void
@@ -1423,90 +1412,6 @@ register_(Context* c, int number)
     ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
-}
-
-class BoundsCheckEvent: public Event {
- public:
-  BoundsCheckEvent(Context* c, Value* object, unsigned lengthOffset,
-                   Value* index, intptr_t handler):
-    Event(c), object(object), lengthOffset(lengthOffset), index(index),
-    handler(handler)
-  {
-    this->addRead(c, object, generalRegisterMask(c));
-    this->addRead(c, index, generalRegisterOrConstantMask(c));
-  }
-
-  virtual const char* name() {
-    return "BoundsCheckEvent";
-  }
-
-  virtual void compile(Context* c) {
-    Assembler* a = c->assembler;
-
-    ConstantSite* constant = findConstantSite(c, index);
-    CodePromise* outOfBoundsPromise = 0;
-
-    if (constant) {
-      if (constant->value->value() < 0) {
-        lir::Constant handlerConstant(resolved(c, handler));
-        a->apply(lir::Call,
-          OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
-      }
-    } else {
-      outOfBoundsPromise = compiler::codePromise(c, static_cast<Promise*>(0));
-
-      ConstantSite zero(resolved(c, 0));
-      ConstantSite oob(outOfBoundsPromise);
-      apply(c, lir::JumpIfLess,
-        4, &zero, &zero,
-        4, index->source, index->source,
-        TargetBytesPerWord, &oob, &oob);
-    }
-
-    if (constant == 0 or constant->value->value() >= 0) {
-      assert(c, object->source->type(c) == lir::RegisterOperand);
-      MemorySite length(static_cast<RegisterSite*>(object->source)->number,
-                        lengthOffset, lir::NoRegister, 1);
-      length.acquired = true;
-
-      CodePromise* nextPromise = compiler::codePromise(c, static_cast<Promise*>(0));
-
-      freezeSource(c, TargetBytesPerWord, index);
-
-      ConstantSite next(nextPromise);
-      apply(c, lir::JumpIfGreater,
-        4, index->source,
-        index->source, 4, &length,
-        &length, TargetBytesPerWord, &next, &next);
-
-      thawSource(c, TargetBytesPerWord, index);
-
-      if (constant == 0) {
-        outOfBoundsPromise->offset = a->offset();
-      }
-
-      lir::Constant handlerConstant(resolved(c, handler));
-      a->apply(lir::Call,
-        OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
-
-      nextPromise->offset = a->offset();
-    }
-
-    popRead(c, this, object);
-    popRead(c, this, index);
-  }
-
-  Value* object;
-  unsigned lengthOffset;
-  Value* index;
-  intptr_t handler;
-};
-
-void
-appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
-                  Value* index, intptr_t handler)
-{
-  append(c, new(c->zone) BoundsCheckEvent(c, object, lengthOffset, index, handler));
 }
 
 class FrameSiteEvent: public Event {
@@ -2650,7 +2555,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* poolAppend(intptr_t value) {
-    return poolAppendPromise(resolved(&c, value));
+    return poolAppendPromise(resolvedPromise(&c, value));
   }
 
   virtual Promise* poolAppendPromise(Promise* value) {
@@ -2670,7 +2575,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* constant(int64_t value, Compiler::OperandType type) {
-    return promiseConstant(resolved(&c, value), type);
+    return promiseConstant(resolvedPromise(&c, value), type);
   }
 
   virtual Operand* promiseConstant(Promise* value, Compiler::OperandType type) {

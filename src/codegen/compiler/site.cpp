@@ -14,17 +14,13 @@
 #include "codegen/compiler/value.h"
 #include "codegen/compiler/site.h"
 #include "codegen/compiler/resource.h"
+#include "codegen/compiler/frame.h"
+#include "codegen/compiler/promise.h"
 
 namespace avian {
 namespace codegen {
 namespace compiler {
 
-
-unsigned frameIndexToOffset(Context* c, unsigned frameIndex);
-
-unsigned offsetToFrameIndex(Context* c, unsigned offset);
-
-ResolvedPromise* resolved(Context* c, int64_t value);
 
 
 int intersectFrameIndexes(int a, int b) {
@@ -120,7 +116,7 @@ Site* constantSite(Context* c, Promise* value) {
 }
 
 Site* constantSite(Context* c, int64_t value) {
-  return constantSite(c, resolved(c, value));
+  return constantSite(c, resolvedPromise(c, value));
 }
 
 

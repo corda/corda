@@ -18,25 +18,13 @@ namespace compiler {
 
 class CodePromise: public Promise {
  public:
-  CodePromise(Context* c, CodePromise* next):
-    c(c), offset(0), next(next)
-  { }
+  CodePromise(Context* c, CodePromise* next);
 
-  CodePromise(Context* c, Promise* offset):
-    c(c), offset(offset), next(0)
-  { }
+  CodePromise(Context* c, Promise* offset);
 
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>(c->machineCode + offset->value());
-    }
-    
-    abort(c);
-  }
+  virtual int64_t value();
 
-  virtual bool resolved() {
-    return c->machineCode != 0 and offset and offset->resolved();
-  }
+  virtual bool resolved();
 
   Context* c;
   Promise* offset;
@@ -44,6 +32,12 @@ class CodePromise: public Promise {
 };
 
 CodePromise* codePromise(Context* c, Promise* offset);
+
+Promise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask);
+
+Promise* combinedPromise(Context* c, Promise* low, Promise* high);
+
+Promise* resolvedPromise(Context* c, int64_t value);
 
 } // namespace compiler
 } // namespace codegen
