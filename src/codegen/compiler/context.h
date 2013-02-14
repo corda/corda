@@ -22,7 +22,6 @@ namespace compiler {
 
 class Stack;
 class Local;
-class Cell;
 class Event;
 class LogicalInstruction;
 
@@ -36,6 +35,25 @@ class ForkState;
 class MySubroutine;
 class Block;
 
+template<class T>
+class Cell {
+ public:
+  Cell(Cell<T>* next, T* value): next(next), value(value) { }
+
+  Cell<T>* next;
+  T* value;
+};
+
+template<class T>
+unsigned count(Cell<T>* c) {
+  unsigned count = 0;
+  while (c) {
+    ++ count;
+    c = c->next;
+  }
+  return count;
+}
+
 class Context {
  public:
   Context(vm::System* system, Assembler* assembler, vm::Zone* zone,
@@ -48,7 +66,7 @@ class Context {
   Compiler::Client* client;
   Stack* stack;
   Local* locals;
-  Cell* saved;
+  Cell<Value>* saved;
   Event* predecessor;
   LogicalInstruction** logicalCode;
   const RegisterFile* regFile;
@@ -76,6 +94,11 @@ class Context {
 
 inline Aborter* getAborter(Context* c) {
   return c->system;
+}
+
+template<class T>
+Cell<T>* cons(Context* c, T* value, Cell<T>* next) {
+  return new (c->zone) Cell<T>(next, value);
 }
 
 } // namespace compiler

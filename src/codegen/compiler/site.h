@@ -34,6 +34,8 @@ class SiteMask {
     typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
   { }
 
+  SiteMask intersectionWith(const SiteMask& b);
+
   uint8_t typeMask;
   uint32_t registerMask;
   int frameIndex;
@@ -239,6 +241,64 @@ class RegisterSite: public Site {
 
 Site* registerSite(Context* c, int number);
 Site* freeRegisterSite(Context* c, uint32_t mask);
+
+
+class MemorySite: public Site {
+ public:
+  MemorySite(int base, int offset, int index, unsigned scale);
+
+  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
+
+  virtual unsigned copyCost(Context* c, Site* s);
+
+  bool conflicts(const SiteMask& mask);
+
+  virtual bool match(Context* c, const SiteMask& mask);
+
+  virtual bool loneMatch(Context* c, const SiteMask& mask);
+
+  virtual bool matchNextWord(Context* c, Site* s, unsigned index);
+
+  virtual void acquire(Context* c, Value* v);
+
+  virtual void release(Context* c, Value* v);
+
+  virtual void freeze(Context* c, Value* v);
+
+  virtual void thaw(Context* c, Value* v);
+
+  virtual bool frozen(Context* c);
+
+  virtual lir::OperandType type(Context*);
+
+  virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
+                                  lir::Operand* result);
+
+  virtual Site* copy(Context* c);
+
+  Site* copyHalf(Context* c, bool add);
+
+  virtual Site* copyLow(Context* c);
+
+  virtual Site* copyHigh(Context* c);
+
+  virtual Site* makeNextWord(Context* c, unsigned index);
+
+  virtual SiteMask mask(Context* c);
+
+  virtual SiteMask nextWordMask(Context* c, unsigned index);
+
+  virtual bool isVolatile(Context* c);
+
+  bool acquired;
+  int base;
+  int offset;
+  int index;
+  unsigned scale;
+};
+
+MemorySite* memorySite(Context* c, int base, int offset = 0, int index = lir::NoRegister, unsigned scale = 1);
+MemorySite* frameSite(Context* c, int frameIndex);
 
 } // namespace compiler
 } // namespace codegen

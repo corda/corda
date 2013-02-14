@@ -15,6 +15,11 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
+class Context;
+class SiteMask;
+class Value;
+class Event;
+
 class Read {
  public:
   Read():
@@ -36,6 +41,74 @@ class Read {
   Value* value;
   Event* event;
   Read* eventNext;
+};
+
+class SingleRead: public Read {
+ public:
+  SingleRead(const SiteMask& mask, Value* successor);
+
+  virtual bool intersect(SiteMask* mask, unsigned);
+
+  virtual Value* high(Context*);
+
+  virtual Value* successor();
+  
+  virtual bool valid();
+
+  virtual void append(Context* c UNUSED, Read* r);
+
+  virtual Read* next(Context*);
+
+  Read* next_;
+  SiteMask mask;
+  Value* high_;
+  Value* successor_;
+};
+
+
+class MultiRead: public Read {
+ public:
+  MultiRead();
+
+  virtual bool intersect(SiteMask* mask, unsigned depth);
+
+  virtual Value* successor();
+
+  virtual bool valid();
+
+  virtual void append(Context* c, Read* r);
+
+  virtual Read* next(Context* c);
+
+  void allocateTarget(Context* c);
+
+  Read* nextTarget();
+
+  Cell<Read>* reads;
+  Cell<Read>* lastRead;
+  Cell<Read>* firstTarget;
+  Cell<Read>* lastTarget;
+  bool visited;
+};
+
+class StubRead: public Read {
+ public:
+  StubRead();
+
+  virtual bool intersect(SiteMask* mask, unsigned depth);
+
+  virtual Value* successor();
+
+  virtual bool valid();
+
+  virtual void append(Context* c UNUSED, Read* r);
+
+  virtual Read* next(Context*);
+
+  Read* next_;
+  Read* read;
+  bool visited;
+  bool valid_;
 };
 
 

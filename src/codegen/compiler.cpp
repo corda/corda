@@ -45,11 +45,6 @@ const unsigned StealRegisterReserveCount = 2;
 const unsigned ResolveRegisterReserveCount = (TargetBytesPerWord == 8 ? 2 : 4);
 
 class Stack;
-class Site;
-class ConstantSite;
-class AddressSite;
-class RegisterSite;
-class MemorySite;
 class Event;
 class PushEvent;
 class Read;
@@ -72,14 +67,6 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
-
-class Cell {
- public:
-  Cell(Cell* next, void* value): next(next), value(value) { }
-
-  Cell* next;
-  void* value;
-};
 
 class Local {
  public:
@@ -106,7 +93,7 @@ class ForkElement {
 
 class ForkState: public Compiler::State {
  public:
-  ForkState(Stack* stack, Local* locals, Cell* saved, Event* predecessor,
+  ForkState(Stack* stack, Local* locals, Cell<Value>* saved, Event* predecessor,
             unsigned logicalIp):
     stack(stack),
     locals(locals),
@@ -118,7 +105,7 @@ class ForkState: public Compiler::State {
 
   Stack* stack;
   Local* locals;
-  Cell* saved;
+  Cell<Value>* saved;
   Event* predecessor;
   unsigned logicalIp;
   unsigned readCount;
@@ -156,23 +143,6 @@ class ConstantPoolNode {
   Promise* promise;
   ConstantPoolNode* next;
 };
-
-int
-intersectFrameIndexes(int a, int b)
-{
-  if (a == NoFrameIndex or b == NoFrameIndex) return NoFrameIndex;
-  if (a == AnyFrameIndex) return b;
-  if (b == AnyFrameIndex) return a;
-  if (a == b) return a;
-  return NoFrameIndex;
-}
-
-SiteMask
-intersect(const SiteMask& a, const SiteMask& b)
-{
-  return SiteMask(a.typeMask & b.typeMask, a.registerMask & b.registerMask,
-                  intersectFrameIndexes(a.frameIndex, b.frameIndex));
-}
 
 class PoolPromise: public Promise {
  public:
@@ -254,29 +224,11 @@ class IpPromise: public Promise {
   int logicalIp;
 };
 
-unsigned
-count(Cell* c)
-{
-  unsigned count = 0;
-  while (c) {
-    ++ count;
-    c = c->next;
-  }
-  return count;
-}
-
-Cell*
-cons(Context* c, void* value, Cell* next)
-{
-  return new (c->zone) Cell(next, value);
-}
-
-Cell*
-reverseDestroy(Cell* cell)
-{
-  Cell* previous = 0;
+template<class T>
+Cell<T>* reverseDestroy(Cell<T>* cell) {
+  Cell<T>* previous = 0;
   while (cell) {
-    Cell* next = cell->next;
+    Cell<T>* next = cell->next;
     cell->next = previous;
     previous = cell;
     cell = next;
@@ -377,7 +329,7 @@ class Event {
   Snapshot* snapshots;
   Link* predecessors;
   Link* successors;
-  Cell* visitLinks;
+  Cell<Link>* visitLinks;
   Block* block;
   LogicalInstruction* logicalInstruction;
   unsigned readCount;
@@ -759,254 +711,6 @@ Promise* resolved(Context* c, int64_t value) {
   return new(c->zone) ResolvedPromise(value);
 }
 
-MemorySite*
-memorySite(Context* c, int base, int offset = 0, int index = lir::NoRegister,
-           unsigned scale = 1);
-
-class MemorySite: public Site {
- public:
-  MemorySite(int base, int offset, int index, unsigned scale):
-    acquired(false), base(base), offset(offset), index(index), scale(scale)
-  { }
-
-  virtual unsigned toString(Context*, char* buffer, unsigned bufferSize) {
-    if (acquired) {
-      return vm::snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
-                      base, offset, index, scale);
-    } else {
-      return vm::snprintf(buffer, bufferSize, "memory unacquired");
-    }
-  }
-
-  virtual unsigned copyCost(Context* c, Site* s) {
-    assert(c, acquired);    
-
-    if (s and
-        (this == s or
-         (s->type(c) == lir::MemoryOperand
-          and static_cast<MemorySite*>(s)->base == base
-          and static_cast<MemorySite*>(s)->offset == offset
-          and static_cast<MemorySite*>(s)->index == index
-          and static_cast<MemorySite*>(s)->scale == scale)))
-    {
-      return 0;
-    } else {
-      return MemoryCopyCost;
-    }
-  }
-
-  bool conflicts(const SiteMask& mask) {
-    return (mask.typeMask & (1 << lir::RegisterOperand)) != 0
-      and (((1 << base) & mask.registerMask) == 0
-           or (index != lir::NoRegister
-               and ((1 << index) & mask.registerMask) == 0));
-  }
-
-  virtual bool match(Context* c, const SiteMask& mask) {
-    assert(c, acquired);
-
-    if (mask.typeMask & (1 << lir::MemoryOperand)) {
-      if (mask.frameIndex >= 0) {
-        if (base == c->arch->stack()) {
-          assert(c, index == lir::NoRegister);
-          return static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
-            == offset;
-        } else {
-          return false;
-        }
-      } else {
-        return true;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  virtual bool loneMatch(Context* c, const SiteMask& mask) {
-    assert(c, acquired);
-
-    if (mask.typeMask & (1 << lir::MemoryOperand)) {
-      if (base == c->arch->stack()) {
-        assert(c, index == lir::NoRegister);
-
-        if (mask.frameIndex == AnyFrameIndex) {
-          return false;
-        } else {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  virtual bool matchNextWord(Context* c, Site* s, unsigned index) {
-    if (s->type(c) == lir::MemoryOperand) {
-      MemorySite* ms = static_cast<MemorySite*>(s);
-      return ms->base == this->base
-        and ((index == 1 and ms->offset == static_cast<int>
-              (this->offset + TargetBytesPerWord))
-             or (index == 0 and this->offset == static_cast<int>
-                 (ms->offset + TargetBytesPerWord)))
-        and ms->index == this->index
-        and ms->scale == this->scale;
-    } else {
-      return false;
-    }
-  }
-
-  virtual void acquire(Context* c, Value* v) {
-    c->registerResources[base].increment(c);
-    if (index != lir::NoRegister) {
-      c->registerResources[index].increment(c);
-    }
-
-    if (base == c->arch->stack()) {
-      assert(c, index == lir::NoRegister);
-      assert
-        (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
-
-      compiler::acquire
-        (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
-    }
-
-    acquired = true;
-  }
-
-  virtual void release(Context* c, Value* v) {
-    if (base == c->arch->stack()) {
-      assert(c, index == lir::NoRegister);
-      assert
-        (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
-
-      compiler::release
-        (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
-    }
-
-    c->registerResources[base].decrement(c);
-    if (index != lir::NoRegister) {
-      c->registerResources[index].decrement(c);
-    }
-
-    acquired = false;
-  }
-
-  virtual void freeze(Context* c, Value* v) {
-    if (base == c->arch->stack()) {
-      c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
-    } else {
-      c->registerResources[base].increment(c);
-      if (index != lir::NoRegister) {
-        c->registerResources[index].increment(c);
-      }
-    }
-  }
-
-  virtual void thaw(Context* c, Value* v) {
-    if (base == c->arch->stack()) {
-      c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
-    } else {
-      c->registerResources[base].decrement(c);
-      if (index != lir::NoRegister) {
-        c->registerResources[index].decrement(c);
-      }
-    }
-  }
-
-  virtual bool frozen(Context* c) {
-    return base == c->arch->stack()
-      and c->frameResources[offsetToFrameIndex(c, offset)].freezeCount != 0;
-  }
-
-  virtual lir::OperandType type(Context*) {
-    return lir::MemoryOperand;
-  }
-
-  virtual void asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
-                                  lir::Operand* result)
-  {
-    // todo: endianness?
-    assert(c, high == this
-           or (static_cast<MemorySite*>(high)->base == base
-               and static_cast<MemorySite*>(high)->offset
-               == static_cast<int>(offset + TargetBytesPerWord)
-               and static_cast<MemorySite*>(high)->index == index
-               and static_cast<MemorySite*>(high)->scale == scale));
-
-    assert(c, acquired);
-
-    new (result) lir::Memory(base, offset, index, scale);
-  }
-
-  virtual Site* copy(Context* c) {
-    return memorySite(c, base, offset, index, scale);
-  }
-
-  Site* copyHalf(Context* c, bool add) {
-    if (add) {
-      return memorySite(c, base, offset + TargetBytesPerWord, index, scale);
-    } else {
-      return copy(c);
-    }
-  }
-
-  virtual Site* copyLow(Context* c) {
-    return copyHalf(c, c->arch->bigEndian());
-  }
-
-  virtual Site* copyHigh(Context* c) {
-    return copyHalf(c, not c->arch->bigEndian());
-  }
-
-  virtual Site* makeNextWord(Context* c, unsigned index) {
-    return memorySite
-      (c, base, offset + ((index == 1) xor c->arch->bigEndian()
-                          ? TargetBytesPerWord : -TargetBytesPerWord),
-       this->index, scale);
-  }
-
-  virtual SiteMask mask(Context* c) {
-    return SiteMask(1 << lir::MemoryOperand, 0, (base == c->arch->stack())
-                    ? static_cast<int>(offsetToFrameIndex(c, offset))
-                    : NoFrameIndex);
-  }
-
-  virtual SiteMask nextWordMask(Context* c, unsigned index) {
-    int frameIndex;
-    if (base == c->arch->stack()) {
-      assert(c, this->index == lir::NoRegister);
-      frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
-        + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
-    } else {
-      frameIndex = NoFrameIndex;
-    }
-    return SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
-  }
-
-  virtual bool isVolatile(Context* c) {
-    return base != c->arch->stack();
-  }
-
-  bool acquired;
-  int base;
-  int offset;
-  int index;
-  unsigned scale;
-};
-
-MemorySite*
-memorySite(Context* c, int base, int offset, int index, unsigned scale)
-{
-  return new(c->zone) MemorySite(base, offset, index, scale);
-}
-
-MemorySite*
-frameSite(Context* c, int frameIndex)
-{
-  assert(c, frameIndex >= 0);
-  return memorySite
-    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex), lir::NoRegister, 0);
-}
-
 void
 move(Context* c, Value* value, Site* src, Site* dst);
 
@@ -1073,45 +777,6 @@ pickTargetSite(Context* c, Read* read, bool intersectRead = false,
   }
 }
 
-class SingleRead: public Read {
- public:
-  SingleRead(const SiteMask& mask, Value* successor):
-    next_(0), mask(mask), high_(0), successor_(successor)
-  { }
-
-  virtual bool intersect(SiteMask* mask, unsigned) {
-    *mask = compiler::intersect(*mask, this->mask);
-
-    return true;
-  }
-
-  virtual Value* high(Context*) {
-    return high_;
-  }
-
-  virtual Value* successor() {
-    return successor_;
-  }
-  
-  virtual bool valid() {
-    return true;
-  }
-
-  virtual void append(Context* c UNUSED, Read* r) {
-    assert(c, next_ == 0);
-    next_ = r;
-  }
-
-  virtual Read* next(Context*) {
-    return next_;
-  }
-
-  Read* next_;
-  SiteMask mask;
-  Value* high_;
-  Value* successor_;
-};
-
 SingleRead*
 read(Context* c, const SiteMask& mask, Value* successor = 0)
 {
@@ -1137,7 +802,7 @@ pickSourceSite(Context* c, Read* read, Site* target = 0,
   SiteMask mask;
 
   if (extraMask) {
-    mask = intersect(mask, *extraMask);
+    mask = mask.intersectionWith(*extraMask);
   }
 
   if (intersectRead) {
@@ -1368,153 +1033,12 @@ fixedRegisterMask(int number)
   return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
 }
 
-class MultiRead: public Read {
- public:
-  MultiRead():
-    reads(0), lastRead(0), firstTarget(0), lastTarget(0), visited(false)
-  { }
-
-  virtual bool intersect(SiteMask* mask, unsigned depth) {
-    if (depth > 0) {
-      // short-circuit recursion to avoid poor performance in
-      // deeply-nested branches
-      return reads != 0;
-    }
-
-    bool result = false;
-    if (not visited) {
-      visited = true;
-      for (Cell** cell = &reads; *cell;) {
-        Read* r = static_cast<Read*>((*cell)->value);
-        bool valid = r->intersect(mask, depth + 1);
-        if (valid) {
-          result = true;
-          cell = &((*cell)->next);
-        } else {
-          *cell = (*cell)->next;
-        }
-      }
-      visited = false;
-    }
-    return result;
-  }
-
-  virtual Value* successor() {
-    return 0;
-  }
-
-  virtual bool valid() {
-    bool result = false;
-    if (not visited) {
-      visited = true;
-      for (Cell** cell = &reads; *cell;) {
-        Read* r = static_cast<Read*>((*cell)->value);
-        if (r->valid()) {
-          result = true;
-          cell = &((*cell)->next);
-        } else {
-          *cell = (*cell)->next;
-        }
-      }
-      visited = false;
-    }
-    return result;
-  }
-
-  virtual void append(Context* c, Read* r) {
-    Cell* cell = cons(c, r, 0);
-    if (lastRead == 0) {
-      reads = cell;
-    } else {
-      lastRead->next = cell;
-    }
-    lastRead = cell;
-
-//     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
-
-    lastTarget->value = r;
-  }
-
-  virtual Read* next(Context* c) {
-    abort(c);
-  }
-
-  void allocateTarget(Context* c) {
-    Cell* cell = cons(c, 0, 0);
-
-//     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
-
-    if (lastTarget) {
-      lastTarget->next = cell;
-    } else {
-      firstTarget = cell;
-    }
-    lastTarget = cell;
-  }
-
-  Read* nextTarget() {
-    //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
-
-    Read* r = static_cast<Read*>(firstTarget->value);
-    firstTarget = firstTarget->next;
-    return r;
-  }
-
-  Cell* reads;
-  Cell* lastRead;
-  Cell* firstTarget;
-  Cell* lastTarget;
-  bool visited;
-};
 
 MultiRead*
 multiRead(Context* c)
 {
   return new(c->zone) MultiRead;
 }
-
-class StubRead: public Read {
- public:
-  StubRead():
-    next_(0), read(0), visited(false), valid_(true)
-  { }
-
-  virtual bool intersect(SiteMask* mask, unsigned depth) {
-    if (not visited) {
-      visited = true;
-      if (read) {
-        bool valid = read->intersect(mask, depth);
-        if (not valid) {
-          read = 0;
-        }
-      }
-      visited = false;
-    }
-    return valid_;
-  }
-
-  virtual Value* successor() {
-    return 0;
-  }
-
-  virtual bool valid() {
-    return valid_;
-  }
-
-  virtual void append(Context* c UNUSED, Read* r) {
-    assert(c, next_ == 0);
-    next_ = r;
-  }
-
-  virtual Read* next(Context*) {
-    return next_;
-  }
-
-  Read* next_;
-  Read* read;
-  bool visited;
-  bool valid_;
-};
 
 StubRead*
 stubRead(Context* c)
@@ -2385,7 +1909,7 @@ pickMatchOrMove(Context* c, Read* r, Site* nextWord, unsigned index,
   }
 
   return pickSiteOrMove
-    (c, r->value, intersect(mask, nextWord->nextWordMask(c, index)),
+    (c, r->value, mask.intersectionWith(nextWord->nextWordMask(c, index)),
      true, true);
 }
 
@@ -4257,9 +3781,8 @@ captureBranchSnapshots(Context* c, Event* e)
       e->snapshots = makeSnapshots(c, el.value, e->snapshots);
     }
 
-    for (Cell* sv = e->successors->forkState->saved; sv; sv = sv->next) {
-      e->snapshots = makeSnapshots
-        (c, static_cast<Value*>(sv->value), e->snapshots);
+    for (Cell<Value>* sv = e->successors->forkState->saved; sv; sv = sv->next) {
+      e->snapshots = makeSnapshots(c, sv->value, e->snapshots);
     }
 
     if (DebugControl) {
@@ -4577,9 +4100,8 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     }
 
     if (e->visitLinks) {
-      for (Cell* cell = reverseDestroy(e->visitLinks); cell; cell = cell->next)
-      {
-        visit(c, static_cast<Link*>(cell->value));
+      for (Cell<Link>* cell = reverseDestroy(e->visitLinks); cell; cell = cell->next) {
+        visit(c, cell->value);
       }
       e->visitLinks = 0;
     }
@@ -4666,8 +4188,8 @@ saveState(Context* c)
       addForkElement(c, e.value, state, count++);
     }
 
-    for (Cell* sv = c->saved; sv; sv = sv->next) {
-      addForkElement(c, static_cast<Value*>(sv->value), state, count++);
+    for (Cell<Value>* sv = c->saved; sv; sv = sv->next) {
+      addForkElement(c, sv->value, state, count++);
     }
 
     state->readCount = count;

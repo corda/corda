@@ -20,7 +20,26 @@ namespace codegen {
 namespace compiler {
 
 
+unsigned frameIndexToOffset(Context* c, unsigned frameIndex);
+
+unsigned offsetToFrameIndex(Context* c, unsigned offset);
+
 ResolvedPromise* resolved(Context* c, int64_t value);
+
+
+int intersectFrameIndexes(int a, int b) {
+  if (a == NoFrameIndex or b == NoFrameIndex) return NoFrameIndex;
+  if (a == AnyFrameIndex) return b;
+  if (b == AnyFrameIndex) return a;
+  if (a == b) return a;
+  return NoFrameIndex;
+}
+
+
+SiteMask SiteMask::intersectionWith(const SiteMask& b) {
+  return SiteMask(typeMask & b.typeMask, registerMask & b.registerMask,
+                  intersectFrameIndexes(frameIndex, b.frameIndex));
+}
 
 SiteIterator::SiteIterator(Context* c, Value* v, bool includeBuddies,
              bool includeNextWord):
@@ -368,6 +387,238 @@ Site* registerSite(Context* c, int number) {
 
 Site* freeRegisterSite(Context* c, uint32_t mask) {
   return new(c->zone) RegisterSite(mask, lir::NoRegister);
+}
+
+MemorySite::MemorySite(int base, int offset, int index, unsigned scale):
+  acquired(false), base(base), offset(offset), index(index), scale(scale)
+{ }
+
+unsigned MemorySite::toString(Context*, char* buffer, unsigned bufferSize) {
+  if (acquired) {
+    return vm::snprintf(buffer, bufferSize, "memory %d 0x%x %d %d",
+                    base, offset, index, scale);
+  } else {
+    return vm::snprintf(buffer, bufferSize, "memory unacquired");
+  }
+}
+
+unsigned MemorySite::copyCost(Context* c, Site* s) {
+  assert(c, acquired);    
+
+  if (s and
+      (this == s or
+       (s->type(c) == lir::MemoryOperand
+        and static_cast<MemorySite*>(s)->base == base
+        and static_cast<MemorySite*>(s)->offset == offset
+        and static_cast<MemorySite*>(s)->index == index
+        and static_cast<MemorySite*>(s)->scale == scale)))
+  {
+    return 0;
+  } else {
+    return MemoryCopyCost;
+  }
+}
+
+bool MemorySite::conflicts(const SiteMask& mask) {
+  return (mask.typeMask & (1 << lir::RegisterOperand)) != 0
+    and (((1 << base) & mask.registerMask) == 0
+         or (index != lir::NoRegister
+             and ((1 << index) & mask.registerMask) == 0));
+}
+
+bool MemorySite::match(Context* c, const SiteMask& mask) {
+  assert(c, acquired);
+
+  if (mask.typeMask & (1 << lir::MemoryOperand)) {
+    if (mask.frameIndex >= 0) {
+      if (base == c->arch->stack()) {
+        assert(c, index == lir::NoRegister);
+        return static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
+          == offset;
+      } else {
+        return false;
+      }
+    } else {
+      return true;
+    }
+  } else {
+    return false;
+  }
+}
+
+bool MemorySite::loneMatch(Context* c, const SiteMask& mask) {
+  assert(c, acquired);
+
+  if (mask.typeMask & (1 << lir::MemoryOperand)) {
+    if (base == c->arch->stack()) {
+      assert(c, index == lir::NoRegister);
+
+      if (mask.frameIndex == AnyFrameIndex) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool MemorySite::matchNextWord(Context* c, Site* s, unsigned index) {
+  if (s->type(c) == lir::MemoryOperand) {
+    MemorySite* ms = static_cast<MemorySite*>(s);
+    return ms->base == this->base
+      and ((index == 1 and ms->offset == static_cast<int>
+            (this->offset + vm::TargetBytesPerWord))
+           or (index == 0 and this->offset == static_cast<int>
+               (ms->offset + vm::TargetBytesPerWord)))
+      and ms->index == this->index
+      and ms->scale == this->scale;
+  } else {
+    return false;
+  }
+}
+
+void MemorySite::acquire(Context* c, Value* v) {
+  c->registerResources[base].increment(c);
+  if (index != lir::NoRegister) {
+    c->registerResources[index].increment(c);
+  }
+
+  if (base == c->arch->stack()) {
+    assert(c, index == lir::NoRegister);
+    assert
+      (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
+
+    compiler::acquire
+      (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
+  }
+
+  acquired = true;
+}
+
+void MemorySite::release(Context* c, Value* v) {
+  if (base == c->arch->stack()) {
+    assert(c, index == lir::NoRegister);
+    assert
+      (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
+
+    compiler::release
+      (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
+  }
+
+  c->registerResources[base].decrement(c);
+  if (index != lir::NoRegister) {
+    c->registerResources[index].decrement(c);
+  }
+
+  acquired = false;
+}
+
+void MemorySite::freeze(Context* c, Value* v) {
+  if (base == c->arch->stack()) {
+    c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
+  } else {
+    c->registerResources[base].increment(c);
+    if (index != lir::NoRegister) {
+      c->registerResources[index].increment(c);
+    }
+  }
+}
+
+void MemorySite::thaw(Context* c, Value* v) {
+  if (base == c->arch->stack()) {
+    c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
+  } else {
+    c->registerResources[base].decrement(c);
+    if (index != lir::NoRegister) {
+      c->registerResources[index].decrement(c);
+    }
+  }
+}
+
+bool MemorySite::frozen(Context* c) {
+  return base == c->arch->stack()
+    and c->frameResources[offsetToFrameIndex(c, offset)].freezeCount != 0;
+}
+
+lir::OperandType MemorySite::type(Context*) {
+  return lir::MemoryOperand;
+}
+
+void MemorySite::asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
+                                lir::Operand* result)
+{
+  // todo: endianness?
+  assert(c, high == this
+         or (static_cast<MemorySite*>(high)->base == base
+             and static_cast<MemorySite*>(high)->offset
+             == static_cast<int>(offset + vm::TargetBytesPerWord)
+             and static_cast<MemorySite*>(high)->index == index
+             and static_cast<MemorySite*>(high)->scale == scale));
+
+  assert(c, acquired);
+
+  new (result) lir::Memory(base, offset, index, scale);
+}
+
+Site* MemorySite::copy(Context* c) {
+  return memorySite(c, base, offset, index, scale);
+}
+
+Site* MemorySite::copyHalf(Context* c, bool add) {
+  if (add) {
+    return memorySite(c, base, offset + vm::TargetBytesPerWord, index, scale);
+  } else {
+    return copy(c);
+  }
+}
+
+Site* MemorySite::copyLow(Context* c) {
+  return copyHalf(c, c->arch->bigEndian());
+}
+
+Site* MemorySite::copyHigh(Context* c) {
+  return copyHalf(c, not c->arch->bigEndian());
+}
+
+Site* MemorySite::makeNextWord(Context* c, unsigned index) {
+  return memorySite
+    (c, base, offset + ((index == 1) xor c->arch->bigEndian()
+                        ? vm::TargetBytesPerWord : -vm::TargetBytesPerWord),
+     this->index, scale);
+}
+
+SiteMask MemorySite::mask(Context* c) {
+  return SiteMask(1 << lir::MemoryOperand, 0, (base == c->arch->stack())
+                  ? static_cast<int>(offsetToFrameIndex(c, offset))
+                  : NoFrameIndex);
+}
+
+SiteMask MemorySite::nextWordMask(Context* c, unsigned index) {
+  int frameIndex;
+  if (base == c->arch->stack()) {
+    assert(c, this->index == lir::NoRegister);
+    frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
+      + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
+  } else {
+    frameIndex = NoFrameIndex;
+  }
+  return SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
+}
+
+bool MemorySite::isVolatile(Context* c) {
+  return base != c->arch->stack();
+}
+
+
+MemorySite* memorySite(Context* c, int base, int offset, int index, unsigned scale) {
+  return new(c->zone) MemorySite(base, offset, index, scale);
+}
+
+MemorySite* frameSite(Context* c, int frameIndex) {
+  assert(c, frameIndex >= 0);
+  return memorySite
+    (c, c->arch->stack(), frameIndexToOffset(c, frameIndex), lir::NoRegister, 0);
 }
 
 } // namespace compiler
