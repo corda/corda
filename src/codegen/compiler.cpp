@@ -25,6 +25,7 @@
 #include "codegen/compiler/event.h"
 #include "codegen/compiler/promise.h"
 #include "codegen/compiler/frame.h"
+#include "codegen/compiler/ir.h"
 
 using namespace vm;
 
@@ -45,14 +46,6 @@ const unsigned StealRegisterReserveCount = 2;
 // compare instruction:
 const unsigned ResolveRegisterReserveCount = (TargetBytesPerWord == 8 ? 2 : 4);
 
-class Stack;
-class PushEvent;
-class Read;
-class MultiRead;
-class StubRead;
-class Block;
-class Snapshot;
-
 void
 apply(Context* c, lir::UnaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High);
@@ -68,57 +61,6 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
 
-class ForkElement {
- public:
-  Value* value;
-  MultiRead* read;
-  bool local;
-};
-
-class ForkState: public Compiler::State {
- public:
-  ForkState(Stack* stack, Local* locals, Cell<Value>* saved, Event* predecessor,
-            unsigned logicalIp):
-    stack(stack),
-    locals(locals),
-    saved(saved),
-    predecessor(predecessor),
-    logicalIp(logicalIp),
-    readCount(0)
-  { }
-
-  Stack* stack;
-  Local* locals;
-  Cell<Value>* saved;
-  Event* predecessor;
-  unsigned logicalIp;
-  unsigned readCount;
-  ForkElement elements[0];
-};
-
-class MySubroutine: public Compiler::Subroutine {
- public:
-  MySubroutine(): forkState(0) { }
-
-  ForkState* forkState;
-};
-
-class LogicalInstruction {
- public:
-  LogicalInstruction(int index, Stack* stack, Local* locals):
-    firstEvent(0), lastEvent(0), immediatePredecessor(0), stack(stack),
-    locals(locals), machineOffset(0), subroutine(0), index(index)
-  { }
-
-  Event* firstEvent;
-  Event* lastEvent;
-  LogicalInstruction* immediatePredecessor;
-  Stack* stack;
-  Local* locals;
-  Promise* machineOffset;
-  MySubroutine* subroutine;
-  int index;
-};
 
 class ConstantPoolNode {
  public:
@@ -127,106 +69,6 @@ class ConstantPoolNode {
   Promise* promise;
   ConstantPoolNode* next;
 };
-
-class PoolPromise: public Promise {
- public:
-  PoolPromise(Context* c, int key): c(c), key(key) { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<int64_t>
-        (c->machineCode + pad(c->machineCodeSize, TargetBytesPerWord)
-         + (key * TargetBytesPerWord));
-    }
-    
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->machineCode != 0;
-  }
-
-  Context* c;
-  int key;
-};
-
-unsigned
-machineOffset(Context* c, int logicalIp)
-{
-  return c->logicalCode[logicalIp]->machineOffset->value();
-}
-
-class IpPromise: public Promise {
- public:
-  IpPromise(Context* c, int logicalIp):
-    c(c),
-    logicalIp(logicalIp)
-  { }
-
-  virtual int64_t value() {
-    if (resolved()) {
-      return reinterpret_cast<intptr_t>
-        (c->machineCode + machineOffset(c, logicalIp));
-    }
-
-    abort(c);
-  }
-
-  virtual bool resolved() {
-    return c->machineCode != 0
-      and c->logicalCode[logicalIp]->machineOffset->resolved();
-  }
-
-  Context* c;
-  int logicalIp;
-};
-
-template<class T>
-Cell<T>* reverseDestroy(Cell<T>* cell) {
-  Cell<T>* previous = 0;
-  while (cell) {
-    Cell<T>* next = cell->next;
-    cell->next = previous;
-    previous = cell;
-    cell = next;
-  }
-  return previous;
-}
-
-unsigned
-countPredecessors(Link* link)
-{
-  unsigned c = 0;
-  for (; link; link = link->nextPredecessor) ++ c;
-  return c;
-}
-
-Link*
-lastPredecessor(Link* link)
-{
-  while (link->nextPredecessor) link = link->nextPredecessor;
-  return link;
-}
-
-unsigned
-countSuccessors(Link* link)
-{
-  unsigned c = 0;
-  for (; link; link = link->nextSuccessor) ++ c;
-  return c;
-}
-
-void
-clearSites(Context* c, Value* v)
-{
-  if (DebugSites) {
-    fprintf(stderr, "clear sites for %p\n", v);
-  }
-  for (SiteIterator it(c, v); it.hasMore();) {
-    it.next();
-    it.remove(c);
-  }
-}
 
 Read*
 live(Context* c UNUSED, Value* v)
@@ -321,7 +163,7 @@ popRead(Context* c, Event* e UNUSED, Value* v)
     if (r) {
       deadBuddy(c, v, r);
     } else {
-      clearSites(c, v);
+      v->clearSites(c);
     }
   }
 }
@@ -1140,11 +982,11 @@ removeBuddy(Context* c, Value* v)
     assert(c, p->buddy);
 
     if (not live(c, next)) {
-      clearSites(c, next);
+      next->clearSites(c);
     }
 
     if (not live(c, v)) {
-      clearSites(c, v);
+      v->clearSites(c);
     }
   }
 }
@@ -1437,7 +1279,7 @@ visit(Context* c, Link* link)
       v->reads = p->read->nextTarget();
       //       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
       if (not live(c, v)) {
-        clearSites(c, v);
+        v->clearSites(c);
       }
     }
   }
@@ -1490,67 +1332,6 @@ void
 appendBuddy(Context* c, Value* original, Value* buddy)
 {
   append(c, new(c->zone) BuddyEvent(c, original, buddy));
-}
-
-class SaveLocalsEvent: public Event {
- public:
-  SaveLocalsEvent(Context* c):
-    Event(c)
-  {
-    saveLocals(c, this);
-  }
-
-  virtual const char* name() {
-    return "SaveLocalsEvent";
-  }
-
-  virtual void compile(Context* c) {
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-  }
-};
-
-void
-appendSaveLocals(Context* c)
-{
-  append(c, new(c->zone) SaveLocalsEvent(c));
-}
-
-class DummyEvent: public Event {
- public:
-  DummyEvent(Context* c, Local* locals):
-  Event(c),
-  locals_(locals)
-  { }
-
-  virtual const char* name() {
-    return "DummyEvent";
-  }
-
-  virtual void compile(Context*) { }
-
-  virtual Local* locals() {
-    return locals_;
-  }
-
-  Local* locals_;
-};
-
-void
-appendDummy(Context* c)
-{
-  Stack* stack = c->stack;
-  Local* locals = c->locals;
-  LogicalInstruction* i = c->logicalCode[c->logicalIp];
-
-  c->stack = i->stack;
-  c->locals = i->locals;
-
-  append(c, new(c->zone) DummyEvent(c, locals));
-
-  c->stack = stack;
-  c->locals = locals;  
 }
 
 void
@@ -1898,11 +1679,11 @@ resetFrame(Context* c, Event* e)
 {
   for (FrameIterator it(c, e->stackBefore, e->localsBefore); it.hasMore();) {
     FrameIterator::Element el = it.next(c);
-    clearSites(c, el.value);
+    el.value->clearSites(c);
   }
 
   while (c->acquiredResources) {
-    clearSites(c, c->acquiredResources->value);
+    c->acquiredResources->value->clearSites(c);
   }
 }
 
@@ -2058,35 +1839,6 @@ updateJunctionReads(Context* c, JunctionState* state)
   }
 }
 
-LogicalInstruction*
-next(Context* c, LogicalInstruction* i)
-{
-  for (unsigned n = i->index + 1; n < c->logicalCodeLength; ++n) {
-    i = c->logicalCode[n];
-    if (i) return i;
-  }
-  return 0;
-}
-
-class Block {
- public:
-  Block(Event* head):
-    head(head), nextBlock(0), nextInstruction(0), assemblerBlock(0), start(0)
-  { }
-
-  Event* head;
-  Block* nextBlock;
-  LogicalInstruction* nextInstruction;
-  Assembler::Block* assemblerBlock;
-  unsigned start;
-};
-
-Block*
-block(Context* c, Event* head)
-{
-  return new(c->zone) Block(head);
-}
-
 void
 compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
 {
@@ -2110,8 +1862,8 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
       fprintf(stderr,
               " -- compile %s at %d with %d preds %d succs %d stack\n",
               e->name(), e->logicalInstruction->index,
-              countPredecessors(e->predecessors),
-              countSuccessors(e->successors),
+              e->predecessors->countPredecessors(),
+              e->successors->countSuccessors(),
               e->stackBefore ? e->stackBefore->index + 1 : 0);
     }
 
@@ -2125,7 +1877,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     }
 
     if (e->predecessors) {
-      visit(c, lastPredecessor(e->predecessors));
+      visit(c, e->predecessors->lastPredecessor());
 
       Event* first = e->predecessors->predecessor;
       if (e->predecessors->nextPredecessor) {
@@ -2191,7 +1943,7 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     
     a->endEvent();
 
-    LogicalInstruction* nextInstruction = next(c, e->logicalInstruction);
+    LogicalInstruction* nextInstruction = e->logicalInstruction->next(c);
     if (e->next == 0
         or (e->next->logicalInstruction != e->logicalInstruction
             and (e->next->logicalInstruction != nextInstruction
@@ -2433,9 +2185,7 @@ class MyCompiler: public Compiler {
 
     memset(c.locals, 0, sizeof(Local) * localFootprint);
 
-    c.logicalCode[-1] = new 
-      (c.zone->allocate(sizeof(LogicalInstruction)))
-      LogicalInstruction(-1, c.stack, c.locals);
+    c.logicalCode[-1] = new(c.zone) LogicalInstruction(-1, c.stack, c.locals);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
@@ -2494,9 +2244,7 @@ class MyCompiler: public Compiler {
       p->localsAfter = c.locals;
     }
 
-    c.logicalCode[logicalIp] = new 
-      (c.zone->allocate(sizeof(LogicalInstruction)))
-      LogicalInstruction(logicalIp, c.stack, c.locals);
+    c.logicalCode[logicalIp] = new(c.zone) LogicalInstruction(logicalIp, c.stack, c.locals);
 
     bool startSubroutine = c.subroutine != 0;
     if (startSubroutine) {
@@ -2525,7 +2273,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
-    return new(c.zone) IpPromise(&c, logicalIp);
+    return ipPromise(&c, logicalIp);
   }
 
   virtual Promise* poolAppend(intptr_t value) {
@@ -2533,7 +2281,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual Promise* poolAppendPromise(Promise* value) {
-    Promise* p = new(c.zone) PoolPromise(&c, c.constantCount);
+    Promise* p = poolPromise(&c, c.constantCount);
 
     ConstantPoolNode* constant = new (c.zone) ConstantPoolNode(value);
 

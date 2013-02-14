@@ -39,6 +39,10 @@ Promise* combinedPromise(Context* c, Promise* low, Promise* high);
 
 Promise* resolvedPromise(Context* c, int64_t value);
 
+Promise* ipPromise(Context* c, int logicalIp);
+
+Promise* poolPromise(Context* c, int key);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

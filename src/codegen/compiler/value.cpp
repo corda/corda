@@ -123,6 +123,16 @@ bool Value::uniqueSite(Context* c, Site* s) {
   }
 }
 
+void Value::clearSites(Context* c) {
+  if (DebugSites) {
+    fprintf(stderr, "clear sites for %p\n", this);
+  }
+  for (SiteIterator it(c, this); it.hasMore();) {
+    it.next();
+    it.remove(c);
+  }
+}
+
 
 #ifndef NDEBUG
 bool Value::hasBuddy(Context* c, Value* b) {

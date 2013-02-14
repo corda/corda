@@ -97,6 +97,10 @@ class Link {
     junctionState(0)
   { }
 
+  unsigned countPredecessors();
+  Link* lastPredecessor();
+  unsigned countSuccessors();
+
   Event* predecessor;
   Link* nextPredecessor;
   Event* successor;
@@ -153,6 +157,12 @@ appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,
 
 void
 appendFrameSite(Context* c, Value* value, int index);
+
+void
+appendSaveLocals(Context* c);
+
+void
+appendDummy(Context* c);
 
 } // namespace compiler
 } // namespace codegen

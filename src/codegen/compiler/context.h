@@ -54,6 +54,18 @@ unsigned count(Cell<T>* c) {
   return count;
 }
 
+template<class T>
+Cell<T>* reverseDestroy(Cell<T>* cell) {
+  Cell<T>* previous = 0;
+  while (cell) {
+    Cell<T>* next = cell->next;
+    cell->next = previous;
+    previous = cell;
+    cell = next;
+  }
+  return previous;
+}
+
 class Context {
  public:
   Context(vm::System* system, Assembler* assembler, vm::Zone* zone,

@@ -18,6 +18,7 @@
 #include "codegen/compiler/value.h"
 #include "codegen/compiler/promise.h"
 #include "codegen/compiler/frame.h"
+#include "codegen/compiler/ir.h"
 
 namespace avian {
 namespace codegen {
@@ -146,6 +147,32 @@ bool Event::isUnreachable() {
     if (not p->predecessor->allExits()) return false;
   }
   return this->predecessors != 0;
+}
+
+unsigned Link::countPredecessors() {
+  Link* link = this;
+  unsigned c = 0;
+  for (; link; link = link->nextPredecessor) {
+    ++ c;
+  }
+  return c;
+}
+
+Link* Link::lastPredecessor() {
+  Link* link = this;
+  while (link->nextPredecessor) {
+    link = link->nextPredecessor;
+  }
+  return link;
+}
+
+unsigned Link::countSuccessors() {
+  Link* link = this;
+  unsigned c = 0;
+  for (; link; link = link->nextSuccessor) {
+    ++ c;
+  }
+  return c;
 }
 
 Link* link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
@@ -1603,6 +1630,67 @@ void
 appendFrameSite(Context* c, Value* value, int index)
 {
   append(c, new(c->zone) FrameSiteEvent(c, value, index));
+}
+
+class SaveLocalsEvent: public Event {
+ public:
+  SaveLocalsEvent(Context* c):
+    Event(c)
+  {
+    saveLocals(c, this);
+  }
+
+  virtual const char* name() {
+    return "SaveLocalsEvent";
+  }
+
+  virtual void compile(Context* c) {
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+  }
+};
+
+void
+appendSaveLocals(Context* c)
+{
+  append(c, new(c->zone) SaveLocalsEvent(c));
+}
+
+class DummyEvent: public Event {
+ public:
+  DummyEvent(Context* c, Local* locals):
+  Event(c),
+  locals_(locals)
+  { }
+
+  virtual const char* name() {
+    return "DummyEvent";
+  }
+
+  virtual void compile(Context*) { }
+
+  virtual Local* locals() {
+    return locals_;
+  }
+
+  Local* locals_;
+};
+
+void
+appendDummy(Context* c)
+{
+  Stack* stack = c->stack;
+  Local* locals = c->locals;
+  LogicalInstruction* i = c->logicalCode[c->logicalIp];
+
+  c->stack = i->stack;
+  c->locals = i->locals;
+
+  append(c, new(c->zone) DummyEvent(c, locals));
+
+  c->stack = stack;
+  c->locals = locals;  
 }
 
 } // namespace compiler

@@ -8,8 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "target.h"
+
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/promise.h"
+#include "codegen/compiler/ir.h"
 
 namespace avian {
 namespace codegen {
@@ -50,6 +53,63 @@ Promise* combinedPromise(Context* c, Promise* low, Promise* high) {
 Promise* resolvedPromise(Context* c, int64_t value) {
   return new (c->zone) ResolvedPromise(value);
 }
+
+class IpPromise: public Promise {
+ public:
+  IpPromise(Context* c, int logicalIp):
+    c(c),
+    logicalIp(logicalIp)
+  { }
+
+  virtual int64_t value() {
+    if (resolved()) {
+      return reinterpret_cast<intptr_t>
+        (c->machineCode + machineOffset(c, logicalIp));
+    }
+
+    abort(c);
+  }
+
+  virtual bool resolved() {
+    return c->machineCode != 0
+      and c->logicalCode[logicalIp]->machineOffset->resolved();
+  }
+
+  Context* c;
+  int logicalIp;
+};
+
+Promise* ipPromise(Context* c, int logicalIp) {
+  return new (c->zone) IpPromise(c, logicalIp);
+}
+
+
+class PoolPromise: public Promise {
+ public:
+  PoolPromise(Context* c, int key): c(c), key(key) { }
+
+  virtual int64_t value() {
+    if (resolved()) {
+      return reinterpret_cast<int64_t>
+        (c->machineCode + vm::pad(c->machineCodeSize, vm::TargetBytesPerWord)
+         + (key * vm::TargetBytesPerWord));
+    }
+    
+    abort(c);
+  }
+
+  virtual bool resolved() {
+    return c->machineCode != 0;
+  }
+
+  Context* c;
+  int key;
+};
+
+Promise* poolPromise(Context* c, int key) {
+  return new(c->zone) PoolPromise(c, key);
+}
+
 
 } // namespace compiler
 } // namespace codegen

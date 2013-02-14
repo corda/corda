@@ -962,6 +962,7 @@ ifeq ($(process),compile)
 		$(src)/codegen/compiler/event.cpp \
 		$(src)/codegen/compiler/promise.cpp \
 		$(src)/codegen/compiler/frame.cpp \
+		$(src)/codegen/compiler/ir.cpp \
 		$(src)/codegen/registers.cpp \
 		$(src)/codegen/targets.cpp
 

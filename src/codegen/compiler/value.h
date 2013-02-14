@@ -60,6 +60,7 @@ class Value: public Compiler::Operand {
 
   bool uniqueSite(Context* c, Site* s);
 
+  void clearSites(Context* c);
 
 #ifndef NDEBUG
   bool hasBuddy(Context* c, Value* b);
