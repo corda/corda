@@ -1595,29 +1595,6 @@ register_(Context* c, int number)
   return value(c, type, s, s);
 }
 
-class OperationEvent: public Event {
- public:
-  OperationEvent(Context* c, lir::Operation op):
-    Event(c), op(op)
-  { }
-
-  virtual const char* name() {
-    return "OperationEvent";
-  }
-
-  virtual void compile(Context* c) {
-    c->assembler->apply(op);
-  }
-
-  lir::Operation op;
-};
-
-void
-appendOperation(Context* c, lir::Operation op)
-{
-  append(c, new(c->zone) OperationEvent(c, op));
-}
-
 void
 moveIfConflict(Context* c, Value* v, MemorySite* s)
 {
