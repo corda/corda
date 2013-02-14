@@ -1272,16 +1272,7 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
 }
 
 ConstantSite*
-findConstantSite(Context* c, Value* v)
-{
-  for (SiteIterator it(c, v); it.hasMore();) {
-    Site* s = it.next();
-    if (s->type(c) == lir::ConstantOperand) {
-      return static_cast<ConstantSite*>(s);
-    }
-  }
-  return 0;
-}
+findConstantSite(Context* c, Value* v);
 
 Site*
 getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask);
@@ -1593,102 +1584,6 @@ register_(Context* c, int number)
     ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
-}
-
-void
-moveIfConflict(Context* c, Value* v, MemorySite* s)
-{
-  if (v->reads) {
-    SiteMask mask(1 << lir::RegisterOperand, ~0, AnyFrameIndex);
-    v->reads->intersect(&mask);
-    if (s->conflicts(mask)) {
-      maybeMove(c, v->reads, true, false);
-      v->removeSite(c, s);
-    }
-  }
-}
-
-class MemoryEvent: public Event {
- public:
-  MemoryEvent(Context* c, Value* base, int displacement, Value* index,
-              unsigned scale, Value* result):
-    Event(c), base(base), displacement(displacement), index(index),
-    scale(scale), result(result)
-  {
-    this->addRead(c, base, generalRegisterMask(c));
-    if (index) {
-      this->addRead(c, index, generalRegisterOrConstantMask(c));
-    }
-  }
-
-  virtual const char* name() {
-    return "MemoryEvent";
-  }
-
-  virtual void compile(Context* c) {
-    int indexRegister;
-    int displacement = this->displacement;
-    unsigned scale = this->scale;
-    if (index) {
-      ConstantSite* constant = findConstantSite(c, index);
-
-      if (constant) {
-        indexRegister = lir::NoRegister;
-        displacement += (constant->value->value() * scale);
-        scale = 1;
-      } else {
-        assert(c, index->source->type(c) == lir::RegisterOperand);
-        indexRegister = static_cast<RegisterSite*>(index->source)->number;
-      }
-    } else {
-      indexRegister = lir::NoRegister;
-    }
-    assert(c, base->source->type(c) == lir::RegisterOperand);
-    int baseRegister = static_cast<RegisterSite*>(base->source)->number;
-
-    popRead(c, this, base);
-    if (index) {
-      if (TargetBytesPerWord == 8 and indexRegister != lir::NoRegister) {
-        apply(c, lir::Move, 4, index->source, index->source,
-              8, index->source, index->source);
-      }
-
-      popRead(c, this, index);
-    }
-
-    MemorySite* site = memorySite
-      (c, baseRegister, displacement, indexRegister, scale);
-
-    MemorySite* low;
-    if (result->nextWord != result) {
-      MemorySite* high = static_cast<MemorySite*>(site->copyHigh(c));
-      low = static_cast<MemorySite*>(site->copyLow(c));
-
-      result->nextWord->target = high;
-      result->nextWord->addSite(c, high);
-      moveIfConflict(c, result->nextWord, high);
-    } else {
-      low = site;
-    }
-
-    result->target = low;
-    result->addSite(c, low);
-    moveIfConflict(c, result, low);
-  }
-
-  Value* base;
-  int displacement;
-  Value* index;
-  unsigned scale;
-  Value* result;
-};
-
-void
-appendMemory(Context* c, Value* base, int displacement, Value* index,
-             unsigned scale, Value* result)
-{
-  append(c, new(c->zone)
-         MemoryEvent(c, base, displacement, index, scale, result));
 }
 
 double

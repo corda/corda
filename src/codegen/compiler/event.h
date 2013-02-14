@@ -135,6 +135,10 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
 void
 appendOperation(Context* c, lir::Operation op);
 
+void
+appendMemory(Context* c, Value* base, int displacement, Value* index,
+             unsigned scale, Value* result);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian
