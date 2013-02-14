@@ -26,7 +26,6 @@ RegisterAllocator::RegisterAllocator(Aborter* a, const RegisterFile* registerFil
 { }
 
 
-bool uniqueSite(Context* c, Value* v, Site* s);
 unsigned totalFrameSize(Context* c);
 Read* live(Context* c UNUSED, Value* v);
 
@@ -45,7 +44,7 @@ resourceCost(Context* c, Value* v, Resource* r, SiteMask mask,
       
       if (v and r->value->isBuddyOf(v)) {
         return baseCost;
-      } else if (uniqueSite(c, r->value, r->site)) {
+      } else if (r->value->uniqueSite(c, r->site)) {
         return baseCost + Target::StealUniquePenalty;
       } else {
         return baseCost = Target::StealPenalty;

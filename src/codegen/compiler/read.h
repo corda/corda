@@ -43,6 +43,10 @@ class Read {
   Read* eventNext;
 };
 
+inline bool valid(Read* r) {
+  return r and r->valid();
+}
+
 class SingleRead: public Read {
  public:
   SingleRead(const SiteMask& mask, Value* successor);

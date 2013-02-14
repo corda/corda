@@ -57,6 +57,14 @@ class Value: public Compiler::Operand {
   void removeSite(Context* c, Site* s);
 
   bool hasSite(Context* c);
+
+  bool uniqueSite(Context* c, Site* s);
+
+
+#ifndef NDEBUG
+  bool hasBuddy(Context* c, Value* b);
+#endif // not NDEBUG
+
 };
 
 

@@ -332,31 +332,6 @@ frameIndex(Context* c, FrameIterator::Element* element)
   return frameIndex(c, element->localIndex);
 }
 
-bool
-uniqueSite(Context* c, Value* v, Site* s)
-{
-  SiteIterator it(c, v);
-  Site* p UNUSED = it.next();
-  if (it.hasMore()) {
-    // the site is not this word's only site, but if the site is
-    // shared with the next word, it may be that word's only site
-    if (v->nextWord != v and s->registerSize(c) > TargetBytesPerWord) {
-      SiteIterator nit(c, v->nextWord);
-      Site* p = nit.next();
-      if (nit.hasMore()) {
-        return false;
-      } else {
-        return p == s;
-      }
-    } else {
-      return false;
-    }    
-  } else {
-    assert(c, p == s);
-    return true;
-  }
-}
-
 void
 clearSites(Context* c, Value* v)
 {
@@ -369,39 +344,10 @@ clearSites(Context* c, Value* v)
   }
 }
 
-bool
-valid(Read* r)
-{
-  return r and r->valid();
-}
-
-#ifndef NDEBUG
-
-bool
-hasBuddy(Context* c, Value* a, Value* b)
-{
-  if (a == b) {
-    return true;
-  }
-
-  int i = 0;
-  for (Value* p = a->buddy; p != a; p = p->buddy) {
-    if (p == b) {
-      return true;
-    }
-    if (++i > 1000) {
-      abort(c);
-    }
-  }
-  return false;
-}
-
-#endif // not NDEBUG
-
 Read*
 live(Context* c UNUSED, Value* v)
 {
-  assert(c, hasBuddy(c, v->buddy, v));
+  assert(c, v->buddy->hasBuddy(c, v));
 
   Value* p = v;
   do {
@@ -410,21 +356,6 @@ live(Context* c UNUSED, Value* v)
     }
     p = p->buddy;
   } while (p != v);
-
-  return 0;
-}
-
-Read*
-liveNext(Context* c, Value* v)
-{
-  assert(c, hasBuddy(c, v->buddy, v));
-
-  Read* r = v->reads->next(c);
-  if (valid(r)) return r;
-
-  for (Value* p = v->buddy; p != v; p = p->buddy) {
-    if (valid(p->reads)) return p->reads;
-  }
 
   return 0;
 }
@@ -837,7 +768,7 @@ steal(Context* c, Resource* r, Value* thief)
   }
 
   if ((not (thief and thief->isBuddyOf(r->value))
-       and uniqueSite(c, r->value, r->site)))
+       and r->value->uniqueSite(c, r->site)))
   {
     r->site->freeze(c, r->value);
 
@@ -1352,175 +1283,14 @@ findConstantSite(Context* c, Value* v)
   return 0;
 }
 
-void
-preserve(Context* c, Value* v, Read* r, Site* s)
-{
-  s->freeze(c, v);
-
-  maybeMove(c, r, false, true, 0);
-
-  s->thaw(c, v);
-}
-
 Site*
-getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask)
-{
-  Site* s;
-  Value* v;
-  Read* r = liveNext(c, value);
-  if (value->source->match
-      (c, static_cast<const SiteMask&>(resultMask))
-      and (r == 0 or value->source->loneMatch
-           (c, static_cast<const SiteMask&>(resultMask))))
-  {
-    s = value->source;
-    v = value;
-    if (r and uniqueSite(c, v, s)) {
-      preserve(c, v, r, s);
-    }
-  } else {
-    SingleRead r(resultMask, 0);
-    r.value = result;
-    r.successor_ = result;
-    s = pickTargetSite(c, &r, true);
-    v = result;
-    result->addSite(c, s);
-  }
-
-  v->removeSite(c, s);
-
-  s->freeze(c, v);
-
-  return s;
-}
+getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask);
 
 void
-freezeSource(Context* c, unsigned size, Value* v)
-{
-  v->source->freeze(c, v);
-  if (size > TargetBytesPerWord) {
-    v->nextWord->source->freeze(c, v->nextWord);
-  }
-}
+freezeSource(Context* c, unsigned size, Value* v);
 
 void
-thawSource(Context* c, unsigned size, Value* v)
-{
-  v->source->thaw(c, v);
-  if (size > TargetBytesPerWord) {
-    v->nextWord->source->thaw(c, v->nextWord);
-  }
-}
-
-class CombineEvent: public Event {
- public:
-  CombineEvent(Context* c, lir::TernaryOperation type,
-               unsigned firstSize, Value* first,
-               unsigned secondSize, Value* second,
-               unsigned resultSize, Value* result,
-               const SiteMask& firstLowMask,
-               const SiteMask& firstHighMask,
-               const SiteMask& secondLowMask,
-               const SiteMask& secondHighMask):
-    Event(c), type(type), firstSize(firstSize), first(first),
-    secondSize(secondSize), second(second), resultSize(resultSize),
-    result(result)
-  {
-    this->addReads(c, first, firstSize, firstLowMask, firstHighMask);
-
-    if (resultSize > TargetBytesPerWord) {
-      result->grow(c);
-    }
-
-    bool condensed = c->arch->alwaysCondensed(type);
-
-    this->addReads(c, second, secondSize,
-             secondLowMask, condensed ? result : 0,
-             secondHighMask, condensed ? result->nextWord : 0);
-  }
-
-  virtual const char* name() {
-    return "CombineEvent";
-  }
-
-  virtual void compile(Context* c) {
-    assert(c, first->source->type(c) == first->nextWord->source->type(c));
-
-    // if (second->source->type(c) != second->nextWord->source->type(c)) {
-    //   fprintf(stderr, "%p %p %d : %p %p %d\n",
-    //           second, second->source, second->source->type(c),
-    //           second->nextWord, second->nextWord->source,
-    //           second->nextWord->source->type(c));
-    // }
-
-    assert(c, second->source->type(c) == second->nextWord->source->type(c));
-    
-    freezeSource(c, firstSize, first);
-    
-    uint8_t cTypeMask;
-    uint64_t cRegisterMask;
-
-    c->arch->planDestination
-      (type,
-       firstSize,
-       1 << first->source->type(c),
-       (static_cast<uint64_t>(first->nextWord->source->registerMask(c)) << 32)
-       | static_cast<uint64_t>(first->source->registerMask(c)),
-       secondSize,
-       1 << second->source->type(c),
-       (static_cast<uint64_t>(second->nextWord->source->registerMask(c)) << 32)
-       | static_cast<uint64_t>(second->source->registerMask(c)),
-       resultSize,
-       &cTypeMask,
-       &cRegisterMask);
-
-    SiteMask resultLowMask(cTypeMask, cRegisterMask, AnyFrameIndex);
-    SiteMask resultHighMask(cTypeMask, cRegisterMask >> 32, AnyFrameIndex);
-
-    Site* low = getTarget(c, second, result, resultLowMask);
-    unsigned lowSize = low->registerSize(c);
-    Site* high
-      = (resultSize > lowSize
-         ? getTarget(c, second->nextWord, result->nextWord, resultHighMask)
-         : low);
-
-//     fprintf(stderr, "combine %p:%p and %p:%p into %p:%p\n",
-//             first, first->nextWord,
-//             second, second->nextWord,
-//             result, result->nextWord);
-
-    apply(c, type,
-          firstSize, first->source, first->nextWord->source,
-          secondSize, second->source, second->nextWord->source,
-          resultSize, low, high);
-
-    thawSource(c, firstSize, first);
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-
-    low->thaw(c, second);
-    if (resultSize > lowSize) {
-      high->thaw(c, second->nextWord);
-    }
-
-    if (live(c, result)) {
-      result->addSite(c, low);
-      if (resultSize > lowSize and live(c, result->nextWord)) {
-        result->nextWord->addSite(c, high);
-      }
-    }
-  }
-
-  lir::TernaryOperation type;
-  unsigned firstSize;
-  Value* first;
-  unsigned secondSize;
-  Value* second;
-  unsigned resultSize;
-  Value* result;
-};
+thawSource(Context* c, unsigned size, Value* v);
 
 void
 removeBuddy(Context* c, Value* v)
@@ -1823,62 +1593,6 @@ register_(Context* c, int number)
     ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
-}
-
-void
-appendCombine(Context* c, lir::TernaryOperation type,
-              unsigned firstSize, Value* first,
-              unsigned secondSize, Value* second,
-              unsigned resultSize, Value* result)
-{
-  bool thunk;
-  uint8_t firstTypeMask;
-  uint64_t firstRegisterMask;
-  uint8_t secondTypeMask;
-  uint64_t secondRegisterMask;
-
-  c->arch->planSource(type, firstSize, &firstTypeMask, &firstRegisterMask,
-                      secondSize, &secondTypeMask, &secondRegisterMask,
-                      resultSize, &thunk);
-
-  if (thunk) {
-    Stack* oldStack = c->stack;
-
-    bool threadParameter;
-    intptr_t handler = c->client->getThunk
-      (type, firstSize, resultSize, &threadParameter);
-
-    unsigned stackSize = ceilingDivide(secondSize, TargetBytesPerWord)
-      + ceilingDivide(firstSize, TargetBytesPerWord);
-
-    compiler::push(c, ceilingDivide(secondSize, TargetBytesPerWord), second);
-    compiler::push(c, ceilingDivide(firstSize, TargetBytesPerWord), first);
-
-    if (threadParameter) {
-      ++ stackSize;
-
-      compiler::push(c, 1, register_(c, c->arch->thread()));
-    }
-
-    Stack* argumentStack = c->stack;
-    c->stack = oldStack;
-
-    appendCall
-      (c, value(c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result,
-       resultSize, argumentStack, stackSize, 0);
-  } else {
-    append
-      (c, new(c->zone)
-       CombineEvent
-       (c, type,
-        firstSize, first,
-        secondSize, second,
-        resultSize, result,
-        SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
-        SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
-        SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
-        SiteMask(secondTypeMask, secondRegisterMask >> 32, AnyFrameIndex)));
-  }
 }
 
 class TranslateEvent: public Event {

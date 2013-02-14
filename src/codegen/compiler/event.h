@@ -122,6 +122,12 @@ void
 appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
            unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst);
 
+void
+appendCombine(Context* c, lir::TernaryOperation type,
+              unsigned firstSize, Value* first,
+              unsigned secondSize, Value* second,
+              unsigned resultSize, Value* result);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian

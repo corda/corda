@@ -100,6 +100,50 @@ bool Value::hasSite(Context* c) {
   return it.hasMore();
 }
 
+bool Value::uniqueSite(Context* c, Site* s) {
+  SiteIterator it(c, this);
+  Site* p UNUSED = it.next();
+  if (it.hasMore()) {
+    // the site is not this word's only site, but if the site is
+    // shared with the next word, it may be that word's only site
+    if (this->nextWord != this and s->registerSize(c) > vm::TargetBytesPerWord) {
+      SiteIterator nit(c, this->nextWord);
+      Site* p = nit.next();
+      if (nit.hasMore()) {
+        return false;
+      } else {
+        return p == s;
+      }
+    } else {
+      return false;
+    }    
+  } else {
+    assert(c, p == s);
+    return true;
+  }
+}
+
+
+#ifndef NDEBUG
+bool Value::hasBuddy(Context* c, Value* b) {
+  Value* a = this;
+  if (a == b) {
+    return true;
+  }
+
+  int i = 0;
+  for (Value* p = a->buddy; p != a; p = p->buddy) {
+    if (p == b) {
+      return true;
+    }
+    if (++i > 1000) {
+      abort(c);
+    }
+  }
+  return false;
+}
+#endif // not NDEBUG
+
 
 Value* value(Context* c, lir::ValueType type, Site* site, Site* target) {
   return new(c->zone) Value(site, target, type);

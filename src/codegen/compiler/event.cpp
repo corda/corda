@@ -65,9 +65,26 @@ void
 maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
           const SiteMask& dstMask);
+
+Site*
+maybeMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
+          bool includeNextWord, unsigned registerReserveCount = 0);
+
+Site*
+maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
+          unsigned registerReserveCount = 0);
 Site*
 pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
                unsigned index);
+
+void push(Context* c, unsigned footprint, Value* v);
+
+Site*
+pickTargetSite(Context* c, Read* read, bool intersectRead = false,
+               unsigned registerReserveCount = 0,
+               CostCalculator* costCalculator = 0);
+Value*
+register_(Context* c, int number);
 
 Event::Event(Context* c):
   next(0), stackBefore(c->stack), localsBefore(c->locals),
@@ -677,6 +694,242 @@ appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
          (c, type, srcSize, srcSelectSize, src, dstSize, dst,
           SiteMask(srcTypeMask, srcRegisterMask, AnyFrameIndex),
           SiteMask(srcTypeMask, srcRegisterMask >> 32, AnyFrameIndex)));
+}
+
+
+void
+freezeSource(Context* c, unsigned size, Value* v)
+{
+  v->source->freeze(c, v);
+  if (size > vm::TargetBytesPerWord) {
+    v->nextWord->source->freeze(c, v->nextWord);
+  }
+}
+
+void
+thawSource(Context* c, unsigned size, Value* v)
+{
+  v->source->thaw(c, v);
+  if (size > vm::TargetBytesPerWord) {
+    v->nextWord->source->thaw(c, v->nextWord);
+  }
+}
+
+Read* liveNext(Context* c, Value* v) {
+  assert(c, v->buddy->hasBuddy(c, v));
+
+  Read* r = v->reads->next(c);
+  if (valid(r)) return r;
+
+  for (Value* p = v->buddy; p != v; p = p->buddy) {
+    if (valid(p->reads)) return p->reads;
+  }
+
+  return 0;
+}
+
+void preserve(Context* c, Value* v, Read* r, Site* s) {
+  s->freeze(c, v);
+
+  maybeMove(c, r, false, true, 0);
+
+  s->thaw(c, v);
+}
+
+Site* getTarget(Context* c, Value* value, Value* result, const SiteMask& resultMask) {
+  Site* s;
+  Value* v;
+  Read* r = liveNext(c, value);
+  if (value->source->match
+      (c, static_cast<const SiteMask&>(resultMask))
+      and (r == 0 or value->source->loneMatch
+           (c, static_cast<const SiteMask&>(resultMask))))
+  {
+    s = value->source;
+    v = value;
+    if (r and v->uniqueSite(c, s)) {
+      preserve(c, v, r, s);
+    }
+  } else {
+    SingleRead r(resultMask, 0);
+    r.value = result;
+    r.successor_ = result;
+    s = pickTargetSite(c, &r, true);
+    v = result;
+    result->addSite(c, s);
+  }
+
+  v->removeSite(c, s);
+
+  s->freeze(c, v);
+
+  return s;
+}
+
+class CombineEvent: public Event {
+ public:
+  CombineEvent(Context* c, lir::TernaryOperation type,
+               unsigned firstSize, Value* first,
+               unsigned secondSize, Value* second,
+               unsigned resultSize, Value* result,
+               const SiteMask& firstLowMask,
+               const SiteMask& firstHighMask,
+               const SiteMask& secondLowMask,
+               const SiteMask& secondHighMask):
+    Event(c), type(type), firstSize(firstSize), first(first),
+    secondSize(secondSize), second(second), resultSize(resultSize),
+    result(result)
+  {
+    this->addReads(c, first, firstSize, firstLowMask, firstHighMask);
+
+    if (resultSize > vm::TargetBytesPerWord) {
+      result->grow(c);
+    }
+
+    bool condensed = c->arch->alwaysCondensed(type);
+
+    this->addReads(c, second, secondSize,
+             secondLowMask, condensed ? result : 0,
+             secondHighMask, condensed ? result->nextWord : 0);
+  }
+
+  virtual const char* name() {
+    return "CombineEvent";
+  }
+
+  virtual void compile(Context* c) {
+    assert(c, first->source->type(c) == first->nextWord->source->type(c));
+
+    // if (second->source->type(c) != second->nextWord->source->type(c)) {
+    //   fprintf(stderr, "%p %p %d : %p %p %d\n",
+    //           second, second->source, second->source->type(c),
+    //           second->nextWord, second->nextWord->source,
+    //           second->nextWord->source->type(c));
+    // }
+
+    assert(c, second->source->type(c) == second->nextWord->source->type(c));
+    
+    freezeSource(c, firstSize, first);
+    
+    uint8_t cTypeMask;
+    uint64_t cRegisterMask;
+
+    c->arch->planDestination
+      (type,
+       firstSize,
+       1 << first->source->type(c),
+       (static_cast<uint64_t>(first->nextWord->source->registerMask(c)) << 32)
+       | static_cast<uint64_t>(first->source->registerMask(c)),
+       secondSize,
+       1 << second->source->type(c),
+       (static_cast<uint64_t>(second->nextWord->source->registerMask(c)) << 32)
+       | static_cast<uint64_t>(second->source->registerMask(c)),
+       resultSize,
+       &cTypeMask,
+       &cRegisterMask);
+
+    SiteMask resultLowMask(cTypeMask, cRegisterMask, AnyFrameIndex);
+    SiteMask resultHighMask(cTypeMask, cRegisterMask >> 32, AnyFrameIndex);
+
+    Site* low = getTarget(c, second, result, resultLowMask);
+    unsigned lowSize = low->registerSize(c);
+    Site* high
+      = (resultSize > lowSize
+         ? getTarget(c, second->nextWord, result->nextWord, resultHighMask)
+         : low);
+
+//     fprintf(stderr, "combine %p:%p and %p:%p into %p:%p\n",
+//             first, first->nextWord,
+//             second, second->nextWord,
+//             result, result->nextWord);
+
+    apply(c, type,
+          firstSize, first->source, first->nextWord->source,
+          secondSize, second->source, second->nextWord->source,
+          resultSize, low, high);
+
+    thawSource(c, firstSize, first);
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+
+    low->thaw(c, second);
+    if (resultSize > lowSize) {
+      high->thaw(c, second->nextWord);
+    }
+
+    if (live(c, result)) {
+      result->addSite(c, low);
+      if (resultSize > lowSize and live(c, result->nextWord)) {
+        result->nextWord->addSite(c, high);
+      }
+    }
+  }
+
+  lir::TernaryOperation type;
+  unsigned firstSize;
+  Value* first;
+  unsigned secondSize;
+  Value* second;
+  unsigned resultSize;
+  Value* result;
+};
+
+void
+appendCombine(Context* c, lir::TernaryOperation type,
+              unsigned firstSize, Value* first,
+              unsigned secondSize, Value* second,
+              unsigned resultSize, Value* result)
+{
+  bool thunk;
+  uint8_t firstTypeMask;
+  uint64_t firstRegisterMask;
+  uint8_t secondTypeMask;
+  uint64_t secondRegisterMask;
+
+  c->arch->planSource(type, firstSize, &firstTypeMask, &firstRegisterMask,
+                      secondSize, &secondTypeMask, &secondRegisterMask,
+                      resultSize, &thunk);
+
+  if (thunk) {
+    Stack* oldStack = c->stack;
+
+    bool threadParameter;
+    intptr_t handler = c->client->getThunk
+      (type, firstSize, resultSize, &threadParameter);
+
+    unsigned stackSize = vm::ceilingDivide(secondSize, vm::TargetBytesPerWord)
+      + vm::ceilingDivide(firstSize, vm::TargetBytesPerWord);
+
+    compiler::push(c, vm::ceilingDivide(secondSize, vm::TargetBytesPerWord), second);
+    compiler::push(c, vm::ceilingDivide(firstSize, vm::TargetBytesPerWord), first);
+
+    if (threadParameter) {
+      ++ stackSize;
+
+      compiler::push(c, 1, register_(c, c->arch->thread()));
+    }
+
+    Stack* argumentStack = c->stack;
+    c->stack = oldStack;
+
+    appendCall
+      (c, value(c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result,
+       resultSize, argumentStack, stackSize, 0);
+  } else {
+    append
+      (c, new(c->zone)
+       CombineEvent
+       (c, type,
+        firstSize, first,
+        secondSize, second,
+        resultSize, result,
+        SiteMask(firstTypeMask, firstRegisterMask, AnyFrameIndex),
+        SiteMask(firstTypeMask, firstRegisterMask >> 32, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
+        SiteMask(secondTypeMask, secondRegisterMask >> 32, AnyFrameIndex)));
+  }
 }
 
 } // namespace compiler
