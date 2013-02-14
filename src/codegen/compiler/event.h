@@ -139,6 +139,10 @@ void
 appendMemory(Context* c, Value* base, int displacement, Value* index,
              unsigned scale, Value* result);
 
+void
+appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first,
+             Value* second, Value* address);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian
