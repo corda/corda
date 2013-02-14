@@ -198,45 +198,6 @@ Cell<T>* reverseDestroy(Cell<T>* cell) {
   return previous;
 }
 
-class StubReadPair {
- public:
-  Value* value;
-  StubRead* read;
-};
-
-class JunctionState {
- public:
-  JunctionState(unsigned frameFootprint): frameFootprint(frameFootprint) { }
-
-  unsigned frameFootprint;
-  StubReadPair reads[0];
-};
-
-class Link {
- public:
-  Link(Event* predecessor, Link* nextPredecessor, Event* successor,
-       Link* nextSuccessor, ForkState* forkState):
-    predecessor(predecessor), nextPredecessor(nextPredecessor),
-    successor(successor), nextSuccessor(nextSuccessor), forkState(forkState),
-    junctionState(0)
-  { }
-
-  Event* predecessor;
-  Link* nextPredecessor;
-  Event* successor;
-  Link* nextSuccessor;
-  ForkState* forkState;
-  JunctionState* junctionState;
-};
-
-Link*
-link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
-     Link* nextSuccessor, ForkState* forkState)
-{
-  return new(c->zone) Link
-    (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
-}
-
 unsigned
 countPredecessors(Link* link)
 {
@@ -1212,52 +1173,6 @@ saveLocals(Context* c, Event* e)
               (1 << lir::MemoryOperand, 0, compiler::frameIndex(c, li)));
     }
   }
-}
-
-bool
-unreachable(Event* event)
-{
-  for (Link* p = event->predecessors; p; p = p->nextPredecessor) {
-    if (not p->predecessor->allExits()) return false;
-  }
-  return event->predecessors != 0;
-}
-
-class ReturnEvent: public Event {
- public:
-  ReturnEvent(Context* c, unsigned size, Value* value):
-    Event(c), value(value)
-  {
-    if (value) {
-      this->addReads(c, value, size,
-        SiteMask::fixedRegisterMask(c->arch->returnLow()),
-        SiteMask::fixedRegisterMask(c->arch->returnHigh()));
-    }
-  }
-
-  virtual const char* name() {
-    return "ReturnEvent";
-  }
-
-  virtual void compile(Context* c) {
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-    
-    if (not unreachable(this)) {
-      c->assembler->popFrameAndPopArgumentsAndReturn
-        (c->alignedFrameSize,
-         c->arch->argumentFootprint(c->parameterFootprint));
-    }
-  }
-
-  Value* value;
-};
-
-void
-appendReturn(Context* c, unsigned size, Value* value)
-{
-  append(c, new(c->zone) ReturnEvent(c, size, value));
 }
 
 void
@@ -2580,7 +2495,7 @@ class BranchEvent: public Event {
     ConstantSite* firstConstant = findConstantSite(c, first);
     ConstantSite* secondConstant = findConstantSite(c, second);
 
-    if (not unreachable(this)) {
+    if (not this->isUnreachable()) {
       if (firstConstant
           and secondConstant
           and firstConstant->value->resolved()
@@ -2700,7 +2615,7 @@ class JumpEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    if (not unreachable(this)) {
+    if (not this->isUnreachable()) {
       apply(c, type, TargetBytesPerWord, address->source, address->source);
     }
 
@@ -2719,7 +2634,7 @@ class JumpEvent: public Event {
   virtual bool isBranch() { return true; }
 
   virtual bool allExits() {
-    return exit or unreachable(this);
+    return exit or this->isUnreachable();
   }
 
   lir::UnaryOperation type;

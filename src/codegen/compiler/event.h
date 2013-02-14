@@ -20,6 +20,7 @@ class CodePromise;
 class Snapshot;
 class Link;
 class Site;
+class StubRead;
 
 const bool DebugReads = false;
 
@@ -51,9 +52,9 @@ class Event {
   void addReads(Context* c, Value* v, unsigned size,
            const SiteMask& lowMask, const SiteMask& highMask);
 
-
-
   CodePromise* makeCodePromise(Context* c);
+
+  bool isUnreachable();
 
   Event* next;
   Stack* stackBefore;
@@ -72,11 +73,49 @@ class Event {
   unsigned readCount;
 };
 
+class StubReadPair {
+ public:
+  Value* value;
+  StubRead* read;
+};
+
+class JunctionState {
+ public:
+  JunctionState(unsigned frameFootprint): frameFootprint(frameFootprint) { }
+
+  unsigned frameFootprint;
+  StubReadPair reads[0];
+};
+
+class Link {
+ public:
+  Link(Event* predecessor, Link* nextPredecessor, Event* successor,
+       Link* nextSuccessor, ForkState* forkState):
+    predecessor(predecessor), nextPredecessor(nextPredecessor),
+    successor(successor), nextSuccessor(nextSuccessor), forkState(forkState),
+    junctionState(0)
+  { }
+
+  Event* predecessor;
+  Link* nextPredecessor;
+  Event* successor;
+  Link* nextSuccessor;
+  ForkState* forkState;
+  JunctionState* junctionState;
+};
+
+Link*
+link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
+     Link* nextSuccessor, ForkState* forkState);
+
 void
 appendCall(Context* c, Value* address, unsigned flags,
            TraceHandler* traceHandler, Value* result, unsigned resultSize,
            Stack* argumentStack, unsigned argumentCount,
            unsigned stackArgumentFootprint);
+
+void
+appendReturn(Context* c, unsigned size, Value* value);
 
 } // namespace compiler
 } // namespace codegen

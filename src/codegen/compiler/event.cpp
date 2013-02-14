@@ -59,6 +59,8 @@ void clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
 
 Read* live(Context* c UNUSED, Value* v);
 
+void popRead(Context* c, Event* e UNUSED, Value* v);
+
 Event::Event(Context* c):
   next(0), stackBefore(c->stack), localsBefore(c->locals),
   stackAfter(0), localsAfter(0), promises(0), reads(0),
@@ -117,6 +119,20 @@ void Event::addReads(Context* c, Value* v, unsigned size,
 
 CodePromise* Event::makeCodePromise(Context* c) {
   return this->promises = new(c->zone) CodePromise(c, this->promises);
+}
+
+bool Event::isUnreachable() {
+  for (Link* p = this->predecessors; p; p = p->nextPredecessor) {
+    if (not p->predecessor->allExits()) return false;
+  }
+  return this->predecessors != 0;
+}
+
+Link* link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
+     Link* nextSuccessor, ForkState* forkState)
+{
+  return new(c->zone) Link
+    (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
 }
 
 
@@ -439,6 +455,42 @@ appendCall(Context* c, Value* address, unsigned flags,
          CallEvent(c, address, flags, traceHandler, result,
                    resultSize, argumentStack, argumentCount,
                    stackArgumentFootprint));
+}
+
+
+class ReturnEvent: public Event {
+ public:
+  ReturnEvent(Context* c, unsigned size, Value* value):
+    Event(c), value(value)
+  {
+    if (value) {
+      this->addReads(c, value, size,
+        SiteMask::fixedRegisterMask(c->arch->returnLow()),
+        SiteMask::fixedRegisterMask(c->arch->returnHigh()));
+    }
+  }
+
+  virtual const char* name() {
+    return "ReturnEvent";
+  }
+
+  virtual void compile(Context* c) {
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+    
+    if (not this->isUnreachable()) {
+      c->assembler->popFrameAndPopArgumentsAndReturn
+        (c->alignedFrameSize,
+         c->arch->argumentFootprint(c->parameterFootprint));
+    }
+  }
+
+  Value* value;
+};
+
+void appendReturn(Context* c, unsigned size, Value* value) {
+  append(c, new(c->zone) ReturnEvent(c, size, value));
 }
 
 } // namespace compiler
