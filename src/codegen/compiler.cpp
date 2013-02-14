@@ -22,8 +22,8 @@
 #include "codegen/compiler/site.h"
 #include "codegen/compiler/read.h"
 #include "codegen/compiler/event.h"
-#include "codegen/compiler/stack.h"
 #include "codegen/compiler/promise.h"
+#include "codegen/compiler/frame.h"
 
 using namespace vm;
 
@@ -66,11 +66,6 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High);
-
-class Local {
- public:
-  Value* value;
-};
 
 class ForkElement {
  public:
@@ -218,118 +213,6 @@ countSuccessors(Link* link)
   unsigned c = 0;
   for (; link; link = link->nextSuccessor) ++ c;
   return c;
-}
-
-unsigned
-totalFrameSize(Context* c)
-{
-  return c->alignedFrameSize
-    + c->arch->frameHeaderSize()
-    + c->arch->argumentFootprint(c->parameterFootprint);
-}
-
-int
-frameIndex(Context* c, int localIndex)
-{
-  assert(c, localIndex >= 0);
-
-  int index = c->alignedFrameSize + c->parameterFootprint - localIndex - 1;
-
-  if (localIndex < static_cast<int>(c->parameterFootprint)) {
-    index += c->arch->frameHeaderSize();
-  } else {
-    index -= c->arch->frameFooterSize();
-  }
-
-  assert(c, index >= 0);
-  assert(c, static_cast<unsigned>(index) < totalFrameSize(c));
-
-  return index;
-}
-
-unsigned
-frameIndexToOffset(Context* c, unsigned frameIndex)
-{
-  assert(c, frameIndex < totalFrameSize(c));
-
-  return (frameIndex + c->arch->frameFooterSize()) * TargetBytesPerWord;
-}
-
-unsigned
-offsetToFrameIndex(Context* c, unsigned offset)
-{
-  assert(c, static_cast<int>
-         ((offset / TargetBytesPerWord) - c->arch->frameFooterSize()) >= 0);
-  assert(c, ((offset / TargetBytesPerWord) - c->arch->frameFooterSize())
-         < totalFrameSize(c));
-
-  return (offset / TargetBytesPerWord) - c->arch->frameFooterSize();
-}
-
-unsigned
-frameBase(Context* c)
-{
-  return c->alignedFrameSize
-    - c->arch->frameReturnAddressSize()
-    - c->arch->frameFooterSize()
-    + c->arch->frameHeaderSize();
-}
-
-class FrameIterator {
- public:
-  class Element {
-   public:
-    Element(Value* value, unsigned localIndex):
-      value(value), localIndex(localIndex)
-    { }
-
-    Value* const value;
-    const unsigned localIndex;
-  };
-
-  FrameIterator(Context* c, Stack* stack, Local* locals,
-                bool includeEmpty = false):
-    stack(stack), locals(locals), localIndex(c->localFootprint - 1),
-    includeEmpty(includeEmpty)
-  { }
-
-  bool hasMore() {
-    if (not includeEmpty) {
-      while (stack and stack->value == 0) stack = stack->next;
-
-      while (localIndex >= 0 and locals[localIndex].value == 0) -- localIndex;
-    }
-
-    return stack != 0 or localIndex >= 0;
-  }
-
-  Element next(Context* c) {
-    Value* v;
-    unsigned li;
-    if (stack) {
-      Stack* s = stack;
-      v = s->value;
-      li = s->index + c->localFootprint;
-      stack = stack->next;
-    } else {
-      Local* l = locals + localIndex;
-      v = l->value;
-      li = localIndex;
-      -- localIndex;
-    }
-    return Element(v, li);
-  }
-
-  Stack* stack;
-  Local* locals;
-  int localIndex;
-  bool includeEmpty;
-};
-
-int
-frameIndex(Context* c, FrameIterator::Element* element)
-{
-  return frameIndex(c, element->localIndex);
 }
 
 void
@@ -1022,44 +905,6 @@ apply(Context* c, lir::TernaryOperation op,
 }
 
 void
-clean(Context* c, Value* v, unsigned popIndex)
-{
-  for (SiteIterator it(c, v); it.hasMore();) {
-    Site* s = it.next();
-    if (not (s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex))
-             and offsetToFrameIndex
-             (c, static_cast<MemorySite*>(s)->offset)
-             >= popIndex))
-    {
-      if (false and
-          s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)))
-      {
-        char buffer[256]; s->toString(c, buffer, 256);
-        fprintf(stderr, "remove %s from %p at %d pop offset 0x%x\n",
-                buffer, v, offsetToFrameIndex
-                (c, static_cast<MemorySite*>(s)->offset),
-                frameIndexToOffset(c, popIndex));
-      }
-      it.remove(c);
-    }
-  }
-}
-
-void
-clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
-      unsigned popIndex)
-{
-  for (FrameIterator it(c, stack, locals); it.hasMore();) {
-    FrameIterator::Element e = it.next(c);
-    clean(c, e.value, popIndex);
-  }
-
-  for (Read* r = reads; r; r = r->eventNext) {
-    popRead(c, e, r->value);
-  }
-}
-
-void
 append(Context* c, Event* e);
 
 void
@@ -1366,12 +1211,6 @@ makeSnapshots(Context* c, Value* value, Snapshot* next)
   return next;
 }
 
-Stack*
-stack(Context* c, Value* value, Stack* next)
-{
-  return new(c->zone) Stack(next ? next->index + 1 : 0, value, next);
-}
-
 Value*
 maybeBuddy(Context* c, Value* v);
 
@@ -1584,63 +1423,6 @@ register_(Context* c, int number)
     ? lir::ValueFloat: lir::ValueGeneral;
 
   return value(c, type, s, s);
-}
-
-class JumpEvent: public Event {
- public:
-  JumpEvent(Context* c, lir::UnaryOperation type, Value* address, bool exit,
-            bool cleanLocals):
-    Event(c), type(type), address(address), exit(exit),
-    cleanLocals(cleanLocals)
-  {
-    bool thunk;
-    uint8_t typeMask;
-    uint64_t registerMask;
-    c->arch->plan(type, TargetBytesPerWord, &typeMask, &registerMask, &thunk);
-
-    assert(c, not thunk);
-
-    this->addRead(c, address, SiteMask(typeMask, registerMask, AnyFrameIndex));
-  }
-
-  virtual const char* name() {
-    return "JumpEvent";
-  }
-
-  virtual void compile(Context* c) {
-    if (not this->isUnreachable()) {
-      apply(c, type, TargetBytesPerWord, address->source, address->source);
-    }
-
-    for (Read* r = reads; r; r = r->eventNext) {
-      popRead(c, this, r->value);
-    }
-
-    if (cleanLocals) {
-      for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
-        FrameIterator::Element e = it.next(c);
-        clean(c, e.value, 0);
-      }
-    }
-  }
-
-  virtual bool isBranch() { return true; }
-
-  virtual bool allExits() {
-    return exit or this->isUnreachable();
-  }
-
-  lir::UnaryOperation type;
-  Value* address;
-  bool exit;
-  bool cleanLocals;
-};
-
-void
-appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit = false,
-           bool cleanLocals = false)
-{
-  append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
 }
 
 class BoundsCheckEvent: public Event {
@@ -2053,7 +1835,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
           char buffer[256];
           s->toString(c, buffer, 256);
           fprintf(stderr, "resolve original %s for %p local %d frame %d\n",
-                  buffer, v, el.localIndex, frameIndex(c, &el));
+                  buffer, v, el.localIndex, el.frameIndex(c));
         }
 
         Site* target = pickSiteOrMove
@@ -2068,7 +1850,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
         char buffer[256];
         s->toString(c, buffer, 256);
         fprintf(stderr, "freeze original %s for %p local %d frame %d\n",
-                buffer, v, el.localIndex, frameIndex(c, &el));
+                buffer, v, el.localIndex, el.frameIndex(c));
       }
       
       Value dummy(0, 0, lir::ValueGeneral);
@@ -2101,7 +1883,7 @@ resolveSourceSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
         if (DebugControl) {
           char buffer[256]; s->toString(c, buffer, 256);
           fprintf(stderr, "resolve source %s from %p local %d frame %d\n",
-                  buffer, v, el.localIndex, frameIndex(c, &el));
+                  buffer, v, el.localIndex, el.frameIndex(c));
         }
 
         freeze(c, frozen, s, v);
@@ -2142,7 +1924,7 @@ resolveTargetSites(Context* c, Event* e, SiteRecordList* frozen, Site** sites)
       if (DebugControl) {
         char buffer[256]; sites[el.localIndex]->toString(c, buffer, 256);
         fprintf(stderr, "resolve target %s for %p local %d frame %d\n",
-                buffer, el.value, el.localIndex, frameIndex(c, &el));
+                buffer, el.value, el.localIndex, el.frameIndex(c));
       }
     }
   }
@@ -2258,11 +2040,11 @@ setSites(Context* c, Event* e, Site** sites)
       } else if (DebugControl) {
         char buffer[256]; sitesToString(c, sites[el.localIndex], buffer, 256);
         fprintf(stderr, "skip sites %s for %p local %d frame %d\n",
-                buffer, el.value, el.localIndex, frameIndex(c, &el));
+                buffer, el.value, el.localIndex, el.frameIndex(c));
       }
     } else if (DebugControl) {
       fprintf(stderr, "no sites for %p local %d frame %d\n",
-              el.value, el.localIndex, frameIndex(c, &el));
+              el.value, el.localIndex, el.frameIndex(c));
     }
   }
 }

@@ -13,20 +13,15 @@
 
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/event.h"
-#include "codegen/compiler/stack.h"
 #include "codegen/compiler/site.h"
 #include "codegen/compiler/read.h"
 #include "codegen/compiler/value.h"
 #include "codegen/compiler/promise.h"
+#include "codegen/compiler/frame.h"
 
 namespace avian {
 namespace codegen {
 namespace compiler {
-
-
-unsigned frameBase(Context* c);
-unsigned totalFrameSize(Context* c);
-int frameIndex(Context* c, int localIndex);
 
 SiteMask generalRegisterMask(Context* c);
 SiteMask generalRegisterOrConstantMask(Context* c);
@@ -1407,6 +1402,96 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
         SiteMask(secondTypeMask, secondRegisterMask, AnyFrameIndex),
         SiteMask(secondTypeMask, secondRegisterMask >> 32, AnyFrameIndex)));
   }
+}
+
+void clean(Context* c, Value* v, unsigned popIndex) {
+  for (SiteIterator it(c, v); it.hasMore();) {
+    Site* s = it.next();
+    if (not (s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex))
+             and offsetToFrameIndex
+             (c, static_cast<MemorySite*>(s)->offset)
+             >= popIndex))
+    {
+      if (false and
+          s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)))
+      {
+        char buffer[256]; s->toString(c, buffer, 256);
+        fprintf(stderr, "remove %s from %p at %d pop offset 0x%x\n",
+                buffer, v, offsetToFrameIndex
+                (c, static_cast<MemorySite*>(s)->offset),
+                frameIndexToOffset(c, popIndex));
+      }
+      it.remove(c);
+    }
+  }
+}
+
+void
+clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
+      unsigned popIndex)
+{
+  for (FrameIterator it(c, stack, locals); it.hasMore();) {
+    FrameIterator::Element e = it.next(c);
+    clean(c, e.value, popIndex);
+  }
+
+  for (Read* r = reads; r; r = r->eventNext) {
+    popRead(c, e, r->value);
+  }
+}
+
+class JumpEvent: public Event {
+ public:
+  JumpEvent(Context* c, lir::UnaryOperation type, Value* address, bool exit,
+            bool cleanLocals):
+    Event(c), type(type), address(address), exit(exit),
+    cleanLocals(cleanLocals)
+  {
+    bool thunk;
+    uint8_t typeMask;
+    uint64_t registerMask;
+    c->arch->plan(type, vm::TargetBytesPerWord, &typeMask, &registerMask, &thunk);
+
+    assert(c, not thunk);
+
+    this->addRead(c, address, SiteMask(typeMask, registerMask, AnyFrameIndex));
+  }
+
+  virtual const char* name() {
+    return "JumpEvent";
+  }
+
+  virtual void compile(Context* c) {
+    if (not this->isUnreachable()) {
+      apply(c, type, vm::TargetBytesPerWord, address->source, address->source);
+    }
+
+    for (Read* r = reads; r; r = r->eventNext) {
+      popRead(c, this, r->value);
+    }
+
+    if (cleanLocals) {
+      for (FrameIterator it(c, 0, c->locals); it.hasMore();) {
+        FrameIterator::Element e = it.next(c);
+        clean(c, e.value, 0);
+      }
+    }
+  }
+
+  virtual bool isBranch() { return true; }
+
+  virtual bool allExits() {
+    return exit or this->isUnreachable();
+  }
+
+  lir::UnaryOperation type;
+  Value* address;
+  bool exit;
+  bool cleanLocals;
+};
+
+void appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit, bool cleanLocals) {
+  append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
 }
 
 } // namespace compiler

@@ -143,6 +143,10 @@ void
 appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first,
              Value* second, Value* address);
 
+void
+appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit = false,
+           bool cleanLocals = false);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian
