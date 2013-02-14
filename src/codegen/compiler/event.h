@@ -128,6 +128,10 @@ appendCombine(Context* c, lir::TernaryOperation type,
               unsigned secondSize, Value* second,
               unsigned resultSize, Value* result);
 
+void
+appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
+                Value* first, unsigned resultSize, Value* result);
+
 } // namespace compiler
 } // namespace codegen
 } // namespace avian
