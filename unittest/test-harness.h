@@ -27,12 +27,20 @@ private:
     fprintf(stderr, "%s", value ? "true" : "false");
   }
 
+  void print(uint8_t value) {
+    fprintf(stderr, "0x%02x", value);
+  }
+
+  void print(uint64_t value) {
+    fprintf(stderr, "0x%" LLD, value);
+  }
+
   int failures;
   int runs;
 
 protected:
   template<class T>
-  void assertEquals(T expected, T actual) {
+  void assertEqual(T expected, T actual) {
     if(expected != actual) {
       fprintf(stderr, "assertion failure, expected: ");
       print(expected);
@@ -43,9 +51,26 @@ protected:
     }
     runs++;
   }
+  
+  template<class T>
+  void assertNotEqual(T expected, T actual) {
+    if(expected == actual) {
+      fprintf(stderr, "assertion failure, expected: not ");
+      print(expected);
+      fprintf(stderr, ", actual: ");
+      print(actual);
+      fprintf(stderr, "\n");
+      failures++;
+    }
+    runs++;
+  }
 
   void assertTrue(bool value) {
-    assertEquals(true, value);
+    assertEqual(true, value);
+  }
+
+  void assertFalse(bool value) {
+    assertEqual(false, value);
   }
 
 public:

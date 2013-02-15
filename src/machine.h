@@ -13,7 +13,7 @@
 
 #include "common.h"
 #include "system.h"
-#include "heap.h"
+#include "heap/heap.h"
 #include "finder.h"
 #include "processor.h"
 #include "constants.h"

@@ -13,7 +13,7 @@
 
 #include "common.h"
 #include "system.h"
-#include "heap.h"
+#include "heap/heap.h"
 #include "bootimage.h"
 #include "heapwalk.h"
 #include "zone.h"

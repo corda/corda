@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "heap.h"
+#include "heap/heap.h"
 #include "heapwalk.h"
 #include "common.h"
 #include "machine.h"

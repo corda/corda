@@ -936,7 +936,7 @@ vm-sources = \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
-	$(src)/heap.cpp \
+	$(src)/heap/heap.cpp \
 	$(src)/$(process).cpp \
 	$(src)/classpath-$(classpath).cpp \
 	$(src)/builtin.cpp \

@@ -11,27 +11,86 @@
 #include <stdio.h>
 
 #include "common.h"
+#include "heap/heap.h"
+#include "system.h"
+#include "target.h"
+
 #include "codegen/assembler.h"
 #include "codegen/targets.h"
+#include "codegen/lir.h"
 
 #include "test-harness.h"
-
-#include "system.h"
 
 
 using namespace avian::codegen;
 using namespace vm;
 
-class BasicAssemblerTest : public Test {
+class BasicEnv {
 public:
-  BasicAssemblerTest():
-    Test("BasicAssemblerTest")
-  {}
+  System* s;
+  Heap* heap;
+  Assembler::Architecture* arch;
 
-  virtual void run() {
-    System* s = makeSystem(0);
-    Assembler::Architecture* arch = makeArchitectureNative(s, true);
+  BasicEnv():
+    s(makeSystem(0)),
+    heap(makeHeap(s, 32 * 1024)),
+    arch(makeArchitectureNative(s, true))
+  {
+    arch->acquire();
+  }
+
+  ~BasicEnv() {
     arch->release();
     s->dispose();
   }
+};
+
+class Asm {
+public:
+  Zone zone;
+  Assembler* a;
+
+  Asm(BasicEnv& env):
+    zone(env.s, env.heap, 8192),
+    a(env.arch->makeAssembler(env.heap, &zone))
+  { }
+
+  ~Asm() {
+    a->dispose();
+  }
+};
+
+
+class BasicAssemblerTest : public Test {
+public:
+  BasicAssemblerTest():
+    Test("BasicAssembler")
+  {}
+
+  virtual void run() {
+    BasicEnv env;
+    Asm a(env);
+  }
 } basicAssemblerTest;
+
+class ArchitecturePlanTest : public Test {
+public:
+  ArchitecturePlanTest():
+    Test("ArchitecturePlan")
+  {}
+
+  virtual void run() {
+    BasicEnv env;
+
+    for(int op = (int)lir::Call; op < (int)lir::AlignedJump; op++) {
+      bool thunk;
+      uint8_t typeMask;
+      uint64_t registerMask;
+      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, &typeMask, &registerMask, &thunk);
+      assertFalse(thunk);
+      assertNotEqual(static_cast<uint8_t>(0), typeMask);
+      assertNotEqual(static_cast<uint64_t>(0), registerMask);
+    }
+
+  }
+} architecturePlanTest;
