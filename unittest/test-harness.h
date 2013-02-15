@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef ARCH_H
-#define ARCH_H
+#ifndef TEST_HARNESS_H
+#define TEST_HARNESS_H
 
 class Test {
 private:
@@ -19,20 +19,22 @@ private:
 
   friend int main(int argc, char** argv);
 
-  void print(uintptr_t value) {
+
+  void print(uint64_t value) {
     fprintf(stderr, "%p", reinterpret_cast<void*>(value));
+  }
+
+  void print(uint32_t value) {
+    fprintf(stderr, "%p", reinterpret_cast<void*>(value));
+  }
+  
+
+  void print(uint8_t value) {
+    print(static_cast<uint32_t>(value));
   }
 
   void print(bool value) {
     fprintf(stderr, "%s", value ? "true" : "false");
-  }
-
-  void print(uint8_t value) {
-    fprintf(stderr, "0x%02x", value);
-  }
-
-  void print(uint64_t value) {
-    fprintf(stderr, "0x%" LLD, value);
   }
 
   int failures;
@@ -82,4 +84,4 @@ public:
   static bool runAll();
 };
 
-#endif
+#endif // TEST_HARNESS_H
