@@ -266,8 +266,13 @@ asm-output = -o $(1)
 asm-input = -c $(1)
 asm-format = S
 as = $(cc)
-ld = $(cxx)
+ld = $(cc)
 build-ld = $(build-cc)
+
+remote-test-host = localhost
+remote-test-port = 22
+remote-test-user = ${USER}
+remote-test-dir = /tmp/avian-test-${USER}
 
 static = -static
 shared = -shared
@@ -1251,11 +1256,14 @@ vg: build
 	$(library-path) $(vg) $(test-executable) $(test-args)
 
 .PHONY: test
-test: build
-	$(library-path) /bin/sh $(test)/test.sh 2>/dev/null \
-		$(test-executable) $(mode) "$(test-flags)" \
-		$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \
-		$(continuation-tests) $(tail-tests)
+test: build $(build)/run-tests.sh $(build)/test.sh
+ifneq ($(remote-test),true)
+	/bin/sh $(build)/run-tests.sh
+else
+	@echo "testing remotely..." $(arch) $(target-arch)
+	rsync $(build) -rav --exclude '*.o' --rsh="ssh -p$(remote-test-port)" $(remote-test-user)@$(remote-test-host):$(remote-test-dir)
+	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
+endif
 
 .PHONY: tarball
 tarball:
@@ -1285,6 +1293,16 @@ clean:
 ifeq ($(continuations),true)
 $(build)/compile-x86-asm.o: $(src)/continuations-x86.$(asm-format)
 endif
+
+$(build)/run-tests.sh: $(test-classes) makefile
+	echo 'cd $$(dirname $$0)' > $(@)
+	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=$$(pwd) -cp test\" log.txt \\" >> $(@)
+	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
+	echo "$(continuation-tests) $(tail-tests)" >> $(@)
+
+$(build)/test.sh: $(test)/test.sh
+	cp $(<) $(@)
 
 gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)

@@ -1,13 +1,16 @@
 #!/bin/sh
 
-log=build/log.txt
 vg="nice valgrind --leak-check=full --num-callers=32 \
 --freelist-vol=100000000 --error-exitcode=1"
 
+ld_path=${1}; shift
 vm=${1}; shift
 mode=${1}; shift
 flags=${1}; shift
+log=${1}; shift
 tests=${@}
+
+export ${ld_path}
 
 echo -n "" >${log}
 
