@@ -64,6 +64,7 @@ test-build = $(build)/test
 src = src
 classpath-src = classpath
 test = test
+unittest = unittest
 win32 ?= $(root)/win32
 win64 ?= $(root)/win64
 winrt ?= $(root)/winrt
@@ -997,6 +998,8 @@ heapwalk-sources = $(src)/heapwalk.cpp
 heapwalk-objects = \
 	$(call cpp-objects,$(heapwalk-sources),$(src),$(build))
 
+unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest/)
+
 ifeq ($(heapdump),true)
 	vm-sources += $(src)/heapdump.cpp
 	vm-heapwalk-objects = $(heapwalk-objects)
@@ -1124,6 +1127,8 @@ executable = $(build)/$(name)${exe-suffix}
 dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
+unittest-executable = $(build)/$(name)-unittest${exe-suffix}
+
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
 # working build, but we include them since our Subroutine test uses
@@ -1180,6 +1185,13 @@ test-extra-sources = $(wildcard $(test)/extra/*.java)
 test-extra-classes = \
 	$(call java-classes,$(test-extra-sources),$(test),$(test-build))
 test-extra-dep = $(test-build)-extra.dep
+
+unittest-sources = \
+	$(wildcard $(unittest)/*.cpp) \
+	$(wildcard $(unittest)/codegen/*.cpp)
+
+unittest-depends = \
+	$(wildcard $(unittest)/*.h)
 
 ifeq ($(continuations),true)
 	continuation-tests = \
@@ -1256,11 +1268,11 @@ vg: build
 	$(library-path) $(vg) $(test-executable) $(test-args)
 
 .PHONY: test
-test: build $(build)/run-tests.sh $(build)/test.sh
+test: build $(build)/run-tests.sh $(build)/test.sh $(unittest-executable)
 ifneq ($(remote-test),true)
 	/bin/sh $(build)/run-tests.sh
 else
-	@echo "testing remotely..." $(arch) $(target-arch)
+	@echo "testing remotely..."
 	rsync $(build) -rav --exclude '*.o' --rsh="ssh -p$(remote-test-port)" $(remote-test-user)@$(remote-test-host):$(remote-test-dir)
 	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
 endif
@@ -1297,7 +1309,7 @@ endif
 $(build)/run-tests.sh: $(test-classes) makefile
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=$$(pwd) -cp test\" log.txt \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=$$(pwd) -cp test\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 
@@ -1356,8 +1368,17 @@ define compile-asm-object
 	$(as) $(asmflags) $(call asm-output,$(@)) $(call asm-input,$(<))
 endef
 
+define compile-unittest-object
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(cflags) -c $$($(windows-path) -I$(unittest) $(<)) $(call output,$(@))
+endef
+
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
+
+$(unittest-objects): $(build)/unittest/%.o: $(unittest)/%.cpp $(vm-depends) $(unittest-depends)
+	$(compile-unittest-object)
 
 $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 	$(compile-object)
@@ -1531,6 +1552,8 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
+unittest-executable-objects = $(unittest-objects) $(vm-objects)
+
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
 ifeq ($(platform),windows)
@@ -1549,6 +1572,25 @@ else
 	$(ld) $(executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
+
+
+$(unittest-executable): $(unittest-executable-objects)
+	@echo "linking $(@)"
+ifeq ($(platform),windows)
+ifdef ms_cl_compiler
+	$(ld) $(lflags) $(unittest-executable-objects) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+ifdef mt
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endif
+else
+	$(dlltool) -z $(@).def $(unittest-executable-objects)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(ld) $(@).exp $(unittest-executable-objects) $(lflags) -o $(@)
+endif
+else
+	$(ld) $(unittest-executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+endif
 
 $(bootimage-generator): $(bootimage-generator-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
