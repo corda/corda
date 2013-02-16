@@ -270,8 +270,18 @@ as = $(cc)
 ld = $(cc)
 build-ld = $(build-cc)
 
-remote-test-host = localhost
-remote-test-port = 22
+default-remote-test-host = localhost
+default-remote-test-port = 22
+ifeq ($(remote-test-host),)
+	remote-test-host = $(default-remote-test-host)
+else
+	remote-test = true
+endif
+ifeq ($(remote-test-port),)
+	remote-test-port = $(default-remote-test-port)
+else
+	remote-test = true
+endif
 remote-test-user = ${USER}
 remote-test-dir = /tmp/avian-test-${USER}
 
@@ -1272,7 +1282,7 @@ test: build $(build)/run-tests.sh $(build)/test.sh $(unittest-executable)
 ifneq ($(remote-test),true)
 	/bin/sh $(build)/run-tests.sh
 else
-	@echo "testing remotely..."
+	@echo "running tests on $(remote-test-user)@$(remote-test-host):$(remote-test-port), in $(remote-test-dir)"
 	rsync $(build) -rav --exclude '*.o' --rsh="ssh -p$(remote-test-port)" $(remote-test-user)@$(remote-test-host):$(remote-test-dir)
 	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
 endif
