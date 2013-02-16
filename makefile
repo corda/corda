@@ -966,31 +966,41 @@ embed-loader-objects = $(call cpp-objects,$(embed-loader-sources),$(src),$(build
 embed-sources = $(src)/embed.cpp
 embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 
+compiler-sources = \
+	$(src)/codegen/compiler.cpp \
+	$(src)/codegen/compiler/context.cpp \
+	$(src)/codegen/compiler/resource.cpp \
+	$(src)/codegen/compiler/site.cpp \
+	$(src)/codegen/compiler/regalloc.cpp \
+	$(src)/codegen/compiler/value.cpp \
+	$(src)/codegen/compiler/read.cpp \
+	$(src)/codegen/compiler/event.cpp \
+	$(src)/codegen/compiler/promise.cpp \
+	$(src)/codegen/compiler/frame.cpp \
+	$(src)/codegen/compiler/ir.cpp \
+	$(src)/codegen/registers.cpp \
+	$(src)/codegen/targets.cpp
+
+all-assembler-sources = \
+	$(src)/codegen/x86/assembler.cpp \
+	$(src)/codegen/arm/assembler.cpp \
+	$(src)/codegen/powerpc/assembler.cpp
+
+native-assembler-sources = \
+	$(src)/codegen/$(target-asm)/assembler.cpp
+
+all-codegen-target-sources = \
+	$(compiler-sources) \
+	$(native-assembler-sources)
+
 ifeq ($(process),compile)
-	vm-sources += \
-		$(src)/codegen/compiler.cpp \
-		$(src)/codegen/compiler/context.cpp \
-		$(src)/codegen/compiler/resource.cpp \
-		$(src)/codegen/compiler/site.cpp \
-		$(src)/codegen/compiler/regalloc.cpp \
-		$(src)/codegen/compiler/value.cpp \
-		$(src)/codegen/compiler/read.cpp \
-		$(src)/codegen/compiler/event.cpp \
-		$(src)/codegen/compiler/promise.cpp \
-		$(src)/codegen/compiler/frame.cpp \
-		$(src)/codegen/compiler/ir.cpp \
-		$(src)/codegen/registers.cpp \
-		$(src)/codegen/targets.cpp
+	vm-sources += $(compiler-sources)
 
 	ifeq ($(codegen-targets),native)
-		vm-sources += \
-			$(src)/codegen/$(target-asm)/assembler.cpp
+		vm-sources += $(native-assembler-sources)
 	endif
 	ifeq ($(codegen-targets),all)
-		vm-sources += \
-			$(src)/codegen/x86/assembler.cpp \
-			$(src)/codegen/arm/assembler.cpp \
-			$(src)/codegen/powerpc/assembler.cpp
+		vm-sources += $(all-assembler-sources)
 	endif
 
 	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
@@ -1001,6 +1011,7 @@ ifeq ($(aot-only),true)
 endif
 
 vm-cpp-objects = $(call cpp-objects,$(vm-sources),$(src),$(build))
+all-codegen-target-objects = $(call cpp-objects,$(all-codegen-target-sources),$(src),$(build))
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
 
@@ -1387,6 +1398,11 @@ endef
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
 	$(compile-object)
 
+ifeq ($(process),interpret)
+$(all-codegen-target-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+endif
+
 $(unittest-objects): $(build)/unittest/%.o: $(unittest)/%.cpp $(vm-depends) $(unittest-depends)
 	$(compile-unittest-object)
 
@@ -1563,6 +1579,10 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects)
+
+ifeq ($(process),interpret)
+	unittest-executable-objects += $(all-codegen-target-objects)
+endif
 
 $(executable): $(executable-objects)
 	@echo "linking $(@)"
