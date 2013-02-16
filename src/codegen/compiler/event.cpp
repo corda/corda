@@ -580,8 +580,8 @@ class MoveEvent: public Event {
             | static_cast<uint64_t>(srcValue->source->registerMask(c))),
        dstSize, dst);
 
-    SiteMask dstLowMask(dst.typeMask, dst.registerMask, AnyFrameIndex);
-    SiteMask dstHighMask(dst.typeMask, dst.registerMask >> 32, AnyFrameIndex);
+    SiteMask dstLowMask = SiteMask::lowPart(dst);
+    SiteMask dstHighMask = SiteMask::highPart(dst);
 
     if (srcSelectSize >= vm::TargetBytesPerWord
         and dstSize >= vm::TargetBytesPerWord
@@ -710,8 +710,8 @@ appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
   append(c, new(c->zone)
          MoveEvent
          (c, type, srcSize, srcSelectSize, srcValue, dstSize, dstValue,
-          SiteMask(src.typeMask, src.registerMask, AnyFrameIndex),
-          SiteMask(src.typeMask, src.registerMask >> 32, AnyFrameIndex)));
+          SiteMask::lowPart(src),
+          SiteMask::highPart(src)));
 }
 
 
@@ -846,8 +846,8 @@ class CombineEvent: public Event {
        resultSize,
        cMask);
 
-    SiteMask resultLowMask(cMask.typeMask, cMask.registerMask, AnyFrameIndex);
-    SiteMask resultHighMask(cMask.typeMask, cMask.registerMask >> 32, AnyFrameIndex);
+    SiteMask resultLowMask = SiteMask::lowPart(cMask);
+    SiteMask resultHighMask = SiteMask::highPart(cMask);
 
     Site* low = getTarget(c, secondValue, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
@@ -943,10 +943,10 @@ appendCombine(Context* c, lir::TernaryOperation type,
         firstSize, firstValue,
         secondSize, secondValue,
         resultSize, resultValue,
-        SiteMask(firstMask.typeMask, firstMask.registerMask, AnyFrameIndex),
-        SiteMask(firstMask.typeMask, firstMask.registerMask >> 32, AnyFrameIndex),
-        SiteMask(secondMask.typeMask, secondMask.registerMask, AnyFrameIndex),
-        SiteMask(secondMask.typeMask, secondMask.registerMask >> 32, AnyFrameIndex)));
+        SiteMask::lowPart(firstMask),
+        SiteMask::highPart(firstMask),
+        SiteMask::lowPart(secondMask),
+        SiteMask::highPart(secondMask)));
   }
 }
 
@@ -988,8 +988,8 @@ class TranslateEvent: public Event {
        resultSize,
        bMask);
 
-    SiteMask resultLowMask(bMask.typeMask, bMask.registerMask, AnyFrameIndex);
-    SiteMask resultHighMask(bMask.typeMask, bMask.registerMask >> 32, AnyFrameIndex);
+    SiteMask resultLowMask = SiteMask::lowPart(bMask);
+    SiteMask resultHighMask = SiteMask::highPart(bMask);
     
     Site* low = getTarget(c, value, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
@@ -1056,8 +1056,8 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
     append(c, new(c->zone)
            TranslateEvent
            (c, type, firstSize, firstValue, resultSize, resultValue,
-            SiteMask(first.typeMask, first.registerMask, AnyFrameIndex),
-            SiteMask(first.typeMask, first.registerMask >> 32, AnyFrameIndex)));
+            SiteMask::lowPart(first),
+            SiteMask::highPart(first)));
   }
 }
 
@@ -1317,7 +1317,7 @@ class BranchEvent: public Event {
       size, OperandMask(0, 0),
       vm::TargetBytesPerWord, dstMask);
 
-    this->addRead(c, addressValue, SiteMask(dstMask.typeMask, dstMask.registerMask, AnyFrameIndex));
+    this->addRead(c, addressValue, SiteMask::lowPart(dstMask));
   }
 
   virtual const char* name() {
@@ -1418,10 +1418,10 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
       (c, new(c->zone)
        BranchEvent
        (c, type, size, firstValue, secondValue, addressValue,
-        SiteMask(firstMask.typeMask, firstMask.registerMask, AnyFrameIndex),
-        SiteMask(firstMask.typeMask, firstMask.registerMask >> 32, AnyFrameIndex),
-        SiteMask(secondMask.typeMask, secondMask.registerMask, AnyFrameIndex),
-        SiteMask(secondMask.typeMask, secondMask.registerMask >> 32, AnyFrameIndex)));
+        SiteMask::lowPart(firstMask),
+        SiteMask::highPart(firstMask),
+        SiteMask::lowPart(secondMask),
+        SiteMask::highPart(secondMask)));
   }
 }
 
@@ -1474,7 +1474,7 @@ class JumpEvent: public Event {
 
     assert(c, not thunk);
 
-    this->addRead(c, address, SiteMask(mask.typeMask, mask.registerMask, AnyFrameIndex));
+    this->addRead(c, address, SiteMask::lowPart(mask));
   }
 
   virtual const char* name() {

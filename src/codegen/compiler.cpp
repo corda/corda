@@ -340,7 +340,7 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
         (size, src, tmp,
          OperandMask(dstMask.typeMask, dstMask.registerMask));
 
-      SiteMask srcMask(src.typeMask, src.registerMask, AnyFrameIndex);
+      SiteMask srcMask = SiteMask::lowPart(src);
       for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
         Site* s = it.next();
         if (s->match(c, srcMask) or s->match(c, dstMask)) {
@@ -365,7 +365,7 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
     (size, src, tmp,
      OperandMask(1 << dstSite->type(c), dstSite->registerMask(c)));
 
-  SiteMask srcMask(src.typeMask, src.registerMask, AnyFrameIndex);
+  SiteMask srcMask = SiteMask::lowPart(src);
   unsigned cost = 0xFFFFFFFF;
   Site* srcSite = 0;
   for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
@@ -403,7 +403,7 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       srcSite->freeze(c, value);
       dstSite->freeze(c, value);
 
-      SiteMask tmpMask(tmp.typeMask, tmp.registerMask, AnyFrameIndex);
+      SiteMask tmpMask = SiteMask::lowPart(tmp);
       SingleRead tmpRead(tmpMask, 0);
       tmpRead.value = value;
       tmpRead.successor_ = value;
