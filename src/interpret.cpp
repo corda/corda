@@ -16,6 +16,8 @@
 #include "process.h"
 #include "arch.h"
 
+#include "util/runtime-array.h"
+
 using namespace vm;
 
 namespace local {
@@ -3191,7 +3193,7 @@ class MyProcessor: public Processor {
   }
 
   virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
-                             DelayedPromise**, object, OffsetResolver*)
+                             avian::codegen::DelayedPromise**, object, OffsetResolver*)
   {
     abort(s);
   }
