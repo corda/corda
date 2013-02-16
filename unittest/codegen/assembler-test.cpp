@@ -84,12 +84,11 @@ public:
 
     for(int op = (int)lir::Call; op < (int)lir::AlignedJump; op++) {
       bool thunk;
-      uint8_t typeMask;
-      uint64_t registerMask;
-      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, &typeMask, &registerMask, &thunk);
+      OperandMask mask;
+      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, mask, &thunk);
       assertFalse(thunk);
-      assertNotEqual(static_cast<uint8_t>(0), typeMask);
-      assertNotEqual(static_cast<uint64_t>(0), registerMask);
+      assertNotEqual(static_cast<uint8_t>(0), mask.typeMask);
+      assertNotEqual(static_cast<uint64_t>(0), mask.registerMask);
     }
 
   }

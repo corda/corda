@@ -40,6 +40,14 @@ class SiteMask {
     return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
   }
 
+  static SiteMask lowPart(const OperandMask& mask) {
+    return SiteMask(mask.typeMask, mask.registerMask, AnyFrameIndex);
+  }
+
+  static SiteMask highPart(const OperandMask& mask) {
+    return SiteMask(mask.typeMask, mask.registerMask >> 32, AnyFrameIndex);
+  }
+
   uint8_t typeMask;
   uint32_t registerMask;
   int frameIndex;

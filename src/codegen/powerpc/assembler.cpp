@@ -2258,27 +2258,27 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void plan
   (lir::UnaryOperation,
-   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned, OperandMask& aMask,
    bool* thunk)
   {
-    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
+    aMask.registerMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }
 
   virtual void planSource
   (lir::BinaryOperation op,
-   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned, OperandMask& aMask,
    unsigned, bool* thunk)
   {
-    *aTypeMask = ~0;
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    aMask.typeMask = ~0;
+    aMask.registerMask = ~static_cast<uint64_t>(0);
 
     *thunk = false;
 
     switch (op) {
     case lir::Negate:
-      *aTypeMask = (1 << lir::RegisterOperand);
+      aMask.typeMask = (1 << lir::RegisterOperand);
       break;
 
     case lir::Absolute:
@@ -2298,15 +2298,15 @@ class MyArchitecture: public Assembler::Architecture {
   
   virtual void planDestination
   (lir::BinaryOperation op,
-   unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask)
+   unsigned, const OperandMask& aMask UNUSED,
+   unsigned, OperandMask& bMask)
   {
-    *bTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+    bMask.registerMask = ~static_cast<uint64_t>(0);
 
     switch (op) {
     case lir::Negate:
-      *bTypeMask = (1 << lir::RegisterOperand);
+      bMask.typeMask = (1 << lir::RegisterOperand);
       break;
 
     default:
@@ -2315,35 +2315,35 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
-   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-   uint8_t dstTypeMask, uint64_t)
+  (unsigned, OperandMask& srcMask,
+   OperandMask& tmpMask,
+   const OperandMask& dstMask)
   {
-    *srcTypeMask = ~0;
-    *srcRegisterMask = ~static_cast<uint64_t>(0);
+    srcMask.typeMask = ~0;
+    srcMask.registerMask = ~static_cast<uint64_t>(0);
 
-    *tmpTypeMask = 0;
-    *tmpRegisterMask = 0;
+    tmpMask.typeMask = 0;
+    tmpMask.registerMask = 0;
 
-    if (dstTypeMask & (1 << lir::MemoryOperand)) {
+    if (dstMask.typeMask & (1 << lir::MemoryOperand)) {
       // can't move directly from memory or constant to memory
-      *srcTypeMask = 1 << lir::RegisterOperand;
-      *tmpTypeMask = 1 << lir::RegisterOperand;
-      *tmpRegisterMask = ~static_cast<uint64_t>(0);
+      srcMask.typeMask = 1 << lir::RegisterOperand;
+      tmpMask.typeMask = 1 << lir::RegisterOperand;
+      tmpMask.registerMask = ~static_cast<uint64_t>(0);
     }
   }
 
   virtual void planSource
   (lir::TernaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-   unsigned, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   unsigned aSize, OperandMask& aMask,
+   unsigned, OperandMask& bMask,
    unsigned, bool* thunk)
   {
-    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
+    aMask.registerMask = ~static_cast<uint64_t>(0);
 
-    *bTypeMask = (1 << lir::RegisterOperand);
-    *bRegisterMask = ~static_cast<uint64_t>(0);
+    bMask.typeMask = (1 << lir::RegisterOperand);
+    bMask.registerMask = ~static_cast<uint64_t>(0);
 
     *thunk = false;
 
@@ -2351,12 +2351,12 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::Add:
     case lir::Subtract:
       if (aSize == 8) {
-        *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
+        aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
       }
       break;
 
     case lir::Multiply:
-      *aTypeMask = *bTypeMask = (1 << lir::RegisterOperand);
+      aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
       break;
 
     case lir::Divide:
@@ -2370,7 +2370,7 @@ class MyArchitecture: public Assembler::Architecture {
       if (true) {//if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;        
       } else {
-        *aTypeMask = (1 << lir::RegisterOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand);
       }
       break;
 
@@ -2399,16 +2399,16 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planDestination
   (lir::TernaryOperation op,
-   unsigned, uint8_t, uint64_t,
-   unsigned, uint8_t, const uint64_t,
-   unsigned, uint8_t* cTypeMask, uint64_t* cRegisterMask)
+   unsigned, const OperandMask& aMask UNUSED,
+   unsigned, const OperandMask& bMask UNUSED,
+   unsigned, OperandMask& cMask)
   {
     if (isBranch(op)) {
-      *cTypeMask = (1 << lir::ConstantOperand);
-      *cRegisterMask = 0;
+      cMask.typeMask = (1 << lir::ConstantOperand);
+      cMask.registerMask = 0;
     } else {
-      *cTypeMask = (1 << lir::RegisterOperand);
-      *cRegisterMask = ~static_cast<uint64_t>(0);
+      cMask.typeMask = (1 << lir::RegisterOperand);
+      cMask.registerMask = ~static_cast<uint64_t>(0);
     }
   }
 

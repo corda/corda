@@ -35,6 +35,22 @@ public:
   { }
 };
 
+class OperandMask {
+public:
+  uint8_t typeMask;
+  uint64_t registerMask;
+
+  OperandMask(uint8_t typeMask, uint64_t registerMask):
+    typeMask(typeMask),
+    registerMask(registerMask)
+  { }
+
+  OperandMask():
+    typeMask(~0),
+    registerMask(~static_cast<uint64_t>(0))
+  { }
+};
+
 #ifdef AVIAN_TAILS
 const bool TailCalls = true;
 #else
@@ -120,35 +136,35 @@ class Assembler {
 
     virtual void plan
     (lir::UnaryOperation op,
-     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned aSize, OperandMask& aMask,
      bool* thunk) = 0;
 
     virtual void planSource
     (lir::BinaryOperation op,
-     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+     unsigned aSize, OperandMask& aMask,
      unsigned bSize, bool* thunk) = 0;
      
     virtual void planDestination
     (lir::BinaryOperation op,
-     unsigned aSize, uint8_t aTypeMask, uint64_t aRegisterMask,
-     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask) = 0;
+     unsigned aSize, const OperandMask& aMask,
+     unsigned bSize, OperandMask& bMask) = 0;
 
     virtual void planMove
-    (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
-     uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-     uint8_t dstTypeMask, uint64_t dstRegisterMask) = 0; 
+    (unsigned size, OperandMask& src,
+     OperandMask& tmp,
+     const OperandMask& dst) = 0; 
 
     virtual void planSource
     (lir::TernaryOperation op,
-     unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
-     unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+     unsigned aSize, OperandMask& aMask,
+     unsigned bSize, OperandMask& bMask,
      unsigned cSize, bool* thunk) = 0; 
 
     virtual void planDestination
     (lir::TernaryOperation op,
-     unsigned aSize, uint8_t aTypeMask, uint64_t aRegisterMask,
-     unsigned bSize, uint8_t bTypeMask, uint64_t bRegisterMask,
-     unsigned cSize, uint8_t* cTypeMask, uint64_t* cRegisterMask) = 0;
+     unsigned aSize, const OperandMask& aMask,
+     unsigned bSize, const OperandMask& bMask,
+     unsigned cSize, OperandMask& cMask) = 0;
 
     virtual Assembler* makeAssembler(vm::Allocator*, vm::Zone*) = 0;
 

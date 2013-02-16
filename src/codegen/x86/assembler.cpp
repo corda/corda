@@ -2992,37 +2992,34 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void plan
   (lir::UnaryOperation,
-   unsigned, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned, OperandMask& aMask,
    bool* thunk)
   {
-    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand)
-      | (1 << lir::ConstantOperand);
-    *aRegisterMask = ~static_cast<uint64_t>(0);
+    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand) | (1 << lir::ConstantOperand);
     *thunk = false;
   }
 
   virtual void planSource
   (lir::BinaryOperation op,
-   unsigned aSize, uint8_t* aTypeMask, uint64_t* aRegisterMask,
+   unsigned aSize, OperandMask& aMask,
    unsigned bSize, bool* thunk)
   {
-    *aTypeMask = ~0;
-    *aRegisterMask = GeneralRegisterMask |
+    aMask.registerMask = GeneralRegisterMask |
       (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
 
     switch (op) {
     case lir::Negate:
-      *aTypeMask = (1 << lir::RegisterOperand);
-      *aRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
+      aMask.typeMask = (1 << lir::RegisterOperand);
+      aMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
         | (static_cast<uint64_t>(1) << rax);
       break;
 
     case lir::Absolute:
       if (aSize <= TargetBytesPerWord) {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = (static_cast<uint64_t>(1) << rax);
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = (static_cast<uint64_t>(1) << rax);
       } else {
         *thunk = true;
       }
@@ -3030,8 +3027,8 @@ class MyArchitecture: public Assembler::Architecture {
 
     case lir::FloatAbsolute:
       if (useSSE(&c)) {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
       } else {
         *thunk = true;
@@ -3041,8 +3038,8 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::FloatNegate:
       // floatNegateRR does not support doubles
       if (useSSE(&c) and aSize == 4 and bSize == 4) {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = FloatRegisterMask;
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = FloatRegisterMask;
       } else {
         *thunk = true;
       }
@@ -3050,8 +3047,8 @@ class MyArchitecture: public Assembler::Architecture {
 
     case lir::FloatSquareRoot:
       if (useSSE(&c)) {
-        *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
       } else {
         *thunk = true;
@@ -3060,8 +3057,8 @@ class MyArchitecture: public Assembler::Architecture {
 
     case lir::Float2Float:
       if (useSSE(&c)) {
-        *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
       } else {
         *thunk = true;
@@ -3074,8 +3071,8 @@ class MyArchitecture: public Assembler::Architecture {
       // thunks or produce inline machine code which handles edge
       // cases properly.
       if (false and useSSE(&c) and bSize <= TargetBytesPerWord) {
-        *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
       } else {
         *thunk = true;
@@ -3084,8 +3081,8 @@ class MyArchitecture: public Assembler::Architecture {
 
     case lir::Int2Float:
       if (useSSE(&c) and aSize <= TargetBytesPerWord) {
-        *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        *aRegisterMask = GeneralRegisterMask
+        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.registerMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
       } else {
         *thunk = true;
@@ -3093,20 +3090,20 @@ class MyArchitecture: public Assembler::Architecture {
       break;
 
     case lir::Move:
-      *aTypeMask = ~0;
-      *aRegisterMask = ~static_cast<uint64_t>(0);
+      aMask.typeMask = ~0;
+      aMask.registerMask = ~static_cast<uint64_t>(0);
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+          aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
           const uint32_t mask
             = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;    
+          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;    
         } else if (aSize == 1 or bSize == 1) {
-          *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+          aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
           const uint32_t mask
             = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
-          *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;     
+          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;     
         }
       }
       break;
@@ -3117,69 +3114,69 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planDestination
-  (lir::BinaryOperation op, unsigned aSize, uint8_t aTypeMask,
-   uint64_t aRegisterMask, unsigned bSize, uint8_t* bTypeMask,
-   uint64_t* bRegisterMask)
+  (lir::BinaryOperation op,
+   unsigned aSize, const OperandMask& aMask,
+   unsigned bSize, OperandMask& bMask)
   {
-    *bTypeMask = ~0;
-    *bRegisterMask = GeneralRegisterMask
+    bMask.typeMask = ~0;
+    bMask.registerMask = GeneralRegisterMask
       | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     switch (op) {
     case lir::Absolute:
-      *bTypeMask = (1 << lir::RegisterOperand);
-      *bRegisterMask = (static_cast<uint64_t>(1) << rax);
+      bMask.typeMask = (1 << lir::RegisterOperand);
+      bMask.registerMask = (static_cast<uint64_t>(1) << rax);
       break;
 
     case lir::FloatAbsolute:
-      *bTypeMask = (1 << lir::RegisterOperand);
-      *bRegisterMask = aRegisterMask;
+      bMask.typeMask = (1 << lir::RegisterOperand);
+      bMask.registerMask = aMask.registerMask;
       break;
 
     case lir::Negate:
-      *bTypeMask = (1 << lir::RegisterOperand);
-      *bRegisterMask = aRegisterMask;
+      bMask.typeMask = (1 << lir::RegisterOperand);
+      bMask.registerMask = aMask.registerMask;
       break;
 
     case lir::FloatNegate:
     case lir::FloatSquareRoot:
     case lir::Float2Float:
     case lir::Int2Float:
-      *bTypeMask = (1 << lir::RegisterOperand);
-      *bRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+      bMask.typeMask = (1 << lir::RegisterOperand);
+      bMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
         | FloatRegisterMask;
       break;
 
     case lir::Float2Int:
-      *bTypeMask = (1 << lir::RegisterOperand);
+      bMask.typeMask = (1 << lir::RegisterOperand);
       break;
 
     case lir::Move:
-      if (aTypeMask & ((1 << lir::MemoryOperand) | 1 << lir::AddressOperand)) {
-        *bTypeMask = (1 << lir::RegisterOperand);
-        *bRegisterMask = GeneralRegisterMask
+      if (aMask.typeMask & ((1 << lir::MemoryOperand) | 1 << lir::AddressOperand)) {
+        bMask.typeMask = (1 << lir::RegisterOperand);
+        bMask.registerMask = GeneralRegisterMask
           | (static_cast<uint64_t>(GeneralRegisterMask) << 32)
           | FloatRegisterMask;
-      } else if (aTypeMask & (1 << lir::RegisterOperand)) {
-        *bTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        if (aRegisterMask & FloatRegisterMask) {
-          *bRegisterMask = FloatRegisterMask;          
+      } else if (aMask.typeMask & (1 << lir::RegisterOperand)) {
+        bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        if (aMask.registerMask & FloatRegisterMask) {
+          bMask.registerMask = FloatRegisterMask;          
         } else {
-          *bRegisterMask = GeneralRegisterMask
+          bMask.registerMask = GeneralRegisterMask
             | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
         }
       } else {
-        *bTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
       }
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32))
+          bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
             | (static_cast<uint64_t>(1) << rax);
         } else if (aSize == 1 or bSize == 1) {
           const uint32_t mask
             = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
-          *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+          bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
         }
       }
       break;
@@ -3190,44 +3187,44 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planMove
-  (unsigned size, uint8_t* srcTypeMask, uint64_t* srcRegisterMask,
-   uint8_t* tmpTypeMask, uint64_t* tmpRegisterMask,
-   uint8_t dstTypeMask, uint64_t dstRegisterMask)
+  (unsigned size, OperandMask& srcMask,
+   OperandMask& tmpMask,
+   const OperandMask& dstMask)
   {
-    *srcTypeMask = ~0;
-    *srcRegisterMask = ~static_cast<uint64_t>(0);
+    srcMask.typeMask = ~0;
+    srcMask.registerMask = ~static_cast<uint64_t>(0);
 
-    *tmpTypeMask = 0;
-    *tmpRegisterMask = 0;
+    tmpMask.typeMask = 0;
+    tmpMask.registerMask = 0;
 
-    if (dstTypeMask & (1 << lir::MemoryOperand)) {
+    if (dstMask.typeMask & (1 << lir::MemoryOperand)) {
       // can't move directly from memory to memory
-      *srcTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-      *tmpTypeMask = 1 << lir::RegisterOperand;
-      *tmpRegisterMask = GeneralRegisterMask
+      srcMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
+      tmpMask.typeMask = 1 << lir::RegisterOperand;
+      tmpMask.registerMask = GeneralRegisterMask
         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
-    } else if (dstTypeMask & (1 << lir::RegisterOperand)) {
+    } else if (dstMask.typeMask & (1 << lir::RegisterOperand)) {
       if (size > TargetBytesPerWord) {
         // can't move directly from FPR to GPR or vice-versa for
         // values larger than the GPR size
-        if (dstRegisterMask & FloatRegisterMask) {
-          *srcRegisterMask = FloatRegisterMask
+        if (dstMask.registerMask & FloatRegisterMask) {
+          srcMask.registerMask = FloatRegisterMask
             | (static_cast<uint64_t>(FloatRegisterMask) << 32);
-          *tmpTypeMask = 1 << lir::MemoryOperand;          
-        } else if (dstRegisterMask & GeneralRegisterMask) {
-          *srcRegisterMask = GeneralRegisterMask
+          tmpMask.typeMask = 1 << lir::MemoryOperand;          
+        } else if (dstMask.registerMask & GeneralRegisterMask) {
+          srcMask.registerMask = GeneralRegisterMask
             | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
-          *tmpTypeMask = 1 << lir::MemoryOperand;
+          tmpMask.typeMask = 1 << lir::MemoryOperand;
         }
       }
-      if (dstRegisterMask & FloatRegisterMask) {
+      if (dstMask.registerMask & FloatRegisterMask) {
         // can't move directly from constant to FPR
-        *srcTypeMask &= ~(1 << lir::ConstantOperand);
+        srcMask.typeMask &= ~(1 << lir::ConstantOperand);
         if (size > TargetBytesPerWord) {
-          *tmpTypeMask = 1 << lir::MemoryOperand;
+          tmpMask.typeMask = 1 << lir::MemoryOperand;
         } else {
-          *tmpTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-          *tmpRegisterMask = GeneralRegisterMask
+          tmpMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+          tmpMask.registerMask = GeneralRegisterMask
             | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
         }
       }
@@ -3236,16 +3233,16 @@ class MyArchitecture: public Assembler::Architecture {
 
   virtual void planSource
   (lir::TernaryOperation op,
-   unsigned aSize, uint8_t *aTypeMask, uint64_t *aRegisterMask,
-   unsigned bSize, uint8_t* bTypeMask, uint64_t* bRegisterMask,
+   unsigned aSize, OperandMask& aMask,
+   unsigned bSize, OperandMask& bMask,
    unsigned, bool* thunk)
   {
-    *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    *aRegisterMask = GeneralRegisterMask
+    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
+    aMask.registerMask = GeneralRegisterMask
       | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
-    *bTypeMask = (1 << lir::RegisterOperand);
-    *bRegisterMask = GeneralRegisterMask
+    bMask.typeMask = (1 << lir::RegisterOperand);
+    bMask.registerMask = GeneralRegisterMask
       | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
@@ -3256,14 +3253,14 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (useSSE(&c)) {
-        *aTypeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        *bTypeMask = (1 << lir::RegisterOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        bMask.typeMask = (1 << lir::RegisterOperand);
 
         const uint64_t mask
           = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
-        *aRegisterMask = mask;
-        *bRegisterMask = mask;
+        aMask.registerMask = mask;
+        bMask.registerMask = mask;
       } else {
         *thunk = true;
       }
@@ -3276,11 +3273,11 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::Multiply:
       if (TargetBytesPerWord == 4 and aSize == 8) { 
         const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
-        *bRegisterMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
+        aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
       } else {
-        *aRegisterMask = GeneralRegisterMask;
-        *bRegisterMask = GeneralRegisterMask;
+        aMask.registerMask = GeneralRegisterMask;
+        bMask.registerMask = GeneralRegisterMask;
       }
       break;
 
@@ -3288,9 +3285,9 @@ class MyArchitecture: public Assembler::Architecture {
       if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;        			
       } else {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        *bRegisterMask = 1 << rax;      
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+        bMask.registerMask = 1 << rax;      
       }
       break;
 
@@ -3298,9 +3295,9 @@ class MyArchitecture: public Assembler::Architecture {
       if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;
       } else {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        *bRegisterMask = 1 << rax;
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+        bMask.registerMask = 1 << rax;
       }
       break;
 
@@ -3309,13 +3306,13 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::UnsignedShiftRight: {
       if (TargetBytesPerWord == 4 and bSize == 8) {
         const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
-        *aRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
-        *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
       } else {
-        *aRegisterMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
+        aMask.registerMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
           | (static_cast<uint64_t>(1) << rcx);
         const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
-        *bRegisterMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
       }
     } break;
 
@@ -3330,11 +3327,11 @@ class MyArchitecture: public Assembler::Architecture {
     case lir::JumpIfFloatLessOrEqualOrUnordered:
     case lir::JumpIfFloatGreaterOrEqualOrUnordered:
       if (useSSE(&c)) {
-        *aTypeMask = (1 << lir::RegisterOperand);
-        *aRegisterMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+        aMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
           | FloatRegisterMask;
-        *bTypeMask = *aTypeMask;
-        *bRegisterMask = *aRegisterMask;
+        bMask.typeMask = aMask.typeMask;
+        bMask.registerMask = aMask.registerMask;
       } else {
         *thunk = true;
       }
@@ -3346,16 +3343,17 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual void planDestination
-  (lir::TernaryOperation op, unsigned, uint8_t, uint64_t, unsigned, uint8_t,
-   uint64_t bRegisterMask, unsigned, uint8_t* cTypeMask,
-   uint64_t* cRegisterMask)
+  (lir::TernaryOperation op,
+    unsigned, const OperandMask&,
+    unsigned, const OperandMask& bMask,
+    unsigned, OperandMask& cMask)
   {
     if (isBranch(op)) {
-      *cTypeMask = (1 << lir::ConstantOperand);
-      *cRegisterMask = 0;
+      cMask.typeMask = (1 << lir::ConstantOperand);
+      cMask.registerMask = 0;
     } else {
-      *cTypeMask = (1 << lir::RegisterOperand);
-      *cRegisterMask = bRegisterMask;
+      cMask.typeMask = (1 << lir::RegisterOperand);
+      cMask.registerMask = bMask.registerMask;
     }
   }
 
