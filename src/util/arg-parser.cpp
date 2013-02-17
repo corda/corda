@@ -27,6 +27,10 @@ Arg::Arg(ArgParser& parser, bool required, const char* name, const char* desc):
   parser.last = &next;
 }
 
+ArgParser::ArgParser():
+  first(0),
+  last(&first) {}
+
 bool ArgParser::parse(int ac, const char** av) {
   Arg* state = 0;
 

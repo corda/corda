@@ -1214,6 +1214,7 @@ test-extra-dep = $(test-build)-extra.dep
 
 unittest-sources = \
 	$(wildcard $(unittest)/*.cpp) \
+	$(wildcard $(unittest)/util/*.cpp) \
 	$(wildcard $(unittest)/codegen/*.cpp)
 
 unittest-depends = \
@@ -1583,7 +1584,7 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
-unittest-executable-objects = $(unittest-objects) $(vm-objects)
+unittest-executable-objects = $(unittest-objects) $(vm-objects) $(build)/util/arg-parser.o
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
