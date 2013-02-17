@@ -1,0 +1,91 @@
+/* Copyright (c) 2008-2012, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
+#ifndef AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H
+#define AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H
+
+#include "codegen/lir.h"
+#include "codegen/assembler.h"
+#include "alloc-vector.h"
+
+class Aborter;
+
+namespace vm {
+class System;
+class Allocator;
+class Zone;
+} // namespace vm
+
+namespace avian {
+namespace codegen {
+namespace x86 {
+
+class Context;
+class MyBlock;
+class Task;
+
+typedef void (*OperationType)(Context*);
+
+typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
+
+typedef void (*BinaryOperationType)
+(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
+
+typedef void (*BranchOperationType)
+(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
+ lir::Operand*, lir::Operand*);
+
+class ArchitectureContext {
+ public:
+  ArchitectureContext(vm::System* s, bool useNativeFeatures);
+
+  vm::System* s;
+  bool useNativeFeatures;
+  OperationType operations[lir::OperationCount];
+  UnaryOperationType unaryOperations[lir::UnaryOperationCount
+                                     * lir::OperandTypeCount];
+  BinaryOperationType binaryOperations
+  [(lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
+   * lir::OperandTypeCount
+   * lir::OperandTypeCount];
+  BranchOperationType branchOperations
+  [lir::BranchOperationCount
+   * lir::OperandTypeCount
+   * lir::OperandTypeCount];
+};
+
+class Context {
+ public:
+  Context(vm::System* s, vm::Allocator* a, vm::Zone* zone, ArchitectureContext* ac);
+
+  vm::System* s;
+  vm::Zone* zone;
+  Assembler::Client* client;
+  vm::Vector code;
+  Task* tasks;
+  uint8_t* result;
+  MyBlock* firstBlock;
+  MyBlock* lastBlock;
+  ArchitectureContext* ac;
+};
+
+inline Aborter* getAborter(Context* c) {
+  return c->s;
+}
+
+inline Aborter* getAborter(ArchitectureContext* c) {
+  return c->s;
+}
+
+} // namespace x86
+} // namespace codegen
+} // namespace avian
+
+#endif // AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H

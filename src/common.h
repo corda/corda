@@ -359,6 +359,18 @@ nextPowerOfTwo(unsigned n)
   return r;
 }
 
+inline bool fitsInInt8(int64_t v) {
+  return v == static_cast<int8_t>(v);
+}
+
+inline bool fitsInInt16(int64_t v) {
+  return v == static_cast<int16_t>(v);
+}
+
+inline bool fitsInInt32(int64_t v) {
+  return v == static_cast<int32_t>(v);
+}
+
 inline unsigned
 log(unsigned n)
 {

@@ -939,7 +939,7 @@ generated-code = \
 	$(build)/type-name-initializations.cpp \
 	$(build)/type-maps.cpp
 
-vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h) $(wildcard $(src)/codegen/compiler/*.h)
+vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h)
 
 vm-sources = \
 	$(src)/$(system).cpp \
@@ -968,26 +968,31 @@ embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 
 compiler-sources = \
 	$(src)/codegen/compiler.cpp \
-	$(src)/codegen/compiler/context.cpp \
-	$(src)/codegen/compiler/resource.cpp \
-	$(src)/codegen/compiler/site.cpp \
-	$(src)/codegen/compiler/regalloc.cpp \
-	$(src)/codegen/compiler/value.cpp \
-	$(src)/codegen/compiler/read.cpp \
-	$(src)/codegen/compiler/event.cpp \
-	$(src)/codegen/compiler/promise.cpp \
-	$(src)/codegen/compiler/frame.cpp \
-	$(src)/codegen/compiler/ir.cpp \
+	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/codegen/registers.cpp \
 	$(src)/codegen/targets.cpp
+compiler-objects = $(call cpp-objects,$(compiler-sources),$(src),$(build))
+$(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
+
+x86-assembler-sources = $(wildcard $(src)/codegen/x86/*.cpp)
+x86-assembler-objects = $(call cpp-objects,$(x86-assembler-sources),$(src),$(build))
+$(x86-assembler-objects): $(wildcard $(src)/codegen/x86/*.h) $(vm-depends)
+
+arm-assembler-sources = $(wildcard $(src)/codegen/arm/*.cpp)
+arm-assembler-objects = $(call cpp-objects,$(arm-assembler-sources),$(src),$(build))
+$(arm-assembler-objects): $(wildcard $(src)/codegen/arm/*.h) $(vm-depends)
+
+powerpc-assembler-sources = $(wildcard $(src)/codegen/powerpc/*.cpp)
+powerpc-assembler-objects = $(call cpp-objects,$(powerpc-assembler-sources),$(src),$(build))
+$(powerpc-assembler-objects): $(wildcard $(src)/codegen/powerpc/*.h) $(vm-depends)
 
 all-assembler-sources = \
-	$(src)/codegen/x86/assembler.cpp \
-	$(src)/codegen/arm/assembler.cpp \
-	$(src)/codegen/powerpc/assembler.cpp
+	$(x86-assembler-sources) \
+	$(arm-assembler-sources) \
+	$(powerpc-assembler-sources)
 
-native-assembler-sources = \
-	$(src)/codegen/$(target-asm)/assembler.cpp
+native-assembler-sources = $($(target-asm)-assembler-sources)
+native-assembler-objects = $($(target-asm)-assembler-objects)
 
 all-codegen-target-sources = \
 	$(compiler-sources) \

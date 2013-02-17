@@ -15,6 +15,11 @@
 #include "codegen/assembler.h"
 #include "codegen/registers.h"
 
+#include "codegen/x86/context.h"
+#include "codegen/x86/block.h"
+#include "codegen/x86/fixup.h"
+#include "codegen/x86/padding.h"
+
 #include "util/runtime-array.h"
 #include "util/abort.h"
 
@@ -23,11 +28,10 @@
 #define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
 using namespace vm;
-using namespace avian::codegen;
 
-namespace {
-
-namespace local {
+namespace avian {
+namespace codegen {
+namespace x86 {
 
 enum {
   rax = 0,
@@ -82,231 +86,12 @@ const int LongJumpRegister = r10;
 const unsigned StackAlignmentInBytes = 16;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes / TargetBytesPerWord;
 
-bool
-isInt8(target_intptr_t v)
-{
-  return v == static_cast<int8_t>(v);
-}
-
-bool
-isInt32(target_intptr_t v)
-{
-  return v == static_cast<int32_t>(v);
-}
-
 class Task;
 class AlignmentPadding;
 
 unsigned
 padding(AlignmentPadding* p, unsigned index, unsigned offset,
         AlignmentPadding* limit);
-
-class Context;
-class MyBlock;
-
-ResolvedPromise*
-resolved(Context* c, int64_t value);
-
-class MyBlock: public Assembler::Block {
- public:
-  MyBlock(unsigned offset):
-    next(0), firstPadding(0), lastPadding(0), offset(offset), start(~0),
-    size(0)
-  { }
-
-  virtual unsigned resolve(unsigned start, Assembler::Block* next) {
-    this->start = start;
-    this->next = static_cast<MyBlock*>(next);
-
-    return start + size + padding(firstPadding, start, offset, lastPadding);
-  }
-
-  MyBlock* next;
-  AlignmentPadding* firstPadding;
-  AlignmentPadding* lastPadding;
-  unsigned offset;
-  unsigned start;
-  unsigned size;
-};
-
-typedef void (*OperationType)(Context*);
-
-typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
-
-typedef void (*BinaryOperationType)
-(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
-
-typedef void (*BranchOperationType)
-(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
- lir::Operand*, lir::Operand*);
-
-class ArchitectureContext {
- public:
-  ArchitectureContext(System* s, bool useNativeFeatures):
-    s(s), useNativeFeatures(useNativeFeatures)
-  { }
-
-  System* s;
-  bool useNativeFeatures;
-  OperationType operations[lir::OperationCount];
-  UnaryOperationType unaryOperations[lir::UnaryOperationCount
-                                     * lir::OperandTypeCount];
-  BinaryOperationType binaryOperations
-  [(lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-   * lir::OperandTypeCount
-   * lir::OperandTypeCount];
-  BranchOperationType branchOperations
-  [lir::BranchOperationCount
-   * lir::OperandTypeCount
-   * lir::OperandTypeCount];
-};
-
-class Context {
- public:
-  Context(System* s, Allocator* a, Zone* zone, ArchitectureContext* ac):
-    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new(zone) MyBlock(0)),
-    lastBlock(firstBlock), ac(ac)
-  { }
-
-  System* s;
-  Zone* zone;
-  Assembler::Client* client;
-  Vector code;
-  Task* tasks;
-  uint8_t* result;
-  MyBlock* firstBlock;
-  MyBlock* lastBlock;
-  ArchitectureContext* ac;
-};
-
-Aborter* getAborter(Context* c) {
-  return c->s;
-}
-
-Aborter* getAborter(ArchitectureContext* c) {
-  return c->s;
-}
-
-ResolvedPromise*
-resolved(Context* c, int64_t value)
-{
-  return new(c->zone) ResolvedPromise(value);
-}
-
-class Offset: public Promise {
- public:
-  Offset(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit):
-    c(c), block(block), offset(offset), limit(limit), value_(-1)
-  { }
-
-  virtual bool resolved() {
-    return block->start != static_cast<unsigned>(~0);
-  }
-  
-  virtual int64_t value() {
-    assert(c, resolved());
-
-    if (value_ == -1) {
-      value_ = block->start + (offset - block->offset)
-        + padding(block->firstPadding, block->start, block->offset, limit);
-    }
-
-    return value_;
-  }
-
-  Context* c;
-  MyBlock* block;
-  unsigned offset;
-  AlignmentPadding* limit;
-  int value_;
-};
-
-Promise*
-offset(Context* c)
-{
-  return new(c->zone) Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
-}
-
-class Task {
- public:
-  Task(Task* next): next(next) { }
-
-  virtual void run(Context* c) = 0;
-
-  Task* next;
-};
-
-void*
-resolveOffset(System* s, uint8_t* instruction, unsigned instructionSize,
-              int64_t value)
-{
-  intptr_t v = reinterpret_cast<uint8_t*>(value)
-    - instruction - instructionSize;
-    
-  expect(s, isInt32(v));
-    
-  int32_t v4 = v;
-  memcpy(instruction + instructionSize - 4, &v4, 4);
-  return instruction + instructionSize;
-}
-
-class OffsetListener: public Promise::Listener {
- public:
-  OffsetListener(System* s, uint8_t* instruction,
-                 unsigned instructionSize):
-    s(s),
-    instruction(instruction),
-    instructionSize(instructionSize)
-  { }
-
-  virtual bool resolve(int64_t value, void** location) {
-    void* p = resolveOffset(s, instruction, instructionSize, value);
-    if (location) *location = p;
-    return false;
-  }
-
-  System* s;
-  uint8_t* instruction;
-  unsigned instructionSize;
-};
-
-class OffsetTask: public Task {
- public:
-  OffsetTask(Task* next, Promise* promise, Promise* instructionOffset,
-             unsigned instructionSize):
-    Task(next),
-    promise(promise),
-    instructionOffset(instructionOffset),
-    instructionSize(instructionSize)
-  { }
-
-  virtual void run(Context* c) {
-    if (promise->resolved()) {
-      resolveOffset
-        (c->s, c->result + instructionOffset->value(), instructionSize,
-         promise->value());
-    } else {
-      new (promise->listen(sizeof(OffsetListener)))
-        OffsetListener(c->s, c->result + instructionOffset->value(),
-                       instructionSize);
-    }
-  }
-
-  Promise* promise;
-  Promise* instructionOffset;
-  unsigned instructionSize;
-};
-
-void
-appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
-                 unsigned instructionSize)
-{
-  OffsetTask* task =
-    new(c->zone) OffsetTask(c->tasks, promise, instructionOffset, instructionSize);
-
-  c->tasks = task;
-}
 
 void
 copy(System* s, void* dst, int64_t src, unsigned size)
@@ -376,60 +161,6 @@ appendImmediateTask(Context* c, Promise* promise, Promise* offset,
 {
   c->tasks = new(c->zone) ImmediateTask
     (c->tasks, promise, offset, size, promiseOffset);
-}
-
-class AlignmentPadding {
- public:
-  AlignmentPadding(Context* c, unsigned instructionOffset, unsigned alignment):
-    offset(c->code.length()),
-    instructionOffset(instructionOffset),
-    alignment(alignment),
-    next(0),
-    padding(-1)
-  {
-    if (c->lastBlock->firstPadding) {
-      c->lastBlock->lastPadding->next = this;
-    } else {
-      c->lastBlock->firstPadding = this;
-    }
-    c->lastBlock->lastPadding = this;
-  }
-
-  unsigned offset;
-  unsigned instructionOffset;
-  unsigned alignment;
-  AlignmentPadding* next;
-  int padding;
-};
-
-unsigned
-padding(AlignmentPadding* p, unsigned start, unsigned offset,
-        AlignmentPadding* limit)
-{
-  unsigned padding = 0;
-  if (limit) {
-    if (limit->padding == -1) {
-      for (; p; p = p->next) {
-        if (p->padding == -1) {
-          unsigned index = p->offset - offset;
-          while ((start + index + padding + p->instructionOffset)
-                 % p->alignment)
-          {
-            ++ padding;
-          }
-      
-          p->padding = padding;
-
-          if (p == limit) break;
-        } else {
-          padding = p->padding;
-        }
-      }
-    } else {
-      padding = limit->padding;
-    }
-  }
-  return padding;
 }
 
 extern "C" bool
@@ -558,7 +289,7 @@ modrmSibImm(Context* c, int a, int scale, int index, int base, int offset)
 {
   if (offset == 0 and regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);
-  } else if (isInt8(offset)) {
+  } else if (vm::fitsInInt8(offset)) {
     modrmSib(c, 0x40, a, scale, index, base);
     c->code.append(offset);
   } else {
@@ -627,7 +358,7 @@ storeLoadBarrier(Context* c)
 void
 unconditional(Context* c, unsigned jump, lir::Constant* a)
 {
-  appendOffsetTask(c, a->value, offset(c), 5);
+  appendOffsetTask(c, a->value, offsetPromise(c), 5);
 
   opcode(c, jump);
   c->code.append4(0);
@@ -636,7 +367,7 @@ unconditional(Context* c, unsigned jump, lir::Constant* a)
 void
 conditional(Context* c, unsigned condition, lir::Constant* a)
 {
-  appendOffsetTask(c, a->value, offset(c), 6);
+  appendOffsetTask(c, a->value, offsetPromise(c), 6);
   
   opcode(c, 0x0f, condition);
   c->code.append4(0);
@@ -904,7 +635,7 @@ moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
       c->code.appendTargetAddress(a->value->value());
     } else {
       appendImmediateTask
-        (c, a->value, offset(c), TargetBytesPerWord, promiseOffset);
+        (c, a->value, offsetPromise(c), TargetBytesPerWord, promiseOffset);
       c->code.appendTargetAddress(static_cast<target_uintptr_t>(0));
     }
   }
@@ -1260,14 +991,14 @@ moveCM(Context* c, unsigned aSize UNUSED, lir::Constant* a,
     if (a->value->resolved()) {
       c->code.append4(a->value->value());
     } else {
-      appendImmediateTask(c, a->value, offset(c), 4);
+      appendImmediateTask(c, a->value, offsetPromise(c), 4);
       c->code.append4(0);
     }
     break;
 
   case 8: {
     if (TargetBytesPerWord == 8) {
-      if (a->value->resolved() and isInt32(a->value->value())) {
+      if (a->value->resolved() and vm::fitsInInt32(a->value->value())) {
         maybeRex(c, bSize, b);
         opcode(c, 0xc7);
         modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
@@ -1358,7 +1089,7 @@ addCarryCR(Context* c, unsigned size, lir::Constant* a,
   
   int64_t v = a->value->value();
   maybeRex(c, size, b);
-  if (isInt8(v)) {
+  if (vm::fitsInInt8(v)) {
     opcode(c, 0x83, 0xd0 + regCode(b));
     c->code.append(v);
   } else {
@@ -1387,9 +1118,9 @@ addCR(Context* c, unsigned aSize, lir::Constant* a,
       addCR(c, 4, &al, 4, b);
       addCarryCR(c, 4, &ah, &bh);
     } else {
-      if (isInt32(v)) {
+      if (vm::fitsInInt32(v)) {
         maybeRex(c, aSize, b);
-        if (isInt8(v)) {
+        if (vm::fitsInInt8(v)) {
           opcode(c, 0x83, 0xc0 + regCode(b));
           c->code.append(v);
         } else {
@@ -1414,7 +1145,7 @@ subtractBorrowCR(Context* c, unsigned size UNUSED, lir::Constant* a,
   assert(c, TargetBytesPerWord == 8 or size == 4);
   
   int64_t v = a->value->value();
-  if (isInt8(v)) {
+  if (vm::fitsInInt8(v)) {
     opcode(c, 0x83, 0xd8 + regCode(b));
     c->code.append(v);
   } else {
@@ -1447,9 +1178,9 @@ subtractCR(Context* c, unsigned aSize, lir::Constant* a,
       subtractCR(c, 4, &al, 4, b);
       subtractBorrowCR(c, 4, &ah, &bh);
     } else {
-      if (isInt32(v)) {
+      if (vm::fitsInInt32(v)) {
         maybeRex(c, aSize, b);
-        if (isInt8(v)) {
+        if (vm::fitsInInt8(v)) {
           opcode(c, 0x83, 0xe8 + regCode(b));
           c->code.append(v);
         } else {
@@ -1537,9 +1268,9 @@ andCR(Context* c, unsigned aSize, lir::Constant* a,
     andCR(c, 4, &al, 4, b);
     andCR(c, 4, &ah, 4, &bh);
   } else {
-    if (isInt32(v)) {
+    if (vm::fitsInInt32(v)) {
       maybeRex(c, aSize, b);
-      if (isInt8(v)) {
+      if (vm::fitsInInt8(v)) {
         opcode(c, 0x83, 0xe0 + regCode(b));
         c->code.append(v);
       } else {
@@ -1595,9 +1326,9 @@ orCR(Context* c, unsigned aSize, lir::Constant* a,
       orCR(c, 4, &al, 4, b);
       orCR(c, 4, &ah, 4, &bh);
     } else {
-      if (isInt32(v)) {
+      if (vm::fitsInInt32(v)) {
         maybeRex(c, aSize, b);
-        if (isInt8(v)) {
+        if (vm::fitsInInt8(v)) {
           opcode(c, 0x83, 0xc8 + regCode(b));
           c->code.append(v);
         } else {
@@ -1652,9 +1383,9 @@ xorCR(Context* c, unsigned aSize, lir::Constant* a,
       xorCR(c, 4, &al, 4, b);
       xorCR(c, 4, &ah, 4, &bh);
     } else {
-      if (isInt32(v)) {
+      if (vm::fitsInInt32(v)) {
         maybeRex(c, aSize, b);
-        if (isInt8(v)) {
+        if (vm::fitsInInt8(v)) {
           opcode(c, 0x83, 0xf0 + regCode(b));
           c->code.append(v);
         } else {
@@ -1828,10 +1559,10 @@ compareCR(Context* c, unsigned aSize, lir::Constant* a,
   assert(c, aSize == bSize);
   assert(c, TargetBytesPerWord == 8 or aSize == 4);
   
-  if (a->value->resolved() and isInt32(a->value->value())) {
+  if (a->value->resolved() and vm::fitsInInt32(a->value->value())) {
     int64_t v = a->value->value();
     maybeRex(c, aSize, b);
-    if (isInt8(v)) {
+    if (vm::fitsInInt8(v)) {
       opcode(c, 0x83, 0xf8 + regCode(b));
       c->code.append(v);
     } else {
@@ -1871,12 +1602,12 @@ compareCM(Context* c, unsigned aSize, lir::Constant* a,
   if (a->value->resolved()) { 
     int64_t v = a->value->value();   
     maybeRex(c, aSize, b);
-    opcode(c, isInt8(v) ? 0x83 : 0x81);
+    opcode(c, vm::fitsInInt8(v) ? 0x83 : 0x81);
     modrmSibImm(c, rdi, b->scale, b->index, b->base, b->offset);
     
-    if (isInt8(v)) {
+    if (vm::fitsInInt8(v)) {
       c->code.append(v);
-    } else if (isInt32(v)) {
+    } else if (vm::fitsInInt32(v)) {
       c->code.append4(v);
     } else {
       abort(c);
@@ -2070,9 +1801,9 @@ multiplyCR(Context* c, unsigned aSize, lir::Constant* a,
   } else {
     int64_t v = a->value->value();
     if (v != 1) {
-      if (isInt32(v)) {
+      if (vm::fitsInInt32(v)) {
         maybeRex(c, bSize, b, b);
-        if (isInt8(v)) {
+        if (vm::fitsInInt8(v)) {
           opcode(c, 0x6b);
           modrm(c, 0xc0, b, b);
           c->code.append(v);
@@ -2150,7 +1881,7 @@ doShift(Context* c, UNUSED void (*shift)
     maybeRex(c, bSize, b);
     if (v == 1) {
       opcode(c, 0xd1, type + regCode(b));
-    } else if (isInt8(v)) {
+    } else if (vm::fitsInInt8(v)) {
       opcode(c, 0xc1, type + regCode(b));
       c->code.append(v);
     } else {
@@ -2796,7 +2527,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return local::argumentFootprint(footprint);
+    return x86::argumentFootprint(footprint);
   }
 
   virtual bool argumentAlignment() {
@@ -2904,7 +2635,7 @@ class MyArchitecture: public Assembler::Architecture {
       intptr_t v = static_cast<uint8_t*>(newTarget)
         - static_cast<uint8_t*>(returnAddress);
 
-      assert(&c, isInt32(v));
+      assert(&c, vm::fitsInInt32(v));
 
       int32_t v32 = v;
 
@@ -2939,7 +2670,7 @@ class MyArchitecture: public Assembler::Architecture {
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    local::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
+    x86::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
                      link, mostRecent, targetParameterFootprint, ip, stack);
   }
 
@@ -3393,7 +3124,7 @@ class MyAssembler: public Assembler {
   {
     lir::Register stack(rsp);
     lir::Memory stackLimit(rbx, stackLimitOffsetFromThread);
-    lir::Constant handlerConstant(resolved(&c, handler));
+    lir::Constant handlerConstant(resolvedPromise(&c, handler));
     branchRM(&c, lir::JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
              &handlerConstant);
   }
@@ -3470,7 +3201,7 @@ class MyAssembler: public Assembler {
         OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base));
     }
 
-    lir::Constant footprintConstant(resolved(&c, footprint * TargetBytesPerWord));
+    lir::Constant footprintConstant(resolvedPromise(&c, footprint * TargetBytesPerWord));
     apply(lir::Subtract,
       OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprintConstant),
       OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
@@ -3479,7 +3210,7 @@ class MyAssembler: public Assembler {
 
   virtual void adjustFrame(unsigned difference) {
     lir::Register stack(rsp);
-    lir::Constant differenceConstant(resolved(&c, difference * TargetBytesPerWord));
+    lir::Constant differenceConstant(resolvedPromise(&c, difference * TargetBytesPerWord));
     apply(lir::Subtract, 
       OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &differenceConstant),
       OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
@@ -3497,7 +3228,7 @@ class MyAssembler: public Assembler {
       popR(&c, TargetBytesPerWord, &base);
     } else {
       lir::Register stack(rsp);
-      lir::Constant footprint(resolved(&c, frameFootprint * TargetBytesPerWord));
+      lir::Constant footprint(resolvedPromise(&c, frameFootprint * TargetBytesPerWord));
       apply(lir::Add,
         OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprint),
         OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
@@ -3536,7 +3267,7 @@ class MyAssembler: public Assembler {
 
         lir::Register stack(rsp);
         lir::Constant footprint
-          (resolved
+          (resolvedPromise
            (&c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
 
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
@@ -3578,7 +3309,7 @@ class MyAssembler: public Assembler {
 
       lir::Register stack(rsp);
       lir::Constant adjustment
-        (resolved(&c, (argumentFootprint - StackAlignmentInWords)
+        (resolvedPromise(&c, (argumentFootprint - StackAlignmentInWords)
                   * TargetBytesPerWord));
       addCR(&c, TargetBytesPerWord, &adjustment, TargetBytesPerWord, &stack);
 
@@ -3674,7 +3405,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset(bool) {
-    return local::offset(&c);
+    return x86::offsetPromise(&c);
   }
 
   virtual Block* endBlock(bool startNew) {
@@ -3713,17 +3444,12 @@ Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
     new(zone) MyAssembler(c.s, allocator, zone, this);
 }
 
-} // namespace local
-
-} // namespace
-
-namespace avian {
-namespace codegen {
+} // namespace x86
 
 Assembler::Architecture* makeArchitectureX86(System* system, bool useNativeFeatures)
 {
-  return new (allocate(system, sizeof(local::MyArchitecture)))
-    local::MyArchitecture(system, useNativeFeatures);
+  return new (allocate(system, sizeof(x86::MyArchitecture)))
+    x86::MyArchitecture(system, useNativeFeatures);
 }
 
 } // namespace codegen
