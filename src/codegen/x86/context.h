@@ -11,6 +11,10 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H
 
+#define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
+#define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
+#define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
+
 #include "codegen/lir.h"
 #include "codegen/assembler.h"
 #include "alloc-vector.h"

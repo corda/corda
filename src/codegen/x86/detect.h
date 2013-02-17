@@ -8,23 +8,21 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/x86/context.h"
-#include "codegen/x86/block.h"
+#ifndef AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H
+#define AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H
+
+#include "codegen/assembler.h"
 
 namespace avian {
 namespace codegen {
 namespace x86 {
 
-ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures):
-  s(s), useNativeFeatures(useNativeFeatures)
-{ }
+class ArchitectureContext;
 
-Context::Context(vm::System* s, vm::Allocator* a, vm::Zone* zone, ArchitectureContext* ac):
-  s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-  firstBlock(new(zone) MyBlock(0)),
-  lastBlock(firstBlock), ac(ac)
-{ }
+bool useSSE(ArchitectureContext* c);
 
 } // namespace x86
 } // namespace codegen
 } // namespace avian
+
+#endif // AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H

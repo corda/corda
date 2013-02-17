@@ -80,6 +80,37 @@ class OffsetTask: public Task {
 
 void appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset, unsigned instructionSize);
 
+class ImmediateListener: public Promise::Listener {
+ public:
+  ImmediateListener(vm::System* s, void* dst, unsigned size, unsigned offset);
+
+  virtual bool resolve(int64_t value, void** location);
+
+  vm::System* s;
+  void* dst;
+  unsigned size;
+  unsigned offset;
+};
+
+class ImmediateTask: public Task {
+ public:
+  ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
+                unsigned promiseOffset);
+
+  virtual void run(Context* c);
+
+  Promise* promise;
+  Promise* offset;
+  unsigned size;
+  unsigned promiseOffset;
+};
+
+void
+appendImmediateTask(Context* c, Promise* promise, Promise* offset,
+                    unsigned size, unsigned promiseOffset = 0);
+
+ShiftMaskPromise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask);
+
 } // namespace x86
 } // namespace codegen
 } // namespace avian

@@ -101,6 +101,62 @@ appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset,
   c->tasks = task;
 }
 
+ImmediateListener::ImmediateListener(vm::System* s, void* dst, unsigned size, unsigned offset):
+  s(s), dst(dst), size(size), offset(offset)
+{ }
+
+void copy(vm::System* s, void* dst, int64_t src, unsigned size) {
+  switch (size) {
+  case 4: {
+    int32_t v = src;
+    memcpy(dst, &v, 4);
+  } break;
+
+  case 8: {
+    int64_t v = src;
+    memcpy(dst, &v, 8);
+  } break;
+
+  default: abort(s);
+  }
+}
+
+bool ImmediateListener::resolve(int64_t value, void** location) {
+  copy(s, dst, value, size);
+  if (location) *location = static_cast<uint8_t*>(dst) + offset;
+  return offset == 0;
+}
+
+ImmediateTask::ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
+              unsigned promiseOffset):
+  Task(next),
+  promise(promise),
+  offset(offset),
+  size(size),
+  promiseOffset(promiseOffset)
+{ }
+
+void ImmediateTask::run(Context* c) {
+  if (promise->resolved()) {
+    copy(c->s, c->result + offset->value(), promise->value(), size);
+  } else {
+    new (promise->listen(sizeof(ImmediateListener))) ImmediateListener
+      (c->s, c->result + offset->value(), size, promiseOffset);
+  }
+}
+
+void
+appendImmediateTask(Context* c, Promise* promise, Promise* offset,
+                    unsigned size, unsigned promiseOffset)
+{
+  c->tasks = new(c->zone) ImmediateTask
+    (c->tasks, promise, offset, size, promiseOffset);
+}
+
+ShiftMaskPromise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask) {
+  return new(c->zone) ShiftMaskPromise(base, shift, mask);
+}
+
 } // namespace x86
 } // namespace codegen
 } // namespace avian

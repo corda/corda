@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
@@ -15,15 +16,24 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures):
-  s(s), useNativeFeatures(useNativeFeatures)
-{ }
+extern "C" bool
+detectFeature(unsigned ecx, unsigned edx);
 
-Context::Context(vm::System* s, vm::Allocator* a, vm::Zone* zone, ArchitectureContext* ac):
-  s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-  firstBlock(new(zone) MyBlock(0)),
-  lastBlock(firstBlock), ac(ac)
-{ }
+bool useSSE(ArchitectureContext* c) {
+  if (vm::TargetBytesPerWord == 8) {
+    // amd64 implies SSE2 support
+    return true;
+  } else if (c->useNativeFeatures) {
+    static int supported = -1;
+    if (supported == -1) {
+      supported = detectFeature(0, 0x2000000) // SSE 1
+        and detectFeature(0, 0x4000000); // SSE 2
+    }
+    return supported;
+  } else {
+    return false;
+  }
+}
 
 } // namespace x86
 } // namespace codegen
