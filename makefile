@@ -1041,7 +1041,7 @@ ifeq ($(continuations),true)
 	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
-bootimage-generator-sources = $(src)/bootimage.cpp
+bootimage-generator-sources = $(src)/bootimage.cpp $(src)/util/arg-parser.cpp
 ifneq ($(lzma),)
 	bootimage-generator-sources += $(src)/lzma-encode.cpp
 endif
