@@ -994,6 +994,8 @@ all-assembler-sources = \
 native-assembler-sources = $($(target-asm)-assembler-sources)
 native-assembler-objects = $($(target-asm)-assembler-objects)
 
+audit-codegen-sources = $(wildcard $(src)/tools/audit-codegen/*.cpp)
+
 all-codegen-target-sources = \
 	$(compiler-sources) \
 	$(native-assembler-sources)
@@ -1154,6 +1156,7 @@ dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
 unittest-executable = $(build)/$(name)-unittest${exe-suffix}
+audit-codegen-executable = $(build)/audit-codegen${exe-suffix}
 
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
@@ -1304,6 +1307,14 @@ else
 	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
 endif
 
+PHONY: audit-baseline
+audit-baseline: $(audit-codegen-executable)
+	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
+
+PHONY: audit
+audit: $(audit-codegen-executable)
+	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
+
 .PHONY: tarball
 tarball:
 	@echo "creating build/avian-$(version).tar.bz2"
@@ -1411,6 +1422,9 @@ endif
 
 $(unittest-objects): $(build)/unittest/%.o: $(unittest)/%.cpp $(vm-depends) $(unittest-depends)
 	$(compile-unittest-object)
+
+$(build)/tools/audit-codegen/main.o: $(build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
 
 $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 	$(compile-object)
@@ -1590,43 +1604,53 @@ ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
 endif
 
-$(executable): $(executable-objects)
-	@echo "linking $(@)"
-ifeq ($(platform),windows)
-ifdef ms_cl_compiler
-	$(ld) $(lflags) $(executable-objects) -out:$(@) \
-		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
-ifdef mt
-	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
-endif
-else
-	$(dlltool) -z $(@).def $(executable-objects)
-	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(executable-objects) $(lflags) -o $(@)
-endif
-else
-	$(ld) $(executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
-endif
-	$(strip) $(strip-all) $(@)
+audit-codegen-objects = $(call cpp-objects,$(audit-codegen-sources),$(src),$(build))
+audit-codegen-executable-objects = $(audit-codegen-objects) $(vm-objects) $(build)/util/arg-parser.o
 
+.PHONY: print
+print:
+	@echo $(audit-codegen-objects)
+
+# apparently, make does poorly with ifs inside of defines, and indented defines.
+# I suggest re-indenting the following before making edits (and unindenting afterwards):
+ifneq ($(platform),windows)
+define link-executable
+	@echo linking $(@)
+	$(ld) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+endef
+else
+ifdef ms_cl_compiler
+ifdef mt
+define link-executable
+	@echo linking $(@)
+	$(ld) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endef
+else
+define link-executable
+	@echo linking $(@)
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endef
+endif
+else
+define link-executable
+	@echo linking $(@)
+	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(ld) $(@).exp $(^) $(lflags) -o $(@)
+endef
+endif
+endif
+
+$(executable): $(executable-objects)
+	$(link-executable)
 
 $(unittest-executable): $(unittest-executable-objects)
-	@echo "linking $(@)"
-ifeq ($(platform),windows)
-ifdef ms_cl_compiler
-	$(ld) $(lflags) $(unittest-executable-objects) -out:$(@) \
-		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
-ifdef mt
-	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
-endif
-else
-	$(dlltool) -z $(@).def $(unittest-executable-objects)
-	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(unittest-executable-objects) $(lflags) -o $(@)
-endif
-else
-	$(ld) $(unittest-executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
-endif
+	$(link-executable)
+
+$(audit-codegen-executable): $(audit-codegen-executable-objects)
+	$(link-executable)
 
 $(bootimage-generator): $(bootimage-generator-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)

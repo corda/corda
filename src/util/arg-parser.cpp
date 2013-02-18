@@ -31,7 +31,7 @@ ArgParser::ArgParser():
   first(0),
   last(&first) {}
 
-bool ArgParser::parse(int ac, const char** av) {
+bool ArgParser::parse(int ac, const char* const* av) {
   Arg* state = 0;
 
   for(int i = 1; i < ac; i++) {

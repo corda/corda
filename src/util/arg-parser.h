@@ -23,7 +23,7 @@ public:
 
   ArgParser();
 
-  bool parse(int ac, const char** av);
+  bool parse(int ac, const char* const* av);
   void printUsage(const char* exe);
 };
 
