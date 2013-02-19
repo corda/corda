@@ -15,6 +15,7 @@
 #include "util.h"
 #include "stream.h"
 #include "codegen/assembler.h"
+#include "codegen/promise.h"
 #include "target.h"
 #include "binaryToObject/tools.h"
 #include "lzma.h"
@@ -29,6 +30,7 @@ extern "C" void __cxa_pure_virtual(void) { abort(); }
 using namespace vm;
 using namespace avian::tools;
 using namespace avian::util;
+using namespace avian::codegen;
 
 namespace {
 
@@ -330,7 +332,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           Client(Thread* t): t(t) { }
 
           virtual void NO_RETURN handleError() {
-            vm::abort(t);
+            abort(t);
           }
 
          private:

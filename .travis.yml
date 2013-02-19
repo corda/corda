@@ -1,2 +1,2 @@
 language: cpp
-script: "make test"
+script: ./test/ci.sh
