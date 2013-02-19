@@ -148,6 +148,41 @@ ifneq ($(openjdk),)
 	build-javahome = $(openjdk)/jre
 endif
 
+ifneq ($(android),)
+	options := $(options)-android
+	classpath-jar-dep = $(build)/android.dep
+	luni-native = $(android)/libcore/luni/src/main/native
+	android-cflags := -I$(luni-native) \
+		-I$(android)/libnativehelper/include/nativehelper \
+		-I$(android)/core/include \
+		-I$(android)/zlib \
+		-I$(android)/icu4c/i18n \
+		-I$(android)/icu4c/common \
+		-I$(android)/expat \
+		-I$(android)/openssl/include \
+		-I$(android)/libcore/include \
+		-I$(build)/android-src/external/fdlibm \
+		-I$(build)/android-src \
+		-fpermissive \
+		-fno-exceptions \
+		-DHAVE_SYS_UIO_H \
+		-D_FILE_OFFSET_BITS=64
+	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
+	classpath-objects = \
+		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build))
+	luni-java = $(android)/libcore/luni/src/main/java
+	luni-javas := $(shell find $(luni-java) -name '*.java')
+	dalvik-java = $(android)/libcore/dalvik/src/main/java
+	dalvik-javas := $(shell find $(dalvik-java) -name '*.java')
+	xml-java = $(android)/libcore/xml/src/main/java
+	xml-javas := $(shell find $(xml-java) -name '*.java')
+	android-classes = \
+		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
+		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
+		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
+	classpath = android
+endif
+
 ifeq ($(classpath),avian)
 	jni-sources := $(shell find $(classpath-src) -name '*.cpp')
 	jni-objects = $(call cpp-objects,$(jni-sources),$(classpath-src),$(build))
@@ -1178,6 +1213,11 @@ ifneq ($(classpath),avian)
 	ifneq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
 			$(classpath-src)/avian/OpenJDK.java
+	else
+		classpath-sources := $(classpath-sources) \
+			$(classpath-src)/sun/reflect/ConstantPool.java \
+			$(classpath-src)/java/lang/ReflectiveOperationException.java \
+			$(classpath-src)/sun/misc/Cleaner.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1346,13 +1386,35 @@ $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources)
+$(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
 	$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$(shell $(MAKE) -s --no-print-directory build=$(build) \
 			$(classpath-classes))
 	@touch $(@)
+
+$(build)/%.o: $(luni-native)/%.cpp $(build)/android.dep
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(android-cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
+
+$(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
+	@echo "compiling luni classes"
+	@mkdir -p $(classpath-build)
+	@mkdir -p $(build)/android
+	@mkdir -p $(build)/android-src/external/fdlibm
+	@mkdir -p $(build)/android-src/libexpat
+	cp $(android)/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
+	cp $(android)/expat/lib/expat.h $(build)/android-src/libexpat/
+	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
+	sed -i 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
+		$(build)/android-src/java/lang/Enum.java
+	find $(build)/android-src -name '*.java' > $(build)/android.txt
+	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
+		@$(build)/android.txt
+	cp -r $(build)/android/* $(classpath-build)
+	@touch $(@)	
 
 $(test-build)/%.class: $(test)/%.java
 	@echo $(<)
@@ -1568,7 +1630,7 @@ else
 endif
 
 $(bootimage-object) $(codeimage-object): $(bootimage-generator) \
-		$(openjdk-jar-dep)
+		$(classpath-jar-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
