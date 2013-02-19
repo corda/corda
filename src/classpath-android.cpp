@@ -8,6 +8,12 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+struct JavaVM;
+
+extern "C" int JNI_OnLoad(JavaVM*, void*);
+
+#define _POSIX_C_SOURCE 200112L
+#undef _GNU_SOURCE
 #include "machine.h"
 #include "classpath-common.h"
 #include "process.h"
@@ -130,9 +136,9 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
-  boot(Thread*)
+  boot(Thread* t)
   {
-    // ignore
+    JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
   }
 
   virtual const char*
@@ -170,3 +176,126 @@ makeClasspath(System*, Allocator* allocator, const char*, const char*)
 }
 
 } // namespace vm
+
+extern "C" int
+jniRegisterNativeMethods(JNIEnv* e, const char* className,
+                         const JNINativeMethod* methods, int methodCount)
+{
+  jclass c = e->vtable->FindClass(e, className);
+
+  if (c) {
+    e->vtable->RegisterNatives(e, c, methods, methodCount);
+  }
+
+  return 0;
+}
+
+extern "C" void
+jniLogException(JNIEnv*, int, const char*, jthrowable)
+{
+  // ignore
+}
+
+extern "C" int
+jniThrowException(JNIEnv* e, const char* className, const char* message)
+{
+  jclass c = e->vtable->FindClass(e, className);
+
+  if (c) {
+    e->vtable->ThrowNew(e, c, message);
+  }
+
+  return 0;
+}
+
+extern "C" int
+jniThrowExceptionFmt(JNIEnv* e, const char* className, const char* format,
+                     va_list args)
+{
+  const unsigned size = 4096;
+  char buffer[size];
+  ::vsnprintf(buffer, size, format, args);
+  return jniThrowException(e, className, buffer);
+}
+
+extern "C" int
+jniThrowNullPointerException(JNIEnv* e, const char* message)
+{
+  return jniThrowException(e, "java/lang/NullPointerException", message);
+}
+
+extern "C" int
+jniThrowRuntimeException(JNIEnv* e, const char* message)
+{
+  return jniThrowException(e, "java/lang/RuntimeException", message);
+}
+
+extern "C" int
+jniThrowIOException(JNIEnv* e, const char* message)
+{
+  return jniThrowException(e, "java/lang/IOException", message);
+}
+
+extern "C" const char*
+jniStrError(int error, char* buffer, size_t length)
+{
+  if (static_cast<int>(strerror_r(error, buffer, length)) == 0) {
+    return buffer;
+  } else {
+    return 0;
+  }
+}
+
+extern "C" int
+__android_log_print(int priority, const char* tag,  const char* format, ...)
+{
+  va_list a;
+  const unsigned size = 4096;
+  char buffer[size];
+
+  va_start(a, format);
+  ::vsnprintf(buffer, size, format, a);
+  va_end(a);
+
+  return fprintf(stderr, "%d %s %s\n", priority, tag, buffer);
+}
+
+extern "C" int
+jniGetFDFromFileDescriptor(JNIEnv* e, jobject descriptor)
+{
+  return e->vtable->GetIntField
+    (e, descriptor, e->vtable->GetFieldID
+     (e, e->vtable->FindClass
+      (e, "java/io/FileDescriptor"), "descriptor", "I"));
+}
+
+extern "C" void
+jniSetFileDescriptorOfFD(JNIEnv* e, jobject descriptor, int value)
+{
+  e->vtable->SetIntField
+    (e, descriptor, e->vtable->GetFieldID
+     (e, e->vtable->FindClass
+      (e, "java/io/FileDescriptor"), "descriptor", "I"), value);
+}
+
+extern "C" jobject
+jniCreateFileDescriptor(JNIEnv* e, int fd)
+{
+  jobject descriptor = e->vtable->NewObject
+    (e, e->vtable->FindClass(e, "java/io/FileDescriptor"),
+     e->vtable->GetMethodID
+     (e, e->vtable->FindClass(e, "java/io/FileDescriptor"), "<init>", "()V"));
+
+  jniSetFileDescriptorOfFD(e, descriptor, fd);
+
+  return descriptor;
+}
+
+extern "C" struct _JNIEnv;
+
+int
+register_org_apache_harmony_dalvik_NativeTestTarget(_JNIEnv*)
+{
+  // ignore
+  return 0;
+}

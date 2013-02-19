@@ -104,7 +104,7 @@ GetEnv(Machine* m, Thread** t, jint version)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t) {
-    if (version <= JNI_VERSION_1_4) {
+    if (version <= JNI_VERSION_1_6) {
       return JNI_OK;
     } else {
       return JNI_EVERSION;

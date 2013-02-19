@@ -166,7 +166,16 @@ ifneq ($(android),)
 		-fpermissive \
 		-fno-exceptions \
 		-DHAVE_SYS_UIO_H \
-		-D_FILE_OFFSET_BITS=64
+		-D_FILE_OFFSET_BITS=64 \
+		-g3
+	classpath-lflags := $(android)/icu4c/lib/libicuuc.a \
+		$(android)/icu4c/lib/libicui18n.a \
+		$(android)/icu4c/lib/libicudata.a \
+		$(android)/fdlibm/libfdm.a \
+		$(android)/expat/.libs/libexpat.a \
+		$(android)/openssl-1.0.1e/libssl.a \
+		$(android)/openssl-1.0.1e/libcrypto.a \
+		-lstdc++
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build))
@@ -279,7 +288,7 @@ common-lflags = -lm -lz $(classpath-lflags)
 
 build-lflags = -lz -lpthread -ldl
 
-lflags = $(common-lflags) -lpthread -ldl
+lflags = $(common-lflags) $(classpath-lflags) -lpthread -ldl
 
 soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
 version-script-flag = -Wl,--version-script=openjdk.ld
@@ -1217,7 +1226,10 @@ ifneq ($(classpath),avian)
 		classpath-sources := $(classpath-sources) \
 			$(classpath-src)/sun/reflect/ConstantPool.java \
 			$(classpath-src)/java/lang/ReflectiveOperationException.java \
-			$(classpath-src)/sun/misc/Cleaner.java
+			$(classpath-src)/java/net/ProtocolFamily.java \
+			$(classpath-src)/java/net/StandardProtocolFamily.java \
+			$(classpath-src)/sun/misc/Cleaner.java \
+			$(classpath-src)/sun/misc/Unsafe.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1413,6 +1425,7 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
+	rm $(build)/android/sun/misc/Unsafe*
 	cp -r $(build)/android/* $(classpath-build)
 	@touch $(@)	
 
