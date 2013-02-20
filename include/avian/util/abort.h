@@ -11,6 +11,9 @@
 #ifndef AVIAN_UTIL_ABORT_H
 #define AVIAN_UTIL_ABORT_H
 
+namespace avian {
+namespace util {
+
 class Aborter {
 public:
   virtual void NO_RETURN abort() = 0;
@@ -37,5 +40,8 @@ inline void assert(T t, bool v) {
   expect(t, v);
 }
 #endif
+  
+} // namespace util
+} // namespace avian
 
 #endif // AVIAN_UTIL_ABORT_H

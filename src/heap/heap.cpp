@@ -14,6 +14,7 @@
 #include "arch.h"
 
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 

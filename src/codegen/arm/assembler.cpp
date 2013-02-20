@@ -12,7 +12,7 @@
 #include <avian/vm/codegen/registers.h>
 
 #include "alloc-vector.h"
-#include "util/abort.h"
+#include <avian/util/abort.h>
 
 #include "util/runtime-array.h"
 
@@ -23,6 +23,7 @@
 
 using namespace vm;
 using namespace avian::codegen;
+using namespace avian::util;
 
 namespace local {
 

@@ -19,6 +19,8 @@
 #include "constants.h"
 #include "arch.h"
 
+using namespace avian::util;
+
 #ifdef PLATFORM_WINDOWS
 #  define JNICALL __stdcall
 #else

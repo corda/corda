@@ -14,7 +14,9 @@
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/compiler.h>
 
-#include "codegen/compiler/regalloc.h"
+#include "regalloc.h"
+
+using namespace avian::util;
 
 namespace avian {
 namespace codegen {

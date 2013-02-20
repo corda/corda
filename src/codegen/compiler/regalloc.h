@@ -16,11 +16,16 @@
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/registers.h>
 
-class Aborter;
-
 namespace avian {
+
+namespace util {
+class Aborter;
+} // namespace util
+
 namespace codegen {
 namespace compiler {
+
+using namespace avian::util;
 
 class Context;
 class Value;
