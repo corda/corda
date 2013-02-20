@@ -291,11 +291,179 @@ jniCreateFileDescriptor(JNIEnv* e, int fd)
   return descriptor;
 }
 
-extern "C" struct _JNIEnv;
+struct _JNIEnv;
 
 int
 register_org_apache_harmony_dalvik_NativeTestTarget(_JNIEnv*)
 {
   // ignore
   return 0;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_isEmpty
+(Thread* t, object, uintptr_t* arguments)
+{
+  return stringLength(t, reinterpret_cast<object>(arguments[0])) == 0;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_length
+(Thread* t, object, uintptr_t* arguments)
+{
+  return stringLength(t, reinterpret_cast<object>(arguments[0]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_charAt
+(Thread* t, object, uintptr_t* arguments)
+{
+  return stringCharAt(t, reinterpret_cast<object>(arguments[0]), arguments[1]);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_equals
+(Thread* t, object, uintptr_t* arguments)
+{
+  return stringEqual(t, reinterpret_cast<object>(arguments[0]),
+                     reinterpret_cast<object>(arguments[1]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_fastIndexOf
+(Thread* t, object, uintptr_t* arguments)
+{
+  object s = reinterpret_cast<object>(arguments[0]);
+  unsigned c = arguments[1];
+  unsigned start = arguments[2];
+
+  for (unsigned i = start; i < stringLength(t, s); ++i) {
+    if (stringCharAt(t, s, i) == c) {
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Class_getComponentType
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = reinterpret_cast<object>(arguments[0]);
+
+  if (classArrayDimensions(t, jclassVmClass(t, c))) {
+    uint8_t n = byteArrayBody(t, className(t, jclassVmClass(t, c)), 1);
+    if (n != 'L' and n != '[') {
+      return reinterpret_cast<uintptr_t>
+        (getJClass(t, primitiveClass(t, n)));
+    } else {
+      return reinterpret_cast<uintptr_t>
+        (getJClass(t, classStaticTable(t, jclassVmClass(t, c))));
+    }    
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Class_getDeclaredField
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, c);
+
+  object name = reinterpret_cast<object>(arguments[1]);
+  PROTECT(t, name);
+  
+  object method = resolveMethod
+    (t, root(t, Machine::BootLoader), "avian/Android", "findField",
+     "(Lavian/VMClass;Ljava/lang/String;)Lavian/VMField;");
+
+  object field = t->m->processor->invoke
+    (t, method, 0, jclassVmClass(t, c), name);
+
+  if (field) {
+    PROTECT(t, field);
+
+    object type = resolveClassBySpec
+      (t, classLoader(t, fieldClass(t, field)),
+       reinterpret_cast<char*>
+       (&byteArrayBody(t, fieldSpec(t, field), 0)),
+       byteArrayLength(t, fieldSpec(t, field)) - 1);
+    PROTECT(t, type);
+
+    unsigned index = 0xFFFFFFFF;
+    object table = classFieldTable(t, fieldClass(t, field));
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      if (field == arrayBody(t, table, i)) {
+        index = i;
+        break;
+      }
+    }
+
+    return reinterpret_cast<uintptr_t>
+      (makeJfield(t, 0, c, type, 0, 0, name, index));
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_dalvik_system_VMRuntime_bootClassPath
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>(root(t, Machine::BootLoader));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_dalvik_system_VMRuntime_classPath
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>(root(t, Machine::AppLoader));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_dalvik_system_VMRuntime_vmVersion
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>(makeString(t, "%s", AVIAN_VERSION));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_dalvik_system_VMRuntime_properties
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>
+    (makeObjectArray(t, type(t, Machine::StringType), 0));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_System_arraycopy
+(Thread* t, object, uintptr_t* arguments)
+{
+  arrayCopy(t, reinterpret_cast<object>(arguments[0]),
+            arguments[1],
+            reinterpret_cast<object>(arguments[2]),
+            arguments[3],
+            arguments[4]);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_objectFieldOffset
+(Thread* t, object, uintptr_t* arguments)
+{
+  object jfield = reinterpret_cast<object>(arguments[1]);
+  return fieldOffset
+    (t, arrayBody
+     (t, classFieldTable
+      (t, jclassVmClass(t, jfieldDeclaringClass(t, jfield))),
+      jfieldSlot(t, jfield)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMThread_currentThread
+(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<uintptr_t>(t->javaThread);
 }

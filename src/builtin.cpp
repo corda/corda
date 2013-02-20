@@ -565,3 +565,16 @@ Avian_java_nio_FixedArrayByteBuffer_allocateFixed
 
   return reinterpret_cast<intptr_t>(array);
 }
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapInt
+(Thread*, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uint32_t expect = arguments[4];
+  uint32_t update = arguments[5];
+
+  return atomicCompareAndSwap32
+    (&fieldAtOffset<uint32_t>(target, offset), expect, update);
+}

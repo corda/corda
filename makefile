@@ -1229,7 +1229,8 @@ ifneq ($(classpath),avian)
 			$(classpath-src)/java/net/ProtocolFamily.java \
 			$(classpath-src)/java/net/StandardProtocolFamily.java \
 			$(classpath-src)/sun/misc/Cleaner.java \
-			$(classpath-src)/sun/misc/Unsafe.java
+			$(classpath-src)/sun/misc/Unsafe.java \
+			$(classpath-src)/avian/Android.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1406,7 +1407,13 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 			$(classpath-classes))
 	@touch $(@)
 
-$(build)/%.o: $(luni-native)/%.cpp $(build)/android.dep
+$(build)/android-src/%.cpp: $(luni-native)/%.cpp
+	if [ "$(luni-native)/libcore_icu_ICU.cpp" = "$(<)" ]; then \
+		sed 's/register_libcore_icu_ICU/hide_register_libcore_icu_ICU/' \
+			< $(<) > $(@).tmp && cat $(@).tmp $(src)/android/icu.cpp > $(@); else \
+		cp $(<) $(@); fi
+
+$(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(android-cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
@@ -1653,7 +1660,8 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
-unittest-executable-objects = $(unittest-objects) $(vm-objects)
+unittest-executable-objects = $(unittest-objects) $(vm-objects) \
+		$(classpath-objects)
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)

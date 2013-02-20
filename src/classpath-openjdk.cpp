@@ -2186,30 +2186,6 @@ countConstructors(Thread* t, object c, bool publicOnly)
 }
 
 object
-resolveClassBySpec(Thread* t, object loader, const char* spec,
-                   unsigned specLength)
-{
-  switch (*spec) {
-  case 'L': {
-    THREAD_RUNTIME_ARRAY(t, char, s, specLength - 1);
-    memcpy(RUNTIME_ARRAY_BODY(s), spec + 1, specLength - 2);
-    RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
-    return resolveClass(t, loader, s);
-  }
-  
-  case '[': {
-    THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
-    memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
-    RUNTIME_ARRAY_BODY(s)[specLength] = 0;
-    return resolveClass(t, loader, s);
-  }
-
-  default:
-    return primitiveClass(t, *spec);
-  }
-}
-
-object
 resolveJType(Thread* t, object loader, const char* spec, unsigned specLength)
 {
   return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
@@ -2498,7 +2474,7 @@ makeJfield(Thread* t, object vmField, int index)
       (t, fieldName(t, vmField)) - 1));
   PROTECT(t, name);
 
-  object type = local::resolveClassBySpec
+  object type = resolveClassBySpec
     (t, classLoader(t, fieldClass(t, vmField)),
      reinterpret_cast<char*>
      (&byteArrayBody(t, fieldSpec(t, vmField), 0)),
@@ -3053,19 +3029,6 @@ Avian_sun_misc_Unsafe_putOrderedObject
 (Thread* t, object method, uintptr_t* arguments)
 {
   Avian_sun_misc_Unsafe_putObjectVolatile(t, method, arguments);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_compareAndSwapInt
-(Thread*, object, uintptr_t* arguments)
-{
-  object target = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  uint32_t expect = arguments[4];
-  uint32_t update = arguments[5];
-
-  return atomicCompareAndSwap32
-    (&fieldAtOffset<uint32_t>(target, offset), expect, update);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

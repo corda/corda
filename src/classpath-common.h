@@ -331,6 +331,30 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
   }
 }
 
+object
+resolveClassBySpec(Thread* t, object loader, const char* spec,
+                   unsigned specLength)
+{
+  switch (*spec) {
+  case 'L': {
+    THREAD_RUNTIME_ARRAY(t, char, s, specLength - 1);
+    memcpy(RUNTIME_ARRAY_BODY(s), spec + 1, specLength - 2);
+    RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
+    return resolveClass(t, loader, s);
+  }
+  
+  case '[': {
+    THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
+    memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
+    RUNTIME_ARRAY_BODY(s)[specLength] = 0;
+    return resolveClass(t, loader, s);
+  }
+
+  default:
+    return primitiveClass(t, *spec);
+  }
+}
+
 } // namespace vm
 
 #endif//CLASSPATH_COMMON_H
