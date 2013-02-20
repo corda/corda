@@ -15,6 +15,8 @@
 #include "target.h"
 #include "machine.h"
 
+#include <avian/util/math.h>
+
 namespace vm {
 
 class BootImage {

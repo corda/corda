@@ -13,6 +13,8 @@
 #include "common.h"
 #include "arch.h"
 
+#include <avian/util/math.h>
+
 using namespace vm;
 using namespace avian::util;
 
