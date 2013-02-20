@@ -11,7 +11,7 @@
 #include <stdio.h>
 
 #include "common.h"
-#include "heap/heap.h"
+#include <avian/vm/heap/heap.h>
 #include "system.h"
 #include "target.h"
 

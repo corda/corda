@@ -13,7 +13,7 @@
 
 #include "common.h"
 #include "system.h"
-#include "heap/heap.h"
+#include <avian/vm/heap/heap.h>
 #include "finder.h"
 #include "processor.h"
 #include "constants.h"
