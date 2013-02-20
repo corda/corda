@@ -297,24 +297,6 @@ const uintptr_t PointerMask
 const unsigned LikelyPageSizeInBytes = 4 * 1024;
 
 inline unsigned
-max(unsigned a, unsigned b)
-{
-  return (a > b ? a : b);
-}
-
-inline unsigned
-min(unsigned a, unsigned b)
-{
-  return (a < b ? a : b);
-}
-
-inline unsigned
-avg(unsigned a, unsigned b)
-{
-  return (a + b) / 2;
-}
-
-inline unsigned
 pad(unsigned n, unsigned alignment)
 {
   return (n + (alignment - 1)) & ~(alignment - 1);
@@ -338,27 +320,6 @@ padWord(uintptr_t n)
   return padWord(n, BytesPerWord);
 }
 
-inline unsigned
-ceilingDivide(unsigned n, unsigned d)
-{
-  return (n + d - 1) / d;
-}
-
-inline bool
-powerOfTwo(unsigned n)
-{
-  for (; n > 2; n >>= 1) if (n & 1) return false;
-  return true;
-}
-
-inline unsigned
-nextPowerOfTwo(unsigned n)
-{
-  unsigned r = 1;
-  while (r < n) r <<= 1;
-  return r;
-}
-
 inline bool fitsInInt8(int64_t v) {
   return v == static_cast<int8_t>(v);
 }
@@ -370,15 +331,6 @@ inline bool fitsInInt16(int64_t v) {
 inline bool fitsInInt32(int64_t v) {
   return v == static_cast<int32_t>(v);
 }
-
-inline unsigned
-log(unsigned n)
-{
-  unsigned r = 0;
-  for (unsigned i = 1; i < n; ++r) i <<= 1;
-  return r;
-}
-
 template <class T>
 inline unsigned
 wordOf(unsigned i)

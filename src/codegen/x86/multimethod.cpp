@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#include "codegen/lir.h"
+#include <avian/vm/codegen/lir.h>
 
 #include "codegen/x86/context.h"
 #include "codegen/x86/multimethod.h"

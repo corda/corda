@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_TARGETS_H
 #define AVIAN_CODEGEN_TARGETS_H
 
-#include "codegen/assembler.h"
+#include <avian/vm/codegen/assembler.h>
 
 namespace avian {
 namespace codegen {

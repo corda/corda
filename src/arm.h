@@ -13,7 +13,7 @@
 
 #include "types.h"
 #include "common.h"
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #ifdef __APPLE__
 #  include "libkern/OSAtomic.h"

@@ -14,6 +14,8 @@
 #include "system.h"
 #include "target.h"
 
+#include <avian/util/math.h>
+
 namespace vm {
 
 class Vector {
@@ -51,8 +53,8 @@ class Vector {
     if (position + space > capacity) {
       assert(s, minimumCapacity >= 0);
 
-      unsigned newCapacity = max
-        (position + space, max(minimumCapacity, capacity * 2));
+      unsigned newCapacity = avian::util::max
+        (position + space, avian::util::max(minimumCapacity, capacity * 2));
       uint8_t* newData = static_cast<uint8_t*>
         (allocator->allocate(newCapacity));
       if (data) {

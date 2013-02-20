@@ -15,11 +15,9 @@
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 #define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
-#include "codegen/lir.h"
-#include "codegen/assembler.h"
+#include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/assembler.h>
 #include "alloc-vector.h"
-
-class Aborter;
 
 namespace vm {
 class System;
@@ -28,6 +26,11 @@ class Zone;
 } // namespace vm
 
 namespace avian {
+
+namespace util {
+class Aborter;
+} // namespace util
+
 namespace codegen {
 namespace x86 {
 
@@ -80,11 +83,11 @@ class Context {
   ArchitectureContext* ac;
 };
 
-inline Aborter* getAborter(Context* c) {
+inline avian::util::Aborter* getAborter(Context* c) {
   return c->s;
 }
 
-inline Aborter* getAborter(ArchitectureContext* c) {
+inline avian::util::Aborter* getAborter(ArchitectureContext* c) {
   return c->s;
 }
 

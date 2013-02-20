@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H
 
-#include "codegen/assembler.h"
+#include <avian/vm/codegen/assembler.h>
 
 namespace avian {
 namespace codegen {

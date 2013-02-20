@@ -16,7 +16,7 @@
 #include "process.h"
 #include "arch.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 

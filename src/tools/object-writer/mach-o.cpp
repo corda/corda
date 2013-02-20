@@ -14,7 +14,7 @@
 
 #include "endianness.h"
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 #define MH_MAGIC_64 0xfeedfacf
 #define MH_MAGIC 0xfeedface

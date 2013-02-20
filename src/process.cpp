@@ -10,7 +10,7 @@
 
 #include "process.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 

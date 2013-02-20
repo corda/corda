@@ -51,10 +51,13 @@
 #include "arch.h"
 #include "system.h"
 
+#include <avian/util/math.h>
+
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
 
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 

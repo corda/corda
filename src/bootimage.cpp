@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "heap/heap.h"
+#include <avian/vm/heap/heap.h>
 #include "heapwalk.h"
 #include "common.h"
 #include "machine.h"
@@ -17,7 +17,7 @@
 #include "codegen/assembler.h"
 #include "codegen/promise.h"
 #include "target.h"
-#include "binaryToObject/tools.h"
+#include <avian/tools/object-writer/tools.h>
 #include "lzma.h"
 
 #include "util/arg-parser.h"

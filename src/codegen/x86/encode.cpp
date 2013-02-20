@@ -15,6 +15,8 @@
 #include "codegen/x86/registers.h"
 #include "codegen/x86/fixup.h"
 
+using namespace avian::util;
+
 namespace avian {
 namespace codegen {
 namespace x86 {
@@ -70,7 +72,7 @@ void modrm(Context* c, uint8_t mod, lir::Register* a, lir::Register* b) {
 }
 
 void sib(Context* c, unsigned scale, int index, int base) {
-  c->code.append((vm::log(scale) << 6) | (regCode(index) << 3) | regCode(base));
+  c->code.append((util::log(scale) << 6) | (regCode(index) << 3) | regCode(base));
 }
 
 void modrmSib(Context* c, int width, int a, int scale, int index, int base) {

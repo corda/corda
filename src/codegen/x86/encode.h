@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_ENCODE_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_ENCODE_H
 
-#include "codegen/assembler.h"
+#include <avian/vm/codegen/assembler.h>
 #include "codegen/x86/registers.h"
 
 namespace avian {

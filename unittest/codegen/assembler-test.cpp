@@ -11,13 +11,13 @@
 #include <stdio.h>
 
 #include "common.h"
-#include "heap/heap.h"
+#include <avian/vm/heap/heap.h>
 #include "system.h"
 #include "target.h"
 
-#include "codegen/assembler.h"
-#include "codegen/targets.h"
-#include "codegen/lir.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/targets.h>
+#include <avian/vm/codegen/lir.h>
 
 #include "test-harness.h"
 

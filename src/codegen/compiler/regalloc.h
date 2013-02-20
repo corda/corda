@@ -13,14 +13,19 @@
 
 #include "common.h"
 
-#include "codegen/lir.h"
-#include "codegen/registers.h"
-
-class Aborter;
+#include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/registers.h>
 
 namespace avian {
+
+namespace util {
+class Aborter;
+} // namespace util
+
 namespace codegen {
 namespace compiler {
+
+using namespace avian::util;
 
 class Context;
 class Value;

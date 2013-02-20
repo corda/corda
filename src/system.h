@@ -13,11 +13,11 @@
 
 #include "common.h"
 #include "allocator.h"
-#include "util/abort.h"
+#include <avian/util/abort.h>
 
 namespace vm {
 
-class System : public Aborter {
+class System : public avian::util::Aborter {
  public:
   typedef intptr_t Status;
 
@@ -165,7 +165,7 @@ allocate(System* s, unsigned size)
 #define ACQUIRE_MONITOR(t, m) \
   System::MonitorResource MAKE_NAME(monitorResource_) (t, m)
 
-inline Aborter* getAborter(System* s) {
+inline avian::util::Aborter* getAborter(System* s) {
   return s;
 }
 

@@ -8,12 +8,15 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "heap/heap.h"
+#include <avian/vm/heap/heap.h>
 #include "system.h"
 #include "common.h"
 #include "arch.h"
 
+#include <avian/util/math.h>
+
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 

@@ -17,7 +17,8 @@
 #include "arch.h"
 #include "lzma.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
+#include <avian/util/math.h>
 
 #if defined(PLATFORM_WINDOWS)
 #  define WIN32_LEAN_AND_MEAN
@@ -25,6 +26,7 @@
 #endif
 
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 

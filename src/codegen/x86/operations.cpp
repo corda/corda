@@ -16,6 +16,8 @@
 #include "codegen/x86/padding.h"
 #include "codegen/x86/fixup.h"
 
+using namespace avian::util;
+
 namespace avian {
 namespace codegen {
 namespace x86 {

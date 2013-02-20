@@ -8,7 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/targets.h"
+#include <avian/vm/codegen/targets.h>
+
 #include "environment.h"
 
 namespace avian {

@@ -22,7 +22,7 @@
 #endif
 #include <fcntl.h>
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 extern "C"
 void __cxa_pure_virtual() {

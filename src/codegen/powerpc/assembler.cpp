@@ -8,11 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/assembler.h"
-#include "codegen/registers.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/registers.h>
 
 #include "alloc-vector.h"
-#include "util/abort.h"
+#include <avian/util/abort.h>
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -21,6 +21,7 @@
 
 using namespace vm;
 using namespace avian::codegen;
+using namespace avian::util;
 
 namespace {
 

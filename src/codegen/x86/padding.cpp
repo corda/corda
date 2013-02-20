@@ -8,7 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/assembler.h"
+#include <avian/vm/codegen/assembler.h>
+
 #include "codegen/x86/context.h"
 #include "codegen/x86/fixup.h"
 #include "codegen/x86/padding.h"
