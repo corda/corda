@@ -10,7 +10,7 @@
 
 #include "target.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/assembler.h>

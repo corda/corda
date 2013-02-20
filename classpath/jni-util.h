@@ -15,7 +15,7 @@
 #include "stdlib.h"
 #include "string.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #undef JNIEXPORT
 

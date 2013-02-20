@@ -15,7 +15,7 @@
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/registers.h>
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 #include <avian/util/abort.h>
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)

@@ -19,7 +19,7 @@
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/targets.h>
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 

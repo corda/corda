@@ -17,7 +17,7 @@
 #include "arch.h"
 #include "lzma.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #if defined(PLATFORM_WINDOWS)
 #  define WIN32_LEAN_AND_MEAN

@@ -9,7 +9,7 @@
    details. */
 
 #include "target.h"
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/event.h"
