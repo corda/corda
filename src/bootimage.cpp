@@ -14,8 +14,8 @@
 #include "machine.h"
 #include "util.h"
 #include "stream.h"
-#include "codegen/assembler.h"
-#include "codegen/promise.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/promise.h>
 #include "target.h"
 #include <avian/tools/object-writer/tools.h>
 #include "lzma.h"
