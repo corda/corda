@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 namespace avian {
 

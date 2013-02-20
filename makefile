@@ -214,7 +214,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
-	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) $(classpath-cflags) \
+	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) -Iinclude $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DAVIAN_INFO="\"$(info)\"" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
@@ -232,7 +232,7 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS -Isrc/binaryToObject -Isrc/ \
+converter-cflags = -D__STDC_CONSTANT_MACROS -Iinclude/ -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
 	-DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_UNKNOWN \
@@ -1126,18 +1126,20 @@ generator-lzma-objects = \
 	$(call generator-c-objects,$(lzma-decode-sources),$(lzma)/C,$(build))
 generator = $(build)/generator
 
-converter-depends = \
-	$(src)/binaryToObject/tools.h \
-	$(src)/binaryToObject/endianness.h
+all-depends = $(shell find include -name '*.h')
 
-converter-sources = \
-	$(src)/binaryToObject/tools.cpp \
-	$(src)/binaryToObject/elf.cpp \
-	$(src)/binaryToObject/mach-o.cpp \
-	$(src)/binaryToObject/pe.cpp
+object-writer-depends = $(shell find $(src)/tools/object-writer -name '*.h')
+object-writer-sources = $(shell find $(src)/tools/object-writer -name '*.cpp')
+object-writer-objects = $(call cpp-objects,$(object-writer-sources),$(src),$(build))
 
-converter-tool-sources = \
-	$(src)/binaryToObject/main.cpp
+binary-to-object-depends = $(shell find $(src)/tools/binary-to-object/ -name '*.h')
+binary-to-object-sources = $(shell find $(src)/tools/binary-to-object/ -name '*.cpp')
+binary-to-object-objects = $(call cpp-objects,$(binary-to-object-sources),$(src),$(build))
+
+converter-sources = $(object-writer-sources)
+
+converter-tool-depends = $(binary-to-object-depends) $(all-depends)
+converter-tool-sources = $(binary-to-object-sources)
 
 converter-objects = $(call cpp-objects,$(converter-sources),$(src),$(build))
 converter-tool-objects = $(call cpp-objects,$(converter-tool-sources),$(src),$(build))
@@ -1497,11 +1499,12 @@ $(boot-object): $(boot-source)
 $(boot-javahome-object): $(src)/boot-javahome.cpp
 	$(compile-object)
 
-$(converter-objects) $(converter-tool-objects): $(build)/binaryToObject/%.o: $(src)/binaryToObject/%.cpp $(converter-depends)
+$(object-writer-objects) $(binary-to-object-objects): $(build)/%.o: $(src)/%.cpp $(binary-to-object-depends) $(object-writer-depends) $(all-depends)
 	@mkdir -p $(dir $(@))
 	$(build-cxx) $(converter-cflags) -c $(<) -o $(@)
 
 $(converter): $(converter-objects) $(converter-tool-objects)
+	@mkdir -p $(dir $(@))
 	$(build-cc) $(^) -g -o $(@)
 
 $(lzma-encoder-objects): $(build)/lzma/%.o: $(src)/lzma/%.cpp

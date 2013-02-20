@@ -17,7 +17,7 @@
 #include "codegen/assembler.h"
 #include "codegen/promise.h"
 #include "target.h"
-#include "binaryToObject/tools.h"
+#include <avian/tools/object-writer/tools.h>
 #include "lzma.h"
 
 // since we aren't linking against libstdc++, we must implement this
