@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/assembler.h"
-#include "codegen/registers.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/registers.h>
 
 #include "alloc-vector.h"
 #include "util/abort.h"

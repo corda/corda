@@ -13,8 +13,8 @@
 
 #include "common.h"
 
-#include "codegen/lir.h"
-#include "codegen/registers.h"
+#include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/registers.h>
 
 class Aborter;
 

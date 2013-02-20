@@ -12,8 +12,8 @@
 #include "target.h"
 #include "alloc-vector.h"
 
-#include "codegen/assembler.h"
-#include "codegen/registers.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/registers.h>
 
 #include "util/runtime-array.h"
 #include "util/abort.h"

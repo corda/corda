@@ -14,8 +14,8 @@
 #include "system.h"
 #include "zone.h"
 
-#include "codegen/lir.h"
-#include "codegen/promise.h"
+#include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/promise.h>
 
 namespace avian {
 namespace codegen {

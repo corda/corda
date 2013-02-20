@@ -13,10 +13,11 @@
 #include "alloc-vector.h"
 #include "process.h"
 #include "target.h"
-#include "codegen/assembler.h"
-#include "codegen/compiler.h"
-#include "codegen/targets.h"
 #include "arch.h"
+
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/compiler.h>
+#include <avian/vm/codegen/targets.h>
 
 #include "util/runtime-array.h"
 

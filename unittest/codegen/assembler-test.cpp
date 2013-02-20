@@ -15,9 +15,9 @@
 #include "system.h"
 #include "target.h"
 
-#include "codegen/assembler.h"
-#include "codegen/targets.h"
-#include "codegen/lir.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/targets.h>
+#include <avian/vm/codegen/lir.h>
 
 #include "test-harness.h"
 
