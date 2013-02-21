@@ -1071,7 +1071,7 @@ boot-object = $(build)/boot.o
 
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
-	$(src)/type-generator.cpp \
+	$(src)/tools/type-generator/main.cpp \
 	$(src)/$(build-system).cpp \
 	$(src)/finder.cpp
 

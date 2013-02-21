@@ -16,7 +16,7 @@
 
 #include "constants.h"
 #include "finder.h"
-#include "stream.h"
+#include <avian/util/stream.h>
 
 #include "assert.h"
 

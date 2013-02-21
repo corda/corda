@@ -13,7 +13,7 @@
 #include "common.h"
 #include "machine.h"
 #include "util.h"
-#include "stream.h"
+#include <avian/util/stream.h>
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/promise.h>
 #include "target.h"

@@ -11,7 +11,7 @@
 #include "jnienv.h"
 #include "machine.h"
 #include "util.h"
-#include "stream.h"
+#include <avian/util/stream.h>
 #include "constants.h"
 #include "processor.h"
 #include "arch.h"
