@@ -72,6 +72,7 @@
 namespace {
 
 using namespace avian::tools;
+using namespace avian::util;
 
 template<class AddrTy>
 struct ElfTypes {

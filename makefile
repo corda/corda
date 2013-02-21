@@ -939,7 +939,11 @@ generated-code = \
 	$(build)/type-name-initializations.cpp \
 	$(build)/type-maps.cpp
 
-vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h) $(wildcard $(src)/codegen/compiler/*.h)
+vm-depends := $(generated-code) \
+	$(wildcard $(src)/*.h) \
+	$(wildcard $(src)/codegen/*.h) \
+	$(wildcard $(src)/codegen/compiler/*.h) \
+	$(shell find include -name '*.h')
 
 vm-sources = \
 	$(src)/vm/system/$(system).cpp \

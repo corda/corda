@@ -12,6 +12,9 @@
 #define AVIAN_TOOLS_H_
 
 #include <stdlib.h>
+
+#include <avian/util/string.h>
+
 #include "environment.h"
 
 namespace avian {
@@ -38,24 +41,12 @@ public:
   virtual void write(uint8_t byte);
 };
 
-class String {
-public:
-  const char* text;
-  size_t length;
-
-  String(const char* text);
-  
-  inline String(const char* text, size_t length):
-    text(text),
-    length(length) {}
-};
-
 class SymbolInfo {
 public:
   unsigned addr;
-  String name;
+  util::String name;
 
-  inline SymbolInfo(uint64_t addr, const String& name):
+  inline SymbolInfo(uint64_t addr, const util::String& name):
     addr(addr),
     name(name) {}
 
@@ -78,7 +69,7 @@ public:
 
 class StringTable : public Buffer {
 public:
-  unsigned add(String str);
+  unsigned add(util::String str);
 };
 
 template<class T>

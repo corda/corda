@@ -86,6 +86,7 @@ pad(unsigned n)
 }
 
 using namespace avian::tools;
+using namespace avian::util;
 
 template<unsigned BytesPerWord, PlatformInfo::Architecture Architecture>
 class WindowsPlatform : public Platform {
