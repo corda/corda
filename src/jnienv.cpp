@@ -219,7 +219,7 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, stringLength(t, *s) + 1);
+  t->m->heap->free(chars, stringUTFLength(t, *s) + 1);
 }
 
 void JNICALL
