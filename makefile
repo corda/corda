@@ -942,7 +942,7 @@ generated-code = \
 vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h) $(wildcard $(src)/codegen/compiler/*.h)
 
 vm-sources = \
-	$(src)/$(system).cpp \
+	$(src)/vm/system/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
@@ -1072,7 +1072,7 @@ boot-object = $(build)/boot.o
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
-	$(src)/$(build-system).cpp \
+	$(src)/vm/system/$(build-system).cpp \
 	$(src)/finder.cpp
 
 ifneq ($(lzma),)
