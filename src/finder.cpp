@@ -9,7 +9,7 @@
    details. */
 
 #include "zlib-custom.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "tokenizer.h"
 #include "finder.h"
 #include "lzma.h"

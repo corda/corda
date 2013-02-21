@@ -9,7 +9,7 @@
    details. */
 
 #include "common.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "constants.h"
 #include "machine.h"
 #include "processor.h"

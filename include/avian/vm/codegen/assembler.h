@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_H
 #define AVIAN_CODEGEN_ASSEMBLER_H
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "zone.h"
 
 #include <avian/vm/codegen/lir.h>
