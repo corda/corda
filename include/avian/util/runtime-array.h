@@ -32,8 +32,8 @@ class RuntimeArray {
 
 #else // not _MSC_VER
 
-#  define RUNTIME_ARRAY(type, name, size) type name[size];
-#  define RUNTIME_ARRAY_BODY(name) name
+#  define RUNTIME_ARRAY(type, name, size) type name##_body[size];
+#  define RUNTIME_ARRAY_BODY(name) name##_body
 
 #endif
 
