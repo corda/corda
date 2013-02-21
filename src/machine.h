@@ -1604,7 +1604,8 @@ class ThreadRuntimeArray: public Thread::Resource {
 
 #else // not _MSC_VER
 
-#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) type name[size];
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) \
+  type name##_body[size];
 
 #endif // not _MSC_VER
 

@@ -18,6 +18,7 @@
 #include <avian/vm/codegen/promise.h>
 #include "target.h"
 #include <avian/tools/object-writer/tools.h>
+#include <avian/util/runtime-array.h>
 #include "lzma.h"
 
 // since we aren't linking against libstdc++, we must implement this
@@ -345,20 +346,20 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         unsigned count = s.read2() - 1;
         if (count) {
           THREAD_RUNTIME_ARRAY(t, Type, types, count + 2);
-          types[0] = Type_object;
-          types[1] = Type_intptr_t;
+          RUNTIME_ARRAY_BODY(types)[0] = Type_object;
+          RUNTIME_ARRAY_BODY(types)[1] = Type_intptr_t;
 
           for (unsigned i = 2; i < count + 2; ++i) {
             switch (s.read1()) {
             case CONSTANT_Class:
             case CONSTANT_String:
-              types[i] = Type_object;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
               s.skip(2);
               break;
 
             case CONSTANT_Integer:
             case CONSTANT_Float:
-              types[i] = Type_int32_t;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_int32_t;
               s.skip(4);
               break;
 
@@ -366,24 +367,24 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             case CONSTANT_Fieldref:
             case CONSTANT_Methodref:
             case CONSTANT_InterfaceMethodref:
-              types[i] = Type_object;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
               s.skip(4);
               break;
 
             case CONSTANT_Long:
-              types[i++] = Type_int64_t;
-              types[i] = Type_int64_t_pad;
+              RUNTIME_ARRAY_BODY(types)[i++] = Type_int64_t;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_int64_t_pad;
               s.skip(8);
               break;
 
             case CONSTANT_Double:
-              types[i++] = Type_double;
-              types[i] = Type_double_pad;
+              RUNTIME_ARRAY_BODY(types)[i++] = Type_double;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_double_pad;
               s.skip(8);
               break;
 
             case CONSTANT_Utf8:
-              types[i] = Type_object;
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
               s.skip(s.read2());
               break;
 
@@ -403,7 +404,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             map->targetFixedOffsets()[i * BytesPerWord]
               = i * TargetBytesPerWord;
 
-            init(new (map->fixedFields() + i) Field, types[i],
+            init(new (map->fixedFields() + i) Field, RUNTIME_ARRAY_BODY(types)[i],
                  i * BytesPerWord, BytesPerWord, i * TargetBytesPerWord,
                  TargetBytesPerWord);
           }
@@ -439,15 +440,15 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           for (unsigned j = 0; j < map->fixedFieldCount; ++j) {
             Field* f = map->fixedFields() + j;
 
-            memberFields[memberIndex] = *f;
+            RUNTIME_ARRAY_BODY(memberFields)[memberIndex] = *f;
 
             targetMemberOffset = f->targetOffset + f->targetSize;
 
             ++ memberIndex;
           }
         } else {
-          init(new (&memberFields[0]) Field, Type_object, 0, BytesPerWord, 0,
-               TargetBytesPerWord);
+          init(new (RUNTIME_ARRAY_BODY(memberFields)) Field, Type_object, 0,
+               BytesPerWord, 0, TargetBytesPerWord);
 
           memberIndex = 1;
           buildMemberOffset = BytesPerWord;
@@ -458,14 +459,16 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         THREAD_RUNTIME_ARRAY(t, Field, staticFields, count + StaticHeader);
         
-        init(new (&staticFields[0]) Field, Type_object, 0, BytesPerWord, 0,
+        init(new (RUNTIME_ARRAY_BODY(staticFields)) Field, Type_object, 0,
+             BytesPerWord, 0, TargetBytesPerWord);
+
+        init(new (RUNTIME_ARRAY_BODY(staticFields) + 1) Field, Type_intptr_t,
+             BytesPerWord, BytesPerWord, TargetBytesPerWord,
              TargetBytesPerWord);
 
-        init(new (&staticFields[1]) Field, Type_intptr_t, BytesPerWord,
-             BytesPerWord, TargetBytesPerWord, TargetBytesPerWord);
-
-        init(new (&staticFields[2]) Field, Type_object, BytesPerWord * 2,
-             BytesPerWord, TargetBytesPerWord * 2, TargetBytesPerWord);
+        init(new (RUNTIME_ARRAY_BODY(staticFields) + 2) Field, Type_object,
+             BytesPerWord * 2, BytesPerWord, TargetBytesPerWord * 2,
+             TargetBytesPerWord);
 
         unsigned staticIndex = StaticHeader;
         unsigned buildStaticOffset = BytesPerWord * StaticHeader;
@@ -514,8 +517,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildStaticOffset = fieldOffset(t, field);
 
-              init(new (&staticFields[staticIndex]) Field, type,
-                   buildStaticOffset, buildSize, targetStaticOffset,
+              init(new (RUNTIME_ARRAY_BODY(staticFields) + staticIndex) Field,
+                   type, buildStaticOffset, buildSize, targetStaticOffset,
                    targetSize);
 
               targetStaticOffset += targetSize;
@@ -528,8 +531,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               buildMemberOffset = fieldOffset(t, field);
 
-              init(new (&memberFields[memberIndex]) Field, type,
-                   buildMemberOffset, buildSize, targetMemberOffset,
+              init(new (RUNTIME_ARRAY_BODY(memberFields) + memberIndex) Field,
+                   type, buildMemberOffset, buildSize, targetMemberOffset,
                    targetSize);
 
               targetMemberOffset += targetSize;
@@ -551,7 +554,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              ceilingDivide(targetMemberOffset, TargetBytesPerWord), memberIndex);
 
           for (unsigned i = 0; i < memberIndex; ++i) {
-            Field* f = &memberFields[i];
+            Field* f = RUNTIME_ARRAY_BODY(memberFields) + i;
 
             expect(t, f->buildOffset
                    < map->buildFixedSizeInWords * BytesPerWord);
@@ -575,7 +578,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
              TypeMap::SingletonKind);
 
           for (unsigned i = 0; i < staticIndex; ++i) {
-            Field* f = &staticFields[i];
+            Field* f = RUNTIME_ARRAY_BODY(staticFields) + i;
 
             expect(t, f->buildOffset
                    < map->buildFixedSizeInWords * BytesPerWord);
@@ -1338,8 +1341,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
       THREAD_RUNTIME_ARRAY(t, Field, fields, count);
 
-      init(new (&fields[0]) Field, Type_object, 0, BytesPerWord, 0,
-           TargetBytesPerWord);
+      init(new (RUNTIME_ARRAY_BODY(fields)) Field, Type_object, 0,
+           BytesPerWord, 0, TargetBytesPerWord);
 
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
@@ -1416,8 +1419,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
             ++ targetOffset;
           }
 
-          init(new (&fields[j]) Field, type, buildOffset, buildSize,
-               targetOffset, targetSize);
+          init(new (RUNTIME_ARRAY_BODY(fields) + j) Field, type, buildOffset,
+               buildSize, targetOffset, targetSize);
 
           buildOffset += buildSize;
           targetOffset += targetSize;
@@ -1451,7 +1454,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
          targetArrayElementSize, arrayElementType);
 
       for (unsigned j = 0; j < fixedFieldCount; ++j) {
-        Field* f = &fields[j];
+        Field* f = RUNTIME_ARRAY_BODY(fields) + j;
 
         expect(t, f->buildOffset
                < map->buildFixedSizeInWords * BytesPerWord);

@@ -943,7 +943,7 @@ vm-depends := $(generated-code) \
 	$(wildcard $(src)/*.h) \
 	$(wildcard $(src)/codegen/*.h) \
 	$(wildcard $(src)/codegen/compiler/*.h) \
-	$(shell find include -name '*.h')
+	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
 	$(src)/vm/system/$(system).cpp \
@@ -1023,7 +1023,7 @@ heapwalk-sources = $(src)/heapwalk.cpp
 heapwalk-objects = \
 	$(call cpp-objects,$(heapwalk-sources),$(src),$(build))
 
-unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest/)
+unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest)
 
 ifeq ($(heapdump),true)
 	vm-sources += $(src)/heapdump.cpp
