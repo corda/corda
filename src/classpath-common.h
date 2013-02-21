@@ -355,6 +355,260 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
   }
 }
 
+object
+resolveJType(Thread* t, object loader, const char* spec, unsigned specLength)
+{
+  return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
+}
+
+object
+resolveParameterTypes(Thread* t, object loader, object spec,
+                      unsigned* parameterCount, unsigned* returnTypeSpec)
+{
+  PROTECT(t, loader);
+  PROTECT(t, spec);
+
+  object list = 0;
+  PROTECT(t, list);
+
+  unsigned offset = 1;
+  unsigned count = 0;
+  while (byteArrayBody(t, spec, offset) != ')') {
+    switch (byteArrayBody(t, spec, offset)) {
+    case 'L': {
+      unsigned start = offset;
+      ++ offset;
+      while (byteArrayBody(t, spec, offset) != ';') ++ offset;
+      ++ offset;
+
+      object type = resolveClassBySpec
+        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
+         offset - start);
+      
+      list = makePair(t, type, list);
+
+      ++ count;
+    } break;
+  
+    case '[': {
+      unsigned start = offset;
+      while (byteArrayBody(t, spec, offset) == '[') ++ offset;
+      switch (byteArrayBody(t, spec, offset)) {
+      case 'L':
+        ++ offset;
+        while (byteArrayBody(t, spec, offset) != ';') ++ offset;
+        ++ offset;
+        break;
+
+      default:
+        ++ offset;
+        break;
+      }
+      
+      object type = resolveClassBySpec
+        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
+         offset - start);
+      
+      list = makePair(t, type, list);
+      ++ count;
+    } break;
+
+    default:
+      list = makePair
+        (t, primitiveClass(t, byteArrayBody(t, spec, offset)), list);
+      ++ offset;
+      ++ count;
+      break;
+    }
+  }
+
+  *parameterCount = count;
+  *returnTypeSpec = offset + 1;
+  return list;
+}
+
+object
+resolveParameterJTypes(Thread* t, object loader, object spec,
+                       unsigned* parameterCount, unsigned* returnTypeSpec)
+{
+  object list = resolveParameterTypes
+    (t, loader, spec, parameterCount, returnTypeSpec);
+
+  PROTECT(t, list);
+  
+  object array = makeObjectArray
+    (t, type(t, Machine::JclassType), *parameterCount);
+  PROTECT(t, array);
+
+  for (int i = *parameterCount - 1; i >= 0; --i) {
+    object c = getJClass(t, pairFirst(t, list));
+    set(t, array, ArrayBody + (i * BytesPerWord), c);
+    list = pairSecond(t, list);
+  }
+
+  return array;
+}
+
+object
+resolveExceptionJTypes(Thread* t, object loader, object addendum)
+{
+  if (addendum == 0 or methodAddendumExceptionTable(t, addendum) == 0) {
+    return makeObjectArray(t, type(t, Machine::JclassType), 0);
+  }
+
+  PROTECT(t, loader);
+  PROTECT(t, addendum);
+
+  object array = makeObjectArray
+    (t, type(t, Machine::JclassType),
+     shortArrayLength(t, methodAddendumExceptionTable(t, addendum)));
+  PROTECT(t, array);
+
+  for (unsigned i = 0; i < shortArrayLength
+         (t, methodAddendumExceptionTable(t, addendum)); ++i)
+  {
+    uint16_t index = shortArrayBody
+      (t, methodAddendumExceptionTable(t, addendum), i) - 1;
+
+    object o = singletonObject(t, addendumPool(t, addendum), index);
+
+    if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
+      o = resolveClass(t, loader, referenceName(t, o));
+    
+      set(t, addendumPool(t, addendum), SingletonBody + (index * BytesPerWord),
+          o);
+    }
+
+    o = getJClass(t, o);
+
+    set(t, array, ArrayBody + (i * BytesPerWord), o);
+  }
+
+  return array;
+}
+
+object
+invoke(Thread* t, object method, object instance, object args)
+{
+  PROTECT(t, method);
+  PROTECT(t, instance);
+  PROTECT(t, args);
+
+  if (methodFlags(t, method) & ACC_STATIC) {
+    instance = 0;
+  }
+
+  if ((args == 0 ? 0 : objectArrayLength(t, args))
+      != methodParameterCount(t, method))
+  {
+    throwNew(t, Machine::IllegalArgumentExceptionType);
+  }
+
+  if (methodParameterCount(t, method)) {
+    PROTECT(t, method);
+
+    unsigned specLength = byteArrayLength(t, methodSpec(t, method));
+    THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
+    memcpy(spec, &byteArrayBody(t, methodSpec(t, method), 0), specLength);
+    unsigned i = 0;
+    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+      object type;
+      bool objectType = false;
+      const char* p = it.next();
+      switch (*p) {
+      case 'Z': type = vm::type(t, Machine::BooleanType); break;
+      case 'B': type = vm::type(t, Machine::ByteType); break;
+      case 'S': type = vm::type(t, Machine::ShortType); break;
+      case 'C': type = vm::type(t, Machine::CharType); break;
+      case 'I': type = vm::type(t, Machine::IntType); break;
+      case 'F': type = vm::type(t, Machine::FloatType); break;
+      case 'J': type = vm::type(t, Machine::LongType); break;
+      case 'D': type = vm::type(t, Machine::DoubleType); break;
+
+      case 'L': ++ p;
+      case '[': {
+        objectType = true;
+        unsigned nameLength = it.s - p;
+        THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
+        memcpy(name, p, nameLength - 1);
+        name[nameLength - 1] = 0;
+        type = resolveClass
+          (t, classLoader(t, methodClass(t, method)), name);
+      } break;
+
+      default:
+        abort();
+      }
+
+      object arg = objectArrayBody(t, args, i++);
+      if ((arg == 0 and (not objectType))
+          or (arg and (not instanceOf(t, type, arg))))
+      {
+        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+
+        throwNew(t, Machine::IllegalArgumentExceptionType);
+      }
+    }
+  }
+
+  unsigned returnCode = methodReturnCode(t, method);
+
+  THREAD_RESOURCE0(t, {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = makeThrowable
+          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+      }
+    });
+
+  object result;
+  if (args) {
+    result = t->m->processor->invokeArray(t, method, instance, args);
+  } else {
+    result = t->m->processor->invoke(t, method, instance);
+  }
+
+  return translateInvokeResult(t, returnCode, result);
+}
+
+// only safe to call during bootstrap when there's only one thread
+// running:
+void
+intercept(Thread* t, object c, const char* name, const char* spec,
+          void* function)
+{
+  object m = findMethodOrNull(t, c, name, spec);
+  if (m) {
+    PROTECT(t, m);
+
+    object clone = methodClone(t, m);
+
+    // make clone private to prevent vtable updates at compilation
+    // time.  Otherwise, our interception might be bypassed by calls
+    // through the vtable.
+    methodFlags(t, clone) |= ACC_PRIVATE;
+
+    methodFlags(t, m) |= ACC_NATIVE;
+
+    object native = makeNativeIntercept(t, function, true, clone);
+
+    PROTECT(t, native);
+
+    object runtimeData = getMethodRuntimeData(t, m);
+
+    set(t, runtimeData, MethodRuntimeDataNative, native);
+  } else {
+    // If we can't find the method, just ignore it, since ProGuard may
+    // have stripped it out as unused.  Otherwise, the code below can
+    // be uncommented for debugging purposes.
+
+    // fprintf(stderr, "unable to find %s%s in %s\n",
+    //         name, spec, &byteArrayBody(t, className(t, c), 0));
+
+    // abort(t);
+  }
+}
+
 } // namespace vm
 
 #endif//CLASSPATH_COMMON_H

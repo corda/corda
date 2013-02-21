@@ -28,11 +28,37 @@ public class SystemClassLoader extends ClassLoader {
 
   public static native Class getClass(VMClass vmClass);
 
+  public static native VMClass vmClass(Class jClass);
+
   private native VMClass findLoadedVMClass(String name);
 
   protected Class reallyFindLoadedClass(String name){
     VMClass c = findLoadedVMClass(name);
     return c == null ? null : getClass(c);
+  }
+
+  protected Class loadClass(String name, boolean resolve)
+    throws ClassNotFoundException
+  {
+    Class c = findLoadedClass(name);
+    if (c == null) {
+      ClassLoader parent = getParent();
+      if (parent != null) {
+        try {
+          c = parent.loadClass(name);
+        } catch (ClassNotFoundException ok) { }
+      }
+
+      if (c == null) {
+        c = findClass(name);
+      }
+    }
+
+    if (resolve) {
+      resolveClass(c);
+    }
+
+    return c;
   }
 
   private native String resourceURLPrefix(String name);

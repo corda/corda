@@ -51,6 +51,15 @@ resolveSystemClassThrow(Thread* t, object loader, object spec)
 } // namespace
 
 extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_initialize
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  initClass(t, this_);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_avian_Classes_acquireClassLock
 (Thread* t, object, uintptr_t*)
 {
@@ -76,6 +85,26 @@ Avian_avian_Classes_resolveVMClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_defineVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object b = reinterpret_cast<object>(arguments[1]);
+  int offset = arguments[2];
+  int length = arguments[3];
+
+  uint8_t* buffer = static_cast<uint8_t*>
+    (t->m->heap->allocate(length));
+  
+  THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
+                   t->m->heap->free(buffer, length));
+
+  memcpy(buffer, &byteArrayBody(t, b, offset), length);
+
+  return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -83,6 +112,14 @@ Avian_avian_SystemClassLoader_findLoadedVMClass
   object name = reinterpret_cast<object>(arguments[1]);
 
   return search(t, loader, name, findLoadedClass, true);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_vmClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

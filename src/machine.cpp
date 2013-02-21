@@ -2369,8 +2369,6 @@ object
 makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
                object elementClass)
 {
-  // todo: arrays should implement Cloneable and Serializable
-
   if (classVmFlags(t, type(t, Machine::JobjectType)) & BootstrapFlag) {
     PROTECT(t, loader);
     PROTECT(t, spec);
@@ -2398,7 +2396,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      spec,
      0,
      type(t, Machine::JobjectType),
-     0,
+     root(t, Machine::ArrayInterfaceTable),
      vtable,
      0,
      0,
@@ -2732,6 +2730,33 @@ boot(Thread* t)
   setRoot(t, Machine::BootstrapClassMap, makeHashMap(t, 0, 0));
 
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
+
+  { object interfaceTable = makeArray(t, 4);
+
+    set(t, interfaceTable, ArrayBody, type(t, Machine::SerializableType));
+
+    set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
+        type(t, Machine::CloneableType));
+    
+    setRoot(t, Machine::ArrayInterfaceTable, interfaceTable);
+  }
+
+  set(t, type(t, Machine::BooleanArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ByteArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::CharArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ShortArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::IntArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::LongArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::FloatArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::DoubleArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
 
   m->processor->boot(t, 0, 0);
 

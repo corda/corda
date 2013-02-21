@@ -58,61 +58,8 @@ public class Method<T> extends AccessibleObject implements Member {
     return new String(vmMethod.spec, 0, vmMethod.spec.length - 1, false);
   }
 
-  private static int next(char c, String s, int start) {
-    for (int i = start; i < s.length(); ++i) {
-      if (s.charAt(i) == c) return i;
-    }
-    throw new RuntimeException();
-  }
-
   public Class[] getParameterTypes() {
-    return getParameterTypes(vmMethod);
-  }
-
-  public static Class[] getParameterTypes(VMMethod vmMethod) {
-    int count = vmMethod.parameterCount;
-
-    Class[] types = new Class[count];
-    int index = 0;
-
-    String spec = new String
-      (vmMethod.spec, 1, vmMethod.spec.length - 1, false);
-
-    try {
-      for (int i = 0; i < spec.length(); ++i) {
-        char c = spec.charAt(i);
-        if (c == ')') {
-          break;
-        } else if (c == 'L') {
-          int start = i + 1;
-          i = next(';', spec, start);
-          String name = spec.substring(start, i).replace('/', '.');
-          types[index++] = Class.forName(name, true, vmMethod.class_.loader);
-        } else if (c == '[') {
-          int start = i;
-          while (spec.charAt(i) == '[') ++i;
-
-          if (spec.charAt(i) == 'L') {
-            i = next(';', spec, i + 1);
-            String name = spec.substring(start, i).replace('/', '.');
-            types[index++] = Class.forName
-              (name, true, vmMethod.class_.loader);
-          } else {
-            String name = spec.substring(start, i + 1);
-            types[index++] = Class.forCanonicalName
-              (vmMethod.class_.loader, name);
-          }
-        } else {
-          String name = spec.substring(i, i + 1);
-          types[index++] = Class.forCanonicalName
-            (vmMethod.class_.loader, name);
-        }
-      }
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
-    }
-
-    return types;
+    return Classes.getParameterTypes(vmMethod);
   }
 
   public Object invoke(Object instance, Object ... arguments)
@@ -160,22 +107,13 @@ public class Method<T> extends AccessibleObject implements Member {
     throw new RuntimeException();
   }
 
-  private Annotation getAnnotation(Object[] a) {
-    if (a[0] == null) {
-      a[0] = Proxy.newProxyInstance
-        (vmMethod.class_.loader, new Class[] { (Class) a[1] },
-         new AnnotationInvocationHandler(a));
-    }
-    return (Annotation) a[0];
-  }
-
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
     if (vmMethod.hasAnnotations()) {
       Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
         if (a[1] == class_) {
-          return (T) getAnnotation(a);
+          return (T) Classes.getAnnotation(vmMethod.class_.loader, a);
         }
       }
     }
@@ -187,7 +125,8 @@ public class Method<T> extends AccessibleObject implements Member {
       Object[] table = (Object[]) vmMethod.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
-        array[i] = getAnnotation((Object[]) table[i]);
+        array[i] = Classes.getAnnotation
+          (vmMethod.class_.loader, (Object[]) table[i]);
       }
       return array;
     } else {

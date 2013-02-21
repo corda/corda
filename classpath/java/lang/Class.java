@@ -145,38 +145,7 @@ public final class Class <T> implements Type, AnnotatedElement {
                               ClassLoader loader)
     throws ClassNotFoundException
   {
-    if (loader == null) {
-      loader = Class.class.vmClass.loader;
-    }
-    Class c = loader.loadClass(name);
-    Classes.link(c.vmClass, loader);
-    if (initialize) {
-      Classes.initialize(c.vmClass);
-    }
-    return c;
-  }
-
-  public static Class forCanonicalName(String name) {
-    return forCanonicalName(null, name);
-  }
-
-  public static Class forCanonicalName(ClassLoader loader, String name) {
-    try {
-      if (name.startsWith("[")) {
-        return forName(name, true, loader);
-      } else if (name.startsWith("L")) {
-        return forName(name.substring(1, name.length() - 1), true, loader);
-      } else {
-        if (name.length() == 1) {
-          return SystemClassLoader.getClass
-            (Classes.primitiveClass(name.charAt(0)));
-        } else {
-          throw new ClassNotFoundException(name);
-        }
-      }
-    } catch (ClassNotFoundException e) {
-      throw new RuntimeException(e);
-    }
+    return Classes.forName(name, initialize, loader);
   }
 
   public Class getComponentType() {
@@ -211,71 +180,23 @@ public final class Class <T> implements Type, AnnotatedElement {
     return Classes.isAssignableFrom(vmClass, c.vmClass);
   }
 
-  private static Field findField(VMClass vmClass, String name) {
-    if (vmClass.fieldTable != null) {
-      Classes.link(vmClass);
-
-      for (int i = 0; i < vmClass.fieldTable.length; ++i) {
-        if (Field.getName(vmClass.fieldTable[i]).equals(name)) {
-          return new Field(vmClass.fieldTable[i]);
-        }
-      }
-    }
-    return null;
-  }
-
   public Field getDeclaredField(String name) throws NoSuchFieldException {
-    Field f = findField(vmClass, name);
-    if (f == null) {
+    int index = Classes.findField(vmClass, name);
+    if (index < 0) {
       throw new NoSuchFieldException(name);
     } else {
-      return f;
+      return new Field(vmClass.fieldTable[index]);
     }
   }
 
   public Field getField(String name) throws NoSuchFieldException {
     for (VMClass c = vmClass; c != null; c = c.super_) {
-      Field f = findField(c, name);
-      if (f != null) {
-        return f;
+      int index = findField(c, name);
+      if (index >= 0) {
+        return new Field(vmClass.fieldTable[index]);
       }
     }
     throw new NoSuchFieldException(name);
-  }
-
-  private static boolean match(Class[] a, Class[] b) {
-    if (a.length == b.length) {
-      for (int i = 0; i < a.length; ++i) {
-        if (! a[i].isAssignableFrom(b[i])) {
-          return false;
-        }
-      }
-      return true;
-    } else {
-      return false;
-    }
-  }
-
-  private static Method findMethod(VMClass vmClass, String name,
-                                   Class[] parameterTypes)
-  {
-    if (vmClass.methodTable != null) {
-      Classes.link(vmClass);
-
-      if (parameterTypes == null) {
-        parameterTypes = new Class[0];
-      }
-
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (Method.getName(vmClass.methodTable[i]).equals(name)
-            && match(parameterTypes,
-                     Method.getParameterTypes(vmClass.methodTable[i])))
-        {
-          return new Method(vmClass.methodTable[i]);
-        }
-      }
-    }
-    return null;
   }
 
   public Method getDeclaredMethod(String name, Class ... parameterTypes)
@@ -284,11 +205,11 @@ public final class Class <T> implements Type, AnnotatedElement {
     if (name.startsWith("<")) {
       throw new NoSuchMethodException(name);
     }
-    Method m = findMethod(vmClass, name, parameterTypes);
-    if (m == null) {
+    int index = Classes.findMethod(vmClass, name, parameterTypes);
+    if (index < 0) {
       throw new NoSuchMethodException(name);
     } else {
-      return m;
+      return new Method(vmClass.methodTable[index]);
     }
   }
 
@@ -299,9 +220,9 @@ public final class Class <T> implements Type, AnnotatedElement {
       throw new NoSuchMethodException(name);
     }
     for (VMClass c = vmClass; c != null; c = c.super_) {
-      Method m = findMethod(c, name, parameterTypes);
-      if (m != null) {
-        return m;
+      int index = findMethod(c, name, parameterTypes);
+      if (index >= 0) {
+        return new Method(vmClass.methodTable[index]);
       }
     }
     throw new NoSuchMethodException(name);

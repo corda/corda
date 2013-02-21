@@ -685,35 +685,6 @@ Avian_avian_Classes_primitiveClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_defineVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  object b = reinterpret_cast<object>(arguments[1]);
-  int offset = arguments[2];
-  int length = arguments[3];
-
-  uint8_t* buffer = static_cast<uint8_t*>
-    (t->m->heap->allocate(length));
-  
-  THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
-                   t->m->heap->free(buffer, length));
-
-  memcpy(buffer, &byteArrayBody(t, b, offset), length);
-
-  return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_initialize
-(Thread* t, object, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-
-  initClass(t, this_);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_Classes_isAssignableFrom
 (Thread* t, object, uintptr_t* arguments)
 {

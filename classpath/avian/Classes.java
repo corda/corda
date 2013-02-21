@@ -16,6 +16,8 @@ import static avian.Stream.read2;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
+import java.lang.reflect.Proxy;
+import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -261,6 +263,158 @@ public class Classes {
   public static void link(VMClass c) {
     link(c, c.loader);
   }
+
+  public static Class forName(String name, boolean initialize,
+                              ClassLoader loader)
+    throws ClassNotFoundException
+  {
+    if (loader == null) {
+      loader = Class.class.getClassLoader();
+    }
+    Class c = loader.loadClass(name);
+    VMClass vmc = SystemClassLoader.vmClass(c);
+    Classes.link(vmc, loader);
+    if (initialize) {
+      Classes.initialize(vmc);
+    }
+    return c;
+  }
+
+  public static Class forCanonicalName(String name) {
+    return forCanonicalName(null, name);
+  }
+
+  public static Class forCanonicalName(ClassLoader loader, String name) {
+    try {
+      if (name.startsWith("[")) {
+        return forName(name, true, loader);
+      } else if (name.startsWith("L")) {
+        return forName(name.substring(1, name.length() - 1), true, loader);
+      } else {
+        if (name.length() == 1) {
+          return SystemClassLoader.getClass
+            (Classes.primitiveClass(name.charAt(0)));
+        } else {
+          throw new ClassNotFoundException(name);
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  private static int next(char c, String s, int start) {
+    for (int i = start; i < s.length(); ++i) {
+      if (s.charAt(i) == c) return i;
+    }
+    throw new RuntimeException();
+  }
+
+  public static Class[] getParameterTypes(VMMethod vmMethod) {
+    int count = vmMethod.parameterCount;
+
+    Class[] types = new Class[count];
+    int index = 0;
+
+    String spec = new String
+      (vmMethod.spec, 1, vmMethod.spec.length - 1);
+
+    try {
+      for (int i = 0; i < spec.length(); ++i) {
+        char c = spec.charAt(i);
+        if (c == ')') {
+          break;
+        } else if (c == 'L') {
+          int start = i + 1;
+          i = next(';', spec, start);
+          String name = spec.substring(start, i).replace('/', '.');
+          types[index++] = Class.forName(name, true, vmMethod.class_.loader);
+        } else if (c == '[') {
+          int start = i;
+          while (spec.charAt(i) == '[') ++i;
+
+          if (spec.charAt(i) == 'L') {
+            i = next(';', spec, i + 1);
+            String name = spec.substring(start, i).replace('/', '.');
+            types[index++] = Class.forName
+              (name, true, vmMethod.class_.loader);
+          } else {
+            String name = spec.substring(start, i + 1);
+            types[index++] = forCanonicalName(vmMethod.class_.loader, name);
+          }
+        } else {
+          String name = spec.substring(i, i + 1);
+          types[index++] = forCanonicalName(vmMethod.class_.loader, name);
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+
+    return types;
+  }
+  public static int findField(VMClass vmClass, String name) {
+    if (vmClass.fieldTable != null) {
+      Classes.link(vmClass);
+
+      for (int i = 0; i < vmClass.fieldTable.length; ++i) {
+        if (toString(vmClass.fieldTable[i].name).equals(name)) {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  public static String toString(byte[] array) {
+    return new String(array, 0, array.length - 1);
+  }
+
+  private static boolean match(Class[] a, Class[] b) {
+    if (a.length == b.length) {
+      for (int i = 0; i < a.length; ++i) {
+        if (! a[i].isAssignableFrom(b[i])) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private static int findMethod(VMClass vmClass, String name,
+                                Class[] parameterTypes)
+  {
+    if (vmClass.methodTable != null) {
+      Classes.link(vmClass);
+
+      if (parameterTypes == null) {
+        parameterTypes = new Class[0];
+      }
+
+      for (int i = 0; i < vmClass.methodTable.length; ++i) {
+        if (toString(vmClass.methodTable[i].name).equals(name)
+            && match(parameterTypes,
+                     getParameterTypes(vmClass.methodTable[i])))
+        {
+          return i;
+        }
+      }
+    }
+    return -1;
+  }
+
+  public static Annotation getAnnotation(ClassLoader loader, Object[] a) {
+    if (a[0] == null) {
+      a[0] = Proxy.newProxyInstance
+        (loader, new Class[] { (Class) a[1] },
+         new AnnotationInvocationHandler(a));
+    }
+    return (Annotation) a[0];
+  }
+
+  public static native Method makeMethod(Class c, int slot);
 
   private static native void acquireClassLock();
 

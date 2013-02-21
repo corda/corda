@@ -163,7 +163,6 @@ ifneq ($(android),)
 		-I$(android)/libcore/include \
 		-I$(build)/android-src/external/fdlibm \
 		-I$(build)/android-src \
-		-fpermissive \
 		-fno-exceptions \
 		-DHAVE_SYS_UIO_H \
 		-D_FILE_OFFSET_BITS=64 \
@@ -1200,6 +1199,7 @@ ifneq ($(classpath),avian)
 # them to synthesize a class:
 	classpath-sources := \
 		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
@@ -1230,7 +1230,7 @@ ifneq ($(classpath),avian)
 			$(classpath-src)/java/net/StandardProtocolFamily.java \
 			$(classpath-src)/sun/misc/Cleaner.java \
 			$(classpath-src)/sun/misc/Unsafe.java \
-			$(classpath-src)/avian/Android.java
+			$(classpath-src)/java/lang/reflect/Proxy.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1432,7 +1432,8 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
-	rm $(build)/android/sun/misc/Unsafe*
+	rm $(build)/android/sun/misc/Unsafe* \
+		$(build)/android/java/lang/reflect/Proxy*
 	cp -r $(build)/android/* $(classpath-build)
 	@touch $(@)	
 

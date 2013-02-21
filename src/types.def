@@ -16,6 +16,10 @@
 
 (type constantPool sun/reflect/ConstantPool)
 
+(type serializable java/io/Serializable)
+
+(type cloneable java/lang/Cloneable)
+
 (type singleton
   (array uintptr_t body))
 
