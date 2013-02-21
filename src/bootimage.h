@@ -12,6 +12,7 @@
 #define BOOTIMAGE_H
 
 #include "common.h"
+#include "java-common.h"
 #include "target.h"
 #include "machine.h"
 

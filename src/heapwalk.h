@@ -12,6 +12,7 @@
 #define HEAPWALK_H
 
 #include "common.h"
+#include "java-common.h"
 
 namespace vm {
 

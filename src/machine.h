@@ -12,6 +12,7 @@
 #define MACHINE_H
 
 #include "common.h"
+#include "java-common.h"
 #include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
 #include "finder.h"
