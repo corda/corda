@@ -13,6 +13,7 @@ package java.lang.reflect;
 import avian.VMMethod;
 import avian.AnnotationInvocationHandler;
 import avian.SystemClassLoader;
+import avian.Classes;
 
 import java.lang.annotation.Annotation;
 
@@ -98,7 +99,7 @@ public class Method<T> extends AccessibleObject implements Member {
   public Class getReturnType() {
     for (int i = 0; i < vmMethod.spec.length - 1; ++i) {
       if (vmMethod.spec[i] == ')') {
-        return Class.forCanonicalName
+        return Classes.forCanonicalName
           (vmMethod.class_.loader,
            new String
            (vmMethod.spec, i + 1, vmMethod.spec.length - i - 2, false));

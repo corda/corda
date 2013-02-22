@@ -127,6 +127,47 @@ class MyClasspath : public Classpath {
     // ignore
   }
 
+  virtual object
+  makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
+  {
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+    PROTECT(t, c);
+
+    object instance = makeNew(t, c);
+    PROTECT(t, instance);
+
+    object constructor = resolveMethod(t, c, "<init>", "(JI)V");
+
+    t->m->processor->invoke
+      (t, constructor, instance, reinterpret_cast<int64_t>(p),
+       static_cast<int32_t>(capacity));
+
+    return instance;
+  }
+
+  virtual void*
+  getDirectBufferAddress(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField(t, objectClass(t, b), "address", "J");
+
+    return reinterpret_cast<void*>
+      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+  }
+
+  virtual int64_t
+  getDirectBufferCapacity(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField
+      (t, objectClass(t, b), "capacity", "I");
+
+    return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
+  }
+
   virtual void
   dispose()
   {
@@ -697,4 +738,42 @@ Avian_avian_Classes_getVMClass
 {
   return reinterpret_cast<int64_t>
     (objectClass(t, reinterpret_cast<object>(arguments[0])));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_makeMethod
+(Thread* t, object, uintptr_t* arguments)
+{
+  object method = arrayBody
+     (t, classMethodTable
+      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))),
+      arguments[1]);
+  PROTECT(t, method);
+
+  object c = resolveClass
+    (t, root(t, Machine::BootLoader), "java/lang/reflect/Method");
+  PROTECT(t, c);
+
+  object instance = makeNew(t, c);
+  PROTECT(t, instance);
+
+  object constructor = resolveMethod(t, c, "<init>", "(Lavian/VMMethod;)V");
+
+  t->m->processor->invoke(t, constructor, instance, method);
+
+  if (byteArrayBody(t, methodName(t, method), 0) == '<') {
+    method = instance;
+
+    c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/lang/reflect/Constructor");
+
+    object instance = makeNew(t, c);
+
+    object constructor = resolveMethod
+      (t, c, "<init>", "(Ljava/lang/Method;)V");
+
+    t->m->processor->invoke(t, constructor, instance, method);    
+  }
+
+  return reinterpret_cast<uintptr_t>(instance);
 }

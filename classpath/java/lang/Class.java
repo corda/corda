@@ -191,7 +191,7 @@ public final class Class <T> implements Type, AnnotatedElement {
 
   public Field getField(String name) throws NoSuchFieldException {
     for (VMClass c = vmClass; c != null; c = c.super_) {
-      int index = findField(c, name);
+      int index = Classes.findField(c, name);
       if (index >= 0) {
         return new Field(vmClass.fieldTable[index]);
       }
@@ -220,7 +220,7 @@ public final class Class <T> implements Type, AnnotatedElement {
       throw new NoSuchMethodException(name);
     }
     for (VMClass c = vmClass; c != null; c = c.super_) {
-      int index = findMethod(c, name, parameterTypes);
+      int index = Classes.findMethod(c, name, parameterTypes);
       if (index >= 0) {
         return new Method(vmClass.methodTable[index]);
       }
@@ -231,11 +231,11 @@ public final class Class <T> implements Type, AnnotatedElement {
   public Constructor getConstructor(Class ... parameterTypes)
     throws NoSuchMethodException
   {
-    Method m = findMethod(vmClass, "<init>", parameterTypes);
-    if (m == null) {
+    int index = Classes.findMethod(vmClass, "<init>", parameterTypes);
+    if (index < 0) {
       throw new NoSuchMethodException();
     } else {
-      return new Constructor(m);
+      return new Constructor(new Method(vmClass.methodTable[index]));
     }
   }
 
@@ -246,7 +246,7 @@ public final class Class <T> implements Type, AnnotatedElement {
     Constructor[] constructors = getDeclaredConstructors();
 
     for (int i = 0; i < constructors.length; ++i) {
-      if (match(parameterTypes, constructors[i].getParameterTypes())) {
+      if (Classes.match(parameterTypes, constructors[i].getParameterTypes())) {
         c = constructors[i];
       }
     }

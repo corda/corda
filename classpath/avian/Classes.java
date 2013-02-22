@@ -317,7 +317,7 @@ public class Classes {
     int index = 0;
 
     String spec = new String
-      (vmMethod.spec, 1, vmMethod.spec.length - 1);
+      (vmMethod.spec, 1, vmMethod.spec.length - 2);
 
     try {
       for (int i = 0; i < spec.length(); ++i) {
@@ -353,6 +353,7 @@ public class Classes {
 
     return types;
   }
+
   public static int findField(VMClass vmClass, String name) {
     if (vmClass.fieldTable != null) {
       Classes.link(vmClass);
@@ -370,7 +371,7 @@ public class Classes {
     return new String(array, 0, array.length - 1);
   }
 
-  private static boolean match(Class[] a, Class[] b) {
+  public static boolean match(Class[] a, Class[] b) {
     if (a.length == b.length) {
       for (int i = 0; i < a.length; ++i) {
         if (! a[i].isAssignableFrom(b[i])) {
@@ -383,7 +384,7 @@ public class Classes {
     }
   }
 
-  private static int findMethod(VMClass vmClass, String name,
+  public static int findMethod(VMClass vmClass, String name,
                                 Class[] parameterTypes)
   {
     if (vmClass.methodTable != null) {
