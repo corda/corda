@@ -940,9 +940,6 @@ generated-code = \
 	$(build)/type-maps.cpp
 
 vm-depends := $(generated-code) \
-	$(wildcard $(src)/*.h) \
-	$(wildcard $(src)/codegen/*.h) \
-	$(wildcard $(src)/codegen/compiler/*.h) \
 	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
