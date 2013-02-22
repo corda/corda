@@ -12,7 +12,7 @@
 #define PROCESSOR_H
 
 #include "common.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
 #include "bootimage.h"
 #include "heapwalk.h"

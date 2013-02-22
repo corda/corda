@@ -24,7 +24,7 @@
 #undef min
 
 #include "arch.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include <avian/util/runtime-array.h>
 
 #if defined(WINAPI_FAMILY)
@@ -806,12 +806,12 @@ class MySystem: public System {
     Status status = 1;
     size_t nameLen = strlen(name) * 2;
     RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-    MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HANDLE file = CreateFileW(wideName, FILE_READ_DATA, FILE_SHARE_READ, 0,
+    HANDLE file = CreateFileW(RUNTIME_ARRAY_BODY(wideName), FILE_READ_DATA, FILE_SHARE_READ, 0,
     OPEN_EXISTING, 0, 0);
 #else
-    HANDLE file = CreateFile2(wideName, GENERIC_READ, FILE_SHARE_READ,
+    HANDLE file = CreateFile2(RUNTIME_ARRAY_BODY(wideName), GENERIC_READ, FILE_SHARE_READ,
                              OPEN_EXISTING, 0);
 #endif
     if (file != INVALID_HANDLE_VALUE) {
@@ -883,10 +883,10 @@ class MySystem: public System {
   virtual FileType stat(const char* name, unsigned* length) {
     size_t nameLen = strlen(name) * 2;
     RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-    MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
+    MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
     WIN32_FILE_ATTRIBUTE_DATA data;
     if (GetFileAttributesExW
-        (wideName, GetFileExInfoStandard, &data))
+        (RUNTIME_ARRAY_BODY(wideName), GetFileExInfoStandard, &data))
     {
       if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         return TypeDirectory;
@@ -935,12 +935,12 @@ class MySystem: public System {
     if (name) {
       size_t nameLen = nameLength * 2;
       RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-      MultiByteToWideChar(CP_UTF8, 0, name, -1, wideName, nameLen + 1);
+      MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
 
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      handle = LoadLibraryW(wideName);
+      handle = LoadLibraryW(RUNTIME_ARRAY_BODY(wideName));
 #else
-      handle = LoadPackagedLibrary(wideName, 0);
+      handle = LoadPackagedLibrary(RUNTIME_ARRAY_BODY(wideName), 0);
 #endif
     } else {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)

@@ -15,13 +15,11 @@
 
 #include <avian/tools/object-writer/tools.h>
 
+using namespace avian::util;
+
 namespace avian {
 
 namespace tools {
-
-String::String(const char* text):
-  text(text),
-  length(strlen(text)) {}
 
 Buffer::Buffer():
   capacity(100),

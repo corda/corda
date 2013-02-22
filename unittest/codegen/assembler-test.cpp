@@ -12,7 +12,7 @@
 
 #include "common.h"
 #include <avian/vm/heap/heap.h>
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "target.h"
 
 #include <avian/vm/codegen/assembler.h>

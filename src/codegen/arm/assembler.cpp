@@ -2236,14 +2236,6 @@ class MyArchitecture: public Assembler::Architecture {
   virtual int framePointerOffset() {
     return 0;
   }
-
-  virtual lir::BinaryOperation hasBinaryIntrinsic(Thread*, object) {
-  	return lir::NoBinaryOperation;
-  }
-  
-  virtual lir::TernaryOperation hasTernaryIntrinsic(Thread*, object) {
-  	return lir::NoTernaryOperation;
-  }
   
   virtual bool alwaysCondensed(lir::BinaryOperation) {
     return false;

@@ -11,7 +11,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "target.h"
 
 #include <avian/util/math.h>

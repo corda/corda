@@ -9,7 +9,7 @@
    details. */
 
 #include <avian/vm/heap/heap.h>
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "common.h"
 #include "arch.h"
 

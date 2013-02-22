@@ -12,7 +12,8 @@
 #define MACHINE_H
 
 #include "common.h"
-#include "system.h"
+#include "java-common.h"
+#include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
 #include "finder.h"
 #include "processor.h"
@@ -1603,7 +1604,8 @@ class ThreadRuntimeArray: public Thread::Resource {
 
 #else // not _MSC_VER
 
-#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) type name[size];
+#  define THREAD_RUNTIME_ARRAY(thread, type, name, size) \
+  type name##_body[size];
 
 #endif // not _MSC_VER
 

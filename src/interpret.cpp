@@ -9,7 +9,7 @@
    details. */
 
 #include "common.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "constants.h"
 #include "machine.h"
 #include "processor.h"
@@ -2325,19 +2325,20 @@ interpret3(Thread* t, const int base)
 
     THREAD_RUNTIME_ARRAY(t, int32_t, counts, dimensions);
     for (int i = dimensions - 1; i >= 0; --i) {
-      counts[i] = popInt(t);
-      if (UNLIKELY(counts[i] < 0)) {
+      RUNTIME_ARRAY_BODY(counts)[i] = popInt(t);
+      if (UNLIKELY(RUNTIME_ARRAY_BODY(counts)[i] < 0)) {
         exception = makeThrowable
-          (t, Machine::NegativeArraySizeExceptionType, "%d", counts[i]);
+          (t, Machine::NegativeArraySizeExceptionType, "%d",
+           RUNTIME_ARRAY_BODY(counts)[i]);
         goto throw_;
       }
     }
 
-    object array = makeArray(t, counts[0]);
+    object array = makeArray(t, RUNTIME_ARRAY_BODY(counts)[0]);
     setObjectClass(t, array, class_);
     PROTECT(t, array);
 
-    populateMultiArray(t, array, counts, 0, dimensions);
+    populateMultiArray(t, array, RUNTIME_ARRAY_BODY(counts), 0, dimensions);
 
     pushObject(t, array);
   } goto loop;

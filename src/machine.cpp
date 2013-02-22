@@ -11,7 +11,7 @@
 #include "jnienv.h"
 #include "machine.h"
 #include "util.h"
-#include "stream.h"
+#include <avian/util/stream.h>
 #include "constants.h"
 #include "processor.h"
 #include "arch.h"
@@ -4777,13 +4777,13 @@ logTrace(FILE* f, const char* fmt, ...)
 
     RUNTIME_ARRAY(char, buffer, length + 1);
     va_start(a, fmt);
-    vsnprintf(&buffer[0], length + 1, fmt, a);
+    vsnprintf(RUNTIME_ARRAY_BODY(buffer), length + 1, fmt, a);
     va_end(a);
-    buffer[length] = 0;
+    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
 
-    ::fprintf(f, "%s", &buffer[0]);
+    ::fprintf(f, "%s", RUNTIME_ARRAY_BODY(buffer));
 #ifdef PLATFORM_WINDOWS
-    ::OutputDebugStringA(&buffer[0]);
+    ::OutputDebugStringA(RUNTIME_ARRAY_BODY(buffer));
 #endif
 }
 

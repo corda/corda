@@ -43,6 +43,7 @@
 namespace {
 
 using namespace avian::tools;
+using namespace avian::util;
 
 typedef int cpu_type_t;
 typedef int cpu_subtype_t;

@@ -939,10 +939,14 @@ generated-code = \
 	$(build)/type-name-initializations.cpp \
 	$(build)/type-maps.cpp
 
-vm-depends := $(generated-code) $(wildcard $(src)/*.h) $(wildcard $(src)/codegen/*.h)
+vm-depends := $(generated-code) \
+	$(wildcard $(src)/*.h) \
+	$(wildcard $(src)/codegen/*.h) \
+	$(wildcard $(src)/codegen/compiler/*.h) \
+	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
-	$(src)/$(system).cpp \
+	$(src)/vm/system/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
@@ -1026,7 +1030,7 @@ heapwalk-sources = $(src)/heapwalk.cpp
 heapwalk-objects = \
 	$(call cpp-objects,$(heapwalk-sources),$(src),$(build))
 
-unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest/)
+unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest)
 
 ifeq ($(heapdump),true)
 	vm-sources += $(src)/heapdump.cpp
@@ -1043,7 +1047,8 @@ ifeq ($(continuations),true)
 	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
-bootimage-generator-sources = $(src)/bootimage.cpp $(src)/util/arg-parser.cpp
+bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp $(src)/util/arg-parser.cpp
+
 ifneq ($(lzma),)
 	bootimage-generator-sources += $(src)/lzma-encode.cpp
 endif
@@ -1078,8 +1083,8 @@ boot-object = $(build)/boot.o
 
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
-	$(src)/type-generator.cpp \
-	$(src)/$(build-system).cpp \
+	$(src)/tools/type-generator/main.cpp \
+	$(src)/vm/system/$(build-system).cpp \
 	$(src)/finder.cpp
 
 ifneq ($(lzma),)

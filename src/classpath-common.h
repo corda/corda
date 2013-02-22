@@ -11,9 +11,10 @@
 #ifndef CLASSPATH_COMMON_H
 #define CLASSPATH_COMMON_H
 
-#include "tokenizer.h"
-
+#include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
+
+using namespace avian::util;
 
 namespace vm {
 
@@ -217,13 +218,13 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
   for (Tokenizer tokenizer(path, t->m->system->pathSeparator());
        tokenizer.hasMore();)
   {
-    Tokenizer::Token token(tokenizer.next());
+    String token(tokenizer.next());
 
     unsigned fullNameLength = token.length + 1 + nameLength;
     THREAD_RUNTIME_ARRAY(t, char, fullName, fullNameLength + 1);
 
     snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
-             "%.*s/%s", token.length, token.s, name);
+             "%.*s/%s", token.length, token.text, name);
 
     lib = loadLibrary(t, RUNTIME_ARRAY_BODY(fullName));
     if (lib) break;

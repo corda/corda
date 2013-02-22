@@ -8,15 +8,17 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include <avian/vm/system/system.h>
+#include <avian/util/string.h>
+#include <avian/util/runtime-array.h>
+
 #include "zlib-custom.h"
-#include "system.h"
-#include "tokenizer.h"
 #include "finder.h"
 #include "lzma.h"
 
-#include <avian/util/runtime-array.h>
 
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 
@@ -658,12 +660,12 @@ addTokens(System* s, Element** first, Element** last, Allocator* allocator,
           const char* jarName, unsigned jarNameBase, const char* tokens,
           unsigned tokensLength, const char* bootLibrary)
 {
-  for (Tokenizer t(tokens, tokensLength, ' '); t.hasMore();) {
-    Tokenizer::Token token(t.next());
+  for (Tokenizer t(String(tokens, tokensLength), ' '); t.hasMore();) {
+    String token(t.next());
 
     RUNTIME_ARRAY(char, n, jarNameBase + token.length + 1);
     memcpy(RUNTIME_ARRAY_BODY(n), jarName, jarNameBase);
-    memcpy(RUNTIME_ARRAY_BODY(n) + jarNameBase, token.s, token.length);
+    memcpy(RUNTIME_ARRAY_BODY(n) + jarNameBase, token.text, token.length);
     RUNTIME_ARRAY_BODY(n)[jarNameBase + token.length] = 0;
           
     add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
@@ -813,9 +815,9 @@ parsePath(System* s, Allocator* allocator, const char* path,
   Element* first = 0;
   Element* last = 0;
   for (Tokenizer t(path, s->pathSeparator()); t.hasMore();) {
-    Tokenizer::Token token(t.next());
+    String token(t.next());
 
-    add(s, &first, &last, allocator, token.s, token.length, bootLibrary);
+    add(s, &first, &last, allocator, token.text, token.length, bootLibrary);
   }
 
   return first;
