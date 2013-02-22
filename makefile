@@ -1333,7 +1333,7 @@ endif
 $(build)/run-tests.sh: $(test-classes) makefile
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=$$(pwd) -cp test\" \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=. -cp test\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 
