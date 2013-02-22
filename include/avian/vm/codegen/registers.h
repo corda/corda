@@ -45,6 +45,28 @@ public:
   { }
 };
 
+class RegisterIterator {
+public:
+  int index;
+  const RegisterMask& mask;
+
+  inline RegisterIterator(const RegisterMask& mask):
+    index(mask.start),
+    mask(mask) {}
+
+  inline bool hasNext() {
+    return index < mask.limit;
+  }
+
+  inline int next() {
+    int r = index;
+    do {
+      index++;
+    } while(index < mask.limit && !(mask.mask & (1 << index)));
+    return r;
+  }
+};
+
 } // namespace codegen
 } // namespace avian
 
