@@ -341,14 +341,14 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
     THREAD_RUNTIME_ARRAY(t, char, s, specLength - 1);
     memcpy(RUNTIME_ARRAY_BODY(s), spec + 1, specLength - 2);
     RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
-    return resolveClass(t, loader, s);
+    return resolveClass(t, loader, RUNTIME_ARRAY_BODY(s));
   }
   
   case '[': {
     THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
     memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
     RUNTIME_ARRAY_BODY(s)[specLength] = 0;
-    return resolveClass(t, loader, s);
+    return resolveClass(t, loader, RUNTIME_ARRAY_BODY(s));
   }
 
   default:
@@ -510,9 +510,10 @@ invoke(Thread* t, object method, object instance, object args)
 
     unsigned specLength = byteArrayLength(t, methodSpec(t, method));
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
-    memcpy(spec, &byteArrayBody(t, methodSpec(t, method), 0), specLength);
+    memcpy(RUNTIME_ARRAY_BODY(spec),
+           &byteArrayBody(t, methodSpec(t, method), 0), specLength);
     unsigned i = 0;
-    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
       object type;
       bool objectType = false;
       const char* p = it.next();
@@ -531,10 +532,11 @@ invoke(Thread* t, object method, object instance, object args)
         objectType = true;
         unsigned nameLength = it.s - p;
         THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
-        memcpy(name, p, nameLength - 1);
-        name[nameLength - 1] = 0;
+        memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
+        RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
         type = resolveClass
-          (t, classLoader(t, methodClass(t, method)), name);
+          (t, classLoader(t, methodClass(t, method)),
+           RUNTIME_ARRAY_BODY(name));
       } break;
 
       default:
