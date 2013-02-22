@@ -13,10 +13,10 @@
 #include "string.h"
 #include "jni.h"
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "finder.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #  define PATH_SEPARATOR ';'

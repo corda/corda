@@ -14,7 +14,7 @@
 
 #include "endianness.h"
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 #define MH_MAGIC_64 0xfeedfacf
 #define MH_MAGIC 0xfeedface
@@ -43,6 +43,7 @@
 namespace {
 
 using namespace avian::tools;
+using namespace avian::util;
 
 typedef int cpu_type_t;
 typedef int cpu_subtype_t;

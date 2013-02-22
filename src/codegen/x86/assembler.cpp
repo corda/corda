@@ -12,11 +12,11 @@
 #include "target.h"
 #include "alloc-vector.h"
 
-#include "codegen/assembler.h"
-#include "codegen/registers.h"
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/registers.h>
 
-#include "util/runtime-array.h"
-#include "util/abort.h"
+#include <avian/util/runtime-array.h>
+#include <avian/util/abort.h>
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -24,6 +24,7 @@
 
 using namespace vm;
 using namespace avian::codegen;
+using namespace avian::util;
 
 namespace {
 

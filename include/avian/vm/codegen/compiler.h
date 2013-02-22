@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_COMPILER_H
 #define AVIAN_CODEGEN_COMPILER_H
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "zone.h"
 #include "assembler.h"
 

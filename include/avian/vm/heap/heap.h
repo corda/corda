@@ -11,7 +11,7 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "allocator.h"
 
 namespace vm {

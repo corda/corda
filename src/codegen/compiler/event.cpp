@@ -9,7 +9,8 @@
    details. */
 
 #include "target.h"
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
+#include <avian/util/math.h>
 
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/event.h"
@@ -19,6 +20,8 @@
 #include "codegen/compiler/promise.h"
 #include "codegen/compiler/frame.h"
 #include "codegen/compiler/ir.h"
+
+using namespace avian::util;
 
 namespace avian {
 namespace codegen {
@@ -921,11 +924,11 @@ appendCombine(Context* c, lir::TernaryOperation type,
     intptr_t handler = c->client->getThunk
       (type, firstSize, resultSize, &threadParameter);
 
-    unsigned stackSize = vm::ceilingDivide(secondSize, vm::TargetBytesPerWord)
-      + vm::ceilingDivide(firstSize, vm::TargetBytesPerWord);
+    unsigned stackSize = ceilingDivide(secondSize, vm::TargetBytesPerWord)
+      + ceilingDivide(firstSize, vm::TargetBytesPerWord);
 
-    compiler::push(c, vm::ceilingDivide(secondSize, vm::TargetBytesPerWord), second);
-    compiler::push(c, vm::ceilingDivide(firstSize, vm::TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(secondSize, vm::TargetBytesPerWord), second);
+    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), first);
 
     if (threadParameter) {
       ++ stackSize;
@@ -1047,7 +1050,7 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
   if (thunk) {
     Stack* oldStack = c->stack;
 
-    compiler::push(c, vm::ceilingDivide(firstSize, vm::TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -1057,7 +1060,7 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
        (c, lir::ValueGeneral, constantSite
         (c, c->client->getThunk(type, firstSize, resultSize))),
        0, 0, result, resultSize, argumentStack,
-       vm::ceilingDivide(firstSize, vm::TargetBytesPerWord), 0);
+       ceilingDivide(firstSize, vm::TargetBytesPerWord), 0);
   } else {
     append(c, new(c->zone)
            TranslateEvent
@@ -1404,8 +1407,8 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
 
     assert(c, not threadParameter);
 
-    compiler::push(c, vm::ceilingDivide(size, vm::TargetBytesPerWord), second);
-    compiler::push(c, vm::ceilingDivide(size, vm::TargetBytesPerWord), first);
+    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), second);
+    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), first);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -1414,7 +1417,7 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
     appendCall
       (c, value
        (c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
-       argumentStack, vm::ceilingDivide(size, vm::TargetBytesPerWord) * 2, 0);
+       argumentStack, ceilingDivide(size, vm::TargetBytesPerWord) * 2, 0);
 
     appendBranch(c, thunkBranch(c, type), 4, value
                  (c, lir::ValueGeneral, constantSite(c, static_cast<int64_t>(0))),

@@ -16,7 +16,10 @@
 
 #include "constants.h"
 #include "finder.h"
-#include "stream.h"
+#include <avian/util/stream.h>
+
+#include "io.h"
+#include "sexpr.h"
 
 #include "assert.h"
 
@@ -29,6 +32,7 @@ inline void operator delete(void*) { abort(); }
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 using namespace vm;
+using namespace avian::tools::typegenerator;
 
 namespace {
 
@@ -55,15 +59,6 @@ pad(unsigned n)
   return (extra ? n + BytesPerWord - extra : n);
 }
 
-template <class T>
-T*
-allocate()
-{
-  T* t = static_cast<T*>(malloc(sizeof(T)));
-  assert(t);
-  return t;
-}
-
 inline bool
 equal(const char* a, const char* b)
 {
@@ -87,214 +82,6 @@ take(unsigned n, const char* c)
   r[n] = 0;
   return r;
 }
-
-class Input {
- public:
-  virtual ~Input() { }
-  
-  virtual void dispose() = 0;
-
-  virtual int peek() = 0;
-
-  virtual int read() = 0;
-
-  virtual unsigned line() = 0;
-
-  virtual unsigned column() = 0;
-
-  void skipSpace() {
-    bool quit = false;
-    while (not quit) {
-      int c = peek();
-      switch (c) {
-      case ' ': case '\t': case '\n':
-        read();
-        break;
-
-      default: quit = true;
-      }
-    }
-  }
-};
-
-class FileInput : public Input {
- public:
-  const char* file;
-  FILE* stream;
-  unsigned line_;
-  unsigned column_;
-  bool close;
-
-  FileInput(const char* file, FILE* stream = 0, bool close = true):
-    file(file), stream(stream), line_(1), column_(1), close(close)
-  { }
-
-  virtual ~FileInput() {
-    dispose();
-  }
-
-  virtual void dispose() {
-    if (stream and close) {
-      fclose(stream);
-      stream = 0;
-    }
-  }
-
-  virtual int peek() {
-    int c = getc(stream);
-    ungetc(c, stream);
-    return c;
-  }
-
-  virtual int read() {
-    int c = getc(stream);
-    if (c == '\n') {
-      ++ line_;
-      column_ = 1;
-    } else {
-      ++ column_;
-    }
-    return c;
-  }
-
-  virtual unsigned line() {
-    return line_;
-  }
-
-  virtual unsigned column() {
-    return column_;
-  }
-};
-
-class Output {
- public:
-  virtual ~Output() { }
-  
-  virtual void dispose() = 0;
-
-  virtual void write(const char* s) = 0;
-
-  void write(int i) {
-    static const int Size = 32;
-    char s[Size];
-    int c UNUSED = ::snprintf(s, Size, "%d", i);
-    assert(c > 0 and c < Size);
-    write(s);
-  }
-};
-
-class FileOutput : public Output {
- public:
-  const char* file;
-  FILE* stream;
-  bool close;
-
-  FileOutput(const char* file, FILE* stream = 0, bool close = true):
-    file(file), stream(stream), close(close)
-  { }
-
-  virtual ~FileOutput() {
-    dispose();
-  }
-
-  virtual void dispose() {
-    if (stream and close) {
-      fclose(stream);
-      stream = 0;
-    }
-  }
-
-  virtual void write(const char* s) {
-    fputs(s, stream);
-  }
-
-  const char* filename() {
-    return file;
-  }
-};
-
-class Object {
- public:
-  typedef enum {
-    Scalar,
-    Array,
-    Method,
-    Type,
-    Pair,
-    Number,
-    Character,
-    String,
-    Eos
-  } ObjectType;
-
-  ObjectType type;
-};
-
-class Pair : public Object {
- public:
-  Object* car;
-  Object* cdr;
-
-  static Pair* make(Object* car, Object* cdr) {
-    Pair* o = allocate<Pair>();
-    o->type = Object::Pair;
-    o->car = car;
-    o->cdr = cdr;
-    return o;
-  }
-};
-
-Object*
-cons(Object* car, Object* cdr)
-{
-  return Pair::make(car, cdr);
-}
-
-Object*&
-car(Object* o)
-{
-  assert(o->type == Object::Pair);
-  return static_cast<Pair*>(o)->car;
-}
-
-void
-setCar(Object* o, Object* v)
-{
-  assert(o->type == Object::Pair);
-  static_cast<Pair*>(o)->car = v;
-}
-
-Object*&
-cdr(Object* o)
-{
-  assert(o->type == Object::Pair);
-  return static_cast<Pair*>(o)->cdr;
-}
-
-void
-setCdr(Object* o, Object* v)
-{
-  assert(o->type == Object::Pair);
-  static_cast<Pair*>(o)->cdr = v;
-}
-
-class List {
- public:
-  Object* first;
-  Object* last;
-
-  List(): first(0), last(0) { }
-
-  void append(Object* o) {
-    Object* p = cons(o, 0);
-    if (last) {
-      setCdr(last, p);
-      last = p;
-    } else {
-      first = last = p;
-    }
-  }
-};
 
 class Scalar : public Object {
  public:
@@ -2176,9 +1963,9 @@ main(int ac, char** av)
     fprintf(stderr, "unable to open %s: %s\n", av[2], strerror(errno));
     return -1;
   }
-  local::FileInput in(0, inStream, false);
+  FileInput in(0, inStream, false);
 
-  local::Object* declarations = local::parse(finder, &in);
+  Object* declarations = local::parse(finder, &in);
 
   finder->dispose();
   system->dispose();
@@ -2188,7 +1975,7 @@ main(int ac, char** av)
     fprintf(stderr, "unable to open %s: %s\n", av[3], strerror(errno));
     return -1;
   }
-  local::FileOutput out(0, outStream, false);
+  FileOutput out(0, outStream, false);
 
   if (local::equal(av[4], "enums")) {
     local::writeEnums(&out, declarations);

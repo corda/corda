@@ -12,7 +12,7 @@
 #define PROCESS_H
 
 #include "common.h"
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "machine.h"
 #include "constants.h"
 

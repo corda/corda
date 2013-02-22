@@ -15,7 +15,7 @@
 
 #include "endianness.h"
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 #define EI_NIDENT 16
 
@@ -72,6 +72,7 @@
 namespace {
 
 using namespace avian::tools;
+using namespace avian::util;
 
 template<class AddrTy>
 struct ElfTypes {

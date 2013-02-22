@@ -11,8 +11,10 @@
 #ifndef ZONE_H
 #define ZONE_H
 
-#include "system.h"
+#include <avian/vm/system/system.h>
 #include "allocator.h"
+
+#include <avian/util/math.h>
 
 namespace vm {
 
@@ -59,8 +61,8 @@ class Zone: public Allocator {
   bool tryEnsure(unsigned space) {
     if (segment == 0 or segment->position + space > segment->size) {
       unsigned size = padToPage
-        (max
-         (space, max
+        (avian::util::max
+         (space, avian::util::max
           (minimumFootprint, segment == 0 ? 0 : segment->size * 2))
          + sizeof(Segment));
 

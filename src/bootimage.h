@@ -12,8 +12,11 @@
 #define BOOTIMAGE_H
 
 #include "common.h"
+#include "java-common.h"
 #include "target.h"
 #include "machine.h"
+
+#include <avian/util/math.h>
 
 namespace vm {
 

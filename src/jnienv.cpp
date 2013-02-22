@@ -14,7 +14,7 @@
 #include "processor.h"
 #include "constants.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 

@@ -339,7 +339,7 @@ makeClassNameString(Thread* t, object name)
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, name, 0)));
 
-  return makeString(t, "%s", s);
+  return makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 }
 
 object
@@ -761,7 +761,8 @@ class MyClasspath : public Classpath {
                length);
         RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
-        object key = vm::makeByteArray(t, "%s", packageName);
+        object key = vm::makeByteArray
+          (t, "%s", RUNTIME_ARRAY_BODY(packageName));
         PROTECT(t, key);
 
         hashMapRemove
@@ -781,7 +782,7 @@ class MyClasspath : public Classpath {
                  &byteArrayBody(t, source, PrefixLength),
                  sourceNameLength);
 
-          source = vm::makeByteArray(t, "%s", sourceName);
+          source = vm::makeByteArray(t, "%s", RUNTIME_ARRAY_BODY(sourceName));
         } else {
           source = vm::makeByteArray(t, "avian-dummy-package-source");
         }
@@ -1575,7 +1576,8 @@ getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
       RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path) + 1] = 0;
     }
 
-    return reinterpret_cast<int64_t>(find(file, p, byteArrayLength(t, path)));
+    return reinterpret_cast<int64_t>
+      (find(file, RUNTIME_ARRAY_BODY(p), byteArrayLength(t, path)));
   } else {
     int64_t entry = longValue
       (t, t->m->processor->invoke
@@ -3269,8 +3271,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
 
     if (*p == '=') {
       THREAD_RUNTIME_ARRAY(t, char, name, (p - start) + 1);
-      memcpy(name, start, p - start);
-      name[p - start] = 0;
+      memcpy(RUNTIME_ARRAY_BODY(name), start, p - start);
+      RUNTIME_ARRAY_BODY(name)[p - start] = 0;
       local::setProperty
         (t, method, *properties, RUNTIME_ARRAY_BODY(name), p + 1);
     }
@@ -4654,6 +4656,86 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
      (t, jclassVmClass(t, jmethodClazz(t, *method))),
       jmethodSlot(t, *method));
 
+<<<<<<< HEAD
+=======
+  if (methodFlags(t, vmMethod) & ACC_STATIC) {
+    instance = 0;
+  }
+
+  if ((args == 0 ? 0 : objectArrayLength(t, *args))
+      != methodParameterCount(t, vmMethod))
+  {
+    throwNew(t, Machine::IllegalArgumentExceptionType);
+  }
+
+  if (methodParameterCount(t, vmMethod)) {
+    PROTECT(t, vmMethod);
+
+    unsigned specLength = byteArrayLength(t, methodSpec(t, vmMethod));
+    THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
+    memcpy(RUNTIME_ARRAY_BODY(spec),
+           &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
+    unsigned i = 0;
+    for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
+      object type;
+      bool objectType = false;
+      const char* p = it.next();
+      switch (*p) {
+      case 'Z': type = vm::type(t, Machine::BooleanType); break;
+      case 'B': type = vm::type(t, Machine::ByteType); break;
+      case 'S': type = vm::type(t, Machine::ShortType); break;
+      case 'C': type = vm::type(t, Machine::CharType); break;
+      case 'I': type = vm::type(t, Machine::IntType); break;
+      case 'F': type = vm::type(t, Machine::FloatType); break;
+      case 'J': type = vm::type(t, Machine::LongType); break;
+      case 'D': type = vm::type(t, Machine::DoubleType); break;
+
+      case 'L': ++ p;
+      case '[': {
+        objectType = true;
+        unsigned nameLength = it.s - p;
+        THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
+        memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
+        RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
+        type = resolveClass
+          (t, classLoader(t, methodClass(t, vmMethod)),
+           RUNTIME_ARRAY_BODY(name));
+      } break;
+
+      default:
+        abort();
+      }
+
+      object arg = objectArrayBody(t, *args, i++);
+      if ((arg == 0 and (not objectType))
+          or (arg and (not instanceOf(t, type, arg))))
+      {
+        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+
+        throwNew(t, Machine::IllegalArgumentExceptionType);
+      }
+    }
+  }
+
+  unsigned returnCode = methodReturnCode(t, vmMethod);
+
+  THREAD_RESOURCE0(t, {
+      if (t->exception) {
+        object exception = t->exception;
+        t->exception = makeThrowable
+          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+      }
+    });
+
+  object result;
+  if (args) {
+    result = t->m->processor->invokeArray
+      (t, vmMethod, instance ? *instance : 0, *args);
+  } else {
+    result = t->m->processor->invoke(t, vmMethod, instance ? *instance : 0);
+  }
+
+>>>>>>> github/master
   return reinterpret_cast<uint64_t>
     (makeLocalReference
      (t, invoke

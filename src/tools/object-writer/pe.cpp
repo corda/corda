@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "tools.h"
+#include <avian/tools/object-writer/tools.h>
 
 namespace {
 
@@ -86,6 +86,7 @@ pad(unsigned n)
 }
 
 using namespace avian::tools;
+using namespace avian::util;
 
 template<unsigned BytesPerWord, PlatformInfo::Architecture Architecture>
 class WindowsPlatform : public Platform {

@@ -9,13 +9,13 @@ const unsigned NAME(BootHeapOffset) = 1 << (NAME(BootShift) + 1);
 inline unsigned
 LABEL(codeMapSize)(unsigned codeSize)
 {
-  return ceilingDivide(codeSize, TargetBitsPerWord) * TargetBytesPerWord;
+  return avian::util::ceilingDivide(codeSize, TargetBitsPerWord) * TargetBytesPerWord;
 }
 
 inline unsigned
 LABEL(heapMapSize)(unsigned heapSize)
 {
-  return ceilingDivide(heapSize, TargetBitsPerWord * TargetBytesPerWord)
+  return avian::util::ceilingDivide(heapSize, TargetBitsPerWord * TargetBytesPerWord)
     * TargetBytesPerWord;
 }
 

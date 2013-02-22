@@ -10,11 +10,11 @@
 
 #include "target.h"
 
-#include "util/runtime-array.h"
+#include <avian/util/runtime-array.h>
 
-#include "codegen/compiler.h"
-#include "codegen/assembler.h"
-#include "codegen/promise.h"
+#include <avian/vm/codegen/compiler.h>
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/promise.h>
 
 #include "codegen/compiler/regalloc.h"
 #include "codegen/compiler/context.h"
