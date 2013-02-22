@@ -110,6 +110,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  preBoot(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   boot(Thread*)
   {
     // ignore

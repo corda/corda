@@ -640,6 +640,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  preBoot(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   boot(Thread* t)
   {
     globalMachine = t->m;
@@ -784,6 +790,47 @@ class MyClasspath : public Classpath {
           (t, root(t, Machine::PackageMap), key, source, byteArrayHash);
       }
     }
+  }
+
+  virtual object
+  makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
+  {
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+    PROTECT(t, c);
+
+    object instance = makeNew(t, c);
+    PROTECT(t, instance);
+
+    object constructor = resolveMethod(t, c, "<init>", "(JI)V");
+
+    t->m->processor->invoke
+      (t, constructor, instance, reinterpret_cast<int64_t>(p),
+       static_cast<int32_t>(capacity));
+
+    return instance;
+  }
+
+  virtual void*
+  getDirectBufferAddress(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField(t, objectClass(t, b), "address", "J");
+
+    return reinterpret_cast<void*>
+      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+  }
+
+  virtual int64_t
+  getDirectBufferCapacity(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField
+      (t, objectClass(t, b), "capacity", "I");
+
+    return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
   }
 
   virtual void

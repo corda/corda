@@ -319,7 +319,7 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
-  boot(Thread* t)
+  preBoot(Thread* t)
   {
     { object runtimeClass = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/Runtime", false);
@@ -346,6 +346,12 @@ class MyClasspath : public Classpath {
     }
     
     JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
+  }
+
+  virtual void
+  boot(Thread*)
+  {
+    // ignore
   }
 
   virtual const char*
