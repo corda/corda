@@ -44,6 +44,118 @@ appLoader(Thread* t, object, uintptr_t*)
   return reinterpret_cast<uintptr_t>(root(t, Machine::AppLoader));
 }
 
+object
+makeMethodOrConstructor(Thread* t, object c, unsigned index)
+{
+  PROTECT(t, c);
+
+  object method = arrayBody
+    (t, classMethodTable(t, jclassVmClass(t, c)), index);
+  PROTECT(t, method);
+
+  unsigned parameterCount;
+  unsigned returnTypeSpec;
+  object parameterTypes = resolveParameterJTypes
+    (t, classLoader(t, methodClass(t, method)), methodSpec(t, method),
+     &parameterCount, &returnTypeSpec);
+  PROTECT(t, parameterTypes);
+
+  object returnType = resolveJType
+    (t, classLoader(t, methodClass(t, method)), reinterpret_cast<char*>
+     (&byteArrayBody(t, methodSpec(t, method), returnTypeSpec)),
+     byteArrayLength(t, methodSpec(t, method)) - 1 - returnTypeSpec);
+  PROTECT(t, returnType);
+
+  object exceptionTypes = resolveExceptionJTypes
+    (t, classLoader(t, methodClass(t, method)), methodAddendum(t, method));
+
+  if (byteArrayBody(t, methodName(t, method), 0) == '<') {
+    return makeJconstructor
+      (t, 0, c, parameterTypes, exceptionTypes, 0, 0, 0, 0, index);
+  } else {
+    PROTECT(t, exceptionTypes);
+ 
+    object name = t->m->classpath->makeString
+      (t, methodName(t, method), 0,
+       byteArrayLength(t, methodName(t, method)) - 1);
+
+    return makeJmethod
+      (t, 0, index, c, name, parameterTypes, exceptionTypes, returnType, 0, 0,
+       0, 0, 0);
+  }
+}
+
+object
+makeField(Thread* t, object c, unsigned index)
+{
+  PROTECT(t, c);
+
+  object field = arrayBody
+    (t, classFieldTable(t, jclassVmClass(t, c)), index);
+
+  PROTECT(t, field);
+
+  object type = resolveClassBySpec
+    (t, classLoader(t, fieldClass(t, field)),
+     reinterpret_cast<char*>
+     (&byteArrayBody(t, fieldSpec(t, field), 0)),
+     byteArrayLength(t, fieldSpec(t, field)) - 1);
+  PROTECT(t, type);
+ 
+  object name = t->m->classpath->makeString
+    (t, fieldName(t, field), 0,
+     byteArrayLength(t, fieldName(t, field)) - 1);
+
+  return makeJfield(t, 0, c, type, 0, 0, name, index);
+}
+
+void
+initVmThread(Thread* t, object thread)
+{
+  PROTECT(t, thread);
+
+  object field = resolveField
+    (t, objectClass(t, thread), "vmThread", "Ljava/lang/VMThread;");
+
+  if (fieldAtOffset<object>(thread, fieldOffset(t, field)) == 0) {
+    PROTECT(t, field);
+
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/lang/VMThread");
+    PROTECT(t, c);
+
+    object instance = makeNew(t, c);
+    PROTECT(t, instance);
+
+    object constructor = resolveMethod
+      (t, c, "<init>", "(Ljava/lang/Thread;)V");
+
+    t->m->processor->invoke(t, constructor, instance, thread);
+
+    set(t, thread, fieldOffset(t, field), instance);
+  }
+}
+
+object
+translateStackTrace(Thread* t, object raw)
+{
+  PROTECT(t, raw);
+  
+  object array = makeObjectArray
+    (t, resolveClass
+     (t, root(t, Machine::BootLoader), "java/lang/StackTraceElement"),
+     objectArrayLength(t, raw));
+  PROTECT(t, array);
+
+  for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
+    object e = makeStackTraceElement(t, objectArrayBody(t, raw, i));
+
+    set(t, array, ArrayBody + (i * BytesPerWord), e);
+  }
+
+  return array;
+}
+
 class MyClasspath : public Classpath {
  public:
   MyClasspath(Allocator* allocator):
@@ -86,64 +198,90 @@ class MyClasspath : public Classpath {
   virtual object
   makeThread(Thread* t, Thread* parent)
   {
-    const unsigned MaxPriority = 10;
     const unsigned NormalPriority = 5;
 
-    object group;
+    object group = 0;
+    PROTECT(t, group);
     if (parent) {
       group = threadGroup(t, parent->javaThread);
     } else {
-      group = allocate(t, FixedSizeOfThreadGroup, true);
-      setObjectClass(t, group, type(t, Machine::ThreadGroupType));
-      threadGroupMaxPriority(t, group) = MaxPriority;
+      resolveSystemClass
+        (t, root(t, Machine::BootLoader),
+         className(t, type(t, Machine::ThreadGroupType)), false);
+
+      group = makeNew(t, type(t, Machine::ThreadGroupType));
+
+      object constructor = resolveMethod
+        (t, type(t, Machine::ThreadGroupType), "<init>", "()V");
+
+      t->m->processor->invoke(t, constructor, group);
     }
 
-    PROTECT(t, group);
-    object thread = allocate(t, FixedSizeOfThread, true);
-    setObjectClass(t, thread, type(t, Machine::ThreadType));
-    threadPriority(t, thread) = NormalPriority;
-    threadGroup(t, thread) = group;
+    resolveSystemClass
+      (t, root(t, Machine::BootLoader),
+       className(t, type(t, Machine::ThreadType)), false);
+    
+    object thread = makeNew(t, type(t, Machine::ThreadType));
     PROTECT(t, thread);
 
-    { object listClass = resolveClass
-        (t, root(t, Machine::BootLoader), "java/util/ArrayList");
-      PROTECT(t, listClass);
+    object constructor = resolveMethod
+      (t, type(t, Machine::ThreadType), "<init>",
+       "(Ljava/lang/ThreadGroup;Ljava/lang/String;IZ)V");
 
-      object instance = makeNew(t, listClass);
-      PROTECT(t, instance);
+    t->m->processor->invoke
+      (t, constructor, thread, group, 0, NormalPriority, false);
 
-      object constructor = resolveMethod(t, listClass, "<init>", "()V");
-
-      t->m->processor->invoke(t, constructor, instance);
-
-      set(t, thread, ThreadInterruptActions, instance);
-    }
+    initVmThread(t, thread);
 
     return thread;
   }
 
   virtual object
-  makeJMethod(Thread* t, object)
+  makeJMethod(Thread* t, object vmMethod)
   {
-    abort(t); // todo
+    object table = classMethodTable(t, methodClass(t, vmMethod));
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      if (vmMethod == arrayBody(t, table, i)) {
+        return makeMethodOrConstructor
+          (t, getJClass(t, methodClass(t, vmMethod)), i);
+      }
+    }
+    abort(t);
   }
 
   virtual object
-  getVMMethod(Thread* t, object)
+  getVMMethod(Thread* t, object jmethod)
   {
-    abort(t); // todo
+    return objectClass(t, jmethod) == type(t, Machine::JmethodType)
+      ? arrayBody
+      (t, classMethodTable
+       (t, jclassVmClass(t, jmethodDeclaringClass(t, jmethod))),
+       jmethodSlot(t, jmethod))
+      : arrayBody
+      (t, classMethodTable
+       (t, jclassVmClass(t, jconstructorDeclaringClass(t, jmethod))),
+       jconstructorSlot(t, jmethod));
   }
 
   virtual object
-  makeJField(Thread* t, object)
+  makeJField(Thread* t, object vmField)
   {
-    abort(t); // todo
+    object table = classFieldTable(t, fieldClass(t, vmField));
+    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+      if (vmField == arrayBody(t, table, i)) {
+        return makeField(t, getJClass(t, fieldClass(t, vmField)), i);
+      }
+    }
+    abort(t);
   }
 
   virtual object
-  getVMField(Thread* t, object)
+  getVMField(Thread* t, object jfield)
   {
-    abort(t); // todo
+    return arrayBody
+      (t, classFieldTable
+       (t, jclassVmClass(t, jfieldDeclaringClass(t, jfield))),
+       jfieldSlot(t, jfield));
   }
 
   virtual void
@@ -155,11 +293,23 @@ class MyClasspath : public Classpath {
   virtual void
   runThread(Thread* t)
   {
-    object method = resolveMethod
-      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run",
-       "(Ljava/lang/Thread;)V");
+    // force monitor creation so we don't get an OutOfMemory error
+    // later when we try to acquire it:
+    objectMonitor(t, t->javaThread, true);
 
-    t->m->processor->invoke(t, method, 0, t->javaThread);
+    THREAD_RESOURCE0(t, {
+        vm::acquire(t, t->javaThread);
+        t->flags &= ~Thread::ActiveFlag;
+        vm::notifyAll(t, t->javaThread);
+        vm::release(t, t->javaThread);
+    });
+
+    initVmThread(t, t->javaThread);
+
+    object method = resolveMethod
+      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
+
+    t->m->processor->invoke(t, method, t->javaThread);
   }
 
   virtual void
@@ -260,47 +410,6 @@ class MyClasspath : public Classpath {
 
   Allocator* allocator;
 };
-
-object
-makeMethodOrConstructor(Thread* t, object c, unsigned index)
-{
-  PROTECT(t, c);
-
-  object method = arrayBody
-    (t, classMethodTable(t, jclassVmClass(t, c)), index);
-  PROTECT(t, method);
-
-  unsigned parameterCount;
-  unsigned returnTypeSpec;
-  object parameterTypes = resolveParameterJTypes
-    (t, classLoader(t, methodClass(t, method)), methodSpec(t, method),
-     &parameterCount, &returnTypeSpec);
-  PROTECT(t, parameterTypes);
-
-  object returnType = resolveJType
-    (t, classLoader(t, methodClass(t, method)), reinterpret_cast<char*>
-     (&byteArrayBody(t, methodSpec(t, method), returnTypeSpec)),
-     byteArrayLength(t, methodSpec(t, method)) - 1 - returnTypeSpec);
-  PROTECT(t, returnType);
-
-  object exceptionTypes = resolveExceptionJTypes
-    (t, classLoader(t, methodClass(t, method)), methodAddendum(t, method));
-
-  if (byteArrayBody(t, methodName(t, method), 0) == '<') {
-    return makeJconstructor
-      (t, 0, c, parameterTypes, exceptionTypes, 0, 0, 0, 0, index);
-  } else {
-    PROTECT(t, exceptionTypes);
-
-    object name = t->m->classpath->makeString
-      (t, methodName(t, method), 0,
-       byteArrayLength(t, methodName(t, method)) - 1);
-
-    return makeJmethod
-      (t, 0, index, c, name, parameterTypes, exceptionTypes, returnType, 0, 0,
-       0, 0, 0);
-  }
-}
 
 } // namespace local
 
@@ -441,6 +550,28 @@ register_org_apache_harmony_dalvik_NativeTestTarget(_JNIEnv*)
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_String_compareTo
+(Thread* t, object, uintptr_t* arguments)
+{
+  object a = reinterpret_cast<object>(arguments[0]);
+  object b = reinterpret_cast<object>(arguments[1]);
+
+  unsigned length = stringLength(t, a);
+  if (length > stringLength(t, b)) {
+    length = stringLength(t, b);
+  }
+
+  for (unsigned i = 0; i < length; ++i) {
+    int d = stringCharAt(t, a, i) - stringCharAt(t, b, i);
+    if (d) {
+      return d;
+    }
+  }
+
+  return stringLength(t, a) - stringLength(t, b);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_String_isEmpty
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -484,6 +615,34 @@ Avian_java_lang_String_fastIndexOf
   }
 
   return -1;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Class_getInterfaces
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = reinterpret_cast<object>(arguments[0]);
+
+  object addendum = classAddendum(t, jclassVmClass(t, c));
+  if (addendum) {
+    object table = classAddendumInterfaceTable(t, addendum);
+    if (table) {
+      PROTECT(t, table);
+
+      object array = makeObjectArray(t, arrayLength(t, table));
+      PROTECT(t, array);
+
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object c = getJClass(t, arrayBody(t, table, i));
+        set(t, array, ArrayBody + (i * BytesPerWord), c);
+      }
+
+      return reinterpret_cast<uintptr_t>(array);
+    }
+  }
+
+  return reinterpret_cast<uintptr_t>
+    (makeObjectArray(t, type(t, Machine::JclassType), 0));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -561,29 +720,7 @@ Avian_java_lang_Class_getDeclaredField
      (t, method, 0, jclassVmClass(t, c), name));
 
   if (index >= 0) {
-    object field = arrayBody
-      (t, classFieldTable(t, jclassVmClass(t, c)), index);
-
-    PROTECT(t, field);
-
-    object type = resolveClassBySpec
-      (t, classLoader(t, fieldClass(t, field)),
-       reinterpret_cast<char*>
-       (&byteArrayBody(t, fieldSpec(t, field), 0)),
-       byteArrayLength(t, fieldSpec(t, field)) - 1);
-    PROTECT(t, type);
-
-    unsigned index = 0xFFFFFFFF;
-    object table = classFieldTable(t, fieldClass(t, field));
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      if (field == arrayBody(t, table, i)) {
-        index = i;
-        break;
-      }
-    }
-
-    return reinterpret_cast<uintptr_t>
-      (makeJfield(t, 0, c, type, 0, 0, name, index));
+    return reinterpret_cast<uintptr_t>(local::makeField(t, c, index));
   } else {
     return 0;
   }
@@ -688,6 +825,13 @@ Avian_dalvik_system_VMRuntime_properties
 }
 
 extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Runtime_gc
+(Thread* t, object, uintptr_t*)
+{
+  collect(t, Heap::MajorCollection);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_java_lang_System_arraycopy
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -710,11 +854,94 @@ Avian_sun_misc_Unsafe_objectFieldOffset
       jfieldSlot(t, jfield)));
 }
 
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMThread_interrupt
+(Thread* t, object, uintptr_t* arguments)
+{
+  object vmThread = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, vmThread);
+
+  object field = resolveField
+    (t, objectClass(t, vmThread), "thread", "Ljava/lang/Thread;");
+
+  interrupt
+    (t, reinterpret_cast<Thread*>
+     (threadPeer(t, fieldAtOffset<object>(vmThread, fieldOffset(t, field)))));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMThread_interrupted
+(Thread* t, object, uintptr_t*)
+{
+  return getAndClearInterrupted(t, t);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMThread_isInterrupted
+(Thread* t, object, uintptr_t* arguments)
+{
+  object vmThread = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, vmThread);
+
+  object field = resolveField
+    (t, objectClass(t, vmThread), "thread", "Ljava/lang/Thread;");
+
+  return threadInterrupted
+    (t, fieldAtOffset<object>(vmThread, fieldOffset(t, field)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_VMThread_getStatus
+(Thread*, object, uintptr_t*)
+{
+  // todo
+  return -1;
+}
+
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMThread_currentThread
 (Thread* t, object, uintptr_t*)
 {
   return reinterpret_cast<uintptr_t>(t->javaThread);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMThread_create
+(Thread* t, object, uintptr_t* arguments)
+{
+  startThread(t, reinterpret_cast<object>(arguments[0]));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_VMThread_sleep
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t milliseconds; memcpy(&milliseconds, arguments, 8);
+  if (arguments[2] > 0) ++ milliseconds;
+  if (milliseconds <= 0) milliseconds = 1;
+
+  if (threadSleepLock(t, t->javaThread) == 0) {
+    object lock = makeJobject(t);
+    set(t, t->javaThread, ThreadSleepLock, lock);
+  }
+
+  acquire(t, threadSleepLock(t, t->javaThread));
+  vm::wait(t, threadSleepLock(t, t->javaThread), milliseconds);
+  release(t, threadSleepLock(t, t->javaThread));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_dalvik_system_VMStack_getThreadStackTrace
+(Thread* t, object, uintptr_t* arguments)
+{
+  Thread* p = reinterpret_cast<Thread*>
+    (threadPeer(t, reinterpret_cast<object>(arguments[0])));
+
+  return reinterpret_cast<uintptr_t>
+    (local::translateStackTrace
+     (t, p == t
+      ? makeTrace(t)
+      : t->m->processor->getStackTrace(t, p)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -758,6 +985,50 @@ Avian_java_lang_Math_max
 (Thread*, object, uintptr_t* arguments)
 {
   return max(static_cast<int>(arguments[0]), static_cast<int>(arguments[1]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_floor
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t v; memcpy(&v, arguments, 8);
+  return doubleToBits(floor(bitsToDouble(v)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Float_intBitsToFloat
+(Thread*, object, uintptr_t* arguments)
+{
+  return arguments[0];
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Float_floatToIntBits
+(Thread*, object, uintptr_t* arguments)
+{
+  if (((arguments[0] & 0x7F800000) == 0x7F800000)
+      and ((arguments[0] & 0x007FFFFF) != 0))
+  {
+    return 0x7fc00000;
+  } else {
+    return arguments[0];
+  }
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Object_wait
+(Thread* t, object, uintptr_t* arguments)
+{
+  jlong milliseconds; memcpy(&milliseconds, arguments + 1, sizeof(jlong));
+
+  wait(t, reinterpret_cast<object>(arguments[0]), milliseconds);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_java_lang_Object_notifyAll
+(Thread* t, object, uintptr_t* arguments)
+{
+  notifyAll(t, reinterpret_cast<object>(arguments[0]));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -857,10 +1128,24 @@ Avian_java_lang_Class_isAssignableFrom
   object that = reinterpret_cast<object>(arguments[1]);
 
   if (LIKELY(that)) {
-    return vm::isAssignableFrom
+    return isAssignableFrom
       (t, jclassVmClass(t, this_), jclassVmClass(t, that));
   } else {
     throwNew(t, Machine::NullPointerExceptionType);
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Class_isInstance
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+  object o = reinterpret_cast<object>(arguments[1]);
+
+  if (o) {
+    return instanceOf(t, jclassVmClass(t, this_), o);
+  } else {
+    return 0;
   }
 }
 
@@ -1020,10 +1305,49 @@ Avian_java_lang_reflect_Constructor_constructNative
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_reflect_Field_getField
+(Thread* t, object, uintptr_t* arguments)
+{
+  object field = arrayBody
+    (t, classFieldTable
+     (t, jclassVmClass(t, reinterpret_cast<object>(arguments[2]))),
+     arguments[4]);
+
+  if (fieldFlags(t, field) & ACC_STATIC) {
+    return reinterpret_cast<uintptr_t>
+      (fieldAtOffset<object>
+       (classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field)));
+  } else {
+    return reinterpret_cast<uintptr_t>
+      (fieldAtOffset<object>
+       (reinterpret_cast<object>(arguments[1]), fieldOffset(t, field)));
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_reflect_Field_getFieldModifiers
+(Thread* t, object, uintptr_t* arguments)
+{
+  return fieldFlags
+    (t, arrayBody
+     (t, classFieldTable
+      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))),
+      arguments[2]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Throwable_nativeFillInStackTrace
 (Thread* t, object, uintptr_t*)
 {
   return reinterpret_cast<uintptr_t>(getTrace(t, 2));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Throwable_nativeGetStackTrace
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<uintptr_t>
+    (local::translateStackTrace(t, reinterpret_cast<object>(arguments[0])));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

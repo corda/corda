@@ -3209,10 +3209,6 @@ Thread::init()
     setRoot(this, Machine::JNIFieldTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
-
-    javaThread = m->classpath->makeThread(this, 0);
-
-    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   }
 
   expect(this, m->system->success(m->system->make(&lock)));

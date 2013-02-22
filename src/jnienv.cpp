@@ -3513,11 +3513,15 @@ boot(Thread* t, uintptr_t*)
 
   setRoot(t, Machine::Shutdown, makeThrowable(t, Machine::ThrowableType));
 
+  t->m->classpath->boot(t);
+
+  t->javaThread = t->m->classpath->makeThread(t, 0);
+
+  threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
+
   setRoot(t, Machine::FinalizerThread, t->m->classpath->makeThread(t, t));
 
   threadDaemon(t, root(t, Machine::FinalizerThread)) = true;
-
-  t->m->classpath->boot(t);
 
   enter(t, Thread::IdleState);
 

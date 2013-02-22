@@ -678,13 +678,6 @@ Avian_avian_Atomic_compareAndSwapObject
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_primitiveClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_Classes_isAssignableFrom
 (Thread* t, object, uintptr_t* arguments)
 {
