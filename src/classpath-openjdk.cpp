@@ -339,7 +339,7 @@ makeClassNameString(Thread* t, object name)
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, name, 0)));
 
-  return makeString(t, "%s", s);
+  return makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 }
 
 object
@@ -755,7 +755,8 @@ class MyClasspath : public Classpath {
                length);
         RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
-        object key = vm::makeByteArray(t, "%s", packageName);
+        object key = vm::makeByteArray
+          (t, "%s", RUNTIME_ARRAY_BODY(packageName));
         PROTECT(t, key);
 
         hashMapRemove
@@ -775,7 +776,7 @@ class MyClasspath : public Classpath {
                  &byteArrayBody(t, source, PrefixLength),
                  sourceNameLength);
 
-          source = vm::makeByteArray(t, "%s", sourceName);
+          source = vm::makeByteArray(t, "%s", RUNTIME_ARRAY_BODY(sourceName));
         } else {
           source = vm::makeByteArray(t, "avian-dummy-package-source");
         }
@@ -1528,7 +1529,8 @@ getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
       RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path) + 1] = 0;
     }
 
-    return reinterpret_cast<int64_t>(find(file, p, byteArrayLength(t, path)));
+    return reinterpret_cast<int64_t>
+      (find(file, RUNTIME_ARRAY_BODY(p), byteArrayLength(t, path)));
   } else {
     int64_t entry = longValue
       (t, t->m->processor->invoke
@@ -2194,14 +2196,14 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
     THREAD_RUNTIME_ARRAY(t, char, s, specLength - 1);
     memcpy(RUNTIME_ARRAY_BODY(s), spec + 1, specLength - 2);
     RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
-    return resolveClass(t, loader, s);
+    return resolveClass(t, loader, RUNTIME_ARRAY_BODY(s));
   }
   
   case '[': {
     THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
     memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
     RUNTIME_ARRAY_BODY(s)[specLength] = 0;
-    return resolveClass(t, loader, s);
+    return resolveClass(t, loader, RUNTIME_ARRAY_BODY(s));
   }
 
   default:
@@ -3429,8 +3431,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
 
     if (*p == '=') {
       THREAD_RUNTIME_ARRAY(t, char, name, (p - start) + 1);
-      memcpy(name, start, p - start);
-      name[p - start] = 0;
+      memcpy(RUNTIME_ARRAY_BODY(name), start, p - start);
+      RUNTIME_ARRAY_BODY(name)[p - start] = 0;
       local::setProperty
         (t, method, *properties, RUNTIME_ARRAY_BODY(name), p + 1);
     }
@@ -4829,9 +4831,10 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
 
     unsigned specLength = byteArrayLength(t, methodSpec(t, vmMethod));
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
-    memcpy(spec, &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
+    memcpy(RUNTIME_ARRAY_BODY(spec),
+           &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
     unsigned i = 0;
-    for (MethodSpecIterator it(t, spec); it.hasNext();) {
+    for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
       object type;
       bool objectType = false;
       const char* p = it.next();
@@ -4850,10 +4853,11 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
         objectType = true;
         unsigned nameLength = it.s - p;
         THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
-        memcpy(name, p, nameLength - 1);
-        name[nameLength - 1] = 0;
+        memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
+        RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
         type = resolveClass
-          (t, classLoader(t, methodClass(t, vmMethod)), name);
+          (t, classLoader(t, methodClass(t, vmMethod)),
+           RUNTIME_ARRAY_BODY(name));
       } break;
 
       default:
