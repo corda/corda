@@ -21,7 +21,7 @@
 #include <avian/util/runtime-array.h>
 #include "lzma.h"
 
-#include "util/arg-parser.h"
+#include <avian/util/arg-parser.h>
 #include "util/abort.h"
 
 // since we aren't linking against libstdc++, we must implement this

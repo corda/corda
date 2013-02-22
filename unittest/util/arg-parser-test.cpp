@@ -13,7 +13,7 @@
 
 #include "common.h"
 
-#include "util/arg-parser.h"
+#include <avian/util/arg-parser.h>
 
 #include "test-harness.h"
 

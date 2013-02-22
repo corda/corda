@@ -10,7 +10,7 @@
 
 #include "system.h"
 
-#include "util/arg-parser.h"
+#include <avian/util/arg-parser.h>
 
 #include "codegen/lir.h"
 #include "codegen/assembler.h"
