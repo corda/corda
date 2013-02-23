@@ -152,6 +152,7 @@ ifneq ($(android),)
 	options := $(options)-android
 	classpath-jar-dep = $(build)/android.dep
 	luni-native = $(android)/libcore/luni/src/main/native
+	classpath-cflags = -DBOOT_JAVAHOME
 	android-cflags := -I$(luni-native) \
 		-I$(android)/libnativehelper/include/nativehelper \
 		-I$(android)/core/include \
@@ -189,6 +190,11 @@ ifneq ($(android),)
 		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
 		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
 	classpath = android
+
+	javahome-files = tzdata
+	javahome-object = $(build)/javahome-jar.o
+	boot-javahome-object = $(build)/boot-javahome.o
+	build-javahome = $(android)/bionic/libc/zoneinfo
 endif
 
 ifeq ($(classpath),avian)

@@ -42,6 +42,12 @@ appLoader(Thread* t, object, uintptr_t*)
   return reinterpret_cast<uintptr_t>(root(t, Machine::AppLoader));
 }
 
+int64_t JNICALL
+mapData(Thread*, object, uintptr_t*);
+
+void JNICALL
+closeMemoryMappedFile(Thread*, object, uintptr_t*);
+
 object
 makeMethodOrConstructor(Thread* t, object c, unsigned index)
 {
@@ -319,27 +325,48 @@ class MyClasspath : public Classpath {
   virtual void
   preBoot(Thread* t)
   {
-    { object runtimeClass = resolveClass
+    { object c = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/Runtime", false);
 
-      if (runtimeClass) {
-        PROTECT(t, runtimeClass);
+      if (c) {
+        PROTECT(t, c);
 
-        intercept(t, runtimeClass, "loadLibrary",
+        intercept(t, c, "loadLibrary",
                   "(Ljava/lang/String;Ljava/lang/ClassLoader;)V",
                   voidPointer(loadLibrary));
       }
     }
 
-    { object classLoaderClass = resolveClass
+    { object c = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/ClassLoader", false);
 
-      if (classLoaderClass) {
-        PROTECT(t, classLoaderClass);
+      if (c) {
+        PROTECT(t, c);
 
-        intercept(t, classLoaderClass, "createSystemClassLoader",
-                  "()Ljava/lang/ClassLoader;",
+        intercept(t, c, "createSystemClassLoader", "()Ljava/lang/ClassLoader;",
                   voidPointer(appLoader));
+      }
+    }
+
+    { object c = resolveClass
+        (t, root(t, Machine::BootLoader), "libcore/util/ZoneInfoDB", false);
+
+      if (c) {
+        PROTECT(t, c);
+
+        intercept(t, c, "mapData", "()Llibcore/io/MemoryMappedFile;",
+                  voidPointer(mapData));
+      }
+    }
+
+    { object c = resolveClass
+        (t, root(t, Machine::BootLoader), "libcore/io/MemoryMappedFile",
+         false);
+
+      if (c) {
+        PROTECT(t, c);
+
+        intercept(t, c, "close", "()V",  voidPointer(closeMemoryMappedFile));
       }
     }
     
@@ -409,11 +436,77 @@ class MyClasspath : public Classpath {
   virtual void
   dispose()
   {
+    if (tzdata) {
+      tzdata->dispose();
+    }
     allocator->free(this, sizeof(*this));
   }
 
   Allocator* allocator;
+  System::Region* tzdata;
 };
+
+int64_t JNICALL
+mapData(Thread* t, object, uintptr_t*)
+{
+  object c = resolveClass
+    (t, root(t, Machine::BootLoader), "libcore/io/MemoryMappedFile");
+  PROTECT(t, c);
+  
+  object instance = makeNew(t, c);
+  PROTECT(t, instance);
+  
+  object constructor = resolveMethod(t, c, "<init>", "(JJ)V");
+  
+  const char* jar = "javahomeJar";
+  Finder* finder = getFinder(t, jar, strlen(jar));
+  if (finder) {
+    System::Region* r = finder->find("tzdata");
+    if (r) {
+      MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+      expect(t, cp->tzdata == 0);
+
+      cp->tzdata = r;
+
+      t->m->processor->invoke
+        (t, constructor, instance, reinterpret_cast<int64_t>(r->start()),
+         static_cast<int64_t>(r->length()));
+
+      return reinterpret_cast<uintptr_t>(instance);
+    }
+  }
+
+  throwNew(t, Machine::RuntimeExceptionType);
+}
+
+void JNICALL
+closeMemoryMappedFile(Thread* t, object method, uintptr_t* arguments)
+{
+  object file = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, file);
+
+  MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
+
+  if (cp->tzdata) {
+    object field = resolveField(t, objectClass(t, file), "address", "J");
+  
+    if (fieldAtOffset<int64_t>(file, fieldOffset(t, field))
+        == reinterpret_cast<int64_t>(cp->tzdata->start()))
+    {
+      cp->tzdata->dispose();
+      cp->tzdata = 0;
+
+      fieldAtOffset<int64_t>(file, fieldOffset(t, field)) = 0;
+      return;
+    }
+  }
+
+  t->m->processor->invoke
+    (t, nativeInterceptOriginal
+     (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+     file);
+}
 
 } // namespace local
 
@@ -1000,6 +1093,22 @@ Avian_java_lang_Math_floor
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_ceil
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t v; memcpy(&v, arguments, 8);
+  return doubleToBits(ceil(bitsToDouble(v)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_log
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t v; memcpy(&v, arguments, 8);
+  return doubleToBits(log(bitsToDouble(v)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_Float_intBitsToFloat
 (Thread*, object, uintptr_t* arguments)
 {
@@ -1017,6 +1126,17 @@ Avian_java_lang_Float_floatToIntBits
   } else {
     return arguments[0];
   }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Double_doubleToRawLongBits
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t v; memcpy(&v, arguments, 8);
+  // todo: do we need to do NaN checks as in
+  // Avian_java_lang_Float_floatToIntBits above?  If so, update
+  // Double.doubleToRawLongBits in the Avian class library too.
+  return v;
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -886,49 +886,6 @@ struct jvm_version_info {
   unsigned: 32;
 };
 
-Finder*
-getFinder(Thread* t, const char* name, unsigned nameLength)
-{
-  ACQUIRE(t, t->m->referenceLock);
-    
-  for (object p = root(t, Machine::VirtualFileFinders);
-       p; p = finderNext(t, p))
-  {
-    if (byteArrayLength(t, finderName(t, p)) == nameLength
-        and strncmp(reinterpret_cast<const char*>
-                    (&byteArrayBody(t, finderName(t, p), 0)),
-                    name, nameLength))
-    {
-      return static_cast<Finder*>(finderFinder(t, p));
-    }
-  }
-
-  object n = makeByteArray(t, nameLength + 1);
-  memcpy(&byteArrayBody(t, n, 0), name, nameLength);
-
-  void* p = t->m->libraries->resolve
-    (reinterpret_cast<const char*>(&byteArrayBody(t, n, 0)));
-
-  if (p) {
-    uint8_t* (*function)(unsigned*);
-    memcpy(&function, &p, BytesPerWord);
-
-    unsigned size;
-    uint8_t* data = function(&size);
-    if (data) {
-      Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
-      object finder = makeFinder
-        (t, f, n, root(t, Machine::VirtualFileFinders));
-
-      setRoot(t, Machine::VirtualFileFinders, finder);
-
-      return f;
-    }
-  }
-
-  return 0;
-}
-
 bool
 pathEqual(const char* a, const char* b, unsigned length)
 {
