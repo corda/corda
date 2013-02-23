@@ -53,15 +53,6 @@ class Context {
   unsigned constantPoolCount;
 };
 
-class Task {
- public:
-  Task(Task* next): next(next) { }
-
-  virtual void run(Context* con) = 0;
-
-  Task* next;
-};
-
 typedef void (*OperationType)(Context*);
 
 typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);

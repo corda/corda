@@ -477,6 +477,12 @@ hash(const uint16_t* s, unsigned length)
   return h;
 }
 
+inline void
+write4(uint8_t* dst, uint32_t v)
+{
+  memcpy(dst, &v, 4);
+}
+
 inline uint32_t
 floatToBits(float f)
 {

@@ -13,7 +13,6 @@
 
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/assembler.h>
-#include "alloc-vector.h"
 
 namespace avian {
 namespace codegen {
