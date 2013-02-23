@@ -2910,7 +2910,8 @@ doCollect(Thread* t, Heap::CollectionType type)
   }
 
   if ((root(t, Machine::ObjectsToFinalize) or root(t, Machine::ObjectsToClean))
-      and m->finalizeThread == 0)
+      and m->finalizeThread == 0
+      and t->state != Thread::ExitState)
   {
     m->finalizeThread = m->processor->makeThread
       (m, root(t, Machine::FinalizerThread), m->rootThread);
@@ -3473,7 +3474,7 @@ enter(Thread* t, Thread::State s)
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
-      t->m->exclusive = 0;
+      // exit state should also be exclusive, so don't set exclusive = 0
 
       t->m->stateLock->notifyAll(t->systemThread);
     } break;
