@@ -8,13 +8,17 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include <avian/util/runtime-array.h>
+
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/registers.h>
+
+#include "context.h"
+#include "block.h"
 
 #include "alloc-vector.h"
 #include <avian/util/abort.h>
 
-#include <avian/util/runtime-array.h>
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
@@ -25,7 +29,8 @@ using namespace vm;
 using namespace avian::codegen;
 using namespace avian::util;
 
-namespace local {
+namespace avian {
+namespace codegen {
 
 namespace isa {
 // SYSTEM REGISTERS
@@ -196,6 +201,8 @@ bool vfpSupported() {
 }
 }
 
+namespace arm {
+
 const uint64_t MASK_LO32 = 0xffffffff;
 const unsigned MASK_LO16 = 0xffff;
 const unsigned MASK_LO8  = 0xff;
@@ -239,8 +246,6 @@ const int32_t PoolOffsetMask = 0xFFF;
 
 const bool DebugPool = false;
 
-class Context;
-class MyBlock;
 class PoolOffset;
 class PoolEvent;
 
@@ -250,113 +255,12 @@ resolve(MyBlock*);
 unsigned
 padding(MyBlock*, unsigned);
 
-class MyBlock: public Assembler::Block {
- public:
-  MyBlock(Context* context, unsigned offset):
-    context(context), next(0), poolOffsetHead(0), poolOffsetTail(0),
-    lastPoolOffsetTail(0), poolEventHead(0), poolEventTail(0),
-    lastEventOffset(0), offset(offset), start(~0), size(0)
-  { }
-
-  virtual unsigned resolve(unsigned start, Assembler::Block* next) {
-    this->start = start;
-    this->next = static_cast<MyBlock*>(next);
-
-    local::resolve(this);
-
-    return start + size + padding(this, size);
-  }
-
-  Context* context;
-  MyBlock* next;
-  PoolOffset* poolOffsetHead;
-  PoolOffset* poolOffsetTail;
-  PoolOffset* lastPoolOffsetTail;
-  PoolEvent* poolEventHead;
-  PoolEvent* poolEventTail;
-  unsigned lastEventOffset;
-  unsigned offset;
-  unsigned start;
-  unsigned size;
-};
-
 class Task;
 class ConstantPoolEntry;
 
-class Context {
+class OffsetPromise: public Promise {
  public:
-  Context(System* s, Allocator* a, Zone* zone):
-    s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-    firstBlock(new(zone) MyBlock(this, 0)),
-    lastBlock(firstBlock), poolOffsetHead(0), poolOffsetTail(0),
-    constantPool(0), constantPoolCount(0)
-  { }
-
-  System* s;
-  Zone* zone;
-  Assembler::Client* client;
-  Vector code;
-  Task* tasks;
-  uint8_t* result;
-  MyBlock* firstBlock;
-  MyBlock* lastBlock;
-  PoolOffset* poolOffsetHead;
-  PoolOffset* poolOffsetTail;
-  ConstantPoolEntry* constantPool;
-  unsigned constantPoolCount;
-};
-
-class Task {
- public:
-  Task(Task* next): next(next) { }
-
-  virtual void run(Context* con) = 0;
-
-  Task* next;
-};
-
-typedef void (*OperationType)(Context*);
-
-typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
-
-typedef void (*BinaryOperationType)
-(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
-
-typedef void (*TernaryOperationType)
-(Context*, unsigned, lir::Operand*, lir::Operand*,
- lir::Operand*);
-
-typedef void (*BranchOperationType)
-(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
- lir::Operand*, lir::Operand*);
-
-class ArchitectureContext {
- public:
-  ArchitectureContext(System* s): s(s) { }
-
-  System* s;
-  OperationType operations[lir::OperationCount];
-  UnaryOperationType unaryOperations[lir::UnaryOperationCount
-                                     * lir::OperandTypeCount];
-  BinaryOperationType binaryOperations
-  [lir::BinaryOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
-  TernaryOperationType ternaryOperations
-  [lir::NonBranchTernaryOperationCount * lir::OperandTypeCount];
-  BranchOperationType branchOperations
-  [lir::BranchOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
-};
-
-inline Aborter* getAborter(Context* con) {
-  return con->s;
-}
-
-inline Aborter* getAborter(ArchitectureContext* con) {
-  return con->s;
-}
-
-class Offset: public Promise {
- public:
-  Offset(Context* con, MyBlock* block, unsigned offset, bool forTrace):
+  OffsetPromise(Context* con, MyBlock* block, unsigned offset, bool forTrace):
     con(con), block(block), offset(offset), forTrace(forTrace)
   { }
 
@@ -378,10 +282,8 @@ class Offset: public Promise {
   bool forTrace;
 };
 
-Promise*
-offset(Context* con, bool forTrace = false)
-{
-  return new(con->zone) Offset(con, con->lastBlock, con->code.length(), forTrace);
+Promise* offsetPromise(Context* con, bool forTrace = false) {
+  return new(con->zone) OffsetPromise(con, con->lastBlock, con->code.length(), forTrace);
 }
 
 bool
@@ -1626,7 +1528,7 @@ branch(Context* con, lir::TernaryOperation op)
 void
 conditional(Context* con, int32_t branch, lir::Constant* target)
 {
-  appendOffsetTask(con, target->value, offset(con));
+  appendOffsetTask(con, target->value, offsetPromise(con));
   emit(con, branch);
 }
 
@@ -1845,7 +1747,7 @@ callC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
-  appendOffsetTask(con, target->value, offset(con));
+  appendOffsetTask(con, target->value, offsetPromise(con));
   emit(con, bl(0));
 }
 
@@ -1855,7 +1757,7 @@ longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
   assert(con, size == TargetBytesPerWord);
 
   lir::Register tmp(4);
-  moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
+  moveCR2(con, TargetBytesPerWord, target, &tmp, offsetPromise(con));
   callR(con, TargetBytesPerWord, &tmp);
 }
 
@@ -1865,7 +1767,7 @@ longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
   assert(con, size == TargetBytesPerWord);
 
   lir::Register tmp(4); // a non-arg reg that we don't mind clobbering
-  moveCR2(con, TargetBytesPerWord, target, &tmp, offset(con));
+  moveCR2(con, TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, TargetBytesPerWord, &tmp);
 }
 
@@ -1874,7 +1776,7 @@ jumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assert(con, size == TargetBytesPerWord);
 
-  appendOffsetTask(con, target->value, offset(con));
+  appendOffsetTask(con, target->value, offsetPromise(con));
   emit(con, b(0));
 }
 
@@ -2120,7 +2022,7 @@ class MyArchitecture: public Assembler::Architecture {
   }
 
   virtual unsigned argumentFootprint(unsigned footprint) {
-    return local::argumentFootprint(footprint);
+    return arm::argumentFootprint(footprint);
   }
 
   virtual bool argumentAlignment() {
@@ -2209,7 +2111,7 @@ class MyArchitecture: public Assembler::Architecture {
                          unsigned targetParameterFootprint, void** ip,
                          void** stack)
   {
-    local::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
+    arm::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
                 mostRecent, targetParameterFootprint, ip, stack);
   }
 
@@ -2796,7 +2698,7 @@ class MyAssembler: public Assembler {
   }
 
   virtual Promise* offset(bool forTrace) {
-    return local::offset(&con, forTrace);
+    return arm::offsetPromise(&con, forTrace);
   }
 
   virtual Block* endBlock(bool startNew) {
@@ -2864,15 +2766,12 @@ Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
   return new(zone) MyAssembler(this->con.s, allocator, zone, this);
 }
 
-} // namespace
-
-namespace avian {
-namespace codegen {
+} // namespace arm
 
 Assembler::Architecture*
 makeArchitectureArm(System* system, bool)
 {
-  return new (allocate(system, sizeof(local::MyArchitecture))) local::MyArchitecture(system);
+  return new (allocate(system, sizeof(arm::MyArchitecture))) arm::MyArchitecture(system);
 }
 
 } // namespace codegen
