@@ -31,7 +31,7 @@ class BasicEnv {
 public:
   System* s;
   Heap* heap;
-  Assembler::Architecture* arch;
+  Architecture* arch;
 
   BasicEnv():
     s(makeSystem(0)),

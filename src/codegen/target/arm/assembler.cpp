@@ -11,6 +11,7 @@
 #include <avian/util/runtime-array.h>
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/registers.h>
 
 #include "context.h"
@@ -136,7 +137,7 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
   *stack = static_cast<void**>(*stack) + offset;
 }
 
-class MyArchitecture: public Assembler::Architecture {
+class MyArchitecture: public Architecture {
  public:
   MyArchitecture(System* system): con(system), referenceCount(0) {
     populateTables(&con);
@@ -950,7 +951,7 @@ Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
 
 } // namespace arm
 
-Assembler::Architecture*
+Architecture*
 makeArchitectureArm(System* system, bool)
 {
   return new (allocate(system, sizeof(arm::MyArchitecture))) arm::MyArchitecture(system);

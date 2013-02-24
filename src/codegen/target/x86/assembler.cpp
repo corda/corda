@@ -24,6 +24,7 @@
 #include <avian/util/math.h>
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/registers.h>
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/promise.h>
@@ -147,7 +148,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   *stack = static_cast<void**>(*stack) + offset;
 }
 
-class MyArchitecture: public Assembler::Architecture {
+class MyArchitecture: public Architecture {
  public:
   MyArchitecture(System* system, bool useNativeFeatures):
     c(system, useNativeFeatures),
@@ -1148,7 +1149,7 @@ Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
 
 } // namespace x86
 
-Assembler::Architecture* makeArchitectureX86(System* system, bool useNativeFeatures)
+Architecture* makeArchitectureX86(System* system, bool useNativeFeatures)
 {
   return new (allocate(system, sizeof(x86::MyArchitecture)))
     x86::MyArchitecture(system, useNativeFeatures);

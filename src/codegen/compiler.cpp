@@ -14,6 +14,7 @@
 
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/promise.h>
 
 #include "codegen/compiler/regalloc.h"

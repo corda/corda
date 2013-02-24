@@ -9,6 +9,7 @@
    details. */
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/registers.h>
 
 #include "alloc-vector.h"
@@ -235,7 +236,7 @@ nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
   *stack = static_cast<void**>(*stack) + offset;
 }
 
-class MyArchitecture: public Assembler::Architecture {
+class MyArchitecture: public Architecture {
  public:
   MyArchitecture(System* system): c(system), referenceCount(0) {
     populateTables(&c);
@@ -996,7 +997,7 @@ Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
 
 } // namespace powerpc
 
-Assembler::Architecture*
+Architecture*
 makeArchitecturePowerpc(System* system, bool)
 {
   return new (allocate(system, sizeof(powerpc::MyArchitecture))) powerpc::MyArchitecture(system);

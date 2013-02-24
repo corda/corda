@@ -16,6 +16,7 @@
 #include "target.h"
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/targets.h>
 #include <avian/vm/codegen/lir.h>
 
@@ -29,7 +30,7 @@ class BasicEnv {
 public:
   System* s;
   Heap* heap;
-  Assembler::Architecture* arch;
+  Architecture* arch;
 
   BasicEnv():
     s(makeSystem(0)),
