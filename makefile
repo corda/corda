@@ -978,17 +978,17 @@ compiler-sources = \
 compiler-objects = $(call cpp-objects,$(compiler-sources),$(src),$(build))
 $(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
 
-x86-assembler-sources = $(wildcard $(src)/codegen/x86/*.cpp)
+x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
 x86-assembler-objects = $(call cpp-objects,$(x86-assembler-sources),$(src),$(build))
-$(x86-assembler-objects): $(wildcard $(src)/codegen/x86/*.h) $(vm-depends)
+$(x86-assembler-objects): $(wildcard $(src)/codegen/target/x86/*.h) $(vm-depends)
 
-arm-assembler-sources = $(wildcard $(src)/codegen/arm/*.cpp)
+arm-assembler-sources = $(wildcard $(src)/codegen/target/arm/*.cpp)
 arm-assembler-objects = $(call cpp-objects,$(arm-assembler-sources),$(src),$(build))
-$(arm-assembler-objects): $(wildcard $(src)/codegen/arm/*.h) $(vm-depends)
+$(arm-assembler-objects): $(wildcard $(src)/codegen/target/arm/*.h) $(vm-depends)
 
-powerpc-assembler-sources = $(wildcard $(src)/codegen/powerpc/*.cpp)
+powerpc-assembler-sources = $(wildcard $(src)/codegen/target/powerpc/*.cpp)
 powerpc-assembler-objects = $(call cpp-objects,$(powerpc-assembler-sources),$(src),$(build))
-$(powerpc-assembler-objects): $(wildcard $(src)/codegen/powerpc/*.h) $(vm-depends)
+$(powerpc-assembler-objects): $(wildcard $(src)/codegen/target/powerpc/*.h) $(vm-depends)
 
 all-assembler-sources = \
 	$(x86-assembler-sources) \
