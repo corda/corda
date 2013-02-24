@@ -9,8 +9,9 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/x86/context.h"
-#include "codegen/x86/block.h"
+#include "target.h"
+
+#include "context.h"
 
 namespace avian {
 namespace codegen {

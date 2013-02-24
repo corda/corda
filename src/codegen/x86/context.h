@@ -15,9 +15,14 @@
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)
 #define CAST_BRANCH(x) reinterpret_cast<BranchOperationType>(x)
 
+#include <stdint.h>
+
+#include "alloc-vector.h"
+
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/assembler.h>
-#include "alloc-vector.h"
+
+#include <avian/vm/system/system.h>
 
 namespace vm {
 class System;

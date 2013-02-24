@@ -11,6 +11,10 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_MULTIMETHOD_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_MULTIMETHOD_H
 
+#include "common.h"
+
+#include <avian/vm/codegen/lir.h>
+
 namespace avian {
 namespace codegen {
 namespace x86 {

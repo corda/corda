@@ -8,13 +8,25 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "codegen/x86/context.h"
-#include "codegen/x86/encode.h"
-#include "codegen/x86/registers.h"
-#include "codegen/x86/detect.h"
-#include "codegen/x86/operations.h"
-#include "codegen/x86/padding.h"
-#include "codegen/x86/fixup.h"
+#include <stdint.h>
+
+#include "target.h"
+#include "alloc-vector.h"
+#include "allocator.h"
+#include "zone.h"
+
+#include <avian/util/abort.h>
+
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/promise.h>
+
+#include "context.h"
+#include "encode.h"
+#include "registers.h"
+#include "detect.h"
+#include "operations.h"
+#include "padding.h"
+#include "fixup.h"
 
 using namespace avian::util;
 

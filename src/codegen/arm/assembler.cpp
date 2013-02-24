@@ -60,11 +60,9 @@ const unsigned StackAlignmentInBytes = 8;
 const unsigned StackAlignmentInWords
 = StackAlignmentInBytes / TargetBytesPerWord;
 
-void
-resolve(MyBlock*);
+void resolve(MyBlock*);
 
-unsigned
-padding(MyBlock*, unsigned);
+unsigned padding(MyBlock*, unsigned);
 
 class ConstantPoolEntry;
 

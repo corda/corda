@@ -178,12 +178,6 @@ resolve(MyBlock* b)
 
 using namespace isa;
 
-inline void
-write4(uint8_t* dst, uint32_t v)
-{
-  memcpy(dst, &v, 4);
-}
-
 // END OPERATION COMPILERS
 
 unsigned

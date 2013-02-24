@@ -9,11 +9,18 @@
    details. */
 
 #include "target.h"
+#include "alloc-vector.h"
 
-#include "codegen/x86/context.h"
-#include "codegen/x86/encode.h"
-#include "codegen/x86/registers.h"
-#include "codegen/x86/fixup.h"
+#include <avian/util/abort.h>
+#include <avian/util/math.h>
+
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/promise.h>
+
+#include "context.h"
+#include "encode.h"
+#include "registers.h"
+#include "fixup.h"
 
 using namespace avian::util;
 

@@ -8,12 +8,20 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/codegen/assembler.h>
-   
-#include "codegen/x86/context.h"
-#include "codegen/x86/fixup.h"
-#include "codegen/x86/padding.h"
-#include "codegen/x86/block.h"
+#include <string.h>
+
+#include "allocator.h"
+#include "alloc-vector.h"
+#include "common.h"
+#include "zone.h"
+
+#include <avian/util/abort.h>
+#include <avian/vm/system/system.h>
+
+#include "context.h"
+#include "fixup.h"
+#include "padding.h"
+#include "block.h"
 
 namespace avian {
 namespace codegen {

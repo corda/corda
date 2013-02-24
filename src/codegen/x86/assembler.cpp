@@ -8,25 +8,36 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include <stdarg.h>
+#include <stdint.h>
+#include <string.h>
+
 #include "environment.h"
 #include "target.h"
 #include "alloc-vector.h"
-
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/registers.h>
-
-#include "codegen/x86/context.h"
-#include "codegen/x86/block.h"
-#include "codegen/x86/fixup.h"
-#include "codegen/x86/padding.h"
-#include "codegen/x86/registers.h"
-#include "codegen/x86/encode.h"
-#include "codegen/x86/operations.h"
-#include "codegen/x86/detect.h"
-#include "codegen/x86/multimethod.h"
+#include "common.h"
+#include "allocator.h"
+#include "zone.h"
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/abort.h>
+#include <avian/util/math.h>
+
+#include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/registers.h>
+#include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/promise.h>
+
+#include <avian/vm/system/system.h>
+
+#include "context.h"
+#include "block.h"
+#include "fixup.h"
+#include "padding.h"
+#include "registers.h"
+#include "operations.h"
+#include "detect.h"
+#include "multimethod.h"
 
 #define CAST1(x) reinterpret_cast<UnaryOperationType>(x)
 #define CAST2(x) reinterpret_cast<BinaryOperationType>(x)

@@ -11,12 +11,20 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_ENCODE_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_ENCODE_H
 
-#include <avian/vm/codegen/assembler.h>
-#include "codegen/x86/registers.h"
+#include <stdint.h>
+
+#include "common.h"
+
+#include <avian/vm/codegen/lir.h>
+
+#include "registers.h"
 
 namespace avian {
 namespace codegen {
 namespace x86 {
+
+class Context;
+
 void maybeRex(Context* c, unsigned size, int a, int index, int base, bool always);
 
 void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Register* b);

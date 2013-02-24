@@ -11,17 +11,19 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_FIXUP_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_FIXUP_H
 
+#include <stdint.h>
+
+#include <avian/vm/codegen/promise.h>
+
 namespace vm {
 class System;
 }
 
 namespace avian {
 namespace codegen {
-
-class Promise;
-
 namespace x86 {
 
+class Context;
 class MyBlock;
 class AlignmentPadding;
 

@@ -10,11 +10,13 @@
 
 #include "common.h"
 
+#include <avian/util/abort.h>
+
 #include <avian/vm/codegen/lir.h>
 
-#include "codegen/x86/context.h"
-#include "codegen/x86/multimethod.h"
-#include "codegen/x86/operations.h"
+#include "context.h"
+#include "multimethod.h"
+#include "operations.h"
 
 namespace avian {
 namespace codegen {

@@ -15,6 +15,7 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
+class Context;
 
 class AlignmentPadding {
  public:

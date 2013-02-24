@@ -21,7 +21,7 @@ using namespace isa;
 
 unsigned padding(MyBlock*, unsigned);
 
-inline int ha16(int32_t i);
+int ha16(int32_t i);
 
 bool bounded(int right, int left, int32_t v) {
   return ((v << left) >> left) == v and ((v >> right) << right) == v;
