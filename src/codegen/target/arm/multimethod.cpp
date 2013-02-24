@@ -16,6 +16,8 @@ namespace avian {
 namespace codegen {
 namespace arm {
 
+using namespace util;
+
 unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand)
 {
   return operation + (lir::UnaryOperationCount * operand);

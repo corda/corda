@@ -16,6 +16,8 @@ namespace avian {
 namespace codegen {
 namespace arm {
 
+using namespace util;
+
 unsigned padding(MyBlock*, unsigned);
 
 OffsetPromise::OffsetPromise(Context* con, MyBlock* block, unsigned offset, bool forTrace):

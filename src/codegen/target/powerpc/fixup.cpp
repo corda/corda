@@ -18,6 +18,7 @@ namespace codegen {
 namespace powerpc {
 
 using namespace isa;
+using namespace util;
 
 unsigned padding(MyBlock*, unsigned);
 

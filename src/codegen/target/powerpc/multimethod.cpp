@@ -19,6 +19,38 @@ namespace avian {
 namespace codegen {
 namespace powerpc {
 
+using namespace util;
+
+unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand)
+{
+  return operation + (lir::UnaryOperationCount * operand);
+}
+
+unsigned index(ArchitectureContext*,
+      lir::BinaryOperation operation,
+      lir::OperandType operand1,
+      lir::OperandType operand2)
+{
+  return operation
+    + (lir::BinaryOperationCount * operand1)
+    + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
+}
+
+unsigned index(ArchitectureContext* c UNUSED,
+      lir::TernaryOperation operation,
+      lir::OperandType operand1)
+{
+  assert(c, not isBranch(operation));
+
+  return operation + (lir::NonBranchTernaryOperationCount * operand1);
+}
+
+unsigned branchIndex(ArchitectureContext* c UNUSED, lir::OperandType operand1,
+            lir::OperandType operand2)
+{
+  return operand1 + (lir::OperandTypeCount * operand2);
+}
+
 void populateTables(ArchitectureContext* c) {
   const lir::OperandType C = lir::ConstantOperand;
   const lir::OperandType A = lir::AddressOperand;

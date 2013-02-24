@@ -22,6 +22,8 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
+using namespace util;
+
 
 unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand) {
   return operation + (lir::UnaryOperationCount * operand);

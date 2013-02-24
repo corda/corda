@@ -21,35 +21,19 @@ namespace codegen {
 namespace powerpc {
 
 
-inline unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand)
-{
-  return operation + (lir::UnaryOperationCount * operand);
-}
+unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand);
 
-inline unsigned index(ArchitectureContext*,
+unsigned index(ArchitectureContext*,
       lir::BinaryOperation operation,
       lir::OperandType operand1,
-      lir::OperandType operand2)
-{
-  return operation
-    + (lir::BinaryOperationCount * operand1)
-    + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
-}
+      lir::OperandType operand2);
 
-inline unsigned index(ArchitectureContext* c UNUSED,
+unsigned index(ArchitectureContext* c UNUSED,
       lir::TernaryOperation operation,
-      lir::OperandType operand1)
-{
-  assert(c, not isBranch(operation));
+      lir::OperandType operand1);
 
-  return operation + (lir::NonBranchTernaryOperationCount * operand1);
-}
-
-inline unsigned branchIndex(ArchitectureContext* c UNUSED, lir::OperandType operand1,
-            lir::OperandType operand2)
-{
-  return operand1 + (lir::OperandTypeCount * operand2);
-}
+unsigned branchIndex(ArchitectureContext* c UNUSED, lir::OperandType operand1,
+            lir::OperandType operand2);
 
 void populateTables(ArchitectureContext* c);
 

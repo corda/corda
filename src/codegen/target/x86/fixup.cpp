@@ -27,6 +27,8 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
+using namespace util;
+
 ResolvedPromise* resolvedPromise(Context* c, int64_t value) {
   return new(c->zone) ResolvedPromise(value);
 }
