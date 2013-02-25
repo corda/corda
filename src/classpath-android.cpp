@@ -401,10 +401,10 @@ class MyClasspath : public Classpath {
     object instance = makeNew(t, c);
     PROTECT(t, instance);
 
-    object constructor = resolveMethod(t, c, "<init>", "(II)V");
+    object constructor = resolveMethod(t, c, "<init>", "(JI)V");
 
     t->m->processor->invoke
-      (t, constructor, instance, reinterpret_cast<int>(p),
+      (t, constructor, instance, reinterpret_cast<int64_t>(p),
        static_cast<int>(capacity));
 
     return instance;
@@ -416,10 +416,10 @@ class MyClasspath : public Classpath {
     PROTECT(t, b);
 
     object field = resolveField
-      (t, objectClass(t, b), "effectiveDirectAddress", "I");
+      (t, objectClass(t, b), "effectiveDirectAddress", "J");
 
     return reinterpret_cast<void*>
-      (fieldAtOffset<int32_t>(b, fieldOffset(t, field)));
+      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
   }
 
   virtual int64_t
@@ -1536,65 +1536,84 @@ extern "C" JNIEXPORT void JNICALL
 Avian_libcore_io_Memory_pokeLong
 (Thread*, object, uintptr_t* arguments)
 {
-  int64_t v; memcpy(&v, arguments + 1, 8);
-  if (arguments[3]) {
+  int64_t address; memcpy(&address, arguments, 8);
+  int64_t v; memcpy(&v, arguments + 2, 8);
+  if (arguments[4]) {
     v = swapV8(v);
   }
-  memcpy(reinterpret_cast<void*>(arguments[0]), &v, 8);
+  memcpy(reinterpret_cast<void*>(address), &v, 8);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_libcore_io_Memory_peekLong
 (Thread*, object, uintptr_t* arguments)
 {
-  int64_t v; memcpy(&v, reinterpret_cast<void*>(arguments[0]), 8);
-  return arguments[1] ? swapV8(v) : v;
+  int64_t address; memcpy(&address, arguments, 8);
+  int64_t v; memcpy(&v, reinterpret_cast<void*>(address), 8);
+  return arguments[2] ? swapV8(v) : v;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Avian_libcore_io_Memory_pokeInt
 (Thread*, object, uintptr_t* arguments)
 {
-  int32_t v = arguments[2] ? swapV4(arguments[1]) : arguments[1];
-  memcpy(reinterpret_cast<void*>(arguments[0]), &v, 4);
+  int64_t address; memcpy(&address, arguments, 8);
+  int32_t v = arguments[3] ? swapV4(arguments[2]) : arguments[2];
+  memcpy(reinterpret_cast<void*>(address), &v, 4);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_libcore_io_Memory_peekInt
 (Thread*, object, uintptr_t* arguments)
 {
-  int32_t v; memcpy(&v, reinterpret_cast<void*>(arguments[0]), 4);
-  return arguments[1] ? swapV4(v) : v;
+  int64_t address; memcpy(&address, arguments, 8);
+  int32_t v; memcpy(&v, reinterpret_cast<void*>(address), 4);
+  return arguments[2] ? swapV4(v) : v;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Avian_libcore_io_Memory_pokeShort
 (Thread*, object, uintptr_t* arguments)
 {
-  int16_t v = arguments[2] ? swapV2(arguments[1]) : arguments[1];
-  memcpy(reinterpret_cast<void*>(arguments[0]), &v, 2);
+  int64_t address; memcpy(&address, arguments, 8);
+  int16_t v = arguments[3] ? swapV2(arguments[2]) : arguments[2];
+  memcpy(reinterpret_cast<void*>(address), &v, 2);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_libcore_io_Memory_peekShort
 (Thread*, object, uintptr_t* arguments)
 {
-  int16_t v; memcpy(&v, reinterpret_cast<void*>(arguments[0]), 2);
-  return arguments[1] ? swapV2(v) : v;
+  int64_t address; memcpy(&address, arguments, 8);
+  int16_t v; memcpy(&v, reinterpret_cast<void*>(address), 2);
+  return arguments[2] ? swapV2(v) : v;
 }
 
 extern "C" JNIEXPORT void JNICALL
 Avian_libcore_io_Memory_pokeByte
 (Thread*, object, uintptr_t* arguments)
 {
-  *reinterpret_cast<int8_t*>(arguments[0]) = arguments[1];
+  int64_t address; memcpy(&address, arguments, 8);
+  *reinterpret_cast<int8_t*>(address) = arguments[2];
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_libcore_io_Memory_peekByte
 (Thread*, object, uintptr_t* arguments)
 {
-  return *reinterpret_cast<int8_t*>(arguments[0]);
+  int64_t address; memcpy(&address, arguments, 8);
+  return *reinterpret_cast<int8_t*>(address);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_libcore_io_Memory_peekByteArray
+(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t address; memcpy(&address, arguments, 8);
+  object array = reinterpret_cast<object>(arguments[2]);
+  memcpy(&byteArrayBody(t, array, arguments[3]),
+         reinterpret_cast<int8_t*>(address),
+         arguments[4]);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

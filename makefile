@@ -167,7 +167,9 @@ ifneq ($(android),)
 		-fno-exceptions \
 		-DHAVE_SYS_UIO_H \
 		-D_FILE_OFFSET_BITS=64 \
-		-g3
+		-g3 \
+		-Werror \
+		-fPIC
 	classpath-lflags := $(android)/icu4c/lib/libicuuc.a \
 		$(android)/icu4c/lib/libicui18n.a \
 		$(android)/icu4c/lib/libicudata.a \
