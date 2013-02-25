@@ -324,7 +324,7 @@ _Stand-alone build:_
         openjdk-src=$(pwd)/../p/jdk7u-dev/jdk/src test
 
 ####Windows (Cygwin):
-_Prerequisite:_ Build OpenJDK 7 according to [this site](http://weblogs.java.net/blog/simonis/archive/2011/10/28/yaojowbi-yet-another-openjdk-windows-build-instruction).
+_Prerequisite:_ Build OpenJDK 7 according to [this site](http://weblogs.java.net/blog/simonis/archive/2011/10/28/yaojowbi-yet-another-openjdk-windows-build-instruction).  Alternatively, use https://github.com/alexkasko/openjdk-unofficial-builds.
 
 _Conventional build:_
 
