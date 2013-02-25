@@ -33,15 +33,15 @@ ResolvedPromise* resolvedPromise(Context* c, int64_t value) {
   return new(c->zone) ResolvedPromise(value);
 }
 
-Offset::Offset(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit):
+OffsetPromise::OffsetPromise(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit):
   c(c), block(block), offset(offset), limit(limit), value_(-1)
 { }
 
-bool Offset::resolved() {
+bool OffsetPromise::resolved() {
   return block->start != static_cast<unsigned>(~0);
 }
 
-int64_t Offset::value() {
+int64_t OffsetPromise::value() {
   assert(c, resolved());
 
   if (value_ == -1) {
@@ -52,7 +52,7 @@ int64_t Offset::value() {
   return value_;
 }
 Promise* offsetPromise(Context* c) {
-  return new(c->zone) Offset(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
+  return new(c->zone) OffsetPromise(c, c->lastBlock, c->code.length(), c->lastBlock->lastPadding);
 }
 
 void*

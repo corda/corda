@@ -29,9 +29,18 @@ class AlignmentPadding;
 
 ResolvedPromise* resolvedPromise(Context* c, int64_t value);
 
-class Offset: public Promise {
+class Task {
  public:
-  Offset(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit);
+  Task(Task* next): next(next) { }
+
+  virtual void run(Context* c) = 0;
+
+  Task* next;
+};
+
+class OffsetPromise: public Promise {
+ public:
+  OffsetPromise(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit);
 
   virtual bool resolved();
   
@@ -45,16 +54,6 @@ class Offset: public Promise {
 };
 
 Promise* offsetPromise(Context* c);
-
-
-class Task {
- public:
-  Task(Task* next): next(next) { }
-
-  virtual void run(Context* c) = 0;
-
-  Task* next;
-};
 
 void* resolveOffset(vm::System* s, uint8_t* instruction, unsigned instructionSize, int64_t value);
 
