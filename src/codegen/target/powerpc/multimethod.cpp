@@ -11,20 +11,16 @@
 #include "context.h"
 #include "block.h"
 #include "common.h"
-
 #include "operations.h"
+
 #include "multimethod.h"
+#include "../multimethod.h"
 
 namespace avian {
 namespace codegen {
 namespace powerpc {
 
 using namespace util;
-
-unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand)
-{
-  return operation + (lir::UnaryOperationCount * operand);
-}
 
 unsigned index(ArchitectureContext*,
       lir::BinaryOperation operation,
@@ -69,25 +65,25 @@ void populateTables(ArchitectureContext* c) {
   zo[lir::StoreLoadBarrier] = memoryBarrier;
   zo[lir::Trap] = trap;
 
-  uo[index(c, lir::LongCall, C)] = CAST1(longCallC);
+  uo[Multimethod::index(lir::LongCall, C)] = CAST1(longCallC);
 
-  uo[index(c, lir::AlignedLongCall, C)] = CAST1(alignedLongCallC);
+  uo[Multimethod::index(lir::AlignedLongCall, C)] = CAST1(alignedLongCallC);
 
-  uo[index(c, lir::LongJump, C)] = CAST1(longJumpC);
+  uo[Multimethod::index(lir::LongJump, C)] = CAST1(longJumpC);
 
-  uo[index(c, lir::AlignedLongJump, C)] = CAST1(alignedLongJumpC);
+  uo[Multimethod::index(lir::AlignedLongJump, C)] = CAST1(alignedLongJumpC);
 
-  uo[index(c, lir::Jump, R)] = CAST1(jumpR);
-  uo[index(c, lir::Jump, C)] = CAST1(jumpC);
+  uo[Multimethod::index(lir::Jump, R)] = CAST1(jumpR);
+  uo[Multimethod::index(lir::Jump, C)] = CAST1(jumpC);
 
-  uo[index(c, lir::AlignedJump, R)] = CAST1(jumpR);
-  uo[index(c, lir::AlignedJump, C)] = CAST1(jumpC);
+  uo[Multimethod::index(lir::AlignedJump, R)] = CAST1(jumpR);
+  uo[Multimethod::index(lir::AlignedJump, C)] = CAST1(jumpC);
 
-  uo[index(c, lir::Call, C)] = CAST1(callC);
-  uo[index(c, lir::Call, R)] = CAST1(callR);
+  uo[Multimethod::index(lir::Call, C)] = CAST1(callC);
+  uo[Multimethod::index(lir::Call, R)] = CAST1(callR);
 
-  uo[index(c, lir::AlignedCall, C)] = CAST1(callC);
-  uo[index(c, lir::AlignedCall, R)] = CAST1(callR);
+  uo[Multimethod::index(lir::AlignedCall, C)] = CAST1(callC);
+  uo[Multimethod::index(lir::AlignedCall, R)] = CAST1(callR);
 
   bo[index(c, lir::Move, R, R)] = CAST2(moveRR);
   bo[index(c, lir::Move, C, R)] = CAST2(moveCR);

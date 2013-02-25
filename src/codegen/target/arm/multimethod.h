@@ -23,8 +23,6 @@ namespace avian {
 namespace codegen {
 namespace arm {
 
-unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand);
-
 unsigned index(ArchitectureContext*,
       lir::BinaryOperation operation,
       lir::OperandType operand1,

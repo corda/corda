@@ -21,6 +21,7 @@
 #include "encode.h"
 #include "operations.h"
 #include "registers.h"
+#include "../multimethod.h"
 
 #include "alloc-vector.h"
 #include <avian/util/abort.h>
@@ -769,7 +770,7 @@ class MyAssembler: public Assembler {
 
   virtual void apply(lir::UnaryOperation op, OperandInfo a)
   {
-    arch_->con.unaryOperations[index(&(arch_->con), op, a.type)]
+    arch_->con.unaryOperations[Multimethod::index(op, a.type)]
       (&con, a.size, a.operand);
   }
 

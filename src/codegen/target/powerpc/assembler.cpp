@@ -19,8 +19,9 @@
 #include "context.h"
 #include "fixup.h"
 #include "block.h"
-#include "multimethod.h"
 #include "operations.h"
+#include "multimethod.h"
+#include "../multimethod.h"
 
 using namespace vm;
 using namespace avian::util;
@@ -824,7 +825,7 @@ class MyAssembler: public Assembler {
 
   virtual void apply(lir::UnaryOperation op, OperandInfo a)
   {
-    arch_->c.unaryOperations[index(&(arch_->c), op, a.type)]
+    arch_->c.unaryOperations[Multimethod::index(op, a.type)]
       (&c, a.size, a.operand);
   }
 

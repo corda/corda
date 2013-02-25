@@ -21,8 +21,6 @@ namespace x86 {
 
 class ArchitectureContext;
 
-unsigned index(ArchitectureContext*, lir::UnaryOperation operation, lir::OperandType operand);
-
 unsigned index(ArchitectureContext*, lir::BinaryOperation operation,
       lir::OperandType operand1,
       lir::OperandType operand2);
