@@ -1873,7 +1873,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 
 #ifdef AVIAN_OPENJDK_SRC
   if (not absolute) {
-    if (strcmp(n, "net") == 0) {
+    if (strcmp(RUNTIME_ARRAY_BODY(n), "net") == 0) {
       bool ran;
 
       { ACQUIRE(t, t->m->classLock);
@@ -1890,7 +1890,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       }
 
       return;
-    } else if (strcmp(n, "management") == 0) { 
+    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "management") == 0) { 
       bool ran;
 
       { ACQUIRE(t, t->m->classLock);
@@ -1907,8 +1907,8 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       }
 
       return;     
-    } else if (strcmp(n, "zip") == 0
-               or strcmp(n, "nio") == 0)
+    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "zip") == 0
+               or strcmp(RUNTIME_ARRAY_BODY(n), "nio") == 0)
     {
       return;
     }
