@@ -662,6 +662,7 @@ class MemberIterator {
           assert(member->type == Object::Scalar);
           offset_ = ((offset_ + size_) + (BytesPerWord - 1))
             & ~(BytesPerWord - 1);
+          alignment_ = BytesPerWord;
           member = 0;
         }
 
