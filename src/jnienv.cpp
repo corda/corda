@@ -3254,13 +3254,21 @@ registerNatives(Thread* t, uintptr_t* arguments)
 
   for (int i = 0; i < methodCount; ++i) {
     if (methods[i].function) {
+      // Android's class library sometimes prepends a mysterious "!"
+      // to the method signature, which we happily ignore:
+      const char* sig = methods[i].signature;
+      if (*sig == '!') ++ sig;
+
       object method = findMethodOrNull
-        (t, jclassVmClass(t, *c), methods[i].name, methods[i].signature);
+        (t, jclassVmClass(t, *c), methods[i].name, sig);
 
       if (method == 0 or (methodFlags(t, method) & ACC_NATIVE) == 0) {
         // The JNI spec says we must throw a NoSuchMethodError in this
         // case, but that would prevent using a code shrinker like
         // ProGuard effectively.  Instead, we just ignore it.
+
+        // fprintf(stderr, "not found: %s.%s%s\n", &byteArrayBody(t, className(t, jclassVmClass(t, *c)), 0), methods[i].name, sig);
+        // abort(t);
       } else {
         registerNative(t, method, methods[i].function);
       }

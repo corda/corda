@@ -169,9 +169,11 @@ ifneq ($(android),)
 		-D_FILE_OFFSET_BITS=64 \
 		-g3 \
 		-Werror \
-		-fPIC
-	classpath-lflags := $(android)/icu4c/lib/libicuuc.a \
+		-fPIC \
+		-fvisibility=hidden
+	classpath-lflags := \
 		$(android)/icu4c/lib/libicui18n.a \
+		$(android)/icu4c/lib/libicuuc.a \
 		$(android)/icu4c/lib/libicudata.a \
 		$(android)/fdlibm/libfdm.a \
 		$(android)/expat/.libs/libexpat.a \
@@ -1413,9 +1415,10 @@ $(classpath-build)/%.class: $(classpath-src)/%.java
 $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
-	$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
-		$(shell $(MAKE) -s --no-print-directory build=$(build) \
-			$(classpath-classes))
+	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
+		$(classpath-classes))"; if [ -n "$${classes}" ]; then \
+		$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
+		$${classes}; fi
 	@touch $(@)
 
 $(build)/android-src/%.cpp: $(luni-native)/%.cpp

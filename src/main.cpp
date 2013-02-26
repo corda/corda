@@ -259,7 +259,10 @@ main(int ac, const char** av)
   JNI_CreateJavaVM(&vm, &env, &vmArgs);
   JNIEnv* e = static_cast<JNIEnv*>(env);
 
-  jclass c = e->FindClass(class_);
+  jclass c = 0;
+  if (not e->ExceptionCheck()) {
+    c = e->FindClass(class_);
+  }
 
   if (jar) {
     free(const_cast<char*>(class_));

@@ -123,7 +123,7 @@ initVmThread(Thread* t, object thread)
 
   if (fieldAtOffset<object>(thread, fieldOffset(t, field)) == 0) {
     PROTECT(t, field);
-
+ 
     object c = resolveClass
       (t, root(t, Machine::BootLoader), "java/lang/VMThread");
     PROTECT(t, c);
@@ -235,6 +235,8 @@ class MyClasspath : public Classpath {
     t->m->processor->invoke
       (t, constructor, thread, group, 0, NormalPriority, false);
 
+    set(t, thread, ThreadContextClassLoader, root(t, Machine::AppLoader));
+
     initVmThread(t, thread);
 
     return thread;
@@ -325,6 +327,10 @@ class MyClasspath : public Classpath {
   virtual void
   preBoot(Thread* t)
   {
+    // Android's System.initSystemProperties throws an NPE if
+    // LD_LIBRARY_PATH is not set as of this writing:
+    setenv("LD_LIBRARY_PATH", "", false);
+
     { object c = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/Runtime", false);
 
@@ -531,6 +537,8 @@ jniRegisterNativeMethods(JNIEnv* e, const char* className,
 
   if (c) {
     e->vtable->RegisterNatives(e, c, methods, methodCount);
+  } else {
+    e->vtable->ExceptionClear(e);
   }
 
   return 0;
@@ -693,8 +701,9 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_String_equals
 (Thread* t, object, uintptr_t* arguments)
 {
-  return stringEqual(t, reinterpret_cast<object>(arguments[0]),
-                     reinterpret_cast<object>(arguments[1]));
+  return arguments[1] and stringEqual
+    (t, reinterpret_cast<object>(arguments[0]),
+     reinterpret_cast<object>(arguments[1]));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -917,8 +926,14 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_dalvik_system_VMRuntime_properties
 (Thread* t, object, uintptr_t*)
 {
-  return reinterpret_cast<uintptr_t>
-    (makeObjectArray(t, type(t, Machine::StringType), 0));
+  object array = makeObjectArray(t, type(t, Machine::StringType), 1);
+  PROTECT(t, array);
+
+  object property = makeString(t, "java.protocol.handler.pkgs=avian");
+
+  set(t, array, ArrayBody, property);
+  
+  return reinterpret_cast<uintptr_t>(array);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -926,6 +941,24 @@ Avian_java_lang_Runtime_gc
 (Thread* t, object, uintptr_t*)
 {
   collect(t, Heap::MajorCollection);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Runtime_nativeLoad
+(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, name);
+
+  unsigned length = stringLength(t, name);
+  THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
+
+  if (loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), false, true)) {
+    return 0;
+  } else {
+    return reinterpret_cast<uintptr_t>(name);
+  }
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -1085,27 +1118,19 @@ Avian_java_lang_Math_max
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_Math_floor
+Avian_java_lang_Math_cos
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t v; memcpy(&v, arguments, 8);
-  return doubleToBits(floor(bitsToDouble(v)));
+  return doubleToBits(cos(bitsToDouble(v)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_Math_ceil
+Avian_java_lang_Math_sin
 (Thread*, object, uintptr_t* arguments)
 {
   int64_t v; memcpy(&v, arguments, 8);
-  return doubleToBits(ceil(bitsToDouble(v)));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_java_lang_Math_log
-(Thread*, object, uintptr_t* arguments)
-{
-  int64_t v; memcpy(&v, arguments, 8);
-  return doubleToBits(log(bitsToDouble(v)));
+  return doubleToBits(sin(bitsToDouble(v)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -1213,8 +1238,12 @@ Avian_java_lang_Class_getNameNative
   object name = className
     (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
 
+  THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, name));
+  replace('/', '.', RUNTIME_ARRAY_BODY(s),
+          reinterpret_cast<char*>(&byteArrayBody(t, name, 0)));
+
   return reinterpret_cast<uintptr_t>
-    (t->m->classpath->makeString(t, name, 0, byteArrayLength(t, name) - 1));
+    (makeString(t, "%s", RUNTIME_ARRAY_BODY(s)));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -1605,17 +1634,6 @@ Avian_libcore_io_Memory_peekByte
   return *reinterpret_cast<int8_t*>(address);
 }
 
-extern "C" JNIEXPORT void JNICALL
-Avian_libcore_io_Memory_peekByteArray
-(Thread* t, object, uintptr_t* arguments)
-{
-  int64_t address; memcpy(&address, arguments, 8);
-  object array = reinterpret_cast<object>(arguments[2]);
-  memcpy(&byteArrayBody(t, array, arguments[3]),
-         reinterpret_cast<int8_t*>(address),
-         arguments[4]);
-}
-
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_System_nanoTime
 (Thread* t, object, uintptr_t*)
@@ -1635,4 +1653,20 @@ Avian_java_lang_System_identityHashCode
 (Thread* t, object, uintptr_t* arguments)
 {
   return objectHash(t, reinterpret_cast<object>(arguments[0]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_System_mapLibraryName
+(Thread* t, object, uintptr_t* arguments)
+{
+  object original = reinterpret_cast<object>(arguments[0]);
+  unsigned originalLength = stringUTFLength(t, original);
+  THREAD_RUNTIME_ARRAY(t, char, originalChars, originalLength);
+  stringUTFChars
+    (t, original, RUNTIME_ARRAY_BODY(originalChars), originalLength);
+
+  return reinterpret_cast<uintptr_t>
+    (makeString(t, "%s%.*s%s", t->m->system->libraryPrefix(), originalLength,
+                RUNTIME_ARRAY_BODY(originalChars),
+                t->m->system->librarySuffix()));
 }
