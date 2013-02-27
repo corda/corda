@@ -640,7 +640,7 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
-  preBoot(Thread* t)
+  preBoot(Thread*)
   {
     // ignore
   }
