@@ -640,7 +640,7 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
-  preBoot(Thread*)
+  preBoot(Thread* t)
   {
     // ignore
   }
@@ -659,7 +659,7 @@ class MyClasspath : public Classpath {
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #  ifndef PLATFORM_WINDOWS
-    loadLibrary(t, libraryPath, "mawt", true, true);
+    loadLibrary(t, libraryPath, "mawt", true, true, false);
 #  endif
 #endif // not AVIAN_OPENJDK_SRC
 

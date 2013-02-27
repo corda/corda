@@ -165,7 +165,7 @@ loadLibrary(Thread* t, const char* name)
 
 System::Library*
 loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
-            bool runOnLoad)
+            bool runOnLoad, bool throw_ = true)
 {
   ACQUIRE(t, t->m->classLock);
 
@@ -238,7 +238,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     if (runOnLoad) {
       runOnLoadIfFound(t, lib);
     }
-  } else {  
+  } else if (throw_) {
     throwNew(t, Machine::UnsatisfiedLinkErrorType, "library not found: %s",
              name);
   }
