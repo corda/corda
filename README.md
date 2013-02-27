@@ -95,7 +95,8 @@ certain flags described below, all of which are optional.
         continuations={true,false} \
         use-clang={true,false} \
         openjdk=<openjdk installation directory> \
-        openjdk-src=<openjdk source directory>
+        openjdk-src=<openjdk source directory> \
+        android=<android source directory>
 
   * `platform` - the target platform  
     * _default:_ output of $(uname -s | tr [:upper:] [:lower:]),
@@ -156,8 +157,8 @@ Note that this does not currently affect cross compiles, only
 native builds.  
     * _default:_ false
 
-  * `openjdk` - if set, use OpenJDK class library instead of the default
-Avian class library.  See "Building with the OpenJDK Class
+  * `openjdk` - if set, use the OpenJDK class library instead of the
+default Avian class library.  See "Building with the OpenJDK Class
 Library" below for details.  
     * _default:_ not set
 
@@ -166,6 +167,11 @@ build an embeddable VM using the OpenJDK class library.  The JNI
 components of the OpenJDK class library will be built from the
 sources found under the specified directory.  See "Building with
 the OpenJDK Class Library" below for details.  
+    * _default:_ not set
+
+  * `android` - if set, use the Android class library instead of the
+default Avian class library.  See "Building with the Android Class
+Library" below for details.
     * _default:_ not set
 
 These flags determine the name of the directory used for the build.
@@ -234,6 +240,7 @@ installation.
 Finally, build with the msvc flag set to the MSVC tool directory:
 
     $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
+
 
 Building with the OpenJDK Class Library
 ---------------------------------------
@@ -306,7 +313,7 @@ _Stand-alone build:_
     $ apt-get install openjdk-7-jdk
     $ apt-get source openjdk-7-jdk
     $ apt-get build-dep openjdk-7-jdk
-    (cd openjdk-7-7~b147-2.0 && dpkg-buildpackage)
+    $ (cd openjdk-7-7~b147-2.0 && dpkg-buildpackage)
     $ make openjdk=/usr/lib/jvm/java-7-openjdk \
         openjdk-src=$(pwd)/openjdk-7-7~b147-2.0/build/openjdk/jdk/src \
         test
@@ -337,6 +344,51 @@ _Stand-alone build:_
 
 Currently, only OpenJDK 7 is supported.  Later versions might work,
 but have not yet been tested.
+
+
+Building with the Android Class Library
+---------------------------------------
+
+As an alternative to both the Avian and OpenJDK class libaries, you
+can also build with the Android Class Library on some platforms
+(currently just Linux, but possibly others in the future).  To build
+this way, do the following, starting from the Avian directory:
+
+    $ cd ..
+    $ mkdir android
+    $ git clone https://android.googlesource.com/platform/bionic
+    $ git clone https://android.googlesource.com/platform/system/core
+    $ git clone https://android.googlesource.com/platform/external/expat
+    $ git clone https://android.googlesource.com/platform/external/fdlibm
+    $ git clone https://android.googlesource.com/platform/external/icu4c
+    $ git clone https://android.googlesource.com/platform/libnativehelper
+    $ git clone https://android.googlesource.com/platform/external/openssl
+    $ git clone https://android.googlesource.com/platform/external/zlib
+    $ git clone git://git.openssl.org/openssl.git openssl-upstream
+    $ git clone https://github.com/dicej/android-libcore64 libcore
+    $ (cd expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
+         && make)
+    $ (cd fdlibm && CFLAGS=-fPIC bash configure && make)
+    $ (cd icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
+         && make)
+    $ (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
+         && (for x in ../openssl/patches/*.patch; do patch -p1 < $x; done) \
+         && CC="gcc -fPIC" ./config && make)
+    $ cd ../avian
+    $ make android=$(pwd)/../android test
+
+Note that we use https://github.com/dicej/android-libcore64 above
+instead of the upstream
+https://android.googlesource.com/platform/libcore repository.  This is
+temporary until upstream has been patched with 64-bit support.
+
+Also note that we use the upstream OpenSSL repository and apply the
+Android patches to it.  This is because it is not clear how to build
+the Android fork of OpenSSL directly without checking out and building
+the entire platform.  As of this writing, the patches apply cleanly
+against OpenSSL 1.0.1e, so that's the tag we check out, but this may
+change in the future when the Android fork rebases against a new
+OpenSSL version.
 
 
 Installing

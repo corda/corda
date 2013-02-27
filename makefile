@@ -177,8 +177,8 @@ ifneq ($(android),)
 		$(android)/icu4c/lib/libicudata.a \
 		$(android)/fdlibm/libfdm.a \
 		$(android)/expat/.libs/libexpat.a \
-		$(android)/openssl-1.0.1e/libssl.a \
-		$(android)/openssl-1.0.1e/libcrypto.a \
+		$(android)/openssl-upstream/libssl.a \
+		$(android)/openssl-upstream/libcrypto.a \
 		-lstdc++
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
 	classpath-objects = \
