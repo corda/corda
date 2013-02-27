@@ -1677,7 +1677,7 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects) \
-		$(classpath-objects)
+	$(classpath-objects)
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)

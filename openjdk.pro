@@ -136,6 +136,7 @@
    public InetSocketAddress(java.net.InetAddress, int);   
  }
 -keep class java.net.ServerSocket
+-keep class java.net.SocketTimeoutException
 
 -keepclassmembers class java.net.PlainSocketImpl {
    <fields>;
