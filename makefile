@@ -567,7 +567,8 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),arm)
 		ios-version := \
-			$(shell if test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
+			$(shell if test -d $(sdk-dir)/iPhoneOS6.1.sdk; then echo 6.1; \
+				elif test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
 				elif test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
 				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
 				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
