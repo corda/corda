@@ -14,7 +14,7 @@
 #include "jni.h"
 
 #include <avian/vm/system/system.h>
-#include "finder.h"
+#include "avian/finder.h"
 
 #include <avian/util/runtime-array.h>
 

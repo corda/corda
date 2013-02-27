@@ -10,7 +10,7 @@
 
 #include <avian/vm/codegen/targets.h>
 
-#include "environment.h"
+#include "avian/environment.h"
 
 namespace avian {
 namespace codegen {

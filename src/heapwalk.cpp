@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "heapwalk.h"
+#include "avian/machine.h"
+#include "avian/heapwalk.h"
 
 using namespace vm;
 

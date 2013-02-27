@@ -11,10 +11,10 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
-#include "common.h"
+#include "avian/common.h"
 #include <avian/vm/system/system.h>
-#include "machine.h"
-#include "constants.h"
+#include "avian/machine.h"
+#include "avian/constants.h"
 
 namespace vm {
 

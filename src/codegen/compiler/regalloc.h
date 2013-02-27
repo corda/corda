@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_COMPILER_REGALLOC_H
 #define AVIAN_CODEGEN_COMPILER_REGALLOC_H
 
-#include "common.h"
+#include "avian/common.h"
 
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/registers.h>

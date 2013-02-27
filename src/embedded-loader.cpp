@@ -12,7 +12,7 @@
 #include <tchar.h>
 #include <stdint.h>
 
-#include "embed.h"
+#include "avian/embed.h"
 #include "jni.h"
 
 #if (defined __MINGW32__) || (defined _MSC_VER)

@@ -10,10 +10,10 @@
 
 #include <stdio.h>
 
-#include "common.h"
+#include "avian/common.h"
 #include <avian/vm/heap/heap.h>
 #include <avian/vm/system/system.h>
-#include "target.h"
+#include "avian/target.h"
 
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/targets.h>

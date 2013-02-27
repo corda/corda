@@ -11,8 +11,8 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
 
-#include "common.h"
-#include "allocator.h"
+#include "avian/common.h"
+#include "avian/allocator.h"
 #include <avian/util/abort.h>
 
 namespace vm {

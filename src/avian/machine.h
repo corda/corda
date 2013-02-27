@@ -11,14 +11,14 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
-#include "common.h"
+#include "avian/common.h"
 #include "java-common.h"
 #include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
-#include "finder.h"
-#include "processor.h"
-#include "constants.h"
-#include "arch.h"
+#include "avian/finder.h"
+#include "avian/processor.h"
+#include "avian/constants.h"
+#include "avian/arch.h"
 
 using namespace avian::util;
 

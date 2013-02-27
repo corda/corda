@@ -8,11 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "jnienv.h"
-#include "machine.h"
-#include "util.h"
-#include "processor.h"
-#include "constants.h"
+#include "avian/jnienv.h"
+#include "avian/machine.h"
+#include "avian/util.h"
+#include "avian/processor.h"
+#include "avian/constants.h"
 
 #include <avian/util/runtime-array.h>
 

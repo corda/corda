@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "types.h"
-#include "target-fields.h"
+#include "avian/types.h"
+#include "avian/target-fields.h"
 
 .text
 

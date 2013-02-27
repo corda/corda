@@ -11,8 +11,8 @@
 #ifndef TARGET_H
 #define TARGET_H
 
-#include "target-fields.h"
-#include "common.h"
+#include "avian/target-fields.h"
+#include "avian/common.h"
 
 namespace vm {
 

@@ -12,7 +12,7 @@
 #define VECTOR_H
 
 #include <avian/vm/system/system.h>
-#include "target.h"
+#include "avian/target.h"
 
 #include <avian/util/math.h>
 

@@ -10,7 +10,7 @@
 
 #include "stdlib.h"
 #include "string.h"
-#include "zlib-custom.h"
+#include "avian/zlib-custom.h"
 
 #include "jni.h"
 #include "jni-util.h"

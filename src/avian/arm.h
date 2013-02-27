@@ -11,8 +11,8 @@
 #ifndef ARM_H
 #define ARM_H
 
-#include "types.h"
-#include "common.h"
+#include "avian/types.h"
+#include "avian/common.h"
 #include <avian/util/runtime-array.h>
 
 #ifdef __APPLE__

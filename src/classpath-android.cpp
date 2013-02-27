@@ -14,9 +14,9 @@ extern "C" int JNI_OnLoad(JavaVM*, void*);
 
 #define _POSIX_C_SOURCE 200112L
 #undef _GNU_SOURCE
-#include "machine.h"
-#include "classpath-common.h"
-#include "process.h"
+#include "avian/machine.h"
+#include "avian/classpath-common.h"
+#include "avian/process.h"
 
 using namespace vm;
 

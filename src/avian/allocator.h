@@ -11,7 +11,7 @@
 #ifndef ALLOCATOR_H
 #define ALLOCATOR_H
 
-#include "common.h"
+#include "avian/common.h"
 
 namespace vm {
 

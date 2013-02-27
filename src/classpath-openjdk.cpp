@@ -8,10 +8,10 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "classpath-common.h"
-#include "util.h"
-#include "process.h"
+#include "avian/machine.h"
+#include "avian/classpath-common.h"
+#include "avian/util.h"
+#include "avian/process.h"
 
 #ifdef PLATFORM_WINDOWS
 

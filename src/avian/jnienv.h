@@ -11,7 +11,7 @@
 #ifndef JNIENV_H
 #define JNIENV_H
 
-#include "machine.h"
+#include "avian/machine.h"
 
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
 #define CRASHDIR_PROPERTY "avian.crash.dir"

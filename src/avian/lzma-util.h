@@ -11,10 +11,10 @@
 #ifndef LZMA_UTIL_H
 #define LZMA_UTIL_H
 
-#include "lzma.h"
+#include "avian/lzma.h"
 #include "C/Types.h"
 #include <avian/vm/system/system.h>
-#include "allocator.h"
+#include "avian/allocator.h"
 
 namespace vm {
 

@@ -12,9 +12,9 @@
 #include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
 
-#include "zlib-custom.h"
-#include "finder.h"
-#include "lzma.h"
+#include "avian/zlib-custom.h"
+#include "avian/finder.h"
+#include "avian/lzma.h"
 
 
 using namespace vm;

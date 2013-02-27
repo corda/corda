@@ -8,10 +8,10 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "constants.h"
-#include "processor.h"
-#include "util.h"
+#include "avian/machine.h"
+#include "avian/constants.h"
+#include "avian/processor.h"
+#include "avian/util.h"
 
 #include <avian/util/runtime-array.h>
 

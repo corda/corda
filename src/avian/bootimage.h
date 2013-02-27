@@ -11,10 +11,10 @@
 #ifndef BOOTIMAGE_H
 #define BOOTIMAGE_H
 
-#include "common.h"
+#include "avian/common.h"
 #include "java-common.h"
-#include "target.h"
-#include "machine.h"
+#include "avian/target.h"
+#include "avian/machine.h"
 
 #include <avian/util/math.h>
 

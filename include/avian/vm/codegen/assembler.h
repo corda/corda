@@ -12,7 +12,7 @@
 #define AVIAN_CODEGEN_ASSEMBLER_H
 
 #include <avian/vm/system/system.h>
-#include "zone.h"
+#include "avian/zone.h"
 
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/promise.h>

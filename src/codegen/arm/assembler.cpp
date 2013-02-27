@@ -11,7 +11,7 @@
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/registers.h>
 
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 #include <avian/util/abort.h>
 
 #include <avian/util/runtime-array.h>

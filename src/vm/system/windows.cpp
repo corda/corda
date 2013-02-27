@@ -23,7 +23,7 @@
 #undef max
 #undef min
 
-#include "arch.h"
+#include "avian/arch.h"
 #include <avian/vm/system/system.h>
 #include <avian/util/runtime-array.h>
 

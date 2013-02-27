@@ -11,8 +11,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include "machine.h"
-#include "zone.h"
+#include "avian/machine.h"
+#include "avian/zone.h"
 
 namespace vm {
 

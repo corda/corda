@@ -11,8 +11,8 @@
 #ifndef X86_H
 #define X86_H
 
-#include "types.h"
-#include "common.h"
+#include "avian/types.h"
+#include "avian/common.h"
 
 #ifdef _MSC_VER
 #  include "windows.h"

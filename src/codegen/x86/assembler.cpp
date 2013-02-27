@@ -8,9 +8,9 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "environment.h"
-#include "target.h"
-#include "alloc-vector.h"
+#include "avian/environment.h"
+#include "avian/target.h"
+#include "avian/alloc-vector.h"
 
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/registers.h>
