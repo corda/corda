@@ -267,7 +267,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
-	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) -Iinclude $(classpath-cflags) \
+	"-I$(JAVA_HOME)/include" -I$(src) -I$(build) -Iinclude $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DAVIAN_INFO="\"$(info)\"" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
