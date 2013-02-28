@@ -11,8 +11,8 @@
 #ifndef POWERPC_H
 #define POWERPC_H
 
-#include "types.h"
-#include "common.h"
+#include "avian/types.h"
+#include "avian/common.h"
 
 #ifdef __APPLE__
 #  include "mach/mach_types.h"

@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "util.h"
+#include "avian/util.h"
 
 using namespace vm;
 

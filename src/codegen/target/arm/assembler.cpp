@@ -23,7 +23,7 @@
 #include "registers.h"
 #include "../multimethod.h"
 
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 #include <avian/util/abort.h>
 
 using namespace vm;

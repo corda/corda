@@ -11,7 +11,7 @@
 #ifndef HEAPWALK_H
 #define HEAPWALK_H
 
-#include "common.h"
+#include "avian/common.h"
 #include "java-common.h"
 
 namespace vm {

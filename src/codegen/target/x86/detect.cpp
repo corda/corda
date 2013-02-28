@@ -9,7 +9,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "target.h"
+#include "avian/target.h"
 
 #include "context.h"
 

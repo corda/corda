@@ -11,7 +11,7 @@
 package java.lang;
 
 public final class Void {
-  public static final Class TYPE = Class.forCanonicalName("V");
+  public static final Class TYPE = avian.Classes.forCanonicalName("V");
 
   private Void() { }
 }

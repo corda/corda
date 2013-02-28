@@ -11,14 +11,14 @@
 #ifndef MACHINE_H
 #define MACHINE_H
 
-#include "common.h"
+#include "avian/common.h"
 #include "java-common.h"
 #include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
-#include "finder.h"
-#include "processor.h"
-#include "constants.h"
-#include "arch.h"
+#include "avian/finder.h"
+#include "avian/processor.h"
+#include "avian/constants.h"
+#include "avian/arch.h"
 
 using namespace avian::util;
 
@@ -1230,10 +1230,11 @@ class Machine {
     OutOfMemoryError,
     Shutdown,
     VirtualFileFinders,
-    VirtualFiles
+    VirtualFiles,
+    ArrayInterfaceTable
   };
 
-  static const unsigned RootCount = VirtualFiles + 1;
+  static const unsigned RootCount = ArrayInterfaceTable + 1;
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
@@ -1564,6 +1565,9 @@ class Classpath {
   resolveNative(Thread* t, object method) = 0;
 
   virtual void
+  preBoot(Thread* t) = 0;
+
+  virtual void
   boot(Thread* t) = 0;
 
   virtual const char*
@@ -1571,6 +1575,15 @@ class Classpath {
 
   virtual void
   updatePackageMap(Thread* t, object class_) = 0;
+
+  virtual object
+  makeDirectByteBuffer(Thread* t, void* p, jlong capacity) = 0;
+
+  virtual void*
+  getDirectBufferAddress(Thread* t, object buffer) = 0;
+
+  virtual int64_t
+  getDirectBufferCapacity(Thread* t, object buffer) = 0;
 
   virtual void
   dispose() = 0;
@@ -1972,6 +1985,7 @@ addThread(Thread* t, Thread* p)
   ACQUIRE_RAW(t, t->m->stateLock);
 
   assert(t, p->state == Thread::NoState);
+  expect(t, t->state == Thread::ActiveState || t->state == Thread::ExclusiveState);
 
   p->state = Thread::IdleState;
   ++ t->m->threadCount;

@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_OPERATIONS_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_OPERATIONS_H
 
-#include "common.h"
+#include "avian/common.h"
 
 #include <avian/vm/codegen/lir.h>
 

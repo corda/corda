@@ -8,10 +8,10 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "classpath-common.h"
-#include "util.h"
-#include "process.h"
+#include "avian/machine.h"
+#include "avian/classpath-common.h"
+#include "avian/util.h"
+#include "avian/process.h"
 
 #ifdef PLATFORM_WINDOWS
 
@@ -339,7 +339,7 @@ makeClassNameString(Thread* t, object name)
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, name, 0)));
 
-  return makeString(t, "%s", s);
+  return makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 }
 
 object
@@ -640,6 +640,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  preBoot(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   boot(Thread* t)
   {
     globalMachine = t->m;
@@ -653,7 +659,7 @@ class MyClasspath : public Classpath {
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #  ifndef PLATFORM_WINDOWS
-    loadLibrary(t, libraryPath, "mawt", true, true);
+    loadLibrary(t, libraryPath, "mawt", true, true, false);
 #  endif
 #endif // not AVIAN_OPENJDK_SRC
 
@@ -755,7 +761,8 @@ class MyClasspath : public Classpath {
                length);
         RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
-        object key = vm::makeByteArray(t, "%s", packageName);
+        object key = vm::makeByteArray
+          (t, "%s", RUNTIME_ARRAY_BODY(packageName));
         PROTECT(t, key);
 
         hashMapRemove
@@ -775,7 +782,7 @@ class MyClasspath : public Classpath {
                  &byteArrayBody(t, source, PrefixLength),
                  sourceNameLength);
 
-          source = vm::makeByteArray(t, "%s", sourceName);
+          source = vm::makeByteArray(t, "%s", RUNTIME_ARRAY_BODY(sourceName));
         } else {
           source = vm::makeByteArray(t, "avian-dummy-package-source");
         }
@@ -784,6 +791,47 @@ class MyClasspath : public Classpath {
           (t, root(t, Machine::PackageMap), key, source, byteArrayHash);
       }
     }
+  }
+
+  virtual object
+  makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
+  {
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+    PROTECT(t, c);
+
+    object instance = makeNew(t, c);
+    PROTECT(t, instance);
+
+    object constructor = resolveMethod(t, c, "<init>", "(JI)V");
+
+    t->m->processor->invoke
+      (t, constructor, instance, reinterpret_cast<int64_t>(p),
+       static_cast<int32_t>(capacity));
+
+    return instance;
+  }
+
+  virtual void*
+  getDirectBufferAddress(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField(t, objectClass(t, b), "address", "J");
+
+    return reinterpret_cast<void*>
+      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+  }
+
+  virtual int64_t
+  getDirectBufferCapacity(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField
+      (t, objectClass(t, b), "capacity", "I");
+
+    return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
   }
 
   virtual void
@@ -837,49 +885,6 @@ struct jvm_version_info {
   unsigned: 32;
   unsigned: 32;
 };
-
-Finder*
-getFinder(Thread* t, const char* name, unsigned nameLength)
-{
-  ACQUIRE(t, t->m->referenceLock);
-    
-  for (object p = root(t, Machine::VirtualFileFinders);
-       p; p = finderNext(t, p))
-  {
-    if (byteArrayLength(t, finderName(t, p)) == nameLength
-        and strncmp(reinterpret_cast<const char*>
-                    (&byteArrayBody(t, finderName(t, p), 0)),
-                    name, nameLength))
-    {
-      return static_cast<Finder*>(finderFinder(t, p));
-    }
-  }
-
-  object n = makeByteArray(t, nameLength + 1);
-  memcpy(&byteArrayBody(t, n, 0), name, nameLength);
-
-  void* p = t->m->libraries->resolve
-    (reinterpret_cast<const char*>(&byteArrayBody(t, n, 0)));
-
-  if (p) {
-    uint8_t* (*function)(unsigned*);
-    memcpy(&function, &p, BytesPerWord);
-
-    unsigned size;
-    uint8_t* data = function(&size);
-    if (data) {
-      Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
-      object finder = makeFinder
-        (t, f, n, root(t, Machine::VirtualFileFinders));
-
-      setRoot(t, Machine::VirtualFileFinders, finder);
-
-      return f;
-    }
-  }
-
-  return 0;
-}
 
 bool
 pathEqual(const char* a, const char* b, unsigned length)
@@ -1528,7 +1533,8 @@ getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
       RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path) + 1] = 0;
     }
 
-    return reinterpret_cast<int64_t>(find(file, p, byteArrayLength(t, path)));
+    return reinterpret_cast<int64_t>
+      (find(file, RUNTIME_ARRAY_BODY(p), byteArrayLength(t, path)));
   } else {
     int64_t entry = longValue
       (t, t->m->processor->invoke
@@ -1871,7 +1877,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 
 #ifdef AVIAN_OPENJDK_SRC
   if (not absolute) {
-    if (strcmp(n, "net") == 0) {
+    if (strcmp(RUNTIME_ARRAY_BODY(n), "net") == 0) {
       bool ran;
 
       { ACQUIRE(t, t->m->classLock);
@@ -1888,7 +1894,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       }
 
       return;
-    } else if (strcmp(n, "management") == 0) { 
+    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "management") == 0) { 
       bool ran;
 
       { ACQUIRE(t, t->m->classLock);
@@ -1905,8 +1911,8 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       }
 
       return;     
-    } else if (strcmp(n, "zip") == 0
-               or strcmp(n, "nio") == 0)
+    } else if (strcmp(RUNTIME_ARRAY_BODY(n), "zip") == 0
+               or strcmp(RUNTIME_ARRAY_BODY(n), "nio") == 0)
     {
       return;
     }
@@ -1916,44 +1922,6 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
   loadLibrary
     (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
      RUNTIME_ARRAY_BODY(n), not absolute, true);
-}
-
-// only safe to call during bootstrap when there's only one thread
-// running:
-void
-intercept(Thread* t, object c, const char* name, const char* spec,
-          void* function)
-{
-  object m = findMethodOrNull(t, c, name, spec);
-  if (m) {
-    PROTECT(t, m);
-
-    object clone = methodClone(t, m);
-
-    // make clone private to prevent vtable updates at compilation
-    // time.  Otherwise, our interception might be bypassed by calls
-    // through the vtable.
-    methodFlags(t, clone) |= ACC_PRIVATE;
-
-    methodFlags(t, m) |= ACC_NATIVE;
-
-    object native = makeNativeIntercept(t, function, true, clone);
-
-    PROTECT(t, native);
-
-    object runtimeData = getMethodRuntimeData(t, m);
-
-    set(t, runtimeData, MethodRuntimeDataNative, native);
-  } else {
-    // If we can't find the method, just ignore it, since ProGuard may
-    // have stripped it out as unused.  Otherwise, the code below can
-    // be uncommented for debugging purposes.
-
-    // fprintf(stderr, "unable to find %s%s in %s\n",
-    //         name, spec, &byteArrayBody(t, className(t, c), 0));
-
-    // abort(t);
-  }
 }
 
 void
@@ -2186,162 +2154,6 @@ countConstructors(Thread* t, object c, bool publicOnly)
 }
 
 object
-resolveClassBySpec(Thread* t, object loader, const char* spec,
-                   unsigned specLength)
-{
-  switch (*spec) {
-  case 'L': {
-    THREAD_RUNTIME_ARRAY(t, char, s, specLength - 1);
-    memcpy(RUNTIME_ARRAY_BODY(s), spec + 1, specLength - 2);
-    RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
-    return resolveClass(t, loader, s);
-  }
-  
-  case '[': {
-    THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
-    memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
-    RUNTIME_ARRAY_BODY(s)[specLength] = 0;
-    return resolveClass(t, loader, s);
-  }
-
-  default:
-    return primitiveClass(t, *spec);
-  }
-}
-
-object
-resolveJType(Thread* t, object loader, const char* spec, unsigned specLength)
-{
-  return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
-}
-
-object
-resolveParameterTypes(Thread* t, object loader, object spec,
-                      unsigned* parameterCount, unsigned* returnTypeSpec)
-{
-  PROTECT(t, loader);
-  PROTECT(t, spec);
-
-  object list = 0;
-  PROTECT(t, list);
-
-  unsigned offset = 1;
-  unsigned count = 0;
-  while (byteArrayBody(t, spec, offset) != ')') {
-    switch (byteArrayBody(t, spec, offset)) {
-    case 'L': {
-      unsigned start = offset;
-      ++ offset;
-      while (byteArrayBody(t, spec, offset) != ';') ++ offset;
-      ++ offset;
-
-      object type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
-         offset - start);
-      
-      list = makePair(t, type, list);
-
-      ++ count;
-    } break;
-  
-    case '[': {
-      unsigned start = offset;
-      while (byteArrayBody(t, spec, offset) == '[') ++ offset;
-      switch (byteArrayBody(t, spec, offset)) {
-      case 'L':
-        ++ offset;
-        while (byteArrayBody(t, spec, offset) != ';') ++ offset;
-        ++ offset;
-        break;
-
-      default:
-        ++ offset;
-        break;
-      }
-      
-      object type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
-         offset - start);
-      
-      list = makePair(t, type, list);
-      ++ count;
-    } break;
-
-    default:
-      list = makePair
-        (t, primitiveClass(t, byteArrayBody(t, spec, offset)), list);
-      ++ offset;
-      ++ count;
-      break;
-    }
-  }
-
-  *parameterCount = count;
-  *returnTypeSpec = offset + 1;
-  return list;
-}
-
-object
-resolveParameterJTypes(Thread* t, object loader, object spec,
-                       unsigned* parameterCount, unsigned* returnTypeSpec)
-{
-  object list = resolveParameterTypes
-    (t, loader, spec, parameterCount, returnTypeSpec);
-
-  PROTECT(t, list);
-  
-  object array = makeObjectArray
-    (t, type(t, Machine::JclassType), *parameterCount);
-  PROTECT(t, array);
-
-  for (int i = *parameterCount - 1; i >= 0; --i) {
-    object c = getJClass(t, pairFirst(t, list));
-    set(t, array, ArrayBody + (i * BytesPerWord), c);
-    list = pairSecond(t, list);
-  }
-
-  return array;
-}
-
-object
-resolveExceptionJTypes(Thread* t, object loader, object addendum)
-{
-  if (addendum == 0 or methodAddendumExceptionTable(t, addendum) == 0) {
-    return makeObjectArray(t, type(t, Machine::JclassType), 0);
-  }
-
-  PROTECT(t, loader);
-  PROTECT(t, addendum);
-
-  object array = makeObjectArray
-    (t, type(t, Machine::JclassType),
-     shortArrayLength(t, methodAddendumExceptionTable(t, addendum)));
-  PROTECT(t, array);
-
-  for (unsigned i = 0; i < shortArrayLength
-         (t, methodAddendumExceptionTable(t, addendum)); ++i)
-  {
-    uint16_t index = shortArrayBody
-      (t, methodAddendumExceptionTable(t, addendum), i) - 1;
-
-    object o = singletonObject(t, addendumPool(t, addendum), index);
-
-    if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
-      o = resolveClass(t, loader, referenceName(t, o));
-    
-      set(t, addendumPool(t, addendum), SingletonBody + (index * BytesPerWord),
-          o);
-    }
-
-    o = getJClass(t, o);
-
-    set(t, array, ArrayBody + (i * BytesPerWord), o);
-  }
-
-  return array;
-}
-
-object
 makeJmethod(Thread* t, object vmMethod, int index)
 {
   PROTECT(t, vmMethod);
@@ -2354,18 +2166,18 @@ makeJmethod(Thread* t, object vmMethod, int index)
 
   unsigned parameterCount;
   unsigned returnTypeSpec;
-  object parameterTypes = local::resolveParameterJTypes
+  object parameterTypes = resolveParameterJTypes
     (t, classLoader(t, methodClass(t, vmMethod)), methodSpec(t, vmMethod),
      &parameterCount, &returnTypeSpec);
   PROTECT(t, parameterTypes);
 
-  object returnType = local::resolveJType
+  object returnType = resolveJType
     (t, classLoader(t, methodClass(t, vmMethod)), reinterpret_cast<char*>
      (&byteArrayBody(t, methodSpec(t, vmMethod), returnTypeSpec)),
      byteArrayLength(t, methodSpec(t, vmMethod)) - 1 - returnTypeSpec);
   PROTECT(t, returnType);
 
-  object exceptionTypes = local::resolveExceptionJTypes
+  object exceptionTypes = resolveExceptionJTypes
     (t, classLoader(t, methodClass(t, vmMethod)),
      methodAddendum(t, vmMethod));
   PROTECT(t, exceptionTypes);
@@ -2430,12 +2242,12 @@ makeJconstructor(Thread* t, object vmMethod, int index)
 
   unsigned parameterCount;
   unsigned returnTypeSpec;
-  object parameterTypes = local::resolveParameterJTypes
+  object parameterTypes = resolveParameterJTypes
     (t, classLoader(t, methodClass(t, vmMethod)), methodSpec(t, vmMethod),
      &parameterCount, &returnTypeSpec);
   PROTECT(t, parameterTypes);
 
-  object exceptionTypes = local::resolveExceptionJTypes
+  object exceptionTypes = resolveExceptionJTypes
     (t, classLoader(t, methodClass(t, vmMethod)),
      methodAddendum(t, vmMethod));
   PROTECT(t, exceptionTypes);
@@ -2498,7 +2310,7 @@ makeJfield(Thread* t, object vmField, int index)
       (t, fieldName(t, vmField)) - 1));
   PROTECT(t, name);
 
-  object type = local::resolveClassBySpec
+  object type = resolveClassBySpec
     (t, classLoader(t, fieldClass(t, vmField)),
      reinterpret_cast<char*>
      (&byteArrayBody(t, fieldSpec(t, vmField), 0)),
@@ -3056,19 +2868,6 @@ Avian_sun_misc_Unsafe_putOrderedObject
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_compareAndSwapInt
-(Thread*, object, uintptr_t* arguments)
-{
-  object target = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  uint32_t expect = arguments[4];
-  uint32_t update = arguments[5];
-
-  return atomicCompareAndSwap32
-    (&fieldAtOffset<uint32_t>(target, offset), expect, update);
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapObject
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -3429,8 +3228,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
 
     if (*p == '=') {
       THREAD_RUNTIME_ARRAY(t, char, name, (p - start) + 1);
-      memcpy(name, start, p - start);
-      name[p - start] = 0;
+      memcpy(RUNTIME_ARRAY_BODY(name), start, p - start);
+      RUNTIME_ARRAY_BODY(name)[p - start] = 0;
       local::setProperty
         (t, method, *properties, RUNTIME_ARRAY_BODY(name), p + 1);
     }
@@ -4814,83 +4613,10 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
      (t, jclassVmClass(t, jmethodClazz(t, *method))),
       jmethodSlot(t, *method));
 
-  if (methodFlags(t, vmMethod) & ACC_STATIC) {
-    instance = 0;
-  }
-
-  if ((args == 0 ? 0 : objectArrayLength(t, *args))
-      != methodParameterCount(t, vmMethod))
-  {
-    throwNew(t, Machine::IllegalArgumentExceptionType);
-  }
-
-  if (methodParameterCount(t, vmMethod)) {
-    PROTECT(t, vmMethod);
-
-    unsigned specLength = byteArrayLength(t, methodSpec(t, vmMethod));
-    THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
-    memcpy(spec, &byteArrayBody(t, methodSpec(t, vmMethod), 0), specLength);
-    unsigned i = 0;
-    for (MethodSpecIterator it(t, spec); it.hasNext();) {
-      object type;
-      bool objectType = false;
-      const char* p = it.next();
-      switch (*p) {
-      case 'Z': type = vm::type(t, Machine::BooleanType); break;
-      case 'B': type = vm::type(t, Machine::ByteType); break;
-      case 'S': type = vm::type(t, Machine::ShortType); break;
-      case 'C': type = vm::type(t, Machine::CharType); break;
-      case 'I': type = vm::type(t, Machine::IntType); break;
-      case 'F': type = vm::type(t, Machine::FloatType); break;
-      case 'J': type = vm::type(t, Machine::LongType); break;
-      case 'D': type = vm::type(t, Machine::DoubleType); break;
-
-      case 'L': ++ p;
-      case '[': {
-        objectType = true;
-        unsigned nameLength = it.s - p;
-        THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
-        memcpy(name, p, nameLength - 1);
-        name[nameLength - 1] = 0;
-        type = resolveClass
-          (t, classLoader(t, methodClass(t, vmMethod)), name);
-      } break;
-
-      default:
-        abort();
-      }
-
-      object arg = objectArrayBody(t, *args, i++);
-      if ((arg == 0 and (not objectType))
-          or (arg and (not instanceOf(t, type, arg))))
-      {
-        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
-
-        throwNew(t, Machine::IllegalArgumentExceptionType);
-      }
-    }
-  }
-
-  unsigned returnCode = methodReturnCode(t, vmMethod);
-
-  THREAD_RESOURCE0(t, {
-      if (t->exception) {
-        object exception = t->exception;
-        t->exception = makeThrowable
-          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
-      }
-    });
-
-  object result;
-  if (args) {
-    result = t->m->processor->invokeArray
-      (t, vmMethod, instance ? *instance : 0, *args);
-  } else {
-    result = t->m->processor->invoke(t, vmMethod, instance ? *instance : 0);
-  }
-
   return reinterpret_cast<uint64_t>
-    (makeLocalReference(t, translateInvokeResult(t, returnCode, result)));
+    (makeLocalReference
+     (t, invoke
+      (t, vmMethod, instance ? *instance : 0, args ? *args : 0)));
 }
 
 extern "C" JNIEXPORT jobject JNICALL

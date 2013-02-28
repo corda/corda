@@ -12,7 +12,7 @@
 #define HEAP_H
 
 #include <avian/vm/system/system.h>
-#include "allocator.h"
+#include "avian/allocator.h"
 
 namespace vm {
 

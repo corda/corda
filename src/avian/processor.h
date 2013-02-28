@@ -11,12 +11,12 @@
 #ifndef PROCESSOR_H
 #define PROCESSOR_H
 
-#include "common.h"
+#include "avian/common.h"
 #include <avian/vm/system/system.h>
 #include <avian/vm/heap/heap.h>
 #include "bootimage.h"
-#include "heapwalk.h"
-#include "zone.h"
+#include "avian/heapwalk.h"
+#include "avian/zone.h"
 
 namespace avian {
 namespace codegen {

@@ -8,11 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "jnienv.h"
-#include "machine.h"
-#include "util.h"
-#include "processor.h"
-#include "constants.h"
+#include "avian/jnienv.h"
+#include "avian/machine.h"
+#include "avian/util.h"
+#include "avian/processor.h"
+#include "avian/constants.h"
 
 #include <avian/util/runtime-array.h>
 
@@ -104,7 +104,7 @@ GetEnv(Machine* m, Thread** t, jint version)
 {
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t) {
-    if (version <= JNI_VERSION_1_4) {
+    if (version <= JNI_VERSION_1_6) {
       return JNI_OK;
     } else {
       return JNI_EVERSION;
@@ -219,7 +219,7 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, stringLength(t, *s) + 1);
+  t->m->heap->free(chars, stringUTFLength(t, *s) + 1);
 }
 
 void JNICALL
@@ -3254,13 +3254,21 @@ registerNatives(Thread* t, uintptr_t* arguments)
 
   for (int i = 0; i < methodCount; ++i) {
     if (methods[i].function) {
+      // Android's class library sometimes prepends a mysterious "!"
+      // to the method signature, which we happily ignore:
+      const char* sig = methods[i].signature;
+      if (*sig == '!') ++ sig;
+
       object method = findMethodOrNull
-        (t, jclassVmClass(t, *c), methods[i].name, methods[i].signature);
+        (t, jclassVmClass(t, *c), methods[i].name, sig);
 
       if (method == 0 or (methodFlags(t, method) & ACC_NATIVE) == 0) {
         // The JNI spec says we must throw a NoSuchMethodError in this
         // case, but that would prevent using a code shrinker like
         // ProGuard effectively.  Instead, we just ignore it.
+
+        // fprintf(stderr, "not found: %s.%s%s\n", &byteArrayBody(t, className(t, jclassVmClass(t, *c)), 0), methods[i].name, sig);
+        // abort(t);
       } else {
         registerNative(t, method, methods[i].function);
       }
@@ -3401,27 +3409,56 @@ PopLocalFrame(Thread* t, jobject result)
   return reinterpret_cast<jobject>(run(t, popLocalFrame, arguments));
 }
 
+uint64_t
+newDirectByteBuffer(Thread* t, uintptr_t* arguments)
+{
+  jlong capacity; memcpy(&capacity, arguments + 1, sizeof(jlong));
+
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, t->m->classpath->makeDirectByteBuffer
+      (t, reinterpret_cast<void*>(arguments[0]), capacity)));
+}
+
 jobject JNICALL
 NewDirectByteBuffer(Thread* t, void* p, jlong capacity)
 {
-  jclass c = FindClass(t, "java/nio/DirectByteBuffer");
-  return NewObject(t, c, GetMethodID(t, c, "<init>", "(JI)V"),
-                   reinterpret_cast<jlong>(p),
-                   static_cast<jint>(capacity));
+  uintptr_t arguments[1 + (sizeof(jlong) / BytesPerWord)];
+  arguments[0] = reinterpret_cast<uintptr_t>(p);
+  memcpy(arguments + 1, &capacity, sizeof(jlong));
+
+  return reinterpret_cast<jobject>(run(t, newDirectByteBuffer, arguments));
+}
+
+uint64_t
+getDirectBufferAddress(Thread* t, uintptr_t* arguments)
+{
+  return reinterpret_cast<uintptr_t>
+    (t->m->classpath->getDirectBufferAddress
+     (t, *reinterpret_cast<jobject>(arguments[0])));
 }
 
 void* JNICALL
 GetDirectBufferAddress(Thread* t, jobject b)
 {
-  return reinterpret_cast<void*>
-    (GetLongField(t, b, GetFieldID(t, GetObjectClass(t, b), "address", "J")));
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(b) };
+
+  return reinterpret_cast<void*>(run(t, getDirectBufferAddress, arguments));
+}
+
+uint64_t
+getDirectBufferCapacity(Thread* t, uintptr_t* arguments)
+{
+  return t->m->classpath->getDirectBufferCapacity
+    (t, *reinterpret_cast<jobject>(arguments[0]));
 }
 
 jlong JNICALL
 GetDirectBufferCapacity(Thread* t, jobject b)
 {
-  return GetIntField
-    (t, b, GetFieldID(t, GetObjectClass(t, b), "capacity", "I"));
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(b) };
+
+  return run(t, getDirectBufferCapacity, arguments);
 }
 
 struct JavaVMOption {
@@ -3483,6 +3520,12 @@ boot(Thread* t, uintptr_t*)
           makeThrowable(t, Machine::OutOfMemoryErrorType));
 
   setRoot(t, Machine::Shutdown, makeThrowable(t, Machine::ThrowableType));
+
+  t->m->classpath->preBoot(t);
+
+  t->javaThread = t->m->classpath->makeThread(t, 0);
+
+  threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
 
   setRoot(t, Machine::FinalizerThread, t->m->classpath->makeThread(t, t));
 

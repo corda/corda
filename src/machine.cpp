@@ -8,14 +8,14 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "jnienv.h"
-#include "machine.h"
-#include "util.h"
+#include "avian/jnienv.h"
+#include "avian/machine.h"
+#include "avian/util.h"
 #include <avian/util/stream.h>
-#include "constants.h"
-#include "processor.h"
-#include "arch.h"
-#include "lzma.h"
+#include "avian/constants.h"
+#include "avian/processor.h"
+#include "avian/arch.h"
+#include "avian/lzma.h"
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/math.h>
@@ -2371,8 +2371,6 @@ object
 makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
                object elementClass)
 {
-  // todo: arrays should implement Cloneable and Serializable
-
   if (classVmFlags(t, type(t, Machine::JobjectType)) & BootstrapFlag) {
     PROTECT(t, loader);
     PROTECT(t, spec);
@@ -2400,7 +2398,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      spec,
      0,
      type(t, Machine::JobjectType),
-     0,
+     root(t, Machine::ArrayInterfaceTable),
      vtable,
      0,
      0,
@@ -2735,6 +2733,33 @@ boot(Thread* t)
 
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
 
+  { object interfaceTable = makeArray(t, 4);
+
+    set(t, interfaceTable, ArrayBody, type(t, Machine::SerializableType));
+
+    set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
+        type(t, Machine::CloneableType));
+    
+    setRoot(t, Machine::ArrayInterfaceTable, interfaceTable);
+  }
+
+  set(t, type(t, Machine::BooleanArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ByteArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::CharArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ShortArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::IntArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::LongArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::FloatArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::DoubleArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+
   m->processor->boot(t, 0, 0);
 
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1);
@@ -2885,7 +2910,8 @@ doCollect(Thread* t, Heap::CollectionType type)
   }
 
   if ((root(t, Machine::ObjectsToFinalize) or root(t, Machine::ObjectsToClean))
-      and m->finalizeThread == 0)
+      and m->finalizeThread == 0
+      and t->state != Thread::ExitState)
   {
     m->finalizeThread = m->processor->makeThread
       (m, root(t, Machine::FinalizerThread), m->rootThread);
@@ -3186,10 +3212,6 @@ Thread::init()
     setRoot(this, Machine::JNIFieldTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
-
-    javaThread = m->classpath->makeThread(this, 0);
-
-    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   }
 
   expect(this, m->system->success(m->system->make(&lock)));
@@ -3452,7 +3474,7 @@ enter(Thread* t, Thread::State s)
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
-      t->m->exclusive = 0;
+      // exit state should also be exclusive, so don't set exclusive = 0
 
       t->m->stateLock->notifyAll(t->systemThread);
     } break;

@@ -148,6 +148,59 @@ ifneq ($(openjdk),)
 	build-javahome = $(openjdk)/jre
 endif
 
+ifneq ($(android),)
+	options := $(options)-android
+	classpath-jar-dep = $(build)/android.dep
+	luni-native = $(android)/libcore/luni/src/main/native
+	classpath-cflags = -DBOOT_JAVAHOME
+	android-cflags := -I$(luni-native) \
+		-I$(android)/libnativehelper/include/nativehelper \
+		-I$(android)/core/include \
+		-I$(android)/zlib \
+		-I$(android)/icu4c/i18n \
+		-I$(android)/icu4c/common \
+		-I$(android)/expat \
+		-I$(android)/openssl/include \
+		-I$(android)/libcore/include \
+		-I$(build)/android-src/external/fdlibm \
+		-I$(build)/android-src \
+		-fno-exceptions \
+		-DHAVE_SYS_UIO_H \
+		-D_FILE_OFFSET_BITS=64 \
+		-g3 \
+		-Werror \
+		-fPIC \
+		-fvisibility=hidden
+	classpath-lflags := \
+		$(android)/icu4c/lib/libicui18n.a \
+		$(android)/icu4c/lib/libicuuc.a \
+		$(android)/icu4c/lib/libicudata.a \
+		$(android)/fdlibm/libfdm.a \
+		$(android)/expat/.libs/libexpat.a \
+		$(android)/openssl-upstream/libssl.a \
+		$(android)/openssl-upstream/libcrypto.a \
+		-lstdc++
+	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
+	classpath-objects = \
+		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build))
+	luni-java = $(android)/libcore/luni/src/main/java
+	luni-javas := $(shell find $(luni-java) -name '*.java')
+	dalvik-java = $(android)/libcore/dalvik/src/main/java
+	dalvik-javas := $(shell find $(dalvik-java) -name '*.java')
+	xml-java = $(android)/libcore/xml/src/main/java
+	xml-javas := $(shell find $(xml-java) -name '*.java')
+	android-classes = \
+		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
+		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
+		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
+	classpath = android
+
+	javahome-files = tzdata
+	javahome-object = $(build)/javahome-jar.o
+	boot-javahome-object = $(build)/boot-javahome.o
+	build-javahome = $(android)/bionic/libc/zoneinfo
+endif
+
 ifeq ($(classpath),avian)
 	jni-sources := $(shell find $(classpath-src) -name '*.cpp')
 	jni-objects = $(call cpp-objects,$(jni-sources),$(classpath-src),$(build))
@@ -214,7 +267,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
 common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
-	"-I$(JAVA_HOME)/include" -idirafter $(src) -I$(build) -Iinclude $(classpath-cflags) \
+	"-I$(JAVA_HOME)/include" -I$(src) -I$(build) -Iinclude $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DAVIAN_INFO="\"$(info)\"" \
 	-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
@@ -244,7 +297,7 @@ common-lflags = -lm -lz $(classpath-lflags)
 
 build-lflags = -lz -lpthread -ldl
 
-lflags = $(common-lflags) -lpthread -ldl
+lflags = $(common-lflags) $(classpath-lflags) -lpthread -ldl
 
 soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
 version-script-flag = -Wl,--version-script=openjdk.ld
@@ -514,7 +567,8 @@ ifeq ($(platform),darwin)
 
 	ifeq ($(arch),arm)
 		ios-version := \
-			$(shell if test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
+			$(shell if test -d $(sdk-dir)/iPhoneOS6.1.sdk; then echo 6.1; \
+				elif test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
 				elif test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
 				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
 				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
@@ -940,9 +994,6 @@ generated-code = \
 	$(build)/type-maps.cpp
 
 vm-depends := $(generated-code) \
-	$(wildcard $(src)/*.h) \
-	$(wildcard $(src)/codegen/*.h) \
-	$(wildcard $(src)/codegen/compiler/*.h) \
 	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
@@ -1171,6 +1222,7 @@ ifneq ($(classpath),avian)
 # them to synthesize a class:
 	classpath-sources := \
 		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
@@ -1193,6 +1245,15 @@ ifneq ($(classpath),avian)
 	ifneq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
 			$(classpath-src)/avian/OpenJDK.java
+	else
+		classpath-sources := $(classpath-sources) \
+			$(classpath-src)/sun/reflect/ConstantPool.java \
+			$(classpath-src)/java/lang/ReflectiveOperationException.java \
+			$(classpath-src)/java/net/ProtocolFamily.java \
+			$(classpath-src)/java/net/StandardProtocolFamily.java \
+			$(classpath-src)/sun/misc/Cleaner.java \
+			$(classpath-src)/sun/misc/Unsafe.java \
+			$(classpath-src)/java/lang/reflect/Proxy.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1354,7 +1415,7 @@ endif
 $(build)/run-tests.sh: $(test-classes) makefile
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(name)${exe-suffix} $(mode) \"-Djava.library.path=$$(pwd) -cp test\" \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 
@@ -1370,13 +1431,44 @@ $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
 
-$(classpath-dep): $(classpath-sources)
+$(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
-	$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
-		$(shell $(MAKE) -s --no-print-directory build=$(build) \
-			$(classpath-classes))
+	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
+		$(classpath-classes))"; if [ -n "$${classes}" ]; then \
+		$(javac) -d $(classpath-build) -bootclasspath $(boot-classpath) \
+		$${classes}; fi
 	@touch $(@)
+
+$(build)/android-src/%.cpp: $(luni-native)/%.cpp
+	if [ "$(luni-native)/libcore_icu_ICU.cpp" = "$(<)" ]; then \
+		sed 's/register_libcore_icu_ICU/hide_register_libcore_icu_ICU/' \
+			< $(<) > $(@).tmp && cat $(@).tmp $(src)/android/icu.cpp > $(@); else \
+		cp $(<) $(@); fi
+
+$(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
+	@echo "compiling $(@)"
+	@mkdir -p $(dir $(@))
+	$(cxx) $(android-cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
+
+$(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
+	@echo "compiling luni classes"
+	@mkdir -p $(classpath-build)
+	@mkdir -p $(build)/android
+	@mkdir -p $(build)/android-src/external/fdlibm
+	@mkdir -p $(build)/android-src/libexpat
+	cp $(android)/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
+	cp $(android)/expat/lib/expat.h $(build)/android-src/libexpat/
+	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
+	sed -i 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
+		$(build)/android-src/java/lang/Enum.java
+	find $(build)/android-src -name '*.java' > $(build)/android.txt
+	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
+		@$(build)/android.txt
+	rm $(build)/android/sun/misc/Unsafe* \
+		$(build)/android/java/lang/reflect/Proxy*
+	cp -r $(build)/android/* $(classpath-build)
+	@touch $(@)	
 
 $(test-build)/%.class: $(test)/%.java
 	@echo $(<)
@@ -1596,7 +1688,7 @@ else
 endif
 
 $(bootimage-object) $(codeimage-object): $(bootimage-generator) \
-		$(openjdk-jar-dep)
+		$(classpath-jar-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
@@ -1606,7 +1698,8 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
-unittest-executable-objects = $(unittest-objects) $(vm-objects) $(build)/util/arg-parser.o
+unittest-executable-objects = $(unittest-objects) $(vm-objects) \
+	$(classpath-objects) $(build)/util/arg-parser.o
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)

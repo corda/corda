@@ -20,7 +20,7 @@
 #include "stddef.h"
 #include "string.h"
 #include "stdio.h"
-#include "types.h"
+#include "avian/types.h"
 #include "math.h"
 
 #ifdef _MSC_VER

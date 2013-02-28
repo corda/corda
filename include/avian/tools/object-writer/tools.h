@@ -15,7 +15,7 @@
 
 #include <avian/util/string.h>
 
-#include "environment.h"
+#include "avian/environment.h"
 
 namespace avian {
 

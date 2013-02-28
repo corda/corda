@@ -11,7 +11,7 @@
 package java.lang;
 
 public final class Byte extends Number implements Comparable<Byte> {
-  public static final Class TYPE = Class.forCanonicalName("B");
+  public static final Class TYPE = avian.Classes.forCanonicalName("B");
 
   private final byte value;
 

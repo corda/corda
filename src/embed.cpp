@@ -15,7 +15,7 @@
 #include <vector>
 #include <string>
 
-#include "embed.h"
+#include "avian/embed.h"
 
 #ifdef __x86_64__
 #  define BINARY_LOADER(x) _binary_loader_##x

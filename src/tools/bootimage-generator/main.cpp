@@ -9,17 +9,17 @@
    details. */
 
 #include <avian/vm/heap/heap.h>
-#include "heapwalk.h"
-#include "common.h"
-#include "machine.h"
-#include "util.h"
+#include "avian/heapwalk.h"
+#include "avian/common.h"
+#include "avian/machine.h"
+#include "avian/util.h"
 #include <avian/util/stream.h>
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/promise.h>
-#include "target.h"
+#include "avian/target.h"
 #include <avian/tools/object-writer/tools.h>
 #include <avian/util/runtime-array.h>
-#include "lzma.h"
+#include "avian/lzma.h"
 
 #include <avian/util/arg-parser.h>
 #include "util/abort.h"

@@ -11,8 +11,8 @@
 #ifndef TARGET_H
 #define TARGET_H
 
-#include "target-fields.h"
-#include "common.h"
+#include "avian/target-fields.h"
+#include "avian/common.h"
 
 namespace vm {
 
@@ -23,11 +23,9 @@ targetV1(T v)
   return v;
 }
 
-#ifdef TARGET_OPPOSITE_ENDIAN
-
 template <class T>
 inline T
-targetV2(T v)
+swapV2(T v)
 {
   return (((v >> 8) & 0xFF) |
           ((v << 8)));
@@ -35,7 +33,7 @@ targetV2(T v)
 
 template <class T>
 inline T
-targetV4(T v)
+swapV4(T v)
 {
   return (((v >> 24) & 0x000000FF) |
           ((v >>  8) & 0x0000FF00) |
@@ -45,7 +43,7 @@ targetV4(T v)
 
 template <class T>
 inline T
-targetV8(T v)
+swapV8(T v)
 {
   return (((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF)) |
           ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00)) |
@@ -55,6 +53,29 @@ targetV8(T v)
           ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000)) |
           ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000)) |
           ((static_cast<uint64_t>(v) << 56)));
+}
+
+#ifdef TARGET_OPPOSITE_ENDIAN
+
+template <class T>
+inline T
+targetV2(T v)
+{
+  return swapV2(v);
+}
+
+template <class T>
+inline T
+targetV4(T v)
+{
+  return swapV4(v);
+}
+
+template <class T>
+inline T
+targetV8(T v)
+{
+  return swapV8(v);
 }
 
 #else

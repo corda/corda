@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "allocator.h"
-#include "zone.h"
+#include "avian/allocator.h"
+#include "avian/zone.h"
 
 #include "context.h"
 #include "block.h"

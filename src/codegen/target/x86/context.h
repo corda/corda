@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/assembler.h>

@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-#include "common.h"
+#include "avian/common.h"
 
 #include <avian/util/arg-parser.h>
 

@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_PROMISE_H
 #define AVIAN_CODEGEN_PROMISE_H
 
-#include "allocator.h"
+#include "avian/allocator.h"
 
 namespace avian {
 namespace codegen {

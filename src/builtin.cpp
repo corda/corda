@@ -8,10 +8,10 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "constants.h"
-#include "processor.h"
-#include "util.h"
+#include "avian/machine.h"
+#include "avian/constants.h"
+#include "avian/processor.h"
+#include "avian/util.h"
 
 #include <avian/util/runtime-array.h>
 
@@ -51,6 +51,15 @@ resolveSystemClassThrow(Thread* t, object loader, object spec)
 } // namespace
 
 extern "C" JNIEXPORT void JNICALL
+Avian_avian_Classes_initialize
+(Thread* t, object, uintptr_t* arguments)
+{
+  object this_ = reinterpret_cast<object>(arguments[0]);
+
+  initClass(t, this_);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Avian_avian_Classes_acquireClassLock
 (Thread* t, object, uintptr_t*)
 {
@@ -76,6 +85,26 @@ Avian_avian_Classes_resolveVMClass
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_defineVMClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  object b = reinterpret_cast<object>(arguments[1]);
+  int offset = arguments[2];
+  int length = arguments[3];
+
+  uint8_t* buffer = static_cast<uint8_t*>
+    (t->m->heap->allocate(length));
+  
+  THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
+                   t->m->heap->free(buffer, length));
+
+  memcpy(buffer, &byteArrayBody(t, b, offset), length);
+
+  return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -83,6 +112,14 @@ Avian_avian_SystemClassLoader_findLoadedVMClass
   object name = reinterpret_cast<object>(arguments[1]);
 
   return search(t, loader, name, findLoadedClass, true);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_vmClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>
+    (jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -564,4 +601,24 @@ Avian_java_nio_FixedArrayByteBuffer_allocateFixed
   longArrayBody(t, address, 0) = reinterpret_cast<intptr_t>(array) + ArrayBody;
 
   return reinterpret_cast<intptr_t>(array);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapInt
+(Thread*, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uint32_t expect = arguments[4];
+  uint32_t update = arguments[5];
+
+  return atomicCompareAndSwap32
+    (&fieldAtOffset<uint32_t>(target, offset), expect, update);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_primitiveClass
+(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
 }

@@ -332,7 +332,8 @@ else
 				$(src)/openjdk/my_java_props_macosx.c
 		else
 			openjdk-sources += \
-				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c
+				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c \
+				$(openjdk-src)/macosx/native/sun/nio/ch/KQueueArrayWrapper.c
 		endif
 
 		openjdk-cflags += \

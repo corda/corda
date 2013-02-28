@@ -10,8 +10,8 @@
 
 #include <avian/vm/heap/heap.h>
 #include <avian/vm/system/system.h>
-#include "common.h"
-#include "arch.h"
+#include "avian/common.h"
+#include "avian/arch.h"
 
 #include <avian/util/math.h>
 

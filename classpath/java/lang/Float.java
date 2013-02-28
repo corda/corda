@@ -11,7 +11,7 @@
 package java.lang;
 
 public final class Float extends Number {
-  public static final Class TYPE = Class.forCanonicalName("F");
+  public static final Class TYPE = avian.Classes.forCanonicalName("F");
   private static final int EXP_BIT_MASK = 0x7F800000;
   private static final int SIGNIF_BIT_MASK = 0x007FFFFF;
 

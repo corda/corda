@@ -8,12 +8,12 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "util.h"
-#include "alloc-vector.h"
-#include "process.h"
-#include "target.h"
-#include "arch.h"
+#include "avian/machine.h"
+#include "avian/util.h"
+#include "avian/alloc-vector.h"
+#include "avian/process.h"
+#include "avian/target.h"
+#include "avian/arch.h"
 
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/architecture.h>

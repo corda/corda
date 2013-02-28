@@ -12,7 +12,7 @@
 #define AVIAN_CODEGEN_ASSEMBLER_POWERPC_CONTEXT_H
 
 #include <avian/vm/codegen/assembler.h>
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 
 
 namespace vm {

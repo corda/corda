@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "target.h"
+#include "avian/target.h"
 #include <avian/util/runtime-array.h>
 #include <avian/util/math.h>
 

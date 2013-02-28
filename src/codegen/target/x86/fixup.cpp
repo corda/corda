@@ -10,10 +10,10 @@
 
 #include <string.h>
 
-#include "allocator.h"
-#include "alloc-vector.h"
-#include "common.h"
-#include "zone.h"
+#include "avian/allocator.h"
+#include "avian/alloc-vector.h"
+#include "avian/common.h"
+#include "avian/zone.h"
 
 #include <avian/util/abort.h>
 #include <avian/vm/system/system.h>

@@ -19,7 +19,7 @@
 #  undef interface
 #endif
 
-#include "common.h"
+#include "avian/common.h"
 
 extern "C" void NO_RETURN
 vmJump(void* address, void* frame, void* stack, void* thread,

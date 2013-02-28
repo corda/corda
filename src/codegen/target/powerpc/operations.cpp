@@ -10,7 +10,7 @@
 
 #include "context.h"
 #include "block.h"
-#include "common.h"
+#include "avian/common.h"
 #include "encode.h"
 #include "operations.h"
 #include "fixup.h"

@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 
 #include "context.h"
 #include "padding.h"

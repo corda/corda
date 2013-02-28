@@ -11,11 +11,11 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_ARM_PROMISE_H
 #define AVIAN_CODEGEN_ASSEMBLER_ARM_PROMISE_H
 
-#include "target.h"
+#include "avian/target.h"
 
 #include <avian/vm/codegen/lir.h>
 #include <avian/vm/codegen/assembler.h>
-#include "alloc-vector.h"
+#include "avian/alloc-vector.h"
 
 namespace vm {
 class System;

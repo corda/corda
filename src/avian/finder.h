@@ -11,9 +11,9 @@
 #ifndef FINDER_H
 #define FINDER_H
 
-#include "common.h"
+#include "avian/common.h"
 #include <avian/vm/system/system.h>
-#include "allocator.h"
+#include "avian/allocator.h"
 
 namespace vm {
 

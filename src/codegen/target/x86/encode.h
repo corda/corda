@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#include "common.h"
+#include "avian/common.h"
 
 #include <avian/vm/codegen/lir.h>
 

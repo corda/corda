@@ -12,7 +12,7 @@
 #define AVIAN_CODEGEN_COMPILER_H
 
 #include <avian/vm/system/system.h>
-#include "zone.h"
+#include "avian/zone.h"
 #include "assembler.h"
 
 namespace avian {

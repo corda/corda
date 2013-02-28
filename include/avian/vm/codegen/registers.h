@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_REGISTERS_H
 #define AVIAN_CODEGEN_REGISTERS_H
 
-#include "common.h"
+#include "avian/common.h"
 
 namespace avian {
 namespace codegen {

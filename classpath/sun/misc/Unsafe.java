@@ -1,5 +1,7 @@
 package sun.misc;
 
+import java.lang.reflect.Field;
+
 public final class Unsafe {
   private void Unsafe() { }
 
@@ -50,9 +52,14 @@ public final class Unsafe {
 
   public native int arrayBaseOffset(Class arrayClass);
 
+  public native long objectFieldOffset(Field field);
+
   public native void copyMemory(Object srcBase, long srcOffset,
                                 Object destBase, long destOffset,
                                 long count);
+
+  public native boolean compareAndSwapInt(Object o, long offset, int old,
+                                          int new_);
 
   public void copyMemory(long src, long dst, long count) {
     copyMemory(null, src, null, dst, count);

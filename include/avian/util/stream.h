@@ -11,7 +11,7 @@
 #ifndef STREAM_H
 #define STREAM_H
 
-#include "common.h"
+#include "avian/common.h"
 
 namespace vm {
 
