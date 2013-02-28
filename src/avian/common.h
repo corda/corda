@@ -27,6 +27,14 @@
 
 #include "float.h"
 
+#ifdef powerpc
+#  undef powerpc
+#endif
+
+#ifdef linux
+#  undef linux
+#endif
+
 // don't complain about using 'this' in member initializers:
 #  pragma warning(disable:4355)
 

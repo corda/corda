@@ -14,6 +14,9 @@
 #include <avian/vm/codegen/assembler.h>
 #include "avian/alloc-vector.h"
 
+#ifdef powerpc
+#undef powerpc
+#endif
 
 namespace vm {
 class System;

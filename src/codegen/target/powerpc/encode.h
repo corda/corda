@@ -11,6 +11,10 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_POWERPC_ENCODE_H
 #define AVIAN_CODEGEN_ASSEMBLER_POWERPC_ENCODE_H
 
+#ifdef powerpc
+#undef powerpc
+#endif
+
 namespace avian {
 namespace codegen {
 namespace powerpc {
