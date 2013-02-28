@@ -8,8 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <stdint.h>
-
 #include "avian/target.h"
 #include "avian/alloc-vector.h"
 #include "avian/allocator.h"

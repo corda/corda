@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef AVIAN_COMMON_H
+#define AVIAN_COMMON_H
 
 #ifndef __STDC_CONSTANT_MACROS
 #  define __STDC_CONSTANT_MACROS
@@ -113,7 +113,7 @@ typedef intptr_t intptr_alias_t;
 
 #else // not _MSC_VER
 
-#  include "stdint.h"
+#  include <stdint.h>
 
 #  define BYTES_PER_WORD __SIZEOF_POINTER__
 
@@ -554,4 +554,4 @@ equal(const void* a, unsigned al, const void* b, unsigned bl)
 
 } // namespace vm
 
-#endif // COMMON_H
+#endif // AVIAN_COMMON_H

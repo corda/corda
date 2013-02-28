@@ -9,7 +9,6 @@
    details. */
 
 #include <stdarg.h>
-#include <stdint.h>
 #include <string.h>
 
 #include "avian/environment.h"
