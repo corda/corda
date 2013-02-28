@@ -350,9 +350,9 @@ Building with the Android Class Library
 ---------------------------------------
 
 As an alternative to both the Avian and OpenJDK class libaries, you
-can also build with the Android Class Library on some platforms
-(currently just Linux, but possibly others in the future).  To build
-this way, do the following, starting from the Avian directory:
+can also build with the Android class library on some platforms
+(currently Linux works and OS X mostly works).  To build this way, do
+the following, starting from the Avian directory:
 
     $ cd ..
     $ mkdir android
@@ -368,10 +368,14 @@ this way, do the following, starting from the Avian directory:
     $ git clone https://github.com/dicej/android-libcore64 libcore
     $ (cd expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
          && make)
-    $ (cd fdlibm && ln -sf makefile.in Makefile.in \
+    $ (cd fdlibm && (mv makefile.in Makefile.in || true) \
          && CFLAGS=-fPIC bash configure && make)
     $ (cd icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
          && make)
+
+NB: use 'CC="gcc -fPIC" ./Configure darwin64-x86_64-cc' when building
+for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
+
     $ (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
          && (for x in ../openssl/patches/*.patch; do patch -p1 < $x; done) \
          && CC="gcc -fPIC" ./config && make)

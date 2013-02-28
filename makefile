@@ -169,8 +169,7 @@ ifneq ($(android),)
 		-D_FILE_OFFSET_BITS=64 \
 		-g3 \
 		-Werror \
-		-fPIC \
-		-fvisibility=hidden
+		-fPIC
 	classpath-lflags := \
 		$(android)/icu4c/lib/libicui18n.a \
 		$(android)/icu4c/lib/libicuuc.a \
@@ -1442,7 +1441,7 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	cp $(android)/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/expat/lib/expat.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
-	sed -i 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
+	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
