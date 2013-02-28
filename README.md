@@ -368,7 +368,8 @@ this way, do the following, starting from the Avian directory:
     $ git clone https://github.com/dicej/android-libcore64 libcore
     $ (cd expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
          && make)
-    $ (cd fdlibm && CFLAGS=-fPIC bash configure && make)
+    $ (cd fdlibm && ln -sf makefile.in Makefile.in \
+         && CFLAGS=-fPIC bash configure && make)
     $ (cd icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
          && make)
     $ (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
