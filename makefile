@@ -1564,19 +1564,18 @@ $(embed-loader-o): $(embed-loader) $(converter)
 	$(converter) $(<) $(@) _binary_loader_start \
 		_binary_loader_end $(target-format) $(arch)
 
-$(embed-loader): $(embed-loader-objects) $(static-library)
-	@mkdir -p $(dir $(@))
-	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
+$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
+		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) \
+	$(ld) $(lflags) $(^) -out:$(@) \
 		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
 else
-	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(dir $(@))/*.o
+	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(^)
 	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
-	$(ld) $(addsuffix .exp,$(basename $(@))) $(dir $(@))/*.o \
+	$(ld) $(addsuffix .exp,$(basename $(@))) $(^) \
 		$(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
