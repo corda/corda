@@ -22,7 +22,7 @@
 #include "avian/lzma.h"
 
 #include <avian/util/arg-parser.h>
-#include "util/abort.h"
+#include <avian/util/abort.h>
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
