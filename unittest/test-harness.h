@@ -11,6 +11,9 @@
 #ifndef TEST_HARNESS_H
 #define TEST_HARNESS_H
 
+#include "avian/common.h"
+#include <stdio.h>
+
 class Test {
 private:
   Test* next;
@@ -49,6 +52,14 @@ protected:
       fprintf(stderr, ", actual: ");
       print(actual);
       fprintf(stderr, "\n");
+      failures++;
+    }
+    runs++;
+  }
+
+  void assertEqual(const char* expected, const char* actual) {
+    if((expected == 0 && actual != 0) || (expected != 0 && actual == 0) || strcmp(expected, actual) != 0) {
+      fprintf(stderr, "assertion failure, expected: \"%s\", actual: \"%s\"\n", expected, actual);
       failures++;
     }
     runs++;

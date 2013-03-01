@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 
-#include "avian/common.h"
 #include "test-harness.h"
 
 // since we aren't linking against libstdc++, we must implement this

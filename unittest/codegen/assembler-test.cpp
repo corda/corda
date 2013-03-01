@@ -16,6 +16,7 @@
 #include "avian/target.h"
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/targets.h>
 #include <avian/vm/codegen/lir.h>
 
@@ -29,7 +30,7 @@ class BasicEnv {
 public:
   System* s;
   Heap* heap;
-  Assembler::Architecture* arch;
+  Architecture* arch;
 
   BasicEnv():
     s(makeSystem(0)),
@@ -84,12 +85,11 @@ public:
 
     for(int op = (int)lir::Call; op < (int)lir::AlignedJump; op++) {
       bool thunk;
-      uint8_t typeMask;
-      uint64_t registerMask;
-      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, &typeMask, &registerMask, &thunk);
+      OperandMask mask;
+      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, mask, &thunk);
       assertFalse(thunk);
-      assertNotEqual(static_cast<uint8_t>(0), typeMask);
-      assertNotEqual(static_cast<uint64_t>(0), registerMask);
+      assertNotEqual(static_cast<uint8_t>(0), mask.typeMask);
+      assertNotEqual(static_cast<uint64_t>(0), mask.registerMask);
     }
 
   }

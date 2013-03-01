@@ -75,7 +75,7 @@ class Context {
 
   vm::System* system;
   Assembler* assembler;
-  Assembler::Architecture* arch;
+  Architecture* arch;
   vm::Zone* zone;
   Compiler::Client* client;
   Stack* stack;

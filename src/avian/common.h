@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef COMMON_H
-#define COMMON_H
+#ifndef AVIAN_COMMON_H
+#define AVIAN_COMMON_H
 
 #ifndef __STDC_CONSTANT_MACROS
 #  define __STDC_CONSTANT_MACROS
@@ -26,6 +26,14 @@
 #ifdef _MSC_VER
 
 #include "float.h"
+
+#ifdef powerpc
+#  undef powerpc
+#endif
+
+#ifdef linux
+#  undef linux
+#endif
 
 // don't complain about using 'this' in member initializers:
 #  pragma warning(disable:4355)
@@ -113,7 +121,7 @@ typedef intptr_t intptr_alias_t;
 
 #else // not _MSC_VER
 
-#  include "stdint.h"
+#  include <stdint.h>
 
 #  define BYTES_PER_WORD __SIZEOF_POINTER__
 
@@ -320,6 +328,17 @@ padWord(uintptr_t n)
   return padWord(n, BytesPerWord);
 }
 
+inline bool fitsInInt8(int64_t v) {
+  return v == static_cast<int8_t>(v);
+}
+
+inline bool fitsInInt16(int64_t v) {
+  return v == static_cast<int16_t>(v);
+}
+
+inline bool fitsInInt32(int64_t v) {
+  return v == static_cast<int32_t>(v);
+}
 template <class T>
 inline unsigned
 wordOf(unsigned i)
@@ -466,6 +485,12 @@ hash(const uint16_t* s, unsigned length)
   return h;
 }
 
+inline void
+write4(uint8_t* dst, uint32_t v)
+{
+  memcpy(dst, &v, 4);
+}
+
 inline uint32_t
 floatToBits(float f)
 {
@@ -537,4 +562,4 @@ equal(const void* a, unsigned al, const void* b, unsigned bl)
 
 } // namespace vm
 
-#endif // COMMON_H
+#endif // AVIAN_COMMON_H
