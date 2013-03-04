@@ -178,7 +178,8 @@ Avian_avian_Machine_dumpHeap
     }
     fclose(out);
   } else {
-    throwNew(t, Machine::RuntimeExceptionType, "file not found: %s", n);
+    throwNew(t, Machine::RuntimeExceptionType, "file not found: %s",
+             RUNTIME_ARRAY_BODY(n));
   }
 }
 
