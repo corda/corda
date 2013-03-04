@@ -11,6 +11,9 @@
 #ifndef AVIAN_UTIL_MATH_H
 #define AVIAN_UTIL_MATH_H
 
+#undef max
+#undef min
+
 namespace avian {
 namespace util {
 

@@ -873,20 +873,23 @@ endif
 
 ifdef msvc
 	no-error =
+	target-format = pe
 	windows-path = $(native-path)
 	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
 	zlib := $(shell $(windows-path) "$(win32)/msvc")
 	ms_cl_compiler = regular
+	as = $(build-cc)
 	cxx = "$(msvc)/BIN/cl.exe"
 	cc = $(cxx)
 	ld = "$(msvc)/BIN/link.exe"
 	mt = "mt.exe"
+	ar = "$(msvc)/BIN/lib.exe"
 	manifest-flags = -MANIFEST -MANIFESTFILE:$(@).manifest
 	cflags = -nologo -DAVIAN_VERSION=\"$(version)\" -D_JNI_IMPLEMENTATION_ \
 		-DUSE_ATOMIC_OPERATIONS -DAVIAN_JAVA_HOME=\"$(javahome)\" \
 		-DAVIAN_EMBED_PREFIX=\"$(embed-prefix)\" \
 		-Fd$(build)/$(name).pdb -I"$(zlib)/include" -I$(src) -I$(classpath-src) \
-		-I"$(build)" \
+		-I"$(build)" -Iinclude \
 		-I"$(windows-java-home)/include" -I"$(windows-java-home)/include/win32" \
 		-DTARGET_BYTES_PER_WORD=$(pointer-size)
 
@@ -899,21 +902,18 @@ ifdef msvc
 		-DEFAULTLIB:zlib -DEFAULTLIB:user32 -MANIFEST -debug
 	output = -Fo$(1)
 
-	ifeq ($(mode),debug)
-		cflags += -Od -Zi -MDd
-	endif
-	ifeq ($(mode),debug-fast)
-		cflags += -Od -Zi -DNDEBUG
-	endif
+	cflags_debug = -Od -Zi -MDd
+	cflags_debug_fast = -Od -Zi -DNDEBUG
+	cflags_fast = -O2 -GL -Zi -DNDEBUG
+	cflags_small = -O1s -Zi -GL -DNDEBUG
 	ifeq ($(mode),fast)
-		cflags += -O2 -GL -Zi -DNDEBUG
 		lflags += -LTCG
 	endif
 	ifeq ($(mode),small)
-		cflags += -O1s -Zi -GL -DNDEBUG
 		lflags += -LTCG
 	endif
 
+	use-lto = false
 	strip = :
 endif
 
@@ -1026,19 +1026,15 @@ compiler-sources = \
 	$(src)/codegen/registers.cpp \
 	$(src)/codegen/targets.cpp
 compiler-objects = $(call cpp-objects,$(compiler-sources),$(src),$(build))
-$(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
 
 x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
 x86-assembler-objects = $(call cpp-objects,$(x86-assembler-sources),$(src),$(build))
-$(x86-assembler-objects): $(wildcard $(src)/codegen/target/x86/*.h) $(vm-depends)
 
 arm-assembler-sources = $(wildcard $(src)/codegen/target/arm/*.cpp)
 arm-assembler-objects = $(call cpp-objects,$(arm-assembler-sources),$(src),$(build))
-$(arm-assembler-objects): $(wildcard $(src)/codegen/target/arm/*.h) $(vm-depends)
 
 powerpc-assembler-sources = $(wildcard $(src)/codegen/target/powerpc/*.cpp)
 powerpc-assembler-objects = $(call cpp-objects,$(powerpc-assembler-sources),$(src),$(build))
-$(powerpc-assembler-objects): $(wildcard $(src)/codegen/target/powerpc/*.h) $(vm-depends)
 
 all-assembler-sources = \
 	$(x86-assembler-sources) \
@@ -1352,6 +1348,14 @@ $(test-dep): $(classpath-dep)
 
 $(test-extra-dep): $(classpath-dep)
 
+$(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
+
+$(x86-assembler-objects): $(wildcard $(src)/codegen/target/x86/*.h) $(vm-depends)
+
+$(arm-assembler-objects): $(wildcard $(src)/codegen/target/arm/*.h) $(vm-depends)
+
+$(powerpc-assembler-objects): $(wildcard $(src)/codegen/target/powerpc/*.h) $(vm-depends)
+
 .PHONY: run
 run: build
 	$(library-path) $(test-executable) $(test-args)
@@ -1507,7 +1511,7 @@ endef
 define compile-unittest-object
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) -c $$($(windows-path) -I$(unittest) $(<)) $(call output,$(@))
+	$(cxx) $(cflags) -c $$($(windows-path) $(<)) -I$(unittest) $(call output,$(@))
 endef
 
 $(vm-cpp-objects): $(build)/%.o: $(src)/%.cpp $(vm-depends)
@@ -1814,7 +1818,7 @@ $(executable-dynamic): $(driver-dynamic-objects) $(dynamic-library)
 	@echo "linking $(@)"
 ifdef ms_cl_compiler
 	$(ld) $(lflags) -LIBPATH:$(build) -DEFAULTLIB:$(name) \
-		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@))
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) \
 		$(driver-dynamic-objects) -out:$(@) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"

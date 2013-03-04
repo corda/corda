@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <avian/common.h>
 #include <avian/util/arg-parser.h>
 
 namespace avian {

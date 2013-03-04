@@ -16,6 +16,9 @@
 
 #include <avian/util/math.h>
 
+#undef max
+#undef min
+
 namespace vm {
 
 class Vector {

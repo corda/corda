@@ -1,7 +1,7 @@
 const unsigned NAME(BootMask) = (~static_cast<unsigned>(0))
   / NAME(BytesPerWord);
 
-const unsigned NAME(BootShift) = 32 - log(NAME(BytesPerWord));
+const unsigned NAME(BootShift) = 32 - avian::util::log(NAME(BytesPerWord));
 
 const unsigned NAME(BootFlatConstant) = 1 << NAME(BootShift);
 const unsigned NAME(BootHeapOffset) = 1 << (NAME(BootShift) + 1);

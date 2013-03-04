@@ -26,6 +26,7 @@
 #ifdef _MSC_VER
 
 #include "float.h"
+#include <stdint.h>
 
 #ifdef powerpc
 #  undef powerpc
@@ -37,15 +38,6 @@
 
 // don't complain about using 'this' in member initializers:
 #  pragma warning(disable:4355)
-
-typedef char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-typedef unsigned int uint32_t;
-typedef __int64 int64_t;
-typedef unsigned __int64 uint64_t;
 
 #define strncasecmp _strnicmp
 
@@ -65,11 +57,6 @@ inline int fpclassify(double d) {
 	}
 	return FP_UNDEF;
 }
-
-#define INT32_MIN    ((int32_t) _I32_MIN)
-#define INT32_MAX    _I32_MAX
-#define INT64_MIN    ((int64_t) _I64_MIN)
-#define INT64_MAX    _I64_MAX
 
 inline int signbit(double d) {
 	return _copysign(1.0, d) < 0;
@@ -94,19 +81,16 @@ inline int signbit(double d) {
 #  ifdef _M_IX86
 typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
-#    define UINT64_C(x) x##LL
 #    define ARCH_x86_32
 #    define BYTES_PER_WORD 4
 #  elif defined _M_X64
 typedef int64_t intptr_t;
 typedef uint64_t uintptr_t;
-#    define UINT64_C(x) x##L
 #    define ARCH_x86_64
 #    define BYTES_PER_WORD 8
 #  elif defined _M_ARM_FP
 typedef int32_t intptr_t;
 typedef uint32_t uintptr_t;
-#    define UINT64_C(x) x##LL
 #    define ARCH_arm
 #    define BYTES_PER_WORD 4
 #  else
