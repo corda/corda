@@ -21,12 +21,16 @@
 #include <avian/util/runtime-array.h>
 #include "avian/lzma.h"
 
+#include <avian/util/arg-parser.h>
+#include <avian/util/abort.h>
+
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
 using namespace vm;
 using namespace avian::tools;
+using namespace avian::util;
 using namespace avian::codegen;
 
 namespace {
@@ -1717,105 +1721,6 @@ writeBootImage(Thread* t, uintptr_t* arguments)
      useLZMA);
 
   return 1;
-}
-
-class Arg;
-
-class ArgParser {
-public:
-  Arg* first;
-  Arg** last;
-
-  ArgParser():
-    first(0),
-    last(&first) {}
-
-  bool parse(int ac, const char** av);
-  void printUsage(const char* exe);
-};
-
-class Arg {
-public:
-  Arg* next;
-  bool required;
-  const char* name;
-  const char* desc;
-
-  const char* value;
-
-  Arg(ArgParser& parser, bool required, const char* name, const char* desc):
-    next(0),
-    required(required),
-    name(name),
-    desc(desc),
-    value(0)
-  {
-    *parser.last = this;
-    parser.last = &next;
-  }
-};
-
-bool ArgParser::parse(int ac, const char** av) {
-  Arg* state = 0;
-
-  for(int i = 1; i < ac; i++) {
-    if(state) {
-      if(state->value) {
-        fprintf(stderr, "duplicate parameter %s: '%s' and '%s'\n", state->name, state->value, av[i]);
-        return false;
-      }
-      state->value = av[i];
-      state = 0;
-    } else {
-      if(av[i][0] != '-') {
-        fprintf(stderr, "expected -parameter\n");
-        return false;
-      }
-      bool found = false;
-      for(Arg* arg = first; arg; arg = arg->next) {
-        if(::strcmp(arg->name, &av[i][1]) == 0) {
-          found = true;
-          if (arg->desc == 0) {
-            arg->value = "true";
-          } else {
-            state = arg;
-          }
-        }
-      }
-      if (not found) {
-        fprintf(stderr, "unrecognized parameter %s\n", av[i]);
-        return false;
-      }
-    }
-  }
-
-  if(state) {
-    fprintf(stderr, "expected argument after -%s\n", state->name);
-    return false;
-  }
-
-  for(Arg* arg = first; arg; arg = arg->next) {
-    if(arg->required && !arg->value) {
-      fprintf(stderr, "expected value for %s\n", arg->name);
-      return false;
-    }
-  }
-
-  return true;
-}
-
-void ArgParser::printUsage(const char* exe) {
-  fprintf(stderr, "usage:\n%s \\\n", exe);
-  for(Arg* arg = first; arg; arg = arg->next) {
-    const char* lineEnd = arg->next ? " \\" : "";
-    if(arg->required) {
-      fprintf(stderr, "  -%s\t%s%s\n", arg->name, arg->desc, lineEnd);
-    } else if (arg->desc) {
-      fprintf(stderr, "  [-%s\t%s]%s\n", arg->name, arg->desc, lineEnd);
-    } else {
-      fprintf(stderr, "  [-%s]%s\n", arg->name, lineEnd);
-    }
-  }
 }
 
 char*

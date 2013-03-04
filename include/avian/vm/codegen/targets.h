@@ -11,16 +11,20 @@
 #ifndef AVIAN_CODEGEN_TARGETS_H
 #define AVIAN_CODEGEN_TARGETS_H
 
-#include <avian/vm/codegen/assembler.h>
+namespace vm {
+class System;
+}
 
 namespace avian {
 namespace codegen {
 
-Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures);
+class Architecture;
 
-Assembler::Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
-Assembler::Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
-Assembler::Architecture* makeArchitecturePowerpc(vm::System* system, bool useNativeFeatures);
+Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures);
+
+Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
+Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
+Architecture* makeArchitecturePowerpc(vm::System* system, bool useNativeFeatures);
 
 } // namespace codegen
 } // namespace avian

@@ -14,6 +14,7 @@
 
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/promise.h>
 
 #include "codegen/compiler/regalloc.h"
@@ -334,16 +335,13 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
 
     virtual unsigned cost(Context* c, SiteMask dstMask)
     {
-      uint8_t srcTypeMask;
-      uint64_t srcRegisterMask;
-      uint8_t tmpTypeMask;
-      uint64_t tmpRegisterMask;
+      OperandMask src;
+      OperandMask tmp;
       c->arch->planMove
-        (size, &srcTypeMask, &srcRegisterMask,
-         &tmpTypeMask, &tmpRegisterMask,
-         dstMask.typeMask, dstMask.registerMask);
+        (size, src, tmp,
+         OperandMask(dstMask.typeMask, dstMask.registerMask));
 
-      SiteMask srcMask(srcTypeMask, srcRegisterMask, AnyFrameIndex);
+      SiteMask srcMask = SiteMask::lowPart(src);
       for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
         Site* s = it.next();
         if (s->match(c, srcMask) or s->match(c, dstMask)) {
@@ -359,26 +357,23 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
     bool includeNextWord;
   } costCalculator(value, size, includeNextWord);
 
-  Site* dst = pickTargetSite
+  Site* dstSite = pickTargetSite
     (c, read, intersectRead, registerReserveCount, &costCalculator);
 
-  uint8_t srcTypeMask;
-  uint64_t srcRegisterMask;
-  uint8_t tmpTypeMask;
-  uint64_t tmpRegisterMask;
+  OperandMask src;
+  OperandMask tmp;
   c->arch->planMove
-    (size, &srcTypeMask, &srcRegisterMask,
-     &tmpTypeMask, &tmpRegisterMask,
-     1 << dst->type(c), dst->registerMask(c));
+    (size, src, tmp,
+     OperandMask(1 << dstSite->type(c), dstSite->registerMask(c)));
 
-  SiteMask srcMask(srcTypeMask, srcRegisterMask, AnyFrameIndex);
+  SiteMask srcMask = SiteMask::lowPart(src);
   unsigned cost = 0xFFFFFFFF;
-  Site* src = 0;
+  Site* srcSite = 0;
   for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
     Site* s = it.next();
-    unsigned v = s->copyCost(c, dst);
+    unsigned v = s->copyCost(c, dstSite);
     if (v == 0) {
-      src = s;
+      srcSite = s;
       cost = 0;
       break;
     }
@@ -386,50 +381,50 @@ maybeMove(Context* c, Read* read, bool intersectRead, bool includeNextWord,
       v += CopyPenalty;
     }
     if (v < cost) {
-      src = s;
+      srcSite = s;
       cost = v;
     }
   }
  
   if (cost) {
     if (DebugMoves) {
-      char srcb[256]; src->toString(c, srcb, 256);
-      char dstb[256]; dst->toString(c, dstb, 256);
+      char srcb[256]; srcSite->toString(c, srcb, 256);
+      char dstb[256]; dstSite->toString(c, dstb, 256);
       fprintf(stderr, "maybe move %s to %s for %p to %p\n",
               srcb, dstb, value, value);
     }
 
-    src->freeze(c, value);
+    srcSite->freeze(c, value);
 
-    value->addSite(c, dst);
+    value->addSite(c, dstSite);
     
-    src->thaw(c, value);    
+    srcSite->thaw(c, value);    
 
-    if (not src->match(c, srcMask)) {
-      src->freeze(c, value);
-      dst->freeze(c, value);
+    if (not srcSite->match(c, srcMask)) {
+      srcSite->freeze(c, value);
+      dstSite->freeze(c, value);
 
-      SiteMask tmpMask(tmpTypeMask, tmpRegisterMask, AnyFrameIndex);
+      SiteMask tmpMask = SiteMask::lowPart(tmp);
       SingleRead tmpRead(tmpMask, 0);
       tmpRead.value = value;
       tmpRead.successor_ = value;
 
-      Site* tmp = pickTargetSite(c, &tmpRead, true);
+      Site* tmpSite = pickTargetSite(c, &tmpRead, true);
 
-      value->addSite(c, tmp);
+      value->addSite(c, tmpSite);
 
-      move(c, value, src, tmp);
+      move(c, value, srcSite, tmpSite);
       
-      dst->thaw(c, value);
-      src->thaw(c, value);
+      dstSite->thaw(c, value);
+      srcSite->thaw(c, value);
 
-      src = tmp;
+      srcSite = tmpSite;
     }
 
-    move(c, value, src, dst);
+    move(c, value, srcSite, dstSite);
   }
 
-  return dst;
+  return dstSite;
 }
 
 Site*
@@ -757,145 +752,143 @@ saveLocals(Context* c, Event* e)
 
 void
 maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-          unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
+          unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue,
           const SiteMask& dstMask)
 {
-  Read* read = live(c, dst);
+  Read* read = live(c, dstValue);
   bool isStore = read == 0;
 
   Site* target;
-  if (dst->target) {
-    target = dst->target;
+  if (dstValue->target) {
+    target = dstValue->target;
   } else if (isStore) {
     return;
   } else {
     target = pickTargetSite(c, read);
   }
 
-  unsigned cost = src->source->copyCost(c, target);
+  unsigned cost = srcValue->source->copyCost(c, target);
 
   if (srcSelectSize < dstSize) cost = 1;
 
   if (cost) {
     // todo: let c->arch->planMove decide this:
     bool useTemporary = ((target->type(c) == lir::MemoryOperand
-                          and src->source->type(c) == lir::MemoryOperand)
+                          and srcValue->source->type(c) == lir::MemoryOperand)
                          or (srcSelectSize < dstSize
                              and target->type(c) != lir::RegisterOperand));
 
-    src->source->freeze(c, src);
+    srcValue->source->freeze(c, srcValue);
 
-    dst->addSite(c, target);
+    dstValue->addSite(c, target);
 
-    src->source->thaw(c, src);
+    srcValue->source->thaw(c, srcValue);
 
     bool addOffset = srcSize != srcSelectSize
       and c->arch->bigEndian()
-      and src->source->type(c) == lir::MemoryOperand;
+      and srcValue->source->type(c) == lir::MemoryOperand;
 
     if (addOffset) {
-      static_cast<MemorySite*>(src->source)->offset
+      static_cast<MemorySite*>(srcValue->source)->offset
         += (srcSize - srcSelectSize);
     }
 
-    target->freeze(c, dst);
+    target->freeze(c, dstValue);
 
     if (target->match(c, dstMask) and not useTemporary) {
       if (DebugMoves) {
-        char srcb[256]; src->source->toString(c, srcb, 256);
+        char srcb[256]; srcValue->source->toString(c, srcb, 256);
         char dstb[256]; target->toString(c, dstb, 256);
         fprintf(stderr, "move %s to %s for %p to %p\n",
-                srcb, dstb, src, dst);
+                srcb, dstb, srcValue, dstValue);
       }
 
-      src->source->freeze(c, src);
+      srcValue->source->freeze(c, srcValue);
 
-      apply(c, type, min(srcSelectSize, dstSize), src->source, src->source,
+      apply(c, type, min(srcSelectSize, dstSize), srcValue->source, srcValue->source,
             dstSize, target, target);
 
-      src->source->thaw(c, src);
+      srcValue->source->thaw(c, srcValue);
     } else {
       // pick a temporary register which is valid as both a
       // destination and a source for the moves we need to perform:
       
-      dst->removeSite(c, target);
+      dstValue->removeSite(c, target);
 
       bool thunk;
-      uint8_t srcTypeMask;
-      uint64_t srcRegisterMask;
+      OperandMask src;
 
-      c->arch->planSource(type, dstSize, &srcTypeMask, &srcRegisterMask,
-                          dstSize, &thunk);
+      c->arch->planSource(type, dstSize, src, dstSize, &thunk);
 
-      if (src->type == lir::ValueGeneral) {
-        srcRegisterMask &= c->regFile->generalRegisters.mask;
+      if (srcValue->type == lir::ValueGeneral) {
+        src.registerMask &= c->regFile->generalRegisters.mask;
       }
 
       assert(c, thunk == 0);
-      assert(c, dstMask.typeMask & srcTypeMask & (1 << lir::RegisterOperand));
+      assert(c, dstMask.typeMask & src.typeMask & (1 << lir::RegisterOperand));
 
       Site* tmpTarget = freeRegisterSite
-        (c, dstMask.registerMask & srcRegisterMask);
+        (c, dstMask.registerMask & src.registerMask);
 
-      src->source->freeze(c, src);
+      srcValue->source->freeze(c, srcValue);
 
-      dst->addSite(c, tmpTarget);
+      dstValue->addSite(c, tmpTarget);
 
-      tmpTarget->freeze(c, dst);
+      tmpTarget->freeze(c, dstValue);
 
       if (DebugMoves) {
-        char srcb[256]; src->source->toString(c, srcb, 256);
+        char srcb[256]; srcValue->source->toString(c, srcb, 256);
         char dstb[256]; tmpTarget->toString(c, dstb, 256);
         fprintf(stderr, "move %s to %s for %p to %p\n",
-                srcb, dstb, src, dst);
+                srcb, dstb, srcValue, dstValue);
       }
 
-      apply(c, type, srcSelectSize, src->source, src->source,
+      apply(c, type, srcSelectSize, srcValue->source, srcValue->source,
             dstSize, tmpTarget, tmpTarget);
 
-      tmpTarget->thaw(c, dst);
+      tmpTarget->thaw(c, dstValue);
 
-      src->source->thaw(c, src);
+      srcValue->source->thaw(c, srcValue);
 
       if (useTemporary or isStore) {
         if (DebugMoves) {
           char srcb[256]; tmpTarget->toString(c, srcb, 256);
           char dstb[256]; target->toString(c, dstb, 256);
           fprintf(stderr, "move %s to %s for %p to %p\n",
-                  srcb, dstb, src, dst);
+                  srcb, dstb, srcValue, dstValue);
         }
 
-        dst->addSite(c, target);
+        dstValue->addSite(c, target);
 
-        tmpTarget->freeze(c, dst);
+        tmpTarget->freeze(c, dstValue);
 
         apply(c, lir::Move, dstSize, tmpTarget, tmpTarget, dstSize, target, target);
 
-        tmpTarget->thaw(c, dst);
+        tmpTarget->thaw(c, dstValue);
 
         if (isStore) {
-          dst->removeSite(c, tmpTarget);
+          dstValue->removeSite(c, tmpTarget);
         }
       }
     }
 
-    target->thaw(c, dst);
+    target->thaw(c, dstValue);
 
     if (addOffset) {
-      static_cast<MemorySite*>(src->source)->offset
+      static_cast<MemorySite*>(srcValue->source)->offset
         -= (srcSize - srcSelectSize);
     }
   } else {
-    target = src->source;
+    target = srcValue->source;
 
     if (DebugMoves) {
       char dstb[256]; target->toString(c, dstb, 256);
-      fprintf(stderr, "null move in %s for %p to %p\n", dstb, src, dst);
+      fprintf(stderr, "null move in %s for %p to %p\n", dstb, srcValue, dstValue);
     }
   }
 
   if (isStore) {
-    dst->removeSite(c, target);
+    dstValue->removeSite(c, target);
   }
 }
 

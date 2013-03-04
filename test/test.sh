@@ -20,6 +20,7 @@ printf "%12s------- Unit tests -------\n" ""
 ${unit_tester} 2>>${log}
 if [ "${?}" != "0" ]; then
   trouble=1
+  echo "unit tests failed!"
 fi
 
 echo

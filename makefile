@@ -1022,26 +1022,33 @@ embed-objects = $(call cpp-objects,$(embed-sources),$(src),$(build-embed))
 
 compiler-sources = \
 	$(src)/codegen/compiler.cpp \
-	$(src)/codegen/compiler/context.cpp \
-	$(src)/codegen/compiler/resource.cpp \
-	$(src)/codegen/compiler/site.cpp \
-	$(src)/codegen/compiler/regalloc.cpp \
-	$(src)/codegen/compiler/value.cpp \
-	$(src)/codegen/compiler/read.cpp \
-	$(src)/codegen/compiler/event.cpp \
-	$(src)/codegen/compiler/promise.cpp \
-	$(src)/codegen/compiler/frame.cpp \
-	$(src)/codegen/compiler/ir.cpp \
+	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/codegen/registers.cpp \
 	$(src)/codegen/targets.cpp
+compiler-objects = $(call cpp-objects,$(compiler-sources),$(src),$(build))
+$(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
+
+x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
+x86-assembler-objects = $(call cpp-objects,$(x86-assembler-sources),$(src),$(build))
+$(x86-assembler-objects): $(wildcard $(src)/codegen/target/x86/*.h) $(vm-depends)
+
+arm-assembler-sources = $(wildcard $(src)/codegen/target/arm/*.cpp)
+arm-assembler-objects = $(call cpp-objects,$(arm-assembler-sources),$(src),$(build))
+$(arm-assembler-objects): $(wildcard $(src)/codegen/target/arm/*.h) $(vm-depends)
+
+powerpc-assembler-sources = $(wildcard $(src)/codegen/target/powerpc/*.cpp)
+powerpc-assembler-objects = $(call cpp-objects,$(powerpc-assembler-sources),$(src),$(build))
+$(powerpc-assembler-objects): $(wildcard $(src)/codegen/target/powerpc/*.h) $(vm-depends)
 
 all-assembler-sources = \
-	$(src)/codegen/x86/assembler.cpp \
-	$(src)/codegen/arm/assembler.cpp \
-	$(src)/codegen/powerpc/assembler.cpp
+	$(x86-assembler-sources) \
+	$(arm-assembler-sources) \
+	$(powerpc-assembler-sources)
 
-native-assembler-sources = \
-	$(src)/codegen/$(target-asm)/assembler.cpp
+native-assembler-sources = $($(target-asm)-assembler-sources)
+native-assembler-objects = $($(target-asm)-assembler-objects)
+
+audit-codegen-sources = $(wildcard $(src)/tools/audit-codegen/*.cpp)
 
 all-codegen-target-sources = \
 	$(compiler-sources) \
@@ -1090,7 +1097,8 @@ ifeq ($(continuations),true)
 	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
-bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp
+bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp $(src)/util/arg-parser.cpp
+
 ifneq ($(lzma),)
 	bootimage-generator-sources += $(src)/lzma-encode.cpp
 endif
@@ -1205,6 +1213,7 @@ dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
 unittest-executable = $(build)/$(name)-unittest${exe-suffix}
+audit-codegen-executable = $(build)/audit-codegen${exe-suffix}
 
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
@@ -1275,6 +1284,7 @@ test-extra-dep = $(test-build)-extra.dep
 
 unittest-sources = \
 	$(wildcard $(unittest)/*.cpp) \
+	$(wildcard $(unittest)/util/*.cpp) \
 	$(wildcard $(unittest)/codegen/*.cpp)
 
 unittest-depends = \
@@ -1363,6 +1373,14 @@ else
 	rsync $(build) -rav --exclude '*.o' --rsh="ssh -p$(remote-test-port)" $(remote-test-user)@$(remote-test-host):$(remote-test-dir)
 	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
 endif
+
+PHONY: audit-baseline
+audit-baseline: $(audit-codegen-executable)
+	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
+
+PHONY: audit
+audit: $(audit-codegen-executable)
+	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
 
 .PHONY: tarball
 tarball:
@@ -1503,6 +1521,9 @@ endif
 $(unittest-objects): $(build)/unittest/%.o: $(unittest)/%.cpp $(vm-depends) $(unittest-depends)
 	$(compile-unittest-object)
 
+$(build)/tools/audit-codegen/main.o: $(build)/%.o: $(src)/%.cpp $(vm-depends)
+	$(compile-object)
+
 $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 	$(compile-object)
 
@@ -1542,19 +1563,18 @@ $(embed-loader-o): $(embed-loader) $(converter)
 	$(converter) $(<) $(@) _binary_loader_start \
 		_binary_loader_end $(target-format) $(arch)
 
-$(embed-loader): $(embed-loader-objects) $(static-library)
-	@mkdir -p $(dir $(@))
-	cd $(dir $(@)) && $(ar) x ../../../$(static-library)
+$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
+		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 ifdef ms_cl_compiler
-	$(ld) $(lflags) $(dir $(@))/*.o -out:$(@) \
+	$(ld) $(lflags) $(^) -out:$(@) \
 		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
 ifdef mt
 	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
 endif
 else
-	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(dir $(@))/*.o
+	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(^)
 	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
-	$(ld) $(addsuffix .exp,$(basename $(@))) $(dir $(@))/*.o \
+	$(ld) $(addsuffix .exp,$(basename $(@))) $(^) \
 		$(lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
@@ -1677,49 +1697,59 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects) \
-	$(classpath-objects)
+	$(classpath-objects) $(build)/util/arg-parser.o
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
 endif
 
-$(executable): $(executable-objects)
-	@echo "linking $(@)"
-ifeq ($(platform),windows)
-ifdef ms_cl_compiler
-	$(ld) $(lflags) $(executable-objects) -out:$(@) \
-		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
-ifdef mt
-	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
-endif
-else
-	$(dlltool) -z $(@).def $(executable-objects)
-	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(executable-objects) $(lflags) -o $(@)
-endif
-else
-	$(ld) $(executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
-endif
-	$(strip) $(strip-all) $(@)
+audit-codegen-objects = $(call cpp-objects,$(audit-codegen-sources),$(src),$(build))
+audit-codegen-executable-objects = $(audit-codegen-objects) $(vm-objects) $(build)/util/arg-parser.o
 
+.PHONY: print
+print:
+	@echo $(audit-codegen-objects)
+
+# apparently, make does poorly with ifs inside of defines, and indented defines.
+# I suggest re-indenting the following before making edits (and unindenting afterwards):
+ifneq ($(platform),windows)
+define link-executable
+	@echo linking $(@)
+	$(ld) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+endef
+else
+ifdef ms_cl_compiler
+ifdef mt
+define link-executable
+	@echo linking $(@)
+	$(ld) $(lflags) $(^) -out:$(@) \
+		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endef
+else
+define link-executable
+	@echo linking $(@)
+	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
+endef
+endif
+else
+define link-executable
+	@echo linking $(@)
+	$(dlltool) -z $(@).def $(^)
+	$(dlltool) -d $(@).def -e $(@).exp
+	$(ld) $(@).exp $(^) $(lflags) -o $(@)
+endef
+endif
+endif
+
+$(executable): $(executable-objects)
+	$(link-executable)
 
 $(unittest-executable): $(unittest-executable-objects)
-	@echo "linking $(@)"
-ifeq ($(platform),windows)
-ifdef ms_cl_compiler
-	$(ld) $(lflags) $(unittest-executable-objects) -out:$(@) \
-		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
-ifdef mt
-	$(mt) -nologo -manifest $(@).manifest -outputresource:"$(@);1"
-endif
-else
-	$(dlltool) -z $(@).def $(unittest-executable-objects)
-	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(unittest-executable-objects) $(lflags) -o $(@)
-endif
-else
-	$(ld) $(unittest-executable-objects) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
-endif
+	$(link-executable)
+
+$(audit-codegen-executable): $(audit-codegen-executable-objects)
+	$(link-executable)
 
 $(bootimage-generator): $(bootimage-generator-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)

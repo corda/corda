@@ -8,6 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include "avian/common.h"
+
 #include <avian/vm/codegen/targets.h>
 
 #include "avian/environment.h"
@@ -15,7 +17,7 @@
 namespace avian {
 namespace codegen {
 
-Assembler::Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures UNUSED) {
+Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures UNUSED) {
 #ifndef AVIAN_TARGET_ARCH
   #error "Must specify native target!"
 #endif

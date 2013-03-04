@@ -11,6 +11,8 @@
 #ifndef AVIAN_CODEGEN_COMPILER_SITE_H
 #define AVIAN_CODEGEN_COMPILER_SITE_H
 
+#include <avian/vm/codegen/architecture.h>
+
 #include "codegen/compiler/value.h"
 #include "codegen/compiler/context.h"
 
@@ -38,6 +40,14 @@ class SiteMask {
 
   static SiteMask fixedRegisterMask(int number) {
     return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
+  }
+
+  static SiteMask lowPart(const OperandMask& mask) {
+    return SiteMask(mask.typeMask, mask.registerMask, AnyFrameIndex);
+  }
+
+  static SiteMask highPart(const OperandMask& mask) {
+    return SiteMask(mask.typeMask, mask.registerMask >> 32, AnyFrameIndex);
   }
 
   uint8_t typeMask;

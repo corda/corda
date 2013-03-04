@@ -16,6 +16,7 @@
 #include "avian/arch.h"
 
 #include <avian/vm/codegen/assembler.h>
+#include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/targets.h>
 
@@ -294,7 +295,7 @@ class MyThread: public Thread {
   void** thunkTable;
   CallTrace* trace;
   Reference* reference;
-  avian::codegen::Assembler::Architecture* arch;
+  avian::codegen::Architecture* arch;
   Context* transition;
   TraceContext* traceContext;
   uintptr_t stackLimit;
