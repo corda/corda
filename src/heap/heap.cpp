@@ -27,8 +27,6 @@ const unsigned Top = ~static_cast<unsigned>(0);
 const unsigned InitialGen2CapacityInBytes = 4 * 1024 * 1024;
 const unsigned InitialTenuredFixieCeilingInBytes = 4 * 1024 * 1024;
 
-const unsigned LowMemoryPaddingInBytes = 1024 * 1024;
-
 const bool Verbose = false;
 const bool Verbose2 = false;
 const bool Debug = false;
@@ -62,6 +60,7 @@ Aborter* getAborter(Context* c);
 
 void* tryAllocate(Context* c, unsigned size);
 void* allocate(Context* c, unsigned size);
+void* allocate(Context* c, unsigned size, bool limit);
 void free(Context* c, const void* p, unsigned size);
 
 #ifdef USE_ATOMIC_OPERATIONS
@@ -348,7 +347,8 @@ class Segment {
       capacity_ = desired;
       while (data == 0) {
         data = static_cast<uintptr_t*>
-          (tryAllocate(context, (footprint(capacity_)) * BytesPerWord));
+          (local::allocate
+           (context, (footprint(capacity_)) * BytesPerWord, false));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -609,7 +609,6 @@ class Context {
     client(0),
     count(0),
     limit(limit),
-    lowMemoryThreshold(limit / 2),
     lock(0),
     
     immortalHeapStart(0),
@@ -680,7 +679,6 @@ class Context {
 
   unsigned count;
   unsigned limit;
-  unsigned lowMemoryThreshold;
 
   System::Mutex* lock;
 
@@ -770,21 +768,6 @@ oversizedGen2(Context* c)
     and c->gen2.position() < (c->gen2.capacity() / 4);
 }
 
-inline unsigned
-memoryNeeded(Context* c)
-{
-  return c->count
-    + ((c->gen1.footprint(minimumNextGen1Capacity(c))
-        + c->gen2.footprint(minimumNextGen2Capacity(c))) * BytesPerWord)
-    + LowMemoryPaddingInBytes;
-}
-
-inline bool
-lowMemory(Context* c)
-{
-  return memoryNeeded(c) > c->lowMemoryThreshold;
-}
-
 inline void
 initNextGen1(Context* c)
 {
@@ -818,7 +801,7 @@ initNextGen2(Context* c)
   unsigned minimum = minimumNextGen2Capacity(c);
   unsigned desired = minimum;
 
-  if (not (lowMemory(c) or oversizedGen2(c))) {
+  if (not oversizedGen2(c)) {
     desired *= 2;
   }
 
@@ -1666,16 +1649,13 @@ collect2(Context* c)
 void
 collect(Context* c)
 {
-  if (lowMemory(c)
-      or oversizedGen2(c)
+  if (oversizedGen2(c)
       or c->tenureFootprint + c->tenurePadding > c->gen2.remaining()
       or c->fixieTenureFootprint + c->tenuredFixieFootprint
       > c->tenuredFixieCeiling)
   {
     if (Verbose) {
-      if (lowMemory(c)) {
-        fprintf(stderr, "low memory causes ");        
-      } else if (oversizedGen2(c)) {
+      if (oversizedGen2(c)) {
         fprintf(stderr, "oversized gen2 causes ");
       } else if (c->tenureFootprint + c->tenurePadding > c->gen2.remaining())
       {
@@ -1697,25 +1677,6 @@ collect(Context* c)
     }
 
     then = c->system->now();
-  }
-
-  unsigned count = memoryNeeded(c);
-  if (count > c->lowMemoryThreshold) {
-    if (Verbose) {
-      fprintf(stderr, "increase low memory threshold from %d to %d\n",
-              c->lowMemoryThreshold,
-              avg(c->limit, c->lowMemoryThreshold));
-    }
-
-    c->lowMemoryThreshold = avg(c->limit, c->lowMemoryThreshold);
-  } else if (count + (count / 16) < c->lowMemoryThreshold) {
-    if (Verbose) {
-      fprintf(stderr, "decrease low memory threshold from %d to %d\n",
-              c->lowMemoryThreshold,
-              avg(count, c->lowMemoryThreshold));
-    }
-
-    c->lowMemoryThreshold = avg(count, c->lowMemoryThreshold);
   }
 
   initNextGen1(c);
