@@ -1678,9 +1678,8 @@ $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 	@rm -rf $(build)/libavian
 	@mkdir -p $(build)/libavian
 	rm -rf $(@)
-	let i=0; for x in $(^); \
-		do cp $${x} $(build)/libavian/avian_$${i}.o; \
-		let i=i+1; \
+	for x in $(^); \
+		do cp $${x} $(build)/libavian/$$(echo $${x} | sed s:/:_:g); \
 	done
 ifdef ms_cl_compiler
 	$(ar) $(arflags) $(build)/libavian/*.o -out:$(@)
