@@ -292,11 +292,11 @@ converter-cflags = -D__STDC_CONSTANT_MACROS -Iinclude/ -Isrc/ \
 
 cflags = $(build-cflags)
 
-common-lflags = -lm -lz $(classpath-lflags)
+common-lflags = -lm -lz
 
 build-lflags = -lz -lpthread -ldl
 
-lflags = $(common-lflags) $(classpath-lflags) -lpthread -ldl
+lflags = $(common-lflags) -lpthread -ldl
 
 soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
 version-script-flag = -Wl,--version-script=openjdk.ld
@@ -580,33 +580,36 @@ ifeq ($(platform),darwin)
 
 		flags = -arch armv7 -isysroot \
 			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
-		openjdk-extra-cflags += $(flags)
+		classpath-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
 		lflags += $(flags)
 	endif
 
 	ifeq ($(arch),powerpc)
-		openjdk-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
+		classpath-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 		lflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 	endif
 
 	ifeq ($(arch),i386)
-		openjdk-extra-cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		classpath-extra-cflags += \
+			-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 		lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
 	endif
 
 	ifeq ($(arch),x86_64)
-		openjdk-extra-cflags += -arch x86_64
+		classpath-extra-cflags += -arch x86_64
 		cflags += -arch x86_64
 		asmflags += -arch x86_64
 		lflags += -arch x86_64
 	endif
 endif
+
+openjdk-extra-cflags += $(classpath-extra-cflags)
 
 ifeq ($(platform),windows)
 	ifeq ($(target-format),)
@@ -785,7 +788,7 @@ ifeq ($(platform),wp8)
 		-DTARGET_BYTES_PER_WORD=$(pointer-size) \
 		-Gd -EHsc
 
-	common-lflags = $(classpath-lflags)
+	common-lflags =
 
 	ifeq ($(mode),debug)
 		build-type = Debug
@@ -1025,16 +1028,12 @@ compiler-sources = \
 	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/codegen/registers.cpp \
 	$(src)/codegen/targets.cpp
-compiler-objects = $(call cpp-objects,$(compiler-sources),$(src),$(build))
 
 x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
-x86-assembler-objects = $(call cpp-objects,$(x86-assembler-sources),$(src),$(build))
 
 arm-assembler-sources = $(wildcard $(src)/codegen/target/arm/*.cpp)
-arm-assembler-objects = $(call cpp-objects,$(arm-assembler-sources),$(src),$(build))
 
 powerpc-assembler-sources = $(wildcard $(src)/codegen/target/powerpc/*.cpp)
-powerpc-assembler-objects = $(call cpp-objects,$(powerpc-assembler-sources),$(src),$(build))
 
 all-assembler-sources = \
 	$(x86-assembler-sources) \
@@ -1042,7 +1041,6 @@ all-assembler-sources = \
 	$(powerpc-assembler-sources)
 
 native-assembler-sources = $($(target-asm)-assembler-sources)
-native-assembler-objects = $($(target-asm)-assembler-objects)
 
 audit-codegen-sources = $(wildcard $(src)/tools/audit-codegen/*.cpp)
 
@@ -1097,6 +1095,9 @@ bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp $(src)/u
 
 ifneq ($(lzma),)
 	bootimage-generator-sources += $(src)/lzma-encode.cpp
+endif
+ifneq ($(android),)
+	bootimage-generator-sources += $(src)/android/stubs.cpp
 endif
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
@@ -1348,14 +1349,6 @@ $(test-dep): $(classpath-dep)
 
 $(test-extra-dep): $(classpath-dep)
 
-$(compiler-objects): $(wildcard $(src)/codegen/compiler/*.h) $(vm-depends)
-
-$(x86-assembler-objects): $(wildcard $(src)/codegen/target/x86/*.h) $(vm-depends)
-
-$(arm-assembler-objects): $(wildcard $(src)/codegen/target/arm/*.h) $(vm-depends)
-
-$(powerpc-assembler-objects): $(wildcard $(src)/codegen/target/powerpc/*.h) $(vm-depends)
-
 .PHONY: run
 run: build
 	$(library-path) $(test-executable) $(test-args)
@@ -1452,7 +1445,8 @@ $(build)/android-src/%.cpp: $(luni-native)/%.cpp
 $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(android-cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
+	$(cxx) $(android-cflags) $(classpath-extra-cflags) -c \
+		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	@echo "compiling luni classes"
@@ -1461,7 +1455,7 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	@mkdir -p $(build)/android-src/external/fdlibm
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
-	cp $(android)/expat/lib/expat.h $(build)/android-src/libexpat/
+	cp $(android)/expat/lib/expat*.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java
@@ -1681,11 +1675,17 @@ $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
 		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 	@echo "creating $(@)"
+	@rm -rf $(build)/libavian
+	@mkdir -p $(build)/libavian
 	rm -rf $(@)
+	let i=0; for x in $(^); \
+		do cp $${x} $(build)/libavian/avian_$${i}.o; \
+		let i=i+1; \
+	done
 ifdef ms_cl_compiler
-	$(ar) $(arflags) $(^) -out:$(@)
+	$(ar) $(arflags) $(build)/libavian/*.o -out:$(@)
 else
-	$(ar) cru $(@) $(^)
+	$(ar) cru $(@) $(build)/libavian/*.o
 	$(ranlib) $(@)
 endif
 
@@ -1701,7 +1701,7 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects) \
-	$(classpath-objects) $(build)/util/arg-parser.o
+	$(build)/util/arg-parser.o
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
@@ -1719,7 +1719,8 @@ print:
 ifneq ($(platform),windows)
 define link-executable
 	@echo linking $(@)
-	$(ld) $(^) $(rdynamic) $(lflags) $(bootimage-lflags) -o $(@)
+	$(ld) $(^) $(rdynamic) $(lflags) $(classpath-lflags) $(bootimage-lflags) \
+		-o $(@)
 endef
 else
 ifdef ms_cl_compiler
@@ -1773,7 +1774,7 @@ $(bootimage-generator): $(bootimage-generator-objects)
 		$(bootimage-generator)
 
 $(build-bootimage-generator): \
-		$(vm-objects) $(classpath-object) $(classpath-objects) \
+		$(vm-objects) $(classpath-object) \
 		$(heapwalk-objects) $(bootimage-generator-objects) $(converter-objects) \
 		$(lzma-decode-objects) $(lzma-encode-objects)
 	@echo "linking $(@)"
@@ -1807,7 +1808,7 @@ ifdef mt
 endif
 else
 	$(ld) $(^) $(version-script-flag) $(soname-flag) \
-		$(shared) $(lflags) $(bootimage-lflags) \
+		$(shared) $(lflags) $(classpath-lflags) $(bootimage-lflags) \
 		-o $(@)
 endif
 	$(strip) $(strip-all) $(@)
