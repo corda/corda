@@ -613,6 +613,10 @@ class MyClasspath : public Classpath {
         t->flags &= ~Thread::ActiveFlag;
         vm::notifyAll(t, t->javaThread);
         vm::release(t, t->javaThread);
+
+        t->m->processor->invoke
+          (t, root(t, Machine::ThreadTerminated),
+           threadGroup(t, t->javaThread), t->javaThread);
     });
 
     object method = resolveMethod
@@ -652,6 +656,10 @@ class MyClasspath : public Classpath {
 
     resolveSystemClass(t, root(t, Machine::BootLoader),
                        className(t, type(t, Machine::ClassLoaderType)));
+
+    setRoot(t, Machine::ThreadTerminated, resolveMethod
+            (t, root(t, Machine::BootLoader), "java/lang/ThreadGroup",
+             "threadTerminated", "(Ljava/lang/Thread;)V"));
 
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t);

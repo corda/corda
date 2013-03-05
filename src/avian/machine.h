@@ -1231,10 +1231,11 @@ class Machine {
     Shutdown,
     VirtualFileFinders,
     VirtualFiles,
-    ArrayInterfaceTable
+    ArrayInterfaceTable,
+    ThreadTerminated
   };
 
-  static const unsigned RootCount = ArrayInterfaceTable + 1;
+  static const unsigned RootCount = ThreadTerminated + 1;
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
