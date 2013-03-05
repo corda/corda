@@ -330,7 +330,8 @@ class Segment {
   unsigned capacity_;
   Map* map;
 
-  Segment(Context* context, Map* map, unsigned desired, unsigned minimum):
+  Segment(Context* context, Map* map, unsigned desired, unsigned minimum,
+          int64_t available = INT64_MAX):
     context(context),
     data(0),
     position_(0),
@@ -346,9 +347,13 @@ class Segment {
 
       capacity_ = desired;
       while (data == 0) {
-        data = static_cast<uintptr_t*>
-          (local::allocate
-           (context, (footprint(capacity_)) * BytesPerWord, false));
+        if (static_cast<int64_t>(footprint(capacity_)) > available) {
+          data = 0;
+        } else {
+          data = static_cast<uintptr_t*>
+            (local::allocate
+             (context, (footprint(capacity_)) * BytesPerWord, false));
+        }
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -809,7 +814,11 @@ initNextGen2(Context* c)
     desired = InitialGen2CapacityInBytes / BytesPerWord;
   }
 
-  new (&(c->nextGen2)) Segment(c, &(c->nextHeapMap), desired, minimum);
+  new (&(c->nextGen2)) Segment
+    (c, &(c->nextHeapMap), desired, minimum,
+     static_cast<int64_t>(c->limit / BytesPerWord)
+     - (static_cast<int64_t>(c->count / BytesPerWord)
+        - c->gen2.footprint(c->gen2.capacity())));
 
   if (Verbose2) {
     fprintf(stderr, "init nextGen2 to %d bytes\n",
