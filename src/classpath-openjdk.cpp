@@ -842,6 +842,30 @@ class MyClasspath : public Classpath {
     return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
   }
 
+  virtual bool
+  canTailCall(Thread* t, object, object calleeClassName,
+              object calleeMethodName, object)
+  {
+    // we can't tail call System.loadLibrary or Runtime.loadLibrary
+    // due to their use of System.getCallerClass, which gets confused
+    // if we elide stack frames.
+
+    return (strcmp("loadLibrary", reinterpret_cast<char*>
+                  (&byteArrayBody(t, calleeMethodName, 0)))
+            or (strcmp("java/lang/System", reinterpret_cast<char*>
+                       (&byteArrayBody(t, calleeClassName, 0)))
+                and strcmp("java/lang/Runtime", reinterpret_cast<char*>
+                           (&byteArrayBody(t, calleeClassName, 0)))))
+
+      // and we can't tail call Reflection.getCallerClass because the
+      // number of stack frames will be wrong
+
+      and (strcmp("getCallerClass", reinterpret_cast<char*>
+                  (&byteArrayBody(t, calleeMethodName, 0)))
+           or strcmp("sun/reflect/Reflection", reinterpret_cast<char*>
+                     (&byteArrayBody(t, calleeClassName, 0))));
+  }
+
   virtual void
   dispose()
   { 

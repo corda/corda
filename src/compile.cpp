@@ -3730,7 +3730,8 @@ returnsNext(MyThread* t, object code, unsigned ip)
 
 bool
 isTailCall(MyThread* t, object code, unsigned ip, object caller,
-           int calleeReturnCode)
+           int calleeReturnCode, object calleeClassName,
+           object calleeMethodName, object calleeMethodSpec)
 {
   return avian::codegen::TailCalls
     and ((methodFlags(t, caller) & ACC_SYNCHRONIZED) == 0)
@@ -3738,21 +3739,32 @@ isTailCall(MyThread* t, object code, unsigned ip, object caller,
     and (not needsReturnBarrier(t, caller))
     and (methodReturnCode(t, caller) == VoidField
          or methodReturnCode(t, caller) == calleeReturnCode)
-    and returnsNext(t, code, ip);
+    and returnsNext(t, code, ip)
+    and t->m->classpath->canTailCall
+    (t, caller, calleeClassName, calleeMethodName, calleeMethodSpec);
 }
 
 bool
 isTailCall(MyThread* t, object code, unsigned ip, object caller, object callee)
 {
-  return isTailCall(t, code, ip, caller, methodReturnCode(t, callee));
+  return isTailCall
+    (t, code, ip, caller, methodReturnCode(t, callee),
+     className(t, methodClass(t, callee)), methodName(t, callee),
+     methodSpec(t, callee));
 }
 
 bool
 isReferenceTailCall(MyThread* t, object code, unsigned ip, object caller,
                     object calleeReference)
 {
+  object c = referenceClass(t, calleeReference);
+  if (objectClass(t, c) == type(t, Machine::ClassType)) {
+    c = className(t, c);
+  }
+
   return isTailCall
-    (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference));
+    (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference),
+     c, referenceName(t, calleeReference), referenceSpec(t, calleeReference));
 }
 
 bool

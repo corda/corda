@@ -1583,6 +1583,10 @@ class Classpath {
   virtual int64_t
   getDirectBufferCapacity(Thread* t, object buffer) = 0;
 
+  virtual bool
+  canTailCall(Thread* t, object caller, object calleeClassName,
+              object calleeMethodName, object calleeMethodSpec) = 0;
+
   virtual void
   dispose() = 0;
 };

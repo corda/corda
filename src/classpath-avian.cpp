@@ -174,6 +174,12 @@ class MyClasspath : public Classpath {
     return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
   }
 
+  virtual bool
+  canTailCall(Thread*, object, object, object, object)
+  {
+    return true;
+  }
+
   virtual void
   dispose()
   {
