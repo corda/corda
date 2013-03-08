@@ -60,13 +60,15 @@ class Heap: public Allocator {
   virtual void setClient(Client* client) = 0;
   virtual void setImmortalHeap(uintptr_t* start, unsigned sizeInWords) = 0;
   virtual unsigned limit() = 0;
-  virtual bool limitExceeded() = 0;
-  virtual void collect(CollectionType type, unsigned footprint) = 0;
-  virtual void* tryAllocateFixed(Allocator* allocator, unsigned sizeInWords,
-                                 bool objectMask, unsigned* totalInBytes) = 0;
-  virtual void* tryAllocateImmortalFixed(Allocator* allocator,
-                                         unsigned sizeInWords, bool objectMask,
-                                         unsigned* totalInBytes) = 0;
+  virtual bool limitExceeded(int pendingAllocation = 0) = 0;
+  virtual void collect(CollectionType type, unsigned footprint,
+                       int pendingAllocation) = 0;
+  virtual unsigned fixedFootprint(unsigned sizeInWords, bool objectMask) = 0;
+  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                              bool objectMask) = 0;
+  virtual void* allocateImmortalFixed(Allocator* allocator,
+                                      unsigned sizeInWords,
+                                      bool objectMask) = 0;
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;
   virtual void* follow(void* p) = 0;

@@ -537,13 +537,22 @@ postVisit(Thread* t, Heap::Visitor* v)
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
 
-  for (object* p = &(m->finalizers); *p;) {
-    v->visit(p);
+  { object unreachable = 0;
+    for (object* p = &(m->finalizers); *p;) {
+      v->visit(p);
 
-    if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
-      // target is unreachable - queue it up for finalization
-      finalizerTargetUnreachable(t, v, p);
-    } else {
+      if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+        object finalizer = *p;
+        *p = finalizerNext(t, finalizer);
+
+        finalizerNext(t, finalizer) = unreachable;
+        unreachable = finalizer;
+      } else {
+        p = &finalizerNext(t, *p);
+      }
+    }
+
+    for (object* p = &(m->finalizers); *p;) {
       // target is reachable
       v->visit(&finalizerTarget(t, *p));
 
@@ -562,6 +571,11 @@ postVisit(Thread* t, Heap::Visitor* v)
       } else {
         p = &finalizerNext(t, *p);
       }
+    }
+
+    for (object* p = &unreachable; *p;) {
+      // target is unreachable - queue it up for finalization
+      finalizerTargetUnreachable(t, v, p);
     }
   }
 
@@ -603,16 +617,30 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (major) {
-    for (object* p = &(m->tenuredFinalizers); *p;) {
-      v->visit(p);
+    { object unreachable = 0;
+      for (object* p = &(m->tenuredFinalizers); *p;) {
+        v->visit(p);
 
-      if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
-        // target is unreachable - queue it up for finalization
-        finalizerTargetUnreachable(t, v, p);
-      } else {
+        if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+          object finalizer = *p;
+          *p = finalizerNext(t, finalizer);
+
+          finalizerNext(t, finalizer) = unreachable;
+          unreachable = finalizer;
+        } else {
+          p = &finalizerNext(t, *p);
+        }
+      }
+
+      for (object* p = &(m->tenuredFinalizers); *p;) {
         // target is reachable
         v->visit(&finalizerTarget(t, *p));
         p = &finalizerNext(t, *p);
+      }
+
+      for (object* p = &unreachable; *p;) {
+        // target is unreachable - queue it up for finalization
+        finalizerTargetUnreachable(t, v, p);
       }
     }
 
@@ -2862,7 +2890,7 @@ class HeapClient: public Heap::Client {
 };
 
 void
-doCollect(Thread* t, Heap::CollectionType type)
+doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 {
   expect(t, not t->m->collecting);
 
@@ -2877,7 +2905,8 @@ doCollect(Thread* t, Heap::CollectionType type)
   Machine* m = t->m;
 
   m->unsafe = true;
-  m->heap->collect(type, footprint(m->rootThread));
+  m->heap->collect(type, footprint(m->rootThread), pendingAllocation
+                   - (t->m->heapPoolIndex * ThreadHeapSizeInWords));
   m->unsafe = false;
 
   postCollect(m->rootThread);
@@ -3575,13 +3604,16 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       break;
     }
 
-    if (t->heap == 0 or t->m->heap->limitExceeded()) {
+    int pendingAllocation = t->m->heap->fixedFootprint
+      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
+
+    if (t->heap == 0 or t->m->heap->limitExceeded(pendingAllocation)) {
       //     fprintf(stderr, "gc");
       //     vmPrintTrace(t);
-      collect(t, Heap::MinorCollection);
+      collect(t, Heap::MinorCollection, pendingAllocation);
     }
 
-    if (t->m->heap->limitExceeded()) {
+    if (t->m->heap->limitExceeded(pendingAllocation)) {
       throw_(t, root(t, Machine::OutOfMemoryError));
     }
   } while (type == Machine::MovableAllocation
@@ -3594,42 +3626,54 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   }
 
   case Machine::FixedAllocation: {
-    unsigned total;
     object o = static_cast<object>
-      (t->m->heap->tryAllocateFixed
-       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask, &total));
+      (t->m->heap->allocateFixed
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
-    if (o) {
-      memset(o, 0, sizeInBytes);
+    memset(o, 0, sizeInBytes);
 
-      alias(o, 0) = FixedMark;
+    alias(o, 0) = FixedMark;
+    
+    t->m->fixedFootprint += t->m->heap->fixedFootprint
+      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
       
-      t->m->fixedFootprint += total;
-      
-      return o;
-    } else {
-      throw_(t, root(t, Machine::OutOfMemoryError));
-    }
+    return o;
   }
 
   case Machine::ImmortalAllocation: {
-    unsigned total;
     object o = static_cast<object>
-      (t->m->heap->tryAllocateImmortalFixed
-       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask, &total));
+      (t->m->heap->allocateImmortalFixed
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
-    if (o) {
-      memset(o, 0, sizeInBytes);
+    memset(o, 0, sizeInBytes);
 
-      alias(o, 0) = FixedMark;
+    alias(o, 0) = FixedMark;
 
-      return o;
-    } else {
-      throw_(t, root(t, Machine::OutOfMemoryError));
-    }
+    return o;
   }
 
   default: abort(t);
+  }
+}
+
+void
+collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
+{
+  ENTER(t, Thread::ExclusiveState);
+
+  unsigned pending = pendingAllocation
+    - (t->m->heapPoolIndex * ThreadHeapSizeInWords);
+
+  if (t->m->heap->limitExceeded(pending)) {
+    type = Heap::MajorCollection;
+  }
+
+  doCollect(t, type, pendingAllocation);
+
+  if (t->m->heap->limitExceeded(pending)) {
+    // try once more, giving the heap a chance to squeeze everything
+    // into the smallest possible space:
+    doCollect(t, Heap::MajorCollection, pendingAllocation);
   }
 }
 
@@ -4676,38 +4720,6 @@ intern(Thread* t, object s)
     addFinalizer(t, s, removeString);
     return s;
   }
-}
-
-void
-collect(Thread* t, Heap::CollectionType type)
-{
-  ENTER(t, Thread::ExclusiveState);
-
-  if (t->m->heap->limitExceeded()) {
-    type = Heap::MajorCollection;
-  }
-
-  doCollect(t, type);
-
-  if (t->m->heap->limitExceeded()) {
-    // try once more, giving the heap a chance to squeeze everything
-    // into the smallest possible space:
-    doCollect(t, Heap::MajorCollection);
-  }
-
-#ifdef AVIAN_HEAPDUMP
-  if ((not t->m->dumpedHeapOnOOM) and t->m->heap->limitExceeded()) {
-    t->m->dumpedHeapOnOOM = true;
-    const char* path = findProperty(t, "avian.heap.dump");
-    if (path) {
-      FILE* out = vm::fopen(path, "wb");
-      if (out) {
-        dumpHeap(t, out);
-        fclose(out);
-      }
-    }
-  }
-#endif//AVIAN_HEAPDUMP
 }
 
 void

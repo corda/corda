@@ -104,6 +104,8 @@ const bool DebugStack = false;
 const bool DebugMonitors = false;
 const bool DebugReferences = false;
 
+const bool AbortOnOutOfMemoryError = false;
+
 const uintptr_t HashTakenMark = 1;
 const uintptr_t ExtendedMark = 2;
 const uintptr_t FixedMark = 3;
@@ -1694,7 +1696,7 @@ release(Thread* t, Reference* r)
 }
 
 void
-collect(Thread* t, Heap::CollectionType type);
+collect(Thread* t, Heap::CollectionType type, int pendingAllocation = 0);
 
 void
 shutDown(Thread* t);
@@ -2689,6 +2691,16 @@ makeThrowable(Thread* t, Machine::Type type, const char* format, ...)
 void
 popResources(Thread* t);
 
+} // namespace vm
+
+JNIEXPORT void
+vmPrintTrace(vm::Thread* t);
+
+namespace vm {
+
+void
+dumpHeap(Thread* t, FILE* out);
+
 inline void NO_RETURN
 throw_(Thread* t, object e)
 {
@@ -2698,6 +2710,28 @@ throw_(Thread* t, object e)
   expect(t, not t->checkpoint->noThrow);
 
   t->exception = e;
+
+  if (objectClass(t, e) == type(t, Machine::OutOfMemoryErrorType)) {
+#ifdef AVIAN_HEAPDUMP
+    if (not t->m->dumpedHeapOnOOM) {
+      t->m->dumpedHeapOnOOM = true;
+      const char* path = findProperty(t, "avian.heap.dump");
+      if (path) {
+        FILE* out = vm::fopen(path, "wb");
+        if (out) {
+          dumpHeap(t, out);
+          fclose(out);
+        }
+      }
+    }
+#endif//AVIAN_HEAPDUMP
+
+    if (AbortOnOutOfMemoryError) {
+      fprintf(stderr, "OutOfMemoryError\n");
+      vmPrintTrace(t);
+      abort();
+    }
+  }
 
   // printTrace(t, e);
 
@@ -3832,9 +3866,6 @@ getCaller(Thread* t, unsigned target, bool skipMethodInvoke = false);
 object
 defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);
 
-void
-dumpHeap(Thread* t, FILE* out);
-
 inline object
 methodClone(Thread* t, object method)
 {
@@ -3918,9 +3949,6 @@ errorLog(Thread* t)
 }
 
 } // namespace vm
-
-JNIEXPORT void
-vmPrintTrace(vm::Thread* t);
 
 JNIEXPORT void*
 vmAddressFromLine(vm::Thread* t, vm::object m, unsigned line);

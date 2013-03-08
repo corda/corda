@@ -346,14 +346,41 @@ class Segment {
       assert(context, desired >= minimum);
 
       capacity_ = desired;
-      while (data == 0) {
-        if (static_cast<int64_t>(footprint(capacity_)) > available) {
-          data = 0;
-        } else {
-          data = static_cast<uintptr_t*>
-            (local::allocate
-             (context, (footprint(capacity_)) * BytesPerWord, false));
+
+      if (static_cast<int64_t>(footprint(capacity_)) > available) {
+        unsigned top = capacity_;
+        unsigned bottom = minimum;
+        unsigned target = available;
+        while (true) {
+          if (static_cast<int64_t>(footprint(capacity_)) > target) {
+            if (bottom == capacity_) {
+              break;
+            } else if (static_cast<int64_t>(footprint(capacity_ - 1))
+                       <= target)
+            {
+              -- capacity_;
+              break;
+            }
+            top = capacity_;
+            capacity_ = avg(bottom, capacity_);
+          } else if (static_cast<int64_t>(footprint(capacity_)) < target) {
+            if (top == capacity_
+                or static_cast<int64_t>(footprint(capacity_ + 1)) >= target)
+            {
+              break;
+            }
+            bottom = capacity_;
+            capacity_ = avg(top, capacity_);
+          } else {
+            break;
+          }
         }
+      }
+
+      while (data == 0) {
+        data = static_cast<uintptr_t*>
+          (local::allocate
+           (context, (footprint(capacity_)) * BytesPerWord, false));
 
         if (data == 0) {
           if (capacity_ > minimum) {
@@ -638,6 +665,7 @@ class Context {
 
     gen2Base(0),
     incomingFootprint(0),
+    pendingAllocation(0),
     tenureFootprint(0),
     gen1Padding(0),
     tenurePadding(0),
@@ -658,7 +686,9 @@ class Context {
 
     lastCollectionTime(system->now()),
     totalCollectionTime(0),
-    totalTime(0)
+    totalTime(0),
+
+    limitWasExceeded(false)
   {
     if (not system->success(system->make(&lock))) {
       system->abort();
@@ -709,6 +739,7 @@ class Context {
   unsigned gen2Base;
   
   unsigned incomingFootprint;
+  int pendingAllocation;
   unsigned tenureFootprint;
   unsigned gen1Padding;
   unsigned tenurePadding;
@@ -730,6 +761,8 @@ class Context {
   int64_t lastCollectionTime;
   int64_t totalCollectionTime;
   int64_t totalTime;
+
+  bool limitWasExceeded;
 };
 
 const char*
@@ -818,7 +851,9 @@ initNextGen2(Context* c)
     (c, &(c->nextHeapMap), desired, minimum,
      static_cast<int64_t>(c->limit / BytesPerWord)
      - (static_cast<int64_t>(c->count / BytesPerWord)
-        - c->gen2.footprint(c->gen2.capacity())));
+        - c->gen2.footprint(c->gen2.capacity())
+        - c->gen1.footprint(c->gen1.capacity())
+        + c->pendingAllocation));
 
   if (Verbose2) {
     fprintf(stderr, "init nextGen2 to %d bytes\n",
@@ -1655,16 +1690,41 @@ collect2(Context* c)
   c->client->visitRoots(&v);
 }
 
+bool
+limitExceeded(Context* c, int pendingAllocation)
+{
+  unsigned count = c->count + pendingAllocation
+    - (c->gen2.remaining() * BytesPerWord);
+
+  if (Verbose) {
+    if (count > c->limit) {
+      if (not c->limitWasExceeded) {
+        c->limitWasExceeded = true;
+        fprintf(stderr, "heap limit %d exceeded: %d\n", c->limit, count);
+      }
+    } else if (c->limitWasExceeded) {
+      c->limitWasExceeded = false;
+      fprintf(stderr, "heap limit %d no longer exceeded: %d\n",
+              c->limit, count);
+    }
+  }
+
+  return count > c->limit;
+}
+
 void
 collect(Context* c)
 {
-  if (oversizedGen2(c)
+  if (limitExceeded(c, c->pendingAllocation)
+      or oversizedGen2(c)
       or c->tenureFootprint + c->tenurePadding > c->gen2.remaining()
       or c->fixieTenureFootprint + c->tenuredFixieFootprint
       > c->tenuredFixieCeiling)
   {
     if (Verbose) {
-      if (oversizedGen2(c)) {
+      if (limitExceeded(c, c->pendingAllocation)) {
+        fprintf(stderr, "low memory causes ");
+      } else if (oversizedGen2(c)) {
         fprintf(stderr, "oversized gen2 causes ");
       } else if (c->tenureFootprint + c->tenurePadding > c->gen2.remaining())
       {
@@ -1832,8 +1892,8 @@ class MyHeap: public Heap {
     return c.limit;
   }
 
-  virtual bool limitExceeded() {
-    return c.count > c.limit;
+  virtual bool limitExceeded(int pendingAllocation = 0) {
+    return local::limitExceeded(&c, pendingAllocation);
   }
 
   virtual void* tryAllocate(unsigned size) {
@@ -1848,50 +1908,45 @@ class MyHeap: public Heap {
     free_(&c, p, size);
   }
 
-  virtual void collect(CollectionType type, unsigned incomingFootprint) {
+  virtual void collect(CollectionType type, unsigned incomingFootprint,
+                       int pendingAllocation)
+  {
     c.mode = type;
     c.incomingFootprint = incomingFootprint;
+    c.pendingAllocation = pendingAllocation;
 
     local::collect(&c);
   }
 
-  void* tryAllocateFixed(Allocator* allocator, unsigned sizeInWords,
-                         bool objectMask, unsigned* totalInBytes,
-                         Fixie** handle, bool immortal)
-  {
-    *totalInBytes = 0;
+  virtual unsigned fixedFootprint(unsigned sizeInWords, bool objectMask) {
+    return Fixie::totalSize(sizeInWords, objectMask);
+  }
 
-    if (limitExceeded()) {
-      return 0;
-    }
+  void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                      bool objectMask, Fixie** handle, bool immortal)
+  {
+    expect(&c, not limitExceeded());
 
     unsigned total = Fixie::totalSize(sizeInWords, objectMask);
-    void* p = allocator->tryAllocate(total);
-    if (p == 0) {
-      return 0;
-    } else if (limitExceeded()) {
-      allocator->free(p, total);
-      return 0;
-    } else {
-      *totalInBytes = total;
-      return (new (p) Fixie(&c, sizeInWords, objectMask, handle, immortal))
-        ->body();
-    }
+    void* p = allocator->allocate(total);
+
+    expect(&c, not limitExceeded());
+
+    return (new (p) Fixie(&c, sizeInWords, objectMask, handle, immortal))
+      ->body();
   }
 
-  virtual void* tryAllocateFixed(Allocator* allocator, unsigned sizeInWords,
-                                 bool objectMask, unsigned* totalInBytes)
+  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+                              bool objectMask)
   {
-    return tryAllocateFixed
-      (allocator, sizeInWords, objectMask, totalInBytes, &(c.fixies), false);
+    return allocateFixed
+      (allocator, sizeInWords, objectMask, &(c.fixies), false);
   }
 
-  virtual void* tryAllocateImmortalFixed(Allocator* allocator,
-                                         unsigned sizeInWords, bool objectMask,
-                                         unsigned* totalInBytes)
+  virtual void* allocateImmortalFixed(Allocator* allocator,
+                                      unsigned sizeInWords, bool objectMask)
   {
-    return tryAllocateFixed
-      (allocator, sizeInWords, objectMask, totalInBytes, 0, true);
+    return allocateFixed(allocator, sizeInWords, objectMask, 0, true);
   }
 
   bool needsMark(void* p) {
