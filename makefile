@@ -1233,6 +1233,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Singleton.java \
 		$(classpath-src)/avian/Stream.java \
 		$(classpath-src)/avian/SystemClassLoader.java \
+		$(classpath-src)/avian/Traces.java \
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \

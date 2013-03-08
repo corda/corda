@@ -3533,6 +3533,18 @@ boot(Thread* t, uintptr_t*)
 
   t->m->classpath->boot(t);
 
+  const char* port = findProperty(t, "avian.trace.port");
+  if (port) {
+    object host = makeString(t, "0.0.0.0");
+    PROTECT(t, host);
+
+    object method = resolveMethod
+      (t, root(t, Machine::BootLoader), "avian/Traces", "startTraceListener",
+       "(Ljava/lang/String;I)V");
+
+    t->m->processor->invoke(t, method, 0, host, atoi(port));
+  }
+
   enter(t, Thread::IdleState);
 
   return 1;
