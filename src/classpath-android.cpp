@@ -24,6 +24,18 @@ namespace {
 
 namespace local {
 
+void*
+getDirectBufferAddress(Thread* t, object b)
+{
+  PROTECT(t, b);
+
+  object field = resolveField
+    (t, objectClass(t, b), "effectiveDirectAddress", "J");
+
+  return reinterpret_cast<void*>
+    (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+}
+
 void JNICALL
 loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
@@ -140,6 +152,28 @@ initVmThread(Thread* t, object thread)
   }
 }
 
+void JNICALL
+createThread(Thread* t, object method, uintptr_t* arguments)
+{
+  object thread = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, thread);
+
+  object group = reinterpret_cast<object>(arguments[1]);
+  PROTECT(t, group);
+
+  object name = reinterpret_cast<object>(arguments[2]);
+  PROTECT(t, name);
+
+  int64_t stackSize; memcpy(&stackSize, arguments + 3, 8);
+
+  initVmThread(t, thread);
+
+  t->m->processor->invoke
+    (t, nativeInterceptOriginal
+     (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+     thread, group, name, stackSize);
+}
+
 object
 translateStackTrace(Thread* t, object raw)
 {
@@ -163,7 +197,8 @@ translateStackTrace(Thread* t, object raw)
 class MyClasspath : public Classpath {
  public:
   MyClasspath(Allocator* allocator):
-    allocator(allocator)
+    allocator(allocator),
+    tzdata(0)
   { }
 
   virtual object
@@ -329,7 +364,11 @@ class MyClasspath : public Classpath {
   {
     // Android's System.initSystemProperties throws an NPE if
     // LD_LIBRARY_PATH is not set as of this writing:
+#ifdef PLATFORM_WINDOWS
+    _wputenv(L"LD_LIBRARY_PATH=dummy");
+#else
     setenv("LD_LIBRARY_PATH", "", false);
+#endif
 
     { object c = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/Runtime", false);
@@ -373,6 +412,19 @@ class MyClasspath : public Classpath {
         PROTECT(t, c);
 
         intercept(t, c, "close", "()V",  voidPointer(closeMemoryMappedFile));
+      }
+    }
+
+    { object c = resolveClass
+        (t, root(t, Machine::BootLoader), "java/lang/Thread", false);
+
+      if (c) {
+        PROTECT(t, c);
+
+        intercept(t, c, "create",
+                  "(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;"
+                  "Ljava/lang/String;J)V",
+                  voidPointer(createThread));
       }
     }
     
@@ -419,13 +471,7 @@ class MyClasspath : public Classpath {
   virtual void*
   getDirectBufferAddress(Thread* t, object b)
   {
-    PROTECT(t, b);
-
-    object field = resolveField
-      (t, objectClass(t, b), "effectiveDirectAddress", "J");
-
-    return reinterpret_cast<void*>
-      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+    return local::getDirectBufferAddress(t, b);
   }
 
   virtual int64_t
@@ -599,11 +645,21 @@ jniThrowIOException(JNIEnv* e, const char* message)
 extern "C" const char*
 jniStrError(int error, char* buffer, size_t length)
 {
+#ifdef PLATFORM_WINDOWS
+  const char* s = strerror(error);
+  if (strlen(s) < length) {
+    strncpy(buffer, s, length);
+    return buffer;
+  } else {
+    return 0;
+  }
+#else
   if (static_cast<int>(strerror_r(error, buffer, length)) == 0) {
     return buffer;
   } else {
     return 0;
   }
+#endif
 }
 
 extern "C" int
@@ -1676,3 +1732,139 @@ Avian_java_lang_System_mapLibraryName
                 RUNTIME_ARRAY_BODY(originalChars),
                 t->m->system->librarySuffix()));
 }
+
+#ifdef PLATFORM_WINDOWS
+
+#  include <io.h>
+
+void register_java_io_Console(_JNIEnv*) { }
+void register_java_lang_ProcessManager(_JNIEnv*) { }
+void register_libcore_io_OsConstants(_JNIEnv*) { }
+void register_libcore_io_AsynchronousCloseMonitor(_JNIEnv*) { }
+void register_libcore_io_Posix(_JNIEnv*) { }
+void register_libcore_net_RawSocket(_JNIEnv*) { }
+void register_org_apache_harmony_xnet_provider_jsse_NativeCrypto(_JNIEnv*) { }
+
+extern "C" JNIEXPORT void JNICALL
+Avian_libcore_io_OsConstants_initConstants
+(Thread* t, object method, uintptr_t*)
+{
+  object c = methodClass(t, method);
+  PROTECT(t, c);
+
+  object table = classStaticTable(t, c);
+  PROTECT(t, table);
+
+  object field = resolveField(t, c, "STDIN_FILENO", "I");
+  fieldAtOffset<jint>(table, fieldOffset(t, field)) = 0;
+
+  field = resolveField(t, c, "STDOUT_FILENO", "I");
+  fieldAtOffset<jint>(table, fieldOffset(t, field)) = 1;
+
+  field = resolveField(t, c, "STDERR_FILENO", "I");
+  fieldAtOffset<jint>(table, fieldOffset(t, field)) = 2;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_libcore_io_Posix_getenv(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[1]);
+
+  THREAD_RUNTIME_ARRAY(t, uint16_t, chars, stringLength(t, name) + 1);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(chars));
+
+  wchar_t* value = _wgetenv
+    (reinterpret_cast<wchar_t*>(RUNTIME_ARRAY_BODY(chars)));
+
+  if (value) {
+    unsigned size = wcslen(value);
+    
+    object a = makeCharArray(t, size);
+    if (size) {
+      memcpy(&charArrayBody(t, a, 0), value, size * sizeof(jchar));
+    }
+    
+    return reinterpret_cast<uintptr_t>
+      (t->m->classpath->makeString(t, a, 0, size));
+  } else {
+    return 0;
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_libcore_io_Posix_uname(Thread* t, object, uintptr_t*)
+{
+  object c = resolveClass
+    (t, root(t, Machine::BootLoader), "libcore/io/StructUtsname");
+  PROTECT(t, c);
+  
+  object instance = makeNew(t, c);
+  PROTECT(t, instance);
+  
+#ifdef ARCH_x86_32
+  object arch = makeString(t, "x86");
+#elif defined ARCH_x86_64
+  object arch = makeString(t, "x86_64");
+#elif defined ARCH_powerpc
+  object arch = makeString(t, "ppc");
+#elif defined ARCH_arm
+  object arch = makeString(t, "arm");
+#else
+  object arch = makeString(t, "unknown");
+#endif
+
+  set(t, instance, fieldOffset
+      (t, resolveField(t, c, "machine", "Ljava/lang/String;")), arch);
+
+  object platform = makeString(t, "Windows");
+
+  set(t, instance, fieldOffset
+      (t, resolveField(t, c, "sysname", "Ljava/lang/String;")), platform);
+
+  object version = makeString(t, "unknown");
+
+  set(t, instance, fieldOffset
+      (t, resolveField(t, c, "release", "Ljava/lang/String;")), version);
+
+  return reinterpret_cast<uintptr_t>(instance);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_libcore_io_Posix_writeBytes(Thread* t, object, uintptr_t* arguments)
+{
+  object fd = reinterpret_cast<object>(arguments[1]);
+  PROTECT(t, fd);
+
+  object buffer = reinterpret_cast<object>(arguments[2]);
+  PROTECT(t, buffer);
+
+  int offset = arguments[3];
+  int count = arguments[4];
+
+  int d = jniGetFDFromFileDescriptor(t, &fd);
+
+  int r;
+  if (objectClass(t, buffer) == type(t, Machine::ByteArrayType)) {
+    void* tmp = t->m->heap->allocate(count);
+    memcpy(tmp, &byteArrayBody(t, buffer, offset), count);
+    { ENTER(t, Thread::IdleState);
+      r = _write(d, tmp, count);
+    }
+    t->m->heap->free(tmp, count);
+  } else {
+    void* p = local::getDirectBufferAddress(t, buffer);
+    { ENTER(t, Thread::IdleState);
+      r = _write(d, p, count);
+    }
+  }
+
+  if (r < 0) {
+    THREAD_RUNTIME_ARRAY(t, char, message, 256);
+    throwNew(t, Machine::RuntimeExceptionType, "writeBytes %d: %s", d,
+             jniStrError(errno, RUNTIME_ARRAY_BODY(message), 0));
+  } else {
+    return r;
+  }
+}
+
+#endif

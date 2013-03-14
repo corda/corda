@@ -165,21 +165,47 @@ ifneq ($(android),)
 		-I$(build)/android-src/external/fdlibm \
 		-I$(build)/android-src \
 		-fno-exceptions \
-		-DHAVE_SYS_UIO_H \
 		-D_FILE_OFFSET_BITS=64 \
 		-g3 \
-		-Werror \
-		-fPIC
+		-Werror
+
+	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
+
+	ifeq ($(platform),windows)
+		android-cflags += -D__STDC_CONSTANT_MACROS
+		ifneq ($(arch),i386)
+			android-cflags += -fPIC
+		endif
+		blacklist = $(luni-native)/java_io_Console.cpp \
+			$(luni-native)/java_lang_ProcessManager.cpp \
+			$(luni-native)/libcore_io_OsConstants.cpp \
+			$(luni-native)/libcore_io_Posix.cpp \
+			$(luni-native)/libcore_io_AsynchronousCloseMonitor.cpp \
+			$(luni-native)/libcore_net_RawSocket.cpp \
+			$(luni-native)/org_apache_harmony_xnet_provider_jsse_NativeCrypto.cpp \
+			$(luni-native)/AsynchronousSocketCloseMonitor.cpp \
+			$(luni-native)/NetworkUtilities.cpp
+		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
+		icu-libs := $(android)/icu4c/lib/sicuin.a \
+			$(android)/icu4c/lib/sicuuc.a \
+			$(android)/icu4c/lib/sicudt.a
+		platform-lflags := -lgdi32
+	else
+		android-cflags += -fPIC -DHAVE_SYS_UIO_H
+		icu-libs := $(android)/icu4c/lib/icui18n.a \
+			$(android)/icu4c/lib/libicuuc.a \
+			$(android)/icu4c/lib/libicudat.a
+	endif
+
 	classpath-lflags := \
-		$(android)/icu4c/lib/libicui18n.a \
-		$(android)/icu4c/lib/libicuuc.a \
-		$(android)/icu4c/lib/libicudata.a \
+		$(icu-libs) \
 		$(android)/fdlibm/libfdm.a \
 		$(android)/expat/.libs/libexpat.a \
 		$(android)/openssl-upstream/libssl.a \
 		$(android)/openssl-upstream/libcrypto.a \
+		$(platform-lflags) \
 		-lstdc++
-	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
+
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
@@ -198,6 +224,8 @@ ifneq ($(android),)
 	javahome-object = $(build)/javahome-jar.o
 	boot-javahome-object = $(build)/boot-javahome.o
 	build-javahome = $(android)/bionic/libc/zoneinfo
+	stub-sources = $(src)/android/stubs.cpp
+	stub-objects = $(call cpp-objects,$(stub-sources),$(src),$(build))
 endif
 
 ifeq ($(classpath),avian)
@@ -1017,7 +1045,7 @@ target-asm = $(asm)
 build-embed = $(build)/embed
 build-embed-loader = $(build)/embed-loader
 
-embed-loader-sources = $(src)/embedded-loader.cpp
+embed-loader-sources = $(src)/embedded-loader.cpp $(stub-sources)
 embed-loader-objects = $(call cpp-objects,$(embed-loader-sources),$(src),$(build-embed-loader))
 
 embed-sources = $(src)/embed.cpp
@@ -1091,14 +1119,12 @@ ifeq ($(continuations),true)
 	asmflags += -DAVIAN_CONTINUATIONS
 endif
 
-bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp $(src)/util/arg-parser.cpp
+bootimage-generator-sources = $(src)/tools/bootimage-generator/main.cpp $(src)/util/arg-parser.cpp $(stub-sources)
 
 ifneq ($(lzma),)
 	bootimage-generator-sources += $(src)/lzma-encode.cpp
 endif
-ifneq ($(android),)
-	bootimage-generator-sources += $(src)/android/stubs.cpp
-endif
+
 bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
@@ -1438,10 +1464,7 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@touch $(@)
 
 $(build)/android-src/%.cpp: $(luni-native)/%.cpp
-	if [ "$(luni-native)/libcore_icu_ICU.cpp" = "$(<)" ]; then \
-		sed 's/register_libcore_icu_ICU/hide_register_libcore_icu_ICU/' \
-			< $(<) > $(@).tmp && cat $(@).tmp $(src)/android/icu.cpp > $(@); else \
-		cp $(<) $(@); fi
+	cp $(<) $(@)
 
 $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 	@echo "compiling $(@)"
@@ -1562,8 +1585,8 @@ $(embed-loader-o): $(embed-loader) $(converter)
 	$(converter) $(<) $(@) _binary_loader_start \
 		_binary_loader_end $(target-format) $(arch)
 
-$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
-		$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
+$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-object) \
+		$(heapwalk-objects) $(lzma-decode-objects)
 ifdef ms_cl_compiler
 	$(ld) $(lflags) $(^) -out:$(@) \
 		-debug -PDB:$(subst $(exe-suffix),.pdb,$(@)) $(manifest-flags)
@@ -1701,7 +1724,7 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects) \
-	$(build)/util/arg-parser.o
+	$(build)/util/arg-parser.o $(stub-objects)
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
@@ -1742,7 +1765,7 @@ define link-executable
 	@echo linking $(@)
 	$(dlltool) -z $(@).def $(^)
 	$(dlltool) -d $(@).def -e $(@).exp
-	$(ld) $(@).exp $(^) $(lflags) -o $(@)
+	$(ld) $(@).exp $(^) $(lflags) $(classpath-lflags) -o $(@)
 endef
 endif
 endif
