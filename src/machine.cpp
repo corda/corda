@@ -2651,6 +2651,20 @@ nameClass(Thread* t, Machine::Type type, const char* name)
 }
 
 void
+makeArrayInterfaceTable(Thread* t)
+{
+  object interfaceTable = makeArray(t, 4);
+  
+  set(t, interfaceTable, ArrayBody, type
+      (t, Machine::SerializableType));
+  
+  set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
+      type(t, Machine::CloneableType));
+  
+  setRoot(t, Machine::ArrayInterfaceTable, interfaceTable);
+}
+
+void
 boot(Thread* t)
 {
   Machine* m = t->m;
@@ -2761,15 +2775,7 @@ boot(Thread* t)
 
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
 
-  { object interfaceTable = makeArray(t, 4);
-
-    set(t, interfaceTable, ArrayBody, type(t, Machine::SerializableType));
-
-    set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
-        type(t, Machine::CloneableType));
-    
-    setRoot(t, Machine::ArrayInterfaceTable, interfaceTable);
-  }
+  makeArrayInterfaceTable(t);
 
   set(t, type(t, Machine::BooleanArrayType), ClassInterfaceTable,
       root(t, Machine::ArrayInterfaceTable));
@@ -3228,6 +3234,7 @@ Thread::init()
 
     if (image and code) {
       m->processor->boot(this, image, code);
+      makeArrayInterfaceTable(this);
     } else {
       boot(this);
     }

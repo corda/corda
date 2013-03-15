@@ -250,5 +250,11 @@ public class Misc {
       μInstance.μMethod(8933);
       expect(μInstance.μField == 8933);
     }
+
+    expect(new int[0] instanceof Cloneable);
+    expect(new int[0] instanceof java.io.Serializable);
+
+    expect(new Object[0] instanceof Cloneable);
+    expect(new Object[0] instanceof java.io.Serializable);
   }
 }
