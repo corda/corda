@@ -640,9 +640,7 @@ endif
 openjdk-extra-cflags += $(classpath-extra-cflags)
 
 ifeq ($(platform),windows)
-	ifeq ($(target-format),)
-		target-format = pe
-	endif
+	target-format = pe
 
 	inc = "$(win32)/include"
 	lib = "$(win32)/lib"
@@ -1005,8 +1003,6 @@ ifeq ($(arch),i386)
 endif
 endif
 endif
-
-build-cflags += -DAVIAN_HOST_TARGET
 
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
