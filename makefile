@@ -192,9 +192,9 @@ ifneq ($(android),)
 		platform-lflags := -lgdi32
 	else
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
-		icu-libs := $(android)/icu4c/lib/icui18n.a \
+		icu-libs := $(android)/icu4c/lib/libicui18n.a \
 			$(android)/icu4c/lib/libicuuc.a \
-			$(android)/icu4c/lib/libicudat.a
+			$(android)/icu4c/lib/libicudata.a
 	endif
 
 	classpath-lflags := \
