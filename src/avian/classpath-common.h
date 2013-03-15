@@ -578,28 +578,33 @@ invoke(Thread* t, object method, object instance, object args)
 // running:
 void
 intercept(Thread* t, object c, const char* name, const char* spec,
-          void* function)
+          void* function, bool updateRuntimeData)
 {
   object m = findMethodOrNull(t, c, name, spec);
   if (m) {
     PROTECT(t, m);
 
-    object clone = methodClone(t, m);
+    object clone;
+    if (updateRuntimeData) {
+      clone = methodClone(t, m);
 
-    // make clone private to prevent vtable updates at compilation
-    // time.  Otherwise, our interception might be bypassed by calls
-    // through the vtable.
-    methodFlags(t, clone) |= ACC_PRIVATE;
+      // make clone private to prevent vtable updates at compilation
+      // time.  Otherwise, our interception might be bypassed by calls
+      // through the vtable.
+      methodFlags(t, clone) |= ACC_PRIVATE;
+    }
 
     methodFlags(t, m) |= ACC_NATIVE;
 
-    object native = makeNativeIntercept(t, function, true, clone);
-
-    PROTECT(t, native);
-
-    object runtimeData = getMethodRuntimeData(t, m);
-
-    set(t, runtimeData, MethodRuntimeDataNative, native);
+    if (updateRuntimeData) {
+      object native = makeNativeIntercept(t, function, true, clone);
+      
+      PROTECT(t, native);
+      
+      object runtimeData = getMethodRuntimeData(t, m);
+      
+      set(t, runtimeData, MethodRuntimeDataNative, native);
+    }
   } else {
     // If we can't find the method, just ignore it, since ProGuard may
     // have stripped it out as unused.  Otherwise, the code below can

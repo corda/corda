@@ -1565,6 +1565,9 @@ class Classpath {
   resolveNative(Thread* t, object method) = 0;
 
   virtual void
+  interceptMethods(Thread* t) = 0;
+
+  virtual void
   preBoot(Thread* t) = 0;
 
   virtual void

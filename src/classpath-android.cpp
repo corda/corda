@@ -152,28 +152,6 @@ initVmThread(Thread* t, object thread)
   }
 }
 
-void JNICALL
-createThread(Thread* t, object method, uintptr_t* arguments)
-{
-  object thread = reinterpret_cast<object>(arguments[0]);
-  PROTECT(t, thread);
-
-  object group = reinterpret_cast<object>(arguments[1]);
-  PROTECT(t, group);
-
-  object name = reinterpret_cast<object>(arguments[2]);
-  PROTECT(t, name);
-
-  int64_t stackSize; memcpy(&stackSize, arguments + 3, 8);
-
-  initVmThread(t, thread);
-
-  t->m->processor->invoke
-    (t, nativeInterceptOriginal
-     (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-     thread, group, name, stackSize);
-}
-
 object
 translateStackTrace(Thread* t, object raw)
 {
@@ -359,17 +337,9 @@ class MyClasspath : public Classpath {
     vm::resolveNative(t, method);
   }
 
-  virtual void
-  preBoot(Thread* t)
+  void
+  interceptMethods(Thread* t, bool updateRuntimeData)
   {
-    // Android's System.initSystemProperties throws an NPE if
-    // LD_LIBRARY_PATH is not set as of this writing:
-#ifdef PLATFORM_WINDOWS
-    _wputenv(L"LD_LIBRARY_PATH=dummy");
-#else
-    setenv("LD_LIBRARY_PATH", "", false);
-#endif
-
     { object c = resolveClass
         (t, root(t, Machine::BootLoader), "java/lang/Runtime", false);
 
@@ -378,7 +348,7 @@ class MyClasspath : public Classpath {
 
         intercept(t, c, "loadLibrary",
                   "(Ljava/lang/String;Ljava/lang/ClassLoader;)V",
-                  voidPointer(loadLibrary));
+                  voidPointer(loadLibrary), updateRuntimeData);
       }
     }
 
@@ -389,7 +359,7 @@ class MyClasspath : public Classpath {
         PROTECT(t, c);
 
         intercept(t, c, "createSystemClassLoader", "()Ljava/lang/ClassLoader;",
-                  voidPointer(appLoader));
+                  voidPointer(appLoader), updateRuntimeData);
       }
     }
 
@@ -400,7 +370,7 @@ class MyClasspath : public Classpath {
         PROTECT(t, c);
 
         intercept(t, c, "mapData", "()Llibcore/io/MemoryMappedFile;",
-                  voidPointer(mapData));
+                  voidPointer(mapData), updateRuntimeData);
       }
     }
 
@@ -411,23 +381,31 @@ class MyClasspath : public Classpath {
       if (c) {
         PROTECT(t, c);
 
-        intercept(t, c, "close", "()V",  voidPointer(closeMemoryMappedFile));
+        intercept(t, c, "close", "()V",  voidPointer(closeMemoryMappedFile),
+                  updateRuntimeData);
       }
     }
+  }
 
-    { object c = resolveClass
-        (t, root(t, Machine::BootLoader), "java/lang/Thread", false);
+  virtual void
+  interceptMethods(Thread* t)
+  {
+    interceptMethods(t, false);
+  }
 
-      if (c) {
-        PROTECT(t, c);
-
-        intercept(t, c, "create",
-                  "(Ljava/lang/ThreadGroup;Ljava/lang/Runnable;"
-                  "Ljava/lang/String;J)V",
-                  voidPointer(createThread));
-      }
-    }
+  virtual void
+  preBoot(Thread* t)
+  {
+    // Android's System.initSystemProperties throws an NPE if
+    // LD_LIBRARY_PATH is not set as of this writing:
+#ifdef PLATFORM_WINDOWS
+    _wputenv(L"LD_LIBRARY_PATH=(dummy)");
+#else
+    setenv("LD_LIBRARY_PATH", "", false);
+#endif
     
+    interceptMethods(t, true);
+
     JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
   }
 
@@ -1101,7 +1079,11 @@ extern "C" JNIEXPORT void JNICALL
 Avian_java_lang_VMThread_create
 (Thread* t, object, uintptr_t* arguments)
 {
-  startThread(t, reinterpret_cast<object>(arguments[0]));
+  object thread = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, thread);
+
+  local::initVmThread(t, thread);
+  startThread(t, thread);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -1193,6 +1175,35 @@ Avian_java_lang_Math_sin
 {
   int64_t v; memcpy(&v, arguments, 8);
   return doubleToBits(sin(bitsToDouble(v)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_sqrt
+(Thread*, object, uintptr_t* arguments)
+{
+  int64_t v; memcpy(&v, arguments, 8);
+  return doubleToBits(sqrt(bitsToDouble(v)));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_abs__I
+(Thread*, object, uintptr_t* arguments)
+{
+  return abs(static_cast<int32_t>(arguments[0]));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_abs__J
+(Thread*, object, uintptr_t* arguments)
+{
+  return llabs(arguments[0]);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Math_abs__F
+(Thread*, object, uintptr_t* arguments)
+{
+  return floatToBits(abs(bitsToFloat(arguments[0])));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

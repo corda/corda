@@ -352,7 +352,7 @@ object
 makeJfield(Thread* t, object vmField, int index = -1);
 
 void
-interceptFileOperations(Thread*);
+interceptFileOperations(Thread*, bool);
 
 void
 clearInterrupted(Thread*);
@@ -614,9 +614,16 @@ class MyClasspath : public Classpath {
         vm::notifyAll(t, t->javaThread);
         vm::release(t, t->javaThread);
 
+        object e = t->exception;
+        PROTECT(t, e);
+
+        t->exception = 0;
+
         t->m->processor->invoke
           (t, root(t, Machine::ThreadTerminated),
            threadGroup(t, t->javaThread), t->javaThread);
+
+        t->exception = e;
     });
 
     object method = resolveMethod
@@ -644,6 +651,14 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  interceptMethods(Thread* t UNUSED)
+  {
+#ifdef AVIAN_OPENJDK_SRC
+    interceptFileOperations(t, false);
+#endif
+  }
+
+  virtual void
   preBoot(Thread*)
   {
     // ignore
@@ -662,7 +677,7 @@ class MyClasspath : public Classpath {
              "threadTerminated", "(Ljava/lang/Thread;)V"));
 
 #ifdef AVIAN_OPENJDK_SRC
-    interceptFileOperations(t);
+    interceptFileOperations(t, true);
 #else // not AVIAN_OPENJDK_SRC
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
@@ -1957,7 +1972,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 }
 
 void
-interceptFileOperations(Thread* t)
+interceptFileOperations(Thread* t, bool updateRuntimeData)
 {
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
@@ -2000,22 +2015,22 @@ interceptFileOperations(Thread* t)
         cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
 
         intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
-                  voidPointer(openFile));
+                  voidPointer(openFile), updateRuntimeData);
   
         intercept(t, fileInputStreamClass, "read", "()I",
-                  voidPointer(readByteFromFile));
+                  voidPointer(readByteFromFile), updateRuntimeData);
   
         intercept(t, fileInputStreamClass, "readBytes", "([BII)I",
-                  voidPointer(readBytesFromFile));
+                  voidPointer(readBytesFromFile), updateRuntimeData);
   
         intercept(t, fileInputStreamClass, "skip", "(J)J",
-                  voidPointer(skipBytesInFile));
+                  voidPointer(skipBytesInFile), updateRuntimeData);
   
         intercept(t, fileInputStreamClass, "available", "()I",
-                  voidPointer(availableBytesInFile));
+                  voidPointer(availableBytesInFile), updateRuntimeData);
   
         intercept(t, fileInputStreamClass, "close0", "()V",
-                  voidPointer(closeFile));
+                  voidPointer(closeFile), updateRuntimeData);
       }
     }
   }
@@ -2033,40 +2048,42 @@ interceptFileOperations(Thread* t)
         cp->zipFileJzfileField = fieldOffset(t, zipFileJzfileField);
 
         intercept(t, zipFileClass, "open", "(Ljava/lang/String;IJZ)J",
-                  voidPointer(openZipFile));
+                  voidPointer(openZipFile), updateRuntimeData);
 
         intercept(t, zipFileClass, "getTotal", "(J)I",
-                  voidPointer(getZipFileEntryCount));
+                  voidPointer(getZipFileEntryCount), updateRuntimeData);
 
         intercept(t, zipFileClass, "getEntry", "(J[BZ)J",
-                  voidPointer(getZipFileEntry));
+                  voidPointer(getZipFileEntry), updateRuntimeData);
 
         intercept(t, zipFileClass, "getEntryBytes", "(JI)[B",
-                  voidPointer(getZipFileEntryBytes));
+                  voidPointer(getZipFileEntryBytes), updateRuntimeData);
 
         intercept(t, zipFileClass, "getNextEntry", "(JI)J",
-                  voidPointer(getNextZipFileEntry));
+                  voidPointer(getNextZipFileEntry), updateRuntimeData);
 
         intercept(t, zipFileClass, "getEntryMethod", "(J)I",
-                  voidPointer(getZipFileEntryMethod));
+                  voidPointer(getZipFileEntryMethod), updateRuntimeData);
 
         intercept(t, zipFileClass, "freeEntry", "(JJ)V",
-                  voidPointer(freeZipFileEntry));
+                  voidPointer(freeZipFileEntry), updateRuntimeData);
 
         intercept(t, zipFileClass, "read", "(JJJ[BII)I",
-                  voidPointer(readZipFileEntry));
+                  voidPointer(readZipFileEntry), updateRuntimeData);
 
         intercept(t, zipFileClass, "getEntryCSize", "(J)J",
-                  voidPointer(getZipFileEntryCompressedSize));
+                  voidPointer(getZipFileEntryCompressedSize),
+                  updateRuntimeData);
 
         intercept(t, zipFileClass, "getEntrySize", "(J)J",
-                  voidPointer(getZipFileEntryUncompressedSize));
+                  voidPointer(getZipFileEntryUncompressedSize),
+                  updateRuntimeData);
 
         intercept(t, zipFileClass, "getZipMessage", "(J)Ljava/lang/String;",
-                  voidPointer(getZipMessage));
+                  voidPointer(getZipMessage), updateRuntimeData);
 
         intercept(t, zipFileClass, "close", "(J)V",
-                  voidPointer(closeZipFile));
+                  voidPointer(closeZipFile), updateRuntimeData);
       }
     }
   }
@@ -2077,7 +2094,7 @@ interceptFileOperations(Thread* t)
     if (jarFileClass) {
       intercept(t, jarFileClass, "getMetaInfEntryNames",
                 "()[Ljava/lang/String;",
-                voidPointer(getJarFileMetaInfEntryNames));
+                voidPointer(getJarFileMetaInfEntryNames), updateRuntimeData);
     }
   }
 
@@ -2097,27 +2114,27 @@ interceptFileOperations(Thread* t)
       PROTECT(t, fsClass);
 
       intercept(t, fsClass, gbaMethodName, "(Ljava/io/File;)I",
-                voidPointer(getFileAttributes));
+                voidPointer(getFileAttributes), updateRuntimeData);
 
       intercept(t, fsClass, "checkAccess", "(Ljava/io/File;I)Z",
-                voidPointer(checkFileAccess));
+                voidPointer(checkFileAccess), updateRuntimeData);
   
       intercept(t, fsClass, "getLength", "(Ljava/io/File;)J",
-                voidPointer(getFileLength));
+                voidPointer(getFileLength), updateRuntimeData);
     }
   }
 
   intercept(t, type(t, Machine::ClassLoaderType), "loadLibrary",
             "(Ljava/lang/Class;Ljava/lang/String;Z)V",
-            voidPointer(loadLibrary));
+            voidPointer(loadLibrary), updateRuntimeData);
 
   intercept(t, type(t, Machine::ClassLoaderType), "getBootstrapResource",
             "(Ljava/lang/String;)Ljava/net/URL;",
-            voidPointer(getBootstrapResource));
+            voidPointer(getBootstrapResource), updateRuntimeData);
 
   intercept(t, type(t, Machine::ClassLoaderType), "getBootstrapResources",
             "(Ljava/lang/String;)Ljava/util/Enumeration;",
-            voidPointer(getBootstrapResources));
+            voidPointer(getBootstrapResources), updateRuntimeData);
 }
 
 object

@@ -285,6 +285,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 {
   PROTECT(t, typeMaps);
 
+  t->m->classpath->interceptMethods(t);
+
   object constants = 0;
   PROTECT(t, constants);
   

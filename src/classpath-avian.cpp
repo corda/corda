@@ -110,6 +110,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  interceptMethods(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   preBoot(Thread*)
   {
     // ignore
