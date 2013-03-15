@@ -1779,7 +1779,7 @@ $(unittest-executable): $(unittest-executable-objects)
 $(audit-codegen-executable): $(audit-codegen-executable-objects)
 	$(link-executable)
 
-$(bootimage-generator): $(bootimage-generator-objects)
+$(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
