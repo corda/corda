@@ -54,4 +54,5 @@ echo
 
 if [ -n "${trouble}" ]; then
   printf "see ${log} for output\n"
+  exit -1
 fi
