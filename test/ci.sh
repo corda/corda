@@ -2,11 +2,11 @@
 
 set -e
 
-make test
-make mode=debug test
-make process=interpret test
+make ${flags} test
+make ${flags} mode=debug test
+make ${flags} process=interpret test
 # bootimage and openjdk builds without openjdk-src don't work:
 if [ -z "${openjdk}" ]; then
-  make bootimage=true test
+  make ${flags} bootimage=true test
 fi
-make tails=true continuations=true test
+make ${flags} tails=true continuations=true test
