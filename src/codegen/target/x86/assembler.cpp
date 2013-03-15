@@ -51,8 +51,6 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-const RegisterFile MyRegisterFile(GeneralRegisterMask, FloatRegisterMask);
-
 const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
 const unsigned StackAlignmentInBytes = 16;
@@ -152,7 +150,8 @@ class MyArchitecture: public Architecture {
  public:
   MyArchitecture(System* system, bool useNativeFeatures):
     c(system, useNativeFeatures),
-    referenceCount(0)
+    referenceCount(0),
+    myRegisterFile(GeneralRegisterMask, useSSE(&c) ? FloatRegisterMask : 0)
   {
     populateTables(&c);
   }
@@ -166,7 +165,7 @@ class MyArchitecture: public Architecture {
   }
 
   virtual const RegisterFile* registerFile() {
-    return &MyRegisterFile;
+    return &myRegisterFile;
   }
 
   virtual int scratch() {
@@ -805,6 +804,7 @@ class MyArchitecture: public Architecture {
 
   ArchitectureContext c;
   unsigned referenceCount;
+  const RegisterFile myRegisterFile;
 };
 
 class MyAssembler: public Assembler {
