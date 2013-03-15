@@ -775,12 +775,12 @@ class MySystem: public System {
       if (rv) {
 #  ifdef ARCH_x86_32
         visitor->visit(reinterpret_cast<void*>(context.Eip),
-                       reinterpret_cast<void*>(context.Ebp),
-                       reinterpret_cast<void*>(context.Esp));
+                       reinterpret_cast<void*>(context.Esp),
+                       reinterpret_cast<void*>(context.Ebp));
 #  elif defined ARCH_x86_64
         visitor->visit(reinterpret_cast<void*>(context.Rip),
-                       reinterpret_cast<void*>(context.Rbp),
-                       reinterpret_cast<void*>(context.Rsp));
+                       reinterpret_cast<void*>(context.Rsp),
+                       reinterpret_cast<void*>(context.Rbp));
 #  endif
         success = true;
       }
