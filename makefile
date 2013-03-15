@@ -656,7 +656,6 @@ ifeq ($(platform),windows)
 	rpath =
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mconsole
-	bootimage-generator-lflags = -static-libstdc++ -static-libgcc
 	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
