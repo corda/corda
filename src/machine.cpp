@@ -2353,12 +2353,12 @@ updateClassTables(Thread* t, object newClass, object oldClass)
         }
       }
     }
-  } else {
-    object methodTable = classMethodTable(t, newClass);
-    if (methodTable) {
-      for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
-        set(t, arrayBody(t, methodTable, i), MethodClass, newClass);
-      }
+  }
+
+  object methodTable = classMethodTable(t, newClass);
+  if (methodTable) {
+    for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
+      set(t, arrayBody(t, methodTable, i), MethodClass, newClass);
     }
   }
 }
