@@ -262,18 +262,32 @@ setTcpNoDelay(JNIEnv* e, int d, bool on)
 void
 doBind(JNIEnv* e, int s, sockaddr_in* address)
 {
-  int opt = 1;
-  int r = ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
-                       reinterpret_cast<char*>(&opt), sizeof(int));
-  if (r != 0) {
-    throwIOException(e);
-    return;
+  { int opt = 1;
+    int r = ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<char*>(&opt), sizeof(int));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
   }
 
-  r = ::bind(s, reinterpret_cast<sockaddr*>(address), sizeof(sockaddr_in));
-  if (r != 0) {
-    throwIOException(e);
-    return;
+#ifdef SO_NOSIGPIPE
+  { int opt = 1;
+    int r = ::setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE,
+                         reinterpret_cast<char*>(&opt), sizeof(int));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
+  }
+#endif
+
+  { int r = ::bind
+      (s, reinterpret_cast<sockaddr*>(address), sizeof(sockaddr_in));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
   }
 }
 
