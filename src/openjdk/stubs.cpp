@@ -1,11 +1,20 @@
-struct JavaVM;
+#include "avian/machine.h"
 
-extern "C" int net_JNI_OnLoad(JavaVM*, void*)
+using namespace vm;
+
+extern "C" JNIEXPORT jint JNICALL
+net_JNI_OnLoad(JavaVM*, void*)
 {
   return 0;
 }
 
-extern "C" int management_JNI_OnLoad(JavaVM*, void*)
+extern "C" JNIEXPORT jint JNICALL
+management_JNI_OnLoad(JavaVM*, void*)
+{
+  return 0;
+}
+
+extern "C" char* findJavaTZ_md(const char*, const char*)
 {
   return 0;
 }

@@ -5589,7 +5589,7 @@ Avian_java_util_TimeZone_getSystemTimeZoneID
     return 0;
   }
 
-  Finder* finder = local::getFinder(t, ef.jar, ef.jarLength);
+  Finder* finder = getFinder(t, ef.jar, ef.jarLength);
   if (finder == 0) {
     return 0;
   }
