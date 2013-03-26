@@ -130,6 +130,8 @@ ifneq ($(openjdk),)
 		endif
 		javahome-object = $(build)/javahome-jar.o
 		boot-javahome-object = $(build)/boot-javahome.o
+		stub-sources = $(src)/openjdk/stubs.cpp
+		stub-objects = $(call cpp-objects,$(stub-sources),$(src),$(build))
 	else
 	  options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
