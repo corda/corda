@@ -431,7 +431,7 @@ class MyClasspath : public Classpath {
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
     object c = resolveClass
-      (t, root(t, Machine::BootLoader), "java/nio/ReadWriteDirectByteBuffer");
+      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
     PROTECT(t, c);
 
     object instance = makeNew(t, c);
