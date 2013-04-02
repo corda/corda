@@ -1042,7 +1042,7 @@ target-asm = $(asm)
 build-embed = $(build)/embed
 build-embed-loader = $(build)/embed-loader
 
-embed-loader-sources = $(src)/embedded-loader.cpp $(stub-sources)
+embed-loader-sources = $(src)/embedded-loader.cpp
 embed-loader-objects = $(call cpp-objects,$(embed-loader-sources),$(src),$(build-embed-loader))
 
 embed-sources = $(src)/embed.cpp
@@ -1582,7 +1582,7 @@ $(embed-loader-o): $(embed-loader) $(converter)
 	$(converter) $(<) $(@) _binary_loader_start \
 		_binary_loader_end $(target-format) $(arch)
 
-$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-object) \
+$(embed-loader): $(embed-loader-objects) $(vm-objects) $(classpath-objects) \
 		$(heapwalk-objects) $(lzma-decode-objects)
 ifdef ms_cl_compiler
 	$(ld) $(lflags) $(^) -out:$(@) \
