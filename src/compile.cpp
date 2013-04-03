@@ -9473,7 +9473,7 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
   }
 
   if (compileLog) {
-    fprintf(compileLog, "%p %p %s.%s%s\n",
+    fprintf(compileLog, "%p,%p %s.%s%s\n",
             code, static_cast<const uint8_t*>(code) + size,
             class_, name, spec);
   }
