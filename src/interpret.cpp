@@ -680,6 +680,18 @@ store(Thread* t, unsigned index)
          BytesPerWord * 2);
 }
 
+bool
+isNaN(double v)
+{
+  return fpclassify(v) == FP_NAN;
+}
+
+bool
+isNaN(float v)
+{
+  return fpclassify(v) == FP_NAN;
+}
+
 uint64_t
 findExceptionHandler(Thread* t, object method, unsigned ip)
 {
@@ -1157,7 +1169,9 @@ interpret3(Thread* t, const int base)
     double b = popDouble(t);
     double a = popDouble(t);
     
-    if (a < b) {
+    if (isNaN(a) or isNaN(b)) {
+      pushInt(t, 1);
+    } if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1172,7 +1186,9 @@ interpret3(Thread* t, const int base)
     double b = popDouble(t);
     double a = popDouble(t);
     
-    if (a < b) {
+    if (isNaN(a) or isNaN(b)) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1370,7 +1386,9 @@ interpret3(Thread* t, const int base)
     float b = popFloat(t);
     float a = popFloat(t);
     
-    if (a < b) {
+    if (isNaN(a) or isNaN(b)) {
+      pushInt(t, 1);
+    } if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1385,7 +1403,9 @@ interpret3(Thread* t, const int base)
     float b = popFloat(t);
     float a = popFloat(t);
     
-    if (a < b) {
+    if (isNaN(a) or isNaN(b)) {
+      pushInt(t, static_cast<unsigned>(-1));
+    } if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);

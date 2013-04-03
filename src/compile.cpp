@@ -2467,13 +2467,27 @@ getJClassFromReference(MyThread* t, object pair)
        referenceName(t, pairSecond(t, pair)))));
 }
 
+bool
+isNaN(double v)
+{
+  return fpclassify(v) == FP_NAN;
+}
+
+bool
+isNaN(float v)
+{
+  return fpclassify(v) == FP_NAN;
+}
+
 int64_t
 compareDoublesG(uint64_t bi, uint64_t ai)
 {
   double a = bitsToDouble(ai);
   double b = bitsToDouble(bi);
   
-  if (a < b) {
+  if (isNaN(a) or isNaN(b)) {
+    return 1;
+  } else if (a < b) {
     return -1;
   } else if (a > b) {
     return 1;
@@ -2490,7 +2504,9 @@ compareDoublesL(uint64_t bi, uint64_t ai)
   double a = bitsToDouble(ai);
   double b = bitsToDouble(bi);
   
-  if (a < b) {
+  if (isNaN(a) or isNaN(b)) {
+    return -1;
+  } else if (a < b) {
     return -1;
   } else if (a > b) {
     return 1;
@@ -2507,7 +2523,9 @@ compareFloatsG(uint32_t bi, uint32_t ai)
   float a = bitsToFloat(ai);
   float b = bitsToFloat(bi);
   
-  if (a < b) {
+  if (isNaN(a) or isNaN(b)) {
+    return 1;
+  } if (a < b) {
     return -1;
   } else if (a > b) {
     return 1;
@@ -2524,7 +2542,9 @@ compareFloatsL(uint32_t bi, uint32_t ai)
   float a = bitsToFloat(ai);
   float b = bitsToFloat(bi);
   
-  if (a < b) {
+  if (isNaN(a) or isNaN(b)) {
+    return -1;
+  } if (a < b) {
     return -1;
   } else if (a > b) {
     return 1;

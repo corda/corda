@@ -243,6 +243,9 @@ void branch(Context* c, lir::TernaryOperation op, lir::Constant* target) {
 void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target) {
   switch (op) {
   case lir::JumpIfFloatEqual:
+    // jp past the je so we don't jump to the target if unordered:
+    c->code.append(0x7a);
+    c->code.append(6);
     conditional(c, 0x84, target);
     break;
 
