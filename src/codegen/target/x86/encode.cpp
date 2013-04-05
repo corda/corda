@@ -251,6 +251,7 @@ void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target) {
 
   case lir::JumpIfFloatNotEqual:
     conditional(c, 0x85, target);
+    conditional(c, 0x8a, target);
     break;
 
   case lir::JumpIfFloatLess:
