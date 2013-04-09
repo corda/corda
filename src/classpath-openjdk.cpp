@@ -4806,8 +4806,15 @@ EXPORT(JVM_ConstantPoolGetIntAt)(Thread* t, jobject, jobject pool, jint index)
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-EXPORT(JVM_ConstantPoolGetLongAt)(Thread*, jobject, jobject, jint)
-{ abort(); }
+EXPORT(JVM_ConstantPoolGetLongAt)(Thread* t, jobject, jobject pool, jint index)
+{
+  ENTER(t, Thread::ActiveState);
+
+  uint64_t v;
+  memcpy(&v, &singletonValue(t, *pool, index - 1), 8);
+
+  return v;
+}
 
 extern "C" JNIEXPORT jfloat JNICALL
 EXPORT(JVM_ConstantPoolGetFloatAt)(Thread*, jobject, jobject, jint)
