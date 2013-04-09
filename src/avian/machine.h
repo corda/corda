@@ -2699,6 +2699,9 @@ popResources(Thread* t);
 JNIEXPORT void
 vmPrintTrace(vm::Thread* t);
 
+JNIEXPORT void
+vmfPrintTrace(vm::Thread* t, FILE* out);
+
 namespace vm {
 
 void

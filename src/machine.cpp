@@ -5171,11 +5171,11 @@ noop()
 
 // for debugging
 JNIEXPORT void
-vmPrintTrace(Thread* t)
+vmfPrintTrace(Thread* t, FILE* out)
 {
   class Visitor: public Processor::StackVisitor {
    public:
-    Visitor(Thread* t): t(t) { }
+    Visitor(Thread* t, FILE* out): t(t), out(out) { }
 
     virtual bool visit(Processor::StackWalker* walker) {
       const int8_t* class_ = &byteArrayBody
@@ -5185,30 +5185,37 @@ vmPrintTrace(Thread* t)
       int line = t->m->processor->lineNumber
         (t, walker->method(), walker->ip());
 
-      fprintf(stderr, "  at %s.%s ", class_, method);
+      fprintf(out, "  at %s.%s ", class_, method);
 
       switch (line) {
       case NativeLine:
-        fprintf(stderr, "(native)\n");
+        fprintf(out, "(native)\n");
         break;
       case UnknownLine:
-        fprintf(stderr, "(unknown line)\n");
+        fprintf(out, "(unknown line)\n");
         break;
       default:
-        fprintf(stderr, "(line %d)\n", line);
+        fprintf(out, "(line %d)\n", line);
       }
 
       return true;
     }
 
     Thread* t;
-  } v(t);
+    FILE* out;
+  } v(t, out);
 
-  fprintf(stderr, "debug trace for thread %p\n", t);
+  fprintf(out, "debug trace for thread %p\n", t);
 
   t->m->processor->walkStack(t, &v);
 
-  fflush(stderr);
+  fflush(out);
+}
+
+JNIEXPORT void
+vmPrintTrace(Thread* t)
+{
+  vmfPrintTrace(t, stderr);
 }
 
 // also for debugging
