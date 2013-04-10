@@ -7307,6 +7307,9 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
        FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
        true);
 
+    context->executableSize = (allocator->base + allocator->offset)
+      - static_cast<uint8_t*>(context->executableStart);
+
     initArray(t, pool, context->objectPoolCount + 1);
     mark(t, pool, 0);
 
