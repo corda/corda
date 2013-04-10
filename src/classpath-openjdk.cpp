@@ -504,7 +504,23 @@ class MyClasspath : public Classpath {
       
       object charArray = makeCharArray(t, length);
       for (int i = 0; i < length; ++i) {
-        expect(t, (byteArrayBody(t, array, offset + i) & 0x80) == 0);
+        if (byteArrayBody(t, array, offset + i) & 0x80) {
+          object constructor = resolveMethod
+            (t, type(t, Machine::StringType), "<init>",
+             "([BIILjava/lang/String;)V");
+          PROTECT(t, constructor);
+
+          object utf8 = vm::makeString(t, "UTF8");
+          PROTECT(t, utf8);
+
+          object s = makeNew(t, type(t, Machine::StringType));
+          PROTECT(t, s);
+
+          t->m->processor->invoke
+            (t, constructor, s, array, offset, length, utf8);
+
+          return s;
+        }
 
         charArrayBody(t, charArray, i) = byteArrayBody(t, array, offset + i);
       }
