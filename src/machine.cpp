@@ -1123,7 +1123,7 @@ getClassAddendum(Thread* t, object class_, object pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0, 0, 0);
     set(t, class_, ClassAddendum, addendum);
   }
   return addendum;
@@ -2303,12 +2303,20 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
         int16_t flags = s.read2();
 
         object reference = makeInnerClassReference
-          (t, inner ? singletonObject(t, pool, inner - 1) : 0,
-           outer ? singletonObject(t, pool, outer - 1) : 0,
+          (t,
+           inner ? referenceName(t, singletonObject(t, pool, inner - 1)) : 0,
+           outer ? referenceName(t, singletonObject(t, pool, outer - 1)) : 0,
            name ? singletonObject(t, pool, name - 1) : 0,
            flags);
 
         set(t, table, ArrayBody + (i * BytesPerWord), reference);
+
+        if (0 == strcmp
+            (&byteArrayBody(t, className(t, class_), 0),
+             &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
+        {
+          classFlags(t, class_) |= flags;
+        }
       }
 
       object addendum = getClassAddendum(t, class_, pool);
@@ -2323,6 +2331,20 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
 
       object addendum = getClassAddendum(t, class_, pool);
       set(t, addendum, AddendumAnnotationTable, body);
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>
+                          ("EnclosingMethod"),
+                          &byteArrayBody(t, name, 0)) == 0)
+    {
+      int16_t enclosingClass = s.read2();
+      int16_t enclosingMethod = s.read2();
+
+      object addendum = getClassAddendum(t, class_, pool);
+
+      set(t, addendum, ClassAddendumEnclosingClass,
+          referenceName(t, singletonObject(t, pool, enclosingClass - 1)));
+
+      set(t, addendum, ClassAddendumEnclosingMethod, enclosingMethod
+          ? singletonObject(t, pool, enclosingMethod - 1) : 0);
     } else {
       s.skip(length);
     }

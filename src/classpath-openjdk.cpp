@@ -4445,8 +4445,8 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
         if (innerClassReferenceOuter(t, arrayBody(t, table, i))) {
           object inner = getJClass
             (t, resolveClass
-             (t, classLoader(t, jclassVmClass(t, *c)), referenceName
-              (t, innerClassReferenceInner(t, arrayBody(t, table, i)))));
+             (t, classLoader(t, jclassVmClass(t, *c)),
+              innerClassReferenceInner(t, arrayBody(t, table, i))));
           
           -- count;
           set(t, result, ArrayBody + (count * BytesPerWord), inner);
@@ -4474,13 +4474,29 @@ jvmGetDeclaringClass(Thread* t, uintptr_t* arguments)
 {
   jclass c = reinterpret_cast<jobject>(arguments[0]);
 
-  object method = resolveMethod
-    (t, root(t, Machine::BootLoader), "avian/OpenJDK", "getDeclaringClass",
-     "(Lavian/VMClass;)Ljava/lang/Class;");
+  object class_ = jclassVmClass(t, *c);
+  object addendum = classAddendum(t, class_);
+  if (addendum) {
+    object table = classAddendumInnerClassTable(t, addendum);
+    if (table) {
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object reference = arrayBody(t, table, i);
+        if (strcmp
+            (&byteArrayBody(t, innerClassReferenceInner(t, reference), 0),
+             &byteArrayBody(t, className(t, class_), 0)) == 0)
+        {
+          return reinterpret_cast<uintptr_t>
+            (makeLocalReference
+             (t, getJClass
+              (t, resolveClass
+               (t, classLoader(t, class_), innerClassReferenceOuter
+                (t, reference)))));
+        }
+      }
+    }
+  }
 
-  return reinterpret_cast<uintptr_t>
-    (makeLocalReference
-     (t, t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c))));
+  return 0;
 }
 
 extern "C" JNIEXPORT jclass JNICALL
@@ -5517,11 +5533,59 @@ EXPORT(JVM_GetManagement)(jint version)
 extern "C" JNIEXPORT jobject JNICALL
 EXPORT(JVM_InitAgentProperties)(Thread*, jobject) { abort(); }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
-EXPORT(JVM_GetEnclosingMethodInfo)(JNIEnv*, jclass)
+uint64_t
+getEnclosingMethodInfo(Thread* t, uintptr_t* arguments)
 {
-  // todo: implement properly
+  jclass c = reinterpret_cast<jclass>(arguments[0]);
+  object class_ = jclassVmClass(t, *c);
+  PROTECT(t, class_);
+
+  object addendum = classAddendum(t, class_);
+  if (addendum) {
+    object enclosingClass = classAddendumEnclosingClass(t, addendum);
+    if (enclosingClass) {
+      PROTECT(t, enclosingClass);
+
+      object array = makeObjectArray(t, type(t, Machine::JobjectType), 3);
+      PROTECT(t, array);
+
+      enclosingClass = getJClass
+        (t, resolveClass(t, classLoader(t, class_), enclosingClass));
+      
+      set(t, array, ArrayBody, enclosingClass);
+
+      object enclosingMethod = classAddendumEnclosingMethod(t, addendum);
+
+      if (enclosingMethod) {
+        PROTECT(t, enclosingMethod);
+
+        object name = t->m->classpath->makeString
+          (t, pairFirst(t, enclosingMethod), 0,
+           byteArrayLength(t, pairFirst(t, enclosingMethod)) - 1);
+
+        set(t, array, ArrayBody + BytesPerWord, name);
+
+        object spec = t->m->classpath->makeString
+          (t, pairSecond(t, enclosingMethod), 0,
+           byteArrayLength(t, pairSecond(t, enclosingMethod)) - 1);
+
+        set(t, array, ArrayBody + (2 * BytesPerWord), spec);
+      }
+
+      return reinterpret_cast<uintptr_t>(makeLocalReference(t, array));
+    }
+  }
   return 0;
+}
+
+
+extern "C" JNIEXPORT jobjectArray JNICALL
+EXPORT(JVM_GetEnclosingMethodInfo)(Thread* t, jclass c)
+{
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
+
+  return reinterpret_cast<jobjectArray>
+    (run(t, getEnclosingMethodInfo, arguments));
 }
 
 extern "C" JNIEXPORT jintArray JNICALL

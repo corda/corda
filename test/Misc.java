@@ -256,5 +256,8 @@ public class Misc {
 
     expect(new Object[0] instanceof Cloneable);
     expect(new Object[0] instanceof java.io.Serializable);
+
+    expect((Baz.class.getModifiers() & java.lang.reflect.Modifier.STATIC)
+           != 0);
   }
 }
