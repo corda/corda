@@ -3285,7 +3285,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
      static_cast<Finder*>
      (systemClassLoaderFinder(t, root(t, Machine::BootLoader)))->path());
 
-  local::setProperty(t, method, *properties, "file.encoding", "ASCII");
+  local::setProperty(t, method, *properties, "file.encoding", "UTF-8");
 #ifdef ARCH_x86_32
   local::setProperty(t, method, *properties, "os.arch", "x86");
 #elif defined ARCH_x86_64
