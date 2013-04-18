@@ -561,6 +561,9 @@ invoke(Thread* t, object method, object instance, object args)
         object exception = t->exception;
         t->exception = makeThrowable
           (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
+        
+        set(t, t->exception, InvocationTargetExceptionTarget,
+            throwableCause(t, t->exception));
       }
     });
 

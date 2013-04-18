@@ -11,6 +11,8 @@
 package java.lang.reflect;
 
 public class InvocationTargetException extends Exception {
+  private Throwable target; // for compatibility with OpenJDK
+
   public InvocationTargetException(Throwable targetException, String message) {
     super(message, targetException);
   }
