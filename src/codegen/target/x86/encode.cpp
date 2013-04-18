@@ -330,6 +330,10 @@ void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
     int64_t v = a->value->value();
 
+    if (aSize == 4) {
+      v = static_cast<int32_t>(v);
+    }
+
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     lir::Constant ah(&high);
 
@@ -344,8 +348,16 @@ void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
     maybeRex(c, vm::TargetBytesPerWord, b);
     opcode(c, 0xb8 + regCode(b));
     if (a->value->resolved()) {
-      c->code.appendTargetAddress(a->value->value());
+      int64_t v = a->value->value();
+      
+      if (aSize == 4 and bSize == 8) {
+        v = static_cast<int32_t>(v);
+      }
+
+      c->code.appendTargetAddress(v);
     } else {
+      expect(c, aSize == vm::TargetBytesPerWord);
+
       appendImmediateTask
         (c, a->value, offsetPromise(c), vm::TargetBytesPerWord, promiseOffset);
       c->code.appendTargetAddress(static_cast<vm::target_uintptr_t>(0));
