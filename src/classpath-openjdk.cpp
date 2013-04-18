@@ -4706,6 +4706,10 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
      (t, jclassVmClass(t, jmethodClazz(t, *method))),
       jmethodSlot(t, *method));
 
+  if (methodFlags(t, vmMethod) & ACC_STATIC) {
+    instance = 0;
+  }
+
   if (instance and not instanceOf(t, methodClass(t, vmMethod), *instance)) {
     throwNew(t, Machine::IllegalArgumentExceptionType);
   }
