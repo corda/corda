@@ -259,5 +259,10 @@ public class Misc {
 
     expect((Baz.class.getModifiers() & java.lang.reflect.Modifier.STATIC)
            != 0);
+
+    expect((Protected.class.getModifiers() & java.lang.reflect.Modifier.PUBLIC)
+           == 0);
   }
+
+  protected class Protected { }
 }

@@ -470,6 +470,12 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  shutDown(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   dispose()
   {
     if (tzdata) {

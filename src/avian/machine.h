@@ -1593,6 +1593,9 @@ class Classpath {
               object calleeMethodName, object calleeMethodSpec) = 0;
 
   virtual void
+  shutDown(Thread* t) = 0;
+
+  virtual void
   dispose() = 0;
 };
 

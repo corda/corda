@@ -898,6 +898,21 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  shutDown(Thread* t)
+  {
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/lang/Shutdown", false);
+
+    if (c) {
+      object m = findMethodOrNull(t, c, "shutdown", "()V");
+      
+      if (m) {
+        t->m->processor->invoke(t, m, 0);
+      }
+    }
+  }
+
+  virtual void
   dispose()
   { 
     allocator->free(buffer, bufferSize);

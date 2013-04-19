@@ -2315,7 +2315,7 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
             (&byteArrayBody(t, className(t, class_), 0),
              &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
         {
-          classFlags(t, class_) |= flags;
+          classFlags(t, class_) = flags;
         }
       }
 
@@ -3320,6 +3320,8 @@ shutDown(Thread* t)
   PROTECT(t, hooks);
 
   setRoot(t, Machine::ShutdownHooks, 0);
+
+  t->m->classpath->shutDown(t);
 
   object h = hooks;
   PROTECT(t, h);
