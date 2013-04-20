@@ -3829,6 +3829,14 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
                   sizeof(BOOTSTRAP_PROPERTY)) == 0)
       {
         bootLibraries = p + sizeof(BOOTSTRAP_PROPERTY);
+      } else if (strncmp(p, JAVA_COMMAND_PROPERTY "=",
+                         sizeof(JAVA_COMMAND_PROPERTY)) == 0
+                 or strncmp(p, JAVA_LAUNCHER_PROPERTY "=",
+                            sizeof(JAVA_LAUNCHER_PROPERTY)) == 0)
+      {
+        // this means we're being invoked via the javac or java
+        // command, so the bootstrap library should be e.g. libjvm.so
+        bootLibraries = SO_PREFIX "jvm" SO_SUFFIX;
       } else if (strncmp(p, CRASHDIR_PROPERTY "=",
                          sizeof(CRASHDIR_PROPERTY)) == 0)
       {

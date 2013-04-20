@@ -14,6 +14,8 @@
 #include "avian/machine.h"
 
 #define BOOTSTRAP_PROPERTY "avian.bootstrap"
+#define JAVA_COMMAND_PROPERTY "sun.java.command"
+#define JAVA_LAUNCHER_PROPERTY "sun.java.launcher"
 #define CRASHDIR_PROPERTY "avian.crash.dir"
 #define EMBED_PREFIX_PROPERTY "avian.embed.prefix"
 #define CLASSPATH_PROPERTY "java.class.path"
