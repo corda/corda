@@ -157,12 +157,12 @@ ifneq ($(android),)
 	classpath-cflags = -DBOOT_JAVAHOME
 	android-cflags := -I$(luni-native) \
 		-I$(android)/libnativehelper/include/nativehelper \
-		-I$(android)/core/include \
-		-I$(android)/zlib \
-		-I$(android)/icu4c/i18n \
-		-I$(android)/icu4c/common \
-		-I$(android)/expat \
-		-I$(android)/openssl/include \
+		-I$(android)/system/core/include \
+		-I$(android)/external/zlib \
+		-I$(android)/external/icu4c/i18n \
+		-I$(android)/external/icu4c/common \
+		-I$(android)/external/expat \
+		-I$(android)/external/openssl/include \
 		-I$(android)/libcore/include \
 		-I$(build)/android-src/external/fdlibm \
 		-I$(build)/android-src \
@@ -188,21 +188,21 @@ ifneq ($(android),)
 			$(luni-native)/AsynchronousSocketCloseMonitor.cpp \
 			$(luni-native)/NetworkUtilities.cpp
 		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
-		icu-libs := $(android)/icu4c/lib/sicuin.a \
-			$(android)/icu4c/lib/sicuuc.a \
-			$(android)/icu4c/lib/sicudt.a
+		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
+			$(android)/external/icu4c/lib/sicuuc.a \
+			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32
 	else
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
-		icu-libs := $(android)/icu4c/lib/libicui18n.a \
-			$(android)/icu4c/lib/libicuuc.a \
-			$(android)/icu4c/lib/libicudata.a
+		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
+			$(android)/external/icu4c/lib/libicuuc.a \
+			$(android)/external/icu4c/lib/libicudata.a
 	endif
 
 	classpath-lflags := \
 		$(icu-libs) \
-		$(android)/fdlibm/libfdm.a \
-		$(android)/expat/.libs/libexpat.a \
+		$(android)/external/fdlibm/libfdm.a \
+		$(android)/external/expat/.libs/libexpat.a \
 		$(android)/openssl-upstream/libssl.a \
 		$(android)/openssl-upstream/libcrypto.a \
 		$(platform-lflags) \
@@ -1475,8 +1475,8 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	@mkdir -p $(build)/android
 	@mkdir -p $(build)/android-src/external/fdlibm
 	@mkdir -p $(build)/android-src/libexpat
-	cp $(android)/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
-	cp $(android)/expat/lib/expat*.h $(build)/android-src/libexpat/
+	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
+	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java

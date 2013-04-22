@@ -354,38 +354,46 @@ can also build with the Android class library on some platforms
 (currently Linux works and OS X mostly works).  To build this way, do
 the following, starting from the Avian directory:
 
-    $ cd ..
-    $ mkdir android
-    $ git clone https://android.googlesource.com/platform/bionic
-    $ git clone https://android.googlesource.com/platform/system/core
-    $ git clone https://android.googlesource.com/platform/external/expat
-    $ git clone https://android.googlesource.com/platform/external/fdlibm
-    $ git clone https://android.googlesource.com/platform/external/icu4c
-    $ git clone https://android.googlesource.com/platform/libnativehelper
-    $ git clone https://android.googlesource.com/platform/external/openssl
-    $ git clone https://android.googlesource.com/platform/external/zlib
-    $ git clone git://git.openssl.org/openssl.git openssl-upstream
-    $ git clone https://github.com/dicej/android-libcore64 libcore
-    $ (cd expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
-         && make)
-    $ (cd fdlibm && (mv makefile.in Makefile.in || true) \
-         && CFLAGS=-fPIC bash configure && make)
-    $ (cd icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure --enable-static \
-         && make)
+    cd ..
+    mkdir -p android/system android/external
+    cd android
+    git clone https://android.googlesource.com/platform/bionic
+    git clone https://android.googlesource.com/platform/system/core \
+      system/core
+    git clone https://android.googlesource.com/platform/external/expat \
+      external/expat
+    git clone https://android.googlesource.com/platform/external/fdlibm \
+      external/fdlibm
+    git clone https://android.googlesource.com/platform/external/icu4c \
+      external/icu4c
+    git clone https://android.googlesource.com/platform/libnativehelper
+    git clone https://android.googlesource.com/platform/external/openssl \
+      external/openssl
+    git clone https://android.googlesource.com/platform/external/zlib \
+      external/zlib
+    git clone git://git.openssl.org/openssl.git openssl-upstream
+    git clone https://github.com/dicej/android-libcore64 libcore
+    (cd external/expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
+       --enable-static && make)
+    (cd external/fdlibm && (mv makefile.in Makefile.in || true) \
+       && CFLAGS=-fPIC bash configure && make)
+    (cd external/icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
+       --enable-static && make)
 
 NB: use 'CC="gcc -fPIC" ./Configure darwin64-x86_64-cc' when building
 for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
 
-    $ (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
-         && (for x in ../openssl/patches/*.patch; do patch -p1 < $x; done) \
-         && CC="gcc -fPIC" ./config && make)
-    $ cd ../avian
-    $ make android=$(pwd)/../android test
+    (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
+       && (for x in ../external/openssl/patches/*.patch; \
+             do patch -p1 < $x; done) \
+       && CC="gcc -fPIC" ./config && make)
+    cd ../avian
+    make android=$(pwd)/../android test
 
 Note that we use https://github.com/dicej/android-libcore64 above
 instead of the upstream
-https://android.googlesource.com/platform/libcore repository.  This is
-temporary until upstream has been patched with 64-bit support.
+https://android.googlesource.com/platform/libcore repository, since
+the former has patches to provide better support for non-Linux platforms.
 
 Also note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build
