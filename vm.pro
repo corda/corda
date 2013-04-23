@@ -54,6 +54,7 @@
 -keep public class java.lang.ArrayIndexOutOfBoundsException
 -keep public class java.lang.ArrayStoreException
 -keep public class java.lang.NegativeArraySizeException
+-keep public class java.lang.CloneNotSupportedException
 -keep public class java.lang.ClassCastException
 -keep public class java.lang.ClassNotFoundException
 -keep public class java.lang.NullPointerException

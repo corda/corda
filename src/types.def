@@ -226,6 +226,8 @@
 
 (type negativeArraySizeException java/lang/NegativeArraySizeException)
 
+(type cloneNotSupportedException java/lang/CloneNotSupportedException)
+
 (type reflectiveOperationException java/lang/ReflectiveOperationException)
 
 (type classCastException java/lang/ClassCastException)

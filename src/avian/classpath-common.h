@@ -260,11 +260,14 @@ clone(Thread* t, object o)
     memcpy(clone, o, size);
     // clear any object header flags:
     setObjectClass(t, o, objectClass(t, o));
-  } else {
+  } else if (instanceOf(t, type(t, Machine::CloneableType), o)) {
     clone = make(t, class_);
     memcpy(reinterpret_cast<void**>(clone) + 1,
            reinterpret_cast<void**>(o) + 1,
            size - BytesPerWord);
+  } else {
+    throwNew(t, Machine::CloneNotSupportedExceptionType, "%s",
+             &byteArrayBody(t, className(t, objectClass(t, o)), 0)); 
   }
 
   return clone;
