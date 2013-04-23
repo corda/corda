@@ -4874,29 +4874,24 @@ EXPORT(JVM_ConstantPoolGetLongAt)(Thread* t, jobject, jobject pool, jint index)
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-EXPORT(JVM_ConstantPoolGetFloatAt)(Thread*, jobject, jobject, jint)
-{ abort(); }
-
-uint64_t
-jvmConstantPoolGetDoubleAt(Thread* t, uintptr_t* arguments)
+EXPORT(JVM_ConstantPoolGetFloatAt)(Thread* t, jobject, jobject pool,
+                                   jint index)
 {
-  jobject pool = reinterpret_cast<jobject>(arguments[0]);
-  jint index = arguments[1];
+  ENTER(t, Thread::ActiveState);
 
-  double v; memcpy(&v, &singletonValue(t, *pool, index - 1), 8);
-
-  return doubleToBits(v);
+  return bitsToFloat(singletonValue(t, *pool, index - 1));
 }
 
 extern "C" JNIEXPORT jdouble JNICALL
 EXPORT(JVM_ConstantPoolGetDoubleAt)(Thread* t, jobject, jobject pool,
                                     jint index)
 {
-  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(pool),
-                            static_cast<uintptr_t>(index) };
+  ENTER(t, Thread::ActiveState);
 
-  return bitsToDouble
-    (run(t, jvmConstantPoolGetDoubleAt, arguments));
+  double v;
+  memcpy(&v, &singletonValue(t, *pool, index - 1), 8);
+
+  return v;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
