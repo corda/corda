@@ -3942,6 +3942,18 @@ lineNumberLine(uint64_t ln)
   return ln & 0xFFFFFFFF;
 }
 
+object
+interruptLock(Thread* t, object thread);
+
+void
+clearInterrupted(Thread* t);
+
+void
+threadInterrupt(Thread* t, object thread);
+
+bool
+threadIsInterrupted(Thread* t, object thread, bool clear);
+
 inline FILE*
 errorLog(Thread* t)
 {

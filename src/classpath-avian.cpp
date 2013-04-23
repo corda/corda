@@ -661,7 +661,7 @@ Avian_java_lang_Thread_interrupt
 {
   int64_t peer; memcpy(&peer, arguments, 8);
 
-  interrupt(t, reinterpret_cast<Thread*>(peer));
+  threadInterrupt(t, reinterpret_cast<Thread*>(peer)->javaThread);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -670,7 +670,8 @@ Avian_java_lang_Thread_interrupted
 {
   int64_t peer; memcpy(&peer, arguments, 8);
 
-  return getAndClearInterrupted(t, reinterpret_cast<Thread*>(peer));
+  return threadIsInterrupted
+    (t, reinterpret_cast<Thread*>(peer)->javaThread, true);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

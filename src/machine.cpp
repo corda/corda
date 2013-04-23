@@ -5186,6 +5186,67 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   }
 }
 
+object
+interruptLock(Thread* t, object thread)
+{
+  object lock = threadInterruptLock(t, thread);
+
+  loadMemoryBarrier();
+
+  if (lock == 0) {
+    PROTECT(t, thread);
+    ACQUIRE(t, t->m->referenceLock);
+
+    if (threadInterruptLock(t, thread) == 0) {
+      object head = makeMonitorNode(t, 0, 0);
+      object lock = makeMonitor(t, 0, 0, 0, head, head, 0);
+
+      storeStoreMemoryBarrier();
+
+      set(t, thread, ThreadInterruptLock, lock);
+    }
+  }
+  
+  return threadInterruptLock(t, thread);
+}
+
+void
+clearInterrupted(Thread* t)
+{
+  monitorAcquire(t, interruptLock(t, t->javaThread));
+  threadInterrupted(t, t->javaThread) = false;
+  monitorRelease(t, interruptLock(t, t->javaThread));
+}
+
+void
+threadInterrupt(Thread* t, object thread)
+{
+  PROTECT(t, thread);
+  
+  monitorAcquire(t, interruptLock(t, thread));
+  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, thread));
+  if (p) {
+    interrupt(t, p);
+  }
+  threadInterrupted(t, thread) = true;
+  monitorRelease(t, interruptLock(t, thread));
+}
+
+bool
+threadIsInterrupted(Thread* t, object thread, bool clear)
+{
+  PROTECT(t, thread);
+  
+  monitorAcquire(t, interruptLock(t, thread));
+  bool v = threadInterrupted(t, thread);
+  if (clear) {
+    threadInterrupted(t, thread) = false;
+  }
+  monitorRelease(t, interruptLock(t, thread));
+
+  return v;
+}
+
 void
 noop()
 { }

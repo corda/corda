@@ -406,6 +406,41 @@ public class Classes {
     return -1;
   }
 
+  public static int countMethods(VMClass vmClass, boolean publicOnly) {
+    int count = 0;
+    if (vmClass.methodTable != null) {
+      for (int i = 0; i < vmClass.methodTable.length; ++i) {
+        if (((! publicOnly)
+             || ((vmClass.methodTable[i].flags & Modifier.PUBLIC))
+             != 0)
+            && (! toString(vmClass.methodTable[i].name).startsWith("<")))
+        {
+          ++ count;
+        }
+      }
+    }
+    return count;
+  }
+
+  public static Method[] getMethods(VMClass vmClass, boolean publicOnly) {
+    Method[] array = new Method[countMethods(vmClass, publicOnly)];
+    if (vmClass.methodTable != null) {
+      Classes.link(vmClass);
+
+      int ai = 0;
+      for (int i = 0; i < vmClass.methodTable.length; ++i) {
+        if ((((vmClass.methodTable[i].flags & Modifier.PUBLIC) != 0)
+             || (! publicOnly))
+            && ! toString(vmClass.methodTable[i].name).startsWith("<"))
+        {
+          array[ai++] = makeMethod(SystemClassLoader.getClass(vmClass), i);
+        }
+      }
+    }
+
+    return array;
+  }
+
   public static Annotation getAnnotation(ClassLoader loader, Object[] a) {
     if (a[0] == null) {
       a[0] = Proxy.newProxyInstance

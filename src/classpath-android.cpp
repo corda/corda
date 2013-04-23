@@ -48,6 +48,12 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
   loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
 }
 
+void JNICALL
+finalizeAllEnqueued(Thread*, object, uintptr_t*)
+{
+  // ignore
+}
+
 int64_t JNICALL
 appLoader(Thread* t, object, uintptr_t*)
 {
@@ -149,6 +155,11 @@ initVmThread(Thread* t, object thread)
     t->m->processor->invoke(t, constructor, instance, thread);
 
     set(t, thread, fieldOffset(t, field), instance);
+  }
+
+  if (threadGroup(t, thread) == 0) {
+    set(t, thread, ThreadGroup, threadGroup(t, t->javaThread));
+    expect(t, threadGroup(t, thread));
   }
 }
 
@@ -349,6 +360,18 @@ class MyClasspath : public Classpath {
         intercept(t, c, "loadLibrary",
                   "(Ljava/lang/String;Ljava/lang/ClassLoader;)V",
                   voidPointer(loadLibrary), updateRuntimeData);
+      }
+    }
+
+    { object c = resolveClass
+        (t, root(t, Machine::BootLoader), "java/lang/ref/FinalizerReference",
+         false);
+
+      if (c) {
+        PROTECT(t, c);
+
+        intercept(t, c, "finalizeAllEnqueued", "()V",
+                  voidPointer(finalizeAllEnqueued), updateRuntimeData);
       }
     }
 
@@ -1071,7 +1094,7 @@ Avian_java_lang_VMThread_getStatus
 (Thread*, object, uintptr_t*)
 {
   // todo
-  return -1;
+  return 1;
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -1379,6 +1402,23 @@ Avian_java_lang_Class_isInstance
   } else {
     return 0;
   }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_java_lang_Class_getDeclaredMethods
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, c);
+
+  bool publicOnly = arguments[1];
+
+  object get = resolveMethod
+    (t, root(t, Machine::BootLoader), "avian/Classes", "getMethods",
+     "(Lavian/VMClass;Z)[Ljava/lang/reflect/Method;");
+
+  return reinterpret_cast<uintptr_t>
+    (t->m->processor->invoke(t, get, 0, jclassVmClass(t, c), publicOnly));
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

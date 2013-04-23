@@ -2461,38 +2461,6 @@ setProperty(Thread* t, object method, object properties,
   t->m->processor->invoke(t, method, properties, n, v);
 }
 
-object
-interruptLock(Thread* t, object thread)
-{
-  object lock = threadInterruptLock(t, thread);
-
-  loadMemoryBarrier();
-
-  if (lock == 0) {
-    PROTECT(t, thread);
-    ACQUIRE(t, t->m->referenceLock);
-
-    if (threadInterruptLock(t, thread) == 0) {
-      object head = makeMonitorNode(t, 0, 0);
-      object lock = makeMonitor(t, 0, 0, 0, head, head, 0);
-
-      storeStoreMemoryBarrier();
-
-      set(t, thread, ThreadInterruptLock, lock);
-    }
-  }
-  
-  return threadInterruptLock(t, thread);
-}
-
-void
-clearInterrupted(Thread* t)
-{
-  monitorAcquire(t, local::interruptLock(t, t->javaThread));
-  threadInterrupted(t, t->javaThread) = false;
-  monitorRelease(t, local::interruptLock(t, t->javaThread));
-}
-
 bool
 pipeAvailable(int fd, int* available)
 {
@@ -2725,27 +2693,6 @@ Avian_sun_misc_Unsafe_objectFieldOffset
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getObject
-(Thread*, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-
-  return fieldAtOffset<uintptr_t>(o, offset);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_putObject
-(Thread* t, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  uintptr_t value = arguments[4];
-
-  set(t, o, offset, reinterpret_cast<object>(value));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2960,25 +2907,6 @@ Avian_sun_misc_Unsafe_putOrderedObject
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_compareAndSwapObject
-(Thread* t, object, uintptr_t* arguments)
-{
-  object target = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  uintptr_t expect = arguments[4];
-  uintptr_t update = arguments[5];
-
-  bool success = atomicCompareAndSwap
-    (&fieldAtOffset<uintptr_t>(target, offset), expect, update);
-
-  if (success) {
-    mark(t, target, offset);
-  }
-
-  return success;
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapLong
 (Thread* t UNUSED, object, uintptr_t* arguments)
 {
@@ -3013,57 +2941,6 @@ Avian_sun_misc_Unsafe_ensureClassInitialized
 (Thread* t, object, uintptr_t* arguments)
 {
   initClass(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1])));
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_unpark
-(Thread* t, object, uintptr_t* arguments)
-{
-  object thread = reinterpret_cast<object>(arguments[1]);
-  
-  monitorAcquire(t, local::interruptLock(t, thread));
-  threadUnparked(t, thread) = true;
-  monitorNotify(t, local::interruptLock(t, thread));
-  monitorRelease(t, local::interruptLock(t, thread));
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_sun_misc_Unsafe_park
-(Thread* t, object, uintptr_t* arguments)
-{
-  bool absolute = arguments[1];
-  int64_t time; memcpy(&time, arguments + 2, 8);
-  
-  int64_t then = t->m->system->now();
-
-  if (absolute) {
-    time -= then;
-    if (time <= 0) {
-      return;
-    }
-  } else if (time) {
-    // if not absolute, interpret time as nanoseconds, but make sure
-    // it doesn't become zero when we convert to milliseconds, since
-    // zero is interpreted as infinity below
-    time = (time / (1000 * 1000)) + 1;
-  }
-
-  monitorAcquire(t, local::interruptLock(t, t->javaThread));
-  while (time >= 0
-         and (not (threadUnparked(t, t->javaThread)
-                   or monitorWait
-                   (t, local::interruptLock(t, t->javaThread), time))))
-  {
-    int64_t now = t->m->system->now();
-    time -= now - then;
-    then = now;
-    
-    if (time == 0) {
-      break;
-    }
-  }
-  threadUnparked(t, t->javaThread) = false;
-  monitorRelease(t, local::interruptLock(t, t->javaThread));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -3635,15 +3512,7 @@ EXPORT(JVM_CountStackFrames)(Thread*, jobject) { abort(); }
 uint64_t
 jvmInterrupt(Thread* t, uintptr_t* arguments)
 {
-  jobject thread = reinterpret_cast<jobject>(arguments[0]);
-
-  monitorAcquire(t, local::interruptLock(t, *thread));
-  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, *thread));
-  if (p) {
-    interrupt(t, p);
-  }
-  threadInterrupted(t, *thread) = true;
-  monitorRelease(t, local::interruptLock(t, *thread));
+  threadInterrupt(t, *reinterpret_cast<jobject>(arguments[0]));
 
   return 1;
 }
@@ -3662,14 +3531,7 @@ jvmIsInterrupted(Thread* t, uintptr_t* arguments)
   jobject thread = reinterpret_cast<jobject>(arguments[0]);
   jboolean clear = arguments[1];
 
-  monitorAcquire(t, local::interruptLock(t, *thread));
-  bool v = threadInterrupted(t, *thread);
-  if (clear) {
-    threadInterrupted(t, *thread) = false;
-  }
-  monitorRelease(t, local::interruptLock(t, *thread));
-
-  return v;
+  return threadIsInterrupted(t, *thread, clear);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
