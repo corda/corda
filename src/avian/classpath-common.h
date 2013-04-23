@@ -527,10 +527,16 @@ invoke(Thread* t, object method, object instance, object args)
       case 'J': type = vm::type(t, Machine::LongType); break;
       case 'D': type = vm::type(t, Machine::DoubleType); break;
 
-      case 'L': ++ p;
+      case 'L':
       case '[': {
         objectType = true;
-        unsigned nameLength = it.s - p;
+        unsigned nameLength;
+        if (*p == 'L') {
+          ++ p;
+          nameLength = it.s - p;
+        } else {
+          nameLength = (it.s - p) + 1;
+        }
         THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
         memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
         RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
