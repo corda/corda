@@ -65,6 +65,9 @@ void negateRR(Context* c, unsigned aSize, lir::Register* a,
 void moveCR(Context* c, unsigned aSize, lir::Constant* a,
        unsigned bSize, lir::Register* b);
 
+void moveZCR(Context* c, unsigned aSize, lir::Constant* a,
+             unsigned bSize, lir::Register* b);
+
 void swapRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
        unsigned bSize UNUSED, lir::Register* b);
 

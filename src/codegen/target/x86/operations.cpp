@@ -226,6 +226,19 @@ void moveCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
+void moveZCR(Context* c, unsigned aSize UNUSED, lir::Constant* a,
+             unsigned bSize UNUSED, lir::Register* b)
+{
+  assert(c, not isFloatReg(b));
+  assert(c, aSize == 2);
+  assert(c, bSize == vm::TargetBytesPerWord);
+  assert(c, a->value->resolved());
+
+  maybeRex(c, vm::TargetBytesPerWord, b);
+  opcode(c, 0xb8 + regCode(b));
+  c->code.appendTargetAddress(static_cast<uint16_t>(a->value->value()));
+}
+
 void swapRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
        unsigned bSize UNUSED, lir::Register* b)
 {
