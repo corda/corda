@@ -74,6 +74,11 @@ DetachCurrentThread(Machine* m)
 uint64_t
 destroyJavaVM(Thread* t, uintptr_t*)
 {
+  { ENTER(t, Thread::ActiveState);
+
+    t->m->classpath->shutDown(t);
+  }
+
   // wait for other non-daemon threads to exit
   { ACQUIRE(t, t->m->stateLock);
     while (t->m->liveCount - t->m->daemonCount > 1) {

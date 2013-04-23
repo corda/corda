@@ -3324,8 +3324,6 @@ shutDown(Thread* t)
 
   setRoot(t, Machine::ShutdownHooks, 0);
 
-  t->m->classpath->shutDown(t);
-
   object h = hooks;
   PROTECT(t, h);
   for (; h; h = pairSecond(t, h)) {
