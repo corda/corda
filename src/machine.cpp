@@ -2510,10 +2510,13 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_,
   default:
     if (dimensions > 1) {
       char c = *s;
-      elementSpec = makeByteArray(t, 3);
-      byteArrayBody(t, elementSpec, 0) = '[';
-      byteArrayBody(t, elementSpec, 1) = c;
-      byteArrayBody(t, elementSpec, 2) = 0;
+      elementSpec = makeByteArray(t, dimensions + 1);
+      unsigned i;
+      for (i = 0; i < dimensions - 1; ++i) {
+        byteArrayBody(t, elementSpec, i) = '[';
+      }
+      byteArrayBody(t, elementSpec, i++) = c;
+      byteArrayBody(t, elementSpec, i) = 0;
       -- dimensions;
     } else {
       abort(t);
