@@ -24,6 +24,24 @@
 
 using namespace avian::util;
 
+namespace {
+
+int64_t
+signExtend(unsigned size, int64_t v)
+{      
+  if (size == 4) {
+    return static_cast<int32_t>(v);
+  } else if (size == 2) {
+    return static_cast<int16_t>(v);
+  } else if (size == 1) {
+    return static_cast<int8_t>(v);
+  } else {
+    return v;
+  }
+}
+
+} // namespace
+
 namespace avian {
 namespace codegen {
 namespace x86 {
@@ -328,11 +346,7 @@ void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
         UNUSED unsigned bSize, lir::Register* b, unsigned promiseOffset)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
-    int64_t v = a->value->value();
-
-    if (aSize == 4) {
-      v = static_cast<int32_t>(v);
-    }
+    int64_t v = signExtend(aSize, a->value->value());
 
     ResolvedPromise high((v >> 32) & 0xFFFFFFFF);
     lir::Constant ah(&high);
@@ -348,13 +362,7 @@ void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
     maybeRex(c, vm::TargetBytesPerWord, b);
     opcode(c, 0xb8 + regCode(b));
     if (a->value->resolved()) {
-      int64_t v = a->value->value();
-      
-      if (aSize == 4 and bSize == 8) {
-        v = static_cast<int32_t>(v);
-      }
-
-      c->code.appendTargetAddress(v);
+      c->code.appendTargetAddress(signExtend(aSize, a->value->value()));
     } else {
       expect(c, aSize == vm::TargetBytesPerWord);
 
