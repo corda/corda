@@ -6459,11 +6459,11 @@ resolveIpBackwards(Context* context, int start, int end)
   if (start >= static_cast<int>
       (codeLength(t, methodCode(t, context->method))))
   {
-    start = codeLength(t, methodCode(t, context->method)) - 1;
-  }
-
-  while (start >= end and context->visitTable[start] == 0) {
-    -- start;
+    start = codeLength(t, methodCode(t, context->method));
+  } else {
+    while (start >= end and context->visitTable[start] == 0) {
+      -- start;
+    }
   }
   
   if (start < end) {
@@ -6523,7 +6523,8 @@ truncateLineNumberTable(Thread* t, object table, unsigned length)
 }
 
 object
-translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
+translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start,
+                               intptr_t end)
 {
   avian::codegen::Compiler* c = context->compiler;
 
@@ -6559,14 +6560,16 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start)
            exceptionHandlerStart(oldHandler));
 
         assert(t, handlerEnd >= 0);
-        assert(t, handlerEnd < static_cast<int>
+        assert(t, handlerEnd <= static_cast<int>
                (codeLength(t, methodCode(t, context->method))));
 
         intArrayBody(t, newIndex, ni * 3)
           = c->machineIp(handlerStart)->value() - start;
 
         intArrayBody(t, newIndex, (ni * 3) + 1)
-          = c->machineIp(handlerEnd)->value() - start;
+          = (handlerEnd == static_cast<int>
+             (codeLength(t, methodCode(t, context->method)))
+             ? end : c->machineIp(handlerEnd)->value()) - start;
 
         intArrayBody(t, newIndex, (ni * 3) + 2)
           = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
@@ -7339,7 +7342,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   }
 
   { object newExceptionHandlerTable = translateExceptionHandlerTable
-      (t, context, reinterpret_cast<intptr_t>(start));
+      (t, context, reinterpret_cast<intptr_t>(start),
+       reinterpret_cast<intptr_t>(start) + codeSize);
 
     PROTECT(t, newExceptionHandlerTable);
 
