@@ -4448,7 +4448,10 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
 
       unsigned count = 0;
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        if (innerClassReferenceOuter(t, arrayBody(t, table, i))) {
+        object outer = innerClassReferenceOuter(t, arrayBody(t, table, i));
+        if (outer and byteArrayEqual
+            (t, outer, className(t, jclassVmClass(t, *c))))
+        {
           ++ count;
         }
       }
@@ -4457,7 +4460,10 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
       PROTECT(t, result);
 
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        if (innerClassReferenceOuter(t, arrayBody(t, table, i))) {
+        object outer = innerClassReferenceOuter(t, arrayBody(t, table, i));
+        if (outer and byteArrayEqual
+            (t, outer, className(t, jclassVmClass(t, *c))))
+        {
           object inner = getJClass
             (t, resolveClass
              (t, classLoader(t, jclassVmClass(t, *c)),
