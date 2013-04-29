@@ -1,4 +1,12 @@
 public class Misc {
+  private static class μClass {
+    public int μField;
+
+    public void μMethod(int i) {
+      μField = i;
+    }
+  }
+
   private interface Bar {
     public int baz();
   }
@@ -237,5 +245,24 @@ public class Misc {
     System.out.println(new char[] { 'h', 'i' });
 
     expect(! (((Object) new int[0]) instanceof Object[]));
+
+    { μClass μInstance = new μClass();
+      μInstance.μMethod(8933);
+      expect(μInstance.μField == 8933);
+    }
+
+    expect(new int[0] instanceof Cloneable);
+    expect(new int[0] instanceof java.io.Serializable);
+
+    expect(new Object[0] instanceof Cloneable);
+    expect(new Object[0] instanceof java.io.Serializable);
+
+    expect((Baz.class.getModifiers() & java.lang.reflect.Modifier.STATIC)
+           != 0);
+
+    expect((Protected.class.getModifiers() & java.lang.reflect.Modifier.PUBLIC)
+           == 0);
   }
+
+  protected class Protected { }
 }

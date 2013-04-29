@@ -8,16 +8,25 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "jnienv.h"
-#include "machine.h"
-#include "util.h"
-#include "stream.h"
-#include "constants.h"
-#include "processor.h"
-#include "arch.h"
-#include "lzma.h"
+#include "avian/jnienv.h"
+#include "avian/machine.h"
+#include "avian/util.h"
+#include <avian/util/stream.h>
+#include "avian/constants.h"
+#include "avian/processor.h"
+#include "avian/arch.h"
+#include "avian/lzma.h"
+
+#include <avian/util/runtime-array.h>
+#include <avian/util/math.h>
+
+#if defined(PLATFORM_WINDOWS)
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#endif
 
 using namespace vm;
+using namespace avian::util;
 
 namespace {
 
@@ -273,6 +282,8 @@ killZombies(Thread* t, Thread* o)
 unsigned
 footprint(Thread* t)
 {
+  expect(t, t->criticalLevel == 0);
+
   unsigned n = t->heapOffset + t->heapIndex + t->backupHeapIndex;
 
   for (Thread* c = t->child; c; c = c->peer) {
@@ -305,9 +316,9 @@ bool
 walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
      unsigned arrayElementSize, unsigned arrayLength, unsigned start)
 {
-  unsigned fixedSizeInWords = ceiling(fixedSize, BytesPerWord);
+  unsigned fixedSizeInWords = ceilingDivide(fixedSize, BytesPerWord);
   unsigned arrayElementSizeInWords
-    = ceiling(arrayElementSize, BytesPerWord);
+    = ceilingDivide(arrayElementSize, BytesPerWord);
 
   for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
@@ -472,6 +483,25 @@ referenceTargetReachable(Thread* t, Heap::Visitor* v, object* p)
   }
 }
 
+bool
+isFinalizable(Thread* t, object o)
+{
+  return t->m->heap->status(o) == Heap::Unreachable
+    and (classVmFlags
+         (t, static_cast<object>(t->m->heap->follow(objectClass(t, o))))
+         & HasFinalizerFlag);
+}
+
+void
+clearTargetIfFinalizable(Thread* t, object r)
+{
+  if (isFinalizable
+      (t, static_cast<object>(t->m->heap->follow(jreferenceTarget(t, r)))))
+  {
+    jreferenceTarget(t, r) = 0;
+  }
+}
+
 void
 postVisit(Thread* t, Heap::Visitor* v)
 {
@@ -480,16 +510,49 @@ postVisit(Thread* t, Heap::Visitor* v)
 
   assert(t, m->finalizeQueue == 0);
 
+  m->heap->postVisit();
+
+  for (object p = m->weakReferences; p;) {
+    object r = static_cast<object>(m->heap->follow(p));
+    p = jreferenceVmNext(t, r);
+    clearTargetIfFinalizable(t, r);
+  }
+
+  if (major) {
+    for (object p = m->tenuredWeakReferences; p;) {
+      object r = static_cast<object>(m->heap->follow(p));
+      p = jreferenceVmNext(t, r);
+      clearTargetIfFinalizable(t, r);
+    }
+  }
+
+  for (Reference* r = m->jniReferences; r; r = r->next) {
+    if (r->weak and isFinalizable
+        (t, static_cast<object>(t->m->heap->follow(r->target))))
+    {
+      r->target = 0;
+    }
+  }
+
   object firstNewTenuredFinalizer = 0;
   object lastNewTenuredFinalizer = 0;
 
-  for (object* p = &(m->finalizers); *p;) {
-    v->visit(p);
+  { object unreachable = 0;
+    for (object* p = &(m->finalizers); *p;) {
+      v->visit(p);
 
-    if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
-      // target is unreachable - queue it up for finalization
-      finalizerTargetUnreachable(t, v, p);
-    } else {
+      if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+        object finalizer = *p;
+        *p = finalizerNext(t, finalizer);
+
+        finalizerNext(t, finalizer) = unreachable;
+        unreachable = finalizer;
+      } else {
+        p = &finalizerNext(t, *p);
+      }
+    }
+
+    for (object* p = &(m->finalizers); *p;) {
       // target is reachable
       v->visit(&finalizerTarget(t, *p));
 
@@ -508,6 +571,11 @@ postVisit(Thread* t, Heap::Visitor* v)
       } else {
         p = &finalizerNext(t, *p);
       }
+    }
+
+    for (object* p = &unreachable; *p;) {
+      // target is unreachable - queue it up for finalization
+      finalizerTargetUnreachable(t, v, p);
     }
   }
 
@@ -549,16 +617,30 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (major) {
-    for (object* p = &(m->tenuredFinalizers); *p;) {
-      v->visit(p);
+    { object unreachable = 0;
+      for (object* p = &(m->tenuredFinalizers); *p;) {
+        v->visit(p);
 
-      if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
-        // target is unreachable - queue it up for finalization
-        finalizerTargetUnreachable(t, v, p);
-      } else {
+        if (m->heap->status(finalizerTarget(t, *p)) == Heap::Unreachable) {
+          object finalizer = *p;
+          *p = finalizerNext(t, finalizer);
+
+          finalizerNext(t, finalizer) = unreachable;
+          unreachable = finalizer;
+        } else {
+          p = &finalizerNext(t, *p);
+        }
+      }
+
+      for (object* p = &(m->tenuredFinalizers); *p;) {
         // target is reachable
         v->visit(&finalizerTarget(t, *p));
         p = &finalizerNext(t, *p);
+      }
+
+      for (object* p = &unreachable; *p;) {
+        // target is unreachable - queue it up for finalization
+        finalizerTargetUnreachable(t, v, p);
       }
     }
 
@@ -682,7 +764,7 @@ finalizeObject(Thread* t, object o, const char* name)
 }
 
 unsigned
-readByte(Stream& s, unsigned* value)
+readByte(AbstractStream& s, unsigned* value)
 {
   if (*value == NoByte) {
     return s.read1();
@@ -694,8 +776,9 @@ readByte(Stream& s, unsigned* value)
 }
 
 object
-parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
-                  unsigned sourceIndex, unsigned byteA, unsigned byteB)
+parseUtf8NonAscii(Thread* t, AbstractStream& s, object bytesSoFar,
+                  unsigned byteCount, unsigned sourceIndex, unsigned byteA,
+                  unsigned byteB)
 {
   PROTECT(t, bytesSoFar);
   
@@ -747,7 +830,7 @@ parseUtf8NonAscii(Thread* t, Stream& s, object bytesSoFar, unsigned byteCount,
 }
 
 object
-parseUtf8(Thread* t, Stream& s, unsigned length)
+parseUtf8(Thread* t, AbstractStream& s, unsigned length)
 {
   object value = makeByteArray(t, length + 1);
   unsigned vi = 0;
@@ -782,6 +865,14 @@ parseUtf8(Thread* t, Stream& s, unsigned length)
     value = v;
   }
   
+  return value;
+}
+
+object
+makeByteArray(Thread* t, Stream& s, unsigned length)
+{
+  object value = makeByteArray(t, length + 1);
+  s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, value, 0)), length);
   return value;
 }
 
@@ -840,10 +931,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
 
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
-      object value = parseUtf8(t, s, s.read2());
-      if (objectClass(t, value) == type(t, Machine::ByteArrayType)) {
-        value = internByteArray(t, value);
-      }
+      object value = internByteArray(t, makeByteArray(t, s, s.read2()));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
@@ -871,9 +959,9 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
         
-      object value = singletonObject(t, pool, si);
+      object value = parseUtf8(t, singletonObject(t, pool, si));
       value = t->m->classpath->makeString
-        (t, value, 0, cast<uintptr_t>(value, BytesPerWord) - 1);
+        (t, value, 0, fieldAtOffset<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
@@ -1035,7 +1123,7 @@ getClassAddendum(Thread* t, object class_, object pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0, 0, 0);
     set(t, class_, ClassAddendum, addendum);
   }
   return addendum;
@@ -1128,7 +1216,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
   unsigned count = s.read2();
   if (count) {
-    unsigned staticOffset = BytesPerWord * 2;
+    unsigned staticOffset = BytesPerWord * 3;
     unsigned staticCount = 0;
   
     object fieldTable = makeArray(t, count);
@@ -1235,14 +1323,17 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassFieldTable, fieldTable);
 
     if (staticCount) {
-      unsigned footprint = ceiling(staticOffset - (BytesPerWord * 2),
+      unsigned footprint = ceilingDivide(staticOffset - (BytesPerWord * 2),
                                    BytesPerWord);
       object staticTable = makeSingletonOfSize(t, footprint);
 
       uint8_t* body = reinterpret_cast<uint8_t*>
         (&singletonBody(t, staticTable, 0));
 
-      for (unsigned i = 0, offset = 0; i < staticCount; ++i) {
+      memcpy(body, &class_, BytesPerWord);
+      singletonMarkObject(t, staticTable, 0);
+
+      for (unsigned i = 0, offset = BytesPerWord; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
         while (offset % size) {
           ++ offset;
@@ -1303,7 +1394,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
         classObjectMask(t, classSuper(t, class_)));
   } else {
     object mask = makeIntArray
-      (t, ceiling(classFixedSize(t, class_), 32 * BytesPerWord));
+      (t, ceilingDivide(classFixedSize(t, class_), 32 * BytesPerWord));
     intArrayBody(t, mask, 0) = 1;
 
     object superMask = 0;
@@ -1312,7 +1403,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
       if (superMask) {
         memcpy(&intArrayBody(t, mask, 0),
                &intArrayBody(t, superMask, 0),
-               ceiling(classFixedSize(t, classSuper(t, class_)),
+               ceilingDivide(classFixedSize(t, classSuper(t, class_)),
                        32 * BytesPerWord)
                * 4);
       }
@@ -2212,12 +2303,20 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
         int16_t flags = s.read2();
 
         object reference = makeInnerClassReference
-          (t, inner ? singletonObject(t, pool, inner - 1) : 0,
-           outer ? singletonObject(t, pool, outer - 1) : 0,
+          (t,
+           inner ? referenceName(t, singletonObject(t, pool, inner - 1)) : 0,
+           outer ? referenceName(t, singletonObject(t, pool, outer - 1)) : 0,
            name ? singletonObject(t, pool, name - 1) : 0,
            flags);
 
         set(t, table, ArrayBody + (i * BytesPerWord), reference);
+
+        if (0 == strcmp
+            (&byteArrayBody(t, className(t, class_), 0),
+             &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
+        {
+          classFlags(t, class_) = flags;
+        }
       }
 
       object addendum = getClassAddendum(t, class_, pool);
@@ -2232,6 +2331,20 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
 
       object addendum = getClassAddendum(t, class_, pool);
       set(t, addendum, AddendumAnnotationTable, body);
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>
+                          ("EnclosingMethod"),
+                          &byteArrayBody(t, name, 0)) == 0)
+    {
+      int16_t enclosingClass = s.read2();
+      int16_t enclosingMethod = s.read2();
+
+      object addendum = getClassAddendum(t, class_, pool);
+
+      set(t, addendum, ClassAddendumEnclosingClass,
+          referenceName(t, singletonObject(t, pool, enclosingClass - 1)));
+
+      set(t, addendum, ClassAddendumEnclosingMethod, enclosingMethod
+          ? singletonObject(t, pool, enclosingMethod - 1) : 0);
     } else {
       s.skip(length);
     }
@@ -2248,6 +2361,11 @@ updateClassTables(Thread* t, object newClass, object oldClass)
     }
   }
 
+  object staticTable = classStaticTable(t, newClass);
+  if (staticTable) {
+    set(t, staticTable, SingletonBody, newClass);
+  }
+
   if (classFlags(t, newClass) & ACC_INTERFACE) {
     object virtualTable = classVirtualTable(t, newClass);
     if (virtualTable) {
@@ -2257,12 +2375,12 @@ updateClassTables(Thread* t, object newClass, object oldClass)
         }
       }
     }
-  } else {
-    object methodTable = classMethodTable(t, newClass);
-    if (methodTable) {
-      for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
-        set(t, arrayBody(t, methodTable, i), MethodClass, newClass);
-      }
+  }
+
+  object methodTable = classMethodTable(t, newClass);
+  if (methodTable) {
+    for (unsigned i = 0; i < arrayLength(t, methodTable); ++i) {
+      set(t, arrayBody(t, methodTable, i), MethodClass, newClass);
     }
   }
 }
@@ -2303,8 +2421,6 @@ object
 makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
                object elementClass)
 {
-  // todo: arrays should implement Cloneable and Serializable
-
   if (classVmFlags(t, type(t, Machine::JobjectType)) & BootstrapFlag) {
     PROTECT(t, loader);
     PROTECT(t, spec);
@@ -2332,7 +2448,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      spec,
      0,
      type(t, Machine::JobjectType),
-     0,
+     root(t, Machine::ArrayInterfaceTable),
      vtable,
      0,
      0,
@@ -2394,10 +2510,13 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_,
   default:
     if (dimensions > 1) {
       char c = *s;
-      elementSpec = makeByteArray(t, 3);
-      byteArrayBody(t, elementSpec, 0) = '[';
-      byteArrayBody(t, elementSpec, 1) = c;
-      byteArrayBody(t, elementSpec, 2) = 0;
+      elementSpec = makeByteArray(t, dimensions + 1);
+      unsigned i;
+      for (i = 0; i < dimensions - 1; ++i) {
+        byteArrayBody(t, elementSpec, i) = '[';
+      }
+      byteArrayBody(t, elementSpec, i++) = c;
+      byteArrayBody(t, elementSpec, i) = 0;
       -- dimensions;
     } else {
       abort(t);
@@ -2557,6 +2676,20 @@ nameClass(Thread* t, Machine::Type type, const char* name)
 }
 
 void
+makeArrayInterfaceTable(Thread* t)
+{
+  object interfaceTable = makeArray(t, 4);
+  
+  set(t, interfaceTable, ArrayBody, type
+      (t, Machine::SerializableType));
+  
+  set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
+      type(t, Machine::CloneableType));
+  
+  setRoot(t, Machine::ArrayInterfaceTable, interfaceTable);
+}
+
+void
 boot(Thread* t)
 {
   Machine* m = t->m;
@@ -2667,6 +2800,25 @@ boot(Thread* t)
 
   setRoot(t, Machine::StringMap, makeWeakHashMap(t, 0, 0));
 
+  makeArrayInterfaceTable(t);
+
+  set(t, type(t, Machine::BooleanArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ByteArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::CharArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::ShortArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::IntArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::LongArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::FloatArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, Machine::DoubleArrayType), ClassInterfaceTable,
+      root(t, Machine::ArrayInterfaceTable));
+
   m->processor->boot(t, 0, 0);
 
   { object bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1);
@@ -2690,8 +2842,6 @@ class HeapClient: public Heap::Client {
   virtual void visitRoots(Heap::Visitor* v) {
     ::visitRoots(m, v);
 
-    m->heap->postVisit();
-
     postVisit(m->rootThread, v);
   }
 
@@ -2706,7 +2856,7 @@ class HeapClient: public Heap::Client {
   virtual unsigned sizeInWords(void* p) {
     Thread* t = m->rootThread;
 
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
 
     unsigned n = baseSize(t, o, static_cast<object>
                           (m->heap->follow(objectClass(t, o))));
@@ -2721,7 +2871,7 @@ class HeapClient: public Heap::Client {
   virtual unsigned copiedSizeInWords(void* p) {
     Thread* t = m->rootThread;
 
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
     assert(t, not objectFixed(t, o));
 
     unsigned n = baseSize(t, o, static_cast<object>
@@ -2737,7 +2887,7 @@ class HeapClient: public Heap::Client {
   virtual void copy(void* srcp, void* dstp) {
     Thread* t = m->rootThread;
 
-    object src = static_cast<object>(m->heap->follow(mask(srcp)));
+    object src = static_cast<object>(m->heap->follow(maskAlignedPointer(srcp)));
     assert(t, not objectFixed(t, src));
 
     object class_ = static_cast<object>
@@ -2758,7 +2908,7 @@ class HeapClient: public Heap::Client {
   }
 
   virtual void walk(void* p, Heap::Walker* w) {
-    object o = static_cast<object>(m->heap->follow(mask(p)));
+    object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
     ::walk(m->rootThread, w, o, 0);
   }
 
@@ -2771,7 +2921,7 @@ class HeapClient: public Heap::Client {
 };
 
 void
-doCollect(Thread* t, Heap::CollectionType type)
+doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 {
   expect(t, not t->m->collecting);
 
@@ -2786,7 +2936,8 @@ doCollect(Thread* t, Heap::CollectionType type)
   Machine* m = t->m;
 
   m->unsafe = true;
-  m->heap->collect(type, footprint(m->rootThread));
+  m->heap->collect(type, footprint(m->rootThread), pendingAllocation
+                   - (t->m->heapPoolIndex * ThreadHeapSizeInWords));
   m->unsafe = false;
 
   postCollect(m->rootThread);
@@ -2819,7 +2970,8 @@ doCollect(Thread* t, Heap::CollectionType type)
   }
 
   if ((root(t, Machine::ObjectsToFinalize) or root(t, Machine::ObjectsToClean))
-      and m->finalizeThread == 0)
+      and m->finalizeThread == 0
+      and t->state != Thread::ExitState)
   {
     m->finalizeThread = m->processor->makeThread
       (m, root(t, Machine::FinalizerThread), m->rootThread);
@@ -2946,6 +3098,14 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
 
   populateJNITables(&javaVMVTable, &jniEnvVTable);
 
+  const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
+  const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
+  const char* bootstrapPropertyEnd = bootstrapPropertyDup + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
+  char* codeLibraryName = (char*)bootstrapPropertyDup;
+  char* codeLibraryNameEnd = 0;
+  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
+    *codeLibraryNameEnd = 0;
+
   if (not system->success(system->make(&localThread)) or
       not system->success(system->make(&stateLock)) or
       not system->success(system->make(&heapLock)) or
@@ -2953,10 +3113,25 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
       not system->success(system->make(&referenceLock)) or
       not system->success(system->make(&shutdownLock)) or
       not system->success
-      (system->load(&libraries, findProperty(this, "avian.bootstrap"))))
+      (system->load(&libraries, bootstrapPropertyDup)))
   {
     system->abort();
   }
+
+  System::Library* additionalLibrary = 0;
+  while (codeLibraryNameEnd && codeLibraryNameEnd + 1 < bootstrapPropertyEnd) {
+    codeLibraryName = codeLibraryNameEnd + 1;
+    codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator());
+    if (codeLibraryNameEnd)
+      *codeLibraryNameEnd = 0;
+
+    if (!system->success(system->load(&additionalLibrary, codeLibraryName)))
+      system->abort();
+    libraries->setNext(additionalLibrary);
+  }
+
+  if(bootstrapPropertyDup)
+    free((void*)bootstrapPropertyDup);
 }
 
 void
@@ -3084,6 +3259,7 @@ Thread::init()
 
     if (image and code) {
       m->processor->boot(this, image, code);
+      makeArrayInterfaceTable(this);
     } else {
       boot(this);
     }
@@ -3097,10 +3273,6 @@ Thread::init()
     setRoot(this, Machine::JNIFieldTable, makeVector(this, 0, 0));
 
     m->localThread->set(this);
-
-    javaThread = m->classpath->makeThread(this, 0);
-
-    threadPeer(this, javaThread) = reinterpret_cast<jlong>(this);
   }
 
   expect(this, m->system->success(m->system->make(&lock)));
@@ -3363,7 +3535,7 @@ enter(Thread* t, Thread::State s)
     switch (t->state) {
     case Thread::ExclusiveState: {
       assert(t, t->m->exclusive == t);
-      t->m->exclusive = 0;
+      // exit state should also be exclusive, so don't set exclusive = 0
 
       t->m->stateLock->notifyAll(t->systemThread);
     } break;
@@ -3392,7 +3564,7 @@ allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
   return allocate3
     (t, t->m->heap,
-     ceiling(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
+     ceilingDivide(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
      Machine::FixedAllocation : Machine::MovableAllocation,
      sizeInBytes, objectMask);
 }
@@ -3401,16 +3573,18 @@ object
 allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
           unsigned sizeInBytes, bool objectMask)
 {
+  expect(t, t->criticalLevel == 0);
+
   if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
-    expect(t,  t->backupHeapIndex + ceiling(sizeInBytes, BytesPerWord)
+    expect(t,  t->backupHeapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadBackupHeapSizeInWords);
     
     object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
-    t->backupHeapIndex += ceiling(sizeInBytes, BytesPerWord);
-    cast<object>(o, 0) = 0;
+    t->backupHeapIndex += ceilingDivide(sizeInBytes, BytesPerWord);
+    fieldAtOffset<object>(o, 0) = 0;
     return o;
   } else if (UNLIKELY(t->flags & Thread::TracingFlag)) {
-    expect(t, t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+    expect(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
   }
@@ -3430,7 +3604,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   do {
     switch (type) {
     case Machine::MovableAllocation:
-      if (t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+      if (t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
           > ThreadHeapSizeInWords)
       {
         t->heap = 0;
@@ -3462,44 +3636,46 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       break;
     }
 
-    if (t->heap == 0) {
+    int pendingAllocation = t->m->heap->fixedFootprint
+      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
+
+    if (t->heap == 0 or t->m->heap->limitExceeded(pendingAllocation)) {
       //     fprintf(stderr, "gc");
       //     vmPrintTrace(t);
-      collect(t, Heap::MinorCollection);
+      collect(t, Heap::MinorCollection, pendingAllocation);
     }
 
-    if (t->m->heap->limitExceeded()) {
+    if (t->m->heap->limitExceeded(pendingAllocation)) {
       throw_(t, root(t, Machine::OutOfMemoryError));
     }
   } while (type == Machine::MovableAllocation
-           and t->heapIndex + ceiling(sizeInBytes, BytesPerWord)
+           and t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            > ThreadHeapSizeInWords);
-  
+
   switch (type) {
   case Machine::MovableAllocation: {
     return allocateSmall(t, sizeInBytes);
   }
 
   case Machine::FixedAllocation: {
-    unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateFixed
-       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
     memset(o, 0, sizeInBytes);
 
     alias(o, 0) = FixedMark;
-
-    t->m->fixedFootprint += total;
-
+    
+    t->m->fixedFootprint += t->m->heap->fixedFootprint
+      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
+      
     return o;
   }
 
   case Machine::ImmortalAllocation: {
-    unsigned total;
     object o = static_cast<object>
       (t->m->heap->allocateImmortalFixed
-       (allocator, ceiling(sizeInBytes, BytesPerWord), objectMask, &total));
+       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
     memset(o, 0, sizeInBytes);
 
@@ -3509,6 +3685,27 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   }
 
   default: abort(t);
+  }
+}
+
+void
+collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
+{
+  ENTER(t, Thread::ExclusiveState);
+
+  unsigned pending = pendingAllocation
+    - (t->m->heapPoolIndex * ThreadHeapSizeInWords);
+
+  if (t->m->heap->limitExceeded(pending)) {
+    type = Heap::MajorCollection;
+  }
+
+  doCollect(t, type, pendingAllocation);
+
+  if (t->m->heap->limitExceeded(pending)) {
+    // try once more, giving the heap a chance to squeeze everything
+    // into the smallest possible space:
+    doCollect(t, Heap::MajorCollection, pendingAllocation);
   }
 }
 
@@ -3869,7 +4066,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
     Client(Thread* t): t(t) { }
 
     virtual void NO_RETURN handleError() {
-      vm::abort(t);
+      abort(t);
     }
 
    private:
@@ -3983,6 +4180,17 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
   return real;
 }
 
+uint64_t
+runParseClass(Thread* t, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[0]);
+  System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
+  Machine::Type throwType = static_cast<Machine::Type>(arguments[2]);
+
+  return reinterpret_cast<uintptr_t>
+    (parseClass(t, loader, region->start(), region->length(), throwType));
+}
+
 object
 resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
                    Machine::Type throwType)
@@ -4028,9 +4236,24 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
         { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
+          uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
+                                    reinterpret_cast<uintptr_t>(region),
+                                    static_cast<uintptr_t>(throwType) };
+
           // parse class file
-          class_ = parseClass
-            (t, loader, region->start(), region->length(), throwType);
+          class_ = reinterpret_cast<object>
+            (runRaw(t, runParseClass, arguments));
+
+          if (UNLIKELY(t->exception)) {
+            if (throw_) {
+              object e = t->exception;
+              t->exception = 0;
+              vm::throw_(t, e);
+            } else {
+              t->exception = 0;
+              return 0;
+            }
+          }
         }
 
         if (Verbose) {
@@ -4068,6 +4291,8 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 
     if (class_) {
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
+
+      t->m->classpath->updatePackageMap(t, class_);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }
@@ -4530,38 +4755,6 @@ intern(Thread* t, object s)
 }
 
 void
-collect(Thread* t, Heap::CollectionType type)
-{
-  ENTER(t, Thread::ExclusiveState);
-
-  if (t->m->heap->limitExceeded()) {
-    type = Heap::MajorCollection;
-  }
-
-  doCollect(t, type);
-
-  if (t->m->heap->limitExceeded()) {
-    // try once more, giving the heap a chance to squeeze everything
-    // into the smallest possible space:
-    doCollect(t, Heap::MajorCollection);
-  }
-
-#ifdef AVIAN_HEAPDUMP
-  if ((not t->m->dumpedHeapOnOOM) and t->m->heap->limitExceeded()) {
-    t->m->dumpedHeapOnOOM = true;
-    const char* path = findProperty(t, "avian.heap.dump");
-    if (path) {
-      FILE* out = vm::fopen(path, "wb");
-      if (out) {
-        dumpHeap(t, out);
-        fclose(out);
-      }
-    }
-  }
-#endif//AVIAN_HEAPDUMP
-}
-
-void
 walk(Thread* t, Heap::Walker* w, object o, unsigned start)
 {
   object class_ = static_cast<object>(t->m->heap->follow(objectClass(t, o)));
@@ -4575,7 +4768,7 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     unsigned arrayElementSize = classArrayElementSize(t, class_);
     unsigned arrayLength
       = (arrayElementSize ?
-         cast<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+         fieldAtOffset<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
     THREAD_RUNTIME_ARRAY(t, uint32_t, mask, intArrayLength(t, objectMask));
     memcpy(RUNTIME_ARRAY_BODY(mask), &intArrayBody(t, objectMask, 0),
@@ -4637,6 +4830,30 @@ visitRoots(Machine* m, Heap::Visitor* v)
 }
 
 void
+logTrace(FILE* f, const char* fmt, ...)
+{
+    va_list a;
+    va_start(a, fmt);
+#ifdef PLATFORM_WINDOWS
+    const unsigned length = _vscprintf(fmt, a);
+#else
+    const unsigned length = vsnprintf(0, 0, fmt, a);
+#endif
+    va_end(a);
+
+    RUNTIME_ARRAY(char, buffer, length + 1);
+    va_start(a, fmt);
+    vsnprintf(RUNTIME_ARRAY_BODY(buffer), length + 1, fmt, a);
+    va_end(a);
+    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+
+    ::fprintf(f, "%s", RUNTIME_ARRAY_BODY(buffer));
+#ifdef PLATFORM_WINDOWS
+    ::OutputDebugStringA(RUNTIME_ARRAY_BODY(buffer));
+#endif
+}
+
+void
 printTrace(Thread* t, object exception)
 {
   if (exception == 0) {
@@ -4645,19 +4862,19 @@ printTrace(Thread* t, object exception)
 
   for (object e = exception; e; e = throwableCause(t, e)) {
     if (e != exception) {
-      fprintf(errorLog(t), "caused by: ");
+      logTrace(errorLog(t), "caused by: ");
     }
 
-    fprintf(errorLog(t), "%s", &byteArrayBody
+    logTrace(errorLog(t), "%s", &byteArrayBody
             (t, className(t, objectClass(t, e)), 0));
-  
+
     if (throwableMessage(t, e)) {
       object m = throwableMessage(t, e);
       THREAD_RUNTIME_ARRAY(t, char, message, stringLength(t, m) + 1);
       stringChars(t, m, RUNTIME_ARRAY_BODY(message));
-      fprintf(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
+      logTrace(errorLog(t), ": %s\n", RUNTIME_ARRAY_BODY(message));
     } else {
-      fprintf(errorLog(t), "\n");
+      logTrace(errorLog(t), "\n");
     }
 
     object trace = throwableTrace(t, e);
@@ -4671,17 +4888,17 @@ printTrace(Thread* t, object exception)
         int line = t->m->processor->lineNumber
           (t, traceElementMethod(t, e), traceElementIp(t, e));
 
-        fprintf(errorLog(t), "  at %s.%s ", class_, method);
+        logTrace(errorLog(t), "  at %s.%s ", class_, method);
 
         switch (line) {
         case NativeLine:
-          fprintf(errorLog(t), "(native)\n");
+          logTrace(errorLog(t), "(native)\n");
           break;
         case UnknownLine:
-          fprintf(errorLog(t), "(unknown line)\n");
+          logTrace(errorLog(t), "(unknown line)\n");
           break;
         default:
-          fprintf(errorLog(t), "(line %d)\n", line);
+          logTrace(errorLog(t), "(line %d)\n", line);
         }
       }
     }
@@ -4691,7 +4908,7 @@ printTrace(Thread* t, object exception)
     }
   }
 
-  fflush(errorLog(t));
+  ::fflush(errorLog(t));
 }
 
 object
@@ -4704,11 +4921,11 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
-        vm_assert(t, trace);
+        assert(t, trace);
       }
 
       object e = makeTraceElement(t, walker->method(), walker->ip());
-      vm_assert(t, index < objectArrayLength(t, trace));
+      assert(t, index < objectArrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;
@@ -4808,15 +5025,83 @@ parseUtf8(Thread* t, const char* data, unsigned length)
 }
 
 object
-getCaller(Thread* t, unsigned target)
+parseUtf8(Thread* t, object array)
+{
+  for (unsigned i = 0; i < byteArrayLength(t, array) - 1; ++i) {
+    if (byteArrayBody(t, array, i) & 0x80) {
+      goto slow_path;
+    }
+  }
+
+  return array;
+
+ slow_path:
+  class Client: public Stream::Client {
+   public:
+    Client(Thread* t): t(t) { }
+
+    virtual void handleError() {
+      //      vm::abort(t);
+    }
+
+   private:
+    Thread* t;
+  } client(t);
+
+  class MyStream: public AbstractStream {
+   public:
+    class MyProtector: public Thread::Protector {
+     public:
+      MyProtector(Thread* t, MyStream* s):
+        Protector(t), s(s)
+      { }
+
+      virtual void visit(Heap::Visitor* v) {
+        v->visit(&(s->array));
+      }
+
+      MyStream* s;
+    };
+
+    MyStream(Thread* t, Client* client, object array):
+      AbstractStream(client, byteArrayLength(t, array) - 1),
+      array(array),
+      protector(t, this)
+    { }
+
+    virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
+      memcpy(dst, &byteArrayBody(protector.t, array, offset), size);
+    }
+
+    object array;
+    MyProtector protector;
+  } s(t, &client, array);
+
+  return ::parseUtf8(t, s, byteArrayLength(t, array) - 1);
+}
+
+object
+getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 {
   class Visitor: public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, unsigned target):
-      t(t), method(0), count(0), target(target)
+    Visitor(Thread* t, unsigned target, bool skipMethodInvoke):
+      t(t), method(0), count(0), target(target),
+      skipMethodInvoke(skipMethodInvoke)
     { }
 
     virtual bool visit(Processor::StackWalker* walker) {
+      if (skipMethodInvoke
+          and methodClass
+          (t, walker->method()) == type(t, Machine::JmethodType)
+          and strcmp
+          (&byteArrayBody(t, methodName(t, walker->method()), 0),
+           reinterpret_cast<const int8_t*>("invoke"))
+          == 0)
+      {
+        return true;
+      }
+
       if (count == target) {
         method = walker->method();
         return false;
@@ -4830,7 +5115,8 @@ getCaller(Thread* t, unsigned target)
     object method;
     unsigned count;
     unsigned target;
-  } v(t, target);
+    bool skipMethodInvoke;
+    } v(t, target, skipMethodInvoke);
 
   t->m->processor->walkStack(t, &v);
 
@@ -4890,7 +5176,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
 
   for (int32_t i = 0; i < counts[index]; ++i) {
     object a = makeArray
-      (t, ceiling
+      (t, ceilingDivide
        (counts[index + 1] * classArrayElementSize(t, class_), BytesPerWord));
     arrayLength(t, a) = counts[index + 1];
     setObjectClass(t, a, class_);
@@ -4910,11 +5196,11 @@ noop()
 
 // for debugging
 JNIEXPORT void
-vmPrintTrace(Thread* t)
+vmfPrintTrace(Thread* t, FILE* out)
 {
   class Visitor: public Processor::StackVisitor {
    public:
-    Visitor(Thread* t): t(t) { }
+    Visitor(Thread* t, FILE* out): t(t), out(out) { }
 
     virtual bool visit(Processor::StackWalker* walker) {
       const int8_t* class_ = &byteArrayBody
@@ -4924,30 +5210,37 @@ vmPrintTrace(Thread* t)
       int line = t->m->processor->lineNumber
         (t, walker->method(), walker->ip());
 
-      fprintf(stderr, "  at %s.%s ", class_, method);
+      fprintf(out, "  at %s.%s ", class_, method);
 
       switch (line) {
       case NativeLine:
-        fprintf(stderr, "(native)\n");
+        fprintf(out, "(native)\n");
         break;
       case UnknownLine:
-        fprintf(stderr, "(unknown line)\n");
+        fprintf(out, "(unknown line)\n");
         break;
       default:
-        fprintf(stderr, "(line %d)\n", line);
+        fprintf(out, "(line %d)\n", line);
       }
 
       return true;
     }
 
     Thread* t;
-  } v(t);
+    FILE* out;
+  } v(t, out);
 
-  fprintf(stderr, "debug trace for thread %p\n", t);
+  fprintf(out, "debug trace for thread %p\n", t);
 
   t->m->processor->walkStack(t, &v);
 
-  fflush(stderr);
+  fflush(out);
+}
+
+JNIEXPORT void
+vmPrintTrace(Thread* t)
+{
+  vmfPrintTrace(t, stderr);
 }
 
 // also for debugging

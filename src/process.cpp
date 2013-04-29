@@ -8,7 +8,9 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "process.h"
+#include "avian/process.h"
+
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 

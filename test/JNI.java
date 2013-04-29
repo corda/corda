@@ -1,3 +1,7 @@
+import java.lang.reflect.Method;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+
 public class JNI {
   static {
     System.loadLibrary("test");
@@ -6,6 +10,18 @@ public class JNI {
   private static void expect(boolean v) {
     if (! v) throw new RuntimeException();
   }
+
+  private static float echo(float f) {
+    return f;
+  }
+
+  private static native float doEcho(float f);
+
+  private static double echo(double f) {
+    return f;
+  }
+
+  private static native double doEcho(double f);
 
   private static native double addDoubles
     (double a1, double a2, double a3, double a4, double a5, double a6,
@@ -25,7 +41,29 @@ public class JNI {
      float a13, float a14, float a15, double a16, float a17, float a18,
      float a19, float a20);
 
-  public static void main(String[] args) {
+  private static native long fromReflectedMethod(Object m);
+
+  private static native Object toReflectedMethod(Class c, long id,
+                                                 boolean isStatic);
+
+  private static native int callStaticIntMethod(Class c, long id);
+
+  private static native Object newObject(Class c, long id);
+
+  private static native long fromReflectedField(Field f);
+
+  private static native Field toReflectedField(Class c, long id,
+                                               boolean isStatic);
+
+  private static native int getStaticIntField(Class c, long id);
+
+  private static native Object testLocalRef(Object o);
+
+  public static int method242() { return 242; }
+  
+  public static final int field950 = 950;
+
+  public static void main(String[] args) throws Exception {
     expect(addDoubles
            (1.0d, 2.0d, 3.0d, 4.0d, 5.0d, 6.0d, 7.0d, 8.0d, 9.0d, 10.0d, 11.0d,
             12.0d, 13.0d, 14.0d, 15.0d, 16.0d, 17.0d, 18.0d, 19.0d, 20.0d)
@@ -40,5 +78,39 @@ public class JNI {
            (1.0f, 2.0d, 3.0f, 4.0d, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f,
             12.0f, 13.0f, 14.0f, 15.0f, 16.0d, 17.0f, 18.0f, 19.0f, 20.0f)
            == 210.0d);
+
+    expect(doEcho(42.0f) == 42.0f);
+    expect(doEcho(42.0d) == 42.0d);
+
+    expect(callStaticIntMethod
+           (JNI.class, fromReflectedMethod
+            (JNI.class.getMethod("method242"))) == 242);
+
+    expect(((Method) toReflectedMethod
+            (JNI.class, fromReflectedMethod
+             (JNI.class.getMethod("method242")), true))
+           .getName().equals("method242"));
+
+    expect(newObject
+           (JNI.class, fromReflectedMethod
+            (JNI.class.getConstructor())) instanceof JNI);
+
+    expect(((Constructor) toReflectedMethod
+            (JNI.class, fromReflectedMethod
+             (JNI.class.getConstructor()), false))
+           .getDeclaringClass().equals(JNI.class));
+
+    expect(getStaticIntField
+           (JNI.class, fromReflectedField
+            (JNI.class.getField("field950"))) == 950);
+
+    expect(toReflectedField
+           (JNI.class, fromReflectedField
+            (JNI.class.getField("field950")), true)
+           .getName().equals("field950"));
+
+    { Object o = new Object();
+      expect(testLocalRef(o) == o);
+    }
   }
 }

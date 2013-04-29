@@ -14,6 +14,10 @@
    public static void setProperties(java.util.Properties);
  }
 
+-keep class sun.misc.Launcher {
+   public static sun.misc.Launcher getLauncher();
+ }
+
 -keep class java.lang.ClassLoader {
    private static java.lang.ClassLoader scl;
    private static boolean sclSet;
@@ -42,7 +46,7 @@
  }
 
 -keep class avian.OpenJDK {
-   public static java.security.ProtectionDomain getProtectionDomain();
+   <methods>;
  }
 
 -keepclassmembers public class java.security.PrivilegedAction {
@@ -132,10 +136,29 @@
    public InetSocketAddress(java.net.InetAddress, int);   
  }
 -keep class java.net.ServerSocket
+-keep class java.net.SocketTimeoutException
 
 -keepclassmembers class java.net.PlainSocketImpl {
    <fields>;
  }
+
+-keepclassmembers class java.net.TwoStacksPlainSocketImpl {
+  *** fd1;
+  *** lastfd;
+}
+
+-keepclassmembers class java.net.AbstractPlainSocketImpl {
+  *** timeout;
+  *** trafficClass;
+}
+
+-keepclassmembers class java.net.SocketImpl {
+  *** serverSocket;
+  *** fd;
+  *** address;
+  *** port;
+  *** localport;
+}
 
 -keepclassmembers class java.io.FileInputStream {
    private java.io.FileDescriptor fd;   
@@ -208,7 +231,7 @@
 -keep class sun.nio.cs.UTF_8
 
 # loaded reflectively to handle embedded resources:
--keep class avian.resource.Handler
+-keep class avian.avianvmresource.Handler
 
 # refered to symbolically in MethodAccessorGenerator:
 -keep class sun.reflect.MethodAccessorImpl {
@@ -244,3 +267,41 @@
 -keep class sun.nio.fs.UnixException {
    UnixException(int);
  }
+
+-keep class sun.net.www.protocol.jar.Handler
+
+# These concurrent classes refer to certain members reflectively in their static initializers
+-keepclassmembers class java.util.concurrent.ConcurrentHashMap$HashEntry {
+	*** next;
+}
+
+-keepclassmembers class java.util.concurrent.CopyOnWriteArrayList {
+	*** lock;
+}
+
+-keepclassmembers class java.util.concurrent.CountDownLatch {
+	*** allocationSpinLock;
+}
+
+-keepclassmembers class java.util.concurrent.PriorityBlockingQueue {
+	*** allocationSpinLock;
+}
+
+-keepclassmembers class java.util.concurrent.SynchronousQueue$TransferStack {
+	*** head;
+}
+
+-keepclassmembers class java.util.concurrent.ConcurrentLinkedQueue {
+	*** head;
+	*** tail;
+}
+
+-keepclassmembers class java.util.concurrent.ConcurrentLinkedQueue$Node {
+	*** item;
+	*** next;
+}
+
+-keepclassmembers class java.util.concurrent.SynchronousQueue$TransferStack$SNode {
+	*** match;
+	*** next;
+}

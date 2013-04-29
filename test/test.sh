@@ -1,20 +1,33 @@
 #!/bin/sh
 
-log=build/log.txt
 vg="nice valgrind --leak-check=full --num-callers=32 \
 --freelist-vol=100000000 --error-exitcode=1"
 
+ld_path=${1}; shift
+unit_tester=${1}; shift
 vm=${1}; shift
 mode=${1}; shift
 flags=${1}; shift
 tests=${@}
 
+log=log.txt
+
+export ${ld_path}
+
 echo -n "" >${log}
+
+printf "%12s------- Unit tests -------\n" ""
+${unit_tester} 2>>${log}
+if [ "${?}" != "0" ]; then
+  trouble=1
+  echo "unit tests failed!"
+fi
 
 echo
 
+printf "%12s------- Java tests -------\n" ""
 for test in ${tests}; do
-  printf "%24s" "${test}: "
+  printf "%24s: " "${test}"
 
   case ${mode} in
     debug|debug-fast|fast|small )
@@ -41,4 +54,5 @@ echo
 
 if [ -n "${trouble}" ]; then
   printf "see ${log} for output\n"
+  exit -1
 fi

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -14,7 +14,7 @@ public final class Long extends Number implements Comparable<Long> {
   public static final long MIN_VALUE = -9223372036854775808l;
   public static final long MAX_VALUE =  9223372036854775807l;
 
-  public static final Class TYPE = Class.forCanonicalName("J");
+  public static final Class TYPE = avian.Classes.forCanonicalName("J");
 
   private final long value;
 
@@ -94,6 +94,14 @@ public final class Long extends Number implements Comparable<Long> {
     return toString(v, 16);
   }
 
+  public static String toOctalString(long v) {
+    return toString(v, 8);
+  }
+
+  public static String toBinaryString(long v) {
+    return toString(v, 2);
+  }
+
   public byte byteValue() {
     return (byte) value;
   }
@@ -116,6 +124,12 @@ public final class Long extends Number implements Comparable<Long> {
 
   public double doubleValue() {
     return (double) value;
+  }
+
+  public static int signum(long v) {
+    if (v == 0)     return  0;
+    else if (v > 0) return  1;
+    else            return -1;
   }
 
   private static long pow(long a, long b) {

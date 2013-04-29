@@ -3,7 +3,7 @@
 PreferredToolkit
 getPreferredToolkit()
 {
-  return unset;
+  return XToolkit;
 }
 
 void

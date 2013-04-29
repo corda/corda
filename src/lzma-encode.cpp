@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "lzma-util.h"
+#include "avian/lzma-util.h"
 #include "C/LzmaEnc.h"
 
 using namespace vm;

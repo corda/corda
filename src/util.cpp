@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "util.h"
+#include "avian/util.h"
 
 using namespace vm;
 
@@ -449,6 +449,12 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
   set(t, n, TripleThird, arrayBody(t, array, index));
   set(t, array, ArrayBody + (index * BytesPerWord), n);
+
+  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) {
+    // this might happen if nodes were removed during GC in which case
+    // we weren't able to resize at the time
+    hashMapResize(t, map, hash, arrayLength(t, array) / 2);
+  }
 }
 
 object
@@ -495,7 +501,9 @@ hashMapRemove(Thread* t, object map, object key,
       }
     }
 
-    if (hashMapSize(t, map) <= arrayLength(t, array) / 3) { 
+    if ((not t->m->collecting)
+        and hashMapSize(t, map) <= arrayLength(t, array) / 3)
+    {
       PROTECT(t, o);
       hashMapResize(t, map, hash, arrayLength(t, array) / 2);
     }

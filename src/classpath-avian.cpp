@@ -8,9 +8,11 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "machine.h"
-#include "classpath-common.h"
-#include "process.h"
+#include "avian/machine.h"
+#include "avian/classpath-common.h"
+#include "avian/process.h"
+
+#include <avian/util/runtime-array.h>
 
 using namespace vm;
 
@@ -54,6 +56,37 @@ class MyClasspath : public Classpath {
        root(t, Machine::BootLoader), 0, 0, group, 0);
   }
 
+  virtual object
+  makeJMethod(Thread* t, object vmMethod)
+  {
+    PROTECT(t, vmMethod);
+
+    object jmethod = makeJmethod(t, vmMethod, false);
+
+    return byteArrayBody(t, methodName(t, vmMethod), 0) == '<'
+      ? makeJconstructor(t, jmethod) : jmethod;
+  }
+
+  virtual object
+  getVMMethod(Thread* t, object jmethod)
+  {
+    return objectClass(t, jmethod) == type(t, Machine::JmethodType)
+      ? jmethodVmMethod(t, jmethod)
+      : jmethodVmMethod(t, jconstructorMethod(t, jmethod));
+  }
+
+  virtual object
+  makeJField(Thread* t, object vmField)
+  {
+    return makeJfield(t, vmField, false);
+  }
+
+  virtual object
+  getVMField(Thread* t, object jfield)
+  {
+    return jfieldVmField(t, jfield);
+  }
+
   virtual void
   clearInterrupted(Thread*)
   {
@@ -77,6 +110,18 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
+  interceptMethods(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
+  preBoot(Thread*)
+  {
+    // ignore
+  }
+
+  virtual void
   boot(Thread*)
   {
     // ignore
@@ -86,6 +131,65 @@ class MyClasspath : public Classpath {
   bootClasspath()
   {
     return AVIAN_CLASSPATH;
+  }
+
+  virtual void
+  updatePackageMap(Thread*, object)
+  {
+    // ignore
+  }
+
+  virtual object
+  makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
+  {
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+    PROTECT(t, c);
+
+    object instance = makeNew(t, c);
+    PROTECT(t, instance);
+
+    object constructor = resolveMethod(t, c, "<init>", "(JI)V");
+
+    t->m->processor->invoke
+      (t, constructor, instance, reinterpret_cast<int64_t>(p),
+       static_cast<int32_t>(capacity));
+
+    return instance;
+  }
+
+  virtual void*
+  getDirectBufferAddress(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField(t, objectClass(t, b), "address", "J");
+
+    return reinterpret_cast<void*>
+      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+  }
+
+  virtual int64_t
+  getDirectBufferCapacity(Thread* t, object b)
+  {
+    PROTECT(t, b);
+
+    object field = resolveField
+      (t, objectClass(t, b), "capacity", "I");
+
+    return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
+  }
+
+  virtual bool
+  canTailCall(Thread*, object, object, object, object)
+  {
+    return true;
+  }
+
+  virtual void
+  shutDown(Thread*)
+  {
+    // ignore
   }
 
   virtual void
@@ -213,21 +317,21 @@ Avian_java_lang_reflect_Field_getPrimitive
 
   switch (code) {
   case ByteField: 
-    return cast<int8_t>(instance, offset);
+    return fieldAtOffset<int8_t>(instance, offset);
   case BooleanField: 
-    return cast<uint8_t>(instance, offset);
+    return fieldAtOffset<uint8_t>(instance, offset);
   case CharField: 
-    return cast<uint16_t>(instance, offset);
+    return fieldAtOffset<uint16_t>(instance, offset);
   case ShortField: 
-    return cast<int16_t>(instance, offset);
+    return fieldAtOffset<int16_t>(instance, offset);
   case IntField: 
-    return cast<int32_t>(instance, offset);
+    return fieldAtOffset<int32_t>(instance, offset);
   case LongField: 
-    return cast<int64_t>(instance, offset);
+    return fieldAtOffset<int64_t>(instance, offset);
   case FloatField: 
-    return cast<uint32_t>(instance, offset);
+    return fieldAtOffset<uint32_t>(instance, offset);
   case DoubleField: 
-    return cast<uint64_t>(instance, offset);
+    return fieldAtOffset<uint64_t>(instance, offset);
   default:
     abort(t);
   }
@@ -240,7 +344,7 @@ Avian_java_lang_reflect_Field_getObject
   object instance = reinterpret_cast<object>(arguments[0]);
   int offset = arguments[1];
 
-  return reinterpret_cast<int64_t>(cast<object>(instance, offset));
+  return reinterpret_cast<int64_t>(fieldAtOffset<object>(instance, offset));
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -254,28 +358,28 @@ Avian_java_lang_reflect_Field_setPrimitive
 
   switch (code) {
   case ByteField:
-    cast<int8_t>(instance, offset) = static_cast<int8_t>(value);
+    fieldAtOffset<int8_t>(instance, offset) = static_cast<int8_t>(value);
     break;
   case BooleanField:
-    cast<uint8_t>(instance, offset) = static_cast<uint8_t>(value);
+    fieldAtOffset<uint8_t>(instance, offset) = static_cast<uint8_t>(value);
     break;
   case CharField:
-    cast<uint16_t>(instance, offset) = static_cast<uint16_t>(value);
+    fieldAtOffset<uint16_t>(instance, offset) = static_cast<uint16_t>(value);
     break;
   case ShortField:
-    cast<int16_t>(instance, offset) = static_cast<int16_t>(value);
+    fieldAtOffset<int16_t>(instance, offset) = static_cast<int16_t>(value);
     break;
   case IntField: 
-    cast<int32_t>(instance, offset) = static_cast<int32_t>(value);
+    fieldAtOffset<int32_t>(instance, offset) = static_cast<int32_t>(value);
     break;
   case LongField: 
-    cast<int64_t>(instance, offset) = static_cast<int64_t>(value);
+    fieldAtOffset<int64_t>(instance, offset) = static_cast<int64_t>(value);
     break;
   case FloatField: 
-    cast<uint32_t>(instance, offset) = static_cast<uint32_t>(value);
+    fieldAtOffset<uint32_t>(instance, offset) = static_cast<uint32_t>(value);
     break;
   case DoubleField: 
-    cast<uint64_t>(instance, offset) = static_cast<uint64_t>(value);
+    fieldAtOffset<uint64_t>(instance, offset) = static_cast<uint64_t>(value);
     break;
   default:
     abort(t);
@@ -342,7 +446,7 @@ Avian_java_lang_reflect_Array_getLength
     unsigned elementSize = classArrayElementSize(t, objectClass(t, array));
 
     if (LIKELY(elementSize)) {
-      return cast<uintptr_t>(array, BytesPerWord);
+      return fieldAtOffset<uintptr_t>(array, BytesPerWord);
     } else {
       throwNew(t, Machine::IllegalArgumentExceptionType);
     }
@@ -629,49 +733,13 @@ Avian_avian_Atomic_compareAndSwapObject
   uintptr_t update = arguments[4];
 
   bool success = atomicCompareAndSwap
-    (&cast<uintptr_t>(target, offset), expect, update);
+    (&fieldAtOffset<uintptr_t>(target, offset), expect, update);
 
   if (success) {
     mark(t, target, offset);
   }
 
   return success;
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_primitiveClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
-}
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_defineVMClass
-(Thread* t, object, uintptr_t* arguments)
-{
-  object loader = reinterpret_cast<object>(arguments[0]);
-  object b = reinterpret_cast<object>(arguments[1]);
-  int offset = arguments[2];
-  int length = arguments[3];
-
-  uint8_t* buffer = static_cast<uint8_t*>
-    (t->m->heap->allocate(length));
-  
-  THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
-                   t->m->heap->free(buffer, length));
-
-  memcpy(buffer, &byteArrayBody(t, b, offset), length);
-
-  return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
-}
-
-extern "C" JNIEXPORT void JNICALL
-Avian_avian_Classes_initialize
-(Thread* t, object, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-
-  initClass(t, this_);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
@@ -694,4 +762,42 @@ Avian_avian_Classes_getVMClass
 {
   return reinterpret_cast<int64_t>
     (objectClass(t, reinterpret_cast<object>(arguments[0])));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_makeMethod
+(Thread* t, object, uintptr_t* arguments)
+{
+  object method = arrayBody
+     (t, classMethodTable
+      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))),
+      arguments[1]);
+  PROTECT(t, method);
+
+  object c = resolveClass
+    (t, root(t, Machine::BootLoader), "java/lang/reflect/Method");
+  PROTECT(t, c);
+
+  object instance = makeNew(t, c);
+  PROTECT(t, instance);
+
+  object constructor = resolveMethod(t, c, "<init>", "(Lavian/VMMethod;)V");
+
+  t->m->processor->invoke(t, constructor, instance, method);
+
+  if (byteArrayBody(t, methodName(t, method), 0) == '<') {
+    method = instance;
+
+    c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/lang/reflect/Constructor");
+
+    object instance = makeNew(t, c);
+
+    object constructor = resolveMethod
+      (t, c, "<init>", "(Ljava/lang/Method;)V");
+
+    t->m->processor->invoke(t, constructor, instance, method);    
+  }
+
+  return reinterpret_cast<uintptr_t>(instance);
 }

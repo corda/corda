@@ -61,7 +61,7 @@ public class Field<T> extends AccessibleObject {
   }
 
   public Class getType() {
-    return Class.forCanonicalName
+    return Classes.forCanonicalName
       (vmField.class_.loader,
        new String(vmField.spec, 0, vmField.spec.length - 1, false));
   }

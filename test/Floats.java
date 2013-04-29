@@ -329,5 +329,23 @@ public class Floats {
 
     { float v = Float.POSITIVE_INFINITY;
       expect(Long.MAX_VALUE == (long) v); }
+
+    expect(Double.NaN != Double.NaN);
+    expect(! (Double.NaN == Double.NaN));
+
+    { double d = Double.NaN;
+      expect(Double.NaN != d);
+      expect(! (Double.NaN == d));
+      expect(d != d);
+      expect(! (d == d)); }
+
+    expect(Float.NaN != Float.NaN);
+    expect(! (Float.NaN == Float.NaN));
+
+    { float d = Float.NaN;
+      expect(Float.NaN != d);
+      expect(! (Float.NaN == d));
+      expect(d != d);
+      expect(! (d == d)); }
   }
 }

@@ -83,8 +83,8 @@ public final class URL {
   {
     if ("http".equals(protocol) || "https".equals(protocol)) {
       return new avian.http.Handler();
-    } else if ("avian_vm_resource".equals(protocol)) {
-      return new avian.avian_vm_resource.Handler();
+    } else if ("avianvmresource".equals(protocol)) {
+      return new avian.avianvmresource.Handler();
     } else if ("file".equals(protocol)) {
       return new avian.file.Handler();
     } else if ("jar".equals(protocol)) {

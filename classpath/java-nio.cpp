@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2012, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -262,18 +262,32 @@ setTcpNoDelay(JNIEnv* e, int d, bool on)
 void
 doBind(JNIEnv* e, int s, sockaddr_in* address)
 {
-  int opt = 1;
-  int r = ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
-                       reinterpret_cast<char*>(&opt), sizeof(int));
-  if (r != 0) {
-    throwIOException(e);
-    return;
+  { int opt = 1;
+    int r = ::setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
+                         reinterpret_cast<char*>(&opt), sizeof(int));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
   }
 
-  r = ::bind(s, reinterpret_cast<sockaddr*>(address), sizeof(sockaddr_in));
-  if (r != 0) {
-    throwIOException(e);
-    return;
+#ifdef SO_NOSIGPIPE
+  { int opt = 1;
+    int r = ::setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE,
+                         reinterpret_cast<char*>(&opt), sizeof(int));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
+  }
+#endif
+
+  { int r = ::bind
+      (s, reinterpret_cast<sockaddr*>(address), sizeof(sockaddr_in));
+    if (r != 0) {
+      throwIOException(e);
+      return;
+    }
   }
 }
 
@@ -1015,3 +1029,15 @@ Java_java_nio_channels_SocketSelector_natUpdateReadySet(JNIEnv *, jclass,
 }
 
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_java_nio_ByteOrder_isNativeBigEndian(JNIEnv *, jclass)
+{
+  union {
+    uint32_t i;
+    char c[4];
+  } u = {0x01020304};
+
+  if (u.c[0] == 1)
+    return JNI_TRUE;
+  return JNI_FALSE;
+}

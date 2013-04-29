@@ -7,6 +7,31 @@ public class Strings {
     return a == b || (a != null && a.equals(b));
   }
 
+  private static boolean arraysEqual(byte[] a, byte[] b) {
+    if (a.length != b.length) {
+      return false;
+    }
+
+    for (int i = 0; i < a.length; ++i) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static byte[] append(byte[] a, byte[] b) {
+    byte[] c = new byte[a.length + b.length];
+    for (int i = 0; i < a.length; ++i) {
+      c[i] = a[i];
+    }
+    for (int i = 0; i < b.length; ++i) {
+      c[i + a.length] = b[i];
+    }
+    return c;
+  }
+
   private static boolean arraysEqual(Object[] a, Object[] b) {
     if (a.length != b.length) {
       return false;
@@ -146,5 +171,27 @@ public class Strings {
         "I", "grape", "nuts", "foobar",
         new Object() { public String toString() { return "you"; } })
        .equals("I enjoy grape nuts.  do you?  you do?"));
+
+    { java.io.ByteArrayOutputStream bout = new java.io.ByteArrayOutputStream();
+      java.io.PrintStream pout = new java.io.PrintStream(bout);
+      String s = "I ♥ grape nuts";
+      System.out.println(s);
+      pout.println(s);
+
+      expect
+        (arraysEqual
+         (bout.toByteArray(),
+          (s + System.getProperty("line.separator")).getBytes()));
+
+      // note that this effectively asserts that the VM's default
+      // charset is UTF-8.  If we want to make this test more
+      // portable, we should specify the charset explicitly.
+      expect
+        (arraysEqual
+         (bout.toByteArray(), append
+          (new byte[] { 73, 32, -30, -103, -91, 32, 103, 114, 97, 112, 101,
+                        32, 110, 117, 116, 115 },
+            System.getProperty("line.separator").getBytes())));
+    }
   }
 }

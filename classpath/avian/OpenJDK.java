@@ -45,20 +45,4 @@ public class OpenJDK {
     }
     return array;
   }
-
-  public static Class getDeclaringClass(VMClass c) {
-    try {
-      String name = new String
-        (replace('/', '.', c.name, 0, c.name.length - 1), 0,
-         c.name.length - 1);
-      int index = name.lastIndexOf("$");
-      if (index == -1) {
-        return null;
-      } else {
-        return c.loader.loadClass(name.substring(0, index));
-      }
-    } catch (ClassNotFoundException e) {
-      return null;
-    }
-  }
 }

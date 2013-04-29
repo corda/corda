@@ -16,6 +16,9 @@ import static avian.Stream.write4;
 import static avian.Stream.set4;
 import static avian.Assembler.*;
 
+import avian.SystemClassLoader;
+import avian.Classes;
+
 import avian.ConstantPool;
 import avian.ConstantPool.PoolEntry;
 
@@ -87,26 +90,15 @@ public class Proxy {
 
     write1(out, aload_0);
     
-    write1(out, new_);
-    write2(out, ConstantPool.addClass(pool, "java/lang/reflect/Method") + 1);
-    write1(out, dup);
     write1(out, ldc_w);
     write2(out, ConstantPool.addClass(pool, className) + 1);
-    write1(out, getfield);
-    write2(out, ConstantPool.addFieldRef
-           (pool, "java/lang/Class",
-            "vmClass", "Lavian/VMClass;") + 1);
-    write1(out, getfield);
-    write2(out, ConstantPool.addFieldRef
-           (pool, "avian/VMClass",
-            "methodTable", "[Lavian/VMMethod;") + 1);
     write1(out, ldc_w);
     write2(out, ConstantPool.addInteger(pool, index) + 1);
-    write1(out, aaload);
-    write1(out, invokespecial);
+    write1(out, invokestatic);
     write2(out, ConstantPool.addMethodRef
-           (pool, "java/lang/reflect/Method",
-            "<init>", "(Lavian/VMMethod;)V") + 1);
+           (pool, "avian/Classes",
+            "makeMethod", "(Ljava/lang/Class;I)Ljava/lang/reflect/Method;")
+           + 1);
 
     write1(out, ldc_w);
     write2(out, ConstantPool.addInteger(pool, parameterCount) + 1);
@@ -363,10 +355,11 @@ public class Proxy {
 
     Map<String,avian.VMMethod> virtualMap = new HashMap();
     for (Class c: interfaces) {
-      avian.VMMethod[] ivtable = c.vmClass.virtualTable;
+      avian.VMMethod[] ivtable = SystemClassLoader.vmClass(c).virtualTable;
       if (ivtable != null) {
         for (avian.VMMethod m: ivtable) {
-          virtualMap.put(Method.getName(m) + Method.getSpec(m), m);
+          virtualMap.put
+            (Classes.toString(m.name) + Classes.toString(m.spec), m);
         }
       }
     }
@@ -376,15 +369,15 @@ public class Proxy {
       for (avian.VMMethod m: virtualMap.values()) {
         methodTable[i] = new MethodData
           (0,
-           ConstantPool.addUtf8(pool, Method.getName(m)),
-           ConstantPool.addUtf8(pool, Method.getSpec(m)),
+           ConstantPool.addUtf8(pool, Classes.toString(m.name)),
+           ConstantPool.addUtf8(pool, Classes.toString(m.spec)),
            makeInvokeCode(pool, name, m.spec, m.parameterCount,
                           m.parameterFootprint, i));
         ++ i;
       }
       
       methodTable[i++] = new MethodData
-        (0,
+        (Modifier.PUBLIC,
          ConstantPool.addUtf8(pool, "<init>"),
          ConstantPool.addUtf8
          (pool, "(Ljava/lang/reflect/InvocationHandler;)V"),

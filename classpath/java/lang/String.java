@@ -127,6 +127,11 @@ public final class String
       } else {
         c = Utf8.decode((byte[])data, offset, length);
         if(c instanceof char[]) length = ((char[])c).length;
+        if (c == null) {
+          throw new RuntimeException
+            ("unable to parse \"" + new String(data, offset, length, false)
+             + "\"");
+        }
       }
       
       this.data = c;
