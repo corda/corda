@@ -120,7 +120,7 @@ public class TreeMap<K,V> implements Map<K,V> {
     
   }
 
-  private class KeySet implements Set<K> {
+  private class KeySet extends AbstractSet<K> {
     public int size() {
       return TreeMap.this.size();
     }
@@ -177,6 +177,21 @@ public class TreeMap<K,V> implements Map<K,V> {
       return containsValue(value);
     }
 
+    public boolean containsAll(Collection<?> c) {
+      if (c == null) {
+        throw new NullPointerException("collection is null");
+      }
+      
+      Iterator<?> it = c.iterator();
+      while (it.hasNext()) {
+        if (! contains(it.next())) {
+          return false;
+        }
+      }
+      
+      return true;
+    }
+
     public boolean add(V value) {
       throw new UnsupportedOperationException();
     }
@@ -186,6 +201,10 @@ public class TreeMap<K,V> implements Map<K,V> {
     }
 
     public boolean remove(Object value) {
+      throw new UnsupportedOperationException();
+    }
+
+    public boolean removeAll(Collection<?> c) {
       throw new UnsupportedOperationException();
     }
 

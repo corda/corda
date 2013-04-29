@@ -51,6 +51,21 @@ public abstract class AbstractCollection<T> implements Collection<T> {
     return false;
   }
 
+  public boolean containsAll(Collection<?> c) {
+    if (c == null) {
+      throw new NullPointerException("Collection is null");
+    }
+
+    Iterator<?> it = c.iterator();
+    while (it.hasNext()) {
+      if (! contains(it.next())) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   public boolean isEmpty() {
     return size() == 0;
   }
@@ -58,6 +73,21 @@ public abstract class AbstractCollection<T> implements Collection<T> {
   public boolean remove(Object element) {
     throw new UnsupportedOperationException("remove(T) in "
                                             + this.getClass().getName());
+  }
+
+  public boolean removeAll(Collection<?> c) {
+    if (c == null) {
+      throw new NullPointerException("Collection is null");
+    }
+
+    boolean changed = false;
+
+    Iterator<?> it = c.iterator();
+    while (it.hasNext()) {
+      changed = remove(it.next()) || changed;
+    }
+
+    return changed;
   }
 
   public abstract int size();

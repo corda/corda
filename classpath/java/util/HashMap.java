@@ -303,7 +303,7 @@ public class HashMap<K, V> implements Map<K, V> {
     }
   }
 
-  private class EntrySet implements Set<Entry<K, V>> {
+  private class EntrySet extends AbstractSet<Entry<K, V>> {
     public int size() {
       return HashMap.this.size();
     }
@@ -319,12 +319,6 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean add(Entry<K, V> e) {
       return putCell(e.getKey(), e.getValue()) != null;
-    }
-
-    public boolean addAll(Collection<? extends Entry<K, V>> collection) {
-      boolean change = false;
-      for (Entry<K, V> e: collection) if (add(e)) change = true;
-      return change;
     }
 
     public boolean remove(Object o) {
@@ -352,7 +346,7 @@ public class HashMap<K, V> implements Map<K, V> {
     }
   }
 
-  private class KeySet implements Set<K> {
+  private class KeySet extends AbstractSet<K> {
     public int size() {
       return HashMap.this.size();
     }
@@ -367,12 +361,6 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean add(K key) {
       return putCell(key, null) != null;
-    }
-
-    public boolean addAll(Collection<? extends K> collection) {
-      boolean change = false;
-      for (K k: collection) if (add(k)) change = true;
-      return change;
     }
 
     public boolean remove(Object key) {
@@ -409,6 +397,21 @@ public class HashMap<K, V> implements Map<K, V> {
       return containsValue(value);
     }
 
+    public boolean containsAll(Collection<?> c) {
+      if (c == null) {
+        throw new NullPointerException("collection is null");
+      }
+      
+      Iterator<?> it = c.iterator();
+      while (it.hasNext()) {
+        if (! contains(it.next())) {
+          return false;
+        }
+      }
+      
+      return true;
+    }
+
     public boolean add(V value) {
       throw new UnsupportedOperationException();
     }
@@ -418,6 +421,10 @@ public class HashMap<K, V> implements Map<K, V> {
     }
 
     public boolean remove(Object value) {
+      throw new UnsupportedOperationException();
+    }
+
+    public boolean removeAll(Collection<?> c) {
       throw new UnsupportedOperationException();
     }
 

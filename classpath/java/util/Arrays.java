@@ -91,36 +91,15 @@ public class Arrays {
   }
 
   public static <T> List<T> asList(final T ... array) {
-    return new List<T>() {
-      public String toString() {
-        return Collections.toString(this);
-      }
-
+    return new AbstractList<T>() {
       public int size() {
         return array.length;
-      }
-
-      public boolean add(T element) {
-        throw new UnsupportedOperationException();
-      }
-
-      public boolean addAll(Collection<? extends T> collection) {
-        throw new UnsupportedOperationException();      
       }
 
       public void add(int index, T element) {
         throw new UnsupportedOperationException();
       }
-
-      public boolean contains(Object element) {
-        for (int i = 0; i < array.length; ++i) {
-          if (equal(element, array[i])) {
-            return true;
-          }
-        }
-        return false;
-      }
-
+      
       public int indexOf(Object element) {
         for (int i = 0; i < array.length; ++i) {
           if (equal(element, array[i])) {
@@ -138,7 +117,7 @@ public class Arrays {
         }
         return -1;
       }
-
+      
       public T get(int index) {
         return array[index];
       }
@@ -147,40 +126,12 @@ public class Arrays {
         throw new UnsupportedOperationException();
       }
 
-      public Object[] toArray() {
-        return toArray(new Object[size()]);      
-      }
-
-      public <S> S[] toArray(S[] a) {
-        return (S[])array;
-      }
-
-      public boolean isEmpty() {
-        return size() == 0;
-      }
-
       public T remove(int index) {
-        throw new UnsupportedOperationException();        
-      }
-
-      public boolean remove(Object element) {
         throw new UnsupportedOperationException();
-      }
-
-      public void clear() {
-        throw new UnsupportedOperationException();
-      }
-
-      public Iterator<T> iterator() {
-        return listIterator();
       }
 
       public ListIterator<T> listIterator(int index) {
         return new Collections.ArrayListIterator(this, index);
-      }
-
-      public ListIterator<T> listIterator() {
-        return listIterator(0);
       }
     };
   }
