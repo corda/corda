@@ -170,6 +170,14 @@ public class Collections {
     public Iterator<T> iterator() {
       return new SynchronizedIterator(lock, collection.iterator());
     }
+
+    public boolean containsAll(Collection<?> c) {
+      synchronized (lock) { return collection.containsAll(c); }
+    }
+
+    public boolean removeAll(Collection<?> c) {
+      synchronized (lock) { return collection.removeAll(c); }
+    }
   }
   
   static class SynchronizedMap<K,V> implements Map<K,V> {
@@ -393,6 +401,18 @@ public class Collections {
     public void clear() {
       throw new UnsupportedOperationException("not supported");
     }
+
+    public boolean removeAll(Collection<?> c) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public boolean addAll(int startIndex, Collection<? extends T> c) {
+      throw new UnsupportedOperationException("not supported");
+    }
+
+    public boolean containsAll(Collection<?> c) {
+      return inner.containsAll(c);
+    }
   }
 
   public static <K,V> Map<K,V> unmodifiableMap(Map<K,V> m) {
@@ -500,6 +520,14 @@ public class Collections {
 
     public <S> S[] toArray(S[] array) {
       return inner.toArray(array);
+    }
+
+    public boolean containsAll(Collection<?> c) {
+      return inner.containsAll(c);
+    }
+
+    public boolean removeAll(Collection<?> c) {
+      throw new UnsupportedOperationException("not supported");
     }     
   }
   

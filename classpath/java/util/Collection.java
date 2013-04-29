@@ -17,11 +17,15 @@ public interface Collection<T> extends Iterable<T> {
 
   public boolean contains(Object element);
 
+  public boolean containsAll(Collection<?> c);
+
   public boolean add(T element);
 
   public boolean addAll(Collection<? extends T> collection);
 
   public boolean remove(Object element);
+
+  public boolean removeAll(Collection<?> c);
 
   public Object[] toArray();
 

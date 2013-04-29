@@ -20,6 +20,27 @@ public abstract class AbstractList<T> extends AbstractCollection<T>
     return true;
   }
 
+  public boolean addAll(Collection<? extends T> c) {
+    return addAll(size(), c);
+  }
+
+  public boolean addAll(int startIndex, Collection<? extends T> c) {
+    if (c == null) {
+      throw new NullPointerException("Collection is null");
+    }
+
+    int index = startIndex;
+    boolean changed = false;
+
+    Iterator<? extends T> it = c.iterator();
+    while (it.hasNext()) {
+      add(index++, it.next());
+      changed = true;
+    }
+
+    return changed;
+  }
+
   public Iterator<T> iterator() {
     return listIterator();
   }
