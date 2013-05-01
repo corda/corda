@@ -354,9 +354,6 @@ makeJfield(Thread* t, object vmField, int index = -1);
 void
 interceptFileOperations(Thread*, bool);
 
-void
-clearInterrupted(Thread*);
-
 class MyClasspath : public Classpath {
  public:
   MyClasspath(System* s, Allocator* allocator, const char* javaHome,
@@ -614,7 +611,7 @@ class MyClasspath : public Classpath {
   virtual void
   clearInterrupted(Thread* t)
   {
-    local::clearInterrupted(t);
+    vm::clearInterrupted(t);
   }
 
   virtual void
