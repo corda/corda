@@ -2009,7 +2009,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
           unsigned exceptionCount = s.read2();
           object body = makeShortArray(t, exceptionCount);
@@ -2022,7 +2022,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           object body = makeByteArray(t, length);
@@ -2034,7 +2034,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
       
           set(t, addendum, AddendumSignature,
@@ -2044,7 +2044,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           object body = makeByteArray(t, length);
@@ -2052,6 +2052,19 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                  length);
 
           set(t, addendum, AddendumAnnotationTable, body);
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
+                              ("RuntimeVisibleParameterAnnotations"),
+                              &byteArrayBody(t, attributeName, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
+          }
+
+          object body = makeByteArray(t, length);
+          s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
+                 length);
+
+          set(t, addendum, MethodAddendumParameterAnnotationTable, body);
         } else {
           s.skip(length);
         }
@@ -5243,7 +5256,6 @@ threadIsInterrupted(Thread* t, object thread, bool clear)
     threadInterrupted(t, thread) = false;
   }
   monitorRelease(t, interruptLock(t, thread));
-
   return v;
 }
 

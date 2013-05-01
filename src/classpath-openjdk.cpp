@@ -2261,6 +2261,7 @@ makeJmethod(Thread* t, object vmMethod, int index)
 
   object signature;
   object annotationTable;
+  object parameterAnnotationTable;
   object annotationDefault;
   object addendum = methodAddendum(t, vmMethod);
   if (addendum) {
@@ -2274,18 +2275,23 @@ makeJmethod(Thread* t, object vmMethod, int index)
 
     annotationTable = addendumAnnotationTable(t, addendum);
 
+    parameterAnnotationTable = methodAddendumParameterAnnotationTable
+      (t, addendum);
+
     annotationDefault = methodAddendumAnnotationDefault(t, addendum);
   } else {
     signature = 0;
     annotationTable = 0;
+    parameterAnnotationTable = 0;
     annotationDefault = 0;
   }
 
   PROTECT(t, signature);
   PROTECT(t, annotationTable);
+  PROTECT(t, parameterAnnotationTable);
   PROTECT(t, annotationDefault);
 
-  if (annotationTable or annotationDefault) {
+  if (annotationTable or parameterAnnotationTable or annotationDefault) {
     object runtimeData = getClassRuntimeData(t, methodClass(t, vmMethod));
 
     set(t, runtimeData, ClassRuntimeDataPool,
@@ -2309,7 +2315,7 @@ makeJmethod(Thread* t, object vmMethod, int index)
   return makeJmethod
     (t, true, 0, jclass, index, name, returnType, parameterTypes,
      exceptionTypes, methodFlags(t, vmMethod), signature, 0, annotationTable,
-     0, annotationDefault, 0, 0, 0);
+     parameterAnnotationTable, annotationDefault, 0, 0, 0);
 }
 
 object
@@ -2331,6 +2337,7 @@ makeJconstructor(Thread* t, object vmMethod, int index)
 
   object signature;
   object annotationTable;
+  object parameterAnnotationTable;
   object addendum = methodAddendum(t, vmMethod);
   if (addendum) {
     signature = addendumSignature(t, addendum);
@@ -2342,15 +2349,19 @@ makeJconstructor(Thread* t, object vmMethod, int index)
     }
 
     annotationTable = addendumAnnotationTable(t, addendum);
+    parameterAnnotationTable = methodAddendumParameterAnnotationTable
+      (t, addendum);
   } else {
     signature = 0;
     annotationTable = 0;
+    parameterAnnotationTable = 0;
   }
 
   PROTECT(t, signature);
   PROTECT(t, annotationTable);
+  PROTECT(t, parameterAnnotationTable);
 
-  if (annotationTable) {
+  if (annotationTable or parameterAnnotationTable) {
     object runtimeData = getClassRuntimeData(t, methodClass(t, vmMethod));
 
     set(t, runtimeData, ClassRuntimeDataPool,
@@ -2373,7 +2384,8 @@ makeJconstructor(Thread* t, object vmMethod, int index)
 
   return makeJconstructor
     (t, true, 0, jclass, index, parameterTypes, exceptionTypes, methodFlags
-     (t, vmMethod), signature, 0, annotationTable, 0, 0, 0, 0);
+     (t, vmMethod), signature, 0, annotationTable, parameterAnnotationTable,
+     0, 0, 0);
 }
 
 object
