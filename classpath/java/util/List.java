@@ -21,6 +21,8 @@ public interface List<T> extends Collection<T> {
 
   public void add(int index, T element);
 
+  public boolean addAll(int startIndex, Collection<? extends T> c);
+
   public int indexOf(Object value);
 
   public int lastIndexOf(Object value);
