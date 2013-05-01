@@ -691,10 +691,12 @@ Avian_sun_misc_Unsafe_park
   }
 
   monitorAcquire(t, interruptLock(t, t->javaThread));
+  bool interrupted = false;
   while (time >= 0
          and (not (threadUnparked(t, t->javaThread)
-                   or monitorWait
-                   (t, interruptLock(t, t->javaThread), time))))
+                   or threadInterrupted(t, t->javaThread)
+                   or (interrupted = monitorWait
+                       (t, interruptLock(t, t->javaThread), time)))))
   {
     int64_t now = t->m->system->now();
     time -= now - then;
@@ -703,6 +705,9 @@ Avian_sun_misc_Unsafe_park
     if (time == 0) {
       break;
     }
+  }
+  if (interrupted) {
+    threadInterrupted(t, t->javaThread) = true;
   }
   threadUnparked(t, t->javaThread) = false;
   monitorRelease(t, interruptLock(t, t->javaThread));
