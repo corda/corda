@@ -2700,6 +2700,16 @@ Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return fieldAtOffset<uint16_t>(o, offset);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2803,6 +2813,17 @@ Avian_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS
   int16_t value = arguments[4];
 
   fieldAtOffset<int16_t>(o, offset) = value;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uint16_t value = arguments[4];
+
+  fieldAtOffset<uint16_t>(o, offset) = value;
 }
 
 extern "C" JNIEXPORT void JNICALL
