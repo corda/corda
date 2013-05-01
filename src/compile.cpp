@@ -4790,9 +4790,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
           PROTECT(t, field);
 
-          if (fieldClass(t, field) != methodClass(t, context->method)
-              and classNeedsInit(t, fieldClass(t, field)))
-          {
+          if (classNeedsInit(t, fieldClass(t, field))) {
             c->call
               (c->constant
                (getThunk(t, tryInitClassThunk), Compiler::AddressType),
@@ -5970,9 +5968,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         if (instruction == putstatic) {
           checkField(t, field, true);
 
-          if (fieldClass(t, field) != methodClass(t, context->method)
-              and classNeedsInit(t, fieldClass(t, field)))
-          {
+          if (classNeedsInit(t, fieldClass(t, field))) {
             PROTECT(t, field);
 
             c->call
@@ -10440,7 +10436,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
 {
   PROTECT(t, method);
 
-  if (bootContext == 0) {
+  if (bootContext == 0 and methodFlags(t, method) & ACC_STATIC) {
     initClass(t, methodClass(t, method));
   }
 
