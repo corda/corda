@@ -3646,7 +3646,13 @@ extern "C" JNIEXPORT jclass JNICALL
 EXPORT(JVM_CurrentLoadedClass)(Thread*) { abort(); }
 
 extern "C" JNIEXPORT jobject JNICALL
-EXPORT(JVM_CurrentClassLoader)(Thread*) { abort(); }
+EXPORT(JVM_CurrentClassLoader)(Thread*)
+{
+  // just return null, i.e. tell SecurityManager.currentClassLoader
+  // all permissions are granted, since Avian doesn't do any internal
+  // security checks:
+  return 0;
+}
 
 uint64_t
 jvmGetClassContext(Thread* t, uintptr_t*)
