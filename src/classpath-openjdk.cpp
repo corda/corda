@@ -2665,24 +2665,21 @@ extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_arrayIndexScale
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
-
-  if (classVmFlags(t, c) & PrimitiveFlag) {
-    const char* name = reinterpret_cast<char*>
-      (&byteArrayBody(t, local::getClassName(t, c), 0));
-
-    switch (*name) {
-    case 'b': return 1;
-    case 's':
-    case 'c': return 2;
-    case 'l':
-    case 'd': return 8;
-    case 'i':
-    case 'f': return 4;
-    default: abort(t);
-    }
-  } else {
-    return BytesPerWord;
+  switch (byteArrayBody
+          (t, className
+           (t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))), 1))
+  {
+  case 'Z':
+  case 'B': return 1;
+  case 'S':
+  case 'C': return 2;
+  case 'I':
+  case 'F': return 4;
+  case 'J':
+  case 'D': return 8;
+  case '[':
+  case 'L': return BytesPerWord;
+  default: abort(t);
   }
 }
 
