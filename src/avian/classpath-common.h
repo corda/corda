@@ -266,8 +266,13 @@ clone(Thread* t, object o)
            reinterpret_cast<void**>(o) + 1,
            size - BytesPerWord);
   } else {
+    object classNameSlash = className(t, objectClass(t, o));
+    PROTECT(t, classNameSlash);
+    THREAD_RUNTIME_ARRAY(t, char, classNameDot, byteArrayLength(t, classNameSlash));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameSlash, 0)));
     throwNew(t, Machine::CloneNotSupportedExceptionType, "%s",
-             &byteArrayBody(t, className(t, objectClass(t, o)), 0)); 
+             RUNTIME_ARRAY_BODY(classNameDot));
   }
 
   return clone;

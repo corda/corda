@@ -3034,10 +3034,19 @@ void
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
+    object classNameFrom = className(t, objectClass(t, o));
+    object classNameTo   = className(t, class_);
+    PROTECT(t, classNameFrom);
+    PROTECT(t, classNameTo);
+    THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
+    THREAD_RUNTIME_ARRAY(t, char, classTo,   byteArrayLength(t, classNameTo));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameFrom, 0)));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classTo),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameTo,   0)));
     throwNew
-      (t, Machine::ClassCastExceptionType, "%s as %s",
-       &byteArrayBody(t, className(t, objectClass(t, o)), 0),
-       &byteArrayBody(t, className(t, class_), 0));
+      (t, Machine::ClassCastExceptionType, "%s cannot be cast to %s",
+       RUNTIME_ARRAY_BODY(classFrom), RUNTIME_ARRAY_BODY(classTo));
   }
 }
 
