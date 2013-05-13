@@ -3349,7 +3349,10 @@ EXPORT(JVM_LoadLibrary)(const char* path)
 }
 
 extern "C" JNIEXPORT void JNICALL
-EXPORT(JVM_UnloadLibrary)(void*) { abort(); }
+EXPORT(JVM_UnloadLibrary)(void*)
+{
+  // todo: implement this correctly for POSIX and Windows
+}
 
 extern "C" JNIEXPORT void* JNICALL
 EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
