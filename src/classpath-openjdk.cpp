@@ -4671,19 +4671,7 @@ jvmNewInstanceFromConstructor(Thread* t, uintptr_t* arguments)
      (t, jclassVmClass(t, jconstructorClazz(t, *constructor))),
       jconstructorSlot(t, *constructor));
 
-  THREAD_RESOURCE0(t, {
-      if (t->exception) {
-        object exception = t->exception;
-        t->exception = makeThrowable
-          (t, Machine::InvocationTargetExceptionType, 0, 0, exception);
-      }
-    });
-
-  if (args) {
-    t->m->processor->invokeArray(t, method, instance, *args);
-  } else {
-    t->m->processor->invoke(t, method, instance);
-  }
+  invoke(t, method, instance, args ? *args : 0);
 
   return reinterpret_cast<uint64_t>(makeLocalReference(t, instance));
 }
