@@ -5049,7 +5049,7 @@ EXPORT(JVM_NativePath)(char* path)
 extern "C" JNIEXPORT jint JNICALL
 EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
 {
-  int r = OPEN(path, flags, mode);
+  int r = OPEN(path, flags & 0xFFFF, mode);
   if (r == -1) {
     return errno == EEXIST ? JVM_EEXIST : -1;
   } else {
