@@ -695,7 +695,13 @@ class MyClasspath : public Classpath {
     expect(t, loadLibrary(t, libraryPath, "verify", true, true));
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #  ifndef PLATFORM_WINDOWS
-    loadLibrary(t, libraryPath, "mawt", true, true, false);
+    // at one point, loading libmawt ahead of time was necessary to
+    // make AWT work, but recent versions of OpenJDK seem to take care
+    // of this from Java code, in which case loading it ahead of time
+    // actually causes trouble, so we comment it out for now until we
+    // know exactly when it's needed:
+
+    //loadLibrary(t, libraryPath, "mawt", true, true, false);
 #  endif
 #endif // not AVIAN_OPENJDK_SRC
 
