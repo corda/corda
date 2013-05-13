@@ -3252,22 +3252,35 @@ instanceOfFromReference(Thread* t, object pair, object o)
 uint64_t
 makeNewGeneral64(Thread* t, object class_)
 {
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
   return reinterpret_cast<uintptr_t>(makeNewGeneral(t, class_));
 }
 
 uint64_t
 makeNew64(Thread* t, object class_)
 {
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
   return reinterpret_cast<uintptr_t>(makeNew(t, class_));
 }
 
 uint64_t
 makeNewFromReference(Thread* t, object pair)
 {
-  return makeNewGeneral64
-    (t, resolveClass
-     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
-      referenceName(t, pairSecond(t, pair))));
+  object class_ = resolveClass
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+     referenceName(t, pairSecond(t, pair)));
+
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
+  return makeNewGeneral64(t, class_);
 }
 
 uint64_t
