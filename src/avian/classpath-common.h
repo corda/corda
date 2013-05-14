@@ -267,7 +267,6 @@ clone(Thread* t, object o)
            size - BytesPerWord);
   } else {
     object classNameSlash = className(t, objectClass(t, o));
-    PROTECT(t, classNameSlash);
     THREAD_RUNTIME_ARRAY(t, char, classNameDot, byteArrayLength(t, classNameSlash));
     replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
             reinterpret_cast<char*>(&byteArrayBody(t, classNameSlash, 0)));

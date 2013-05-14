@@ -3036,8 +3036,6 @@ checkCast(MyThread* t, object class_, object o)
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
     object classNameFrom = className(t, objectClass(t, o));
     object classNameTo   = className(t, class_);
-    PROTECT(t, classNameFrom);
-    PROTECT(t, classNameTo);
     THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
     THREAD_RUNTIME_ARRAY(t, char, classTo,   byteArrayLength(t, classNameTo));
     replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
