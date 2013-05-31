@@ -126,8 +126,12 @@ OPEN(string_t path, int mask, int mode)
 inline bool
 exists(string_t path)
 {
+#ifdef PLATFORM_WINDOWS
+  return GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES;
+#else
   STRUCT_STAT s;
   return STAT(path, &s) == 0;
+#endif
 }
 
 inline int
