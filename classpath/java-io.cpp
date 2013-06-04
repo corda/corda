@@ -20,6 +20,8 @@
 
 #ifdef PLATFORM_WINDOWS
 
+#  define UNICODE
+
 #  include <windows.h>
 #  include <io.h>
 #  include <direct.h>
