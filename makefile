@@ -106,7 +106,7 @@ ifneq ($(openjdk),)
 
 	ifneq ($(openjdk-src),)
 		include openjdk-src.mk
-	  options := $(options)-openjdk-src
+		options := $(options)-openjdk-src
 		classpath-objects = $(openjdk-objects) $(openjdk-local-objects)
 		classpath-cflags = -DAVIAN_OPENJDK_SRC -DBOOT_JAVAHOME
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
@@ -133,7 +133,7 @@ ifneq ($(openjdk),)
 		stub-sources = $(src)/openjdk/stubs.cpp
 		stub-objects = $(call cpp-objects,$(stub-sources),$(src),$(build))
 	else
-	  options := $(options)-openjdk
+		options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
 		ifeq ($(build-platform),darwin)
 			library-path = \
@@ -455,6 +455,9 @@ ifeq ($(build-platform),darwin)
 	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/ \
 		-Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
+endif
+
+ifeq ($(platform),darwin)
 	soname-flag =
 endif
 
@@ -489,7 +492,7 @@ ifeq ($(platform),freebsd)
 	cflags = $(build-cflags)
 endif
 ifeq ($(platform),android)
-    ifeq ($(build-platform),cygwin)
+	ifeq ($(build-platform),cygwin)
 		ndk = "$$(cygpath -u "$(ANDROID_NDK)")"
 	else
 		ndk = $(ANDROID_NDK)

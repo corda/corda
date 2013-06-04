@@ -600,19 +600,16 @@ intercept(Thread* t, object c, const char* name, const char* spec,
   if (m) {
     PROTECT(t, m);
 
-    object clone;
+    methodFlags(t, m) |= ACC_NATIVE;
+
     if (updateRuntimeData) {
-      clone = methodClone(t, m);
+      object clone = methodClone(t, m);
 
       // make clone private to prevent vtable updates at compilation
       // time.  Otherwise, our interception might be bypassed by calls
       // through the vtable.
       methodFlags(t, clone) |= ACC_PRIVATE;
-    }
 
-    methodFlags(t, m) |= ACC_NATIVE;
-
-    if (updateRuntimeData) {
       object native = makeNativeIntercept(t, function, true, clone);
       
       PROTECT(t, native);
