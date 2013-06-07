@@ -4182,7 +4182,8 @@ jvmGetClassInterfaces(Thread* t, uintptr_t* arguments)
     if (table) {
       PROTECT(t, table);
 
-      object array = makeObjectArray(t, arrayLength(t, table));
+      object array = makeObjectArray
+        (t, type(t, Machine::JclassType), arrayLength(t, table));
       PROTECT(t, array);
 
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
@@ -4360,7 +4361,7 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
         }
       }
 
-      object result = makeObjectArray(t, count);
+      object result = makeObjectArray(t, type(t, Machine::JclassType), count);
       PROTECT(t, result);
 
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
@@ -4383,7 +4384,8 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
   }
 
   return reinterpret_cast<uintptr_t>
-    (makeLocalReference(t, makeObjectArray(t, 0)));
+    (makeLocalReference
+     (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
