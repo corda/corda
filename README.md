@@ -468,7 +468,8 @@ setting the boot classpath to "[bootJar]".
 
     $ cat >embedded-jar-main.cpp <<EOF
     #include "stdint.h"
-        #include "jni.h"
+    #include "jni.h"
+	#include "stdlib.h" 
     
     #if (defined __MINGW32__) || (defined _MSC_VER)
     #  define EXPORT __declspec(dllexport)
@@ -496,6 +497,8 @@ setting the boot classpath to "[bootJar]".
       }
     
     } // extern "C"
+	
+	extern "C" void __cxa_pure_virtual(void) { abort(); }
     
     int
     main(int ac, const char** av)
@@ -557,7 +560,7 @@ __on Mac OS X:__
 
 __on Windows:__
 
-     $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
+     $ g++ -fno-exceptions -fno-rtti -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/win32" \
          -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 __5.__ Link the objects produced above to produce the final
@@ -577,7 +580,7 @@ __on Windows:__
 
     $ dlltool -z hello.def *.o
     $ dlltool -d hello.def -e hello.exp
-    $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
+    $ gcc hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
         -mwindows -mconsole -o hello.exe
     $ strip --strip-all hello.exe
 
