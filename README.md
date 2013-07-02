@@ -59,7 +59,7 @@ Avian can currently target the following platforms:
 
   * Linux (i386, x86_64, ARM, and 32-bit PowerPC)
   * Windows (i386 and x86_64)
-  * Mac OS X (i386, x86_64 and 32-bit PowerPC)
+  * Mac OS X (i386 and x86_64)
   * Apple iOS (i386 and ARM)
   * FreeBSD (i386, x86_64)
 
