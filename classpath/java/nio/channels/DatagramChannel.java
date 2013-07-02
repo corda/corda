@@ -20,6 +20,7 @@ import java.net.SocketException;
 import java.net.DatagramSocket;
 import java.net.StandardProtocolFamily;
 
+// TODO: This class is both divergent from the Java standard and incomplete.
 public class DatagramChannel extends SelectableChannel
   implements ReadableByteChannel, WritableByteChannel
 {
@@ -27,13 +28,18 @@ public class DatagramChannel extends SelectableChannel
 
   private int socket = InvalidSocket;
   private boolean blocking = true;
+  private boolean connected = false;
 
   public SelectableChannel configureBlocking(boolean v) throws IOException {
     blocking = v;
-    if (socket != InvalidSocket) {
-      configureBlocking(socket, v);
-    }
+    configureBlocking();
     return this;
+  }
+
+  private void configureBlocking() throws IOException {
+    if (socket != InvalidSocket) {
+      configureBlocking(socket, blocking);
+    }
   }
 
   int socketFD() {
@@ -75,6 +81,7 @@ public class DatagramChannel extends SelectableChannel
     }
 
     socket = bind(inetAddress.getHostName(), inetAddress.getPort());
+    configureBlocking();
 
     return this;
   }
@@ -88,6 +95,9 @@ public class DatagramChannel extends SelectableChannel
     }
 
     socket = connect(inetAddress.getHostName(), inetAddress.getPort());
+    configureBlocking();
+
+    if (socket != 0) connected = true;
 
     return this;
   }
@@ -162,6 +172,15 @@ public class DatagramChannel extends SelectableChannel
         throw se;
       }
     }
+  }
+
+  public boolean isConnected() { return connected; }
+
+  /** TODO: This is probably incomplete. */
+  public DatagramChannel disconnect() throws IOException {
+    close();
+    connected = false;
+    return this;
   }
 
   private static native void configureBlocking(int socket, boolean blocking)
