@@ -351,8 +351,10 @@ makeJconstructor(Thread* t, object vmMethod, int index = -1);
 object
 makeJfield(Thread* t, object vmField, int index = -1);
 
+#ifdef AVIAN_OPENJDK_SRC
 void
 interceptFileOperations(Thread*, bool);
+#endif
 
 class MyClasspath : public Classpath {
  public:
@@ -977,16 +979,6 @@ pathEqual(const char* a, const char* b, unsigned length)
 #endif
 }
 
-bool
-pathEqual(const char* a, const char* b)
-{
-#ifdef PLATFORM_WINDOWS
-  return strcasecmp(a, b) == 0;
-#else
-  return strcmp(a, b) == 0;
-#endif
-}
-
 class EmbeddedFile {
  public:
   EmbeddedFile(MyClasspath* cp, const char* path, unsigned pathLength) {
@@ -1025,6 +1017,7 @@ class EmbeddedFile {
   unsigned pathLength;
 };
 
+#ifdef AVIAN_OPENJDK_SRC
 int64_t JNICALL
 getFileAttributes
 (Thread* t, object method, uintptr_t* arguments)
@@ -1688,46 +1681,6 @@ getNextZipFileEntry(Thread* t, object method, uintptr_t* arguments)
   }
 }
 
-void JNICALL
-initializeZipEntryFields(Thread* t, object method, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-  int64_t peer; memcpy(&peer, arguments + 1, 8);
-
-  ZipFile::Entry* entry = reinterpret_cast<ZipFile::Entry*>(peer);
-  if (entry->start) {
-    PROTECT(t, this_);
-
-    MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
-
-    unsigned nameLength = fileNameLength(entry->start);
-    object array = makeByteArray(t, nameLength + 1);
-    memcpy(&byteArrayBody(t, array, 0), fileName(entry->start), nameLength);
-    byteArrayBody(t, array, nameLength) = 0;
-
-    object name = t->m->classpath->makeString
-      (t, array, 0, byteArrayLength(t, array) - 1);
-
-    set(t, this_, cp->zipEntryNameField, name);
-
-    fieldAtOffset<int64_t>(this_, cp->zipEntryTimeField)
-      = fileTime(entry->start);
-    fieldAtOffset<int64_t>(this_, cp->zipEntryCrcField)
-      = fileCRC(entry->start);
-    fieldAtOffset<int64_t>(this_, cp->zipEntrySizeField)
-      = uncompressedSize(entry->start);
-    fieldAtOffset<int64_t>(this_, cp->zipEntryCsizeField)
-      = compressedSize(entry->start);
-    fieldAtOffset<int64_t>(this_, cp->zipEntryMethodField)
-      = compressionMethod(entry->start);
-  } else {
-    t->m->processor->invoke
-      (t, nativeInterceptOriginal
-       (t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-       this_, entry->entry);
-  }
-}
-
 int64_t JNICALL
 getZipFileEntryMethod(Thread* t, object method, uintptr_t* arguments)
 {
@@ -1956,7 +1909,6 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 
   bool absolute = arguments[2];
 
-#ifdef AVIAN_OPENJDK_SRC
   if (not absolute) {
     if (strcmp(RUNTIME_ARRAY_BODY(n), "net") == 0) {
       bool ran;
@@ -1998,7 +1950,6 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
       return;
     }
   }
-#endif // AVIAN_OPENJDK_SRC 
  
   loadLibrary
     (t, static_cast<local::MyClasspath*>(t->m->classpath)->libraryPath,
@@ -2170,6 +2121,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
             "(Ljava/lang/String;)Ljava/util/Enumeration;",
             voidPointer(getBootstrapResources), updateRuntimeData);
 }
+#endif // AVIAN_OPENJDK_SRC
 
 object
 getClassMethodTable(Thread* t, object c)

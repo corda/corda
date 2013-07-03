@@ -5025,7 +5025,7 @@ parseUtf8(Thread* t, const char* data, unsigned length)
     Client(Thread* t): t(t) { }
 
     virtual void handleError() {
-      //      vm::abort(t);
+      if (false) abort(t);
     }
 
    private:
@@ -5054,7 +5054,7 @@ parseUtf8(Thread* t, object array)
     Client(Thread* t): t(t) { }
 
     virtual void handleError() {
-      //      vm::abort(t);
+      if (false) abort(t);
     }
 
    private:
