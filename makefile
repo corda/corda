@@ -168,10 +168,19 @@ ifneq ($(android),)
 		-I$(build)/android-src \
 		-fno-exceptions \
 		-D_FILE_OFFSET_BITS=64 \
+		-DOS_SHARED_LIB_FORMAT_STR="\"$(so-prefix)%s$(so-suffix)\"" \
+		-DJNI_JARJAR_PREFIX= \
 		-g3 \
 		-Werror
 
-	luni-cpps := $(shell find $(luni-native) -name '*.cpp')	
+	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
+
+	libnativehelper-native := $(android)/libnativehelper
+	libnativehelper-cpps := $(libnativehelper-native)/JniConstants.cpp \
+		$(libnativehelper-native)/toStringArray.cpp
+
+	crypto-native := $(android)/libcore/crypto/src/main/native
+	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
 		android-cflags += -D__STDC_CONSTANT_MACROS
@@ -206,18 +215,27 @@ ifneq ($(android),)
 		$(android)/openssl-upstream/libssl.a \
 		$(android)/openssl-upstream/libcrypto.a \
 		$(platform-lflags) \
+		-lrt \
 		-lstdc++
 
 	classpath-objects = \
-		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build))
+		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
+		$(call cpp-objects,$(crypto-cpps),$(crypto-native),$(build)) \
+		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
 	luni-javas := $(shell find $(luni-java) -name '*.java')
+	libdvm-java = $(android)/libcore/libdvm/src/main/java
+	libdvm-javas := $(shell find $(libdvm-java) -name '*.java')
+	crypto-java = $(android)/libcore/crypto/src/main/java
+	crypto-javas := $(shell find $(crypto-java) -name '*.java')
 	dalvik-java = $(android)/libcore/dalvik/src/main/java
 	dalvik-javas := $(shell find $(dalvik-java) -name '*.java')
 	xml-java = $(android)/libcore/xml/src/main/java
 	xml-javas := $(shell find $(xml-java) -name '*.java')
 	android-classes = \
 		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
+		$(call java-classes,$(libdvm-javas),$(libdvm-java),$(build)/android) \
+		$(call java-classes,$(crypto-javas),$(crypto-java),$(build)/android) \
 		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
 		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
 	classpath = android
@@ -1466,13 +1484,20 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 $(build)/android-src/%.cpp: $(luni-native)/%.cpp
 	cp $(<) $(@)
 
+$(build)/android-src/%.cpp: $(libnativehelper-native)/%.cpp
+	cp $(<) $(@)
+
+$(build)/android-src/%.cpp: $(crypto-native)/%.cpp
+	cp $(<) $(@)
+
 $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	$(cxx) $(android-cflags) $(classpath-extra-cflags) -c \
 		$$($(windows-path) $(<)) $(call output,$(@))
 
-$(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
+$(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
+		$(dalvik-javas) $(xml-javas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1480,7 +1505,8 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(xml-javas)
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
-	cp -a $(luni-java)/* $(dalvik-java)/* $(xml-java)/* $(build)/android-src/
+	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
+		$(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java
 	find $(build)/android-src -name '*.java' > $(build)/android.txt

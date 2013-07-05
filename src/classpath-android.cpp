@@ -9,6 +9,11 @@
    details. */
 
 struct JavaVM;
+struct _JNIEnv;
+
+struct JniConstants {
+  static void init(_JNIEnv* env);
+};
 
 extern "C" int JNI_OnLoad(JavaVM*, void*);
 
@@ -19,6 +24,10 @@ extern "C" int JNI_OnLoad(JavaVM*, void*);
 #include "avian/process.h"
 
 using namespace vm;
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_Classes_defineVMClass
+(Thread*, object, uintptr_t*);
 
 namespace {
 
@@ -58,6 +67,22 @@ int64_t JNICALL
 appLoader(Thread* t, object, uintptr_t*)
 {
   return reinterpret_cast<uintptr_t>(root(t, Machine::AppLoader));
+}
+
+int64_t JNICALL
+defineClass(Thread* t, object method, uintptr_t* arguments)
+{
+  uintptr_t args[]
+    = { arguments[0], arguments[2], arguments[3], arguments[4] };
+
+  int64_t v = Avian_avian_Classes_defineVMClass(t, method, args);
+
+  if (v) {
+    return reinterpret_cast<uintptr_t>
+      (getJClass(t, reinterpret_cast<object>(v)));
+  } else {
+    return 0;
+  }  
 }
 
 int64_t JNICALL
@@ -383,6 +408,10 @@ class MyClasspath : public Classpath {
 
         intercept(t, c, "createSystemClassLoader", "()Ljava/lang/ClassLoader;",
                   voidPointer(appLoader), updateRuntimeData);
+
+        intercept(t, c, "defineClass",
+                  "(Ljava/lang/String;[BII)Ljava/lang/Class;",
+                  voidPointer(defineClass), updateRuntimeData);
       }
     }
 
@@ -428,6 +457,8 @@ class MyClasspath : public Classpath {
 #endif
     
     interceptMethods(t, true);
+
+    JniConstants::init(reinterpret_cast<_JNIEnv*>(t));
 
     JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
   }
@@ -714,8 +745,6 @@ jniCreateFileDescriptor(JNIEnv* e, int fd)
   return descriptor;
 }
 
-struct _JNIEnv;
-
 int
 register_org_apache_harmony_dalvik_NativeTestTarget(_JNIEnv*)
 {
@@ -948,10 +977,6 @@ Avian_java_lang_VMClassLoader_findLoadedClass
     return 0;
   }
 }
-
-extern "C" JNIEXPORT int64_t JNICALL
-Avian_avian_Classes_defineVMClass
-(Thread*, object, uintptr_t*);
 
 extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_VMClassLoader_defineClass__Ljava_lang_ClassLoader_2Ljava_lang_String_2_3BII
