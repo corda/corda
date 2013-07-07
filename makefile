@@ -215,8 +215,11 @@ ifneq ($(android),)
 		$(android)/openssl-upstream/libssl.a \
 		$(android)/openssl-upstream/libcrypto.a \
 		$(platform-lflags) \
-		-lrt \
 		-lstdc++
+
+ifeq ($(platform),linux)
+	classpath-lflags += -lrt
+endif
 
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
