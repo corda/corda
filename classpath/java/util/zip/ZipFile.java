@@ -285,6 +285,7 @@ public class ZipFile {
     public final int pointer;
 
     public MyZipEntry(Window window, int pointer) {
+      super(null);
       this.window = window;
       this.pointer = pointer;
     }

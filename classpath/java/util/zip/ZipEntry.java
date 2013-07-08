@@ -117,7 +117,10 @@ public class ZipEntry {
 
   public long getTime(){
     return millisTime;
+  }
 
+  public int getJavaTime(){
+    return modTimeDate;
   }
 
   /**
