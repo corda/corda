@@ -952,6 +952,12 @@ Java_java_lang_Math_ceil(JNIEnv*, jclass, jdouble val)
   return ceil(val);
 }
 
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_exp(JNIEnv*, jclass, jdouble exp)
+{
+  return pow(M_E, exp);
+}
+
 extern "C" JNIEXPORT jint JNICALL
 Java_java_lang_Double_fillBufferWithDouble(JNIEnv* e, jclass, jdouble val,
 					   jbyteArray buffer, jint bufferSize) {
