@@ -168,7 +168,7 @@ public class Collections {
     }
 
     public Iterator<T> iterator() {
-      return new SynchronizedIterator(lock, collection.iterator());
+      return new SynchronizedIterator<T>(lock, collection.iterator());
     }
 
     public boolean containsAll(Collection<?> c) {
@@ -355,7 +355,7 @@ public class Collections {
     }
 
     public Iterator<T> iterator() {
-      return inner.iterator();
+      return new UnmodifiableIterator<T>(inner.iterator());
     }
 
     public int indexOf(Object value) {
@@ -371,11 +371,11 @@ public class Collections {
     }
 
     public ListIterator<T> listIterator(int index) {
-      return inner.listIterator(index);
+      return new UnmodifiableListIterator<T>(inner.listIterator(index));
     }
 
     public ListIterator<T> listIterator() {
-      return inner.listIterator();
+      return new UnmodifiableListIterator<T>(inner.listIterator());
     }
 
     public int size() {
@@ -471,64 +471,136 @@ public class Collections {
     }
 
     public Collection<V> values() {
-      return unmodifiableSet((Set<V>)inner.values());
+      return unmodifiableCollection(inner.values());
     }
   }
-
-  static class UnmodifiableSet<T> implements Set<T> {
-    private Set<T> inner;
-
-    UnmodifiableSet(Set<T> inner) {
+  
+  static class UnmodifiableIterator<T> implements Iterator<T> {
+    private static final String EXCEPTION_MESSAGE = "not supported in unmodifiable collection";
+    
+    private final Iterator<T> inner;
+    
+    UnmodifiableIterator(Iterator<T> inner) {
       this.inner = inner;
     }
-          
-    public boolean add(T element) {
-      throw new UnsupportedOperationException("not supported");
+    
+    @Override
+    public T next() {
+      return inner.next();
     }
 
-    public boolean addAll(Collection<? extends T> collection) {
-      throw new UnsupportedOperationException("not supported");
+    @Override
+    public boolean hasNext() {
+      return inner.hasNext();
     }
 
-    public void clear() {
-      throw new UnsupportedOperationException("not supported");
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+  }
+  
+  
+  static class UnmodifiableListIterator<T> extends UnmodifiableIterator<T> 
+                                                   implements ListIterator<T> {
+    private final ListIterator<T> innerListIterator;
+    
+    UnmodifiableListIterator(ListIterator<T> listIterator) {
+      super(listIterator);
+      
+      this.innerListIterator = listIterator;
     }
 
-    public boolean contains(Object element) {
-      return inner.contains(element);
+    @Override
+    public boolean hasPrevious() {
+      return innerListIterator.hasPrevious();
     }
 
-    public boolean isEmpty() {
-      return inner.isEmpty();
+    @Override
+    public T previous() {
+      return innerListIterator.previous();
     }
-
+  }
+  
+  static class UnmodifiableCollection<T> implements Collection<T> {
+    private static final String EXCEPTION_MESSAGE = "not supported in unmodifiable collection";
+    
+    private final Collection<T> inner;
+    
+    UnmodifiableCollection(Collection<T> inner) {
+      this.inner = inner;
+    }
+    
+    @Override
     public Iterator<T> iterator() {
-      return inner.iterator();
+      return new UnmodifiableIterator<T>(inner.iterator());
     }
 
-    public boolean remove(Object element) {
-      throw new UnsupportedOperationException("not supported");
-    }
-
+    @Override
     public int size() {
       return inner.size();
     }
 
-    public Object[] toArray() {
-      return toArray(new Object[size()]);      
+    @Override
+    public boolean isEmpty() {
+      return inner.isEmpty();
     }
 
-    public <S> S[] toArray(S[] array) {
-      return inner.toArray(array);
+    @Override
+    public boolean contains(Object element) {
+      return inner.contains(element);
     }
 
+    @Override
     public boolean containsAll(Collection<?> c) {
       return inner.containsAll(c);
     }
 
+    @Override
+    public boolean add(T element) {
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+
+    @Override
+    public boolean addAll(Collection<? extends T> collection) {
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+
+    @Override
+    public boolean remove(Object element) {
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+
+    @Override
     public boolean removeAll(Collection<?> c) {
-      throw new UnsupportedOperationException("not supported");
-    }     
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+
+    @Override
+    public Object[] toArray() {
+      return inner.toArray();
+    }
+
+    @Override
+    public <S> S[] toArray(S[] array) {
+      return inner.toArray(array);
+    }
+
+    @Override
+    public void clear() {
+      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+    }
+  }
+  
+  public static <T> UnmodifiableCollection<T> unmodifiableCollection(Collection<T> collection) {
+    return new UnmodifiableCollection<T>(collection);
+  }
+
+  static class UnmodifiableSet<T> extends UnmodifiableCollection<T> 
+                                  implements Set<T> {
+    UnmodifiableSet(Set<T> inner) {
+      super(inner);
+    }  
   }
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {
