@@ -59,7 +59,7 @@ Avian can currently target the following platforms:
 
   * Linux (i386, x86_64, ARM, and 32-bit PowerPC)
   * Windows (i386 and x86_64)
-  * Mac OS X (i386, x86_64 and 32-bit PowerPC)
+  * Mac OS X (i386 and x86_64)
   * Apple iOS (i386 and ARM)
   * FreeBSD (i386, x86_64)
 
@@ -357,36 +357,74 @@ the following, starting from the Avian directory:
     cd ..
     mkdir -p android/system android/external
     cd android
+
     git clone https://android.googlesource.com/platform/bionic
+    (cd bionic && \
+       git checkout 84983592ade3ec7d72d082262fb6646849979bfc)
+    
     git clone https://android.googlesource.com/platform/system/core \
       system/core
-    git clone https://android.googlesource.com/platform/external/expat \
-      external/expat
+    (cd system/core && \
+       git checkout fafcabd0dd4432de3c7f5956edec23f6ed241b56)
+
     git clone https://android.googlesource.com/platform/external/fdlibm \
       external/fdlibm
+    (cd external/fdlibm && \
+       git checkout 0da5f683c9ddc9442af3b389b4220e91ccffb320)
+
     git clone https://android.googlesource.com/platform/external/icu4c \
       external/icu4c
+    (cd external/icu4c && \
+       git checkout 8fd45e08f1054d80a356ef8aa05659a2ba84707c)
+
     git clone https://android.googlesource.com/platform/libnativehelper
+    (cd libnativehelper && \
+       git checkout cf5ac0ec696fce7fac6b324ec7d4d6da217e501c)
+
     git clone https://android.googlesource.com/platform/external/openssl \
       external/openssl
+    (cd external/openssl && \
+       git checkout 7b972f1aa23172c4430ada7f3236fa1fd9b31756)
+
     git clone https://android.googlesource.com/platform/external/zlib \
       external/zlib
+    (cd external/zlib && \
+       git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
+
     git clone git://git.openssl.org/openssl.git openssl-upstream
+    (cd openssl-upstream && \
+       git checkout OpenSSL_1_0_1e)
+
     git clone https://github.com/dicej/android-libcore64 libcore
+
+    curl -Of http://readytalk.github.io/avian/expat-2.1.0.tar.gz
+    (cd external && tar xzf ../expat-2.1.0.tar.gz && mv expat-2.1.0 expat)
+
     (cd external/expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
        --enable-static && make)
+
     (cd external/fdlibm && (mv makefile.in Makefile.in || true) \
        && CFLAGS=-fPIC bash configure && make)
+
     (cd external/icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
        --enable-static && make)
 
 NB: use 'CC="gcc -fPIC" ./Configure darwin64-x86_64-cc' when building
 for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
 
-    (cd openssl-upstream && git checkout OpenSSL_1_0_1e \
-       && (for x in ../external/openssl/patches/*.patch; \
-             do patch -p1 < $x; done) \
+    (cd openssl-upstream \
+       && (for x in \
+               progs \
+               handshake_cutthrough \
+               jsse \
+               channelid \
+               eng_dyn_dirs \
+               fix_clang_build \
+               tls12_digests \
+               alpn; \
+             do patch -p1 < ../external/openssl/patches/$x.patch; done) \
        && CC="gcc -fPIC" ./config && make)
+
     cd ../avian
     make android=$(pwd)/../android test
 
@@ -402,6 +440,10 @@ the entire platform.  As of this writing, the patches apply cleanly
 against OpenSSL 1.0.1e, so that's the tag we check out, but this may
 change in the future when the Android fork rebases against a new
 OpenSSL version.
+
+Finally, we specify specific commit hashes for each repository which
+are known to work.  Later versions may also work, but have not been
+tested.
 
 
 Installing
@@ -468,7 +510,8 @@ setting the boot classpath to "[bootJar]".
 
     $ cat >embedded-jar-main.cpp <<EOF
     #include "stdint.h"
-        #include "jni.h"
+    #include "jni.h"
+	#include "stdlib.h" 
     
     #if (defined __MINGW32__) || (defined _MSC_VER)
     #  define EXPORT __declspec(dllexport)
@@ -496,6 +539,8 @@ setting the boot classpath to "[bootJar]".
       }
     
     } // extern "C"
+	
+	extern "C" void __cxa_pure_virtual(void) { abort(); }
     
     int
     main(int ac, const char** av)
@@ -557,7 +602,7 @@ __on Mac OS X:__
 
 __on Windows:__
 
-     $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/win32 \
+     $ g++ -fno-exceptions -fno-rtti -I"$JAVA_HOME/include" -I"$JAVA_HOME/include/win32" \
          -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 __5.__ Link the objects produced above to produce the final
@@ -577,7 +622,7 @@ __on Windows:__
 
     $ dlltool -z hello.def *.o
     $ dlltool -d hello.def -e hello.exp
-    $ g++ hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
+    $ gcc hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
         -mwindows -mconsole -o hello.exe
     $ strip --strip-all hello.exe
 

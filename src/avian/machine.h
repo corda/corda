@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -1995,7 +1995,7 @@ addThread(Thread* t, Thread* p)
   ACQUIRE_RAW(t, t->m->stateLock);
 
   assert(t, p->state == Thread::NoState);
-  expect(t, t->state == Thread::ActiveState || t->state == Thread::ExclusiveState);
+  expect(t, t->state == Thread::ActiveState || t->state == Thread::ExclusiveState || t->state == Thread::NoState);
 
   p->state = Thread::IdleState;
   ++ t->m->threadCount;
@@ -3941,6 +3941,18 @@ lineNumberLine(uint64_t ln)
 {
   return ln & 0xFFFFFFFF;
 }
+
+object
+interruptLock(Thread* t, object thread);
+
+void
+clearInterrupted(Thread* t);
+
+void
+threadInterrupt(Thread* t, object thread);
+
+bool
+threadIsInterrupted(Thread* t, object thread, bool clear);
 
 inline FILE*
 errorLog(Thread* t)

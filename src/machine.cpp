@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -2009,7 +2009,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
           unsigned exceptionCount = s.read2();
           object body = makeShortArray(t, exceptionCount);
@@ -2022,7 +2022,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           object body = makeByteArray(t, length);
@@ -2034,7 +2034,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
       
           set(t, addendum, AddendumSignature,
@@ -2044,7 +2044,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0);
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           object body = makeByteArray(t, length);
@@ -2052,6 +2052,19 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
                  length);
 
           set(t, addendum, AddendumAnnotationTable, body);
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
+                              ("RuntimeVisibleParameterAnnotations"),
+                              &byteArrayBody(t, attributeName, 0)) == 0)
+        {
+          if (addendum == 0) {
+            addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
+          }
+
+          object body = makeByteArray(t, length);
+          s.read(reinterpret_cast<uint8_t*>(&byteArrayBody(t, body, 0)),
+                 length);
+
+          set(t, addendum, MethodAddendumParameterAnnotationTable, body);
         } else {
           s.skip(length);
         }
@@ -5012,7 +5025,7 @@ parseUtf8(Thread* t, const char* data, unsigned length)
     Client(Thread* t): t(t) { }
 
     virtual void handleError() {
-      //      vm::abort(t);
+      if (false) abort(t);
     }
 
    private:
@@ -5041,7 +5054,7 @@ parseUtf8(Thread* t, object array)
     Client(Thread* t): t(t) { }
 
     virtual void handleError() {
-      //      vm::abort(t);
+      if (false) abort(t);
     }
 
    private:
@@ -5184,6 +5197,66 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
     
     populateMultiArray(t, a, counts, index + 1, dimensions);
   }
+}
+
+object
+interruptLock(Thread* t, object thread)
+{
+  object lock = threadInterruptLock(t, thread);
+
+  loadMemoryBarrier();
+
+  if (lock == 0) {
+    PROTECT(t, thread);
+    ACQUIRE(t, t->m->referenceLock);
+
+    if (threadInterruptLock(t, thread) == 0) {
+      object head = makeMonitorNode(t, 0, 0);
+      object lock = makeMonitor(t, 0, 0, 0, head, head, 0);
+
+      storeStoreMemoryBarrier();
+
+      set(t, thread, ThreadInterruptLock, lock);
+    }
+  }
+  
+  return threadInterruptLock(t, thread);
+}
+
+void
+clearInterrupted(Thread* t)
+{
+  monitorAcquire(t, interruptLock(t, t->javaThread));
+  threadInterrupted(t, t->javaThread) = false;
+  monitorRelease(t, interruptLock(t, t->javaThread));
+}
+
+void
+threadInterrupt(Thread* t, object thread)
+{
+  PROTECT(t, thread);
+  
+  monitorAcquire(t, interruptLock(t, thread));
+  Thread* p = reinterpret_cast<Thread*>(threadPeer(t, thread));
+  if (p) {
+    interrupt(t, p);
+  }
+  threadInterrupted(t, thread) = true;
+  monitorRelease(t, interruptLock(t, thread));
+}
+
+bool
+threadIsInterrupted(Thread* t, object thread, bool clear)
+{
+  PROTECT(t, thread);
+  
+  monitorAcquire(t, interruptLock(t, thread));
+  bool v = threadInterrupted(t, thread);
+  if (clear) {
+    threadInterrupted(t, thread) = false;
+  }
+  monitorRelease(t, interruptLock(t, thread));
+  return v;
 }
 
 void

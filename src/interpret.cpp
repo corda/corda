@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -790,8 +790,6 @@ interpret3(Thread* t, const int base)
   if (UNLIKELY(exception)) {
     goto throw_;
   }
-
-  initClass(t, methodClass(t, frameMethod(t, frame)));
 
  loop:
   instruction = codeBody(t, code, ip++);
@@ -1907,8 +1905,6 @@ interpret3(Thread* t, const int base)
       PROTECT(t, method);
       PROTECT(t, class_);
 
-      initClass(t, class_);
-
       code = findVirtualMethod(t, method, class_);
       goto invoke;
     } else {
@@ -2909,7 +2905,9 @@ invoke(Thread* t, object method)
     class_ = methodClass(t, method);
   }
 
-  initClass(t, class_);
+  if (methodFlags(t, method) & ACC_STATIC) {
+    initClass(t, class_);
+  }
 
   object result = 0;
 

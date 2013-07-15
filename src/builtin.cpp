@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -605,6 +605,46 @@ Avian_java_nio_FixedArrayByteBuffer_allocateFixed
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getObject
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  return fieldAtOffset<uintptr_t>(o, offset);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uintptr_t value = arguments[4];
+
+  set(t, o, offset, reinterpret_cast<object>(value));
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_compareAndSwapObject
+(Thread* t, object, uintptr_t* arguments)
+{
+  object target = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  uintptr_t expect = arguments[4];
+  uintptr_t update = arguments[5];
+
+  bool success = atomicCompareAndSwap
+    (&fieldAtOffset<uintptr_t>(target, offset), expect, update);
+
+  if (success) {
+    mark(t, target, offset);
+  }
+
+  return success;
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapInt
 (Thread*, object, uintptr_t* arguments)
 {
@@ -615,6 +655,82 @@ Avian_sun_misc_Unsafe_compareAndSwapInt
 
   return atomicCompareAndSwap32
     (&fieldAtOffset<uint32_t>(target, offset), expect, update);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_unpark
+(Thread* t, object, uintptr_t* arguments)
+{
+  object thread = reinterpret_cast<object>(arguments[1]);
+  
+  monitorAcquire(t, interruptLock(t, thread));
+  threadUnparked(t, thread) = true;
+  monitorNotify(t, interruptLock(t, thread));
+  monitorRelease(t, interruptLock(t, thread));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_park
+(Thread* t, object, uintptr_t* arguments)
+{
+  bool absolute = arguments[1];
+  int64_t time; memcpy(&time, arguments + 2, 8);
+  
+  int64_t then = t->m->system->now();
+
+  if (absolute) {
+    time -= then;
+    if (time <= 0) {
+      return;
+    }
+  } else if (time) {
+    // if not absolute, interpret time as nanoseconds, but make sure
+    // it doesn't become zero when we convert to milliseconds, since
+    // zero is interpreted as infinity below
+    time = (time / (1000 * 1000)) + 1;
+  }
+
+  monitorAcquire(t, interruptLock(t, t->javaThread));
+  bool interrupted = false;
+  while (time >= 0
+         and (not (threadUnparked(t, t->javaThread)
+                   or threadInterrupted(t, t->javaThread)
+                   or (interrupted = monitorWait
+                       (t, interruptLock(t, t->javaThread), time)))))
+  {
+    int64_t now = t->m->system->now();
+    time -= now - then;
+    then = now;
+    
+    if (time == 0) {
+      break;
+    }
+  }
+  if (interrupted) {
+    threadInterrupted(t, t->javaThread) = true;
+  }
+  threadUnparked(t, t->javaThread) = false;
+  monitorRelease(t, interruptLock(t, t->javaThread));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putIntVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int32_t value = arguments[4];
+  
+  storeStoreMemoryBarrier();
+  fieldAtOffset<int32_t>(o, offset) = value;
+  storeLoadMemoryBarrier();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Avian_sun_misc_Unsafe_putOrderedInt
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putIntVolatile(t, method, arguments);
 }
 
 extern "C" JNIEXPORT int64_t JNICALL

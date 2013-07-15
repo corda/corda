@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -3034,10 +3034,17 @@ void
 checkCast(MyThread* t, object class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
+    object classNameFrom = className(t, objectClass(t, o));
+    object classNameTo   = className(t, class_);
+    THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
+    THREAD_RUNTIME_ARRAY(t, char, classTo,   byteArrayLength(t, classNameTo));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameFrom, 0)));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classTo),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameTo,   0)));
     throwNew
-      (t, Machine::ClassCastExceptionType, "%s as %s",
-       &byteArrayBody(t, className(t, objectClass(t, o)), 0),
-       &byteArrayBody(t, className(t, class_), 0));
+      (t, Machine::ClassCastExceptionType, "%s cannot be cast to %s",
+       RUNTIME_ARRAY_BODY(classFrom), RUNTIME_ARRAY_BODY(classTo));
   }
 }
 
@@ -3252,22 +3259,35 @@ instanceOfFromReference(Thread* t, object pair, object o)
 uint64_t
 makeNewGeneral64(Thread* t, object class_)
 {
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
   return reinterpret_cast<uintptr_t>(makeNewGeneral(t, class_));
 }
 
 uint64_t
 makeNew64(Thread* t, object class_)
 {
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
   return reinterpret_cast<uintptr_t>(makeNew(t, class_));
 }
 
 uint64_t
 makeNewFromReference(Thread* t, object pair)
 {
-  return makeNewGeneral64
-    (t, resolveClass
-     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
-      referenceName(t, pairSecond(t, pair))));
+  object class_ = resolveClass
+    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+     referenceName(t, pairSecond(t, pair)));
+
+  PROTECT(t, class_);
+
+  initClass(t, class_);
+
+  return makeNewGeneral64(t, class_);
 }
 
 uint64_t
@@ -4790,9 +4810,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
           PROTECT(t, field);
 
-          if (fieldClass(t, field) != methodClass(t, context->method)
-              and classNeedsInit(t, fieldClass(t, field)))
-          {
+          if (classNeedsInit(t, fieldClass(t, field))) {
             c->call
               (c->constant
                (getThunk(t, tryInitClassThunk), Compiler::AddressType),
@@ -5970,9 +5988,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         if (instruction == putstatic) {
           checkField(t, field, true);
 
-          if (fieldClass(t, field) != methodClass(t, context->method)
-              and classNeedsInit(t, fieldClass(t, field)))
-          {
+          if (classNeedsInit(t, fieldClass(t, field))) {
             PROTECT(t, field);
 
             c->call
@@ -10440,7 +10456,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
 {
   PROTECT(t, method);
 
-  if (bootContext == 0) {
+  if (bootContext == 0 and methodFlags(t, method) & ACC_STATIC) {
     initClass(t, methodClass(t, method));
   }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -667,6 +667,7 @@ asAssemblerOperand(Context* c, Site* low, Site* high,
 }
 
 class OperandUnion: public lir::Operand {
+ public:
   // must be large enough and aligned properly to hold any operand
   // type (we'd use an actual union type here, except that classes
   // with constructors cannot be used in a union):

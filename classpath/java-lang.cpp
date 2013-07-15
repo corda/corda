@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -950,6 +950,12 @@ extern "C" JNIEXPORT jdouble JNICALL
 Java_java_lang_Math_ceil(JNIEnv*, jclass, jdouble val)
 {
   return ceil(val);
+}
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_java_lang_Math_exp(JNIEnv*, jclass, jdouble exp)
+{
+  return pow(M_E, exp);
 }
 
 extern "C" JNIEXPORT jint JNICALL

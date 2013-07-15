@@ -46,6 +46,14 @@ public final class Unsafe {
 
   public native void putDouble(long address, double x);
 
+  public native void putIntVolatile(Object o, long offset, int x);
+
+  public native void putOrderedInt(Object o, long offset, int x);
+
+  public native Object getObject(Object o, long offset);
+
+  public native void putObject(Object o, long offset, Object x);
+
   public native long getAddress(long address);
 
   public native void putAddress(long address, long x);
@@ -54,12 +62,19 @@ public final class Unsafe {
 
   public native long objectFieldOffset(Field field);
 
+  public native void park(boolean absolute, long time);
+
+  public native void unpark(Object target);
+
   public native void copyMemory(Object srcBase, long srcOffset,
                                 Object destBase, long destOffset,
                                 long count);
 
   public native boolean compareAndSwapInt(Object o, long offset, int old,
                                           int new_);
+
+  public native boolean compareAndSwapObject(Object o, long offset, Object old,
+                                             Object new_);
 
   public void copyMemory(long src, long dst, long count) {
     copyMemory(null, src, null, dst, count);

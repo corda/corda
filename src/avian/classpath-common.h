@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -266,8 +266,12 @@ clone(Thread* t, object o)
            reinterpret_cast<void**>(o) + 1,
            size - BytesPerWord);
   } else {
+    object classNameSlash = className(t, objectClass(t, o));
+    THREAD_RUNTIME_ARRAY(t, char, classNameDot, byteArrayLength(t, classNameSlash));
+    replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
+            reinterpret_cast<char*>(&byteArrayBody(t, classNameSlash, 0)));
     throwNew(t, Machine::CloneNotSupportedExceptionType, "%s",
-             &byteArrayBody(t, className(t, objectClass(t, o)), 0)); 
+             RUNTIME_ARRAY_BODY(classNameDot));
   }
 
   return clone;
@@ -596,19 +600,16 @@ intercept(Thread* t, object c, const char* name, const char* spec,
   if (m) {
     PROTECT(t, m);
 
-    object clone;
+    methodFlags(t, m) |= ACC_NATIVE;
+
     if (updateRuntimeData) {
-      clone = methodClone(t, m);
+      object clone = methodClone(t, m);
 
       // make clone private to prevent vtable updates at compilation
       // time.  Otherwise, our interception might be bypassed by calls
       // through the vtable.
       methodFlags(t, clone) |= ACC_PRIVATE;
-    }
 
-    methodFlags(t, m) |= ACC_NATIVE;
-
-    if (updateRuntimeData) {
       object native = makeNativeIntercept(t, function, true, clone);
       
       PROTECT(t, native);

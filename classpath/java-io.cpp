@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -19,6 +19,8 @@
 #include "jni-util.h"
 
 #ifdef PLATFORM_WINDOWS
+
+#  define UNICODE
 
 #  include <windows.h>
 #  include <io.h>
@@ -126,8 +128,12 @@ OPEN(string_t path, int mask, int mode)
 inline bool
 exists(string_t path)
 {
+#ifdef PLATFORM_WINDOWS
+  return GetFileAttributes(path) != INVALID_FILE_ATTRIBUTES;
+#else
   STRUCT_STAT s;
   return STAT(path, &s) == 0;
+#endif
 }
 
 inline int

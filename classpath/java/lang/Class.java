@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2011, Avian Contributors
+/* Copyright (c) 2008-2013, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -366,54 +366,12 @@ public final class Class <T> implements Type, AnnotatedElement {
     return fields.toArray(new Field[fields.size()]);
   }
 
-  private int countMethods(boolean publicOnly) {
-    int count = 0;
-    if (vmClass.methodTable != null) {
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (((! publicOnly)
-             || ((vmClass.methodTable[i].flags & Modifier.PUBLIC))
-             != 0)
-            && (! Method.getName(vmClass.methodTable[i]).startsWith("<")))
-        {
-          ++ count;
-        }
-      }
-    }
-    return count;
-  }
-
   public Method[] getDeclaredMethods() {
-    Method[] array = new Method[countMethods(false)];
-    if (vmClass.methodTable != null) {
-      Classes.link(vmClass);
-
-      int ai = 0;
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (! Method.getName(vmClass.methodTable[i]).startsWith("<")) {
-          array[ai++] = new Method(vmClass.methodTable[i]);
-        }
-      }
-    }
-
-    return array;
+    return Classes.getMethods(vmClass, false);
   }
 
   public Method[] getMethods() {
-    Method[] array = new Method[countMethods(true)];
-    if (vmClass.methodTable != null) {
-      Classes.link(vmClass);
-
-      int index = 0;
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (((vmClass.methodTable[i].flags & Modifier.PUBLIC) != 0)
-            && (! Method.getName(vmClass.methodTable[i]).startsWith("<")))
-        {
-          array[index++] = new Method(vmClass.methodTable[i]);
-        }
-      }
-    }
-
-    return array;
+    return Classes.getMethods(vmClass, true);
   }
 
   public Class[] getInterfaces() {
@@ -591,7 +549,7 @@ public final class Class <T> implements Type, AnnotatedElement {
   }
 
   public Annotation[] getAnnotations() {
-    Annotation[] array = new Annotation[countMethods(true)];
+    Annotation[] array = new Annotation[countAnnotations()];
     int i = 0;
     for (VMClass c = vmClass; c != null; c = c.super_) {
       if (c.addendum != null && c.addendum.annotationTable != null) {
