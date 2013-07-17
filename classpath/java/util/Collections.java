@@ -335,23 +335,23 @@ public class Collections {
     }
 
     public T set(int index, T value) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public T remove(int index) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean remove(Object o) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean add(T element) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public void add(int index, T element) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public Iterator<T> iterator() {
@@ -387,7 +387,7 @@ public class Collections {
     }
 
     public boolean addAll(Collection<? extends T> collection) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public Object[] toArray() {
@@ -399,15 +399,15 @@ public class Collections {
     }
 
     public void clear() {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean removeAll(Collection<?> c) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean addAll(int startIndex, Collection<? extends T> c) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean containsAll(Collection<?> c) {
@@ -427,7 +427,7 @@ public class Collections {
 	  }
 
     public void clear() {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public boolean containsKey(Object key) {
@@ -455,15 +455,15 @@ public class Collections {
     }
 
     public V put(K key, V value) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public void putAll(Map<? extends K, ? extends V> t) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public V remove(Object key) {
-      throw new UnsupportedOperationException("not supported");
+      throw new UnsupportedOperationException();
     }
 
     public int size() {
@@ -476,8 +476,6 @@ public class Collections {
   }
   
   static class UnmodifiableIterator<T> implements Iterator<T> {
-    private static final String EXCEPTION_MESSAGE = "not supported in unmodifiable collection";
-    
     private final Iterator<T> inner;
     
     UnmodifiableIterator(Iterator<T> inner) {
@@ -496,7 +494,7 @@ public class Collections {
 
     @Override
     public void remove() {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
   }
   
@@ -523,8 +521,6 @@ public class Collections {
   }
   
   static class UnmodifiableCollection<T> implements Collection<T> {
-    private static final String EXCEPTION_MESSAGE = "not supported in unmodifiable collection";
-    
     private final Collection<T> inner;
     
     UnmodifiableCollection(Collection<T> inner) {
@@ -558,22 +554,22 @@ public class Collections {
 
     @Override
     public boolean add(T element) {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean addAll(Collection<? extends T> collection) {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean remove(Object element) {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
 
     @Override
     public boolean removeAll(Collection<?> c) {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -588,7 +584,7 @@ public class Collections {
 
     @Override
     public void clear() {
-      throw new UnsupportedOperationException(EXCEPTION_MESSAGE);
+      throw new UnsupportedOperationException();
     }
   }
   
