@@ -450,10 +450,10 @@ GLOBAL(vmNativeCall):
    
    subl   %ecx,%esp
 
-#  ifdef __APPLE__
-   // align to a 16 byte boundary on Darwin
+//#  ifdef __APPLE__
+   // align to a 16 byte boundary
    andl   $0xFFFFFFF0,%esp
-#  endif
+//#  endif
    
    // copy arguments into place
    movl   $0,%ecx
