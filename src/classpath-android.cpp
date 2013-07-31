@@ -452,7 +452,7 @@ class MyClasspath : public Classpath {
     // LD_LIBRARY_PATH is not set as of this writing:
 #ifdef PLATFORM_WINDOWS
     _wputenv(L"LD_LIBRARY_PATH=(dummy)");
-#else
+#elif (! defined AVIAN_IOS)
     setenv("LD_LIBRARY_PATH", "", false);
 #endif
     

@@ -170,6 +170,7 @@ ifneq ($(android),)
 		-D_FILE_OFFSET_BITS=64 \
 		-DOS_SHARED_LIB_FORMAT_STR="\"$(so-prefix)%s$(so-suffix)\"" \
 		-DJNI_JARJAR_PREFIX= \
+		-D__DARWIN_UNIX03=1 \
 		-g3 \
 		-Werror
 
@@ -445,19 +446,7 @@ ifeq ($(arch),arm)
 	endif
 
 	ifneq ($(arch),$(build-arch))
-		ifeq ($(platform),darwin)
-			ios-bin = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/usr/bin
-			ifeq ($(use-clang),true)
-				cxx = clang -std=c++11
-				cc = clang
-			else
-				cxx = $(ios-bin)/g++
-				cc = $(ios-bin)/gcc
-			endif
-			ar = $(ios-bin)/ar
-			ranlib = $(ios-bin)/ranlib
-			strip = $(ios-bin)/strip
-		else
+		ifneq ($(platform),darwin)
 			cxx = arm-linux-gnueabi-g++
 			cc = arm-linux-gnueabi-gcc
 			ar = arm-linux-gnueabi-ar
@@ -616,24 +605,53 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 	rpath =
 
-	sdk-dir = $(developer-dir)/Platforms/iPhoneOS.platform/Developer/SDKs
-
-	ifeq ($(arch),arm)
-		ios-version := \
-			$(shell if test -d $(sdk-dir)/iPhoneOS6.1.sdk; then echo 6.1; \
-				elif test -d $(sdk-dir)/iPhoneOS6.0.sdk; then echo 6.0; \
-				elif test -d $(sdk-dir)/iPhoneOS5.1.sdk; then echo 5.1; \
-				elif test -d $(sdk-dir)/iPhoneOS5.0.sdk; then echo 5.0; \
-				elif test -d $(sdk-dir)/iPhoneOS4.3.sdk; then echo 4.3; \
-				elif test -d $(sdk-dir)/iPhoneOS4.2.sdk; then echo 4.2; \
-				else echo; fi)
-
-		ifeq ($(ios-version),)
-			x := $(error "couldn't find SDK for iOS version")
+	ifeq ($(ios),true)
+		ifeq ($(arch),i386)
+			target = iPhoneSimulator
+			sdk = iphonesimulator$(ios-version)
+			arch = i386
+			arch-flag = -arch i386
+			release = Release-iphonesimulator
+		else
+			target = iPhoneOS
+			sdk = iphoneos$(ios-version)
+			arch = arm
+			arch-flag = -arch armv7
+			release = Release-iphoneos
 		endif
 
-		flags = -arch armv7 -isysroot \
-			$(sdk-dir)/iPhoneOS$(ios-version).sdk/
+		platform-dir = $(developer-dir)/Platforms/$(target).platform
+		sdk-dir = $(platform-dir)/Developer/SDKs
+
+		ios-version := $(shell \
+			  if test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
+			elif test -d $(sdk-dir)/$(target)6.0.sdk; then echo 6.0; \
+			elif test -d $(sdk-dir)/$(target)5.1.sdk; then echo 5.1; \
+			elif test -d $(sdk-dir)/$(target)5.0.sdk; then echo 5.0; \
+			elif test -d $(sdk-dir)/$(target)4.3.sdk; then echo 4.3; \
+  		elif test -d $(sdk-dir)/$(target)4.2.sdk; then echo 4.2; \
+  		else echo; fi)
+
+		ifeq ($(ios-version),)
+			x := $(error "couldn't find SDK")
+		endif
+
+		ios-bin = $(platform-dir)/Developer/usr/bin
+
+		ifeq ($(use-clang),true)
+			cxx = clang -std=c++11
+			cc = clang
+		else
+			cxx = $(ios-bin)/g++
+			cc = $(ios-bin)/gcc
+		endif
+		ar = $(ios-bin)/ar
+		ranlib = $(ios-bin)/ranlib
+		strip = $(ios-bin)/strip
+
+		flags = -isysroot $(sdk-dir)/$(target)$(ios-version).sdk \
+			$(arch-flag)
+
 		classpath-extra-cflags += $(flags)
 		cflags += $(flags)
 		asmflags += $(flags)
@@ -1811,6 +1829,7 @@ $(audit-codegen-executable): $(audit-codegen-executable-objects)
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
 	$(MAKE) mode=$(mode) \
+		ios=false \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
 		aot-only=false \
