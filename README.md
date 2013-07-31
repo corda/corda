@@ -397,7 +397,7 @@ the following, starting from the Avian directory:
 
     git clone https://github.com/dicej/android-libcore64 libcore
 
-    curl -Of http://readytalk.github.io/avian/expat-2.1.0.tar.gz
+    curl -Of http://oss.readytalk.com/avian/expat-2.1.0.tar.gz
     (cd external && tar xzf ../expat-2.1.0.tar.gz && mv expat-2.1.0 expat)
 
     (cd external/expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
