@@ -20,6 +20,7 @@
 -keep class java.net.Inet6Address
 -keep class java.net.InetAddress
 -keep class java.net.InetSocketAddress
+-keep class java.net.InetUnixAddress
 -keep class java.util.zip.Inflater
 -keep class java.lang.Integer
 -keep class libcore.icu.LocaleData
@@ -37,7 +38,9 @@
 -keep class libcore.io.StructFlock
 -keep class libcore.io.StructGroupReq
 -keep class libcore.io.StructLinger
--keep class libcore.io.StructPasswd
+-keep class libcore.io.StructPasswd {
+   StructPasswd(java.lang.String, int, int, java.lang.String, java.lang.String);
+ }
 -keep class libcore.io.StructPollfd
 -keep class libcore.io.StructStat {
    StructStat(long, long, int, long, int, int, long, long, long, long, long, long, long);
@@ -47,11 +50,20 @@
 -keep class libcore.io.StructUtsname {
    StructUtsname(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String);
  }
+-keep class libcore.io.StructUcred
 
 # referenced from libcore native code
 
 -keep class libcore.icu.LocaleData {
    <fields>;
+ }
+
+-keep class org.conscrypt.OpenSSLBIOInputStream {
+   <methods>;
+ }
+
+-keep class java.util.Calendar {
+   void set(int, int, int, int, int, int);
  }
 
 # called from the VM
