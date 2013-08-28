@@ -35,7 +35,7 @@
 #  define STRUCT_STAT struct _stat
 #  define MKDIR(path, mode) _wmkdir(path)
 #  define CHMOD(path, mode) _wchmod(path, mode)
-#  define UNLINK _wunlink
+#  define REMOVE _wremove
 #  define RENAME _wrename
 #  define OPEN_MASK O_BINARY
 
@@ -81,7 +81,7 @@ typedef wchar_t char_t;
 #  define STRUCT_STAT struct stat
 #  define MKDIR mkdir
 #  define CHMOD chmod
-#  define UNLINK unlink
+#  define REMOVE remove
 #  define RENAME rename
 #  define OPEN_MASK 0
 
@@ -386,7 +386,7 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    int r = UNLINK(chars);
+    int r = REMOVE(chars);
     if (r != 0) {
       throwNewErrno(e, "java/io/IOException");
     }
