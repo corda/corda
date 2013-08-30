@@ -222,6 +222,68 @@ const char* Locale::DEFAULT_LANGUAGE = "en";
 const char* Locale::DEFAULT_REGION = "";
 
 #ifdef PLATFORM_WINDOWS
+
+void appendN(char** dest, char ch, size_t length) {
+  for(size_t i = 0; i < length; i++) {
+    *((*dest)++) = ch;
+  }
+}
+
+bool needsEscape(const char* src, size_t length) {
+  const char* end = src + length;
+  for(const char* ptr = src; ptr < end; ptr++) {
+    switch(*ptr) {
+      case ' ':
+      case '\t':
+      case '\n':
+      case '\v':
+      case '"':
+        return true;
+    }
+  }
+
+  return false;
+
+}
+
+void copyAndEscape(char** dest, const char* src, size_t length) {
+  char* destp = *dest;
+  const char* end = src + length;
+
+  if(length != 0 && !needsEscape(src, length)) {
+    for(const char* ptr = src; ptr < end; ptr++) {
+      *(destp++) = *ptr;
+    }
+  } else {
+
+    *(destp++) = '"';
+
+    for(const char* ptr = src; ; ptr++) {
+      unsigned numBackslashes = 0;
+
+      while(ptr < end && *ptr == '\\') {
+        ptr++;
+        numBackslashes++;
+      }
+
+      if(ptr == end) {
+        appendN(&destp, '\\', 2 * numBackslashes);
+        break;
+      } else if(*ptr == '"') {
+        appendN(&destp, '\\', 2 * numBackslashes + 1);
+        *(destp++) = *ptr;
+      } else {
+        appendN(&destp, '\\', numBackslashes);
+        *(destp++) = *ptr;
+      }
+    }
+    
+    *(destp++) = '"';
+  }
+
+  *dest = destp;
+}
+
 extern "C" JNIEXPORT void JNICALL 
 Java_java_lang_Runtime_exec(JNIEnv* e, jclass, 
                             jobjectArray command, jlongArray process)
@@ -230,8 +292,13 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
   int size = 0;
   for (int i = 0; i < e->GetArrayLength(command); ++i){
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
-    size += e->GetStringUTFLength(element) + 1;
-  } 
+    if(element) {
+      // worst case, assuming every character is '"', and we escape all of them
+      size += 2 * e->GetStringUTFLength(element) + 3;
+    } else {
+      throwNew(e, "java/lang/NullPointerException", strdup("null string array element"));
+    }
+  }
    
   RUNTIME_ARRAY(char, line, size);
   char* linep = RUNTIME_ARRAY_BODY(line);
@@ -239,13 +306,10 @@ Java_java_lang_Runtime_exec(JNIEnv* e, jclass,
     if (i) *(linep++) = _T(' ');
     jstring element = (jstring) e->GetObjectArrayElement(command, i);
     const char* s =  e->GetStringUTFChars(element, 0);
-#ifdef _MSC_VER
-    _tcscpy_s(linep, size - (linep - RUNTIME_ARRAY_BODY(line)), s);
-#else
-    _tcscpy(linep, s);
-#endif
+
+    copyAndEscape(&linep, s, e->GetStringUTFLength(element));
+
     e->ReleaseStringUTFChars(element, s);
-    linep += e->GetStringUTFLength(element);
   }
   *(linep++) = _T('\0');
  
