@@ -229,7 +229,7 @@ void appendN(char** dest, char ch, size_t length) {
   }
 }
 
-bool needsEscape(const char* src; size_t length) {
+bool needsEscape(const char* src, size_t length) {
   const char* end = src + length;
   for(const char* ptr = src; ptr < end; ptr++) {
     switch(*ptr) {
