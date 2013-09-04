@@ -402,7 +402,7 @@ bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 bootimage-symbols = _binary_bootimage_bin_start:_binary_bootimage_bin_end
 codeimage-symbols = _binary_codeimage_bin_start:_binary_codeimage_bin_end
 
-developer-dir := $(shell if test -d /Developer; then echo /Developer; \
+developer-dir := $(shell if test -d /Developer/Platforms/$(target).platform/Developer/SDKs; then echo /Developer; \
 	else echo /Applications/Xcode.app/Contents/Developer; fi)
 
 ifeq ($(build-arch),powerpc)
