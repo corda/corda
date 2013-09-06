@@ -222,11 +222,11 @@ class Directory {
 
 } // namespace
 
-inline string_t getChars(JNIEnv* e, jstring path) {
+static inline string_t getChars(JNIEnv* e, jstring path) {
   return reinterpret_cast<string_t>(e->GET_CHARS(path, 0));
 }
 
-inline void releaseChars(JNIEnv* e, jstring path, string_t chars) {
+static inline void releaseChars(JNIEnv* e, jstring path, string_t chars) {
   e->RELEASE_CHARS(path, chars);
 }
 
