@@ -44,7 +44,7 @@
 
 #endif
 
-#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
+#if defined(WINAPI_PARTITION_PHONE) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
 // Headers in Windows Phone 8 DevKit contain severe error, so let's define needed functions on our own
 extern "C"
 {
