@@ -40,7 +40,7 @@ public class Pattern {
 
     if (! trivial(pattern)) {
       throw new UnsupportedOperationException
-        ("only trivial regular expressions are supported so far");
+        ("only trivial regular expressions are supported so far (" + pattern + ")");
     }
   }
 
