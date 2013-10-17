@@ -546,22 +546,22 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
 {
   string_t chars = getChars(e, path);
   if (chars) {
-    #ifdef PLATFORM_WINDOWS
+#ifdef PLATFORM_WINDOWS
       // Option: without opening file
       // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364946(v=vs.85).aspx
-      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       HANDLE hFile = CreateFileW
         (chars, FILE_READ_DATA, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-      #else
+#  else
       HANDLE hFile = CreateFile2
         (chars, GENERIC_READ, FILE_SHARE_READ, OPEN_EXISTING, nullptr);
-      #endif
+#  endif
       releaseChars(e, path, chars);
       if (hFile == INVALID_HANDLE_VALUE)
         return 0;
       LARGE_INTEGER fileDate, filetimeToUnixEpochAdjustment;
       filetimeToUnixEpochAdjustment.QuadPart = 11644473600000L * 10000L;
-      #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+#  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       FILETIME fileLastWriteTime;
       if (!GetFileTime(hFile, 0, 0, &fileLastWriteTime))
       {
@@ -570,7 +570,7 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
       }
       fileDate.HighPart = fileLastWriteTime.dwHighDateTime;
       fileDate.LowPart = fileLastWriteTime.dwLowDateTime;
-      #else
+#  else
       FILE_BASIC_INFO fileInfo;
       if (!GetFileInformationByHandleEx(hFile,  FileBasicInfo, &fileInfo, sizeof(fileInfo)))
       {
@@ -578,20 +578,22 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
         return 0;
       }
       fileDate = fileInfo.ChangeTime;
-      #endif
+#  endif
       CloseHandle(hFile);
       fileDate.QuadPart -= filetimeToUnixEpochAdjustment.QuadPart;
       return fileDate.QuadPart / 10000000L;
-    #else
+#else
       struct stat fileStat;
-      if (stat(chars, &fileStat) == -1) {
-        releaseChars(e, path, chars);
+      int res = stat(chars, &fileStat);
+      releaseChars(e, path, chars);
+
+      if (res == -1) {
         return 0;
       }
-      
+
       return (static_cast<jlong>(fileStat.st_mtim.tv_sec) * 1000) +
         (static_cast<jlong>(fileStat.st_mtim.tv_nsec) / (1000*1000));
-    #endif
+#endif
   }
 
   return 0;
