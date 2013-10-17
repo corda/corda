@@ -803,17 +803,18 @@ Java_java_io_FileOutputStream_close(JNIEnv* e, jclass, jint fd)
 
 extern "C" JNIEXPORT void JNICALL
 Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
-                                   jlongArray result)
+                                   jboolean allowWrite, jlongArray result)
 {
   string_t chars = getChars(e, path);
   if (chars) {
     jlong peer = 0;
     jlong length = 0;
+    int flags = (allowWrite ? O_RDWR | O_CREAT : O_RDONLY) | OPEN_MASK;
     #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     #if defined(PLATFORM_WINDOWS)
-    int fd = ::_wopen(chars, O_RDONLY | OPEN_MASK);
+    int fd = ::_wopen(chars, flags);
     #else
-    int fd = ::open((const char*)chars, O_RDONLY | OPEN_MASK);
+    int fd = ::open((const char*)chars, flags, 0644);
     #endif
 	releaseChars(e, path, chars);
 	if (fd == -1) {

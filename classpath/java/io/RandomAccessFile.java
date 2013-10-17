@@ -17,23 +17,25 @@ public class RandomAccessFile {
   private File file;
   private long position = 0;
   private long length;
+  private boolean allowWrite;
 
   public RandomAccessFile(String name, String mode)
     throws FileNotFoundException
   {
-    if (! mode.equals("r")) throw new IllegalArgumentException();
     file = new File(name);
+    if (mode.equals("rw")) allowWrite = true;
+    else if (! mode.equals("r")) throw new IllegalArgumentException();
     open();
   }
 
   private void open() throws FileNotFoundException {
     long[] result = new long[2];
-    open(file.getPath(), result);
+    open(file.getPath(), allowWrite, result);
     peer = result[0];
     length = result[1];
   }
 
-  private static native void open(String name, long[] result)
+  private static native void open(String name, boolean allowWrite, long[] result)
     throws FileNotFoundException;
 
   private void refresh() throws IOException {
@@ -53,7 +55,7 @@ public class RandomAccessFile {
   }
 
   public void seek(long position) throws IOException {
-    if (position < 0 || position > length()) throw new IOException();
+    if (position < 0 || (!allowWrite && position > length())) throw new IOException();
 
     this.position = position;
   }
