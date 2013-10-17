@@ -35,20 +35,20 @@ public class Pattern {
   private final String pattern;
 
   protected Pattern(String pattern, int flags) {
-    this.pattern = pattern;
+    this.pattern = trivial(pattern);
     this.patternFlags = flags;
-
-    if (! trivial(pattern)) {
-      throw new UnsupportedOperationException
-        ("only trivial regular expressions are supported so far (" + pattern + ")");
-    }
   }
 
-  private static boolean trivial(String pattern) {
+  private static String trivial(String pattern) {
+    StringBuffer buffer = new StringBuffer();
     for (int i = 0; i < pattern.length(); ++i) {
       char c = pattern.charAt(i);
       switch (c) {
       case '\\':
+        if (++i == pattern.length() || (c = unescape(pattern.charAt(i))) != -1) {
+          break;
+        }
+        // fallthru
       case '.':
       case '*':
       case '+':
@@ -62,10 +62,32 @@ public class Pattern {
       case ')':
       case '^':
       case '$':
-        return false;
+        throw new UnsupportedOperationException
+          ("only trivial regular expressions are supported so far (" + pattern + ")");
       }
+      buffer.append(c);
     }
-    return true;
+    return buffer.toString();
+  }
+
+  private static char unescape(char c) {
+    switch (c) {
+    case '\\':
+       return c;
+    case 'a':
+       return 0x0007;
+    case 'e':
+       return 0x001B;
+    case 'f':
+       return 0x000C;
+    case 'n':
+       return 0x000A;
+    case 'r':
+       return 0x000D;
+    case 't':
+       return 0x0009;
+    }
+    return (char)-1;
   }
 
   public static Pattern compile(String regex) {
