@@ -541,39 +541,6 @@ Java_java_io_File_exists(JNIEnv* e, jclass, jstring path)
   }
 }
 
-#ifdef PLATFORM_WINDOWS
-
-extern "C" JNIEXPORT jlong JNICALL
-Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
-{
-  string_t chars = getChars(e, path);
-  if (chars) {
-    unsigned length = wcslen(chars);
-    unsigned size = length * sizeof(char_t);
-
-    RUNTIME_ARRAY(char_t, buffer, length + 3);
-    memcpy(RUNTIME_ARRAY_BODY(buffer), chars, size);
-    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, L"\\*", 6);
-
-    releaseChars(e, path, chars);
-
-    Directory* d = new (malloc(sizeof(Directory))) Directory;
-    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    d->handle = FindFirstFileW(RUNTIME_ARRAY_BODY(buffer), &(d->data));
-    #else
-	d->handle = FindFirstFileExW(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, NULL, 0);
-    #endif
-    if (d->handle == INVALID_HANDLE_VALUE) {
-      d->dispose();
-      d = 0;
-    }
-
-    return reinterpret_cast<jlong>(d);
-  } else {
-    return 0;
-  }
-}
-
 extern "C" JNIEXPORT jlong JNICALL
 Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
 {
@@ -622,12 +589,45 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
         return 0;
       }
       
-      return (static_cast<jlong>(st.st_mtim.tv_sec) * 1000) +
-        (static_cast<jlong>(st.st_mtim.tv_nsec) / (1000*1000));
+      return (static_cast<jlong>(fileStat.st_mtim.tv_sec) * 1000) +
+        (static_cast<jlong>(fileStat.st_mtim.tv_nsec) / (1000*1000));
     #endif
   }
 
   return 0;
+}
+
+#ifdef PLATFORM_WINDOWS
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
+{
+  string_t chars = getChars(e, path);
+  if (chars) {
+    unsigned length = wcslen(chars);
+    unsigned size = length * sizeof(char_t);
+
+    RUNTIME_ARRAY(char_t, buffer, length + 3);
+    memcpy(RUNTIME_ARRAY_BODY(buffer), chars, size);
+    memcpy(RUNTIME_ARRAY_BODY(buffer) + length, L"\\*", 6);
+
+    releaseChars(e, path, chars);
+
+    Directory* d = new (malloc(sizeof(Directory))) Directory;
+    #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+    d->handle = FindFirstFileW(RUNTIME_ARRAY_BODY(buffer), &(d->data));
+    #else
+	d->handle = FindFirstFileExW(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, NULL, 0);
+    #endif
+    if (d->handle == INVALID_HANDLE_VALUE) {
+      d->dispose();
+      d = 0;
+    }
+
+    return reinterpret_cast<jlong>(d);
+  } else {
+    return 0;
+  }
 }
 
 extern "C" JNIEXPORT jstring JNICALL
