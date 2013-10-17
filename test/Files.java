@@ -56,6 +56,8 @@ public class Files {
         out.write(message);
         out.close();
 
+        expect(f.lastModified() > 0);
+
         FileInputStream in = new FileInputStream(f);
         try {
           expect(in.available() == message.length);
