@@ -22,9 +22,16 @@ public class RandomAccessFile {
   public RandomAccessFile(String name, String mode)
     throws FileNotFoundException
   {
-    file = new File(name);
+    this(new File(name), mode);
+  }
+
+  public RandomAccessFile(File file, String mode)
+    throws FileNotFoundException
+  {
+    if (file == null) throw new NullPointerException();
     if (mode.equals("rw")) allowWrite = true;
     else if (! mode.equals("r")) throw new IllegalArgumentException();
+    this.file = file;
     open();
   }
 
