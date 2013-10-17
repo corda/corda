@@ -131,6 +131,14 @@ public class RandomAccessFile {
   private static native int readBytes(long peer, long position, byte[] buffer,
                                   int offset, int length);
 
+  public void write(int b) throws IOException {
+    int count = writeBytes(peer, position, new byte[] { (byte)b }, 0, 1);
+    if (count > 0) position += count;
+  }
+
+  private static native int writeBytes(long peer, long position, byte[] buffer,
+                                  int offset, int length);
+
   public void close() throws IOException {
     if (peer != 0) {
       close(peer);
