@@ -170,6 +170,10 @@ public final class Character implements Comparable<Character> {
     return ch >= '\uDC00' && ch <= '\uDFFF';
   }
 
+  public static boolean isISOControl(char ch) {
+   return ch <= '\u001F' || (ch >= '\u007F' && ch <= '\u009F');
+  }
+
   public static int toCodePoint(char high, char low) {
     return (((high & 0x3FF) << 10) | (low & 0x3FF)) + 0x10000;
   }

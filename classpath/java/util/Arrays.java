@@ -17,7 +17,109 @@ public class Arrays {
     return asList(a).toString();
   }
 
+  public static String toString(boolean[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
   public static String toString(byte[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
+  public static String toString(short[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
+  public static String toString(int[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
+  public static String toString(long[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
+  public static String toString(float[] a) {
+    if (a == null) {
+      return "null";
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append("[");
+      for (int i = 0; i < a.length; ++i) {
+        sb.append(String.valueOf(a[i]));
+        if (i + 1 != a.length) {
+          sb.append(", ");
+        }
+      }
+      sb.append("]");
+      return sb.toString();
+    }
+  }
+
+  public static String toString(double[] a) {
     if (a == null) {
       return "null";
     } else {
