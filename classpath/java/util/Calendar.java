@@ -55,6 +55,10 @@ public abstract class Calendar {
     time = date.getTime();
   }
 
+  public Date getTime() {
+    return new Date(time);
+  }
+
   public abstract void roll(int field, boolean up);
   public abstract void add(int field, int amount);
 
@@ -100,6 +104,23 @@ public abstract class Calendar {
     public void setTime(Date date) {
       super.setTime(date);
       parseIntoFields(this.time);
+    }
+
+    public Date getTime() {
+      long days = fields[DAY_OF_MONTH] - 1;
+      long years = fields[YEAR] - EPOCH_LEAP_YEAR;
+      days += years * 365 + years / 4 + 1 - DAYS_TO_EPOCH;
+      for (int month = 0; month < fields[MONTH]; month++) {
+        days += DAYS_IN_MONTH[0][month];
+      }
+      if (fields[MONTH] < 2 && isLeapYear(fields[YEAR])) {
+        days--;
+      }
+      long time = MILLIS_PER_DAY * days
+        + MILLIS_PER_HOUR * fields[HOUR_OF_DAY]
+        + MILLIS_PER_MINUTE * fields[MINUTE]
+        + MILLIS_PER_SECOND * fields[SECOND];
+      return new Date(time);
     }
 
     private static boolean isLeapYear(int year) {
