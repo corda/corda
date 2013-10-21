@@ -105,6 +105,15 @@ public class Strings {
            (prematureEOS ? "\u00ae\ufffd" : "\u00ae\uaeaf"));
   }
 
+  public static void testTrivialPattern() throws Exception {
+    expect("?7".matches("\\0777"));
+    expect("\007".matches("\\a"));
+    expect("\\".matches("\\\\"));
+    expect("J".matches("\\x4A"));
+    expect("a".matches("\\x61"));
+    expect("\0078".matches("\\078"));
+  }
+
   public static void main(String[] args) throws Exception {
     expect(new String(new byte[] { 99, 111, 109, 46, 101, 99, 111, 118, 97,
                                    116, 101, 46, 110, 97, 116, 46, 98, 117,
@@ -193,5 +202,7 @@ public class Strings {
                         32, 110, 117, 116, 115 },
             System.getProperty("line.separator").getBytes())));
     }
+
+    testTrivialPattern();
   }
 }
