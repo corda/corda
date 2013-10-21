@@ -619,7 +619,7 @@ Java_java_io_File_openDir(JNIEnv* e, jclass, jstring path)
     #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     d->handle = FindFirstFileW(RUNTIME_ARRAY_BODY(buffer), &(d->data));
     #else
-	d->handle = FindFirstFileExW(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, NULL, 0);
+    d->handle = FindFirstFileExW(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, NULL, 0);
     #endif
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
@@ -816,16 +816,16 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     #else
     int fd = ::open((const char*)chars, flags, 0644);
     #endif
-	releaseChars(e, path, chars);
-	if (fd == -1) {
+    releaseChars(e, path, chars);
+    if (fd == -1) {
       throwNewErrno(e, "java/io/IOException");
-	  return;
+      return;
     }
-	struct ::stat fileStats;
-	if(::fstat(fd, &fileStats) == -1) {
-	  ::close(fd);
+    struct ::stat fileStats;
+    if(::fstat(fd, &fileStats) == -1) {
+      ::close(fd);
       throwNewErrno(e, "java/io/IOException");
-	  return;
+      return;
     }
     peer = fd;
     length = fileStats.st_size;
@@ -861,8 +861,8 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   int fd = (int)peer;
   if(::lseek(fd, position, SEEK_SET) == -1) {
-	throwNewErrno(e, "java/io/IOException");
-	return -1;
+    throwNewErrno(e, "java/io/IOException");
+    return -1;
   }
   
   uint8_t* dst = reinterpret_cast<uint8_t*>
@@ -872,16 +872,16 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
   e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
   
   if(bytesRead == -1) {
-	throwNewErrno(e, "java/io/IOException");
-	return -1;
+    throwNewErrno(e, "java/io/IOException");
+    return -1;
   }
 #else
   HANDLE hFile = (HANDLE)peer;
   LARGE_INTEGER lPos;
   lPos.QuadPart = position;
   if(!SetFilePointerEx(hFile, lPos, nullptr, FILE_BEGIN)) {
-	throwNewErrno(e, "java/io/IOException");
-	return -1;
+    throwNewErrno(e, "java/io/IOException");
+    return -1;
   }
 
   uint8_t* dst = reinterpret_cast<uint8_t*>
@@ -889,8 +889,8 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
 
   DWORD bytesRead = 0;
   if(!ReadFile(hFile, dst + offset, length, &bytesRead, nullptr)) {
-      throwNewErrno(e, "java/io/IOException");
-      return -1;
+    throwNewErrno(e, "java/io/IOException");
+    return -1;
   }
   e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
 #endif
