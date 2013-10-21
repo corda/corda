@@ -45,7 +45,25 @@ public class Pattern {
       char c = pattern.charAt(i);
       switch (c) {
       case '\\':
-        if (++i == pattern.length() || (c = unescape(pattern.charAt(i))) != -1) {
+        if (++i == pattern.length()) {
+          break;
+        }
+        c = pattern.charAt(i);
+        if (c == '0') {
+          int len = digits(pattern, ++i, 3, 8);
+          if (len == 3 && pattern.charAt(i) > '3') {
+            --len;
+          }
+          c = (char)Integer.parseInt(pattern.substring(i, i + len), 8);
+          i += len - 1;
+        } else if (c == 'x' || c == 'u') {
+          int len = digits(pattern, ++i, 4, 16);
+          c = (char)Integer.parseInt(pattern.substring(i, i + len), 16);
+          i += len - 1;
+        } else {
+          c = unescape(pattern.charAt(i));
+        }
+        if (c != -1) {
           break;
         }
         // fallthru
@@ -68,6 +86,24 @@ public class Pattern {
       buffer.append(c);
     }
     return buffer.toString();
+  }
+
+  private static int digits(String s, int offset, int maxLength, int base) {
+    for (int i = 0; ; ++i) {
+      if (i == maxLength || offset + i >= s.length()) {
+        return i;
+      }
+      int value = s.charAt(offset + i) - '0';
+      if (value < 0) {
+        return i;
+      }
+      if (base > 10 && value >= 10) {
+        value += 10 - (value >= 'a' - '0' ? 'a' - '0' : 'A' - '0');
+      }
+      if (value >= base) {
+        return i;
+      }
+    }
   }
 
   private static char unescape(char c) {
