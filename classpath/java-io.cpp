@@ -889,6 +889,7 @@ Java_java_io_RandomAccessFile_readBytes(JNIEnv* e, jclass, jlong peer,
 
   DWORD bytesRead = 0;
   if(!ReadFile(hFile, dst + offset, length, &bytesRead, nullptr)) {
+    e->ReleasePrimitiveArrayCritical(buffer, dst, 0);
     throwNewErrno(e, "java/io/IOException");
     return -1;
   }
