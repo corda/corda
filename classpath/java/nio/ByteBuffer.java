@@ -244,4 +244,13 @@ public abstract class ByteBuffer
   protected void checkGet(int position, int amount) {
     if (amount > limit-position) throw new IndexOutOfBoundsException();
   }
+
+  public ByteBuffer order(ByteOrder order) {
+    if (order != ByteOrder.BIG_ENDIAN) throw new UnsupportedOperationException();
+    return this;
+  }
+
+  public ByteOrder order() {
+    return ByteOrder.BIG_ENDIAN;
+  }
 }
