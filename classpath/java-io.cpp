@@ -590,9 +590,13 @@ Java_java_io_File_lastModified(JNIEnv* e, jclass, jstring path)
       if (res == -1) {
         return 0;
       }
-
-      return (static_cast<jlong>(fileStat.st_mtim.tv_sec) * 1000) +
-        (static_cast<jlong>(fileStat.st_mtim.tv_nsec) / (1000*1000));
+#  ifdef __APPLE__
+      #define MTIME st_mtimespec
+#  else
+      #define MTIME st_mtim
+#  endif
+      return (static_cast<jlong>(fileStat.MTIME.tv_sec) * 1000) +
+        (static_cast<jlong>(fileStat.MTIME.tv_nsec) / (1000*1000));
 #endif
   }
 
