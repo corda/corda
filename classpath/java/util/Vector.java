@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class Vector<T> extends AbstractList<T> implements java.io.Serializable {
+public class Vector<T> extends AbstractList<T> implements java.io.Serializable, Cloneable {
   private final ArrayList<T> list;
 
   public Vector(int capacity) {
@@ -126,5 +126,12 @@ public class Vector<T> extends AbstractList<T> implements java.io.Serializable {
   public Enumeration<T> elements() {
     return new Collections.IteratorEnumeration(iterator());
   }
-  
+
+  public synchronized Object clone() {
+    Vector copy = new Vector(size());
+    for (T t : this) {
+      copy.add(t);
+    }
+    return copy;
+  }
 }
