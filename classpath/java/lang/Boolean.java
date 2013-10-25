@@ -59,6 +59,10 @@ public final class Boolean implements Comparable<Boolean> {
     return value;
   }
 
+  public static boolean getBoolean(String name) {
+    return parseBoolean(System.getProperty(name));
+  }
+
   public static boolean parseBoolean(String string) {
     return string != null && string.equalsIgnoreCase("true");
   }
