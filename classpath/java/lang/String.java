@@ -602,6 +602,9 @@ public final class String
   }
 
   public int lastIndexOf(int ch, int lastIndex) {
+    if (lastIndex >= length) {
+      lastIndex = length - 1;
+    }
     for (int i = lastIndex ; i >= 0; --i) {
       if (charAt(i) == ch) {
         return i;
