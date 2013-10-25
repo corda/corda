@@ -47,8 +47,16 @@ public class Reflection {
     expect(Hello.class == inner[0]);
   }
 
+  private int egads;
+
+  private static void annotations() throws Exception {
+    Field egads = Reflection.class.getDeclaredField("egads");
+    expect(egads.getAnnotation(Deprecated.class) == null);
+  }
+
   public static void main(String[] args) throws Exception {
     innerClasses();
+    annotations();
 
     Class system = Class.forName("java.lang.System");
     Field out = system.getDeclaredField("out");
