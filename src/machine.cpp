@@ -2512,7 +2512,11 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_,
     ++ s;
     const char* elementSpecStart = s;
     while (*s and *s != ';') ++ s;
-    
+    if (dimensions > 1) {
+      elementSpecStart -= dimensions;
+      ++ s;
+    }
+
     elementSpec = makeByteArray(t, s - elementSpecStart + 1);
     memcpy(&byteArrayBody(t, elementSpec, 0),
            &byteArrayBody(t, spec, elementSpecStart - start),

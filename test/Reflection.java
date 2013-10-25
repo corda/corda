@@ -67,5 +67,10 @@ public class Reflection {
 
     expect(7.0 == (Double) Reflection.class.getMethod
            ("doubleMethod").invoke(null));
+
+    Class[][] array = new Class[][] { { Class.class } };
+    expect("[Ljava.lang.Class;".equals(array[0].getClass().getName()));
+    expect(Class[].class == array[0].getClass());
+    expect(array.getClass().getComponentType() == array[0].getClass());
   }
 }

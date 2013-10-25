@@ -314,5 +314,11 @@ public class Integers {
 
     { int b = 0xBE; int x = 0; int y = 0xFF;
       expect(((b >>> x) & y) == 0xBE); }
+
+    expect(123 == Integer.decode("123").intValue());
+    expect(-123 == Integer.decode("-123").intValue());
+    expect(-83 == Integer.decode("-0123").intValue());
+    expect(-291 == Integer.decode("-0x123").intValue());
+    expect(291 == Integer.decode("#123").intValue());
   }
 }

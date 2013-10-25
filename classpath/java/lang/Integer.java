@@ -122,4 +122,21 @@ public final class Integer extends Number implements Comparable<Integer> {
   public static int parseInt(String s, int radix) {
     return (int) Long.parseLong(s, radix);
   }
+
+  public static Integer decode(String string) {
+    if (string.startsWith("-")) {
+      if (string.startsWith("-0") || string.startsWith("-#")) {
+        return new Integer(-decode(string.substring(1)));
+      }
+    } else if (string.startsWith("0")) {
+      char c = string.length() < 2 ? (char)-1 : string.charAt(1);
+      if (c == 'x' || c == 'X') {
+        return new Integer(parseInt(string.substring(2), 0x10));
+      }
+      return new Integer(parseInt(string, 010));
+    } else if (string.startsWith("#")) {
+      return new Integer(parseInt(string.substring(1), 0x10));
+    }
+    return new Integer(parseInt(string, 10));
+  }
 }

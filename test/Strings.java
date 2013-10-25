@@ -203,6 +203,8 @@ public class Strings {
             System.getProperty("line.separator").getBytes())));
     }
 
+    expect("abc".lastIndexOf('b', 100) == 1);
+
     testTrivialPattern();
   }
 }

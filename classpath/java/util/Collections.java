@@ -245,6 +245,10 @@ public class Collections {
     }
   }
 
+  public static <V> Set<V> synchronizedSet(Set<V> set) {
+    return new SynchronizedSet<V> (new Object(), set);
+  }
+
   static class SynchronizedIterator<T> implements Iterator<T> {
     private final Object lock;
     private final Iterator<T> it;
@@ -654,5 +658,11 @@ public class Collections {
     public int compare(T o1, T o2) {
       return - cmp.compare(o1, o2);
     }
+  }
+
+  public static <T> List<T> singletonList(T o) {
+    ArrayList<T> list = new ArrayList<T>(1);
+    list.add(o);
+    return new UnmodifiableList(list);
   }
 }
