@@ -138,4 +138,8 @@ public class Method<T> extends AccessibleObject implements Member {
   public Annotation[] getDeclaredAnnotations() {
     return getAnnotations();
   }
+
+  public boolean isVarArgs() {
+    return (getModifiers() & 0x80) != 0;
+  }
 }
