@@ -659,4 +659,10 @@ public class Collections {
       return - cmp.compare(o1, o2);
     }
   }
+
+  public static <T> List<T> singletonList(T o) {
+    ArrayList<T> list = new ArrayList<T>(1);
+    list.add(o);
+    return new UnmodifiableList(list);
+  }
 }
