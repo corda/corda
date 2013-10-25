@@ -245,6 +245,10 @@ public class Collections {
     }
   }
 
+  public static <V> Set<V> synchronizedSet(Set<V> set) {
+    return new SynchronizedSet<V> (new Object(), set);
+  }
+
   static class SynchronizedIterator<T> implements Iterator<T> {
     private final Object lock;
     private final Iterator<T> it;
