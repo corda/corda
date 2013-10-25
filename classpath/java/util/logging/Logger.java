@@ -32,6 +32,7 @@ public class Logger {
     if (name.equals("")) return rootLogger;
     Logger logger = new Logger(name);
     logger.parent = rootLogger;
+    logger.setLevel(Level.INFO);
     return logger;
   }
 
