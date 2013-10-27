@@ -284,7 +284,9 @@ struct JmmInterface {
 
 const unsigned InterfaceVersion = 4;
 const unsigned PageSize = 4 * 1024;
+#ifdef AVIAN_OPENJDK_SRC
 const int VirtualFileBase = 1000000000;
+#endif
 
 Machine* globalMachine;
 

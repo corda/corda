@@ -261,7 +261,7 @@ endif
 input = List
 
 ifeq ($(use-clang),true)
-	build-cxx = clang -std=c++11
+	build-cxx = clang++ -std=c++11
 	build-cc = clang
 else
 	build-cxx = g++
@@ -302,7 +302,7 @@ cflags_debug_fast = -O0 -g3
 cflags_stress = -O0 -g3
 cflags_stress_major = -O0 -g3
 ifeq ($(use-clang),true)
-	cflags_fast = -O4 -g3
+	cflags_fast = -O3 -flto -g3
 	cflags_small = -Oz -g3
 else
 	cflags_fast = -O3 -g3
@@ -345,6 +345,18 @@ converter-cflags = -D__STDC_CONSTANT_MACROS -Iinclude/ -Isrc/ \
 cflags = $(build-cflags)
 
 common-lflags = -lm -lz
+
+ifeq ($(use-clang),true)
+  ifeq ($(build-platform),darwin)
+    common-lflags += -Wl,-export_dynamic
+  else
+    ifneq ($(platform),windows)
+      common-lflags += -Wl,-E
+    else
+      common-lflags += -Wl,--export-all-symbols
+    endif
+  endif
+endif
 
 build-lflags = -lz -lpthread -ldl
 
@@ -1657,7 +1669,7 @@ endif
 $(build)/%.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cxx) $(cflags) $(no-error) -c $$($(windows-path) $(<)) $(call output,$(@))
+	$(cc) $(cflags) $(no-error) -c $$($(windows-path) $(<)) $(call output,$(@))
 
 $(vm-asm-objects): $(build)/%-asm.o: $(src)/%.$(asm-format)
 	$(compile-asm-object)
@@ -1771,7 +1783,7 @@ executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(javahome-object) $(boot-javahome-object) $(lzma-decode-objects)
 
 unittest-executable-objects = $(unittest-objects) $(vm-objects) \
-	$(build)/util/arg-parser.o $(stub-objects)
+	$(build)/util/arg-parser.o $(stub-objects) $(lzma-decode-objects)
 
 ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
