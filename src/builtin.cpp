@@ -153,6 +153,30 @@ Avian_avian_SystemClassLoader_resourceURLPrefix
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_00024ResourceEnumeration_nextResourceURLPrefix
+(Thread* t, object, uintptr_t* arguments)
+{
+  object loader = reinterpret_cast<object>(arguments[1]);
+  object name = reinterpret_cast<object>(arguments[2]);
+  object finderElementPtrPtr = reinterpret_cast<object>(arguments[3]);
+
+  if (LIKELY(name) && LIKELY(finderElementPtrPtr)) {
+    THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
+    stringChars(t, name, RUNTIME_ARRAY_BODY(n));
+
+    void *&finderElementPtr = reinterpret_cast<void *&>(longArrayBody(t,
+      finderElementPtrPtr, 0));
+    const char* name = static_cast<Finder*>
+      (systemClassLoaderFinder(t, loader))->nextUrlPrefix(RUNTIME_ARRAY_BODY(n),
+        finderElementPtr);
+
+    return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;
+  } else {
+    throwNew(t, Machine::NullPointerExceptionType);
+  }
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_getClass
 (Thread* t, object, uintptr_t* arguments)
 {
