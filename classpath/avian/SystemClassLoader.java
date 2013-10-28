@@ -107,9 +107,9 @@ public class SystemClassLoader extends ClassLoader {
       }
     }
 
-    URL url = findResource(name);
-    if (url != null) {
-      urls.add(url);
+    Enumeration<URL> urls2 = findResources(name);
+    while (urls2.hasMoreElements()) {
+      urls.add(urls2.nextElement());
     }
 
     return Collections.enumeration(urls);
