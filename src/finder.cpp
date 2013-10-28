@@ -908,7 +908,16 @@ class MyFinder: public Finder {
   }
 
   virtual const char* urlPrefix(const char* name) {
-    for (Element* e = path_; e; e = e->next) {
+    void *finderElementPtr = NULL;
+    return nextUrlPrefix(name, finderElementPtr);
+  }
+
+  virtual const char* nextUrlPrefix(const char* name,
+      void *&finderElementPtr)
+  {
+    Element *&e = reinterpret_cast<Element*&>(finderElementPtr);
+    e = e ? e->next : path_;
+    for (; e; e = e->next) {
       unsigned length;
       System::FileType type = e->stat(name, &length, true);
       if (type != System::TypeDoesNotExist) {
