@@ -10,6 +10,29 @@
 
 package java.io;
 
+import static java.io.ObjectOutputStream.STREAM_MAGIC;
+import static java.io.ObjectOutputStream.STREAM_VERSION;
+import static java.io.ObjectOutputStream.TC_NULL;
+import static java.io.ObjectOutputStream.TC_REFERENCE;
+import static java.io.ObjectOutputStream.TC_CLASSDESC;
+import static java.io.ObjectOutputStream.TC_OBJECT;
+import static java.io.ObjectOutputStream.TC_STRING;
+import static java.io.ObjectOutputStream.TC_ARRAY;
+import static java.io.ObjectOutputStream.TC_CLASS;
+import static java.io.ObjectOutputStream.TC_BLOCKDATA;
+import static java.io.ObjectOutputStream.TC_ENDBLOCKDATA;
+import static java.io.ObjectOutputStream.TC_RESET;
+import static java.io.ObjectOutputStream.TC_BLOCKDATALONG;
+import static java.io.ObjectOutputStream.TC_EXCEPTION;
+import static java.io.ObjectOutputStream.TC_LONGSTRING;
+import static java.io.ObjectOutputStream.TC_PROXYCLASSDESC;
+import static java.io.ObjectOutputStream.TC_ENUM;
+import static java.io.ObjectOutputStream.SC_WRITE_METHOD;
+import static java.io.ObjectOutputStream.SC_BLOCK_DATA;
+import static java.io.ObjectOutputStream.SC_SERIALIZABLE;
+import static java.io.ObjectOutputStream.SC_EXTERNALIZABLE;
+import static java.io.ObjectOutputStream.SC_ENUM;
+
 import avian.VMClass;
 
 import java.util.HashMap;
@@ -17,21 +40,87 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-public class ObjectInputStream extends InputStream {
+public class ObjectInputStream extends InputStream implements DataInput {
   private final InputStream in;
-  private final PushbackReader r;
 
-  public ObjectInputStream(InputStream in) {
+  public ObjectInputStream(InputStream in) throws IOException {
     this.in = in;
-    this.r = new PushbackReader(new InputStreamReader(in));
+    short signature = (short)rawShort();
+    if (signature != STREAM_MAGIC) {
+      throw new IOException("Unrecognized signature: 0x"
+          + Integer.toHexString(signature));
+    }
+    int version = rawShort();
+    if (version != STREAM_VERSION) {
+      throw new IOException("Unsupported version: " + version);
+    }
   }
 
   public int read() throws IOException {
     return in.read();
   }
 
+  private int rawByte() throws IOException {
+    int c = read();
+    if (c < 0) {
+      throw new EOFException();
+    }
+    return c;
+  }
+
+  private int rawShort() throws IOException {
+    return (rawByte() << 8) | rawByte();
+  }
+
+  private int rawInt() throws IOException {
+    return (rawShort() << 16) | rawShort();
+  }
+
+  private long rawLong() throws IOException {
+    return ((rawInt() & 0xffffffffl) << 32) | rawInt();
+  }
+
+  private String rawString() throws IOException {
+    int length = rawShort();
+    byte[] array = new byte[length];
+    readFully(array);
+    return new String(array);
+  }
+
   public int read(byte[] b, int offset, int length) throws IOException {
     return in.read(b, offset, length);
+  }
+
+  public void readFully(byte[] b) throws IOException {
+    readFully(b, 0, b.length);
+  }
+
+  public void readFully(byte[] b, int offset, int length) throws IOException {
+    while (length > 0) {
+      int count = read(b, offset, length);
+      if (count < 0) {
+        throw new EOFException("Reached EOF " + length + " bytes too early");
+      }
+      offset += count;
+      length -= count;
+    }
+  }
+
+  public String readLine() throws IOException {
+    int c = read();
+    if (c < 0) {
+      return null;
+    } else if (c == '\n') {
+      return "";
+    }
+    StringBuilder builder = new StringBuilder();
+    for (;;) {
+      builder.append((char)c);
+      c = read();
+      if (c < 0 || c == '\n') {
+        return builder.toString();
+      }
+    }
   }
 
   public void close() throws IOException {
@@ -39,196 +128,99 @@ public class ObjectInputStream extends InputStream {
   }
 
   public Object readObject() throws IOException, ClassNotFoundException {
-    return readObject(new HashMap());
+    throw new UnsupportedOperationException();
+  }
+  private int remainingBlockData;
+
+  private int rawBlockDataByte() throws IOException {
+    while (remainingBlockData <= 0) {
+      int b = rawByte();
+      if (b == TC_BLOCKDATA) {
+        remainingBlockData = rawByte();
+      } else {
+        throw new UnsupportedOperationException("Unknown token: 0x"
+            + Integer.toHexString(b));
+      }
+    }
+    --remainingBlockData;
+    return rawByte();
+  }
+
+  private int rawBlockDataShort() throws IOException {
+    return (rawBlockDataByte() << 8) | rawBlockDataByte();
+  }
+
+  private int rawBlockDataInt() throws IOException {
+    return (rawBlockDataShort() << 16) | rawBlockDataShort();
+  }
+
+  private long rawBlockDataLong() throws IOException {
+    return ((rawBlockDataInt() & 0xffffffffl) << 32) | rawBlockDataInt();
   }
 
   public boolean readBoolean() throws IOException {
-    read('z');
-    return readLongToken() != 0;
+    return rawBlockDataByte() != 0;
   }
 
   public byte readByte() throws IOException {
-    read('b');
-    return (byte) readLongToken();
+    return (byte)rawBlockDataByte();
   }
 
   public char readChar() throws IOException {
-    read('c');
-    return (char) readLongToken();
+    return (char)rawBlockDataShort();
   }
 
   public short readShort() throws IOException {
-    read('s');
-    return (short) readLongToken();
+    return (short)rawBlockDataShort();
   }
 
   public int readInt() throws IOException {
-    read('i');
-    return (int) readLongToken();
+    return rawBlockDataInt();
   }
 
   public long readLong() throws IOException {
-    read('j');
-    return readLongToken();
+    return rawBlockDataLong();
   }
 
   public float readFloat() throws IOException {
-    read('f');
-    return (float) readDoubleToken();
+    return Float.intBitsToFloat(rawBlockDataInt());
   }
 
   public double readDouble() throws IOException {
-    read('d');
-    return readDoubleToken();
-  }
-  
-  public void defaultReadObject() throws IOException {
-    throw new UnsupportedOperationException();
+    return Double.longBitsToDouble(rawBlockDataLong());
   }
 
-  private void skipSpace() throws IOException {
-    int c;
-    while ((c = r.read()) != -1 && Character.isWhitespace((char) c));
-    if (c != -1) {
-      r.unread(c);
+  public int readUnsignedByte() throws IOException {
+    return rawBlockDataByte();
+  }
+
+  public int readUnsignedShort() throws IOException {
+    return rawBlockDataShort();
+  }
+
+  public String readUTF() throws IOException {
+    int length = rawBlockDataShort();
+    if (remainingBlockData < length) {
+      throw new IOException("Short block data: "
+          + remainingBlockData + " < " + length);
     }
+    byte[] bytes = new byte[length];
+    readFully(bytes);
+    remainingBlockData -= length;
+    return new String(bytes, "UTF-8");
   }
 
-  private void read(char v) throws IOException {
-    skipSpace();
-
-    int c = r.read();
-    if (c != v) {
-      if (c == -1) {
-        throw new EOFException();
-      } else {
-        throw new StreamCorruptedException();
+  public int skipBytes(int count) throws IOException {
+    int i = 0;
+    while (i < count) {
+      if (read() < 0) {
+        return i;
       }
+      ++i;
     }
+    return count;
   }
 
-  private String readStringToken() throws IOException {
-    skipSpace();
-
-    StringBuilder sb = new StringBuilder();
-    int c;
-    while ((c = r.read()) != -1 && ! Character.isWhitespace((char) c) && c != ')') {
-      sb.append((char) c);
-    }
-    if (c != -1) {
-      r.unread(c);
-    }
-    return sb.toString();
-  }
-
-  private long readLongToken() throws IOException {
-    return Long.parseLong(readStringToken());
-  }
-
-  private double readDoubleToken() throws IOException {
-    return Double.parseDouble(readStringToken());
-  }
-
-  private Object readObject(HashMap<Integer, Object> map)
-    throws IOException, ClassNotFoundException
-  {
-    skipSpace();
-    switch (r.read()) {
-    case 'a':
-      return deserializeArray(map);
-    case 'l':
-      return deserializeObject(map);
-    case 'n':
-      return null;
-    case -1:
-      throw new EOFException();
-    default:
-      throw new StreamCorruptedException();
-    }
-  }
-
-  private Object deserialize(HashMap<Integer, Object> map)
-    throws IOException, ClassNotFoundException
-  {
-    skipSpace(); 
-    switch (r.read()) {
-    case 'a':
-      return deserializeArray(map);
-    case 'l':
-      return deserializeObject(map);
-    case 'r':
-      return map.get((int) readLongToken());
-    case 'n':
-      return null;
-    case 'z':
-      return (readLongToken() != 0);
-    case 'b':
-      return (byte) readLongToken();
-    case 'c':
-      return (char) readLongToken();
-    case 's':
-      return (short) readLongToken();
-    case 'i':
-      return (int) readLongToken();
-    case 'j':
-      return readLongToken();
-    case 'f':
-      return (float) readDoubleToken();
-    case 'd':
-      return readDoubleToken();
-    case -1:
-      throw new EOFException();
-    default:
-      throw new StreamCorruptedException();
-    }
-  }
-
-  private Object deserializeArray(HashMap<Integer, Object> map)
-    throws IOException, ClassNotFoundException
-  {
-    read('(');
-    int id = (int) readLongToken();
-    Class c = Class.forName(readStringToken());
-    int length = (int) readLongToken();
-    Class t = c.getComponentType();
-    Object o = Array.newInstance(t, length);
-
-    map.put(id, o);
-  
-    for (int i = 0; i < length; ++i) {
-      Array.set(o, i, deserialize(map));
-    }
-
-    read(')');
-
-    return o;
-  }
 
   private static native Object makeInstance(VMClass c);
-
-  private Object deserializeObject(HashMap<Integer, Object> map)
-    throws IOException, ClassNotFoundException
-  {
-    read('(');
-    int id = (int) readLongToken();
-    Class c = Class.forName(readStringToken());
-    Object o = makeInstance(c.vmClass);
-
-    map.put(id, o);
-
-    for (Field f: c.getAllFields()) {
-      int modifiers = f.getModifiers();
-      if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
-        try {
-          f.set(o, deserialize(map));
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      }
-    }
-
-    read(')');
-
-    return o;
-  }
 }
