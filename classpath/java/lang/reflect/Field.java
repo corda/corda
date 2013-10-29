@@ -215,6 +215,85 @@ public class Field<T> extends AccessibleObject {
     }
   }
 
+  private void set(Object instance, long value)
+    throws IllegalAccessException
+  {
+    Object target;
+    if ((vmField.flags & Modifier.STATIC) != 0) {
+      target = vmField.class_.staticTable;
+    } else if (Class.isInstance(vmField.class_, instance)) {
+      target = instance;
+    } else {
+      throw new IllegalArgumentException();
+    }
+
+    switch (vmField.code) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case IntField:
+    case LongField:
+    case FloatField:
+    case DoubleField:
+      setPrimitive(target, vmField.code, vmField.offset, value);
+      break;
+
+    default:
+      throw new IllegalArgumentException
+        ("needed " + getType() + ", got primitive type when setting "
+         + Class.getName(vmField.class_) + "." + getName());
+    }
+  }
+
+  public void setByte(Object instance, byte value)
+    throws IllegalAccessException
+  {
+    set(instance, value & 0xff);
+  }
+
+  public void setBoolean(Object instance, boolean value)
+    throws IllegalAccessException
+  {
+    set(instance, value ? 1 : 0);
+  }
+
+  public void setChar(Object instance, char value)
+    throws IllegalAccessException
+  {
+    set(instance, value & 0xffff);
+  }
+
+  public void setShort(Object instance, short value)
+    throws IllegalAccessException
+  {
+    set(instance, value & 0xffff);
+  }
+
+  public void setInt(Object instance, int value)
+    throws IllegalAccessException
+  {
+    set(instance, value & 0xffffffffl);
+  }
+
+  public void setLong(Object instance, long value)
+    throws IllegalAccessException
+  {
+    set(instance, value);
+  }
+
+  public void setFloat(Object instance, float value)
+    throws IllegalAccessException
+  {
+    set(instance, Float.floatToIntBits(value));
+  }
+
+  public void setDouble(Object instance, double value)
+    throws IllegalAccessException
+  {
+    set(instance, Double.doubleToLongBits(value));
+  }
+
   private Annotation getAnnotation(Object[] a) {
     if (a[0] == null) {
       a[0] = Proxy.newProxyInstance
