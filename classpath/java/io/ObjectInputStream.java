@@ -32,12 +32,14 @@ import static java.io.ObjectOutputStream.SC_BLOCK_DATA;
 import static java.io.ObjectOutputStream.SC_SERIALIZABLE;
 import static java.io.ObjectOutputStream.SC_EXTERNALIZABLE;
 import static java.io.ObjectOutputStream.SC_ENUM;
+import static java.io.ObjectOutputStream.getReadOrWriteMethod;
 
 import avian.VMClass;
 
 import java.util.HashMap;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class ObjectInputStream extends InputStream implements DataInput {
@@ -310,7 +312,7 @@ public class ObjectInputStream extends InputStream implements DataInput {
     } catch (Exception ignored) { }
 
     int flags = rawByte();
-    if (flags != SC_SERIALIZABLE) {
+    if ((flags & ~(SC_SERIALIZABLE | SC_WRITE_METHOD)) != 0) {
       throw new UnsupportedOperationException("Cannot handle flags: 0x"
           + Integer.toHexString(flags));
     }
@@ -344,8 +346,22 @@ public class ObjectInputStream extends InputStream implements DataInput {
     try {
       Object o = makeInstance(clazz.vmClass);
 
-      for (Field field : fields) {
-        field(field, o);
+      boolean customized = (flags & SC_WRITE_METHOD) != 0;
+      Method readMethod = customized ?
+        getReadOrWriteMethod(o, "readObject") : null;
+      if (readMethod == null) {
+        if (customized) {
+          throw new IOException("Could not find required readObject method in "
+            + clazz);
+        }
+        defaultReadObject(o, fields);
+      } else {
+        current = o;
+        currentFields = fields;
+        readMethod.invoke(o, this);
+        current = null;
+        currentFields = null;
+        expectToken(TC_ENDBLOCKDATA);
       }
 
       return o;
@@ -356,8 +372,23 @@ public class ObjectInputStream extends InputStream implements DataInput {
     }
   }
 
+  private Object current;
+  private Field[] currentFields;
+
   public void defaultReadObject() throws IOException {
-    throw new UnsupportedOperationException();
+    defaultReadObject(current, currentFields);
+  }
+
+  private void defaultReadObject(Object o, Field[] fields) throws IOException {
+    try {
+      for (Field field : fields) {
+        field(field, o);
+      }
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
   }
 
   private static native Object makeInstance(VMClass c);
