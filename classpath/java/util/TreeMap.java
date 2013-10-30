@@ -10,6 +10,10 @@
 
 package java.util;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 public class TreeMap<K,V> implements Map<K,V> {
   private final Comparator<K> comparator;
   private transient TreeSet<MyEntry<K,V>> set;
@@ -230,6 +234,28 @@ public class TreeMap<K,V> implements Map<K,V> {
 
     public Iterator<V> iterator() {
       return new Collections.ValueIterator(set.iterator());
+    }
+  }
+
+  public final static long serialVersionUID = 0x0cc1f63e2d256ae6l;
+
+  private void writeObject(ObjectOutputStream out) throws IOException {
+    out.defaultWriteObject();
+    out.writeInt(size());
+    for (Entry<K, V> entry : entrySet()) {
+      out.writeObject(entry.getKey());
+      out.writeObject(entry.getValue());
+    }
+  }
+
+  private void readObject(ObjectInputStream in) throws IOException {
+    in.defaultReadObject();
+    initializeSet();
+    int size = in.readInt();
+    for (int i = 0; i < size; i++) try {
+      put((K) in.readObject(), (V) in.readObject());
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
     }
   }
 }
