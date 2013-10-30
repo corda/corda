@@ -36,6 +36,7 @@ import static java.io.ObjectOutputStream.getReadOrWriteMethod;
 
 import avian.VMClass;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -43,7 +44,10 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class ObjectInputStream extends InputStream implements DataInput {
+  private final static int HANDLE_OFFSET = 0x7e0000;
+
   private final InputStream in;
+  private final ArrayList references;
 
   public ObjectInputStream(InputStream in) throws IOException {
     this.in = in;
@@ -56,6 +60,7 @@ public class ObjectInputStream extends InputStream implements DataInput {
     if (version != STREAM_VERSION) {
       throw new IOException("Unsupported version: " + version);
     }
+    references = new ArrayList();
   }
 
   public int read() throws IOException {
@@ -288,7 +293,13 @@ public class ObjectInputStream extends InputStream implements DataInput {
       int length = rawShort();
       byte[] bytes = new byte[length];
       readFully(bytes);
-      return new String(bytes, "UTF-8");
+      String s = new String(bytes, "UTF-8");
+      references.add(s);
+      return s;
+    }
+    if (c == TC_REFERENCE) {
+      int handle = rawInt();
+      return references.get(handle - HANDLE_OFFSET);
     }
     if (c != TC_OBJECT) {
       throw new IOException("Unexpected token: 0x"
@@ -296,11 +307,21 @@ public class ObjectInputStream extends InputStream implements DataInput {
     }
 
     // class desc
-    expectToken(TC_CLASSDESC);
-    ClassDesc classDesc = classDesc();
+    c = rawByte();
+    ClassDesc classDesc;
+    if (c == TC_REFERENCE) {
+      int handle = rawInt() - HANDLE_OFFSET;
+      classDesc = (ClassDesc)references.get(handle);
+    } else if (c == TC_CLASSDESC) {
+      classDesc = classDesc();
+    } else {
+      throw new UnsupportedOperationException("Unexpected token: 0x"
+          + Integer.toHexString(c));
+    }
 
     try {
       Object o = makeInstance(classDesc.clazz.vmClass);
+      references.add(o);
 
       boolean customized = (classDesc.flags & SC_WRITE_METHOD) != 0;
       Method readMethod = customized ?
@@ -350,6 +371,7 @@ public class ObjectInputStream extends InputStream implements DataInput {
             + Long.toHexString(expected));
       }
     } catch (Exception ignored) { }
+    references.add(result);
 
     result.flags = rawByte();
     if ((result.flags & ~(SC_SERIALIZABLE | SC_WRITE_METHOD)) != 0) {
