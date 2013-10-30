@@ -16,28 +16,28 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
 public class ObjectOutputStream extends OutputStream implements DataOutput {
-  private final static short STREAM_MAGIC = (short)0xaced;
-  private final static short STREAM_VERSION = 5;
-  private final static byte TC_NULL = (byte)0x70;
-  private final static byte TC_REFERENCE = (byte)0x71;
-  private final static byte TC_CLASSDESC = (byte)0x72;
-  private final static byte TC_OBJECT = (byte)0x73;
-  private final static byte TC_STRING = (byte)0x74;
-  private final static byte TC_ARRAY = (byte)0x75;
-  private final static byte TC_CLASS = (byte)0x76;
-  private final static byte TC_BLOCKDATA = (byte)0x77;
-  private final static byte TC_ENDBLOCKDATA = (byte)0x78;
-  private final static byte TC_RESET = (byte)0x79;
-  private final static byte TC_BLOCKDATALONG = (byte)0x7a;
-  private final static byte TC_EXCEPTION = (byte)0x7b;
-  private final static byte TC_LONGSTRING = (byte)0x7c;
-  private final static byte TC_PROXYCLASSDESC = (byte)0x7d;
-  private final static byte TC_ENUM = (byte)0x7e;
-  private final static byte SC_WRITE_METHOD = 0x01; //if SC_SERIALIZABLE
-  private final static byte SC_BLOCK_DATA = 0x08;   //if SC_EXTERNALIZABLE
-  private final static byte SC_SERIALIZABLE = 0x02;
-  private final static byte SC_EXTERNALIZABLE = 0x04;
-  private final static byte SC_ENUM = 0x10;
+  final static short STREAM_MAGIC = (short)0xaced;
+  final static short STREAM_VERSION = 5;
+  final static byte TC_NULL = (byte)0x70;
+  final static byte TC_REFERENCE = (byte)0x71;
+  final static byte TC_CLASSDESC = (byte)0x72;
+  final static byte TC_OBJECT = (byte)0x73;
+  final static byte TC_STRING = (byte)0x74;
+  final static byte TC_ARRAY = (byte)0x75;
+  final static byte TC_CLASS = (byte)0x76;
+  final static byte TC_BLOCKDATA = (byte)0x77;
+  final static byte TC_ENDBLOCKDATA = (byte)0x78;
+  final static byte TC_RESET = (byte)0x79;
+  final static byte TC_BLOCKDATALONG = (byte)0x7a;
+  final static byte TC_EXCEPTION = (byte)0x7b;
+  final static byte TC_LONGSTRING = (byte)0x7c;
+  final static byte TC_PROXYCLASSDESC = (byte)0x7d;
+  final static byte TC_ENUM = (byte)0x7e;
+  final static byte SC_WRITE_METHOD = 0x01; //if SC_SERIALIZABLE
+  final static byte SC_BLOCK_DATA = 0x08;   //if SC_EXTERNALIZABLE
+  final static byte SC_SERIALIZABLE = 0x02;
+  final static byte SC_EXTERNALIZABLE = 0x04;
+  final static byte SC_ENUM = 0x10;
 
   private final OutputStream out;
 
