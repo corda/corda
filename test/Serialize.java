@@ -24,15 +24,44 @@ public class Serialize implements Serializable {
 	  expect(a.equals(b));
   }
 
+  private static String pad(long number, int length) {
+    return pad(Long.toHexString(number), length, '0');
+  }
+
+  private static String pad(String s, int length, char padChar) {
+    length -= s.length();
+    if (length <= 0) {
+      return s;
+    }
+    StringBuilder builder = new StringBuilder();
+    while (length-- > 0) {
+      builder.append(padChar);
+    }
+    return builder.append(s).toString();
+  }
+
   protected static void hexdump(byte[] a) {
+    StringBuilder builder = new StringBuilder();
+    System.err.print(pad(0, 8) + " ");
     for (int i = 0; i < a.length; i++) {
-      if ((i & 0xf) == 0) {
-        System.err.println();
-      }
       String hex = Integer.toHexString(a[i] & 0xff);
       System.err.print(" " + (hex.length() == 1 ? "0" : "") + hex);
+      builder.append(a[i] < 0x20 || a[i] > 0x7f ? '.' : (char)a[i]);
+      if ((i & 0xf) == 0x7) {
+        System.err.print(" ");
+      } else if ((i & 0xf) == 0xf) {
+        System.err.println("  |" + builder + "|");
+        builder.setLength(0);
+        System.err.print(pad(i + 1, 8) + " ");
+      }
     }
-    System.err.println();
+    for (int i = a.length & 0xf; i < 0x10; i++) {
+      System.err.print("   ");
+      if ((i & 0xf) == 0x7) {
+        System.err.print(" ");
+      }
+    }
+    System.err.println("  |" + builder + "|");
   }
 
   private static void expectEqual(byte[] a, int[] b) {
