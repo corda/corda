@@ -11,22 +11,30 @@
 package java.util;
 
 public class TreeMap<K,V> implements Map<K,V> {
-  private TreeSet<MyEntry<K,V>> set;
+  private final Comparator<K> comparator;
+  private transient TreeSet<MyEntry<K,V>> set;
 
-  public TreeMap(final Comparator<K> comparator) {
-    set = new TreeSet(new Comparator<MyEntry<K,V>>() {
-        public int compare(MyEntry<K,V> a, MyEntry<K,V> b) {
-          return comparator.compare(a.key, b.key);
-        }
-      });
+  public TreeMap(Comparator<K> comparator) {
+    this.comparator = comparator;
+    initializeSet();
   }
 
-  public TreeMap() {
-    this(new Comparator<K>() {
+  private void initializeSet() {
+    final Comparator<K> comparator = this.comparator != null ?
+      this.comparator : new Comparator<K>() {
         public int compare(K a, K b) {
           return ((Comparable) a).compareTo(b);
         }
+      };
+    set = new TreeSet(new Comparator<MyEntry<K,V>>() {
+      public int compare(MyEntry<K,V> a, MyEntry<K,V> b) {
+        return comparator.compare(a.key, b.key);
+      }
     });
+  }
+
+  public TreeMap() {
+    this(null);
   }
 
   public String toString() {
