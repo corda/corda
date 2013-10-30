@@ -13,6 +13,7 @@ package java.io;
 import java.util.ArrayList;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public class ObjectOutputStream extends OutputStream implements DataOutput {
@@ -192,7 +193,7 @@ public class ObjectOutputStream extends OutputStream implements DataOutput {
     throw new RuntimeException("Unhandled primitive type: " + type);
   }
 
-  private void classDesc(Class clazz) throws IOException {
+  private void classDesc(Class clazz, int scFlags) throws IOException {
     rawByte(TC_CLASSDESC);
 
     // class name
@@ -207,7 +208,7 @@ public class ObjectOutputStream extends OutputStream implements DataOutput {
     rawLong(serialVersionUID);
 
     // handle
-    rawByte(SC_SERIALIZABLE);
+    rawByte(SC_SERIALIZABLE | scFlags);
 
     Field[] fields = getFields(clazz);
     rawShort(fields.length);
@@ -292,13 +293,45 @@ public class ObjectOutputStream extends OutputStream implements DataOutput {
       return;
     }
     rawByte(TC_OBJECT);
-    classDesc(o.getClass());
-    for (Field field : getFields(o.getClass())) {
-      field(o, field);
+    Method writeObject = getReadOrWriteMethod(o, "writeObject");
+    if (writeObject == null) {
+      classDesc(o.getClass(), 0);
+      defaultWriteObject(o);
+    } else try {
+      classDesc(o.getClass(), SC_WRITE_METHOD);
+      current = o;
+      writeObject.invoke(o, this);
+      current = null;
+      rawByte(TC_ENDBLOCKDATA);
+    } catch (Exception e) {
+      throw new IOException(e);
     }
   }
 
+  static Method getReadOrWriteMethod(Object o, String methodName) {
+    try {
+      Method method = o.getClass().getDeclaredMethod(methodName,
+        new Class[] { methodName.startsWith("write") ?
+          ObjectOutputStream.class : ObjectInputStream.class });
+      method.setAccessible(true);
+      int modifiers = method.getModifiers();
+      if ((modifiers & Modifier.STATIC) == 0 ||
+          (modifiers & Modifier.PRIVATE) != 0) {
+        return method;
+      }
+    } catch (NoSuchMethodException ignored) { }
+    return null;
+  }
+
+  private Object current;
+
   public void defaultWriteObject() throws IOException {
-    throw new UnsupportedOperationException();
+    defaultWriteObject(current);
+  }
+
+  private void defaultWriteObject(Object o) throws IOException {
+    for (Field field : getFields(o.getClass())) {
+      field(o, field);
+    }
   }
 }
