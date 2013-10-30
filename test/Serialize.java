@@ -3,6 +3,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.TreeMap;
 
 public class Serialize implements Serializable {
   public static final long serialVersionUID = 1l;
@@ -112,5 +113,51 @@ public class Serialize implements Serializable {
     Serialize unserialized = (Serialize) in2.readObject();
     expectEqual(0x12345678, unserialized.dummy);
     in2.close();
+
+    out.reset();
+    out2 = new ObjectOutputStream(out);
+    TreeMap map = new TreeMap();
+    map.put("key", "value");
+    out2.writeObject(map);
+    out2.close();
+    array = out.toByteArray();
+    expectEqual(array, new int[] {
+      // magic
+      0xac, 0xed,
+      // version
+      0x00, 0x05,
+      // object
+      0x73,
+      // class desc "java.util.TreeMap"
+      0x72, 0, 17, 'j', 'a', 'v', 'a', '.', 'u', 't', 'i', 'l', '.',
+      'T', 'r', 'e', 'e', 'M', 'a', 'p',
+      // serial version UID: 0x0cc1f64e2d266ae6
+      0x0c, 0xc1, 0xf6, 0x3e, 0x2d, 0x25, 0x6a, 0xe6,
+      // flags: SC_SERIALIZABLE | SC_WRITE_METHOD
+      0x03,
+      // 1 field: comparator
+      0, 1, 'L', 0, 10, 'c', 'o', 'm', 'p', 'a', 'r', 'a', 't', 'o', 'r',
+      0x74, 0, 22, 'L', 'j', 'a', 'v', 'a', '/', 'u', 't', 'i', 'l', '/',
+      'C', 'o', 'm', 'p', 'a', 'r', 'a', 't', 'o', 'r', ';',
+      // class annotation
+      0x78,
+      // super class desc
+      0x70,
+      // classdata[]: NULL
+      0x70,
+      // custom TreeMap data writte by TreeMap#writeObject
+      0x77, 4, 0x00 , 0x00, 0x00, 0x01, // (int)1 (== map.size())
+      0x74, 0, 3, 'k', 'e', 'y', // "key"
+      0x74, 0, 5, 'v', 'a', 'l', 'u', 'e', // "value"
+      // end block data
+      0x78
+    });
+    map.put("Hello", "ween");
+    in = new ByteArrayInputStream(array);
+    in2 = new ObjectInputStream(in);
+    map = (TreeMap)in2.readObject();
+    in2.close();
+    expectEqual(1, map.size());
+    expectEqual("value", (String)map.get("key"));
   }
 }
