@@ -99,7 +99,7 @@ public class Field<T> extends AccessibleObject {
 
     case LongField:
       return Long.valueOf
-        ((int) getPrimitive(target, vmField.code, vmField.offset));
+        (getPrimitive(target, vmField.code, vmField.offset));
 
     case FloatField:
       return Float.valueOf
