@@ -284,6 +284,13 @@ public class ObjectOutputStream extends OutputStream implements DataOutput {
       rawByte(TC_NULL);
       return;
     }
+    if (o instanceof String) {
+      byte[] bytes = ((String)o).getBytes("UTF-8");
+      rawByte(TC_STRING);
+      rawShort(bytes.length);
+      write(bytes);
+      return;
+    }
     rawByte(TC_OBJECT);
     classDesc(o.getClass());
     for (Field field : getFields(o.getClass())) {
