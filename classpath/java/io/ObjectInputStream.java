@@ -278,7 +278,20 @@ public class ObjectInputStream extends InputStream implements DataInput {
   }
 
   public Object readObject() throws IOException, ClassNotFoundException {
-    expectToken(TC_OBJECT);
+    int c = rawByte();
+    if (c == TC_NULL) {
+      return null;
+    }
+    if (c == TC_STRING) {
+      int length = rawShort();
+      byte[] bytes = new byte[length];
+      readFully(bytes);
+      return new String(bytes, "UTF-8");
+    }
+    if (c != TC_OBJECT) {
+      throw new IOException("Unexpected token: 0x"
+        + Integer.toHexString(c));
+    }
 
     // class desc
     expectToken(TC_CLASSDESC);
