@@ -127,9 +127,6 @@ public class ObjectInputStream extends InputStream implements DataInput {
     in.close();
   }
 
-  public Object readObject() throws IOException, ClassNotFoundException {
-    throw new UnsupportedOperationException();
-  }
   private int remainingBlockData;
 
   private int rawBlockDataByte() throws IOException {
@@ -221,6 +218,134 @@ public class ObjectInputStream extends InputStream implements DataInput {
     return count;
   }
 
+  private static Class charToPrimitiveType(int c) {
+    if (c == 'B') {
+      return Byte.TYPE;
+    } else if (c == 'C') {
+      return Character.TYPE;
+    } else if (c == 'D') {
+      return Double.TYPE;
+    } else if (c == 'F') {
+      return Float.TYPE;
+    } else if (c == 'I') {
+      return Integer.TYPE;
+    } else if (c == 'J') {
+      return Long.TYPE;
+    } else if (c == 'S') {
+      return Short.TYPE;
+    } else if (c == 'Z') {
+      return Boolean.TYPE;
+    }
+    throw new RuntimeException("Unhandled char: " + (char)c);
+  }
+
+  private void expectToken(int token) throws IOException {
+    int c = rawByte();
+    if (c != token) {
+      throw new UnsupportedOperationException("Unexpected token: 0x"
+          + Integer.toHexString(c));
+    }
+  }
+
+  private void field(Field field, Object o)
+    throws IOException, IllegalArgumentException, IllegalAccessException,
+      ClassNotFoundException
+  {
+    Class type = field.getType();
+    if (!type.isPrimitive()) {
+      field.set(o, readObject());
+    } else {
+      if (type == Byte.TYPE) {
+        field.setByte(o, (byte)rawByte());
+      } else if (type == Character.TYPE) {
+        field.setChar(o, (char)rawShort());
+      } else if (type == Double.TYPE) {
+        field.setDouble(o, Double.longBitsToDouble(rawLong()));
+      } else if (type == Float.TYPE) {
+        field.setFloat(o, Float.intBitsToFloat(rawInt()));
+      } else if (type == Integer.TYPE) {
+        field.setInt(o, rawInt());
+      } else if (type == Long.TYPE) {
+        field.setLong(o, rawLong());
+      } else if (type == Short.TYPE) {
+        field.setShort(o, (short)rawShort());
+      } else if (type == Boolean.TYPE) {
+        field.setBoolean(o, rawByte() != 0);
+      } else {
+        throw new IOException("Unhandled type: " + type);
+      }
+    }
+  }
+
+  public Object readObject() throws IOException, ClassNotFoundException {
+    expectToken(TC_OBJECT);
+
+    // class desc
+    expectToken(TC_CLASSDESC);
+    String className = rawString();
+    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+    Class clazz = loader.loadClass(className);
+    long serialVersionUID = rawLong();
+    try {
+      Field field = clazz.getField("serialVersionUID");
+      long expected = field.getLong(null);
+      if (expected != serialVersionUID) {
+        throw new IOException("Incompatible serial version UID: 0x"
+            + Long.toHexString(serialVersionUID) + " != 0x"
+            + Long.toHexString(expected));
+      }
+    } catch (Exception ignored) { }
+
+    int flags = rawByte();
+    if (flags != SC_SERIALIZABLE) {
+      throw new UnsupportedOperationException("Cannot handle flags: 0x"
+          + Integer.toHexString(flags));
+    }
+
+    int fieldCount = rawShort();
+    Field[] fields = new Field[fieldCount];
+    for (int i = 0; i < fields.length; i++) {
+      int typeChar = rawByte();
+      String fieldName = rawString();
+      try {
+        fields[i] = clazz.getDeclaredField(fieldName);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+      Class type;
+      if (typeChar == '[' || typeChar == 'L') {
+        expectToken(TC_STRING);
+        String typeName = rawString();
+        type = loader.loadClass(typeName);
+      } else {
+        type = charToPrimitiveType(typeChar);
+      }
+      if (fields[i].getType() != type) {
+        throw new IOException("Unexpected type of field " + fieldName
+            + ": expected " + fields[i].getType() + " but got " + type);
+      }
+    }
+    expectToken(TC_ENDBLOCKDATA);
+    expectToken(TC_NULL);
+
+    try {
+      Object o = makeInstance(clazz.vmClass);
+
+      for (Field field : fields) {
+        field(field, o);
+      }
+
+      return o;
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  public void defaultReadObject() throws IOException {
+    throw new UnsupportedOperationException();
+  }
 
   private static native Object makeInstance(VMClass c);
 }
