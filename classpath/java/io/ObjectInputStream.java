@@ -297,67 +297,23 @@ public class ObjectInputStream extends InputStream implements DataInput {
 
     // class desc
     expectToken(TC_CLASSDESC);
-    String className = rawString();
-    ClassLoader loader = Thread.currentThread().getContextClassLoader();
-    Class clazz = loader.loadClass(className);
-    long serialVersionUID = rawLong();
-    try {
-      Field field = clazz.getField("serialVersionUID");
-      long expected = field.getLong(null);
-      if (expected != serialVersionUID) {
-        throw new IOException("Incompatible serial version UID: 0x"
-            + Long.toHexString(serialVersionUID) + " != 0x"
-            + Long.toHexString(expected));
-      }
-    } catch (Exception ignored) { }
-
-    int flags = rawByte();
-    if ((flags & ~(SC_SERIALIZABLE | SC_WRITE_METHOD)) != 0) {
-      throw new UnsupportedOperationException("Cannot handle flags: 0x"
-          + Integer.toHexString(flags));
-    }
-
-    int fieldCount = rawShort();
-    Field[] fields = new Field[fieldCount];
-    for (int i = 0; i < fields.length; i++) {
-      int typeChar = rawByte();
-      String fieldName = rawString();
-      try {
-        fields[i] = clazz.getDeclaredField(fieldName);
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
-      Class type;
-      if (typeChar == '[' || typeChar == 'L') {
-        expectToken(TC_STRING);
-        String typeName = rawString();
-        type = loader.loadClass(typeName);
-      } else {
-        type = charToPrimitiveType(typeChar);
-      }
-      if (fields[i].getType() != type) {
-        throw new IOException("Unexpected type of field " + fieldName
-            + ": expected " + fields[i].getType() + " but got " + type);
-      }
-    }
-    expectToken(TC_ENDBLOCKDATA);
-    expectToken(TC_NULL);
+    ClassDesc classDesc = classDesc();
 
     try {
-      Object o = makeInstance(clazz.vmClass);
+      Object o = makeInstance(classDesc.clazz.vmClass);
 
-      boolean customized = (flags & SC_WRITE_METHOD) != 0;
+      boolean customized = (classDesc.flags & SC_WRITE_METHOD) != 0;
       Method readMethod = customized ?
         getReadOrWriteMethod(o, "readObject") : null;
       if (readMethod == null) {
         if (customized) {
           throw new IOException("Could not find required readObject method in "
-            + clazz);
+            + classDesc.clazz);
         }
-        defaultReadObject(o, fields);
+        defaultReadObject(o, classDesc.fields);
       } else {
         current = o;
-        currentFields = fields;
+        currentFields = classDesc.fields;
         readMethod.invoke(o, this);
         current = null;
         currentFields = null;
@@ -370,6 +326,67 @@ public class ObjectInputStream extends InputStream implements DataInput {
     } catch (Exception e) {
       throw new IOException(e);
     }
+  }
+
+  private static class ClassDesc {
+    Class clazz;
+    int flags;
+    Field[] fields;
+    ClassDesc superClassDesc;
+  }
+
+  private ClassDesc classDesc() throws ClassNotFoundException, IOException {
+    ClassDesc result = new ClassDesc();
+    String className = rawString();
+    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+    result.clazz = loader.loadClass(className);
+    long serialVersionUID = rawLong();
+    try {
+      Field field = result.clazz.getField("serialVersionUID");
+      long expected = field.getLong(null);
+      if (expected != serialVersionUID) {
+        throw new IOException("Incompatible serial version UID: 0x"
+            + Long.toHexString(serialVersionUID) + " != 0x"
+            + Long.toHexString(expected));
+      }
+    } catch (Exception ignored) { }
+
+    result.flags = rawByte();
+    if ((result.flags & ~(SC_SERIALIZABLE | SC_WRITE_METHOD)) != 0) {
+      throw new UnsupportedOperationException("Cannot handle flags: 0x"
+          + Integer.toHexString(result.flags));
+    }
+
+    int fieldCount = rawShort();
+    result.fields = new Field[fieldCount];
+    for (int i = 0; i < result.fields.length; i++) {
+      int typeChar = rawByte();
+      String fieldName = rawString();
+      try {
+        result.fields[i] = result.clazz.getDeclaredField(fieldName);
+      } catch (Exception e) {
+        throw new IOException(e);
+      }
+      Class type;
+      if (typeChar == '[' || typeChar == 'L') {
+        String typeName = (String)readObject();
+        if (typeName.startsWith("L") && typeName.endsWith(";")) {
+          typeName = typeName.substring(1, typeName.length() - 1)
+            .replace('/', '.');
+        }
+        type = loader.loadClass(typeName);
+      } else {
+        type = charToPrimitiveType(typeChar);
+      }
+      if (result.fields[i].getType() != type) {
+        throw new IOException("Unexpected type of field " + fieldName
+            + ": expected " + result.fields[i].getType() + " but got " + type);
+      }
+    }
+    expectToken(TC_ENDBLOCKDATA);
+    expectToken(TC_NULL);
+
+    return result;
   }
 
   private Object current;
