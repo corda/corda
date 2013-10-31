@@ -148,6 +148,22 @@ public class Collections {
     }
   }
 
+  public static <T> int binarySearch(List<T> list, T needle) {
+    int left = -1, right = list.size();
+    while (left + 1 < right) {
+      int middle = (left + right) >> 1;
+      int result = ((Comparable)needle).compareTo(list.get(middle));
+      if (result < 0) {
+        right = middle;
+      } else if (result > 0) {
+        left = middle;
+      } else {
+        return middle;
+      }
+    }
+    return -1 - right;
+  }
+
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 
