@@ -10,10 +10,9 @@
 
 package avian;
 
-public class ClassAddendum extends Addendum {
-  public Object[] interfaceTable;
-  public InnerClassReference[] innerClassTable;
-  public Object[] methodTable;
-  public Object enclosingClass;
-  public Object enclosingMethod;
+public class InnerClassReference {
+  public byte[] inner;
+  public byte[] outer;
+  public byte[] name;
+  public short flags;
 }
