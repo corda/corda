@@ -323,23 +323,26 @@ public class ObjectInputStream extends InputStream implements DataInput {
       Object o = makeInstance(classDesc.clazz.vmClass);
       references.add(o);
 
-      boolean customized = (classDesc.flags & SC_WRITE_METHOD) != 0;
-      Method readMethod = customized ?
-        getReadOrWriteMethod(o, "readObject") : null;
-      if (readMethod == null) {
-        if (customized) {
-          throw new IOException("Could not find required readObject method in "
-            + classDesc.clazz);
+      do {
+        Object o1 = classDesc.clazz.cast(o);
+        boolean customized = (classDesc.flags & SC_WRITE_METHOD) != 0;
+        Method readMethod = customized ?
+          getReadOrWriteMethod(o, "readObject") : null;
+        if (readMethod == null) {
+          if (customized) {
+            throw new IOException("Could not find required readObject method "
+              + "in " + classDesc.clazz);
+          }
+          defaultReadObject(o, classDesc.fields);
+        } else {
+          current = o1;
+          currentFields = classDesc.fields;
+          readMethod.invoke(o, this);
+          current = null;
+          currentFields = null;
+          expectToken(TC_ENDBLOCKDATA);
         }
-        defaultReadObject(o, classDesc.fields);
-      } else {
-        current = o;
-        currentFields = classDesc.fields;
-        readMethod.invoke(o, this);
-        current = null;
-        currentFields = null;
-        expectToken(TC_ENDBLOCKDATA);
-      }
+      } while ((classDesc = classDesc.superClassDesc) != null);
 
       return o;
     } catch (IOException e) {
@@ -406,7 +409,13 @@ public class ObjectInputStream extends InputStream implements DataInput {
       }
     }
     expectToken(TC_ENDBLOCKDATA);
-    expectToken(TC_NULL);
+    int c = rawByte();
+    if (c == TC_CLASSDESC) {
+      result.superClassDesc = classDesc();
+    } else if (c != TC_NULL) {
+      throw new UnsupportedOperationException("Unexpected token: 0x"
+          + Integer.toHexString(c));
+    }
 
     return result;
   }
