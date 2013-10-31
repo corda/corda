@@ -30,8 +30,8 @@
 
 #ifdef __APPLE__
 #  include "mach/mach_types.h"
-#  include "mach/i386/thread_act.h"
-#  include "mach/i386/thread_status.h"
+#  include "mach/thread_act.h"
+#  include "mach/thread_status.h"
 
 #  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
 #    define FIELD(x) __##x

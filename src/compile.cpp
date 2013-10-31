@@ -50,7 +50,9 @@ const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
+#ifndef NDEBUG
 const bool DebugIntrinsics = false;
+#endif
 
 const bool CheckArrayBounds = true;
 

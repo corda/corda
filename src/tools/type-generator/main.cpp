@@ -27,7 +27,7 @@
 
 #define UNUSED __attribute__((unused))
 
-inline void operator delete(void*) { abort(); }
+void operator delete(void*) { abort(); }
 
 extern "C" void __cxa_pure_virtual(void) { abort(); }
 
