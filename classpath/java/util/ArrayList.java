@@ -10,6 +10,10 @@
 
 package java.util;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 public class ArrayList<T> extends AbstractList<T> implements java.io.Serializable {
   private static final int MinimumCapacity = 16;
 
@@ -182,5 +186,24 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
 
   public String toString() {
     return Collections.toString(this);
+  }
+
+  private void writeObject(ObjectOutputStream out) throws IOException {
+    out.defaultWriteObject();
+    out.writeInt(array.length);
+    for (T o : this) {
+      out.writeObject(o);
+    }
+  }
+
+  private void readObject(ObjectInputStream in)
+      throws ClassNotFoundException, IOException
+  {
+    in.defaultReadObject();
+    int capacity = in.readInt();
+    grow(capacity);
+    for (int i = 0; i < size; i++) {
+      array[i] = in.readObject();
+    }
   }
 }
