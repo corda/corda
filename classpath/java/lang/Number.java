@@ -10,7 +10,9 @@
 
 package java.lang;
 
-public abstract class Number {
+import java.io.Serializable;
+
+public abstract class Number implements Serializable {
   public abstract byte byteValue();
   public abstract short shortValue();
   public abstract int intValue();
