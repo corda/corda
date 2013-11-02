@@ -75,6 +75,14 @@ public final class Math {
     return (int) Math.floor(v + 0.5);
   }
 
+  public static double signum(double d) {
+    return d > 0 ? +1.0 : d < 0 ? -1.0 : 0;
+  }
+
+  public static float signum(float f) {
+    return f > 0 ? +1.0f : f < 0 ? -1.0f : 0;
+  }
+
   public static double random() {
     return random.nextDouble();
   }
