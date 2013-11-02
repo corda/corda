@@ -164,6 +164,15 @@ public class Collections {
     return -1 - right;
   }
 
+  public static <T> void reverse(List<T> list) {
+    int ascending = 0, descending = list.size() - 1;
+    while (ascending < descending) {
+      T tmp = list.get(ascending);
+      list.set(ascending++, list.get(descending));
+      list.set(descending--, tmp);
+    }
+  }
+
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 
