@@ -56,6 +56,12 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
     return new MyIterator<T>(set.first());
   }
 
+  public Iterator<T> descendingIterator() {
+    ArrayList<T> iterable = new ArrayList<T>(this);
+    Collections.reverse(iterable);
+    return iterable.iterator();
+  }
+
   public String toString() {
     return Collections.toString(this);
   }
