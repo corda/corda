@@ -3,6 +3,41 @@ public class Arrays {
     if (! v) throw new RuntimeException();
   }
 
+  private static <T extends Comparable<T>> void expectSorted(T[] array) {
+    for (int i = 1; i < array.length; ++i) {
+      expect(array[i - 1].compareTo(array[i]) <= 0);
+    }
+  }
+
+  private static int pseudoRandom(int seed) {
+    return 3170425 * seed + 132102;
+  }
+
+  private static <T extends Comparable<T>> int shuffle(T[] array, int seed) {
+    for (int i = array.length; i > 1; --i) {
+      int i2 = (seed < 0 ? -seed : seed) % i;
+      T value = array[i - 1];
+      array[i - 1] = array[i2];
+      array[i2] = value;
+      seed = pseudoRandom(seed);
+    }
+    return seed;
+  }
+
+  public static void testSort() {
+    Integer[] array = new Integer[64];
+    for (int i = 0; i < array.length; ++i) {
+      array[i] = Integer.valueOf(i + 1);
+    }
+    ;
+    int random = 12345;
+    for (int i = 0; i < 32; ++i) {
+      random = shuffle(array, random);
+      java.util.Arrays.sort(array);
+      expectSorted(array);
+    }
+  }
+
   public static void main(String[] args) {
     { int[] array = new int[0];
       Exception exception = null;
@@ -94,5 +129,7 @@ public class Arrays {
       java.util.Arrays.hashCode(a);
       java.util.Arrays.hashCode((Object[])null);
     }
+
+    testSort();
   }
 }
