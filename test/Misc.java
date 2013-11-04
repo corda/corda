@@ -1,3 +1,7 @@
+import java.io.IOException;
+import java.net.URL;
+import java.util.Enumeration;
+
 public class Misc {
   private static class μClass {
     public int μField;
@@ -262,6 +266,27 @@ public class Misc {
 
     expect((Protected.class.getModifiers() & java.lang.reflect.Modifier.PUBLIC)
            == 0);
+
+    try {
+      int count = 0;
+      boolean test = false, extraDir = false;
+      ClassLoader loader = Misc.class.getClassLoader();
+      Enumeration<URL> resources = loader.getResources("multi-classpath-test.txt");
+      while (resources.hasMoreElements()) {
+        ++count;
+        String url = resources.nextElement().toString();
+        if (url.contains("extra-dir")) {
+          extraDir = true;
+        } else if (url.contains("test")) {
+          test = true;
+        }
+      }
+      expect(count == 2);
+      expect(test);
+      expect(extraDir);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   protected class Protected { }
