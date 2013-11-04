@@ -50,7 +50,11 @@ public class SocketChannel extends SelectableChannel
   }
 
   public Socket socket() {
-    return new Handle();
+    try {
+		return new Handle();
+	} catch (IOException e) {
+		return null;
+	}
   }
 
   public boolean connect(SocketAddress address) throws IOException {
@@ -165,7 +169,11 @@ public class SocketChannel extends SelectableChannel
   }
 
   public class Handle extends Socket {
-    public void setTcpNoDelay(boolean on) throws SocketException {
+    public Handle() throws IOException {
+		super();
+	}
+
+	public void setTcpNoDelay(boolean on) throws SocketException {
       natSetTcpNoDelay(socket, on);
     }
   }

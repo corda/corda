@@ -123,4 +123,7 @@ public class Throwable implements Serializable {
     trace = trace(0);
     return this;
   }
+  
+  public void addSuppressed(Throwable exception) {
+  }
 }
