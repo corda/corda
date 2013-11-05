@@ -42,7 +42,7 @@ public class Handler extends URLStreamHandler {
         ("protocol " + file.getProtocol() + " not yet supported");
     }
 
-    url.set("jar", "", -1, s, null);
+    url.set("jar", null, -1, s, null);
   }
 
   private static class MyJarURLConnection extends JarURLConnection {

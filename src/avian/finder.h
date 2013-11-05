@@ -168,6 +168,7 @@ class Finder {
                                 unsigned* length,
                                 bool tryDirectory = false) = 0;
   virtual const char* urlPrefix(const char* name) = 0;
+  virtual const char* nextUrlPrefix(const char* name, void *&finderElementPtr) = 0;
   virtual const char* sourceUrl(const char* name) = 0;
   virtual const char* path() = 0;
   virtual void dispose() = 0;

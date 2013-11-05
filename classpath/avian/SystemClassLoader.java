@@ -17,6 +17,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.NoSuchElementException;
 
 public class SystemClassLoader extends ClassLoader {
   private native VMClass findVMClass(String name)
@@ -106,20 +107,51 @@ public class SystemClassLoader extends ClassLoader {
       }
     }
 
-    URL url = findResource(name);
-    if (url != null) {
-      urls.add(url);
+    Enumeration<URL> urls2 = findResources(name);
+    while (urls2.hasMoreElements()) {
+      urls.add(urls2.nextElement());
     }
 
     return Collections.enumeration(urls);
   }
 
-  protected Enumeration<URL> findResources(String name) {
-    Collection<URL> urls = new ArrayList(1);
-    URL url = findResource(name);
-    if (url != null) {
-      urls.add(url);
+  private class ResourceEnumeration implements Enumeration<URL> {
+    private long[] finderElementPtrPtr;
+    private String name, urlPrefix;
+
+    public ResourceEnumeration(String name) {
+      this.name = name;
+      finderElementPtrPtr = new long[1];
+      urlPrefix = nextResourceURLPrefix();
     }
-    return Collections.enumeration(urls);
+
+    private native String nextResourceURLPrefix(SystemClassLoader loader,
+      String name, long[] finderElementPtrPtr);
+
+    private String nextResourceURLPrefix() {
+      return nextResourceURLPrefix(SystemClassLoader.this, name,
+        finderElementPtrPtr);
+    }
+
+    public boolean hasMoreElements() {
+      return urlPrefix != null;
+    }
+
+    public URL nextElement() {
+      if (urlPrefix == null) throw new NoSuchElementException();
+      URL result;
+      try {
+        result = new URL(urlPrefix + name);
+      } catch (MalformedURLException ignored) {
+        result = null;
+      }
+      if (finderElementPtrPtr[0] == 0l) urlPrefix = null;
+      else urlPrefix = nextResourceURLPrefix();
+      return result;
+    }
+  }
+
+  protected Enumeration<URL> findResources(String name) {
+    return new ResourceEnumeration(name);
   }
 }
