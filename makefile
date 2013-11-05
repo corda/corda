@@ -474,8 +474,7 @@ endif
 
 ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
-	cflags += -I/System/Library/Frameworks/JavaVM.framework/Headers/ \
-		-Wno-deprecated-declarations
+	cflags += -Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
 endif
 
@@ -691,6 +690,8 @@ ifeq ($(platform),darwin)
 		asmflags += -arch x86_64
 		lflags += -arch x86_64
 	endif
+
+	cflags += -I$(JAVA_HOME)/include/darwin
 endif
 
 openjdk-extra-cflags += $(classpath-extra-cflags)
