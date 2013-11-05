@@ -12,4 +12,8 @@ package java.util.jar;
 
 import java.util.zip.ZipEntry;
 
-public abstract class JarEntry extends ZipEntry { }
+public abstract class JarEntry extends ZipEntry {
+    public JarEntry(){
+        super(null);
+    }
+}

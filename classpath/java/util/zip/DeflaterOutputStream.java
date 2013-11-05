@@ -11,16 +11,16 @@
 package java.util.zip;
 
 import java.io.OutputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 
-public class DeflaterOutputStream extends OutputStream {
-  private final OutputStream out;
-  private final Deflater deflater;
-  private final byte[] buffer;
+public class DeflaterOutputStream extends FilterOutputStream {
+  protected final Deflater deflater;
+  protected final byte[] buffer;
 
   public DeflaterOutputStream(OutputStream out, Deflater deflater, int bufferSize)
   {
-    this.out = out;
+    super(out);
     this.deflater = deflater;
     this.buffer = new byte[bufferSize];
   }
