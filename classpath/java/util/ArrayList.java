@@ -65,6 +65,10 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
     return size;
   }
 
+  public void ensureCapacity(int capacity) {
+    grow(capacity);
+  }
+
   public boolean contains(Object element) {
     for (int i = 0; i < size; ++i) {
       if (equal(element, array[i])) {

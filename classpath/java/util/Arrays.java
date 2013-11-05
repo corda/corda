@@ -10,6 +10,8 @@
 
 package java.util;
 
+import java.lang.reflect.Array;
+
 public class Arrays {
   private Arrays() { }
 
@@ -341,11 +343,119 @@ public class Arrays {
       array[i] = value;
     }
   }
-  
+
+  public static void fill(short[] array, short value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(byte[] array, byte value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(boolean[] array, boolean value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(long[] array, long value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+   public static void fill(float[] array, float value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+ public static void fill(double[] array, double value) {
+    for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
   public static <T> void fill(T[] array, T value) {
     for (int i=0;i<array.length;i++) {
       array[i] = value;
     }
   }
 
+  public static boolean[] copyOf(boolean[] array, int newLength) {
+    boolean[] result = new boolean[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static byte[] copyOf(byte[] array, int newLength) {
+    byte[] result = new byte[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static char[] copyOf(char[] array, int newLength) {
+    char[] result = new char[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static double[] copyOf(double[] array, int newLength) {
+    double[] result = new double[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static float[] copyOf(float[] array, int newLength) {
+    float[] result = new float[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static int[] copyOf(int[] array, int newLength) {
+    int[] result = new int[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static long[] copyOf(long[] array, int newLength) {
+    long[] result = new long[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static short[] copyOf(short[] array, int newLength) {
+    short[] result = new short[newLength];
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static <T> T[] copyOf(T[] array, int newLength) {
+    Class<?> clazz = array.getClass().getComponentType();
+    T[] result = (T[])Array.newInstance(clazz, newLength);
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
+
+  public static <T, U> T[] copyOf(U[] array, int newLength,
+    Class<? extends T[]> newType)
+  {
+    T[] result = (T[])Array.newInstance(newType.getComponentType(), newLength);
+    int length = array.length > newLength ? newLength : array.length;
+    System.arraycopy(array, 0, result, 0, length);
+    return result;
+  }
 }

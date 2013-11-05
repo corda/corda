@@ -33,6 +33,146 @@ public class Collections {
     shuffle(list, new Random());
   }
 
+  public static void sort(List list) {
+    sort(list, new Comparator() {
+        public int compare(Object a, Object b) {
+          return ((Comparable) a).compareTo(b);
+        }
+      });
+  }
+
+  private final static int SORT_SIZE_THRESHOLD = 16;
+
+  public static <T> void sort(List<T> list, Comparator<? super T> comparator) {
+    int size = list.size();
+    introSort(list, comparator, 0, size, size);
+    insertionSort(list, comparator);
+  }
+
+  private static <T > void introSort(List<T> list,
+    Comparator<? super T> comparator, int begin, int end, int limit)
+  {
+    while (end - begin > SORT_SIZE_THRESHOLD) {
+      if (limit == 0) {
+        heapSort(list, comparator, begin, end);
+        return;
+      }
+      limit >>= 1;
+
+      // median of three
+      T a = list.get(begin);
+      T b = list.get(begin + (end - begin) / 2 + 1);
+      T c = list.get(end - 1);
+      T median;
+      if (comparator.compare(a, b) < 0) {
+        median = comparator.compare(b, c) < 0 ?
+          b : (comparator.compare(a, c) < 0 ? c : a);
+      } else {
+        median = comparator.compare(b, c) > 0 ?
+          b : (comparator.compare(a, c) > 0 ? c : a);
+      }
+
+      // partition
+      int pivot, i = begin, j = end;
+      for (;;) {
+        while (comparator.compare(list.get(i), median) < 0) {
+          ++i;
+        }
+        --j;
+        while (comparator.compare(median, list.get(j)) < 0) {
+          --j;
+        }
+        if (i >= j) {
+          pivot = i;
+          break;
+        }
+        T swap = list.get(i);
+        list.set(i, list.get(j));
+        list.set(j, swap);
+        ++i;
+      }
+
+      introSort(list, comparator, pivot, end, limit);
+      end = pivot;
+    }
+  }
+
+  private static <T> void heapSort(List<T> list, Comparator<? super T> comparator,
+    int begin, int end)
+  {
+    int count = end - begin;
+    for (int i = count / 2 - 1; i >= 0; --i) {
+      siftDown(list, comparator, i, count, begin);
+    }
+    for (int i = count - 1; i > 0; --i) {
+      // swap begin and begin + i
+      T swap = list.get(begin + i);
+      list.set(begin + i, list.get(begin));
+      list.set(begin, swap);
+
+      siftDown(list, comparator, 0, i, begin);
+    }
+  }
+
+  private static <T> void siftDown(List<T> list, Comparator<? super T> comparator,
+    int i, int count, int offset)
+  {
+    T value = list.get(offset + i);
+    while (i < count / 2) {
+      int child = 2 * i + 1;
+      if (child + 1 < count &&
+          comparator.compare(list.get(child), list.get(child + 1)) < 0) {
+        ++child;
+      }
+      if (comparator.compare(value, list.get(child)) >= 0) {
+        break;
+      }
+      list.set(offset + i, list.get(offset + child));
+      i = child;
+    }
+    list.set(offset + i, value);
+  }
+
+  private static <T> void insertionSort(List<T> list,
+    Comparator<? super T> comparator)
+  {
+    int size = list.size();
+    for (int j = 1; j < size; ++j) {
+      T t = list.get(j);
+      int i = j - 1;
+      while (i >= 0 && comparator.compare(list.get(i), t) > 0) {
+        list.set(i + 1, list.get(i));
+        --i;
+      }
+      list.set(i + 1, t);
+    }
+  }
+
+  public static <T> int binarySearch(List<T> list, T needle) {
+    int left = -1, right = list.size();
+    while (left + 1 < right) {
+      int middle = (left + right) >> 1;
+      int result = ((Comparable)needle).compareTo(list.get(middle));
+      if (result < 0) {
+        right = middle;
+      } else if (result > 0) {
+        left = middle;
+      } else {
+        return middle;
+      }
+    }
+    return -1 - right;
+  }
+
+  public static <T> void reverse(List<T> list) {
+    int ascending = 0, descending = list.size() - 1;
+    while (ascending < descending) {
+      T tmp = list.get(ascending);
+      list.set(ascending++, list.get(descending));
+      list.set(descending--, tmp);
+    }
+  }
+
   static <T> T[] toArray(Collection collection, T[] array) {
     Class c = array.getClass().getComponentType();
 

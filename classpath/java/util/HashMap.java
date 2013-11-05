@@ -93,7 +93,7 @@ public class HashMap<K, V> implements Map<K, V> {
     array = newArray;
   }
 
-  private Cell<K, V> find(Object key) {
+  protected Cell<K, V> find(Object key) {
     if (array != null) {
       int index = helper.hash(key) & (array.length - 1);
       for (Cell<K, V> c = array[index]; c != null; c = c.next()) {

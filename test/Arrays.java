@@ -130,6 +130,13 @@ public class Arrays {
       java.util.Arrays.hashCode((Object[])null);
     }
 
+    { String[] list = new String[] { "Hello", "World", "!" };
+      Object[] result = java.util.Arrays.copyOf(list, 2, Object[].class);
+      expect(list[1] == result[1]);
+      expect(result.length == 2);
+      expect(result.getClass().getComponentType() == Object.class);
+    }
+
     testSort();
   }
 }
