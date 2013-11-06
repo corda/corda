@@ -53,7 +53,7 @@ class MyClasspath : public Classpath {
 
     return vm::makeThread
       (t, 0, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
-       root(t, Machine::BootLoader), 0, 0, group, 0);
+       root(t, Machine::AppLoader), 0, 0, group, 0);
   }
 
   virtual object

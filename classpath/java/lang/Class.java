@@ -15,6 +15,7 @@ import avian.ClassAddendum;
 import avian.AnnotationInvocationHandler;
 import avian.SystemClassLoader;
 import avian.Classes;
+import avian.InnerClassReference;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -400,6 +401,37 @@ public final class Class <T> implements Type, AnnotatedElement {
     } else {
       return null;
     }
+  }
+
+  public Class[] getDeclaredClasses() {
+    if (vmClass.addendum == null || vmClass.addendum.innerClassTable == null) {
+      return new Class[0];
+    }
+    InnerClassReference[] table = vmClass.addendum.innerClassTable;
+    Class[] result = new Class[table.length];
+    int counter = 0;
+    String prefix = getName().replace('.', '/') + "$";
+    for (int i = 0; i < table.length; ++i) try {
+      byte[] inner = table[i].inner;
+      if (inner != null && inner.length > 1) {
+        String name = new String(inner, 0, inner.length - 1);
+        if (name.startsWith(prefix)) {
+          Class innerClass = getClassLoader().loadClass(name);
+          result[counter++] = innerClass;
+        }
+      }
+    } catch (ClassNotFoundException e) {
+      throw new Error(e);
+    }
+    if (counter == result.length) {
+      return result;
+    }
+    if (counter == 0) {
+      return new Class[0];
+    }
+    Class[] result2 = new Class[counter];
+    System.arraycopy(result, 0, result2, 0, counter);
+    return result2;
   }
 
   public ClassLoader getClassLoader() {

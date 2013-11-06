@@ -8,12 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package avian;
+package java.util;
 
-public class ClassAddendum extends Addendum {
-  public Object[] interfaceTable;
-  public InnerClassReference[] innerClassTable;
-  public Object[] methodTable;
-  public Object enclosingClass;
-  public Object enclosingMethod;
-}
+public class EmptyStackException extends RuntimeException {}

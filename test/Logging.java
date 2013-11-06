@@ -66,7 +66,7 @@ public class Logging {
   public void run() {
     log.info("Started run");
     a();
-    log.info("Ended run");
+    log.log(Level.INFO, "Ended {}!", "run");
   }
 
   private void a() {

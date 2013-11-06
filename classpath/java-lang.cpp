@@ -653,6 +653,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("\r\n");
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("\\");
+    } else if (strcmp(chars, "path.separator") == 0) {
+      r = e->NewStringUTF(";");
     } else if (strcmp(chars, "os.name") == 0) {
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       r = e->NewStringUTF("Windows");
@@ -726,6 +728,8 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("\n");
     } else if (strcmp(chars, "file.separator") == 0) {
       r = e->NewStringUTF("/");
+    } else if (strcmp(chars, "path.separator") == 0) {
+      r = e->NewStringUTF(":");
     } else if (strcmp(chars, "os.name") == 0) {
 #ifdef __APPLE__
       r = e->NewStringUTF("Mac OS X");

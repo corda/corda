@@ -38,7 +38,18 @@ public class Reflection {
     if (! v) throw new RuntimeException();
   }
 
+  private static class Hello { }
+
+  private static void innerClasses() throws Exception {
+    Class c = Reflection.class;
+    Class[] inner = c.getDeclaredClasses();
+    expect(1 == inner.length);
+    expect(Hello.class == inner[0]);
+  }
+
   public static void main(String[] args) throws Exception {
+    innerClasses();
+
     Class system = Class.forName("java.lang.System");
     Field out = system.getDeclaredField("out");
     Class output = Class.forName("java.io.PrintStream");

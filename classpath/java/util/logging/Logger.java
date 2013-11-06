@@ -32,6 +32,7 @@ public class Logger {
     if (name.equals("")) return rootLogger;
     Logger logger = new Logger(name);
     logger.parent = rootLogger;
+    logger.setLevel(Level.INFO);
     return logger;
   }
 
@@ -77,6 +78,30 @@ public class Logger {
 
   public void log(Level level, String message, Throwable exception) {
     log(level, Method.getCaller(), message, exception);
+  }
+
+  public void log(Level level, String message, Object param) {
+    log(level, Method.getCaller(), replaceParameters(message, param), null);
+  }
+
+  private static String replaceParameters(String message, Object... params) {
+    StringBuilder builder = new StringBuilder();
+    int offset = 0;
+    for (int i = 0; i < params.length; ++i) {
+      int curly = message.indexOf("{}", offset);
+      if (curly < 0) {
+        break;
+      }
+      if (curly > offset) {
+        builder.append(message, offset, curly);
+      }
+      offset = curly + 2;
+      builder.append(params[i]);
+    }
+    if (message.length() > offset) {
+      builder.append(message, offset, message.length());
+    }
+    return builder.toString();
   }
 
   public void logp(Level level, String sourceClass, String sourceMethod, String msg) {
