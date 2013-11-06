@@ -308,6 +308,13 @@ Avian_java_io_ObjectInputStream_makeInstance
 }
 
 extern "C" JNIEXPORT int64_t JNICALL
+Avian_avian_LegacyObjectInputStream_makeInstance
+(Thread* t, object, uintptr_t* arguments)
+{
+  return Avian_java_io_ObjectInputStream_makeInstance(t, NULL, arguments);
+}
+
+extern "C" JNIEXPORT int64_t JNICALL
 Avian_java_lang_reflect_Field_getPrimitive
 (Thread* t, object, uintptr_t* arguments)
 {
