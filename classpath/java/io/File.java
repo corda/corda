@@ -16,10 +16,14 @@ public class File implements Serializable {
 
   public static final String separator = FileSeparator;
 
+  public static final char separatorChar = FileSeparator.charAt(0);
+
   private static final String PathSeparator
     = System.getProperty("path.separator");
 
   public static final String pathSeparator = PathSeparator;
+
+  public static final char pathSeparatorChar = PathSeparator.charAt(0);
 
   //   static {
   //     System.loadLibrary("natives");
