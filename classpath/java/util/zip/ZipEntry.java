@@ -119,10 +119,6 @@ public class ZipEntry {
     return millisTime;
   }
 
-  public int getJavaTime(){
-    return modTimeDate;
-  }
-
   /**
    * Method computeDOSDateTime():
    * 
