@@ -1301,6 +1301,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/CallbackReceiver.java \
 		$(classpath-src)/avian/ClassAddendum.java \
+		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Classes.java \
 		$(classpath-src)/avian/ConstantPool.java \
 		$(classpath-src)/avian/Continuations.java \
