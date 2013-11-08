@@ -1,4 +1,6 @@
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 
 import avian.testing.annotations.Color;
 import avian.testing.annotations.Test;
@@ -27,6 +29,7 @@ public class Annotations {
     Method noAnno = Annotations.class.getMethod("noAnnotation");
     expect(noAnno.getAnnotation(Test.class) == null);
     expect(noAnno.getAnnotations().length == 0);
+    testProxyDefaultValue();
   }
 
   @Test("couscous")
@@ -38,5 +41,17 @@ public class Annotations {
   
   public static void noAnnotation() {
     
+  }
+
+  private static void testProxyDefaultValue() {
+    ClassLoader loader = Annotations.class.getClassLoader();
+    InvocationHandler handler = new InvocationHandler() {
+      public Object invoke(Object proxy, Method method, Object... args) {
+        return method.getDefaultValue();
+      }
+    };
+    Test test = (Test)
+      Proxy.newProxyInstance(loader, new Class[] { Test.class }, handler);
+    expect("Hello, world!".equals(test.value()));
   }
 }
