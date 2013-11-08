@@ -120,12 +120,12 @@ GetEnv(Machine* m, Thread** t, jint version)
   *t = static_cast<Thread*>(m->localThread->get());
   if (*t) {
     if (version <= JNI_VERSION_1_6) {
-      return JNI_OK;
+      return AVIAN_JNI_OK;
     } else {
-      return JNI_EVERSION;
+      return AVIAN_JNI_EVERSION;
     }
   } else {
-    return JNI_EDETACHED;
+    return AVIAN_JNI_EDETACHED;
   }
 }
 
@@ -2841,13 +2841,13 @@ ReleaseBooleanArrayElements(Thread* t, jbooleanArray array, jboolean* p,
     
   unsigned size = booleanArrayLength(t, *array) * sizeof(jboolean);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&booleanArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2859,13 +2859,13 @@ ReleaseByteArrayElements(Thread* t, jbyteArray array, jbyte* p, jint mode)
     
   unsigned size = byteArrayLength(t, *array) * sizeof(jbyte);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&byteArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2877,13 +2877,13 @@ ReleaseCharArrayElements(Thread* t, jcharArray array, jchar* p, jint mode)
 
   unsigned size = charArrayLength(t, *array) * sizeof(jchar);
 
-  if (mode == 0 or mode == JNI_COMMIT) {    
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {    
     if (size) {
       memcpy(&charArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2895,13 +2895,13 @@ ReleaseShortArrayElements(Thread* t, jshortArray array, jshort* p, jint mode)
 
   unsigned size = shortArrayLength(t, *array) * sizeof(jshort);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&shortArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2913,13 +2913,13 @@ ReleaseIntArrayElements(Thread* t, jintArray array, jint* p, jint mode)
     
   unsigned size = intArrayLength(t, *array) * sizeof(jint);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&intArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2931,13 +2931,13 @@ ReleaseLongArrayElements(Thread* t, jlongArray array, jlong* p, jint mode)
     
   unsigned size = longArrayLength(t, *array) * sizeof(jlong);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&longArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2949,13 +2949,13 @@ ReleaseFloatArrayElements(Thread* t, jfloatArray array, jfloat* p, jint mode)
     
   unsigned size = floatArrayLength(t, *array) * sizeof(jfloat);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&floatArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
@@ -2968,13 +2968,13 @@ ReleaseDoubleArrayElements(Thread* t, jdoubleArray array, jdouble* p,
     
   unsigned size = doubleArrayLength(t, *array) * sizeof(jdouble);
 
-  if (mode == 0 or mode == JNI_COMMIT) {
+  if (mode == 0 or mode == AVIAN_JNI_COMMIT) {
     if (size) {
       memcpy(&doubleArrayBody(t, *array, 0), p, size);
     }
   }
 
-  if (mode == 0 or mode == JNI_ABORT) {
+  if (mode == 0 or mode == AVIAN_JNI_ABORT) {
     t->m->heap->free(p, size);
   }
 }
