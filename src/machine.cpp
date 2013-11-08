@@ -5272,7 +5272,7 @@ noop()
 } // namespace vm
 
 // for debugging
-JNIEXPORT void
+AVIAN_EXPORT void
 vmfPrintTrace(Thread* t, FILE* out)
 {
   class Visitor: public Processor::StackVisitor {
@@ -5314,14 +5314,14 @@ vmfPrintTrace(Thread* t, FILE* out)
   fflush(out);
 }
 
-JNIEXPORT void
+AVIAN_EXPORT void
 vmPrintTrace(Thread* t)
 {
   vmfPrintTrace(t, stderr);
 }
 
 // also for debugging
-JNIEXPORT void*
+AVIAN_EXPORT void*
 vmAddressFromLine(Thread* t, object m, unsigned line)
 {
   object code = methodCode(t, m);

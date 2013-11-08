@@ -174,7 +174,7 @@ class Finder {
   virtual void dispose() = 0;
 };
 
-JNIEXPORT Finder*
+AVIAN_EXPORT Finder*
 makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary);
 
 Finder*

@@ -3785,20 +3785,20 @@ populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable)
 
 } // namespace vm
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 JNI_GetDefaultJavaVMInitArgs(void*)
 {
   return 0;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 JNI_GetCreatedJavaVMs(Machine**, jsize, jsize*)
 {
   // todo
   return -1;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
 {
   local::JavaVMInitArgs* a = static_cast<local::JavaVMInitArgs*>(args);

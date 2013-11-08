@@ -1896,10 +1896,10 @@ getBootstrapResources(Thread* t, object, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 net_JNI_OnLoad(JavaVM*, void*);
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 management_JNI_OnLoad(JavaVM*, void*);
 
 void JNICALL
@@ -2525,7 +2525,7 @@ makeClasspath(System* s, Allocator* allocator, const char* javaHome,
 
 } // namespace vm
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getSuperclass
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2538,21 +2538,21 @@ Avian_java_lang_Class_getSuperclass
   }
 }
 
-extern "C" JNIEXPORT void
+extern "C" AVIAN_EXPORT void
 Avian_sun_misc_Unsafe_registerNatives
 (Thread*, object, uintptr_t*)
 {
   // ignore
 }
 
-extern "C" JNIEXPORT void
+extern "C" AVIAN_EXPORT void
 Avian_sun_misc_Perf_registerNatives
 (Thread*, object, uintptr_t*)
 {
   // ignore
 }
 
-extern "C" JNIEXPORT int64_t
+extern "C" AVIAN_EXPORT int64_t
 Avian_sun_misc_Perf_createLong
 (Thread* t, object, uintptr_t*)
 {
@@ -2563,14 +2563,14 @@ Avian_sun_misc_Perf_createLong
        "(I)Ljava/nio/ByteBuffer;"), 0, 8));
 }
 
-extern "C" JNIEXPORT int64_t
+extern "C" AVIAN_EXPORT int64_t
 Avian_sun_misc_Unsafe_addressSize
 (Thread*, object, uintptr_t*)
 {
   return BytesPerWord;
 }
 
-extern "C" JNIEXPORT int64_t
+extern "C" AVIAN_EXPORT int64_t
 Avian_sun_misc_Unsafe_defineClass__Ljava_lang_String_2_3BIILjava_lang_ClassLoader_2Ljava_security_ProtectionDomain_2
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2592,7 +2592,7 @@ Avian_sun_misc_Unsafe_defineClass__Ljava_lang_String_2_3BIILjava_lang_ClassLoade
     (getJClass(t, defineClass(t, loader, buffer, length)));
 }
 
-extern "C" JNIEXPORT int64_t
+extern "C" AVIAN_EXPORT int64_t
 Avian_sun_misc_Unsafe_allocateInstance
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2604,7 +2604,7 @@ Avian_sun_misc_Unsafe_allocateInstance
   return reinterpret_cast<int64_t>(make(t, c));
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_staticFieldOffset
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2615,7 +2615,7 @@ Avian_sun_misc_Unsafe_staticFieldOffset
       (t, jclassVmClass(t, jfieldClazz(t, jfield))), jfieldSlot(t, jfield)));
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_arrayIndexScale
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2637,7 +2637,7 @@ Avian_sun_misc_Unsafe_arrayIndexScale
   }
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_staticFieldBase
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2647,7 +2647,7 @@ Avian_sun_misc_Unsafe_staticFieldBase
       (t, jfieldClazz(t, reinterpret_cast<object>(arguments[1])))));
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_objectFieldOffset
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2658,7 +2658,7 @@ Avian_sun_misc_Unsafe_objectFieldOffset
       (t, jclassVmClass(t, jfieldClazz(t, jfield))), jfieldSlot(t, jfield)));
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2668,7 +2668,7 @@ Avian_sun_misc_Unsafe_getShort__Ljava_lang_Object_2J
   return fieldAtOffset<int16_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2678,7 +2678,7 @@ Avian_sun_misc_Unsafe_getChar__Ljava_lang_Object_2J
   return fieldAtOffset<uint16_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2688,7 +2688,7 @@ Avian_sun_misc_Unsafe_getInt__Ljava_lang_Object_2J
   return fieldAtOffset<int32_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2698,7 +2698,7 @@ Avian_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J
   return fieldAtOffset<int32_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getIntVolatile
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2714,7 +2714,7 @@ Avian_sun_misc_Unsafe_getIntVolatile
   return result;
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2724,7 +2724,7 @@ Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
   return fieldAtOffset<int64_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J
 (Thread* t, object method, uintptr_t* arguments)
 {
@@ -2732,7 +2732,7 @@ Avian_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J
     (t, method, arguments);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getLongVolatile
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2762,7 +2762,7 @@ Avian_sun_misc_Unsafe_getLongVolatile
   return result;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2773,7 +2773,7 @@ Avian_sun_misc_Unsafe_putByte__Ljava_lang_Object_2JB
   fieldAtOffset<int8_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2784,7 +2784,7 @@ Avian_sun_misc_Unsafe_putShort__Ljava_lang_Object_2JS
   fieldAtOffset<int16_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2795,7 +2795,7 @@ Avian_sun_misc_Unsafe_putChar__Ljava_lang_Object_2JC
   fieldAtOffset<uint16_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2806,7 +2806,7 @@ Avian_sun_misc_Unsafe_putInt__Ljava_lang_Object_2JI
   fieldAtOffset<int32_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2817,7 +2817,7 @@ Avian_sun_misc_Unsafe_putFloat__Ljava_lang_Object_2JF
   fieldAtOffset<int32_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2827,7 +2827,7 @@ Avian_sun_misc_Unsafe_getByte__Ljava_lang_Object_2J
   return fieldAtOffset<int8_t>(o, offset);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getBoolean__Ljava_lang_Object_2J
 (Thread* t, object method, uintptr_t* arguments)
 {
@@ -2835,7 +2835,7 @@ Avian_sun_misc_Unsafe_getBoolean__Ljava_lang_Object_2J
     (t, method, arguments);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putBoolean__Ljava_lang_Object_2JZ
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2846,7 +2846,7 @@ Avian_sun_misc_Unsafe_putBoolean__Ljava_lang_Object_2JZ
   fieldAtOffset<uint8_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2857,7 +2857,7 @@ Avian_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ
   fieldAtOffset<int64_t>(o, offset) = value;
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getObjectVolatile
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2873,7 +2873,7 @@ Avian_sun_misc_Unsafe_getObjectVolatile
   return value;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putObjectVolatile
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2886,14 +2886,14 @@ Avian_sun_misc_Unsafe_putObjectVolatile
   storeLoadMemoryBarrier();
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_putOrderedObject
 (Thread* t, object method, uintptr_t* arguments)
 {
   Avian_sun_misc_Unsafe_putObjectVolatile(t, method, arguments);
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapLong
 (Thread* t UNUSED, object, uintptr_t* arguments)
 {
@@ -2916,28 +2916,28 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
 #endif
 }
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_pageSize
 (Thread*, object, uintptr_t*)
 {
   return local::PageSize;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_ensureClassInitialized
 (Thread* t, object, uintptr_t* arguments)
 {
   initClass(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1])));
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_monitorEnter
 (Thread* t, object, uintptr_t* arguments)
 {
   acquire(t, reinterpret_cast<object>(arguments[1]));
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_monitorExit
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -2948,13 +2948,13 @@ namespace {
 
 namespace local {
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetInterfaceVersion)()
 {
   return local::InterfaceVersion;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_IHashCode)(Thread* t, jobject o)
 {
   ENTER(t, Thread::ActiveState);
@@ -2973,7 +2973,7 @@ jvmWait(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_MonitorWait)(Thread* t, jobject o, jlong milliseconds)
 {
   uintptr_t arguments[1 + (sizeof(jlong) / BytesPerWord)];
@@ -2993,7 +2993,7 @@ jvmNotify(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_MonitorNotify)(Thread* t, jobject o)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
@@ -3011,7 +3011,7 @@ jvmNotifyAll(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_MonitorNotifyAll)(Thread* t, jobject o)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
@@ -3027,7 +3027,7 @@ jvmClone(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, clone(t, *o)));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_Clone)(Thread* t, jobject o)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
@@ -3043,7 +3043,7 @@ jvmInternString(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, intern(t, *o)));
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_InternString)(Thread* t, jstring s)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(s) };
@@ -3051,13 +3051,13 @@ EXPORT(JVM_InternString)(Thread* t, jstring s)
   return reinterpret_cast<jobject>(run(t, jvmInternString, arguments));
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_CurrentTimeMillis)(Thread* t, jclass)
 {
   return t->m->system->now();
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_NanoTime)(Thread* t, jclass)
 {
   return t->m->system->now() * 1000 * 1000;
@@ -3077,7 +3077,7 @@ jvmArrayCopy(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_ArrayCopy)(Thread* t, jclass, jobject src, jint srcOffset,
                       jobject dst, jint dstOffset, jint length)
 {
@@ -3194,7 +3194,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(properties);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_InitProperties)(Thread* t, jobject properties)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(properties) };
@@ -3202,16 +3202,16 @@ EXPORT(JVM_InitProperties)(Thread* t, jobject properties)
   return reinterpret_cast<jobject>(run(t, jvmInitProperties, arguments));
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_OnExit)(void (*)(void)) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_Exit)(jint code)
 {
   exit(code);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_Halt)(jint code)
 {
   exit(code);
@@ -3225,7 +3225,7 @@ jvmGC(Thread* t, uintptr_t*)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GC)()
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
@@ -3233,37 +3233,37 @@ EXPORT(JVM_GC)()
   run(t, jvmGC, 0);
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_MaxObjectInspectionAge)(void)
 {
   return 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_TraceInstructions)(jboolean) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_TraceMethodCalls)(jboolean) { abort(); }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_TotalMemory)()
 {
   return 0;
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_FreeMemory)()
 {
   return 0;
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_MaxMemory)()
 {
   return local::globalMachine->heap->limit();
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_ActiveProcessorCount)()
 {
 #ifdef PLATFORM_WINDOWS
@@ -3289,7 +3289,7 @@ jvmLoadLibrary(Thread* t, uintptr_t* arguments)
       RUNTIME_ARRAY_BODY(p), false, false));
 }
 
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_LoadLibrary)(const char* path)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
@@ -3299,13 +3299,13 @@ EXPORT(JVM_LoadLibrary)(const char* path)
   return reinterpret_cast<void*>(run(t, jvmLoadLibrary, arguments));  
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_UnloadLibrary)(void*)
 {
   // todo: implement this correctly for POSIX and Windows
 }
 
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
 {
   Thread* t = static_cast<Thread*>(local::globalMachine->localThread->get());
@@ -3319,13 +3319,13 @@ EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
   return static_cast<System::Library*>(library)->resolve(name);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsSupportedJNIVersion)(jint version)
 {
   return version <= JNI_VERSION_1_6;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsNaN)(jdouble) { abort(); }
 
 uint64_t
@@ -3339,7 +3339,7 @@ jvmFillInStackTrace(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_FillInStackTrace)(Thread* t, jobject throwable)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(throwable) };
@@ -3347,10 +3347,10 @@ EXPORT(JVM_FillInStackTrace)(Thread* t, jobject throwable)
   run(t, jvmFillInStackTrace, arguments);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_PrintStackTrace)(Thread*, jobject, jobject) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetStackTraceDepth)(Thread* t, jobject throwable)
 {
   ENTER(t, Thread::ActiveState);
@@ -3370,7 +3370,7 @@ jvmGetStackTraceElement(Thread* t, uintptr_t* arguments)
       (t, objectArrayBody(t, throwableTrace(t, *throwable), index))));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetStackTraceElement)(Thread* t, jobject throwable, jint index)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(throwable),
@@ -3379,34 +3379,34 @@ EXPORT(JVM_GetStackTraceElement)(Thread* t, jobject throwable, jint index)
   return reinterpret_cast<jobject>(run(t, jvmGetStackTraceElement, arguments));
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_InitializeCompiler) (Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsSilentCompiler)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_CompileClass)(Thread*, jclass, jclass)
 {
   return false;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_CompileClasses)(Thread*, jclass, jstring)
 {
   return false;
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_CompilerCommand)(Thread*, jclass, jobject) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_EnableCompiler)(Thread*, jclass)
 {
   // ignore
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_DisableCompiler)(Thread*, jclass)
 {
   // ignore
@@ -3420,7 +3420,7 @@ jvmStartThread(Thread* t, uintptr_t* arguments)
   return startThread(t, *thread) != 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_StartThread)(Thread* t, jobject thread)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(thread) };
@@ -3428,10 +3428,10 @@ EXPORT(JVM_StartThread)(Thread* t, jobject thread)
   run(t, jvmStartThread, arguments);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_StopThread)(Thread*, jobject, jobject) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsThreadAlive)(Thread* t, jobject thread)
 {
   ENTER(t, Thread::ActiveState);
@@ -3440,19 +3440,19 @@ EXPORT(JVM_IsThreadAlive)(Thread* t, jobject thread)
   return p and (p->flags & Thread::ActiveFlag) != 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SuspendThread)(Thread*, jobject) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_ResumeThread)(Thread*, jobject) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetThreadPriority)(Thread*, jobject, jint)
 {
   // ignore
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_Yield)(Thread* t, jclass)
 {
   t->m->system->yield();
@@ -3479,7 +3479,7 @@ jvmSleep(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_Sleep)(Thread* t, jclass, jlong milliseconds)
 {
   uintptr_t arguments[sizeof(jlong) / BytesPerWord];
@@ -3488,7 +3488,7 @@ EXPORT(JVM_Sleep)(Thread* t, jclass, jlong milliseconds)
   run(t, jvmSleep, arguments);
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_CurrentThread)(Thread* t, jclass)
 {
   ENTER(t, Thread::ActiveState);
@@ -3496,7 +3496,7 @@ EXPORT(JVM_CurrentThread)(Thread* t, jclass)
   return makeLocalReference(t, t->javaThread);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_CountStackFrames)(Thread*, jobject) { abort(); }
 
 uint64_t
@@ -3507,7 +3507,7 @@ jvmInterrupt(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_Interrupt)(Thread* t, jobject thread)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(thread) };
@@ -3524,7 +3524,7 @@ jvmIsInterrupted(Thread* t, uintptr_t* arguments)
   return threadIsInterrupted(t, *thread, clear);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsInterrupted)(Thread* t, jobject thread, jboolean clear)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(thread), clear };
@@ -3540,7 +3540,7 @@ jvmHoldsLock(Thread* t, uintptr_t* arguments)
   return m and monitorOwner(t, m) == t;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_HoldsLock)(Thread* t, jclass, jobject o)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(o) };
@@ -3548,10 +3548,10 @@ EXPORT(JVM_HoldsLock)(Thread* t, jclass, jobject o)
   return run(t, jvmHoldsLock, arguments);
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_DumpAllStacks)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetAllThreads)(Thread*, jclass) { abort(); }
 
 uint64_t
@@ -3594,7 +3594,7 @@ jvmDumpThreads(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, result));
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_DumpThreads)(Thread* t, jclass, jobjectArray threads)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(threads) };
@@ -3602,10 +3602,10 @@ EXPORT(JVM_DumpThreads)(Thread* t, jclass, jobjectArray threads)
   return reinterpret_cast<jobjectArray>(run(t, jvmDumpThreads, arguments));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_CurrentLoadedClass)(Thread*) { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_CurrentClassLoader)(Thread*)
 {
   // just return null, i.e. tell SecurityManager.currentClassLoader
@@ -3634,16 +3634,16 @@ jvmGetClassContext(Thread* t, uintptr_t*)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, context));
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassContext)(Thread* t)
 {
   return reinterpret_cast<jobjectArray>(run(t, jvmGetClassContext, 0));
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_ClassDepth)(Thread*, jstring) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_ClassLoaderDepth)(Thread*) { abort(); }
 
 uint64_t
@@ -3671,7 +3671,7 @@ jvmGetSystemPackage(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_GetSystemPackage)(Thread* t, jstring s)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(s) };
@@ -3689,21 +3689,21 @@ jvmGetSystemPackages(Thread* t, uintptr_t*)
        (t, root(t, Machine::BootLoader), "java/lang/Package"), 0)));
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetSystemPackages)(Thread* t)
 {
   return reinterpret_cast<jobjectArray>(run(t, jvmGetSystemPackages, 0));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_AllocateNewObject)(Thread*, jobject, jclass,
                       jclass) { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_AllocateNewArray)(Thread*, jobject, jclass,
                      jint) { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
 {
   ENTER(t, Thread::ActiveState);
@@ -3739,11 +3739,11 @@ EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
   return makeLocalReference(t, v.loader);
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_LoadClass0)(Thread*, jobject, jclass,
                jstring) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetArrayLength)(Thread* t, jobject array)
 {
   ENTER(t, Thread::ActiveState);
@@ -3800,7 +3800,7 @@ jvmGetArrayElement(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetArrayElement)(Thread* t, jobject array, jint index)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(array),
@@ -3809,10 +3809,10 @@ EXPORT(JVM_GetArrayElement)(Thread* t, jobject array, jint index)
   return reinterpret_cast<jobject>(run(t, jvmGetArrayElement, arguments));
 }
 
-extern "C" JNIEXPORT jvalue JNICALL
+extern "C" AVIAN_EXPORT jvalue JNICALL
 EXPORT(JVM_GetPrimitiveArrayElement)(Thread*, jobject, jint, jint) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
                             jobject value)
 {
@@ -3852,7 +3852,7 @@ EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetPrimitiveArrayElement)(Thread*, jobject, jint, jvalue,
                              unsigned char) { abort(); }
 
@@ -3894,7 +3894,7 @@ jvmNewArray(Thread* t, uintptr_t* arguments)
      (t, makeNewArray(t, jclassVmClass(t, *elementClass), length)));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_NewArray)(Thread* t, jclass elementClass, jint length)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(elementClass),
@@ -3929,7 +3929,7 @@ jvmNewMultiArray(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_NewMultiArray)(Thread* t, jclass elementClass,
                           jintArray dimensions)
 {
@@ -3939,7 +3939,7 @@ EXPORT(JVM_NewMultiArray)(Thread* t, jclass elementClass,
   return reinterpret_cast<jobject>(run(t, jvmNewMultiArray, arguments));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_GetCallerClass)(Thread* t, int target)
 {
   ENTER(t, Thread::ActiveState);
@@ -3950,7 +3950,7 @@ EXPORT(JVM_GetCallerClass)(Thread* t, int target)
     (t, getJClass(t, methodClass(t, method))) : 0;
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindPrimitiveClass)(Thread* t, const char* name)
 {
   ENTER(t, Thread::ActiveState);
@@ -4004,7 +4004,7 @@ jvmResolveClass(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_ResolveClass)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4034,7 +4034,7 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
                                      jboolean init, jobject loader,
                                      jboolean throwError)
@@ -4048,13 +4048,13 @@ EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
     (run(t, jvmFindClassFromClassLoader, arguments));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 JVM_FindClassFromBootLoader(Thread* t, const char* name)
 {
   return EXPORT(JVM_FindClassFromClassLoader)(t, name, false, 0, false);
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindClassFromClass)(Thread*, const char*, jboolean, jclass)
 { abort(); }
 
@@ -4077,7 +4077,7 @@ jvmFindLoadedClass(Thread* t, uintptr_t* arguments)
     (c ? makeLocalReference(t, getJClass(t, c)) : 0);
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindLoadedClass)(Thread* t, jobject loader, jstring name)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
@@ -4098,7 +4098,7 @@ jvmDefineClass(Thread* t, uintptr_t* arguments)
      (t, getJClass(t, defineClass(t, *loader, data, length))));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
                         const uint8_t* data, jsize length, jobject)
 {
@@ -4109,7 +4109,7 @@ EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
   return reinterpret_cast<jclass>(run(t, jvmDefineClass, arguments));
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
                           const uint8_t* data, jsize length, jobject,
                           const char*)
@@ -4117,7 +4117,7 @@ EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
   return EXPORT(JVM_DefineClass)(t, 0, loader, data, length, 0);
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_GetClassName)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4154,7 +4154,7 @@ jvmGetClassInterfaces(Thread* t, uintptr_t* arguments)
      (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassInterfaces)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4162,7 +4162,7 @@ EXPORT(JVM_GetClassInterfaces)(Thread* t, jclass c)
   return reinterpret_cast<jclass>(run(t, jvmGetClassInterfaces, arguments));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4188,7 +4188,7 @@ EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
   }
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsInterface)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4196,7 +4196,7 @@ EXPORT(JVM_IsInterface)(Thread* t, jclass c)
   return (classFlags(t, jclassVmClass(t, *c)) & ACC_INTERFACE) != 0;
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassSigners)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4207,7 +4207,7 @@ EXPORT(JVM_GetClassSigners)(Thread* t, jclass c)
     (t, classRuntimeDataSigners(t, runtimeData)) : 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetClassSigners)(Thread* t, jclass c, jobjectArray signers)
 {
   ENTER(t, Thread::ActiveState);
@@ -4231,7 +4231,7 @@ jvmGetProtectionDomain(Thread* t, uintptr_t* arguments)
      (t, t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c))));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4239,10 +4239,10 @@ EXPORT(JVM_GetProtectionDomain)(Thread* t, jclass c)
   return reinterpret_cast<jobject>(run(t, jvmGetProtectionDomain, arguments));
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetProtectionDomain)(Thread*, jclass, jobject) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsArrayClass)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4250,7 +4250,7 @@ EXPORT(JVM_IsArrayClass)(Thread* t, jclass c)
   return classArrayDimensions(t, jclassVmClass(t, *c)) != 0;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsPrimitiveClass)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4278,7 +4278,7 @@ jvmGetComponentType(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4286,7 +4286,7 @@ EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
   return reinterpret_cast<jclass>(run(t, jvmGetComponentType, arguments));
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassModifiers)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4342,7 +4342,7 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
      (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetDeclaredClasses)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4380,7 +4380,7 @@ jvmGetDeclaringClass(Thread* t, uintptr_t* arguments)
   return 0;
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_GetDeclaringClass)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4406,7 +4406,7 @@ jvmGetClassSignature(Thread* t, uintptr_t* arguments)
   return 0;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_GetClassSignature)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -4414,7 +4414,7 @@ EXPORT(JVM_GetClassSignature)(Thread* t, jclass c)
   return reinterpret_cast<jclass>(run(t, jvmGetClassSignature, arguments));
 }
 
-extern "C" JNIEXPORT jbyteArray JNICALL
+extern "C" AVIAN_EXPORT jbyteArray JNICALL
 EXPORT(JVM_GetClassAnnotations)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4463,7 +4463,7 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassDeclaredMethods)(Thread* t, jclass c, jboolean publicOnly)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c), publicOnly };
@@ -4509,7 +4509,7 @@ jvmGetClassDeclaredFields(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassDeclaredFields)(Thread* t, jclass c, jboolean publicOnly)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c), publicOnly };
@@ -4559,7 +4559,7 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
   }
 }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetClassDeclaredConstructors)(Thread* t, jclass c,
                                          jboolean publicOnly)
 {
@@ -4569,7 +4569,7 @@ EXPORT(JVM_GetClassDeclaredConstructors)(Thread* t, jclass c,
     (run(t, jvmGetClassDeclaredConstructors, arguments));
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassAccessFlags)(Thread* t, jclass c)
 {
   return EXPORT(JVM_GetClassModifiers)(t, c);
@@ -4601,7 +4601,7 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
       (t, vmMethod, instance ? *instance : 0, args ? *args : 0)));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_InvokeMethod)(Thread* t, jobject method, jobject instance,
                          jobjectArray args)
 {
@@ -4632,7 +4632,7 @@ jvmNewInstanceFromConstructor(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(makeLocalReference(t, instance));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_NewInstanceFromConstructor)(Thread* t, jobject constructor,
                                        jobjectArray args)
 {
@@ -4643,7 +4643,7 @@ EXPORT(JVM_NewInstanceFromConstructor)(Thread* t, jobject constructor,
     (run(t, jvmNewInstanceFromConstructor, arguments));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetClassConstantPool)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
@@ -4664,7 +4664,7 @@ EXPORT(JVM_GetClassConstantPool)(Thread* t, jclass c)
   return makeLocalReference(t, makeConstantPool(t, pool));
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_ConstantPoolGetSize)(Thread* t, jobject, jobject pool)
 {
   if (pool == 0) return 0;
@@ -4674,35 +4674,35 @@ EXPORT(JVM_ConstantPoolGetSize)(Thread* t, jobject, jobject pool)
   return singletonCount(t, *pool);
 }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_ConstantPoolGetClassAt)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jclass JNICALL
+extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_ConstantPoolGetClassAtIfLoaded)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_ConstantPoolGetMethodAt)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_ConstantPoolGetMethodAtIfLoaded)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_ConstantPoolGetFieldAt)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_ConstantPoolGetFieldAtIfLoaded)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_ConstantPoolGetMemberRefInfoAt)(Thread*, jobject, jobject, jint)
 { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_ConstantPoolGetIntAt)(Thread* t, jobject, jobject pool, jint index)
 {
   ENTER(t, Thread::ActiveState);
@@ -4710,7 +4710,7 @@ EXPORT(JVM_ConstantPoolGetIntAt)(Thread* t, jobject, jobject pool, jint index)
   return singletonValue(t, *pool, index - 1);
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_ConstantPoolGetLongAt)(Thread* t, jobject, jobject pool, jint index)
 {
   ENTER(t, Thread::ActiveState);
@@ -4721,7 +4721,7 @@ EXPORT(JVM_ConstantPoolGetLongAt)(Thread* t, jobject, jobject pool, jint index)
   return v;
 }
 
-extern "C" JNIEXPORT jfloat JNICALL
+extern "C" AVIAN_EXPORT jfloat JNICALL
 EXPORT(JVM_ConstantPoolGetFloatAt)(Thread* t, jobject, jobject pool,
                                    jint index)
 {
@@ -4730,7 +4730,7 @@ EXPORT(JVM_ConstantPoolGetFloatAt)(Thread* t, jobject, jobject pool,
   return bitsToFloat(singletonValue(t, *pool, index - 1));
 }
 
-extern "C" JNIEXPORT jdouble JNICALL
+extern "C" AVIAN_EXPORT jdouble JNICALL
 EXPORT(JVM_ConstantPoolGetDoubleAt)(Thread* t, jobject, jobject pool,
                                     jint index)
 {
@@ -4742,7 +4742,7 @@ EXPORT(JVM_ConstantPoolGetDoubleAt)(Thread* t, jobject, jobject pool,
   return v;
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_ConstantPoolGetStringAt)(Thread*, jobject, jobject, jint)
 { abort(); }
 
@@ -4760,7 +4760,7 @@ jvmConstantPoolGetUTF8At(Thread* t, uintptr_t* arguments)
       (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1)));
 }
 
-extern "C" JNIEXPORT jstring JNICALL
+extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_ConstantPoolGetUTF8At)(Thread* t, jobject, jobject pool, jint index)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(pool),
@@ -4833,7 +4833,7 @@ jvmDoPrivileged(Thread* t, uintptr_t* arguments)
     (makeLocalReference(t, t->m->processor->invoke(t, method, *action)));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_DoPrivileged)
 (Thread* t, jclass, jobject action, jobject, jboolean wrapException)
 {
@@ -4843,151 +4843,151 @@ EXPORT(JVM_DoPrivileged)
   return reinterpret_cast<jobject>(run(t, jvmDoPrivileged, arguments));
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetInheritedAccessControlContext)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_GetStackAccessControlContext)(Thread*, jclass)
 {
   return 0;
 }
 
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_RegisterSignal)(jint, void*) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_RaiseSignal)(jint) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_FindSignal)(const char*)
 {
   return -1;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_DesiredAssertionStatus)(Thread*, jclass, jclass)
 {
   return false;
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_AssertionStatusDirectives)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_SupportsCX8)()
 {
   return true;
 }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetClassNameUTF)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GetClassCPTypes)(Thread*, jclass, unsigned char*) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassCPEntriesCount)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassFieldsCount)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassMethodsCount)(Thread*, jclass) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GetMethodIxExceptionIndexes)(Thread*, jclass, jint,
                                 unsigned short*) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxExceptionsCount)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GetMethodIxByteCode)(Thread*, jclass, jint,
                         unsigned char*) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxByteCodeLength)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GetMethodIxExceptionTableEntry)(Thread*, jclass, jint,
                                    jint,
                                    local::JVM_ExceptionTableEntryType*)
 { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxExceptionTableLength)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetFieldIxModifiers)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxModifiers)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxLocalsCount)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxArgsSize)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetMethodIxMaxStack)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsConstructorIx)(Thread*, jclass, int) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetMethodIxNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetMethodIxSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPFieldNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPMethodNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPMethodSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPFieldSignatureUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPFieldClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT const char* JNICALL
+extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetCPMethodClassNameUTF)(Thread*, jclass, jint) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetCPFieldModifiers)(Thread*, jclass, int, jclass) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetCPMethodModifiers)(Thread*, jclass, int, jclass) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_ReleaseUTF)(const char*) { abort(); }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsSameClassPackage)(Thread*, jclass, jclass) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetLastErrorString)(char* dst, int length)
 {
   strncpy(dst, strerror(errno), length);
   return strlen(dst);
 }
 
-extern "C" JNIEXPORT char* JNICALL
+extern "C" AVIAN_EXPORT char* JNICALL
 EXPORT(JVM_NativePath)(char* path)
 {
   return path;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
 {
   int r = OPEN(path, flags & 0xFFFF, mode);
@@ -4998,25 +4998,25 @@ EXPORT(JVM_Open)(const char* path, jint flags, jint mode)
   }
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Close)(jint fd)
 {
   return CLOSE(fd);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Read)(jint fd, char* dst, jint length)
 {
   return READ(fd, dst, length);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Write)(jint fd, char* src, jint length)
 {
   return WRITE(fd, src, length);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Available)(jint fd, jlong* result)
 {
   struct STAT buffer;
@@ -5043,13 +5043,13 @@ EXPORT(JVM_Available)(jint fd, jlong* result)
   return 1;
 }
 
-extern "C" JNIEXPORT jlong JNICALL
+extern "C" AVIAN_EXPORT jlong JNICALL
 EXPORT(JVM_Lseek)(jint fd, jlong offset, jint seek)
 {
   return LSEEK(fd, offset, seek);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SetLength)(jint fd, jlong length)
 {
 #ifdef PLATFORM_WINDOWS
@@ -5077,7 +5077,7 @@ EXPORT(JVM_SetLength)(jint fd, jlong length)
 #endif
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Sync)(jint fd)
 {
 #ifdef PLATFORM_WINDOWS
@@ -5098,7 +5098,7 @@ EXPORT(JVM_Sync)(jint fd)
 #endif
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_InitializeSocketLibrary)()
 {
 #ifdef PLATFORM_WINDOWS
@@ -5116,13 +5116,13 @@ EXPORT(JVM_InitializeSocketLibrary)()
   return 0;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Socket)(jint domain, jint type, jint protocol)
 {
   return socket(domain, type, protocol);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SocketClose)(jint socket)
 {
 #ifdef PLATFORM_WINDOWS
@@ -5132,43 +5132,43 @@ EXPORT(JVM_SocketClose)(jint socket)
 #endif
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SocketShutdown)(jint socket, jint how)
 {
   return shutdown(socket, how);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Recv)(jint socket, char* dst, jint count, jint flags)
 {
   return recv(socket, dst, count, flags);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Send)(jint socket, char* src, jint count, jint flags)
 {
   return send(socket, src, count, flags);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Timeout)(int, long) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Listen)(jint socket, jint count)
 {
   return listen(socket, count);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Connect)(jint socket, sockaddr* address, jint addressLength)
 {
   return connect(socket, address, addressLength);
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Bind)(jint, struct sockaddr*, jint) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_Accept)(jint socket, struct sockaddr* address, jint* addressLength)
 {
   socklen_t length = *addressLength;
@@ -5177,15 +5177,15 @@ EXPORT(JVM_Accept)(jint socket, struct sockaddr* address, jint* addressLength)
   return r;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_RecvFrom)(jint, char*, int,
              int, struct sockaddr*, int*) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SendTo)(jint, char*, int,
            int, struct sockaddr*, int) { abort(); }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SocketAvailable)(jint socket, jint* count)
 {
 #ifdef PLATFORM_WINDOWS
@@ -5198,7 +5198,7 @@ EXPORT(JVM_SocketAvailable)(jint socket, jint* count)
 #endif
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetSockName)(jint socket, struct sockaddr* address,
                         int* addressLength)
 {
@@ -5208,7 +5208,7 @@ EXPORT(JVM_GetSockName)(jint socket, struct sockaddr* address,
   return r;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetSockOpt)(jint socket, int level, int optionName,
                        char* optionValue, int* optionLength)
 {
@@ -5218,29 +5218,29 @@ EXPORT(JVM_GetSockOpt)(jint socket, int level, int optionName,
   return rv;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_SetSockOpt)(jint socket, int level, int optionName,
                        const char* optionValue, int optionLength)
 {
   return setsockopt(socket, level, optionName, optionValue, optionLength);
 }
 
-extern "C" JNIEXPORT struct protoent* JNICALL
+extern "C" AVIAN_EXPORT struct protoent* JNICALL
 EXPORT(JVM_GetProtoByName)(char*) { abort(); }
 
-extern "C" JNIEXPORT struct hostent* JNICALL
+extern "C" AVIAN_EXPORT struct hostent* JNICALL
 EXPORT(JVM_GetHostByAddr)(const char*, int, int) { abort(); }
 
-extern "C" JNIEXPORT struct hostent* JNICALL
+extern "C" AVIAN_EXPORT struct hostent* JNICALL
 EXPORT(JVM_GetHostByName)(char*) { abort(); }
 
-extern "C" JNIEXPORT int JNICALL
+extern "C" AVIAN_EXPORT int JNICALL
 EXPORT(JVM_GetHostName)(char* name, int length)
 {
   return gethostname(name, length);
 }
 
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_RawMonitorCreate)(void)
 {
   System* s = local::globalMachine->system;
@@ -5252,13 +5252,13 @@ EXPORT(JVM_RawMonitorCreate)(void)
   }
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_RawMonitorDestroy)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->dispose();
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_RawMonitorEnter)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->acquire
@@ -5268,7 +5268,7 @@ EXPORT(JVM_RawMonitorEnter)(void* lock)
   return 0;
 }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_RawMonitorExit)(void* lock)
 {
   static_cast<System::Monitor*>(lock)->release
@@ -5374,7 +5374,7 @@ GetMemoryPools(Thread* t, jobject)
   return reinterpret_cast<jobjectArray>(run(t, getMemoryPools, 0));
 }
 
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_GetManagement)(jint version)
 {
   if (version == JMM_VERSION_1_0) {
@@ -5398,7 +5398,7 @@ EXPORT(JVM_GetManagement)(jint version)
   }
 }
 
-extern "C" JNIEXPORT jobject JNICALL
+extern "C" AVIAN_EXPORT jobject JNICALL
 EXPORT(JVM_InitAgentProperties)(Thread*, jobject) { abort(); }
 
 uint64_t
@@ -5447,7 +5447,7 @@ getEnclosingMethodInfo(Thread* t, uintptr_t* arguments)
 }
 
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetEnclosingMethodInfo)(Thread* t, jclass c)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
@@ -5456,44 +5456,44 @@ EXPORT(JVM_GetEnclosingMethodInfo)(Thread* t, jclass c)
     (run(t, getEnclosingMethodInfo, arguments));
 }
 
-extern "C" JNIEXPORT jintArray JNICALL
+extern "C" AVIAN_EXPORT jintArray JNICALL
 EXPORT(JVM_GetThreadStateValues)(JNIEnv*, jint) { abort(); }
 
-extern "C" JNIEXPORT jobjectArray JNICALL
+extern "C" AVIAN_EXPORT jobjectArray JNICALL
 EXPORT(JVM_GetThreadStateNames)(JNIEnv*, jint, jintArray) { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_GetVersionInfo)(JNIEnv*, local::jvm_version_info* info, size_t size)
 {
   memset(info, 0, size);
   info->jvm_version = 0x01070000;
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_CX8Field)(JNIEnv*, jobject*, jfieldID*, jlong, jlong)
 { abort(); }
 
-extern "C" JNIEXPORT void JNICALL
+extern "C" AVIAN_EXPORT void JNICALL
 EXPORT(JVM_SetNativeThreadName)(JNIEnv*, jobject, jstring) { abort(); }
 
 } // namespace local
 
 } // namespace
 
-extern "C" JNIEXPORT int
+extern "C" AVIAN_EXPORT int
 jio_vsnprintf(char* dst, size_t size, const char* format, va_list a)
 {
   return vm::vsnprintf(dst, size, format, a);
 }
 
-extern "C" JNIEXPORT int
+extern "C" AVIAN_EXPORT int
 jio_vfprintf(FILE* stream, const char* format, va_list a)
 {
   return vfprintf(stream, format, a);
 }
 
 #ifdef PLATFORM_WINDOWS
-extern "C" JNIEXPORT void* JNICALL
+extern "C" AVIAN_EXPORT void* JNICALL
 EXPORT(JVM_GetThreadInterruptEvent)()
 {
   // hack: We don't want to expose thread interruption implementation
@@ -5524,7 +5524,7 @@ extern "C" void* JDK_FindJvmEntry(const char* name)
 
 extern "C" char* findJavaTZ_md(const char*, const char*);
 
-extern "C" JNIEXPORT int64_t JNICALL
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_util_TimeZone_getSystemTimeZoneID
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -5605,7 +5605,7 @@ Avian_java_util_TimeZone_getSystemTimeZoneID
   }
 }
 #  else // not AVIAN_OPENJDK_SRC
-extern "C" JNIEXPORT int
+extern "C" AVIAN_EXPORT int
 jio_snprintf(char* dst, size_t size, const char* format, ...)
 {
   va_list a;
@@ -5618,7 +5618,7 @@ jio_snprintf(char* dst, size_t size, const char* format, ...)
   return r;
 }
 
-extern "C" JNIEXPORT int
+extern "C" AVIAN_EXPORT int
 jio_fprintf(FILE* stream, const char* format, ...)
 {
   va_list a;

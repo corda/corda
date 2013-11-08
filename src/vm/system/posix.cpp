@@ -1051,7 +1051,7 @@ handleSignal(int signal, siginfo_t*, void* context)
 
 namespace vm {
 
-JNIEXPORT System*
+AVIAN_EXPORT System*
 makeSystem(const char*)
 {
   return new (malloc(sizeof(MySystem))) MySystem();

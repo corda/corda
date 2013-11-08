@@ -2699,10 +2699,10 @@ popResources(Thread* t);
 
 } // namespace vm
 
-JNIEXPORT void
+AVIAN_EXPORT void
 vmPrintTrace(vm::Thread* t);
 
-JNIEXPORT void
+AVIAN_EXPORT void
 vmfPrintTrace(vm::Thread* t, FILE* out);
 
 namespace vm {
@@ -3971,7 +3971,7 @@ errorLog(Thread* t)
 
 } // namespace vm
 
-JNIEXPORT void*
+AVIAN_EXPORT void*
 vmAddressFromLine(vm::Thread* t, vm::object m, unsigned line);
 
 #endif//MACHINE_H

@@ -192,7 +192,7 @@ sysAbort(System* s)
 
 // #endif // not NDEBUG
 
-JNIEXPORT System*
+AVIAN_EXPORT System*
 makeSystem(const char* crashDumpDirectory);
 
 } // namespace vm
