@@ -21,8 +21,9 @@ public class AnnotationInvocationHandler implements InvocationHandler {
   }
     
   public Object invoke(Object proxy, Method method, Object[] arguments) {
+    String name = method.getName();
     for (int i = 2; i < data.length; i += 2) {
-      if (method.getName().equals(data[i])) {
+      if (name.equals(data[i])) {
         return data[i + 1];
       }
     }
