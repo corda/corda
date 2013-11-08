@@ -12,6 +12,7 @@ package java.text;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 public class SimpleDateFormat {
   private String pattern;
@@ -20,6 +21,12 @@ public class SimpleDateFormat {
     this.pattern = pattern;
     if (! "yyyy-MM-dd'T'HH:mm:ss".equals(pattern)) {
       throw new UnsupportedOperationException("Unsupported pattern: " + pattern);
+    }
+  }
+
+  public void setTimeZone(TimeZone tz) {
+    if(!tz.getDisplayName().equals("GMT")) {
+      throw new UnsupportedOperationException();
     }
   }
 

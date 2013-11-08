@@ -1,6 +1,7 @@
 import java.text.FieldPosition;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 public class Dates {
   private final static long EPOCH = 1234567890;
@@ -12,6 +13,7 @@ public class Dates {
 
   public static void main(String[] args) throws Exception {
     SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    format.setTimeZone(TimeZone.getTimeZone("GMT"));
     Date date = format.parse("1970-01-01T00:00:00");
     expect(0 == date.getTime());
 
