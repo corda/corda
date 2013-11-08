@@ -1,3 +1,5 @@
+package extra;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -15,11 +17,12 @@ public class Sockets {
 	 */
 	public static void main(String[] args) throws UnknownHostException,
 			IOException {
-		System.out.print("Requesting...\n");
-		try (Socket sock = new Socket("www.google.com", 80)) {
+		System.out.print("Requesting... " + args[0] + "\n");
+		Socket sock = new Socket(args[0], 80);
+		try {
 			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(sock.getOutputStream()));
 			String request = "GET /?gws_rd=cr HTTP/1.1\r\n"
-					+ "Host: www.google.com\r\n" + "Accept: */*\r\n"
+					+ "Host: " + args[0] + "\r\n" + "Accept: */*\r\n"
 					+ "User-Agent: Java\r\n" + "Connection: close\r\n" + "\r\n";
 			bw.write(request);
 			bw.flush();
@@ -30,6 +33,7 @@ public class Sockets {
 				System.out.println(read);
 			}
 			bw.close();
+		} finally {
 			sock.close();
 		}
 	}
