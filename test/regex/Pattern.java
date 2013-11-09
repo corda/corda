@@ -19,7 +19,7 @@ import java.util.List;
  * @author zsombor and others
  * 
  */
-public abstract class Pattern {
+public abstract class Pattern implements PikeVMOpcodes {
 
   public static final int UNIX_LINES       = 1;
   public static final int CASE_INSENSITIVE = 2;
@@ -46,6 +46,23 @@ public abstract class Pattern {
     try {
       return new TrivialPattern(regex, flags);
     } catch (UnsupportedOperationException handledBelow) { }
+    if (flags != 0) {
+      throw new UnsupportedOperationException("TODO");
+    }
+    if ("a(bb)?a".equals(regex)) {
+      int[] program = new int[] {
+        SAVE_OFFSET, 0,
+        CHAR, 'a',
+        SPLIT, 14,
+        SAVE_OFFSET, 2,
+        CHAR, 'b',
+        CHAR, 'b',
+        SAVE_OFFSET, 3,
+        /* 14 */ CHAR, 'a',
+        SAVE_OFFSET, 1
+      };
+      return new RegexPattern(regex, flags, new PikeVM(program, 1));
+    }
     throw new UnsupportedOperationException("Cannot handle regex " + regex);
   }
 
