@@ -19,10 +19,11 @@ package regex;
  * @author Johannes Schindelin
  */
 interface PikeVMOpcodes {
-  final static int CHAR = 1;
-  final static int DOT = 2;
-  final static int DOTALL = 3;
-  final static int SAVE_OFFSET = 4;
-  final static int SPLIT = 5;
-  final static int JMP = 6;
+  final static int DOT = -1;
+  final static int DOTALL = -2;
+
+  final static int SAVE_OFFSET = -40;
+
+  final static int SPLIT = -50;
+  final static int JMP = -51;
 }

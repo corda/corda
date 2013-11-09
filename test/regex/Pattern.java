@@ -52,13 +52,13 @@ public abstract class Pattern implements PikeVMOpcodes {
     if ("a(bb)?a".equals(regex)) {
       int[] program = new int[] {
         SAVE_OFFSET, 0,
-        CHAR, 'a',
-        SPLIT, 14,
+        'a',
+        SPLIT, 11,
         SAVE_OFFSET, 2,
-        CHAR, 'b',
-        CHAR, 'b',
+        'b',
+        'b',
         SAVE_OFFSET, 3,
-        /* 14 */ CHAR, 'a',
+        /* 11 */ 'a',
         SAVE_OFFSET, 1
       };
       return new RegexPattern(regex, flags, new PikeVM(program, 1));

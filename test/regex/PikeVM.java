@@ -256,12 +256,6 @@ class PikeVM implements PikeVMOpcodes {
 
         int opcode = program[pc];
         switch (opcode) {
-        /* Possible optimization: make all opcodes <= 0xffff implicit chars */
-        case CHAR:
-          if (c == (char)program[pc + 1]) {
-            current.queueNext(pc, pc + 2, next);
-          }
-          break;
         case DOT:
           if (c != '\0' && c != '\r' && c != '\n') {
             current.queueNext(pc, pc + 1, next);
@@ -270,6 +264,7 @@ class PikeVM implements PikeVMOpcodes {
         case DOTALL:
           current.queueNext(pc, pc + 1, next);
           break;
+        /* immediate opcodes, i.e. thread continues within the same step */
         case SAVE_OFFSET:
           int index = program[pc + 1];
           current.saveOffset(pc, index, i);
@@ -283,6 +278,12 @@ class PikeVM implements PikeVMOpcodes {
           current.queueImmediately(pc, program[pc + 1], false);
           break;
         default:
+          if (program[pc] >= 0 && program[pc] <= 0xffff) {
+            if (c == (char)program[pc]) {
+              current.queueNext(pc, pc + 1, next);
+            }
+            break;
+          }
           throw new RuntimeException("Invalid opcode: " + opcode
             + " at pc " + pc);
         }
