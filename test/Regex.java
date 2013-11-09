@@ -54,5 +54,7 @@ public class Regex {
     expectGroups("a(bb)*a", "abbbba", "bb");
     expectGroups("a(bb)?(bb)+a", "abba", null, "bb");
     expectFind(" +", "Hello  ,   world! ", "  ", "   ", " ");
+    expectMatch("[0-9A-Fa-f]+", "08ef");
+    expectNoMatch("[0-9A-Fa-f]+", "08@ef");
   }
 }

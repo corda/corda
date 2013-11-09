@@ -26,16 +26,20 @@ class PikeVM implements PikeVMOpcodes {
    * findPrefixLength} instead.
    */
   private final int findPrefixLength;
+  private final CharacterMatcher[] classes;
 
   public interface Result {
     void set(int[] start, int[] end);
   }
 
-  protected PikeVM(int[] program, int findPrefixLength, int groupCount) {
+  protected PikeVM(int[] program, int findPrefixLength, int groupCount,
+    CharacterMatcher[] classes)
+  {
     this.program = program;
     this.findPrefixLength = findPrefixLength;
     this.groupCount = groupCount;
     offsetsCount = 2 * groupCount + 2;
+    this.classes = classes;
   }
 
   /**
@@ -328,6 +332,11 @@ class PikeVM implements PikeVMOpcodes {
           break;
         case DOTALL:
           current.queueNext(pc, pc + 1, next);
+          break;
+        case CHARACTER_CLASS:
+          if (classes[program[pc + 1]].matches(c)) {
+            current.queueNext(pc, pc + 2, next);
+          }
           break;
         /* immediate opcodes, i.e. thread continues within the same step */
         case SAVE_OFFSET:

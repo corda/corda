@@ -22,6 +22,8 @@ interface PikeVMOpcodes {
   final static int DOT = -1;
   final static int DOTALL = -2;
 
+  final static int CHARACTER_CLASS = -20;
+
   final static int SAVE_OFFSET = -40;
 
   final static int SPLIT = -50;

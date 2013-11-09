@@ -27,6 +27,7 @@ class Compiler implements PikeVMOpcodes {
     private int offset;
     private int groupCount = -1;
     private int findPreambleSize;
+    private ArrayList<CharacterMatcher> classes;
 
     public Output(Expression expr) {
       // try-run to determine the code size
@@ -34,6 +35,7 @@ class Compiler implements PikeVMOpcodes {
       program = new int[offset];
       offset = 0;
       groupCount = -1;
+      classes = new ArrayList<CharacterMatcher>();
       // write it out!
       expr.writeCode(this);
     }
@@ -60,13 +62,36 @@ class Compiler implements PikeVMOpcodes {
     }
 
     public PikeVM toVM() {
-      return new PikeVM(program, findPreambleSize, groupCount);
+      CharacterMatcher[] classes = new CharacterMatcher[this.classes.size()];
+      this.classes.toArray(classes);
+      return new PikeVM(program, findPreambleSize, groupCount, classes);
     }
 
+    public int addClass(CharacterMatcher characterClass) {
+      if (program == null) {
+        return -1;
+      }
+      int result = classes.size();
+      classes.add(characterClass);
+      return result;
+    }
   }
 
   private abstract class Expression {
     protected abstract void writeCode(Output output);
+  }
+
+  private class CharacterRange extends Expression {
+    private final CharacterMatcher characterClass;
+
+    public CharacterRange(CharacterMatcher characterClass) {
+      this.characterClass = characterClass;
+    }
+
+    protected void writeCode(Output output) {
+      output.add(CHARACTER_CLASS);
+      output.add(output.addClass(characterClass));
+    }
   }
 
   private class Repeat extends Expression {
@@ -177,6 +202,8 @@ class Compiler implements PikeVMOpcodes {
 
   public Pattern compile(String regex) {
     char[] array = regex.toCharArray();
+    CharacterMatcher.Parser characterClassParser =
+      new CharacterMatcher.Parser(array);
     for (int index = 0; index < array.length; ++ index) {
       char c = array[index];
       Group current = groups.peek();
@@ -214,6 +241,15 @@ class Compiler implements PikeVMOpcodes {
         }
         groups.pop();
         continue;
+      case '[': {
+        CharacterMatcher matcher = characterClassParser.parseClass(index);
+        if (matcher == null) {
+          throw new RuntimeException("Invalid range @" + index + ": " + regex);
+        }
+        current.push(new CharacterRange(matcher));
+        index = characterClassParser.getEndOffset() - 1;
+        continue;
+      }
       default:
         throw new RuntimeException("Parse error @" + index + ": " + regex);
       }
