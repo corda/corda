@@ -49,19 +49,7 @@ public abstract class Pattern implements PikeVMOpcodes {
     if (flags != 0) {
       throw new UnsupportedOperationException("TODO");
     }
-    if ("a(bb)?a".equals(regex)) {
-      return new RegexPattern(regex, flags, new PikeVM(new int[] {
-        SAVE_OFFSET, 0,
-        'a',
-        SPLIT, 11,
-        SAVE_OFFSET, 2,
-        'b',
-        'b',
-        SAVE_OFFSET, 3,
-        /* 11 */ 'a',
-        SAVE_OFFSET, 1
-      }, 1));
-    } else if ("a(a*?)(a?)(a??)(a+)(a*)a".equals(regex)) {
+    if ("a(a*?)(a?)(a??)(a+)(a*)a".equals(regex)) {
       return new RegexPattern(regex, flags, new PikeVM(new int[] {
         SAVE_OFFSET, 0,
         'a',
@@ -91,7 +79,7 @@ public abstract class Pattern implements PikeVMOpcodes {
         SAVE_OFFSET, 1
       }, 5));
     }
-    throw new UnsupportedOperationException("Cannot handle regex " + regex);
+    return new Compiler().compile(regex);
   }
 
   public int flags() {
