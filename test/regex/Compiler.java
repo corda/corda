@@ -63,18 +63,44 @@ class Compiler implements PikeVMOpcodes {
     protected abstract void writeCode(Output output);
   }
 
-  private class QuestionMark extends Expression {
+  private class Repeat extends Expression {
     private Expression expr;
+    private int minCount, maxCount;
 
-    public QuestionMark(Expression expr) {
+    public Repeat(Expression expr, int minCount, int maxCount) {
+      if (minCount != 0 && minCount != 1) {
+        throw new RuntimeException("Unexpected min count: " + minCount);
+      }
+      if (maxCount != 1 && maxCount != -1) {
+        throw new RuntimeException("Unexpected max count: " + maxCount);
+      }
       this.expr = expr;
+      this.minCount = minCount;
+      this.maxCount = maxCount;
     }
 
     protected void writeCode(Output output) {
-      output.add(SPLIT);
-      int jump = output.markJump();
-      expr.writeCode(output);
-      output.setJump(jump);
+      int start = output.offset;
+      if (minCount == 1 && maxCount == -1) {
+        expr.writeCode(output);
+        output.add(SPLIT_JMP);
+        output.add(start);
+      } else if (minCount == 0 && maxCount == -1) {
+        output.add(SPLIT);
+        int jump = output.markJump();
+        expr.writeCode(output);
+        output.add(SPLIT_JMP);
+        output.add(start + 2);
+        output.setJump(jump);
+      } else if (minCount == 0 && maxCount == 1) {
+        output.add(SPLIT);
+        int jump = output.markJump();
+        expr.writeCode(output);
+        output.setJump(jump);
+      } else {
+        throw new RuntimeException("Unexpected range: "
+          + minCount + ", " + maxCount);
+      }
     }
   }
 
@@ -145,8 +171,11 @@ class Compiler implements PikeVMOpcodes {
         current.push(DOT);
         continue;
       case '?':
-        current.push(new QuestionMark(current.pop()));
-        break;
+      case '*':
+      case '+':
+        current.push(new Repeat(current.pop(),
+          c == '+' ? 1 : 0, c == '?' ? 1 : -1));
+        continue;
       case '(':
         if (index + 1 < array.length && array[index + 1] == '?') {
           throw new UnsupportedOperationException("Not yet supported: "

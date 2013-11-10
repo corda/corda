@@ -24,7 +24,11 @@ public class Regex {
     expect(matcher.matches());
     expect(matcher.groupCount() == groups.length);
     for (int i = 1; i <= groups.length; ++i) {
-      expect(groups[i - 1].equals(matcher.group(i)));
+      if (groups[i - 1] == null) {
+        expect(matcher.group(i) == null);
+      } else {
+        expect(groups[i - 1].equals(matcher.group(i)));
+      }
     }
   }
 
@@ -35,5 +39,7 @@ public class Regex {
     expectGroups("a(a*?)(a?)(a??)(a+)(a*)a", "aaaaaa", "", "a", "", "aaa", "");
     expectMatch("...", "abc");
     expectNoMatch(".", "\n");
+    expectGroups("a(bb)*a", "abbbba", "bb");
+    expectGroups("a(bb)?(bb)+a", "abba", null, "bb");
   }
 }
