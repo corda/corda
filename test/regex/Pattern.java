@@ -46,36 +46,6 @@ public abstract class Pattern implements PikeVMOpcodes {
     if (flags != 0) {
       throw new UnsupportedOperationException("TODO");
     }
-    if ("a(a*?)(a?)(a??)(a+)(a*)a".equals(regex)) {
-      return new RegexPattern(regex, flags, new PikeVM(new int[] {
-        SAVE_OFFSET, 0,
-        'a',
-        SAVE_OFFSET, 2,
-        SPLIT_JMP, 10,
-        /* 7 */ 'a',
-        SPLIT, 7,
-        /* 10 */ SAVE_OFFSET, 3,
-        SAVE_OFFSET, 4,
-        SPLIT, 17,
-        'a',
-        /* 17 */ SAVE_OFFSET, 5,
-        SAVE_OFFSET, 6,
-        SPLIT_JMP, 24,
-        'a',
-        /* 24 */ SAVE_OFFSET, 7,
-        SAVE_OFFSET, 8,
-        /* 28 */ 'a',
-        SPLIT_JMP, 28,
-        SAVE_OFFSET, 9,
-        SAVE_OFFSET, 10,
-        SPLIT, 40,
-        /* 37 */ 'a',
-        SPLIT_JMP, 37,
-        /* 40 */ SAVE_OFFSET, 11,
-        'a',
-        SAVE_OFFSET, 1
-      }, 5));
-    }
     return new Compiler().compile(regex);
   }
 
