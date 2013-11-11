@@ -116,12 +116,12 @@ ifneq ($(openjdk),)
 			lib/security/java.policy lib/security/cacerts
 
 		local-policy = lib/security/local_policy.jar
-		ifeq ($(shell test -e "$(openjdk)/$(local-policy)" && echo found),found)
+		ifeq ($(shell test -e "$(openjdk)/jre/$(local-policy)" && echo found),found)
 			javahome-files += $(local-policy)
 		endif
 
 		export-policy = lib/security/US_export_policy.jar
-		ifeq ($(shell test -e "$(openjdk)/$(export-policy)" && echo found),found)
+		ifeq ($(shell test -e "$(openjdk)/jre/$(export-policy)" && echo found),found)
 			javahome-files += $(export-policy)
 		endif
 
