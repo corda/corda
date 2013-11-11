@@ -70,6 +70,34 @@ class PikeVM implements PikeVMOpcodes {
       offsets = new int[program.length + 1][];
     }
 
+    public ThreadQueue(int startPC) {
+      head = tail = startPC;
+      next = new int[program.length + 1];
+      offsets = new int[program.length + 1][];
+      offsets[head] = new int[offsetsCount];
+    }
+
+    public int queueOneImmediately(ThreadQueue into) {
+      for (;;) {
+        if (head < 0) {
+          return -1;
+        }
+        boolean wasQueued = queueNext(head, head, into);
+        int pc = head;
+        if (head == tail) {
+          head = tail = -1;
+        } else {
+          head = next[pc] - 1;
+          next[pc] = 0;
+        }
+        offsets[pc] = null;
+        if (wasQueued) {
+          into.tail = pc;
+          return pc;
+        }
+      }
+    }
+
     /**
      * Schedules the instruction at {@code nextPC} to be executed immediately.
      * <p>
@@ -141,8 +169,7 @@ class PikeVM implements PikeVMOpcodes {
       } else {
         next.next[next.tail] = nextPC + 1;
       }
-      next.offsets[nextPC] =
-        currentPC < 0 ? new int[offsetsCount] : offsets[currentPC];
+      next.offsets[nextPC] = offsets[currentPC];
       next.tail = nextPC;
       return true;
     }
@@ -223,7 +250,7 @@ class PikeVM implements PikeVMOpcodes {
     ThreadQueue next = new ThreadQueue();
 
     // initialize the first thread
-    current.queueNext(-1, 0, current);
+    ThreadQueue queued = new ThreadQueue(0);
     if (!anchorStart) {
       // this requires non-greedy matching
       throw new UnsupportedOperationException();
@@ -231,7 +258,7 @@ class PikeVM implements PikeVMOpcodes {
 
     boolean foundMatch = false;
     for (int i = start; i <= end; ++i) {
-      if (current.isEmpty()) {
+      if (queued.isEmpty()) {
         // no threads left
         return foundMatch;
       }
@@ -240,6 +267,9 @@ class PikeVM implements PikeVMOpcodes {
       int pc = -1;
       for (;;) {
         pc = current.next(pc);
+        if (pc < 0) {
+          pc = queued.queueOneImmediately(current);
+        }
         if (pc < 0) {
           break;
         }
@@ -274,6 +304,10 @@ class PikeVM implements PikeVMOpcodes {
           current.queueImmediately(pc, program[pc + 1], true);
           current.queueImmediately(pc, pc + 2, false);
           break;
+        case SPLIT_JMP:
+          current.queueImmediately(pc, pc + 2, true);
+          current.queueImmediately(pc, program[pc + 1], false);
+          break;
         case JMP:
           current.queueImmediately(pc, program[pc + 1], false);
           break;
@@ -292,8 +326,8 @@ class PikeVM implements PikeVMOpcodes {
       current.clean();
 
       // prepare for next step
-      ThreadQueue swap = current;
-      current = next;
+      ThreadQueue swap = queued;
+      queued = next;
       next = swap;
     }
     return foundMatch;

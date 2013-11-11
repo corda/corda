@@ -25,5 +25,6 @@ interface PikeVMOpcodes {
   final static int SAVE_OFFSET = -40;
 
   final static int SPLIT = -50;
-  final static int JMP = -51;
+  final static int SPLIT_JMP = -51; // this split prefers to jump
+  final static int JMP = -52;
 }
