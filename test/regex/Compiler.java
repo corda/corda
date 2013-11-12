@@ -143,9 +143,13 @@ class Compiler implements PikeVMOpcodes {
     private final boolean capturing;
 
     private ArrayList<Expression> list = new ArrayList<Expression>();
+    private ArrayList<Group> alternatives;
 
-    public Group(boolean capturing) {
+    public Group(boolean capturing, ArrayList<Expression> initialList) {
       this.capturing = capturing;
+      if (initialList != null) {
+        list.addAll(initialList);
+      }
     }
 
     public void push(Expression expr) {
@@ -160,6 +164,14 @@ class Compiler implements PikeVMOpcodes {
       });
     }
 
+    public void startAlternative() {
+      if (alternatives == null) {
+        alternatives = new ArrayList<Group>();
+      }
+      alternatives.add(new Group(false, list));
+      list.clear();
+    }
+
     public Expression pop() {
       Expression result = list.remove(list.size() - 1);
       return result;
@@ -172,8 +184,26 @@ class Compiler implements PikeVMOpcodes {
         output.add(SAVE_OFFSET);
         output.add(2 * groupIndex);
       }
+      int[] jumps = null;
+      if (alternatives != null) {
+        jumps = new int[alternatives.size()];
+        int i = 0;
+        for (Group alternative : alternatives) {
+          output.add(SPLIT);
+          int jump = output.markJump();
+          alternative.writeCode(output);
+          output.add(JMP);
+          jumps[i++] = output.markJump();
+          output.setJump(jump);
+        }
+      }
       for (Expression expr : list) {
         expr.writeCode(output);
+      }
+      if (jumps != null) {
+        for (int jump : jumps) {
+          output.setJump(jump);
+        }
       }
       if (capturing) {
         output.add(SAVE_OFFSET);
@@ -186,7 +216,7 @@ class Compiler implements PikeVMOpcodes {
     private final Group group;
 
     public Group0() {
-      group = new Group(true);
+      group = new Group(true, null);
     }
 
     public void writeCode(Output output) {
@@ -249,7 +279,7 @@ class Compiler implements PikeVMOpcodes {
               + regex.substring(index));
           }
         }
-        current.push(groups.push(new Group(capturing)));
+        current.push(groups.push(new Group(capturing, null)));
         continue;
       }
       case ')':
@@ -268,6 +298,9 @@ class Compiler implements PikeVMOpcodes {
         index = characterClassParser.getEndOffset() - 1;
         continue;
       }
+      case '|':
+        current.startAlternative();
+        continue;
       default:
         throw new RuntimeException("Parse error @" + index + ": " + regex);
       }

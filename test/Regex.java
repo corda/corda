@@ -57,5 +57,7 @@ public class Regex {
     expectMatch("[0-9A-Fa-f]+", "08ef");
     expectNoMatch("[0-9A-Fa-f]+", "08@ef");
     expectGroups("(?:a)", "a");
+    expectGroups("a|(b|c)", "a", (String)null);
+    expectGroups("a|(b|c)", "c", "c");
   }
 }
