@@ -27,19 +27,21 @@ class PikeVM implements PikeVMOpcodes {
    */
   private final int findPrefixLength;
   private final CharacterMatcher[] classes;
+  private final PikeVM[] lookaheads;
 
   public interface Result {
     void set(int[] start, int[] end);
   }
 
   protected PikeVM(int[] program, int findPrefixLength, int groupCount,
-    CharacterMatcher[] classes)
+    CharacterMatcher[] classes, PikeVM[] lookaheads)
   {
     this.program = program;
     this.findPrefixLength = findPrefixLength;
     this.groupCount = groupCount;
     offsetsCount = 2 * groupCount + 2;
     this.classes = classes;
+    this.lookaheads = lookaheads;
   }
 
   /**
@@ -313,7 +315,12 @@ class PikeVM implements PikeVMOpcodes {
           if (anchorEnd && i < end) {
             continue;
           }
+          if (result == null) {
+            // only interested in a match, no need to go on
+            return true;
+          }
           current.setResult(result);
+
           // now that we found a match, even higher-priority matches must match
           // at the same start offset
           if (!anchorStart) {
@@ -338,10 +345,18 @@ class PikeVM implements PikeVMOpcodes {
             current.queueNext(pc, pc + 2, next);
           }
           break;
+        case LOOKAHEAD:
+          if (lookaheads[program[pc + 1]].matches(characters,
+              i, characters.length, true, false, null)) {
+            current.queueImmediately(pc, pc + 2, false);
+          }
+          break;
         /* immediate opcodes, i.e. thread continues within the same step */
         case SAVE_OFFSET:
-          int index = program[pc + 1];
-          current.saveOffset(pc, index, i);
+          if (result != null) {
+            int index = program[pc + 1];
+            current.saveOffset(pc, index, i);
+          }
           current.queueImmediately(pc, pc + 2, false);
           break;
         case SPLIT:

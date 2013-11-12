@@ -59,5 +59,6 @@ public class Regex {
     expectGroups("(?:a)", "a");
     expectGroups("a|(b|c)", "a", (String)null);
     expectGroups("a|(b|c)", "c", "c");
+    expectGroups("(?=a)a", "a");
   }
 }

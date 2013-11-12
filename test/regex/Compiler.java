@@ -28,6 +28,7 @@ class Compiler implements PikeVMOpcodes {
     private int groupCount = -1;
     private int findPreambleSize;
     private ArrayList<CharacterMatcher> classes;
+    private ArrayList<PikeVM> lookaheads;
 
     public Output(Expression expr) {
       // try-run to determine the code size
@@ -36,6 +37,7 @@ class Compiler implements PikeVMOpcodes {
       offset = 0;
       groupCount = -1;
       classes = new ArrayList<CharacterMatcher>();
+      lookaheads = new ArrayList<PikeVM>();
       // write it out!
       expr.writeCode(this);
     }
@@ -64,7 +66,10 @@ class Compiler implements PikeVMOpcodes {
     public PikeVM toVM() {
       CharacterMatcher[] classes = new CharacterMatcher[this.classes.size()];
       this.classes.toArray(classes);
-      return new PikeVM(program, findPreambleSize, groupCount, classes);
+      PikeVM[] lookaheads = new PikeVM[this.lookaheads.size()];
+      this.lookaheads.toArray(lookaheads);
+      return new PikeVM(program, findPreambleSize, groupCount, classes,
+        lookaheads);
     }
 
     public int addClass(CharacterMatcher characterClass) {
@@ -73,6 +78,15 @@ class Compiler implements PikeVMOpcodes {
       }
       int result = classes.size();
       classes.add(characterClass);
+      return result;
+    }
+
+    public int addLookahead(PikeVM lookahead) {
+      if (program == null) {
+        return -1;
+      }
+      int result = lookaheads.size();
+      lookaheads.add(lookahead);
       return result;
     }
   }
@@ -212,6 +226,17 @@ class Compiler implements PikeVMOpcodes {
     }
   }
 
+  private class Lookahead extends Expression {
+    private final Group group = new Group(false, null);
+
+    @Override
+    protected void writeCode(Output output) {
+      PikeVM vm = new Output(group).toVM();
+      output.add(LOOKAHEAD);
+      output.add(output.addLookahead(vm));
+    }
+  }
+
   private class Group0 extends Expression {
     private final Group group;
 
@@ -271,10 +296,24 @@ class Compiler implements PikeVMOpcodes {
       case '(': {
         boolean capturing = true;
         if (index + 1 < array.length && array[index + 1] == '?') {
-          if (index + 2 < array.length && array[index + 2] == ':') {
-            index += 2;
+          index += 2;
+          if (index >= array.length) {
+            throw new RuntimeException("Short pattern @" + index + ": "
+              + regex);
+          }
+          c = array[index];
+          switch (c) {
+          case ':':
             capturing = false;
-          } else {
+            break;
+          case '=': {
+            capturing = false;
+            Lookahead lookahead = new Lookahead();
+            current.push(lookahead);
+            groups.push(lookahead.group);
+            continue;
+          }
+          default:
             throw new UnsupportedOperationException("Not yet supported: "
               + regex.substring(index));
           }
