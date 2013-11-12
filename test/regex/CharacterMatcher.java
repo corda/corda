@@ -98,6 +98,17 @@ class CharacterMatcher {
     this.inversePattern = inversePattern;
   }
 
+  private void intersect(CharacterMatcher other) {
+    boolean inversePattern = this.inversePattern && other.inversePattern;
+    if ((map.length > other.map.length) ^ inversePattern) {
+      map = java.util.Arrays.copyOf(map, other.map.length);
+    }
+    for (int i = 0; i < map.length; ++ i) {
+      map[i] = (matches((char)i) && other.matches((char)i)) ^ inversePattern;
+    }
+    this.inversePattern = inversePattern;
+  }
+
   static class Parser {
     private final char[] description;
     private int offset;
@@ -248,8 +259,28 @@ class CharacterMatcher {
           } else {
             matcher.setMatch(previous);
           }
-        } else if (c == '&' || c == '[') {
-          unsupported("operation");
+        } else if (c == '[') {
+          Parser parser = new Parser(description);
+          CharacterMatcher other = parser.parseClass(offset - 1);
+          if (other == null) {
+            unsupported("invalid merge");
+          }
+          matcher.merge(other);
+          offset = parser.getEndOffset();
+          previous = -1;
+        } else if (c == '&') {
+          if (offset + 2 > description.length || description[offset] != '&'
+              || description[offset + 1] != '[') {
+            unsupported("operation");
+          }
+          Parser parser = new Parser(description);
+          CharacterMatcher other = parser.parseClass(offset + 1);
+          if (other == null) {
+            unsupported("invalid intersection");
+          }
+          matcher.intersect(other);
+          offset = parser.getEndOffset();
+          previous = -1;
         } else if (c == ']') {
           break;
         } else {

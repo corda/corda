@@ -81,5 +81,7 @@ public class Regex {
     expectMatch("\\078", "\0078");
     expectSplit("(?<=\\w)(?=\\W)|(?<=\\W)(?=\\w)", "a + b * x",
       "a", " + ", "b", " * ", "x");
+    expectMatch("[0-9[def]]", "f");
+    expectNoMatch("[a-z&&[^d-f]]", "f");
   }
 }
