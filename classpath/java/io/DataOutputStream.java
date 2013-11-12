@@ -92,6 +92,8 @@ public class DataOutputStream extends OutputStream implements DataOutput {
   }
 
   public void writeUTF(String s) throws IOException {
-    out.write(s.getBytes("UTF-8"));
+    byte[] bytes = s.getBytes("UTF-8");
+    writeShort((short)bytes.length);
+    out.write(bytes);
   }
 }
