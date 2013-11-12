@@ -106,6 +106,10 @@ class Compiler implements PikeVMOpcodes {
       output.add(CHARACTER_CLASS);
       output.add(output.addClass(characterClass));
     }
+
+    public String toString() {
+      return characterClass.toString();
+    }
   }
 
   private class Repeat extends Expression {
@@ -169,6 +173,18 @@ class Compiler implements PikeVMOpcodes {
         }
       }
     }
+
+    public String toString() {
+      String qualifier = greedy ? "" : "?";
+      if (minCount == 0 && maxCount < 2) {
+        return expr.toString() + (minCount < 0 ? "*" : "?") + qualifier;
+      }
+      if (minCount == 1 && maxCount < 0) {
+        return expr.toString() + "+" + qualifier;
+      }
+      return expr.toString() + "{" + minCount + ","
+        + (maxCount < 0 ? "" : "" + maxCount) + "}" + qualifier;
+    }
   }
 
   private class Group extends Expression {
@@ -192,6 +208,26 @@ class Compiler implements PikeVMOpcodes {
       push(new Expression() {
         public void writeCode(Output output) {
           output.add(c);
+        }
+
+        public String toString() {
+          if (c >= 0) {
+              return "" + (char)c;
+          }
+          switch (c) {
+          case DOT:
+            return ".";
+          case WORD_BOUNDARY:
+            return "\\b";
+          case NON_WORD_BOUNDARY:
+            return "\\B";
+          case LINE_START:
+            return "^";
+          case LINE_END:
+            return "$";
+          default:
+            throw new RuntimeException("Unhandled opcode: " + c);
+          }
         }
       });
     }
@@ -242,6 +278,28 @@ class Compiler implements PikeVMOpcodes {
         output.add(2 * groupIndex + 1);
       }
     }
+
+    public String toString() {
+      StringBuilder builder = new StringBuilder();
+      if (alternatives != null || list.size() > 1) {
+        builder.append('(');
+        if (!capturing) {
+          builder.append("?:");
+        }
+      }
+      if (alternatives != null) {
+        for (Group alternative : alternatives) {
+          builder.append(alternative).append('|');
+        }
+      }
+      for (Expression expr : list) {
+        builder.append(expr);
+      }
+      if (alternatives != null || list.size() > 1) {
+        builder.append(')');
+      }
+      return builder.toString();
+    }
   }
 
   private class Lookaround extends Expression {
@@ -264,6 +322,16 @@ class Compiler implements PikeVMOpcodes {
         (negative ? NEGATIVE_LOOKAHEAD : LOOKBEHIND));
       output.add(output.addLookaround(vm));
     }
+
+    public String toString() {
+      String inner = group.toString();
+      if (inner.startsWith("(?:")) {
+        inner = inner.substring(3);
+      } else {
+        inner += ")";
+      }
+      return "(?=" + inner;
+    }
   }
 
   private class Group0 extends Expression {
@@ -283,6 +351,12 @@ class Compiler implements PikeVMOpcodes {
       output.add(start + 2);
       output.markFindPreambleEnd();
       group.writeCode(output);
+    }
+
+    public String toString() {
+      String inner = group.toString();
+      return inner.startsWith("(?:") && inner.endsWith(")") ?
+          inner.substring(1, inner.length() - 1) : inner;
     }
   }
 

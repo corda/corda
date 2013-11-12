@@ -41,6 +41,36 @@ class CharacterMatcher {
     return (map.length > index && map[index]) ^ inversePattern;
   }
 
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("[");
+    if (inversePattern) {
+      builder.append("^");
+    }
+    for (int i = 0; i < map.length; ++ i) {
+      if (!map[i]) {
+        continue;
+      }
+      builder.append(i >= ' ' && i <= 0x7f ?
+        "" + (char)i : ("\\x" + Integer.toHexString(i)));
+      int j = i + 1;
+      while (j < map.length && map[j]) {
+        ++ j;
+      }
+      -- j;
+      if (j > i) {
+        if (j > i + 1) {
+          builder.append('-');
+        }
+        builder.append(j >= ' ' && j <= 0x7f ?
+          "" + (char)j : ("\\x" + Integer.toHexString(j)));
+        i = j;
+      }
+    }
+    builder.append("]");
+    return builder.toString();
+  }
+
   private static String specialClass(int c) {
     if ('d' == c) {
       return "[0-9]";
