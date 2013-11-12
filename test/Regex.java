@@ -62,5 +62,12 @@ public class Regex {
     expectGroups("(?=a)a", "a");
     expectGroups(".*(o)(?<=[A-Z][a-z]*)", "Hello", "o");
     expectNoMatch("(?!a).", "a");
+    expectMatch("[\\d]", "0");
+    expectMatch("\\0777", "?7");
+    expectMatch("\\a", "\007");
+    expectMatch("\\\\", "\\");
+    expectMatch("\\x4A", "J");
+    expectMatch("\\x61", "a");
+    expectMatch("\\078", "\0078");
   }
 }

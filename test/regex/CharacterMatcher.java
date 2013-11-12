@@ -41,6 +41,28 @@ class CharacterMatcher {
     return (map.length > index && map[index]) ^ inversePattern;
   }
 
+  private static String specialClass(int c) {
+    if ('d' == c) {
+      return "[0-9]";
+    }
+    if ('D' == c) {
+      return "[^0-9]";
+    }
+    if ('s' == c) {
+      return "[ \\t\\n\\x0B\\f\\r]";
+    }
+    if ('S' == c) {
+      return "[^ \\t\\n\\x0B\\f\\r]";
+    }
+    if ('w' == c) {
+      return "[a-zA-Z_0-9]";
+    }
+    if ('W' == c) {
+      return "[^a-zA-Z_0-9]";
+    }
+    return null;
+  }
+
   private CharacterMatcher(boolean[] map, boolean inversePattern) {
     this.map = map;
     this.inversePattern = inversePattern;
@@ -63,6 +85,17 @@ class CharacterMatcher {
       size <<= 1;
     }
     map = java.util.Arrays.copyOf(map, size);
+  }
+
+  private void merge(CharacterMatcher other) {
+    boolean inversePattern = this.inversePattern || other.inversePattern;
+    if ((map.length < other.map.length) ^ inversePattern) {
+      map = java.util.Arrays.copyOf(map, other.map.length);
+    }
+    for (int i = 0; i < map.length; ++ i) {
+      map[i] = (matches((char)i) || other.matches((char)i)) ^ inversePattern;
+    }
+    this.inversePattern = inversePattern;
   }
 
   static class Parser {
@@ -165,6 +198,13 @@ class CharacterMatcher {
 
     public CharacterMatcher parseClass() {
       if (description[offset] != '[') {
+        if (description[offset] == '\\') {
+          String range = specialClass(description[++ offset]);
+          if (range != null) {
+            ++ offset;
+            return CharacterMatcher.parse(range);
+          }
+        }
         return null;
       }
       CharacterMatcher matcher = new CharacterMatcher(new boolean[0],
@@ -196,9 +236,15 @@ class CharacterMatcher {
             matcher.map[j] = true;
           }
         } else if (c == '\\') {
+          int saved = offset;
           previous = parseEscapedCharacter();
           if (previous < 0) {
-            unsupported("escape");
+            offset = saved - 1;
+            CharacterMatcher clazz = parseClass();
+            if (clazz == null) {
+              unsupported("escape");
+            }
+            matcher.merge(clazz);
           } else {
             matcher.setMatch(previous);
           }

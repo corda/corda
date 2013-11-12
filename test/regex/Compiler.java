@@ -292,6 +292,20 @@ class Compiler implements PikeVMOpcodes {
       case '.':
         current.push(DOT);
         continue;
+      case '\\':
+        int unescaped = characterClassParser.parseEscapedCharacter(index + 1);
+        if (unescaped >= 0) {
+          index = characterClassParser.getEndOffset() - 1;
+          current.push((char)unescaped);
+          continue;
+        }
+        CharacterMatcher characterClass = characterClassParser.parseClass(index);
+        if (characterClass != null) {
+          index = characterClassParser.getEndOffset() - 1;
+          current.push(new CharacterRange(characterClass));
+          continue;
+        }
+        throw new RuntimeException("Parse error @" + index + ": " + regex);
       case '?':
       case '*':
       case '+': {
