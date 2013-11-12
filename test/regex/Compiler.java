@@ -140,7 +140,13 @@ class Compiler implements PikeVMOpcodes {
   }
 
   private class Group extends Expression {
+    private final boolean capturing;
+
     private ArrayList<Expression> list = new ArrayList<Expression>();
+
+    public Group(boolean capturing) {
+      this.capturing = capturing;
+    }
 
     public void push(Expression expr) {
       list.add(expr);
@@ -160,14 +166,19 @@ class Compiler implements PikeVMOpcodes {
     }
 
     protected void writeCode(Output output) {
-      int groupIndex = ++ output.groupCount;
-      output.add(SAVE_OFFSET);
-      output.add(2 * groupIndex);
+      int groupIndex = -1;
+      if (capturing) {
+        groupIndex = ++ output.groupCount;
+        output.add(SAVE_OFFSET);
+        output.add(2 * groupIndex);
+      }
       for (Expression expr : list) {
         expr.writeCode(output);
       }
-      output.add(SAVE_OFFSET);
-      output.add(2 * groupIndex + 1);
+      if (capturing) {
+        output.add(SAVE_OFFSET);
+        output.add(2 * groupIndex + 1);
+      }
     }
   }
 
@@ -175,7 +186,7 @@ class Compiler implements PikeVMOpcodes {
     private final Group group;
 
     public Group0() {
-      group = new Group();
+      group = new Group(true);
     }
 
     public void writeCode(Output output) {
@@ -227,13 +238,20 @@ class Compiler implements PikeVMOpcodes {
           c == '+' ? 1 : 0, c == '?' ? 1 : -1, greedy));
         continue;
       }
-      case '(':
+      case '(': {
+        boolean capturing = true;
         if (index + 1 < array.length && array[index + 1] == '?') {
-          throw new UnsupportedOperationException("Not yet supported: "
-            + regex.substring(index));
+          if (index + 2 < array.length && array[index + 2] == ':') {
+            index += 2;
+            capturing = false;
+          } else {
+            throw new UnsupportedOperationException("Not yet supported: "
+              + regex.substring(index));
+          }
         }
-        current.push(groups.push(new Group()));
+        current.push(groups.push(new Group(capturing)));
         continue;
+      }
       case ')':
         if (groups.size() < 2) {
           throw new RuntimeException("Invalid group close @" + index + ": "

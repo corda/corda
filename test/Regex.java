@@ -56,5 +56,6 @@ public class Regex {
     expectFind(" +", "Hello  ,   world! ", "  ", "   ", " ");
     expectMatch("[0-9A-Fa-f]+", "08ef");
     expectNoMatch("[0-9A-Fa-f]+", "08@ef");
+    expectGroups("(?:a)", "a");
   }
 }
