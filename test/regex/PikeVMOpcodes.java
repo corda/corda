@@ -31,4 +31,7 @@ interface PikeVMOpcodes {
   final static int SPLIT = -50;
   final static int SPLIT_JMP = -51; // this split prefers to jump
   final static int JMP = -52;
+
+  final static int SINGLE_ARG_START = CHARACTER_CLASS;
+  final static int SINGLE_ARG_END = JMP;
 }

@@ -428,4 +428,138 @@ class PikeVM implements PikeVMOpcodes {
     }
     return new String(array);
   }
+
+  private static int length(int opcode) {
+    return opcode <= SINGLE_ARG_START && opcode >= SINGLE_ARG_END ? 2 : 1;
+  }
+
+  private static boolean isJump(int opcode) {
+    return opcode <= SPLIT && opcode >= JMP;
+  }
+
+  /**
+   * Reverses the program (effectively matching the reverse pattern).
+   * <p>
+   * It is a well-known fact that any regular expression can be reordered
+   * trivially into an equivalent regular expression to be applied in backward
+   * direction (coming in real handy for look-behind expressions).
+   * </p>
+   * <p>
+   * Example: instead of matching the sequence "aaaabb" with the pattern "a+b+",
+   * we can match the reverse sequence "bbaaaa" with the pattern "b+a+".
+   * </p>
+   * <p>
+   * One caveat: while the reverse pattern is equivalent in the sense that it
+   * matches if, and only if, the original pattern matches the forward
+   * direction, the same is not true for submatches. Consider the input "a" and
+   * the pattern "(a?)a?": when matching in forward direction the captured group
+   * is "a", while the backward direction will yield the empty string. For that
+   * reason, Java dictates that capturing groups in look-behind patterns are
+   * ignored.
+   * </p>
+   */
+  public void reverse() {
+    reverse(findPrefixLength, program.length);
+  }
+
+  /**
+   * Reverses a specific part of the program (to match in reverse direction).
+   * <p>
+   * This is the work-horse of {@link #reverse()}.
+   * </p>
+   * <p>
+   * To visualize the process of reversing a program, let's look at it as a
+   * directed graph (each jump is represented by an "<tt>X</tt>
+   * ", non-jumping steps are represented by a "<tt>o</tt>"s, arrows show the
+   * direction of the flow, <code>SPLIT</code>s spawn two arrows):
+   * 
+   * <pre>
+   * o -> X -> X -> o -> X    o -> o
+   * ^    |     \         \___^____^
+   *  \__/       \____________|
+   * </pre>
+   * 
+   * The concept of reversing the program is easiest explained as following: if
+   * we insert auxiliary nodes "<tt>Y</tt>" for jump targets, the graph looks
+   * like this instead:
+   * 
+   * <pre>
+   * Y -> o -> X -> X -> o -> X    Y -> o -> Y -> o
+   * ^         |     \         \___^_________^
+   *  \_______/       \____________|
+   * </pre>
+   * 
+   * It is now obvious that reversing the program is equivalent to reversing all
+   * arrows, simply deleting all <tt>X</tt>s and substituting each <tt>Y</tt>
+   * with a jump. Note that the reverse program will have the same number of
+   * <tt>JMP</tt>, but they will not be associated with the same arrows!:
+   * 
+   * <pre>
+   * X <- o <- o    X <- o <- X <- o
+   * |    ^    ^____|________/
+   *  \__/ \_______/
+   * </pre>
+   * 
+   * </p>
+   * @param start
+   *          start reversing the program with this instruction
+   * @param end
+   *          stop reversing at this instruction (this must be either an index
+   *          aligned exactly with an instruction, or exactly
+   *          {@code program.length}.
+   */
+  private void reverse(int start, int end) {
+    // Pass 1: build the list of jump targets
+    int[] newJumps = new int[end + 1];
+    boolean[] brokenArrows = new boolean[end + 1];
+    for (int pc = start; pc < end; pc += length(program[pc])) {
+      if (isJump(program[pc])) {
+        int target = program[pc + 1];
+        newJumps[pc + 1] = newJumps[target];
+        newJumps[target] = pc + 1;
+        if (program[pc] == JMP) {
+          brokenArrows[pc + 2] = true;
+        }
+      }
+    }
+
+    // Pass 2: determine mapped program counters
+    int[] mapping = new int[end];
+    for (int pc = start, mappedPC = end; mappedPC > 0
+        && pc < end; pc += length(program[pc])) {
+      for (int jump = newJumps[pc]; jump > 0; jump = newJumps[jump]) {
+        mappedPC -= 2;
+      }
+      if (!isJump(program[pc])) {
+        mappedPC -= length(program[pc]);
+      }
+      mapping[pc] = mappedPC;
+    }
+
+    // Pass 3: write the new program
+    int[] reverse =  new int[end];
+    for (int pc = start, mappedPC = end; mappedPC > 0;
+        pc += length(program[pc])) {
+      boolean brokenArrow = brokenArrows[pc];
+      for (int jump = newJumps[pc]; jump > 0; jump = newJumps[jump]) {
+        reverse[--mappedPC] = mapping[jump - 1];
+        if (brokenArrow) {
+          reverse[--mappedPC] = JMP;
+          brokenArrow = false;
+        } else {
+          reverse[--mappedPC] =
+              program[jump - 1] == SPLIT_JMP ? SPLIT_JMP : SPLIT;
+        }
+      }
+      if (pc == end) {
+        break;
+      }
+      if (!isJump(program[pc])) {
+        for (int i = length(program[pc]); i-- > 0; ) {
+          reverse[--mappedPC] = program[pc + i];
+        }
+      }
+    }
+    System.arraycopy(reverse, start, program, start, end - start);
+  }
 }
