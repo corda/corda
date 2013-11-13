@@ -19,13 +19,21 @@ class PikeVM implements PikeVMOpcodes {
   private final int[] program;
   private final int groupCount;
   private final int offsetsCount;
+  /*
+   * For find(), we do not want to anchor the match at the start offset. Our
+   * compiler allows this by prefixing the code with an implicit '(?:.*?)'. For
+   * regular matches() calls, we want to skip that code and start at {@code
+   * findPrefixLength} instead.
+   */
+  private final int findPrefixLength;
 
   public interface Result {
     void set(int[] start, int[] end);
   }
 
-  protected PikeVM(int[] program, int groupCount) {
+  protected PikeVM(int[] program, int findPrefixLength, int groupCount) {
     this.program = program;
+    this.findPrefixLength = findPrefixLength;
     this.groupCount = groupCount;
     offsetsCount = 2 * groupCount + 2;
   }
@@ -190,6 +198,31 @@ class PikeVM implements PikeVMOpcodes {
       result.set(groupStart, groupEnd);
     }
 
+    private void mustStartMatchAt(int start) {
+      int previous = -1;
+      for (int pc = head; pc >= 0; ) {
+        int nextPC = next[pc] - 1;
+        if (start + 1 == offsets[pc][0]) {
+          previous = pc;
+        } else {
+          next[pc] = 0;
+          offsets[pc] = null;
+          if (pc == tail) {
+            head = tail = -1;
+          } else if (previous < 0) {
+            head = nextPC;
+          } else {
+            next[previous] = 1 + nextPC;
+          }
+        }
+        pc = nextPC;
+      }
+    }
+
+    private int startOffset(int pc) {
+      return offsets[pc][0] - 1;
+    }
+
     public boolean isEmpty() {
       return head < 0;
     }
@@ -250,11 +283,8 @@ class PikeVM implements PikeVMOpcodes {
     ThreadQueue next = new ThreadQueue();
 
     // initialize the first thread
-    ThreadQueue queued = new ThreadQueue(0);
-    if (!anchorStart) {
-      // this requires non-greedy matching
-      throw new UnsupportedOperationException();
-    }
+    int startPC = anchorStart ? findPrefixLength : 0;
+    ThreadQueue queued = new ThreadQueue(startPC);
 
     boolean foundMatch = false;
     for (int i = start; i <= end; ++i) {
@@ -280,6 +310,11 @@ class PikeVM implements PikeVMOpcodes {
             continue;
           }
           current.setResult(result);
+          // now that we found a match, even higher-priority matches must match
+          // at the same start offset
+          if (!anchorStart) {
+            next.mustStartMatchAt(current.startOffset(pc));
+          }
           foundMatch = true;
           break;
         }
@@ -346,9 +381,9 @@ class PikeVM implements PikeVMOpcodes {
    *         non-trivial pattern
    */
   public String isPlainString() {
-    // we expect the machine to start with SAVE_OFFSET 0 and
+    // we expect the machine to start with the find preamble and SAVE_OFFSET 0
     // end with SAVE_OFFSET 1
-    int start = 0;
+    int start = findPrefixLength;
     if (start + 1 < program.length &&
         program[start] == SAVE_OFFSET && program[start + 1] == 0) {
       start += 2;

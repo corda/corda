@@ -32,6 +32,18 @@ public class Regex {
     }
   }
 
+  private static void expectFind(String regex, String string,
+      String... matches)
+  {
+    Matcher matcher = getMatcher(regex, string);
+    int i = 0;
+    while (i < matches.length) {
+      expect(matcher.find());
+      expect(matches[i++].equals(matcher.group()));
+    }
+    expect(!matcher.find());
+  }
+
   public static void main(String[] args) {
     expectMatch("a(bb)?a", "abba");
     expectNoMatch("a(bb)?a", "abbba");
@@ -41,5 +53,6 @@ public class Regex {
     expectNoMatch(".", "\n");
     expectGroups("a(bb)*a", "abbbba", "bb");
     expectGroups("a(bb)?(bb)+a", "abba", null, "bb");
+    expectFind(" +", "Hello  ,   world! ", "  ", "   ", " ");
   }
 }

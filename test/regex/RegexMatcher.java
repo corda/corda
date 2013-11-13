@@ -49,8 +49,12 @@ public class RegexMatcher extends Matcher {
     return vm.matches(array, 0, array.length, true, true, adapter);
   }
 
+  public boolean find() {
+    return find(end + (start == end ? 1 : 0));
+  }
+
   public boolean find(int offset) {
-    throw new UnsupportedOperationException("TODO");
+    return vm.matches(array, offset, array.length, false, false, adapter);
   }
 
   public int start(int group) {

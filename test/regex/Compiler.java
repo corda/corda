@@ -26,6 +26,7 @@ class Compiler implements PikeVMOpcodes {
     private int[] program;
     private int offset;
     private int groupCount = -1;
+    private int findPreambleSize;
 
     public Output(Expression expr) {
       // try-run to determine the code size
@@ -54,9 +55,14 @@ class Compiler implements PikeVMOpcodes {
       }
     }
 
-    public PikeVM toVM() {
-      return new PikeVM(program, groupCount);
+    public void markFindPreambleEnd() {
+      findPreambleSize = offset;
     }
+
+    public PikeVM toVM() {
+      return new PikeVM(program, findPreambleSize, groupCount);
+    }
+
   }
 
   private abstract class Expression {
@@ -148,6 +154,14 @@ class Compiler implements PikeVMOpcodes {
     }
 
     public void writeCode(Output output) {
+      // find() preamble
+      int start = output.offset;
+      output.add(SPLIT_JMP);
+      output.add(start + 5);
+      output.add(DOTALL);
+      output.add(SPLIT);
+      output.add(start + 2);
+      output.markFindPreambleEnd();
       group.writeCode(output);
     }
   }
