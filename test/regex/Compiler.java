@@ -141,6 +141,9 @@ class Compiler implements PikeVMOpcodes {
         continue;
       }
       switch (c) {
+      case '.':
+        current.push(DOT);
+        continue;
       case '?':
         current.push(new QuestionMark(current.pop()));
         break;

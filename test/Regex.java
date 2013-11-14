@@ -33,5 +33,7 @@ public class Regex {
     expectNoMatch("a(bb)?a", "abbba");
     expectNoMatch("a(bb)?a", "abbaa");
     expectGroups("a(a*?)(a?)(a??)(a+)(a*)a", "aaaaaa", "", "a", "", "aaa", "");
+    expectMatch("...", "abc");
+    expectNoMatch(".", "\n");
   }
 }
