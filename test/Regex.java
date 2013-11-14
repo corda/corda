@@ -44,6 +44,16 @@ public class Regex {
     expect(!matcher.find());
   }
 
+  private static void expectSplit(String regex, String string,
+      String... list)
+  {
+    String[] array = Pattern.compile(regex).split(string);
+    expect(array.length == list.length);
+    for (int i = 0; i < list.length; ++ i) {
+      expect(list[i].equals(array[i]));
+    }
+  }
+
   public static void main(String[] args) {
     expectMatch("a(bb)?a", "abba");
     expectNoMatch("a(bb)?a", "abbba");
@@ -69,5 +79,7 @@ public class Regex {
     expectMatch("\\x4A", "J");
     expectMatch("\\x61", "a");
     expectMatch("\\078", "\0078");
+    expectSplit("(?<=\\w)(?=\\W)|(?<=\\W)(?=\\w)", "a + b * x",
+      "a", " + ", "b", " * ", "x");
   }
 }
