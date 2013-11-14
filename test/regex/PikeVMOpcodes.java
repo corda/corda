@@ -25,6 +25,7 @@ interface PikeVMOpcodes {
   final static int CHARACTER_CLASS = -20;
 
   final static int LOOKAHEAD = -30;
+  final static int LOOKBEHIND = -31;
 
   final static int SAVE_OFFSET = -40;
 

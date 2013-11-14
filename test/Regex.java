@@ -60,5 +60,6 @@ public class Regex {
     expectGroups("a|(b|c)", "a", (String)null);
     expectGroups("a|(b|c)", "c", "c");
     expectGroups("(?=a)a", "a");
+    expectGroups(".*(o)(?<=[A-Z][a-z]*)", "Hello", "o");
   }
 }

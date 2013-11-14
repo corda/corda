@@ -28,7 +28,7 @@ class Compiler implements PikeVMOpcodes {
     private int groupCount = -1;
     private int findPreambleSize;
     private ArrayList<CharacterMatcher> classes;
-    private ArrayList<PikeVM> lookaheads;
+    private ArrayList<PikeVM> lookarounds;
 
     public Output(Expression expr) {
       // try-run to determine the code size
@@ -37,7 +37,7 @@ class Compiler implements PikeVMOpcodes {
       offset = 0;
       groupCount = -1;
       classes = new ArrayList<CharacterMatcher>();
-      lookaheads = new ArrayList<PikeVM>();
+      lookarounds = new ArrayList<PikeVM>();
       // write it out!
       expr.writeCode(this);
     }
@@ -66,10 +66,10 @@ class Compiler implements PikeVMOpcodes {
     public PikeVM toVM() {
       CharacterMatcher[] classes = new CharacterMatcher[this.classes.size()];
       this.classes.toArray(classes);
-      PikeVM[] lookaheads = new PikeVM[this.lookaheads.size()];
-      this.lookaheads.toArray(lookaheads);
+      PikeVM[] lookarounds = new PikeVM[this.lookarounds.size()];
+      this.lookarounds.toArray(lookarounds);
       return new PikeVM(program, findPreambleSize, groupCount, classes,
-        lookaheads);
+        lookarounds);
     }
 
     public int addClass(CharacterMatcher characterClass) {
@@ -81,12 +81,12 @@ class Compiler implements PikeVMOpcodes {
       return result;
     }
 
-    public int addLookahead(PikeVM lookahead) {
+    public int addLookaround(PikeVM lookaround) {
       if (program == null) {
         return -1;
       }
-      int result = lookaheads.size();
-      lookaheads.add(lookahead);
+      int result = lookarounds.size();
+      lookarounds.add(lookaround);
       return result;
     }
   }
@@ -226,14 +226,22 @@ class Compiler implements PikeVMOpcodes {
     }
   }
 
-  private class Lookahead extends Expression {
+  private class Lookaround extends Expression {
     private final Group group = new Group(false, null);
+    private final boolean forward;
+
+    public Lookaround(boolean forward) {
+      this.forward = forward;
+    }
 
     @Override
     protected void writeCode(Output output) {
       PikeVM vm = new Output(group).toVM();
-      output.add(LOOKAHEAD);
-      output.add(output.addLookahead(vm));
+      if (!forward) {
+        vm.reverse();
+      }
+      output.add(forward ? LOOKAHEAD : LOOKBEHIND);
+      output.add(output.addLookaround(vm));
     }
   }
 
@@ -302,15 +310,28 @@ class Compiler implements PikeVMOpcodes {
               + regex);
           }
           c = array[index];
+          boolean lookAhead = true;
+          if (c == '<') {
+            if (++ index >= array.length) {
+              throw new RuntimeException("Short pattern @" + index + ": "
+                + regex);
+            }
+            lookAhead = false;
+            c = array[index];
+            if (c != '=' && c != '!') {
+              throw new IllegalArgumentException("Named groups not supported @"
+                + index + ": " + regex);
+            }
+          }
           switch (c) {
           case ':':
             capturing = false;
             break;
           case '=': {
             capturing = false;
-            Lookahead lookahead = new Lookahead();
-            current.push(lookahead);
-            groups.push(lookahead.group);
+            Lookaround lookaround = new Lookaround(lookAhead);
+            current.push(lookaround);
+            groups.push(lookaround.group);
             continue;
           }
           default:

@@ -27,21 +27,21 @@ class PikeVM implements PikeVMOpcodes {
    */
   private final int findPrefixLength;
   private final CharacterMatcher[] classes;
-  private final PikeVM[] lookaheads;
+  private final PikeVM[] lookarounds;
 
   public interface Result {
     void set(int[] start, int[] end);
   }
 
   protected PikeVM(int[] program, int findPrefixLength, int groupCount,
-    CharacterMatcher[] classes, PikeVM[] lookaheads)
+    CharacterMatcher[] classes, PikeVM[] lookarounds)
   {
     this.program = program;
     this.findPrefixLength = findPrefixLength;
     this.groupCount = groupCount;
     offsetsCount = 2 * groupCount + 2;
     this.classes = classes;
-    this.lookaheads = lookaheads;
+    this.lookarounds = lookarounds;
   }
 
   /**
@@ -293,13 +293,14 @@ class PikeVM implements PikeVMOpcodes {
     ThreadQueue queued = new ThreadQueue(startPC);
 
     boolean foundMatch = false;
-    for (int i = start; i <= end; ++i) {
+    int step = end > start ? +1 : -1;
+    for (int i = start; i != end + step; i += step) {
       if (queued.isEmpty()) {
         // no threads left
         return foundMatch;
       }
 
-      char c = i < end ? characters[i] : 0;
+      char c = i != end ? characters[i] : 0;
       int pc = -1;
       for (;;) {
         pc = current.next(pc);
@@ -312,7 +313,7 @@ class PikeVM implements PikeVMOpcodes {
 
         // pc == program.length is a match!
         if (pc == program.length) {
-          if (anchorEnd && i < end) {
+          if (anchorEnd && i != end) {
             continue;
           }
           if (result == null) {
@@ -346,8 +347,14 @@ class PikeVM implements PikeVMOpcodes {
           }
           break;
         case LOOKAHEAD:
-          if (lookaheads[program[pc + 1]].matches(characters,
+          if (lookarounds[program[pc + 1]].matches(characters,
               i, characters.length, true, false, null)) {
+            current.queueImmediately(pc, pc + 2, false);
+          }
+          break;
+        case LOOKBEHIND:
+          if (lookarounds[program[pc + 1]].matches(characters,
+              i - 1, -1, true, false, null)) {
             current.queueImmediately(pc, pc + 2, false);
           }
           break;
