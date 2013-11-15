@@ -12,6 +12,34 @@ package regex;
 
 /**
  * A minimal implementation of a regular expression engine.
+ * <p>
+ * Intended as a permissively-licensed drop-in replacement for Oracle JDK's
+ * regular expression engine, this class uses the Pike VM implemented in
+ * {@link PikeVM} to match regular expressions.
+ * </p>
+ * <p>
+ * The Pike VM not only has a nicer runtime performance than Oracle JDK's
+ * backtracking approach -- <i>O(n*m)</i> instead of <i>O(2^m)</i> where
+ * <i>n</i> is the length of the regular expression pattern (after normalizing
+ * {&lt;n&gt;} quantifiers) and <i>m</i> the length of the text to match against
+ * the pattern -- but also supports arbitrary-sized look-behinds.
+ * </p>
+ * <p>
+ * The current implementation supports all regular expression constructs
+ * supported by Oracle JDK's regular expression engine except for the following
+ * ones:
+ * <ul>
+ * <li>control characters: \cX</li>
+ * <li>extended character classes: \p{...}</li>
+ * <li>extended boundary matchers: \A,\G,\Z,\z</li>
+ * <li>possessive quantifiers: X?+</li>
+ * <li>back references: \&lt;n&gt;, \k&lt;name&gt;</li>
+ * <li>long escape: \Q, \E</li>
+ * <li>named groups: (?&lt;name&gt;X)</li>
+ * <li>flags: (?idmsuxU)</li>
+ * <li>independent, non-capturing group: (?>X)</li>
+ * </ul>
+ * </p>
  * 
  * @author Johannes Schindelin
  */
