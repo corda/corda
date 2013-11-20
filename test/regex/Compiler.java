@@ -114,11 +114,16 @@ class Compiler implements PikeVMOpcodes {
     private boolean greedy;
 
     public Repeat(Expression expr, int minCount, int maxCount, boolean greedy) {
-      if (minCount != 0 && minCount != 1) {
+      if (minCount < 0) {
         throw new RuntimeException("Unexpected min count: " + minCount);
       }
-      if (maxCount != 1 && maxCount != -1) {
-        throw new RuntimeException("Unexpected max count: " + maxCount);
+      if (maxCount != -1) {
+        if (maxCount == 0) {
+          throw new RuntimeException("Unexpected max count: " + maxCount);
+        }
+        if (minCount > maxCount) {
+          throw new RuntimeException("Unexpected range: " + minCount + ", " + maxCount);
+        }
       }
       this.expr = expr;
       this.minCount = minCount;
@@ -130,25 +135,38 @@ class Compiler implements PikeVMOpcodes {
       int start = output.offset;
       int splitJmp = greedy ? SPLIT_JMP : SPLIT;
       int split = greedy ? SPLIT : SPLIT_JMP;
-      if (minCount == 1 && maxCount == -1) {
+      for (int i = 1; i < minCount; ++ i) {
         expr.writeCode(output);
-        output.add(splitJmp);
-        output.add(start);
-      } else if (minCount == 0 && maxCount == -1) {
-        output.add(split);
-        int jump = output.markJump();
-        expr.writeCode(output);
-        output.add(splitJmp);
-        output.add(start + 2);
-        output.setJump(jump);
-      } else if (minCount == 0 && maxCount == 1) {
-        output.add(split);
-        int jump = output.markJump();
-        expr.writeCode(output);
-        output.setJump(jump);
+      }
+      if (maxCount == -1) {
+        if (minCount > 0) {
+          int jump = output.offset;
+          expr.writeCode(output);
+          output.add(splitJmp);
+          output.add(jump);
+        } else {
+          output.add(split);
+          int jump = output.markJump();
+          expr.writeCode(output);
+          output.add(splitJmp);
+          output.add(start + 2);
+          output.setJump(jump);
+        }
       } else {
-        throw new RuntimeException("Unexpected range: "
-          + minCount + ", " + maxCount);
+        if (minCount > 0) {
+          expr.writeCode(output);
+        }
+        if (maxCount > minCount) {
+          int[] jumps = new int[maxCount - minCount];
+          for (int i = 0; i < jumps.length; ++ i) {
+            output.add(split);
+            jumps[i] = output.markJump();
+            expr.writeCode(output);
+          }
+          for (int jump : jumps) {
+            output.setJump(jump);
+          }
+        }
       }
     }
   }
@@ -326,6 +344,34 @@ class Compiler implements PikeVMOpcodes {
         }
         current.push(new Repeat(current.pop(),
           c == '+' ? 1 : 0, c == '?' ? 1 : -1, greedy));
+        continue;
+      }
+      case '{': {
+        ++ index;
+        int length = characterClassParser.digits(index, 8, 10);
+        int min = Integer.parseInt(regex.substring(index, index + length));
+        int max = min;
+        index += length - 1;
+        c = index + 1 < array.length ? array[index + 1] : 0;
+        if (c == ',') {
+          ++ index;
+          length = characterClassParser.digits(index + 1, 8, 10);
+          max = length == 0 ? -1 :
+            Integer.parseInt(regex.substring(index + 1, index + 1 + length));
+          index += length;
+          c = index + 1< array.length ? array[index + 1] : 0;
+        }
+        if (c != '}') {
+          throw new RuntimeException("Invalid quantifier @" + index + ": "
+              + regex);
+        }
+        ++ index;
+        boolean greedy = true;
+        if (index + 1 < array.length && array[index + 1] == '?') {
+          ++ index;
+          greedy = false;
+        }
+        current.push(new Repeat(current.pop(), min, max, greedy));
         continue;
       }
       case '(': {

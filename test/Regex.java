@@ -87,5 +87,10 @@ public class Regex {
     expectSplit("o.*?$", "Hello\r\nHobbes!", "Hello\r\nH");
     expectSplit("\\b", "a+ b + c\nd", "", "a", "+ ", "b", " + ", "c", "\n", "d");
     expectSplit("\\B", "Hi Cal!", "H", "i C", "a", "l!");
+    expectMatch("a{2,5}", "aaaa");
+    expectGroups("a??(a{2,5}?)", "aaaa", "aaaa");
+    expectGroups("a??(a{3}?)", "aaaa", "aaa");
+    expectNoMatch("a(a{3}?)", "aaaaa");
+    expectMatch("a(a{3,}?)", "aaaaa");
   }
 }
