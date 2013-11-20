@@ -26,6 +26,8 @@ interface PikeVMOpcodes {
 
   final static int LOOKAHEAD = -30;
   final static int LOOKBEHIND = -31;
+  final static int NEGATIVE_LOOKAHEAD = -32;
+  final static int NEGATIVE_LOOKBEHIND = -33;
 
   final static int SAVE_OFFSET = -40;
 

@@ -358,6 +358,18 @@ class PikeVM implements PikeVMOpcodes {
             current.queueImmediately(pc, pc + 2, false);
           }
           break;
+        case NEGATIVE_LOOKAHEAD:
+          if (!lookarounds[program[pc + 1]].matches(characters,
+              i, characters.length, true, false, null)) {
+            current.queueImmediately(pc, pc + 2, false);
+          }
+          break;
+        case NEGATIVE_LOOKBEHIND:
+          if (!lookarounds[program[pc + 1]].matches(characters,
+              i - 1, -1, true, false, null)) {
+            current.queueImmediately(pc, pc + 2, false);
+          }
+          break;
         /* immediate opcodes, i.e. thread continues within the same step */
         case SAVE_OFFSET:
           if (result != null) {

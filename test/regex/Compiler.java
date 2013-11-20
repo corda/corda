@@ -228,10 +228,11 @@ class Compiler implements PikeVMOpcodes {
 
   private class Lookaround extends Expression {
     private final Group group = new Group(false, null);
-    private final boolean forward;
+    private final boolean forward, negative;
 
-    public Lookaround(boolean forward) {
+    public Lookaround(boolean forward, boolean negative) {
       this.forward = forward;
+      this.negative = negative;
     }
 
     @Override
@@ -240,7 +241,9 @@ class Compiler implements PikeVMOpcodes {
       if (!forward) {
         vm.reverse();
       }
-      output.add(forward ? LOOKAHEAD : LOOKBEHIND);
+      output.add(forward ?
+        (negative ? NEGATIVE_LOOKAHEAD : LOOKAHEAD) :
+        (negative ? NEGATIVE_LOOKAHEAD : LOOKBEHIND));
       output.add(output.addLookaround(vm));
     }
   }
@@ -327,9 +330,10 @@ class Compiler implements PikeVMOpcodes {
           case ':':
             capturing = false;
             break;
+          case '!':
           case '=': {
             capturing = false;
-            Lookaround lookaround = new Lookaround(lookAhead);
+            Lookaround lookaround = new Lookaround(lookAhead, c == '!');
             current.push(lookaround);
             groups.push(lookaround.group);
             continue;
