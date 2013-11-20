@@ -22,6 +22,11 @@ interface PikeVMOpcodes {
   final static int DOT = -1;
   final static int DOTALL = -2;
 
+  final static int WORD_BOUNDARY = -10;
+  final static int NON_WORD_BOUNDARY = -11;
+  final static int LINE_START = -12;
+  final static int LINE_END = -13;
+
   final static int CHARACTER_CLASS = -20;
 
   final static int LOOKAHEAD = -30;

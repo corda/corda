@@ -83,5 +83,9 @@ public class Regex {
       "a", " + ", "b", " * ", "x");
     expectMatch("[0-9[def]]", "f");
     expectNoMatch("[a-z&&[^d-f]]", "f");
+    expectSplit("^H", "Hello\nHobbes!", "", "ello\nHobbes!");
+    expectSplit("o.*?$", "Hello\r\nHobbes!", "Hello\r\nH");
+    expectSplit("\\b", "a+ b + c\nd", "", "a", "+ ", "b", " + ", "c", "\n", "d");
+    expectSplit("\\B", "Hi Cal!", "H", "i C", "a", "l!");
   }
 }

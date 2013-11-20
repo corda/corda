@@ -28,6 +28,11 @@ class PikeVM implements PikeVMOpcodes {
   private final int findPrefixLength;
   private final CharacterMatcher[] classes;
   private final PikeVM[] lookarounds;
+  private final static CharacterMatcher wordCharacter =
+    CharacterMatcher.parse("\\w");
+  private final static CharacterMatcher lineTerminator =
+    CharacterMatcher.parse("[\n\r\u0085\u2028\u2029]");
+  private boolean multiLine;
 
   public interface Result {
     void set(int[] start, int[] end);
@@ -340,6 +345,46 @@ class PikeVM implements PikeVMOpcodes {
           break;
         case DOTALL:
           current.queueNext(pc, pc + 1, next);
+          break;
+        case WORD_BOUNDARY:
+        case NON_WORD_BOUNDARY: {
+          int i2 = i - step;
+          int c2 = i2 < 0 || i2 >= characters.length ? -1 : characters[i2];
+          switch (opcode) {
+          case WORD_BOUNDARY:
+            if ((c2 < 0 || !wordCharacter.matches((char)c2))) {
+              if (wordCharacter.matches(c)) {
+                current.queueImmediately(pc, pc + 1, false);
+              }
+            } else if (i >= 0 && i < characters.length &&
+                !wordCharacter.matches(c)) {
+              current.queueImmediately(pc, pc + 1, false);
+            }
+            break;
+          case NON_WORD_BOUNDARY:
+            if ((c2 < 0 || !wordCharacter.matches((char)c2))) {
+              if (i >= 0 && i < characters.length &&
+                  !wordCharacter.matches(c)) {
+                current.queueImmediately(pc, pc + 1, false);
+              }
+            } else if (wordCharacter.matches(c)) {
+              current.queueImmediately(pc, pc + 1, false);
+            }
+            break;
+          }
+          break;
+        }
+        case LINE_START:
+          if (i == 0 || (multiLine &&
+              lineTerminator.matches(characters[i - 1]))) {
+            current.queueImmediately(pc, pc + 1, false);
+          }
+          break;
+        case LINE_END:
+          if (i == characters.length || (multiLine &&
+              lineTerminator.matches(c))) {
+            current.queueImmediately(pc, pc + 1, false);
+          }
           break;
         case CHARACTER_CLASS:
           if (classes[program[pc + 1]].matches(c)) {

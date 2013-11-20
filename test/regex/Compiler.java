@@ -305,6 +305,16 @@ class Compiler implements PikeVMOpcodes {
           current.push(new CharacterRange(characterClass));
           continue;
         }
+        switch (array[index + 1]) {
+        case 'b':
+          index++;
+          current.push(WORD_BOUNDARY);
+          continue;
+        case 'B':
+          index++;
+          current.push(NON_WORD_BOUNDARY);
+          continue;
+        }
         throw new RuntimeException("Parse error @" + index + ": " + regex);
       case '?':
       case '*':
@@ -378,6 +388,12 @@ class Compiler implements PikeVMOpcodes {
       }
       case '|':
         current.startAlternative();
+        continue;
+      case '^':
+        current.push(LINE_START);
+        continue;
+      case '$':
+        current.push(LINE_END);
         continue;
       default:
         throw new RuntimeException("Parse error @" + index + ": " + regex);
