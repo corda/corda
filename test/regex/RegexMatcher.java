@@ -52,4 +52,25 @@ public class RegexMatcher extends Matcher {
   public boolean find(int offset) {
     throw new UnsupportedOperationException("TODO");
   }
+
+  public int start(int group) {
+    return groupStart[group];
+  }
+
+  public int end(int group) {
+    return groupEnd[group];
+  }
+
+  public String group(int group) {
+    int offset = start(group);
+    if (offset < 0) {
+      return null;
+    }
+    int length = end(group) - offset;
+    return new String(array, offset, length);
+  }
+
+  public int groupCount() {
+    return groupStart.length - 1;
+  }
 }

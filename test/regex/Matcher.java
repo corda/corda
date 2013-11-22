@@ -87,4 +87,33 @@ public abstract class Matcher {
   public int end() {
     return end;
   }
+
+  public String group() {
+    return input.subSequence(start, end).toString();
+  }
+
+  public int start(int group) {
+    if (group == 0) {
+      return start();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public int end(int group) {
+    if (group == 0) {
+      return end();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public String group(int group) {
+    if (group == 0) {
+      return group();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public int groupCount() {
+    return 0;
+  }
 }
