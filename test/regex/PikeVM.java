@@ -332,4 +332,41 @@ class PikeVM implements PikeVMOpcodes {
     }
     return foundMatch;
   }
+
+  /**
+   * Determines whether this machine recognizes a pattern without special
+   * operators.
+   * <p>
+   * In case that the regular expression is actually a plain string without any
+   * special operators, we can avoid using a full-blown Pike VM and instead fall
+   * back to using the much faster {@link TrivialPattern}.
+   * </p>
+   * 
+   * @return the string to match, or null if the machine recognizes a
+   *         non-trivial pattern
+   */
+  public String isPlainString() {
+    // we expect the machine to start with SAVE_OFFSET 0 and
+    // end with SAVE_OFFSET 1
+    int start = 0;
+    if (start + 1 < program.length &&
+        program[start] == SAVE_OFFSET && program[start + 1] == 0) {
+      start += 2;
+    }
+    int end = program.length;
+    if (end > start + 1 &&
+        program[end - 2] == SAVE_OFFSET && program[end - 1] == 1) {
+      end -= 2;
+    }
+    for (int i = start; i < end; ++ i) {
+      if (program[i] < 0) {
+        return null;
+      }
+    }
+    char[] array = new char[end - start];
+    for (int i = start; i < end; ++ i) {
+      array[i - start] = (char)program[i];
+    }
+    return new String(array);
+  }
 }

@@ -22,102 +22,15 @@ import java.util.LinkedList;
  */
 public class TrivialPattern extends Pattern {
 
-  private final String trivialPattern;
+  private final String unescaped;
 
-  TrivialPattern(String pattern, int flags) {
+  TrivialPattern(String pattern, String unescaped, int flags) {
     super(pattern, flags);
-    this.trivialPattern = trivial(pattern);
-  }
-
-  private static String trivial(String pattern) {
-    StringBuffer buffer = new StringBuffer();
-    for (int i = 0; i < pattern.length(); ++i) {
-      char c = pattern.charAt(i);
-      switch (c) {
-      case '\\':
-        if (++i == pattern.length()) {
-          break;
-        }
-        c = pattern.charAt(i);
-        if (c == '0') {
-          int len = digits(pattern, ++i, 3, 8);
-          if (len == 3 && pattern.charAt(i) > '3') {
-            --len;
-          }
-          c = (char)Integer.parseInt(pattern.substring(i, i + len), 8);
-          i += len - 1;
-        } else if (c == 'x' || c == 'u') {
-          int len = digits(pattern, ++i, 4, 16);
-          c = (char)Integer.parseInt(pattern.substring(i, i + len), 16);
-          i += len - 1;
-        } else {
-          c = unescape(pattern.charAt(i));
-        }
-        if (c != -1) {
-          break;
-        }
-        // fallthru
-      case '.':
-      case '*':
-      case '+':
-      case '?':
-      case '|':
-      case '[':
-      case ']':
-      case '{':
-      case '}':
-      case '(':
-      case ')':
-      case '^':
-      case '$':
-        throw new UnsupportedOperationException
-          ("only trivial regular expressions are supported so far (" + pattern + ")");
-      }
-      buffer.append(c);
-    }
-    return buffer.toString();
-  }
-
-  private static int digits(String s, int offset, int maxLength, int base) {
-    for (int i = 0; ; ++i) {
-      if (i == maxLength || offset + i >= s.length()) {
-        return i;
-      }
-      int value = s.charAt(offset + i) - '0';
-      if (value < 0) {
-        return i;
-      }
-      if (base > 10 && value >= 10) {
-        value += 10 - (value >= 'a' - '0' ? 'a' - '0' : 'A' - '0');
-      }
-      if (value >= base) {
-        return i;
-      }
-    }
-  }
-
-  private static char unescape(char c) {
-    switch (c) {
-    case '\\':
-       return c;
-    case 'a':
-       return 0x0007;
-    case 'e':
-       return 0x001B;
-    case 'f':
-       return 0x000C;
-    case 'n':
-       return 0x000A;
-    case 'r':
-       return 0x000D;
-    case 't':
-       return 0x0009;
-    }
-    return (char)-1;
+    this.unescaped = unescaped;
   }
 
   public Matcher matcher(CharSequence input) {
-    return new TrivialMatcher(trivialPattern, input);
+    return new TrivialMatcher(unescaped, input);
   }
 
   public String[] split(CharSequence input, int limit) {
@@ -135,7 +48,7 @@ public class TrivialPattern extends Pattern {
     List<CharSequence> list = new LinkedList<CharSequence>();
     int index = 0;
     int trailing = 0;
-    int patternLength = trivialPattern.length();
+    int patternLength = unescaped.length();
     while (index < input.length() && list.size() < limit - 1) {
       int i;
       if (patternLength == 0) {
@@ -145,7 +58,7 @@ public class TrivialPattern extends Pattern {
           i = index + 1;
         }
       } else {
-        i = indexOf(input, trivialPattern, index);
+        i = indexOf(input, unescaped, index);
       }
 
       if (i >= 0) {

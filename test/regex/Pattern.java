@@ -43,9 +43,6 @@ public abstract class Pattern implements PikeVMOpcodes {
   }
 
   public static Pattern compile(String regex, int flags) {
-    try {
-      return new TrivialPattern(regex, flags);
-    } catch (UnsupportedOperationException handledBelow) { }
     if (flags != 0) {
       throw new UnsupportedOperationException("TODO");
     }

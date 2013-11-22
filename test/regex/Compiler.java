@@ -166,6 +166,11 @@ class Compiler implements PikeVMOpcodes {
       throw new IllegalArgumentException("Unclosed groups: ("
         + (groups.size() - 1) + "): " + regex);
     }
-    return new RegexPattern(regex, 0, new Output(root).toVM());
+    PikeVM vm = new Output(root).toVM();
+    String plain = vm.isPlainString();
+    if (plain != null) {
+      return new TrivialPattern(regex, plain, 0);
+    }
+    return new RegexPattern(regex, 0, vm);
   }
 }
