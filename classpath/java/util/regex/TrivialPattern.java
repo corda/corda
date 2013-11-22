@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package regex;
+package java.util.regex;
 
 import java.util.Iterator;
 import java.util.List;

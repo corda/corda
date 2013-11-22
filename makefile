@@ -1344,7 +1344,7 @@ vm-classes = \
 	avian/*.class \
 	avian/resource/*.class
 
-test-support-sources = $(shell find $(test)/avian $(test)/regex -name '*.java')
+test-support-sources = $(shell find $(test)/avian/ -name '*.java')
 test-sources = $(wildcard $(test)/*.java)
 test-cpp-sources = $(wildcard $(test)/*.cpp)
 test-sources += $(test-support-sources)
