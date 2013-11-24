@@ -6,7 +6,7 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 
   echo "Start to publish lastest Javadoc to gh-pages..."
 
-  cp -R build/docs/javadoc $HOME/javadoc-latest
+  cd build/
 
   if test -d gh-pages
   then
@@ -20,7 +20,7 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
   fi
 
   git rm -rf ./javadoc
-  cp -Rf $HOME/javadoc-latest ./javadoc
+  cp -Rf ../javadoc ./javadoc
   git add -f .
   git commit -m "Lastest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
   git push -fq origin gh-pages > /dev/null
