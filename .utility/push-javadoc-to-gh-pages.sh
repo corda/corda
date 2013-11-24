@@ -8,12 +8,17 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 
   cp -R build/docs/javadoc $HOME/javadoc-latest
 
-  cd $HOME
-  git config --global user.email "travis@travis-ci.org"
-  git config --global user.name "travis-ci"
-  git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/ReadyTalk/avian gh-pages > /dev/null
+  if test -d gh-pages
+  then
+    cd gh-pages
+    git pull
+  else
+    git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/ReadyTalk/avian gh-pages > /dev/null
+    cd gh-pages
+    git config user.email "travis@travis-ci.org"
+    git config user.name "travis-ci"
+  fi
 
-  cd gh-pages
   git rm -rf ./javadoc
   cp -Rf $HOME/javadoc-latest ./javadoc
   git add -f .
