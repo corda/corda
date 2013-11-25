@@ -4,22 +4,26 @@
 
 if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 
-  echo -e "Start to publish lastest Javadoc to gh-pages...\n"
+  echo "Start to publish lastest Javadoc to gh-pages..."
 
-  cp -R build/docs/javadoc $HOME/javadoc-latest
+  cd build/
 
-  cd $HOME
-  git config --global user.email "travis@travis-ci.org"
-  git config --global user.name "travis-ci"
-  git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/ReadyTalk/avian gh-pages > /dev/null
+  if test -d gh-pages
+  then
+    cd gh-pages
+    git pull
+  else
+    git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/ReadyTalk/avian gh-pages > /dev/null
+    cd gh-pages
+    git config user.email "travis@travis-ci.org"
+    git config user.name "travis-ci"
+  fi
 
-  cd gh-pages
   git rm -rf ./javadoc
-  cp -Rf $HOME/javadoc-latest ./javadoc
+  cp -Rf ../javadoc ./javadoc
   git add -f .
   git commit -m "Lastest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
   git push -fq origin gh-pages > /dev/null
 
-  echo -e "Done magic with auto publishment to gh-pages.\n"
-  
+  echo "Done magic with auto publishment to gh-pages."
 fi
