@@ -368,7 +368,7 @@ public class Proxy {
     { int i = 0;
       for (avian.VMMethod m: virtualMap.values()) {
         methodTable[i] = new MethodData
-          (0,
+          (Modifier.PUBLIC,
            ConstantPool.addUtf8(pool, Classes.toString(m.name)),
            ConstantPool.addUtf8(pool, Classes.toString(m.spec)),
            makeInvokeCode(pool, name, m.spec, m.parameterCount,
