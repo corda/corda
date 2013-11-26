@@ -27,13 +27,17 @@ public class Files {
     throws Exception
   {
     File file = File.createTempFile("avian.", null);
-    file.setExecutable(executable);
-    if (executable) {
-      expect(file.canExecute());
-    } else {
-      // Commented out because this will fail on Windows - both on Avian and on OpenJDK
-      // The implementation for Windows considers canExecute() to be the same as canRead()
-      // expect(!file.canExecute());
+    try {
+      file.setExecutable(executable);
+      if (executable) {
+        expect(file.canExecute());
+      } else {
+        // Commented out because this will fail on Windows - both on Avian and on OpenJDK
+        // The implementation for Windows considers canExecute() to be the same as canRead()
+        // expect(!file.canExecute());
+      }
+    } finally {
+      expect(file.delete());
     }
   }
   
