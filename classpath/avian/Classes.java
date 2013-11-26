@@ -117,7 +117,7 @@ public class Classes {
     }
 
     case '@':
-      return parseAnnotation(loader, pool, in);
+      return getAnnotation(loader, parseAnnotation(loader, pool, in));
 
     case '[': {
       Object[] array = new Object[read2(in)];
