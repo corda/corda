@@ -117,7 +117,7 @@ public class Classes {
     }
 
     case '@':
-      return parseAnnotation(loader, pool, in);
+      return getAnnotation(loader, parseAnnotation(loader, pool, in));
 
     case '[': {
       Object[] array = new Object[read2(in)];
@@ -448,6 +448,25 @@ public class Classes {
          new AnnotationInvocationHandler(a));
     }
     return (Annotation) a[0];
+  }
+
+  public static Object getAnnotationDefaultValue(ClassLoader loader,
+                                                 MethodAddendum addendum) {
+    if (addendum == null) {
+      return null;
+    }
+    byte[] annotationDefault = (byte[]) addendum.annotationDefault;
+    if (annotationDefault == null) {
+      return null;
+    }
+    try {
+      return parseAnnotationValue(loader, addendum.pool,
+        new ByteArrayInputStream(annotationDefault));
+    } catch (IOException e) {
+      AssertionError error = new AssertionError();
+      error.initCause(e);
+      throw error;
+    }
   }
 
   public static native Method makeMethod(Class c, int slot);

@@ -142,4 +142,9 @@ public class Method<T> extends AccessibleObject implements Member {
   public boolean isVarArgs() {
     return (getModifiers() & 0x80) != 0;
   }
+
+  public Object getDefaultValue() {
+    ClassLoader loader = getDeclaringClass().getClassLoader();
+    return Classes.getAnnotationDefaultValue(loader, vmMethod.addendum);
+  }
 }
