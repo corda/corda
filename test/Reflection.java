@@ -1,5 +1,7 @@
-import java.lang.reflect.Method;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 public class Reflection {
   public static boolean booleanMethod() {
@@ -38,8 +40,8 @@ public class Reflection {
     if (! v) throw new RuntimeException();
   }
 
-  private static class Hello {
-    private class World { }
+  private static class Hello<T> {
+    private class World<S> { }
   }
 
   private static void innerClasses() throws Exception {
@@ -56,9 +58,44 @@ public class Reflection {
     expect(egads.getAnnotation(Deprecated.class) == null);
   }
 
+  public static Hello<Hello<Reflection>>.World<Hello<String>> pinky;
+
+  private static void genericType() throws Exception {
+    Field field = Reflection.class.getDeclaredField("egads");
+    expect(field.getGenericType() == Integer.TYPE);
+
+    field = Reflection.class.getField("pinky");
+    expect("Reflection$Hello$World".equals(field.getType().getName()));
+    expect(field.getGenericType() instanceof ParameterizedType);
+    ParameterizedType type = (ParameterizedType) field.getGenericType();
+
+    expect(type.getRawType() instanceof Class);
+    Class<?> clazz = (Class<?>) type.getRawType();
+    expect("Reflection$Hello$World".equals(clazz.getName()));
+
+    expect(type.getOwnerType() instanceof ParameterizedType);
+    ParameterizedType owner = (ParameterizedType) type.getOwnerType();
+    clazz = (Class<?>) owner.getRawType();
+    expect(clazz == Hello.class);
+
+    Type[] args = type.getActualTypeArguments();
+    expect(1 == args.length);
+    expect(args[0] instanceof ParameterizedType);
+
+    ParameterizedType arg = (ParameterizedType) args[0];
+    expect(arg.getRawType() instanceof Class);
+    clazz = (Class<?>) arg.getRawType();
+    expect("Reflection$Hello".equals(clazz.getName()));
+
+    args = arg.getActualTypeArguments();
+    expect(1 == args.length);
+    expect(args[0] == String.class);
+  }
+
   public static void main(String[] args) throws Exception {
     innerClasses();
     annotations();
+    genericType();
 
     Class system = Class.forName("java.lang.System");
     Field out = system.getDeclaredField("out");
