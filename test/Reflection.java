@@ -38,7 +38,9 @@ public class Reflection {
     if (! v) throw new RuntimeException();
   }
 
-  private static class Hello { }
+  private static class Hello {
+    private class World { }
+  }
 
   private static void innerClasses() throws Exception {
     Class c = Reflection.class;
