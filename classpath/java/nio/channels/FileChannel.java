@@ -30,4 +30,6 @@ public abstract class FileChannel implements Channel {
   public abstract long position() throws IOException;
 
   public abstract FileChannel position(long position) throws IOException;
+
+  public abstract long size() throws IOException;
 }

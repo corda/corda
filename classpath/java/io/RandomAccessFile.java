@@ -193,6 +193,10 @@ public class RandomAccessFile {
         seek(position);
         return this;
       }
+
+      public long size() throws IOException {
+        return length();
+      }
     };
   }
 }
