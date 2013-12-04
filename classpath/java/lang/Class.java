@@ -415,7 +415,7 @@ public final class Class <T> implements Type, AnnotatedElement {
       byte[] inner = table[i].inner;
       if (inner != null && inner.length > 1) {
         String name = new String(inner, 0, inner.length - 1);
-        if (name.startsWith(prefix)) {
+        if (name.startsWith(prefix) && name.indexOf('$', prefix.length()) < 0) {
           Class innerClass = getClassLoader().loadClass(name);
           result[counter++] = innerClass;
         }

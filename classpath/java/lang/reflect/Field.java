@@ -66,6 +66,14 @@ public class Field<T> extends AccessibleObject {
        new String(vmField.spec, 0, vmField.spec.length - 1, false));
   }
 
+  public Type getGenericType() {
+    if (vmField.addendum == null || vmField.addendum.signature == null) {
+      return getType();
+    }
+    String signature = Classes.toString((byte[]) vmField.addendum.signature);
+    return SignatureParser.parse(vmField.class_.loader, signature);
+  }
+
   public Object get(Object instance) throws IllegalAccessException {
     Object target;
     if ((vmField.flags & Modifier.STATIC) != 0) {
