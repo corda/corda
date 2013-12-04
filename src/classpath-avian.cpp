@@ -593,18 +593,16 @@ Avian_java_lang_Runtime_gc
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Runtime_freeMemory
-(Thread*, object, uintptr_t*)
+(Thread* t, object, uintptr_t*)
 {
-  // todo
-  return 0;
+  return t->m->heap->remaining();
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Runtime_totalMemory
-(Thread*, object, uintptr_t*)
+(Thread* t, object, uintptr_t*)
 {
-  // todo
-  return 0;
+  return t->m->heap->limit();
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

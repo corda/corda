@@ -1888,6 +1888,10 @@ class MyHeap: public Heap {
     c.immortalHeapEnd = start + sizeInWords;
   }
 
+  virtual unsigned remaining() {
+    return c.limit - c.count;
+  }
+
   virtual unsigned limit() {
     return c.limit;
   }
