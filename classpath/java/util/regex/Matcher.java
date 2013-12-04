@@ -15,26 +15,22 @@ package java.util.regex;
  * 
  * @author zsombor and others
  */
-public class Matcher {
-  private final Pattern pattern;
-  private CharSequence input;
-  private int start;
-  private int end;
+public abstract class Matcher {
+  protected CharSequence input;
+  protected int start;
+  protected int end;
 
-  Matcher(Pattern pattern, CharSequence input) {
-    this.pattern = pattern;
-    this.input = input;
+  public Matcher(CharSequence input) {
+    reset(input);
   }
 
-  public boolean matches() {
-    if (pattern.pattern().equals(input.toString())) {
-      start = 0;
-      end = input.length();
-      return true;
-    } else {
-      return false;
-    }
+  public abstract boolean matches();
+
+  public boolean find() {
+    return find(end);
   }
+
+  public abstract boolean find(int start);
 
   public Matcher reset() {
     return reset(input);
@@ -47,10 +43,6 @@ public class Matcher {
     return this;
   }
 
-  public int start() {
-    return start;
-  }
-
   public String replaceAll(String replacement) {
     return replace(replacement, Integer.MAX_VALUE);
   }
@@ -59,7 +51,7 @@ public class Matcher {
     return replace(replacement, 1);
   }
 
-  private String replace(String replacement, int limit) {
+  protected String replace(String replacement, int limit) {
     reset();
 
     StringBuilder sb = null;
@@ -88,23 +80,40 @@ public class Matcher {
     return sb.toString();
   }
 
+  public int start() {
+    return start;
+  }
+
   public int end() {
     return end;
   }
 
-  public boolean find() {
-    return find(end);
+  public String group() {
+    return input.subSequence(start, end).toString();
   }
 
-  public boolean find(int start) {
-    String p = pattern.pattern();
-    int i = Pattern.indexOf(input, p, start);
-    if (i >= 0) {
-      this.start = i;
-      this.end = i + p.length();
-      return true;
-    } else {
-      return false;
+  public int start(int group) {
+    if (group == 0) {
+      return start();
     }
+    throw new UnsupportedOperationException();
+  }
+
+  public int end(int group) {
+    if (group == 0) {
+      return end();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public String group(int group) {
+    if (group == 0) {
+      return group();
+    }
+    throw new UnsupportedOperationException();
+  }
+
+  public int groupCount() {
+    return 0;
   }
 }

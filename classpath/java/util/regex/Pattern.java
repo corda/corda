@@ -10,9 +10,8 @@
 
 package java.util.regex;
 
-import java.util.Iterator;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.LinkedList;
 
 /**
  * This is a work in progress.
@@ -20,7 +19,7 @@ import java.util.LinkedList;
  * @author zsombor and others
  * 
  */
-public class Pattern {
+public abstract class Pattern implements PikeVMOpcodes {
 
   public static final int UNIX_LINES       = 1;
   public static final int CASE_INSENSITIVE = 2;
@@ -35,112 +34,26 @@ public class Pattern {
   private final String pattern;
 
   protected Pattern(String pattern, int flags) {
-    this.pattern = trivial(pattern);
+    this.pattern = pattern;
     this.patternFlags = flags;
   }
 
-  private static String trivial(String pattern) {
-    StringBuffer buffer = new StringBuffer();
-    for (int i = 0; i < pattern.length(); ++i) {
-      char c = pattern.charAt(i);
-      switch (c) {
-      case '\\':
-        if (++i == pattern.length()) {
-          break;
-        }
-        c = pattern.charAt(i);
-        if (c == '0') {
-          int len = digits(pattern, ++i, 3, 8);
-          if (len == 3 && pattern.charAt(i) > '3') {
-            --len;
-          }
-          c = (char)Integer.parseInt(pattern.substring(i, i + len), 8);
-          i += len - 1;
-        } else if (c == 'x' || c == 'u') {
-          int len = digits(pattern, ++i, 4, 16);
-          c = (char)Integer.parseInt(pattern.substring(i, i + len), 16);
-          i += len - 1;
-        } else {
-          c = unescape(pattern.charAt(i));
-        }
-        if (c != -1) {
-          break;
-        }
-        // fallthru
-      case '.':
-      case '*':
-      case '+':
-      case '?':
-      case '|':
-      case '[':
-      case ']':
-      case '{':
-      case '}':
-      case '(':
-      case ')':
-      case '^':
-      case '$':
-        throw new UnsupportedOperationException
-          ("only trivial regular expressions are supported so far (" + pattern + ")");
-      }
-      buffer.append(c);
-    }
-    return buffer.toString();
-  }
-
-  private static int digits(String s, int offset, int maxLength, int base) {
-    for (int i = 0; ; ++i) {
-      if (i == maxLength || offset + i >= s.length()) {
-        return i;
-      }
-      int value = s.charAt(offset + i) - '0';
-      if (value < 0) {
-        return i;
-      }
-      if (base > 10 && value >= 10) {
-        value += 10 - (value >= 'a' - '0' ? 'a' - '0' : 'A' - '0');
-      }
-      if (value >= base) {
-        return i;
-      }
-    }
-  }
-
-  private static char unescape(char c) {
-    switch (c) {
-    case '\\':
-       return c;
-    case 'a':
-       return 0x0007;
-    case 'e':
-       return 0x001B;
-    case 'f':
-       return 0x000C;
-    case 'n':
-       return 0x000A;
-    case 'r':
-       return 0x000D;
-    case 't':
-       return 0x0009;
-    }
-    return (char)-1;
-  }
-
   public static Pattern compile(String regex) {
-    return new Pattern(regex, 0);
+    return compile(regex, 0);
   }
 
   public static Pattern compile(String regex, int flags) {
-    return new Pattern(regex, flags);
+    if (flags != 0) {
+      throw new UnsupportedOperationException("TODO");
+    }
+    return new Compiler().compile(regex);
   }
 
   public int flags() {
     return patternFlags;
   }
 
-  public Matcher matcher(CharSequence input) {
-    return new Matcher(this, input);
-  }
+  public abstract Matcher matcher(CharSequence input);
 
   public static boolean matches(String regex, CharSequence input) {
     return Pattern.compile(regex).matcher(input).matches();
@@ -155,79 +68,22 @@ public class Pattern {
   }
 
   public String[] split(CharSequence input, int limit) {
-    boolean strip;
-    if (limit < 0) {
-      strip = false;
+    if (limit <= 0) {
       limit = Integer.MAX_VALUE;
-    } else if (limit == 0) {
-      strip = true;
-      limit = Integer.MAX_VALUE;
-    } else {
-      strip = false;
     }
-
-    List<CharSequence> list = new LinkedList();
-    int index = 0;
-    int trailing = 0;
-    int patternLength = pattern.length();
-    while (index < input.length() && list.size() < limit - 1) {
-      int i;
-      if (patternLength == 0) {
-        if (list.size() == 0) {
-          i = 0;
-        } else {
-          i = index + 1;
-        }
-      } else {
-        i = indexOf(input, pattern, index);
-      }
-
-      if (i >= 0) {
-        if (patternLength != 0 && i == index) {
-          ++ trailing;
-        } else {
-          trailing = 0;
-        }
-
-        list.add(input.subSequence(index, i));
-        index = i + patternLength;
-      } else {
+    Matcher matcher = matcher(input);
+    List<String> result = new ArrayList<String>();
+    int offset = 0;
+    for (;;) {
+      if (result.size() >= limit || !matcher.find()) {
         break;
       }
+      result.add(input.subSequence(offset, matcher.start()).toString());
+      offset = matcher.end();
     }
-
-    if (strip && index > 0 && index == input.length()) {
-      ++ trailing;
-    } else {
-      trailing = 0;
+    if (offset == 0 || offset < input.length()) {
+      result.add(input.subSequence(offset, input.length()).toString());
     }
-    list.add(input.subSequence(index, input.length()));
-
-    String[] result = new String[list.size() - trailing];
-    int i = 0;
-    for (Iterator<CharSequence> it = list.iterator();
-         it.hasNext() && i < result.length; ++ i)
-    {
-      result[i] = it.next().toString();
-    }
-    return result;
-  }
-
-  static int indexOf(CharSequence haystack, CharSequence needle, int start) {
-    if (needle.length() == 0) return start;
-
-    for (int i = start; i < haystack.length() - needle.length() + 1; ++i) {
-      int j = 0;
-      for (; j < needle.length(); ++j) {
-        if (haystack.charAt(i + j) != needle.charAt(j)) {
-          break;
-        }
-      }
-      if (j == needle.length()) {
-        return i;
-      }
-    }
-
-    return -1;
+    return result.toArray(new String[result.size()]);
   }
 }
