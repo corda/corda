@@ -48,7 +48,39 @@ public class Tree {
     }
   }
 
+  private static void ascendingIterator() {
+    TreeSet<Integer> t = new TreeSet<Integer>();
+    t.add(7);
+    t.add(2);
+    t.add(9);
+    t.add(2);
+    Iterator<Integer> iter = t.iterator();
+    expect(2 == (int)iter.next());
+    expect(7 == (int)iter.next());
+    iter.remove();
+    expect(9 == (int)iter.next());
+    expect(!iter.hasNext());
+    isEqual(printList(t), "2, 9");
+  }
+
+  private static void descendingIterator() {
+    TreeSet<Integer> t = new TreeSet<Integer>();
+    t.add(7);
+    t.add(2);
+    t.add(9);
+    t.add(2);
+    Iterator<Integer> iter = t.descendingIterator();
+    expect(9 == (int)iter.next());
+    expect(7 == (int)iter.next());
+    iter.remove();
+    expect(2 == (int)iter.next());
+    expect(!iter.hasNext());
+    isEqual(printList(t), "2, 9");
+  }
+
   public static void main(String args[]) {
+    ascendingIterator();
+    descendingIterator();
     TreeSet<Integer> t1 = new TreeSet<Integer>(new MyCompare());
     t1.add(5); t1.add(2); t1.add(1); t1.add(8); t1.add(3);
     isEqual(printList(t1), "1, 2, 3, 5, 8");
