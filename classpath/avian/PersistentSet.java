@@ -358,6 +358,18 @@ public class PersistentSet <T> implements Iterable <T> {
     return new Cell(n, ancestors);
   }
 
+  private static <T> Cell<Node<T>> maximum(Node<T> n,
+                                           Cell<Node<T>> ancestors)
+  {
+    while (n.right != NullNode) {
+      n.right = new Node(n.right);
+      ancestors = new Cell(n, ancestors);
+      n = n.right;
+    }
+
+    return new Cell(n, ancestors);
+  }
+
   private static <T> Cell<Node<T>> successor(Node<T> n,
                                              Cell<Node<T>> ancestors)
   {
@@ -367,6 +379,22 @@ public class PersistentSet <T> implements Iterable <T> {
     }
 
     while (ancestors != null && n == ancestors.value.right) {
+      n = ancestors.value;
+      ancestors = ancestors.next;
+    }
+
+    return ancestors;
+  }
+
+  private static <T> Cell<Node<T>> predecessor(Node<T> n,
+                                               Cell<Node<T>> ancestors)
+  {
+    if (n.left != NullNode) {
+      n.left = new Node(n.left);
+      return maximum(n.left, new Cell(n, ancestors));
+    }
+
+    while (ancestors != null && n == ancestors.value.left) {
       n = ancestors.value;
       ancestors = ancestors.next;
     }
@@ -456,6 +484,15 @@ public class PersistentSet <T> implements Iterable <T> {
     }
   }
 
+  private Path<T> predecessor(Path<T> p) {
+    Cell<Node<T>> s = predecessor(p.node, p.ancestors);
+    if (s == null) {
+      return null;
+    } else {
+      return new Path(false, s.value, p.root, s.next);
+    }
+  }
+
   private static class Node <T> {
     public T value;
     public Node left;
@@ -501,6 +538,10 @@ public class PersistentSet <T> implements Iterable <T> {
 
     public Path<T> successor() {
       return root.successor(this);
+    }
+
+    public Path<T> predecessor() {
+      return root.predecessor(this);
     }
 
     public PersistentSet<T> remove() {
