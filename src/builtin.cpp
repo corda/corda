@@ -757,6 +757,13 @@ Avian_sun_misc_Unsafe_putOrderedInt
   Avian_sun_misc_Unsafe_putIntVolatile(t, method, arguments);
 }
 
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_throwException
+(Thread* t, object, uintptr_t* arguments)
+{
+  vm::throw_(t, reinterpret_cast<object>(arguments[1]));
+}
+
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_Classes_primitiveClass
 (Thread* t, object, uintptr_t* arguments)
