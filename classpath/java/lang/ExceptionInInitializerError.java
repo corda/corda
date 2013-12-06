@@ -11,11 +11,11 @@
 package java.lang;
 
 public class ExceptionInInitializerError extends Error {
-  private final Throwable cause2;
+  private final Throwable exception;
 
   public ExceptionInInitializerError(String message) {
     super(message);
-    cause2 = null;
+    exception = null;
   }
 
   public ExceptionInInitializerError() {

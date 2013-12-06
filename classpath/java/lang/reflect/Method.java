@@ -81,6 +81,8 @@ public class Method<T> extends AccessibleObject implements Member {
       }
 
       if (arguments.length == vmMethod.parameterCount) {
+        Classes.initialize(vmMethod.class_);
+
         return invoke(vmMethod, instance, arguments);        
       } else {
         throw new ArrayIndexOutOfBoundsException();

@@ -2,6 +2,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.lang.reflect.InvocationTargetException;
 
 public class Reflection {
   public static boolean booleanMethod() {
@@ -92,6 +93,10 @@ public class Reflection {
     expect(args[0] == String.class);
   }
 
+  public static void throwOOME() {
+    throw new OutOfMemoryError();
+  }
+
   public static void main(String[] args) throws Exception {
     innerClasses();
     annotations();
@@ -130,5 +135,50 @@ public class Reflection {
     expect("[Ljava.lang.Class;".equals(array[0].getClass().getName()));
     expect(Class[].class == array[0].getClass());
     expect(array.getClass().getComponentType() == array[0].getClass());
+
+    try {
+      Foo.class.getMethod("foo").invoke(null);
+      expect(false);
+    } catch (ExceptionInInitializerError e) {
+      expect(e.getCause() instanceof MyException);
+    }
+
+    try {
+      Foo.class.getConstructor().newInstance();
+      expect(false);
+    } catch (NoClassDefFoundError e) {
+      // cool
+    }
+
+    try {
+      Foo.class.getField("foo").get(null);
+      expect(false);
+    } catch (NoClassDefFoundError e) {
+      // cool
+    }
+
+    { Method m = Reflection.class.getMethod("throwOOME");
+      try {
+        m.invoke(null);
+      } catch(Throwable t) {
+        expect(t.getClass() == InvocationTargetException.class);
+      }
+    }
   }
 }
+
+class Foo {
+  static {
+    if (true) throw new MyException();
+  }
+
+  public Foo() { }
+
+  public static int foo;
+
+  public static void foo() {
+    // ignore
+  }
+}
+
+class MyException extends RuntimeException { }
