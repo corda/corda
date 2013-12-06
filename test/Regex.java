@@ -70,7 +70,7 @@ public class Regex {
     expectGroups("a|(b|c)", "a", (String)null);
     expectGroups("a|(b|c)", "c", "c");
     expectGroups("(?=a)a", "a");
-    expectGroups(".*(o)(?<=[A-Z][a-z]*)", "Hello", "o");
+    expectGroups(".*(o)(?<=[A-Z][a-z]{1,4})", "Hello", "o");
     expectNoMatch("(?!a).", "a");
     expectMatch("[\\d]", "0");
     expectMatch("\\0777", "?7");
