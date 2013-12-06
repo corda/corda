@@ -161,6 +161,40 @@ public class Field<T> extends AccessibleObject {
     return ((Double) get(instance)).doubleValue();
   }
 
+  private boolean matchType(Object value) {
+    switch (vmField.code) {
+    case ByteField:
+      return value instanceof Byte;
+
+    case BooleanField:
+      return value instanceof Boolean;
+
+    case CharField:
+      return value instanceof Character;
+
+    case ShortField:
+      return value instanceof Short;
+
+    case IntField:
+      return value instanceof Integer;
+
+    case LongField:
+      return value instanceof Long;
+
+    case FloatField:
+      return value instanceof Float;
+
+    case DoubleField:
+      return value instanceof Double;
+
+    case ObjectField:
+      return value == null || getType().isInstance(value);
+
+    default:
+      throw new Error();
+    }
+  }
+
   public void set(Object instance, Object value)
     throws IllegalAccessException
   {
@@ -170,6 +204,10 @@ public class Field<T> extends AccessibleObject {
     } else if (Class.isInstance(vmField.class_, instance)) {
       target = instance;
     } else {
+      throw new IllegalArgumentException();
+    }
+
+    if (! matchType(value)) {
       throw new IllegalArgumentException();
     }
 
@@ -212,14 +250,7 @@ public class Field<T> extends AccessibleObject {
       break;
 
     case ObjectField:
-      if (value == null || getType().isInstance(value)) {
-        setObject(target, vmField.offset, value);
-      } else {
-        throw new IllegalArgumentException
-          ("needed " + getType() + ", got "
-           + value.getClass().getName() +
-           " when setting " + Class.getName(vmField.class_) + "." + getName());
-      }
+      setObject(target, vmField.offset, value);
       break;
 
     default:

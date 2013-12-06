@@ -441,6 +441,39 @@ public class Classes {
     return array;
   }
 
+  public static int countFields(VMClass vmClass, boolean publicOnly) {
+    int count = 0;
+    if (vmClass.fieldTable != null) {
+      for (int i = 0; i < vmClass.fieldTable.length; ++i) {
+        if ((! publicOnly)
+            || ((vmClass.fieldTable[i].flags & Modifier.PUBLIC))
+            != 0)
+        {
+          ++ count;
+        }
+      }
+    }
+    return count;
+  }
+
+  public static Field[] getFields(VMClass vmClass, boolean publicOnly) {
+    Field[] array = new Field[countFields(vmClass, publicOnly)];
+    if (vmClass.fieldTable != null) {
+      Classes.link(vmClass);
+
+      int ai = 0;
+      for (int i = 0; i < vmClass.fieldTable.length; ++i) {
+        if (((vmClass.fieldTable[i].flags & Modifier.PUBLIC) != 0)
+            || (! publicOnly))
+        {
+          array[ai++] = makeField(SystemClassLoader.getClass(vmClass), i);
+        }
+      }
+    }
+
+    return array;
+  }
+
   public static Annotation getAnnotation(ClassLoader loader, Object[] a) {
     if (a[0] == null) {
       a[0] = Proxy.newProxyInstance
@@ -469,7 +502,21 @@ public class Classes {
     }
   }
 
+  private static int index(VMMethod m) {
+    VMMethod[] table = m.class_.methodTable;
+    for (int i = 0; i < table.length; ++i) {
+      if (m == table[i]) return i;
+    }
+    throw new AssertionError();
+  }
+
+  public static Method makeMethod(VMMethod m) {
+    return makeMethod(SystemClassLoader.getClass(m.class_), index(m));
+  }
+  
   public static native Method makeMethod(Class c, int slot);
+  
+  public static native Field makeField(Class c, int slot);
 
   private static native void acquireClassLock();
 

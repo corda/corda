@@ -674,6 +674,78 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
   return 0;
 }
 
+object
+getDeclaredClasses(Thread* t, object c, bool publicOnly)
+{
+  object addendum = classAddendum(t, c);
+  if (addendum) {
+    object table = classAddendumInnerClassTable(t, addendum);
+    if (table) {
+      PROTECT(t, table);
+
+      unsigned count = 0;
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object reference = arrayBody(t, table, i);
+        object outer = innerClassReferenceOuter(t, reference);
+        if (outer and byteArrayEqual(t, outer, className(t, c))
+            and ((not publicOnly)
+                 or (innerClassReferenceFlags(t, reference) & ACC_PUBLIC)))
+        {
+          ++ count;
+        }
+      }
+
+      object result = makeObjectArray(t, type(t, Machine::JclassType), count);
+      PROTECT(t, result);
+
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object reference = arrayBody(t, table, i);
+        object outer = innerClassReferenceOuter(t, reference);
+        if (outer and byteArrayEqual(t, outer, className(t, c))
+            and ((not publicOnly)
+                 or (innerClassReferenceFlags(t, reference) & ACC_PUBLIC)))
+        {
+          object inner = getJClass
+            (t, resolveClass
+             (t, classLoader(t, c),
+              innerClassReferenceInner(t, arrayBody(t, table, i))));
+          
+          -- count;
+          set(t, result, ArrayBody + (count * BytesPerWord), inner);
+        }
+      }
+
+      return result;
+    }
+  }
+
+  return makeObjectArray(t, type(t, Machine::JclassType), 0);
+}
+
+object
+getDeclaringClass(Thread* t, object c)
+{
+  object addendum = classAddendum(t, c);
+  if (addendum) {
+    object table = classAddendumInnerClassTable(t, addendum);
+    if (table) {
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object reference = arrayBody(t, table, i);
+        if (strcmp
+            (&byteArrayBody(t, innerClassReferenceInner(t, reference), 0),
+             &byteArrayBody(t, className(t, c), 0)) == 0)
+        {
+          return getJClass
+            (t, resolveClass
+             (t, classLoader(t, c), innerClassReferenceOuter(t, reference)));
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
 } // namespace vm
 
 #endif//CLASSPATH_COMMON_H
