@@ -84,6 +84,8 @@ public class Field<T> extends AccessibleObject {
       throw new IllegalArgumentException();
     }
 
+    Classes.initialize(vmField.class_);
+
     switch (vmField.code) {
     case ByteField:
       return Byte.valueOf
@@ -171,6 +173,8 @@ public class Field<T> extends AccessibleObject {
       throw new IllegalArgumentException();
     }
 
+    Classes.initialize(vmField.class_);
+
     switch (vmField.code) {
     case ByteField:
       setPrimitive(target, vmField.code, vmField.offset, (Byte) value);
@@ -234,6 +238,8 @@ public class Field<T> extends AccessibleObject {
     } else {
       throw new IllegalArgumentException();
     }
+
+    Classes.initialize(vmField.class_);
 
     switch (vmField.code) {
     case ByteField:
