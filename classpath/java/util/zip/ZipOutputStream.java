@@ -147,8 +147,8 @@ public class ZipOutputStream extends DeflaterOutputStream {
 
     addFourBytes(DATA_DESCRIPTER_HEADER, 0, tmpBuffer);  // data descripter header
     addFourBytes(currentEntry.crc, 4, tmpBuffer);        // crc value
-    addFourBytes(currentEntry.compSize, 8, tmpBuffer);   // compressed size
-    addFourBytes(currentEntry.uncompSize, 12, tmpBuffer);// uncompressed size
+    addFourBytes((int)currentEntry.compSize, 8, tmpBuffer);   // compressed size
+    addFourBytes((int)currentEntry.uncompSize, 12, tmpBuffer);// uncompressed size
     out.write(tmpBuffer, 0, 16);
     bytesWritten += 16;
   }
@@ -164,8 +164,8 @@ public class ZipOutputStream extends DeflaterOutputStream {
     
     addFourBytes(e.modTimeDate, 12, tmpBuffer);       // last mod date and time
     addFourBytes(e.crc, 16, tmpBuffer);               // crc
-    addFourBytes(e.compSize, 20, tmpBuffer);          // compressed size
-    addFourBytes(e.uncompSize, 24, tmpBuffer);        // uncompressed size
+    addFourBytes((int)e.compSize, 20, tmpBuffer);          // compressed size
+    addFourBytes((int)e.uncompSize, 24, tmpBuffer);        // uncompressed size
    
     addTwoBytes(e.getName().length(), 28, tmpBuffer); // file name length
 

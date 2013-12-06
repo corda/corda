@@ -67,7 +67,7 @@ public class Assembler {
 
     write4(out, 0xCAFEBABE);
     write2(out, 0); // minor version
-    write2(out, 0); // major version
+    write2(out, 50); // major version
 
     write2(out, pool.size() + 1);
     for (PoolEntry e: pool) {

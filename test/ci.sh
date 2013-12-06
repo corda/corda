@@ -2,6 +2,7 @@
 
 set -e
 
+make ${flags} jdk-test
 make ${flags} test
 make ${flags} mode=debug test
 make ${flags} process=interpret test

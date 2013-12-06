@@ -1451,6 +1451,10 @@ else
 	ssh -p$(remote-test-port) $(remote-test-user)@$(remote-test-host) sh "$(remote-test-dir)/$(platform)-$(arch)$(options)/run-tests.sh"
 endif
 
+.PHONY: jdk-test
+jdk-test: $(test-dep) $(build)/jdk-run-tests.sh $(build)/test.sh
+	/bin/sh $(build)/jdk-run-tests.sh
+
 PHONY: audit-baseline
 audit-baseline: $(audit-codegen-executable)
 	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
@@ -1492,6 +1496,13 @@ $(build)/run-tests.sh: $(test-classes) makefile $(build)/extra-dir/multi-classpa
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
 	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test:extra-dir\" \\" >> $(@)
+	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
+	echo "$(continuation-tests) $(tail-tests)" >> $(@)
+
+$(build)/jdk-run-tests.sh: $(test-classes) makefile $(build)/extra-dir/multi-classpath-test.txt $(build)/test/multi-classpath-test.txt
+	echo 'cd $$(dirname $$0)' > $(@)
+	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') /bin/true $(JAVA_HOME)/bin/java $(mode) \"-Djava.library.path=. -cp test:extra-dir:classpath\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 

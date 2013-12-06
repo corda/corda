@@ -70,7 +70,7 @@ public class LazyLoading {
         if (loadLazy) {
           return findClass(name);
         } else {
-          throw new ClassNotFoundException();
+          throw new ClassNotFoundException(name);
         }
       } else {
         return super.loadClass(name);

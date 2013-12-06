@@ -5,10 +5,10 @@ import java.lang.reflect.Field;
 public final class Unsafe {
   private void Unsafe() { }
 
-  private static final Unsafe Instance = new Unsafe();
+  private static final Unsafe theUnsafe = new Unsafe();
 
   public static Unsafe getUnsafe() {
-    return Instance;
+    return theUnsafe;
   }
 
   public native long allocateMemory(long bytes);
