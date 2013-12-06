@@ -79,4 +79,6 @@ public final class Unsafe {
   public void copyMemory(long src, long dst, long count) {
     copyMemory(null, src, null, dst, count);
   }
+
+  public native void throwException(Throwable t);
 }

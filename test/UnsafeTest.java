@@ -5,9 +5,22 @@ public class UnsafeTest {
     if (! v) throw new RuntimeException();
   }
 
-  public static void main(String[] args) {
-    Unsafe u = avian.Machine.getUnsafe();
+  private static void unsafeThrow(Unsafe u) {
+    u.throwException(new Exception());
+  }
 
+  private static void unsafeCatch(Unsafe u) {
+    boolean success = false;
+    try {
+      unsafeThrow(u);
+    } catch(Exception e) {
+      expect(e.getClass() == Exception.class);
+      success = true;
+    }
+    expect(success);
+  }
+
+  private static void unsafeMemory(Unsafe u) {
     final long size = 64;
     long memory = u.allocateMemory(size);
     try {
@@ -61,5 +74,12 @@ public class UnsafeTest {
     } finally {
       u.freeMemory(memory);
     }
+  }
+
+  public static void main(String[] args) {
+    Unsafe u = avian.Machine.getUnsafe();
+
+    unsafeCatch(u);
+    unsafeMemory(u);
   }
 }
