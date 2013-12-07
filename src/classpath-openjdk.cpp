@@ -4297,49 +4297,10 @@ EXPORT(JVM_GetClassModifiers)(Thread* t, jclass c)
 uint64_t
 jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
 {
-  jclass c = reinterpret_cast<jobject>(arguments[0]);
-
-  object addendum = classAddendum(t, jclassVmClass(t, *c));
-  if (addendum) {
-    object table = classAddendumInnerClassTable(t, addendum);
-    if (table) {
-      PROTECT(t, table);
-
-      unsigned count = 0;
-      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        object outer = innerClassReferenceOuter(t, arrayBody(t, table, i));
-        if (outer and byteArrayEqual
-            (t, outer, className(t, jclassVmClass(t, *c))))
-        {
-          ++ count;
-        }
-      }
-
-      object result = makeObjectArray(t, type(t, Machine::JclassType), count);
-      PROTECT(t, result);
-
-      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        object outer = innerClassReferenceOuter(t, arrayBody(t, table, i));
-        if (outer and byteArrayEqual
-            (t, outer, className(t, jclassVmClass(t, *c))))
-        {
-          object inner = getJClass
-            (t, resolveClass
-             (t, classLoader(t, jclassVmClass(t, *c)),
-              innerClassReferenceInner(t, arrayBody(t, table, i))));
-          
-          -- count;
-          set(t, result, ArrayBody + (count * BytesPerWord), inner);
-        }
-      }
-
-      return reinterpret_cast<uintptr_t>(makeLocalReference(t, result));
-    }
-  }
-
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
-     (t, makeObjectArray(t, type(t, Machine::JclassType), 0)));
+     (t, getDeclaredClasses
+      (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])), false)));
 }
 
 extern "C" AVIAN_EXPORT jobjectArray JNICALL
@@ -4353,31 +4314,10 @@ EXPORT(JVM_GetDeclaredClasses)(Thread* t, jclass c)
 uint64_t
 jvmGetDeclaringClass(Thread* t, uintptr_t* arguments)
 {
-  jclass c = reinterpret_cast<jobject>(arguments[0]);
-
-  object class_ = jclassVmClass(t, *c);
-  object addendum = classAddendum(t, class_);
-  if (addendum) {
-    object table = classAddendumInnerClassTable(t, addendum);
-    if (table) {
-      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        object reference = arrayBody(t, table, i);
-        if (strcmp
-            (&byteArrayBody(t, innerClassReferenceInner(t, reference), 0),
-             &byteArrayBody(t, className(t, class_), 0)) == 0)
-        {
-          return reinterpret_cast<uintptr_t>
-            (makeLocalReference
-             (t, getJClass
-              (t, resolveClass
-               (t, classLoader(t, class_), innerClassReferenceOuter
-                (t, reference)))));
-        }
-      }
-    }
-  }
-
-  return 0;
+  return reinterpret_cast<uintptr_t>
+    (makeLocalReference
+     (t, getDeclaringClass
+      (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])))));
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL

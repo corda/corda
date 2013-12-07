@@ -59,6 +59,10 @@ public class Reflection {
     expect(egads.getAnnotation(Deprecated.class) == null);
   }
 
+  private Integer[] array;
+
+  private Integer integer;
+
   public static Hello<Hello<Reflection>>.World<Hello<String>> pinky;
 
   private static void genericType() throws Exception {
@@ -131,10 +135,58 @@ public class Reflection {
     expect(7.0 == (Double) Reflection.class.getMethod
            ("doubleMethod").invoke(null));
 
-    Class[][] array = new Class[][] { { Class.class } };
-    expect("[Ljava.lang.Class;".equals(array[0].getClass().getName()));
-    expect(Class[].class == array[0].getClass());
-    expect(array.getClass().getComponentType() == array[0].getClass());
+    { Class[][] array = new Class[][] { { Class.class } };
+      expect("[Ljava.lang.Class;".equals(array[0].getClass().getName()));
+      expect(Class[].class == array[0].getClass());
+      expect(array.getClass().getComponentType() == array[0].getClass());
+    }
+
+    { Reflection r = new Reflection();
+      expect(r.egads == 0);
+
+      Reflection.class.getDeclaredField("egads").set(r, 42);
+      expect(((int) Reflection.class.getDeclaredField("egads").get(r)) == 42);
+
+      Reflection.class.getDeclaredField("egads").setInt(r, 43);
+      expect(Reflection.class.getDeclaredField("egads").getInt(r) == 43);
+
+      Integer[] array = new Integer[0];
+      Reflection.class.getDeclaredField("array").set(r, array);
+      expect(Reflection.class.getDeclaredField("array").get(r) == array);
+
+      try {
+        Reflection.class.getDeclaredField("array").set(r, new Object());
+        expect(false);
+      } catch (IllegalArgumentException e) {
+        // cool
+      }
+
+      Integer integer = 45;
+      Reflection.class.getDeclaredField("integer").set(r, integer);
+      expect(Reflection.class.getDeclaredField("integer").get(r) == integer);
+
+      try {
+        Reflection.class.getDeclaredField("integer").set(r, new Object());
+        expect(false);
+      } catch (IllegalArgumentException e) {
+        // cool
+      }
+
+      try {
+        Reflection.class.getDeclaredField("integer").set
+          (new Object(), integer);
+        expect(false);
+      } catch (IllegalArgumentException e) {
+        // cool
+      }
+
+      try {
+        Reflection.class.getDeclaredField("integer").get(new Object());
+        expect(false);
+      } catch (IllegalArgumentException e) {
+        // cool
+      }
+    }
 
     try {
       Foo.class.getMethod("foo").invoke(null);
@@ -153,6 +205,22 @@ public class Reflection {
     try {
       Foo.class.getField("foo").get(null);
       expect(false);
+    } catch (NoClassDefFoundError e) {
+      // cool
+    }
+
+    try {
+      Foo.class.getField("foo").set(null, 42);
+      expect(false);
+    } catch (NoClassDefFoundError e) {
+      // cool
+    }
+
+    try {
+      Foo.class.getField("foo").set(null, new Object());
+      expect(false);
+    } catch (IllegalArgumentException e) {
+      // cool
     } catch (NoClassDefFoundError e) {
       // cool
     }

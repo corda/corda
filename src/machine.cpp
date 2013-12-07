@@ -1947,9 +1947,7 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
   object superVirtualTable = 0;
   PROTECT(t, superVirtualTable);
 
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    addInterfaceMethods(t, class_, virtualMap, &virtualCount, false);
-  } else {
+  if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
     if (classSuper(t, class_)) {
       superVirtualTable = classVirtualTable(t, classSuper(t, class_));
     }
@@ -2144,13 +2142,10 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     set(t, class_, ClassMethodTable, methodTable);
   }
 
-  object abstractVirtuals;
-  if (classFlags(t, class_) & ACC_INTERFACE) {
-    abstractVirtuals = 0;
-  } else {
-    abstractVirtuals = addInterfaceMethods
-      (t, class_, virtualMap, &virtualCount, true);
-  }
+
+  object abstractVirtuals = addInterfaceMethods
+    (t, class_, virtualMap, &virtualCount, true);
+
   PROTECT(t, abstractVirtuals);
 
   bool populateInterfaceVtables = false;
@@ -2212,43 +2207,45 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         set(t, vtable, ArrayBody + (i * BytesPerWord), pairFirst(t, p));
         ++ i;
       }
+    }
 
-      if (abstractVirtuals) {
-        PROTECT(t, vtable);
+    if (abstractVirtuals) {
+      PROTECT(t, vtable);
 
-        object addendum = getClassAddendum(t, class_, pool);
-        set(t, addendum, ClassAddendumMethodTable,
-            classMethodTable(t, class_));
+      object addendum = getClassAddendum(t, class_, pool);
+      set(t, addendum, ClassAddendumMethodTable,
+          classMethodTable(t, class_));
 
-        unsigned oldLength = classMethodTable(t, class_) ?
-          arrayLength(t, classMethodTable(t, class_)) : 0;
+      unsigned oldLength = classMethodTable(t, class_) ?
+        arrayLength(t, classMethodTable(t, class_)) : 0;
 
-        object newMethodTable = makeArray
-          (t, oldLength + listSize(t, abstractVirtuals));
+      object newMethodTable = makeArray
+        (t, oldLength + listSize(t, abstractVirtuals));
 
-        if (oldLength) {
-          memcpy(&arrayBody(t, newMethodTable, 0),
-                 &arrayBody(t, classMethodTable(t, class_), 0),
-                 oldLength * sizeof(object));
-        }
+      if (oldLength) {
+        memcpy(&arrayBody(t, newMethodTable, 0),
+               &arrayBody(t, classMethodTable(t, class_), 0),
+               oldLength * sizeof(object));
+      }
 
-        mark(t, newMethodTable, ArrayBody, oldLength);
+      mark(t, newMethodTable, ArrayBody, oldLength);
 
-        unsigned mti = oldLength;
-        for (object p = listFront(t, abstractVirtuals);
-             p; p = pairSecond(t, p))
-        {
-          set(t, newMethodTable,
-              ArrayBody + ((mti++) * BytesPerWord), pairFirst(t, p));
+      unsigned mti = oldLength;
+      for (object p = listFront(t, abstractVirtuals);
+           p; p = pairSecond(t, p))
+      {
+        set(t, newMethodTable,
+            ArrayBody + ((mti++) * BytesPerWord), pairFirst(t, p));
 
+        if ((classFlags(t, class_) & ACC_INTERFACE) == 0) {
           set(t, vtable,
               ArrayBody + ((i++) * BytesPerWord), pairFirst(t, p));
         }
-
-        assert(t, arrayLength(t, newMethodTable) == mti);
-
-        set(t, class_, ClassMethodTable, newMethodTable);
       }
+
+      assert(t, arrayLength(t, newMethodTable) == mti);
+
+      set(t, class_, ClassMethodTable, newMethodTable);
     }
 
     assert(t, arrayLength(t, vtable) == i);
