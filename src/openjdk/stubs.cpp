@@ -2,13 +2,13 @@
 
 using namespace vm;
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 net_JNI_OnLoad(JavaVM*, void*)
 {
   return 0;
 }
 
-extern "C" JNIEXPORT jint JNICALL
+extern "C" AVIAN_EXPORT jint JNICALL
 management_JNI_OnLoad(JavaVM*, void*)
 {
   return 0;
