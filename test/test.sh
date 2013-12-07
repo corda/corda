@@ -12,7 +12,7 @@ tests=${@}
 
 log=log.txt
 
-if [[ ! -z ${ld_path} ]]; then
+if [ -n "${ld_path}" ]; then
   export ${ld_path}
 fi
 
