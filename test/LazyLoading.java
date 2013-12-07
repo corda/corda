@@ -3,9 +3,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 public class LazyLoading {
-  private static boolean loadLazy;
+  public static boolean loadLazy;
 
-  private static void expect(boolean v) {
+  public static void expect(boolean v) {
     if (! v) throw new RuntimeException();
   }
 
@@ -104,8 +104,7 @@ public class LazyLoading {
         expect(lazy instanceof Lazy);
 
         // invokeinterface
-        Interface i = array[0];
-        expect(i.interfaceMethod() == 42);
+        expect(array[0].interfaceMethod() == 42);
 
         // invokestatic
         expect(Lazy.staticMethod() == 43);

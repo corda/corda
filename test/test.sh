@@ -12,7 +12,9 @@ tests=${@}
 
 log=log.txt
 
-export ${ld_path}
+if [[ ! -z ${ld_path} ]]; then
+  export ${ld_path}
+fi
 
 echo -n "" >${log}
 
