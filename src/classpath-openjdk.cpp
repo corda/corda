@@ -2004,8 +2004,13 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
         intercept(t, fileInputStreamClass, "open", "(Ljava/lang/String;)V",
                   voidPointer(openFile), updateRuntimeData);
   
-        intercept(t, fileInputStreamClass, "read", "()I",
-                  voidPointer(readByteFromFile), updateRuntimeData);
+        if(findMethodOrNull(t, fileInputStreamClass, "read0", "()I") != 0) {
+          intercept(t, fileInputStreamClass, "read0", "()I",
+                    voidPointer(readByteFromFile), updateRuntimeData);
+        } else {
+          intercept(t, fileInputStreamClass, "read", "()I",
+                    voidPointer(readByteFromFile), updateRuntimeData);
+        }
   
         intercept(t, fileInputStreamClass, "readBytes", "([BII)I",
                   voidPointer(readBytesFromFile), updateRuntimeData);
