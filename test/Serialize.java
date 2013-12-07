@@ -1,9 +1,10 @@
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.TreeMap;
+import java.util.Properties;
 
 public class Serialize implements Serializable {
   public static final long serialVersionUID = 1l;
@@ -69,6 +70,49 @@ public class Serialize implements Serializable {
 
     for (int i = 0; i < a.length; ++i) {
       expect(a[i] == (byte)b[i]);
+    }
+  }
+
+  private static class MyMap implements Serializable {
+    private transient Properties properties = new Properties();
+
+    public final static long serialVersionUID = 0x0cc1f63e2d256ae6l;
+
+    public int size() {
+      return properties.size();
+    }
+
+    public void put(String key, String value) {
+      properties.put(key, value);
+    }
+
+    public String get(String key) {
+      return properties.getProperty(key);
+    }
+
+    private void writeObject(ObjectOutputStream out) throws IOException {
+      out.defaultWriteObject();
+      out.writeInt(size());
+      for (Object key : properties.keySet()) {
+        out.writeObject(key);
+        out.writeObject(properties.get(key));
+      }
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException {
+      try {
+        in.defaultReadObject();
+      } catch (Exception e) {
+        // OpenJDK's defaultReadObject() can throw a ClassNotFoundException
+        throw new IOException(e);
+      }
+      properties = new Properties();
+      int size = in.readInt();
+      for (int i = 0; i < size; i++) try {
+        properties.put(in.readObject(), in.readObject());
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e);
+      }
     }
   }
 
@@ -145,7 +189,7 @@ public class Serialize implements Serializable {
 
     out.reset();
     out2 = new ObjectOutputStream(out);
-    TreeMap map = new TreeMap();
+    MyMap map = new MyMap();
     map.put("key", "value");
     out2.writeObject(map);
     out2.close();
@@ -157,34 +201,29 @@ public class Serialize implements Serializable {
       0x00, 0x05,
       // object
       0x73,
-      // class desc "java.util.TreeMap"
-      0x72, 0, 17, 'j', 'a', 'v', 'a', '.', 'u', 't', 'i', 'l', '.',
-      'T', 'r', 'e', 'e', 'M', 'a', 'p',
+      // class desc "Serialize$MyMap"
+      0x72, 0, 15, 'S', 'e', 'r', 'i', 'a', 'l', 'i', 'z', 'e', '$',
+      'M', 'y', 'M', 'a', 'p',
       // serial version UID: 0x0cc1f64e2d266ae6
       0x0c, 0xc1, 0xf6, 0x3e, 0x2d, 0x25, 0x6a, 0xe6,
       // flags: SC_SERIALIZABLE | SC_WRITE_METHOD
       0x03,
-      // 1 field: comparator
-      0, 1, 'L', 0, 10, 'c', 'o', 'm', 'p', 'a', 'r', 'a', 't', 'o', 'r',
-      0x74, 0, 22, 'L', 'j', 'a', 'v', 'a', '/', 'u', 't', 'i', 'l', '/',
-      'C', 'o', 'm', 'p', 'a', 'r', 'a', 't', 'o', 'r', ';',
+      // no (non-transient) fields
+      0, 0,
       // class annotation
       0x78,
       // super class desc
       0x70,
-      // classdata[]: NULL
-      0x70,
-      // custom TreeMap data writte by TreeMap#writeObject
+      // custom TreeMap data written by TreeMap#writeObject
       0x77, 4, 0x00 , 0x00, 0x00, 0x01, // (int)1 (== map.size())
       0x74, 0, 3, 'k', 'e', 'y', // "key"
       0x74, 0, 5, 'v', 'a', 'l', 'u', 'e', // "value"
       // end block data
       0x78
     });
-    map.put("Hello", "ween");
     in = new ByteArrayInputStream(array);
     in2 = new ObjectInputStream(in);
-    map = (TreeMap)in2.readObject();
+    map = (MyMap)in2.readObject();
     in2.close();
     expectEqual(1, map.size());
     expectEqual("value", (String)map.get("key"));
