@@ -350,7 +350,7 @@ Java_java_io_File_mkdir(JNIEnv* e, jclass, jstring path)
   string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
-      int r = ::MKDIR(chars, 0700);
+      int r = ::MKDIR(chars, 0777);
       if (r != 0) {
         throwNewErrno(e, "java/io/IOException");
       }
@@ -366,7 +366,7 @@ Java_java_io_File_createNewFile(JNIEnv* e, jclass, jstring path)
   string_t chars = getChars(e, path);
   if (chars) {
     if (not exists(chars)) {
-      int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0600);
+      int fd = OPEN(chars, O_CREAT | O_WRONLY | O_EXCL, 0666);
       if (fd == -1) {
         if (errno != EEXIST) {
           throwNewErrno(e, "java/io/IOException");
@@ -818,7 +818,7 @@ Java_java_io_RandomAccessFile_open(JNIEnv* e, jclass, jstring path,
     #if defined(PLATFORM_WINDOWS)
     int fd = ::_wopen(chars, flags);
     #else
-    int fd = ::open((const char*)chars, flags, 0644);
+    int fd = ::open((const char*)chars, flags, 0666);
     #endif
     releaseChars(e, path, chars);
     if (fd == -1) {
