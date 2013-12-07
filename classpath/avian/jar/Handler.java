@@ -70,7 +70,7 @@ public class Handler extends URLStreamHandler {
     }
 
     public int getContentLength() {
-      return entry.getSize();
+      return (int)entry.getSize();
     }
 
     public InputStream getInputStream() throws IOException {

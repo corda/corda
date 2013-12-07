@@ -50,7 +50,7 @@ public class JarFile extends ZipFile {
       }
     }
 
-    public int getCompressedSize() {
+    public long getCompressedSize() {
       try {
         return compressedSize(window, pointer);
       } catch (IOException e) {
@@ -58,7 +58,7 @@ public class JarFile extends ZipFile {
       }
     }
 
-    public int getSize() {
+    public long getSize() {
       try {
         return uncompressedSize(window, pointer);
       } catch (IOException e) {

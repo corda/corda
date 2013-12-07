@@ -42,8 +42,8 @@ public class ZipEntry {
   int modTimeDate = -1;
   long millisTime = -1;
   int crc = -1;
-  int compSize = 0;
-  int uncompSize = 0;
+  long compSize = 0;
+  long uncompSize = 0;
   int offset = -1;
   
   public ZipEntry(String name) {
@@ -191,12 +191,12 @@ public class ZipEntry {
       uncompSize = size;
   }
 
-  public int getSize() {
+  public long getSize() {
     return uncompSize;
   }
 
   //Methods to set and get the compressed size of the entry
-  public void setCompressedSize(int size){
+  public void setCompressedSize(long size){
     if (size < 0){
       return;
     }
@@ -204,7 +204,7 @@ public class ZipEntry {
       compSize = size;
   }
 
-  public int getCompressedSize() {
+  public long getCompressedSize() {
     return compSize;
   }
 }
