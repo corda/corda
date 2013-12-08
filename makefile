@@ -220,9 +220,9 @@ ifneq ($(android),)
 		$(platform-lflags) \
 		-lstdc++
 
-ifeq ($(platform),linux)
-	classpath-lflags += -lrt
-endif
+	ifeq ($(platform),linux)
+		classpath-lflags += -lrt
+	endif
 
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
@@ -1970,6 +1970,9 @@ ifeq ($(ios),true)
 		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
 		> $(build)/openjdk/UNIXProcess_md.c
 endif
+	if [ -f openjdk-patches/$(notdir $(<)).patch ]; then \
+		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).patch; \
+	fi
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
 		$(call output,$(@)) -Wno-return-type
