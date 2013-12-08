@@ -98,6 +98,8 @@ endif
 
 library-path = $(library-path-variable)=$(build)
 
+
+
 ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
 	ifeq ($(arch),x86_64)
@@ -218,9 +220,9 @@ ifneq ($(android),)
 		$(platform-lflags) \
 		-lstdc++
 
-ifeq ($(platform),linux)
-	classpath-lflags += -lrt
-endif
+	ifeq ($(platform),linux)
+		classpath-lflags += -lrt
+	endif
 
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
@@ -595,6 +597,21 @@ ifeq ($(platform),darwin)
 		cflags = -I$(sysroot)/System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/Headers/ \
 			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	endif
+
+	ifneq ($(ios),true)
+		platform-dir = $(developer-dir)/Platforms/MacOSX.platform
+		sdk-dir = $(platform-dir)/Developer/SDKs
+
+		mac-version := $(shell \
+			  if test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
+			elif test -d $(sdk-dir)/MacOSX10.8.sdk; then echo 10.8; \
+			elif test -d $(sdk-dir)/MacOSX10.7.sdk; then echo 10.7; \
+			elif test -d $(sdk-dir)/MacOSX10.6.sdk; then echo 10.6; \
+			else echo; fi)
+
+		sysroot = $(sdk-dir)/MacOSX$(mac-version).sdk
+	endif
+
 
 	version-script-flag =
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
@@ -1953,9 +1970,12 @@ ifeq ($(ios),true)
 		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
 		> $(build)/openjdk/UNIXProcess_md.c
 endif
+	if [ -f openjdk-patches/$(notdir $(<)).patch ]; then \
+		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).patch; \
+	fi
 	$(cc) -fPIC $(openjdk-extra-cflags) $(openjdk-cflags) \
 		$(optimization-cflags) -w -c $(build)/openjdk/$(notdir $(<)) \
-		$(call output,$(@))
+		$(call output,$(@)) -Wno-return-type
 
 $(openjdk-local-objects): $(build)/openjdk/%-openjdk.o: $(src)/openjdk/%.c \
 		$(openjdk-headers-dep)
@@ -1984,37 +2004,38 @@ ifeq ($(platform),windows)
 		> $(build)/openjdk/NetworkInterface.h
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
+
 ifeq ($(platform),darwin)
 	mkdir -p $(build)/openjdk/netinet
 	for file in \
-		/usr/include/netinet/ip.h \
-		/usr/include/netinet/in_systm.h \
-		/usr/include/netinet/ip_icmp.h \
-		/usr/include/netinet/in_var.h \
-		/usr/include/netinet/icmp6.h \
-		/usr/include/netinet/ip_var.h; do \
+		$(sysroot)/usr/include/netinet/ip.h \
+		$(sysroot)/usr/include/netinet/in_systm.h \
+		$(sysroot)/usr/include/netinet/ip_icmp.h \
+		$(sysroot)/usr/include/netinet/in_var.h \
+		$(sysroot)/usr/include/netinet/icmp6.h \
+		$(sysroot)/usr/include/netinet/ip_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/netinet/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/netinet6
 	for file in \
-		/usr/include/netinet6/in6_var.h; do \
+		$(sysroot)/usr/include/netinet6/in6_var.h; do \
 		if [ ! -f "$(build)/openjdk/netinet6/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/netinet6/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/net
 	for file in \
-		/usr/include/net/if_arp.h; do \
+		$(sysroot)/usr/include/net/if_arp.h; do \
 		if [ ! -f "$(build)/openjdk/net/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/net/$$(basename $${file})"; \
 		fi; \
 	done
 	mkdir -p $(build)/openjdk/sys
 	for file in \
-		/usr/include/sys/kern_event.h \
-		/usr/include/sys/sys_domain.h; do \
+		$(sysroot)/usr/include/sys/kern_event.h \
+		$(sysroot)/usr/include/sys/sys_domain.h; do \
 		if [ ! -f "$(build)/openjdk/sys/$$(basename $${file})" ]; then \
 			ln "$${file}" "$(build)/openjdk/sys/$$(basename $${file})"; \
 		fi; \
