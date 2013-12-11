@@ -26,7 +26,7 @@ class ForkElement {
 
 class ForkState: public Compiler::State {
  public:
-  ForkState(Stack* stack, Local* locals, Cell<Value>* saved, Event* predecessor,
+  ForkState(Stack* stack, Local* locals, List<Value*>* saved, Event* predecessor,
             unsigned logicalIp):
     stack(stack),
     locals(locals),
@@ -38,7 +38,7 @@ class ForkState: public Compiler::State {
 
   Stack* stack;
   Local* locals;
-  Cell<Value>* saved;
+  List<Value*>* saved;
   Event* predecessor;
   unsigned logicalIp;
   unsigned readCount;

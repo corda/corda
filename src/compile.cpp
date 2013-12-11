@@ -21,6 +21,7 @@
 #include <avian/vm/codegen/targets.h>
 
 #include <avian/util/runtime-array.h>
+#include <avian/util/list.h>
 
 using namespace vm;
 
@@ -211,17 +212,6 @@ class MyThread: public Thread {
     bool methodIsMostRecent;
   };
 
-  class ReferenceFrame {
-   public:
-    ReferenceFrame(ReferenceFrame* next, Reference* reference):
-      next(next),
-      reference(reference)
-    { }
-
-    ReferenceFrame* next;
-    Reference* reference;
-  };
-
   static void doTransition(MyThread* t, void* ip, void* stack,
                            object continuation, MyThread::CallTrace* trace)
   {
@@ -301,7 +291,7 @@ class MyThread: public Thread {
   Context* transition;
   TraceContext* traceContext;
   uintptr_t stackLimit;
-  ReferenceFrame* referenceFrame;
+  List<Reference*>* referenceFrame;
   bool methodLockIsClean;
 };
 
@@ -9061,8 +9051,8 @@ class MyProcessor: public Processor {
     MyThread* t = static_cast<MyThread*>(vmt);
 
     t->referenceFrame = new
-      (t->m->heap->allocate(sizeof(MyThread::ReferenceFrame)))
-      MyThread::ReferenceFrame(t->referenceFrame, t->reference);
+      (t->m->heap->allocate(sizeof(List<Reference*>)))
+      List<Reference*>(t->reference, t->referenceFrame);
     
     return true;
   }
@@ -9072,13 +9062,13 @@ class MyProcessor: public Processor {
   {
     MyThread* t = static_cast<MyThread*>(vmt);
 
-    MyThread::ReferenceFrame* f = t->referenceFrame;
+    List<Reference*>* f = t->referenceFrame;
     t->referenceFrame = f->next;
-    while (t->reference != f->reference) {
+    while (t->reference != f->item) {
       vm::dispose(t, t->reference);
     }
 
-    t->m->heap->free(f, sizeof(MyThread::ReferenceFrame));
+    t->m->heap->free(f, sizeof(List<Reference*>));
   }
 
   virtual object
