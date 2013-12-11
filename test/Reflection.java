@@ -145,7 +145,7 @@ public class Reflection {
       expect(r.egads == 0);
 
       Reflection.class.getDeclaredField("egads").set(r, 42);
-      expect(((int) Reflection.class.getDeclaredField("egads").get(r)) == 42);
+      expect(((Integer)Reflection.class.getDeclaredField("egads").get(r)) == 42);
 
       Reflection.class.getDeclaredField("egads").setInt(r, 43);
       expect(Reflection.class.getDeclaredField("egads").getInt(r) == 43);
