@@ -1634,8 +1634,8 @@ captureBranchSnapshots(Context* c, Event* e)
       e->snapshots = makeSnapshots(c, el.value, e->snapshots);
     }
 
-    for (Cell<Value>* sv = e->successors->forkState->saved; sv; sv = sv->next) {
-      e->snapshots = makeSnapshots(c, sv->value, e->snapshots);
+    for (List<Value*>* sv = e->successors->forkState->saved; sv; sv = sv->next) {
+      e->snapshots = makeSnapshots(c, sv->item, e->snapshots);
     }
 
     if (DebugControl) {
@@ -1925,8 +1925,8 @@ compile(Context* c, uintptr_t stackOverflowHandler, unsigned stackLimitOffset)
     }
 
     if (e->visitLinks) {
-      for (Cell<Link>* cell = reverseDestroy(e->visitLinks); cell; cell = cell->next) {
-        visit(c, cell->value);
+      for (List<Link*>* cell = reverseDestroy(e->visitLinks); cell; cell = cell->next) {
+        visit(c, cell->item);
       }
       e->visitLinks = 0;
     }
@@ -1997,7 +1997,7 @@ saveState(Context* c)
     appendDummy(c);
   }
 
-  unsigned elementCount = frameFootprint(c, c->stack) + count(c->saved);
+  unsigned elementCount = frameFootprint(c, c->stack) + c->saved->count();
 
   ForkState* state = new
     (c->zone->allocate
@@ -2014,8 +2014,8 @@ saveState(Context* c)
       addForkElement(c, e.value, state, count++);
     }
 
-    for (Cell<Value>* sv = c->saved; sv; sv = sv->next) {
-      addForkElement(c, sv->value, state, count++);
+    for (List<Value*>* sv = c->saved; sv; sv = sv->next) {
+      addForkElement(c, sv->item, state, count++);
     }
 
     state->readCount = count;

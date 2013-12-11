@@ -68,7 +68,7 @@ class Event {
   Snapshot* snapshots;
   Link* predecessors;
   Link* successors;
-  Cell<Link>* visitLinks;
+  List<Link*>* visitLinks;
   Block* block;
   LogicalInstruction* logicalInstruction;
   unsigned readCount;

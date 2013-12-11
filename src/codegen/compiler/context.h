@@ -13,6 +13,7 @@
 
 #include <avian/vm/codegen/assembler.h>
 #include <avian/vm/codegen/compiler.h>
+#include <avian/util/list.h>
 
 #include "regalloc.h"
 
@@ -38,29 +39,10 @@ class MySubroutine;
 class Block;
 
 template<class T>
-class Cell {
- public:
-  Cell(Cell<T>* next, T* value): next(next), value(value) { }
-
-  Cell<T>* next;
-  T* value;
-};
-
-template<class T>
-unsigned count(Cell<T>* c) {
-  unsigned count = 0;
-  while (c) {
-    ++ count;
-    c = c->next;
-  }
-  return count;
-}
-
-template<class T>
-Cell<T>* reverseDestroy(Cell<T>* cell) {
-  Cell<T>* previous = 0;
+List<T>* reverseDestroy(List<T>* cell) {
+  List<T>* previous = 0;
   while (cell) {
-    Cell<T>* next = cell->next;
+    List<T>* next = cell->next;
     cell->next = previous;
     previous = cell;
     cell = next;
@@ -80,7 +62,7 @@ class Context {
   Compiler::Client* client;
   Stack* stack;
   Local* locals;
-  Cell<Value>* saved;
+  List<Value*>* saved;
   Event* predecessor;
   LogicalInstruction** logicalCode;
   const RegisterFile* regFile;
@@ -111,8 +93,8 @@ inline Aborter* getAborter(Context* c) {
 }
 
 template<class T>
-Cell<T>* cons(Context* c, T* value, Cell<T>* next) {
-  return new (c->zone) Cell<T>(next, value);
+List<T>* cons(Context* c, const T& value, List<T>* next) {
+  return new (c->zone) List<T>(value, next);
 }
 
 } // namespace compiler

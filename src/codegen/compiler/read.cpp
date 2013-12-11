@@ -66,8 +66,8 @@ bool MultiRead::intersect(SiteMask* mask, unsigned depth) {
   bool result = false;
   if (not visited) {
     visited = true;
-    for (Cell<Read>** cell = &reads; *cell;) {
-      Read* r = (*cell)->value;
+    for (List<Read*>** cell = &reads; *cell;) {
+      Read* r = (*cell)->item;
       bool valid = r->intersect(mask, depth + 1);
       if (valid) {
         result = true;
@@ -89,8 +89,8 @@ bool MultiRead::valid() {
   bool result = false;
   if (not visited) {
     visited = true;
-    for (Cell<Read>** cell = &reads; *cell;) {
-      Read* r = (*cell)->value;
+    for (List<Read*>** cell = &reads; *cell;) {
+      Read* r = (*cell)->item;
       if (r->valid()) {
         result = true;
         cell = &((*cell)->next);
@@ -104,7 +104,7 @@ bool MultiRead::valid() {
 }
 
 void MultiRead::append(Context* c, Read* r) {
-  Cell<Read>* cell = cons<Read>(c, r, 0);
+  List<Read*>* cell = cons<Read*>(c, r, 0);
   if (lastRead == 0) {
     reads = cell;
   } else {
@@ -114,7 +114,7 @@ void MultiRead::append(Context* c, Read* r) {
 
 //     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
 
-  lastTarget->value = r;
+  lastTarget->item = r;
 }
 
 Read* MultiRead::next(Context* c) {
@@ -122,7 +122,7 @@ Read* MultiRead::next(Context* c) {
 }
 
 void MultiRead::allocateTarget(Context* c) {
-  Cell<Read>* cell = cons<Read>(c, 0, 0);
+  List<Read*>* cell = cons<Read*>(c, 0, 0);
 
 //     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
 
@@ -137,7 +137,7 @@ void MultiRead::allocateTarget(Context* c) {
 Read* MultiRead::nextTarget() {
   //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
 
-  Read* r = firstTarget->value;
+  Read* r = firstTarget->item;
   firstTarget = firstTarget->next;
   return r;
 }

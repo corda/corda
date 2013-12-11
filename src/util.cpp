@@ -9,6 +9,7 @@
    details. */
 
 #include "avian/util.h"
+#include <avian/util/list.h>
 
 using namespace vm;
 
@@ -16,13 +17,6 @@ namespace {
 
 class TreeContext {
  public:
-  class Path {
-   public:
-    Path(object node, Path* next): node(node), next(next) { }
-
-    object node;
-    Path* next;
-  };
 
   class MyProtector: public Thread::Protector {
    public:
@@ -34,8 +28,8 @@ class TreeContext {
       v->visit(&(context->root));
       v->visit(&(context->node));
 
-      for (Path* p = context->ancestors; p; p = p->next) {
-        v->visit(&(p->node));
+      for (List<object>* p = context->ancestors; p; p = p->next) {
+        v->visit(&(p->item));
       }
     }
 
@@ -50,15 +44,15 @@ class TreeContext {
   Zone* zone;
   object root;
   object node;
-  Path* ancestors;
+  List<object>* ancestors;
   MyProtector protector;
   bool fresh;
 };
 
-TreeContext::Path*
-path(TreeContext* c, object node, TreeContext::Path* next)
+List<object>*
+path(TreeContext* c, object node, List<object>* next)
 {
-  return new(c->zone) TreeContext::Path(node, next);
+  return new(c->zone) List<object>(node, next);
 }
 
 inline object
@@ -212,99 +206,99 @@ treeAdd(Thread* t, TreeContext* c)
 
   // rebalance
   setTreeNodeRed(t, new_, true);
-  while (c->ancestors != 0 and treeNodeRed(t, c->ancestors->node)) {
-    if (c->ancestors->node
-        == treeNodeLeft(t, c->ancestors->next->node))
+  while (c->ancestors != 0 and treeNodeRed(t, c->ancestors->item)) {
+    if (c->ancestors->item
+        == treeNodeLeft(t, c->ancestors->next->item))
     {
       if (treeNodeRed
-          (t, treeNodeRight(t, c->ancestors->next->node)))
+          (t, treeNodeRight(t, c->ancestors->next->item)))
       {
-        setTreeNodeRed(t, c->ancestors->node, false);
+        setTreeNodeRed(t, c->ancestors->item, false);
 
         object n = cloneTreeNode
-          (t, treeNodeRight(t, c->ancestors->next->node));
+          (t, treeNodeRight(t, c->ancestors->next->item));
 
-        set(t, c->ancestors->next->node, TreeNodeRight, n);
+        set(t, c->ancestors->next->item, TreeNodeRight, n);
 
-        setTreeNodeRed(t, treeNodeRight(t, c->ancestors->next->node), false);
+        setTreeNodeRed(t, treeNodeRight(t, c->ancestors->next->item), false);
 
-        setTreeNodeRed(t, c->ancestors->next->node, true);
+        setTreeNodeRed(t, c->ancestors->next->item, true);
 
-        new_ = c->ancestors->next->node;
+        new_ = c->ancestors->next->item;
         c->ancestors = c->ancestors->next->next;
       } else {
-        if (new_ == treeNodeRight(t, c->ancestors->node)) {
-          new_ = c->ancestors->node;
+        if (new_ == treeNodeRight(t, c->ancestors->item)) {
+          new_ = c->ancestors->item;
           c->ancestors = c->ancestors->next;
 
           object n = leftRotate(t, new_);
 
-          if (new_ == treeNodeRight(t, c->ancestors->node)) {
-            set(t, c->ancestors->node, TreeNodeRight, n);
+          if (new_ == treeNodeRight(t, c->ancestors->item)) {
+            set(t, c->ancestors->item, TreeNodeRight, n);
           } else {
-            set(t, c->ancestors->node, TreeNodeLeft, n);
+            set(t, c->ancestors->item, TreeNodeLeft, n);
           }
           c->ancestors = path(c, n, c->ancestors);
         }
-        setTreeNodeRed(t, c->ancestors->node, false);
-        setTreeNodeRed(t, c->ancestors->next->node, true);
+        setTreeNodeRed(t, c->ancestors->item, false);
+        setTreeNodeRed(t, c->ancestors->next->item, true);
 
-        object n = rightRotate(t, c->ancestors->next->node);
+        object n = rightRotate(t, c->ancestors->next->item);
         if (c->ancestors->next->next == 0) {
           newRoot = n;
-        } else if (treeNodeRight(t, c->ancestors->next->next->node)
-                   == c->ancestors->next->node)
+        } else if (treeNodeRight(t, c->ancestors->next->next->item)
+                   == c->ancestors->next->item)
         {
-          set(t, c->ancestors->next->next->node, TreeNodeRight, n);
+          set(t, c->ancestors->next->next->item, TreeNodeRight, n);
         } else {
-          set(t, c->ancestors->next->next->node, TreeNodeLeft, n);
+          set(t, c->ancestors->next->next->item, TreeNodeLeft, n);
         }
         // done
       }
     } else { // this is just the reverse of the code above (right and
              // left swapped):
       if (treeNodeRed
-          (t, treeNodeLeft(t, c->ancestors->next->node)))
+          (t, treeNodeLeft(t, c->ancestors->next->item)))
       {
-        setTreeNodeRed(t, c->ancestors->node, false);
+        setTreeNodeRed(t, c->ancestors->item, false);
 
         object n = cloneTreeNode
-          (t, treeNodeLeft(t, c->ancestors->next->node));
+          (t, treeNodeLeft(t, c->ancestors->next->item));
 
-        set(t, c->ancestors->next->node, TreeNodeLeft, n);
+        set(t, c->ancestors->next->item, TreeNodeLeft, n);
 
-        setTreeNodeRed(t, treeNodeLeft(t, c->ancestors->next->node), false);
+        setTreeNodeRed(t, treeNodeLeft(t, c->ancestors->next->item), false);
 
-        setTreeNodeRed(t, c->ancestors->next->node, true);
+        setTreeNodeRed(t, c->ancestors->next->item, true);
 
-        new_ = c->ancestors->next->node;
+        new_ = c->ancestors->next->item;
         c->ancestors = c->ancestors->next->next;
       } else {
-        if (new_ == treeNodeLeft(t, c->ancestors->node)) {
-          new_ = c->ancestors->node;
+        if (new_ == treeNodeLeft(t, c->ancestors->item)) {
+          new_ = c->ancestors->item;
           c->ancestors = c->ancestors->next;
 
           object n = rightRotate(t, new_);
 
-          if (new_ == treeNodeLeft(t, c->ancestors->node)) {
-            set(t, c->ancestors->node, TreeNodeLeft, n);
+          if (new_ == treeNodeLeft(t, c->ancestors->item)) {
+            set(t, c->ancestors->item, TreeNodeLeft, n);
           } else {
-            set(t, c->ancestors->node, TreeNodeRight, n);
+            set(t, c->ancestors->item, TreeNodeRight, n);
           }
           c->ancestors = path(c, n, c->ancestors);
         }
-        setTreeNodeRed(t, c->ancestors->node, false);
-        setTreeNodeRed(t, c->ancestors->next->node, true);
+        setTreeNodeRed(t, c->ancestors->item, false);
+        setTreeNodeRed(t, c->ancestors->next->item, true);
 
-        object n = leftRotate(t, c->ancestors->next->node);
+        object n = leftRotate(t, c->ancestors->next->item);
         if (c->ancestors->next->next == 0) {
           newRoot = n;
-        } else if (treeNodeLeft(t, c->ancestors->next->next->node)
-                   == c->ancestors->next->node)
+        } else if (treeNodeLeft(t, c->ancestors->next->next->item)
+                   == c->ancestors->next->item)
         {
-          set(t, c->ancestors->next->next->node, TreeNodeLeft, n);
+          set(t, c->ancestors->next->next->item, TreeNodeLeft, n);
         } else {
-          set(t, c->ancestors->next->next->node, TreeNodeRight, n);
+          set(t, c->ancestors->next->next->item, TreeNodeRight, n);
         }
         // done
       }

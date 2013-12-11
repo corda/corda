@@ -17,6 +17,7 @@
 #include "avian/arch.h"
 
 #include <avian/util/runtime-array.h>
+#include <avian/util/list.h>
 
 using namespace vm;
 
@@ -30,16 +31,6 @@ const unsigned FrameFootprint = 4;
 
 class Thread: public vm::Thread {
  public:
-  class ReferenceFrame {
-   public:
-    ReferenceFrame(ReferenceFrame* next, unsigned sp):
-      next(next),
-      sp(sp)
-    { }
-
-    ReferenceFrame* next;
-    unsigned sp;
-  };
 
   Thread(Machine* m, object javaThread, vm::Thread* parent):
     vm::Thread(m, javaThread, parent),
@@ -47,14 +38,14 @@ class Thread: public vm::Thread {
     sp(0),
     frame(-1),
     code(0),
-    referenceFrame(0)
+    stackPointers(0)
   { }
 
   unsigned ip;
   unsigned sp;
   int frame;
   object code;
-  ReferenceFrame* referenceFrame;
+  List<unsigned>* stackPointers;
   uintptr_t stack[0];
 };
 
@@ -3079,9 +3070,8 @@ class MyProcessor: public Processor {
     Thread* t = static_cast<Thread*>(vmt);
 
     if (t->sp + capacity < stackSizeInWords(t) / 2) {
-      t->referenceFrame = new
-        (t->m->heap->allocate(sizeof(Thread::ReferenceFrame)))
-        Thread::ReferenceFrame(t->referenceFrame, t->sp);
+      t->stackPointers = new(t->m->heap)
+        List<unsigned>(t->sp, t->stackPointers);
     
       return true;
     } else {
@@ -3094,11 +3084,11 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    Thread::ReferenceFrame* f = t->referenceFrame;
-    t->referenceFrame = f->next;
-    t->sp = f->sp;
+    List<unsigned>* f = t->stackPointers;
+    t->stackPointers = f->next;
+    t->sp = f->item;
 
-    t->m->heap->free(f, sizeof(Thread::ReferenceFrame));
+    t->m->heap->free(f, sizeof(List<unsigned>));
   }
 
   virtual object

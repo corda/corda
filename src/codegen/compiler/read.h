@@ -88,10 +88,10 @@ class MultiRead: public Read {
 
   Read* nextTarget();
 
-  Cell<Read>* reads;
-  Cell<Read>* lastRead;
-  Cell<Read>* firstTarget;
-  Cell<Read>* lastTarget;
+  List<Read*>* reads;
+  List<Read*>* lastRead;
+  List<Read*>* firstTarget;
+  List<Read*>* lastTarget;
   bool visited;
 };
 

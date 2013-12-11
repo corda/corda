@@ -11,6 +11,7 @@
 #include <avian/vm/system/system.h>
 #include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
+#include <avian/util/list.h>
 
 #include "avian/zlib-custom.h"
 #include "avian/finder.h"
@@ -241,15 +242,14 @@ class JarIndex {
     Deflated = 8
   };
 
-  class Node {
-   public:
-    Node(uint32_t hash, const uint8_t* entry, Node* next):
-      hash(hash), entry(entry), next(next)
-    { }
+  class Entry {
+  public:
+    Entry(uint32_t hash, const uint8_t* entry):
+      hash(hash),
+      entry(entry) {}
 
     uint32_t hash;
     const uint8_t* entry;
-    Node* next;
   };
 
   JarIndex(System* s, Allocator* allocator, unsigned capacity):
@@ -257,14 +257,14 @@ class JarIndex {
     allocator(allocator),
     capacity(capacity),
     position(0),
-    nodes(static_cast<Node*>(allocator->allocate(sizeof(Node) * capacity)))
+    nodes(static_cast<List<Entry>*>(allocator->allocate(sizeof(List<Entry>) * capacity)))
   {
-    memset(table, 0, sizeof(Node*) * capacity);
+    memset(table, 0, sizeof(List<Entry>*) * capacity);
   }
 
   static JarIndex* make(System* s, Allocator* allocator, unsigned capacity) {
     return new
-      (allocator->allocate(sizeof(JarIndex) + (sizeof(Node*) * capacity)))
+      (allocator->allocate(sizeof(JarIndex) + (sizeof(List<Entry>*) * capacity)))
       JarIndex(s, allocator, capacity);
   }
   
@@ -279,46 +279,46 @@ class JarIndex {
     // Find end of central directory record
     while (p > start) {
       if (signature(p) == CentralDirectorySignature) {
-	p = region->start() + centralDirectoryOffset(p);
-	
-	while (p < end) {
-	  if (signature(p) == EntrySignature) {
-	    index = index->add(hash(fileName(p), fileNameLength(p)), p);
+        p = region->start() + centralDirectoryOffset(p);
 
-	    p = endOfEntry(p);
-	  } else {
-	    return index;
-	  }
-	}
+        while (p < end) {
+          if (signature(p) == EntrySignature) {
+            index = index->add(Entry(hash(fileName(p), fileNameLength(p)), p));
+
+            p = endOfEntry(p);
+          } else {
+            return index;
+          }
+        }
       } else {
-	p--;
+        p--;
       }
     }
 
     return index;
   }
 
-  JarIndex* add(uint32_t hash, const uint8_t* entry) {
+  JarIndex* add(const Entry& entry) {
     if (position < capacity) {
-      unsigned i = hash & (capacity - 1);
-      table[i] = new (nodes + (position++)) Node(hash, entry, table[i]);
+      unsigned i = entry.hash & (capacity - 1);
+      table[i] = new (nodes + (position++)) List<Entry>(entry, table[i]);
       return this;
     } else {
       JarIndex* index = make(s, allocator, capacity * 2);
       for (unsigned i = 0; i < capacity; ++i) {
-        index->add(nodes[i].hash, nodes[i].entry);
+        index->add(nodes[i].item);
       }
-      index->add(hash, entry);
+      index->add(entry);
       dispose();
       return index;
     }
   }
 
-  Node* findNode(const char* name) {
+  List<Entry>* findNode(const char* name) {
     unsigned length = strlen(name);
     unsigned i = hash(name) & (capacity - 1);
-    for (Node* n = table[i]; n; n = n->next) {
-      const uint8_t* p = n->entry;
+    for (List<Entry>* n = table[i]; n; n = n->next) {
+      const uint8_t* p = n->item.entry;
       if (equal(name, length, fileName(p), fileNameLength(p))) {
         return n;
       }
@@ -327,14 +327,14 @@ class JarIndex {
   }
 
   System::Region* find(const char* name, const uint8_t* start) {
-    Node* n = findNode(name);
+    List<Entry>* n = findNode(name);
     if (n) {
-      const uint8_t* p = n->entry;
+      const uint8_t* p = n->item.entry;
       switch (compressionMethod(p)) {
       case Stored: {
         return new (allocator->allocate(sizeof(PointerRegion)))
           PointerRegion(s, allocator, fileData(start + localHeaderOffset(p)),
-			compressedSize(p));
+          compressedSize(p));
       } break;
 
       case Deflated: {
@@ -345,7 +345,7 @@ class JarIndex {
         z_stream zStream; memset(&zStream, 0, sizeof(z_stream));
 
         zStream.next_in = const_cast<uint8_t*>(fileData(start +
-							localHeaderOffset(p)));
+              localHeaderOffset(p)));
         zStream.avail_in = compressedSize(p);
         zStream.next_out = region->data;
         zStream.avail_out = region->length();
@@ -372,9 +372,9 @@ class JarIndex {
 
   System::FileType stat(const char* name, unsigned* length, bool tryDirectory)
   {
-    Node* node = findNode(name);
+    List<Entry>* node = findNode(name);
     if (node) {
-      *length = uncompressedSize(node->entry);
+      *length = uncompressedSize(node->item.entry);
       return System::TypeFile;
     } else if (tryDirectory) {
       *length = 0;
@@ -399,8 +399,8 @@ class JarIndex {
   }
 
   void dispose() {
-    allocator->free(nodes, sizeof(Node) * capacity);
-    allocator->free(this, sizeof(*this) + (sizeof(Node*) * capacity));
+    allocator->free(nodes, sizeof(List<Entry>) * capacity);
+    allocator->free(this, sizeof(*this) + (sizeof(List<Entry>*) * capacity));
   }
 
   System* s;
@@ -408,8 +408,8 @@ class JarIndex {
   unsigned capacity;
   unsigned position;
   
-  Node* nodes;
-  Node* table[0];
+  List<Entry>* nodes;
+  List<Entry>* table[0];
 };
 
 class JarElement: public Element {
@@ -422,9 +422,9 @@ class JarElement: public Element {
 
     virtual const char* next(unsigned* size) {
       if (position < index->position) {
-        JarIndex::Node* n = index->nodes + (position++);
-        *size = fileNameLength(n->entry);
-        return reinterpret_cast<const char*>(fileName(n->entry));
+        List<JarIndex::Entry>* n = index->nodes + (position++);
+        *size = fileNameLength(n->item.entry);
+        return reinterpret_cast<const char*>(fileName(n->item.entry));
       } else {
         return 0;
       }
