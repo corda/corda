@@ -73,6 +73,9 @@ public final class Unsafe {
   public native boolean compareAndSwapInt(Object o, long offset, int old,
                                           int new_);
 
+  public native boolean compareAndSwapLong(Object o, long offset,
+                                                 long old, long new_);
+
   public native boolean compareAndSwapObject(Object o, long offset, Object old,
                                              Object new_);
 
