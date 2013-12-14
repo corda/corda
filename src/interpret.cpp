@@ -765,6 +765,10 @@ pushField(Thread* t, object target, object field)
   }
 }
 
+void safePoint(Thread* t) {
+  ENTER(t, Thread::IdleState);
+}
+
 object
 interpret3(Thread* t, const int base)
 {
@@ -1489,12 +1493,12 @@ interpret3(Thread* t, const int base)
   case goto_: {
     int16_t offset = codeReadInt16(t, code, ip);
     ip = (ip - 3) + offset;
-  } goto loop;
+  } goto back_branch;
     
   case goto_w: {
     int32_t offset = codeReadInt32(t, code, ip);
     ip = (ip - 5) + offset;
-  } goto loop;
+  } goto back_branch;
 
   case i2b: {
     pushInt(t, static_cast<int8_t>(popInt(t)));
@@ -1626,7 +1630,7 @@ interpret3(Thread* t, const int base)
     if (a == b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_acmpne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1637,7 +1641,7 @@ interpret3(Thread* t, const int base)
     if (a != b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmpeq: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1648,7 +1652,7 @@ interpret3(Thread* t, const int base)
     if (a == b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmpne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1659,7 +1663,7 @@ interpret3(Thread* t, const int base)
     if (a != b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmpgt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1670,7 +1674,7 @@ interpret3(Thread* t, const int base)
     if (a > b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmpge: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1681,7 +1685,7 @@ interpret3(Thread* t, const int base)
     if (a >= b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmplt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1692,7 +1696,7 @@ interpret3(Thread* t, const int base)
     if (a < b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case if_icmple: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1703,7 +1707,7 @@ interpret3(Thread* t, const int base)
     if (a <= b) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifeq: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1711,7 +1715,7 @@ interpret3(Thread* t, const int base)
     if (popInt(t) == 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1719,7 +1723,7 @@ interpret3(Thread* t, const int base)
     if (popInt(t)) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifgt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1727,7 +1731,7 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) > 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifge: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1735,7 +1739,7 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) >= 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case iflt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1743,7 +1747,7 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) < 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifle: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1751,7 +1755,7 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) <= 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifnonnull: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1759,7 +1763,7 @@ interpret3(Thread* t, const int base)
     if (popObject(t)) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case ifnull: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1767,7 +1771,7 @@ interpret3(Thread* t, const int base)
     if (popObject(t) == 0) {
       ip = (ip - 3) + offset;
     }
-  } goto loop;
+  } goto back_branch;
 
   case iinc: {
     uint8_t index = codeBody(t, code, ip++);
@@ -2710,6 +2714,10 @@ interpret3(Thread* t, const int base)
 
   default: abort(t);
   }
+
+ back_branch:
+  safePoint(t);
+  goto loop;
 
  invoke: {
     if (methodFlags(t, code) & ACC_NATIVE) {

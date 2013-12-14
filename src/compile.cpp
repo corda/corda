@@ -970,7 +970,7 @@ enum Thunk {
 #undef THUNK
 };
 
-const unsigned ThunkCount = gcIfNecessaryThunk + 1;
+const unsigned ThunkCount = idleIfNecessaryThunk + 1;
 
 intptr_t
 getThunk(MyThread* t, Thunk thunk);
@@ -3298,6 +3298,11 @@ gcIfNecessary(MyThread* t)
   }
 }
 
+void idleIfNecessary(MyThread* t)
+{
+  ENTER(t, Thread::IdleState);
+}
+
 unsigned
 resultSize(MyThread* t, unsigned code)
 {
@@ -3411,6 +3416,16 @@ useLongJump(MyThread* t, uintptr_t target)
 
   return (target > end && (target - start) > reach)
     or (target < start && (end - target) > reach);
+}
+
+void compileSafePoint(MyThread* t, Compiler* c, Frame* frame) {
+  c->call
+    (c->constant(getThunk(t, idleIfNecessaryThunk), Compiler::AddressType),
+     0,
+     frame->trace(0, 0),
+     0,
+     Compiler::VoidType,
+     1, c->register_(t->arch->thread()));
 }
 
 Compiler::Operand*
@@ -4951,6 +4966,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint32_t newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
+
       c->jmp(frame->machineIp(newIp));
       ip = newIp;
     } break;
@@ -4959,6 +4978,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint32_t offset = codeReadInt32(t, code, ip);
       uint32_t newIp = (ip - 5) + offset;
       assert(t, newIp < codeLength(t, code));
+
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
 
       c->jmp(frame->machineIp(newIp));
       ip = newIp;
@@ -5048,6 +5071,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
+
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
         
       Compiler::Operand* a = frame->popObject();
       Compiler::Operand* b = frame->popObject();
@@ -5069,6 +5096,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
+
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
         
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
@@ -5110,6 +5141,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       Compiler::Operand* target = frame->machineIp(newIp);
 
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
+
       Compiler::Operand* a = c->constant(0, Compiler::IntegerType);
       Compiler::Operand* b = frame->popInt();
 
@@ -5142,6 +5177,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
+
+      if(newIp <= ip) {
+        compileSafePoint(t, c, frame);
+      }
 
       Compiler::Operand* a = c->constant(0, Compiler::ObjectType);
       Compiler::Operand* b = frame->popObject();
