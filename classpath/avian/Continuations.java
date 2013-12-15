@@ -205,11 +205,11 @@ public class Continuations {
     }
   }
 
-  public static <Result, Argument> Result shift
-    (final FunctionReceiver<Result, Argument> receiver)
+  public static <T> T shift
+    (final FunctionReceiver<T> receiver)
     throws Exception
   {
-    return (Result) callWithCurrentContinuation(new CallbackReceiver() {
+    return (T) callWithCurrentContinuation(new CallbackReceiver() {
         public Object receive(final Callback continuation) {
           final Reset reset = latestReset.get();
           final Callback resetContinuation = reset.continuation;

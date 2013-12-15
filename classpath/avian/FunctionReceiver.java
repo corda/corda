@@ -10,6 +10,6 @@
 
 package avian;
 
-public interface FunctionReceiver<Argument, Result> {
-  public Result receive(Function<Argument, Result> function) throws Exception;
+public interface FunctionReceiver<T> {
+  public T receive(Function<T> function) throws Exception;
 }

@@ -10,6 +10,6 @@
 
 package avian;
 
-public interface Function<Argument, Result> {
-  public Result call(Argument argument) throws Exception;
+public interface Function<T> {
+  public T call(T argument) throws Exception;
 }
