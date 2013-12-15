@@ -3550,7 +3550,7 @@ boot(Thread* t, uintptr_t*)
 
   const char* port = findProperty(t, "avian.trace.port");
   if (port) {
-    object host = makeString(t, "0.0.0.0");
+    object host = makeString(t, "localhost");
     PROTECT(t, host);
 
     object method = resolveMethod

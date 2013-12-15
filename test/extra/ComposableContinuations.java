@@ -68,8 +68,6 @@ public class ComposableContinuations {
   }
   
   private static <Car> boolean equal(Cell<Car> a, Cell<Car> b) {
-    System.out.println(a + " vs " + b);
-
     while (a != null) {
       if (b == null || (! equal(a.car, b.car))) {
         return false;

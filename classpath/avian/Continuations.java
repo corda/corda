@@ -195,8 +195,10 @@ public class Continuations {
           }
         });
 
-      if (reset.continuation != null) {
-        reset.continuation.handleResult(result);
+      Cell<Callback> shift = reset.shifts;
+      if (shift != null) {
+        reset.shifts = shift.next;
+        shift.value.handleResult(result);
       }
 
       return result;
@@ -212,42 +214,41 @@ public class Continuations {
     return (T) callWithCurrentContinuation(new CallbackReceiver() {
         public Object receive(final Callback continuation) {
           final Reset reset = latestReset.get();
-          final Callback resetContinuation = reset.continuation;
-          reset.continuation = new Callback() {
+          reset.shifts = new Cell(new Callback() {
               public void handleResult(Object ignored) {
                 try {
-                  resetContinuation.handleResult
+                  reset.continuation.handleResult
                     (receiver.receive
                      (new Function() {
                          public Object call(final Object argument)
-                           throws Exception {
-                           Object result = callWithCurrentContinuation
+                           throws Exception
+                         {
+                           return callWithCurrentContinuation
                              (new CallbackReceiver() {
                                  public Object receive
                                    (Callback shiftContinuation)
                                    throws Exception
                                  {
-                                   reset.continuation = shiftContinuation;
+                                   reset.shifts = new Cell
+                                     (shiftContinuation, reset.shifts);
+
                                    continuation.handleResult(argument);
                                    throw new AssertionError();
                                  }
                                });
-
-                           reset.continuation = null;
-                           return result;
                          }
                        }));
                 } catch (Exception e) {
-                  resetContinuation.handleException(e);
+                  reset.continuation.handleException(e);
                 }
               }
 
               public void handleException(Throwable exception) {
                 throw new AssertionError();
               }
-            };
+            }, reset.shifts);
 
-          resetContinuation.handleResult(null);
+          reset.continuation.handleResult(null);
           throw new AssertionError();
         }
       });
@@ -311,8 +312,19 @@ public class Continuations {
   private static class Reset {
     public Callback continuation;
     public final Reset next;
+    public Cell<Callback> shifts;
 
     public Reset(Reset next) {
+      this.next = next;
+    }
+  }
+
+  private static class Cell<T> {
+    public final T value;
+    public final Cell<T> next;
+
+    public Cell(T value, Cell<T> next) {
+      this.value = value;
       this.next = next;
     }
   }
