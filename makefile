@@ -1397,6 +1397,7 @@ unittest-depends = \
 
 ifeq ($(continuations),true)
 	continuation-tests = \
+		extra.ComposableContinuations \
 		extra.Continuations \
 		extra.Coroutines \
 		extra.DynamicWind

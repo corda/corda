@@ -120,6 +120,8 @@ import java.util.concurrent.Callable;
 public class Continuations {
   private Continuations() { }
 
+  private static final ThreadLocal<Reset> latestReset = new ThreadLocal();
+
   /**
    * Captures the current continuation, passing a reference to the
    * specified receiver.
@@ -181,6 +183,76 @@ public class Continuations {
     }
   }
 
+  public static <T> T reset(final Callable<T> thunk) throws Exception {
+    final Reset reset = new Reset(latestReset.get());
+    latestReset.set(reset);
+    try {
+      T result = callWithCurrentContinuation
+        (new CallbackReceiver<T>() {
+          public T receive(Callback<T> continuation) throws Exception {
+            reset.continuation = continuation;
+            return thunk.call();
+          }
+        });
+
+      if (reset.continuation != null) {
+        reset.continuation.handleResult(result);
+      }
+
+      return result;
+    } finally {
+      latestReset.set(reset.next);
+    }
+  }
+
+  public static <Result, Argument> Result shift
+    (final FunctionReceiver<Result, Argument> receiver)
+    throws Exception
+  {
+    return (Result) callWithCurrentContinuation(new CallbackReceiver() {
+        public Object receive(final Callback continuation) {
+          final Reset reset = latestReset.get();
+          final Callback resetContinuation = reset.continuation;
+          reset.continuation = new Callback() {
+              public void handleResult(Object ignored) {
+                try {
+                  resetContinuation.handleResult
+                    (receiver.receive
+                     (new Function() {
+                         public Object call(final Object argument)
+                           throws Exception {
+                           Object result = callWithCurrentContinuation
+                             (new CallbackReceiver() {
+                                 public Object receive
+                                   (Callback shiftContinuation)
+                                   throws Exception
+                                 {
+                                   reset.continuation = shiftContinuation;
+                                   continuation.handleResult(argument);
+                                   throw new AssertionError();
+                                 }
+                               });
+
+                           reset.continuation = null;
+                           return result;
+                         }
+                       }));
+                } catch (Exception e) {
+                  resetContinuation.handleException(e);
+                }
+              }
+
+              public void handleException(Throwable exception) {
+                throw new AssertionError();
+              }
+            };
+
+          resetContinuation.handleResult(null);
+          throw new AssertionError();
+        }
+      });
+  }
+
   private static native UnwindResult dynamicWind2(Runnable before,
                                                   Callable thunk,
                                                   Runnable after)
@@ -233,6 +305,15 @@ public class Continuations {
       this.continuation = continuation;
       this.result = result;
       this.exception = exception;
+    }
+  }
+
+  private static class Reset {
+    public Callback continuation;
+    public final Reset next;
+
+    public Reset(Reset next) {
+      this.next = next;
     }
   }
 }
