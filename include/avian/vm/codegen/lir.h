@@ -108,6 +108,10 @@ inline bool isFloatBranch(lir::TernaryOperation op) {
   return op > JumpIfNotEqual;
 }
 
+inline bool isGeneralBranch(lir::TernaryOperation op) {
+  return isBranch(op) && !isFloatBranch(op);
+}
+
 class Operand { };
 
 class Constant: public Operand {

@@ -19,6 +19,7 @@
 #include <avian/vm/codegen/architecture.h>
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/targets.h>
+#include <avian/vm/codegen/lir.h>
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
@@ -40,7 +41,7 @@ vmJumpAndInvoke(void* thread, void* function, void* stack,
                 unsigned argumentFootprint, uintptr_t* arguments,
                 unsigned frameSize);
 
-using avian::codegen::Compiler;
+using namespace avian::codegen;
 
 namespace {
 
@@ -3833,27 +3834,27 @@ integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   switch (instruction) {
   case ifeq:
-    c->jumpIfEqual(size, a, b, target);
+    c->condJump(lir::JumpIfEqual, size, a, b, target);
     break;
 
   case ifne:
-    c->jumpIfNotEqual(size, a, b, target);
+    c->condJump(lir::JumpIfNotEqual, size, a, b, target);
     break;
 
   case ifgt:
-    c->jumpIfGreater(size, a, b, target);
+    c->condJump(lir::JumpIfGreater, size, a, b, target);
     break;
 
   case ifge:
-    c->jumpIfGreaterOrEqual(size, a, b, target);
+    c->condJump(lir::JumpIfGreaterOrEqual, size, a, b, target);
     break;
 
   case iflt:
-    c->jumpIfLess(size, a, b, target);
+    c->condJump(lir::JumpIfLess, size, a, b, target);
     break;
 
   case ifle:
-    c->jumpIfLessOrEqual(size, a, b, target);
+    c->condJump(lir::JumpIfLessOrEqual, size, a, b, target);
     break;
 
   default:
@@ -3884,42 +3885,42 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   switch (instruction) {
   case ifeq:
-    c->jumpIfFloatEqual(size, a, b, target);
+    c->condJump(lir::JumpIfFloatEqual, size, a, b, target);
     break;
 
   case ifne:
-    c->jumpIfFloatNotEqual(size, a, b, target);
+    c->condJump(lir::JumpIfFloatNotEqual, size, a, b, target);
     break;
 
   case ifgt:
     if (lessIfUnordered) {
-      c->jumpIfFloatGreater(size, a, b, target);
+      c->condJump(lir::JumpIfFloatGreater, size, a, b, target);
     } else {
-      c->jumpIfFloatGreaterOrUnordered(size, a, b, target);
+      c->condJump(lir::JumpIfFloatGreaterOrUnordered, size, a, b, target);
     }
     break;
 
   case ifge:
     if (lessIfUnordered) {
-      c->jumpIfFloatGreaterOrEqual(size, a, b, target);
+      c->condJump(lir::JumpIfFloatGreaterOrEqual, size, a, b, target);
     } else {
-      c->jumpIfFloatGreaterOrEqualOrUnordered(size, a, b, target);
+      c->condJump(lir::JumpIfFloatGreaterOrEqualOrUnordered, size, a, b, target);
     }
     break;
 
   case iflt:
     if (lessIfUnordered) {
-      c->jumpIfFloatLessOrUnordered(size, a, b, target);
+      c->condJump(lir::JumpIfFloatLessOrUnordered, size, a, b, target);
     } else {
-      c->jumpIfFloatLess(size, a, b, target);
+      c->condJump(lir::JumpIfFloatLess, size, a, b, target);
     }
     break;
 
   case ifle:
     if (lessIfUnordered) {
-      c->jumpIfFloatLessOrEqualOrUnordered(size, a, b, target);
+      c->condJump(lir::JumpIfFloatLessOrEqualOrUnordered, size, a, b, target);
     } else {
-      c->jumpIfFloatLessOrEqual(size, a, b, target);
+      c->condJump(lir::JumpIfFloatLessOrEqual, size, a, b, target);
     }
     break;
 
@@ -5081,9 +5082,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == if_acmpeq) {
-        c->jumpIfEqual(TargetBytesPerWord, a, b, target);
+        c->condJump(lir::JumpIfEqual, TargetBytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(TargetBytesPerWord, a, b, target);
+        c->condJump(lir::JumpIfNotEqual, TargetBytesPerWord, a, b, target);
       }
     } goto branch;
 
@@ -5107,22 +5108,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       switch (instruction) {
       case if_icmpeq:
-        c->jumpIfEqual(4, a, b, target);
+        c->condJump(lir::JumpIfEqual, 4, a, b, target);
         break;
       case if_icmpne:
-        c->jumpIfNotEqual(4, a, b, target);
+        c->condJump(lir::JumpIfNotEqual, 4, a, b, target);
         break;
       case if_icmpgt:
-        c->jumpIfGreater(4, a, b, target);
+        c->condJump(lir::JumpIfGreater, 4, a, b, target);
         break;
       case if_icmpge:
-        c->jumpIfGreaterOrEqual(4, a, b, target);
+        c->condJump(lir::JumpIfGreaterOrEqual, 4, a, b, target);
         break;
       case if_icmplt:
-        c->jumpIfLess(4, a, b, target);
+        c->condJump(lir::JumpIfLess, 4, a, b, target);
         break;
       case if_icmple:
-        c->jumpIfLessOrEqual(4, a, b, target);
+        c->condJump(lir::JumpIfLessOrEqual, 4, a, b, target);
         break;
       default:
         abort(t);
@@ -5150,22 +5151,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       switch (instruction) {
       case ifeq:
-        c->jumpIfEqual(4, a, b, target);
+        c->condJump(lir::JumpIfEqual, 4, a, b, target);
         break;
       case ifne:
-        c->jumpIfNotEqual(4, a, b, target);
+        c->condJump(lir::JumpIfNotEqual, 4, a, b, target);
         break;
       case ifgt:
-        c->jumpIfGreater(4, a, b, target);
+        c->condJump(lir::JumpIfGreater, 4, a, b, target);
         break;
       case ifge:
-        c->jumpIfGreaterOrEqual(4, a, b, target);
+        c->condJump(lir::JumpIfGreaterOrEqual, 4, a, b, target);
         break;
       case iflt:
-        c->jumpIfLess(4, a, b, target);
+        c->condJump(lir::JumpIfLess, 4, a, b, target);
         break;
       case ifle:
-        c->jumpIfLessOrEqual(4, a, b, target);
+        c->condJump(lir::JumpIfLessOrEqual, 4, a, b, target);
         break;
       default:
         abort(t);
@@ -5187,9 +5188,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* target = frame->machineIp(newIp);
 
       if (instruction == ifnull) {
-        c->jumpIfEqual(TargetBytesPerWord, a, b, target);
+        c->condJump(lir::JumpIfEqual, TargetBytesPerWord, a, b, target);
       } else {
-        c->jumpIfNotEqual(TargetBytesPerWord, a, b, target);
+        c->condJump(lir::JumpIfNotEqual, TargetBytesPerWord, a, b, target);
       }
     } goto branch;
 
@@ -6303,7 +6304,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       Compiler::Operand* key = frame->popInt();
       
-      c->jumpIfLess(4, c->constant(bottom, Compiler::IntegerType), key,
+      c->condJump(lir::JumpIfLess, 4, c->constant(bottom, Compiler::IntegerType), key,
                     frame->machineIp(defaultIp));
 
       c->save(1, key);
@@ -6390,7 +6391,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     c->restoreState(s->state);
 
-    c->jumpIfGreater(4, c->constant(s->top, Compiler::IntegerType), s->key,
+    c->condJump(lir::JumpIfGreater, 4, c->constant(s->top, Compiler::IntegerType), s->key,
                      frame->machineIp(s->defaultIp));
   
     c->save(1, s->key);
