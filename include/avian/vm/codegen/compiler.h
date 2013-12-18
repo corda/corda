@@ -129,22 +129,15 @@ class Compiler {
 
   virtual void jmp(Operand* address) = 0;
   virtual void exit(Operand* address) = 0;
-  virtual Operand* add(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* sub(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* mul(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* div(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* rem(unsigned size, Operand* a, Operand* b) = 0;
+
+  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) = 0;
+
   virtual Operand* fadd(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* fsub(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* fmul(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* fdiv(unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* frem(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* shl(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* shr(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* ushr(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* and_(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* or_(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* xor_(unsigned size, Operand* a, Operand* b) = 0;
+
   virtual Operand* neg(unsigned size, Operand* a) = 0;
   virtual Operand* fneg(unsigned size, Operand* a) = 0;
   virtual Operand* abs(unsigned size, Operand* a) = 0;

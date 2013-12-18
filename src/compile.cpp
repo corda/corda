@@ -1408,8 +1408,8 @@ class Frame {
       object pointer = makePointer(t, p);
       bc->constants = makeTriple(t, o, pointer, bc->constants);
 
-      return c->add
-        (TargetBytesPerWord, c->memory
+      return c->binaryOp(lir::Add,
+        TargetBytesPerWord, c->memory
           (c->register_(t->arch->thread()), Compiler::AddressType,
            TARGET_THREAD_HEAPIMAGE), c->promiseConstant
          (p, Compiler::AddressType));
@@ -1638,8 +1638,8 @@ class Frame {
 
   Value absoluteAddressOperand(avian::codegen::Promise* p) {
     return context->bootContext
-      ? c->add
-        (TargetBytesPerWord, c->memory
+      ? c->binaryOp(lir::Add,
+        TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           TARGET_THREAD_CODEIMAGE), c->promiseConstant
          (new(&context->zone)
@@ -4380,10 +4380,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
            0,
            Compiler::VoidType,
            4, c->register_(t->arch->thread()), array,
-           c->add
-           (4, c->constant(TargetArrayBody, Compiler::IntegerType),
-            c->shl
-            (4, c->constant(log(TargetBytesPerWord), Compiler::IntegerType),
+           c->binaryOp(lir::Add,
+            4, c->constant(TargetArrayBody, Compiler::IntegerType),
+            c->binaryOp(lir::ShiftLeft,
+              4, c->constant(log(TargetBytesPerWord), Compiler::IntegerType),
              index)),
            value);
       } break;
@@ -5018,13 +5018,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case iadd: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->add(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Add, 4, a, b));
     } break;
       
     case iand: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->and_(4, a, b));
+      frame->pushInt(c->binaryOp(lir::And, 4, a, b));
     } break;
 
     case iconst_m1:
@@ -5064,7 +5064,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->div(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Divide, 4, a, b));
     } break;
 
     case if_acmpeq:
@@ -5200,8 +5200,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       storeLocal
         (context, 1,
-         c->add
-         (4, c->constant(count, Compiler::IntegerType),
+         c->binaryOp(lir::Add,
+          4, c->constant(count, Compiler::IntegerType),
           loadLocal(context, 1, index)),
          index);
     } break;
@@ -5234,7 +5234,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case imul: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->mul(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Multiply, 4, a, b));
     } break;
 
     case ineg: {
@@ -5422,8 +5422,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
             Compiler::Operand* result = c->stackCall
               (c->memory
-               (c->and_
-                (TargetBytesPerWord, c->constant
+               (c->binaryOp(lir::And,
+                TargetBytesPerWord, c->constant
                  (TargetPointerMask, Compiler::IntegerType),
                  c->memory(instance, Compiler::ObjectType, 0, 0, 1)),
                 Compiler::ObjectType, offset, 0, 1),
@@ -5470,7 +5470,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ior: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->or_(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Or, 4, a, b));
     } break;
 
     case irem: {
@@ -5482,7 +5482,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->rem(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Remainder, 4, a, b));
     } break;
 
     case ireturn:
@@ -5494,13 +5494,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ishl: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->shl(4, a, b));
+      frame->pushInt(c->binaryOp(lir::ShiftLeft, 4, a, b));
     } break;
 
     case ishr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->shr(4, a, b));
+      frame->pushInt(c->binaryOp(lir::ShiftRight, 4, a, b));
     } break;
 
     case istore:
@@ -5531,19 +5531,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case isub: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->sub(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Subtract, 4, a, b));
     } break;
 
     case iushr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->ushr(4, a, b));
+      frame->pushInt(c->binaryOp(lir::UnsignedShiftRight, 4, a, b));
     } break;
 
     case ixor: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->xor_(4, a, b));
+      frame->pushInt(c->binaryOp(lir::Xor, 4, a, b));
     } break;
 
     case jsr:
@@ -5587,13 +5587,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ladd: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->add(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Add, 8, a, b));
     } break;
 
     case land: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->and_(8, a, b));
+      frame->pushLong(c->binaryOp(lir::And, 8, a, b));
     } break;
 
     case lcmp: {
@@ -5705,7 +5705,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->div(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Divide, 8, a, b));
     } break;
 
     case lload:
@@ -5736,7 +5736,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lmul: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->mul(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Multiply, 8, a, b));
     } break;
 
     case lneg:
@@ -5786,8 +5786,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
            c->constant(pairCount, Compiler::IntegerType), default_);
 
         c->jmp
-          (context->bootContext ? c->add
-           (TargetBytesPerWord, c->memory
+          (context->bootContext ? c->binaryOp(lir::Add,
+            TargetBytesPerWord, c->memory
             (c->register_(t->arch->thread()), Compiler::AddressType,
              TARGET_THREAD_CODEIMAGE), address)
            : address);
@@ -5806,7 +5806,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lor: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->or_(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Or, 8, a, b));
     } break;
 
     case lrem: {
@@ -5818,7 +5818,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->rem(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Remainder, 8, a, b));
     } break;
 
     case lreturn:
@@ -5830,13 +5830,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lshl: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->shl(8, a, b));
+      frame->pushLong(c->binaryOp(lir::ShiftLeft, 8, a, b));
     } break;
 
     case lshr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->shr(8, a, b));
+      frame->pushLong(c->binaryOp(lir::ShiftRight, 8, a, b));
     } break;
 
     case lstore:
@@ -5867,19 +5867,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lsub: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->sub(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Subtract, 8, a, b));
     } break;
 
     case lushr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->ushr(8, a, b));
+      frame->pushLong(c->binaryOp(lir::UnsignedShiftRight, 8, a, b));
     } break;
 
     case lxor: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->xor_(8, a, b));
+      frame->pushLong(c->binaryOp(lir::Xor, 8, a, b));
     } break;
 
     case monitorenter: {
@@ -6332,8 +6332,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         storeLocal
           (context, 1,
-           c->add
-           (4, c->constant(count, Compiler::IntegerType), 
+           c->binaryOp(lir::Add,
+            4, c->constant(count, Compiler::IntegerType), 
             loadLocal(context, 1, index)),
            index);
       } break;
@@ -6409,7 +6409,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     Compiler::Operand* normalizedKey
       = (s->bottom
-         ? c->sub(4, c->constant(s->bottom, Compiler::IntegerType), s->key)
+         ? c->binaryOp(lir::Subtract, 4, c->constant(s->bottom, Compiler::IntegerType), s->key)
          : s->key);
 
     Compiler::Operand* entry = c->memory
@@ -6419,8 +6419,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     c->jmp
       (c->load
        (TargetBytesPerWord, TargetBytesPerWord, context->bootContext
-        ? c->add
-        (TargetBytesPerWord, c->memory
+        ? c->binaryOp(lir::Add,
+         TargetBytesPerWord, c->memory
          (c->register_(t->arch->thread()), Compiler::AddressType,
           TARGET_THREAD_CODEIMAGE), entry)
         : entry,

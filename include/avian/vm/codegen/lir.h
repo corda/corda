@@ -112,6 +112,14 @@ inline bool isGeneralBranch(lir::TernaryOperation op) {
   return isBranch(op) && !isFloatBranch(op);
 }
 
+inline bool isGeneralBinaryOp(lir::TernaryOperation op) {
+  return op < FloatAdd;
+}
+
+inline bool isFloatBinaryOp(lir::TernaryOperation op) {
+  return op > FloatAdd && op <= FloatMin;
+}
+
 class Operand { };
 
 class Constant: public Operand {

@@ -2611,47 +2611,14 @@ class MyCompiler: public Compiler {
     appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
   }
 
-  virtual Operand* add(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Add, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
+  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) {
+    assert(&c,
+      (isGeneralBinaryOp(type) and isGeneralValue(a) and isGeneralValue(b))
+      or (isFloatBinaryOp(type) and isFloatValue(a) and isFloatValue(b)));
 
-  virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Subtract, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Multiply, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Divide, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Remainder, size, static_cast<Value*>(a),
+    Value* result = value(&c, static_cast<Value*>(a)->type);
+    
+    appendCombine(&c, type, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
@@ -2700,55 +2667,6 @@ class MyCompiler: public Compiler {
            and static_cast<Value*>(b)->type == lir::ValueFloat);
     Value* result = value(&c, lir::ValueFloat);
     appendCombine(&c, lir::FloatRemainder, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::ShiftLeft, TargetBytesPerWord, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::ShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine
-      (&c, lir::UnsignedShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
-       size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::And, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Or, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Xor, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
