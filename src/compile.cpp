@@ -3954,17 +3954,17 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "sqrt")
         and MATCH(methodSpec(t, target), "(D)D"))
     {
-      frame->pushLong(c->fsqrt(8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::FloatSquareRoot, 8, frame->popLong()));
       return true;
     } else if (MATCH(methodName(t, target), "abs")) {
       if (MATCH(methodSpec(t, target), "(I)I")) {
-        frame->pushInt(c->abs(4, frame->popInt()));
+        frame->pushInt(c->unaryOp(lir::Absolute, 4, frame->popInt()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(J)J")) {
-        frame->pushLong(c->abs(8, frame->popLong()));
+        frame->pushLong(c->unaryOp(lir::Absolute, 8, frame->popLong()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(F)F")) {
-        frame->pushInt(c->fabs(4, frame->popInt()));
+        frame->pushInt(c->unaryOp(lir::FloatAbsolute, 4, frame->popInt()));
         return true;
       }
     }
@@ -4649,7 +4649,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case dneg: {
-      frame->pushLong(c->fneg(8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::FloatNegate, 8, frame->popLong()));
     } break;
 
     case vm::drem: {
@@ -4766,7 +4766,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case fneg: {
-      frame->pushInt(c->fneg(4, frame->popInt()));
+      frame->pushInt(c->unaryOp(lir::FloatNegate, 4, frame->popInt()));
     } break;
 
     case vm::frem: {
@@ -5238,7 +5238,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case ineg: {
-      frame->pushInt(c->neg(4, frame->popInt()));
+      frame->pushInt(c->unaryOp(lir::Negate, 4, frame->popInt()));
     } break;
 
     case instanceof: {
@@ -5740,7 +5740,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lneg:
-      frame->pushLong(c->neg(8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::Negate, 8, frame->popLong()));
       break;
 
     case lookupswitch: {

@@ -131,12 +131,8 @@ class Compiler {
   virtual void exit(Operand* address) = 0;
 
   virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) = 0;
+  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) = 0;
 
-  virtual Operand* neg(unsigned size, Operand* a) = 0;
-  virtual Operand* fneg(unsigned size, Operand* a) = 0;
-  virtual Operand* abs(unsigned size, Operand* a) = 0;
-  virtual Operand* fabs(unsigned size, Operand* a) = 0;
-  virtual Operand* fsqrt(unsigned size, Operand* a) = 0;
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;

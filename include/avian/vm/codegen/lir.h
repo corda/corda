@@ -99,7 +99,6 @@ const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
 
-
 inline bool isBranch(lir::TernaryOperation op) {
   return op > FloatMin;
 }
@@ -118,6 +117,14 @@ inline bool isGeneralBinaryOp(lir::TernaryOperation op) {
 
 inline bool isFloatBinaryOp(lir::TernaryOperation op) {
   return op >= FloatAdd && op <= FloatMin;
+}
+
+inline bool isGeneralUnaryOp(lir::BinaryOperation op) {
+  return op == Negate || op == Absolute;
+}
+
+inline bool isFloatUnaryOp(lir::BinaryOperation op) {
+  return op == FloatNegate || op == FloatSquareRoot || op == FloatAbsolute;
 }
 
 class Operand { };

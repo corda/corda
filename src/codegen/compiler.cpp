@@ -2623,40 +2623,11 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* neg(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate(&c, lir::Negate, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fneg(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate(&c, lir::FloatNegate, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* abs(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate(&c, lir::Absolute, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fabs(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::FloatAbsolute, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fsqrt(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::FloatSquareRoot, size, static_cast<Value*>(a), size, result);
+  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) {
+    assert(&c, (isGeneralUnaryOp(type) and isGeneralValue(a))or(
+                   isFloatUnaryOp(type) and isFloatValue(a)));
+    Value* result = value(&c, static_cast<Value*>(a)->type);
+    appendTranslate(&c, type, size, static_cast<Value*>(a), size, result);
     return result;
   }
   
