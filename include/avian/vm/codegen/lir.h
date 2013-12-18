@@ -117,7 +117,7 @@ inline bool isGeneralBinaryOp(lir::TernaryOperation op) {
 }
 
 inline bool isFloatBinaryOp(lir::TernaryOperation op) {
-  return op > FloatAdd && op <= FloatMin;
+  return op >= FloatAdd && op <= FloatMin;
 }
 
 class Operand { };

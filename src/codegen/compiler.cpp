@@ -2623,54 +2623,6 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* fadd(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatAdd, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fsub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatSubtract, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fmul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatMultiply, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fdiv(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendCombine(&c, lir::FloatDivide, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* frem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendCombine(&c, lir::FloatRemainder, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
   virtual Operand* neg(unsigned size, Operand* a) {
   	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
     Value* result = value(&c, lir::ValueGeneral);

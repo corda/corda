@@ -4589,7 +4589,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->fadd(8, a, b));
+      frame->pushLong(c->binaryOp(lir::FloatAdd, 8, a, b));
     } break;
 
     case dcmpg: {
@@ -4638,14 +4638,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->fdiv(8, a, b));
+      frame->pushLong(c->binaryOp(lir::FloatDivide, 8, a, b));
     } break;
 
     case dmul: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->fmul(8, a, b));
+      frame->pushLong(c->binaryOp(lir::FloatMultiply, 8, a, b));
     } break;
 
     case dneg: {
@@ -4656,14 +4656,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->frem(8, a, b));
+      frame->pushLong(c->binaryOp(lir::FloatRemainder, 8, a, b));
     } break;
 
     case dsub: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->fsub(8, a, b));
+      frame->pushLong(c->binaryOp(lir::FloatSubtract, 8, a, b));
     } break;
 
     case dup:
@@ -4706,7 +4706,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->fadd(4, a, b));
+      frame->pushInt(c->binaryOp(lir::FloatAdd, 4, a, b));
     } break;
 
     case fcmpg: {
@@ -4755,14 +4755,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->fdiv(4, a, b));
+      frame->pushInt(c->binaryOp(lir::FloatDivide, 4, a, b));
     } break;
 
     case fmul: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->fmul(4, a, b));
+      frame->pushInt(c->binaryOp(lir::FloatMultiply, 4, a, b));
     } break;
 
     case fneg: {
@@ -4773,14 +4773,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->frem(4, a, b));   	
+      frame->pushInt(c->binaryOp(lir::FloatRemainder, 4, a, b));   	
     } break;
 
     case fsub: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->fsub(4, a, b));
+      frame->pushInt(c->binaryOp(lir::FloatSubtract, 4, a, b));
     } break;
 
     case getfield:

@@ -132,12 +132,6 @@ class Compiler {
 
   virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) = 0;
 
-  virtual Operand* fadd(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* fsub(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* fmul(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* fdiv(unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* frem(unsigned size, Operand* a, Operand* b) = 0;
-
   virtual Operand* neg(unsigned size, Operand* a) = 0;
   virtual Operand* fneg(unsigned size, Operand* a) = 0;
   virtual Operand* abs(unsigned size, Operand* a) = 0;
