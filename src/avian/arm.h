@@ -19,8 +19,8 @@
 #  include "libkern/OSAtomic.h"
 #  include "libkern/OSCacheControl.h"
 #  include "mach/mach_types.h"
-#  include "mach/arm/thread_act.h"
-#  include "mach/arm/thread_status.h"
+#  include "mach/thread_act.h"
+#  include "mach/thread_status.h"
 
 #  define THREAD_STATE ARM_THREAD_STATE
 #  define THREAD_STATE_TYPE arm_thread_state_t

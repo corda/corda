@@ -652,7 +652,8 @@ ifeq ($(platform),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-			  if test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
+			  if test -d $(sdk-dir)/$(target)7.0.sdk; then echo 7.0; \
+			elif test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
 			elif test -d $(sdk-dir)/$(target)6.0.sdk; then echo 6.0; \
 			elif test -d $(sdk-dir)/$(target)5.1.sdk; then echo 5.1; \
 			elif test -d $(sdk-dir)/$(target)5.0.sdk; then echo 5.0; \
@@ -665,6 +666,12 @@ ifeq ($(platform),darwin)
 		endif
 
 		ios-bin = $(platform-dir)/Developer/usr/bin
+
+		found-gcc = $(shell if test -f $(ios-bin)/gcc; then echo true; else echo false; fi)
+
+		ifeq ($(found-gcc),false)
+			use-clang = true
+		endif
 
 		ifeq ($(use-clang),true)
 			cxx = clang -std=c++11
