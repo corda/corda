@@ -9,9 +9,9 @@
    details. */
 
 #include "jni.h"
-#include "jni-util.h"
 #include "avian/machine.h"
 #include "sockets.h"
+#include "jni-util.h"
 
 using namespace avian::classpath::sockets;
 
