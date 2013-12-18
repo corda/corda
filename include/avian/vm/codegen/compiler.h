@@ -132,16 +132,11 @@ class Compiler {
 
   virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) = 0;
   virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) = 0;
+  virtual void nullaryOp(lir::Operation type) = 0;
 
   virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
   virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
-
-  virtual void trap() = 0;
-
-  virtual void loadBarrier() = 0;
-  virtual void storeStoreBarrier() = 0;
-  virtual void storeLoadBarrier() = 0;
 
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset) = 0;

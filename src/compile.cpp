@@ -4530,7 +4530,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
          2, c->register_(t->arch->thread()), target);
 
       if (ip == codeLength(t, code)) {
-        c->trap();
+        c->nullaryOp(lir::Trap);
       }
     } goto next;
 
@@ -4926,7 +4926,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                c->register_(t->arch->thread()),
                frame->append(field));
           } else {
-            c->loadBarrier();
+            c->nullaryOp(lir::LoadBarrier);
           }
         }
       } else {
@@ -6057,7 +6057,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
                c->register_(t->arch->thread()), frame->append(field));
           } else {
-            c->storeStoreBarrier();
+            c->nullaryOp(lir::StoreStoreBarrier);
           }
         }
 
@@ -6156,7 +6156,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                0, frame->trace(0, 0), 0, Compiler::VoidType, 2,
                c->register_(t->arch->thread()), frame->append(field));
           } else {
-            c->storeLoadBarrier();
+            c->nullaryOp(lir::StoreLoadBarrier);
           }
         }
       } else {
@@ -6254,7 +6254,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case return_:
       if (needsReturnBarrier(t, context->method)) {
-        c->storeStoreBarrier();
+        c->nullaryOp(lir::StoreStoreBarrier);
       }
 
       handleExit(t, frame);

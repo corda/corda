@@ -2655,20 +2655,8 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void trap() {
-    appendOperation(&c, lir::Trap);
-  }
-
-  virtual void loadBarrier() {
-    appendOperation(&c, lir::LoadBarrier);
-  }
-
-  virtual void storeStoreBarrier() {
-    appendOperation(&c, lir::StoreStoreBarrier);
-  }
-
-  virtual void storeLoadBarrier() {
-    appendOperation(&c, lir::StoreLoadBarrier);
+  virtual void nullaryOp(lir::Operation type) {
+    appendOperation(&c, type);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,
