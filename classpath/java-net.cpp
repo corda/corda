@@ -9,8 +9,8 @@
    details. */
 
 #include "jni.h"
+#include "jni-util.h"
 #include "avian/machine.h"
-
 #include "sockets.h"
 
 using namespace avian::classpath::sockets;
@@ -88,7 +88,8 @@ Java_java_net_InetAddress_ipv4AddressForName(JNIEnv* e,
     if (host) {
       return ntohl(reinterpret_cast<in_addr*>(host->h_addr_list[0])->s_addr);
     } else {
-      fprintf(stderr, "trouble %d\n", WSAGetLastError());
+      throwNew(e, "java/net/UnknownHostException", 0);
+      return 0;
     }
 #else
     addrinfo hints;
@@ -100,19 +101,20 @@ Java_java_net_InetAddress_ipv4AddressForName(JNIEnv* e,
     int r = getaddrinfo(chars, 0, &hints, &result);
     e->ReleaseStringUTFChars(name, chars);
 
-    jint address;
     if (r != 0) {
-      address = 0;
+      throwNew(e, "java/net/UnknownHostException", 0);
+      return 0;
     } else {
-      address = ntohl
+      int address = ntohl
         (reinterpret_cast<sockaddr_in*>(result->ai_addr)->sin_addr.s_addr);
 
       freeaddrinfo(result);
+      return address;
     }
-
-    return address;
 #endif
+  } else {
+    throwNew(e, "java/lang/OutOfMemoryError", 0);
+    return 0;
   }
-  return 0;
 }
 

@@ -291,6 +291,14 @@ public class Misc {
     expect(java.util.Arrays.equals
 	   (new byte[] { 0, 0, 0, 0 },
 	    java.net.InetAddress.getByName("0.0.0.0").getAddress()));
+
+    try {
+      java.net.InetAddress.getByName
+	("bs.thisdomaindoesntexistseriouslynoway");
+      throw new AssertionError();
+    } catch (java.net.UnknownHostException e) {
+      // cool
+    }
   }
 
   protected class Protected { }
