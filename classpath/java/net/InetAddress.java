@@ -19,9 +19,6 @@ public class InetAddress {
   private InetAddress(String name) throws UnknownHostException {
     this.name = name;
     this.ip = ipv4AddressForName(name);
-    if (ip == 0) {
-        throw new UnknownHostException(name);
-    }
   }
 
   public String getHostName() {

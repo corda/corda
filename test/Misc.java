@@ -135,7 +135,7 @@ public class Misc {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     zam();
 
     Bim bim = new Baz();
@@ -286,6 +286,18 @@ public class Misc {
       expect(extraDir);
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+
+    expect(java.util.Arrays.equals
+	   (new byte[] { 0, 0, 0, 0 },
+	    java.net.InetAddress.getByName("0.0.0.0").getAddress()));
+
+    try {
+      java.net.InetAddress.getByName
+	("bs.thisdomaindoesntexistseriouslynoway");
+      throw new AssertionError();
+    } catch (java.net.UnknownHostException e) {
+      // cool
     }
   }
 
