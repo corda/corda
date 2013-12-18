@@ -48,6 +48,60 @@ resolveSystemClassThrow(Thread* t, object loader, object spec)
     (t, loader, spec, true, Machine::ClassNotFoundExceptionType);
 }
 
+object
+fieldForOffsetInClass(Thread* t, object c, unsigned offset)
+{
+  object super = classSuper(t, c);
+  if (super) {
+    object field = fieldForOffsetInClass(t, super, offset);
+    if (field) {
+      return field;
+    }
+  }
+
+  object table = classFieldTable(t, c);
+  if (table) {
+    for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+      object field = objectArrayBody(t, table, i);
+      if ((fieldFlags(t, field) & ACC_STATIC) == 0
+          and fieldOffset(t, field) == offset)
+      {
+        return field;
+      }
+    }
+  }
+
+  return 0;
+}
+
+object
+fieldForOffset(Thread* t, object o, unsigned offset)
+{
+  object c = objectClass(t, o);
+  if (classVmFlags(t, c) & SingletonFlag) {
+    c = singletonObject(t, o, 0);
+    object table = classFieldTable(t, c);
+    if (table) {
+      for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+        object field = objectArrayBody(t, table, i);
+        if ((fieldFlags(t, field) & ACC_STATIC)
+            and fieldOffset(t, field) == offset)
+        {
+          return field;
+        }
+      }
+    }
+    abort(t);
+  } else {
+    object field = fieldForOffsetInClass(t, c, offset);
+    if (field) {
+      return field;
+    } else {
+      abort(t);
+    }
+  }
+}
+
 } // namespace
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -694,7 +748,7 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
   return atomicCompareAndSwap64
     (&fieldAtOffset<uint64_t>(target, offset), expect, update);
 #else
-  ACQUIRE_FIELD_FOR_WRITE(t, local::fieldForOffset(t, target, offset));
+  ACQUIRE_FIELD_FOR_WRITE(t, fieldForOffset(t, target, offset));
   if (fieldAtOffset<uint64_t>(target, offset) == expect) {
     fieldAtOffset<uint64_t>(target, offset) = update;
     return true;
@@ -702,6 +756,36 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
     return false;
   }
 #endif
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getLongVolatile
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  // avoid blocking the VM if this is being called in a busy loop
+  PROTECT(t, o);
+  { ENTER(t, Thread::IdleState); }
+
+  object field;
+  if (BytesPerWord < 8) {
+    field = fieldForOffset(t, o, offset);
+
+    PROTECT(t, field);
+    acquire(t, field);        
+  }
+
+  int64_t result = fieldAtOffset<int64_t>(o, offset);
+
+  if (BytesPerWord < 8) {
+    release(t, field);        
+  } else {
+    loadMemoryBarrier();
+  }
+
+  return result;
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

@@ -2460,60 +2460,6 @@ pipeAvailable(int fd, int* available)
 #endif
 }
 
-object
-fieldForOffsetInClass(Thread* t, object c, unsigned offset)
-{
-  object super = classSuper(t, c);
-  if (super) {
-    object field = fieldForOffsetInClass(t, super, offset);
-    if (field) {
-      return field;
-    }
-  }
-
-  object table = classFieldTable(t, c);
-  if (table) {
-    for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-      object field = objectArrayBody(t, table, i);
-      if ((fieldFlags(t, field) & ACC_STATIC) == 0
-          and fieldOffset(t, field) == offset)
-      {
-        return field;
-      }
-    }
-  }
-
-  return 0;
-}
-
-object
-fieldForOffset(Thread* t, object o, unsigned offset)
-{
-  object c = objectClass(t, o);
-  if (classVmFlags(t, c) & SingletonFlag) {
-    c = singletonObject(t, o, 0);
-    object table = classFieldTable(t, c);
-    if (table) {
-      for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-        object field = objectArrayBody(t, table, i);
-        if ((fieldFlags(t, field) & ACC_STATIC)
-            and fieldOffset(t, field) == offset)
-        {
-          return field;
-        }
-      }
-    }
-    abort(t);
-  } else {
-    object field = fieldForOffsetInClass(t, c, offset);
-    if (field) {
-      return field;
-    } else {
-      abort(t);
-    }
-  }
-}
-
 } // namespace local
 
 } // namespace
@@ -2735,36 +2681,6 @@ Avian_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J
 {
   return Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
     (t, method, arguments);
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getLongVolatile
-(Thread* t, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-
-  // avoid blocking the VM if this is being called in a busy loop
-  PROTECT(t, o);
-  { ENTER(t, Thread::IdleState); }
-
-  object field;
-  if (BytesPerWord < 8) {
-    field = local::fieldForOffset(t, o, offset);
-
-    PROTECT(t, field);
-    acquire(t, field);        
-  }
-
-  int64_t result = fieldAtOffset<int64_t>(o, offset);
-
-  if (BytesPerWord < 8) {
-    release(t, field);        
-  } else {
-    loadMemoryBarrier();
-  }
-
-  return result;
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

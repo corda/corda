@@ -48,6 +48,8 @@ public final class Unsafe {
 
   public native void putIntVolatile(Object o, long offset, int x);
 
+  public native long getLongVolatile(Object o, long offset);
+
   public native void putOrderedInt(Object o, long offset, int x);
 
   public native Object getObject(Object o, long offset);
