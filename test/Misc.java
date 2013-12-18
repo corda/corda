@@ -135,7 +135,7 @@ public class Misc {
     }
   }
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     zam();
 
     Bim bim = new Baz();
@@ -287,6 +287,10 @@ public class Misc {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+
+    expect(java.util.Arrays.equals
+	   (new byte[] { 0, 0, 0, 0 },
+	    java.net.InetAddress.getByName("0.0.0.0").getAddress()));
   }
 
   protected class Protected { }
