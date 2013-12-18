@@ -304,7 +304,7 @@ cflags_debug_fast = -O0 -g3
 cflags_stress = -O0 -g3
 cflags_stress_major = -O0 -g3
 ifeq ($(use-clang),true)
-	cflags_fast = -O3 -flto -g3
+	cflags_fast = -O3 -g3
 	cflags_small = -Oz -g3
 else
 	cflags_fast = -O3 -g3
@@ -472,6 +472,7 @@ endif
 
 ifeq ($(ios),true)
 	cflags += -DAVIAN_IOS
+	use-lto = false
 endif
 
 ifeq ($(build-platform),darwin)
