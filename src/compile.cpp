@@ -4196,6 +4196,56 @@ class SwitchState {
   unsigned index;
 };
 
+lir::TernaryOperation toCompilerBinaryOp(MyThread* t, unsigned instruction)
+{
+  switch (instruction) {
+  case iadd:
+  case ladd:
+    return lir::Add;
+  case ior:
+  case lor:
+    return lir::Or;
+  case ishl:
+  case lshl:
+    return lir::ShiftLeft;
+  case ishr:
+  case lshr:
+    return lir::ShiftRight;
+  case iushr:
+  case lushr:
+    return lir::UnsignedShiftRight;
+  case fadd:
+  case dadd:
+    return lir::FloatAdd;
+  case fsub:
+  case dsub:
+    return lir::FloatSubtract;
+  case fmul:
+  case dmul:
+    return lir::FloatMultiply;
+  case fdiv:
+  case ddiv:
+    return lir::FloatDivide;
+  case frem:
+  case vm::drem:
+    return lir::FloatRemainder;
+  case iand:
+  case land:
+    return lir::And;
+  case isub:
+  case lsub:
+    return lir::Subtract;
+  case ixor:
+  case lxor:
+    return lir::Xor;
+  case imul:
+  case lmul:
+    return lir::Multiply;
+  default:
+    abort(t);
+  }
+}
+
 void
 compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         int exceptionHandlerStart = -1)
@@ -4585,11 +4635,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushLong(c->f2i(8, 8, frame->popLong()));
     } break;
 
-    case dadd: {
+    case dadd:
+    case dsub:
+    case dmul:
+    case ddiv:
+    case vm::drem: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->binaryOp(lir::FloatAdd, 8, a, b));
+      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
     } break;
 
     case dcmpg: {
@@ -4634,36 +4688,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushLong(c->constant(doubleToBits(1.0), Compiler::FloatType));
       break;
 
-    case ddiv: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-
-      frame->pushLong(c->binaryOp(lir::FloatDivide, 8, a, b));
-    } break;
-
-    case dmul: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-
-      frame->pushLong(c->binaryOp(lir::FloatMultiply, 8, a, b));
-    } break;
-
     case dneg: {
       frame->pushLong(c->unaryOp(lir::FloatNegate, 8, frame->popLong()));
-    } break;
-
-    case vm::drem: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-
-      frame->pushLong(c->binaryOp(lir::FloatRemainder, 8, a, b));
-    } break;
-
-    case dsub: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-
-      frame->pushLong(c->binaryOp(lir::FloatSubtract, 8, a, b));
     } break;
 
     case dup:
@@ -4702,11 +4728,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushLong(c->f2i(4, 8, frame->popInt()));
     } break;
 
-    case fadd: {
+    case fadd:
+    case fsub:
+    case fmul:
+    case fdiv:
+    case frem: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->binaryOp(lir::FloatAdd, 4, a, b));
+      frame->pushInt(c->binaryOp(toCompilerBinaryOp(t, instruction), 4, a, b));
     } break;
 
     case fcmpg: {
@@ -4751,36 +4781,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushInt(c->constant(floatToBits(2.0), Compiler::FloatType));
       break;
 
-    case fdiv: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-
-      frame->pushInt(c->binaryOp(lir::FloatDivide, 4, a, b));
-    } break;
-
-    case fmul: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-
-      frame->pushInt(c->binaryOp(lir::FloatMultiply, 4, a, b));
-    } break;
-
     case fneg: {
       frame->pushInt(c->unaryOp(lir::FloatNegate, 4, frame->popInt()));
-    } break;
-
-    case vm::frem: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-
-      frame->pushInt(c->binaryOp(lir::FloatRemainder, 4, a, b));   	
-    } break;
-
-    case fsub: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-
-      frame->pushInt(c->binaryOp(lir::FloatSubtract, 4, a, b));
     } break;
 
     case getfield:
@@ -5015,16 +5017,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         (c->load(TargetBytesPerWord, 2, frame->popInt(), TargetBytesPerWord));
     } break;
       
-    case iadd: {
+    case iadd:
+    case iand:
+    case ior:
+    case ishl:
+    case ishr:
+    case iushr:
+    case isub:
+    case ixor:
+    case imul: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::Add, 4, a, b));
-    } break;
-      
-    case iand: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::And, 4, a, b));
+      frame->pushInt(c->binaryOp(toCompilerBinaryOp(t, instruction), 4, a, b));
     } break;
 
     case iconst_m1:
@@ -5230,12 +5234,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case fload_3:
       frame->loadInt(3);
       break;
-
-    case imul: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::Multiply, 4, a, b));
-    } break;
 
     case ineg: {
       frame->pushInt(c->unaryOp(lir::Negate, 4, frame->popInt()));
@@ -5467,12 +5465,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
     } break;
 
-    case ior: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::Or, 4, a, b));
-    } break;
-
     case irem: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
@@ -5490,18 +5482,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       handleExit(t, frame);
       c->return_(4, frame->popInt());
     } goto next;
-
-    case ishl: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::ShiftLeft, 4, a, b));
-    } break;
-
-    case ishr: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::ShiftRight, 4, a, b));
-    } break;
 
     case istore:
     case fstore:
@@ -5527,24 +5507,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case fstore_3:
       frame->storeInt(3);
       break;
-
-    case isub: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::Subtract, 4, a, b));
-    } break;
-
-    case iushr: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::UnsignedShiftRight, 4, a, b));
-    } break;
-
-    case ixor: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(lir::Xor, 4, a, b));
-    } break;
 
     case jsr:
     case jsr_w: {
@@ -5584,16 +5546,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushInt(c->load(8, 8, frame->popLong(), TargetBytesPerWord));
       break;
 
-    case ladd: {
+    case ladd:
+    case land:
+    case lor:
+    case lsub:
+    case lxor:
+    case lmul: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::Add, 8, a, b));
-    } break;
-
-    case land: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::And, 8, a, b));
+      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
     } break;
 
     case lcmp: {
@@ -5733,12 +5694,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->loadLong(3);
       break;
 
-    case lmul: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::Multiply, 8, a, b));
-    } break;
-
     case lneg:
       frame->pushLong(c->unaryOp(lir::Negate, 8, frame->popLong()));
       break;
@@ -5803,12 +5758,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
     } break;
 
-    case lor: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::Or, 8, a, b));
-    } break;
-
     case lrem: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
@@ -5827,16 +5776,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       c->return_(8, frame->popLong());
     } goto next;
 
-    case lshl: {
+    case lshl:
+    case lshr:
+    case lushr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::ShiftLeft, 8, a, b));
-    } break;
-
-    case lshr: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::ShiftRight, 8, a, b));
+      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
     } break;
 
     case lstore:
@@ -5863,24 +5808,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case dstore_3:
       frame->storeLong(3);
       break;
-
-    case lsub: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::Subtract, 8, a, b));
-    } break;
-
-    case lushr: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::UnsignedShiftRight, 8, a, b));
-    } break;
-
-    case lxor: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(lir::Xor, 8, a, b));
-    } break;
 
     case monitorenter: {
       Compiler::Operand* target = frame->popObject();
