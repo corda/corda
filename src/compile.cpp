@@ -20,6 +20,7 @@
 #include <avian/vm/codegen/compiler.h>
 #include <avian/vm/codegen/targets.h>
 #include <avian/vm/codegen/lir.h>
+#include <avian/vm/codegen/runtime.h>
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
@@ -2460,232 +2461,6 @@ getJClassFromReference(MyThread* t, object pair)
        referenceName(t, pairSecond(t, pair)))));
 }
 
-bool
-isNaN(double v)
-{
-  return fpclassify(v) == FP_NAN;
-}
-
-bool
-isNaN(float v)
-{
-  return fpclassify(v) == FP_NAN;
-}
-
-int64_t
-compareDoublesG(uint64_t bi, uint64_t ai)
-{
-  double a = bitsToDouble(ai);
-  double b = bitsToDouble(bi);
-  
-  if (isNaN(a) or isNaN(b)) {
-    return 1;
-  } else if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else if (a == b) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
-
-int64_t
-compareDoublesL(uint64_t bi, uint64_t ai)
-{
-  double a = bitsToDouble(ai);
-  double b = bitsToDouble(bi);
-  
-  if (isNaN(a) or isNaN(b)) {
-    return -1;
-  } else if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else if (a == b) {
-    return 0;
-  } else {
-    return -1;
-  }
-}
-
-int64_t
-compareFloatsG(uint32_t bi, uint32_t ai)
-{
-  float a = bitsToFloat(ai);
-  float b = bitsToFloat(bi);
-  
-  if (isNaN(a) or isNaN(b)) {
-    return 1;
-  } if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else if (a == b) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
-
-int64_t
-compareFloatsL(uint32_t bi, uint32_t ai)
-{
-  float a = bitsToFloat(ai);
-  float b = bitsToFloat(bi);
-  
-  if (isNaN(a) or isNaN(b)) {
-    return -1;
-  } if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else if (a == b) {
-    return 0;
-  } else {
-    return -1;
-  }
-}
-
-int64_t
-compareLongs(uint64_t b, uint64_t a)
-{
-  if (a < b) {
-    return -1;
-  } else if (a > b) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
-uint64_t
-addDouble(uint64_t b, uint64_t a)
-{
-  return doubleToBits(bitsToDouble(a) + bitsToDouble(b));
-}
-
-uint64_t
-subtractDouble(uint64_t b, uint64_t a)
-{
-  return doubleToBits(bitsToDouble(a) - bitsToDouble(b));
-}
-
-uint64_t
-multiplyDouble(uint64_t b, uint64_t a)
-{
-  return doubleToBits(bitsToDouble(a) * bitsToDouble(b));
-}
-
-uint64_t
-divideDouble(uint64_t b, uint64_t a)
-{
-  return doubleToBits(bitsToDouble(a) / bitsToDouble(b));
-}
-
-uint64_t
-moduloDouble(uint64_t b, uint64_t a)
-{
-  return doubleToBits(fmod(bitsToDouble(a), bitsToDouble(b)));
-}
-
-uint64_t
-negateDouble(uint64_t a)
-{
-  return doubleToBits(- bitsToDouble(a));
-}
-
-uint64_t
-squareRootDouble(uint64_t a)
-{
-  return doubleToBits(sqrt(bitsToDouble(a)));
-}
-
-uint64_t
-doubleToFloat(int64_t a)
-{
-  return floatToBits(static_cast<float>(bitsToDouble(a)));
-}
-
-int64_t
-doubleToInt(int64_t a)
-{
-  double f = bitsToDouble(a);
-  switch (fpclassify(f)) {
-  case FP_NAN: return 0;
-  case FP_INFINITE: return signbit(f) ? INT32_MIN : INT32_MAX;
-  default: return f >= INT32_MAX ? INT32_MAX
-      : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
-  }
-}
-
-int64_t
-doubleToLong(int64_t a)
-{
-  double f = bitsToDouble(a);
-  switch (fpclassify(f)) {
-  case FP_NAN: return 0;
-  case FP_INFINITE: return signbit(f) ? INT64_MIN : INT64_MAX;
-  default: return f >= INT64_MAX ? INT64_MAX
-      : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f));
-  }
-}
-
-uint64_t
-addFloat(uint32_t b, uint32_t a)
-{
-  return floatToBits(bitsToFloat(a) + bitsToFloat(b));
-}
-
-uint64_t
-subtractFloat(uint32_t b, uint32_t a)
-{
-  return floatToBits(bitsToFloat(a) - bitsToFloat(b));
-}
-
-uint64_t
-multiplyFloat(uint32_t b, uint32_t a)
-{
-  return floatToBits(bitsToFloat(a) * bitsToFloat(b));
-}
-
-uint64_t
-divideFloat(uint32_t b, uint32_t a)
-{
-  return floatToBits(bitsToFloat(a) / bitsToFloat(b));
-}
-
-uint64_t
-moduloFloat(uint32_t b, uint32_t a)
-{
-  return floatToBits(fmod(bitsToFloat(a), bitsToFloat(b)));
-}
-
-uint64_t
-negateFloat(uint32_t a)
-{
-  return floatToBits(- bitsToFloat(a));
-}
-
-uint64_t
-absoluteFloat(uint32_t a)
-{
-  return floatToBits(fabsf(bitsToFloat(a)));
-}
-
-int64_t
-absoluteLong(int64_t a)
-{
-  return a > 0 ? a : -a;
-}
-
-int64_t
-absoluteInt(int32_t a)
-{
-  return a > 0 ? a : -a;
-}
-
 unsigned
 traceSize(Thread* t)
 {
@@ -2722,8 +2497,7 @@ throwArithmetic(MyThread* t)
   }
 }
 
-int64_t
-divideLong(MyThread* t, int64_t b, int64_t a)
+int64_t divideLong(MyThread* t, int64_t b, int64_t a)
 {
   if (LIKELY(b)) {
     return a / b;
@@ -2732,8 +2506,7 @@ divideLong(MyThread* t, int64_t b, int64_t a)
   }
 }
 
-int64_t
-divideInt(MyThread* t, int32_t b, int32_t a)
+int64_t divideInt(MyThread* t, int32_t b, int32_t a)
 {
   if (LIKELY(b)) {
     return a / b;
@@ -2742,8 +2515,7 @@ divideInt(MyThread* t, int32_t b, int32_t a)
   }
 }
 
-int64_t
-moduloLong(MyThread* t, int64_t b, int64_t a)
+int64_t moduloLong(MyThread* t, int64_t b, int64_t a)
 {
   if (LIKELY(b)) {
     return a % b;
@@ -2752,67 +2524,13 @@ moduloLong(MyThread* t, int64_t b, int64_t a)
   }
 }
 
-int64_t
-moduloInt(MyThread* t, int32_t b, int32_t a)
+int64_t moduloInt(MyThread* t, int32_t b, int32_t a)
 {
   if (LIKELY(b)) {
     return a % b;
   } else {
     throwArithmetic(t);
   }
-}
-
-uint64_t
-floatToDouble(int32_t a)
-{
-  return doubleToBits(static_cast<double>(bitsToFloat(a)));
-}
-
-int64_t
-floatToInt(int32_t a)
-{
-  float f = bitsToFloat(a);
-  switch (fpclassify(f)) {
-  case FP_NAN: return 0;
-  case FP_INFINITE: return signbit(f) ? INT32_MIN : INT32_MAX;
-  default: return f >= INT32_MAX ? INT32_MAX
-      : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f));
-  }
-}
-
-int64_t
-floatToLong(int32_t a)
-{
-  float f = bitsToFloat(a);
-  switch (fpclassify(f)) {
-  case FP_NAN: return 0;
-  case FP_INFINITE: return signbit(f) ? INT64_MIN : INT64_MAX;
-  default: return static_cast<int64_t>(f);
-  }
-}
-
-uint64_t
-intToDouble(int32_t a)
-{
-  return doubleToBits(static_cast<double>(a));
-}
-
-uint64_t
-intToFloat(int32_t a)
-{
-  return floatToBits(static_cast<float>(a));
-}
-
-uint64_t
-longToDouble(int64_t a)
-{
-  return doubleToBits(static_cast<double>(a));
-}
-
-uint64_t
-longToFloat(int64_t a)
-{
-  return floatToBits(static_cast<float>(a));
 }
 
 uint64_t
@@ -8803,6 +8521,9 @@ class MyProcessor: public Processor {
     thunkTable[throwArrayIndexOutOfBoundsIndex] = voidPointer
       (throwArrayIndexOutOfBounds);
     thunkTable[throwStackOverflowIndex] = voidPointer(throwStackOverflow);
+
+    using namespace avian::codegen::runtime;
+
 #define THUNK(s) thunkTable[s##Index] = voidPointer(s);
 #include "thunks.cpp"
 #undef THUNK
@@ -8872,7 +8593,7 @@ class MyProcessor: public Processor {
                           "TARGET_THREAD_HEAPIMAGE")
           + checkConstant(t,
                           TARGET_THREAD_CODEIMAGE,
-                          &MyThread::codeImage,,
+                          &MyThread::codeImage,
                           "TARGET_THREAD_CODEIMAGE")
           + checkConstant(t,
                           TARGET_THREAD_THUNKTABLE,
