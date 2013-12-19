@@ -8740,7 +8740,12 @@ template<class T, class C>
 int checkConstant(MyThread* t, size_t expected, T C::* field, const char* name) {
   size_t actual = reinterpret_cast<uint8_t*>(&(t->*field)) - reinterpret_cast<uint8_t*>(t);
   if(expected != actual) {
-    fprintf(stderr, "constant mismatch (%s): \n\tconstant says: %d\n\tc++ compiler says: %d\n", name, (unsigned) expected, (unsigned) actual);
+    fprintf(stderr,
+            "constant mismatch (%s): \n\tconstant says: %d\n\tc++ compiler "
+            "says: %d\n",
+            name,
+            (unsigned)expected,
+            (unsigned)actual);
     return 1;
   }
   return 0;
@@ -8824,21 +8829,59 @@ class MyProcessor: public Processor {
 
 #if TARGET_BYTES_PER_WORD == BYTES_PER_WORD
 
-    int mismatches =
-      checkConstant(t, TARGET_THREAD_EXCEPTION, &Thread::exception, "TARGET_THREAD_EXCEPTION") +
-      checkConstant(t, TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT, &MyThread::exceptionStackAdjustment, "TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT") +
-      checkConstant(t, TARGET_THREAD_EXCEPTIONOFFSET, &MyThread::exceptionOffset, "TARGET_THREAD_EXCEPTIONOFFSET") +
-      checkConstant(t, TARGET_THREAD_EXCEPTIONHANDLER, &MyThread::exceptionHandler, "TARGET_THREAD_EXCEPTIONHANDLER") +
-      checkConstant(t, TARGET_THREAD_IP, &MyThread::ip, "TARGET_THREAD_IP") +
-      checkConstant(t, TARGET_THREAD_STACK, &MyThread::stack, "TARGET_THREAD_STACK") +
-      checkConstant(t, TARGET_THREAD_NEWSTACK, &MyThread::newStack, "TARGET_THREAD_NEWSTACK") +
-      checkConstant(t, TARGET_THREAD_TAILADDRESS, &MyThread::tailAddress, "TARGET_THREAD_TAILADDRESS") +
-      checkConstant(t, TARGET_THREAD_VIRTUALCALLTARGET, &MyThread::virtualCallTarget, "TARGET_THREAD_VIRTUALCALLTARGET") +
-      checkConstant(t, TARGET_THREAD_VIRTUALCALLINDEX, &MyThread::virtualCallIndex, "TARGET_THREAD_VIRTUALCALLINDEX") +
-      checkConstant(t, TARGET_THREAD_HEAPIMAGE, &MyThread::heapImage, "TARGET_THREAD_HEAPIMAGE") +
-      checkConstant(t, TARGET_THREAD_CODEIMAGE, &MyThread::codeImage, "TARGET_THREAD_CODEIMAGE") +
-      checkConstant(t, TARGET_THREAD_THUNKTABLE, &MyThread::thunkTable, "TARGET_THREAD_THUNKTABLE") +
-      checkConstant(t, TARGET_THREAD_STACKLIMIT, &MyThread::stackLimit, "TARGET_THREAD_STACKLIMIT");
+    int mismatches
+        = checkConstant(t,
+                        TARGET_THREAD_EXCEPTION,
+                        &Thread::exception,
+                        "TARGET_THREAD_EXCEPTION")
+          + checkConstant(t,
+                          TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT,
+                          &MyThread::exceptionStackAdjustment,
+                          "TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT")
+          + checkConstant(t,
+                          TARGET_THREAD_EXCEPTIONOFFSET,
+                          &MyThread::exceptionOffset,
+                          "TARGET_THREAD_EXCEPTIONOFFSET")
+          + checkConstant(t,
+                          TARGET_THREAD_EXCEPTIONHANDLER,
+                          &MyThread::exceptionHandler,
+                          "TARGET_THREAD_EXCEPTIONHANDLER")
+          + checkConstant(
+                t, TARGET_THREAD_IP, &MyThread::ip, "TARGET_THREAD_IP")
+          + checkConstant(
+                t, TARGET_THREAD_STACK, &MyThread::stack, "TARGET_THREAD_STACK")
+          + checkConstant(t,
+                          TARGET_THREAD_NEWSTACK,
+                          &MyThread::newStack,
+                          "TARGET_THREAD_NEWSTACK")
+          + checkConstant(t,
+                          TARGET_THREAD_TAILADDRESS,
+                          &MyThread::tailAddress,
+                          "TARGET_THREAD_TAILADDRESS")
+          + checkConstant(t,
+                          TARGET_THREAD_VIRTUALCALLTARGET,
+                          &MyThread::virtualCallTarget,
+                          "TARGET_THREAD_VIRTUALCALLTARGET")
+          + checkConstant(t,
+                          TARGET_THREAD_VIRTUALCALLINDEX,
+                          &MyThread::virtualCallIndex,
+                          "TARGET_THREAD_VIRTUALCALLINDEX")
+          + checkConstant(t,
+                          TARGET_THREAD_HEAPIMAGE,
+                          &MyThread::heapImage,
+                          "TARGET_THREAD_HEAPIMAGE")
+          + checkConstant(t,
+                          TARGET_THREAD_CODEIMAGE,
+                          &MyThread::codeImage,,
+                          "TARGET_THREAD_CODEIMAGE")
+          + checkConstant(t,
+                          TARGET_THREAD_THUNKTABLE,
+                          &MyThread::thunkTable,
+                          "TARGET_THREAD_THUNKTABLE")
+          + checkConstant(t,
+                          TARGET_THREAD_STACKLIMIT,
+                          &MyThread::stackLimit,
+                          "TARGET_THREAD_STACKLIMIT");
 
     if(mismatches > 0) {
       fprintf(stderr, "%d constant mismatches\n", mismatches);
@@ -9252,7 +9295,9 @@ class MyProcessor: public Processor {
   }
 
   virtual void addCompilationHandler(CompilationHandler* handler) {
-    compilationHandlers = new(allocator->allocate(sizeof(CompilationHandlerList))) CompilationHandlerList(compilationHandlers, handler);
+    compilationHandlers
+        = new (allocator->allocate(sizeof(CompilationHandlerList)))
+        CompilationHandlerList(compilationHandlers, handler);
   }
 
   virtual void compileMethod(Thread* vmt, Zone* zone, object* constants,
@@ -9454,11 +9499,16 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
             class_, name, spec);
   }
 
-  size_t nameLength = stringOrNullSize(class_) + stringOrNullSize(name) + stringOrNullSize(spec) + 2;
+  size_t nameLength = stringOrNullSize(class_) + stringOrNullSize(name)
+                      + stringOrNullSize(spec) + 2;
 
   THREAD_RUNTIME_ARRAY(t, char, completeName, nameLength);
 
-  sprintf(RUNTIME_ARRAY_BODY(completeName), "%s.%s%s", stringOrNull(class_), stringOrNull(name), stringOrNull(spec));
+  sprintf(RUNTIME_ARRAY_BODY(completeName),
+          "%s.%s%s",
+          stringOrNull(class_),
+          stringOrNull(name),
+          stringOrNull(spec));
 
   MyProcessor* p = static_cast<MyProcessor*>(t->m->processor);
   for(CompilationHandlerList* h = p->compilationHandlers; h; h = h->next) {
@@ -9789,7 +9839,8 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 
           if (number) {
             *p = reinterpret_cast<uintptr_t>(heap + (number - 1)) | mark;
-            // fprintf(stderr, "fixup %d: %d 0x%x\n", index, static_cast<unsigned>(number), static_cast<unsigned>(*p));
+            // fprintf(stderr, "fixup %d: %d 0x%x\n", index,
+            // static_cast<unsigned>(number), static_cast<unsigned>(*p));
           } else {
             *p = mark;
           }
