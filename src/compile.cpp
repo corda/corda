@@ -3815,6 +3815,35 @@ isReferenceTailCall(MyThread* t, object code, unsigned ip, object caller,
      c, referenceName(t, calleeReference), referenceSpec(t, calleeReference));
 }
 
+lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
+  switch(instruction) {
+  case ifeq:
+  case if_icmpeq:
+  case if_acmpeq:
+  case ifnull:
+    return lir::JumpIfEqual;
+  case ifne:
+  case if_icmpne:
+  case if_acmpne:
+  case ifnonnull:
+    return lir::JumpIfNotEqual;
+  case ifgt:
+  case if_icmpgt:
+    return lir::JumpIfGreater;
+  case ifge:
+  case if_icmpge:
+    return lir::JumpIfGreaterOrEqual;
+  case iflt:
+  case if_icmplt:
+    return lir::JumpIfLess;
+  case ifle:
+  case if_icmple:
+    return lir::JumpIfLessOrEqual;
+  default:
+    abort(t);
+  }
+}
+
 bool
 integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
               unsigned size, Compiler::Operand* a, Compiler::Operand* b,
@@ -3834,27 +3863,12 @@ integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   switch (instruction) {
   case ifeq:
-    c->condJump(lir::JumpIfEqual, size, a, b, target);
-    break;
-
   case ifne:
-    c->condJump(lir::JumpIfNotEqual, size, a, b, target);
-    break;
-
   case ifgt:
-    c->condJump(lir::JumpIfGreater, size, a, b, target);
-    break;
-
   case ifge:
-    c->condJump(lir::JumpIfGreaterOrEqual, size, a, b, target);
-    break;
-
   case iflt:
-    c->condJump(lir::JumpIfLess, size, a, b, target);
-    break;
-
   case ifle:
-    c->condJump(lir::JumpIfLessOrEqual, size, a, b, target);
+    c->condJump(toCompilerJumpOp(t, instruction), size, a, b, target);
     break;
 
   default:
@@ -3864,6 +3878,44 @@ integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   *newIpp = newIp;
   return true;
+}
+
+lir::TernaryOperation toCompilerFloatJumpOp(MyThread* t,
+                                            unsigned instruction,
+                                            bool lessIfUnordered)
+{
+  switch(instruction) {
+  case ifeq:
+    return lir::JumpIfFloatEqual;
+  case ifne:
+    return lir::JumpIfFloatNotEqual;
+  case ifgt:
+    if (lessIfUnordered) {
+      return lir::JumpIfFloatGreater;
+    } else {
+      return lir::JumpIfFloatGreaterOrUnordered;
+    }
+  case ifge:
+    if (lessIfUnordered) {
+      return lir::JumpIfFloatGreaterOrEqual;
+    } else {
+      return lir::JumpIfFloatGreaterOrEqualOrUnordered;
+    }
+  case iflt:
+    if (lessIfUnordered) {
+      return lir::JumpIfFloatLessOrUnordered;
+    } else {
+      return lir::JumpIfFloatLess;
+    }
+  case ifle:
+    if (lessIfUnordered) {
+      return lir::JumpIfFloatLessOrEqualOrUnordered;
+    } else {
+      return lir::JumpIfFloatLessOrEqual;
+    }
+  default:
+    abort(t);
+  }
 }
 
 bool
@@ -3885,44 +3937,16 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
 
   switch (instruction) {
   case ifeq:
-    c->condJump(lir::JumpIfFloatEqual, size, a, b, target);
-    break;
-
   case ifne:
-    c->condJump(lir::JumpIfFloatNotEqual, size, a, b, target);
-    break;
-
   case ifgt:
-    if (lessIfUnordered) {
-      c->condJump(lir::JumpIfFloatGreater, size, a, b, target);
-    } else {
-      c->condJump(lir::JumpIfFloatGreaterOrUnordered, size, a, b, target);
-    }
-    break;
-
   case ifge:
-    if (lessIfUnordered) {
-      c->condJump(lir::JumpIfFloatGreaterOrEqual, size, a, b, target);
-    } else {
-      c->condJump(lir::JumpIfFloatGreaterOrEqualOrUnordered, size, a, b, target);
-    }
-    break;
-
   case iflt:
-    if (lessIfUnordered) {
-      c->condJump(lir::JumpIfFloatLessOrUnordered, size, a, b, target);
-    } else {
-      c->condJump(lir::JumpIfFloatLess, size, a, b, target);
-    }
-    break;
-
   case ifle:
-    if (lessIfUnordered) {
-      c->condJump(lir::JumpIfFloatLessOrEqualOrUnordered, size, a, b, target);
-    } else {
-      c->condJump(lir::JumpIfFloatLessOrEqual, size, a, b, target);
-    }
-    break;
+    c->condJump(toCompilerFloatJumpOp(t, instruction, lessIfUnordered),
+                size,
+                a,
+                b,
+                target);
 
   default:
     ip -= 3;
@@ -5085,11 +5109,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      if (instruction == if_acmpeq) {
-        c->condJump(lir::JumpIfEqual, TargetBytesPerWord, a, b, target);
-      } else {
-        c->condJump(lir::JumpIfNotEqual, TargetBytesPerWord, a, b, target);
-      }
+      c->condJump(toCompilerJumpOp(t, instruction), TargetBytesPerWord, a, b, target);
     } goto branch;
 
     case if_icmpeq:
@@ -5110,28 +5130,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popInt();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      switch (instruction) {
-      case if_icmpeq:
-        c->condJump(lir::JumpIfEqual, 4, a, b, target);
-        break;
-      case if_icmpne:
-        c->condJump(lir::JumpIfNotEqual, 4, a, b, target);
-        break;
-      case if_icmpgt:
-        c->condJump(lir::JumpIfGreater, 4, a, b, target);
-        break;
-      case if_icmpge:
-        c->condJump(lir::JumpIfGreaterOrEqual, 4, a, b, target);
-        break;
-      case if_icmplt:
-        c->condJump(lir::JumpIfLess, 4, a, b, target);
-        break;
-      case if_icmple:
-        c->condJump(lir::JumpIfLessOrEqual, 4, a, b, target);
-        break;
-      default:
-        abort(t);
-      }
+      c->condJump(toCompilerJumpOp(t, instruction), 4, a, b, target);
     } goto branch;
 
     case ifeq:
@@ -5153,28 +5152,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = c->constant(0, Compiler::IntegerType);
       Compiler::Operand* b = frame->popInt();
 
-      switch (instruction) {
-      case ifeq:
-        c->condJump(lir::JumpIfEqual, 4, a, b, target);
-        break;
-      case ifne:
-        c->condJump(lir::JumpIfNotEqual, 4, a, b, target);
-        break;
-      case ifgt:
-        c->condJump(lir::JumpIfGreater, 4, a, b, target);
-        break;
-      case ifge:
-        c->condJump(lir::JumpIfGreaterOrEqual, 4, a, b, target);
-        break;
-      case iflt:
-        c->condJump(lir::JumpIfLess, 4, a, b, target);
-        break;
-      case ifle:
-        c->condJump(lir::JumpIfLessOrEqual, 4, a, b, target);
-        break;
-      default:
-        abort(t);
-      }
+      c->condJump(toCompilerJumpOp(t, instruction), 4, a, b, target);
     } goto branch;
 
     case ifnull:
@@ -5191,11 +5169,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      if (instruction == ifnull) {
-        c->condJump(lir::JumpIfEqual, TargetBytesPerWord, a, b, target);
-      } else {
-        c->condJump(lir::JumpIfNotEqual, TargetBytesPerWord, a, b, target);
-      }
+      c->condJump(toCompilerJumpOp(t, instruction), TargetBytesPerWord, a, b, target);
     } goto branch;
 
     case iinc: {
