@@ -67,6 +67,13 @@ class Value: public Compiler::Operand {
 
 };
 
+inline bool isGeneralValue(Compiler::Operand* a) {
+  return static_cast<Value*>(a)->type == lir::ValueGeneral;
+}
+
+inline bool isFloatValue(Compiler::Operand* a) {
+  return static_cast<Value*>(a)->type == lir::ValueFloat;
+}
 
 Value* value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0);
 

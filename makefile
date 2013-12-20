@@ -1132,6 +1132,7 @@ compiler-sources = \
 	$(src)/codegen/compiler.cpp \
 	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/codegen/registers.cpp \
+	$(src)/codegen/runtime.cpp \
 	$(src)/codegen/targets.cpp
 
 x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)

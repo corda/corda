@@ -2592,168 +2592,15 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual void jumpIfEqual(unsigned size, Operand* a, Operand* b,
+  virtual void condJump(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b,
                            Operand* address)
   {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
+    assert(&c,
+      (isGeneralBranch(type) and isGeneralValue(a) and isGeneralValue(b))
+      or (isFloatBranch(type) and isFloatValue(a) and isFloatValue(b)));
 
-    appendBranch(&c, lir::JumpIfEqual, size, static_cast<Value*>(a),
+    appendBranch(&c, type, size, static_cast<Value*>(a),
                  static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfNotEqual(unsigned size, Operand* a, Operand* b,
-                              Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-
-    appendBranch(&c, lir::JumpIfNotEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfLess(unsigned size, Operand* a, Operand* b,
-                          Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-
-    appendBranch(&c, lir::JumpIfLess, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfGreater(unsigned size, Operand* a, Operand* b,
-                             Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-
-    appendBranch(&c, lir::JumpIfGreater, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfLessOrEqual(unsigned size, Operand* a, Operand* b,
-                                 Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-
-    appendBranch(&c, lir::JumpIfLessOrEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfGreaterOrEqual(unsigned size, Operand* a, Operand* b,
-                                    Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-
-    appendBranch(&c, lir::JumpIfGreaterOrEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatEqual(unsigned size, Operand* a, Operand* b,
-                           Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatNotEqual(unsigned size, Operand* a, Operand* b,
-                                   Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatNotEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatLess(unsigned size, Operand* a, Operand* b,
-                               Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatLess, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatGreater(unsigned size, Operand* a, Operand* b,
-                                  Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatGreater, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatLessOrEqual(unsigned size, Operand* a, Operand* b,
-                                 Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatLessOrEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatGreaterOrEqual(unsigned size, Operand* a, Operand* b,
-                                    Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatGreaterOrEqual, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatLessOrUnordered(unsigned size, Operand* a,
-                                          Operand* b, Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatLessOrUnordered, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatGreaterOrUnordered(unsigned size, Operand* a,
-                                             Operand* b, Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatGreaterOrUnordered, size,
-                 static_cast<Value*>(a), static_cast<Value*>(b),
-                 static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatLessOrEqualOrUnordered(unsigned size, Operand* a,
-                                                 Operand* b, Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatLessOrEqualOrUnordered, size,
-                 static_cast<Value*>(a), static_cast<Value*>(b),
-                 static_cast<Value*>(address));
-  }
-
-  virtual void jumpIfFloatGreaterOrEqualOrUnordered(unsigned size, Operand* a,
-                                                    Operand* b,
-                                                    Operand* address)
-  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-
-    appendBranch(&c, lir::JumpIfFloatGreaterOrEqualOrUnordered, size,
-                 static_cast<Value*>(a), static_cast<Value*>(b),
-                 static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
@@ -2764,182 +2611,23 @@ class MyCompiler: public Compiler {
     appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
   }
 
-  virtual Operand* add(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Add, size, static_cast<Value*>(a),
+  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) {
+    assert(&c,
+      (isGeneralBinaryOp(type) and isGeneralValue(a) and isGeneralValue(b))
+      or (isFloatBinaryOp(type) and isFloatValue(a) and isFloatValue(b)));
+
+    Value* result = value(&c, static_cast<Value*>(a)->type);
+    
+    appendCombine(&c, type, size, static_cast<Value*>(a),
                   size, static_cast<Value*>(b), size, result);
     return result;
   }
 
-  virtual Operand* sub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Subtract, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* mul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Multiply, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* div(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Divide, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* rem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral
-           and static_cast<Value*>(b)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Remainder, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fadd(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatAdd, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fsub(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatSubtract, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fmul(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    static_cast<Value*>(a)->type = static_cast<Value*>(b)->type = lir::ValueFloat;
-    appendCombine(&c, lir::FloatMultiply, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* fdiv(unsigned size, Operand* a, Operand* b)  {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendCombine(&c, lir::FloatDivide, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* frem(unsigned size, Operand* a, Operand* b) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat
-           and static_cast<Value*>(b)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendCombine(&c, lir::FloatRemainder, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* shl(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::ShiftLeft, TargetBytesPerWord, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* shr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::ShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* ushr(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine
-      (&c, lir::UnsignedShiftRight, TargetBytesPerWord, static_cast<Value*>(a),
-       size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* and_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::And, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* or_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Or, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* xor_(unsigned size, Operand* a, Operand* b) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendCombine(&c, lir::Xor, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
-
-  virtual Operand* neg(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate(&c, lir::Negate, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fneg(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate(&c, lir::FloatNegate, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* abs(unsigned size, Operand* a) {
-  	assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate(&c, lir::Absolute, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fabs(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::FloatAbsolute, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-
-  virtual Operand* fsqrt(unsigned size, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::FloatSquareRoot, size, static_cast<Value*>(a), size, result);
+  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) {
+    assert(&c, (isGeneralUnaryOp(type) and isGeneralValue(a))or(
+                   isFloatUnaryOp(type) and isFloatValue(a)));
+    Value* result = value(&c, static_cast<Value*>(a)->type);
+    appendTranslate(&c, type, size, static_cast<Value*>(a), size, result);
     return result;
   }
   
@@ -2967,20 +2655,8 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void trap() {
-    appendOperation(&c, lir::Trap);
-  }
-
-  virtual void loadBarrier() {
-    appendOperation(&c, lir::LoadBarrier);
-  }
-
-  virtual void storeStoreBarrier() {
-    appendOperation(&c, lir::StoreStoreBarrier);
-  }
-
-  virtual void storeLoadBarrier() {
-    appendOperation(&c, lir::StoreLoadBarrier);
+  virtual void nullaryOp(lir::Operation type) {
+    appendOperation(&c, type);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,
