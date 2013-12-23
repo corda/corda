@@ -22,7 +22,7 @@ public class ConcurrentLinkedQueue<T> {
     }
   }
 
-  private volatile Node<T> head = new Node(null, null);
+  private volatile Node<T> head = new Node<T>(null, null);
   private volatile Node<T> tail = head;
 
   public void clear() {
@@ -31,7 +31,7 @@ public class ConcurrentLinkedQueue<T> {
   }
 
   public boolean add(T value) {
-    Node<T> n = new Node(value, null);
+    Node<T> n = new Node<T>(value, null);
     while (true) {
       Node<T> t = tail;
       Node<T> next = tail.next;
