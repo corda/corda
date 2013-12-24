@@ -34,7 +34,7 @@ public enum TimeUnit {
     
     @Override
     public long toMinutes(long d) {
-      return d / NANOSECONDS_PER_MINUET;
+      return d / NANOSECONDS_PER_MINUTE;
     }
     
     @Override
@@ -80,7 +80,7 @@ public enum TimeUnit {
     
     @Override
     public long toMinutes(long d) {
-      return d / MICROSECONDS_PER_MINUET;
+      return d / MICROSECONDS_PER_MINUTE;
     }
     
     @Override
@@ -126,7 +126,7 @@ public enum TimeUnit {
     
     @Override
     public long toMinutes(long d) {
-      return d / MILLISECONDS_PER_MINUET;
+      return d / MILLISECONDS_PER_MINUTE;
     }
     
     @Override
@@ -172,7 +172,7 @@ public enum TimeUnit {
     
     @Override
     public long toMinutes(long d) {
-      return d / SECONDS_PER_MINUET;
+      return d / SECONDS_PER_MINUTE;
     }
     
     @Override
@@ -198,22 +198,22 @@ public enum TimeUnit {
   MINUTES {
     @Override
     public long toNanos(long d) {
-      return scale(d, NANOSECONDS_PER_MINUET);
+      return scale(d, NANOSECONDS_PER_MINUTE);
     }
     
     @Override
     public long toMicros(long d) {
-      return scale(d, MICROSECONDS_PER_MINUET);
+      return scale(d, MICROSECONDS_PER_MINUTE);
     }
     
     @Override
     public long toMillis(long d) {
-      return scale(d, MILLISECONDS_PER_MINUET);
+      return scale(d, MILLISECONDS_PER_MINUTE);
     }
     
     @Override
     public long toSeconds(long d) {
-      return scale(d, SECONDS_PER_MINUET);
+      return scale(d, SECONDS_PER_MINUTE);
     }
     
     @Override
@@ -337,26 +337,26 @@ public enum TimeUnit {
   private static final long NANOSECONDS_PER_MICROSECOND = 1000L;
   private static final long MICROSECONDS_PER_MILLISECOND = 1000L;
   private static final long MILLISECONDS_PER_SECOND = 1000L;
-  private static final long SECONDS_PER_MINUET = 60;
+  private static final long SECONDS_PER_MINUTE = 60;
   private static final long MINUETS_PER_HOUR = 60;
   private static final long HOURS_PER_DAY = 24;
   
   private static final long NANOSECONDS_PER_MILLISECOND = NANOSECONDS_PER_MICROSECOND * MICROSECONDS_PER_MILLISECOND;
   private static final long NANOSECONDS_PER_SECOND = NANOSECONDS_PER_MILLISECOND * MILLISECONDS_PER_SECOND;
-  private static final long NANOSECONDS_PER_MINUET = NANOSECONDS_PER_SECOND * SECONDS_PER_MINUET;
-  private static final long NANOSECONDS_PER_HOUR = NANOSECONDS_PER_MINUET * MINUETS_PER_HOUR;
+  private static final long NANOSECONDS_PER_MINUTE = NANOSECONDS_PER_SECOND * SECONDS_PER_MINUTE;
+  private static final long NANOSECONDS_PER_HOUR = NANOSECONDS_PER_MINUTE * MINUETS_PER_HOUR;
   private static final long NANOSECONDS_PER_DAY = NANOSECONDS_PER_HOUR * HOURS_PER_DAY;
   
   private static final long MICROSECONDS_PER_SECOND = MICROSECONDS_PER_MILLISECOND * MILLISECONDS_PER_SECOND;
-  private static final long MICROSECONDS_PER_MINUET = MICROSECONDS_PER_SECOND * SECONDS_PER_MINUET;
-  private static final long MICROSECONDS_PER_HOUR = MICROSECONDS_PER_MINUET * MINUETS_PER_HOUR;
+  private static final long MICROSECONDS_PER_MINUTE = MICROSECONDS_PER_SECOND * SECONDS_PER_MINUTE;
+  private static final long MICROSECONDS_PER_HOUR = MICROSECONDS_PER_MINUTE * MINUETS_PER_HOUR;
   private static final long MICROSECONDS_PER_DAY = MICROSECONDS_PER_HOUR * HOURS_PER_DAY;
   
-  private static final long MILLISECONDS_PER_MINUET = MILLISECONDS_PER_SECOND * SECONDS_PER_MINUET;
-  private static final long MILLISECONDS_PER_HOUR = MILLISECONDS_PER_MINUET * MINUETS_PER_HOUR;
+  private static final long MILLISECONDS_PER_MINUTE = MILLISECONDS_PER_SECOND * SECONDS_PER_MINUTE;
+  private static final long MILLISECONDS_PER_HOUR = MILLISECONDS_PER_MINUTE * MINUETS_PER_HOUR;
   private static final long MILLISECONDS_PER_DAY = MILLISECONDS_PER_HOUR * HOURS_PER_DAY;
   
-  private static final long SECONDS_PER_HOUR = SECONDS_PER_MINUET * MINUETS_PER_HOUR;
+  private static final long SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUETS_PER_HOUR;
   private static final long SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
   
   private static final long MINUETS_PER_DAY = MINUETS_PER_HOUR * HOURS_PER_DAY;
