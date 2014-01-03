@@ -1,20 +1,26 @@
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AtomicReferenceTest {
   private static void runTest(final int threadCount, 
                               final int iterationsPerThread) {
-    // we assume a 1ms delay per thread to try to get them all to start at the same time
-    final long startTime = System.currentTimeMillis() + threadCount + 10;
     final AtomicReference<Integer> result = new AtomicReference<Integer>(0);
     final AtomicInteger threadDoneCount = new AtomicInteger(0);
+    // only using an AtomicBoolean here so I don't need two variables to do the synchronize/wait/notify
+    final AtomicBoolean threadsStart = new AtomicBoolean(false);
     
     for (int i = 0; i < threadCount; i++) {
       new Thread(new Runnable() {
         @Override
         public void run() {
           try {
-            waitTillReady();
+            try {
+              waitTillReady();
+            } catch (InterruptedException e) {
+              // let thread exit
+              return;
+            }
             doOperation();
           } finally {
             synchronized (threadDoneCount) {
@@ -25,14 +31,10 @@ public class AtomicReferenceTest {
           }
         }
         
-        private void waitTillReady() {
-          long sleepTime = System.currentTimeMillis() - startTime;
-          if (sleepTime > 0) {
-            try {
-              Thread.sleep(sleepTime);
-            } catch (InterruptedException e) {
-              // let thread exit
-              return;
+        private void waitTillReady() throws InterruptedException {
+          synchronized (threadsStart) {
+            while (! threadsStart.get()) {
+              threadsStart.wait();
             }
           }
         }
@@ -46,6 +48,12 @@ public class AtomicReferenceTest {
           }
         }
       }).start();
+    }
+    
+    synchronized (threadsStart) {
+      threadsStart.set(true);
+      
+      threadsStart.notifyAll();
     }
     
     synchronized (threadDoneCount) {
