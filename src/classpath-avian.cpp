@@ -730,6 +730,14 @@ Avian_avian_Atomic_getOffset
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_objectFieldOffset
+(Thread* t, object, uintptr_t* arguments)
+{
+  return fieldOffset
+    (t, jfieldVmField(t, reinterpret_cast<object>(arguments[1])));
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_Atomic_compareAndSwapObject
 (Thread* t, object, uintptr_t* arguments)
 {
