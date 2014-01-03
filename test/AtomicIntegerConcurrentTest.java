@@ -5,7 +5,7 @@ public class AtomicIntegerConcurrentTest {
                               final int threadCount, 
                               final int iterationsPerThread) {
     // we assume a 1ms delay per thread to try to get them all to start at the same time
-    final long startTime = System.currentTimeMillis() + threadCount;
+    final long startTime = System.currentTimeMillis() + threadCount + 10;
     final AtomicInteger result = new AtomicInteger();
     final AtomicInteger threadDoneCount = new AtomicInteger();
     
@@ -15,6 +15,7 @@ public class AtomicIntegerConcurrentTest {
         public void run() {
           try {
             doOperation();
+            waitTillReady();
           } finally {
             synchronized (threadDoneCount) {
               threadDoneCount.incrementAndGet();
@@ -24,15 +25,19 @@ public class AtomicIntegerConcurrentTest {
           }
         }
         
-        private void doOperation() {
+        private void waitTillReady() {
           long sleepTime = System.currentTimeMillis() - startTime;
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            // let thread exit
-            return;
+          if (sleepTime > 0) {
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              // let thread exit
+              return;
+            }
           }
-          
+        }
+        
+        private void doOperation() {
           boolean flip = true;
           for (int i = 0; i < iterationsPerThread; i++) {
             if (flip) {

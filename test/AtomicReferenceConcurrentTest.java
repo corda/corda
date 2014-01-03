@@ -5,7 +5,7 @@ public class AtomicReferenceConcurrentTest {
   private static void runTest(final int threadCount, 
                               final int iterationsPerThread) {
     // we assume a 1ms delay per thread to try to get them all to start at the same time
-    final long startTime = System.currentTimeMillis() + threadCount;
+    final long startTime = System.currentTimeMillis() + threadCount + 10;
     final AtomicReference<Integer> result = new AtomicReference<Integer>(0);
     final AtomicInteger threadDoneCount = new AtomicInteger(0);
     
@@ -15,6 +15,7 @@ public class AtomicReferenceConcurrentTest {
         public void run() {
           try {
             doOperation();
+            waitTillReady();
           } finally {
             synchronized (threadDoneCount) {
               threadDoneCount.incrementAndGet();
@@ -24,15 +25,19 @@ public class AtomicReferenceConcurrentTest {
           }
         }
         
-        private void doOperation() {
+        private void waitTillReady() {
           long sleepTime = System.currentTimeMillis() - startTime;
-          try {
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException e) {
-            // let thread exit
-            return;
+          if (sleepTime > 0) {
+            try {
+              Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+              // let thread exit
+              return;
+            }
           }
-          
+        }
+        
+        private void doOperation() {
           for (int i = 0; i < iterationsPerThread; i++) {
             Integer current = result.get();
             while (! result.compareAndSet(current, current + 1)) {
@@ -62,7 +67,6 @@ public class AtomicReferenceConcurrentTest {
   }
   
   public static void main(String[] args) {
-    runTest(10, 100);
     runTest(10, 100);
   }
 }
