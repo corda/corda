@@ -1,6 +1,6 @@
 import java.util.concurrent.atomic.AtomicLong;
 
-public class AtomicLongConcurrentTest {
+public class AtomicLongTest {
   private static void runTest(final boolean increment, 
                               final int threadCount, 
                               final int iterationsPerThread) {

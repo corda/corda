@@ -1,13 +1,13 @@
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
-public class AtomicReferenceConcurrentTest {
-  private static void runTest(final int threadCount, 
+public class AtomicIntegerTest {
+  private static void runTest(final boolean increment, 
+                              final int threadCount, 
                               final int iterationsPerThread) {
     // we assume a 1ms delay per thread to try to get them all to start at the same time
     final long startTime = System.currentTimeMillis() + threadCount + 10;
-    final AtomicReference<Integer> result = new AtomicReference<Integer>(0);
-    final AtomicInteger threadDoneCount = new AtomicInteger(0);
+    final AtomicInteger result = new AtomicInteger();
+    final AtomicInteger threadDoneCount = new AtomicInteger();
     
     for (int i = 0; i < threadCount; i++) {
       new Thread(new Runnable() {
@@ -38,10 +38,22 @@ public class AtomicReferenceConcurrentTest {
         }
         
         private void doOperation() {
+          boolean flip = true;
           for (int i = 0; i < iterationsPerThread; i++) {
-            Integer current = result.get();
-            while (! result.compareAndSet(current, current + 1)) {
-              current = result.get();
+            if (flip) {
+              if (increment) {
+                result.incrementAndGet();
+              } else {
+                result.decrementAndGet();
+              }
+              flip = false;
+            } else {
+              if (increment) {
+                result.getAndIncrement();
+              } else {
+                result.getAndDecrement();
+              }
+              flip = true;
             }
           }
         }
@@ -59,14 +71,18 @@ public class AtomicReferenceConcurrentTest {
       }
     }
     
-    long expectedResult = threadCount * iterationsPerThread;
-    Integer resultValue = result.get();
+    int expectedResult = threadCount * iterationsPerThread;
+    if (! increment) {
+      expectedResult *= -1;
+    }
+    int resultValue = result.get();
     if (resultValue != expectedResult) {
       throw new IllegalStateException(resultValue + " != " + expectedResult);
     }
   }
   
   public static void main(String[] args) {
-    runTest(10, 100);
+    runTest(true, 10, 100);
+    runTest(false, 10, 100);
   }
 }
