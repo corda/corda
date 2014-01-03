@@ -223,7 +223,7 @@ public final class Class <T> implements Type, AnnotatedElement {
     for (VMClass c = vmClass; c != null; c = c.super_) {
       int index = Classes.findMethod(c, name, parameterTypes);
       if (index >= 0) {
-        return new Method(vmClass.methodTable[index]);
+        return new Method(c.methodTable[index]);
       }
     }
     throw new NoSuchMethodException(name);
