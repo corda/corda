@@ -14,8 +14,8 @@ public class AtomicIntegerTest {
         @Override
         public void run() {
           try {
-            doOperation();
             waitTillReady();
+            doOperation();
           } finally {
             synchronized (threadDoneCount) {
               threadDoneCount.incrementAndGet();
