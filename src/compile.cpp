@@ -3665,6 +3665,7 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
                 a,
                 b,
                 target);
+    break;
 
   default:
     ip -= 3;
