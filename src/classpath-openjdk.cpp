@@ -2794,26 +2794,6 @@ Avian_sun_misc_Unsafe_getObjectVolatile
   return value;
 }
 
-extern "C" AVIAN_EXPORT void JNICALL
-Avian_sun_misc_Unsafe_putObjectVolatile
-(Thread* t, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-  object value = reinterpret_cast<object>(arguments[4]);
-  
-  storeStoreMemoryBarrier();
-  set(t, o, offset, reinterpret_cast<object>(value));
-  storeLoadMemoryBarrier();
-}
-
-extern "C" AVIAN_EXPORT void JNICALL
-Avian_sun_misc_Unsafe_putOrderedObject
-(Thread* t, object method, uintptr_t* arguments)
-{
-  Avian_sun_misc_Unsafe_putObjectVolatile(t, method, arguments);
-}
-
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_pageSize
 (Thread*, object, uintptr_t*)

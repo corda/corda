@@ -60,6 +60,10 @@ public final class Unsafe {
 
   public native void putObject(Object o, long offset, Object x);
 
+  public native void putObjectVolatile(Object o, long offset, Object x);
+
+  public native void putOrderedObject(Object o, long offset, Object x);
+
   public native long getAddress(long address);
 
   public native void putAddress(long address, long x);
