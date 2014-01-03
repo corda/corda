@@ -3665,6 +3665,7 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
                 a,
                 b,
                 target);
+    break;
 
   default:
     ip -= 3;
@@ -4007,7 +4008,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   unsigned stackSize = codeMaxStack(t, methodCode(t, context->method));
   Stack stack(t);
   unsigned ip = initialIp;
-  unsigned newIp = -1;
+  unsigned newIp;
   stack.pushValue(Return);
 
  start:
