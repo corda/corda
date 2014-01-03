@@ -50,11 +50,19 @@ public final class Unsafe {
 
   public native long getLongVolatile(Object o, long offset);
 
+  public native long putLongVolatile(Object o, long offset, long x);
+
+  public native long putOrderedLong(Object o, long offset, long x);
+
   public native void putOrderedInt(Object o, long offset, int x);
 
   public native Object getObject(Object o, long offset);
 
   public native void putObject(Object o, long offset, Object x);
+
+  public native void putObjectVolatile(Object o, long offset, Object x);
+
+  public native void putOrderedObject(Object o, long offset, Object x);
 
   public native long getAddress(long address);
 

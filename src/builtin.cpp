@@ -703,6 +703,26 @@ Avian_sun_misc_Unsafe_putObject
   set(t, o, offset, reinterpret_cast<object>(value));
 }
 
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putObjectVolatile
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  object value = reinterpret_cast<object>(arguments[4]);
+  
+  storeStoreMemoryBarrier();
+  set(t, o, offset, reinterpret_cast<object>(value));
+  storeLoadMemoryBarrier();
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putOrderedObject
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putObjectVolatile(t, method, arguments);
+}
+
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapObject
 (Thread* t, object, uintptr_t* arguments)
@@ -765,10 +785,6 @@ Avian_sun_misc_Unsafe_getLongVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  // avoid blocking the VM if this is being called in a busy loop
-  PROTECT(t, o);
-  { ENTER(t, Thread::IdleState); }
-
   object field;
   if (BytesPerWord < 8) {
     field = fieldForOffset(t, o, offset);
@@ -786,6 +802,42 @@ Avian_sun_misc_Unsafe_getLongVolatile
   }
 
   return result;
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putLongVolatile
+(Thread* t, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int64_t value; memcpy(&value, arguments + 4, 8);
+
+  object field;
+  if (BytesPerWord < 8) {
+    field = fieldForOffset(t, o, offset);
+
+    PROTECT(t, field);
+    acquire(t, field);        
+  } else {
+    storeStoreMemoryBarrier();
+  }
+
+  fieldAtOffset<int64_t>(o, offset) = value;
+
+  if (BytesPerWord < 8) {
+    release(t, field);
+  } else {
+    storeLoadMemoryBarrier();
+  }
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putOrderedLong
+(Thread* t, object method, uintptr_t* arguments)
+{
+  // todo: we might be able to use weaker barriers here than
+  // putLongVolatile does
+  Avian_sun_misc_Unsafe_putLongVolatile(t, method, arguments);
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
