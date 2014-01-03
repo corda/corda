@@ -1,5 +1,6 @@
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.InvocationTargetException;
@@ -232,6 +233,9 @@ public class Reflection {
         expect(t.getClass() == InvocationTargetException.class);
       }
     }
+
+    expect((Foo.class.getMethod("toString").getModifiers()
+            & Modifier.PUBLIC) != 0);
   }
 }
 
