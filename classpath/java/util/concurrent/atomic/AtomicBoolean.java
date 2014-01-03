@@ -21,11 +21,7 @@ public class AtomicBoolean implements java.io.Serializable {
   }
   
   private static boolean booleanValue(int value) {
-    if (value == TRUE_VALUE) {
-      return true;
-    } else {
-      return false;
-    }
+    return value == TRUE_VALUE;
   }
   
   public boolean get() {
