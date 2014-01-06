@@ -1292,9 +1292,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
-        while (staticOffset % size) {
-          ++ staticOffset;
-        }
+        staticOffset = pad(staticOffset, size);
 
         fieldOffset(t, field) = staticOffset;
 
@@ -1308,9 +1306,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
           classVmFlags(t, class_) |= HasFinalMemberFlag;
         }
 
-        while (memberOffset % size) {
-          ++ memberOffset;
-        }
+        memberOffset = pad(memberOffset, size);
 
         fieldOffset(t, field) = memberOffset;
 
@@ -1335,9 +1331,7 @@ parseFieldTable(Thread* t, Stream& s, object class_, object pool)
 
       for (unsigned i = 0, offset = BytesPerWord; i < staticCount; ++i) {
         unsigned size = fieldSize(t, RUNTIME_ARRAY_BODY(staticTypes)[i]);
-        while (offset % size) {
-          ++ offset;
-        }
+        offset = pad(offset, size);
 
         unsigned value = intArrayBody(t, staticValueTable, i);
         if (value) {

@@ -636,6 +636,7 @@ class MemberIterator {
   unsigned size_;
   unsigned padding_;
   unsigned alignment_;
+  unsigned sawSuperclassBoundary;
 
   MemberIterator(Object* type, bool skipSupers = false):
     types(derivationChain(type)),
@@ -646,7 +647,8 @@ class MemberIterator {
     offset_(BytesPerWord),
     size_(0),
     padding_(0),
-    alignment_(BytesPerWord)
+    alignment_(BytesPerWord),
+    sawSuperclassBoundary(true)
   { 
     while (skipSupers and hasMore() and this->type != type) next();
     padding_ = 0;
@@ -663,7 +665,10 @@ class MemberIterator {
           offset_ = ((offset_ + size_) + (BytesPerWord - 1))
             & ~(BytesPerWord - 1);
           alignment_ = BytesPerWord;
+          sawSuperclassBoundary = true;
           member = 0;
+        } else {
+          sawSuperclassBoundary = false;
         }
 
         type = car(types);
@@ -1832,6 +1837,10 @@ writeMap(Output* out, Object* type)
 {
   for (MemberIterator it(type); it.hasMore();) {
     Object* m = it.next();
+
+    if (it.sawSuperclassBoundary) {
+      out->write("Type_pad, ");
+    }
 
     switch (m->type) {
     case Object::Scalar: {
