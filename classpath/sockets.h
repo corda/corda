@@ -25,6 +25,10 @@
 #  include <winsock2.h>
 
 #  define ONLY_ON_WINDOWS(x)	x
+
+#  ifndef ENOTCONN
+#    define ENOTCONN WSAENOTCONN
+#  endif
 #else
 #  include <netdb.h>
 #  include <sys/socket.h>

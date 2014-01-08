@@ -659,8 +659,8 @@ ifeq ($(platform),darwin)
 			elif test -d $(sdk-dir)/$(target)5.1.sdk; then echo 5.1; \
 			elif test -d $(sdk-dir)/$(target)5.0.sdk; then echo 5.0; \
 			elif test -d $(sdk-dir)/$(target)4.3.sdk; then echo 4.3; \
-  		elif test -d $(sdk-dir)/$(target)4.2.sdk; then echo 4.2; \
-  		else echo; fi)
+			elif test -d $(sdk-dir)/$(target)4.2.sdk; then echo 4.2; \
+			else echo; fi)
 
 		ifeq ($(ios-version),)
 			x := $(error "couldn't find SDK")
@@ -1521,14 +1521,14 @@ endif
 $(build)/run-tests.sh: $(test-classes) makefile $(build)/extra-dir/multi-classpath-test.txt $(build)/test/multi-classpath-test.txt
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test:extra-dir\" \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test$(path-separator)extra-dir\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 
 $(build)/jdk-run-tests.sh: $(test-classes) makefile $(build)/extra-dir/multi-classpath-test.txt $(build)/test/multi-classpath-test.txt
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "'' true $(JAVA_HOME)/bin/java $(mode) \"-Xmx128m -Djava.library.path=. -cp test:extra-dir:classpath\" \\" >> $(@)
+	echo "'' true $(JAVA_HOME)/bin/java $(mode) \"-Xmx128m -Djava.library.path=. -cp test$(path-separator)extra-dir$(path-separator)classpath\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 
