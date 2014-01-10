@@ -58,9 +58,9 @@ void populateTables(ArchitectureContext* con) {
   BranchOperationType* bro = con->branchOperations;
 
   zo[lir::Return] = return_;
-  zo[lir::LoadBarrier] = memoryBarrier;
-  zo[lir::StoreStoreBarrier] = memoryBarrier;
-  zo[lir::StoreLoadBarrier] = memoryBarrier;
+  zo[lir::LoadBarrier] = loadBarrier;
+  zo[lir::StoreStoreBarrier] = storeStoreBarrier;
+  zo[lir::StoreLoadBarrier] = storeLoadBarrier;
   zo[lir::Trap] = trap;
 
   uo[Multimethod::index(lir::LongCall, C)] = CAST1(longCallC);

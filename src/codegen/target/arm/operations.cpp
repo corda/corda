@@ -1228,7 +1228,33 @@ void trap(Context* con)
   emit(con, bkpt(0));
 }
 
-void memoryBarrier(Context*) {}
+// todo: determine the minimal operation types and domains needed to
+// implement the following barriers (see
+// http://community.arm.com/groups/processors/blog/2011/10/19/memory-access-ordering-part-3--memory-access-ordering-in-the-arm-architecture).
+// For now, we just use DMB SY as a conservative but not necessarily
+// performant choice.
+
+void memoryBarrier(Context* con UNUSED)
+{
+#ifndef AVIAN_ASSUME_ARMV6
+  emit(con, dmb());
+#endif
+}
+
+void loadBarrier(Context* con)
+{
+  memoryBarrier(con);
+}
+
+void storeStoreBarrier(Context* con)
+{
+  memoryBarrier(con);
+}
+
+void storeLoadBarrier(Context* con)
+{
+  memoryBarrier(con);
+}
 
 } // namespace arm
 } // namespace codegen

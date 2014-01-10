@@ -79,11 +79,25 @@ trap()
 #endif
 }
 
+// todo: determine the minimal operation types and domains needed to
+// implement the following barriers (see
+// http://community.arm.com/groups/processors/blog/2011/10/19/memory-access-ordering-part-3--memory-access-ordering-in-the-arm-architecture).
+// For now, we just use DMB SY as a conservative but not necessarily
+// performant choice.
+
 #ifndef _MSC_VER
 inline void
 memoryBarrier()
 {
-  asm("nop");
+#ifdef __APPLE__
+  OSMemoryBarrier();
+#elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return __sync_synchronize();
+#elif (! defined AVIAN_ASSUME_ARMV6)
+  __asm__ __volatile__ ("dmb" : : : "memory");
+#else
+  __asm__ __volatile__ ("" : : : "memory");
+#endif
 }
 #endif
 
@@ -148,7 +162,7 @@ inline bool
 atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef __APPLE__
-  return OSAtomicCompareAndSwap32(old, new_, reinterpret_cast<int32_t*>(p));
+  return OSAtomicCompareAndSwap32Barrier(old, new_, reinterpret_cast<int32_t*>(p));
 #elif (defined __QNX__)
   return old == _smp_cmpxchg(p, old, new_);
 #else

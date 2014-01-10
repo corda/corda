@@ -172,6 +172,8 @@ inline int blo(int offset) { return SETCOND(b(offset), CC); }
 inline int bhs(int offset) { return SETCOND(b(offset), CS); }
 inline int bpl(int offset) { return SETCOND(b(offset), PL); }
 inline int fmstat() { return fmrx(15, FPSCR); }
+// todo: make this pretty:
+inline int dmb() { return 0xf57ff05f; }
 
 } // namespace isa
 

@@ -127,6 +127,10 @@ devices.  See [here](https://github.com/ReadyTalk/hello-ios) for an
 example of an Xcode project for iOS which uses Avian.  
     * _default:_ false
 
+  * `armv6` - if true, don't use any instructions newer than armv6.  By
+default, we assume the target is armv7 or later, and thus requires explicit
+memory barrier instructions to ensure cache coherency
+
   * `bootimage` - if true, create a boot image containing the pre-parsed
 class library and ahead-of-time compiled methods.  This option is
 only valid for process=compile builds.  Note that you may need to
