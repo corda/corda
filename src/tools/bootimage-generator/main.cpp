@@ -48,6 +48,7 @@ const bool DebugNativeTarget = false;
 
 enum Type {
   Type_none,
+  Type_pad,
   Type_object,
   Type_object_nogc,
   Type_int8_t,
@@ -517,9 +518,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             }
 
             if (fieldFlags(t, field) & ACC_STATIC) {
-              while (targetStaticOffset % targetSize) {
-                ++ targetStaticOffset;
-              }
+              targetStaticOffset = pad(targetStaticOffset, targetSize);
 
               buildStaticOffset = fieldOffset(t, field);
 
@@ -531,9 +530,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
               ++ staticIndex;
             } else {
-              while (targetMemberOffset % targetSize) {
-                ++ targetMemberOffset;
-              }
+              targetMemberOffset = pad(targetMemberOffset, targetSize);
 
               buildMemberOffset = fieldOffset(t, field);
 
@@ -1339,13 +1336,16 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     for (unsigned i = 0; i < arrayLength(t, t->m->types); ++i) {
       Type* source = types[i];
-      unsigned count = 0;
-      while (source[count] != Type_none) {
-        ++ count;
+      unsigned typeCount = 0;
+      unsigned fieldCount = 1;
+      while (source[typeCount] != Type_none) {
+        ++ typeCount;
+        if (source[typeCount] != Type_pad) {
+          ++ fieldCount;
+        }
       }
-      ++ count;
 
-      THREAD_RUNTIME_ARRAY(t, Field, fields, count);
+      THREAD_RUNTIME_ARRAY(t, Field, fields, fieldCount);
 
       init(new (RUNTIME_ARRAY_BODY(fields)) Field, Type_object, 0,
            BytesPerWord, 0, TargetBytesPerWord);
@@ -1356,8 +1356,15 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       Type type = Type_none;
       unsigned buildSize = 0;
       unsigned targetSize = 0;
-      for (unsigned j = 1; j < count; ++j) {
-        switch (source[j - 1]) {
+      unsigned fieldOffset = 1;
+      for (unsigned j = 0; j < typeCount; ++j) {
+        switch (source[j]) {
+        case Type_pad:
+          type = Type_pad;
+          buildSize = 0;
+          targetSize = 0;
+          break;
+
         case Type_object:
           type = Type_object;
           buildSize = BytesPerWord;
@@ -1412,21 +1419,21 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
         default: abort(t);
         }
 
-        if (source[j - 1] == Type_array) {
+        if (source[j] == Type_array) {
           sawArray = true;
         }
 
-        if (not sawArray) {
-          while (buildOffset % buildSize) {
-            ++ buildOffset;
-          }
+        if (type == Type_pad) {
+          buildOffset = pad(buildOffset, BytesPerWord);
 
-          while (targetOffset % targetSize) {
-            ++ targetOffset;
-          }
+          targetOffset = pad(targetOffset, TargetBytesPerWord);
+        } else if (not sawArray) {
+          buildOffset = pad(buildOffset, buildSize);
 
-          init(new (RUNTIME_ARRAY_BODY(fields) + j) Field, type, buildOffset,
-               buildSize, targetOffset, targetSize);
+          targetOffset = pad(targetOffset, targetSize);
+
+          init(new (RUNTIME_ARRAY_BODY(fields) + (fieldOffset++)) Field, type,
+               buildOffset, buildSize, targetOffset, targetSize);
 
           buildOffset += buildSize;
           targetOffset += targetSize;
@@ -1438,12 +1445,12 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       unsigned buildArrayElementSize;
       unsigned targetArrayElementSize;
       if (sawArray) {
-        fixedFieldCount = count - 2;
+        fixedFieldCount = fieldCount - 2;
         arrayElementType = type;
         buildArrayElementSize = buildSize; 
         targetArrayElementSize = targetSize;
       } else {
-        fixedFieldCount = count;
+        fixedFieldCount = fieldCount;
         arrayElementType = Type_none;
         buildArrayElementSize = 0;
         targetArrayElementSize = 0;
