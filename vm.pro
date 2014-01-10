@@ -98,6 +98,7 @@
 
 -keepclassmembers class java.lang.Thread {
    private static void run(java.lang.Thread);
+   public void run();
  }
 
 # when continuations are enabled, the VM may call these methods by name:
