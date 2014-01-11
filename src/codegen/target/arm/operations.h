@@ -230,7 +230,11 @@ void return_(Context* con);
 
 void trap(Context* con);
 
-void memoryBarrier(Context*);
+void loadBarrier(Context*);
+
+void storeStoreBarrier(Context*);
+
+void storeLoadBarrier(Context*);
 
 } // namespace arm
 } // namespace codegen

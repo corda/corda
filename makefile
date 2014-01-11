@@ -470,6 +470,10 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+ifeq ($(armv6),true)
+	cflags += -DAVIAN_ASSUME_ARMV6
+endif
+
 ifeq ($(ios),true)
 	cflags += -DAVIAN_IOS
 	use-lto = false
@@ -1895,6 +1899,7 @@ $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 		arch=$(build-arch) \
 		aot-only=false \
 		target-arch=$(arch) \
+		armv6=$(armv6) \
 		platform=$(bootimage-platform) \
 		target-format=$(target-format) \
 		openjdk=$(openjdk) \
