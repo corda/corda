@@ -739,26 +739,9 @@ Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
       r = e->NewStringUTF("Linux");
 #endif
     } else if (strcmp(chars, "os.version") == 0) {
-#if (defined __APPLE__) && (! defined AVIAN_IOS)
-      unsigned size = 32;
-      char buffer[size];
-#ifdef ARCH_x86_64
-      int32_t minorVersion, majorVersion;
-#else
-      long minorVersion, majorVersion;
-#endif
-      
-      Gestalt(gestaltSystemVersionMajor, &majorVersion);
-      Gestalt(gestaltSystemVersionMinor, &minorVersion);
-      
-      snprintf(buffer, size, "%d.%d", static_cast<int32_t>(majorVersion),
-               static_cast<int32_t>(minorVersion));
-      r = e->NewStringUTF(buffer);
-#else
       struct utsname system_id; 
       uname(&system_id);
       r = e->NewStringUTF(system_id.release);
-#endif
     } else if (strcmp(chars, "os.arch") == 0) {
 #ifdef ARCH_x86_32
       r = e->NewStringUTF("x86");
