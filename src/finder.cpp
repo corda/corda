@@ -566,7 +566,7 @@ class BuiltinElement: public JarElement {
   virtual void init() {
     if (index == 0) {
       if (s->success(s->load(&library, libraryName))) {
-        bool lzma = strncmp("lzma:", name, 5) == 0;
+        bool lzma = strncmp("lzma.", name, 5) == 0;
         const char* symbolName = lzma ? name + 5 : name;
 
         void* p = library->resolve(symbolName);
