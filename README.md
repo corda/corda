@@ -503,7 +503,7 @@ compress the jar before generating the object:
            boot.jar.lzma boot-jar.o _binary_boot_jar_start _binary_boot_jar_end \
            ${platform} ${arch}
 
-Note that you'll need to specify "-Xbootclasspath:[lzma:bootJar]"
+Note that you'll need to specify "-Xbootclasspath:[lzma.bootJar]"
 instead of "-Xbootclasspath:[bootJar]" in the next step if you've used
 LZMA to compress the jar.
 
