@@ -9,6 +9,10 @@
    public void run();
  }
 
+-keepclassmembers class java.lang.ThreadGroup {
+   void threadTerminated(java.lang.Thread);
+ }
+
 -keep class java.lang.System {
    private static void initializeSystemClass();
    public static void setProperties(java.util.Properties);
