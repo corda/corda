@@ -10,13 +10,14 @@
 
 package java.lang;
 
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
-import java.util.regex.Pattern;
 import java.util.Comparator;
 import java.util.Locale;
-import java.io.Serializable;
-import avian.Utf8;
+import java.util.regex.Pattern;
+
 import avian.Iso88591;
+import avian.Utf8;
 
 public final class String
   implements Comparable<String>, CharSequence, Serializable
@@ -28,6 +29,7 @@ public final class String
 
   public static Comparator<String> CASE_INSENSITIVE_ORDER
     = new Comparator<String>() {
+    @Override
     public int compare(String a, String b) {
       return a.compareToIgnoreCase(b);
     }
@@ -64,7 +66,7 @@ public final class String
       throw new UnsupportedEncodingException(charsetName);
     }
   }
-  
+
   public String(byte[] data, int offset, int length, boolean copy) {
     this((Object) data, offset, length, copy);
   }
@@ -88,10 +90,12 @@ public final class String
   }
 
   public String(byte bytes[], int highByte, int offset, int length) {
-    if (offset < 0 || offset + length > bytes.length) {
-      throw new IndexOutOfBoundsException
-        (offset + " < 0 or " + offset + " + " + length + " > " + bytes.length);
-    }
+    if (offset < 0 )
+      throw new StringIndexOutOfBoundsException(offset);
+    else if (offset + length > bytes.length)
+      throw new StringIndexOutOfBoundsException(offset + length);
+    else if (length < 0)
+      throw new StringIndexOutOfBoundsException(length);
 
     char[] c = new char[length];
     int mask = highByte << 8;
@@ -112,10 +116,12 @@ public final class String
       l = ((byte[]) data).length;
     }
 
-    if (offset < 0 || offset + length > l) {
-      throw new IndexOutOfBoundsException
-        (offset + " < 0 or " + offset + " + " + length + " > " + l);
-    }
+    if (offset < 0 )
+      throw new StringIndexOutOfBoundsException(offset);
+    else if (offset + length > l)
+      throw new StringIndexOutOfBoundsException(offset + length);
+    else if (length < 0)
+      throw new StringIndexOutOfBoundsException(length);
 
     if(!copy && Utf8.test(data)) copy = true;
 
@@ -133,7 +139,7 @@ public final class String
              + "\"");
         }
       }
-      
+
       this.data = c;
       this.offset = 0;
       this.length = length;
@@ -144,14 +150,17 @@ public final class String
     }
   }
 
+  @Override
   public String toString() {
     return this;
   }
 
+  @Override
   public int length() {
     return length;
   }
 
+  @Override
   public int hashCode() {
     if (hashCode == 0) {
       int h = 0;
@@ -161,6 +170,7 @@ public final class String
     return hashCode;
   }
 
+  @Override
   public boolean equals(Object o) {
     if (this == o) {
       return true;
@@ -172,17 +182,15 @@ public final class String
     }
   }
 
-  public boolean equalsIgnoreCase(String o) {
-    if (this == o) {
+  public boolean equalsIgnoreCase(String s) {
+    if (this == s) {
       return true;
-    } else if (o instanceof String) {
-      String s = (String) o;
-      return s.length == length && compareToIgnoreCase(s) == 0;
     } else {
-      return false;
+      return s.length == length && compareToIgnoreCase(s) == 0;
     }
   }
 
+  @Override
   public int compareTo(String s) {
     if (this == s) return 0;
 
@@ -367,18 +375,20 @@ public final class String
   }
 
   public String substring(int start, int end) {
-    if (start >= 0 && end >= start && end <= length) {
-      if (start == 0 && end == length) {
-        return this;
-      } else if (end - start == 0) {
-        return "";
-      } else  {
-        return new String(data, offset + start, end - start, false);
-      }
-    } else {
-      throw new IndexOutOfBoundsException
-        (start + " not in [0, " + end + ") or " + end + " > " + length);
-    }
+    if (start < 0)
+      throw new StringIndexOutOfBoundsException(start);
+    else if (end > length)
+      throw new StringIndexOutOfBoundsException(end);
+    int newLen = end - start;
+    if (newLen < 0)
+      throw new StringIndexOutOfBoundsException(newLen);
+
+    if (start == 0 && end == length)
+      return this;
+    else if (end - start == 0)
+      return "";
+    else
+      return new String(data, offset + start, newLen, false);
   }
 
   public boolean startsWith(String s) {
@@ -396,7 +406,7 @@ public final class String
       return false;
     }
   }
-  
+
   public boolean endsWith(String s) {
     if (length >= s.length) {
       return substring(length - s.length).compareTo(s) == 0;
@@ -416,9 +426,12 @@ public final class String
   public void getBytes(int srcOffset, int srcLength,
                        byte[] dst, int dstOffset)
   {
-    if (srcOffset < 0 || srcOffset + srcLength > length) {
-      throw new IndexOutOfBoundsException();
-    }
+    if (srcOffset < 0)
+      throw new StringIndexOutOfBoundsException(srcOffset);
+    else if (srcOffset + srcLength > length)
+      throw new StringIndexOutOfBoundsException(srcOffset + srcLength);
+    else if (srcLength < 0)
+      throw new StringIndexOutOfBoundsException(srcLength);
 
     if (data instanceof char[]) {
       char[] src = (char[]) data;
@@ -462,9 +475,11 @@ public final class String
   public void getChars(int srcOffset, int srcEnd,
                        char[] dst, int dstOffset)
   {
-    if (srcOffset < 0 || srcEnd > length) {
-      throw new IndexOutOfBoundsException();
-    }
+    if (srcOffset < 0)
+      throw new StringIndexOutOfBoundsException(srcOffset);
+    else if (srcEnd > length)
+      throw new StringIndexOutOfBoundsException(srcEnd);
+
     int srcLength = srcEnd-srcOffset;
     if (data instanceof char[]) {
       char[] src = (char[]) data;
@@ -473,7 +488,7 @@ public final class String
       byte[] src = (byte[]) data;
       for (int i = 0; i < srcLength; ++i) {
         dst[i + dstOffset] = (char) src[i + offset + srcOffset];
-      }      
+      }
     }
   }
 
@@ -483,11 +498,12 @@ public final class String
     return b;
   }
 
+  @Override
   public char charAt(int index) {
     if (index < 0 || index > length) {
-      throw new IndexOutOfBoundsException();
+      throw new StringIndexOutOfBoundsException(index);
     }
-    
+
     if (data instanceof char[]) {
       return ((char[]) data)[index + offset];
     } else {
@@ -503,10 +519,11 @@ public final class String
     return Pattern.compile(regex).split(this, limit);
   }
 
+  @Override
   public CharSequence subSequence(int start, int end) {
     return substring(start, end);
   }
-  
+
   public boolean matches(String regex) {
     return Pattern.matches(regex, this);
   }
@@ -514,7 +531,7 @@ public final class String
   public String replaceFirst(String regex, String replacement) {
     return Pattern.compile(regex).matcher(this).replaceFirst(replacement);
   }
-  
+
   public String replaceAll(String regex, String replacement) {
     return Pattern.compile(regex).matcher(this).replaceAll(replacement);
   }
@@ -554,7 +571,7 @@ public final class String
     retVal.append(infuseWith);
     return retVal.toString();
   }
-  
+
   public native String intern();
 
   public static String valueOf(Object s) {
