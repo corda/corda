@@ -9,3 +9,4 @@ bin
 /distrib
 *.pdb
 *.swp
+/*.sublime-*
