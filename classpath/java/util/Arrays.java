@@ -144,6 +144,7 @@ public class Arrays {
 
   public static void sort(Object[] array) {
     sort(array, new Comparator() {
+        @Override
         public int compare(Object a, Object b) {
           return ((Comparable) a).compareTo(b);
         }
@@ -306,14 +307,17 @@ public class Arrays {
 
   public static <T> List<T> asList(final T ... array) {
     return new AbstractList<T>() {
+      @Override
       public int size() {
         return array.length;
       }
 
+      @Override
       public void add(int index, T element) {
         throw new UnsupportedOperationException();
       }
-      
+
+      @Override
       public int indexOf(Object element) {
         for (int i = 0; i < array.length; ++i) {
           if (equal(element, array[i])) {
@@ -323,6 +327,7 @@ public class Arrays {
         return -1;
       }
 
+      @Override
       public int lastIndexOf(Object element) {
         for (int i = array.length - 1; i >= 0; --i) {
           if (equal(element, array[i])) {
@@ -331,19 +336,23 @@ public class Arrays {
         }
         return -1;
       }
-      
+
+      @Override
       public T get(int index) {
         return array[index];
       }
 
+      @Override
       public T set(int index, T value) {
         throw new UnsupportedOperationException();
       }
 
+      @Override
       public T remove(int index) {
         throw new UnsupportedOperationException();
       }
 
+      @Override
       public ListIterator<T> listIterator(int index) {
         return new Collections.ArrayListIterator(this, index);
       }
