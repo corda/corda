@@ -19,51 +19,44 @@
 
 using namespace avian::util;
 
-class ArgParserTest : public Test {
-public:
-  ArgParserTest():
-    Test("ArgParser")
-  {}
-
-  virtual void run() {
-    {
-      ArgParser parser;
-      Arg arg1(parser, false, "arg1", "<value>");
-      Arg required2(parser, true, "required2", "<value>");
-      const char* args[] = {
-        "myExecutable",
-        "-arg1", "myValue1",
-        "-required2", "myRequired2",
-        0
-      };
-      assertTrue(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
-      assertEqual("myValue1", arg1.value);
-      assertEqual("myRequired2", required2.value);
-    }
-
-    {
-      ArgParser parser;
-      Arg arg1(parser, false, "arg1", "<value>");
-      Arg required2(parser, true, "required2", "<value>");
-      const char* args[] = {
-        "myExecutable",
-        "-arg1", "myValue1",
-        "-required2",
-        0
-      };
-      assertFalse(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
-    }
-
-    {
-      ArgParser parser;
-      Arg arg1(parser, false, "arg1", "<value>");
-      Arg required2(parser, true, "required2", "<value>");
-      const char* args[] = {
-        "myExecutable",
-        "-arg1", "myValue1",
-        0
-      };
-      assertFalse(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
-    }
+TEST(ArgParser) {
+  {
+    ArgParser parser;
+    Arg arg1(parser, false, "arg1", "<value>");
+    Arg required2(parser, true, "required2", "<value>");
+    const char* args[] = {
+      "myExecutable",
+      "-arg1", "myValue1",
+      "-required2", "myRequired2",
+      0
+    };
+    assertTrue(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
+    assertEqual("myValue1", arg1.value);
+    assertEqual("myRequired2", required2.value);
   }
-} argParserTest;
+
+  {
+    ArgParser parser;
+    Arg arg1(parser, false, "arg1", "<value>");
+    Arg required2(parser, true, "required2", "<value>");
+    const char* args[] = {
+      "myExecutable",
+      "-arg1", "myValue1",
+      "-required2",
+      0
+    };
+    assertFalse(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
+  }
+
+  {
+    ArgParser parser;
+    Arg arg1(parser, false, "arg1", "<value>");
+    Arg required2(parser, true, "required2", "<value>");
+    const char* args[] = {
+      "myExecutable",
+      "-arg1", "myValue1",
+      0
+    };
+    assertFalse(parser.parse(sizeof(args) / sizeof(char*) - 1, args));
+  }
+}

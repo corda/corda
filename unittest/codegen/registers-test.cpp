@@ -19,26 +19,19 @@ using namespace avian::codegen;
 using namespace vm;
 
 
-class RegisterIteratorTest : public Test {
-public:
-  RegisterIteratorTest():
-    Test("RegisterIterator")
-  {}
+TEST(RegisterIterator) {
+  RegisterMask regs(0x55);
+  assertEqual<unsigned>(0, regs.start);
+  assertEqual<unsigned>(7, regs.limit);
 
-  virtual void run() {
-    RegisterMask regs(0x55);
-    assertEqual<unsigned>(0, regs.start);
-    assertEqual<unsigned>(7, regs.limit);
-
-    RegisterIterator it(regs);
-    assertTrue(it.hasNext());
-    assertEqual<unsigned>(0, it.next());
-    assertTrue(it.hasNext());
-    assertEqual<unsigned>(2, it.next());
-    assertTrue(it.hasNext());
-    assertEqual<unsigned>(4, it.next());
-    assertTrue(it.hasNext());
-    assertEqual<unsigned>(6, it.next());
-    assertFalse(it.hasNext());
-  }
-} registerIteratorTest;
+  RegisterIterator it(regs);
+  assertTrue(it.hasNext());
+  assertEqual<unsigned>(0, it.next());
+  assertTrue(it.hasNext());
+  assertEqual<unsigned>(2, it.next());
+  assertTrue(it.hasNext());
+  assertEqual<unsigned>(4, it.next());
+  assertTrue(it.hasNext());
+  assertEqual<unsigned>(6, it.next());
+  assertFalse(it.hasNext());
+}
