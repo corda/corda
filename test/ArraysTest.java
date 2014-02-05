@@ -1,4 +1,6 @@
-public class Arrays {
+import java.util.Arrays;
+
+public class ArraysTest {
   private static void expect(boolean v) {
     if (! v) throw new RuntimeException();
   }
@@ -33,7 +35,7 @@ public class Arrays {
     int random = 12345;
     for (int i = 0; i < 32; ++i) {
       random = shuffle(array, random);
-      java.util.Arrays.sort(array);
+      Arrays.sort(array);
       expectSorted(array);
     }
   }
@@ -116,25 +118,55 @@ public class Arrays {
     { Object[] a = new Object[3];
       Object[] b = new Object[3];
 
-      expect(java.util.Arrays.equals(a, b));
+      expect(Arrays.equals(a, b));
       a[0] = new Object();
-      expect(! java.util.Arrays.equals(a, b));
-      expect(! java.util.Arrays.equals(b, new Object[4]));
-      expect(! java.util.Arrays.equals(a, null));
-      expect(! java.util.Arrays.equals(null, b));
-      expect(java.util.Arrays.equals((Object[])null, (Object[])null));
+      expect(! Arrays.equals(a, b));
+      expect(! Arrays.equals(b, new Object[4]));
+      expect(! Arrays.equals(a, null));
+      expect(! Arrays.equals(null, b));
+      expect(Arrays.equals((Object[])null, (Object[])null));
       b[0] = a[0];
-      expect(java.util.Arrays.equals(a, b));
+      expect(Arrays.equals(a, b));
 
-      java.util.Arrays.hashCode(a);
-      java.util.Arrays.hashCode((Object[])null);
+      Arrays.hashCode(a);
+      Arrays.hashCode((Object[])null);
     }
 
     { String[] list = new String[] { "Hello", "World", "!" };
-      Object[] result = java.util.Arrays.copyOf(list, 2, Object[].class);
+      Object[] result = Arrays.copyOf(list, 2, Object[].class);
       expect(list[1] == result[1]);
       expect(result.length == 2);
       expect(result.getClass().getComponentType() == Object.class);
+    }
+
+    { Object[] a = new Object[3];
+      Object[] b = new Object[3];
+
+      expect(Arrays.deepEquals(a, b));
+
+      a[0] = new Object();
+      expect(! Arrays.deepEquals(a, b));
+      expect(! Arrays.deepEquals(b, new Object[4]));
+      expect(! Arrays.deepEquals(a, null));
+      expect(! Arrays.deepEquals(null, b));
+      expect(Arrays.deepEquals((Object[])null, (Object[])null));
+
+      b[0] = a[0];
+      expect(Arrays.deepEquals(a, b));
+
+      a[0] = new Object[] {1};
+      expect(! Arrays.deepEquals(a, b));
+      b[0] = new Object[] {1};
+      expect(Arrays.deepEquals(a, b));
+      ((Object[])a[0])[0] = (Long)1L;
+      expect(! Arrays.deepEquals(a, b));
+      a[0] = new Integer[] {1};
+      expect(Arrays.deepEquals(a, b));
+
+      a[0] = new int[] {1};
+      expect(! Arrays.deepEquals(a, b));
+      b[0] = new int[] {1};
+      expect(Arrays.deepEquals(a, b));
     }
 
     testSort();
