@@ -11,7 +11,7 @@
 #ifndef ZONE_H
 #define ZONE_H
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/allocator.h"
 
 #include <avian/util/math.h>

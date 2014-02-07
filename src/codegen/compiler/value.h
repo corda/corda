@@ -11,8 +11,8 @@
 #ifndef AVIAN_CODEGEN_COMPILER_VALUE_H
 #define AVIAN_CODEGEN_COMPILER_VALUE_H
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/compiler.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/compiler.h>
 
 namespace avian {
 namespace codegen {

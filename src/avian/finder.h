@@ -12,7 +12,7 @@
 #define FINDER_H
 
 #include "avian/common.h"
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/allocator.h"
 
 namespace vm {

@@ -15,12 +15,12 @@
 #include "avian/target.h"
 #include "avian/arch.h"
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/architecture.h>
-#include <avian/vm/codegen/compiler.h>
-#include <avian/vm/codegen/targets.h>
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/runtime.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/architecture.h>
+#include <avian/codegen/compiler.h>
+#include <avian/codegen/targets.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/runtime.h>
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>

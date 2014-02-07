@@ -49,7 +49,7 @@
 #include "dirent.h"
 #include "sched.h"
 #include "avian/arch.h"
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 
 #include <avian/util/math.h>
 

@@ -8,8 +8,8 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/heap/heap.h>
-#include <avian/vm/system/system.h>
+#include <avian/heap/heap.h>
+#include <avian/system/system.h>
 #include "avian/common.h"
 #include "avian/arch.h"
 

@@ -11,14 +11,14 @@
 #include <stdio.h>
 
 #include "avian/common.h"
-#include <avian/vm/heap/heap.h>
-#include <avian/vm/system/system.h>
+#include <avian/heap/heap.h>
+#include <avian/system/system.h>
 #include "avian/target.h"
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/architecture.h>
-#include <avian/vm/codegen/targets.h>
-#include <avian/vm/codegen/lir.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/architecture.h>
+#include <avian/codegen/targets.h>
+#include <avian/codegen/lir.h>
 
 #include "test-harness.h"
 

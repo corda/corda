@@ -12,8 +12,8 @@
 #define PROCESSOR_H
 
 #include "avian/common.h"
-#include <avian/vm/system/system.h>
-#include <avian/vm/heap/heap.h>
+#include <avian/system/system.h>
+#include <avian/heap/heap.h>
 #include "bootimage.h"
 #include "avian/heapwalk.h"
 #include "avian/zone.h"

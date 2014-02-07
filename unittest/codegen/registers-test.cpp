@@ -10,7 +10,7 @@
 
 #include <stdio.h>
 
-#include <avian/vm/codegen/registers.h>
+#include <avian/codegen/registers.h>
 
 #include "test-harness.h"
 

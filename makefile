@@ -1108,7 +1108,7 @@ vm-depends := $(generated-code) \
 	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
-	$(src)/vm/system/$(system).cpp \
+	$(src)/system/$(system).cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
@@ -1239,7 +1239,7 @@ boot-object = $(build)/boot.o
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
-	$(src)/vm/system/$(build-system).cpp \
+	$(src)/system/$(build-system).cpp \
 	$(src)/finder.cpp
 
 ifneq ($(lzma),)

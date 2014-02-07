@@ -11,8 +11,8 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_ARM_CONTEXT_H
 #define AVIAN_CODEGEN_ASSEMBLER_ARM_CONTEXT_H
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/assembler.h>
 #include "avian/alloc-vector.h"
 
 namespace vm {

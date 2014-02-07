@@ -13,8 +13,8 @@
 
 #include "avian/common.h"
 #include "java-common.h"
-#include <avian/vm/system/system.h>
-#include <avian/vm/heap/heap.h>
+#include <avian/system/system.h>
+#include <avian/heap/heap.h>
 #include "avian/finder.h"
 #include "avian/processor.h"
 #include "avian/constants.h"

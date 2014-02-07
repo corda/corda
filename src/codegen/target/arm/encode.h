@@ -11,8 +11,8 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_ARM_ENCODE_H
 #define AVIAN_CODEGEN_ASSEMBLER_ARM_ENCODE_H
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/assembler.h>
 
 namespace avian {
 namespace codegen {

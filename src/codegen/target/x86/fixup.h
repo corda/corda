@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/promise.h>
 
 namespace vm {
 class System;

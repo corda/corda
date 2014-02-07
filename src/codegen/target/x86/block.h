@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_X86_BLOCK_H
 #define AVIAN_CODEGEN_ASSEMBLER_X86_BLOCK_H
 
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/assembler.h>
 
 namespace avian {
 namespace codegen {

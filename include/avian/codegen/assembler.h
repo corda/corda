@@ -11,11 +11,11 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_H
 #define AVIAN_CODEGEN_ASSEMBLER_H
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/zone.h"
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/promise.h>
 
 namespace avian {
 namespace codegen {

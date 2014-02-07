@@ -11,8 +11,8 @@
 #ifndef AVIAN_CODEGEN_COMPILER_CONTEXT_H
 #define AVIAN_CODEGEN_COMPILER_CONTEXT_H
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/compiler.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/compiler.h>
 #include <avian/util/list.h>
 
 #include "regalloc.h"

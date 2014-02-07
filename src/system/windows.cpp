@@ -24,7 +24,7 @@
 #undef min
 
 #include "avian/arch.h"
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include <avian/util/runtime-array.h>
 
 #if defined(WINAPI_FAMILY)

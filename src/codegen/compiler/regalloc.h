@@ -13,8 +13,8 @@
 
 #include "avian/common.h"
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/registers.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/registers.h>
 
 namespace avian {
 

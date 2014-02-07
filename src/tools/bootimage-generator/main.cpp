@@ -8,14 +8,14 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/heap/heap.h>
+#include <avian/heap/heap.h>
 #include "avian/heapwalk.h"
 #include "avian/common.h"
 #include "avian/machine.h"
 #include "avian/util.h"
 #include <avian/util/stream.h>
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/promise.h>
 #include "avian/target.h"
 #include <avian/tools/object-writer/tools.h>
 #include <avian/util/runtime-array.h>

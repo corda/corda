@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_ASSEMBLER_POWERPC_CONTEXT_H
 #define AVIAN_CODEGEN_ASSEMBLER_POWERPC_CONTEXT_H
 
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/assembler.h>
 #include "avian/alloc-vector.h"
 
 #ifdef powerpc
