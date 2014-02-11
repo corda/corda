@@ -56,7 +56,7 @@ public class ConcurrentLinkedQueue<T> {
     return poll(true);
   }
 
-  public T poll(boolean remove) {
+  private T poll(boolean remove) {
     while (true) {
       Node<T> h = head;
       Node<T> t = tail;
