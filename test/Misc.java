@@ -23,6 +23,16 @@ public class Misc {
     }
   }
 
+  private static class Static {
+    static {
+      staticRan = true;
+    }
+
+    public static void run() { }
+  }
+
+  private static boolean staticRan;
+
   private static int alpha;
   private static int beta;
   private static byte byte1, byte2, byte3;
@@ -299,6 +309,10 @@ public class Misc {
     } catch (java.net.UnknownHostException e) {
       // cool
     }
+
+    expect(! staticRan);
+    Static.run();
+    expect(staticRan);
   }
 
   protected class Protected { }

@@ -3234,7 +3234,11 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
 
   Compiler::Operand* result = 0;
 
-  if (emptyMethod(t, target)) {
+  // don't bother calling an empty method unless calling it might
+  // cause the class to be initialized, which may have side effects
+  if (emptyMethod(t, target)
+      and (not classNeedsInit(t, methodClass(t, target))))
+  {
     tailCall = false;
   } else {
     BootContext* bc = frame->context->bootContext;
