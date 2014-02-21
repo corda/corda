@@ -192,7 +192,6 @@ ifneq ($(android),)
 		endif
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
-			$(luni-native)/libcore_io_OsConstants.cpp \
 			$(luni-native)/libcore_net_RawSocket.cpp \
 			$(luni-native)/org_apache_harmony_xnet_provider_jsse_NativeCrypto.cpp \
 

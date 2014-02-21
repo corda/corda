@@ -2306,7 +2306,7 @@ Avian_java_lang_System_mapLibraryName
 
 void register_java_io_Console(_JNIEnv*) { }
 void register_java_lang_ProcessManager(_JNIEnv*) { }
-void register_libcore_io_OsConstants(_JNIEnv*) { }
+//void register_libcore_io_OsConstants(_JNIEnv*) { }
 //void register_libcore_io_AsynchronousCloseMonitor(_JNIEnv*) { }
 //void register_libcore_io_Posix(_JNIEnv*) { }
 void register_libcore_net_RawSocket(_JNIEnv*) { }
