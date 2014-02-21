@@ -62,35 +62,21 @@ public:
 };
 
 
-class BasicAssemblerTest : public Test {
-public:
-  BasicAssemblerTest():
-    Test("BasicAssembler")
-  {}
+TEST(BasicAssembler) {
+  BasicEnv env;
+  Asm a(env);
+}
 
-  virtual void run() {
-    BasicEnv env;
-    Asm a(env);
+TEST(ArchitecturePlan) {
+  BasicEnv env;
+
+  for(int op = (int)lir::Call; op < (int)lir::AlignedJump; op++) {
+    bool thunk;
+    OperandMask mask;
+    env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, mask, &thunk);
+    assertFalse(thunk);
+    assertNotEqual(static_cast<uint8_t>(0), mask.typeMask);
+    assertNotEqual(static_cast<uint64_t>(0), mask.registerMask);
   }
-} basicAssemblerTest;
 
-class ArchitecturePlanTest : public Test {
-public:
-  ArchitecturePlanTest():
-    Test("ArchitecturePlan")
-  {}
-
-  virtual void run() {
-    BasicEnv env;
-
-    for(int op = (int)lir::Call; op < (int)lir::AlignedJump; op++) {
-      bool thunk;
-      OperandMask mask;
-      env.arch->plan((lir::UnaryOperation)op, vm::TargetBytesPerWord, mask, &thunk);
-      assertFalse(thunk);
-      assertNotEqual(static_cast<uint8_t>(0), mask.typeMask);
-      assertNotEqual(static_cast<uint64_t>(0), mask.registerMask);
-    }
-
-  }
-} architecturePlanTest;
+}

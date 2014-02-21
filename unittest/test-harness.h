@@ -15,38 +15,41 @@
 #include <stdio.h>
 
 class Test {
-private:
+ private:
   Test* next;
   static Test* first;
   static Test** last;
 
   friend int main(int argc, char** argv);
 
-
-  void print(uint64_t value) {
+  void print(uint64_t value)
+  {
     fprintf(stderr, "%p", reinterpret_cast<void*>(value));
   }
 
-  void print(uint32_t value) {
+  void print(uint32_t value)
+  {
     fprintf(stderr, "%p", reinterpret_cast<void*>(value));
   }
-  
 
-  void print(uint8_t value) {
+  void print(uint8_t value)
+  {
     print(static_cast<uint32_t>(value));
   }
 
-  void print(bool value) {
+  void print(bool value)
+  {
     fprintf(stderr, "%s", value ? "true" : "false");
   }
 
   int failures;
   int runs;
 
-protected:
-  template<class T>
-  void assertEqual(T expected, T actual) {
-    if(expected != actual) {
+ protected:
+  template <class T>
+  void assertEqual(T expected, T actual)
+  {
+    if (expected != actual) {
       fprintf(stderr, "assertion failure, expected: ");
       print(expected);
       fprintf(stderr, ", actual: ");
@@ -57,17 +60,23 @@ protected:
     runs++;
   }
 
-  void assertEqual(const char* expected, const char* actual) {
-    if((expected == 0 && actual != 0) || (expected != 0 && actual == 0) || strcmp(expected, actual) != 0) {
-      fprintf(stderr, "assertion failure, expected: \"%s\", actual: \"%s\"\n", expected, actual);
+  void assertEqual(const char* expected, const char* actual)
+  {
+    if ((expected == 0 && actual != 0) || (expected != 0 && actual == 0)
+        || strcmp(expected, actual) != 0) {
+      fprintf(stderr,
+              "assertion failure, expected: \"%s\", actual: \"%s\"\n",
+              expected,
+              actual);
       failures++;
     }
     runs++;
   }
-  
-  template<class T>
-  void assertNotEqual(T expected, T actual) {
-    if(expected == actual) {
+
+  template <class T>
+  void assertNotEqual(T expected, T actual)
+  {
+    if (expected == actual) {
       fprintf(stderr, "assertion failure, expected: not ");
       print(expected);
       fprintf(stderr, ", actual: ");
@@ -78,15 +87,17 @@ protected:
     runs++;
   }
 
-  void assertTrue(bool value) {
+  void assertTrue(bool value)
+  {
     assertEqual(true, value);
   }
 
-  void assertFalse(bool value) {
+  void assertFalse(bool value)
+  {
     assertEqual(false, value);
   }
 
-public:
+ public:
   const char* const name;
   Test(const char* name);
 
@@ -95,4 +106,14 @@ public:
   static bool runAll();
 };
 
-#endif // TEST_HARNESS_H
+#define TEST(name)                      \
+  class name##TestClass : public Test { \
+   public:                              \
+    name##TestClass() : Test(#name)     \
+    {                                   \
+    }                                   \
+    virtual void run();                 \
+  } name##TestInstance;                 \
+  void name##TestClass::run()
+
+#endif  // TEST_HARNESS_H
