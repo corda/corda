@@ -36,8 +36,6 @@ namespace avian {
 namespace system {
 
 namespace windows {
-const unsigned SegFaultIndex = 0;
-const unsigned DivideByZeroIndex = 1;
 
 const unsigned HandlerCount = 2;
 
@@ -161,10 +159,10 @@ LONG CALLBACK handleException(LPEXCEPTION_POINTERS e)
 {
   SignalRegistrar::Handler* handler = 0;
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    handler = SignalRegistrar::Data::instance->handlers[SegFaultIndex];
+    handler = SignalRegistrar::Data::instance->handlers[SignalRegistrar::SegFault];
   } else if (e->ExceptionRecord->ExceptionCode
              == EXCEPTION_INT_DIVIDE_BY_ZERO) {
-    handler = SignalRegistrar::Data::instance->handlers[DivideByZeroIndex];
+    handler = SignalRegistrar::Data::instance->handlers[SignalRegistrar::DivideByZero];
   }
 
   if (handler) {
@@ -219,6 +217,10 @@ SignalRegistrar::~SignalRegistrar()
 
 bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
 {
+  if(index != SegFault && index != DivideByZero) {
+    crash();
+  }
+
   if (handler) {
     handlers[index] = handler;
 
@@ -271,14 +273,14 @@ NO_RETURN void crash()
   abort();
 }
 
-bool SignalRegistrar::handleSegFault(Handler* handler)
+bool SignalRegistrar::registerHandler(Signal signal, Handler* handler)
 {
-  return data->registerHandler(handler, windows::SegFaultIndex);
+  return data->registerHandler(handler, signal);
 }
 
-bool SignalRegistrar::handleDivideByZero(Handler* handler)
+bool SignalRegistrar::unregisterHandler(Signal signal)
 {
-  return data->registerHandler(handler, windows::DivideByZeroIndex);
+  return data->registerHandler(0, signal);
 }
 
 void SignalRegistrar::setCrashDumpDirectory(const char* crashDumpDirectory)

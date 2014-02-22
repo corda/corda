@@ -36,21 +36,29 @@ class SignalRegistrar {
                               void** thread) = 0;
   };
 
+  enum Signal {
+    // "Segmentation fault" exceptions (mostly null pointer dereference, but
+    // generally access to any non-mapped memory)
+    SegFault,
+
+    DivideByZero,
+  };
+
   SignalRegistrar();
   ~SignalRegistrar();
 
-  // Register a handler for segfault signals.
-  // After this method call, any segfault exceptions (mostly null pointer
-  // dereference, but generally access to any non-mapped memory) will be handled
-  // by the given handler. Pass null (0) to unregister a handler.
+  // Register a handler for the given signal.
+  // After this method call, anytime the given signal is raised, it will be
+  // handled by the given handler.
   // Returns true upon success, false upon failure
-  bool handleSegFault(Handler* handler);
+  bool registerHandler(Signal signal, Handler* handler);
 
-  // Register a handler for divide-by-zero signals.
-  // After this method call, any divide-by-zero exceptions will be handled by
-  // the given handler. Pass null (0) to unregister a handler.
+  // Unregister a handler for the given signal.
+  // After this method call, the given signal will no longer be handled (or,
+  // rather, it go back to being handled by whatever was registered to handle it
+  // before us).
   // Returns true upon success, false upon failure
-  bool handleDivideByZero(Handler* handler);
+  bool unregisterHandler(Signal signal);
 
   // Set the directory that a crash dump will be written to should an unhandled
   // exception be thrown.

@@ -8930,8 +8930,8 @@ class MyProcessor: public Processor {
 
     compilationHandlers->dispose(allocator);
 
-    signals.handleSegFault(0);
-    signals.handleDivideByZero(0);
+    signals.unregisterHandler(SignalRegistrar::SegFault);
+    signals.unregisterHandler(SignalRegistrar::DivideByZero);
     signals.setCrashDumpDirectory(0);
 
     allocator->free(this, sizeof(*this));
@@ -9124,10 +9124,10 @@ class MyProcessor: public Processor {
 #endif
 
     segFaultHandler.m = t->m;
-    expect(t, signals.handleSegFault(&segFaultHandler));
+    expect(t, signals.registerHandler(SignalRegistrar::SegFault, &segFaultHandler));
 
     divideByZeroHandler.m = t->m;
-    expect(t, signals.handleDivideByZero(&divideByZeroHandler));
+    expect(t, signals.registerHandler(SignalRegistrar::DivideByZero, &divideByZeroHandler));
   }
 
   virtual void callWithCurrentContinuation(Thread* t, object receiver) {

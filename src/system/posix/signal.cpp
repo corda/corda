@@ -186,21 +186,42 @@ bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
   }
 }
 
-bool SignalRegistrar::handleSegFault(Handler* handler)
+bool SignalRegistrar::registerHandler(Signal signal, Handler* handler)
 {
-  if(!data->registerHandler(handler, posix::SegFaultSignalIndex)) {
-    return false;
-  }
-  if (posix::AltSegFaultSignal != posix::InvalidSignal) {
-    return data->registerHandler(handler, posix::AltSegFaultSignalIndex);
-  } else {
-    return true;
+  switch(signal) {
+  case SegFault:
+    if(!data->registerHandler(handler, posix::SegFaultSignalIndex)) {
+      return false;
+    }
+    if (posix::AltSegFaultSignal != posix::InvalidSignal) {
+      return data->registerHandler(handler, posix::AltSegFaultSignalIndex);
+    } else {
+      return true;
+    }
+  case DivideByZero:
+    return data->registerHandler(handler, posix::DivideByZeroSignalIndex);
+  default:
+    crash();
   }
 }
 
-bool SignalRegistrar::handleDivideByZero(Handler* handler)
+bool SignalRegistrar::unregisterHandler(Signal signal)
 {
-  return data->registerHandler(handler, posix::DivideByZeroSignalIndex);
+  switch(signal) {
+  case SegFault:
+    if(!data->registerHandler(0, posix::SegFaultSignalIndex)) {
+      return false;
+    }
+    if (posix::AltSegFaultSignal != posix::InvalidSignal) {
+      return data->registerHandler(0, posix::AltSegFaultSignalIndex);
+    } else {
+      return true;
+    }
+  case DivideByZero:
+    return data->registerHandler(0, posix::DivideByZeroSignalIndex);
+  default:
+    crash();
+  }
 }
 
 void SignalRegistrar::setCrashDumpDirectory(const char*)
