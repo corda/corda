@@ -78,29 +78,14 @@ class MutexResource {
 const int InvalidSignal = -1;
 const int VisitSignal = SIGUSR1;
 const unsigned VisitSignalIndex = 0;
-const int SegFaultSignal = SIGSEGV;
-const unsigned SegFaultSignalIndex = 1;
 const int InterruptSignal = SIGUSR2;
-const unsigned InterruptSignalIndex = 2;
-#ifdef __APPLE__
-const int AltSegFaultSignal = SIGBUS;
-#else
-const int AltSegFaultSignal = InvalidSignal;
-#endif
-const unsigned AltSegFaultSignalIndex = 3;
+const unsigned InterruptSignalIndex = 1;
 const int PipeSignal = SIGPIPE;
-const unsigned PipeSignalIndex = 4;
-const int DivideByZeroSignal = SIGFPE;
-const unsigned DivideByZeroSignalIndex = 5;
+const unsigned PipeSignalIndex = 2;
 
-const int signals[] = { VisitSignal,
-                        SegFaultSignal,
-                        InterruptSignal,
-                        AltSegFaultSignal,
-                        PipeSignal,
-                        DivideByZeroSignal };
+const int signals[] = {VisitSignal, InterruptSignal, PipeSignal};
 
-const unsigned SignalCount = 6;
+const unsigned SignalCount = 3;
 
 class MySystem;
 MySystem* system;
@@ -123,7 +108,7 @@ pathOfExecutable(System* s, const char** retBuf, unsigned* size)
   CFURLRef url = CFBundleCopyExecutableURL(bundle);
   CFStringRef path = CFURLCopyPath(url);
   path = CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault,
-						    path, CFSTR(""));
+                path, CFSTR(""));
   CFIndex pathSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path);
   char* buffer = reinterpret_cast<char*>(allocate(s, pathSize));
   if (CFStringGetFileSystemRepresentation(path, buffer, pathSize)) {
@@ -606,32 +591,27 @@ class MySystem: public System {
     expect(this, system == 0);
     system = this;
 
-    memset(handlers, 0, sizeof(handlers));
-
-    registerHandler(&nullHandler, InterruptSignalIndex);
-    registerHandler(&nullHandler, PipeSignalIndex);
-    registerHandler(&nullHandler, VisitSignalIndex);
+    expect(this, registerHandler(InterruptSignalIndex));
+    expect(this, registerHandler(VisitSignalIndex));
+    expect(this, registerHandler(PipeSignalIndex));
 
     expect(this, make(&visitLock) == 0);
   }
 
-  int registerHandler(System::SignalHandler* handler, int index) {
-    if (handler) {
-      handlers[index] = handler;
+  // Returns true on success, false on failure
+  bool unregisterHandler(int index) {
+    return sigaction(signals[index], oldHandlers + index, 0) == 0;
+  }
 
-      struct sigaction sa;
-      memset(&sa, 0, sizeof(struct sigaction));
-      sigemptyset(&(sa.sa_mask));
-      sa.sa_flags = SA_SIGINFO;
-      sa.sa_sigaction = handleSignal;
-    
-      return sigaction(signals[index], &sa, oldHandlers + index);
-    } else if (handlers[index]) {
-      handlers[index] = 0;
-      return sigaction(signals[index], oldHandlers + index, 0);
-    } else {
-      return 1;
-    }
+  // Returns true on success, false on failure
+  bool registerHandler(int index) {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sigemptyset(&(sa.sa_mask));
+    sa.sa_flags = SA_SIGINFO;
+    sa.sa_sigaction = handleSignal;
+  
+    return sigaction(signals[index], &sa, oldHandlers + index) == 0;
   }
 
   virtual void* tryAllocate(unsigned sizeInBytes) {
@@ -699,18 +679,6 @@ class MySystem: public System {
   virtual Status make(System::Local** l) {
     *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
-  }
-
-  virtual Status handleSegFault(SignalHandler* handler) {
-    Status s = registerHandler(handler, SegFaultSignalIndex);
-    if (s == 0 and AltSegFaultSignal != InvalidSignal) {
-      return registerHandler(handler, AltSegFaultSignalIndex);
-    }
-    return s;
-  }
-
-  virtual Status handleDivideByZero(SignalHandler* handler) {
-    return registerHandler(handler, DivideByZeroSignalIndex);
   }
 
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
@@ -937,19 +905,14 @@ class MySystem: public System {
   virtual void dispose() {
     visitLock->dispose();
 
-    registerHandler(0, InterruptSignalIndex);
-    registerHandler(0, VisitSignalIndex);
-    registerHandler(0, PipeSignalIndex);
+    expect(this, unregisterHandler(InterruptSignalIndex));
+    expect(this, unregisterHandler(VisitSignalIndex));
+    expect(this, unregisterHandler(PipeSignalIndex));
     system = 0;
 
     ::free(this);
   }
 
-  class NullSignalHandler: public SignalHandler {
-    virtual bool handleSignal(void**, void**, void**, void**) { return false; }
-  } nullHandler;
-
-  SignalHandler* handlers[SignalCount];
   struct sigaction oldHandlers[SignalCount];
 
   ThreadVisitor* threadVisitor;
@@ -957,27 +920,16 @@ class MySystem: public System {
   System::Monitor* visitLock;
 };
 
-void
-handleSignal(int signal, siginfo_t*, void* context)
+void handleSignal(int signal, siginfo_t*, void* context)
 {
   ucontext_t* c = static_cast<ucontext_t*>(context);
 
   void* ip = reinterpret_cast<void*>(IP_REGISTER(c));
   void* stack = reinterpret_cast<void*>(STACK_REGISTER(c));
-  void* thread = reinterpret_cast<void*>(THREAD_REGISTER(c));
   void* link = reinterpret_cast<void*>(LINK_REGISTER(c));
-#ifdef FRAME_REGISTER
-  void* frame = reinterpret_cast<void*>(FRAME_REGISTER(c));
-#else
-  void* frame = 0;
-#endif
-
-  unsigned index;
 
   switch (signal) {
   case VisitSignal: {
-    index = VisitSignalIndex;
-
     system->threadVisitor->visit(ip, stack, link);
 
     System::Thread* t = system->visitTarget;
@@ -987,57 +939,6 @@ handleSignal(int signal, siginfo_t*, void* context)
     system->visitLock->notifyAll(t);
   } break;
 
-  case SegFaultSignal:
-  case AltSegFaultSignal:
-  case DivideByZeroSignal: {
-    switch (signal) {
-    case SegFaultSignal:
-      index = SegFaultSignalIndex;
-      break;
-
-    case AltSegFaultSignal:
-      index = AltSegFaultSignalIndex;
-      break;
-
-    case DivideByZeroSignal:
-      index = DivideByZeroSignalIndex;
-      break;
-
-    default:
-      abort();
-    }
-
-    bool jump = system->handlers[index]->handleSignal
-      (&ip, &frame, &stack, &thread);
-
-    if (jump) {
-      // I'd like to use setcontext here (and get rid of the
-      // sigprocmask call), but it doesn't work on my Linux x86_64
-      // system, and I can't tell from the documentation if it's even
-      // supposed to work.
-
-      sigset_t set;
-      sigemptyset(&set);
-      sigaddset(&set, signal);
-      pthread_sigmask(SIG_UNBLOCK, &set, 0);
-
-      vmJump(ip, frame, stack, thread, 0, 0);
-    }
-  } break;
-
-  case InterruptSignal: {
-    index = InterruptSignalIndex;
-  } break;
-
-  case PipeSignal: {
-    index = PipeSignalIndex;
-  } break;
-
-  default: abort();
-  }
-
-  switch (signal) {
-  case VisitSignal:
   case InterruptSignal:
   case PipeSignal:
     break;
@@ -1052,7 +953,7 @@ handleSignal(int signal, siginfo_t*, void* context)
 namespace vm {
 
 AVIAN_EXPORT System*
-makeSystem(const char*)
+makeSystem()
 {
   return new (malloc(sizeof(MySystem))) MySystem();
 }

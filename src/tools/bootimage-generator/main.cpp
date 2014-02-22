@@ -1899,11 +1899,11 @@ main(int ac, const char** av)
   Arguments args(ac, av);
   // args.dump();
 
-  System* s = makeSystem(0);
+  System* s = makeSystem();
   Heap* h = makeHeap(s, HeapCapacity * 2);
   Classpath* c = makeClasspath(s, h, AVIAN_JAVA_HOME, AVIAN_EMBED_PREFIX);
   Finder* f = makeFinder(s, h, args.classpath, 0);
-  Processor* p = makeProcessor(s, h, false);
+  Processor* p = makeProcessor(s, h, 0, false);
 
   // todo: currently, the compiler cannot compile code with jumps or
   // calls spanning more than the maximum size of an immediate value

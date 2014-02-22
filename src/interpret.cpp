@@ -10,6 +10,7 @@
 
 #include "avian/common.h"
 #include <avian/system/system.h>
+#include <avian/system/signal.h>
 #include "avian/constants.h"
 #include "avian/machine.h"
 #include "avian/processor.h"
@@ -20,6 +21,7 @@
 #include <avian/util/list.h>
 
 using namespace vm;
+using namespace avian::system;
 
 namespace local {
 
@@ -2959,9 +2961,11 @@ invoke(Thread* t, object method)
 
 class MyProcessor: public Processor {
  public:
-  MyProcessor(System* s, Allocator* allocator):
-    s(s), allocator(allocator)
-  { }
+  MyProcessor(System* s, Allocator* allocator, const char* crashDumpDirectory)
+      : s(s), allocator(allocator)
+  {
+    signals.setCrashDumpDirectory(crashDumpDirectory);
+  }
 
   virtual vm::Thread*
   makeThread(Machine* m, object javaThread, vm::Thread* parent)
@@ -3260,21 +3264,25 @@ class MyProcessor: public Processor {
 
   virtual void dispose() {
     allocator->free(this, sizeof(*this));
+    signals.setCrashDumpDirectory(0);
   }
   
   System* s;
   Allocator* allocator;
+  SignalRegistrar signals;
 };
 
 } // namespace
 
 namespace vm {
 
-Processor*
-makeProcessor(System* system, Allocator* allocator, bool)
+Processor* makeProcessor(System* system,
+                         Allocator* allocator,
+                         const char* crashDumpDirectory,
+                         bool)
 {
   return new (allocator->allocate(sizeof(local::MyProcessor)))
-    local::MyProcessor(system, allocator);
+    local::MyProcessor(system, allocator, crashDumpDirectory);
 }
 
 } // namespace vm

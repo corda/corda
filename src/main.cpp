@@ -59,7 +59,7 @@ mainClass(const char* jar)
 {
   using namespace vm;
 
-  System* system = makeSystem(0);
+  System* system = makeSystem();
 
   class MyAllocator: public Allocator {
    public:

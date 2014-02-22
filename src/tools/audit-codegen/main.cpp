@@ -34,7 +34,7 @@ public:
   Architecture* arch;
 
   BasicEnv():
-    s(makeSystem(0)),
+    s(makeSystem()),
     heap(makeHeap(s, 32 * 1024)),
     arch(makeArchitectureNative(s, true))
   {

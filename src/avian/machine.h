@@ -14,6 +14,7 @@
 #include "avian/common.h"
 #include "java-common.h"
 #include <avian/system/system.h>
+#include <avian/system/signal.h>
 #include <avian/heap/heap.h>
 #include "avian/finder.h"
 #include "avian/processor.h"

@@ -208,8 +208,10 @@ class Processor {
   }
 };
 
-Processor*
-makeProcessor(System* system, Allocator* allocator, bool useNativeFeatures);
+Processor* makeProcessor(System* system,
+                         Allocator* allocator,
+                         const char* crashDumpDirectory,
+                         bool useNativeFeatures);
 
 } // namespace vm
 
