@@ -57,7 +57,7 @@ struct SignalRegistrar::Data {
 #endif
   {
     if (instance) {
-      abort();
+      crash();
     }
     instance = this;
     memset(handlers, 0, sizeof(handlers));
@@ -258,6 +258,17 @@ bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
   } else {
     return false;
   }
+}
+
+NO_RETURN void crash()
+{
+  // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
+  // generate a debug dump for
+  *static_cast<volatile int*>(0) = 0;
+
+  // Some (all?) compilers don't realize that we can't possibly continue past
+  // the above statement.
+  abort();
 }
 
 bool SignalRegistrar::handleSegFault(Handler* handler)

@@ -24,6 +24,7 @@
 
 #include "avian/arch.h"
 #include <avian/system/system.h>
+#include <avian/system/signal.h>
 #include <avian/util/runtime-array.h>
 
 #if defined(WINAPI_FAMILY)
@@ -941,9 +942,7 @@ class MySystem: public System {
   }
 
   virtual void abort() {
-    // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
-    // generate a debug dump for
-    *static_cast<volatile int*>(0) = 0;
+    avian::system::crash();
   }
 
   virtual void dispose() {

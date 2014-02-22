@@ -49,8 +49,9 @@
 #include "dirent.h"
 #include "sched.h"
 #include "avian/arch.h"
-#include <avian/system/system.h>
 
+#include <avian/system/system.h>
+#include <avian/system/signal.h>
 #include <avian/util/math.h>
 
 
@@ -899,7 +900,7 @@ class MySystem: public System {
   }
 
   virtual void abort() {
-    ::abort();
+    avian::system::crash();
   }
 
   virtual void dispose() {

@@ -11,8 +11,15 @@
 #ifndef AVIAN_SYSTEM_SIGNAL_H
 #define AVIAN_SYSTEM_SIGNAL_H
 
+#include <avian/common.h>
+
 namespace avian {
 namespace system {
+
+// Crash the process.
+// On posix, the just calls abort. On windows, we dereference a null pointer in
+// order to trigger the crash dump logic.
+NO_RETURN void crash();
 
 // Registrar for unix-like "signals" (implemented with structured exceptions on windows).
 // TODO: remove dependence on generated code having a well-known "thread"

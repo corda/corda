@@ -69,7 +69,7 @@ struct SignalRegistrar::Data {
   Data()
   {
     if(instance) {
-      abort();
+      crash();
     }
 
     instance = this;
@@ -122,7 +122,7 @@ void handleSignal(int signal, siginfo_t*, void* context)
       break;
 
     default:
-      abort();
+      crash();
     }
 
     bool jump
@@ -144,11 +144,16 @@ void handleSignal(int signal, siginfo_t*, void* context)
   } break;
 
   default:
-    abort();
+    crash();
   }
 }
 
 } // namespace posix
+
+NO_RETURN void crash()
+{
+  abort();
+}
 
 SignalRegistrar::SignalRegistrar()
 {
