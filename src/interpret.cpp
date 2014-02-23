@@ -597,13 +597,12 @@ invokeNativeSlow(Thread* t, object method, void* function)
     t->checkpoint->noThrow = true;
     THREAD_RESOURCE(t, bool, noThrow, t->checkpoint->noThrow = noThrow);
 
-    result = t->m->system->call
-      (function,
-       RUNTIME_ARRAY_BODY(args),
-       RUNTIME_ARRAY_BODY(types),
-       count,
-       footprint * BytesPerWord,
-       returnType);
+    result = vm::dynamicCall(function,
+                             RUNTIME_ARRAY_BODY(args),
+                             RUNTIME_ARRAY_BODY(types),
+                             count,
+                             footprint * BytesPerWord,
+                             returnType);
   }
 
   if (DebugRun) {
