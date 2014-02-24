@@ -627,7 +627,7 @@ __on Windows:__
     $ dlltool -z hello.def *.o
     $ dlltool -d hello.def -e hello.exp
     $ gcc hello.exp *.o -L../../win32/lib -lmingwthrd -lm -lz -lws2_32 \
-        -mwindows -mconsole -o hello.exe
+        -lIphlpapi -mwindows -mconsole -o hello.exe
     $ strip --strip-all hello.exe
 
 Embedding with ProGuard and a Boot Image
