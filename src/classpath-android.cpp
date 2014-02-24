@@ -2300,6 +2300,13 @@ Avian_java_lang_System_mapLibraryName
                 t->m->system->librarySuffix()));
 }
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
+(Thread*, object, uintptr_t*)
+{
+  return true;
+}
+
 #ifdef PLATFORM_WINDOWS
 
 #  include <io.h>
