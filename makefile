@@ -1593,6 +1593,10 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
+	if [ -a $(build)/android-src/java/lang/Enum.java ] ; \
+	then \
+		chmod +w $(build)/android-src/java/lang/Enum.java ; \
+	fi;
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
