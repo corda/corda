@@ -15,6 +15,7 @@
 #include "avian/target.h"
 
 #include <avian/util/math.h>
+#include <avian/util/allocator.h>
 
 #undef max
 #undef min
@@ -23,13 +24,13 @@ namespace vm {
 
 class Vector {
  public:
-  Vector(System* s, Allocator* allocator, unsigned minimumCapacity):
-    s(s),
-    allocator(allocator),
-    data(0),
-    position(0),
-    capacity(0),
-    minimumCapacity(minimumCapacity)
+  Vector(System* s, avian::util::Allocator* allocator, unsigned minimumCapacity)
+      : s(s),
+        allocator(allocator),
+        data(0),
+        position(0),
+        capacity(0),
+        minimumCapacity(minimumCapacity)
   { }
 
   ~Vector() {
@@ -157,7 +158,7 @@ class Vector {
   }
   
   System* s;
-  Allocator* allocator;
+  avian::util::Allocator* allocator;
   uint8_t* data;
   unsigned position;
   unsigned capacity;

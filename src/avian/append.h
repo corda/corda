@@ -8,22 +8,18 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef ALLOCATOR_H
-#define ALLOCATOR_H
+#ifndef APPEND_H
+#define APPEND_H
 
-#include "avian/common.h"
+#include <avian/common.h>
+#include <avian/util/allocator.h>
 
 namespace vm {
 
-class Allocator {
- public:
-  virtual void* tryAllocate(unsigned size) = 0;
-  virtual void* allocate(unsigned size) = 0;
-  virtual void free(const void* p, unsigned size) = 0;
-};
-
-inline const char*
-append(Allocator* allocator, const char* a, const char* b, const char* c)
+inline const char* append(avian::util::Allocator* allocator,
+                          const char* a,
+                          const char* b,
+                          const char* c)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
@@ -35,8 +31,9 @@ append(Allocator* allocator, const char* a, const char* b, const char* c)
   return p;
 }
 
-inline const char*
-append(Allocator* allocator, const char* a, const char* b)
+inline const char* append(avian::util::Allocator* allocator,
+                          const char* a,
+                          const char* b)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
@@ -46,8 +43,7 @@ append(Allocator* allocator, const char* a, const char* b)
   return p;
 }
 
-inline const char*
-copy(Allocator* allocator, const char* a)
+inline const char* copy(avian::util::Allocator* allocator, const char* a)
 {
   unsigned al = strlen(a);
   char* p = static_cast<char*>(allocator->allocate(al + 1));
@@ -55,10 +51,6 @@ copy(Allocator* allocator, const char* a)
   return p;
 }
 
-} // namespace vm
+}  // namespace vm
 
-inline void* operator new (size_t size, vm::Allocator* allocator) {
-  return allocator->allocate(size);
-}
-
-#endif//ALLOCATOR_H
+#endif  // APPEND_H

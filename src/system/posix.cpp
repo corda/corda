@@ -48,7 +48,9 @@
 #include "stdint.h"
 #include "dirent.h"
 #include "sched.h"
-#include "avian/arch.h"
+
+#include <avian/arch.h>
+#include <avian/append.h>
 
 #include <avian/system/system.h>
 #include <avian/system/signal.h>

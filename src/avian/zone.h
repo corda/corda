@@ -12,13 +12,12 @@
 #define ZONE_H
 
 #include <avian/system/system.h>
-#include "avian/allocator.h"
-
+#include <avian/util/allocator.h>
 #include <avian/util/math.h>
 
 namespace vm {
 
-class Zone: public Allocator {
+class Zone : public avian::util::Allocator {
  public:
   class Segment {
    public:

@@ -11,6 +11,10 @@
 #ifndef AVIAN_UTIL_ABORT_H
 #define AVIAN_UTIL_ABORT_H
 
+// TODO: remove reference back into the source directory!
+// Note: this is needed for UNLIKELY
+#include <avian/common.h>
+
 namespace avian {
 namespace util {
 

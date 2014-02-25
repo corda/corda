@@ -10,7 +10,7 @@
 
 #include <string.h>
 
-#include "avian/allocator.h"
+#include "avian/util/allocator.h"
 #include "avian/alloc-vector.h"
 #include "avian/common.h"
 #include "avian/zone.h"

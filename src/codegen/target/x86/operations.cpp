@@ -10,7 +10,7 @@
 
 #include "avian/target.h"
 #include "avian/alloc-vector.h"
-#include "avian/allocator.h"
+#include "avian/util/allocator.h"
 #include "avian/zone.h"
 
 #include <avian/util/abort.h>

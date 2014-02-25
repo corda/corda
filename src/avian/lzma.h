@@ -12,17 +12,26 @@
 #define LZMA_H
 
 #include <avian/system/system.h>
-#include "avian/allocator.h"
+
+namespace avian {
+namespace util {
+class Allocator;
+}
+}
 
 namespace vm {
 
-uint8_t*
-decodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
-           unsigned* outSize);
+uint8_t* decodeLZMA(System* s,
+                    avian::util::Allocator* a,
+                    uint8_t* in,
+                    unsigned inSize,
+                    unsigned* outSize);
 
-uint8_t*
-encodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
-           unsigned* outSize);
+uint8_t* encodeLZMA(System* s,
+                    avian::util::Allocator* a,
+                    uint8_t* in,
+                    unsigned inSize,
+                    unsigned* outSize);
 
 } // namespace vm
 

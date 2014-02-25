@@ -12,7 +12,7 @@
 #define HEAP_H
 
 #include <avian/system/system.h>
-#include "avian/allocator.h"
+#include <avian/util/allocator.h>
 
 namespace vm {
 
@@ -22,7 +22,7 @@ const unsigned TenureThreshold = 3;
 
 const unsigned FixieTenureThreshold = TenureThreshold + 2;
 
-class Heap: public Allocator {
+class Heap : public avian::util::Allocator {
  public:
   enum CollectionType {
     MinorCollection,
@@ -65,9 +65,10 @@ class Heap: public Allocator {
   virtual void collect(CollectionType type, unsigned footprint,
                        int pendingAllocation) = 0;
   virtual unsigned fixedFootprint(unsigned sizeInWords, bool objectMask) = 0;
-  virtual void* allocateFixed(Allocator* allocator, unsigned sizeInWords,
+  virtual void* allocateFixed(avian::util::Allocator* allocator,
+                              unsigned sizeInWords,
                               bool objectMask) = 0;
-  virtual void* allocateImmortalFixed(Allocator* allocator,
+  virtual void* allocateImmortalFixed(avian::util::Allocator* allocator,
                                       unsigned sizeInWords,
                                       bool objectMask) = 0;
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;

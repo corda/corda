@@ -12,11 +12,15 @@
 #define AVIAN_CODEGEN_ARCHITECTURE_H
 
 namespace vm {
-class Allocator;
 class Zone;
 }
 
 namespace avian {
+
+namespace util {
+class Allocator;
+}
+
 namespace codegen {
 
 class Assembler;
@@ -125,7 +129,7 @@ virtual void planDestination
  unsigned bSize, const OperandMask& bMask,
  unsigned cSize, OperandMask& cMask) = 0;
 
-virtual Assembler* makeAssembler(vm::Allocator*, vm::Zone*) = 0;
+virtual Assembler* makeAssembler(util::Allocator*, vm::Zone*) = 0;
 
 virtual void acquire() = 0;
 virtual void release() = 0;

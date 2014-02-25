@@ -20,12 +20,16 @@
 
 namespace vm {
 class System;
-class Allocator;
 class Zone;
 } // namespace vm
 
 
 namespace avian {
+
+namespace util {
+class Allocator;
+}
+
 namespace codegen {
 namespace powerpc {
 
@@ -36,7 +40,7 @@ class MyBlock;
 
 class Context {
  public:
-  Context(vm::System* s, vm::Allocator* a, vm::Zone* zone);
+  Context(vm::System* s, util::Allocator* a, vm::Zone* zone);
 
   vm::System* s;
   vm::Zone* zone;

@@ -14,6 +14,7 @@
 #include "avian/common.h"
 #include <avian/system/system.h>
 #include <avian/heap/heap.h>
+#include <avian/util/allocator.h>
 #include "bootimage.h"
 #include "avian/heapwalk.h"
 #include "avian/zone.h"
@@ -209,7 +210,7 @@ class Processor {
 };
 
 Processor* makeProcessor(System* system,
-                         Allocator* allocator,
+                         avian::util::Allocator* allocator,
                          const char* crashDumpDirectory,
                          bool useNativeFeatures);
 

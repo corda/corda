@@ -16,7 +16,7 @@
 #include "avian/zlib-custom.h"
 #include "avian/finder.h"
 #include "avian/lzma.h"
-
+#include "avian/append.h"
 
 using namespace vm;
 using namespace avian::util;

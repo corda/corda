@@ -586,7 +586,7 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual Assembler* makeAssembler(Allocator* allocator, Zone* zone);
+  virtual Assembler* makeAssembler(util::Allocator* allocator, Zone* zone);
 
   virtual void acquire() {
     ++ referenceCount;
@@ -604,8 +604,8 @@ class MyArchitecture: public Architecture {
 
 class MyAssembler: public Assembler {
  public:
-  MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
-    c(s, a, zone), arch_(arch)
+  MyAssembler(System* s, util::Allocator* a, Zone* zone, MyArchitecture* arch)
+      : c(s, a, zone), arch_(arch)
   { }
 
   virtual void setClient(Client* client) {
@@ -992,7 +992,8 @@ class MyAssembler: public Assembler {
   MyArchitecture* arch_;
 };
 
-Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
+Assembler* MyArchitecture::makeAssembler(util::Allocator* allocator, Zone* zone)
+{
   return new(zone) MyAssembler(this->c.s, allocator, zone, this);
 }
 

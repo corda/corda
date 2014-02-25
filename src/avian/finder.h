@@ -13,7 +13,12 @@
 
 #include "avian/common.h"
 #include <avian/system/system.h>
-#include "avian/allocator.h"
+
+namespace avian {
+namespace util {
+class Allocator;
+}
+}
 
 namespace vm {
 
@@ -174,12 +179,15 @@ class Finder {
   virtual void dispose() = 0;
 };
 
-AVIAN_EXPORT Finder*
-makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary);
+AVIAN_EXPORT Finder* makeFinder(System* s,
+                                avian::util::Allocator* a,
+                                const char* path,
+                                const char* bootLibrary);
 
-Finder*
-makeFinder(System* s, Allocator* a, const uint8_t* jarData,
-           unsigned jarLength);
+Finder* makeFinder(System* s,
+                   avian::util::Allocator* a,
+                   const uint8_t* jarData,
+                   unsigned jarLength);
 
 } // namespace vm
 

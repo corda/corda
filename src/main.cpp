@@ -61,7 +61,7 @@ mainClass(const char* jar)
 
   System* system = makeSystem();
 
-  class MyAllocator: public Allocator {
+  class MyAllocator : public avian::util::Allocator {
    public:
     MyAllocator(System* s): s(s) { }
 

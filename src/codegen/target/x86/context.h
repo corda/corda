@@ -75,7 +75,10 @@ class ArchitectureContext {
 
 class Context {
  public:
-  Context(vm::System* s, vm::Allocator* a, vm::Zone* zone, ArchitectureContext* ac);
+  Context(vm::System* s,
+          util::Allocator* a,
+          vm::Zone* zone,
+          ArchitectureContext* ac);
 
   vm::System* s;
   vm::Zone* zone;

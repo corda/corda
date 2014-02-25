@@ -26,6 +26,7 @@
 #include <avian/system/system.h>
 #include <avian/system/signal.h>
 #include <avian/util/runtime-array.h>
+#include <avian/append.h>
 
 #if defined(WINAPI_FAMILY)
 
@@ -842,7 +843,9 @@ class MySystem: public System {
     return SO_SUFFIX;
   }
 
-  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+  virtual const char* toAbsolutePath(avian::util::Allocator* allocator,
+                                     const char* name)
+  {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     if (strncmp(name, "//", 2) == 0
         or strncmp(name, "\\\\", 2) == 0

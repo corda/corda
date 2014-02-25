@@ -15,12 +15,21 @@ namespace avian {
 namespace codegen {
 namespace arm {
 
-Context::Context(vm::System* s, vm::Allocator* a, vm::Zone* zone):
-  s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-  firstBlock(new(zone) MyBlock(this, 0)),
-  lastBlock(firstBlock), poolOffsetHead(0), poolOffsetTail(0),
-  constantPool(0), constantPoolCount(0)
-{ }
+Context::Context(vm::System* s, util::Allocator* a, vm::Zone* zone)
+    : s(s),
+      zone(zone),
+      client(0),
+      code(s, a, 1024),
+      tasks(0),
+      result(0),
+      firstBlock(new (zone) MyBlock(this, 0)),
+      lastBlock(firstBlock),
+      poolOffsetHead(0),
+      poolOffsetTail(0),
+      constantPool(0),
+      constantPoolCount(0)
+{
+}
 
 } // namespace arm
 } // namespace codegen

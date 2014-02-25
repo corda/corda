@@ -8,36 +8,27 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#ifndef AVIAN_UTIL_LIST_H
-#define AVIAN_UTIL_LIST_H
+#ifndef AVIAN_UTIL_ALLOCATOR_H
+#define AVIAN_UTIL_ALLOCATOR_H
 
-#include "allocator.h"
+#include <stddef.h>
 
 namespace avian {
 namespace util {
 
-template <class T>
-class List {
-public:
-  List(const T& item, List<T>* next):
-    item(item),
-    next(next) {}
-
-  unsigned count() {
-    unsigned count = 0;
-    List<T>* c = this;
-    while (c) {
-      ++ count;
-      c = c->next;
-    }
-    return count;
-  }
-
-  T item;
-  List<T>* next;
+class Allocator {
+ public:
+  virtual void* tryAllocate(unsigned size) = 0;
+  virtual void* allocate(unsigned size) = 0;
+  virtual void free(const void* p, unsigned size) = 0;
 };
 
 }  // namespace util
 }  // namespace avian
 
-#endif  // AVIAN_UTIL_LIST_H
+inline void* operator new(size_t size, avian::util::Allocator* allocator)
+{
+  return allocator->allocate(size);
+}
+
+#endif  // AVIAN_UTIL_ALLOCATOR_H
