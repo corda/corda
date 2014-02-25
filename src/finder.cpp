@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>

@@ -22,13 +22,13 @@
 #include <avian/util/abort.h>
 #include <avian/util/math.h>
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/architecture.h>
-#include <avian/vm/codegen/registers.h>
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/architecture.h>
+#include <avian/codegen/registers.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/promise.h>
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 
 #include "context.h"
 #include "block.h"

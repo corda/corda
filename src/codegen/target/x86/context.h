@@ -19,10 +19,10 @@
 
 #include "avian/alloc-vector.h"
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/assembler.h>
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 
 namespace vm {
 class System;

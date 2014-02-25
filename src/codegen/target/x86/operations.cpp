@@ -15,8 +15,8 @@
 
 #include <avian/util/abort.h>
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/promise.h>
 
 #include "context.h"
 #include "encode.h"
@@ -1280,7 +1280,8 @@ void shiftLeftRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, &cx);
+    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
+              &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 2);
@@ -1324,7 +1325,8 @@ void shiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, &cx);
+    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
+              &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 3);
@@ -1371,7 +1373,8 @@ void unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, aSize, &constant, aSize, &cx);
+    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
+              &cx);
 
     opcode(c, 0x7c); //jl
     c->code.append(2 + 2);

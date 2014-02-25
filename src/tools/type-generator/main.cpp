@@ -1941,7 +1941,7 @@ main(int ac, char** av)
     local::usageAndExit(av[0]);
   }
 
-  System* system = makeSystem(0);
+  System* system = makeSystem();
 
   class MyAllocator: public Allocator {
    public:

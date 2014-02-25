@@ -157,17 +157,11 @@ makeField(Thread* t, object c, unsigned index)
   return makeJfield(t, 0, c, type, 0, 0, name, index);
 }
 
-void
-initVmThread(Thread* t, object thread)
+void initVmThread(Thread* t, object thread, unsigned offset)
 {
   PROTECT(t, thread);
 
-  object field = resolveField
-    (t, objectClass(t, thread), "vmThread", "Ljava/lang/VMThread;");
-
-  if (fieldAtOffset<object>(thread, fieldOffset(t, field)) == 0) {
-    PROTECT(t, field);
- 
+  if (fieldAtOffset<object>(thread, offset) == 0) {
     object c = resolveClass
       (t, root(t, Machine::BootLoader), "java/lang/VMThread");
     PROTECT(t, c);
@@ -180,13 +174,24 @@ initVmThread(Thread* t, object thread)
 
     t->m->processor->invoke(t, constructor, instance, thread);
 
-    set(t, thread, fieldOffset(t, field), instance);
+    set(t, thread, offset, instance);
   }
 
   if (threadGroup(t, thread) == 0) {
     set(t, thread, ThreadGroup, threadGroup(t, t->javaThread));
     expect(t, threadGroup(t, thread));
   }
+}
+
+void initVmThread(Thread* t, object thread)
+{
+  initVmThread(
+      t,
+      thread,
+      fieldOffset(
+          t,
+          resolveField(
+              t, objectClass(t, thread), "vmThread", "Ljava/lang/VMThread;")));
 }
 
 object
@@ -353,14 +358,28 @@ class MyClasspath : public Classpath {
     // later when we try to acquire it:
     objectMonitor(t, t->javaThread, true);
 
-    THREAD_RESOURCE0(t, {
-        vm::acquire(t, t->javaThread);
-        t->flags &= ~Thread::ActiveFlag;
-        vm::notifyAll(t, t->javaThread);
-        vm::release(t, t->javaThread);
+    object field = resolveField(
+        t, objectClass(t, t->javaThread), "vmThread", "Ljava/lang/VMThread;");
+
+    unsigned offset = fieldOffset(t, field);
+
+    THREAD_RESOURCE(t, unsigned, offset, {
+      object vmt = fieldAtOffset<object>(t->javaThread, offset);
+      if (vmt) {
+        PROTECT(t, vmt);
+        vm::acquire(t, vmt);
+        fieldAtOffset<object>(t->javaThread, offset) = 0;
+        vm::notifyAll(t, vmt);
+        vm::release(t, vmt);
+      }
+
+      vm::acquire(t, t->javaThread);
+      t->flags &= ~Thread::ActiveFlag;
+      vm::notifyAll(t, t->javaThread);
+      vm::release(t, t->javaThread);
     });
 
-    initVmThread(t, t->javaThread);
+    initVmThread(t, t->javaThread, offset);
 
     object method = resolveMethod
       (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
@@ -2298,6 +2317,13 @@ Avian_java_lang_System_mapLibraryName
     (makeString(t, "%s%.*s%s", t->m->system->libraryPrefix(), originalLength,
                 RUNTIME_ARRAY_BODY(originalChars),
                 t->m->system->librarySuffix()));
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
+(Thread*, object, uintptr_t*)
+{
+  return true;
 }
 
 #ifdef PLATFORM_WINDOWS

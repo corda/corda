@@ -10,7 +10,6 @@
 
 #include "sys/stat.h"
 #include "windows.h"
-#include "sys/timeb.h"
 
 #ifdef _MSC_VER
 #  define S_ISREG(x) ((x) & _S_IFREG)
@@ -24,7 +23,8 @@
 #undef min
 
 #include "avian/arch.h"
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
+#include <avian/system/signal.h>
 #include <avian/util/runtime-array.h>
 
 #if defined(WINAPI_FAMILY)
@@ -114,11 +114,6 @@ class MutexResource {
   System* s; 
   HANDLE m;
 };
-
-const unsigned SegFaultIndex = 0;
-const unsigned DivideByZeroIndex = 1;
-
-const unsigned HandlerCount = 2;
 
 class MySystem;
 MySystem* system;
@@ -626,66 +621,13 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem(const char* crashDumpDirectory):
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    oldHandler(0),
-#endif
-    crashDumpDirectory(crashDumpDirectory)
+  MySystem()
   {
     expect(this, system == 0);
     system = this;
 
-    memset(handlers, 0, sizeof(handlers));
-
     mutex = CreateMutex(0, false, 0);
     assert(this, mutex);
-  }
-
-  bool findHandler() {
-    for (unsigned i = 0; i < HandlerCount; ++i) {
-      if (handlers[i]) return true;
-    }
-    return false;
-  }
-
-  int registerHandler(System::SignalHandler* handler, int index) {
-    if (handler) {
-      handlers[index] = handler;
-
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      if (oldHandler == 0) {
-#  ifdef ARCH_x86_32
-        oldHandler = SetUnhandledExceptionFilter(handleException);
-#  elif defined ARCH_x86_64
-        AddVectoredExceptionHandler(1, handleException);
-        oldHandler = reinterpret_cast<LPTOP_LEVEL_EXCEPTION_FILTER>(1);
-#  endif
-      }
-#else
-        #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
-#endif
-
-      return 0;
-    } else if (handlers[index]) {
-      handlers[index] = 0;
-
-      if (not findHandler()) {
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-#  ifdef ARCH_x86_32
-        SetUnhandledExceptionFilter(oldHandler);
-        oldHandler = 0;
-#  elif defined ARCH_x86_64
-        // do nothing, handlers are never "unregistered" anyway
-#  endif
-#else
-        #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
-#endif
-      }
-
-      return 0;
-    } else {
-      return 1;
-    }
   }
 
   virtual void* tryAllocate(unsigned sizeInBytes) {
@@ -744,14 +686,6 @@ class MySystem: public System {
   virtual Status make(System::Local** l) {
     *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
-  }
-
-  virtual Status handleSegFault(SignalHandler* handler) {
-    return registerHandler(handler, SegFaultIndex);
-  }
-
-  virtual Status handleDivideByZero(SignalHandler* handler) {
-    return registerHandler(handler, DivideByZeroIndex);
   }
 
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
@@ -1008,9 +942,7 @@ class MySystem: public System {
   }
 
   virtual void abort() {
-    // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
-    // generate a debug dump for
-    *static_cast<volatile int*>(0) = 0;
+    avian::system::crash();
   }
 
   virtual void dispose() {
@@ -1020,139 +952,16 @@ class MySystem: public System {
   }
 
   HANDLE mutex;
-  SignalHandler* handlers[HandlerCount];
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-  LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
-#endif
-  const char* crashDumpDirectory;
 };
-
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-
-#pragma pack(push,4)
-struct MINIDUMP_EXCEPTION_INFORMATION {
-  DWORD thread;
-  LPEXCEPTION_POINTERS exception;
-  BOOL exceptionInCurrentAddressSpace;
-};
-#pragma pack(pop)
-
-struct MINIDUMP_USER_STREAM_INFORMATION;
-struct MINIDUMP_CALLBACK_INFORMATION;
-
-enum MINIDUMP_TYPE {
-  MiniDumpNormal = 0,
-  MiniDumpWithFullMemory = 2
-};
-
-typedef BOOL (*MiniDumpWriteDumpType)
-(HANDLE processHandle,
- DWORD processId,
- HANDLE file,
- MINIDUMP_TYPE type,
- const MINIDUMP_EXCEPTION_INFORMATION* exception,
- const MINIDUMP_USER_STREAM_INFORMATION* userStream,
- const MINIDUMP_CALLBACK_INFORMATION* callback);
-
-void
-dump(LPEXCEPTION_POINTERS e, const char* directory)
-{
-  HINSTANCE dbghelp = LoadLibrary("dbghelp.dll");
-
-  if (dbghelp) {
-    MiniDumpWriteDumpType MiniDumpWriteDump = reinterpret_cast
-      <MiniDumpWriteDumpType>(GetProcAddress(dbghelp, "MiniDumpWriteDump"));
-
-    if (MiniDumpWriteDump) {
-      char name[MAX_PATH];
-      _timeb tb;
-      FTIME(&tb);
-      vm::snprintf(name, MAX_PATH, "%s\\crash-%" LLD ".mdmp", directory,
-                   (static_cast<int64_t>(tb.time) * 1000)
-                   + static_cast<int64_t>(tb.millitm));
-
-      HANDLE file = CreateFile
-        (name, FILE_WRITE_DATA, 0, 0, CREATE_ALWAYS, 0, 0);
-
-      if (file != INVALID_HANDLE_VALUE) {
-        MINIDUMP_EXCEPTION_INFORMATION exception
-           = { GetCurrentThreadId(), e, true };
-
-         MiniDumpWriteDump
-           (GetCurrentProcess(),
-            GetCurrentProcessId(),
-            file,
-            MiniDumpWithFullMemory,
-            &exception,
-            0,
-            0);
-
-        CloseHandle(file);
-      }
-    }
-
-    FreeLibrary(dbghelp);
-  }
-}
-
-LONG CALLBACK
-handleException(LPEXCEPTION_POINTERS e)
-{
-  System::SignalHandler* handler = 0;
-  if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    handler = system->handlers[SegFaultIndex];
-  } else if (e->ExceptionRecord->ExceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO)
-  {
-    handler = system->handlers[DivideByZeroIndex];
-  }
-
-  if (handler) {
-#ifdef ARCH_x86_32
-    void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
-    void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
-    void* stack = reinterpret_cast<void*>(e->ContextRecord->Esp);
-    void* thread = reinterpret_cast<void*>(e->ContextRecord->Ebx);
-#elif defined ARCH_x86_64
-    void* ip = reinterpret_cast<void*>(e->ContextRecord->Rip);
-    void* base = reinterpret_cast<void*>(e->ContextRecord->Rbp);
-    void* stack = reinterpret_cast<void*>(e->ContextRecord->Rsp);
-    void* thread = reinterpret_cast<void*>(e->ContextRecord->Rbx);
-#endif
-
-    bool jump = handler->handleSignal(&ip, &base, &stack, &thread);
-
-#ifdef  ARCH_x86_32
-    e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
-    e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
-    e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
-    e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
-#elif defined ARCH_x86_64
-    e->ContextRecord->Rip = reinterpret_cast<DWORD64>(ip);
-    e->ContextRecord->Rbp = reinterpret_cast<DWORD64>(base);
-    e->ContextRecord->Rsp = reinterpret_cast<DWORD64>(stack);
-    e->ContextRecord->Rbx = reinterpret_cast<DWORD64>(thread);
-#endif
-
-    if (jump) {
-      return EXCEPTION_CONTINUE_EXECUTION;
-    } else if (system->crashDumpDirectory) {
-      dump(e, system->crashDumpDirectory);
-    }
-  }
-
-  return EXCEPTION_CONTINUE_SEARCH;
-}
-
-#endif
 
 } // namespace
 
 namespace vm {
 
 AVIAN_EXPORT System*
-makeSystem(const char* crashDumpDirectory)
+makeSystem()
 {
-  return new (malloc(sizeof(MySystem))) MySystem(crashDumpDirectory);
+  return new (malloc(sizeof(MySystem))) MySystem();
 }
 
 } // namespace vm

@@ -10,9 +10,9 @@
 
 #include <avian/util/runtime-array.h>
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/architecture.h>
-#include <avian/vm/codegen/registers.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/architecture.h>
+#include <avian/codegen/registers.h>
 
 #include "context.h"
 #include "block.h"

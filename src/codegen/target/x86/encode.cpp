@@ -14,8 +14,8 @@
 #include <avian/util/abort.h>
 #include <avian/util/math.h>
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/promise.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/promise.h>
 
 #include "context.h"
 #include "encode.h"

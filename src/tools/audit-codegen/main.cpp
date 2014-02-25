@@ -8,16 +8,16 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 
 #include <avian/util/arg-parser.h>
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/targets.h>
-#include <avian/vm/codegen/registers.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/targets.h>
+#include <avian/codegen/registers.h>
 
-#include <avian/vm/heap/heap.h>
+#include <avian/heap/heap.h>
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
@@ -34,7 +34,7 @@ public:
   Architecture* arch;
 
   BasicEnv():
-    s(makeSystem(0)),
+    s(makeSystem()),
     heap(makeHeap(s, 32 * 1024)),
     arch(makeArchitectureNative(s, true))
   {

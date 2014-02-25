@@ -15,12 +15,12 @@
 #include "avian/target.h"
 #include "avian/arch.h"
 
-#include <avian/vm/codegen/assembler.h>
-#include <avian/vm/codegen/architecture.h>
-#include <avian/vm/codegen/compiler.h>
-#include <avian/vm/codegen/targets.h>
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/runtime.h>
+#include <avian/codegen/assembler.h>
+#include <avian/codegen/architecture.h>
+#include <avian/codegen/compiler.h>
+#include <avian/codegen/targets.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/runtime.h>
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
@@ -43,6 +43,7 @@ vmJumpAndInvoke(void* thread, void* function, void* stack,
                 unsigned frameSize);
 
 using namespace avian::codegen;
+using namespace avian::system;
 
 namespace {
 
@@ -8366,7 +8367,7 @@ invoke(Thread* thread, object method, ArgumentList* arguments)
   return r;
 }
 
-class SignalHandler: public System::SignalHandler {
+class SignalHandler: public SignalRegistrar::Handler {
  public:
   SignalHandler(Machine::Type type, Machine::Root root, unsigned fixedSize):
     m(0), type(type), root(root), fixedSize(fixedSize) { }
@@ -8501,24 +8502,27 @@ class MyProcessor: public Processor {
     Thunk table;
   };
 
-  MyProcessor(System* s, Allocator* allocator, bool useNativeFeatures):
-    s(s),
-    allocator(allocator),
-    roots(0),
-    bootImage(0),
-    heapImage(0),
-    codeImage(0),
-    codeImageSize(0),
-    segFaultHandler(Machine::NullPointerExceptionType,
-                    Machine::NullPointerException,
-                    FixedSizeOfNullPointerException),
-    divideByZeroHandler(Machine::ArithmeticExceptionType,
-                        Machine::ArithmeticException,
-                        FixedSizeOfArithmeticException),
-    codeAllocator(s, 0, 0),
-    callTableSize(0),
-    useNativeFeatures(useNativeFeatures),
-    compilationHandlers(0)
+  MyProcessor(System* s,
+              Allocator* allocator,
+              const char* crashDumpDirectory,
+              bool useNativeFeatures)
+      : s(s),
+        allocator(allocator),
+        roots(0),
+        bootImage(0),
+        heapImage(0),
+        codeImage(0),
+        codeImageSize(0),
+        segFaultHandler(Machine::NullPointerExceptionType,
+                        Machine::NullPointerException,
+                        FixedSizeOfNullPointerException),
+        divideByZeroHandler(Machine::ArithmeticExceptionType,
+                            Machine::ArithmeticException,
+                            FixedSizeOfArithmeticException),
+        codeAllocator(s, 0, 0),
+        callTableSize(0),
+        useNativeFeatures(useNativeFeatures),
+        compilationHandlers(0)
   {
     thunkTable[compileMethodIndex] = voidPointer(local::compileMethod);
     thunkTable[compileVirtualMethodIndex] = voidPointer(compileVirtualMethod);
@@ -8540,6 +8544,8 @@ class MyProcessor: public Processor {
     // table.
     thunkTable[dummyIndex] = reinterpret_cast<void*>
       (static_cast<uintptr_t>(UINT64_C(0x5555555555555555)));
+
+    signals.setCrashDumpDirectory(crashDumpDirectory);
   }
 
   virtual Thread*
@@ -8924,7 +8930,9 @@ class MyProcessor: public Processor {
 
     compilationHandlers->dispose(allocator);
 
-    s->handleSegFault(0);
+    signals.unregisterHandler(SignalRegistrar::SegFault);
+    signals.unregisterHandler(SignalRegistrar::DivideByZero);
+    signals.setCrashDumpDirectory(0);
 
     allocator->free(this, sizeof(*this));
   }
@@ -9116,12 +9124,10 @@ class MyProcessor: public Processor {
 #endif
 
     segFaultHandler.m = t->m;
-    expect(t, t->m->system->success
-           (t->m->system->handleSegFault(&segFaultHandler)));
+    expect(t, signals.registerHandler(SignalRegistrar::SegFault, &segFaultHandler));
 
     divideByZeroHandler.m = t->m;
-    expect(t, t->m->system->success
-           (t->m->system->handleDivideByZero(&divideByZeroHandler)));
+    expect(t, signals.registerHandler(SignalRegistrar::DivideByZero, &divideByZeroHandler));
   }
 
   virtual void callWithCurrentContinuation(Thread* t, object receiver) {
@@ -9173,6 +9179,7 @@ class MyProcessor: public Processor {
   }
   
   System* s;
+  SignalRegistrar signals;
   Allocator* allocator;
   object roots;
   BootImage* bootImage;
@@ -10285,11 +10292,13 @@ codeAllocator(MyThread* t)
 
 namespace vm {
 
-Processor*
-makeProcessor(System* system, Allocator* allocator, bool useNativeFeatures)
+Processor* makeProcessor(System* system,
+                         Allocator* allocator,
+                         const char* crashDumpDirectory,
+                         bool useNativeFeatures)
 {
   return new (allocator->allocate(sizeof(local::MyProcessor)))
-    local::MyProcessor(system, allocator, useNativeFeatures);
+    local::MyProcessor(system, allocator, crashDumpDirectory, useNativeFeatures);
 }
 
 } // namespace vm

@@ -16,7 +16,7 @@
 #include "avian/zone.h"
 
 #include <avian/util/abort.h>
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 
 #include "context.h"
 #include "fixup.h"

@@ -11,7 +11,7 @@
 #include "codegen/compiler/context.h"
 #include "codegen/compiler/resource.h"
 
-#include <avian/vm/codegen/architecture.h>
+#include <avian/codegen/architecture.h>
 
 namespace avian {
 namespace codegen {

@@ -15,7 +15,7 @@
 
 #include "avian/common.h"
 
-#include <avian/vm/codegen/lir.h>
+#include <avian/codegen/lir.h>
 
 #include "registers.h"
 
