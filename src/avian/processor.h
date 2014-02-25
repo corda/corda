@@ -23,6 +23,11 @@ namespace avian {
 namespace codegen {
 class DelayedPromise;
 }
+
+namespace util {
+template <class T>
+class Slice;
+}
 }
 
 namespace vm {
@@ -140,8 +145,8 @@ class Processor {
   virtual object
   getStackTrace(Thread* t, Thread* target) = 0;
 
-  virtual void
-  initialize(BootImage* image, uint8_t* code, unsigned capacity) = 0;
+  virtual void initialize(BootImage* image, avian::util::Slice<uint8_t> code)
+      = 0;
 
   virtual void
   addCompilationHandler(CompilationHandler* handler) = 0;

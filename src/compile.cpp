@@ -24,6 +24,7 @@
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
+#include <avian/util/slice.h>
 #include <avian/util/fixed-allocator.h>
 
 using namespace vm;
@@ -1640,15 +1641,19 @@ class Frame {
 
   Value absoluteAddressOperand(avian::codegen::Promise* p) {
     return context->bootContext
-      ? c->binaryOp(lir::Add,
-        TargetBytesPerWord, c->memory
-         (c->register_(t->arch->thread()), Compiler::AddressType,
-          TARGET_THREAD_CODEIMAGE), c->promiseConstant
-         (new(&context->zone)
-          avian::codegen::OffsetPromise
-          (p, - reinterpret_cast<intptr_t>(codeAllocator(t)->base)),
-          Compiler::AddressType))
-      : addressOperand(p);
+               ? c->binaryOp(
+                     lir::Add,
+                     TargetBytesPerWord,
+                     c->memory(c->register_(t->arch->thread()),
+                               Compiler::AddressType,
+                               TARGET_THREAD_CODEIMAGE),
+                     c->promiseConstant(
+                         new (&context->zone) avian::codegen::OffsetPromise(
+                             p,
+                             -reinterpret_cast<intptr_t>(
+                                 codeAllocator(t)->memory.begin())),
+                         Compiler::AddressType))
+               : addressOperand(p);
   }
 
   Value machineIp(unsigned logicalIp) {
@@ -3130,8 +3135,9 @@ useLongJump(MyThread* t, uintptr_t target)
 {
   uintptr_t reach = t->arch->maximumImmediateJump();
   FixedAllocator* a = codeAllocator(t);
-  uintptr_t start = reinterpret_cast<uintptr_t>(a->base);
-  uintptr_t end = reinterpret_cast<uintptr_t>(a->base) + a->capacity;
+  uintptr_t start = reinterpret_cast<uintptr_t>(a->memory.begin());
+  uintptr_t end = reinterpret_cast<uintptr_t>(a->memory.begin())
+                  + a->memory.count;
   assert(t, end - start < reach);
 
   return (target > end && (target - start) > reach)
@@ -6962,9 +6968,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
              TARGET_THREAD_STACKLIMIT);
 
   // we must acquire the class lock here at the latest
- 
-  unsigned codeSize = c->resolve
-    (allocator->base + allocator->offset);
+
+  unsigned codeSize = c->resolve(allocator->memory.begin() + allocator->offset);
 
   unsigned total = pad(codeSize, TargetBytesPerWord)
     + pad(c->poolSize(), TargetBytesPerWord);
@@ -6983,8 +6988,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
        FixedSizeOfArray + ((context->objectPoolCount + 1) * BytesPerWord),
        true);
 
-    context->executableSize = (allocator->base + allocator->offset)
-      - static_cast<uint8_t*>(context->executableStart);
+    context->executableSize = (allocator->memory.begin() + allocator->offset)
+                              - static_cast<uint8_t*>(context->executableStart);
 
     initArray(t, pool, context->objectPoolCount + 1);
     mark(t, pool, 0);
@@ -8519,7 +8524,7 @@ class MyProcessor: public Processor {
         divideByZeroHandler(Machine::ArithmeticExceptionType,
                             Machine::ArithmeticException,
                             FixedSizeOfArithmeticException),
-        codeAllocator(s, 0, 0),
+        codeAllocator(s, Slice<uint8_t>(0, 0)),
         callTableSize(0),
         useNativeFeatures(useNativeFeatures),
         compilationHandlers(0)
@@ -8922,9 +8927,10 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose() {
-    if (codeAllocator.base) {
+    if (codeAllocator.memory.begin()) {
 #if !defined(AVIAN_AOT_ONLY)
-      s->freeExecutable(codeAllocator.base, codeAllocator.capacity);
+      s->freeExecutable(codeAllocator.memory.begin(),
+                        codeAllocator.memory.count);
 #endif
     }
 
@@ -9022,10 +9028,10 @@ class MyProcessor: public Processor {
     return visitor.trace ? visitor.trace : makeObjectArray(t, 0);
   }
 
-  virtual void initialize(BootImage* image, uint8_t* code, unsigned capacity) {
+  virtual void initialize(BootImage* image, Slice<uint8_t> code)
+  {
     bootImage = image;
-    codeAllocator.base = code;
-    codeAllocator.capacity = capacity;
+    codeAllocator.memory = code;
   }
 
   virtual void addCompilationHandler(CompilationHandler* handler) {
@@ -9060,7 +9066,7 @@ class MyProcessor: public Processor {
     {
       if (wordArrayBody(t, root(t, VirtualThunks), i)) {
         wordArrayBody(t, root(t, VirtualThunks), i)
-          -= reinterpret_cast<uintptr_t>(codeAllocator.base);
+            -= reinterpret_cast<uintptr_t>(codeAllocator.memory.begin());
       }
     }
   }
@@ -9077,24 +9083,25 @@ class MyProcessor: public Processor {
       for (object p = arrayBody(t, root(t, CallTable), i);
            p; p = callNodeNext(t, p))
       {
-        table[index++] = targetVW
-          (callNodeAddress(t, p)
-           - reinterpret_cast<uintptr_t>(codeAllocator.base));
-        table[index++] = targetVW
-          (w->map()->find(callNodeTarget(t, p))
-           | (static_cast<unsigned>(callNodeFlags(t, p)) << TargetBootShift));
+        table[index++] = targetVW(
+            callNodeAddress(t, p)
+            - reinterpret_cast<uintptr_t>(codeAllocator.memory.begin()));
+        table[index++] = targetVW(
+            w->map()->find(callNodeTarget(t, p))
+            | (static_cast<unsigned>(callNodeFlags(t, p)) << TargetBootShift));
       }
     }
 
     return table;
   }
 
-  virtual void boot(Thread* t, BootImage* image, uint8_t* code) {
+  virtual void boot(Thread* t, BootImage* image, uint8_t* code)
+  {
 #if !defined(AVIAN_AOT_ONLY)
-    if (codeAllocator.base == 0) {
-      codeAllocator.base = static_cast<uint8_t*>
-        (s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
-      codeAllocator.capacity = ExecutableAreaSizeInBytes;
+    if (codeAllocator.memory.begin() == 0) {
+      codeAllocator.memory.items = static_cast<uint8_t*>(
+          s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
+      codeAllocator.memory.count = ExecutableAreaSizeInBytes;
     }
 #endif
 
@@ -9104,7 +9111,7 @@ class MyProcessor: public Processor {
       roots = makeArray(t, RootCount);
 
       setRoot(t, CallTable, makeArray(t, 128));
-      
+
       setRoot(t, MethodTreeSentinal, makeTreeNode(t, 0, 0, 0));
       setRoot(t, MethodTree, root(t, MethodTreeSentinal));
       set(t, root(t, MethodTree), TreeNodeLeft,
@@ -10032,7 +10039,7 @@ compileThunks(MyThread* t, FixedAllocator* allocator)
   BootImage* image = p->bootImage;
 
   if (image) {
-    uint8_t* imageBase = p->codeAllocator.base;
+    uint8_t* imageBase = p->codeAllocator.memory.begin();
 
     image->thunks.default_ = thunkToThunk(p->thunks.default_, imageBase);
     image->thunks.defaultVirtual = thunkToThunk

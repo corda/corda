@@ -15,8 +15,8 @@
 namespace avian {
 namespace util {
 
-FixedAllocator::FixedAllocator(Aborter* a, uint8_t* base, unsigned capacity)
-    : a(a), base(base), capacity(capacity), offset(0)
+FixedAllocator::FixedAllocator(Aborter* a, Slice<uint8_t> memory)
+    : a(a), memory(memory), offset(0)
 {
 }
 
@@ -28,9 +28,9 @@ void* FixedAllocator::tryAllocate(unsigned size)
 void* FixedAllocator::allocate(unsigned size, unsigned padAlignment)
 {
   unsigned paddedSize = vm::pad(size, padAlignment);
-  expect(a, offset + paddedSize < capacity);
+  expect(a, offset + paddedSize < memory.count);
 
-  void* p = base + offset;
+  void* p = memory.begin() + offset;
   offset += paddedSize;
   return p;
 }
@@ -42,7 +42,8 @@ void* FixedAllocator::allocate(unsigned size)
 
 void FixedAllocator::free(const void* p, unsigned size)
 {
-  if (p >= base and static_cast<const uint8_t*>(p) + size == base + offset) {
+  if (p >= memory.begin() and static_cast<const uint8_t*>(p) + size
+      == memory.begin() + offset) {
     offset -= size;
   } else {
     abort(a);

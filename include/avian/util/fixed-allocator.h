@@ -13,13 +13,16 @@
 
 #include "allocator.h"
 #include "abort.h"
+#include "slice.h"
 
 namespace avian {
 namespace util {
 
+// An Allocator that allocates, bump-pointer style, out of a pre-defined chunk
+// of memory.
 class FixedAllocator : public Allocator {
  public:
-  FixedAllocator(Aborter* a, uint8_t* base, unsigned capacity);
+  FixedAllocator(Aborter* a, Slice<uint8_t> memory);
 
   virtual void* tryAllocate(unsigned size);
 
@@ -30,11 +33,8 @@ class FixedAllocator : public Allocator {
   virtual void free(const void* p, unsigned size);
 
   Aborter* a;
-
-  uint8_t* base;
-  unsigned capacity;
-
-  unsigned offset;
+  Slice<uint8_t> memory;
+  size_t offset;
 };
 
 }  // namespace util
