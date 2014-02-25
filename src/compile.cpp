@@ -24,6 +24,7 @@
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
+#include <avian/util/fixed-allocator.h>
 
 using namespace vm;
 
@@ -1347,8 +1348,7 @@ storeLocal(Context* context, unsigned footprint, Compiler::Operand* value,
     (footprint, value, translateLocalIndex(context, footprint, index));
 }
 
-FixedAllocator*
-codeAllocator(MyThread* t);
+avian::util::FixedAllocator* codeAllocator(MyThread* t);
 
 class Frame {
  public:
@@ -10280,8 +10280,7 @@ setRoot(Thread* t, Root root, object value)
       ArrayBody + (root * BytesPerWord), value);
 }
 
-FixedAllocator*
-codeAllocator(MyThread* t)
+avian::util::FixedAllocator* codeAllocator(MyThread* t)
 {
   return &(processor(t)->codeAllocator);
 }

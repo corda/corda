@@ -23,6 +23,11 @@ public:
   virtual void NO_RETURN abort() = 0;
 };
 
+inline Aborter* getAborter(Aborter* a)
+{
+  return a;
+}
+
 template<class T>
 inline void NO_RETURN abort(T t) {
   getAborter(t)->abort();
@@ -44,7 +49,7 @@ inline void assert(T t, bool v) {
   expect(t, v);
 }
 #endif
-  
+
 } // namespace util
 } // namespace avian
 
