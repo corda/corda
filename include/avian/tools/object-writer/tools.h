@@ -14,6 +14,7 @@
 #include <stdlib.h>
 
 #include <avian/util/string.h>
+#include <avian/util/slice.h>
 
 #include "avian/environment.h"
 
@@ -72,51 +73,32 @@ public:
   unsigned add(util::String str);
 };
 
-template<class T>
-class Slice {
-public:
-  T* items;
-  size_t count;
-
-  inline Slice(T* items, size_t count):
-    items(items),
-    count(count) {}
-
-  inline Slice(const Slice<T>& copy):
-    items(copy.items),
-    count(copy.count) {}
-
-  inline T* begin() {
-    return items;
-  }
-
-  inline T* end() {
-    return items + count;
-  }
-};
-
-template<class T>
-class DynamicArray : public Slice<T> {
-public:
+template <class T>
+class DynamicArray : public util::Slice<T> {
+ public:
   size_t capacity;
 
-  DynamicArray():
-    Slice<T>((T*)malloc(10 * sizeof(T)), 0),
-    capacity(10) {}
-  ~DynamicArray() {
-    free(Slice<T>::items);
+  DynamicArray() : util::Slice<T>((T*)malloc(10 * sizeof(T)), 0), capacity(10)
+  {
+  }
+  ~DynamicArray()
+  {
+    free(util::Slice<T>::items);
   }
 
-  void ensure(size_t more) {
-  if(Slice<T>::count + more > capacity) {
-    capacity = capacity * 2 + more;
-    Slice<T>::items = (T*)realloc(Slice<T>::items, capacity * sizeof(T));
+  void ensure(size_t more)
+  {
+    if (util::Slice<T>::count + more > capacity) {
+      capacity = capacity * 2 + more;
+      util::Slice<T>::items
+          = (T*)realloc(util::Slice<T>::items, capacity * sizeof(T));
+    }
   }
-}
 
-  void add(const T& item) {
+  void add(const T& item)
+  {
     ensure(1);
-    Slice<T>::items[Slice<T>::count++] = item;
+    util::Slice<T>::items[util::Slice<T>::count++] = item;
   }
 };
 
@@ -175,7 +157,11 @@ public:
     Executable = 1 << 1
   };
 
-  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) = 0;
+  virtual bool writeObject(OutputStream* out,
+                           util::Slice<SymbolInfo> symbols,
+                           util::Slice<const uint8_t> data,
+                           unsigned accessFlags,
+                           unsigned alignment) = 0;
 
   static Platform* getPlatform(PlatformInfo info);
 };
