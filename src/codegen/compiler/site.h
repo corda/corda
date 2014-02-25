@@ -11,7 +11,7 @@
 #ifndef AVIAN_CODEGEN_COMPILER_SITE_H
 #define AVIAN_CODEGEN_COMPILER_SITE_H
 
-#include <avian/vm/codegen/architecture.h>
+#include <avian/codegen/architecture.h>
 
 #include "codegen/compiler/value.h"
 #include "codegen/compiler/context.h"

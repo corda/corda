@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include <avian/vm/codegen/registers.h>
+#include <avian/codegen/registers.h>
 
 namespace avian {
 namespace codegen {

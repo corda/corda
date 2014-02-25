@@ -3878,7 +3878,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   
   if (classpath == 0) classpath = ".";
   
-  System* s = makeSystem(crashDumpDirectory);
+  System* s = makeSystem();
   Heap* h = makeHeap(s, heapLimit);
   Classpath* c = makeClasspath(s, h, javaHome, embedPrefix);
 
@@ -3913,7 +3913,7 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   Finder* af = makeFinder(s, h, classpath, bootLibrary);
   if(bootLibrary)
     free(bootLibrary);
-  Processor* p = makeProcessor(s, h, true);
+  Processor* p = makeProcessor(s, h, crashDumpDirectory, true);
 
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));

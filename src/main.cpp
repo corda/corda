@@ -13,7 +13,7 @@
 #include "string.h"
 #include "jni.h"
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/finder.h"
 
 #include <avian/util/runtime-array.h>
@@ -59,7 +59,7 @@ mainClass(const char* jar)
 {
   using namespace vm;
 
-  System* system = makeSystem(0);
+  System* system = makeSystem();
 
   class MyAllocator: public Allocator {
    public:

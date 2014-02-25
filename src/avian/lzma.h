@@ -11,7 +11,7 @@
 #ifndef LZMA_H
 #define LZMA_H
 
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/allocator.h"
 
 namespace vm {

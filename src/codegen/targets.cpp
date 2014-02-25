@@ -10,7 +10,7 @@
 
 #include "avian/common.h"
 
-#include <avian/vm/codegen/targets.h>
+#include <avian/codegen/targets.h>
 
 #include "avian/environment.h"
 

@@ -10,7 +10,7 @@
 
 #include "block.h"
 
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/assembler.h>
 
 namespace avian {
 namespace codegen {

@@ -13,7 +13,7 @@
 
 #include "avian/lzma.h"
 #include "C/Types.h"
-#include <avian/vm/system/system.h>
+#include <avian/system/system.h>
 #include "avian/allocator.h"
 
 namespace vm {

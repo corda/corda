@@ -90,6 +90,12 @@ ifneq (,$(filter mingw32 cygwin,$(build-platform)))
 	path-separator = ;
 endif
 
+target-path-separator = :
+
+ifeq ($(platform),windows)
+	target-path-separator = ;
+endif
+
 library-path-variable = LD_LIBRARY_PATH
 
 ifeq ($(build-platform),darwin)
@@ -1108,7 +1114,8 @@ vm-depends := $(generated-code) \
 	$(shell find src include -name '*.h' -or -name '*.inc.cpp')
 
 vm-sources = \
-	$(src)/vm/system/$(system).cpp \
+	$(src)/system/$(system).cpp \
+	$(src)/system/$(system)/signal.cpp \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
@@ -1239,7 +1246,8 @@ boot-object = $(build)/boot.o
 generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
-	$(src)/vm/system/$(build-system).cpp \
+	$(src)/system/$(build-system).cpp \
+	$(src)/system/$(build-system)/signal.cpp \
 	$(src)/finder.cpp
 
 ifneq ($(lzma),)
@@ -1525,7 +1533,7 @@ endif
 $(build)/run-tests.sh: $(test-classes) makefile $(build)/extra-dir/multi-classpath-test.txt $(build)/test/multi-classpath-test.txt
 	echo 'cd $$(dirname $$0)' > $(@)
 	echo "sh ./test.sh 2>/dev/null \\" >> $(@)
-	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test$(path-separator)extra-dir\" \\" >> $(@)
+	echo "$(shell echo $(library-path) | sed 's|$(build)|\.|g') ./$(name)-unittest${exe-suffix} ./$(notdir $(test-executable)) $(mode) \"-Djava.library.path=. -cp test$(target-path-separator)extra-dir\" \\" >> $(@)
 	echo "$(call class-names,$(test-build),$(filter-out $(test-support-classes), $(test-classes))) \\" >> $(@)
 	echo "$(continuation-tests) $(tail-tests)" >> $(@)
 

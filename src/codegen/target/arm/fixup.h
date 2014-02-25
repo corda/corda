@@ -13,8 +13,8 @@
 
 #include "avian/target.h"
 
-#include <avian/vm/codegen/lir.h>
-#include <avian/vm/codegen/assembler.h>
+#include <avian/codegen/lir.h>
+#include <avian/codegen/assembler.h>
 #include "avian/alloc-vector.h"
 
 namespace vm {
