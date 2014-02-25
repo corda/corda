@@ -1593,14 +1593,12 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
-	if [ -a $(build)/android-src/java/lang/Enum.java ] ; \
-	then \
-		chmod +w $(build)/android-src/java/lang/Enum.java ; \
-	fi;
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java
+	# sed makes this file read-only which in turn breaks re-builds; so marking it as writable
+	chmod +w $(build)/android-src/java/lang/Enum.java
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
