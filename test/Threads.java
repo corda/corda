@@ -1,15 +1,11 @@
 public class Threads implements Runnable {
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     { Threads test = new Threads();
       Thread thread = new Thread(test);
 
-      try {
-        synchronized (test) {
-          thread.start();
-          test.wait();
-        }
-      } catch (Throwable e) {
-        e.printStackTrace();
+      synchronized (test) {
+        thread.start();
+        test.wait();
       }
     }
 
@@ -31,6 +27,17 @@ public class Threads implements Runnable {
       System.out.println("\nAbout to interrupt...");
       thread.interrupt();
       System.out.println("\nInterrupted!");
+    }
+
+    { Thread thread = new Thread() {
+        @Override
+        public void run() {
+          // do nothing
+        }
+      };
+    
+      thread.start();
+      thread.join();
     }
 
     System.out.println("finished");
