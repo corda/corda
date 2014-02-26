@@ -179,6 +179,7 @@ ifneq ($(android),)
 		-DOS_SHARED_LIB_FORMAT_STR="\"$(so-prefix)%s$(so-suffix)\"" \
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
+		-D__DISABLE_IPV6_PROTO \
 		-g3
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
@@ -193,9 +194,6 @@ ifneq ($(android),)
 
 	ifeq ($(platform),windows)
 		android-cflags += -D__STDC_CONSTANT_MACROS
-		ifneq ($(arch),i386)
-			android-cflags += -fPIC
-		endif
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
 			$(luni-native)/libcore_net_RawSocket.cpp \
