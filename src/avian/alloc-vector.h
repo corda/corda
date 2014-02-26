@@ -40,7 +40,7 @@ class Vector {
   }
 
   void dispose() {
-    if (data.items and minimumCapacity >= 0) {
+    if (data.items and minimumCapacity > 0) {
       allocator->free(data.items, data.count);
       data.items = 0;
       data.count = 0;
@@ -53,13 +53,13 @@ class Vector {
 
     this->data = data;
     this->position = 0;
-    this->minimumCapacity = -1;
+    this->minimumCapacity = 0;
   }
 
   void ensure(size_t space)
   {
     if (position + space > data.count) {
-      assert(a, minimumCapacity >= 0);
+      assert(a, minimumCapacity > 0);
 
       size_t newCapacity = avian::util::max(
           position + space, avian::util::max(minimumCapacity, data.count * 2));
@@ -177,7 +177,7 @@ class Vector {
   avian::util::Allocator* allocator;
   avian::util::Slice<uint8_t> data;
   size_t position;
-  int minimumCapacity;
+  size_t minimumCapacity;
 };
 
 } // namespace vm
