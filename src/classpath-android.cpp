@@ -23,6 +23,10 @@ extern "C" int JNI_OnLoad(JavaVM*, void*);
 #include "avian/classpath-common.h"
 #include "avian/process.h"
 
+#ifdef PLATFORM_WINDOWS
+#include <errno.h>
+#endif
+
 using namespace vm;
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -801,6 +805,137 @@ setField(Thread* t, object field, object instance, object value)
 
 namespace vm {
 
+#ifdef PLATFORM_WINDOWS
+const char* getErrnoDescription(int err)
+{
+	switch (err) {
+
+	// EACCES
+	case EACCES:
+		return "Permission denied";
+
+	case EFAULT:
+		return "Bad address";
+
+	// EINTR
+	case EINTR:
+		return "Interrupted function call";
+
+	// EINVAL
+	case EINVAL:
+		return "Invalid argument";
+
+	// EBADF
+	case EBADF:
+		return "File handle is not valid";
+
+	// EMFILE
+	case EMFILE:
+		return "Too many open files";
+
+	// EWOULDBLOCK
+	case EWOULDBLOCK:
+		return "Resource temporarily unavailable";
+
+	// EINPROGRESS
+	case EINPROGRESS:
+		return "Operation now in progress";
+
+	// EALREADY
+	case EALREADY:
+		return "Operation already in progress";
+
+	// ENOTSOCK
+	case ENOTSOCK:
+		return "Socket operation on nonsocket";
+
+	// EDESTADDRREQ
+	case EDESTADDRREQ:
+		return "Destination address required";
+
+	// EMSGSIZE
+	case EMSGSIZE:
+		return "Message too long";
+
+	// EPROTOTYPE
+	case EPROTOTYPE:
+		return "Protocol wrong type for socket";
+
+	// ENOPROTOOPT
+	case ENOPROTOOPT:
+		return "Bad protocol option";
+
+	// EPROTONOSUPPORT
+	case EPROTONOSUPPORT:
+		return "Protocol not supported";
+
+	// EOPNOTSUPP
+	case EOPNOTSUPP:
+		return "Operation not supported";
+
+	// EAFNOSUPPORT
+	case EAFNOSUPPORT:
+		return "Address family not supported by protocol family";
+
+	// EADDRINUSE
+	case EADDRINUSE:
+		return "Address already in use";
+
+	// EADDRNOTAVAIL
+	case EADDRNOTAVAIL:
+		return "Cannot assign requested address";
+
+	// ENETDOWN
+	case ENETDOWN:
+		return "Network is down";
+
+	// ENETUNREACH
+	case ENETUNREACH:
+		return "Network is unreachable";
+
+	// ENETRESET
+	case ENETRESET:
+		return "Network dropped connection on reset";
+
+	// ECONNABORTED
+	case ECONNABORTED:
+		return "Software caused connection abort";
+
+	// ECONNRESET
+	case ECONNRESET:
+		return "Connection reset by peer";
+
+	// ENOBUFS
+	case ENOBUFS:
+		return "No buffer space available";
+
+	// EISCONN
+	case EISCONN:
+		return "Socket is already connected";
+
+	// ENOTCONN
+	case ENOTCONN:
+		return "Socket is not connected";
+
+	// ETIMEDOUT
+	case ETIMEDOUT:
+		return "Connection timed out";
+
+	// ECONNREFUSED
+	case ECONNREFUSED:
+		return "Connection refused";
+
+	// EHOSTUNREACH
+	case EHOSTUNREACH:
+		return "No route to host";
+
+	default:
+		return "Undescribed error";
+	}
+}
+#endif
+
+
 Classpath*
 makeClasspath(System*, Allocator* allocator, const char*, const char*)
 {
@@ -875,7 +1010,7 @@ extern "C" const char*
 jniStrError(int error, char* buffer, size_t length)
 {
 #ifdef PLATFORM_WINDOWS
-  const char* s = strerror(error);
+  const char* s = getErrnoDescription(error);
   if (strlen(s) < length) {
     strncpy(buffer, s, length);
     return buffer;
