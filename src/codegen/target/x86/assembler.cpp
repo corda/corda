@@ -1084,7 +1084,7 @@ class MyAssembler: public Assembler {
         unsigned size = p->offset - b->offset - index;
 
         memcpy(dst + b->start + index + padding,
-               c.code.data + b->offset + index,
+               c.code.data.begin() + b->offset + index,
                size);
 
         index += size;
@@ -1098,7 +1098,7 @@ class MyAssembler: public Assembler {
       }
 
       memcpy(dst + b->start + index + padding,
-             c.code.data + b->offset + index,
+             c.code.data.begin() + b->offset + index,
              b->size - index);
     }
     

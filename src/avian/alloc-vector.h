@@ -11,10 +11,11 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <avian/system/system.h>
-#include "avian/target.h"
+#include <avian/target.h>
 
 #include <avian/util/math.h>
+#include <avian/util/abort.h>
+#include <avian/util/slice.h>
 #include <avian/util/allocator.h>
 
 #undef max
@@ -24,12 +25,13 @@ namespace vm {
 
 class Vector {
  public:
-  Vector(System* s, avian::util::Allocator* allocator, unsigned minimumCapacity)
-      : s(s),
+  Vector(avian::util::Aborter* a,
+         avian::util::Allocator* allocator,
+         size_t minimumCapacity)
+      : a(a),
         allocator(allocator),
-        data(0),
+        data(0, 0),
         position(0),
-        capacity(0),
         minimumCapacity(minimumCapacity)
   { }
 
@@ -38,61 +40,68 @@ class Vector {
   }
 
   void dispose() {
-    if (data and minimumCapacity >= 0) {
-      allocator->free(data, capacity);
-      data = 0;
+    if (data.items and minimumCapacity >= 0) {
+      allocator->free(data.items, data.count);
+      data.items = 0;
+      data.count = 0;
     }
   }
 
-  void wrap(uint8_t* data, unsigned capacity) {
+  void wrap(avian::util::Slice<uint8_t> data)
+  {
     dispose();
 
     this->data = data;
     this->position = 0;
-    this->capacity = capacity;
     this->minimumCapacity = -1;
   }
 
-  void ensure(unsigned space) {
-    if (position + space > capacity) {
-      assert(s, minimumCapacity >= 0);
+  void ensure(size_t space)
+  {
+    if (position + space > data.count) {
+      assert(a, minimumCapacity >= 0);
 
-      unsigned newCapacity = avian::util::max
-        (position + space, avian::util::max(minimumCapacity, capacity * 2));
+      size_t newCapacity = avian::util::max(
+          position + space, avian::util::max(minimumCapacity, data.count * 2));
       uint8_t* newData = static_cast<uint8_t*>
         (allocator->allocate(newCapacity));
-      if (data) {
-        memcpy(newData, data, position);
-        allocator->free(data, capacity);
+      if (data.begin()) {
+        memcpy(newData, data.begin(), position);
+        allocator->free(data.begin(), data.count);
       }
-      data = newData;
-      capacity = newCapacity;
+      data.items = newData;
+      data.count = newCapacity;
     }
   }
 
-  void get(unsigned offset, void* dst, unsigned size) {
-    assert(s, offset + size <= position);
-    memcpy(dst, data + offset, size);
+  void get(size_t offset, void* dst, size_t size)
+  {
+    assert(a, offset + size <= position);
+    memcpy(dst, data.begin() + offset, size);
   }
 
-  void set(unsigned offset, const void* src, unsigned size) {
-    assert(s, offset + size <= position);
-    memcpy(data + offset, src, size);
+  void set(size_t offset, const void* src, size_t size)
+  {
+    assert(a, offset + size <= position);
+    memcpy(data.begin() + offset, src, size);
   }
 
-  void pop(void* dst, unsigned size) {
+  void pop(void* dst, size_t size)
+  {
     get(position - size, dst, size);
     position -= size;
   }
 
-  void* allocate(unsigned size) {
+  void* allocate(size_t size)
+  {
     ensure(size);
-    void* r = data + position;
+    void* r = data.begin() + position;
     position += size;
     return r;
   }
 
-  void* append(const void* p, unsigned size) {
+  void* append(const void* p, size_t size)
+  {
     void* r = allocate(size);
     memcpy(r, p, size);
     return r;
@@ -122,46 +131,52 @@ class Vector {
     append(&v, BytesPerWord);
   }
 
-  void set2(unsigned offset, uint16_t v) {
-    assert(s, offset <= position - 2);
-    memcpy(data + offset, &v, 2);
+  void set2(size_t offset, uint16_t v)
+  {
+    assert(a, offset <= position - 2);
+    memcpy(data.begin() + offset, &v, 2);
   }
 
-  unsigned get(unsigned offset) {
+  size_t get(size_t offset)
+  {
     uint8_t v; get(offset, &v, 1);
     return v;
   }
 
-  unsigned get2(unsigned offset) {
+  size_t get2(size_t offset)
+  {
     uint16_t v; get(offset, &v, 2);
     return v;
   }
 
-  unsigned get4(unsigned offset) {
+  size_t get4(size_t offset)
+  {
     uint32_t v; get(offset, &v, 4);
     return v;
   }
 
-  uintptr_t getAddress(unsigned offset) {
+  uintptr_t getAddress(size_t offset)
+  {
     uintptr_t v; get(offset, &v, BytesPerWord);
     return v;
   }
 
-  unsigned length() {
+  size_t length()
+  {
     return position;
   }
 
   template <class T>
-  T* peek(unsigned offset) {
-    assert(s, offset + sizeof(T) <= position);
-    return reinterpret_cast<T*>(data + offset);
+  T* peek(size_t offset)
+  {
+    assert(a, offset + sizeof(T) <= position);
+    return reinterpret_cast<T*>(data.begin() + offset);
   }
-  
-  System* s;
+
+  avian::util::Aborter* a;
   avian::util::Allocator* allocator;
-  uint8_t* data;
-  unsigned position;
-  unsigned capacity;
+  avian::util::Slice<uint8_t> data;
+  size_t position;
   int minimumCapacity;
 };
 
