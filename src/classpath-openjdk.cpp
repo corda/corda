@@ -4092,7 +4092,7 @@ jvmGetProtectionDomain(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   object method = resolveMethod
-    (t, root(t, Machine::BootLoader), "avian/OpenJDK", "getProtectionDomain",
+    (t, root(t, Machine::BootLoader), "avian/Classes", "getProtectionDomain",
      "(Lavian/VMClass;)Ljava/security/ProtectionDomain;");
 
   return reinterpret_cast<uint64_t>

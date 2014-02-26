@@ -13,6 +13,13 @@ package avian;
 import static avian.Stream.read1;
 import static avian.Stream.read2;
 
+import java.net.URL;
+import java.net.MalformedURLException;
+import java.security.CodeSource;
+import java.security.AllPermission;
+import java.security.Permissions;
+import java.security.ProtectionDomain;
+import java.security.cert.Certificate;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
@@ -512,6 +519,22 @@ public class Classes {
 
   public static Method makeMethod(VMMethod m) {
     return makeMethod(SystemClassLoader.getClass(m.class_), index(m));
+  }
+
+  public static ProtectionDomain getProtectionDomain(VMClass c) {
+    CodeSource source = null;
+    if (c.source != null) {
+      try {
+        source = new CodeSource
+          (new URL(new String(c.source, 0, c.source.length - 1)),
+           (Certificate[]) null);
+      } catch (MalformedURLException ignored) { }
+    }
+
+    Permissions p = new Permissions();
+    p.add(new AllPermission());
+
+    return new ProtectionDomain(source, p);
   }
   
   public static native Method makeMethod(Class c, int slot);
