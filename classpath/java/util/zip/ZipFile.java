@@ -103,11 +103,9 @@ public class ZipFile {
         int remaining = uncompressedSize(window, pointer);
 
         public int read() throws IOException {
-          int c = super.read();
-          if (c >= 0) {
-            -- remaining;
-          }
-          return c;
+          byte[] buffer = new byte[1];
+          int c = read(buffer);
+          return (c < 0 ? c : (buffer[0] & 0xFF));
         }
 
         public int read(byte[] buffer) throws IOException {
