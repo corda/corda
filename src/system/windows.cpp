@@ -730,12 +730,6 @@ class MySystem: public System {
 #endif
   }
 
-  virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
-                        unsigned count, unsigned size, unsigned returnType)
-  {
-    return dynamicCall(function, arguments, types, count, size, returnType);
-  }
-
   virtual Status map(System::Region** region, const char* name) {
     Status status = 1;
     size_t nameLen = strlen(name) * 2;

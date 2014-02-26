@@ -128,9 +128,7 @@ class System : public avian::util::Aborter {
 
   virtual Status visit(Thread* thread, Thread* target,
                        ThreadVisitor* visitor) = 0;
-  virtual uint64_t call(void* function, uintptr_t* arguments, uint8_t* types,
-                        unsigned count, unsigned size,
-                        unsigned returnType) = 0;
+
   virtual Status map(Region**, const char* name) = 0;
   virtual FileType stat(const char* name, unsigned* length) = 0;
   virtual Status open(Directory**, const char* name) = 0;
