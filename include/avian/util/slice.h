@@ -46,11 +46,25 @@ class Slice {
     return items + count;
   }
 
+  static Slice<T> alloc(Allocator* a, size_t count)
+  {
+    return Slice<T>((T*)a->allocate(sizeof(T) * count), count);
+  }
+
   Slice<T> clone(Allocator* a)
   {
     Slice<T> ret((T*)a->allocate(count * sizeof(T)), count);
     memcpy(ret.items, items, count * sizeof(T));
     return ret;
+  }
+
+  void resize(Allocator* a, size_t newCount)
+  {
+    T* newItems = (T*)a->allocate(newCount * sizeof(T));
+    memcpy(newItems, items, min(count, newCount));
+    a->free(items, count);
+    items = newItems;
+    count = newCount;
   }
 };
 

@@ -47,15 +47,6 @@ class Vector {
     }
   }
 
-  void wrap(avian::util::Slice<uint8_t> data)
-  {
-    dispose();
-
-    this->data = data;
-    this->position = 0;
-    this->minimumCapacity = 0;
-  }
-
   void ensure(size_t space)
   {
     if (position + space > data.count) {
@@ -63,14 +54,11 @@ class Vector {
 
       size_t newCapacity = avian::util::max(
           position + space, avian::util::max(minimumCapacity, data.count * 2));
-      uint8_t* newData = static_cast<uint8_t*>
-        (allocator->allocate(newCapacity));
       if (data.begin()) {
-        memcpy(newData, data.begin(), position);
-        allocator->free(data.begin(), data.count);
+        data.resize(allocator, newCapacity);
+      } else {
+        data = avian::util::Slice<uint8_t>::alloc(allocator, newCapacity);
       }
-      data.items = newData;
-      data.count = newCapacity;
     }
   }
 

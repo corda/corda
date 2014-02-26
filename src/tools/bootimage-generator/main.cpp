@@ -1917,9 +1917,9 @@ main(int ac, const char** av)
   const unsigned CodeCapacity = 30 * 1024 * 1024;
 #endif
 
-  uint8_t* code = static_cast<uint8_t*>(h->allocate(CodeCapacity));
+  Slice<uint8_t> code = Slice<uint8_t>::alloc(h, CodeCapacity);
   BootImage image;
-  p->initialize(&image, Slice<uint8_t>(code, CodeCapacity));
+  p->initialize(&image, code);
 
   Machine* m = new (h->allocate(sizeof(Machine))) Machine
     (s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
@@ -1940,20 +1940,18 @@ main(int ac, const char** av)
     return -1;
   }
 
-  uintptr_t arguments[] = {
-    reinterpret_cast<uintptr_t>(&bootimageOutput),
-    reinterpret_cast<uintptr_t>(&codeOutput),
-    reinterpret_cast<uintptr_t>(&image),
-    reinterpret_cast<uintptr_t>(code),
-    reinterpret_cast<uintptr_t>(args.entryClass),
-    reinterpret_cast<uintptr_t>(args.entryMethod),
-    reinterpret_cast<uintptr_t>(args.entrySpec),
-    reinterpret_cast<uintptr_t>(args.bootimageStart),
-    reinterpret_cast<uintptr_t>(args.bootimageEnd),
-    reinterpret_cast<uintptr_t>(args.codeimageStart),
-    reinterpret_cast<uintptr_t>(args.codeimageEnd),
-    static_cast<uintptr_t>(args.useLZMA)
-  };
+  uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(&bootimageOutput),
+                           reinterpret_cast<uintptr_t>(&codeOutput),
+                           reinterpret_cast<uintptr_t>(&image),
+                           reinterpret_cast<uintptr_t>(code.begin()),
+                           reinterpret_cast<uintptr_t>(args.entryClass),
+                           reinterpret_cast<uintptr_t>(args.entryMethod),
+                           reinterpret_cast<uintptr_t>(args.entrySpec),
+                           reinterpret_cast<uintptr_t>(args.bootimageStart),
+                           reinterpret_cast<uintptr_t>(args.bootimageEnd),
+                           reinterpret_cast<uintptr_t>(args.codeimageStart),
+                           reinterpret_cast<uintptr_t>(args.codeimageEnd),
+                           static_cast<uintptr_t>(args.useLZMA)};
 
   run(t, writeBootImage, arguments);
 
