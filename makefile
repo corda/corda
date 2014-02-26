@@ -1356,10 +1356,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMMethod.java \
 		$(classpath-src)/avian/avianvmresource/Handler.java
 
-	ifneq ($(openjdk),)
-		classpath-sources := $(classpath-sources) \
-			$(classpath-src)/avian/OpenJDK.java
-	else
+	ifeq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
 			$(classpath-src)/sun/reflect/ConstantPool.java \
 			$(classpath-src)/java/lang/ReflectiveOperationException.java \

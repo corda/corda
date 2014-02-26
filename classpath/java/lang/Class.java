@@ -596,8 +596,6 @@ public final class Class <T> implements Type, AnnotatedElement {
   }
 
   public ProtectionDomain getProtectionDomain() {
-    Permissions p = new Permissions();
-    p.add(new AllPermission());
-    return new ProtectionDomain(null, p);
+    return Classes.getProtectionDomain(vmClass);
   }
 }
