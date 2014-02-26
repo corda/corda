@@ -814,7 +814,9 @@ class MyAssembler: public Assembler {
       unsigned blockOffset = 0;
       for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
         unsigned size = e->offset - blockOffset;
-        memcpy(dst + dstOffset, con.code.data + b->offset + blockOffset, size);
+        memcpy(dst + dstOffset,
+               con.code.data.begin() + b->offset + blockOffset,
+               size);
         blockOffset = e->offset;
         dstOffset += size;
 
@@ -857,7 +859,7 @@ class MyAssembler: public Assembler {
       unsigned size = b->size - blockOffset;
 
       memcpy(dst + dstOffset,
-             con.code.data + b->offset + blockOffset,
+             con.code.data.begin() + b->offset + blockOffset,
              size);
 
       dstOffset += size;

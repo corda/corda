@@ -1065,9 +1065,10 @@ void branchLong(Context* con, lir::TernaryOperation op, lir::Operand* al,
   }
 
   if (next) {
-    updateOffset
-      (con->s, con->code.data + next, reinterpret_cast<intptr_t>
-       (con->code.data + con->code.length()));
+    updateOffset(con->s,
+                 con->code.data.begin() + next,
+                 reinterpret_cast<intptr_t>(con->code.data.begin()
+                                            + con->code.length()));
   }
 }
 

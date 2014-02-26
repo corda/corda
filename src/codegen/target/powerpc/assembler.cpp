@@ -869,7 +869,9 @@ class MyAssembler: public Assembler {
       unsigned blockOffset = 0;
       for (JumpEvent* e = b->jumpEventHead; e; e = e->next) {
         unsigned size = e->offset - blockOffset;
-        memcpy(dst + dstOffset, c.code.data + b->offset + blockOffset, size);
+        memcpy(dst + dstOffset,
+               c.code.data.begin() + b->offset + blockOffset,
+               size);
         blockOffset = e->offset;
         dstOffset += size;
 
@@ -903,9 +905,8 @@ class MyAssembler: public Assembler {
 
       unsigned size = b->size - blockOffset;
 
-      memcpy(dst + dstOffset,
-             c.code.data + b->offset + blockOffset,
-             size);
+      memcpy(
+          dst + dstOffset, c.code.data.begin() + b->offset + blockOffset, size);
 
       dstOffset += size;
     }
