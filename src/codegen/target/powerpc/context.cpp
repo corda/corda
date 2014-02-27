@@ -16,13 +16,21 @@ namespace avian {
 namespace codegen {
 namespace powerpc {
 
-
-Context::Context(vm::System* s, vm::Allocator* a, vm::Zone* zone):
-  s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-  firstBlock(new(zone) MyBlock(this, 0)),
-  lastBlock(firstBlock), jumpOffsetHead(0), jumpOffsetTail(0),
-  constantPool(0), constantPoolCount(0)
-{ }
+Context::Context(vm::System* s, util::Allocator* a, vm::Zone* zone)
+    : s(s),
+      zone(zone),
+      client(0),
+      code(s, a, 1024),
+      tasks(0),
+      result(0),
+      firstBlock(new (zone) MyBlock(this, 0)),
+      lastBlock(firstBlock),
+      jumpOffsetHead(0),
+      jumpOffsetTail(0),
+      constantPool(0),
+      constantPoolCount(0)
+{
+}
 
 } // namespace powerpc
 } // namespace codegen

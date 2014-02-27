@@ -11,6 +11,11 @@
 #ifndef AVIAN_UTIL_LIST_H
 #define AVIAN_UTIL_LIST_H
 
+#include "allocator.h"
+
+namespace avian {
+namespace util {
+
 template <class T>
 class List {
 public:
@@ -32,4 +37,7 @@ public:
   List<T>* next;
 };
 
-#endif // AVIAN_UTIL_LIST_H
+}  // namespace util
+}  // namespace avian
+
+#endif  // AVIAN_UTIL_LIST_H

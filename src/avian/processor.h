@@ -14,6 +14,7 @@
 #include "avian/common.h"
 #include <avian/system/system.h>
 #include <avian/heap/heap.h>
+#include <avian/util/allocator.h>
 #include "bootimage.h"
 #include "avian/heapwalk.h"
 #include "avian/zone.h"
@@ -21,6 +22,11 @@
 namespace avian {
 namespace codegen {
 class DelayedPromise;
+}
+
+namespace util {
+template <class T>
+class Slice;
 }
 }
 
@@ -139,8 +145,8 @@ class Processor {
   virtual object
   getStackTrace(Thread* t, Thread* target) = 0;
 
-  virtual void
-  initialize(BootImage* image, uint8_t* code, unsigned capacity) = 0;
+  virtual void initialize(BootImage* image, avian::util::Slice<uint8_t> code)
+      = 0;
 
   virtual void
   addCompilationHandler(CompilationHandler* handler) = 0;
@@ -209,7 +215,7 @@ class Processor {
 };
 
 Processor* makeProcessor(System* system,
-                         Allocator* allocator,
+                         avian::util::Allocator* allocator,
                          const char* crashDumpDirectory,
                          bool useNativeFeatures);
 

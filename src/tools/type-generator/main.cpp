@@ -1943,7 +1943,7 @@ main(int ac, char** av)
 
   System* system = makeSystem();
 
-  class MyAllocator: public Allocator {
+  class MyAllocator : public avian::util::Allocator {
    public:
     MyAllocator(System* s): s(s) { }
 

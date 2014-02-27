@@ -8,7 +8,7 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "avian/allocator.h"
+#include "avian/util/allocator.h"
 #include "avian/zone.h"
 
 #include "context.h"
@@ -22,11 +22,21 @@ ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures):
   s(s), useNativeFeatures(useNativeFeatures)
 { }
 
-Context::Context(vm::System* s, vm::Allocator* a, vm::Zone* zone, ArchitectureContext* ac):
-  s(s), zone(zone), client(0), code(s, a, 1024), tasks(0), result(0),
-  firstBlock(new(zone) MyBlock(0)),
-  lastBlock(firstBlock), ac(ac)
-{ }
+Context::Context(vm::System* s,
+                 util::Allocator* a,
+                 vm::Zone* zone,
+                 ArchitectureContext* ac)
+    : s(s),
+      zone(zone),
+      client(0),
+      code(s, a, 1024),
+      tasks(0),
+      result(0),
+      firstBlock(new (zone) MyBlock(0)),
+      lastBlock(firstBlock),
+      ac(ac)
+{
+}
 
 } // namespace x86
 } // namespace codegen

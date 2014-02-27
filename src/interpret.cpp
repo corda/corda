@@ -19,6 +19,7 @@
 
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
+#include <avian/util/slice.h>
 
 using namespace vm;
 using namespace avian::system;
@@ -3204,7 +3205,8 @@ class MyProcessor: public Processor {
     return makeObjectArray(t, 0);
   }
 
-  virtual void initialize(BootImage*, uint8_t*, unsigned) {
+  virtual void initialize(BootImage*, avian::util::Slice<uint8_t>)
+  {
     abort(s);
   }
 
@@ -3233,7 +3235,6 @@ class MyProcessor: public Processor {
   virtual void boot(vm::Thread*, BootImage* image, uint8_t* code) {
     expect(s, image == 0 and code == 0);
   }
-  
 
   virtual void callWithCurrentContinuation(vm::Thread*, object) {
     abort(s);

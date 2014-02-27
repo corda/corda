@@ -1793,43 +1793,6 @@ inline Aborter* getAborter(Thread* t) {
   return t->m->system;
 }
 
-class FixedAllocator: public Allocator {
- public:
-  FixedAllocator(System* s, uint8_t* base, unsigned capacity):
-    s(s), base(base), offset(0), capacity(capacity)
-  { }
-
-  virtual void* tryAllocate(unsigned size) {
-    return allocate(size);
-  }
-
-  void* allocate(unsigned size, unsigned padAlignment) {
-    unsigned paddedSize = pad(size, padAlignment);
-    expect(s, offset + paddedSize < capacity);
-
-    void* p = base + offset;
-    offset += paddedSize;
-    return p;
-  }
-
-  virtual void* allocate(unsigned size) {
-    return allocate(size, BytesPerWord);
-  }
-
-  virtual void free(const void* p, unsigned size) {
-    if (p >= base and static_cast<const uint8_t*>(p) + size == base + offset) {
-      offset -= size;
-    } else {
-      abort(s);
-    }
-  }
-
-  System* s;
-  uint8_t* base;
-  unsigned offset;
-  unsigned capacity;
-};
-
 inline bool
 ensure(Thread* t, unsigned sizeInBytes)
 {

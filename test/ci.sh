@@ -11,3 +11,4 @@ if [ -z "${openjdk}" ]; then
   make ${flags} bootimage=true test
 fi
 make ${flags} tails=true continuations=true test
+make ${flags} codegen-targets=all

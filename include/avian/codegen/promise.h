@@ -11,7 +11,9 @@
 #ifndef AVIAN_CODEGEN_PROMISE_H
 #define AVIAN_CODEGEN_PROMISE_H
 
-#include "avian/allocator.h"
+#include <avian/util/allocator.h>
+#include <avian/util/abort.h>
+#include <avian/system/system.h>
 
 namespace avian {
 namespace codegen {
@@ -102,8 +104,8 @@ class OffsetPromise: public Promise {
 
 class ListenPromise: public Promise {
  public:
-  ListenPromise(vm::System* s, vm::Allocator* allocator):
-    s(s), allocator(allocator), listener(0)
+  ListenPromise(vm::System* s, util::Allocator* allocator)
+      : s(s), allocator(allocator), listener(0)
   { }
 
   virtual int64_t value() {
@@ -122,16 +124,18 @@ class ListenPromise: public Promise {
   }
 
   vm::System* s;
-  vm::Allocator* allocator;
+  util::Allocator* allocator;
   Listener* listener;
   Promise* promise;
 };
 
 class DelayedPromise: public ListenPromise {
  public:
-  DelayedPromise(vm::System* s, vm::Allocator* allocator, Promise* basis,
-                 DelayedPromise* next):
-    ListenPromise(s, allocator), basis(basis), next(next)
+  DelayedPromise(vm::System* s,
+                 util::Allocator* allocator,
+                 Promise* basis,
+                 DelayedPromise* next)
+      : ListenPromise(s, allocator), basis(basis), next(next)
   { }
 
   virtual int64_t value() {

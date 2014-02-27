@@ -38,6 +38,7 @@ void operator delete(void*) { abort(); }
 namespace {
 
 using namespace avian::tools;
+using namespace avian::util;
 
 bool
 writeObject(uint8_t* data, size_t size, OutputStream* out, const char* startName,

@@ -12,7 +12,7 @@
 #define SYSTEM_H
 
 #include "avian/common.h"
-#include "avian/allocator.h"
+#include <avian/util/allocator.h>
 #include <avian/util/abort.h>
 
 namespace vm {
@@ -137,7 +137,7 @@ class System : public avian::util::Aborter {
   virtual Status load(Library**, const char* name) = 0;
   virtual char pathSeparator() = 0;
   virtual char fileSeparator() = 0;
-  virtual const char* toAbsolutePath(Allocator* allocator,
+  virtual const char* toAbsolutePath(avian::util::Allocator* allocator,
                                      const char* name) = 0;
   virtual int64_t now() = 0;
   virtual void yield() = 0;

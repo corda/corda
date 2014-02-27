@@ -1144,7 +1144,8 @@ compiler-sources = \
 	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/codegen/registers.cpp \
 	$(src)/codegen/runtime.cpp \
-	$(src)/codegen/targets.cpp
+	$(src)/codegen/targets.cpp \
+	$(src)/util/fixed-allocator.cpp
 
 x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
 

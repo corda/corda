@@ -38,14 +38,14 @@ namespace isa {
 // HARDWARE FLAGS
 bool vfpSupported() {
   // TODO: Use at runtime detection
-#if defined(__ARM_PCS_VFP)  
+#if defined(__ARM_PCS_VFP)
   // armhf
   return true;
 #else
   // armel
   // TODO: allow VFP use for -mfloat-abi=softfp armel builds.
   // GCC -mfloat-abi=softfp flag allows use of VFP while remaining compatible
-  // with soft-float code. 
+  // with soft-float code.
   return false;
 #endif
 }
@@ -793,7 +793,7 @@ class MyAssembler: public Assembler {
       assert(&con, b.size == c.size);
       assert(&con, b.type == lir::RegisterOperand);
       assert(&con, c.type == lir::RegisterOperand);
-      
+
       arch_->con.ternaryOperations[index(&(arch_->con), op, a.type)]
         (&con, b.size, a.operand, b.operand, c.operand);
     }
@@ -814,7 +814,9 @@ class MyAssembler: public Assembler {
       unsigned blockOffset = 0;
       for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
         unsigned size = e->offset - blockOffset;
-        memcpy(dst + dstOffset, con.code.data + b->offset + blockOffset, size);
+        memcpy(dst + dstOffset,
+               con.code.data.begin() + b->offset + blockOffset,
+               size);
         blockOffset = e->offset;
         dstOffset += size;
 
@@ -857,7 +859,7 @@ class MyAssembler: public Assembler {
       unsigned size = b->size - blockOffset;
 
       memcpy(dst + dstOffset,
-             con.code.data + b->offset + blockOffset,
+             con.code.data.begin() + b->offset + blockOffset,
              size);
 
       dstOffset += size;

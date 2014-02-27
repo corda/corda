@@ -11,6 +11,10 @@
 #ifndef AVIAN_UTIL_ABORT_H
 #define AVIAN_UTIL_ABORT_H
 
+// TODO: remove reference back into the source directory!
+// Note: this is needed for UNLIKELY
+#include <avian/common.h>
+
 namespace avian {
 namespace util {
 
@@ -18,6 +22,11 @@ class Aborter {
 public:
   virtual void NO_RETURN abort() = 0;
 };
+
+inline Aborter* getAborter(Aborter* a)
+{
+  return a;
+}
 
 template<class T>
 inline void NO_RETURN abort(T t) {
@@ -40,7 +49,7 @@ inline void assert(T t, bool v) {
   expect(t, v);
 }
 #endif
-  
+
 } // namespace util
 } // namespace avian
 

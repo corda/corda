@@ -14,7 +14,7 @@
 #include "avian/lzma.h"
 #include "C/Types.h"
 #include <avian/system/system.h>
-#include "avian/allocator.h"
+#include "avian/util/allocator.h"
 
 namespace vm {
 
