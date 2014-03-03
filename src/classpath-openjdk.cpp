@@ -2641,22 +2641,6 @@ Avian_sun_misc_Unsafe_getFloat__Ljava_lang_Object_2J
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getIntVolatile
-(Thread* t, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-
-  // avoid blocking the VM if this is being called in a busy loop
-  PROTECT(t, o);
-  { ENTER(t, Thread::IdleState); }
-
-  int32_t result = fieldAtOffset<int32_t>(o, offset);
-  loadMemoryBarrier();
-  return result;
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J
 (Thread*, object, uintptr_t* arguments)
 {
@@ -2767,22 +2751,6 @@ Avian_sun_misc_Unsafe_putLong__Ljava_lang_Object_2JJ
   int64_t value; memcpy(&value, arguments + 4, 8);
 
   fieldAtOffset<int64_t>(o, offset) = value;
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_getObjectVolatile
-(Thread* t, object, uintptr_t* arguments)
-{
-  object o = reinterpret_cast<object>(arguments[1]);
-  int64_t offset; memcpy(&offset, arguments + 2, 8);
-
-  // avoid blocking the VM if this is being called in a busy loop
-  PROTECT(t, o);
-  { ENTER(t, Thread::IdleState); }
-  
-  uintptr_t value = fieldAtOffset<uintptr_t>(o, offset);
-  loadMemoryBarrier();
-  return value;
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
