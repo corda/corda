@@ -180,6 +180,7 @@ ifneq ($(android),)
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
 		-D__DISABLE_IPV6_PROTO \
+		-D__PROVIDE_FIXMES \
 		-g3
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
