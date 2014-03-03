@@ -13,7 +13,14 @@ package avian;
 public class ClassAddendum extends Addendum {
   public Object[] interfaceTable;
   public InnerClassReference[] innerClassTable;
-  public Object[] methodTable;
+  /**
+   * If this value is negative, all the methods in VMClass.methodTable
+   * were declared in that class.  Otherwise, only the first
+   * declaredMethodCount methods in that table were declared in that
+   * class, while the rest were declared in interfaces implemented or
+   * extended by that class.
+   */
+  public int declaredMethodCount;
   public Object enclosingClass;
   public Object enclosingMethod;
 }

@@ -2121,25 +2121,26 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
 }
 #endif // AVIAN_OPENJDK_SRC
 
-object
-getClassMethodTable(Thread* t, object c)
+unsigned
+classDeclaredMethodCount(Thread* t, object c)
 {
   object addendum = classAddendum(t, c);
   if (addendum) {
-    object table = classAddendumMethodTable(t, addendum);
-    if (table) {
-      return table;
+    int count = classAddendumDeclaredMethodCount(t, addendum);
+    if (count >= 0) {
+      return count;
     }
   }
-  return classMethodTable(t, c);
+  object table = classMethodTable(t, c);
+  return table == 0 ? 0 : arrayLength(t, table);
 }
 
 unsigned
 countMethods(Thread* t, object c, bool publicOnly)
 {
-  object table = getClassMethodTable(t, c);
+  object table = classMethodTable(t, c);
   unsigned count = 0;
-  for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+  for (unsigned i = 0, j = classDeclaredMethodCount(t, c); i < j; ++i) {
     object vmMethod = arrayBody(t, table, i);
     if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
         and byteArrayBody(t, methodName(t, vmMethod), 0) != '<')
@@ -2171,9 +2172,9 @@ countFields(Thread* t, object c, bool publicOnly)
 unsigned
 countConstructors(Thread* t, object c, bool publicOnly)
 {
-  object table = getClassMethodTable(t, c);
+  object table = classMethodTable(t, c);
   unsigned count = 0;
-  for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+  for (unsigned i = 0, j = classDeclaredMethodCount(t, c); i < j; ++i) {
     object vmMethod = arrayBody(t, table, i);
     if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
         and strcmp(reinterpret_cast<char*>
@@ -4214,7 +4215,7 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
   jboolean publicOnly = arguments[1];
 
-  object table = getClassMethodTable(t, jclassVmClass(t, *c));
+  object table = classMethodTable(t, jclassVmClass(t, *c));
   if (table) {
     PROTECT(t, table);
 
@@ -4224,7 +4225,9 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
     PROTECT(t, array);
 
     unsigned ai = 0;
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+    for (unsigned i = 0, j = classDeclaredMethodCount(t, jclassVmClass(t, *c));
+         i < j; ++i)
+    {
       object vmMethod = arrayBody(t, table, i);
       PROTECT(t, vmMethod);
 
@@ -4308,7 +4311,7 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
   jboolean publicOnly = arguments[1];
 
-  object table = getClassMethodTable(t, jclassVmClass(t, *c));
+  object table = classMethodTable(t, jclassVmClass(t, *c));
   if (table) {
     PROTECT(t, table);
 
@@ -4318,7 +4321,9 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
     PROTECT(t, array);
 
     unsigned ai = 0;
-    for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+    for (unsigned i = 0, j = classDeclaredMethodCount(t, jclassVmClass(t, *c));
+         i < j; ++i)
+    {
       object vmMethod = arrayBody(t, table, i);
       PROTECT(t, vmMethod);
 

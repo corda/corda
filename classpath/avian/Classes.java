@@ -221,6 +221,18 @@ public class Classes {
     return result;
   }
 
+  private static int declaredMethodCount(VMClass c) {
+    ClassAddendum a = c.addendum;
+    if (a != null) {
+      int count = a.declaredMethodCount;
+      if (count >= 0) {
+        return count;
+      }
+    }
+    VMMethod[] table = c.methodTable;
+    return table == null ? 0 : table.length;
+  }
+
   public static void link(VMClass c, ClassLoader loader) {
     acquireClassLock();
     try {
@@ -238,9 +250,10 @@ public class Classes {
           }
         }
 
-        if (c.methodTable != null) {
-          for (int i = 0; i < c.methodTable.length; ++i) {
-            VMMethod m = c.methodTable[i];
+        VMMethod[] methodTable = c.methodTable;
+        if (methodTable != null) {
+          for (int i = 0; i < methodTable.length; ++i) {
+            VMMethod m = methodTable[i];
 
             for (int j = 1; j < m.spec.length;) {
               j = resolveSpec(loader, m.spec, j);
@@ -394,17 +407,18 @@ public class Classes {
   public static int findMethod(VMClass vmClass, String name,
                                 Class[] parameterTypes)
   {
-    if (vmClass.methodTable != null) {
+    VMMethod[] methodTable = vmClass.methodTable;
+    if (methodTable != null) {
       Classes.link(vmClass);
 
       if (parameterTypes == null) {
         parameterTypes = new Class[0];
       }
 
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (toString(vmClass.methodTable[i].name).equals(name)
-            && match(parameterTypes,
-                     getParameterTypes(vmClass.methodTable[i])))
+      for (int i = 0; i < methodTable.length; ++i) {
+        VMMethod m = methodTable[i];
+        if (toString(m.name).equals(name)
+            && match(parameterTypes, getParameterTypes(m)))
         {
           return i;
         }
@@ -415,12 +429,12 @@ public class Classes {
 
   public static int countMethods(VMClass vmClass, boolean publicOnly) {
     int count = 0;
-    if (vmClass.methodTable != null) {
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if (((! publicOnly)
-             || ((vmClass.methodTable[i].flags & Modifier.PUBLIC))
-             != 0)
-            && (! toString(vmClass.methodTable[i].name).startsWith("<")))
+    VMMethod[] methodTable = vmClass.methodTable;
+    if (methodTable != null) {
+      for (int i = 0, j = declaredMethodCount(vmClass); i < j; ++i) {
+        VMMethod m = methodTable[i];
+        if (((! publicOnly) || ((m.flags & Modifier.PUBLIC)) != 0)
+            && (! toString(m.name).startsWith("<")))
         {
           ++ count;
         }
@@ -431,14 +445,15 @@ public class Classes {
 
   public static Method[] getMethods(VMClass vmClass, boolean publicOnly) {
     Method[] array = new Method[countMethods(vmClass, publicOnly)];
-    if (vmClass.methodTable != null) {
+    VMMethod[] methodTable = vmClass.methodTable;
+    if (methodTable != null) {
       Classes.link(vmClass);
 
       int ai = 0;
-      for (int i = 0; i < vmClass.methodTable.length; ++i) {
-        if ((((vmClass.methodTable[i].flags & Modifier.PUBLIC) != 0)
-             || (! publicOnly))
-            && ! toString(vmClass.methodTable[i].name).startsWith("<"))
+      for (int i = 0, j = declaredMethodCount(vmClass); i < j; ++i) {
+        VMMethod m = methodTable[i];
+        if (((! publicOnly) || ((m.flags & Modifier.PUBLIC) != 0))
+            && ! toString(m.name).startsWith("<"))
         {
           array[ai++] = makeMethod(SystemClassLoader.getClass(vmClass), i);
         }

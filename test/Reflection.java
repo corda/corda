@@ -241,6 +241,8 @@ public class Reflection {
     expect(avian.TestReflection.get(Baz.class.getField("foo"), new Baz())
            .equals(42));
     expect((Baz.class.getModifiers() & Modifier.PUBLIC) == 0);
+
+    expect(B.class.getDeclaredMethods().length == 0);
   }
 
   protected static class Baz {
@@ -263,3 +265,9 @@ class Foo {
 }
 
 class MyException extends RuntimeException { }
+
+interface A {
+  void foo();
+}
+
+interface B extends A { }
