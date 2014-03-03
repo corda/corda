@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class LinkedList<T> extends AbstractSequentialList<T> {
+public class LinkedList<T> extends AbstractSequentialList<T> implements Deque<T> {
   private Cell<T> front;
   private Cell<T> rear;
   private int size;
@@ -85,14 +85,17 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
+  @Override
   public int size() {
     return size;
   }
 
+  @Override
   public boolean contains(Object element) {
     return find(element) != null;
   }
 
+  @Override
   public int indexOf(Object element) {
     int i = 0;
     for (Cell<T> c = front; c != null; c = c.next) {
@@ -104,6 +107,7 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return -1;
   }
 
+  @Override
   public int lastIndexOf(Object element) {
     int i = size;
     for (Cell<T> c = rear; c != null; c = c.prev) {
@@ -115,16 +119,24 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return -1;
   }
 
+  @Override
+  public boolean offer(T element) {
+    return add(element);
+  }
+
+  @Override
   public boolean add(T element) {
     addLast(element);
     return true;
   }
 
+  @Override
   public boolean addAll(Collection<? extends T> collection) {
     for (T t: collection) add(t);
     return true;
   }
 
+  @Override
   public void add(int index, T element) {
     if (index == 0) {
       addFirst(element);
@@ -135,10 +147,31 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
+  @Override
+  public boolean offerFirst(T e) {
+    addFirst(e);
+    
+    return true;
+  }
+
+  @Override
+  public void push(T e) {
+    addFirst(e);
+  }
+
+  @Override
   public void addFirst(T element) {
     addFirst(new Cell(element, null, null));
   }
 
+  @Override
+  public boolean offerLast(T e) {
+    addLast(e);
+    
+    return true;
+  }
+
+  @Override
   public void addLast(T element) {
     addLast(new Cell(element, null, null));
   }
@@ -147,6 +180,7 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return find(index).value;
   }
 
+  @Override
   public T set(int index, T value) {
     Cell<T> c = find(index);
     T old = c.value;
@@ -154,6 +188,21 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return old;
   }
 
+  @Override
+  public T peek() {
+    return peekFirst();
+  }
+
+  @Override
+  public T peekFirst() {
+    if (front != null) {
+      return front.value;
+    } else {
+      return null;
+    }
+  }
+
+  @Override
   public T getFirst() {
     if (front != null) {
       return front.value;
@@ -161,7 +210,17 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
       throw new NoSuchElementException();
     }
   }
+  
+  @Override
+  public T peekLast() {
+    if (rear != null) {
+      return rear.value;
+    } else {
+      return null;
+    }
+  }
 
+  @Override
   public T getLast() {
     if (rear != null) {
       return rear.value;
@@ -170,27 +229,57 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
+  @Override
   public T remove(int index) {
     Cell<T> c = find(index);
     remove(c);
     return c.value;
   }
 
+  @Override
   public boolean isEmpty() {
     return size() == 0;
   }
 
-  public T removeFirst() {
+  @Override
+  public T poll() {
+    return pollFirst();
+  }
+
+  @Override
+  public T pollFirst() {
     if (front != null) {
       T v = front.value;
       remove(front);
       return v;
     } else {
-      throw new NoSuchElementException();
+      return null;
     }
   }
 
-  public T removeLast() {
+  @Override
+  public T removeFirst() {
+    T result = pollFirst();
+    
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
+  public T pop() {
+    return removeFirst();
+  }
+
+  @Override
+  public T remove() {
+    return removeFirst();
+  }
+
+  @Override
+  public T pollLast() {
     if (rear != null) {
       T v = rear.value;
       remove(rear);
@@ -200,6 +289,18 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
+  @Override
+  public T removeLast() {
+    T result = pollLast();
+    
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
   public boolean remove(Object element) {
     Cell<T> c = find(element);
     if (c == null) {
@@ -210,15 +311,23 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     }
   }
 
+  @Override
   public void clear() {
     front = rear = null;
     size = 0;
   }
 
+  @Override
   public Iterator<T> iterator() {
     return listIterator();
   }
 
+  @Override
+  public ListIterator<T> listIterator() {
+    return listIterator(0);
+  }
+
+  @Override
   public ListIterator<T> listIterator(int index) {
     MyIterator it = new MyIterator();
     for (int i = 0; i < index; ++i) {
@@ -227,14 +336,67 @@ public class LinkedList<T> extends AbstractSequentialList<T> {
     return it;
   }
 
-  public ListIterator<T> listIterator() {
-    return listIterator(0);
+  @Override
+  public Iterator<T> descendingIterator() {
+    final ListIterator<T> li = listIterator(size());
+    
+    return new Iterator<T>() {
+      @Override
+      public T next() {
+        return li.previous();
+      }
+
+      @Override
+      public boolean hasNext() {
+        return li.hasPrevious();
+      }
+
+      @Override
+      public void remove() {
+        li.remove();
+      }
+    };
   }
 
+  @Override
   public String toString() {
     return Collections.toString(this);
   }
 
+  @Override
+  public T element() {
+    T result = peek();
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
+  public boolean removeFirstOccurrence(Object o) {
+    int index = indexOf(o);
+    if (index > 0) {
+      remove(index);
+      
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  @Override
+  public boolean removeLastOccurrence(Object o) {
+    int lastIndex = lastIndexOf(o);
+    if (lastIndex > 0) {
+      remove(lastIndex);
+      
+      return true;
+    } else {
+      return false;
+    }
+  }
+  
   private static class Cell<T> {
     public T value;
     public Cell<T> prev;
