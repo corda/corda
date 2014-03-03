@@ -724,6 +724,18 @@ Avian_sun_misc_Unsafe_putOrderedObject
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getObjectVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  
+  uintptr_t value = fieldAtOffset<uintptr_t>(o, offset);
+  loadMemoryBarrier();
+  return value;
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_compareAndSwapObject
 (Thread* t, object, uintptr_t* arguments)
 {
@@ -914,6 +926,18 @@ Avian_sun_misc_Unsafe_putOrderedInt
 (Thread* t, object method, uintptr_t* arguments)
 {
   Avian_sun_misc_Unsafe_putIntVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getIntVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  int32_t result = fieldAtOffset<int32_t>(o, offset);
+  loadMemoryBarrier();
+  return result;
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

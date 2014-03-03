@@ -46,6 +46,8 @@ public final class Unsafe {
 
   public native void putDouble(long address, double x);
 
+  public native int getIntVolatile(Object o, long offset);
+
   public native void putIntVolatile(Object o, long offset, int x);
 
   public native long getLongVolatile(Object o, long offset);
@@ -63,6 +65,8 @@ public final class Unsafe {
   public native void putObjectVolatile(Object o, long offset, Object x);
 
   public native void putOrderedObject(Object o, long offset, Object x);
+
+  public native Object getObjectVolatile(Object o, long offset);
 
   public native long getAddress(long address);
 
