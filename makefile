@@ -179,7 +179,6 @@ ifneq ($(android),)
 		-DOS_SHARED_LIB_FORMAT_STR="\"$(so-prefix)%s$(so-suffix)\"" \
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
-		-D__DISABLE_IPV6_PROTO \
 		-D__PROVIDE_FIXMES \
 		-g3
 
