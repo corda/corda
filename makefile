@@ -190,10 +190,9 @@ ifneq ($(android),)
 		$(libnativehelper-native)/toStringArray.cpp
 
 	crypto-native := $(android)/libcore/crypto/src/main/native
-	crypto-cpps := 
-	#$(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
+		crypto-cpps := 
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
@@ -206,6 +205,7 @@ ifneq ($(android),)
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32 -lshell32
 	else
+		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
