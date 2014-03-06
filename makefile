@@ -776,10 +776,10 @@ ifeq ($(platform),windows)
 		endif
 		cxx = x86_64-w64-mingw32-g++ $(mflag)
 		cc = x86_64-w64-mingw32-gcc $(mflag)
-		dlltool = x86_64-w64-mingw32-dlltool
-		ar = x86_64-w64-mingw32-ar
-		ranlib = x86_64-w64-mingw32-ranlib
-		strip = x86_64-w64-mingw32-strip
+		dlltool = dlltool
+		ar = ar
+		ranlib = ranlib
+		strip = strip
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
 	else
