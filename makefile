@@ -180,7 +180,8 @@ ifneq ($(android),)
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
 		-D__PROVIDE_FIXMES \
-		-g3
+		-g3 \
+		-Werror
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
 
@@ -202,7 +203,7 @@ ifneq ($(android),)
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
-		platform-lflags := -lgdi32 -lshell32
+		platform-lflags := -lgdi32
 	else
 		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
@@ -775,10 +776,10 @@ ifeq ($(platform),windows)
 		endif
 		cxx = x86_64-w64-mingw32-g++ $(mflag)
 		cc = x86_64-w64-mingw32-gcc $(mflag)
-		dlltool = dlltool
-		ar = ar
-		ranlib = ranlib
-		strip = strip
+		dlltool = x86_64-w64-mingw32-dlltool
+		ar = x86_64-w64-mingw32-ar
+		ranlib = x86_64-w64-mingw32-ranlib
+		strip = x86_64-w64-mingw32-strip
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
 	else
