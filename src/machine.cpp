@@ -2314,13 +2314,6 @@ parseAttributeTable(Thread* t, Stream& s, object class_, object pool)
            flags);
 
         set(t, table, ArrayBody + (i * BytesPerWord), reference);
-
-        if (0 == strcmp
-            (&byteArrayBody(t, className(t, class_), 0),
-             &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
-        {
-          classFlags(t, class_) = flags;
-        }
       }
 
       object addendum = getClassAddendum(t, class_, pool);
