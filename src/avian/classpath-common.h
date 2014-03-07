@@ -746,6 +746,28 @@ getDeclaringClass(Thread* t, object c)
   return 0;
 }
 
+unsigned
+classModifiers(Thread* t, object c)
+{
+  object addendum = classAddendum(t, c);
+  if (addendum) {
+    object table = classAddendumInnerClassTable(t, addendum);
+    if (table) {
+      for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+        object reference = arrayBody(t, table, i);
+        if (0 == strcmp
+            (&byteArrayBody(t, className(t, c), 0),
+             &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
+        {
+          return innerClassReferenceFlags(t, reference);
+        }        
+      }
+    }
+  }
+
+  return classFlags(t, c);
+}
+
 } // namespace vm
 
 #endif//CLASSPATH_COMMON_H

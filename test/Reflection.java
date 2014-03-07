@@ -49,8 +49,9 @@ public class Reflection {
   private static void innerClasses() throws Exception {
     Class c = Reflection.class;
     Class[] inner = c.getDeclaredClasses();
-    expect(1 == inner.length);
-    expect(Hello.class == inner[0]);
+    expect(2 == inner.length);
+    expect(Hello.class == inner[0]
+           || Hello.class == inner[1]);
   }
 
   private int egads;
@@ -236,6 +237,14 @@ public class Reflection {
 
     expect((Foo.class.getMethod("toString").getModifiers()
             & Modifier.PUBLIC) != 0);
+
+    expect(avian.TestReflection.get(Baz.class.getField("foo"), new Baz())
+           .equals(42));
+    expect((Baz.class.getModifiers() & Modifier.PUBLIC) == 0);
+  }
+
+  protected static class Baz {
+    public int foo = 42;
   }
 }
 

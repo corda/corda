@@ -4123,12 +4123,19 @@ EXPORT(JVM_GetComponentType)(Thread* t, jclass c)
   return reinterpret_cast<jclass>(run(t, jvmGetComponentType, arguments));
 }
 
+uint64_t
+jvmGetClassModifiers(Thread* t, uintptr_t* arguments)
+{
+  return classModifiers
+    (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])));
+}
+
 extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassModifiers)(Thread* t, jclass c)
 {
-  ENTER(t, Thread::ActiveState);
+  uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(c) };
 
-  return classFlags(t, jclassVmClass(t, *c));
+  return run(t, jvmGetClassModifiers, arguments);
 }
 
 uint64_t
@@ -4349,7 +4356,9 @@ EXPORT(JVM_GetClassDeclaredConstructors)(Thread* t, jclass c,
 extern "C" AVIAN_EXPORT jint JNICALL
 EXPORT(JVM_GetClassAccessFlags)(Thread* t, jclass c)
 {
-  return EXPORT(JVM_GetClassModifiers)(t, c);
+  ENTER(t, Thread::ActiveState);
+
+  return classFlags(t, jclassVmClass(t, *c));
 }
 
 uint64_t

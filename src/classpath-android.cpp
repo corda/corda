@@ -1634,7 +1634,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getModifiers
 (Thread* t, object, uintptr_t* arguments)
 {
-  return classFlags
+  return classModifiers
     (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
 }
 

@@ -30,6 +30,7 @@ import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
@@ -439,6 +440,19 @@ public final class Class <T> implements Type, AnnotatedElement {
   }
 
   public int getModifiers() {
+    ClassAddendum addendum = vmClass.addendum;
+    if (addendum != null) {
+      InnerClassReference[] table = addendum.innerClassTable;
+      if (table != null) {
+        for (int i = 0; i < table.length; ++i) {
+          InnerClassReference reference = table[i];
+          if (Arrays.equals(vmClass.name, reference.inner)) {
+            return reference.flags;
+          }
+        }
+      }
+    }
+
     return vmClass.flags;
   }
 
