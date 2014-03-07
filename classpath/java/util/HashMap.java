@@ -10,6 +10,8 @@
 
 package java.util;
 
+import avian.Data;
+
 public class HashMap<K, V> implements Map<K, V> {
   private static final int MinimumCapacity = 16;
 
@@ -19,7 +21,7 @@ public class HashMap<K, V> implements Map<K, V> {
 
   public HashMap(int capacity, Helper<K, V> helper) {
     if (capacity > 0) {
-      array = new Cell[nextPowerOfTwo(capacity)];
+      array = new Cell[Data.nextPowerOfTwo(capacity)];
     }
     this.helper = helper;
   }
@@ -40,13 +42,7 @@ public class HashMap<K, V> implements Map<K, V> {
   }
 
   public String toString() {
-    return Collections.toString(this);
-  }
-
-  private static int nextPowerOfTwo(int n) {
-    int r = 1;
-    while (r < n) r <<= 1;
-    return r;
+    return avian.Data.toString(this);
   }
 
   public boolean isEmpty() {
@@ -72,7 +68,7 @@ public class HashMap<K, V> implements Map<K, V> {
   private void resize(int capacity) {
     Cell<K, V>[] newArray = null;
     if (capacity != 0) {
-      capacity = nextPowerOfTwo(capacity);
+      capacity = Data.nextPowerOfTwo(capacity);
       if (array != null && array.length == capacity) {
         return;
       }
@@ -220,19 +216,41 @@ public class HashMap<K, V> implements Map<K, V> {
   }
 
   public Set<Entry<K, V>> entrySet() {
-    return new EntrySet();
+    return new Data.EntrySet(new MyEntryMap());
   }
 
   public Set<K> keySet() {
-    return new KeySet();
+    return new Data.KeySet(new MyEntryMap());
   }
 
   public Collection<V> values() {
-    return new Values();
+    return new Data.Values(new MyEntryMap());
   }
 
   Iterator<Entry<K, V>> iterator() {
     return new MyIterator();
+  }
+
+  private class MyEntryMap implements Data.EntryMap<K, V> {
+    public int size() {
+      return HashMap.this.size();
+    }
+
+    public Entry<K,V> find(Object key) {
+      return HashMap.this.find(key);
+    }
+
+    public Entry<K,V> remove(Object key) {
+      return removeCell(key);
+    }
+
+    public void clear() {
+      HashMap.this.clear();
+    }
+
+    public Iterator<Entry<K,V>> iterator() {
+      return HashMap.this.iterator();
+    }
   }
 
   interface Cell<K, V> extends Entry<K, V> {
@@ -300,148 +318,6 @@ public class HashMap<K, V> implements Map<K, V> {
 
     public boolean equal(K a, K b) {
       return (a == null && b == null) || (a != null && a.equals(b));
-    }
-  }
-
-  private class EntrySet extends AbstractSet<Entry<K, V>> {
-    public int size() {
-      return HashMap.this.size();
-    }
-
-    public boolean isEmpty() {
-      return HashMap.this.isEmpty();
-    }
-
-    public boolean contains(Object o) {
-      return (o instanceof Entry<?,?>)
-        && containsKey(((Entry<?,?>)o).getKey());
-    }
-
-    public boolean add(Entry<K, V> e) {
-      return putCell(e.getKey(), e.getValue()) != null;
-    }
-
-    public boolean remove(Object o) {
-      return (o instanceof Entry<?,?>) && remove((Entry<?,?>)o);
-    }
-
-    public boolean remove(Entry<K, V> e) {
-      return removeCell(e.getKey()) != null;
-    }
-
-    public Object[] toArray() {
-      return toArray(new Object[size()]);      
-    }
-
-    public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);      
-    }
-
-    public void clear() {
-      HashMap.this.clear();
-    }
-
-    public Iterator<Entry<K, V>> iterator() {
-      return new MyIterator();
-    }
-  }
-
-  private class KeySet extends AbstractSet<K> {
-    public int size() {
-      return HashMap.this.size();
-    }
-
-    public boolean isEmpty() {
-      return HashMap.this.isEmpty();
-    }
-
-    public boolean contains(Object key) {
-      return containsKey(key);
-    }
-
-    public boolean add(K key) {
-      return putCell(key, null) != null;
-    }
-
-    public boolean remove(Object key) {
-      return removeCell(key) != null;
-    }
-
-    public Object[] toArray() {
-      return toArray(new Object[size()]);      
-    }
-
-    public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);      
-    }
-
-    public void clear() {
-      HashMap.this.clear();
-    }
-
-    public Iterator<K> iterator() {
-      return new Collections.KeyIterator(new MyIterator());
-    }
-  }
-
-  private class Values implements Collection<V> {
-    public int size() {
-      return HashMap.this.size();
-    }
-
-    public boolean isEmpty() {
-      return HashMap.this.isEmpty();
-    }
-
-    public boolean contains(Object value) {
-      return containsValue(value);
-    }
-
-    public boolean containsAll(Collection<?> c) {
-      if (c == null) {
-        throw new NullPointerException("collection is null");
-      }
-      
-      Iterator<?> it = c.iterator();
-      while (it.hasNext()) {
-        if (! contains(it.next())) {
-          return false;
-        }
-      }
-      
-      return true;
-    }
-
-    public boolean add(V value) {
-      throw new UnsupportedOperationException();
-    }
-
-    public boolean addAll(Collection<? extends V> collection) {
-      throw new UnsupportedOperationException();      
-    }
-
-    public boolean remove(Object value) {
-      throw new UnsupportedOperationException();
-    }
-
-    public boolean removeAll(Collection<?> c) {
-      throw new UnsupportedOperationException();
-    }
-
-    public Object[] toArray() {
-      return toArray(new Object[size()]);      
-    }
-
-    public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);      
-    }
-
-    public void clear() {
-      HashMap.this.clear();
-    }
-
-    public Iterator<V> iterator() {
-      return new Collections.ValueIterator(new MyIterator());
     }
   }
 

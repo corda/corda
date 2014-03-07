@@ -185,7 +185,7 @@ public class ArrayList<T> extends AbstractList<T> implements java.io.Serializabl
   }
 
   public String toString() {
-    return Collections.toString(this);
+    return avian.Data.toString(this);
   }
 
   private void writeObject(ObjectOutputStream out) throws IOException {

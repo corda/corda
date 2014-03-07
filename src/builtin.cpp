@@ -664,6 +664,28 @@ Avian_sun_misc_Unsafe_arrayBaseOffset
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_arrayIndexScale
+(Thread* t, object, uintptr_t* arguments)
+{
+  object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
+
+  if (c == type(t, Machine::JbooleanType)
+      || c == type(t, Machine::JbyteType))
+    return 1;
+  else if (c == type(t, Machine::JshortType)
+           || c == type(t, Machine::JcharType))
+    return 2;
+  else if (c == type(t, Machine::JintType)
+           || c == type(t, Machine::JfloatType))
+    return 4;
+  else if (c == type(t, Machine::JlongType)
+           || c == type(t, Machine::JdoubleType))
+    return 8;
+  else
+    return BytesPerWord;
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_nio_FixedArrayByteBuffer_allocateFixed
 (Thread* t, object, uintptr_t* arguments)
 {
