@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 public class Thread implements Runnable {
+  // set and accessed from within LockSupport
+  protected volatile Object parkBlocker;
+  
   private long peer;
   private volatile boolean interrupted;
   private volatile boolean unparked;

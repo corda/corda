@@ -1,8 +1,13 @@
 package java.util.concurrent;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+import java.util.Queue;
+
 import avian.Atomic;
 
-public class ConcurrentLinkedQueue<T> {
+public class ConcurrentLinkedQueue<T> implements Queue<T> {
   private static final long QueueHead;
   private static final long QueueTail;
   private static final long NodeNext;
@@ -25,11 +30,20 @@ public class ConcurrentLinkedQueue<T> {
   private volatile Node<T> head = new Node<T>(null, null);
   private volatile Node<T> tail = head;
 
+  @Override
   public void clear() {
-    // todo: can we safely make this O(1)?
+    // TODO - can we safely make this O(1)?
     while (poll() != null) { }
   }
 
+  @Override
+  public boolean offer(T element) {
+    add(element);
+    
+    return true;
+  }
+
+  @Override
   public boolean add(T value) {
     Node<T> n = new Node<T>(value, null);
     while (true) {
@@ -48,12 +62,34 @@ public class ConcurrentLinkedQueue<T> {
     return true;
   }
 
+  @Override
   public T peek() {
     return poll(false);
   }
 
+  @Override
+  public T element() {
+    T result = peek();
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
   public T poll() {
     return poll(true);
+  }
+
+  @Override
+  public T remove() {
+    T result = poll();
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
+    }
   }
 
   private T poll(boolean remove) {
@@ -89,5 +125,64 @@ public class ConcurrentLinkedQueue<T> {
       this.value = value;
       this.next = next;
     }
+  }
+
+  @Override
+  public int size() {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return size() == 0;
+  }
+
+  @Override
+  public boolean contains(Object element) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean containsAll(Collection<?> c) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean addAll(Collection<? extends T> collection) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean remove(Object element) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean removeAll(Collection<?> c) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Object[] toArray() {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public <S> S[] toArray(S[] array) {
+    // TODO - implement
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Iterator<T> iterator() {
+    // TODO - implement
+    throw new UnsupportedOperationException();
   }
 }
