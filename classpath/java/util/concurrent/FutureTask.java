@@ -34,21 +34,17 @@ public class FutureTask<T> implements RunnableFuture<T> {
 
   @Override
   public void run() {
-    // must set running thread before we change the state for cancel to work
-    runningThread = Thread.currentThread();
-    try {
-      if (currentState.compareAndSet(State.New, State.Running)) {
-        try {
-          result = callable.call();
-        } catch (Throwable t) {
-          failure = t;
-        } finally {
-          currentState.compareAndSet(State.Running, State.Done);
-          handleDone();
-        }
+    if (currentState.compareAndSet(State.New, State.Running)) {
+      runningThread = Thread.currentThread();
+      try {
+        result = callable.call();
+      } catch (Throwable t) {
+        failure = t;
+      } finally {
+        currentState.compareAndSet(State.Running, State.Done);
+        handleDone();
+        runningThread = null; // must be set after state changed to done
       }
-    } finally {
-      runningThread = null;
     }
   }
   
