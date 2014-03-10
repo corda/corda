@@ -3,7 +3,7 @@ package java.util.concurrent;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class FutureTask<T> implements RunnableFuture<T> {
-  private enum State { New, Canceled, Running, Done };
+  private enum State { New, Canceling, Canceled, Running, Done };
   
   private final AtomicReference<State> currentState;
   private final Callable<T> callable;
@@ -41,9 +41,29 @@ public class FutureTask<T> implements RunnableFuture<T> {
       } catch (Throwable t) {
         failure = t;
       } finally {
-        currentState.compareAndSet(State.Running, State.Done);
+        if (currentState.compareAndSet(State.Running, State.Done) || 
+            currentState.get() == State.Canceled) {
+          /* in either of these conditions we either were not canceled 
+           * or we already were interrupted.  The thread may or MAY NOT
+           * be in an interrupted status depending on when it was 
+           * interrupted and what the callable did with the state. 
+           */
+        } else {
+          /* Should be in canceling state, so block forever till we are 
+           * interrupted.  If state already transitioned into canceled 
+           * and thus thread is in interrupted status, the exception should 
+           * throw immediately on the sleep call.
+           */
+          try {
+            Thread.sleep(Long.MAX_VALUE);
+          } catch (InterruptedException e) {
+            // expected
+          }
+        }
+
+        Thread.interrupted(); // reset interrupted status if set
         handleDone();
-        runningThread = null; // must be set after state changed to done
+        runningThread = null; // must be last operation
       }
     }
   }
@@ -66,12 +86,19 @@ public class FutureTask<T> implements RunnableFuture<T> {
       handleDone();
       
       return true;
-    } else if (mayInterruptIfRunning) {
-      Thread runningThread = this.runningThread;
-      if (runningThread != null) {
-        runningThread.interrupt();
-        
-        return true;
+    } else if (mayInterruptIfRunning && 
+               currentState.compareAndSet(State.Running, State.Canceling)) {
+      // handleDone will be called from running thread
+      try {
+        Thread runningThread = this.runningThread;
+        if (runningThread != null) {
+          runningThread.interrupt();
+          
+          return true;
+        }
+      } finally {
+        // we can not set to canceled until interrupt status has been set
+        currentState.set(State.Canceled);
       }
     }
     
