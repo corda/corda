@@ -1123,7 +1123,7 @@ getClassAddendum(Thread* t, object class_, object pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, 0, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0);
     set(t, class_, ClassAddendum, addendum);
   }
   return addendum;
@@ -2206,12 +2206,14 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
     if (abstractVirtuals) {
       PROTECT(t, vtable);
 
-      object addendum = getClassAddendum(t, class_, pool);
-      set(t, addendum, ClassAddendumMethodTable,
-          classMethodTable(t, class_));
+      object originalMethodTable = classMethodTable(t, class_);
+      PROTECT(t, originalMethodTable);
 
       unsigned oldLength = classMethodTable(t, class_) ?
         arrayLength(t, classMethodTable(t, class_)) : 0;
+
+      object addendum = getClassAddendum(t, class_, pool);
+      classAddendumDeclaredMethodCount(t, addendum) = oldLength;
 
       object newMethodTable = makeArray
         (t, oldLength + listSize(t, abstractVirtuals));

@@ -24,6 +24,15 @@ public class VMClass {
   public Object[] interfaceTable;
   public VMMethod[] virtualTable;
   public VMField[] fieldTable;
+  /**
+   * Methods declared in this class, plus any abstract virtual methods
+   * inherited from implemented or extended interfaces.  If addendum
+   * is non-null and addendum.declaredMethodCount is non-negative,
+   * then the first addendum.declaredMethodCount methods are declared
+   * methods, while the rest are abstract virtual methods.  If
+   * addendum is null or addendum.declaredMethodCount is negative, all
+   * are declared methods.
+   */
   public VMMethod[] methodTable;
   public ClassAddendum addendum;
   public Object staticTable;
