@@ -23,14 +23,10 @@ public class LockSupport {
   static {
     unsafe = Unsafe.getUnsafe();
     try {
-      parkBlockerOffset = unsafe.objectFieldOffset(java.lang.Thread.class.getDeclaredField("parkBlocker"));
+      parkBlockerOffset = unsafe.objectFieldOffset(Thread.class.getDeclaredField("parkBlocker"));
     } catch (Exception ex) { 
       throw new Error(ex);
     }
-  }
-  
-  private static void setBlocker(Thread t, Object arg) {
-    unsafe.putObject(t, parkBlockerOffset, arg);
   }
   
   public static void unpark(Thread thread) {
@@ -53,16 +49,16 @@ public class LockSupport {
   
   private static void doParkNanos(Object blocker, long nanos) {
     Thread t = Thread.currentThread();
-    setBlocker(t, blocker);
+    unsafe.putObject(t, parkBlockerOffset, blocker);
     unsafe.park(false, nanos);
-    setBlocker(t, null);
+    unsafe.putObject(t, parkBlockerOffset, null);
   }
   
   public static void parkUntil(Object blocker, long deadline) {
     Thread t = Thread.currentThread();
-    setBlocker(t, blocker);
+    unsafe.putObject(t, parkBlockerOffset, blocker);
     unsafe.park(true, deadline);
-    setBlocker(t, null);
+    unsafe.putObject(t, parkBlockerOffset, null);
   }
   
   public static Object getBlocker(Thread t) {
