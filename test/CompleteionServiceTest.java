@@ -18,12 +18,16 @@ public class CompleteionServiceTest {
     takeTest(dumbExecutor);
   }
   
+  private static void verify(boolean val) {
+    if (! val) {
+      throw new RuntimeException();
+    }
+  }
+  
   private static void pollNoResultTest(Executor executor) {
     ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<Object>(executor);
     
-    if (ecs.poll() != null) {
-      throw new RuntimeException();
-    }
+    verify(ecs.poll() == null);
   }
   
   private static void pollTimeoutNoResultTest(Executor executor) throws InterruptedException {
@@ -31,12 +35,8 @@ public class CompleteionServiceTest {
     ExecutorCompletionService<Object> ecs = new ExecutorCompletionService<Object>(executor);
     
     long startTime = System.currentTimeMillis();
-    if (ecs.poll(delayTime, TimeUnit.MILLISECONDS) != null) {
-      throw new RuntimeException();
-    }
-    if (System.currentTimeMillis() - startTime < delayTime) {
-      throw new RuntimeException();
-    }
+    verify(ecs.poll(delayTime, TimeUnit.MILLISECONDS) == null);
+    verify(System.currentTimeMillis() - startTime >= delayTime);
   }
   
   private static void takeTest(Executor executor) throws InterruptedException, ExecutionException {
@@ -49,8 +49,6 @@ public class CompleteionServiceTest {
       }
     });
     
-    if (ecs.take().get() != result) {
-      throw new RuntimeException();
-    }
+    verify(ecs.take().get() == result);
   }
 }
