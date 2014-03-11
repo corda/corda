@@ -191,7 +191,7 @@ ifneq ($(android),)
 	crypto-native := $(android)/libcore/crypto/src/main/native
 
 	ifeq ($(platform),windows)
-		crypto-cpps := 
+    	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
