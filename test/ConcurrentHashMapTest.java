@@ -3,7 +3,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Concurrent {
+public class ConcurrentHashMapTest {
   private static final int ThreadCount = 4;
   private static final int IterationCount = 100;
   private static final int Range = 10;
