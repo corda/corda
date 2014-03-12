@@ -61,7 +61,7 @@ public class TreeSet<T> extends AbstractSet<T> implements Collection<T> {
   }
 
   public String toString() {
-    return Collections.toString(this);
+    return avian.Data.toString(this);
   }
 
   public boolean add(T value) {

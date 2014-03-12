@@ -10,12 +10,14 @@
 
 package java.util;
 
+import avian.Data;
+
 public class Collections {
 
   private Collections() { }
 
   public static void shuffle(List list, Random random) {
-    Object[] array = toArray(list, new Object[list.size()]);
+    Object[] array = Data.toArray(list, new Object[list.size()]);
     for (int i = 0; i < array.length; ++i) {
       int j = random.nextInt(array.length);
       Object tmp = array[i];
@@ -173,25 +175,6 @@ public class Collections {
     }
   }
 
-  static <T> T[] toArray(Collection collection, T[] array) {
-    Class c = array.getClass().getComponentType();
-
-    if (array.length < collection.size()) {
-      array = (T[]) java.lang.reflect.Array.newInstance(c, collection.size());
-    }
-
-    int i = 0;
-    for (Object o: collection) {
-      if (c.isInstance(o)) {
-        array[i++] = (T) o;
-      } else {
-        throw new ArrayStoreException();
-      }
-    }
-
-    return array;
-  }
-
   public static final List EMPTY_LIST
     = new UnmodifiableList<Object>(new ArrayList<Object>(0));
 
@@ -207,35 +190,6 @@ public class Collections {
   public static final <T> Set<T> emptySet() {
     return (Set<T>) new UnmodifiableSet<Object>(
       new HashSet<Object>(0));
-  }
-
-  static String toString(Collection c) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("[");
-    for (Iterator it = c.iterator(); it.hasNext();) {
-      sb.append(it.next());
-      if (it.hasNext()) {
-        sb.append(",");
-      }
-    }
-    sb.append("]");
-    return sb.toString();
-  }
-
-  static String toString(Map m) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("{");
-    for (Iterator<Map.Entry> it = m.entrySet().iterator(); it.hasNext();) {
-      Map.Entry e = it.next();
-      sb.append(e.getKey())
-        .append("=")
-        .append(e.getValue());
-      if (it.hasNext()) {
-        sb.append(",");
-      }
-    }
-    sb.append("}");
-    return sb.toString();
   }
   
   public static <T> Enumeration<T> enumeration(Collection<T> c) {
@@ -745,46 +699,6 @@ public class Collections {
   
   public static <T> Set<T> unmodifiableSet(Set<T> hs) {
     return new UnmodifiableSet<T>(hs);
-  }
-
-  static class KeyIterator<K, V> implements Iterator<K> {
-    private final Iterator<Map.Entry<K, V>> it;
-
-    public KeyIterator(Iterator<Map.Entry<K, V>> it) {
-      this.it = it;
-    }
-
-    public K next() {
-      return it.next().getKey();
-    }
-
-    public boolean hasNext() {
-      return it.hasNext();
-    }
-
-    public void remove() {
-      it.remove();
-    }
-  }
-
-  static class ValueIterator<K, V> implements Iterator<V> {
-    private final Iterator<Map.Entry<K, V>> it;
-
-    public ValueIterator(Iterator<Map.Entry<K, V>> it) {
-      this.it = it;
-    }
-
-    public V next() {
-      return it.next().getValue();
-    }
-
-    public boolean hasNext() {
-      return it.hasNext();
-    }
-
-    public void remove() {
-      it.remove();
-    }
   }
   
   private static final class ReverseComparator<T> implements Comparator<T> {

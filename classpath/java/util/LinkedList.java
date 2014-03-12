@@ -360,7 +360,7 @@ public class LinkedList<T> extends AbstractSequentialList<T> implements Deque<T>
 
   @Override
   public String toString() {
-    return Collections.toString(this);
+    return avian.Data.toString(this);
   }
 
   @Override

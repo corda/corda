@@ -63,7 +63,7 @@ public class LinkedHashSet<T> extends AbstractSet<T> implements Set<T> {
   }
 
   public String toString() {
-    return Collections.toString(this);
+    return avian.Data.toString(this);
   }
 
   private static class MyIterator<T> implements Iterator<T> {

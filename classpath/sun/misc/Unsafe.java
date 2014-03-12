@@ -74,6 +74,8 @@ public final class Unsafe {
 
   public native int arrayBaseOffset(Class arrayClass);
 
+  public native int arrayIndexScale(Class arrayClass);
+
   public native long objectFieldOffset(Field field);
 
   public native void park(boolean absolute, long time);

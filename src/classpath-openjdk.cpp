@@ -2559,28 +2559,6 @@ Avian_sun_misc_Unsafe_staticFieldOffset
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_sun_misc_Unsafe_arrayIndexScale
-(Thread* t, object, uintptr_t* arguments)
-{
-  switch (byteArrayBody
-          (t, className
-           (t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))), 1))
-  {
-  case 'Z':
-  case 'B': return 1;
-  case 'S':
-  case 'C': return 2;
-  case 'I':
-  case 'F': return 4;
-  case 'J':
-  case 'D': return 8;
-  case '[':
-  case 'L': return BytesPerWord;
-  default: abort(t);
-  }
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_staticFieldBase
 (Thread* t, object, uintptr_t* arguments)
 {

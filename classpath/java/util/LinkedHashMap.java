@@ -131,7 +131,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> {
     }
 
     public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);
+      return avian.Data.toArray(this, array);
     }
 
     public void clear() {
@@ -169,7 +169,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> {
     }
 
     public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);
+      return avian.Data.toArray(this, array);
     }
 
     public void clear() {
@@ -177,7 +177,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> {
     }
 
     public Iterator<K> iterator() {
-      return new Collections.KeyIterator(new MyIterator());
+      return new avian.Data.KeyIterator(new MyIterator());
     }
   }
 
@@ -230,7 +230,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> {
     }
 
     public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);
+      return avian.Data.toArray(this, array);
     }
 
     public void clear() {
@@ -238,7 +238,7 @@ public class LinkedHashMap<K, V> extends HashMap<K, V> {
     }
 
     public Iterator<V> iterator() {
-      return new Collections.ValueIterator(new MyIterator());
+      return new avian.Data.ValueIterator(new MyIterator());
     }
   }
 

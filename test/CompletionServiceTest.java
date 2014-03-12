@@ -4,7 +4,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.TimeUnit;
 
-public class CompleteionServiceTest {
+public class CompletionServiceTest {
   public static void main(String args[]) throws InterruptedException, ExecutionException {
     Executor dumbExecutor = new Executor() {
       @Override

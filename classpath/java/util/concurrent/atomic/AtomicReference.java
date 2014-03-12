@@ -32,9 +32,9 @@ public class AtomicReference<T> implements java.io.Serializable {
   public T get() {
     return value;
   }
-
+  
   public void set(T newValue) {
-    this.value = newValue;
+    value = newValue;
   }
   
   public void lazySet(T newValue) {

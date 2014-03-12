@@ -42,7 +42,7 @@ public class TreeMap<K,V> implements Map<K,V> {
   }
 
   public String toString() {
-    return Collections.toString(this);
+    return avian.Data.toString(this);
   }
 
   public V get(Object key) {
@@ -164,7 +164,7 @@ public class TreeMap<K,V> implements Map<K,V> {
     }
 
     public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);      
+      return avian.Data.toArray(this, array);      
     }
 
     public void clear() {
@@ -172,7 +172,7 @@ public class TreeMap<K,V> implements Map<K,V> {
     }
 
     public Iterator<K> iterator() {
-      return new Collections.KeyIterator(set.iterator());
+      return new avian.Data.KeyIterator(set.iterator());
     }
   }
 
@@ -225,7 +225,7 @@ public class TreeMap<K,V> implements Map<K,V> {
     }
 
     public <T> T[] toArray(T[] array) {
-      return Collections.toArray(this, array);      
+      return avian.Data.toArray(this, array);      
     }
 
     public void clear() {
@@ -233,7 +233,7 @@ public class TreeMap<K,V> implements Map<K,V> {
     }
 
     public Iterator<V> iterator() {
-      return new Collections.ValueIterator(set.iterator());
+      return new avian.Data.ValueIterator(set.iterator());
     }
   }
 
