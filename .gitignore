@@ -10,3 +10,5 @@ bin
 *.pdb
 *.swp
 /*.sublime-*
+workspace/
+src/.cproject

@@ -179,6 +179,7 @@ ifneq ($(android),)
 		-DOS_SHARED_LIB_FORMAT_STR="\"$(so-prefix)%s$(so-suffix)\"" \
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
+		-D__PROVIDE_FIXMES \
 		-g3 \
 		-Werror
 
@@ -189,28 +190,22 @@ ifneq ($(android),)
 		$(libnativehelper-native)/toStringArray.cpp
 
 	crypto-native := $(android)/libcore/crypto/src/main/native
-	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
+    	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -D__STDC_CONSTANT_MACROS
-		ifneq ($(arch),i386)
-			android-cflags += -fPIC
-		endif
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
-			$(luni-native)/libcore_io_OsConstants.cpp \
-			$(luni-native)/libcore_io_Posix.cpp \
-			$(luni-native)/libcore_io_AsynchronousCloseMonitor.cpp \
 			$(luni-native)/libcore_net_RawSocket.cpp \
 			$(luni-native)/org_apache_harmony_xnet_provider_jsse_NativeCrypto.cpp \
-			$(luni-native)/AsynchronousSocketCloseMonitor.cpp \
-			$(luni-native)/NetworkUtilities.cpp
+
 		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32
 	else
+		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
@@ -781,10 +776,10 @@ ifeq ($(platform),windows)
 		endif
 		cxx = x86_64-w64-mingw32-g++ $(mflag)
 		cc = x86_64-w64-mingw32-gcc $(mflag)
-		dlltool = x86_64-w64-mingw32-dlltool
-		ar = x86_64-w64-mingw32-ar
-		ranlib = x86_64-w64-mingw32-ranlib
-		strip = x86_64-w64-mingw32-strip
+		dlltool = dlltool
+		ar = ar
+		ranlib = ranlib
+		strip = strip
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
 	else
@@ -1599,6 +1594,8 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 		$(xml-java)/* $(build)/android-src/
 	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
 		$(build)/android-src/java/lang/Enum.java
+	# sed makes this file read-only which in turn breaks re-builds; so marking it as writable
+	chmod +w $(build)/android-src/java/lang/Enum.java
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
