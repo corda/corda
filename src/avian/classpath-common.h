@@ -731,7 +731,7 @@ getDeclaringClass(Thread* t, object c)
     if (table) {
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
         object reference = arrayBody(t, table, i);
-        if (strcmp
+        if (innerClassReferenceOuter(t, reference) and strcmp
             (&byteArrayBody(t, innerClassReferenceInner(t, reference), 0),
              &byteArrayBody(t, className(t, c), 0)) == 0)
         {
