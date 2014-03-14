@@ -140,6 +140,8 @@ void handleSignal(int signal, siginfo_t*, void* context)
       pthread_sigmask(SIG_UNBLOCK, &set, 0);
 
       vmJump(ip, frame, stack, thread, 0, 0);
+    } else {
+      crash();
     }
   } break;
 

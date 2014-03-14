@@ -72,7 +72,7 @@ read4(uint8_t* p)
 void
 nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
           unsigned footprint, void*, bool mostRecent,
-          unsigned targetParameterFootprint, void** ip, void** stack)
+          int targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
   assert(c, *ip <= start + size);
@@ -114,13 +114,13 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
 
   unsigned offset = footprint + FrameHeaderSize - (mostRecent ? 1 : 0);
 
-  if (TailCalls) {
+  if (TailCalls and targetParameterFootprint >= 0) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
       offset += argumentFootprint(targetParameterFootprint)
         - StackAlignmentInWords;
     }
 
-    // check for post-non-tail-call stack adjustment of the form "add
+    // check for post-non-tail-call stack adjustment of the form "sub
     // $offset,%rsp":
     if (TargetBytesPerWord == 4) {
       if ((*instruction == 0x83 or *instruction == 0x81)
@@ -140,6 +140,14 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     }
 
     // todo: check for and handle tail calls
+  }
+  
+  if (UseFramePointer and not mostRecent) {
+    assert(c, static_cast<void***>(*stack)[-1] + 1
+           == static_cast<void**>(*stack) + offset);
+
+    assert(c, static_cast<void***>(*stack)[-1][1]
+           == static_cast<void**>(*stack)[offset]);
   }
 
   *ip = static_cast<void**>(*stack)[offset];
@@ -369,7 +377,7 @@ class MyArchitecture: public Architecture {
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
                          void* link, bool mostRecent,
-                         unsigned targetParameterFootprint, void** ip,
+                         int targetParameterFootprint, void** ip,
                          void** stack)
   {
     x86::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,

@@ -191,7 +191,7 @@ argumentFootprint(unsigned footprint)
 void
 nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
           unsigned footprint, void* link, bool,
-          unsigned targetParameterFootprint, void** ip, void** stack)
+          int targetParameterFootprint, void** ip, void** stack)
 {
   assert(c, *ip >= start);
   assert(c, *ip <= start + (size / BytesPerWord));
@@ -214,7 +214,7 @@ nextFrame(ArchitectureContext* c UNUSED, int32_t* start, unsigned size,
 
   unsigned offset = footprint;
 
-  if (TailCalls) {
+  if (TailCalls and targetParameterFootprint >= 0) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
       offset += argumentFootprint(targetParameterFootprint)
         - StackAlignmentInWords;
@@ -391,7 +391,7 @@ class MyArchitecture: public Architecture {
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
                          void* link, bool mostRecent,
-                         unsigned targetParameterFootprint, void** ip,
+                         int targetParameterFootprint, void** ip,
                          void** stack)
   {
     powerpc::nextFrame(&c, static_cast<int32_t*>(start), size, footprint, link,

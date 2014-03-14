@@ -4330,9 +4330,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
          Compiler::VoidType,
          2, c->register_(t->arch->thread()), target);
 
-      if (ip == codeLength(t, code)) {
-        c->nullaryOp(lir::Trap);
-      }
+      c->nullaryOp(lir::Trap);
     } goto next;
 
     case bipush:
