@@ -83,7 +83,7 @@ argumentFootprint(unsigned footprint)
 void
 nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
           unsigned footprint, void* link, bool,
-          unsigned targetParameterFootprint UNUSED, void** ip, void** stack)
+          int targetParameterFootprint UNUSED, void** ip, void** stack)
 {
   assert(con, *ip >= start);
   assert(con, *ip <= start + (size / TargetBytesPerWord));
@@ -113,13 +113,13 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
     return;
   }
 
-  if (TailCalls) {
+  if (TailCalls and targetParameterFootprint >= 0) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
       offset += argumentFootprint(targetParameterFootprint)
         - StackAlignmentInWords;
     }
 
-    // check for post-non-tail-call stack adjustment of the form "add
+    // check for post-non-tail-call stack adjustment of the form "sub
     // sp, sp, #offset":
     if ((*instruction >> 12) == 0xe24dd) {
       unsigned value = *instruction & 0xff;
@@ -292,7 +292,7 @@ class MyArchitecture: public Architecture {
 
   virtual void nextFrame(void* start, unsigned size, unsigned footprint,
                          void* link, bool mostRecent,
-                         unsigned targetParameterFootprint, void** ip,
+                         int targetParameterFootprint, void** ip,
                          void** stack)
   {
     arm::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
