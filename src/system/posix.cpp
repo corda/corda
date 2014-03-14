@@ -78,7 +78,6 @@ class MutexResource {
   pthread_mutex_t* m;
 };
 
-const int InvalidSignal = -1;
 const int VisitSignal = SIGUSR1;
 const unsigned VisitSignalIndex = 0;
 const int InterruptSignal = SIGUSR2;
