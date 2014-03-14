@@ -405,34 +405,64 @@ public final class Class <T> implements Type, AnnotatedElement {
   }
 
   public Class[] getDeclaredClasses() {
-    if (vmClass.addendum == null || vmClass.addendum.innerClassTable == null) {
-      return new Class[0];
+    ClassAddendum addendum = vmClass.addendum;
+    if (addendum != null) {
+      InnerClassReference[] table = addendum.innerClassTable;
+      if (table != null) {
+        int count = 0;
+        for (int i = 0; i < table.length; ++i) {
+          InnerClassReference reference = table[i];
+          if (reference.outer != null
+              && Arrays.equals(vmClass.name, reference.outer))
+          {
+            ++ count;
+          }
+        }
+
+        Class[] result = new Class[count];
+        for (int i = 0; i < table.length; ++i) {
+          InnerClassReference reference = table[i];
+          if (reference.outer != null
+              && Arrays.equals(vmClass.name, reference.outer))
+          {
+            try {
+              result[--count] = getClassLoader().loadClass
+                (new String(reference.inner, 0, reference.inner.length - 1));
+            } catch (ClassNotFoundException e) {
+              throw new Error(e);
+            }
+          }
+        }
+
+        return result;
+      }
     }
-    InnerClassReference[] table = vmClass.addendum.innerClassTable;
-    Class[] result = new Class[table.length];
-    int counter = 0;
-    String prefix = getName().replace('.', '/') + "$";
-    for (int i = 0; i < table.length; ++i) try {
-      byte[] inner = table[i].inner;
-      if (inner != null && inner.length > 1) {
-        String name = new String(inner, 0, inner.length - 1);
-        if (name.startsWith(prefix) && name.indexOf('$', prefix.length()) < 0) {
-          Class innerClass = getClassLoader().loadClass(name);
-          result[counter++] = innerClass;
+    return new Class[0];
+  }
+
+  public Class getDeclaringClass() {
+    ClassAddendum addendum = vmClass.addendum;
+    if (addendum != null) {
+      InnerClassReference[] table = addendum.innerClassTable;
+      if (table != null) {
+        for (int i = 0; i < table.length; ++i) {
+          InnerClassReference reference = table[i];
+          if (Arrays.equals(vmClass.name, reference.inner)) {
+            if (reference.outer != null) {
+              try {
+                return getClassLoader().loadClass
+                  (new String(reference.outer, 0, reference.outer.length - 1));
+              } catch (ClassNotFoundException e) {
+                throw new Error(e);
+              }
+            } else {
+              return null;
+            }
+          }
         }
       }
-    } catch (ClassNotFoundException e) {
-      throw new Error(e);
     }
-    if (counter == result.length) {
-      return result;
-    }
-    if (counter == 0) {
-      return new Class[0];
-    }
-    Class[] result2 = new Class[counter];
-    System.arraycopy(result, 0, result2, 0, counter);
-    return result2;
+    return null;
   }
 
   public ClassLoader getClassLoader() {

@@ -243,6 +243,12 @@ public class Reflection {
     expect((Baz.class.getModifiers() & Modifier.PUBLIC) == 0);
 
     expect(B.class.getDeclaredMethods().length == 0);
+
+    new Runnable() {
+      public void run() {
+        expect(getClass().getDeclaringClass() == null);
+      }
+    }.run();
   }
 
   protected static class Baz {
