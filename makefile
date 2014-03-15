@@ -191,21 +191,20 @@ ifneq ($(android),)
 
 	crypto-native := $(android)/libcore/crypto/src/main/native
 
+   	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
+
 	ifeq ($(platform),windows)
-    	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
-			$(luni-native)/libcore_net_RawSocket.cpp \
-			$(luni-native)/org_apache_harmony_xnet_provider_jsse_NativeCrypto.cpp \
-
+			$(luni-native)/libcore_net_RawSocket.cpp
+			
 		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32
 	else
-		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \

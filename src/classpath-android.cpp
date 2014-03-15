@@ -2337,7 +2337,7 @@ Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
 void register_java_io_Console(_JNIEnv*) { }
 void register_java_lang_ProcessManager(_JNIEnv*) { }
 void register_libcore_net_RawSocket(_JNIEnv*) { }
-void register_org_apache_harmony_xnet_provider_jsse_NativeCrypto(_JNIEnv*) { }
+//void register_org_apache_harmony_xnet_provider_jsse_NativeCrypto(_JNIEnv*) { }
 
 extern "C" AVIAN_EXPORT void JNICALL
 Avian_libcore_io_OsConstants_initConstants
