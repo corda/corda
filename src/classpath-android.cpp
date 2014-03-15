@@ -895,6 +895,21 @@ jniStrError(int error, char* buffer, size_t length)
 #endif
 }
 
+/*
+ * Android log priority values (as text)
+ */
+const char * const androidLogPriorityTitles[] = {
+    "UNKNOWN",
+    "DEFAULT",
+    "VERBOSE",
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "FATAL",
+    "SILENT"
+};
+
 extern "C" int
 __android_log_print(int priority, const char* tag,  const char* format, ...)
 {
@@ -906,7 +921,11 @@ __android_log_print(int priority, const char* tag,  const char* format, ...)
   ::vsnprintf(buffer, size, format, a);
   va_end(a);
 
-  return fprintf(stderr, "%d %s %s\n", priority, tag, buffer);
+#ifndef PLATFORM_WINDOWS
+  return printf("[%s] %s: %s\n", androidLogPriorityTitles[priority], tag, buffer);
+#else
+  return __mingw_fprintf(stderr, "[%s] %s: %s\n", androidLogPriorityTitles[priority], tag, buffer);
+#endif
 }
 
 extern "C" int
