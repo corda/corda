@@ -230,6 +230,9 @@ ifneq ($(android),)
 		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
 	luni-javas := $(shell find $(luni-java) -name '*.java')
+	java-prop = $(android)/libcore/luni/src/main/java
+	java-props := $(shell find $(java-prop) -name '*.properties')
+	java-copied-props = $(call java-properties,$(java-props),$(java-prop),)
 	libdvm-java = $(android)/libcore/libdvm/src/main/java
 	libdvm-javas := $(shell find $(libdvm-java) -name '*.java')
 	crypto-java = $(android)/libcore/crypto/src/main/java
@@ -1094,6 +1097,7 @@ c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.$(asm-format),$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
+java-properties = $(foreach x,$(1),$(patsubst $(2)/%.properties,$(3)/%.properties,$(x)))
 
 generated-code = \
 	$(build)/type-enums.cpp \
@@ -1581,7 +1585,7 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
-		$(dalvik-javas) $(xml-javas)
+		$(dalvik-javas) $(xml-javas) $(java-props)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1601,6 +1605,9 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	rm $(build)/android/sun/misc/Unsafe* \
 		$(build)/android/java/lang/reflect/Proxy*
 	cp -r $(build)/android/* $(classpath-build)
+	for x in $(java-copied-props); \
+		do cp -f $(java-prop)$${x} $(build)/android$${x} ; \
+	done
 	@touch $(@)	
 
 $(test-build)/%.class: $(test)/%.java
