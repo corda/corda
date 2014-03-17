@@ -1155,8 +1155,6 @@ all-assembler-sources = \
 
 native-assembler-sources = $($(target-asm)-assembler-sources)
 
-audit-codegen-sources = $(wildcard $(src)/tools/audit-codegen/*.cpp)
-
 all-codegen-target-sources = \
 	$(compiler-sources) \
 	$(native-assembler-sources)
@@ -1322,7 +1320,6 @@ dynamic-library = $(build)/$(so-prefix)jvm$(so-suffix)
 executable-dynamic = $(build)/$(name)-dynamic$(exe-suffix)
 
 unittest-executable = $(build)/$(name)-unittest${exe-suffix}
-audit-codegen-executable = $(build)/audit-codegen${exe-suffix}
 
 ifneq ($(classpath),avian)
 # Assembler, ConstantPool, and Stream are not technically needed for a
@@ -1485,14 +1482,6 @@ endif
 .PHONY: jdk-test
 jdk-test: $(test-dep) $(build)/classpath.jar $(build)/jdk-run-tests.sh $(build)/test.sh
 	/bin/sh $(build)/jdk-run-tests.sh
-
-PHONY: audit-baseline
-audit-baseline: $(audit-codegen-executable)
-	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
-
-PHONY: audit
-audit: $(audit-codegen-executable)
-	$(<) -output $(build)/codegen-audit-output/baseline.o -format macho
 
 .PHONY: tarball
 tarball:
@@ -1657,9 +1646,6 @@ endif
 
 $(unittest-objects): $(build)/unittest/%.o: $(unittest)/%.cpp $(vm-depends) $(unittest-depends)
 	$(compile-unittest-object)
-
-$(build)/tools/audit-codegen/main.o: $(build)/%.o: $(src)/%.cpp $(vm-depends)
-	$(compile-object)
 
 $(test-cpp-objects): $(test-build)/%.o: $(test)/%.cpp $(vm-depends)
 	$(compile-object)
@@ -1845,13 +1831,6 @@ ifeq ($(process),interpret)
 	unittest-executable-objects += $(all-codegen-target-objects)
 endif
 
-audit-codegen-objects = $(call cpp-objects,$(audit-codegen-sources),$(src),$(build))
-audit-codegen-executable-objects = $(audit-codegen-objects) $(vm-objects) $(build)/util/arg-parser.o
-
-.PHONY: print
-print:
-	@echo $(audit-codegen-objects)
-
 # apparently, make does poorly with ifs inside of defines, and indented defines.
 # I suggest re-indenting the following before making edits (and unindenting afterwards):
 ifneq ($(platform),windows)
@@ -1889,9 +1868,6 @@ $(executable): $(executable-objects)
 	$(link-executable)
 
 $(unittest-executable): $(unittest-executable-objects)
-	$(link-executable)
-
-$(audit-codegen-executable): $(audit-codegen-executable-objects)
 	$(link-executable)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
