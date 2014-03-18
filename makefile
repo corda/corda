@@ -1606,7 +1606,7 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 		$(build)/android/java/lang/reflect/Proxy*
 	cp -r $(build)/android/* $(classpath-build)
 	for x in $(java-copied-props); \
-		do cp -f $(java-prop)$${x} $(build)/android$${x} ; \
+		do cp -f $(java-prop)$${x} $(classpath-build)$${x} ; \
 	done
 	@touch $(@)	
 
