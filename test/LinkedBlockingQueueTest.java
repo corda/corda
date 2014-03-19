@@ -7,32 +7,32 @@ public class LinkedBlockingQueueTest {
   
   public static void main(String[] args) throws InterruptedException {
     remainingCapacityTest();
-    QueueTest.sizeTest(new LinkedBlockingQueue<Object>());
-    QueueTest.isEmptyTest(new LinkedBlockingQueue<Object>());
-    QueueTest.addTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.sizeTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.isEmptyTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.addTest(new LinkedBlockingQueue<Object>());
     addCapacityFail();
     offerTest();
     offerWithTimeoutTest();
     offerTimeoutTest();
     putTest();
-    QueueTest.addAllTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.addAllTest(new LinkedBlockingQueue<Object>());
     addAllFail();
-    QueueTest.elementTest(new LinkedBlockingQueue<Object>());
-    QueueTest.elementFail(new LinkedBlockingQueue<Object>());
+    QueueHelper.elementTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.elementFail(new LinkedBlockingQueue<Object>());
     pollEmptyTest();
     pollTest();
     pollTimeoutTest();
     takeTest();
-    QueueTest.removeEmptyFail(new LinkedBlockingQueue<Object>());
-    QueueTest.removeTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.removeEmptyFail(new LinkedBlockingQueue<Object>());
+    QueueHelper.removeTest(new LinkedBlockingQueue<Object>());
     drainToTest();
     drainToLimitTest();
-    QueueTest.containsTest(new LinkedBlockingQueue<Object>());
-    QueueTest.containsAllTest(new LinkedBlockingQueue<Object>());
-    QueueTest.removeObjectTest(new LinkedBlockingQueue<Object>());
-    QueueTest.removeAllTest(new LinkedBlockingQueue<Object>());
-    QueueTest.clearTest(new LinkedBlockingQueue<Object>());
-    QueueTest.toArrayTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.containsTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.containsAllTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.removeObjectTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.removeAllTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.clearTest(new LinkedBlockingQueue<Object>());
+    QueueHelper.toArrayTest(new LinkedBlockingQueue<Object>());
   }
   
   private static void verify(boolean val) {

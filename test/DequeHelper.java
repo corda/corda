@@ -1,6 +1,6 @@
 import java.util.Deque;
 
-public class DequeTest {
+public class DequeHelper {
   private static void verify(boolean val) {
     if (! val) {
       throw new RuntimeException();

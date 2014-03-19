@@ -2,7 +2,7 @@ import java.util.LinkedList;
 import java.util.NoSuchElementException;
 import java.util.Queue;
 
-public class QueueTest {
+public class QueueHelper {
   private static void verify(boolean val) {
     if (! val) {
       throw new RuntimeException();

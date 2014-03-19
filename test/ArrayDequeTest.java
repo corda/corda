@@ -11,25 +11,25 @@ public class ArrayDequeTest {
   }
   
   public static void main(String[] args) throws InterruptedException {
-    QueueTest.sizeTest(new ArrayDeque<Object>());
-    QueueTest.isEmptyTest(new ArrayDeque<Object>());
-    QueueTest.addTest(new ArrayDeque<Object>());
-    QueueTest.addAllTest(new ArrayDeque<Object>());
-    QueueTest.elementTest(new ArrayDeque<Object>());
-    QueueTest.elementFail(new ArrayDeque<Object>());
-    QueueTest.removeEmptyFail(new ArrayDeque<Object>());
-    QueueTest.removeTest(new ArrayDeque<Object>());
-    QueueTest.containsTest(new ArrayDeque<Object>());
-    QueueTest.containsAllTest(new ArrayDeque<Object>());
-    QueueTest.removeObjectTest(new ArrayDeque<Object>());
-    QueueTest.removeAllTest(new ArrayDeque<Object>());
-    QueueTest.clearTest(new ArrayDeque<Object>());
-    QueueTest.toArrayTest(new ArrayDeque<Object>());
+    QueueHelper.sizeTest(new ArrayDeque<Object>());
+    QueueHelper.isEmptyTest(new ArrayDeque<Object>());
+    QueueHelper.addTest(new ArrayDeque<Object>());
+    QueueHelper.addAllTest(new ArrayDeque<Object>());
+    QueueHelper.elementTest(new ArrayDeque<Object>());
+    QueueHelper.elementFail(new ArrayDeque<Object>());
+    QueueHelper.removeEmptyFail(new ArrayDeque<Object>());
+    QueueHelper.removeTest(new ArrayDeque<Object>());
+    QueueHelper.containsTest(new ArrayDeque<Object>());
+    QueueHelper.containsAllTest(new ArrayDeque<Object>());
+    QueueHelper.removeObjectTest(new ArrayDeque<Object>());
+    QueueHelper.removeAllTest(new ArrayDeque<Object>());
+    QueueHelper.clearTest(new ArrayDeque<Object>());
+    QueueHelper.toArrayTest(new ArrayDeque<Object>());
     
-    DequeTest.addFirstTest(new ArrayDeque<Object>());
-    DequeTest.addLastTest(new ArrayDeque<Object>());
-    DequeTest.removeFirstTest(new ArrayDeque<Object>());
-    DequeTest.removeLastTest(new ArrayDeque<Object>());
+    DequeHelper.addFirstTest(new ArrayDeque<Object>());
+    DequeHelper.addLastTest(new ArrayDeque<Object>());
+    DequeHelper.removeFirstTest(new ArrayDeque<Object>());
+    DequeHelper.removeLastTest(new ArrayDeque<Object>());
     
     iterateTest(false);
     iterateTest(true);
