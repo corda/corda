@@ -1,5 +1,4 @@
 import java.util.ArrayDeque;
-import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.NoSuchElementException;
@@ -36,8 +35,6 @@ public class ArrayDequeTest {
     iterateTest(true);
     iteratorRemoveTest(false);
     iteratorRemoveTest(true);
-    iteratorConcurrentModificationFail(false);
-    iteratorConcurrentModificationFail(true);
     iteratorNoElementFail(false);
     iteratorNoElementFail(true);
   }
@@ -141,30 +138,6 @@ public class ArrayDequeTest {
     }
     while (testIt.hasNext()) {
       verify(testIt.next() == compIt.next());
-    }
-  }
-  
-  private static void iteratorConcurrentModificationFail(boolean desc) {
-    ArrayDeque<Object> ad = new ArrayDeque<Object>();
-    ad.add(new Object());
-    ad.add(new Object());
-    
-    Iterator<Object> testIt;
-    if (desc) {
-      testIt = ad.descendingIterator();
-    } else {
-      testIt = ad.iterator();
-    }
-
-    testIt.next();
-    try {
-      // modify structure
-      ad.add(new Object());
-
-      testIt.next();
-      throw new RuntimeException("Exception should have thrown");
-    } catch (ConcurrentModificationException e) {
-      // expected
     }
   }
   
