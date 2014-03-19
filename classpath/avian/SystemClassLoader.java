@@ -74,6 +74,21 @@ public class SystemClassLoader extends ClassLoader {
     return null;
   }
 
+  protected Package getPackage(String name) {
+    Package p = super.getPackage(name);
+    if (p == null) {
+      String source = getPackageSource(name);
+      if (source != null) {
+        // todo: load attributes from JAR manifest
+        definePackage(name, null, null, null, null, null, null, null);
+      }
+    }
+
+    return super.getPackage(name);
+  }
+
+  protected static native String getPackageSource(String name);
+
   // OpenJDK's java.lang.ClassLoader.getResource makes use of
   // sun.misc.Launcher to load bootstrap resources, which is not
   // appropriate for the Avian build, so we override it to ensure we

@@ -238,6 +238,36 @@ Avian_avian_SystemClassLoader_getClass
     (getJClass(t, reinterpret_cast<object>(arguments[0])));
 }
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_avian_SystemClassLoader_getPackageSource
+(Thread* t, object, uintptr_t* arguments)
+{
+  object name = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, name);
+
+  ACQUIRE(t, t->m->classLock);
+
+  THREAD_RUNTIME_ARRAY(t, char, chars, stringLength(t, name) + 2);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(chars));
+  replace('.', '/', RUNTIME_ARRAY_BODY(chars));
+  RUNTIME_ARRAY_BODY(chars)[stringLength(t, name)] = '/';
+  RUNTIME_ARRAY_BODY(chars)[stringLength(t, name) + 1] = 0;
+
+  object key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
+
+  object array = hashMapFind
+    (t, root(t, Machine::PackageMap), key, byteArrayHash, byteArrayEqual);
+
+  if (array) {
+    return reinterpret_cast<uintptr_t>
+      (makeLocalReference
+       (t, t->m->classpath->makeString
+        (t, array, 0, byteArrayLength(t, array))));
+  } else {
+    return 0;
+  }
+}
+
 #ifdef AVIAN_HEAPDUMP
 
 extern "C" AVIAN_EXPORT void JNICALL

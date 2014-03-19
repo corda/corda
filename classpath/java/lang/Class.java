@@ -559,8 +559,7 @@ public final class Class <T> implements Type, AnnotatedElement {
       String name = getCanonicalName();
       int index = name.lastIndexOf('.');
       if (index >= 0) {
-        return new Package(name.substring(0, index),
-                           null, null, null, null, null, null, null, null);
+        return getClassLoader().getPackage(name.substring(0, index));
       } else {
         return null;
       }

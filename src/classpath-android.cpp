@@ -22,6 +22,7 @@ extern "C" int JNI_OnLoad(JavaVM*, void*);
 #include "avian/machine.h"
 #include "avian/classpath-common.h"
 #include "avian/process.h"
+#include "avian/util.h"
 
 #ifdef PLATFORM_WINDOWS
 const char* getErrnoDescription(int err);		// This function is defined in mingw-extensions.cpp
@@ -488,21 +489,28 @@ class MyClasspath : public Classpath {
   }
 
   virtual void
-  boot(Thread*)
+  boot(Thread* t)
   {
-    // ignore
+    object c = resolveClass
+      (t, root(t, Machine::BootLoader), "java/lang/ClassLoader");
+    PROTECT(t, c);
+
+    object constructor = resolveMethod
+      (t, c, "<init>", "(Ljava/lang/ClassLoader;Z)V");
+    PROTECT(t, constructor);
+
+    t->m->processor->invoke
+      (t, constructor, root(t, Machine::BootLoader), 0, true);
+
+    t->m->processor->invoke
+      (t, constructor, root(t, Machine::AppLoader),
+       root(t, Machine::BootLoader), false);
   }
 
   virtual const char*
   bootClasspath()
   {
     return AVIAN_CLASSPATH;
-  }
-
-  virtual void
-  updatePackageMap(Thread*, object)
-  {
-    // ignore
   }
 
   virtual object
