@@ -17,9 +17,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Map;
+import java.util.HashMap;
 
 public abstract class ClassLoader {
   private final ClassLoader parent;
+  private Map<String, Package> packages;
 
   protected ClassLoader(ClassLoader parent) {
     if (parent == null) {
@@ -32,6 +35,45 @@ public abstract class ClassLoader {
   protected ClassLoader() {
     this(getSystemClassLoader());
   }
+
+  private Map<String, Package> packages() {
+    if (packages == null) {
+      packages = new HashMap();
+    }
+    return packages;
+  }
+
+  protected Package getPackage(String name) {
+    synchronized (this) {
+      return packages().get(name);
+    }
+  }
+
+  protected Package[] getPackages() {
+    synchronized (this) {
+      return packages().values().toArray(new Package[packages().size()]);
+    }
+  }
+
+  protected Package definePackage(String name,
+                                  String specificationTitle,
+                                  String specificationVersion,
+                                  String specificationVendor,
+                                  String implementationTitle,
+                                  String implementationVersion,
+                                  String implementationVendor,
+                                  URL sealBase)
+    {
+      Package p = new Package
+        (name, implementationTitle, implementationVersion,
+         implementationVendor, specificationTitle, specificationVersion,
+         specificationVendor, sealBase, this);
+
+      synchronized (this) {
+        packages().put(name, p);
+        return p;
+      }
+    }
 
   public static ClassLoader getSystemClassLoader() {
     return ClassLoader.class.getClassLoader();

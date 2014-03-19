@@ -3042,6 +3042,61 @@ findInTable(Thread* t, object table, object name, object spec,
   return 0;
 }
 
+void
+updatePackageMap(Thread* t, object class_)
+{
+  PROTECT(t, class_);
+
+  if (root(t, Machine::PackageMap) == 0) {
+    setRoot(t, Machine::PackageMap, makeHashMap(t, 0, 0));
+  }
+
+  object className = vm::className(t, class_);
+  if ('[' != byteArrayBody(t, className, 0)) {
+    THREAD_RUNTIME_ARRAY
+      (t, char, packageName, byteArrayLength(t, className));
+
+    char* s = reinterpret_cast<char*>(&byteArrayBody(t, className, 0));
+    char* p = strrchr(s, '/');
+
+    if (p) {
+      int length = (p - s) + 1;
+      memcpy(RUNTIME_ARRAY_BODY(packageName),
+             &byteArrayBody(t, className, 0),
+             length);
+      RUNTIME_ARRAY_BODY(packageName)[length] = 0;
+
+      object key = vm::makeByteArray
+        (t, "%s", RUNTIME_ARRAY_BODY(packageName));
+      PROTECT(t, key);
+
+      hashMapRemove
+        (t, root(t, Machine::PackageMap), key, byteArrayHash,
+         byteArrayEqual);
+
+      object source = classSource(t, class_);
+      if (source) {
+        // note that we strip the "file:" prefix, since OpenJDK's
+        // Package.defineSystemPackage expects an unadorned filename:
+        const unsigned PrefixLength = 5;
+        unsigned sourceNameLength = byteArrayLength(t, source)
+          - PrefixLength;
+        THREAD_RUNTIME_ARRAY(t, char, sourceName, sourceNameLength);
+        memcpy(RUNTIME_ARRAY_BODY(sourceName),
+               &byteArrayBody(t, source, PrefixLength),
+               sourceNameLength);
+
+        source = vm::makeByteArray(t, "%s", RUNTIME_ARRAY_BODY(sourceName));
+      } else {
+        source = vm::makeByteArray(t, "avian-dummy-package-source");
+      }
+
+      hashMapInsert
+        (t, root(t, Machine::PackageMap), key, source, byteArrayHash);
+    }
+  }
+}
+
 } // namespace
 
 namespace vm {
@@ -4295,7 +4350,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
     if (class_) {
       hashMapInsert(t, classLoaderMap(t, loader), spec, class_, byteArrayHash);
 
-      t->m->classpath->updatePackageMap(t, class_);
+      updatePackageMap(t, class_);
     } else if (throw_) {
       throwNew(t, throwType, "%s", &byteArrayBody(t, spec, 0));
     }

@@ -133,12 +133,6 @@ class MyClasspath : public Classpath {
     return AVIAN_CLASSPATH;
   }
 
-  virtual void
-  updatePackageMap(Thread*, object)
-  {
-    // ignore
-  }
-
   virtual object
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
