@@ -1,11 +1,22 @@
+/* Copyright (c) 2008-2014, Avian Contributors
+
+   Permission to use, copy, modify, and/or distribute this software
+   for any purpose with or without fee is hereby granted, provided
+   that the above copyright notice and this permission notice appear
+   in all copies.
+
+   There is NO WARRANTY for this software.  See license.txt for
+   details. */
+
 package java.util.concurrent;
 
+import java.util.AbstractQueue;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 
-public class LinkedBlockingQueue<T> implements BlockingQueue<T> {
+public class LinkedBlockingQueue<T> extends AbstractQueue<T> 
+                                    implements BlockingQueue<T> {
   private final Object collectionLock;
   private final LinkedList<T> storage;
   private final int capacity;
@@ -85,15 +96,6 @@ public class LinkedBlockingQueue<T> implements BlockingQueue<T> {
   }
 
   @Override
-  public boolean add(T element) {
-    if (! offer(element)) {
-      throw new IllegalStateException("At capacity");
-    }
-    
-    return true;
-  }
-
-  @Override
   public boolean offer(T element) {
     synchronized (collectionLock) {
       if (capacity > storage.size()) {
@@ -158,17 +160,6 @@ public class LinkedBlockingQueue<T> implements BlockingQueue<T> {
     }
   }
 
-  @Override
-  public T element() {
-    T result = peek();
-    
-    if (result == null) {
-      throw new NoSuchElementException();
-    }
-    
-    return result;
-  }
-
   // should be synchronized on collectionLock before calling
   private T removeFirst() {
     T result = storage.removeFirst();
@@ -210,17 +201,6 @@ public class LinkedBlockingQueue<T> implements BlockingQueue<T> {
   }
 
   @Override
-  public T remove() {
-    T result = poll();
-    
-    if (result == null) {
-      throw new NoSuchElementException();
-    }
-    
-    return result;
-  }
-
-  @Override
   public int drainTo(Collection<? super T> c) {
     return drainTo(c, Integer.MAX_VALUE);
   }
@@ -254,11 +234,6 @@ public class LinkedBlockingQueue<T> implements BlockingQueue<T> {
     synchronized (collectionLock) {
       return storage.size();
     }
-  }
-
-  @Override
-  public boolean isEmpty() {
-    return size() == 0;
   }
 
   @Override

@@ -16,6 +16,7 @@ public abstract class AbstractQueue<T> extends AbstractCollection<T> implements 
     super();
   }
   
+  @Override
   public boolean add(T element) {
     if (offer(element)) {
       return true;
@@ -23,7 +24,8 @@ public abstract class AbstractQueue<T> extends AbstractCollection<T> implements 
       throw new IllegalStateException();
     }
   }
-  
+
+  @Override
   public boolean addAll(Collection <? extends T> collection) {
     if (collection == null) {
       throw new NullPointerException();
@@ -35,26 +37,31 @@ public abstract class AbstractQueue<T> extends AbstractCollection<T> implements 
 
     return true;
   }
-  
+
+  @Override
   public void clear() {
     while (size() > 0) {
       poll();
     }
   }
-  
+
+  @Override
   public T element() {
-    emptyCheck();
-    return peek();
-  }
-  
-  public T remove() {
-    emptyCheck();
-    return poll();
-  }
-  
-  private void emptyCheck() {
-    if (size() == 0) {
+    T result = peek();
+    if (result == null) {
       throw new NoSuchElementException();
+    } else {
+      return result;
+    }
+  }
+
+  @Override
+  public T remove() {
+    T result = poll();
+    if (result == null) {
+      throw new NoSuchElementException();
+    } else {
+      return result;
     }
   }
 }
