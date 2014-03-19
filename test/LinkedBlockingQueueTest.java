@@ -1,40 +1,38 @@
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-
 
 public class LinkedBlockingQueueTest {
   private static final int DELAY_TILL_ACTION = 10;
   
   public static void main(String[] args) throws InterruptedException {
     remainingCapacityTest();
-    sizeTest();
-    isEmptyTest();
-    addTest();
+    QueueTest.sizeTest(new LinkedBlockingQueue<Object>());
+    QueueTest.isEmptyTest(new LinkedBlockingQueue<Object>());
+    QueueTest.addTest(new LinkedBlockingQueue<Object>());
     addCapacityFail();
     offerTest();
     offerWithTimeoutTest();
     offerTimeoutTest();
     putTest();
-    addAllTest();
+    QueueTest.addAllTest(new LinkedBlockingQueue<Object>());
     addAllFail();
-    elementTest();
-    elementFail();
+    QueueTest.elementTest(new LinkedBlockingQueue<Object>());
+    QueueTest.elementFail(new LinkedBlockingQueue<Object>());
     pollEmptyTest();
     pollTest();
     pollTimeoutTest();
     takeTest();
-    removeEmptyTest();
-    removeTest();
+    QueueTest.removeEmptyFail(new LinkedBlockingQueue<Object>());
+    QueueTest.removeTest(new LinkedBlockingQueue<Object>());
     drainToTest();
     drainToLimitTest();
-    containsTest();
-    containsAllTest();
-    removeObjectTest();
-    removeAllTest();
-    clearTest();
-    toArrayTest();
+    QueueTest.containsTest(new LinkedBlockingQueue<Object>());
+    QueueTest.containsAllTest(new LinkedBlockingQueue<Object>());
+    QueueTest.removeObjectTest(new LinkedBlockingQueue<Object>());
+    QueueTest.removeAllTest(new LinkedBlockingQueue<Object>());
+    QueueTest.clearTest(new LinkedBlockingQueue<Object>());
+    QueueTest.toArrayTest(new LinkedBlockingQueue<Object>());
   }
   
   private static void verify(boolean val) {
@@ -49,31 +47,6 @@ public class LinkedBlockingQueueTest {
 
     lbq.add(new Object());
     verify(lbq.remainingCapacity() == 1);
-  }
-  
-  private static void sizeTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    verify(lbq.size() == 0);
-    
-    lbq.add(new Object());
-    verify(lbq.size() == 1);
-  }
-  
-  private static void isEmptyTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    verify(lbq.isEmpty());
-    
-    lbq.add(new Object());
-    verify(! lbq.isEmpty());
-  }
-  
-  private static void addTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    verify(lbq.size() == 1);
-    verify(lbq.peek() == testObject);
   }
   
   private static void addCapacityFail() {
@@ -139,20 +112,6 @@ public class LinkedBlockingQueueTest {
     verify(lbq.peek() == testObject);
   }
   
-  private static void addAllTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    LinkedList<Object> toAdd = new LinkedList<Object>();
-    toAdd.add(new Object());
-    toAdd.add(new Object());
-    
-    lbq.addAll(toAdd);
-    
-    verify(lbq.size() == toAdd.size());
-    while (! lbq.isEmpty()) {
-      verify(lbq.remove() == toAdd.remove());
-    }
-  }
-  
   private static void addAllFail() {
     LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>(1);
     LinkedList<Object> toAdd = new LinkedList<Object>();
@@ -163,25 +122,6 @@ public class LinkedBlockingQueueTest {
       lbq.addAll(toAdd);
       throw new RuntimeException("Exception should have thrown");
     } catch (IllegalStateException e) {
-      // expected
-    }
-  }
-  
-  private static void elementTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    verify(lbq.element() == testObject);
-  }
-  
-  private static void elementFail() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    
-    try {
-      lbq.element();
-      throw new RuntimeException("Exception should have thrown");
-    } catch (NoSuchElementException e) {
       // expected
     }
   }
@@ -240,25 +180,6 @@ public class LinkedBlockingQueueTest {
     verify(lbq.take() == testObject);
   }
   
-  private static void removeEmptyTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    
-    try {
-      lbq.remove();
-      throw new RuntimeException("Exception should have thrown");
-    } catch (NoSuchElementException e) {
-      // expected
-    }
-  }
-  
-  private static void removeTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    verify(lbq.remove() == testObject);
-  }
-  
   private static void drainToTest() {
     int objQty = 2;
     LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
@@ -283,79 +204,5 @@ public class LinkedBlockingQueueTest {
     verify(lbq.drainTo(drainToResult, limit) == limit);
     verify(drainToResult.size() == limit);
     verify(lbq.size() == objQty - limit);
-  }
-  
-  private static void containsTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    
-    verify(! lbq.contains(testObject));
-    
-    lbq.add(testObject);
-    verify(lbq.contains(testObject));
-  }
-  
-  private static void containsAllTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    LinkedList<Object> testList = new LinkedList<Object>();
-    testList.add(testObject);
-    testList.add(new Object());
-    
-    verify(! lbq.containsAll(testList));
-    
-    lbq.addAll(testList);
-    verify(lbq.containsAll(testList));
-  }
-  
-  private static void removeObjectTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    
-    verify(! lbq.remove(testObject));
-    
-    lbq.add(testObject);
-    verify(lbq.remove(testObject));
-  }
-  
-  private static void removeAllTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    LinkedList<Object> testList = new LinkedList<Object>();
-    testList.add(testObject);
-    testList.add(new Object());
-    
-    verify(lbq.removeAll(testList));
-    
-    lbq.addAll(testList);
-    verify(lbq.removeAll(testList));
-  }
-  
-  private static void clearTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    lbq.add(new Object());
-    
-    lbq.clear();
-    
-    verify(lbq.isEmpty());
-  }
-  
-  private static void toArrayTest() {
-    LinkedBlockingQueue<Object> lbq = new LinkedBlockingQueue<Object>();
-    
-    if (lbq.toArray().length != 0) {
-      throw new RuntimeException();
-    }
-
-    Object testObject = new Object();
-    lbq.add(testObject);
-    
-    Object[] result = lbq.toArray();
-    verify(result.length == 1);
-    verify(result[0] == testObject);
   }
 }
