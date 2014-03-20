@@ -126,7 +126,7 @@ public class Data {
     }
 
     public <T> T[] toArray(T[] array) {
-      return toArray(this, array);      
+      return Data.toArray(this, array);      
     }
 
     public void clear() {
@@ -170,7 +170,7 @@ public class Data {
     }
 
     public <T> T[] toArray(T[] array) {
-      return toArray(this, array);      
+      return Data.toArray(this, array);      
     }
 
     public void clear() {
@@ -256,7 +256,7 @@ public class Data {
     }
 
     public <T> T[] toArray(T[] array) {
-      return toArray(this, array);      
+      return Data.toArray(this, array);      
     }
 
     public void clear() {

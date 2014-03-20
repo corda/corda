@@ -1577,9 +1577,6 @@ class Classpath {
   virtual const char*
   bootClasspath() = 0;
 
-  virtual void
-  updatePackageMap(Thread* t, object class_) = 0;
-
   virtual object
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity) = 0;
 

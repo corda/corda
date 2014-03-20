@@ -249,6 +249,9 @@ public class Reflection {
         expect(getClass().getDeclaringClass() == null);
       }
     }.run();
+
+    expect(avian.testing.annotations.Test.class.getPackage().getName().equals
+           ("avian.testing.annotations"));
   }
 
   protected static class Baz {
