@@ -2,7 +2,7 @@ package extra;
 
 import static avian.Continuations.callWithCurrentContinuation;
 
-import avian.CallbackReceiver;
+import avian.Function;
 import avian.Callback;
 
 public class Coroutines {
@@ -40,8 +40,8 @@ public class Coroutines {
 
     final Consumer<Character> consumer = new Consumer<Character>() {
       public void consume(final Character c) throws Exception {
-        callWithCurrentContinuation(new CallbackReceiver() {
-          public Object receive(Callback continuation) {
+        callWithCurrentContinuation(new Function<Callback<Object>,Object>() {
+          public Object call(Callback continuation) {
             state.produceNext = continuation;
 
             state.consumeNext.handleResult(c);
@@ -53,9 +53,9 @@ public class Coroutines {
     };
 
     final Producer<Character> producer = new Producer<Character>() {
-      final CallbackReceiver<Character> receiver
-      = new CallbackReceiver<Character>() {
-        public Character receive(Callback<Character> continuation)
+      final Function<Callback<Character>,Character> receiver
+      = new Function<Callback<Character>,Character>() {
+        public Character call(Callback<Character> continuation)
         throws Exception
         {
           state.consumeNext = continuation;

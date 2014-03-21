@@ -127,14 +127,14 @@ public class Continuations {
    * specified receiver.
    *
    * <p>This method will either return the result returned by
-   * <code>receiver.receive(Callback)</code>, propagate the exception
+   * <code>receiver.call(Callback)</code>, propagate the exception
    * thrown by that method, return the result passed to the
    * handleResult(T) method of the continuation, or throw the
    * exception passed to the handleException(Throwable) method of the
    * continuation.
    */
   public static native <T> T callWithCurrentContinuation
-    (CallbackReceiver<T> receiver) throws Exception;
+    (Function<Callback<T>,T> receiver) throws Exception;
 
   /**
    * Calls the specified "before" and "after" tasks each time a
@@ -183,13 +183,13 @@ public class Continuations {
     }
   }
 
-  public static <T> T reset(final Callable<T> thunk) throws Exception {
+  public static <B,C> C reset(final Callable<B> thunk) throws Exception {
     final Reset reset = new Reset(latestReset.get());
     latestReset.set(reset);
     try {
-      T result = callWithCurrentContinuation
-        (new CallbackReceiver<T>() {
-          public T receive(Callback<T> continuation) throws Exception {
+      C result = (C) callWithCurrentContinuation
+        (new Function<Callback<Object>,Object>() {
+          public Object call(Callback continuation) throws Exception {
             reset.continuation = continuation;
             return thunk.call();
           }
@@ -207,26 +207,26 @@ public class Continuations {
     }
   }
 
-  public static <T> T shift
-    (final FunctionReceiver<T> receiver)
+  public static <A,B,C> A shift
+    (final Function<Function<A,B>,C> receiver)
     throws Exception
   {
-    return (T) callWithCurrentContinuation(new CallbackReceiver() {
-        public Object receive(final Callback continuation) {
+    return (A) callWithCurrentContinuation
+      (new Function<Callback<Object>,Object>() {
+        public Object call(final Callback continuation) {
           final Reset reset = latestReset.get();
           reset.shifts = new Cell(new Callback() {
               public void handleResult(Object ignored) {
                 try {
                   reset.continuation.handleResult
-                    (receiver.receive
+                    (receiver.call
                      (new Function() {
                          public Object call(final Object argument)
                            throws Exception
                          {
                            return callWithCurrentContinuation
-                             (new CallbackReceiver() {
-                                 public Object receive
-                                   (Callback shiftContinuation)
+                             (new Function<Callback<Object>,Object>() {
+                                 public Object call(Callback shiftContinuation)
                                    throws Exception
                                  {
                                    reset.shifts = new Cell

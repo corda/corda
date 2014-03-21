@@ -3,7 +3,7 @@ package extra;
 import static avian.Continuations.callWithCurrentContinuation;
 import static avian.Continuations.dynamicWind;
 
-import avian.CallbackReceiver;
+import avian.Function;
 import avian.Callback;
 
 import java.util.concurrent.Callable;
@@ -86,24 +86,27 @@ public class DynamicWind {
       });
   }
 
-  private void continuationUnwindTest(final CallbackReceiver<Integer> receiver)
+  private void continuationUnwindTest
+    (final Function<Callback<Integer>,Integer> receiver)
     throws Exception
   {
     System.out.println("continuationUnwindTest enter");
             
     try {
-      expect(callWithCurrentContinuation(new CallbackReceiver<Integer>() {
-            public Integer receive(final Callback<Integer> continuation)
-              throws Exception
-            {
-              unwindTest(new Callable<Integer>() {
-                  public Integer call() throws Exception {
-                    return receiver.receive(continuation);
-                  }
-                });
-              throw new AssertionError();
-            }
-          }) == 42);
+      expect
+        (callWithCurrentContinuation
+         (new Function<Callback<Integer>,Integer>() {
+           public Integer call(final Callback<Integer> continuation)
+             throws Exception
+           {
+             unwindTest(new Callable<Integer>() {
+                 public Integer call() throws Exception {
+                   return receiver.call(continuation);
+                 }
+               });
+             throw new AssertionError();
+           }
+         }) == 42);
     } catch (MyException e) {
       e.printStackTrace();
     }
@@ -118,8 +121,8 @@ public class DynamicWind {
   }
 
   private void continuationResultUnwind() throws Exception {
-    continuationUnwindTest(new CallbackReceiver<Integer>() {
-          public Integer receive(final Callback<Integer> continuation) {
+    continuationUnwindTest(new Function<Callback<Integer>,Integer>() {
+          public Integer call(final Callback<Integer> continuation) {
             continuation.handleResult(42);
             throw new AssertionError();
           }
@@ -127,8 +130,8 @@ public class DynamicWind {
   }
 
   private void continuationExceptionUnwind() throws Exception {
-    continuationUnwindTest(new CallbackReceiver<Integer>() {
-          public Integer receive(final Callback<Integer> continuation) {
+    continuationUnwindTest(new Function<Callback<Integer>,Integer>() {
+          public Integer call(final Callback<Integer> continuation) {
             continuation.handleException(new MyException());
             throw new AssertionError();
           }
@@ -163,8 +166,8 @@ public class DynamicWind {
             task = 1;
         
             return callWithCurrentContinuation
-            (new CallbackReceiver<Integer>() {
-              public Integer receive(final Callback<Integer> continuation)
+            (new Function<Callback<Integer>,Integer>() {
+              public Integer call(final Callback<Integer> continuation)
                 throws Exception
               {
                 continuationReference = continuation;
