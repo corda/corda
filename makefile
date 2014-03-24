@@ -1330,7 +1330,6 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
-		$(classpath-src)/avian/CallbackReceiver.java \
 		$(classpath-src)/avian/ClassAddendum.java \
 		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Classes.java \
@@ -1338,7 +1337,6 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
 		$(classpath-src)/avian/Function.java \
-		$(classpath-src)/avian/FunctionReceiver.java \
 		$(classpath-src)/avian/IncompatibleContinuationException.java \
 		$(classpath-src)/avian/Machine.java \
 		$(classpath-src)/avian/MethodAddendum.java \
