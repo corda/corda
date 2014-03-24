@@ -192,7 +192,7 @@ ifneq ($(android),)
 	crypto-native := $(android)/libcore/crypto/src/main/native
 
 	ifeq ($(platform),windows)
-    	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
+		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
@@ -1330,13 +1330,13 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
-		$(classpath-src)/avian/CallbackReceiver.java \
 		$(classpath-src)/avian/ClassAddendum.java \
 		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Classes.java \
 		$(classpath-src)/avian/ConstantPool.java \
 		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
+		$(classpath-src)/avian/Function.java \
 		$(classpath-src)/avian/IncompatibleContinuationException.java \
 		$(classpath-src)/avian/Machine.java \
 		$(classpath-src)/avian/MethodAddendum.java \
@@ -1397,6 +1397,7 @@ unittest-depends = \
 
 ifeq ($(continuations),true)
 	continuation-tests = \
+		extra.ComposableContinuations \
 		extra.Continuations \
 		extra.Coroutines \
 		extra.DynamicWind

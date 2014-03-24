@@ -120,19 +120,21 @@ import java.util.concurrent.Callable;
 public class Continuations {
   private Continuations() { }
 
+  private static final ThreadLocal<Reset> latestReset = new ThreadLocal();
+
   /**
    * Captures the current continuation, passing a reference to the
    * specified receiver.
    *
    * <p>This method will either return the result returned by
-   * <code>receiver.receive(Callback)</code>, propagate the exception
+   * <code>receiver.call(Callback)</code>, propagate the exception
    * thrown by that method, return the result passed to the
    * handleResult(T) method of the continuation, or throw the
    * exception passed to the handleException(Throwable) method of the
    * continuation.
    */
   public static native <T> T callWithCurrentContinuation
-    (CallbackReceiver<T> receiver) throws Exception;
+    (Function<Callback<T>,T> receiver) throws Exception;
 
   /**
    * Calls the specified "before" and "after" tasks each time a
@@ -179,6 +181,83 @@ public class Continuations {
     } else {
       return (T) result.result;
     }
+  }
+
+  public static <B,C> C reset(final Callable<B> thunk) throws Exception {
+    final Reset reset = new Reset(latestReset.get());
+    latestReset.set(reset);
+    try {
+      Object result = callWithCurrentContinuation
+        (new Function<Callback<Object>,Object>() {
+          public Object call(Callback continuation) throws Exception {
+            reset.continuation = continuation;
+            return thunk.call();
+          }
+        });
+
+      while (true) {
+        Cell<Function> shift = reset.shifts;
+        if (shift != null) {
+          reset.shifts = shift.next;
+          result = shift.value.call(result);
+        } else {
+          return (C) result;
+        }
+      }
+    } finally {
+      latestReset.set(reset.next);
+    }
+  }
+
+  public static <A,B,C> A shift
+    (final Function<Function<A,B>,C> receiver)
+    throws Exception
+  {
+    return (A) callWithCurrentContinuation
+      (new Function<Callback<Object>,Object>() {
+        public Object call(final Callback continuation) {
+          final Reset reset = latestReset.get();
+          reset.shifts = new Cell(new Function() {
+              public Object call(Object ignored) throws Exception {
+                return receiver.call
+                  (new Function() {
+                      public Object call(final Object argument)
+                        throws Exception
+                      {
+                        return callWithCurrentContinuation
+                          (new Function<Callback<Object>,Object>() {
+                            public Object call
+                              (final Callback shiftContinuation)
+                              throws Exception
+                            {
+                              reset.shifts = new Cell
+                                (new Function() {
+                                    public Object call(Object result)
+                                      throws Exception
+                                    {
+                                      shiftContinuation.handleResult(result);
+                                      throw new AssertionError();
+                                    }
+                                  },
+                                  reset.shifts);
+
+                              continuation.handleResult(argument);
+                              throw new AssertionError();
+                            }
+                          });
+                      }
+                    });
+              }
+
+              public void handleException(Throwable exception) {
+                throw new AssertionError();
+              }
+            }, reset.shifts);
+
+          reset.continuation.handleResult(null);
+          throw new AssertionError();
+        }
+      });
   }
 
   private static native UnwindResult dynamicWind2(Runnable before,
@@ -233,6 +312,16 @@ public class Continuations {
       this.continuation = continuation;
       this.result = result;
       this.exception = exception;
+    }
+  }
+
+  private static class Reset {
+    public Callback continuation;
+    public final Reset next;
+    public Cell<Function> shifts;
+
+    public Reset(Reset next) {
+      this.next = next;
     }
   }
 }

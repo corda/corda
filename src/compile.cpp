@@ -8044,8 +8044,8 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
     if (root(t, ReceiveMethod) == 0) {
       object m = resolveMethod
-        (t, root(t, Machine::BootLoader), "avian/CallbackReceiver", "receive",
-         "(Lavian/Callback;)Ljava/lang/Object;");
+        (t, root(t, Machine::BootLoader), "avian/Function", "call",
+         "(Ljava/lang/Object;)Ljava/lang/Object;");
 
       if (m) {
         setRoot(t, ReceiveMethod, m);
