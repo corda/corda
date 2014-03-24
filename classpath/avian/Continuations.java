@@ -324,14 +324,4 @@ public class Continuations {
       this.next = next;
     }
   }
-
-  private static class Cell<T> {
-    public final T value;
-    public final Cell<T> next;
-
-    public Cell(T value, Cell<T> next) {
-      this.value = value;
-      this.next = next;
-    }
-  }
 }

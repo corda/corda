@@ -1,7 +1,10 @@
 package extra;
 
 import static avian.Continuations.shift;
+import static avian.Cell.cons;
+import static avian.Cell.equal;
 
+import avian.Cell;
 import avian.Function;
 import avian.Continuations;
 
@@ -86,48 +89,5 @@ public class ComposableContinuations {
                 }), "UTF-8");
           }
         }), 42));
-  }
-
-  private static <T> boolean equal(T a, T b) {
-    return (a == null && b == null) || (a != null && a.equals(b));
-  }
-  
-  private static <Car> boolean equal(Cell<Car> a, Cell<Car> b) {
-    while (a != null) {
-      if (b == null || (! equal(a.car, b.car))) {
-        return false;
-      }
-      a = a.cdr;
-      b = b.cdr;
-    }
-
-    return b == null;
-  }
-
-  private static <Car> Cell<Car> cons(Car car, Cell<Car> cdr) {
-    return new Cell(car, cdr);
-  }
-
-  private static class Cell<Car> {
-    public final Car car;
-    public final Cell<Car> cdr;
-
-    public Cell(Car car, Cell<Car> cdr) {
-      this.car = car;
-      this.cdr = cdr;
-    }
-
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append("(");
-      for (Cell<Car> c = this; c != null; c = c.cdr) {
-        sb.append(c.car);
-        if (c.cdr != null) {
-          sb.append(", ");
-        }
-      }
-      sb.append(")");
-      return sb.toString();
-    }
   }
 }
