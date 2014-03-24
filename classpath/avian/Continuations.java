@@ -187,7 +187,7 @@ public class Continuations {
     final Reset reset = new Reset(latestReset.get());
     latestReset.set(reset);
     try {
-      C result = (C) callWithCurrentContinuation
+      Object result = callWithCurrentContinuation
         (new Function<Callback<Object>,Object>() {
           public Object call(Callback continuation) throws Exception {
             reset.continuation = continuation;
@@ -195,13 +195,15 @@ public class Continuations {
           }
         });
 
-      Cell<Callback> shift = reset.shifts;
-      if (shift != null) {
-        reset.shifts = shift.next;
-        shift.value.handleResult(result);
+      while (true) {
+        Cell<Function> shift = reset.shifts;
+        if (shift != null) {
+          reset.shifts = shift.next;
+          result = shift.value.call(result);
+        } else {
+          return (C) result;
+        }
       }
-
-      return result;
     } finally {
       latestReset.set(reset.next);
     }
@@ -215,32 +217,36 @@ public class Continuations {
       (new Function<Callback<Object>,Object>() {
         public Object call(final Callback continuation) {
           final Reset reset = latestReset.get();
-          reset.shifts = new Cell(new Callback() {
-              public void handleResult(Object ignored) {
-                try {
-                  reset.continuation.handleResult
-                    (receiver.call
-                     (new Function() {
-                         public Object call(final Object argument)
-                           throws Exception
-                         {
-                           return callWithCurrentContinuation
-                             (new Function<Callback<Object>,Object>() {
-                                 public Object call(Callback shiftContinuation)
-                                   throws Exception
-                                 {
-                                   reset.shifts = new Cell
-                                     (shiftContinuation, reset.shifts);
+          reset.shifts = new Cell(new Function() {
+              public Object call(Object ignored) throws Exception {
+                return receiver.call
+                  (new Function() {
+                      public Object call(final Object argument)
+                        throws Exception
+                      {
+                        return callWithCurrentContinuation
+                          (new Function<Callback<Object>,Object>() {
+                            public Object call
+                              (final Callback shiftContinuation)
+                              throws Exception
+                            {
+                              reset.shifts = new Cell
+                                (new Function() {
+                                    public Object call(Object result)
+                                      throws Exception
+                                    {
+                                      shiftContinuation.handleResult(result);
+                                      throw new AssertionError();
+                                    }
+                                  },
+                                  reset.shifts);
 
-                                   continuation.handleResult(argument);
-                                   throw new AssertionError();
-                                 }
-                               });
-                         }
-                       }));
-                } catch (Exception e) {
-                  reset.continuation.handleException(e);
-                }
+                              continuation.handleResult(argument);
+                              throw new AssertionError();
+                            }
+                          });
+                      }
+                    });
               }
 
               public void handleException(Throwable exception) {
@@ -312,7 +318,7 @@ public class Continuations {
   private static class Reset {
     public Callback continuation;
     public final Reset next;
-    public Cell<Callback> shifts;
+    public Cell<Function> shifts;
 
     public Reset(Reset next) {
       this.next = next;
