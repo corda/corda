@@ -1330,6 +1330,7 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
+		$(classpath-src)/avian/Cell.java \
 		$(classpath-src)/avian/ClassAddendum.java \
 		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Classes.java \
