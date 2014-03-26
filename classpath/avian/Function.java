@@ -10,6 +10,6 @@
 
 package avian;
 
-public interface CallbackReceiver<T> {
-  public T receive(Callback<T> callback) throws Exception;
+public interface Function<A,B> {
+  public B call(A argument) throws Exception;
 }

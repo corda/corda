@@ -2,7 +2,7 @@ package extra;
 
 import static avian.Continuations.callWithCurrentContinuation;
 
-import avian.CallbackReceiver;
+import avian.Function;
 import avian.Callback;
 
 public class Continuations {
@@ -11,22 +11,26 @@ public class Continuations {
   }
 
   public static void main(String[] args) throws Exception {
-    expect(callWithCurrentContinuation(new CallbackReceiver<Integer>() {
-          public Integer receive(Callback<Integer> continuation) {
-            continuation.handleResult(42);
-            throw new AssertionError();
-          }
-        }) == 42);
+    expect
+      (callWithCurrentContinuation
+       (new Function<Callback<Integer>,Integer>() {
+         public Integer call(Callback<Integer> continuation) {
+           continuation.handleResult(42);
+           throw new AssertionError();
+         }
+       }) == 42);
 
-    expect(callWithCurrentContinuation(new CallbackReceiver<Integer>() {
-          public Integer receive(Callback<Integer> continuation) {
-            return 43;
-          }
-        }) == 43);
+    expect
+      (callWithCurrentContinuation
+       (new Function<Callback<Integer>,Integer>() {
+         public Integer call(Callback<Integer> continuation) {
+           return 43;
+         }
+       }) == 43);
 
     try {
-      callWithCurrentContinuation(new CallbackReceiver<Integer>() {
-          public Integer receive(Callback<Integer> continuation) {
+      callWithCurrentContinuation(new Function<Callback<Integer>,Integer>() {
+          public Integer call(Callback<Integer> continuation) {
             continuation.handleException(new MyException());
             throw new AssertionError();
           }
@@ -37,8 +41,8 @@ public class Continuations {
     }
 
     try {
-      callWithCurrentContinuation(new CallbackReceiver<Integer>() {
-          public Integer receive(Callback<Integer> continuation)
+      callWithCurrentContinuation(new Function<Callback<Integer>,Integer>() {
+          public Integer call(Callback<Integer> continuation)
             throws MyException
           {
             throw new MyException();
