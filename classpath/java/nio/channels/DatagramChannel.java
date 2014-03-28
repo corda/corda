@@ -26,7 +26,7 @@ public class DatagramChannel extends SelectableChannel
 {
   public static final int InvalidSocket = -1;
 
-  private int socket = InvalidSocket;
+  private int socket = makeSocket();
   private boolean blocking = true;
   private boolean connected = false;
 
@@ -80,8 +80,12 @@ public class DatagramChannel extends SelectableChannel
       throw new UnsupportedAddressTypeException();
     }
 
-    socket = bind(inetAddress.getHostName(), inetAddress.getPort());
-    configureBlocking();
+    if (inetAddress == null) {
+      bind(socket, 0, 0);
+    } else {
+      bind(socket, inetAddress.getAddress().getRawAddress(),
+           inetAddress.getPort());
+    }
 
     return this;
   }
@@ -94,10 +98,8 @@ public class DatagramChannel extends SelectableChannel
       throw new UnsupportedAddressTypeException();
     }
 
-    socket = connect(inetAddress.getHostName(), inetAddress.getPort());
-    configureBlocking();
-
-    if (socket != 0) connected = true;
+    connected = connect(socket, inetAddress.getAddress().getRawAddress(),
+                        inetAddress.getPort());
 
     return this;
   }
@@ -145,6 +147,31 @@ public class DatagramChannel extends SelectableChannel
     }
   }
 
+  public int send(ByteBuffer b, SocketAddress address) throws IOException {
+    if (b.remaining() == 0) return 0;
+
+    InetSocketAddress inetAddress;
+    try {
+      inetAddress = (InetSocketAddress) address;
+    } catch (ClassCastException e) {
+      throw new UnsupportedAddressTypeException();
+    }
+
+    byte[] array = b.array();
+    if (array == null) throw new NullPointerException();
+
+    int c = send
+      (socket, inetAddress.getAddress().getRawAddress(),
+       inetAddress.getPort(), array, b.arrayOffset() + b.position(),
+       b.remaining(), blocking);
+
+    if (c > 0) {
+      b.position(b.position() + c);
+    }
+
+    return c;    
+  }
+
   private static String ipv4ToString(int address) {
     StringBuilder sb = new StringBuilder();
 
@@ -178,22 +205,35 @@ public class DatagramChannel extends SelectableChannel
 
   /** TODO: This is probably incomplete. */
   public DatagramChannel disconnect() throws IOException {
-    close();
+    connect(socket, 0, 0);
     connected = false;
     return this;
   }
 
+  public void close() throws IOException {
+    if (isOpen()) {
+      super.close();
+      close(socket);
+    }
+  }
+
+  private static native int makeSocket();
   private static native void configureBlocking(int socket, boolean blocking)
     throws IOException;
-  private static native int bind(String hostname, int port)
+  private static native void bind(int socket, int host, int port)
     throws IOException;
-  private static native int connect(String hostname, int port)
+  private static native boolean connect(int socket, int host, int port)
     throws IOException;
   private static native int write(int socket, byte[] array, int offset,
                                   int length, boolean blocking)
+    throws IOException;
+  private static native int send(int socket, int host, int port,
+                                 byte[] array, int offset,
+                                 int length, boolean blocking)
     throws IOException;
   private static native int receive(int socket, byte[] array, int offset,
                                     int length, boolean blocking,
                                     int[] address)
     throws IOException;
+  private static native void close(int socket);
 }

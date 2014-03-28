@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2013, Avian Contributors
+/* Copyright (c) 2008-2014, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
@@ -10,11 +10,11 @@
 
 package java.nio;
 
-class ArrayByteBuffer extends ByteBuffer {
-  private final byte[] array;
+class ArrayCharBuffer extends CharBuffer {
+  private final char[] array;
   private final int arrayOffset;
 
-  ArrayByteBuffer(byte[] array, int offset, int length, boolean readOnly) {
+  ArrayCharBuffer(char[] array, int offset, int length, boolean readOnly) {
     super(readOnly);
 
     this.array = array;
@@ -24,8 +24,8 @@ class ArrayByteBuffer extends ByteBuffer {
     this.position = 0;
   }
 
-  public ByteBuffer asReadOnlyBuffer() {
-    ByteBuffer b = new ArrayByteBuffer(array, arrayOffset, capacity, true);
+  public CharBuffer asReadOnlyBuffer() {
+    CharBuffer b = new ArrayCharBuffer(array, arrayOffset, capacity, true);
     b.position(position());
     b.limit(limit());
     return b;
@@ -35,12 +35,12 @@ class ArrayByteBuffer extends ByteBuffer {
     return true;
   }
 
-  public byte[] array() {
+  public char[] array() {
     return array;
   }
 
-  public ByteBuffer slice() {
-    return new ArrayByteBuffer
+  public CharBuffer slice() {
+    return new ArrayCharBuffer
       (array, arrayOffset + position, remaining(), true);
   }
 
@@ -48,11 +48,11 @@ class ArrayByteBuffer extends ByteBuffer {
     return arrayOffset;
   }
 
-  protected void doPut(int position, byte val) {
+  protected void doPut(int position, char val) {
     array[arrayOffset + position] = val;
   }
 
-  public ByteBuffer put(ByteBuffer src) {
+  public CharBuffer put(CharBuffer src) {
     int length = src.remaining();
     checkPut(position, length, false);
     src.get(array, arrayOffset + position, length);
@@ -60,7 +60,7 @@ class ArrayByteBuffer extends ByteBuffer {
     return this;
   }
 
-  public ByteBuffer put(byte[] src, int offset, int length) {
+  public CharBuffer put(char[] src, int offset, int length) {
     checkPut(position, length, false);
 
     System.arraycopy(src, offset, array, arrayOffset + position, length);
@@ -69,7 +69,7 @@ class ArrayByteBuffer extends ByteBuffer {
     return this;
   }
 
-  public ByteBuffer get(byte[] dst, int offset, int length) {
+  public CharBuffer get(char[] dst, int offset, int length) {
     checkGet(position, length, false);
 
     System.arraycopy(array, arrayOffset + position, dst, offset, length);
@@ -78,12 +78,12 @@ class ArrayByteBuffer extends ByteBuffer {
     return this;
   }
 
-  protected byte doGet(int position) {
+  protected char doGet(int position) {
     return array[arrayOffset+position];
   }
 
   public String toString() {
-    return "(ArrayByteBuffer with array: " + array
+    return "(ArrayCharBuffer with array: " + array
       + " arrayOffset: " + arrayOffset
       + " position: " + position
       + " limit: " + limit
