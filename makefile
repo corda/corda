@@ -1592,14 +1592,14 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 		@$(build)/android.txt
 	rm $(build)/android/sun/misc/Unsafe* \
 		$(build)/android/java/lang/reflect/Proxy*
-	cp -r $(build)/android/* $(classpath-build)
 	for x in $(luni-copied-nonjavas); \
-		do cp $(luni-java)$${x} $(classpath-build)$${x} ; \
+		do cp $(luni-java)$${x} $(build)/android$${x} ; \
 	done
 	# fix security.properties - get rid of "com.android" in front of classes starting with "org"
 	sed -i -e 's/\(.*=\)com\.android\.\(org\..*\)/\1\2/g' \
-		$(classpath-build)/java/security/security.properties
-	chmod +w $(classpath-build)/java/security/security.properties
+		$(build)/android/java/security/security.properties
+	chmod +w $(build)/android/java/security/security.properties
+	cp -r $(build)/android/* $(classpath-build)
 	@touch $(@)	
 
 $(test-build)/%.class: $(test)/%.java
