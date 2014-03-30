@@ -230,6 +230,8 @@ ifneq ($(android),)
 		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
 	luni-javas := $(shell find $(luni-java) -name '*.java')
+	luni-nonjavas := $(shell find $(luni-java) -not -type d -not -name '*.java')
+	luni-copied-nonjavas = $(call noop-files,$(luni-nonjavas),$(luni-java),)
 	libdvm-java = $(android)/libcore/libdvm/src/main/java
 	libdvm-javas := $(shell find $(libdvm-java) -name '*.java')
 	crypto-java = $(android)/libcore/crypto/src/main/java
@@ -1094,6 +1096,7 @@ c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.$(asm-format),$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
+noop-files = $(foreach x,$(1),$(patsubst $(2)/%,$(3)/%,$(x)))
 
 generated-code = \
 	$(build)/type-enums.cpp \
@@ -1572,7 +1575,7 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
-		$(dalvik-javas) $(xml-javas)
+		$(dalvik-javas) $(xml-javas) $(luni-nonjavas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
