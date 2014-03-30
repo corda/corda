@@ -29,7 +29,7 @@ read4(const uint8_t* in)
 namespace vm {
 
 uint8_t*
-decodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
+decodeLZMA(System* s, avian::util::Allocator* a, uint8_t* in, unsigned inSize,
            unsigned* outSize)
 {
   const unsigned PropHeaderSize = 5;

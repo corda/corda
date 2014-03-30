@@ -18,7 +18,7 @@ fi
 
 echo -n "" >${log}
 
-printf "%12s------- Unit tests -------\n" ""
+printf "%20s------- Unit tests -------\n" ""
 ${unit_tester} 2>>${log}
 if [ "${?}" != "0" ]; then
   trouble=1
@@ -27,9 +27,9 @@ fi
 
 echo
 
-printf "%12s------- Java tests -------\n" ""
+printf "%20s------- Java tests -------\n" ""
 for test in ${tests}; do
-  printf "%24s: " "${test}"
+  printf "%32s: " "${test}"
 
   case ${mode} in
     debug|debug-fast|fast|small )

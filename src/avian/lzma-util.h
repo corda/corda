@@ -11,10 +11,10 @@
 #ifndef LZMA_UTIL_H
 #define LZMA_UTIL_H
 
-#include "avian/lzma.h"
-#include "C/Types.h"
+#include <avian/lzma.h>
+#include <C/Types.h>
 #include <avian/system/system.h>
-#include "avian/util/allocator.h"
+#include <avian/util/allocator.h>
 
 namespace vm {
 
@@ -22,13 +22,13 @@ const unsigned Padding = 16;
 
 class LzmaAllocator {
  public:
-  LzmaAllocator(Allocator* a): a(a) {
+  LzmaAllocator(avian::util::Allocator* a): a(a) {
     allocator.Alloc = allocate;
     allocator.Free = free;
   }
 
   ISzAlloc allocator;
-  Allocator* a;
+  avian::util::Allocator* a;
 
   static void* allocate(void* allocator, size_t size) {
     uint8_t* p = static_cast<uint8_t*>

@@ -176,8 +176,6 @@
 
 (type unwindResult avian/Continuations$UnwindResult)
 
-(type callbackReceiver avian/CallbackReceiver)
-
 (type string java/lang/String
   (alias data object value)
   (alias length uint32_t count)
