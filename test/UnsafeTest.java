@@ -76,10 +76,69 @@ public class UnsafeTest {
     }
   }
 
+  private static void unsafeArray(Unsafe u) {
+    final int offset = u.arrayBaseOffset(long[].class);
+    final int scale = u.arrayIndexScale(long[].class);
+    final int size = 64;
+    final long[] array = new long[size];
+
+    for (int i = 0; i < size; ++i)
+      u.putBooleanVolatile(array, offset + (i * scale), i % 2 == 0);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getBooleanVolatile(array, offset + (i * scale))
+             == (i % 2 == 0));
+
+    for (int i = 0; i < size; ++i)
+      u.putByteVolatile(array, offset + (i * scale), (byte) 42);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getByteVolatile(array, offset + (i * scale)) == 42);
+
+    for (int i = 0; i < size; ++i)
+      u.putShortVolatile(array, offset + (i * scale), (short) -12345);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getShortVolatile(array, offset + (i * scale)) == -12345);
+
+    for (int i = 0; i < size; ++i)
+      u.putCharVolatile(array, offset + (i * scale), (char) 23456);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getCharVolatile(array, offset + (i * scale)) == 23456);
+
+    for (int i = 0; i < size; ++i)
+      u.putIntVolatile(array, offset + (i * scale), 0x12345678);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getIntVolatile(array, offset + (i * scale)) == 0x12345678);
+
+    for (int i = 0; i < size; ++i)
+      u.putFloatVolatile(array, offset + (i * scale), 1.2345678F);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getFloatVolatile(array, offset + (i * scale)) == 1.2345678F);
+
+    for (int i = 0; i < size; ++i)
+      u.putLongVolatile(array, offset + (i * scale), 0x1234567890ABCDEFL);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getLongVolatile(array, offset + (i * scale))
+             == 0x1234567890ABCDEFL);
+
+    for (int i = 0; i < size; ++i)
+      u.putDoubleVolatile(array, offset + (i * scale), 1.23456789012345D);
+
+    for (int i = 0; i < size; ++i)
+      expect(u.getDoubleVolatile(array, offset + (i * scale))
+             == 1.23456789012345D);
+  }
+
   public static void main(String[] args) {
     Unsafe u = avian.Machine.getUnsafe();
 
     unsafeCatch(u);
     unsafeMemory(u);
+    unsafeArray(u);
   }
 }

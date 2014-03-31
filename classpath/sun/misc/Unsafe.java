@@ -46,15 +46,39 @@ public final class Unsafe {
 
   public native void putDouble(long address, double x);
 
+  public native boolean getBooleanVolatile(Object o, long offset);
+
+  public native void putBooleanVolatile(Object o, long offset, boolean x);
+
+  public native byte getByteVolatile(Object o, long offset);
+
+  public native void putByteVolatile(Object o, long offset, byte x);
+
+  public native short getShortVolatile(Object o, long offset);
+
+  public native void putShortVolatile(Object o, long offset, short x);
+
+  public native char getCharVolatile(Object o, long offset);
+
+  public native void putCharVolatile(Object o, long offset, char x);
+
   public native int getIntVolatile(Object o, long offset);
 
   public native void putIntVolatile(Object o, long offset, int x);
 
+  public native float getFloatVolatile(Object o, long offset);
+
+  public native void putFloatVolatile(Object o, long offset, float x);
+
+  public native double getDoubleVolatile(Object o, long offset);
+
+  public native void putDoubleVolatile(Object o, long offset, double x);
+
   public native long getLongVolatile(Object o, long offset);
 
-  public native long putLongVolatile(Object o, long offset, long x);
+  public native void putLongVolatile(Object o, long offset, long x);
 
-  public native long putOrderedLong(Object o, long offset, long x);
+  public native void putOrderedLong(Object o, long offset, long x);
 
   public native void putOrderedInt(Object o, long offset, int x);
 
