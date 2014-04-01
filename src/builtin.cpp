@@ -993,6 +993,112 @@ Avian_sun_misc_Unsafe_getIntVolatile
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putByteVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int8_t value = arguments[4];
+  
+  storeStoreMemoryBarrier();
+  fieldAtOffset<int8_t>(o, offset) = value;
+  storeLoadMemoryBarrier();
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getByteVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  int8_t result = fieldAtOffset<int8_t>(o, offset);
+  loadMemoryBarrier();
+  return result;
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putBooleanVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putByteVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getBooleanVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getByteVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putShortVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+  int16_t value = arguments[4];
+  
+  storeStoreMemoryBarrier();
+  fieldAtOffset<int16_t>(o, offset) = value;
+  storeLoadMemoryBarrier();
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getShortVolatile
+(Thread*, object, uintptr_t* arguments)
+{
+  object o = reinterpret_cast<object>(arguments[1]);
+  int64_t offset; memcpy(&offset, arguments + 2, 8);
+
+  int16_t result = fieldAtOffset<int16_t>(o, offset);
+  loadMemoryBarrier();
+  return result;
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putCharVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putShortVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getCharVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getShortVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putFloatVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putIntVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getFloatVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getIntVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+Avian_sun_misc_Unsafe_putDoubleVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  Avian_sun_misc_Unsafe_putLongVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_sun_misc_Unsafe_getDoubleVolatile
+(Thread* t, object method, uintptr_t* arguments)
+{
+  return Avian_sun_misc_Unsafe_getLongVolatile(t, method, arguments);
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
 Avian_sun_misc_Unsafe_throwException
 (Thread* t, object, uintptr_t* arguments)
 {
