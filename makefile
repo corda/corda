@@ -726,6 +726,8 @@ endif
 
 openjdk-extra-cflags += $(classpath-extra-cflags)
 
+find-tool = $(shell if ( command -v "$(1)$(2)" >/dev/null ); then (echo "$(1)$(2)") else (echo "$(2)"); fi)
+
 ifeq ($(platform),windows)
 	target-format = pe
 
@@ -776,10 +778,10 @@ ifeq ($(platform),windows)
 		endif
 		cxx = x86_64-w64-mingw32-g++ $(mflag)
 		cc = x86_64-w64-mingw32-gcc $(mflag)
-		dlltool = dlltool
-		ar = ar
-		ranlib = ranlib
-		strip = strip
+		dlltool = $(call find-tool,x86_64-w64-mingw32-,dlltool)
+		ar = $(call find-tool,x86_64-w64-mingw32-,ar)
+		ranlib = $(call find-tool,x86_64-w64-mingw32-,ranlib)
+		strip = $(call find-tool,x86_64-w64-mingw32-,strip)
 		inc = "$(win64)/include"
 		lib = "$(win64)/lib"
 	else
