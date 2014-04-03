@@ -191,6 +191,9 @@ public class Socket implements Closeable, AutoCloseable {
 		outputStream.close();
 	}
 	
+        public SocketAddress getRemoteSocketAddress() {
+                 throw new UnsupportedOperationException();
+        }
 	
 	@Override
 	protected void finalize() throws Throwable {

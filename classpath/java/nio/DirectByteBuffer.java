@@ -48,7 +48,7 @@ class DirectByteBuffer extends ByteBuffer {
 
   public ByteBuffer put(ByteBuffer src) {
     if (src instanceof DirectByteBuffer) {
-      checkPut(position, src.remaining());
+      checkPut(position, src.remaining(), false);
 
       DirectByteBuffer b = (DirectByteBuffer) src;
 
@@ -69,7 +69,7 @@ class DirectByteBuffer extends ByteBuffer {
       throw new ArrayIndexOutOfBoundsException();
     }
 
-    checkPut(position, length);
+    checkPut(position, length, false);
 
     unsafe.copyMemory
       (src, baseOffset + offset, null, address + position, length);
@@ -84,7 +84,7 @@ class DirectByteBuffer extends ByteBuffer {
       throw new ArrayIndexOutOfBoundsException();
     }
 
-    checkGet(position, length);
+    checkGet(position, length, false);
 
     unsafe.copyMemory
       (null, address + position, dst, baseOffset + offset, length);

@@ -11,15 +11,25 @@
 package java.net;
 
 public class InetSocketAddress extends SocketAddress {
+  private final String host;
   private final InetAddress address;
   private final int port;
 
-  public InetSocketAddress(String host, int port) throws UnknownHostException {
-	  this.address = InetAddress.getByName(host);
-	  this.port = port;
+  public InetSocketAddress(String host, int port) {
+    InetAddress address;
+    try {
+      address = InetAddress.getByName(host);
+      host = address.getHostName();
+    } catch (UnknownHostException e) {
+      address = null;
+    }
+    this.host = host;
+    this.address = address;
+    this.port = port;
   }
   
   public InetSocketAddress(InetAddress address, int port) {
+    this.host = address.getHostName();
     this.address = address;
     this.port = port;
   }
@@ -29,10 +39,27 @@ public class InetSocketAddress extends SocketAddress {
   }
   
   public String getHostName() {
-	return address.getHostName();
+    return host;
   }
 
   public int getPort() {
     return port;
+  }
+
+  public boolean equals(Object o) {
+    if (o instanceof InetSocketAddress) {
+      InetSocketAddress a = (InetSocketAddress) o;
+      return a.address.equals(address) && a.port == port;
+    } else {
+      return false;
+    }
+  }
+
+  public int hashCode() {
+    return port ^ address.hashCode();
+  }
+
+  public String toString() {
+    return getHostName() + ":" + port;
   }
 }

@@ -22,20 +22,28 @@ public class Datagrams {
   }
 
   public static void main(String[] args) throws Exception {
+    test(true);
+    test(false);
+  }
+
+  private static void test(boolean send) throws Exception {
     final String Hostname = "localhost";
-    final int Port = 22043;
-    final SocketAddress Address = new InetSocketAddress(Hostname, Port);
+    final int InPort = 22043;
+    final int OutPort = 22044;
+    final SocketAddress InAddress = new InetSocketAddress(Hostname, InPort);
+    final SocketAddress OutAddress = new InetSocketAddress(Hostname, OutPort);
     final byte[] Message = "hello, world!".getBytes();
 
     DatagramChannel out = DatagramChannel.open();
     try {
       out.configureBlocking(false);
-      out.connect(Address);
+      out.socket().bind(OutAddress);
+      if (! send) out.connect(InAddress);
     
       DatagramChannel in = DatagramChannel.open();
       try {
         in.configureBlocking(false);
-        in.socket().bind(Address);
+        in.socket().bind(InAddress);
 
         Selector selector = Selector.open();
         try {
@@ -53,14 +61,18 @@ public class Datagrams {
             switch (state) {
             case 0: {
               if (outKey.isWritable()) {
-                out.write(ByteBuffer.wrap(Message));
+                if (send) {
+                  out.send(ByteBuffer.wrap(Message), InAddress);
+                } else {
+                  out.write(ByteBuffer.wrap(Message));
+                }
                 state = 1;
               }
             } break;
 
             case 1: {
               if (inKey.isReadable()) {
-                in.receive(inBuffer);
+                expect(in.receive(inBuffer).equals(OutAddress));
                 if (! inBuffer.hasRemaining()) {
                   expect(equal(inBuffer.array(),
                                inBuffer.arrayOffset(),

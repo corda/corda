@@ -206,5 +206,12 @@ public class Strings {
     expect("abc".lastIndexOf('b', 100) == 1);
 
     testTrivialPattern();
+
+    { String s = "hello, world!";
+      java.nio.CharBuffer buffer = java.nio.CharBuffer.allocate(s.length());
+      new java.io.InputStreamReader
+        (new java.io.ByteArrayInputStream(s.getBytes())).read(buffer);
+      expect(s.equals(new String(buffer.array())));
+    }
   }
 }

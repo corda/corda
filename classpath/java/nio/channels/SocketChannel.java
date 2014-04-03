@@ -22,7 +22,7 @@ public class SocketChannel extends SelectableChannel
 {
   public static final int InvalidSocket = -1;
 
-  int socket = InvalidSocket;
+  int socket = makeSocket();
   boolean connected = false;
   boolean readyToConnect = false;
   boolean blocking = true;
@@ -64,7 +64,7 @@ public class SocketChannel extends SelectableChannel
     } catch (ClassCastException e) {
       throw new UnsupportedAddressTypeException();
     }
-    socket = doConnect(a.getHostName(), a.getPort());
+    doConnect(socket, a.getAddress().getRawAddress(), a.getPort());
     configureBlocking(blocking);
     return connected;
   }
@@ -98,13 +98,10 @@ public class SocketChannel extends SelectableChannel
     }
   }
 
-  private int doConnect(String host, int port) throws IOException {
-    if (host == null) throw new NullPointerException();
-
-    boolean b[] = new boolean[1];
-    int s = natDoConnect(host, port, blocking, b);
-    connected = b[0];
-    return s;
+  private void doConnect(int socket, int host, int port)
+    throws IOException
+  {
+    connected = natDoConnect(socket, host, port);
   }
 
   public int read(ByteBuffer b) throws IOException {
@@ -170,21 +167,40 @@ public class SocketChannel extends SelectableChannel
 
   public class Handle extends Socket {
     public Handle() throws IOException {
-		super();
-	}
+      super();
+    }
 
-	public void setTcpNoDelay(boolean on) throws SocketException {
+    public void setTcpNoDelay(boolean on) throws SocketException {
       natSetTcpNoDelay(socket, on);
+    }
+
+    public void bind(SocketAddress address)
+      throws IOException
+    {
+      InetSocketAddress a;
+      try {
+        a = (InetSocketAddress) address;
+      } catch (ClassCastException e) {
+        throw new IllegalArgumentException();
+      }
+
+      if (a == null) {
+        bind(socket, 0, 0);
+      } else {
+        bind(socket, a.getAddress().getRawAddress(), a.getPort());
+      }
     }
   }
 
+  private static native int makeSocket();
   private static native void configureBlocking(int socket, boolean blocking)
     throws IOException;
 
   private static native void natSetTcpNoDelay(int socket, boolean on)
     throws SocketException;
-
-  private static native int natDoConnect(String host, int port, boolean blocking, boolean[] connected)
+  private static native void bind(int socket, int host, int port)
+    throws IOException;
+  private static native boolean natDoConnect(int socket, int host, int port)
     throws IOException;
   private static native void natFinishConnect(int socket)
     throws IOException;

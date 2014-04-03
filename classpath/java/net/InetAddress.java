@@ -62,9 +62,17 @@ public class InetAddress {
 	         (int)((addr[3] + 256) % 256);
 	}
   
-  int getRawAddress() {
+  public int getRawAddress() {
 	  return ip;
   }
   
-  static native int ipv4AddressForName(String name);
+  static native int ipv4AddressForName(String name) throws UnknownHostException;
+
+  public boolean equals(Object o) {
+    return o instanceof InetAddress && ((InetAddress) o).ip == ip;
+  }
+
+  public int hashCode() {
+    return ip;
+  }
 }

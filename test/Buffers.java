@@ -1,4 +1,6 @@
 import java.nio.ByteBuffer;
+import java.nio.BufferUnderflowException;
+import java.nio.BufferOverflowException;
 
 public class Buffers {
   static {
@@ -57,7 +59,7 @@ public class Buffers {
 
   private static native void freeNative(ByteBuffer b);
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws Exception {
     Factory array = new Factory() {
         public ByteBuffer allocate(int capacity) {
           return ByteBuffer.allocate(capacity);
@@ -99,6 +101,34 @@ public class Buffers {
     test(native_, array);
     test(native_, direct);
     test(native_, native_);
+
+    try {
+      ByteBuffer.allocate(1).getInt();
+      expect(false);
+    } catch (BufferUnderflowException e) {
+      // cool
+    }
+
+    try {
+      ByteBuffer.allocate(1).getInt(0);
+      expect(false);
+    } catch (IndexOutOfBoundsException e) {
+      // cool
+    }
+
+    try {
+      ByteBuffer.allocate(1).putInt(1);
+      expect(false);
+    } catch (BufferOverflowException e) {
+      // cool
+    }
+
+    try {
+      ByteBuffer.allocate(1).putInt(0, 1);
+      expect(false);
+    } catch (IndexOutOfBoundsException e) {
+      // cool
+    }
   }
 
   private interface Factory {

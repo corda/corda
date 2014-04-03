@@ -69,7 +69,7 @@ public abstract class ByteBuffer
 
   public ByteBuffer put(ByteBuffer src) {
     if (src.hasArray()) {
-      checkPut(position, src.remaining());
+      checkPut(position, src.remaining(), false);
 
       put(src.array(), src.arrayOffset() + src.position, src.remaining());
       src.position(src.position() + src.remaining());
@@ -107,13 +107,14 @@ public abstract class ByteBuffer
   }
 
   public ByteBuffer put(int offset, byte val) {
-    checkPut(offset, 1);
+    checkPut(offset, 1, true);
     doPut(offset, val);
     return this;
   }
 
   public ByteBuffer put(byte val) {
-    put(position, val);
+    checkPut(position, 1, false);
+    doPut(position, val);
     ++ position;
     return this;
   }
@@ -122,9 +123,7 @@ public abstract class ByteBuffer
     return put(arr, 0, arr.length);
   }
 
-  public ByteBuffer putLong(int position, long val) {
-    checkPut(position, 8);
-
+  private void rawPutLong(int position, long val) {
     doPut(position    , (byte) ((val >> 56) & 0xff));
     doPut(position + 1, (byte) ((val >> 48) & 0xff));
     doPut(position + 2, (byte) ((val >> 40) & 0xff));
@@ -133,54 +132,75 @@ public abstract class ByteBuffer
     doPut(position + 5, (byte) ((val >> 16) & 0xff));
     doPut(position + 6, (byte) ((val >>  8) & 0xff));
     doPut(position + 7, (byte) ((val      ) & 0xff));
-    
-    return this;
   }
 
-  public ByteBuffer putInt(int position, int val) {
-    checkPut(position, 4);
-
+  private void rawPutInt(int position, int val) {
     doPut(position    , (byte) ((val >> 24) & 0xff));
     doPut(position + 1, (byte) ((val >> 16) & 0xff));
     doPut(position + 2, (byte) ((val >>  8) & 0xff));
     doPut(position + 3, (byte) ((val      ) & 0xff));
+  }
+
+  private void rawPutShort(int position, short val) {
+    doPut(position    , (byte) ((val >> 8) & 0xff));
+    doPut(position + 1, (byte) ((val     ) & 0xff));
+  }
+
+  public ByteBuffer putLong(int position, long val) {
+    checkPut(position, 8, true);
+
+    rawPutLong(position, val);
+
+    return this;
+  }
+
+  public ByteBuffer putInt(int position, int val) {
+    checkPut(position, 4, true);
+
+    rawPutInt(position, val);
 
     return this;
   }
 
   public ByteBuffer putShort(int position, short val) {
-    checkPut(position, 2);
+    checkPut(position, 2, true);
 
-    doPut(position    , (byte) ((val >> 8) & 0xff));
-    doPut(position + 1, (byte) ((val     ) & 0xff));
+    rawPutShort(position, val);
 
     return this;
   }
 
   public ByteBuffer putLong(long val) {
-    putLong(position, val);
+    checkPut(position, 8, false);
+
+    rawPutLong(position, val);
     position += 8;
     return this;
   }
 
   public ByteBuffer putInt(int val) {
-    putInt(position, val);
+    checkPut(position, 4, false);
+
+    rawPutInt(position, val);
     position += 4;
     return this;
   }
 
   public ByteBuffer putShort(short val) {
-    putShort(position, val);
+    checkPut(position, 2, false);
+
+    rawPutShort(position, val);
     position += 2;
     return this;
   }
 
   public byte get() {
-    return get(position++);
+    checkGet(position, 1, false);
+    return doGet(position++);
   }
 
   public byte get(int position) {
-    checkGet(position, 1);
+    checkGet(position, 1, true);
     return doGet(position);
   }
 
@@ -189,8 +209,24 @@ public abstract class ByteBuffer
   }
 
   public long getLong(int position) {
-    checkGet(position, 8);
+    checkGet(position, 8, true);
 
+    return rawGetLong(position);
+  }
+
+  public int getInt(int position) {
+    checkGet(position, 4, true);
+
+    return rawGetInt(position);
+  }
+
+  public short getShort(int position) {
+    checkGet(position, 2, true);
+
+    return rawGetShort(position);
+  }
+
+  private long rawGetLong(int position) {
     return (((long) (doGet(position    ) & 0xFF)) << 56)
       |    (((long) (doGet(position + 1) & 0xFF)) << 48)
       |    (((long) (doGet(position + 2) & 0xFF)) << 40)
@@ -201,48 +237,60 @@ public abstract class ByteBuffer
       |    (((long) (doGet(position + 7) & 0xFF))      );
   }
 
-  public int getInt(int position) {
-    checkGet(position, 4);
-
+  private int rawGetInt(int position) {
     return (((int) (doGet(position    ) & 0xFF)) << 24)
       |    (((int) (doGet(position + 1) & 0xFF)) << 16)
       |    (((int) (doGet(position + 2) & 0xFF)) <<  8)
       |    (((int) (doGet(position + 3) & 0xFF))      );
   }
 
-  public short getShort(int position) {
-    checkGet(position, 2);
-
+  private short rawGetShort(int position) {
     return (short) ((  ((int) (doGet(position    ) & 0xFF)) << 8)
                     | (((int) (doGet(position + 1) & 0xFF))     ));
   }
 
   public long getLong() {
-    long r = getLong(position);
+    checkGet(position, 8, false);
+
+    long r = rawGetLong(position);
     position += 8;
     return r;
   }
 
   public int getInt() {
-    int r = getInt(position);
+    checkGet(position, 4, false);
+
+    int r = rawGetInt(position);
     position += 4;
     return r;
   }
 
   public short getShort() {
-    short r = getShort(position);
+    checkGet(position, 2, false);
+
+    short r = rawGetShort(position);
     position += 2;
     return r;
   }
 
-  protected void checkPut(int position, int amount) {
-    if (readOnly) throw new ReadOnlyBufferException();
-    if (position < 0 || position+amount > limit)
-      throw new IndexOutOfBoundsException();
+  protected void checkPut(int position, int amount, boolean absolute) {
+    if (readOnly) {
+      throw new ReadOnlyBufferException();
+    }
+
+    if (position < 0 || position+amount > limit) {
+      throw absolute
+        ? new IndexOutOfBoundsException()
+        : new BufferOverflowException();
+    }
   }
 
-  protected void checkGet(int position, int amount) {
-    if (amount > limit-position) throw new IndexOutOfBoundsException();
+  protected void checkGet(int position, int amount, boolean absolute) {
+    if (amount > limit-position) {
+      throw absolute
+        ? new IndexOutOfBoundsException()
+        : new BufferUnderflowException();
+    }
   }
 
   public ByteBuffer order(ByteOrder order) {
