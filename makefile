@@ -163,7 +163,7 @@ ifneq ($(android),)
 	classpath-jar-dep = $(build)/android.dep
 	luni-native = $(android)/libcore/luni/src/main/native
 	classpath-cflags = -DBOOT_JAVAHOME
-	android-cflags := -I$(luni-native) \
+	android-cflags = -I$(luni-native) \
 		-I$(android)/libnativehelper/include/nativehelper \
 		-I$(android)/system/core/include \
 		-I$(android)/external/zlib \

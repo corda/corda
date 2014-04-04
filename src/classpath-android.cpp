@@ -2335,22 +2335,6 @@ Avian_java_lang_System_identityHashCode
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_java_lang_System_mapLibraryName
-(Thread* t, object, uintptr_t* arguments)
-{
-  object original = reinterpret_cast<object>(arguments[0]);
-  unsigned originalLength = stringUTFLength(t, original);
-  THREAD_RUNTIME_ARRAY(t, char, originalChars, originalLength);
-  stringUTFChars
-    (t, original, RUNTIME_ARRAY_BODY(originalChars), originalLength);
-
-  return reinterpret_cast<uintptr_t>
-    (makeString(t, "%s%.*s%s", t->m->system->libraryPrefix(), originalLength,
-                RUNTIME_ARRAY_BODY(originalChars),
-                t->m->system->librarySuffix()));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
 (Thread*, object, uintptr_t*)
 {
