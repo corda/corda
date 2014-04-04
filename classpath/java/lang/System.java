@@ -24,7 +24,10 @@ import java.util.Properties;
 public abstract class System {
   private static final long NanoTimeBaseInMillis = currentTimeMillis();
   
-  private static Property properties;
+  private static class Static {
+    public static Properties properties = makeProperties();
+  }
+
   private static Map<String, String> environment;
   
   private static SecurityManager securityManager;
@@ -45,20 +48,7 @@ public abstract class System {
                                       int dstOffset, int length);
 
   public static String getProperty(String name) {
-    for (Property p = properties; p != null; p = p.next) {
-      if (p.name.equals(name)) {
-        return p.value;
-      }
-    }
-
-    boolean[] found = new boolean[1];
-    String value = getProperty(name, found);
-    if (found[0]) return value;
-
-    value = getVMProperty(name, found);
-    if (found[0]) return value;
-
-    return null;
+    return (String) Static.properties.get(name);
   }
   
   public static String getProperty(String name, String defaultValue) {
@@ -69,31 +59,35 @@ public abstract class System {
     return result;
   }
   
-
   public static String setProperty(String name, String value) {
-    for (Property p = properties; p != null; p = p.next) {
-      if (p.name.equals(name)) {
-        String oldValue = p.value;
-        p.value = value;
-        return oldValue;
-      }
-    }
-
-    properties = new Property(name, value, properties);
-    return null;
+    return (String) Static.properties.put(name, value);
   }
 
-  public static Properties getProperties () {
-    Properties prop = new Properties();
-    for (Property p = properties; p != null; p = p.next) {
-      prop.put(p.name, p.value);
+  public static Properties getProperties() {
+    return Static.properties;
+  }
+
+  private static Properties makeProperties() {
+    Properties properties = new Properties();
+
+    for (String p: getNativeProperties()) {
+      if (p == null) break;
+      int index = p.indexOf('=');
+      properties.put(p.substring(0, index), p.substring(index + 1));
     }
-    return prop;
+
+    for (String p: getVMProperties()) {
+      if (p == null) break;
+      int index = p.indexOf('=');
+      properties.put(p.substring(0, index), p.substring(index + 1));
+    }
+
+    return properties;
   }
   
-  private static native String getProperty(String name, boolean[] found);
+  private static native String[] getNativeProperties();
 
-  private static native String getVMProperty(String name, boolean[] found);
+  private static native String[] getVMProperties();
 
   public static native long currentTimeMillis();
 
@@ -135,18 +129,6 @@ public abstract class System {
   
   public static void setSecurityManager(SecurityManager securityManager) {
     System.securityManager = securityManager;
-  }
-
-  private static class Property {
-    public final String name;
-    public String value;
-    public final Property next;
-
-    public Property(String name, String value, Property next) {
-      this.name = name;
-      this.value = value;
-      this.next = next;
-    }
   }
 
   public static String getenv(String name) throws NullPointerException,

@@ -3875,9 +3875,13 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   if (heapLimit == 0) heapLimit = 128 * 1024 * 1024;
 
   if (stackLimit == 0) stackLimit = 128 * 1024;
-  
-  if (classpath == 0) classpath = ".";
-  
+
+  bool addClasspathProperty = classpath == 0;
+  if (addClasspathProperty) {
+    classpath = ".";
+    ++propertyCount;
+  }
+
   System* s = makeSystem();
   Heap* h = makeHeap(s, heapLimit);
   Classpath* c = makeClasspath(s, h, javaHome, embedPrefix);
@@ -3915,6 +3919,9 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     free(bootLibrary);
   Processor* p = makeProcessor(s, h, crashDumpDirectory, true);
 
+  // reserve space for avian.version and file.encoding:
+  propertyCount += 2;
+
   const char** properties = static_cast<const char**>
     (h->allocate(sizeof(const char*) * propertyCount));
 
@@ -3931,6 +3938,21 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     }
     *(argumentPointer++) = a->options[i].optionString;
   }
+
+  unsigned cpl = strlen(classpath);
+  RUNTIME_ARRAY(char, classpathProperty, cpl + sizeof(CLASSPATH_PROPERTY) + 1);
+  if (addClasspathProperty) {
+    char* p = RUNTIME_ARRAY_BODY(classpathProperty);
+    local::append(&p, CLASSPATH_PROPERTY, sizeof(CLASSPATH_PROPERTY), '=');
+    local::append(&p, classpath, cpl, 0);
+    *(propertyPointer++) = RUNTIME_ARRAY_BODY(classpathProperty);
+  }
+
+  *(propertyPointer++) = "avian.version=" AVIAN_VERSION;
+
+  // todo: should this be derived from the OS locale?  Should it be
+  // overrideable via JavaVMInitArgs?
+  *(propertyPointer++) = "file.encoding=UTF-8";
 
   *m = new (h->allocate(sizeof(Machine))) Machine
     (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions,

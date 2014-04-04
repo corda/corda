@@ -313,6 +313,34 @@ public class Misc {
     expect(! staticRan);
     Static.run();
     expect(staticRan);
+
+    expect(System.getProperty("java.class.path").equals
+           (System.getProperties().get("java.class.path")));
+
+    expect(System.getProperty("path.separator").equals
+           (System.getProperties().get("path.separator")));
+
+    expect(System.getProperty("user.dir").equals
+           (System.getProperties().get("user.dir")));
+
+    expect(System.getProperty("java.io.tmpdir").equals
+           (System.getProperties().get("java.io.tmpdir")));
+
+    System.setProperty("buzzy.buzzy.bim.bam", "dippy dopey flim flam");
+
+    expect(System.getProperty("buzzy.buzzy.bim.bam").equals
+           (System.getProperties().get("buzzy.buzzy.bim.bam")));
+
+    expect(System.getProperty("buzzy.buzzy.bim.bam").equals
+           ("dippy dopey flim flam"));
+
+    System.getProperties().put("buzzy.buzzy.bim.bam", "yippy yappy yin yang");
+
+    expect(System.getProperty("buzzy.buzzy.bim.bam").equals
+           (System.getProperties().get("buzzy.buzzy.bim.bam")));
+
+    expect(System.getProperty("buzzy.buzzy.bim.bam").equals
+           ("yippy yappy yin yang"));
   }
 
   protected class Protected { }
