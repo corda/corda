@@ -80,7 +80,53 @@
 #endif // WINAPI_FAMILY
 
 namespace {
+
+void add(JNIEnv* e, jobjectArray array, unsigned index, const char* format, ...)
+{
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    RUNTIME_ARRAY(char, buffer, size);
+    int r = vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+    va_end(a);
+    if (r >= 0 and r < size - 1) {
+      e->SetObjectArrayElement(
+          array, index++, e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer)));
+      return;
+    }
+
+    size *= 2;
+  }
+}
+
 #ifdef PLATFORM_WINDOWS
+
+void add(JNIEnv* e,
+         jobjectArray array,
+         unsigned index,
+         const WCHAR* format,
+         ...)
+{
+  int size = 256;
+  while (true) {
+    va_list a;
+    va_start(a, format);
+    RUNTIME_ARRAY(WCHAR, buffer, size);
+    int r = _vsnwprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
+    va_end(a);
+    if (r >= 0 and r < size - 1) {
+      e->SetObjectArrayElement(
+          array,
+          index++,
+          e->NewString(reinterpret_cast<jchar*>(RUNTIME_ARRAY_BODY(buffer)),
+                       r));
+      return;
+    }
+
+    size *= 2;
+  }
+}
 
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
   char* getErrorStr(DWORD err) {
@@ -641,143 +687,166 @@ Locale getLocale() {
 }
 #endif
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_java_lang_System_getProperty(JNIEnv* e, jclass, jstring name,
-                                  jbooleanArray found)
+extern "C" JNIEXPORT jobjectArray JNICALL
+    Java_java_lang_System_getNativeProperties(JNIEnv* e, jclass)
 {
-  jstring r = 0;
-  const char* chars = e->GetStringUTFChars(name, 0);
-  if (chars) {
-#ifdef PLATFORM_WINDOWS 
-    if (strcmp(chars, "line.separator") == 0) {
-      r = e->NewStringUTF("\r\n");
-    } else if (strcmp(chars, "file.separator") == 0) {
-      r = e->NewStringUTF("\\");
-    } else if (strcmp(chars, "path.separator") == 0) {
-      r = e->NewStringUTF(";");
-    } else if (strcmp(chars, "os.name") == 0) {
+  jobjectArray array
+      = e->NewObjectArray(32, e->FindClass("java/lang/String"), 0);
+
+  unsigned index = 0;
+
+#ifdef ARCH_x86_32
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=x86"));
+
+#elif defined ARCH_x86_64
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=x86_64"));
+
+#elif defined ARCH_powerpc
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=ppc"));
+
+#elif defined ARCH_arm
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=arm"));
+
+#endif
+
+#ifdef PLATFORM_WINDOWS
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("line.separator=\r\n"));
+
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("file.separator=\\"));
+
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("path.separator=;"));
+
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      r = e->NewStringUTF("Windows");
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.name=Windows"));
+
 #  elif WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
-      r = e->NewStringUTF("Windows Phone");
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("os.name=Windows Phone"));
+
 #  else
-      r = e->NewStringUTF("Windows RT");
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("os.name=Windows RT"));
+
 #  endif
-    } else if (strcmp(chars, "os.version") == 0) {
+
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      unsigned size = 32;
-      RUNTIME_ARRAY(char, buffer, size);
-      OSVERSIONINFO OSversion;
-      OSversion.dwOSVersionInfoSize=sizeof(OSVERSIONINFO);
-      ::GetVersionEx(&OSversion);
-      snprintf(RUNTIME_ARRAY_BODY(buffer), size, "%i.%i", (int)OSversion.dwMajorVersion, (int)OSversion.dwMinorVersion);
-      r = e->NewStringUTF(RUNTIME_ARRAY_BODY(buffer));
+  {
+    OSVERSIONINFO OSversion;
+    OSversion.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    ::GetVersionEx(&OSversion);
+
+    add(e,
+        array,
+        index++,
+        "os.version=%i.%i",
+        static_cast<int>(OSversion.dwMajorVersion),
+        static_cast<int>(OSversion.dwMinorVersion));
+  }
+
 #  else
-      // Currently there is no alternative on WinRT/WP8
-      r = e->NewStringUTF("8.0");
+  // Currently there is no alternative on WinRT/WP8
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.version=8.0"));
+
 #  endif
-    } else if (strcmp(chars, "os.arch") == 0) {
-#ifdef ARCH_x86_32
-      r = e->NewStringUTF("x86");
-#elif defined ARCH_x86_64
-      r = e->NewStringUTF("x86_64");
-#elif defined ARCH_powerpc
-      r = e->NewStringUTF("ppc");
-#elif defined ARCH_arm
-      r = e->NewStringUTF("arm");
-#endif
-    } else if (strcmp(chars, "java.io.tmpdir") == 0) {
+
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      TCHAR buffer[MAX_PATH];
-      GetTempPath(MAX_PATH, buffer);
-      r = e->NewStringUTF(buffer);
+  {
+    WCHAR buffer[MAX_PATH];
+    GetTempPathW(MAX_PATH, buffer);
+    add(e, array, index++, L"java.io.tmpdir=%ls", buffer);
+  }
+
 #  else
-      std::wstring tmpDir = AvianInterop::GetTemporaryFolder();
-      r = e->NewString((const jchar*)tmpDir.c_str(), tmpDir.length());
+  add(e,
+      array,
+      index++,
+      L"java.io.tmpdir=%ls",
+      AvianInterop::GetTemporaryFolder().c_str());
+
 #  endif
-    } else if (strcmp(chars, "user.dir") == 0) {
+
 #  if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      TCHAR buffer[MAX_PATH];
-      GetCurrentDirectory(MAX_PATH, buffer);
-      r = e->NewStringUTF(buffer);
+  {
+    WCHAR buffer[MAX_PATH];
+    GetCurrentDirectoryW(MAX_PATH, buffer);
+    add(e, array, index++, L"user.dir=%ls", buffer);
+  }
+
 #  else
-      std::wstring userDir = AvianInterop::GetInstalledLocation();
-      r = e->NewString((const jchar*)userDir.c_str(), userDir.length());
+  add(e,
+      array,
+      index++,
+      L"user.dir=%ls",
+      AvianInterop::GetInstalledLocation().c_str());
+
 #  endif
-    } else if (strcmp(chars, "user.home") == 0) {
-#  ifdef _MSC_VER
+
 #    if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-      WCHAR buffer[MAX_PATH];
-      size_t needed;
-      if (_wgetenv_s(&needed, buffer, MAX_PATH, L"USERPROFILE") == 0) {
-        r = e->NewString(reinterpret_cast<jchar*>(buffer), lstrlenW(buffer));
-      } else {
-        r = 0;
-      }
+#ifdef _MSC_VER
+  {
+    WCHAR buffer[MAX_PATH];
+    size_t needed;
+    if (_wgetenv_s(&needed, buffer, MAX_PATH, L"USERPROFILE") == 0) {
+      add(e, array, index++, L"user.home=%ls", buffer);
+    }
+  }
+
+#else
+  add(e, array, index++, L"user.home=%ls", _wgetenv(L"USERPROFILE"));
+
+#endif
 #    else
-      std::wstring userHome = AvianInterop::GetDocumentsLibraryLocation();
-      r = e->NewString((const jchar*)userHome.c_str(), userHome.length());
+  add(e,
+      array,
+      index++,
+      L"user.home=%ls",
+      AvianInterop::GetDocumentsLibraryLocation().c_str());
+
 #    endif
-#  else
-      LPWSTR home = _wgetenv(L"USERPROFILE");
-      r = e->NewString(reinterpret_cast<jchar*>(home), lstrlenW(home));
-#  endif
-    }
-#else
-    if (strcmp(chars, "line.separator") == 0) {
-      r = e->NewStringUTF("\n");
-    } else if (strcmp(chars, "file.separator") == 0) {
-      r = e->NewStringUTF("/");
-    } else if (strcmp(chars, "path.separator") == 0) {
-      r = e->NewStringUTF(":");
-    } else if (strcmp(chars, "os.name") == 0) {
+
+#else  // not Windows
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("line.separator=\n"));
+
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("file.separator=/"));
+
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("path.separator=:"));
+
 #ifdef __APPLE__
-      r = e->NewStringUTF("Mac OS X");
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.name=Mac OS X"));
+
 #elif defined __FreeBSD__
-      r = e->NewStringUTF("FreeBSD");
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.name=FreeBSD"));
+
 #else
-      r = e->NewStringUTF("Linux");
-#endif
-    } else if (strcmp(chars, "os.version") == 0) {
-      struct utsname system_id; 
-      uname(&system_id);
-      r = e->NewStringUTF(system_id.release);
-    } else if (strcmp(chars, "os.arch") == 0) {
-#ifdef ARCH_x86_32
-      r = e->NewStringUTF("x86");
-#elif defined ARCH_x86_64
-      r = e->NewStringUTF("x86_64");
-#elif defined ARCH_powerpc
-      r = e->NewStringUTF("ppc");
-#elif defined ARCH_arm
-      r = e->NewStringUTF("arm");
-#endif
-    } else if (strcmp(chars, "java.io.tmpdir") == 0) {
-      r = e->NewStringUTF("/tmp");
-    } else if (strcmp(chars, "user.dir") == 0) {
-      char buffer[PATH_MAX];
-      r = e->NewStringUTF(getcwd(buffer, PATH_MAX));
-    } else if (strcmp(chars, "user.home") == 0) {
-      r = e->NewStringUTF(getenv("HOME"));
-    }
-#endif
-    else if (strcmp(chars, "user.language") == 0) {
-      Locale locale = getLocale();
-      if (strlen(locale.getLanguage())) r = e->NewStringUTF(locale.getLanguage());
-    } else if (strcmp(chars, "user.region") == 0) {
-      Locale locale = getLocale();
-      if (strlen(locale.getRegion())) r = e->NewStringUTF(locale.getRegion());
-    }
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.name=Linux"));
 
-    e->ReleaseStringUTFChars(name, chars);
+#endif
+  {
+    struct utsname system_id;
+    uname(&system_id);
+    add(e, array, index++, "os.version=%s", system_id.release);
   }
 
-  if (r) {
-    jboolean v = true;
-    e->SetBooleanArrayRegion(found, 0, 1, &v);
+  e->SetObjectArrayElement(
+      array, index++, e->NewStringUTF("java.io.tmpdir=/tmp"));
+
+  {
+    char buffer[PATH_MAX];
+    add(e, array, index++, "user.dir=%s", getcwd(buffer, PATH_MAX));
   }
 
-  return r;
+#endif  // not Windows
+
+  {
+    Locale locale = getLocale();
+    add(e, array, index++, "user.language=%s", locale.getLanguage());
+    add(e, array, index++, "user.region=%s", locale.getRegion());
+  }
+
+  return array;
 }
 
 // System.getEnvironment() implementation

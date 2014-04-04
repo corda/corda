@@ -507,37 +507,18 @@ Avian_java_lang_String_intern
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_java_lang_System_getVMProperty
-(Thread* t, object, uintptr_t* arguments)
+    Avian_java_lang_System_getVMProperties(Thread* t, object, uintptr_t*)
 {
-  object name = reinterpret_cast<object>(arguments[0]);
-  object found = reinterpret_cast<object>(arguments[1]);
-  PROTECT(t, found);
+  object array
+      = makeObjectArray(t, type(t, Machine::StringType), t->m->propertyCount);
+  PROTECT(t, array);
 
-  unsigned length = stringLength(t, name);
-  THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
-  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
-
-  int64_t r = 0;
-  if (::strcmp(RUNTIME_ARRAY_BODY(n), "java.lang.classpath") == 0) {
-    r = reinterpret_cast<int64_t>
-      (makeString(t, "%s", t->m->appFinder->path()));
-  } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "avian.version") == 0) {
-    r = reinterpret_cast<int64_t>(makeString(t, AVIAN_VERSION));
-  } else if (::strcmp(RUNTIME_ARRAY_BODY(n), "file.encoding") == 0) {
-    r = reinterpret_cast<int64_t>(makeString(t, "ASCII"));
-  } else {
-    const char* v = findProperty(t, RUNTIME_ARRAY_BODY(n));
-    if (v) {
-      r = reinterpret_cast<int64_t>(makeString(t, v));
-    }
-  }
-  
-  if (r) {
-    booleanArrayBody(t, found, 0) = true;
+  for (unsigned i = 0; i < t->m->propertyCount; ++i) {
+    object s = makeString(t, "%s", t->m->properties[i]);
+    set(t, array, ArrayBody + (i * BytesPerWord), s);
   }
 
-  return r;
+  return reinterpret_cast<int64_t>(array);
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

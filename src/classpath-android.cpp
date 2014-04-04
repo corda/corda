@@ -1288,13 +1288,21 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_dalvik_system_VMRuntime_properties
 (Thread* t, object, uintptr_t*)
 {
-  object array = makeObjectArray(t, type(t, Machine::StringType), 1);
+  object array = makeObjectArray(
+      t, type(t, Machine::StringType), t->m->propertyCount + 1);
   PROTECT(t, array);
 
-  object property = makeString(t, "java.protocol.handler.pkgs=avian");
+  unsigned i;
+  for (i = 0; i < t->m->propertyCount; ++i) {
+    object s = makeString(t, "%s", t->m->properties[i]);
+    set(t, array, ArrayBody + (i * BytesPerWord), s);
+  }
 
-  set(t, array, ArrayBody, property);
-  
+  {
+    object s = makeString(t, "%s", "java.protocol.handler.pkgs=avian");
+    set(t, array, ArrayBody + (i++ * BytesPerWord), s);
+  }
+
   return reinterpret_cast<uintptr_t>(array);
 }
 
