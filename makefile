@@ -1586,12 +1586,14 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
-	# convert line endings... otherwise patches are difficult
-	# do that by first "dry-running" the patch to determine which files are patched
-	patch -d $(build)/android-src -p1 --dry-run -f < android-patches.diff | \
-		grep -E '^patching file ' | sed -e 's/^patching file \(.*\)/\1/g' | \
-		( cd $(build)/android-src && xargs dos2unix )
-	# now patch the files
+	ifeq ($(platform),windows)
+		# convert line endings... otherwise patches are difficult
+		# do that by first "dry-running" the patch to determine which files are patched
+		patch -d $(build)/android-src -p1 --dry-run -f < android-patches.diff | \
+			grep -E '^patching file ' | sed -e 's/^patching file \(.*\)/\1/g' | \
+			( cd $(build)/android-src && xargs dos2unix )
+		# now patch the files
+	endif
 	( cd $(build)/android-src && patch -p1 ) < android-patches.diff
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
