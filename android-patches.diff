@@ -1,0 +1,12 @@
+diff -ru android-src.old/org/conscrypt/NativeCrypto.java android-src/org/conscrypt/NativeCrypto.java
+--- android-src.old/org/conscrypt/NativeCrypto.java	2014-03-30 23:53:27 +0400
++++ android-src/org/conscrypt/NativeCrypto.java	2014-03-30 23:53:39 +0400
+@@ -51,7 +51,7 @@
+          * name.
+          */
+         if (!"com.android.org.conscrypt".equals(NativeCrypto.class.getPackage().getName())) {
+-            System.loadLibrary("conscrypt_jni");
++            //System.loadLibrary("conscrypt_jni");
+         }
+ 
+         clinit();
