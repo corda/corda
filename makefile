@@ -1587,13 +1587,13 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
 
-		ifeq ($(platform),windows)
-		# convert line endings... otherwise patches are difficult
-		# do that by first "dry-running" the patch to determine which files are patched
-		patch -d $(build)/android-src -p1 --dry-run -f < android-patches.diff | \
-			grep -E '^patching file ' | sed -e 's/^patching file \(.*\)/\1/g' | \
-			( cd $(build)/android-src && xargs dos2unix )
-	endif
+ifeq ($(platform),windows)
+	# convert line endings... otherwise patches are difficult
+	# do that by first "dry-running" the patch to determine which files are patched
+	patch -d $(build)/android-src -p1 --dry-run -f < android-patches.diff | \
+		grep -E '^patching file ' | sed -e 's/^patching file \(.*\)/\1/g' | \
+		( cd $(build)/android-src && xargs dos2unix )
+endif
 
 	# now patch the files
 	( cd $(build)/android-src && patch -p1 ) < android-patches.diff
