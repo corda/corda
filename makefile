@@ -1579,24 +1579,12 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
-	@rm -rf $(build)/android-src
 	@mkdir -p $(build)/android-src/external/fdlibm
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
-
-ifeq ($(platform),windows)
-	# convert line endings... otherwise patches are difficult
-	# do that by first "dry-running" the patch to determine which files are patched
-	patch -d $(build)/android-src -p1 --dry-run -f < android-patches.diff | \
-		grep -E '^patching file ' | sed -e 's/^patching file \(.*\)/\1/g' | \
-		( cd $(build)/android-src && xargs dos2unix )
-endif
-
-	# now patch the files
-	( cd $(build)/android-src && patch -p1 ) < android-patches.diff
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
