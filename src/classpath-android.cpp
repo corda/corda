@@ -66,6 +66,7 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
   just ignore this request. */
   if (strcmp(RUNTIME_ARRAY_BODY(n), "conscrypt_jni") != 0) {
     loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
+  }
 }
 
 void JNICALL
