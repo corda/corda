@@ -1054,15 +1054,9 @@ ifeq ($(mode),stress-major)
 endif
 ifeq ($(mode),fast)
 	optimization-cflags = $(cflags_fast) -DNDEBUG
-	ifeq ($(use-lto),)
-		use-lto = true
-	endif
 endif
 ifeq ($(mode),small)
 	optimization-cflags = $(cflags_small) -DNDEBUG
-	ifeq ($(use-lto),)
-		use-lto = true
-	endif
 endif
 
 ifeq ($(use-lto),true)
