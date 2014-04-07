@@ -185,9 +185,10 @@ public class SocketChannel extends SelectableChannel
       }
 
       if (a == null) {
-        bind(socket, 0, 0);
+        SocketChannel.bind(socket, 0, 0);
       } else {
-        bind(socket, a.getAddress().getRawAddress(), a.getPort());
+        SocketChannel.bind
+          (socket, a.getAddress().getRawAddress(), a.getPort());
       }
     }
   }
