@@ -699,17 +699,17 @@ Avian_sun_misc_Unsafe_arrayIndexScale
 {
   object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
 
-  if (c == type(t, Machine::JbooleanType)
-      || c == type(t, Machine::JbyteType))
+  if (c == type(t, Machine::BooleanArrayType)
+      || c == type(t, Machine::ByteArrayType))
     return 1;
-  else if (c == type(t, Machine::JshortType)
-           || c == type(t, Machine::JcharType))
+  else if (c == type(t, Machine::ShortArrayType)
+           || c == type(t, Machine::CharArrayType))
     return 2;
-  else if (c == type(t, Machine::JintType)
-           || c == type(t, Machine::JfloatType))
+  else if (c == type(t, Machine::IntArrayType)
+           || c == type(t, Machine::FloatArrayType))
     return 4;
-  else if (c == type(t, Machine::JlongType)
-           || c == type(t, Machine::JdoubleType))
+  else if (c == type(t, Machine::LongArrayType)
+           || c == type(t, Machine::DoubleArrayType))
     return 8;
   else
     return BytesPerWord;
@@ -832,6 +832,7 @@ Avian_sun_misc_Unsafe_compareAndSwapLong
   return atomicCompareAndSwap64
     (&fieldAtOffset<uint64_t>(target, offset), expect, update);
 #else
+  PROTECT(t, target);
   ACQUIRE_FIELD_FOR_WRITE(t, fieldForOffset(t, target, offset));
   if (fieldAtOffset<uint64_t>(target, offset) == expect) {
     fieldAtOffset<uint64_t>(target, offset) = update;
@@ -849,18 +850,23 @@ Avian_sun_misc_Unsafe_getLongVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
 
-  object field;
+  object lock;
   if (BytesPerWord < 8) {
-    field = fieldForOffset(t, o, offset);
+    if (classArrayDimensions(t, objectClass(t, o))) {
+      lock = objectClass(t, o);
+    } else {
+      lock = fieldForOffset(t, o, offset);
+    }
 
-    PROTECT(t, field);
-    acquire(t, field);        
+    PROTECT(t, o);
+    PROTECT(t, lock);
+    acquire(t, lock);        
   }
 
   int64_t result = fieldAtOffset<int64_t>(o, offset);
 
   if (BytesPerWord < 8) {
-    release(t, field);        
+    release(t, lock);        
   } else {
     loadMemoryBarrier();
   }
@@ -876,12 +882,17 @@ Avian_sun_misc_Unsafe_putLongVolatile
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int64_t value; memcpy(&value, arguments + 4, 8);
 
-  object field;
+  object lock;
   if (BytesPerWord < 8) {
-    field = fieldForOffset(t, o, offset);
+    if (classArrayDimensions(t, objectClass(t, o))) {
+      lock = objectClass(t, o);
+    } else {
+      lock = fieldForOffset(t, o, offset);
+    }
 
-    PROTECT(t, field);
-    acquire(t, field);        
+    PROTECT(t, o);
+    PROTECT(t, lock);
+    acquire(t, lock);        
   } else {
     storeStoreMemoryBarrier();
   }
@@ -889,7 +900,7 @@ Avian_sun_misc_Unsafe_putLongVolatile
   fieldAtOffset<int64_t>(o, offset) = value;
 
   if (BytesPerWord < 8) {
-    release(t, field);
+    release(t, lock);
   } else {
     storeLoadMemoryBarrier();
   }
