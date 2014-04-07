@@ -163,7 +163,7 @@ ifneq ($(android),)
 	classpath-jar-dep = $(build)/android.dep
 	luni-native = $(android)/libcore/luni/src/main/native
 	classpath-cflags = -DBOOT_JAVAHOME
-	android-cflags := -I$(luni-native) \
+	android-cflags = -I$(luni-native) \
 		-I$(android)/libnativehelper/include/nativehelper \
 		-I$(android)/system/core/include \
 		-I$(android)/external/zlib \
@@ -191,21 +191,20 @@ ifneq ($(android),)
 
 	crypto-native := $(android)/libcore/crypto/src/main/native
 
+   	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
+
 	ifeq ($(platform),windows)
-		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
-			$(luni-native)/libcore_net_RawSocket.cpp \
-			$(luni-native)/org_apache_harmony_xnet_provider_jsse_NativeCrypto.cpp \
-
+			$(luni-native)/libcore_net_RawSocket.cpp
+			
 		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32
 	else
-		crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
@@ -231,6 +230,8 @@ ifneq ($(android),)
 		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
 	luni-javas := $(shell find $(luni-java) -name '*.java')
+	luni-nonjavas := $(shell find $(luni-java) -not -type d -not -name '*.java')
+	luni-copied-nonjavas = $(call noop-files,$(luni-nonjavas),$(luni-java),)
 	libdvm-java = $(android)/libcore/libdvm/src/main/java
 	libdvm-javas := $(shell find $(libdvm-java) -name '*.java')
 	crypto-java = $(android)/libcore/crypto/src/main/java
@@ -1097,6 +1098,7 @@ c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.$(asm-format),$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
+noop-files = $(foreach x,$(1),$(patsubst $(2)/%,$(3)/%,$(x)))
 
 generated-code = \
 	$(build)/type-enums.cpp \
@@ -1575,7 +1577,7 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
-		$(dalvik-javas) $(xml-javas)
+		$(dalvik-javas) $(xml-javas) $(luni-nonjavas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1585,15 +1587,18 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
 	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
 		$(xml-java)/* $(build)/android-src/
-	sed -i -e 's/return ordinal - o.ordinal;/return ordinal - o.ordinal();/' \
-		$(build)/android-src/java/lang/Enum.java
-	# sed makes this file read-only which in turn breaks re-builds; so marking it as writable
-	chmod +w $(build)/android-src/java/lang/Enum.java
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
 		@$(build)/android.txt
 	rm $(build)/android/sun/misc/Unsafe* \
 		$(build)/android/java/lang/reflect/Proxy*
+	for x in $(luni-copied-nonjavas); \
+		do cp $(luni-java)$${x} $(build)/android$${x} ; \
+	done
+	# fix security.properties - get rid of "com.android" in front of classes starting with "org"
+	sed -i -e 's/\(.*=\)com\.android\.\(org\..*\)/\1\2/g' \
+		$(build)/android/java/security/security.properties
+	chmod +w $(build)/android/java/security/security.properties
 	cp -r $(build)/android/* $(classpath-build)
 	@touch $(@)	
 

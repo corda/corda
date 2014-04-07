@@ -59,7 +59,14 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-  loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
+  /* org_conscrypt_NativeCrypto.o is linked statically, and in Avian build
+  the package is named org.conscrypt.NativeCrypto. When Android code sees
+  that name it thinks the library isn't linked as a part of Android, so it
+  tries to load in dynamically, but there's actually no need to, so we
+  just ignore this request. */
+  if (strcmp(RUNTIME_ARRAY_BODY(n), "conscrypt_jni") != 0) {
+    loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
+  }
 }
 
 void JNICALL
@@ -903,6 +910,21 @@ jniStrError(int error, char* buffer, size_t length)
 #endif
 }
 
+/*
+ * Android log priority values (as text)
+ */
+const char * const androidLogPriorityTitles[] = {
+    "UNKNOWN",
+    "DEFAULT",
+    "VERBOSE",
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "FATAL",
+    "SILENT"
+};
+
 extern "C" int
 __android_log_print(int priority, const char* tag,  const char* format, ...)
 {
@@ -914,7 +936,11 @@ __android_log_print(int priority, const char* tag,  const char* format, ...)
   ::vsnprintf(buffer, size, format, a);
   va_end(a);
 
-  return fprintf(stderr, "%d %s %s\n", priority, tag, buffer);
+#ifndef PLATFORM_WINDOWS
+  return printf("[%s] %s: %s\n", androidLogPriorityTitles[priority], tag, buffer);
+#else
+  return __mingw_fprintf(stderr, "[%s] %s: %s\n", androidLogPriorityTitles[priority], tag, buffer);
+#endif
 }
 
 extern "C" int
@@ -2324,22 +2350,6 @@ Avian_java_lang_System_identityHashCode
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_java_lang_System_mapLibraryName
-(Thread* t, object, uintptr_t* arguments)
-{
-  object original = reinterpret_cast<object>(arguments[0]);
-  unsigned originalLength = stringUTFLength(t, original);
-  THREAD_RUNTIME_ARRAY(t, char, originalChars, originalLength);
-  stringUTFChars
-    (t, original, RUNTIME_ARRAY_BODY(originalChars), originalLength);
-
-  return reinterpret_cast<uintptr_t>
-    (makeString(t, "%s%.*s%s", t->m->system->libraryPrefix(), originalLength,
-                RUNTIME_ARRAY_BODY(originalChars),
-                t->m->system->librarySuffix()));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
 (Thread*, object, uintptr_t*)
 {
@@ -2353,7 +2363,7 @@ Avian_java_util_concurrent_atomic_AtomicLong_VMSupportsCS8
 void register_java_io_Console(_JNIEnv*) { }
 void register_java_lang_ProcessManager(_JNIEnv*) { }
 void register_libcore_net_RawSocket(_JNIEnv*) { }
-void register_org_apache_harmony_xnet_provider_jsse_NativeCrypto(_JNIEnv*) { }
+//void register_org_apache_harmony_xnet_provider_jsse_NativeCrypto(_JNIEnv*) { }
 
 extern "C" AVIAN_EXPORT void JNICALL
 Avian_libcore_io_OsConstants_initConstants
