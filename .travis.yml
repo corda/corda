@@ -1,10 +1,8 @@
 language: cpp
 env:
   global:
-    secure: NhmSoQSnkmcj5BgBtVTd1X5KIECmFHwss8hzDdNmEtbGe3sIBjZksx1RSP67y/bAhuG9l8rrc0V/yMvCJY8KnjirZE9bhcY8jY8Tl1nRuUbruT7QEoufhCi79+9U1KA62PdbvHnNmoRjvwPfe3SirNbDNH0Cc3ugJnYew/c1TLQ=
-
+  - secure: J32ES3Z/8YVm3tukNdTGyZ8/MdFhU8udkW23l4TsVRLRP95wcIb3HiwwTHCLKXsvDbTj2dOCU91gYbfjWLH7yynf8hpp1nVYbOCqHf3KYFn6cALSGnJATE9nRuwlcvW4Y9A5JooHOq/iSfuF/9eBsWobEkH9BPrmmjrupyoD7z0=
 script: ./test/ci.sh
-
 after_success:
-  - make javadoc 
-  - .utility/push-javadoc-to-gh-pages.sh
+- make javadoc
+- .utility/push-javadoc-to-gh-pages.sh
