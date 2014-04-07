@@ -59,7 +59,13 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-  loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
+  /* org_conscrypt_NativeCrypto.o is linked statically, and in Avian build
+  the package is named org.conscrypt.NativeCrypto. When Android code sees
+  that name it thinks the library isn't linked as a part of Android, so it
+  tries to load in dynamically, but there's actually no need to, so we
+  just ignore this request. */
+  if (strcmp(RUNTIME_ARRAY_BODY(n), "conscrypt_jni") != 0) {
+    loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), true, true);
 }
 
 void JNICALL
