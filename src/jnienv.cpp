@@ -349,12 +349,16 @@ findClass(Thread* t, uintptr_t* arguments)
 
   object caller = getCaller(t, 0);
 
-  return reinterpret_cast<uint64_t>
-    (makeLocalReference
-     (t, getJClass
-      (t, resolveClass
-       (t, caller ? classLoader(t, methodClass(t, caller))
-        : root(t, Machine::AppLoader), n))));
+  object c = resolveClass(t,
+                          caller ? classLoader(t, methodClass(t, caller))
+                                 : root(t, Machine::AppLoader),
+                          n);
+
+  PROTECT(t, c);
+
+  initClass(t, c);
+
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
 }
 
 jclass JNICALL
