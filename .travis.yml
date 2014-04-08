@@ -1,7 +1,7 @@
 language: cpp
 env:
   global:
-  - secure: J32ES3Z/8YVm3tukNdTGyZ8/MdFhU8udkW23l4TsVRLRP95wcIb3HiwwTHCLKXsvDbTj2dOCU91gYbfjWLH7yynf8hpp1nVYbOCqHf3KYFn6cALSGnJATE9nRuwlcvW4Y9A5JooHOq/iSfuF/9eBsWobEkH9BPrmmjrupyoD7z0=
+  - secure: Pe7OLUvdk3DeTAShyaYsdAXBcnjdNOrtfTPt1mCP5+JKBUw3z0n7BpTgATVRBmkn866pDqxL0N3+jBgjKUpEpqOj23bTB2AeDdIzlYkFGvTd3GQQV1lMFn16I9LOgWJhkfICTJ1rIYiNf8xSkJoeKGB7eGUM0KGsTvelFfsaGVc=
 script: ./test/ci.sh
 after_success:
 - make javadoc
