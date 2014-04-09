@@ -3159,8 +3159,9 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   this->properties = (char**)heap->allocate(sizeof(char*) * propertyCount);
   for (unsigned int i = 0; i < propertyCount; i++)
   {
-    this->properties[i] = (char*)heap->allocate(sizeof(char) * (strlen(properties[i]) + 1));
-    strcpy(this->properties[i], properties[i]);
+    size_t length = strlen(properties[i]) + 1; // +1 for null-terminating char
+    this->properties[i] = (char*)heap->allocate(sizeof(char) * length);
+    memcpy(this->properties[i], properties[i], length);
   }
 
   const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
