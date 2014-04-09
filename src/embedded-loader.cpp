@@ -13,24 +13,15 @@
 #include <stdint.h>
 
 #include "avian/embed.h"
+#include "avian/common.h"
 #include "jni.h"
-
-#if (defined __MINGW32__) || (defined _MSC_VER)
-#  define EXPORT __declspec(dllexport)
-#  ifdef _MSC_VER
-#    define not !
-#  endif
-#else
-#  define EXPORT __attribute__ ((visibility("default"))) \
-  __attribute__ ((used))
-#endif
 
 extern "C" {
   // since we aren't linking against libstdc++, we must implement this   
   // ourselves:
   void __cxa_pure_virtual(void) { abort(); }
 
-  EXPORT const uint8_t*
+  AVIAN_EXPORT const uint8_t*
   bootJar(unsigned* size)
   {
     if(HRSRC hResInfo = FindResourceW(NULL, RESID_BOOT_JAR, reinterpret_cast<LPCWSTR>(RT_RCDATA)))
