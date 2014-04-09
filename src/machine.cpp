@@ -3155,14 +3155,6 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
 
   populateJNITables(&javaVMVTable, &jniEnvVTable);
 
-  const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
-  const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
-  const char* bootstrapPropertyEnd = bootstrapPropertyDup + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
-  char* codeLibraryName = (char*)bootstrapPropertyDup;
-  char* codeLibraryNameEnd = 0;
-  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
-    *codeLibraryNameEnd = 0;
-
   // Copying the properties memory (to avoid memory crashes)
   this->properties = (char**)heap->allocate(sizeof(char*) * propertyCount);
   for (unsigned int i = 0; i < propertyCount; i++)
@@ -3170,6 +3162,14 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
     this->properties[i] = (char*)heap->allocate(sizeof(char) * (strlen(properties[i]) + 1));
     strcpy(this->properties[i], properties[i]);
   }
+
+  const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
+  const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
+  const char* bootstrapPropertyEnd = bootstrapPropertyDup + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
+  char* codeLibraryName = (char*)bootstrapPropertyDup;
+  char* codeLibraryNameEnd = 0;
+  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
+    *codeLibraryNameEnd = 0;
 
   if (not system->success(system->make(&localThread)) or
       not system->success(system->make(&stateLock)) or
