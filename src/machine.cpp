@@ -3119,7 +3119,6 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   exclusive(0),
   finalizeThread(0),
   jniReferences(0),
-  properties(properties),
   propertyCount(propertyCount),
   arguments(arguments),
   argumentCount(argumentCount),
@@ -3163,6 +3162,14 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   char* codeLibraryNameEnd = 0;
   if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
     *codeLibraryNameEnd = 0;
+
+  // Copying the properties memory (to avoid memory crashes)
+  this->properties = (char**)heap->allocate(sizeof(char*) * propertyCount);
+  for (unsigned int i = 0; i < propertyCount; i++)
+  {
+    this->properties[i] = (char*)heap->allocate(sizeof(char) * (strlen(properties[i]) + 1));
+    strcpy(this->properties[i], properties[i]);
+  }
 
   if (not system->success(system->make(&localThread)) or
       not system->success(system->make(&stateLock)) or
@@ -3222,6 +3229,10 @@ Machine::dispose()
 
   heap->free(arguments, sizeof(const char*) * argumentCount);
 
+  for (unsigned int i = 0; i < propertyCount; i++)
+  {
+    heap->free(properties[i], sizeof(char) * (strlen(properties[i]) + 1));
+  }
   heap->free(properties, sizeof(const char*) * propertyCount);
 
   static_cast<HeapClient*>(heapClient)->dispose();

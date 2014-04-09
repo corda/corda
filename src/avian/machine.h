@@ -1263,7 +1263,7 @@ class Machine {
   Thread* exclusive;
   Thread* finalizeThread;
   Reference* jniReferences;
-  const char** properties;
+  char** properties;
   unsigned propertyCount;
   const char** arguments;
   unsigned argumentCount;
