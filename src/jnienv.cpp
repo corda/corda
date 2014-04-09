@@ -3958,6 +3958,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
     (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions,
      stackLimit);
 
+  h->free(properties, sizeof(const char*) * propertyCount);
+
   *t = p->makeThread(*m, 0, 0);
 
   enter(*t, Thread::ActiveState);
