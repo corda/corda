@@ -23,7 +23,9 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
   cp -Rf ../javadoc ./javadoc
   git add -f .
   git commit -m "Lastest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
-  git push -fq origin gh-pages > /dev/null
-
-  echo "Done magic with auto publishment to gh-pages."
+  if ! git push -fq origin gh-pages &> /dev/null; then
+    echo "Error pushing gh-pages to origin. Bad GH_TOKEN? GitHub down?"
+  else
+    echo "Done magic with auto publishment to gh-pages."
+  fi
 fi
