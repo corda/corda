@@ -3944,10 +3944,10 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   }
 
   unsigned cpl = strlen(classpath);
-  RUNTIME_ARRAY(char, classpathProperty, cpl + sizeof(CLASSPATH_PROPERTY) + 1);
+  RUNTIME_ARRAY(char, classpathProperty, cpl + strlen(CLASSPATH_PROPERTY) + 2);
   if (addClasspathProperty) {
     char* p = RUNTIME_ARRAY_BODY(classpathProperty);
-    local::append(&p, CLASSPATH_PROPERTY, sizeof(CLASSPATH_PROPERTY), '=');
+    local::append(&p, CLASSPATH_PROPERTY, strlen(CLASSPATH_PROPERTY), '=');
     local::append(&p, classpath, cpl, 0);
     *(propertyPointer++) = RUNTIME_ARRAY_BODY(classpathProperty);
   }
@@ -3961,6 +3961,8 @@ JNI_CreateJavaVM(Machine** m, Thread** t, void* args)
   *m = new (h->allocate(sizeof(Machine))) Machine
     (s, h, bf, af, p, c, properties, propertyCount, arguments, a->nOptions,
      stackLimit);
+
+  h->free(properties, sizeof(const char*) * propertyCount);
 
   *t = p->makeThread(*m, 0, 0);
 

@@ -3119,7 +3119,6 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   exclusive(0),
   finalizeThread(0),
   jniReferences(0),
-  properties(properties),
   propertyCount(propertyCount),
   arguments(arguments),
   argumentCount(argumentCount),
@@ -3155,6 +3154,15 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
   heap->setClient(heapClient);
 
   populateJNITables(&javaVMVTable, &jniEnvVTable);
+
+  // Copying the properties memory (to avoid memory crashes)
+  this->properties = (char**)heap->allocate(sizeof(char*) * propertyCount);
+  for (unsigned int i = 0; i < propertyCount; i++)
+  {
+    size_t length = strlen(properties[i]) + 1; // +1 for null-terminating char
+    this->properties[i] = (char*)heap->allocate(sizeof(char) * length);
+    memcpy(this->properties[i], properties[i], length);
+  }
 
   const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
   const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
@@ -3222,6 +3230,10 @@ Machine::dispose()
 
   heap->free(arguments, sizeof(const char*) * argumentCount);
 
+  for (unsigned int i = 0; i < propertyCount; i++)
+  {
+    heap->free(properties[i], sizeof(char) * (strlen(properties[i]) + 1));
+  }
   heap->free(properties, sizeof(const char*) * propertyCount);
 
   static_cast<HeapClient*>(heapClient)->dispose();
