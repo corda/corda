@@ -9095,6 +9095,9 @@ class MyProcessor: public Processor {
     if (codeAllocator.memory.begin() == 0) {
       codeAllocator.memory.items = static_cast<uint8_t*>(
           s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
+
+      expect(t, codeAllocator.memory.items);
+
       codeAllocator.memory.count = ExecutableAreaSizeInBytes;
     }
 #endif
