@@ -228,9 +228,8 @@ translateStackTrace(Thread* t, object raw)
 
 class MyClasspath : public Classpath {
  public:
-  MyClasspath(Allocator* allocator):
-    allocator(allocator),
-    tzdata(0)
+  MyClasspath(Allocator* allocator)
+      : allocator(allocator), tzdata(0), mayInitClasses_(false)
   { }
 
   virtual object
@@ -493,6 +492,13 @@ class MyClasspath : public Classpath {
     JniConstants::init(reinterpret_cast<_JNIEnv*>(t));
 
     JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
+
+    mayInitClasses_ = true;
+  }
+
+  virtual bool mayInitClasses()
+  {
+    return mayInitClasses_;
   }
 
   virtual void
@@ -579,6 +585,7 @@ class MyClasspath : public Classpath {
 
   Allocator* allocator;
   System::Region* tzdata;
+  bool mayInitClasses_;
 };
 
 int64_t JNICALL

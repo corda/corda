@@ -354,9 +354,11 @@ findClass(Thread* t, uintptr_t* arguments)
                                  : root(t, Machine::AppLoader),
                           n);
 
-  PROTECT(t, c);
+  if (t->m->classpath->mayInitClasses()) {
+    PROTECT(t, c);
 
-  initClass(t, c);
+    initClass(t, c);
+  }
 
   return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
 }
