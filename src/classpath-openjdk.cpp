@@ -681,6 +681,11 @@ class MyClasspath : public Classpath {
     // ignore
   }
 
+  virtual bool mayInitClasses()
+  {
+    return true;
+  }
+
   virtual void
   boot(Thread* t)
   {

@@ -1571,6 +1571,8 @@ class Classpath {
   virtual void
   preBoot(Thread* t) = 0;
 
+  virtual bool mayInitClasses() = 0;
+
   virtual void
   boot(Thread* t) = 0;
 
