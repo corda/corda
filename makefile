@@ -141,6 +141,8 @@ ifneq ($(openjdk),)
 		stub-sources = $(src)/openjdk/stubs.cpp
 		stub-objects = $(call cpp-objects,$(stub-sources),$(src),$(build))
 	else
+		soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
+		version-script-flag = -Wl,--version-script=openjdk.ld
 		options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
 		ifeq ($(build-platform),darwin)
@@ -191,14 +193,14 @@ ifneq ($(android),)
 
 	crypto-native := $(android)/libcore/crypto/src/main/native
 
-   	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
+	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
 			$(luni-native)/libcore_net_RawSocket.cpp
-			
+
 		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
@@ -366,9 +368,6 @@ build-lflags = -lz -lpthread -ldl
 
 lflags = $(common-lflags) -lpthread -ldl
 
-soname-flag = -Wl,-soname -Wl,$(so-prefix)jvm$(so-suffix)
-version-script-flag = -Wl,--version-script=openjdk.ld
-
 build-system = posix
 
 system = posix
@@ -485,10 +484,6 @@ ifeq ($(build-platform),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
-endif
-
-ifeq ($(platform),darwin)
-	soname-flag =
 endif
 
 ifeq ($(platform),qnx)
@@ -619,7 +614,7 @@ ifeq ($(platform),darwin)
 		sysroot = $(sdk-dir)/MacOSX$(mac-version).sdk
 	endif
 
-
+	soname-flag =
 	version-script-flag =
 	lflags = $(common-lflags) -ldl -framework CoreFoundation
 
