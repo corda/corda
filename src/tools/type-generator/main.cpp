@@ -1839,6 +1839,7 @@ writeMap(Output* out, Object* type)
     Object* m = it.next();
 
     if (it.sawSuperclassBoundary) {
+      it.sawSuperclassBoundary = false;
       out->write("Type_pad, ");
     }
 
