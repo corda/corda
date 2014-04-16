@@ -10,7 +10,7 @@
 
 package java.util;
 
-public class Vector<T> extends AbstractList<T> implements java.io.Serializable, Cloneable {
+public class Vector<T> extends AbstractList<T> implements java.io.Serializable, Cloneable, RandomAccess {
   private final ArrayList<T> list;
 
   public Vector(int capacity) {

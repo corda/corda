@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class ArrayList<T> extends AbstractList<T> implements java.io.Serializable {
+public class ArrayList<T> extends AbstractList<T> implements java.io.Serializable, RandomAccess {
   private static final int MinimumCapacity = 16;
 
   private Object[] array;
