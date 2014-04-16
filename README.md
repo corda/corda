@@ -6,35 +6,37 @@ Avian - A lightweight Java Virtual Machine (JVM)
 Quick Start
 -----------
 
+These are examples of building Avian on various operating systems for
+the x86_64 architecture.  You may need to modify JAVA_HOME according
+to where the JDK is installed on your system.  In all cases, be sure
+to use forward slashes in the path.
+
 #### on Linux:
-    $ export JAVA_HOME=/usr/local/java # or wherever you have the JDK installed
+    $ export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
     $ make
-    $ build/linux-i386/avian -cp build/linux-i386/test Hello
+    $ build/linux-x86_64/avian -cp build/linux-x86_64/test Hello
 
 #### on Mac OS X:
-    $ export JAVA_HOME=/Library/Java/Home
+    $ export JAVA_HOME=$(/usr/libexec/java_home)
     $ make
-    $ build/darwin-i386/avian -cp build/darwin-i386/test Hello
+    $ build/darwin-x86_64/avian -cp build/darwin-x86_64/test Hello
  
 #### on Windows (MSYS):
-    $ git clone git@github.com:ReadyTalk/win32.git ../win32
-    $ export JAVA_HOME="C:/Program Files/Java/jdk1.6.0_07"
+    $ git clone git@github.com:ReadyTalk/win64.git ../win64
+    $ export JAVA_HOME="C:/Program Files/Java/jdk1.7.0_45"
     $ make
-    $ build/windows-i386/avian -cp build/windows-i386/test Hello
+    $ build/windows-x86_64/avian -cp build/windows-x86_64/test Hello
 
 #### on Windows (Cygwin):
-    $ git clone git@github.com:ReadyTalk/win32.git ../win32
-    $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.6.0_07"
+    $ git clone git@github.com:ReadyTalk/win64.git ../win64
+    $ export JAVA_HOME="/cygdrive/c/Program Files/Java/jdk1.7.0_45"
     $ make
-    $ build/windows-i386/avian -cp build/windows-i386/test Hello
+    $ build/windows-x86_64/avian -cp build/windows-x86_64/test Hello
 
 #### on FreeBSD:
-    $ export JAVA_HOME=/usr/local/openjdk7 # or wherever you have the JDK installed
+    $ export JAVA_HOME=/usr/local/openjdk7
     $ gmake
     $ build/freebsd-x86_64/avian -cp build/freebsd-x86_64/test Hello
-
-Adjust JAVA_HOME according to your system, but be sure to use forward
-slashes in the path.
 
 
 Introduction
