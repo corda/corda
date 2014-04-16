@@ -11,4 +11,6 @@
 package java.util;
 
 public interface RandomAccess {
+  /* nothing added here, this interface just indicates a 
+   * structure is efficient to access via index's directly.*/
 }
