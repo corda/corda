@@ -252,6 +252,9 @@ public class Reflection {
 
     expect(avian.testing.annotations.Test.class.getPackage().getName().equals
            ("avian.testing.annotations"));
+
+    expect(Baz.class.getField("foo").getAnnotation(Ann.class) == null);
+    expect(Baz.class.getField("foo").getAnnotations().length == 0);
   }
 
   protected static class Baz {
@@ -280,3 +283,5 @@ interface A {
 }
 
 interface B extends A { }
+
+@interface Ann { }
