@@ -348,8 +348,13 @@ public class Field<T> extends AccessibleObject {
     return (Annotation) a[0];
   }
 
+  private boolean hasAnnotations() {
+    return vmField.addendum != null
+      && vmField.addendum.annotationTable != null;
+  }
+
   public <T extends Annotation> T getAnnotation(Class<T> class_) {
-    if (vmField.addendum != null && vmField.addendum.annotationTable != null) {
+    if (hasAnnotations()) {
       Object[] table = (Object[]) vmField.addendum.annotationTable;
       for (int i = 0; i < table.length; ++i) {
         Object[] a = (Object[]) table[i];
@@ -362,7 +367,7 @@ public class Field<T> extends AccessibleObject {
   }
 
   public Annotation[] getAnnotations() {
-    if (vmField.addendum.annotationTable != null) {
+    if (hasAnnotations()) {
       Object[] table = (Object[]) vmField.addendum.annotationTable;
       Annotation[] array = new Annotation[table.length];
       for (int i = 0; i < table.length; ++i) {
