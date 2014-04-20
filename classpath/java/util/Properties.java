@@ -58,6 +58,10 @@ public class Properties extends Hashtable {
     return keys();
   }
 
+  public Set<String> stringPropertyNames() {
+    return new HashSet(keySet());
+  }
+
   private abstract static class Parser {
     private StringBuilder key = null;
     private StringBuilder value = null;
