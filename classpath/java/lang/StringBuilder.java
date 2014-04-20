@@ -70,6 +70,10 @@ public class StringBuilder implements CharSequence, Appendable {
     return append(new String(b, offset, length));
   }
 
+  public StringBuilder append(char[] b) {
+    return append(new String(b));
+  }
+
   public StringBuilder append(Object o) {
     return append(o == null ? "null" : o.toString());
   }
