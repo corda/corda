@@ -8,13 +8,13 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
 
   cd build/
 
-  if test -d gh-pages
+  if test -d gh-pages/avian-web
   then
-    cd gh-pages
+    cd gh-pages/avian-web
     git pull
   else
-    git clone --quiet --branch=gh-pages https://${GH_TOKEN}@github.com/ReadyTalk/avian gh-pages > /dev/null
-    cd gh-pages
+    git clone --quiet https://${GH_TOKEN}@github.com/ReadyTalk/readytalk.github.io gh-pages > /dev/null
+    cd gh-pages/avian-web
     git config user.email "travis@travis-ci.org"
     git config user.name "travis-ci"
   fi
@@ -22,10 +22,10 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ]; then
   git rm -rf ./javadoc
   cp -Rf ../javadoc ./javadoc
   git add -f .
-  git commit -m "Latest javadoc on successful travis build $TRAVIS_BUILD_NUMBER auto-pushed to gh-pages"
-  if ! git push -fq origin gh-pages &> /dev/null; then
+  git commit -m "Latest javadoc on successful Travis build $TRAVIS_BUILD_NUMBER auto-pushed to readytalk.github.io"
+  if ! git push -fq origin master &> /dev/null; then
     echo "Error pushing gh-pages to origin. Bad GH_TOKEN? GitHub down?"
   else
-    echo "Done magic with auto publishment to gh-pages."
+    echo "Done magic with auto publishment to readytalk.github.io."
   fi
 fi
