@@ -471,6 +471,12 @@ ifeq ($(arch),arm)
 	endif
 endif
 
+ifneq ($(platform),darwin)
+# By default, assume we can't use armv7-specific instructions on
+# non-iOS platforms.  Ideally, we'd detect this at runtime.
+	armv6=true
+endif
+
 ifeq ($(armv6),true)
 	cflags += -DAVIAN_ASSUME_ARMV6
 endif
@@ -1465,8 +1471,15 @@ debug: build
 vg: build
 	$(library-path) $(vg) $(test-executable) $(test-args)
 
+
 .PHONY: test
-test: build $(build)/run-tests.sh $(build)/test.sh $(unittest-executable)
+test: build-test run-test
+
+.PHONY: build-test
+build-test: build $(build)/run-tests.sh $(build)/test.sh $(unittest-executable)
+
+.PHONY: run-test
+run-test:
 ifneq ($(remote-test),true)
 	/bin/sh $(build)/run-tests.sh
 else
