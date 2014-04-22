@@ -1433,7 +1433,8 @@ endif
 class-name = $(patsubst $(1)/%.class,%,$(2))
 class-names = $(foreach x,$(2),$(call class-name,$(1),$(x)))
 
-test-flags = -Djava.library.path=$(build) -cp $(build)/test
+test-flags = -Djava.library.path=$(build) \
+	-cp $(build)/test$(target-path-separator)$(build)/extra-dir
 
 test-args = $(test-flags) $(input)
 
