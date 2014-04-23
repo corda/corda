@@ -103,7 +103,7 @@ public final class URL {
     this.file = file;
     this.ref = ref;
     
-    int q = file.lastIndexOf('?');
+    int q = file == null ? -1 : file.lastIndexOf('?');
     if (q != -1) {
       this.query = file.substring(q + 1);
       this.path = file.substring(0, q);
