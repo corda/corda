@@ -1,10 +1,8 @@
 FROM debian:jessie
 MAINTAINER Joshua Warner, joshuawarner32@gmail.com
 
-RUN apt-get update
-
 # Install base dependencies and build tools, general debugging tools
-RUN apt-get install -y build-essential g++-4.8 zlib1g-dev openjdk-7-jdk locales --no-install-recommends && apt-get clean all
+RUN apt-get update && apt-get install -y build-essential g++-4.8 zlib1g-dev openjdk-7-jdk locales --no-install-recommends && apt-get clean all
 
 # Fix utf-8 default locale - we'd otherwise have trouble with the Strings and Misc tests
 RUN localedef -i en_US -f UTF-8 en_US.UTF-8
