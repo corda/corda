@@ -2197,6 +2197,16 @@ stringOffset(Thread*, object)
   return 0;
 }
 
+#  ifndef HAVE_StringHash32
+
+inline object
+makeString(Thread* t, object data, int32_t hash, int32_t)
+{
+  return makeString(t, data, hash);
+}
+
+#  endif // not HAVE_StringHash32
+
 inline object
 makeString(Thread* t, object data, unsigned offset, unsigned length, unsigned)
 {
@@ -2476,16 +2486,33 @@ fieldSize(Thread* t, object field)
 }
 
 inline void
-scanMethodSpec(Thread* t, const char* s, unsigned* parameterCount,
+scanMethodSpec(Thread* t, const char* s, bool static_,
+               unsigned* parameterCount, unsigned* parameterFootprint,
                unsigned* returnCode)
 {
   unsigned count = 0;
+  unsigned footprint = 0;
   MethodSpecIterator it(t, s);
-  for (; it.hasNext(); it.next()) {
+  while (it.hasNext()) {
     ++ count;
+    switch (*it.next()) {
+    case 'J':
+    case 'D':
+      footprint += 2;
+      break;
+
+    default:
+      ++ footprint;
+      break;        
+    }
+  }
+
+  if (not static_) {
+    ++ footprint;
   }
 
   *parameterCount = count;
+  *parameterFootprint = footprint;
   *returnCode = fieldCode(t, *it.returnSpec());
 }
 

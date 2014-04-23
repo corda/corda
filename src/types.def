@@ -8,6 +8,8 @@
 
 (type jaccessibleObject java/lang/reflect/AccessibleObject)
 
+(type jexecutable java/lang/reflect/Executable)
+
 (type jfield java/lang/reflect/Field)
 
 (type jmethod java/lang/reflect/Method)
@@ -87,9 +89,18 @@
   (array uint8_t body))
 
 (type reference
+  (uint8_t kind)
   (object class)
   (object name)
   (object spec))
+
+(type invocation
+  (uint16_t bootstrap)
+  (int32_t index)
+  (object class)
+  (object pool)
+  (object template)
+  (object site))
 
 (type triple
   (object first)

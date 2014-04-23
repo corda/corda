@@ -3296,11 +3296,12 @@ int
 methodReferenceReturnCode(Thread* t, object reference)
 {
   unsigned parameterCount;
+  unsigned parameterFootprint;
   unsigned returnCode;
   scanMethodSpec
     (t, reinterpret_cast<const char*>
-     (&byteArrayBody(t, referenceSpec(t, reference), 0)), &parameterCount,
-     &returnCode);
+     (&byteArrayBody(t, referenceSpec(t, reference), 0)), true,
+     &parameterCount, &parameterFootprint, &returnCode);
 
   return returnCode;
 }

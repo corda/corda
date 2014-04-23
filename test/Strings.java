@@ -124,22 +124,39 @@ public class Strings {
     expect(months.split("\u00ae").length == 3);
     expect(months.replaceAll("\u00ae", ".").equals("Jan.Feb.Mar."));
 
+    // Java 8 changed the semantics of String.split relative to
+    // previous versions, therefore we accept multiple possible
+    // results:
     expect(arraysEqual
-           ("xyz".split("",  0), new String[] { "", "x", "y", "z" }));
+           ("xyz".split("",  0), new String[] { "", "x", "y", "z" })
+           || arraysEqual
+           ("xyz".split("",  0), new String[] { "x", "y", "z" }));
     expect(arraysEqual
            ("xyz".split("",  1), new String[] { "xyz" }));
     expect(arraysEqual
-           ("xyz".split("",  2), new String[] { "", "xyz" }));
+           ("xyz".split("",  2), new String[] { "", "xyz" })
+           || arraysEqual
+           ("xyz".split("",  2), new String[] { "x", "yz" }));
     expect(arraysEqual
-           ("xyz".split("",  3), new String[] { "", "x", "yz" }));
+           ("xyz".split("",  3), new String[] { "", "x", "yz" })
+           || arraysEqual
+           ("xyz".split("",  3), new String[] { "x", "y", "z" }));
     expect(arraysEqual
-           ("xyz".split("",  4), new String[] { "", "x", "y", "z" }));
+           ("xyz".split("",  4), new String[] { "", "x", "y", "z" })
+           || arraysEqual
+           ("xyz".split("",  4), new String[] { "x", "y", "z", "" }));
     expect(arraysEqual
-           ("xyz".split("",  5), new String[] { "", "x", "y", "z", "" }));
+           ("xyz".split("",  5), new String[] { "", "x", "y", "z", "" })
+           || arraysEqual
+           ("xyz".split("",  5), new String[] { "x", "y", "z", "" }));
     expect(arraysEqual
-           ("xyz".split("",  6), new String[] { "", "x", "y", "z", "" }));
+           ("xyz".split("",  6), new String[] { "", "x", "y", "z", "" })
+           || arraysEqual
+           ("xyz".split("",  6), new String[] { "x", "y", "z", "" }));
     expect(arraysEqual
-           ("xyz".split("", -1), new String[] { "", "x", "y", "z", "" }));
+           ("xyz".split("", -1), new String[] { "", "x", "y", "z", "" })
+           || arraysEqual
+           ("xyz".split("", -1), new String[] { "x", "y", "z", "" }));
 
     expect(arraysEqual("".split("xyz",  0), new String[] { "" }));
     expect(arraysEqual("".split("xyz",  1), new String[] { "" }));

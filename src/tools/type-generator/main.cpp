@@ -1061,6 +1061,7 @@ parseType(Finder* finder, Object::ObjectType type, Object* p,
       }
     } client;
     System::Region* region = finder->find(append(javaName, ".class"));
+    if (region == 0) return 0;
     Stream s(&client, region->start(), region->length());
     parseJavaClass(t, &s, declarations);
     region->dispose();
@@ -1109,8 +1110,10 @@ parse(Finder* finder, Input* in)
 
   Object* o;
   while ((o = read(in, eos, 0)) != eos) {
-    declarations.append
-      (parseDeclaration(finder, o, declarations.first));
+    Object* declaration = parseDeclaration(finder, o, declarations.first);
+    if (declaration) {
+      declarations.append(declaration);
+    }
   }
 
   return declarations.first;
