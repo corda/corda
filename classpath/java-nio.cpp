@@ -115,12 +115,17 @@ throwIOException(JNIEnv* e, const char* s)
   throwNew(e, "java/io/IOException", s);
 }
 
-void
-throwIOException(JNIEnv* e, jbyteArray a)
+void throwIOException(JNIEnv* e, jbyteArray a)
 {
-  jbyte* s = static_cast<jbyte*>(e->GetPrimitiveArrayCritical(a, 0));
-  throwIOException(e, reinterpret_cast<const char*>(s));
-  e->ReleasePrimitiveArrayCritical(a, s, 0);
+  size_t length = e->GetArrayLength(a);
+  uint8_t* buf = static_cast<uint8_t*>(allocate(e, length));
+  if (buf) {
+    e->GetByteArrayRegion(a, 0, length, reinterpret_cast<jbyte*>(buf));
+    throwIOException(e, reinterpret_cast<const char*>(buf));
+    free(buf);
+  } else {
+    return;
+  }
 }
 
 void

@@ -1841,6 +1841,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
   {
     return allocate2(t, sizeInBytes, objectMask);
   } else {
+    assert(t, t->criticalLevel == 0);
     return allocateSmall(t, sizeInBytes);
   }
 }
