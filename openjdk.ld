@@ -74,6 +74,7 @@ SUNWprivate_1.1 {
                 JVM_CurrentTimeMillis;
                 JVM_DefineClass;
                 JVM_DefineClassWithSource;
+                JVM_DefineClassWithSourceCond;
                 JVM_DesiredAssertionStatus;
                 JVM_DisableCompiler;
                 JVM_DoPrivileged;
@@ -127,12 +128,14 @@ SUNWprivate_1.1 {
                 JVM_GetClassNameUTF;
                 JVM_GetClassSignature;
                 JVM_GetClassSigners;
+                JVM_GetClassTypeAnnotations;
                 JVM_GetComponentType;
                 JVM_GetDeclaredClasses;
                 JVM_GetDeclaringClass;
                 JVM_GetEnclosingMethodInfo;
                 JVM_GetFieldAnnotations;
                 JVM_GetFieldIxModifiers;
+                JVM_GetFieldTypeAnnotations;
                 JVM_GetHostName;
                 JVM_GetInheritedAccessControlContext;
                 JVM_GetInterfaceVersion;
@@ -185,6 +188,7 @@ SUNWprivate_1.1 {
                 JVM_IsSilentCompiler;
                 JVM_IsSupportedJNIVersion;
                 JVM_IsThreadAlive;
+                JVM_IsVMGeneratedMethodIx;
                 JVM_LatestUserDefinedLoader;
                 JVM_Listen;
                 JVM_LoadClass0;
@@ -220,6 +224,7 @@ SUNWprivate_1.1 {
                 JVM_SetArrayElement;
                 JVM_SetClassSigners;
                 JVM_SetLength;
+                JVM_SetNativeThreadName;
                 JVM_SetPrimitiveArrayElement;
                 JVM_SetProtectionDomain;
                 JVM_SetSockOpt;

@@ -945,7 +945,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
         
-      object value = makeReference(t, 0, singletonObject(t, pool, si), 0);
+      object value = makeReference(t, 0, 0, singletonObject(t, pool, si), 0);
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
@@ -1004,7 +1004,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       object nameAndType = singletonObject(t, pool, nti);
 
       object value = makeReference
-          (t, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
+        (t, 0, class_, pairFirst(t, nameAndType), pairSecond(t, nameAndType));
       set(t, pool, SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
@@ -1012,6 +1012,68 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, object pool, unsigned i)
       }
     }
   } return 1;
+
+  case CONSTANT_MethodHandle:
+    if (singletonObject(t, pool, i) == 0) {
+      unsigned kind = s.read1();
+      unsigned ri = s.read2() - 1;
+
+      parsePoolEntry(t, s, index, pool, ri);
+
+      object value = singletonObject(t, pool, ri);
+
+      if (DebugClassReader) {
+        fprintf(stderr, "   consts[%d] = method handle %d %s.%s%s\n", i, kind,
+                &byteArrayBody(t, referenceClass(t, value), 0),
+                &byteArrayBody(t, referenceName(t, value), 0),
+                &byteArrayBody(t, referenceSpec(t, value), 0));
+      }
+
+      value = makeReference
+        (t, kind, referenceClass(t, value), referenceName(t, value),
+         referenceSpec(t, value));
+
+      set(t, pool, SingletonBody + (i * BytesPerWord), value);
+    } return 1;
+
+  case CONSTANT_MethodType:
+    if (singletonObject(t, pool, i) == 0) {
+      unsigned ni = s.read2() - 1;
+
+      parsePoolEntry(t, s, index, pool, ni);
+
+      set(t, pool, SingletonBody + (i * BytesPerWord),
+          singletonObject(t, pool, ni));
+    } return 1;
+
+  case CONSTANT_InvokeDynamic:
+    if (singletonObject(t, pool, i) == 0) {
+      unsigned bootstrap = s.read2();
+      unsigned nti = s.read2() - 1;
+
+      parsePoolEntry(t, s, index, pool, nti);
+
+      object nameAndType = singletonObject(t, pool, nti);
+
+      const char* specString = reinterpret_cast<const char*>
+        (&byteArrayBody(t, pairSecond(t, nameAndType), 0));
+
+      unsigned parameterCount;
+      unsigned parameterFootprint;
+      unsigned returnCode;
+      scanMethodSpec
+        (t, specString, true, &parameterCount, &parameterFootprint,
+         &returnCode);
+
+      object template_ = makeMethod
+        (t, 0, returnCode, parameterCount, parameterFootprint, 0, 0, 0, 0,
+         pairFirst(t, nameAndType), pairSecond(t, nameAndType), 0, 0, 0);
+
+      object value = makeInvocation
+        (t, bootstrap, -1, 0, pool, template_, 0);
+
+      set(t, pool, SingletonBody + (i * BytesPerWord), value);
+    } return 1;
 
   default: abort(t);
   }
@@ -1076,6 +1138,21 @@ parsePool(Thread* t, Stream& s)
       case CONSTANT_Utf8:
         singletonMarkObject(t, pool, i);
         s.skip(s.read2());
+        break;
+
+      case CONSTANT_MethodHandle:
+        singletonMarkObject(t, pool, i);
+        s.skip(3);
+        break;
+
+      case CONSTANT_MethodType:
+        singletonMarkObject(t, pool, i);
+        s.skip(2);
+        break;
+
+      case CONSTANT_InvokeDynamic:
+        singletonMarkObject(t, pool, i);
+        s.skip(4);
         break;
 
       default: abort(t);
@@ -2066,15 +2143,17 @@ parseMethodTable(Thread* t, Stream& s, object class_, object pool)
         (&byteArrayBody(t, singletonObject(t, pool, spec - 1), 0));
 
       unsigned parameterCount;
+      unsigned parameterFootprint;
       unsigned returnCode;
-      scanMethodSpec(t, specString, &parameterCount, &returnCode);
+      scanMethodSpec(t, specString, flags & ACC_STATIC, &parameterCount,
+                     &parameterFootprint, &returnCode);
 
       object method =  t->m->processor->makeMethod
         (t,
          0, // vm flags
          returnCode,
          parameterCount,
-         parameterFootprint(t, specString, flags & ACC_STATIC),
+         parameterFootprint,
          flags,
          0, // offset
          singletonObject(t, pool, name - 1),
@@ -5158,6 +5237,10 @@ parseUtf8(Thread* t, object array)
 object
 getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 {
+  if (static_cast<int>(target) == -1) {
+    target = 2;
+  }
+
   class Visitor: public Processor::StackVisitor {
    public:
     Visitor(Thread* t, unsigned target, bool skipMethodInvoke):

@@ -120,16 +120,24 @@ ifneq ($(openjdk),)
 		openjdk-jar-dep = $(build)/openjdk-jar.dep
 		classpath-jar-dep = $(openjdk-jar-dep)
 		javahome = $(embed-prefix)/javahomeJar
-		javahome-files = lib/zi lib/currency.data lib/security/java.security \
+		javahome-files = lib/currency.data lib/security/java.security \
 			lib/security/java.policy lib/security/cacerts
 
+		ifneq (,$(wildcard $(openjdk)/jre/lib/zi))
+			javahome-files += lib/zi
+		endif
+
+		ifneq (,$(wildcard $(openjdk)/jre/lib/tzdb.dat))
+			javahome-files += lib/tzdb.dat
+		endif
+
 		local-policy = lib/security/local_policy.jar
-		ifeq ($(shell test -e "$(openjdk)/jre/$(local-policy)" && echo found),found)
+		ifneq (,$(wildcard $(openjdk)/jre/$(local-policy)))
 			javahome-files += $(local-policy)
 		endif
 
 		export-policy = lib/security/US_export_policy.jar
-		ifeq ($(shell test -e "$(openjdk)/jre/$(export-policy)" && echo found),found)
+		ifneq (,$(wildcard $(openjdk)/jre/$(export-policy)))
 			javahome-files += $(export-policy)
 		endif
 

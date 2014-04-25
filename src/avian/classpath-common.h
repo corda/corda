@@ -239,8 +239,8 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
       runOnLoadIfFound(t, lib);
     }
   } else if (throw_) {
-    throwNew(t, Machine::UnsatisfiedLinkErrorType, "library not found: %s",
-             name);
+    throwNew(t, Machine::UnsatisfiedLinkErrorType,
+             "library not found in %s: %s", path, name);
   }
 
   return lib;

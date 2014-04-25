@@ -2136,6 +2136,58 @@ countConstructors(Thread* t, object c, bool publicOnly)
   return count;
 }
 
+#ifdef HAVE_JexecutableHasRealParameterData
+object
+makeJmethod(Thread* t,
+            uint8_t override,
+            object securityCheckCache,
+            object clazz,
+            uint32_t slot,
+            object name,
+            object returnType,
+            object parameterTypes,
+            object exceptionTypes,
+            uint32_t modifiers,
+            object signature,
+            object genericInfo,
+            object annotations,
+            object parameterAnnotations,
+            object annotationDefault,
+            object methodAccessor,
+            object root,
+            object declaredAnnotations)
+{
+  return makeJmethod
+    (t, override, securityCheckCache, 0, 0, declaredAnnotations, clazz, slot,
+     name, returnType, parameterTypes, exceptionTypes, modifiers, signature,
+     genericInfo, annotations, parameterAnnotations, annotationDefault,
+     methodAccessor, root);
+}
+
+object
+makeJconstructor(Thread* t,
+                 uint8_t override,
+                 object securityCheckCache,
+                 object clazz,
+                 uint32_t slot,
+                 object parameterTypes,
+                 object exceptionTypes,
+                 uint32_t modifiers,
+                 object signature,
+                 object genericInfo,
+                 object annotations,
+                 object parameterAnnotations,
+                 object constructorAccessor,
+                 object root,
+                 object declaredAnnotations)
+{
+  return makeJconstructor
+    (t, override, securityCheckCache, 0, 0, declaredAnnotations, clazz, slot,
+     parameterTypes, exceptionTypes, modifiers, signature, genericInfo,
+     annotations, parameterAnnotations, constructorAccessor, root);
+}
+#endif // HAVE_JexecutableHasRealParameterData
+
 object
 makeJmethod(Thread* t, object vmMethod, int index)
 {
@@ -3081,7 +3133,13 @@ EXPORT(JVM_FindLibraryEntry)(void* library, const char* name)
     library = t->m->libraries;
   }
 
-  return static_cast<System::Library*>(library)->resolve(name);
+  for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
+    if (library == lib) {
+      return lib->resolve(name);
+    }
+  }
+
+  return 0;
 }
 
 extern "C" AVIAN_EXPORT jboolean JNICALL
@@ -3882,6 +3940,14 @@ EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
   return EXPORT(JVM_DefineClass)(t, 0, loader, data, length, 0);
 }
 
+extern "C" AVIAN_EXPORT jclass JNICALL
+EXPORT(JVM_DefineClassWithSourceCond)(Thread* t, const char*, jobject loader,
+                                      const uint8_t* data, jsize length,
+                                      jobject, const char*, jboolean)
+{
+  return EXPORT(JVM_DefineClass)(t, 0, loader, data, length, 0);
+}
+
 extern "C" AVIAN_EXPORT jstring JNICALL
 EXPORT(JVM_GetClassName)(Thread* t, jclass c)
 {
@@ -3970,6 +4036,24 @@ EXPORT(JVM_GetClassSigners)(Thread* t, jclass c)
 
   return runtimeData ? makeLocalReference
     (t, classRuntimeDataSigners(t, runtimeData)) : 0;
+}
+
+extern "C" AVIAN_EXPORT jbyteArray JNICALL
+EXPORT(JVM_GetClassTypeAnnotations)(Thread*, jclass)
+{
+  abort();
+}
+
+extern "C" AVIAN_EXPORT jbyteArray JNICALL
+EXPORT(JVM_GetFieldTypeAnnotations)(Thread*, jobject)
+{
+  abort();
+}
+
+extern "C" AVIAN_EXPORT jbyteArray JNICALL
+EXPORT(JVM_GetMethodTypeAnnotations)(Thread*, jobject)
+{
+  abort();
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -4652,6 +4736,9 @@ EXPORT(JVM_GetMethodIxMaxStack)(Thread*, jclass, int) { abort(); }
 
 extern "C" AVIAN_EXPORT jboolean JNICALL
 EXPORT(JVM_IsConstructorIx)(Thread*, jclass, int) { abort(); }
+
+extern "C" AVIAN_EXPORT jboolean JNICALL
+EXPORT(JVM_IsVMGeneratedMethodIx)(Thread*, jclass, int) { abort(); }
 
 extern "C" AVIAN_EXPORT const char* JNICALL
 EXPORT(JVM_GetMethodIxNameUTF)(Thread*, jclass, jint) { abort(); }

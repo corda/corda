@@ -19,10 +19,10 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/lang/Float.c \
 	$(openjdk-src)/share/native/java/lang/Object.c \
 	$(openjdk-src)/share/native/java/lang/Package.c \
-	$(openjdk-src)/share/native/java/lang/ref/Finalizer.c \
+	$(wildcard $(openjdk-src)/share/native/java/lang/ref/Finalizer.c) \
 	$(openjdk-src)/share/native/java/lang/reflect/Array.c \
 	$(openjdk-src)/share/native/java/lang/reflect/Proxy.c \
-	$(openjdk-src)/share/native/java/lang/ResourceBundle.c \
+	$(wildcard $(openjdk-src)/share/native/java/lang/ResourceBundle.c) \
 	$(openjdk-src)/share/native/java/lang/Runtime.c \
 	$(openjdk-src)/share/native/java/lang/SecurityManager.c \
 	$(openjdk-src)/share/native/java/lang/Shutdown.c \
@@ -38,7 +38,7 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/net/Inet6Address.c \
 	$(openjdk-src)/share/native/java/nio/Bits.c \
 	$(openjdk-src)/share/native/java/security/AccessController.c \
-	$(openjdk-src)/share/native/java/sql/DriverManager.c \
+	$(wildcard $(openjdk-src)/share/native/java/sql/DriverManager.c) \
 	$(openjdk-src)/share/native/java/util/concurrent/atomic/AtomicLong.c \
 	$(openjdk-src)/share/native/java/util/TimeZone.c \
 	$(openjdk-src)/share/native/java/util/zip/Adler32.c \
@@ -250,11 +250,12 @@ else
 		$(openjdk-src)/solaris/native/java/io/FileDescriptor_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileInputStream_md.c \
 		$(openjdk-src)/solaris/native/java/io/FileOutputStream_md.c \
-		$(openjdk-src)/solaris/native/java/io/FileSystem_md.c \
+		$(wildcard $(openjdk-src)/solaris/native/java/io/FileSystem_md.c) \
 		$(openjdk-src)/solaris/native/java/io/io_util_md.c \
 		$(openjdk-src)/solaris/native/java/io/RandomAccessFile_md.c \
 		$(openjdk-src)/solaris/native/java/io/UnixFileSystem_md.c \
 		$(openjdk-src)/solaris/native/java/lang/java_props_md.c \
+		$(wildcard $(openjdk-src)/solaris/native/java/lang/childproc.c) \
 		$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c \
 		$(openjdk-src)/solaris/native/java/net/net_util_md.c \
