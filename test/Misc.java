@@ -298,6 +298,9 @@ public class Misc {
       throw new RuntimeException(e);
     }
 
+    expect(new URL("http://oss.readytalk.com")
+           .getHost().equals("oss.readytalk.com"));
+
     expect(java.util.Arrays.equals
 	   (new byte[] { 0, 0, 0, 0 },
 	    java.net.InetAddress.getByName("0.0.0.0").getAddress()));
