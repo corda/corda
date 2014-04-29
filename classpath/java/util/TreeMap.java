@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class TreeMap<K,V> implements Map<K,V> {
+public class TreeMap<K,V> implements SortedMap<K,V> {
   private final Comparator<K> comparator;
   private transient TreeSet<MyEntry<K,V>> set;
 
@@ -43,6 +43,39 @@ public class TreeMap<K,V> implements Map<K,V> {
 
   public String toString() {
     return avian.Data.toString(this);
+  }
+
+  @Override
+  public Comparator<? super K> comparator() {
+    return comparator;
+  }
+
+  @Override
+  public K firstKey() {
+    return set.first().key;
+  }
+
+  @Override
+  public K lastKey() {
+    return set.last().key;
+  }
+
+  @Override
+  public SortedMap<K, V> headMap(K toKey) {
+    // TODO - this should be implemented, the trick is making the returned SortedMap backed by this TreeSet
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SortedMap<K, V> tailMap(K fromKey) {
+    // TODO - this should be implemented, the trick is making the returned SortedMap backed by this TreeSet
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SortedMap<K, V> subMap(K fromKey, K toKey) {
+    // TODO - this should be implemented, the trick is making the returned SortedMap backed by this TreeSet
+    throw new UnsupportedOperationException();
   }
 
   public V get(Object key) {
