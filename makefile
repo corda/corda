@@ -1173,7 +1173,13 @@ ifeq ($(process),compile)
 		vm-sources += $(native-assembler-sources)
 	endif
 	ifeq ($(codegen-targets),all)
-		vm-sources += $(all-assembler-sources)
+		ifeq ($(arch),arm)
+			# The x86 jit has a dependency on the x86 assembly code,
+			# and thus can't be successfully built on non-x86 platforms.
+			vm-sources += $(native-assembler-sources)
+		else
+			vm-sources += $(all-assembler-sources)
+		endif
 	endif
 
 	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
