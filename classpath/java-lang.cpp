@@ -701,9 +701,6 @@ extern "C" JNIEXPORT jobjectArray JNICALL
 #elif defined ARCH_x86_64
   e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=x86_64"));
 
-#elif defined ARCH_powerpc
-  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=ppc"));
-
 #elif defined ARCH_arm
   e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=arm"));
 

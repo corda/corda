@@ -41,8 +41,6 @@ compileTimeMemoryBarrier()
 
 #if (defined ARCH_x86_32) || (defined ARCH_x86_64)
 #  include "x86.h"
-#elif defined ARCH_powerpc
-#  include "powerpc.h"
 #elif defined ARCH_arm
 #  include "arm.h"
 #else

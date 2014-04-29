@@ -41,7 +41,7 @@ const bool TailCalls = true;
 const bool TailCalls = false;
 #endif
 
-#if (defined AVIAN_USE_FRAME_POINTER) || (defined ARCH_powerpc)
+#ifdef AVIAN_USE_FRAME_POINTER
 const bool UseFramePointer = true;
 #else
 const bool UseFramePointer = false;

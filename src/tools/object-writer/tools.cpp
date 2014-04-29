@@ -108,8 +108,6 @@ PlatformInfo::Architecture PlatformInfo::archFromString(const char* arch) {
     return x86;
   } else if(strcmp(arch, "x86_64") == 0) {
     return x86_64;
-  } else if(strcmp(arch, "powerpc") == 0) {
-    return PowerPC;
   } else if(strcmp(arch, "arm") == 0) {
     return Arm;
   } else {

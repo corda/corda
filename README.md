@@ -59,7 +59,7 @@ Supported Platforms
 
 Avian can currently target the following platforms:
 
-  * Linux (i386, x86_64, ARM, and 32-bit PowerPC)
+  * Linux (i386, x86_64, and ARM)
   * Windows (i386 and x86_64)
   * Mac OS X (i386 and x86_64)
   * Apple iOS (i386 and ARM)
@@ -86,7 +86,7 @@ certain flags described below, all of which are optional.
 
     $ make \
         platform={linux,windows,darwin,freebsd} \
-        arch={i386,x86_64,powerpc,arm} \
+        arch={i386,x86_64,arm} \
         process={compile,interpret} \
         mode={debug,debug-fast,fast,small} \
         lzma=<lzma source directory> \

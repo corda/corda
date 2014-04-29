@@ -7,12 +7,7 @@ build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
 	| sed 's/^x86pc$$/i386/' \
 	| sed 's/amd64/x86_64/' \
-	| sed 's/^arm.*$$/arm/' \
-	| sed 's/ppc/powerpc/')
-
-ifeq (Power,$(filter Power,$(build-arch)))
-	build-arch = powerpc
-endif
+	| sed 's/^arm.*$$/arm/')
 
 build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
@@ -428,33 +423,8 @@ codeimage-symbols = _binary_codeimage_bin_start:_binary_codeimage_bin_end
 developer-dir := $(shell if test -d /Developer/Platforms/$(target).platform/Developer/SDKs; then echo /Developer; \
 	else echo /Applications/Xcode.app/Contents/Developer; fi)
 
-ifeq ($(build-arch),powerpc)
-	ifneq ($(arch),$(build-arch))
-		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
-	endif
-endif
-
 ifeq ($(arch),i386)
 	pointer-size = 4
-endif
-
-ifeq ($(arch),powerpc)
-	asm = powerpc
-	pointer-size = 4
-
-	ifneq ($(arch),$(build-arch))
-		bootimage-cflags += -DTARGET_OPPOSITE_ENDIAN
-	endif
-
-	ifneq ($(platform),darwin)
-		ifneq ($(arch),$(build-arch))
-			cxx = powerpc-linux-gnu-g++
-			cc = powerpc-linux-gnu-gcc
-			ar = powerpc-linux-gnu-ar
-			ranlib = powerpc-linux-gnu-ranlib
-			strip = powerpc-linux-gnu-strip
-		endif
-	endif
 endif
 
 ifeq ($(arch),arm)
@@ -707,13 +677,6 @@ ifeq ($(platform),darwin)
 		cflags += $(flags)
 		asmflags += $(flags)
 		lflags += $(flags)
-	endif
-
-	ifeq ($(arch),powerpc)
-		classpath-extra-cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
-		cflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
-		asmflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
-		lflags += -arch ppc -mmacosx-version-min=${OSX_SDK_VERSION}
 	endif
 
 	ifeq ($(arch),i386)
@@ -1153,12 +1116,9 @@ x86-assembler-sources = $(wildcard $(src)/codegen/target/x86/*.cpp)
 
 arm-assembler-sources = $(wildcard $(src)/codegen/target/arm/*.cpp)
 
-powerpc-assembler-sources = $(wildcard $(src)/codegen/target/powerpc/*.cpp)
-
 all-assembler-sources = \
 	$(x86-assembler-sources) \
-	$(arm-assembler-sources) \
-	$(powerpc-assembler-sources)
+	$(arm-assembler-sources)
 
 native-assembler-sources = $($(target-asm)-assembler-sources)
 
@@ -1422,10 +1382,6 @@ endif
 
 ifeq ($(target-arch),x86_64)
 	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_X86_64
-endif
-
-ifeq ($(target-arch),powerpc)
-	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_POWERPC
 endif
 
 ifeq ($(target-arch),arm)

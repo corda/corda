@@ -24,7 +24,6 @@ Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures)
 
 Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
 Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
-Architecture* makeArchitecturePowerpc(vm::System* system, bool useNativeFeatures);
 
 } // namespace codegen
 } // namespace avian

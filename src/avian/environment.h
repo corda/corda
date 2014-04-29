@@ -28,7 +28,6 @@
 #define AVIAN_ARCH_X86 (1 << 8)
 #define AVIAN_ARCH_X86_64 (2 << 8)
 #define AVIAN_ARCH_ARM (3 << 8)
-#define AVIAN_ARCH_POWERPC (4 << 8)
 
 #endif
 

@@ -29,8 +29,6 @@ Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures 
   return makeArchitectureX86(system, useNativeFeatures);
 #elif AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
   return makeArchitectureArm(system, useNativeFeatures);
-#elif AVIAN_TARGET_ARCH == AVIAN_ARCH_POWERPC
-  return makeArchitecturePowerpc(system, useNativeFeatures);
 #else
   #error "Unsupported codegen target"
 #endif
