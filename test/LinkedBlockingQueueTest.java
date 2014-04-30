@@ -157,7 +157,7 @@ public class LinkedBlockingQueueTest {
     }).start();
 
     
-    verify(lbq.poll(DELAY_TILL_ACTION * 2, TimeUnit.MILLISECONDS) == testObject);
+    verify(lbq.poll(DELAY_TILL_ACTION * 10, TimeUnit.MILLISECONDS) == testObject);
   }
   
   private static void takeTest() throws InterruptedException {
