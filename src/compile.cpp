@@ -1358,28 +1358,30 @@ class Frame {
 
   typedef Compiler::Operand* Value;
 
-  Frame(Context* context, uint8_t* stackMap):
-    context(context),
-    t(context->thread),
-    c(context->compiler),
-    subroutine(0),
-    stackMap(stackMap),
-    ip(0),
-    sp(localSize()),
-    level(0)
+  Frame(Context* context, uint8_t* stackMap)
+      : context(context),
+        t(context->thread),
+        c(context->compiler),
+        subroutine(0),
+        stackMap(stackMap),
+        ip(0),
+        sp(localSize()),
+        level(0),
+        types(TargetBytesPerWord)
   {
     memset(stackMap, 0, codeMaxStack(t, methodCode(t, context->method)));
   }
 
-  Frame(Frame* f, uint8_t* stackMap):
-    context(f->context),
-    t(context->thread),
-    c(context->compiler),
-    subroutine(f->subroutine),
-    stackMap(stackMap),
-    ip(f->ip),
-    sp(f->sp),
-    level(f->level + 1)
+  Frame(Frame* f, uint8_t* stackMap)
+      : context(f->context),
+        t(context->thread),
+        c(context->compiler),
+        subroutine(f->subroutine),
+        stackMap(stackMap),
+        ip(f->ip),
+        sp(f->sp),
+        level(f->level + 1),
+        types(TargetBytesPerWord)
   {
     memcpy(stackMap, f->stackMap, codeMaxStack
            (t, methodCode(t, context->method)));
@@ -1677,12 +1679,13 @@ class Frame {
     this->ip = ip;
   }
 
-  void pushQuiet(unsigned footprint, Value o) {
-    c->push(footprint, o);
+  void pushQuiet(ir::Type type, Value o)
+  {
+    c->push(type, o);
   }
 
   void pushLongQuiet(Value o) {
-    pushQuiet(2, o);
+    pushQuiet(types.i8, o);
   }
 
   Value popQuiet(unsigned footprint) {
@@ -1694,17 +1697,17 @@ class Frame {
   }
 
   void pushInt(Value o) {
-    pushQuiet(1, o);
+    pushQuiet(types.i4, o);
     pushedInt();
   }
 
   void pushAddress(Value o) {
-    pushQuiet(1, o);
+    pushQuiet(types.i4, o);
     pushedInt();
   }
 
   void pushObject(Value o) {
-    pushQuiet(1, o);
+    pushQuiet(types.object, o);
     pushedObject();
   }
 
@@ -1784,7 +1787,7 @@ class Frame {
   }
 
   void dup() {
-    pushQuiet(1, c->peek(1, 0));
+    pushQuiet(types.i4, c->peek(1, 0));
 
     dupped();
   }
@@ -1793,9 +1796,9 @@ class Frame {
     Value s0 = popQuiet(1);
     Value s1 = popQuiet(1);
 
-    pushQuiet(1, s0);
-    pushQuiet(1, s1);
-    pushQuiet(1, s0);
+    pushQuiet(types.i4, s0);
+    pushQuiet(types.i4, s1);
+    pushQuiet(types.i4, s0);
 
     duppedX1();
   }
@@ -1806,17 +1809,17 @@ class Frame {
     if (get(sp - 2) == Long) {
       Value s1 = popLongQuiet();
 
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s0);
       pushLongQuiet(s1);
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s0);
     } else {
       Value s1 = popQuiet(1);
       Value s2 = popQuiet(1);
 
-      pushQuiet(1, s0);
-      pushQuiet(1, s2);
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s0);
+      pushQuiet(types.i4, s2);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
     }
 
     duppedX2();
@@ -1829,10 +1832,10 @@ class Frame {
       Value s0 = popQuiet(1);
       Value s1 = popQuiet(1);
 
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
     }
 
     dupped2();
@@ -1844,18 +1847,18 @@ class Frame {
       Value s1 = popQuiet(1);
 
       pushLongQuiet(s0);
-      pushQuiet(1, s1);
+      pushQuiet(types.i4, s1);
       pushLongQuiet(s0);
     } else {
       Value s0 = popQuiet(1);
       Value s1 = popQuiet(1);
       Value s2 = popQuiet(1);
 
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
-      pushQuiet(1, s2);
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
+      pushQuiet(types.i4, s2);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
     }
 
     dupped2X1();
@@ -1876,8 +1879,8 @@ class Frame {
         Value s2 = popQuiet(1);
 
         pushLongQuiet(s0);
-        pushQuiet(1, s2);
-        pushQuiet(1, s1);
+        pushQuiet(types.i4, s2);
+        pushQuiet(types.i4, s1);
         pushLongQuiet(s0);
       }
     } else {
@@ -1886,12 +1889,12 @@ class Frame {
       Value s2 = popQuiet(1);
       Value s3 = popQuiet(1);
 
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
-      pushQuiet(1, s3);
-      pushQuiet(1, s2);
-      pushQuiet(1, s1);
-      pushQuiet(1, s0);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
+      pushQuiet(types.i4, s3);
+      pushQuiet(types.i4, s2);
+      pushQuiet(types.i4, s1);
+      pushQuiet(types.i4, s0);
     }
 
     dupped2X2();
@@ -1901,8 +1904,8 @@ class Frame {
     Value s0 = popQuiet(1);
     Value s1 = popQuiet(1);
 
-    pushQuiet(1, s0);
-    pushQuiet(1, s1);
+    pushQuiet(types.i4, s0);
+    pushQuiet(types.i4, s1);
 
     swapped();
   }
@@ -1996,6 +1999,7 @@ class Frame {
   unsigned ip;
   unsigned sp;
   unsigned level;
+  ir::Types types;
 };
 
 unsigned

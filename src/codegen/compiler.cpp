@@ -2110,6 +2110,20 @@ class Client: public Assembler::Client {
   Context* c;
 };
 
+unsigned typeFootprint(Context* c, ir::Type type)
+{
+  // TODO: this function is very Java-specific in nature. Generalize.
+  switch (type.flavor()) {
+  case ir::Type::Float:
+  case ir::Type::Integer:
+    return type.size() / 4;
+  case ir::Type::Object:
+    return 1;
+  default:
+    abort(c);
+  }
+}
+
 class MyCompiler: public Compiler {
  public:
   MyCompiler(System* s, Assembler* assembler, Zone* zone,
@@ -2335,8 +2349,12 @@ class MyCompiler: public Compiler {
     c.stack = s;
   }
 
-  virtual void push(unsigned footprint, Operand* value) {
-    compiler::push(&c, footprint, static_cast<Value*>(value));
+  virtual void push(ir::Type type, Operand* value)
+  {
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, static_cast<Value*>(value)->type == type);
+    compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
   virtual void save(unsigned footprint, Operand* value) {
