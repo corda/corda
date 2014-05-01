@@ -4145,7 +4145,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->pushInt(
             c->load(1,
                     1,
-                    c->memory(array, types.i4, TargetArrayBody, index, 1),
+                    c->memory(array, types.i1, TargetArrayBody, index, 1),
                     TargetBytesPerWord));
         break;
 
@@ -4153,25 +4153,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->pushInt(
             c->loadz(2,
                      2,
-                     c->memory(array, types.i4, TargetArrayBody, index, 2),
+                     c->memory(array, types.i2, TargetArrayBody, index, 2),
                      TargetBytesPerWord));
         break;
 
       case daload:
         frame->pushLong(c->load(
-            8, 8, c->memory(array, types.f4, TargetArrayBody, index, 8), 8));
+            8, 8, c->memory(array, types.f8, TargetArrayBody, index, 8), 8));
         break;
 
       case laload:
         frame->pushLong(c->load(
-            8, 8, c->memory(array, types.i4, TargetArrayBody, index, 8), 8));
+            8, 8, c->memory(array, types.i8, TargetArrayBody, index, 8), 8));
         break;
 
       case saload:
         frame->pushInt(
             c->load(2,
                     2,
-                    c->memory(array, types.i4, TargetArrayBody, index, 2),
+                    c->memory(array, types.i2, TargetArrayBody, index, 2),
                     TargetBytesPerWord));
         break;
       }
@@ -4245,7 +4245,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         c->store(types.address,
                  value,
                  types.i1,
-                 c->memory(array, types.i4, TargetArrayBody, index, 1));
+                 c->memory(array, types.i1, TargetArrayBody, index, 1));
         break;
 
       case castore:
@@ -4253,14 +4253,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         c->store(types.address,
                  value,
                  types.i2,
-                 c->memory(array, types.i4, TargetArrayBody, index, 2));
+                 c->memory(array, types.i2, TargetArrayBody, index, 2));
         break;
 
       case dastore:
         c->store(types.f8,
                  value,
                  types.f8,
-                 c->memory(array, types.f4, TargetArrayBody, index, 8));
+                 c->memory(array, types.f8, TargetArrayBody, index, 8));
         break;
 
       case lastore:
@@ -5453,8 +5453,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
       frame->pushLong(c->constant(
           v,
-          singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f4
-                                                              : types.i4));
+          singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f8
+                                                              : types.i8));
     } break;
 
     case ldiv_: {

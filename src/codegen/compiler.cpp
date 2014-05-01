@@ -2323,6 +2323,8 @@ class MyCompiler: public Compiler {
                           Operand* index = 0,
                           unsigned scale = 1)
   {
+    assert(&c, index != 0 || scale == 1);
+    assert(&c, type.size() == scale || index == 0);
     Value* result = value(&c, type);
 
     appendMemory(&c, static_cast<Value*>(base), displacement,
@@ -2600,6 +2602,10 @@ class MyCompiler: public Compiler {
   {
     assert(&c, srcType.flavor() == static_cast<Value*>(src)->type.flavor());
     assert(&c, dstType.flavor() == static_cast<Value*>(dst)->type.flavor());
+    assert(&c, srcType.flavor() == dstType.flavor());
+    assert(&c,
+           srcType.flavor() != ir::Type::Float
+           || srcType.size() == static_cast<Value*>(src)->type.size());
     appendMove(&c,
                lir::Move,
                srcType.size(),
