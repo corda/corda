@@ -838,6 +838,8 @@ extern "C" JNIEXPORT jobjectArray JNICALL
     add(e, array, index++, "user.dir=%s", getcwd(buffer, PATH_MAX));
   }
 
+  add(e, array, index++, "user.home=%s", getenv("HOME"));
+
 #endif  // not Windows
 
   {
