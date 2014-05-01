@@ -2320,15 +2320,16 @@ class MyCompiler: public Compiler {
   virtual Operand* memory(Operand* base,
                           ir::Type type,
                           int displacement = 0,
-                          Operand* index = 0,
-                          unsigned scale = 1)
+                          Operand* index = 0)
   {
-    assert(&c, index != 0 || scale == 1);
-    assert(&c, type.size() == scale || index == 0);
     Value* result = value(&c, type);
 
-    appendMemory(&c, static_cast<Value*>(base), displacement,
-                 static_cast<Value*>(index), scale, result);
+    appendMemory(&c,
+                 static_cast<Value*>(base),
+                 displacement,
+                 static_cast<Value*>(index),
+                 index == 0 ? 1 : type.size(),
+                 result);
 
     return result;
   }

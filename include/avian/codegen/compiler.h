@@ -69,8 +69,7 @@ class Compiler {
   virtual Operand* memory(Operand* base,
                           ir::Type type,
                           int displacement = 0,
-                          Operand* index = 0,
-                          unsigned scale = 1) = 0;
+                          Operand* index = 0) = 0;
 
   virtual Operand* threadRegister() = 0;
 

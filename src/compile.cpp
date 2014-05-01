@@ -3755,8 +3755,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushInt(c->load(
-          1, 1, c->memory(address, types.i4, 0, 0, 1), TargetBytesPerWord));
+      frame->pushInt(
+          c->load(1, 1, c->memory(address, types.i4), TargetBytesPerWord));
       return true;
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
@@ -3764,10 +3764,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address,
-               value,
-               types.i1,
-               c->memory(address, types.i4, 0, 0, 1));
+      c->store(types.address, value, types.i1, c->memory(address, types.i4));
       return true;
     } else if ((MATCH(methodName(t, target), "getShort")
                 and MATCH(methodSpec(t, target), "(J)S"))
@@ -3776,8 +3773,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushInt(c->load(
-          2, 2, c->memory(address, types.i4, 0, 0, 1), TargetBytesPerWord));
+      frame->pushInt(
+          c->load(2, 2, c->memory(address, types.i4), TargetBytesPerWord));
       return true;
     } else if ((MATCH(methodName(t, target), "putShort")
                 and MATCH(methodSpec(t, target), "(JS)V"))
@@ -3787,10 +3784,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address,
-               value,
-               types.i2,
-               c->memory(address, types.i4, 0, 0, 1));
+      c->store(types.address, value, types.i2, c->memory(address, types.i4));
       return true;
     } else if ((MATCH(methodName(t, target), "getInt")
                 and MATCH(methodSpec(t, target), "(J)I"))
@@ -3804,10 +3798,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
                   4,
                   c->memory(address,
                             MATCH(methodName(t, target), "getInt") ? types.i4
-                                                                   : types.f4,
-                            0,
-                            0,
-                            1),
+                                                                   : types.f4),
                   TargetBytesPerWord));
       return true;
     } else if ((MATCH(methodName(t, target), "putInt")
@@ -3820,7 +3811,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putInt") ? types.i4
                                                              : types.f4;
-      c->store(type, value, type, c->memory(address, type, 0, 0, 1));
+      c->store(type, value, type, c->memory(address, type));
       return true;
     } else if ((MATCH(methodName(t, target), "getLong")
                 and MATCH(methodSpec(t, target), "(J)J"))
@@ -3834,10 +3825,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
                   8,
                   c->memory(address,
                             MATCH(methodName(t, target), "getLong") ? types.i4
-                                                                    : types.f4,
-                            0,
-                            0,
-                            1),
+                                                                    : types.f4),
                   8));
       return true;
     } else if ((MATCH(methodName(t, target), "putLong")
@@ -3850,7 +3838,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putLong") ? types.i8
                                                               : types.f8;
-      c->store(type, value, type, c->memory(address, type, 0, 0, 1));
+      c->store(type, value, type, c->memory(address, type));
       return true;
     } else if (MATCH(methodName(t, target), "getAddress")
                 and MATCH(methodSpec(t, target), "(J)J"))
@@ -3859,7 +3847,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       frame->popObject();
       frame->pushLong(c->load(TargetBytesPerWord,
                               TargetBytesPerWord,
-                              c->memory(address, types.address, 0, 0, 1),
+                              c->memory(address, types.address),
                               8));
       return true;
     } else if (MATCH(methodName(t, target), "putAddress")
@@ -3868,10 +3856,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popLong();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.i8,
-               value,
-               types.address,
-               c->memory(address, types.address, 0, 0, 1));
+      c->store(
+          types.i8, value, types.address, c->memory(address, types.address));
       return true;
     }
   }
@@ -4115,21 +4101,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       switch (instruction) {
       case aaload:
-        frame->pushObject(c->load(TargetBytesPerWord,
-                                  TargetBytesPerWord,
-                                  c->memory(array,
-                                            types.object,
-                                            TargetArrayBody,
-                                            index,
-                                            TargetBytesPerWord),
-                                  TargetBytesPerWord));
+        frame->pushObject(
+            c->load(TargetBytesPerWord,
+                    TargetBytesPerWord,
+                    c->memory(array, types.object, TargetArrayBody, index),
+                    TargetBytesPerWord));
         break;
 
       case faload:
         frame->pushInt(
             c->load(4,
                     4,
-                    c->memory(array, types.f4, TargetArrayBody, index, 4),
+                    c->memory(array, types.f4, TargetArrayBody, index),
                     TargetBytesPerWord));
         break;
 
@@ -4137,7 +4120,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->pushInt(
             c->load(4,
                     4,
-                    c->memory(array, types.i4, TargetArrayBody, index, 4),
+                    c->memory(array, types.i4, TargetArrayBody, index),
                     TargetBytesPerWord));
         break;
 
@@ -4145,7 +4128,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->pushInt(
             c->load(1,
                     1,
-                    c->memory(array, types.i1, TargetArrayBody, index, 1),
+                    c->memory(array, types.i1, TargetArrayBody, index),
                     TargetBytesPerWord));
         break;
 
@@ -4153,25 +4136,25 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->pushInt(
             c->loadz(2,
                      2,
-                     c->memory(array, types.i2, TargetArrayBody, index, 2),
+                     c->memory(array, types.i2, TargetArrayBody, index),
                      TargetBytesPerWord));
         break;
 
       case daload:
         frame->pushLong(c->load(
-            8, 8, c->memory(array, types.f8, TargetArrayBody, index, 8), 8));
+            8, 8, c->memory(array, types.f8, TargetArrayBody, index), 8));
         break;
 
       case laload:
         frame->pushLong(c->load(
-            8, 8, c->memory(array, types.i8, TargetArrayBody, index, 8), 8));
+            8, 8, c->memory(array, types.i8, TargetArrayBody, index), 8));
         break;
 
       case saload:
         frame->pushInt(
             c->load(2,
                     2,
-                    c->memory(array, types.i2, TargetArrayBody, index, 2),
+                    c->memory(array, types.i2, TargetArrayBody, index),
                     TargetBytesPerWord));
         break;
       }
@@ -4231,21 +4214,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         c->store(types.f4,
                  value,
                  types.f4,
-                 c->memory(array, types.f4, TargetArrayBody, index, 4));
+                 c->memory(array, types.f4, TargetArrayBody, index));
         break;
 
       case iastore:
         c->store(types.address,
                  value,
                  types.i4,
-                 c->memory(array, types.i4, TargetArrayBody, index, 4));
+                 c->memory(array, types.i4, TargetArrayBody, index));
         break;
 
       case bastore:
         c->store(types.address,
                  value,
                  types.i1,
-                 c->memory(array, types.i1, TargetArrayBody, index, 1));
+                 c->memory(array, types.i1, TargetArrayBody, index));
         break;
 
       case castore:
@@ -4253,21 +4236,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         c->store(types.address,
                  value,
                  types.i2,
-                 c->memory(array, types.i2, TargetArrayBody, index, 2));
+                 c->memory(array, types.i2, TargetArrayBody, index));
         break;
 
       case dastore:
         c->store(types.f8,
                  value,
                  types.f8,
-                 c->memory(array, types.f8, TargetArrayBody, index, 8));
+                 c->memory(array, types.f8, TargetArrayBody, index));
         break;
 
       case lastore:
         c->store(types.i8,
                  value,
                  types.i8,
-                 c->memory(array, types.i8, TargetArrayBody, index, 8));
+                 c->memory(array, types.i8, TargetArrayBody, index));
         break;
       }
     } break;
@@ -4335,11 +4318,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto next;
 
     case arraylength: {
-      frame->pushInt(c->load(
-          TargetBytesPerWord,
-          TargetBytesPerWord,
-          c->memory(frame->popObject(), types.i4, TargetArrayLength, 0, 1),
-          TargetBytesPerWord));
+      frame->pushInt(
+          c->load(TargetBytesPerWord,
+                  TargetBytesPerWord,
+                  c->memory(frame->popObject(), types.i4, TargetArrayLength),
+                  TargetBytesPerWord));
     } break;
 
     case astore:
@@ -4660,8 +4643,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               1,
               1,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.i4, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -4669,8 +4651,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->loadz(
               2,
               2,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.i4, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -4678,8 +4659,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               2,
               2,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.i4, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -4687,8 +4667,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               4,
               4,
-              c->memory(
-                  table, types.f4, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.f4, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -4696,8 +4675,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               4,
               4,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.i4, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -4705,8 +4683,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushLong(c->load(
               8,
               8,
-              c->memory(
-                  table, types.f8, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.f8, targetFieldOffset(context, field)),
               8));
           break;
 
@@ -4714,8 +4691,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushLong(c->load(
               8,
               8,
-              c->memory(
-                  table, types.i8, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.i8, targetFieldOffset(context, field)),
               8));
           break;
 
@@ -4723,8 +4699,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushObject(c->load(
               TargetBytesPerWord,
               TargetBytesPerWord,
-              c->memory(
-                  table, types.object, targetFieldOffset(context, field), 0, 1),
+              c->memory(table, types.object, targetFieldOffset(context, field)),
               TargetBytesPerWord));
           break;
 
@@ -5202,15 +5177,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
             Compiler::Operand* result = c->stackCall(
-                c->memory(
-                    c->binaryOp(lir::And,
-                                types.address,
-                                c->constant(TargetPointerMask, types.i4),
-                                c->memory(instance, types.object, 0, 0, 1)),
-                    types.object,
-                    offset,
-                    0,
-                    1),
+                c->memory(c->binaryOp(lir::And,
+                                      types.address,
+                                      c->constant(TargetPointerMask, types.i4),
+                                      c->memory(instance, types.object)),
+                          types.object,
+                          offset),
                 tailCall ? Compiler::TailJump : 0,
                 frame->trace(0, 0),
                 rSize,
@@ -5227,7 +5199,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             // (e.g. readObject and writeObject for serialization), so
             // we must handle such cases here.
 
-            compileDirectInvoke(t, frame, target, tailCall);          
+            compileDirectInvoke(t, frame, target, tailCall);
           }
         }
       } else {
@@ -5833,8 +5805,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.address,
               value,
               types.i1,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.i4, targetFieldOffset(context, field)));
           break;
 
         case CharField:
@@ -5843,8 +5814,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.address,
               value,
               types.i2,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.i4, targetFieldOffset(context, field)));
           break;
             
         case FloatField:
@@ -5852,8 +5822,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.f4,
               value,
               types.f4,
-              c->memory(
-                  table, types.f4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.f4, targetFieldOffset(context, field)));
           break;
 
         case IntField:
@@ -5861,8 +5830,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.address,
               value,
               types.i4,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.i4, targetFieldOffset(context, field)));
           break;
 
         case DoubleField:
@@ -5870,8 +5838,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.f8,
               value,
               types.f8,
-              c->memory(
-                  table, types.f4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.f4, targetFieldOffset(context, field)));
           break;
 
         case LongField:
@@ -5879,8 +5846,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.i8,
               value,
               types.i8,
-              c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1));
+              c->memory(table, types.i4, targetFieldOffset(context, field)));
           break;
 
         case ObjectField:
@@ -6222,8 +6188,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         = c->memory(frame->absoluteAddressOperand(s->start),
                     types.address,
                     0,
-                    normalizedKey,
-                    TargetBytesPerWord);
+                    normalizedKey);
 
     c->jmp(c->load(TargetBytesPerWord,
                    TargetBytesPerWord,
