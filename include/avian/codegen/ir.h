@@ -113,6 +113,8 @@ class Types {
   }
 };
 
+enum SignExtendMode { SignExtend, ZeroExtend };
+
 }  // namespace ir
 }  // namespace codegen
 }  // namespace avian

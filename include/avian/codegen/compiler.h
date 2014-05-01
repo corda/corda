@@ -110,14 +110,11 @@ class Compiler {
   virtual void store(ir::Type srcType,
                      Operand* src,
                      Operand* dst) = 0;
-  virtual Operand* load(ir::Type srcType,
+  virtual Operand* load(ir::SignExtendMode signExtend,
+                        ir::Type srcType,
                         ir::Type srcSelectType,
                         Operand* src,
                         ir::Type dstType) = 0;
-  virtual Operand* loadz(ir::Type srcType,
-                         ir::Type srcSelectType,
-                         Operand* src,
-                         ir::Type dstType) = 0;
 
   virtual void condJump(lir::TernaryOperation op,
                         unsigned size,
