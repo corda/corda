@@ -108,7 +108,7 @@ class Compiler {
   virtual void return_(ir::Type type, Operand* value) = 0;
   virtual void return_() = 0;
 
-  virtual void initLocal(unsigned size, unsigned index, OperandType type) = 0;
+  virtual void initLocal(unsigned size, unsigned index, ir::Type type) = 0;
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
   virtual void storeLocal(unsigned footprint, Operand* src,
                           unsigned index) = 0;

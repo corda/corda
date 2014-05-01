@@ -23,7 +23,13 @@ class Type {
 
     // GC-invisible types
     Integer,
-    Float
+    Float,
+    Address,
+
+    // Represents individual halves of two-word types
+    // (double/long on 32-bit systems)
+    // TODO: remove when possible
+    Half,
   };
 
  private:
