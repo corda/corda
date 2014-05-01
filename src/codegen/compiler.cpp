@@ -2354,7 +2354,7 @@ class MyCompiler: public Compiler {
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
-    // assert(&c, static_cast<Value*>(value)->type == type);
+    // assert(&c, value->type == type);
     compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
@@ -2362,7 +2362,7 @@ class MyCompiler: public Compiler {
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
-    // assert(&c, static_cast<Value*>(value)->type == type);
+    // assert(&c, value->type == type);
     unsigned footprint = typeFootprint(&c, type);
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (TargetBytesPerWord == 4 and footprint > 1) {
@@ -2638,17 +2638,17 @@ class MyCompiler: public Compiler {
 
   virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst)
   {
-    assert(&c, srcType.flavor() == static_cast<Value*>(src)->type.flavor());
-    assert(&c, srcType.flavor() == static_cast<Value*>(dst)->type.flavor());
+    assert(&c, srcType.flavor() == src->type.flavor());
+    assert(&c, srcType.flavor() == dst->type.flavor());
     assert(&c,
-           srcType.flavor() != ir::Type::Float
-           || srcType.size() == static_cast<Value*>(src)->type.size());
+           srcType.flavor() != ir::Type::Float || srcType.size()
+                                                  == src->type.size());
     appendMove(&c,
                lir::Move,
                srcType.size(),
                srcType.size(),
                static_cast<Value*>(src),
-               static_cast<Value*>(dst)->type.size(),
+               dst->type.size(),
                static_cast<Value*>(dst));
   }
 
@@ -2660,7 +2660,7 @@ class MyCompiler: public Compiler {
     assert(&c, dstType.size() >= TargetBytesPerWord);
     assert(&c, srcType.flavor() == dstType.flavor());
 
-    Value* dst = value(&c, static_cast<Value*>(src)->type);
+    Value* dst = value(&c, src->type);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
                srcType.size(),
@@ -2681,11 +2681,10 @@ class MyCompiler: public Compiler {
            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
                isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
-    // assert(&c, type.flavor() == static_cast<Value*>(a)->type.flavor());
-    // assert(&c, type.flavor() == static_cast<Value*>(b)->type.flavor());
+    // assert(&c, type.flavor() == a->type.flavor());
+    // assert(&c, type.flavor() == b->type.flavor());
     assert(&c,
-           static_cast<Value*>(address)->type
-           == ir::Type(ir::Type::Integer, TargetBytesPerWord));
+           address->type == ir::Type(ir::Type::Integer, TargetBytesPerWord));
 
     appendBranch(&c,
                  op,
@@ -2714,7 +2713,7 @@ class MyCompiler: public Compiler {
            (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
            or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
-    Value* result = value(&c, static_cast<Value*>(a)->type);
+    Value* result = value(&c, a->type);
 
     appendCombine(&c,
                   op,
@@ -2734,7 +2733,7 @@ class MyCompiler: public Compiler {
     assert(&c,
            (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
                                                           and isFloatValue(a)));
-    Value* result = value(&c, static_cast<Value*>(a)->type);
+    Value* result = value(&c, a->type);
     appendTranslate(
         &c, op, type.size(), static_cast<Value*>(a), type.size(), result);
     return result;
@@ -2742,7 +2741,7 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* f2f(ir::Type aType, ir::Type resType, ir::Value* a)
   {
-    assert(&c, aType == static_cast<Value*>(a)->type);
+    assert(&c, aType == a->type);
     assert(&c, isFloatValue(a));
     assert(&c, resType.flavor() == ir::Type::Float);
     assert(&c, aType.flavor() == ir::Type::Float);
@@ -2759,7 +2758,7 @@ class MyCompiler: public Compiler {
   virtual ir::Value* f2i(ir::Type aType, ir::Type resType, ir::Value* a)
   {
     // TODO: enable when possible
-    // assert(&c, aType == static_cast<Value*>(a)->type);
+    // assert(&c, aType == a->type);
     assert(&c, isFloatValue(a));
     assert(&c, resType.flavor() != ir::Type::Float);
     assert(&c, aType.flavor() == ir::Type::Float);
@@ -2776,7 +2775,7 @@ class MyCompiler: public Compiler {
   virtual ir::Value* i2f(ir::Type aType, ir::Type resType, ir::Value* a)
   {
     // TODO: enable when possible
-    // assert(&c, aType == static_cast<Value*>(a)->type);
+    // assert(&c, aType == a->type);
     assert(&c, isGeneralValue(a));
     assert(&c, resType.flavor() == ir::Type::Float);
     assert(&c, aType.flavor() != ir::Type::Float);
