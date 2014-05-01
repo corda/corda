@@ -821,7 +821,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
 
       c->arch->planSource(type, dstSize, src, dstSize, &thunk);
 
-      if (srcValue->type == lir::ValueGeneral) {
+      if (isGeneralValue(srcValue)) {
         src.registerMask &= c->regFile->generalRegisters.mask;
       }
 
@@ -1506,8 +1506,8 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
         fprintf(stderr, "freeze original %s for %p local %d frame %d\n",
                 buffer, v, el.localIndex, el.frameIndex(c));
       }
-      
-      Value dummy(0, 0, lir::ValueGeneral);
+
+      Value dummy(0, 0, ir::Type(ir::Type::Integer, TargetBytesPerWord));
       dummy.addSite(c, s);
       dummy.removeSite(c, s);
       freeze(c, frozen, s, 0);
@@ -2536,8 +2536,7 @@ class MyCompiler: public Compiler {
     for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
       Local* local = e->locals() + i;
       if (local->value) {
-        initLocal
-          (1, i, local->value->type == lir::ValueGeneral ? IntegerType : FloatType);
+        initLocal(1, i, isGeneralValue(local->value) ? IntegerType : FloatType);
       }
     }
 
@@ -2633,8 +2632,9 @@ class MyCompiler: public Compiler {
 
   virtual Operand* f2f(unsigned aSize, ir::Type resType, Operand* a)
   {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
+    assert(&c, isFloatValue(a));
+    assert(&c, resType.flavor() == ir::Type::Float);
+    Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Float,
                     aSize,
@@ -2646,8 +2646,9 @@ class MyCompiler: public Compiler {
 
   virtual Operand* f2i(unsigned aSize, ir::Type resType, Operand* a)
   {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueGeneral);
+    assert(&c, isFloatValue(a));
+    assert(&c, resType.flavor() != ir::Type::Float);
+    Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Int,
                     aSize,
@@ -2659,8 +2660,9 @@ class MyCompiler: public Compiler {
 
   virtual Operand* i2f(unsigned aSize, ir::Type resType, Operand* a)
   {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueFloat);
+    assert(&c, isGeneralValue(a));
+    assert(&c, resType.flavor() == ir::Type::Float);
+    Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Int2Float,
                     aSize,

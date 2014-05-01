@@ -36,10 +36,10 @@ class Value: public Compiler::Operand {
   Value* buddy;
   Value* nextWord;
   int16_t home;
-  lir::ValueType type;
   uint8_t wordIndex;
+  ir::Type type;
 
-  Value(Site* site, Site* target, lir::ValueType type);
+  Value(Site* site, Site* target, ir::Type type);
 
   bool findSite(Site* site);
 
@@ -67,15 +67,18 @@ class Value: public Compiler::Operand {
 
 };
 
-inline bool isGeneralValue(Compiler::Operand* a) {
-  return static_cast<Value*>(a)->type == lir::ValueGeneral;
+inline bool isFloatValue(Compiler::Operand* a)
+{
+  return static_cast<Value*>(a)->type.flavor() == ir::Type::Float;
 }
 
-inline bool isFloatValue(Compiler::Operand* a) {
-  return static_cast<Value*>(a)->type == lir::ValueFloat;
+inline bool isGeneralValue(Compiler::Operand* a)
+{
+  return !isFloatValue(a);
 }
 
 Value* value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0);
+Value* value(Context* c, ir::Type type, Site* site = 0, Site* target = 0);
 
 } // namespace compiler
 } // namespace codegen

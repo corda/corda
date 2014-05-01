@@ -4380,11 +4380,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case d2i: {
-      frame->pushInt(c->f2i(8, types.f4, frame->popLong()));
+      frame->pushInt(c->f2i(8, types.i4, frame->popLong()));
     } break;
 
     case d2l: {
-      frame->pushLong(c->f2i(8, types.f8, frame->popLong()));
+      frame->pushLong(c->f2i(8, types.i8, frame->popLong()));
     } break;
 
     case dadd:
@@ -4473,11 +4473,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case f2i: {
-      frame->pushInt(c->f2i(4, types.f4, frame->popInt()));
+      frame->pushInt(c->f2i(4, types.i4, frame->popInt()));
     } break;
 
     case f2l: {
-      frame->pushLong(c->f2i(4, types.f8, frame->popInt()));
+      frame->pushLong(c->f2i(4, types.i8, frame->popInt()));
     } break;
 
     case fadd:
