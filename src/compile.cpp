@@ -1331,11 +1331,13 @@ translateLocalIndex(Context* context, unsigned footprint, unsigned index)
   }
 }
 
-Compiler::Operand*
-loadLocal(Context* context, unsigned footprint, unsigned index)
+Compiler::Operand* loadLocal(Context* context,
+                             unsigned footprint,
+                             ir::Type type,
+                             unsigned index)
 {
-  return context->compiler->loadLocal
-    (footprint, translateLocalIndex(context, footprint, index));
+  return context->compiler->loadLocal(
+      type, translateLocalIndex(context, footprint, index));
 }
 
 void
@@ -1746,17 +1748,17 @@ class Frame {
 
   void loadInt(unsigned index) {
     assert(t, index < localSize());
-    pushInt(loadLocal(context, 1, index));
+    pushInt(loadLocal(context, 1, types.i4, index));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong(loadLocal(context, 2, index));
+    pushLong(loadLocal(context, 2, types.i8, index));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
-    pushObject(loadLocal(context, 1, index));
+    pushObject(loadLocal(context, 1, types.object, index));
   }
 
   void storeInt(unsigned index) {
@@ -1973,8 +1975,12 @@ class Frame {
   }
 
   void returnFromSubroutine(unsigned returnAddressLocal) {
-    c->returnFromSubroutine
-      (subroutine->handle, loadLocal(context, 1, returnAddressLocal));
+    c->returnFromSubroutine(
+        subroutine->handle,
+        loadLocal(context,
+                  1,
+                  ir::Type(ir::Type::Address, TargetBytesPerWord),
+                  returnAddressLocal));
 
     subroutine->stackIndex = localOffsetFromStack
       (t, translateLocalIndex(context, 1, returnAddressLocal),
@@ -3421,7 +3427,8 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
 
       lock = frame->append(methodClass(t, method));
     } else {
-      lock = loadLocal(frame->context, 1, savedTargetIndex(t, method));
+      lock = loadLocal(
+          frame->context, 1, frame->types.object, savedTargetIndex(t, method));
     }
 
     c->call(c->constant(function, types.address),
@@ -3444,7 +3451,10 @@ handleEntrance(MyThread* t, Frame* frame)
   {
     // save 'this' pointer in case it is overwritten.
     unsigned index = savedTargetIndex(t, method);
-    storeLocal(frame->context, 1, loadLocal(frame->context, 1, 0), index);
+    storeLocal(frame->context,
+               1,
+               loadLocal(frame->context, 1, frame->types.object, 0),
+               index);
     frame->set(index, Frame::Object);
   }
 
@@ -4937,7 +4947,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                  c->binaryOp(lir::Add,
                              types.i4,
                              c->constant(count, types.i4),
-                             loadLocal(context, 1, index)),
+                             loadLocal(context, 1, types.i4, index)),
                  index);
     } break;
 
@@ -6047,7 +6057,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                    c->binaryOp(lir::Add,
                                types.i4,
                                c->constant(count, types.i4),
-                               loadLocal(context, 1, index)),
+                               loadLocal(context, 1, types.i4, index)),
                    index);
       } break;
 
@@ -6069,7 +6079,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       case ret: {
         unsigned index = codeReadInt16(t, code, ip);
-        c->jmp(loadLocal(context, 1, index));
+        c->jmp(loadLocal(context,
+                         1,
+                         ir::Type(ir::Type::Address, TargetBytesPerWord),
+                         index));
         frame->returnFromSubroutine(index);
       } goto next;
 

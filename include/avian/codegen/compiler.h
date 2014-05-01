@@ -101,7 +101,7 @@ class Compiler {
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
   virtual void storeLocal(unsigned footprint, Operand* src,
                           unsigned index) = 0;
-  virtual Operand* loadLocal(unsigned footprint, unsigned index) = 0;
+  virtual Operand* loadLocal(ir::Type type, unsigned index) = 0;
   virtual void saveLocals() = 0;
 
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
