@@ -1974,19 +1974,47 @@ class Frame {
     return e;
   }
 
-  ir::Value* stackCall(ir::Value* methodValue,
-                       object methodObject,
-                       unsigned flags,
-                       TraceElement* trace)
+  void pushReturnValue(unsigned code, ir::Value* result)
   {
-    ir::Value* result = c->stackCall(
-        methodValue,
-        flags,
-        trace,
-        operandTypeForFieldCode(t, methodReturnCode(t, methodObject)),
-        methodParameterFootprint(t, methodObject));
+    switch (code) {
+    case ByteField:
+    case BooleanField:
+    case CharField:
+    case ShortField:
+    case FloatField:
+    case IntField:
+      return pushInt(result);
 
-    return result;
+    case ObjectField:
+      return pushObject(result);
+
+    case LongField:
+    case DoubleField:
+      return pushLong(result);
+
+    default:
+      abort(t);
+    }
+  }
+
+  void stackCall(ir::Value* methodValue,
+                 object methodObject,
+                 unsigned flags,
+                 TraceElement* trace)
+  {
+    unsigned footprint = methodParameterFootprint(t, methodObject);
+    unsigned returnCode = methodReturnCode(t, methodObject);
+    ir::Value* result = c->stackCall(methodValue,
+                                     flags,
+                                     trace,
+                                     operandTypeForFieldCode(t, returnCode),
+                                     footprint);
+
+    pop(footprint);
+
+    if (returnCode != VoidField) {
+      pushReturnValue(returnCode, result);
+    }
   }
 
   unsigned startSubroutine(unsigned ip, avian::codegen::Promise* returnAddress) {
@@ -3124,32 +3152,6 @@ resultSize(MyThread* t, unsigned code)
   }
 }
 
-void pushReturnValue(MyThread* t,
-                     Frame* frame,
-                     unsigned code,
-                     ir::Value* result)
-{
-  switch (code) {
-  case ByteField:
-  case BooleanField:
-  case CharField:
-  case ShortField:
-  case FloatField:
-  case IntField:
-    return frame->pushInt(result);
-
-  case ObjectField:
-    return frame->pushObject(result);
-
-  case LongField:
-  case DoubleField:
-    return frame->pushLong(result);
-
-  default:
-    abort(t);
-  }
-}
-
 ir::Value* popField(MyThread* t, Frame* frame, int code)
 {
   switch (code) {
@@ -3196,12 +3198,12 @@ void compileSafePoint(MyThread* t, Compiler* c, Frame* frame) {
           c->threadRegister());
 }
 
-ir::Value* compileDirectInvoke(MyThread* t,
-                               Frame* frame,
-                               object target,
-                               bool tailCall,
-                               bool useThunk,
-                               avian::codegen::Promise* addressPromise)
+void compileDirectInvoke(MyThread* t,
+                         Frame* frame,
+                         object target,
+                         bool tailCall,
+                         bool useThunk,
+                         avian::codegen::Promise* addressPromise)
 {
   avian::codegen::Compiler* c = frame->c;
   ir::Types types(TargetBytesPerWord);
@@ -3232,11 +3234,10 @@ ir::Value* compileDirectInvoke(MyThread* t,
         (frame->context->zone.allocate(sizeof(TraceElementPromise)))
         TraceElementPromise(t->m->system, trace);
 
-      ir::Value* result = frame->stackCall(
-          c->promiseConstant(returnAddressPromise, types.address),
-          target,
-          flags,
-          trace);
+      frame->stackCall(c->promiseConstant(returnAddressPromise, types.address),
+                       target,
+                       flags,
+                       trace);
 
       c->store(
           types.address,
@@ -3248,8 +3249,6 @@ ir::Value* compileDirectInvoke(MyThread* t,
                               ? nativeThunk(t)
                               : defaultThunk(t),
                           types.address));
-
-      return result;
     } else {
       return frame->stackCall(c->constant(defaultThunk(t), types.address),
                               target,
@@ -3262,7 +3261,7 @@ ir::Value* compileDirectInvoke(MyThread* t,
                ? c->promiseConstant(addressPromise, types.address)
                : c->constant(methodAddress(t, target), types.address));
 
-    return frame->stackCall(
+    frame->stackCall(
         address,
         target,
         flags,
@@ -3275,15 +3274,12 @@ ir::Value* compileDirectInvoke(MyThread* t,
 bool
 compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
 {
-  unsigned rSize = resultSize(t, methodReturnCode(t, target));
-
-  ir::Value* result = 0;
-
   // don't bother calling an empty method unless calling it might
   // cause the class to be initialized, which may have side effects
   if (emptyMethod(t, target)
       and (not classNeedsInit(t, methodClass(t, target))))
   {
+    frame->pop(methodParameterFootprint(t, target));
     tailCall = false;
   } else {
     BootContext* bc = frame->context->bootContext;
@@ -3299,23 +3295,17 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
         object pointer = makePointer(t, p);
         bc->calls = makeTriple(t, target, pointer, bc->calls);
 
-        result = compileDirectInvoke(t, frame, target, tailCall, false, p);
+        compileDirectInvoke(t, frame, target, tailCall, false, p);
       } else {
-        result = compileDirectInvoke(t, frame, target, tailCall, true, 0);
+        compileDirectInvoke(t, frame, target, tailCall, true, 0);
       }
     } else if (unresolved(t, methodAddress(t, target))
                or classNeedsInit(t, methodClass(t, target)))
     {
-      result = compileDirectInvoke(t, frame, target, tailCall, true, 0);
+      compileDirectInvoke(t, frame, target, tailCall, true, 0);
     } else {
-      result = compileDirectInvoke(t, frame, target, tailCall, false, 0);
+      compileDirectInvoke(t, frame, target, tailCall, false, 0);
     }
-  }
-
-  frame->pop(methodParameterFootprint(t, target));
-
-  if (rSize) {
-    pushReturnValue(t, frame, methodReturnCode(t, target), result);
   }
 
   return tailCall;
@@ -3367,7 +3357,7 @@ void compileReferenceInvoke(MyThread* t,
   frame->pop(parameterFootprint);
 
   if (rSize) {
-    pushReturnValue(t, frame, returnCode, result);
+    frame->pushReturnValue(returnCode, result);
   }
 }
 
@@ -3396,27 +3386,13 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
                          tailCall);
 }
 
-void compileAbstractInvoke(MyThread* t,
-                           Frame* frame,
+void compileAbstractInvoke(Frame* frame,
                            ir::Value* method,
                            object target,
                            bool tailCall)
 {
-  unsigned parameterFootprint = methodParameterFootprint(t, target);
-  ir::Types types(TargetBytesPerWord);
-
-  int returnCode = methodReturnCode(t, target);
-
-  unsigned rSize = resultSize(t, returnCode);
-
-  ir::Value* result = frame->stackCall(
+  frame->stackCall(
       method, target, tailCall ? Compiler::TailJump : 0, frame->trace(0, 0));
-
-  frame->pop(parameterFootprint);
-
-  if (rSize) {
-    pushReturnValue(t, frame, returnCode, result);
-  }    
 }
 
 void
@@ -3426,8 +3402,7 @@ compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
   avian::codegen::Compiler* c = frame->c;
   ir::Types types(TargetBytesPerWord);
 
-  compileAbstractInvoke(t,
-                        frame,
+  compileAbstractInvoke(frame,
                         c->call(c->constant(getThunk(t, thunk), types.address),
                                 0,
                                 frame->trace(0, 0),
@@ -4787,7 +4762,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               instance);
         }
 
-        pushReturnValue(t, frame, fieldCode, result);
+        frame->pushReturnValue(fieldCode, result);
       }
     } break;
 
@@ -5106,7 +5081,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pop(parameterFootprint);
 
       if (rSize) {
-        pushReturnValue(t, frame, returnCode, result);
+        frame->pushReturnValue(returnCode, result);
       }
     } break;
 
@@ -5197,9 +5172,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
             ir::Value* instance = c->peek(1, parameterFootprint - 1);
 
-            unsigned rSize = resultSize(t, methodReturnCode(t, target));
-
-            ir::Value* result = frame->stackCall(
+            frame->stackCall(
                 c->memory(c->binaryOp(lir::And,
                                       types.address,
                                       c->constant(TargetPointerMask, types.i4),
@@ -5209,12 +5182,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 target,
                 tailCall ? Compiler::TailJump : 0,
                 frame->trace(0, 0));
-
-            frame->pop(parameterFootprint);
-
-            if (rSize) {
-              pushReturnValue(t, frame, methodReturnCode(t, target), result);
-            }
           } else {
             // OpenJDK generates invokevirtual calls to private methods
             // (e.g. readObject and writeObject for serialization), so
