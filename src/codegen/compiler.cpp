@@ -156,7 +156,7 @@ popRead(Context* c, Event* e UNUSED, Value* v)
       if (valid(nextWord->reads)) {
         deadWord(c, v);
       } else {
-        deadWord(c, nextWord);        
+        deadWord(c, nextWord);
       }
     }
 
@@ -183,22 +183,6 @@ addBuddy(Value* original, Value* buddy)
       fprintf(stderr, " %p", p);
     }
     fprintf(stderr, "\n");
-  }
-}
-
-lir::ValueType
-valueType(Context* c, Compiler::OperandType type)
-{
-  switch (type) {
-  case Compiler::ObjectType:
-  case Compiler::AddressType:
-  case Compiler::IntegerType:
-  case Compiler::VoidType:
-    return lir::ValueGeneral;
-  case Compiler::FloatType:
-    return lir::ValueFloat;
-  default:
-    abort(c);
   }
 }
 
@@ -2121,6 +2105,8 @@ unsigned typeFootprint(Context* c, ir::Type type)
   case ir::Type::Address:
   case ir::Type::Half:
     return 1;
+  case ir::Type::Void:
+    return 0;
   default:
     abort(c);
   }
@@ -2306,13 +2292,14 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* constant(int64_t value, Compiler::OperandType type) {
+  virtual Operand* constant(int64_t value, ir::Type type)
+  {
     return promiseConstant(resolvedPromise(&c, value), type);
   }
 
-  virtual Operand* promiseConstant(Promise* value, Compiler::OperandType type) {
-    return compiler::value
-      (&c, valueType(&c, type), compiler::constantSite(&c, value));
+  virtual Operand* promiseConstant(Promise* value, ir::Type type)
+  {
+    return compiler::value(&c, type, compiler::constantSite(&c, value));
   }
 
   virtual Operand* address(Promise* address) {
@@ -2320,12 +2307,12 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* memory(Operand* base,
-                          OperandType type,
+                          ir::Type type,
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1)
   {
-    Value* result = value(&c, valueType(&c, type));
+    Value* result = value(&c, type);
 
     appendMemory(&c, static_cast<Value*>(base), displacement,
                  static_cast<Value*>(index), scale, result);
@@ -2441,7 +2428,7 @@ class MyCompiler: public Compiler {
                         unsigned flags,
                         TraceHandler* traceHandler,
                         unsigned resultSize,
-                        OperandType resultType,
+                        ir::Type resultType,
                         unsigned argumentCount,
                         ...)
   {
@@ -2479,7 +2466,7 @@ class MyCompiler: public Compiler {
         (&c, RUNTIME_ARRAY_BODY(arguments)[i], argumentStack);
     }
 
-    Value* result = value(&c, valueType(&c, resultType));
+    Value* result = value(&c, resultType);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
                resultSize, argumentStack, index, 0);
 
@@ -2490,10 +2477,10 @@ class MyCompiler: public Compiler {
                              unsigned flags,
                              TraceHandler* traceHandler,
                              unsigned resultSize,
-                             OperandType resultType,
+                             ir::Type resultType,
                              unsigned argumentFootprint)
   {
-    Value* result = value(&c, valueType(&c, resultType));
+    Value* result = value(&c, resultType);
     appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
                resultSize, c.stack, 0, argumentFootprint);
     return result;

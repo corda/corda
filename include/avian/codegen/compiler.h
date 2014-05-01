@@ -34,19 +34,11 @@ class Compiler {
     virtual intptr_t getThunk(lir::TernaryOperation op, unsigned size,
                               unsigned resultSize, bool* threadParameter) = 0;
   };
-  
+
   static const unsigned Aligned  = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
   static const unsigned TailJump = 1 << 2;
   static const unsigned LongJumpOrCall = 1 << 3;
-
-  enum OperandType {
-    ObjectType,
-    AddressType,
-    IntegerType,
-    FloatType,
-    VoidType
-  };
 
   class Operand { };
   class State { };
@@ -71,11 +63,11 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t value) = 0;
   virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual Operand* constant(int64_t value, OperandType type) = 0;
-  virtual Operand* promiseConstant(Promise* value, OperandType type) = 0;
+  virtual Operand* constant(int64_t value, ir::Type type) = 0;
+  virtual Operand* promiseConstant(Promise* value, ir::Type type) = 0;
   virtual Operand* address(Promise* address) = 0;
   virtual Operand* memory(Operand* base,
-                          OperandType type,
+                          ir::Type type,
                           int displacement = 0,
                           Operand* index = 0,
                           unsigned scale = 1) = 0;
@@ -94,7 +86,7 @@ class Compiler {
                         unsigned flags,
                         TraceHandler* traceHandler,
                         unsigned resultSize,
-                        OperandType resultType,
+                        ir::Type resultType,
                         unsigned argumentCount,
                         ...) = 0;
 
@@ -102,7 +94,7 @@ class Compiler {
                              unsigned flags,
                              TraceHandler* traceHandler,
                              unsigned resultSize,
-                             OperandType resultType,
+                             ir::Type resultType,
                              unsigned argumentFootprint) = 0;
 
   virtual void return_(ir::Type type, Operand* value) = 0;

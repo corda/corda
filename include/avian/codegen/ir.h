@@ -30,6 +30,10 @@ class Type {
     // (double/long on 32-bit systems)
     // TODO: remove when possible
     Half,
+
+    // Represents the lack of a return value
+    // TODO: remove when possible
+    Void
   };
 
  private:
@@ -91,6 +95,10 @@ class Types {
   // A 8-byte floating point type
   Type f8;
 
+  // A type representing the lack of a return value
+  // TODO: remove when possible
+  Type void_;
+
   Types(unsigned bytesPerWord)
       : object(Type::Object, bytesPerWord),
         address(Type::Integer, bytesPerWord),
@@ -99,7 +107,8 @@ class Types {
         i4(Type::Integer, 4),
         i8(Type::Integer, 8),
         f4(Type::Float, 4),
-        f8(Type::Float, 8)
+        f8(Type::Float, 8),
+        void_(Type::Void, 0)
   {
   }
 };
