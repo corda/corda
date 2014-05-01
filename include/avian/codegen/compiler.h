@@ -110,7 +110,9 @@ class Compiler {
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;
 
-  virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
+  virtual void store(ir::Type srcType,
+                     Operand* src,
+                     ir::Type dstType,
                      Operand* dst) = 0;
   virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
                         unsigned dstSize) = 0;

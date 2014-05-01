@@ -2593,11 +2593,18 @@ class MyCompiler: public Compiler {
                       static_cast<Value*>(index), handler);
   }
 
-  virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
+  virtual void store(ir::Type srcType,
+                     Operand* src,
+                     ir::Type dstType,
                      Operand* dst)
   {
-    appendMove(&c, lir::Move, srcSize, srcSize, static_cast<Value*>(src),
-               dstSize, static_cast<Value*>(dst));
+    appendMove(&c,
+               lir::Move,
+               srcType.size(),
+               srcType.size(),
+               static_cast<Value*>(src),
+               dstType.size(),
+               static_cast<Value*>(dst));
   }
 
   virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,

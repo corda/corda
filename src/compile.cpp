@@ -3205,9 +3205,9 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
           methodParameterFootprint(t, target));
 
       c->store(
-          TargetBytesPerWord,
+          types.address,
           frame->absoluteAddressOperand(returnAddressPromise),
-          TargetBytesPerWord,
+          types.address,
           c->memory(
               c->threadRegister(), types.address, TARGET_THREAD_TAILADDRESS));
 
@@ -3764,8 +3764,10 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(
-          TargetBytesPerWord, value, 1, c->memory(address, types.i4, 0, 0, 1));
+      c->store(types.address,
+               value,
+               types.i1,
+               c->memory(address, types.i4, 0, 0, 1));
       return true;
     } else if ((MATCH(methodName(t, target), "getShort")
                 and MATCH(methodSpec(t, target), "(J)S"))
@@ -3785,8 +3787,10 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(
-          TargetBytesPerWord, value, 2, c->memory(address, types.i4, 0, 0, 1));
+      c->store(types.address,
+               value,
+               types.i2,
+               c->memory(address, types.i4, 0, 0, 1));
       return true;
     } else if ((MATCH(methodName(t, target), "getInt")
                 and MATCH(methodSpec(t, target), "(J)I"))
@@ -3814,9 +3818,9 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(TargetBytesPerWord,
+      c->store(types.address,
                value,
-               4,
+               types.i4,
                c->memory(
                    address,
                    MATCH(methodName(t, target), "putInt") ? types.i4 : types.f4,
@@ -3850,9 +3854,9 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popLong();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(8,
+      c->store(types.i8,
                value,
-               8,
+               types.i8,
                c->memory(address,
                          MATCH(methodName(t, target), "putLong") ? types.i4
                                                                  : types.f4,
@@ -3876,9 +3880,9 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popLong();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(8,
+      c->store(types.i8,
                value,
-               TargetBytesPerWord,
+               types.address,
                c->memory(address, types.address, 0, 0, 1));
       return true;
     }
@@ -4236,42 +4240,46 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       } break;
 
       case fastore:
-        c->store(TargetBytesPerWord,
+        c->store(types.address,
                  value,
-                 4,
+                 types.f4,
                  c->memory(array, types.f4, TargetArrayBody, index, 4));
         break;
 
       case iastore:
-        c->store(TargetBytesPerWord,
+        c->store(types.address,
                  value,
-                 4,
+                 types.f4,
                  c->memory(array, types.i4, TargetArrayBody, index, 4));
         break;
 
       case bastore:
-        c->store(TargetBytesPerWord,
+        c->store(types.address,
                  value,
-                 1,
+                 types.i1,
                  c->memory(array, types.i4, TargetArrayBody, index, 1));
         break;
 
       case castore:
       case sastore:
-        c->store(TargetBytesPerWord,
+        c->store(types.address,
                  value,
-                 2,
+                 types.i2,
                  c->memory(array, types.i4, TargetArrayBody, index, 2));
         break;
 
       case dastore:
-        c->store(
-            8, value, 8, c->memory(array, types.f4, TargetArrayBody, index, 8));
+        c->store(types.f8,
+                 value,
+                 types.f8,
+                 c->memory(array, types.f4, TargetArrayBody, index, 8));
         break;
 
       case lastore:
-        c->store(
-            8, value, 8, c->memory(array, types.i4, TargetArrayBody, index, 8));
+        c->store(types.i8,
+                 value,
+                 types.f8,
+                 c->memory(array, types.i4, TargetArrayBody, index, 8));
         break;
       }
     } break;
@@ -5834,9 +5842,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case ByteField:
         case BooleanField:
           c->store(
-              TargetBytesPerWord,
+              types.address,
               value,
-              1,
+              types.i1,
               c->memory(
                   table, types.i4, targetFieldOffset(context, field), 0, 1));
           break;
@@ -5844,45 +5852,45 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case CharField:
         case ShortField:
           c->store(
-              TargetBytesPerWord,
+              types.address,
               value,
-              2,
+              types.i2,
               c->memory(
                   table, types.i4, targetFieldOffset(context, field), 0, 1));
           break;
             
         case FloatField:
           c->store(
-              TargetBytesPerWord,
+              types.address,
               value,
-              4,
+              types.f4,
               c->memory(
                   table, types.f4, targetFieldOffset(context, field), 0, 1));
           break;
 
         case IntField:
           c->store(
-              TargetBytesPerWord,
+              types.address,
               value,
-              4,
+              types.i4,
               c->memory(
                   table, types.i4, targetFieldOffset(context, field), 0, 1));
           break;
 
         case DoubleField:
           c->store(
-              8,
+              types.f8,
               value,
-              8,
+              types.f8,
               c->memory(
                   table, types.f4, targetFieldOffset(context, field), 0, 1));
           break;
 
         case LongField:
           c->store(
-              8,
+              types.i8,
               value,
-              8,
+              types.i8,
               c->memory(
                   table, types.i4, targetFieldOffset(context, field), 0, 1));
           break;
