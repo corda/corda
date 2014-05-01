@@ -2609,6 +2609,22 @@ class MyCompiler: public Compiler {
                       static_cast<Value*>(index), handler);
   }
 
+  virtual Operand* truncateThenExtend(ir::SignExtendMode signExtend,
+                                      ir::Type extendType,
+                                      ir::Type truncateType,
+                                      Operand* src)
+  {
+    Value* dst = value(&c, extendType);
+    appendMove(&c,
+               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               TargetBytesPerWord,
+               truncateType.size(),
+               static_cast<Value*>(src),
+               extendType.size(),
+               dst);
+    return dst;
+  }
+
   virtual void store(ir::Type srcType,
                      Operand* src,
                      Operand* dst)

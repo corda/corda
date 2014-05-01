@@ -4831,8 +4831,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case i2l:
-      frame->pushLong(c->load(
-          ir::SignExtend, types.address, types.i4, frame->popInt(), types.i8));
+      frame->pushLong(c->truncateThenExtend(
+          ir::SignExtend, types.i8, types.i4, frame->popInt()));
       break;
 
     case i2s: {

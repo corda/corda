@@ -107,6 +107,11 @@ class Compiler {
   virtual void checkBounds(Operand* object, unsigned lengthOffset,
                            Operand* index, intptr_t handler) = 0;
 
+  virtual Operand* truncateThenExtend(ir::SignExtendMode signExtend,
+                                      ir::Type extendType,
+                                      ir::Type truncateType,
+                                      Operand* src) = 0;
+
   virtual void store(ir::Type srcType,
                      Operand* src,
                      Operand* dst) = 0;
