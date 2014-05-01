@@ -84,7 +84,7 @@ class Compiler {
 
   virtual void push(ir::Type type, Operand* value) = 0;
   virtual void save(ir::Type type, Operand* value) = 0;
-  virtual Operand* pop(unsigned footprint) = 0;
+  virtual Operand* pop(ir::Type type) = 0;
   virtual void pushed() = 0;
   virtual void popped(unsigned footprint) = 0;
   virtual unsigned topOfStack() = 0;

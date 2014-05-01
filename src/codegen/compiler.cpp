@@ -2363,8 +2363,13 @@ class MyCompiler: public Compiler {
     }
   }
 
-  virtual Operand* pop(unsigned footprint) {
-    return compiler::pop(&c, footprint);
+  virtual Operand* pop(ir::Type type)
+  {
+    Operand* value = compiler::pop(&c, typeFootprint(&c, type));
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, static_cast<Value*>(value)->type == type);
+    return value;
   }
 
   virtual void pushed() {

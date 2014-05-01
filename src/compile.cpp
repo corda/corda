@@ -1688,12 +1688,13 @@ class Frame {
     pushQuiet(types.i8, o);
   }
 
-  Value popQuiet(unsigned footprint) {
-    return c->pop(footprint);
+  Value popQuiet(ir::Type type)
+  {
+    return c->pop(type);
   }
 
   Value popLongQuiet() {
-    return popQuiet(2);
+    return popQuiet(types.i8);
   }
 
   void pushInt(Value o) {
@@ -1729,7 +1730,7 @@ class Frame {
 
   Value popInt() {
     poppedInt();
-    return popQuiet(1);
+    return popQuiet(types.i4);
   }
 
   Value popLong() {
@@ -1739,7 +1740,7 @@ class Frame {
   
   Value popObject() {
     poppedObject();
-    return popQuiet(1);
+    return popQuiet(types.object);
   }
 
   void loadInt(unsigned index) {
@@ -1773,7 +1774,7 @@ class Frame {
   }
 
   void storeObjectOrAddress(unsigned index) {
-    storeLocal(context, 1, popQuiet(1), index);
+    storeLocal(context, 1, popQuiet(types.i4), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -1793,8 +1794,8 @@ class Frame {
   }
 
   void dupX1() {
-    Value s0 = popQuiet(1);
-    Value s1 = popQuiet(1);
+    Value s0 = popQuiet(types.i4);
+    Value s1 = popQuiet(types.i4);
 
     pushQuiet(types.i4, s0);
     pushQuiet(types.i4, s1);
@@ -1804,7 +1805,7 @@ class Frame {
   }
 
   void dupX2() {
-    Value s0 = popQuiet(1);
+    Value s0 = popQuiet(types.i4);
 
     if (get(sp - 2) == Long) {
       Value s1 = popLongQuiet();
@@ -1813,8 +1814,8 @@ class Frame {
       pushLongQuiet(s1);
       pushQuiet(types.i4, s0);
     } else {
-      Value s1 = popQuiet(1);
-      Value s2 = popQuiet(1);
+      Value s1 = popQuiet(types.i4);
+      Value s2 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s0);
       pushQuiet(types.i4, s2);
@@ -1829,8 +1830,8 @@ class Frame {
     if (get(sp - 1) == Long) {
       pushLongQuiet(c->peek(2, 0));
     } else {
-      Value s0 = popQuiet(1);
-      Value s1 = popQuiet(1);
+      Value s0 = popQuiet(types.i4);
+      Value s1 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1844,15 +1845,15 @@ class Frame {
   void dup2X1() {
     if (get(sp - 1) == Long) {
       Value s0 = popLongQuiet();
-      Value s1 = popQuiet(1);
+      Value s1 = popQuiet(types.i4);
 
       pushLongQuiet(s0);
       pushQuiet(types.i4, s1);
       pushLongQuiet(s0);
     } else {
-      Value s0 = popQuiet(1);
-      Value s1 = popQuiet(1);
-      Value s2 = popQuiet(1);
+      Value s0 = popQuiet(types.i4);
+      Value s1 = popQuiet(types.i4);
+      Value s2 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1875,8 +1876,8 @@ class Frame {
         pushLongQuiet(s1);
         pushLongQuiet(s0);
       } else {
-        Value s1 = popQuiet(1);
-        Value s2 = popQuiet(1);
+        Value s1 = popQuiet(types.i4);
+        Value s2 = popQuiet(types.i4);
 
         pushLongQuiet(s0);
         pushQuiet(types.i4, s2);
@@ -1884,10 +1885,10 @@ class Frame {
         pushLongQuiet(s0);
       }
     } else {
-      Value s0 = popQuiet(1);
-      Value s1 = popQuiet(1);
-      Value s2 = popQuiet(1);
-      Value s3 = popQuiet(1);
+      Value s0 = popQuiet(types.i4);
+      Value s1 = popQuiet(types.i4);
+      Value s2 = popQuiet(types.i4);
+      Value s3 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1901,8 +1902,8 @@ class Frame {
   }
 
   void swap() {
-    Value s0 = popQuiet(1);
-    Value s1 = popQuiet(1);
+    Value s0 = popQuiet(types.i4);
+    Value s1 = popQuiet(types.i4);
 
     pushQuiet(types.i4, s0);
     pushQuiet(types.i4, s1);
