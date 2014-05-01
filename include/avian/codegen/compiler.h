@@ -109,7 +109,6 @@ class Compiler {
 
   virtual void store(ir::Type srcType,
                      Operand* src,
-                     ir::Type dstType,
                      Operand* dst) = 0;
   virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
                         unsigned dstSize) = 0;

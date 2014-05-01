@@ -2610,22 +2610,19 @@ class MyCompiler: public Compiler {
 
   virtual void store(ir::Type srcType,
                      Operand* src,
-                     ir::Type dstType,
                      Operand* dst)
   {
     assert(&c, srcType.flavor() == static_cast<Value*>(src)->type.flavor());
-    assert(&c, dstType.flavor() == static_cast<Value*>(dst)->type.flavor());
-    assert(&c, srcType.flavor() == dstType.flavor());
+    assert(&c, srcType.flavor() == static_cast<Value*>(dst)->type.flavor());
     assert(&c,
            srcType.flavor() != ir::Type::Float
            || srcType.size() == static_cast<Value*>(src)->type.size());
-    assert(&c, dstType == static_cast<Value*>(dst)->type);
     appendMove(&c,
                lir::Move,
                srcType.size(),
                srcType.size(),
                static_cast<Value*>(src),
-               dstType.size(),
+               static_cast<Value*>(dst)->type.size(),
                static_cast<Value*>(dst));
   }
 
