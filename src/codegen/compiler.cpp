@@ -2478,8 +2478,17 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void return_(unsigned size, Operand* value) {
-    appendReturn(&c, size, static_cast<Value*>(value));
+  virtual void return_(ir::Type type, Operand* value)
+  {
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, static_cast<Value*>(value)->type == type);
+    appendReturn(&c, type.size(), static_cast<Value*>(value));
+  }
+
+  virtual void return_()
+  {
+    appendReturn(&c, 0, 0);
   }
 
   virtual void initLocal(unsigned footprint, unsigned index, OperandType type)
@@ -2498,7 +2507,7 @@ class MyCompiler: public Compiler {
         lowIndex = index;
       } else {
         lowIndex = index + 1;
-        highIndex = index;      
+        highIndex = index;
       }
 
       if (TargetBytesPerWord == 4) {

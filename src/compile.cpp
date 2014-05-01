@@ -4290,7 +4290,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(TargetBytesPerWord, frame->popObject());
+      c->return_(types.address, frame->popObject());
     } goto next;
 
     case arraylength: {
@@ -5179,10 +5179,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushInt(c->binaryOp(lir::Remainder, 4, a, b));
     } break;
 
-    case ireturn:
+    case ireturn: {
+      handleExit(t, frame);
+      c->return_(types.i4, frame->popInt());
+    }
+      goto next;
+
     case freturn: {
       handleExit(t, frame);
-      c->return_(4, frame->popInt());
+      c->return_(types.f4, frame->popInt());
     } goto next;
 
     case istore:
@@ -5472,10 +5477,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->pushLong(c->binaryOp(lir::Remainder, 8, a, b));
     } break;
 
-    case lreturn:
+    case lreturn: {
+      handleExit(t, frame);
+      c->return_(types.i8, frame->popLong());
+    }
+      goto next;
+
     case dreturn: {
       handleExit(t, frame);
-      c->return_(8, frame->popLong());
+      c->return_(types.f8, frame->popLong());
     } goto next;
 
     case lshl:
@@ -5887,7 +5897,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
 
       handleExit(t, frame);
-      c->return_(0, 0);
+      c->return_();
       goto next;
 
     case sipush:
