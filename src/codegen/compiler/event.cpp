@@ -288,21 +288,28 @@ class CallEvent: public Event {
     if (stackArgumentFootprint) {
       RUNTIME_ARRAY(Value*, argsArr, stackArgumentFootprint);
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
-        Value* v = stack->value;
-        ir::Value* v2 UNUSED = arguments[i];
+        Value* v = static_cast<Value*>(arguments[i]);
         stack = stack->next;
-        assert(c, v == v2);
 
-        if ((vm::TargetBytesPerWord == 8
-             and (v == 0 or (i >= 1 and stack->value == 0)))
-            or (vm::TargetBytesPerWord == 4 and v->nextWord != v))
-        {
-          assert(c, vm::TargetBytesPerWord == 8 or v->nextWord == stack->value);
+        if ((vm::TargetBytesPerWord
+             == 8 and(v == 0 or(i >= 1 and arguments[i - 1] == 0)))
+            or(vm::TargetBytesPerWord == 4 and v->nextWord != v)) {
+          assert(
+              c,
+              vm::TargetBytesPerWord == 8 or v->nextWord == arguments[i - 1]);
 
-          RUNTIME_ARRAY_BODY(argsArr)[i--] = stack->value;
+          Value* v2 = static_cast<Value*>(arguments[i - 1]);
+          RUNTIME_ARRAY_BODY(argsArr)[i] = v2;
+          arguments[i] = arguments[i - 1];
+          --i;
           stack = stack->next;
         }
         RUNTIME_ARRAY_BODY(argsArr)[i] = v;
+        arguments[i] = v;
+      }
+
+      for (size_t i = 0; i < arguments.count; i++) {
+        assert(c, arguments[i] == RUNTIME_ARRAY_BODY(argsArr)[i]);
       }
 
       int returnAddressIndex;
