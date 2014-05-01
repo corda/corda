@@ -82,8 +82,7 @@ Site*
 pickTargetSite(Context* c, Read* read, bool intersectRead = false,
                unsigned registerReserveCount = 0,
                CostCalculator* costCalculator = 0);
-Value*
-register_(Context* c, int number);
+Value* threadRegister(Context* c);
 
 Event::Event(Context* c):
   next(0), stackBefore(c->stack), localsBefore(c->locals),
@@ -929,15 +928,23 @@ appendCombine(Context* c, lir::TernaryOperation type,
     if (threadParameter) {
       ++ stackSize;
 
-      compiler::push(c, 1, register_(c, c->arch->thread()));
+      compiler::push(c, 1, threadRegister(c));
     }
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
-    appendCall
-      (c, value(c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, resultValue,
-       resultSize, argumentStack, stackSize, 0);
+    appendCall(c,
+               value(c,
+                     ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
+                     constantSite(c, handler)),
+               0,
+               0,
+               resultValue,
+               resultSize,
+               argumentStack,
+               stackSize,
+               0);
   } else {
     append
       (c, new(c->zone)
@@ -1049,12 +1056,18 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
-    appendCall
-      (c, value
-       (c, lir::ValueGeneral, constantSite
-        (c, c->client->getThunk(type, firstSize, resultSize))),
-       0, 0, resultValue, resultSize, argumentStack,
-       ceilingDivide(firstSize, vm::TargetBytesPerWord), 0);
+    appendCall(c,
+               value(c,
+                     ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
+                     constantSite(
+                         c, c->client->getThunk(type, firstSize, resultSize))),
+               0,
+               0,
+               resultValue,
+               resultSize,
+               argumentStack,
+               ceilingDivide(firstSize, vm::TargetBytesPerWord),
+               0);
   } else {
     append(c, new(c->zone)
            TranslateEvent
@@ -1407,15 +1420,28 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
 
-    Value* result = value(c, lir::ValueGeneral);
-    appendCall
-      (c, value
-       (c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
-       argumentStack, ceilingDivide(size, vm::TargetBytesPerWord) * 2, 0);
+    Value* result
+        = value(c, ir::Type(ir::Type::Address, vm::TargetBytesPerWord));
+    appendCall(c,
+               value(c,
+                     ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
+                     constantSite(c, handler)),
+               0,
+               0,
+               result,
+               4,
+               argumentStack,
+               ceilingDivide(size, vm::TargetBytesPerWord) * 2,
+               0);
 
-    appendBranch(c, thunkBranch(c, type), 4, value
-                 (c, lir::ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
-                 result, addressValue);
+    appendBranch(c,
+                 thunkBranch(c, type),
+                 4,
+                 value(c,
+                       ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
+                       constantSite(c, static_cast<int64_t>(0))),
+                 result,
+                 addressValue);
   } else {
     append
       (c, new(c->zone)

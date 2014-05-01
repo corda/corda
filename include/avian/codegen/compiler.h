@@ -72,7 +72,7 @@ class Compiler {
                           Operand* index = 0,
                           unsigned scale = 1) = 0;
 
-  virtual Operand* register_(int number) = 0;
+  virtual Operand* threadRegister() = 0;
 
   virtual void push(ir::Type type, Operand* value) = 0;
   virtual void save(ir::Type type, Operand* value) = 0;

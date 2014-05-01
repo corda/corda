@@ -77,7 +77,6 @@ inline bool isGeneralValue(Compiler::Operand* a)
   return !isFloatValue(a);
 }
 
-Value* value(Context* c, lir::ValueType type, Site* site = 0, Site* target = 0);
 Value* value(Context* c, ir::Type type, Site* site = 0, Site* target = 0);
 
 } // namespace compiler

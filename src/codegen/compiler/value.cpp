@@ -162,16 +162,6 @@ bool Value::hasBuddy(Context* c, Value* b) {
 }
 #endif // not NDEBUG
 
-
-Value* value(Context* c, lir::ValueType type, Site* site, Site* target) {
-  return value(
-      c,
-      ir::Type(type == lir::ValueGeneral ? ir::Type::Integer : ir::Type::Float,
-               vm::TargetBytesPerWord),
-      site,
-      target);
-}
-
 Value* value(Context* c, ir::Type type, Site* site, Site* target)
 {
   return new(c->zone) Value(site, target, type);

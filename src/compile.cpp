@@ -1410,12 +1410,12 @@ class Frame {
       object pointer = makePointer(t, p);
       bc->constants = makeTriple(t, o, pointer, bc->constants);
 
-      return c->binaryOp(lir::Add,
-                         types.address,
-                         c->memory(c->register_(t->arch->thread()),
-                                   types.address,
-                                   TARGET_THREAD_HEAPIMAGE),
-                         c->promiseConstant(p, types.address));
+      return c->binaryOp(
+          lir::Add,
+          types.address,
+          c->memory(
+              c->threadRegister(), types.address, TARGET_THREAD_HEAPIMAGE),
+          c->promiseConstant(p, types.address));
     } else {
       for (PoolElement* e = context->objectPool; e; e = e->next) {
         if (o == e->target) {
@@ -1644,7 +1644,7 @@ class Frame {
                ? c->binaryOp(
                      lir::Add,
                      types.address,
-                     c->memory(c->register_(t->arch->thread()),
+                     c->memory(c->threadRegister(),
                                types.address,
                                TARGET_THREAD_CODEIMAGE),
                      c->promiseConstant(
@@ -3160,7 +3160,7 @@ void compileSafePoint(MyThread* t, Compiler* c, Frame* frame) {
           0,
           types.void_,
           1,
-          c->register_(t->arch->thread()));
+          c->threadRegister());
 }
 
 Compiler::Operand*
@@ -3204,12 +3204,12 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
           operandTypeForFieldCode(t, methodReturnCode(t, target)),
           methodParameterFootprint(t, target));
 
-      c->store(TargetBytesPerWord,
-               frame->absoluteAddressOperand(returnAddressPromise),
-               TargetBytesPerWord,
-               c->memory(c->register_(t->arch->thread()),
-                         types.address,
-                         TARGET_THREAD_TAILADDRESS));
+      c->store(
+          TargetBytesPerWord,
+          frame->absoluteAddressOperand(returnAddressPromise),
+          TargetBytesPerWord,
+          c->memory(
+              c->threadRegister(), types.address, TARGET_THREAD_TAILADDRESS));
 
       c->exit(c->constant((methodFlags(t, target) & ACC_NATIVE)
                               ? nativeThunk(t)
@@ -3363,7 +3363,7 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
                                  TargetBytesPerWord,
                                  types.address,
                                  2,
-                                 c->register_(t->arch->thread()),
+                                 c->threadRegister(),
                                  frame->append(pair)),
                          reference,
                          isStatic,
@@ -3411,7 +3411,7 @@ compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
                                 TargetBytesPerWord,
                                 types.address,
                                 2,
-                                c->register_(t->arch->thread()),
+                                c->threadRegister(),
                                 frame->append(target)),
                         target,
                         tailCall);
@@ -3440,7 +3440,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
             0,
             types.void_,
             2,
-            c->register_(t->arch->thread()),
+            c->threadRegister(),
             lock);
   }
 }
@@ -4093,7 +4093,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               0,
               types.void_,
               1,
-              c->register_(t->arch->thread()));
+              c->threadRegister());
     }
     
 //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
@@ -4222,7 +4222,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 0,
                 types.void_,
                 4,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 array,
                 c->binaryOp(
                     lir::Add,
@@ -4328,7 +4328,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                 TargetBytesPerWord,
                                 types.object,
                                 3,
-                                c->register_(t->arch->thread()),
+                                c->threadRegister(),
                                 frame->append(argument),
                                 length));
     } break;
@@ -4374,7 +4374,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               0,
               types.void_,
               2,
-              c->register_(t->arch->thread()),
+              c->threadRegister(),
               target);
 
       c->nullaryOp(lir::Trap);
@@ -4413,7 +4413,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               0,
               types.void_,
               3,
-              c->register_(t->arch->thread()),
+              c->threadRegister(),
               frame->append(argument),
               instance);
     } break;
@@ -4624,7 +4624,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                   0,
                   types.void_,
                   2,
-                  c->register_(t->arch->thread()),
+                  c->threadRegister(),
                   frame->append(field));
         }
 
@@ -4642,7 +4642,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     2,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(fieldClass(t, field)));
           }
 
@@ -4748,7 +4748,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     2,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(field));
           } else {
             c->nullaryOp(lir::LoadBarrier);
@@ -4773,7 +4773,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               rSize,
               rType,
               2,
-              c->register_(t->arch->thread()),
+              c->threadRegister(),
               frame->append(pair));
         } else {
           Compiler::Operand* instance = frame->popObject();
@@ -4786,7 +4786,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               rSize,
               rType,
               3,
-              c->register_(t->arch->thread()),
+              c->threadRegister(),
               frame->append(pair),
               instance);
         }
@@ -5050,7 +5050,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                              4,
                              types.i4,
                              3,
-                             c->register_(t->arch->thread()),
+                             c->threadRegister(),
                              frame->append(argument),
                              instance));
     } break;
@@ -5100,7 +5100,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                  TargetBytesPerWord,
                                  types.address,
                                  3,
-                                 c->register_(t->arch->thread()),
+                                 c->threadRegister(),
                                  frame->append(argument),
                                  c->peek(1, parameterFootprint - 1)),
                          tailCall ? Compiler::TailJump : 0,
@@ -5250,7 +5250,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 TargetBytesPerWord,
                 types.address,
                 3,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(pair),
                 c->peek(1,
                         methodReferenceParameterFootprint(t, reference, false)
@@ -5420,7 +5420,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 TargetBytesPerWord,
                 types.object,
                 2,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(makePair(t, context->method, reference))));
           }
         }
@@ -5434,7 +5434,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 TargetBytesPerWord,
                 types.object,
                 2,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(v)));
           } else {
             frame->pushObject(frame->append(v));
@@ -5553,7 +5553,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         c->jmp(context->bootContext
                    ? c->binaryOp(lir::Add,
                                  types.address,
-                                 c->memory(c->register_(t->arch->thread()),
+                                 c->memory(c->threadRegister(),
                                            types.address,
                                            TARGET_THREAD_CODEIMAGE),
                                  address)
@@ -5636,7 +5636,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           0,
           types.void_,
           2,
-          c->register_(t->arch->thread()),
+          c->threadRegister(),
           target);
     } break;
 
@@ -5649,7 +5649,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           0,
           types.void_,
           2,
-          c->register_(t->arch->thread()),
+          c->threadRegister(),
           target);
     } break;
 
@@ -5686,7 +5686,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     TargetBytesPerWord,
                     types.object,
                     4,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(argument),
                     c->constant(dimensions, types.i4),
                     c->constant(offset, types.i4));
@@ -5725,7 +5725,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                 TargetBytesPerWord,
                                 types.object,
                                 2,
-                                c->register_(t->arch->thread()),
+                                c->threadRegister(),
                                 frame->append(argument)));
     } break;
 
@@ -5741,7 +5741,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                   TargetBytesPerWord,
                   types.object,
                   3,
-                  c->register_(t->arch->thread()),
+                  c->threadRegister(),
                   c->constant(type, types.i4),
                   length));
     } break;
@@ -5784,7 +5784,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     2,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(fieldClass(t, field)));
           }
 
@@ -5811,7 +5811,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     2,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(field));
           } else {
             c->nullaryOp(lir::StoreStoreBarrier);
@@ -5895,7 +5895,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     4,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     table,
                     c->constant(targetFieldOffset(context, field), types.i4),
                     value);
@@ -5906,7 +5906,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     4,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     table,
                     c->constant(targetFieldOffset(context, field), types.i4),
                     value);
@@ -5927,7 +5927,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.void_,
                     2,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(field));
           } else {
             c->nullaryOp(lir::StoreLoadBarrier);
@@ -5959,7 +5959,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 rSize,
                 rType,
                 3,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(pair),
                 value);
           } else {
@@ -5972,7 +5972,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     rSize,
                     rType,
                     4,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(pair),
                     instance,
                     value);
@@ -5990,7 +5990,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     rSize,
                     rType,
                     4,
-                    c->register_(t->arch->thread()),
+                    c->threadRegister(),
                     frame->append(pair),
                     static_cast<Compiler::Operand*>(0),
                     value);
@@ -6005,7 +6005,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 rSize,
                 rType,
                 5,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(pair),
                 instance,
                 static_cast<Compiler::Operand*>(0),
@@ -6024,7 +6024,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 rSize,
                 rType,
                 3,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(pair),
                 value);
           } else {
@@ -6038,7 +6038,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 rSize,
                 rType,
                 4,
-                c->register_(t->arch->thread()),
+                c->threadRegister(),
                 frame->append(pair),
                 instance,
                 value);
@@ -6234,7 +6234,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                    context->bootContext
                        ? c->binaryOp(lir::Add,
                                      types.address,
-                                     c->memory(c->register_(t->arch->thread()),
+                                     c->memory(c->threadRegister(),
                                                types.address,
                                                TARGET_THREAD_CODEIMAGE),
                                      entry)

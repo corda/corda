@@ -1237,17 +1237,10 @@ loadLocal(Context* c, unsigned footprint, unsigned index)
   return c->locals[index].value;
 }
 
-Value*
-register_(Context* c, int number)
+Value* threadRegister(Context* c)
 {
-  assert(c, (1 << number) & (c->regFile->generalRegisters.mask
-                             | c->regFile->floatRegisters.mask));
-
-  Site* s = registerSite(c, number);
-  lir::ValueType type = ((1 << number) & c->regFile->floatRegisters.mask)
-    ? lir::ValueFloat: lir::ValueGeneral;
-
-  return value(c, type, s, s);
+  Site* s = registerSite(c, c->arch->thread());
+  return value(c, ir::Type(ir::Type::Address, TargetBytesPerWord), s, s);
 }
 
 unsigned
@@ -2319,7 +2312,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual Operand* address(Promise* address) {
-    return value(&c, lir::ValueGeneral, compiler::addressSite(&c, address));
+    return value(&c,
+                 ir::Type(ir::Type::Address, TargetBytesPerWord),
+                 compiler::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
@@ -2336,8 +2331,9 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* register_(int number) {
-    return compiler::register_(&c, number);
+  virtual Operand* threadRegister()
+  {
+    return compiler::threadRegister(&c);
   }
 
   Promise* machineIp() {
@@ -2378,7 +2374,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void pushed() {
-    Value* v = value(&c, lir::ValueGeneral);
+    Value* v = value(&c, ir::Type(ir::Type::Object, TargetBytesPerWord));
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
