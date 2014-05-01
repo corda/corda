@@ -1383,6 +1383,33 @@ ir::Type operandTypeForFieldCode(Thread* t, unsigned code)
   }
 }
 
+unsigned methodReferenceParameterFootprint(Thread* t,
+                                           object reference,
+                                           bool isStatic)
+{
+  return parameterFootprint(
+      t,
+      reinterpret_cast<const char*>(
+          &byteArrayBody(t, referenceSpec(t, reference), 0)),
+      isStatic);
+}
+
+int methodReferenceReturnCode(Thread* t, object reference)
+{
+  unsigned parameterCount;
+  unsigned parameterFootprint;
+  unsigned returnCode;
+  scanMethodSpec(t,
+                 reinterpret_cast<const char*>(
+                     &byteArrayBody(t, referenceSpec(t, reference), 0)),
+                 true,
+                 &parameterCount,
+                 &parameterFootprint,
+                 &returnCode);
+
+  return returnCode;
+}
+
 class Frame {
  public:
   enum StackType {
@@ -2004,6 +2031,28 @@ class Frame {
   {
     unsigned footprint = methodParameterFootprint(t, methodObject);
     unsigned returnCode = methodReturnCode(t, methodObject);
+    ir::Value* result = c->stackCall(methodValue,
+                                     flags,
+                                     trace,
+                                     operandTypeForFieldCode(t, returnCode),
+                                     footprint);
+
+    pop(footprint);
+
+    if (returnCode != VoidField) {
+      pushReturnValue(returnCode, result);
+    }
+  }
+
+  void referenceStackCall(bool isStatic,
+                          ir::Value* methodValue,
+                          object methodReference,
+                          unsigned flags,
+                          TraceElement* trace)
+  {
+    unsigned footprint
+        = methodReferenceParameterFootprint(t, methodReference, isStatic);
+    unsigned returnCode = methodReferenceReturnCode(t, methodReference);
     ir::Value* result = c->stackCall(methodValue,
                                      flags,
                                      trace,
@@ -3311,54 +3360,17 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
   return tailCall;
 }
 
-unsigned
-methodReferenceParameterFootprint(Thread* t, object reference, bool isStatic)
-{
-  return parameterFootprint
-    (t, reinterpret_cast<const char*>
-     (&byteArrayBody(t, referenceSpec(t, reference), 0)), isStatic);
-}
-
-int
-methodReferenceReturnCode(Thread* t, object reference)
-{
-  unsigned parameterCount;
-  unsigned parameterFootprint;
-  unsigned returnCode;
-  scanMethodSpec
-    (t, reinterpret_cast<const char*>
-     (&byteArrayBody(t, referenceSpec(t, reference), 0)), true,
-     &parameterCount, &parameterFootprint, &returnCode);
-
-  return returnCode;
-}
-
-void compileReferenceInvoke(MyThread* t,
-                            Frame* frame,
+void compileReferenceInvoke(Frame* frame,
                             ir::Value* method,
                             object reference,
                             bool isStatic,
                             bool tailCall)
 {
-  unsigned parameterFootprint
-    = methodReferenceParameterFootprint(t, reference, isStatic);
-
-  int returnCode = methodReferenceReturnCode(t, reference);
-
-  unsigned rSize = resultSize(t, returnCode);
-
-  ir::Value* result
-      = frame->c->stackCall(method,
+  frame->referenceStackCall(isStatic,
+                            method,
+                            reference,
                             tailCall ? Compiler::TailJump : 0,
-                            frame->trace(0, 0),
-                            operandTypeForFieldCode(t, returnCode),
-                            parameterFootprint);
-
-  frame->pop(parameterFootprint);
-
-  if (rSize) {
-    frame->pushReturnValue(returnCode, result);
-  }
+                            frame->trace(0, 0));
 }
 
 void
@@ -3372,8 +3384,7 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
 
   object pair = makePair(t, frame->context->method, reference);
 
-  compileReferenceInvoke(t,
-                         frame,
+  compileReferenceInvoke(frame,
                          c->call(c->constant(getThunk(t, thunk), types.address),
                                  0,
                                  frame->trace(0, 0),
@@ -5196,7 +5207,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         object pair = makePair(t, context->method, reference);
 
         compileReferenceInvoke(
-            t,
             frame,
             c->call(
                 c->constant(getThunk(t, findVirtualMethodFromReferenceThunk),
