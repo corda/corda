@@ -84,7 +84,6 @@ class Compiler {
   virtual Operand* call(Operand* address,
                         unsigned flags,
                         TraceHandler* traceHandler,
-                        unsigned resultSize,
                         ir::Type resultType,
                         unsigned argumentCount,
                         ...) = 0;

@@ -2442,7 +2442,6 @@ class MyCompiler: public Compiler {
   virtual Operand* call(Operand* address,
                         unsigned flags,
                         TraceHandler* traceHandler,
-                        unsigned resultSize,
                         ir::Type resultType,
                         unsigned argumentCount,
                         ...)
@@ -2482,8 +2481,15 @@ class MyCompiler: public Compiler {
     }
 
     Value* result = value(&c, resultType);
-    appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
-               resultSize, argumentStack, index, 0);
+    appendCall(&c,
+               static_cast<Value*>(address),
+               flags,
+               traceHandler,
+               result,
+               resultType.size(),
+               argumentStack,
+               index,
+               0);
 
     return result;
   }
