@@ -2347,13 +2347,19 @@ class MyCompiler: public Compiler {
     compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
-  virtual void save(unsigned footprint, Operand* value) {
+  virtual void save(ir::Type type, Operand* value)
+  {
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, static_cast<Value*>(value)->type == type);
+    unsigned footprint = typeFootprint(&c, type);
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (TargetBytesPerWord == 4 and footprint > 1) {
       assert(&c, footprint == 2);
       assert(&c, static_cast<Value*>(value)->nextWord);
 
-      save(1, static_cast<Value*>(value)->nextWord);
+      save(ir::Type(ir::Type::Integer, 4),
+           static_cast<Value*>(value)->nextWord);
     }
   }
 

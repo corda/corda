@@ -5950,7 +5950,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       c->condJump(lir::JumpIfLess, 4, c->constant(bottom, Compiler::IntegerType), key,
                     frame->machineIp(defaultIp));
 
-      c->save(1, key);
+      c->save(types.i4, key);
 
       new (stack.push(sizeof(SwitchState))) SwitchState
         (c->saveState(), count, defaultIp, key, start, bottom, top);
@@ -6036,8 +6036,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     c->condJump(lir::JumpIfGreater, 4, c->constant(s->top, Compiler::IntegerType), s->key,
                      frame->machineIp(s->defaultIp));
-  
-    c->save(1, s->key);
+
+    c->save(types.i4, s->key);
     ip = s->defaultIp;
     stack.pushValue(Untable1);
   } goto start;
