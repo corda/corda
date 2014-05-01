@@ -2599,7 +2599,7 @@ class MyCompiler: public Compiler {
                      Operand* dst)
   {
     assert(&c, srcType.flavor() == static_cast<Value*>(src)->type.flavor());
-    // assert(&c, dstType.flavor() == static_cast<Value*>(dst)->type.flavor());
+    assert(&c, dstType.flavor() == static_cast<Value*>(dst)->type.flavor());
     appendMove(&c,
                lir::Move,
                srcType.size(),

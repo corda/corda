@@ -4237,7 +4237,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case iastore:
         c->store(types.address,
                  value,
-                 types.f4,
+                 types.i4,
                  c->memory(array, types.i4, TargetArrayBody, index, 4));
         break;
 
@@ -4266,8 +4266,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case lastore:
         c->store(types.i8,
                  value,
-                 types.f8,
-                 c->memory(array, types.i4, TargetArrayBody, index, 8));
+                 types.i8,
+                 c->memory(array, types.i8, TargetArrayBody, index, 8));
         break;
       }
     } break;
