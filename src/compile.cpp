@@ -3818,15 +3818,9 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address,
-               value,
-               types.i4,
-               c->memory(
-                   address,
-                   MATCH(methodName(t, target), "putInt") ? types.i4 : types.f4,
-                   0,
-                   0,
-                   1));
+      ir::Type type = MATCH(methodName(t, target), "putInt") ? types.i4
+                                                             : types.f4;
+      c->store(type, value, type, c->memory(address, type, 0, 0, 1));
       return true;
     } else if ((MATCH(methodName(t, target), "getLong")
                 and MATCH(methodSpec(t, target), "(J)J"))
@@ -3854,15 +3848,9 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popLong();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.i8,
-               value,
-               types.i8,
-               c->memory(address,
-                         MATCH(methodName(t, target), "putLong") ? types.i4
-                                                                 : types.f4,
-                         0,
-                         0,
-                         1));
+      ir::Type type = MATCH(methodName(t, target), "putLong") ? types.i8
+                                                              : types.f8;
+      c->store(type, value, type, c->memory(address, type, 0, 0, 1));
       return true;
     } else if (MATCH(methodName(t, target), "getAddress")
                 and MATCH(methodSpec(t, target), "(J)J"))
@@ -4240,7 +4228,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       } break;
 
       case fastore:
-        c->store(types.address,
+        c->store(types.f4,
                  value,
                  types.f4,
                  c->memory(array, types.f4, TargetArrayBody, index, 4));
@@ -5861,7 +5849,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             
         case FloatField:
           c->store(
-              types.address,
+              types.f4,
               value,
               types.f4,
               c->memory(
