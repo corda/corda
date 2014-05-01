@@ -2626,25 +2626,39 @@ class MyCompiler: public Compiler {
                static_cast<Value*>(dst));
   }
 
-  virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
-                        unsigned dstSize)
+  virtual Operand* load(ir::Type srcType,
+                        ir::Type srcSelectType,
+                        Operand* src,
+                        ir::Type dstType)
   {
-    assert(&c, dstSize >= TargetBytesPerWord);
+    assert(&c, dstType.size() >= TargetBytesPerWord);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, lir::Move, srcSize, srcSelectSize, static_cast<Value*>(src),
-               dstSize, dst);
+    appendMove(&c,
+               lir::Move,
+               srcType.size(),
+               srcSelectType.size(),
+               static_cast<Value*>(src),
+               dstType.size(),
+               dst);
     return dst;
   }
 
-  virtual Operand* loadz(unsigned srcSize, unsigned srcSelectSize,
-                         Operand* src, unsigned dstSize)
+  virtual Operand* loadz(ir::Type srcType,
+                         ir::Type srcSelectType,
+                         Operand* src,
+                         ir::Type dstType)
   {
-    assert(&c, dstSize >= TargetBytesPerWord);
+    assert(&c, dstType.size() >= TargetBytesPerWord);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, lir::MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
-               dstSize, dst);
+    appendMove(&c,
+               lir::MoveZ,
+               srcType.size(),
+               srcSelectType.size(),
+               static_cast<Value*>(src),
+               dstType.size(),
+               dst);
     return dst;
   }
 
