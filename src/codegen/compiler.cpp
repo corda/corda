@@ -735,10 +735,14 @@ saveLocals(Context* c, Event* e)
   }
 }
 
-void
-maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-          unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue,
-          const SiteMask& dstMask)
+void maybeMove(Context* c,
+               lir::BinaryOperation op,
+               unsigned srcSize,
+               unsigned srcSelectSize,
+               Value* srcValue,
+               unsigned dstSize,
+               Value* dstValue,
+               const SiteMask& dstMask)
 {
   Read* read = live(c, dstValue);
   bool isStore = read == 0;
@@ -790,8 +794,14 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
 
       srcValue->source->freeze(c, srcValue);
 
-      apply(c, type, min(srcSelectSize, dstSize), srcValue->source, srcValue->source,
-            dstSize, target, target);
+      apply(c,
+            op,
+            min(srcSelectSize, dstSize),
+            srcValue->source,
+            srcValue->source,
+            dstSize,
+            target,
+            target);
 
       srcValue->source->thaw(c, srcValue);
     } else {
@@ -803,7 +813,7 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
       bool thunk;
       OperandMask src;
 
-      c->arch->planSource(type, dstSize, src, dstSize, &thunk);
+      c->arch->planSource(op, dstSize, src, dstSize, &thunk);
 
       if (isGeneralValue(srcValue)) {
         src.registerMask &= c->regFile->generalRegisters.mask;
@@ -828,8 +838,14 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
                 srcb, dstb, srcValue, dstValue);
       }
 
-      apply(c, type, srcSelectSize, srcValue->source, srcValue->source,
-            dstSize, tmpTarget, tmpTarget);
+      apply(c,
+            op,
+            srcSelectSize,
+            srcValue->source,
+            srcValue->source,
+            dstSize,
+            tmpTarget,
+            tmpTarget);
 
       tmpTarget->thaw(c, dstValue);
 
@@ -2610,15 +2626,22 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual void condJump(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b,
-                           Operand* address)
+  virtual void condJump(lir::TernaryOperation op,
+                        unsigned size,
+                        Operand* a,
+                        Operand* b,
+                        Operand* address)
   {
     assert(&c,
-      (isGeneralBranch(type) and isGeneralValue(a) and isGeneralValue(b))
-      or (isFloatBranch(type) and isFloatValue(a) and isFloatValue(b)));
+           (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
+               isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
-    appendBranch(&c, type, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
+    appendBranch(&c,
+                 op,
+                 size,
+                 static_cast<Value*>(a),
+                 static_cast<Value*>(b),
+                 static_cast<Value*>(address));
   }
 
   virtual void jmp(Operand* address) {
@@ -2629,23 +2652,36 @@ class MyCompiler: public Compiler {
     appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
   }
 
-  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) {
+  virtual Operand* binaryOp(lir::TernaryOperation op,
+                            ir::Type type,
+                            Operand* a,
+                            Operand* b)
+  {
     assert(&c,
-      (isGeneralBinaryOp(type) and isGeneralValue(a) and isGeneralValue(b))
-      or (isFloatBinaryOp(type) and isFloatValue(a) and isFloatValue(b)));
+           (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
+           or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
     Value* result = value(&c, static_cast<Value*>(a)->type);
-    
-    appendCombine(&c, type, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
+
+    appendCombine(&c,
+                  op,
+                  type.size(),
+                  static_cast<Value*>(a),
+                  type.size(),
+                  static_cast<Value*>(b),
+                  type.size(),
+                  result);
     return result;
   }
 
-  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) {
-    assert(&c, (isGeneralUnaryOp(type) and isGeneralValue(a))or(
-                   isFloatUnaryOp(type) and isFloatValue(a)));
+  virtual Operand* unaryOp(lir::BinaryOperation op, ir::Type type, Operand* a)
+  {
+    assert(&c,
+           (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
+                                                          and isFloatValue(a)));
     Value* result = value(&c, static_cast<Value*>(a)->type);
-    appendTranslate(&c, type, size, static_cast<Value*>(a), size, result);
+    appendTranslate(
+        &c, op, type.size(), static_cast<Value*>(a), type.size(), result);
     return result;
   }
 
@@ -2699,8 +2735,9 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void nullaryOp(lir::Operation type) {
-    appendOperation(&c, type);
+  virtual void nullaryOp(lir::Operation op)
+  {
+    appendOperation(&c, op);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,

@@ -117,15 +117,22 @@ class Compiler {
   virtual Operand* loadz(unsigned size, unsigned srcSelectSize, Operand* src,
                          unsigned dstSize) = 0;
 
-
-  virtual void condJump(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b, Operand* address) = 0;
+  virtual void condJump(lir::TernaryOperation op,
+                        unsigned size,
+                        Operand* a,
+                        Operand* b,
+                        Operand* address) = 0;
 
   virtual void jmp(Operand* address) = 0;
   virtual void exit(Operand* address) = 0;
 
-  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) = 0;
-  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) = 0;
-  virtual void nullaryOp(lir::Operation type) = 0;
+  virtual Operand* binaryOp(lir::TernaryOperation op,
+                            ir::Type type,
+                            Operand* a,
+                            Operand* b) = 0;
+  virtual Operand* unaryOp(lir::BinaryOperation op, ir::Type type, Operand* a)
+      = 0;
+  virtual void nullaryOp(lir::Operation op) = 0;
 
   virtual Operand* f2f(ir::Type aType, ir::Type resType, Operand* a) = 0;
   virtual Operand* f2i(ir::Type aType, ir::Type resType, Operand* a) = 0;

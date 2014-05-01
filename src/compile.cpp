@@ -1411,7 +1411,7 @@ class Frame {
       bc->constants = makeTriple(t, o, pointer, bc->constants);
 
       return c->binaryOp(lir::Add,
-                         TargetBytesPerWord,
+                         types.address,
                          c->memory(c->register_(t->arch->thread()),
                                    types.address,
                                    TARGET_THREAD_HEAPIMAGE),
@@ -1643,7 +1643,7 @@ class Frame {
     return context->bootContext
                ? c->binaryOp(
                      lir::Add,
-                     TargetBytesPerWord,
+                     types.address,
                      c->memory(c->register_(t->arch->thread()),
                                types.address,
                                TARGET_THREAD_CODEIMAGE),
@@ -3732,17 +3732,19 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "sqrt")
         and MATCH(methodSpec(t, target), "(D)D"))
     {
-      frame->pushLong(c->unaryOp(lir::FloatSquareRoot, 8, frame->popLong()));
+      frame->pushLong(
+          c->unaryOp(lir::FloatSquareRoot, types.f8, frame->popLong()));
       return true;
     } else if (MATCH(methodName(t, target), "abs")) {
       if (MATCH(methodSpec(t, target), "(I)I")) {
-        frame->pushInt(c->unaryOp(lir::Absolute, 4, frame->popInt()));
+        frame->pushInt(c->unaryOp(lir::Absolute, types.i4, frame->popInt()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(J)J")) {
-        frame->pushLong(c->unaryOp(lir::Absolute, 8, frame->popLong()));
+        frame->pushLong(c->unaryOp(lir::Absolute, types.i8, frame->popLong()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(F)F")) {
-        frame->pushInt(c->unaryOp(lir::FloatAbsolute, 4, frame->popInt()));
+        frame->pushInt(
+            c->unaryOp(lir::FloatAbsolute, types.f4, frame->popInt()));
         return true;
       }
     }
@@ -4224,10 +4226,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 array,
                 c->binaryOp(
                     lir::Add,
-                    4,
+                    types.i4,
                     c->constant(TargetArrayBody, types.i4),
                     c->binaryOp(lir::ShiftLeft,
-                                4,
+                                types.i4,
                                 c->constant(log(TargetBytesPerWord), types.i4),
                                 index)),
                 value);
@@ -4436,7 +4438,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
+      frame->pushLong(
+          c->binaryOp(toCompilerBinaryOp(t, instruction), types.f8, a, b));
     } break;
 
     case dcmpg: {
@@ -4490,7 +4493,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case dneg: {
-      frame->pushLong(c->unaryOp(lir::FloatNegate, 8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::FloatNegate, types.f8, frame->popLong()));
     } break;
 
     case dup:
@@ -4537,7 +4540,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      frame->pushInt(c->binaryOp(toCompilerBinaryOp(t, instruction), 4, a, b));
+      frame->pushInt(
+          c->binaryOp(toCompilerBinaryOp(t, instruction), types.f4, a, b));
     } break;
 
     case fcmpg: {
@@ -4591,7 +4595,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case fneg: {
-      frame->pushInt(c->unaryOp(lir::FloatNegate, 4, frame->popInt()));
+      frame->pushInt(c->unaryOp(lir::FloatNegate, types.f4, frame->popInt()));
     } break;
 
     case getfield:
@@ -4855,7 +4859,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case imul: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
-      frame->pushInt(c->binaryOp(toCompilerBinaryOp(t, instruction), 4, a, b));
+      frame->pushInt(
+          c->binaryOp(toCompilerBinaryOp(t, instruction), types.i4, a, b));
     } break;
 
     case iconst_m1:
@@ -4895,7 +4900,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->binaryOp(lir::Divide, 4, a, b));
+      frame->pushInt(c->binaryOp(lir::Divide, types.i4, a, b));
     } break;
 
     case if_acmpeq:
@@ -4982,7 +4987,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       storeLocal(context,
                  1,
                  c->binaryOp(lir::Add,
-                             4,
+                             types.i4,
                              c->constant(count, types.i4),
                              loadLocal(context, 1, index)),
                  index);
@@ -5014,7 +5019,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case ineg: {
-      frame->pushInt(c->unaryOp(lir::Negate, 4, frame->popInt()));
+      frame->pushInt(c->unaryOp(lir::Negate, types.i4, frame->popInt()));
     } break;
 
     case instanceof: {
@@ -5203,7 +5208,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             Compiler::Operand* result = c->stackCall(
                 c->memory(
                     c->binaryOp(lir::And,
-                                TargetBytesPerWord,
+                                types.address,
                                 c->constant(TargetPointerMask, types.i4),
                                 c->memory(instance, types.object, 0, 0, 1)),
                     types.object,
@@ -5265,7 +5270,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->binaryOp(lir::Remainder, 4, a, b));
+      frame->pushInt(c->binaryOp(lir::Remainder, types.i4, a, b));
     } break;
 
     case ireturn: {
@@ -5350,7 +5355,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lmul: {
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
+      frame->pushLong(
+          c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
 
     case lcmp: {
@@ -5464,7 +5470,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->binaryOp(lir::Divide, 8, a, b));
+      frame->pushLong(c->binaryOp(lir::Divide, types.i8, a, b));
     } break;
 
     case lload:
@@ -5493,7 +5499,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case lneg:
-      frame->pushLong(c->unaryOp(lir::Negate, 8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::Negate, types.i8, frame->popLong()));
       break;
 
     case lookupswitch: {
@@ -5546,7 +5552,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         c->jmp(context->bootContext
                    ? c->binaryOp(lir::Add,
-                                 TargetBytesPerWord,
+                                 types.address,
                                  c->memory(c->register_(t->arch->thread()),
                                            types.address,
                                            TARGET_THREAD_CODEIMAGE),
@@ -5573,7 +5579,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->binaryOp(lir::Remainder, 8, a, b));
+      frame->pushLong(c->binaryOp(lir::Remainder, types.i8, a, b));
     } break;
 
     case lreturn: {
@@ -5592,7 +5598,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lushr: {
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popLong();
-      frame->pushLong(c->binaryOp(toCompilerBinaryOp(t, instruction), 8, a, b));
+      frame->pushLong(
+          c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
 
     case lstore:
@@ -6130,7 +6137,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         storeLocal(context,
                    1,
                    c->binaryOp(lir::Add,
-                               4,
+                               types.i4,
                                c->constant(count, types.i4),
                                loadLocal(context, 1, index)),
                    index);
@@ -6209,10 +6216,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     c->restoreState(s->state);
 
     Compiler::Operand* normalizedKey
-        = (s->bottom
-               ? c->binaryOp(
-                     lir::Subtract, 4, c->constant(s->bottom, types.i4), s->key)
-               : s->key);
+        = (s->bottom ? c->binaryOp(lir::Subtract,
+                                   types.i4,
+                                   c->constant(s->bottom, types.i4),
+                                   s->key)
+                     : s->key);
 
     Compiler::Operand* entry
         = c->memory(frame->absoluteAddressOperand(s->start),
@@ -6225,7 +6233,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                    TargetBytesPerWord,
                    context->bootContext
                        ? c->binaryOp(lir::Add,
-                                     TargetBytesPerWord,
+                                     types.address,
                                      c->memory(c->register_(t->arch->thread()),
                                                types.address,
                                                TARGET_THREAD_CODEIMAGE),
