@@ -2652,6 +2652,7 @@ class MyCompiler: public Compiler {
     assert(&c, dstType.size() >= TargetBytesPerWord);
     assert(&c, srcType.flavor() == srcSelectType.flavor());
     assert(&c, srcType.flavor() == dstType.flavor());
+    assert(&c, srcType == srcSelectType);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
     appendMove(&c,

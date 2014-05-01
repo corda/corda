@@ -4807,19 +4807,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case i2b: {
-      frame->pushInt(c->load(ir::SignExtend,
-                             types.address,
-                             types.i1,
-                             frame->popInt(),
-                             types.address));
+      frame->pushInt(c->truncateThenExtend(
+          ir::SignExtend, types.address, types.i1, frame->popInt()));
     } break;
 
     case i2c: {
-      frame->pushInt(c->load(ir::ZeroExtend,
-                             types.address,
-                             types.i2,
-                             frame->popInt(),
-                             types.address));
+      frame->pushInt(c->truncateThenExtend(
+          ir::ZeroExtend, types.address, types.i2, frame->popInt()));
     } break;
 
     case i2d: {
@@ -4836,11 +4830,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case i2s: {
-      frame->pushInt(c->load(ir::SignExtend,
-                             types.address,
-                             types.i2,
-                             frame->popInt(),
-                             types.address));
+      frame->pushInt(c->truncateThenExtend(
+          ir::SignExtend, types.address, types.i2, frame->popInt()));
     } break;
       
     case iadd:
