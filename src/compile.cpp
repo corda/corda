@@ -1351,6 +1351,38 @@ void storeLocal(Context* context,
 
 avian::util::FixedAllocator* codeAllocator(MyThread* t);
 
+ir::Type operandTypeForFieldCode(Thread* t, unsigned code)
+{
+  ir::Types types(TargetBytesPerWord);
+
+  switch (code) {
+  case ByteField:
+  case BooleanField:
+    return types.i1;
+  case CharField:
+  case ShortField:
+    return types.i2;
+  case IntField:
+    return types.i4;
+  case LongField:
+    return types.i8;
+
+  case ObjectField:
+    return types.object;
+
+  case FloatField:
+    return types.f4;
+  case DoubleField:
+    return types.f8;
+
+  case VoidField:
+    return types.void_;
+
+  default:
+    abort(t);
+  }
+}
+
 class Frame {
  public:
   enum StackType {
@@ -1940,6 +1972,21 @@ class Frame {
     context->eventLog.appendAddress(e);
 
     return e;
+  }
+
+  ir::Value* stackCall(ir::Value* methodValue,
+                       object methodObject,
+                       unsigned flags,
+                       TraceElement* trace)
+  {
+    ir::Value* result = c->stackCall(
+        methodValue,
+        flags,
+        trace,
+        operandTypeForFieldCode(t, methodReturnCode(t, methodObject)),
+        methodParameterFootprint(t, methodObject));
+
+    return result;
   }
 
   unsigned startSubroutine(unsigned ip, avian::codegen::Promise* returnAddress) {
@@ -3125,38 +3172,6 @@ ir::Value* popField(MyThread* t, Frame* frame, int code)
   }
 }
 
-ir::Type operandTypeForFieldCode(Thread* t, unsigned code)
-{
-  ir::Types types(TargetBytesPerWord);
-
-  switch (code) {
-  case ByteField:
-  case BooleanField:
-    return types.i1;
-  case CharField:
-  case ShortField:
-    return types.i2;
-  case IntField:
-    return types.i4;
-  case LongField:
-    return types.i8;
-
-  case ObjectField:
-    return types.object;
-
-  case FloatField:
-    return types.f4;
-  case DoubleField:
-    return types.f8;
-
-  case VoidField:
-    return types.void_;
-
-  default:
-    abort(t);
-  }
-}
-
 bool
 useLongJump(MyThread* t, uintptr_t target)
 {
@@ -3217,12 +3232,11 @@ ir::Value* compileDirectInvoke(MyThread* t,
         (frame->context->zone.allocate(sizeof(TraceElementPromise)))
         TraceElementPromise(t->m->system, trace);
 
-      ir::Value* result = c->stackCall(
+      ir::Value* result = frame->stackCall(
           c->promiseConstant(returnAddressPromise, types.address),
+          target,
           flags,
-          trace,
-          operandTypeForFieldCode(t, methodReturnCode(t, target)),
-          methodParameterFootprint(t, target));
+          trace);
 
       c->store(
           types.address,
@@ -3237,12 +3251,10 @@ ir::Value* compileDirectInvoke(MyThread* t,
 
       return result;
     } else {
-      return c->stackCall(
-          c->constant(defaultThunk(t), types.address),
-          flags,
-          frame->trace(target, traceFlags),
-          operandTypeForFieldCode(t, methodReturnCode(t, target)),
-          methodParameterFootprint(t, target));
+      return frame->stackCall(c->constant(defaultThunk(t), types.address),
+                              target,
+                              flags,
+                              frame->trace(target, traceFlags));
     }
   } else {
     ir::Value* address
@@ -3250,13 +3262,13 @@ ir::Value* compileDirectInvoke(MyThread* t,
                ? c->promiseConstant(addressPromise, types.address)
                : c->constant(methodAddress(t, target), types.address));
 
-    return c->stackCall
-      (address,
-       flags,
-       tailCall ? 0 : frame->trace
-       ((methodFlags(t, target) & ACC_NATIVE) ? target : 0, 0),
-       operandTypeForFieldCode(t, methodReturnCode(t, target)),
-       methodParameterFootprint(t, target));
+    return frame->stackCall(
+        address,
+        target,
+        flags,
+        tailCall ? 0
+                 : frame->trace(
+                       (methodFlags(t, target) & ACC_NATIVE) ? target : 0, 0));
   }
 }
 
@@ -3397,12 +3409,8 @@ void compileAbstractInvoke(MyThread* t,
 
   unsigned rSize = resultSize(t, returnCode);
 
-  ir::Value* result
-      = frame->c->stackCall(method,
-                            tailCall ? Compiler::TailJump : 0,
-                            frame->trace(0, 0),
-                            operandTypeForFieldCode(t, returnCode),
-                            parameterFootprint);
+  ir::Value* result = frame->stackCall(
+      method, target, tailCall ? Compiler::TailJump : 0, frame->trace(0, 0));
 
   frame->pop(parameterFootprint);
 
@@ -5191,17 +5199,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
             unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-            ir::Value* result = c->stackCall(
+            ir::Value* result = frame->stackCall(
                 c->memory(c->binaryOp(lir::And,
                                       types.address,
                                       c->constant(TargetPointerMask, types.i4),
                                       c->memory(instance, types.object)),
                           types.object,
                           offset),
+                target,
                 tailCall ? Compiler::TailJump : 0,
-                frame->trace(0, 0),
-                operandTypeForFieldCode(t, methodReturnCode(t, target)),
-                parameterFootprint);
+                frame->trace(0, 0));
 
             frame->pop(parameterFootprint);
 
