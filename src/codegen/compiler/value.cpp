@@ -18,7 +18,8 @@ namespace codegen {
 namespace compiler {
 
 Value::Value(Site* site, Site* target, ir::Type type)
-    : reads(0),
+    : Compiler::Operand(type),
+      reads(0),
       lastRead(0),
       sites(site),
       source(0),
@@ -26,9 +27,9 @@ Value::Value(Site* site, Site* target, ir::Type type)
       buddy(this),
       nextWord(this),
       home(NoFrameIndex),
-      wordIndex(0),
-      type(type)
-{ }
+      wordIndex(0)
+{
+}
 
 bool Value::findSite(Site* site) {
   for (Site* s = this->sites; s; s = s->next) {

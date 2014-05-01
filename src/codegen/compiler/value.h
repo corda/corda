@@ -37,7 +37,6 @@ class Value: public Compiler::Operand {
   Value* nextWord;
   int16_t home;
   uint8_t wordIndex;
-  ir::Type type;
 
   Value(Site* site, Site* target, ir::Type type);
 

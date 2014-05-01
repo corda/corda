@@ -1711,6 +1711,7 @@ class Frame {
   }
 
   void pushObject(Value o) {
+    // assert(t, o->type == types.object);
     pushQuiet(types.object, o);
     pushedObject();
   }
@@ -3595,10 +3596,14 @@ lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
   }
 }
 
-bool
-integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
-              unsigned size, Compiler::Operand* a, Compiler::Operand* b,
-              unsigned* newIpp)
+bool integerBranch(MyThread* t,
+                   Frame* frame,
+                   object code,
+                   unsigned& ip,
+                   ir::Type type,
+                   Compiler::Operand* a,
+                   Compiler::Operand* b,
+                   unsigned* newIpp)
 {
   if (ip + 3 > codeLength(t, code)) {
     return false;
@@ -3619,7 +3624,7 @@ integerBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
   case ifge:
   case iflt:
   case ifle:
-    c->condJump(toCompilerJumpOp(t, instruction), size, a, b, target);
+    c->condJump(toCompilerJumpOp(t, instruction), type, a, b, target);
     break;
 
   default:
@@ -3669,10 +3674,15 @@ lir::TernaryOperation toCompilerFloatJumpOp(MyThread* t,
   }
 }
 
-bool
-floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
-            unsigned size, bool lessIfUnordered, Compiler::Operand* a,
-            Compiler::Operand* b, unsigned* newIpp)
+bool floatBranch(MyThread* t,
+                 Frame* frame,
+                 object code,
+                 unsigned& ip,
+                 ir::Type type,
+                 bool lessIfUnordered,
+                 Compiler::Operand* a,
+                 Compiler::Operand* b,
+                 unsigned* newIpp)
 {
   if (ip + 3 > codeLength(t, code)) {
     return false;
@@ -3694,7 +3704,7 @@ floatBranch(MyThread* t, Frame* frame, object code, unsigned& ip,
   case iflt:
   case ifle:
     c->condJump(toCompilerFloatJumpOp(t, instruction, lessIfUnordered),
-                size,
+                type,
                 a,
                 b,
                 target);
@@ -4426,7 +4436,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (floatBranch(t, frame, code, ip, 8, false, a, b, &newIp)) {
+      if (floatBranch(t, frame, code, ip, types.f8, false, a, b, &newIp)) {
         goto branch;
       } else {
         frame->pushInt(c->call(
@@ -4446,7 +4456,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (floatBranch(t, frame, code, ip, 8, true, a, b, &newIp)) {
+      if (floatBranch(t, frame, code, ip, types.f8, true, a, b, &newIp)) {
         goto branch;
       } else {
         frame->pushInt(c->call(
@@ -4526,7 +4536,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if (floatBranch(t, frame, code, ip, 4, false, a, b, &newIp)) {
+      if (floatBranch(t, frame, code, ip, types.f4, false, a, b, &newIp)) {
         goto branch;
       } else {
         frame->pushInt(c->call(
@@ -4544,7 +4554,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popInt();
       Compiler::Operand* b = frame->popInt();
 
-      if (floatBranch(t, frame, code, ip, 4, true, a, b, &newIp)) {
+      if (floatBranch(t, frame, code, ip, types.f4, true, a, b, &newIp)) {
         goto branch;
       } else {
         frame->pushInt(c->call(
@@ -4880,7 +4890,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->condJump(toCompilerJumpOp(t, instruction), TargetBytesPerWord, a, b, target);
+      c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
 
     case if_icmpeq:
@@ -4901,7 +4911,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popInt();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->condJump(toCompilerJumpOp(t, instruction), 4, a, b, target);
+      c->condJump(toCompilerJumpOp(t, instruction), types.i4, a, b, target);
     } goto branch;
 
     case ifeq:
@@ -4923,7 +4933,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = c->constant(0, types.i4);
       Compiler::Operand* b = frame->popInt();
 
-      c->condJump(toCompilerJumpOp(t, instruction), 4, a, b, target);
+      c->condJump(toCompilerJumpOp(t, instruction), types.i4, a, b, target);
     } goto branch;
 
     case ifnull:
@@ -4940,7 +4950,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* b = frame->popObject();
       Compiler::Operand* target = frame->machineIp(newIp);
 
-      c->condJump(toCompilerJumpOp(t, instruction), TargetBytesPerWord, a, b, target);
+      c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
 
     case iinc: {
@@ -5319,7 +5329,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* a = frame->popLong();
       Compiler::Operand* b = frame->popLong();
 
-      if (integerBranch(t, frame, code, ip, 8, a, b, &newIp)) {
+      if (integerBranch(t, frame, code, ip, types.i8, a, b, &newIp)) {
         goto branch;
       } else {
         frame->pushInt(
@@ -6029,7 +6039,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       Compiler::Operand* key = frame->popInt();
 
       c->condJump(lir::JumpIfLess,
-                  4,
+                  types.i4,
                   c->constant(bottom, types.i4),
                   key,
                   frame->machineIp(defaultIp));
@@ -6123,7 +6133,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     c->restoreState(s->state);
 
     c->condJump(lir::JumpIfGreater,
-                4,
+                types.i4,
                 c->constant(s->top, types.i4),
                 s->key,
                 frame->machineIp(s->defaultIp));

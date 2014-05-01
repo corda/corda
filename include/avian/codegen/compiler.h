@@ -40,7 +40,15 @@ class Compiler {
   static const unsigned TailJump = 1 << 2;
   static const unsigned LongJumpOrCall = 1 << 3;
 
-  class Operand { };
+  class Operand {
+   public:
+    ir::Type type;
+
+    Operand(ir::Type type) : type(type)
+    {
+    }
+  };
+
   class State { };
   class Subroutine { };
 
@@ -121,7 +129,7 @@ class Compiler {
                         ir::Type dstType) = 0;
 
   virtual void condJump(lir::TernaryOperation op,
-                        unsigned size,
+                        ir::Type type,
                         Operand* a,
                         Operand* b,
                         Operand* address) = 0;
