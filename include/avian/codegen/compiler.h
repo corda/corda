@@ -92,7 +92,6 @@ class Compiler {
                                unsigned flags,
                                TraceHandler* traceHandler,
                                ir::Type resultType,
-                               unsigned argumentFootprint,
                                util::Slice<ir::Value*> arguments) = 0;
 
   virtual void return_(ir::Type type, ir::Value* value) = 0;

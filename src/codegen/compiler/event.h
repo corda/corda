@@ -121,7 +121,6 @@ void appendCall(Context* c,
                 unsigned resultSize,
                 Stack* argumentStack,
                 unsigned argumentCount,
-                unsigned stackArgumentFootprint,
                 util::Slice<ir::Value*> arguments);
 
 void

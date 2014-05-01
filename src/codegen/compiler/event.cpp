@@ -195,8 +195,7 @@ class CallEvent: public Event {
             unsigned resultSize,
             Stack* argumentStack,
             unsigned argumentCount,
-            unsigned stackArgumentFootprint,
-            util::Slice<ir::Value*> arguments UNUSED)
+            util::Slice<ir::Value*> arguments)
       : Event(c),
         address(address),
         traceHandler(traceHandler),
@@ -207,13 +206,13 @@ class CallEvent: public Event {
         stackArgumentIndex(0),
         flags(flags),
         resultSize(resultSize),
-        stackArgumentFootprint(stackArgumentFootprint)
+        stackArgumentFootprint(arguments.count)
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
     if (argumentCount) {
       assert(c, (flags & Compiler::TailJump) == 0);
-      assert(c, stackArgumentFootprint == 0);
+      assert(c, arguments.count == 0);
 
       Stack* s = argumentStack;
       unsigned index = 0;
@@ -286,30 +285,22 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (stackArgumentFootprint) {
-      RUNTIME_ARRAY(Value*, argsArr, stackArgumentFootprint);
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = static_cast<Value*>(arguments[i]);
         stack = stack->next;
 
-        if ((vm::TargetBytesPerWord
-             == 8 and(v == 0 or(i >= 1 and arguments[i - 1] == 0)))
-            or(vm::TargetBytesPerWord == 4 and v->nextWord != v)) {
+        if ((vm::TargetBytesPerWord == 8
+             && (v == 0 || (i >= 1 && arguments[i - 1] == 0)))
+            || (vm::TargetBytesPerWord == 4 && v->nextWord != v)) {
           assert(
               c,
               vm::TargetBytesPerWord == 8 or v->nextWord == arguments[i - 1]);
 
-          Value* v2 = static_cast<Value*>(arguments[i - 1]);
-          RUNTIME_ARRAY_BODY(argsArr)[i] = v2;
           arguments[i] = arguments[i - 1];
           --i;
           stack = stack->next;
         }
-        RUNTIME_ARRAY_BODY(argsArr)[i] = v;
         arguments[i] = v;
-      }
-
-      for (size_t i = 0; i < arguments.count; i++) {
-        assert(c, arguments[i] == RUNTIME_ARRAY_BODY(argsArr)[i]);
       }
 
       int returnAddressIndex;
@@ -336,7 +327,7 @@ class CallEvent: public Event {
       }
 
       for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
-        Value* v = RUNTIME_ARRAY_BODY(argsArr)[i];
+        Value* v = static_cast<Value*>(arguments[i]);
         if (v) {
           int frameIndex = i + frameOffset;
 
@@ -516,7 +507,6 @@ void appendCall(Context* c,
                 unsigned resultSize,
                 Stack* argumentStack,
                 unsigned argumentCount,
-                unsigned stackArgumentFootprint,
                 util::Slice<ir::Value*> arguments)
 {
   append(c,
@@ -528,7 +518,6 @@ void appendCall(Context* c,
                                  resultSize,
                                  argumentStack,
                                  argumentCount,
-                                 stackArgumentFootprint,
                                  arguments));
 }
 
@@ -971,7 +960,6 @@ appendCombine(Context* c, lir::TernaryOperation type,
                resultSize,
                argumentStack,
                stackSize,
-               0,
                util::Slice<ir::Value*>(0, 0));
   } else {
     append
@@ -1095,7 +1083,6 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                resultSize,
                argumentStack,
                ceilingDivide(firstSize, vm::TargetBytesPerWord),
-               0,
                util::Slice<ir::Value*>(0, 0));
   } else {
     append(c, new(c->zone)
@@ -1461,7 +1448,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                4,
                argumentStack,
                ceilingDivide(size, vm::TargetBytesPerWord) * 2,
-               0,
                util::Slice<ir::Value*>(0, 0));
 
     appendBranch(c,

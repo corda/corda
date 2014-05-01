@@ -2055,7 +2055,6 @@ class Frame {
                                      flags,
                                      trace,
                                      operandTypeForFieldCode(t, returnCode),
-                                     footprint,
                                      peekMethodArguments(footprint));
 
     pop(footprint);
@@ -2078,7 +2077,6 @@ class Frame {
                                      flags,
                                      trace,
                                      operandTypeForFieldCode(t, returnCode),
-                                     footprint,
                                      peekMethodArguments(footprint));
 
     pop(footprint);
@@ -5109,7 +5107,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                          tailCall ? Compiler::TailJump : 0,
                          frame->trace(0, 0),
                          operandTypeForFieldCode(t, returnCode),
-                         parameterFootprint,
                          frame->peekMethodArguments(parameterFootprint));
 
       frame->pop(parameterFootprint);

@@ -2497,7 +2497,6 @@ class MyCompiler: public Compiler {
                resultType.size(),
                argumentStack,
                index,
-               0,
                util::Slice<ir::Value*>(0, 0));
 
     return result;
@@ -2507,7 +2506,6 @@ class MyCompiler: public Compiler {
                                unsigned flags,
                                TraceHandler* traceHandler,
                                ir::Type resultType,
-                               unsigned argumentFootprint,
                                Slice<ir::Value*> arguments)
   {
     Value* result = value(&c, resultType);
@@ -2519,7 +2517,6 @@ class MyCompiler: public Compiler {
                resultType.size(),
                c.stack,
                0,
-               argumentFootprint,
                arguments);
     return result;
   }
