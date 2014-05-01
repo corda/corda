@@ -4103,7 +4103,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(types.f4,
                     types.f4,
                     c->memory(array, types.f4, TargetArrayBody, index),
-                    types.address));
+                    types.f8));
         break;
 
       case iaload:
@@ -4648,7 +4648,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.f4,
               types.f4,
               c->memory(table, types.f4, targetFieldOffset(context, field)),
-              types.address));
+              types.f8));
           break;
 
         case IntField:
