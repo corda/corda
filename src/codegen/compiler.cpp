@@ -2339,16 +2339,6 @@ class MyCompiler: public Compiler {
     return c.logicalCode[c.logicalIp]->lastEvent->makeCodePromise(&c);
   }
 
-  virtual void push(unsigned footprint UNUSED) {
-    assert(&c, footprint == 1);
-
-    Value* v = value(&c, lir::ValueGeneral);
-    Stack* s = compiler::stack(&c, v, c.stack);
-
-    v->home = frameIndex(&c, s->index + c.localFootprint);
-    c.stack = s;
-  }
-
   virtual void push(ir::Type type, Operand* value)
   {
     // TODO: once type information is flowed properly, enable this assert.
