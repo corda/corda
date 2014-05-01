@@ -91,7 +91,6 @@ class Compiler {
   virtual Operand* stackCall(Operand* address,
                              unsigned flags,
                              TraceHandler* traceHandler,
-                             unsigned resultSize,
                              ir::Type resultType,
                              unsigned argumentFootprint) = 0;
 

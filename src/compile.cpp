@@ -3162,9 +3162,12 @@ void compileSafePoint(MyThread* t, Compiler* c, Frame* frame) {
           c->threadRegister());
 }
 
-Compiler::Operand*
-compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
-                    bool useThunk, unsigned rSize, avian::codegen::Promise* addressPromise)
+Compiler::Operand* compileDirectInvoke(MyThread* t,
+                                       Frame* frame,
+                                       object target,
+                                       bool tailCall,
+                                       bool useThunk,
+                                       avian::codegen::Promise* addressPromise)
 {
   avian::codegen::Compiler* c = frame->c;
   ir::Types types(TargetBytesPerWord);
@@ -3199,7 +3202,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
           c->promiseConstant(returnAddressPromise, types.address),
           flags,
           trace,
-          rSize,
           operandTypeForFieldCode(t, methodReturnCode(t, target)),
           methodParameterFootprint(t, target));
 
@@ -3221,7 +3223,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
           c->constant(defaultThunk(t), types.address),
           flags,
           frame->trace(target, traceFlags),
-          rSize,
           operandTypeForFieldCode(t, methodReturnCode(t, target)),
           methodParameterFootprint(t, target));
     }
@@ -3236,7 +3237,6 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall,
        flags,
        tailCall ? 0 : frame->trace
        ((methodFlags(t, target) & ACC_NATIVE) ? target : 0, 0),
-       rSize,
        operandTypeForFieldCode(t, methodReturnCode(t, target)),
        methodParameterFootprint(t, target));
   }
@@ -3269,20 +3269,16 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
         object pointer = makePointer(t, p);
         bc->calls = makeTriple(t, target, pointer, bc->calls);
 
-        result = compileDirectInvoke
-          (t, frame, target, tailCall, false, rSize, p);
+        result = compileDirectInvoke(t, frame, target, tailCall, false, p);
       } else {
-        result = compileDirectInvoke
-          (t, frame, target, tailCall, true, rSize, 0);
+        result = compileDirectInvoke(t, frame, target, tailCall, true, 0);
       }
     } else if (unresolved(t, methodAddress(t, target))
                or classNeedsInit(t, methodClass(t, target)))
     {
-      result = compileDirectInvoke
-        (t, frame, target, tailCall, true, rSize, 0);
+      result = compileDirectInvoke(t, frame, target, tailCall, true, 0);
     } else {
-      result = compileDirectInvoke
-        (t, frame, target, tailCall, false, rSize, 0);
+      result = compileDirectInvoke(t, frame, target, tailCall, false, 0);
     }
   }
 
@@ -3332,7 +3328,6 @@ compileReferenceInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
     (method,
      tailCall ? Compiler::TailJump : 0,
      frame->trace(0, 0),
-     rSize,
      operandTypeForFieldCode(t, returnCode),
      parameterFootprint);
 
@@ -3383,7 +3378,6 @@ compileAbstractInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
     (method,
      tailCall ? Compiler::TailJump : 0,
      frame->trace(0, 0),
-     rSize,
      operandTypeForFieldCode(t, returnCode),
      parameterFootprint);
 
@@ -5055,7 +5049,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                  c->peek(1, parameterFootprint - 1)),
                          tailCall ? Compiler::TailJump : 0,
                          frame->trace(0, 0),
-                         rSize,
                          operandTypeForFieldCode(t, returnCode),
                          parameterFootprint);
 
@@ -5164,7 +5157,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                           offset),
                 tailCall ? Compiler::TailJump : 0,
                 frame->trace(0, 0),
-                rSize,
                 operandTypeForFieldCode(t, methodReturnCode(t, target)),
                 parameterFootprint);
 

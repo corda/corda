@@ -2497,13 +2497,19 @@ class MyCompiler: public Compiler {
   virtual Operand* stackCall(Operand* address,
                              unsigned flags,
                              TraceHandler* traceHandler,
-                             unsigned resultSize,
                              ir::Type resultType,
                              unsigned argumentFootprint)
   {
     Value* result = value(&c, resultType);
-    appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
-               resultSize, c.stack, 0, argumentFootprint);
+    appendCall(&c,
+               static_cast<Value*>(address),
+               flags,
+               traceHandler,
+               result,
+               resultType.size(),
+               c.stack,
+               0,
+               argumentFootprint);
     return result;
   }
 
