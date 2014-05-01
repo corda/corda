@@ -1331,18 +1331,19 @@ translateLocalIndex(Context* context, unsigned footprint, unsigned index)
   }
 }
 
-Compiler::Operand* loadLocal(Context* context,
-                             unsigned footprint,
-                             ir::Type type,
-                             unsigned index)
+ir::Value* loadLocal(Context* context,
+                     unsigned footprint,
+                     ir::Type type,
+                     unsigned index)
 {
   return context->compiler->loadLocal(
       type, translateLocalIndex(context, footprint, index));
 }
 
-void
-storeLocal(Context* context, unsigned footprint, Compiler::Operand* value,
-           unsigned index)
+void storeLocal(Context* context,
+                unsigned footprint,
+                ir::Value* value,
+                unsigned index)
 {
   context->compiler->storeLocal
     (footprint, value, translateLocalIndex(context, footprint, index));
@@ -1357,8 +1358,6 @@ class Frame {
     Long,
     Object
   };
-
-  typedef Compiler::Operand* Value;
 
   Frame(Context* context, uint8_t* stackMap)
       : context(context),
@@ -1399,11 +1398,12 @@ class Frame {
 
   void dispose() {
     if (level > 1) {
-      context->eventLog.append(PopContextEvent);      
+      context->eventLog.append(PopContextEvent);
     }
   }
 
-  Value append(object o) {
+  ir::Value* append(object o)
+  {
     BootContext* bc = context->bootContext;
     if (bc) {
       avian::codegen::Promise* p = new (bc->zone) avian::codegen::ListenPromise(t->m->system, bc->zone);
@@ -1637,11 +1637,13 @@ class Frame {
     }
   }
 
-  Value addressOperand(avian::codegen::Promise* p) {
+  ir::Value* addressOperand(avian::codegen::Promise* p)
+  {
     return c->promiseConstant(p, types.address);
   }
 
-  Value absoluteAddressOperand(avian::codegen::Promise* p) {
+  ir::Value* absoluteAddressOperand(avian::codegen::Promise* p)
+  {
     return context->bootContext
                ? c->binaryOp(
                      lir::Add,
@@ -1658,7 +1660,8 @@ class Frame {
                : addressOperand(p);
   }
 
-  Value machineIp(unsigned logicalIp) {
+  ir::Value* machineIp(unsigned logicalIp)
+  {
     return c->promiseConstant(c->machineIp(logicalIp), types.address);
   }
 
@@ -1682,35 +1685,40 @@ class Frame {
     this->ip = ip;
   }
 
-  void pushQuiet(ir::Type type, Value o)
+  void pushQuiet(ir::Type type, ir::Value* o)
   {
     c->push(type, o);
   }
 
-  void pushLongQuiet(Value o) {
+  void pushLongQuiet(ir::Value* o)
+  {
     pushQuiet(types.i8, o);
   }
 
-  Value popQuiet(ir::Type type)
+  ir::Value* popQuiet(ir::Type type)
   {
     return c->pop(type);
   }
 
-  Value popLongQuiet() {
+  ir::Value* popLongQuiet()
+  {
     return popQuiet(types.i8);
   }
 
-  void pushInt(Value o) {
+  void pushInt(ir::Value* o)
+  {
     pushQuiet(types.i4, o);
     pushedInt();
   }
 
-  void pushAddress(Value o) {
+  void pushAddress(ir::Value* o)
+  {
     pushQuiet(types.i4, o);
     pushedInt();
   }
 
-  void pushObject(Value o) {
+  void pushObject(ir::Value* o)
+  {
     assert(t, o->type == types.object || o->type.flavor() == ir::Type::Address);
     pushQuiet(types.object, o);
     pushedObject();
@@ -1722,7 +1730,8 @@ class Frame {
     pushedObject();
   }
 
-  void pushLong(Value o) {
+  void pushLong(ir::Value* o)
+  {
     pushLongQuiet(o);
     pushedLong();
   }
@@ -1732,17 +1741,20 @@ class Frame {
     c->popped(count);
   }
 
-  Value popInt() {
+  ir::Value* popInt()
+  {
     poppedInt();
     return popQuiet(types.i4);
   }
 
-  Value popLong() {
+  ir::Value* popLong()
+  {
     poppedLong();
     return popLongQuiet();
   }
-  
-  Value popObject() {
+
+  ir::Value* popObject()
+  {
     poppedObject();
     return popQuiet(types.object);
   }
@@ -1798,8 +1810,8 @@ class Frame {
   }
 
   void dupX1() {
-    Value s0 = popQuiet(types.i4);
-    Value s1 = popQuiet(types.i4);
+    ir::Value* s0 = popQuiet(types.i4);
+    ir::Value* s1 = popQuiet(types.i4);
 
     pushQuiet(types.i4, s0);
     pushQuiet(types.i4, s1);
@@ -1809,17 +1821,17 @@ class Frame {
   }
 
   void dupX2() {
-    Value s0 = popQuiet(types.i4);
+    ir::Value* s0 = popQuiet(types.i4);
 
     if (get(sp - 2) == Long) {
-      Value s1 = popLongQuiet();
+      ir::Value* s1 = popLongQuiet();
 
       pushQuiet(types.i4, s0);
       pushLongQuiet(s1);
       pushQuiet(types.i4, s0);
     } else {
-      Value s1 = popQuiet(types.i4);
-      Value s2 = popQuiet(types.i4);
+      ir::Value* s1 = popQuiet(types.i4);
+      ir::Value* s2 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s0);
       pushQuiet(types.i4, s2);
@@ -1834,8 +1846,8 @@ class Frame {
     if (get(sp - 1) == Long) {
       pushLongQuiet(c->peek(2, 0));
     } else {
-      Value s0 = popQuiet(types.i4);
-      Value s1 = popQuiet(types.i4);
+      ir::Value* s0 = popQuiet(types.i4);
+      ir::Value* s1 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1848,16 +1860,16 @@ class Frame {
 
   void dup2X1() {
     if (get(sp - 1) == Long) {
-      Value s0 = popLongQuiet();
-      Value s1 = popQuiet(types.i4);
+      ir::Value* s0 = popLongQuiet();
+      ir::Value* s1 = popQuiet(types.i4);
 
       pushLongQuiet(s0);
       pushQuiet(types.i4, s1);
       pushLongQuiet(s0);
     } else {
-      Value s0 = popQuiet(types.i4);
-      Value s1 = popQuiet(types.i4);
-      Value s2 = popQuiet(types.i4);
+      ir::Value* s0 = popQuiet(types.i4);
+      ir::Value* s1 = popQuiet(types.i4);
+      ir::Value* s2 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1871,17 +1883,17 @@ class Frame {
 
   void dup2X2() {
     if (get(sp - 1) == Long) {
-      Value s0 = popLongQuiet();
+      ir::Value* s0 = popLongQuiet();
 
       if (get(sp - 3) == Long) {
-        Value s1 = popLongQuiet();
+        ir::Value* s1 = popLongQuiet();
 
         pushLongQuiet(s0);
         pushLongQuiet(s1);
         pushLongQuiet(s0);
       } else {
-        Value s1 = popQuiet(types.i4);
-        Value s2 = popQuiet(types.i4);
+        ir::Value* s1 = popQuiet(types.i4);
+        ir::Value* s2 = popQuiet(types.i4);
 
         pushLongQuiet(s0);
         pushQuiet(types.i4, s2);
@@ -1889,10 +1901,10 @@ class Frame {
         pushLongQuiet(s0);
       }
     } else {
-      Value s0 = popQuiet(types.i4);
-      Value s1 = popQuiet(types.i4);
-      Value s2 = popQuiet(types.i4);
-      Value s3 = popQuiet(types.i4);
+      ir::Value* s0 = popQuiet(types.i4);
+      ir::Value* s1 = popQuiet(types.i4);
+      ir::Value* s2 = popQuiet(types.i4);
+      ir::Value* s3 = popQuiet(types.i4);
 
       pushQuiet(types.i4, s1);
       pushQuiet(types.i4, s0);
@@ -1906,8 +1918,8 @@ class Frame {
   }
 
   void swap() {
-    Value s0 = popQuiet(types.i4);
-    Value s1 = popQuiet(types.i4);
+    ir::Value* s0 = popQuiet(types.i4);
+    ir::Value* s1 = popQuiet(types.i4);
 
     pushQuiet(types.i4, s0);
     pushQuiet(types.i4, s1);
@@ -3065,9 +3077,10 @@ resultSize(MyThread* t, unsigned code)
   }
 }
 
-void
-pushReturnValue(MyThread* t, Frame* frame, unsigned code,
-                Compiler::Operand* result)
+void pushReturnValue(MyThread* t,
+                     Frame* frame,
+                     unsigned code,
+                     ir::Value* result)
 {
   switch (code) {
   case ByteField:
@@ -3090,8 +3103,7 @@ pushReturnValue(MyThread* t, Frame* frame, unsigned code,
   }
 }
 
-Compiler::Operand*
-popField(MyThread* t, Frame* frame, int code)
+ir::Value* popField(MyThread* t, Frame* frame, int code)
 {
   switch (code) {
   case ByteField:
@@ -3169,12 +3181,12 @@ void compileSafePoint(MyThread* t, Compiler* c, Frame* frame) {
           c->threadRegister());
 }
 
-Compiler::Operand* compileDirectInvoke(MyThread* t,
-                                       Frame* frame,
-                                       object target,
-                                       bool tailCall,
-                                       bool useThunk,
-                                       avian::codegen::Promise* addressPromise)
+ir::Value* compileDirectInvoke(MyThread* t,
+                               Frame* frame,
+                               object target,
+                               bool tailCall,
+                               bool useThunk,
+                               avian::codegen::Promise* addressPromise)
 {
   avian::codegen::Compiler* c = frame->c;
   ir::Types types(TargetBytesPerWord);
@@ -3205,7 +3217,7 @@ Compiler::Operand* compileDirectInvoke(MyThread* t,
         (frame->context->zone.allocate(sizeof(TraceElementPromise)))
         TraceElementPromise(t->m->system, trace);
 
-      Compiler::Operand* result = c->stackCall(
+      ir::Value* result = c->stackCall(
           c->promiseConstant(returnAddressPromise, types.address),
           flags,
           trace,
@@ -3233,7 +3245,7 @@ Compiler::Operand* compileDirectInvoke(MyThread* t,
           methodParameterFootprint(t, target));
     }
   } else {
-    Compiler::Operand* address
+    ir::Value* address
         = (addressPromise
                ? c->promiseConstant(addressPromise, types.address)
                : c->constant(methodAddress(t, target), types.address));
@@ -3253,7 +3265,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, object target, bool tailCall)
 {
   unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-  Compiler::Operand* result = 0;
+  ir::Value* result = 0;
 
   // don't bother calling an empty method unless calling it might
   // cause the class to be initialized, which may have side effects
@@ -3319,9 +3331,12 @@ methodReferenceReturnCode(Thread* t, object reference)
   return returnCode;
 }
 
-void
-compileReferenceInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
-                       object reference, bool isStatic, bool tailCall)
+void compileReferenceInvoke(MyThread* t,
+                            Frame* frame,
+                            ir::Value* method,
+                            object reference,
+                            bool isStatic,
+                            bool tailCall)
 {
   unsigned parameterFootprint
     = methodReferenceParameterFootprint(t, reference, isStatic);
@@ -3330,12 +3345,12 @@ compileReferenceInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
 
   unsigned rSize = resultSize(t, returnCode);
 
-  Compiler::Operand* result = frame->c->stackCall
-    (method,
-     tailCall ? Compiler::TailJump : 0,
-     frame->trace(0, 0),
-     operandTypeForFieldCode(t, returnCode),
-     parameterFootprint);
+  ir::Value* result
+      = frame->c->stackCall(method,
+                            tailCall ? Compiler::TailJump : 0,
+                            frame->trace(0, 0),
+                            operandTypeForFieldCode(t, returnCode),
+                            parameterFootprint);
 
   frame->pop(parameterFootprint);
 
@@ -3369,9 +3384,11 @@ compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
                          tailCall);
 }
 
-void
-compileAbstractInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
-                      object target, bool tailCall)
+void compileAbstractInvoke(MyThread* t,
+                           Frame* frame,
+                           ir::Value* method,
+                           object target,
+                           bool tailCall)
 {
   unsigned parameterFootprint = methodParameterFootprint(t, target);
   ir::Types types(TargetBytesPerWord);
@@ -3380,12 +3397,12 @@ compileAbstractInvoke(MyThread* t, Frame* frame, Compiler::Operand* method,
 
   unsigned rSize = resultSize(t, returnCode);
 
-  Compiler::Operand* result = frame->c->stackCall
-    (method,
-     tailCall ? Compiler::TailJump : 0,
-     frame->trace(0, 0),
-     operandTypeForFieldCode(t, returnCode),
-     parameterFootprint);
+  ir::Value* result
+      = frame->c->stackCall(method,
+                            tailCall ? Compiler::TailJump : 0,
+                            frame->trace(0, 0),
+                            operandTypeForFieldCode(t, returnCode),
+                            parameterFootprint);
 
   frame->pop(parameterFootprint);
 
@@ -3422,7 +3439,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
   object method = frame->context->method;
 
   if (methodFlags(t, method) & ACC_SYNCHRONIZED) {
-    Compiler::Operand* lock;
+    ir::Value* lock;
     if (methodFlags(t, method) & ACC_STATIC) {
       PROTECT(t, method);
 
@@ -3601,8 +3618,8 @@ bool integerBranch(MyThread* t,
                    object code,
                    unsigned& ip,
                    ir::Type type,
-                   Compiler::Operand* a,
-                   Compiler::Operand* b,
+                   ir::Value* a,
+                   ir::Value* b,
                    unsigned* newIpp)
 {
   if (ip + 3 > codeLength(t, code)) {
@@ -3614,8 +3631,8 @@ bool integerBranch(MyThread* t,
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
   assert(t, newIp < codeLength(t, code));
-  
-  Compiler::Operand* target = frame->machineIp(newIp);
+
+  ir::Value* target = frame->machineIp(newIp);
 
   switch (instruction) {
   case ifeq:
@@ -3680,8 +3697,8 @@ bool floatBranch(MyThread* t,
                  unsigned& ip,
                  ir::Type type,
                  bool lessIfUnordered,
-                 Compiler::Operand* a,
-                 Compiler::Operand* b,
+                 ir::Value* a,
+                 ir::Value* b,
                  unsigned* newIpp)
 {
   if (ip + 3 > codeLength(t, code)) {
@@ -3693,8 +3710,8 @@ bool floatBranch(MyThread* t,
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
   assert(t, newIp < codeLength(t, code));
-  
-  Compiler::Operand* target = frame->machineIp(newIp);
+
+  ir::Value* target = frame->machineIp(newIp);
 
   switch (instruction) {
   case ifeq:
@@ -3719,8 +3736,7 @@ bool floatBranch(MyThread* t,
   return true;
 }
 
-Compiler::Operand*
-popLongAddress(Frame* frame)
+ir::Value* popLongAddress(Frame* frame)
 {
   ir::Types types(TargetBytesPerWord);
   return TargetBytesPerWord == 8 ? frame->popLong()
@@ -3766,7 +3782,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "getByte")
         and MATCH(methodSpec(t, target), "(J)B"))
     {
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(c->load(ir::SignExtend,
                              types.i1,
@@ -3776,8 +3792,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
     {
-      Compiler::Operand* value = frame->popInt();
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* value = frame->popInt();
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       c->store(types.address, value, c->memory(address, types.i1));
       return true;
@@ -3786,7 +3802,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "getChar")
                    and MATCH(methodSpec(t, target), "(J)C")))
     {
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(c->load(ir::SignExtend,
                              types.i2,
@@ -3798,8 +3814,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "putChar")
                    and MATCH(methodSpec(t, target), "(JC)V")))
     {
-      Compiler::Operand* value = frame->popInt();
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* value = frame->popInt();
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       c->store(types.address, value, c->memory(address, types.i2));
       return true;
@@ -3808,7 +3824,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "getFloat")
                    and MATCH(methodSpec(t, target), "(J)F")))
     {
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(
           c->load(ir::SignExtend,
@@ -3823,8 +3839,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "putFloat")
                    and MATCH(methodSpec(t, target), "(JF)V")))
     {
-      Compiler::Operand* value = frame->popInt();
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* value = frame->popInt();
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putInt") ? types.i4
                                                              : types.f4;
@@ -3835,7 +3851,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "getDouble")
                    and MATCH(methodSpec(t, target), "(J)D")))
     {
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushLong(
           c->load(ir::SignExtend,
@@ -3850,8 +3866,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
                or (MATCH(methodName(t, target), "putDouble")
                    and MATCH(methodSpec(t, target), "(JD)V")))
     {
-      Compiler::Operand* value = frame->popLong();
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* value = frame->popLong();
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putLong") ? types.i8
                                                               : types.f8;
@@ -3860,7 +3876,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
     } else if (MATCH(methodName(t, target), "getAddress")
                 and MATCH(methodSpec(t, target), "(J)J"))
     {
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushLong(c->load(ir::SignExtend,
                               types.address,
@@ -3870,8 +3886,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     } else if (MATCH(methodName(t, target), "putAddress")
                and MATCH(methodSpec(t, target), "(JJ)V"))
     {
-      Compiler::Operand* value = frame->popLong();
-      Compiler::Operand* address = popLongAddress(frame);
+      ir::Value* value = frame->popLong();
+      ir::Value* address = popLongAddress(frame);
       frame->popObject();
       c->store(types.i8, value, c->memory(address, types.address));
       return true;
@@ -3949,18 +3965,18 @@ class SwitchState {
   SwitchState(Compiler::State* state,
               unsigned count,
               unsigned defaultIp,
-              Compiler::Operand* key,
+              ir::Value* key,
               avian::codegen::Promise* start,
               int bottom,
-              int top):
-    state(state),
-    count(count),
-    defaultIp(defaultIp),
-    key(key),
-    start(start),
-    bottom(bottom),
-    top(top),
-    index(0)
+              int top)
+      : state(state),
+        count(count),
+        defaultIp(defaultIp),
+        key(key),
+        start(start),
+        bottom(bottom),
+        top(top),
+        index(0)
   { }
 
   Frame* frame() {
@@ -3976,7 +3992,7 @@ class SwitchState {
   Compiler::State* state;
   unsigned count;
   unsigned defaultIp;
-  Compiler::Operand* key;
+  ir::Value* key;
   avian::codegen::Promise* start;
   int bottom;
   int top;
@@ -4102,8 +4118,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case iaload:
     case laload:
     case saload: {
-      Compiler::Operand* index = frame->popInt();
-      Compiler::Operand* array = frame->popObject();
+      ir::Value* index = frame->popInt();
+      ir::Value* array = frame->popObject();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -4189,7 +4205,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case iastore:
     case lastore:
     case sastore: {
-      Compiler::Operand* value;
+      ir::Value* value;
       if (instruction == dastore or instruction == lastore) {
         value = frame->popLong();
       } else if (instruction == aastore) {
@@ -4198,8 +4214,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         value = frame->popInt();
       }
 
-      Compiler::Operand* index = frame->popInt();
-      Compiler::Operand* array = frame->popObject();
+      ir::Value* index = frame->popInt();
+      ir::Value* array = frame->popObject();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -4303,7 +4319,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       object class_ = resolveClassInPool(t, context->method, index - 1, false);
 
-      Compiler::Operand* length = frame->popInt();
+      ir::Value* length = frame->popInt();
 
       object argument;
       Thunk thunk;
@@ -4359,7 +4375,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case athrow: {
-      Compiler::Operand* target = frame->popObject();
+      ir::Value* target = frame->popObject();
       c->call(c->constant(getThunk(t, throw_Thunk), types.address),
               Compiler::NoReturn,
               frame->trace(0, 0),
@@ -4396,7 +4412,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         thunk = checkCastFromReferenceThunk;
       }
 
-      Compiler::Operand* instance = c->peek(1, 0);
+      ir::Value* instance = c->peek(1, 0);
 
       c->call(c->constant(getThunk(t, thunk), types.address),
               0,
@@ -4425,16 +4441,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case dmul:
     case ddiv:
     case vm::drem: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       frame->pushLong(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f8, a, b));
     } break;
 
     case dcmpg: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       if (floatBranch(t, frame, code, ip, types.f8, false, a, b, &newIp)) {
         goto branch;
@@ -4445,16 +4461,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             0,
             types.i4,
             4,
-            static_cast<Compiler::Operand*>(0),
+            static_cast<ir::Value*>(0),
             a,
-            static_cast<Compiler::Operand*>(0),
+            static_cast<ir::Value*>(0),
             b));
       }
     } break;
 
     case dcmpl: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       if (floatBranch(t, frame, code, ip, types.f8, true, a, b, &newIp)) {
         goto branch;
@@ -4465,9 +4481,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             0,
             types.i4,
             4,
-            static_cast<Compiler::Operand*>(0),
+            static_cast<ir::Value*>(0),
             a,
-            static_cast<Compiler::Operand*>(0),
+            static_cast<ir::Value*>(0),
             b));
       }
     } break;
@@ -4525,16 +4541,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case fmul:
     case fdiv:
     case frem: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
 
       frame->pushInt(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f4, a, b));
     } break;
 
     case fcmpg: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
 
       if (floatBranch(t, frame, code, ip, types.f4, false, a, b, &newIp)) {
         goto branch;
@@ -4551,8 +4567,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case fcmpl: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
 
       if (floatBranch(t, frame, code, ip, types.f4, true, a, b, &newIp)) {
         goto branch;
@@ -4613,7 +4629,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                   frame->append(field));
         }
 
-        Compiler::Operand* table;
+        ir::Value* table;
 
         if (instruction == getstatic) {
           checkField(t, field, true);
@@ -4737,7 +4753,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         ir::Type rType = operandTypeForFieldCode(t, fieldCode);
 
-        Compiler::Operand* result;
+        ir::Value* result;
         if (instruction == getstatic) {
           result = c->call(
               c->constant(getThunk(t, getStaticFieldValueFromReferenceThunk),
@@ -4749,7 +4765,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               c->threadRegister(),
               frame->append(pair));
         } else {
-          Compiler::Operand* instance = frame->popObject();
+          ir::Value* instance = frame->popObject();
 
           result = c->call(
               c->constant(getThunk(t, getFieldValueFromReferenceThunk),
@@ -4830,8 +4846,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case isub:
     case ixor:
     case imul: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
       frame->pushInt(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i4, a, b));
     } break;
@@ -4865,8 +4881,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case idiv: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -4885,10 +4901,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
       }
-        
-      Compiler::Operand* a = frame->popObject();
-      Compiler::Operand* b = frame->popObject();
-      Compiler::Operand* target = frame->machineIp(newIp);
+
+      ir::Value* a = frame->popObject();
+      ir::Value* b = frame->popObject();
+      ir::Value* target = frame->machineIp(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
@@ -4906,10 +4922,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
       }
-        
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
-      Compiler::Operand* target = frame->machineIp(newIp);
+
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
+      ir::Value* target = frame->machineIp(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.i4, a, b, target);
     } goto branch;
@@ -4924,14 +4940,14 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
-      Compiler::Operand* target = frame->machineIp(newIp);
+      ir::Value* target = frame->machineIp(newIp);
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
       }
 
-      Compiler::Operand* a = c->constant(0, types.i4);
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = c->constant(0, types.i4);
+      ir::Value* b = frame->popInt();
 
       c->condJump(toCompilerJumpOp(t, instruction), types.i4, a, b, target);
     } goto branch;
@@ -4946,9 +4962,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         compileSafePoint(t, c, frame);
       }
 
-      Compiler::Operand* a = c->constant(0, types.object);
-      Compiler::Operand* b = frame->popObject();
-      Compiler::Operand* target = frame->machineIp(newIp);
+      ir::Value* a = c->constant(0, types.object);
+      ir::Value* b = frame->popObject();
+      ir::Value* target = frame->machineIp(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
@@ -5005,7 +5021,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       object class_ = resolveClassInPool(t, context->method, index - 1, false);
 
-      Compiler::Operand* instance = frame->popObject();
+      ir::Value* instance = frame->popObject();
 
       object argument;
       Thunk thunk;
@@ -5065,7 +5081,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       unsigned rSize = resultSize(t, returnCode);
 
-      Compiler::Operand* result
+      ir::Value* result
           = c->stackCall(c->call(c->constant(getThunk(t, thunk), types.address),
                                  0,
                                  frame->trace(0, 0),
@@ -5171,11 +5187,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             unsigned offset = TargetClassVtable
               + (methodOffset(t, target) * TargetBytesPerWord);
 
-            Compiler::Operand* instance = c->peek(1, parameterFootprint - 1);
+            ir::Value* instance = c->peek(1, parameterFootprint - 1);
 
             unsigned rSize = resultSize(t, methodReturnCode(t, target));
 
-            Compiler::Operand* result = c->stackCall(
+            ir::Value* result = c->stackCall(
                 c->memory(c->binaryOp(lir::And,
                                       types.address,
                                       c->constant(TargetPointerMask, types.i4),
@@ -5227,8 +5243,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case irem: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popInt();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popInt();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -5319,15 +5335,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lsub:
     case lxor:
     case lmul: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
       frame->pushLong(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
 
     case lcmp: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       if (integerBranch(t, frame, code, ip, types.i8, a, b, &newIp)) {
         goto branch;
@@ -5338,9 +5354,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     0,
                     types.i4,
                     4,
-                    static_cast<Compiler::Operand*>(0),
+                    static_cast<ir::Value*>(0),
                     a,
-                    static_cast<Compiler::Operand*>(0),
+                    static_cast<ir::Value*>(0),
                     b));
       }
     } break;
@@ -5425,8 +5441,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case ldiv_: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -5470,16 +5486,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
-      Compiler::Operand* key = frame->popInt();
-    
+      ir::Value* key = frame->popInt();
+
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
       if (pairCount) {
-        Compiler::Operand* default_ = frame->addressOperand
-          (frame->addressPromise(c->machineIp(defaultIp)));
+        ir::Value* default_ = frame->addressOperand(
+            frame->addressPromise(c->machineIp(defaultIp)));
 
         avian::codegen::Promise* start = 0;
         uint32_t* ipTable = static_cast<uint32_t*>
@@ -5501,7 +5517,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         }
         assert(t, start);
 
-        Compiler::Operand* address = c->call(
+        ir::Value* address = c->call(
             c->constant(getThunk(t, lookUpAddressThunk), types.address),
             0,
             0,
@@ -5533,8 +5549,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lrem: {
-      Compiler::Operand* a = frame->popLong();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popLong();
+      ir::Value* b = frame->popLong();
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -5558,8 +5574,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lshl:
     case lshr:
     case lushr: {
-      Compiler::Operand* a = frame->popInt();
-      Compiler::Operand* b = frame->popLong();
+      ir::Value* a = frame->popInt();
+      ir::Value* b = frame->popLong();
       frame->pushLong(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
@@ -5590,7 +5606,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case monitorenter: {
-      Compiler::Operand* target = frame->popObject();
+      ir::Value* target = frame->popObject();
       c->call(
           c->constant(getThunk(t, acquireMonitorForObjectThunk), types.address),
           0,
@@ -5602,7 +5618,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case monitorexit: {
-      Compiler::Operand* target = frame->popObject();
+      ir::Value* target = frame->popObject();
       c->call(
           c->constant(getThunk(t, releaseMonitorForObjectThunk), types.address),
           0,
@@ -5639,7 +5655,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         (t, localSize(t, context->method) + c->topOfStack(), context->method)
         + t->arch->frameReturnAddressSize();
 
-      Compiler::Operand* result
+      ir::Value* result
           = c->call(c->constant(getThunk(t, thunk), types.address),
                     0,
                     frame->trace(0, 0),
@@ -5690,7 +5706,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case newarray: {
       uint8_t type = codeBody(t, code, ip++);
 
-      Compiler::Operand* length = frame->popInt();
+      ir::Value* length = frame->popInt();
 
       frame->pushObject(
           c->call(c->constant(getThunk(t, makeBlankArrayThunk), types.address),
@@ -5773,9 +5789,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
 
-        Compiler::Operand* value = popField(t, frame, fieldCode);
+        ir::Value* value = popField(t, frame, fieldCode);
 
-        Compiler::Operand* table;
+        ir::Value* table;
 
         if (instruction == putstatic) {
           PROTECT(t, field);
@@ -5877,7 +5893,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         int fieldCode = vm::fieldCode
           (t, byteArrayBody(t, referenceSpec(t, reference), 0));
 
-        Compiler::Operand* value = popField(t, frame, fieldCode);
+        ir::Value* value = popField(t, frame, fieldCode);
         ir::Type rType = operandTypeForFieldCode(t, fieldCode);
 
         object pair = makePair(t, context->method, reference);
@@ -5901,7 +5917,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 frame->append(pair),
                 value);
           } else {
-            Compiler::Operand* instance = frame->popObject();
+            ir::Value* instance = frame->popObject();
 
             c->call(c->constant(getThunk(t, setFieldValueFromReferenceThunk),
                                 types.address),
@@ -5928,10 +5944,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     4,
                     c->threadRegister(),
                     frame->append(pair),
-                    static_cast<Compiler::Operand*>(0),
+                    static_cast<ir::Value*>(0),
                     value);
           } else {
-            Compiler::Operand* instance = frame->popObject();
+            ir::Value* instance = frame->popObject();
 
             c->call(
                 c->constant(getThunk(t, setLongFieldValueFromReferenceThunk),
@@ -5943,7 +5959,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 c->threadRegister(),
                 frame->append(pair),
                 instance,
-                static_cast<Compiler::Operand*>(0),
+                static_cast<ir::Value*>(0),
                 value);
           }
         } break;
@@ -5962,7 +5978,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 frame->append(pair),
                 value);
           } else {
-            Compiler::Operand* instance = frame->popObject();
+            ir::Value* instance = frame->popObject();
 
             c->call(
                 c->constant(getThunk(t, setObjectFieldValueFromReferenceThunk),
@@ -6036,7 +6052,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
       assert(t, start);
 
-      Compiler::Operand* key = frame->popInt();
+      ir::Value* key = frame->popInt();
 
       c->condJump(lir::JumpIfLess,
                   types.i4,
@@ -6151,18 +6167,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     c->restoreState(s->state);
 
-    Compiler::Operand* normalizedKey
+    ir::Value* normalizedKey
         = (s->bottom ? c->binaryOp(lir::Subtract,
                                    types.i4,
                                    c->constant(s->bottom, types.i4),
                                    s->key)
                      : s->key);
 
-    Compiler::Operand* entry
-        = c->memory(frame->absoluteAddressOperand(s->start),
-                    types.address,
-                    0,
-                    normalizedKey);
+    ir::Value* entry = c->memory(frame->absoluteAddressOperand(s->start),
+                                 types.address,
+                                 0,
+                                 normalizedKey);
 
     c->jmp(c->load(ir::SignExtend,
                    types.address,

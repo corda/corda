@@ -115,6 +115,15 @@ class Types {
 
 enum SignExtendMode { SignExtend, ZeroExtend };
 
+class Value {
+ public:
+  ir::Type type;
+
+  Value(ir::Type type) : type(type)
+  {
+  }
+};
+
 }  // namespace ir
 }  // namespace codegen
 }  // namespace avian

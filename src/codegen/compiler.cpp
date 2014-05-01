@@ -2151,7 +2151,8 @@ class MyCompiler: public Compiler {
     return c.subroutine = new(c.zone) MySubroutine;
   }
 
-  virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
+  virtual void returnFromSubroutine(Subroutine* subroutine, ir::Value* address)
+  {
     appendSaveLocals(&c);
     appendJump(&c, lir::Jump, static_cast<Value*>(address), false, true);
     static_cast<MySubroutine*>(subroutine)->forkState = compiler::saveState(&c);
@@ -2308,25 +2309,25 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* constant(int64_t value, ir::Type type)
+  virtual ir::Value* constant(int64_t value, ir::Type type)
   {
     return promiseConstant(resolvedPromise(&c, value), type);
   }
 
-  virtual Operand* promiseConstant(Promise* value, ir::Type type)
+  virtual ir::Value* promiseConstant(Promise* value, ir::Type type)
   {
     return compiler::value(&c, type, compiler::constantSite(&c, value));
   }
 
-  virtual Operand* address(ir::Type type, Promise* address)
+  virtual ir::Value* address(ir::Type type, Promise* address)
   {
     return value(&c, type, compiler::addressSite(&c, address));
   }
 
-  virtual Operand* memory(Operand* base,
-                          ir::Type type,
-                          int displacement = 0,
-                          Operand* index = 0)
+  virtual ir::Value* memory(ir::Value* base,
+                            ir::Type type,
+                            int displacement = 0,
+                            ir::Value* index = 0)
   {
     Value* result = value(&c, type);
 
@@ -2340,7 +2341,7 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* threadRegister()
+  virtual ir::Value* threadRegister()
   {
     return compiler::threadRegister(&c);
   }
@@ -2349,7 +2350,7 @@ class MyCompiler: public Compiler {
     return c.logicalCode[c.logicalIp]->lastEvent->makeCodePromise(&c);
   }
 
-  virtual void push(ir::Type type, Operand* value)
+  virtual void push(ir::Type type, ir::Value* value)
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
@@ -2357,7 +2358,7 @@ class MyCompiler: public Compiler {
     compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
-  virtual void save(ir::Type type, Operand* value)
+  virtual void save(ir::Type type, ir::Value* value)
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
@@ -2373,9 +2374,9 @@ class MyCompiler: public Compiler {
     }
   }
 
-  virtual Operand* pop(ir::Type type)
+  virtual ir::Value* pop(ir::Type type)
   {
-    Operand* value = compiler::pop(&c, typeFootprint(&c, type));
+    ir::Value* value = compiler::pop(&c, typeFootprint(&c, type));
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
     // assert(&c, static_cast<Value*>(value)->type == type);
@@ -2409,7 +2410,8 @@ class MyCompiler: public Compiler {
     return c.stack->index;
   }
 
-  virtual Operand* peek(unsigned footprint, unsigned index) {
+  virtual ir::Value* peek(unsigned footprint, unsigned index)
+  {
     Stack* s = c.stack;
     for (unsigned i = index; i > 0; --i) {
       s = s->next;
@@ -2445,12 +2447,12 @@ class MyCompiler: public Compiler {
     return s->value;
   }
 
-  virtual Operand* call(Operand* address,
-                        unsigned flags,
-                        TraceHandler* traceHandler,
-                        ir::Type resultType,
-                        unsigned argumentCount,
-                        ...)
+  virtual ir::Value* call(ir::Value* address,
+                          unsigned flags,
+                          TraceHandler* traceHandler,
+                          ir::Type resultType,
+                          unsigned argumentCount,
+                          ...)
   {
     va_list a; va_start(a, argumentCount);
 
@@ -2500,11 +2502,11 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* stackCall(Operand* address,
-                             unsigned flags,
-                             TraceHandler* traceHandler,
-                             ir::Type resultType,
-                             unsigned argumentFootprint)
+  virtual ir::Value* stackCall(ir::Value* address,
+                               unsigned flags,
+                               TraceHandler* traceHandler,
+                               ir::Type resultType,
+                               unsigned argumentFootprint)
   {
     Value* result = value(&c, resultType);
     appendCall(&c,
@@ -2519,7 +2521,7 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void return_(ir::Type type, Operand* value)
+  virtual void return_(ir::Type type, ir::Value* value)
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
@@ -2595,11 +2597,12 @@ class MyCompiler: public Compiler {
     linkLocals(&c, e->locals(), newLocals);
   }
 
-  virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
+  virtual void storeLocal(unsigned footprint, ir::Value* src, unsigned index)
+  {
     compiler::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
   }
 
-  virtual Operand* loadLocal(ir::Type type, unsigned index)
+  virtual ir::Value* loadLocal(ir::Type type, unsigned index)
   {
     return compiler::loadLocal(&c, type, index);
   }
@@ -2608,17 +2611,19 @@ class MyCompiler: public Compiler {
     appendSaveLocals(&c);
   }
 
-  virtual void checkBounds(Operand* object, unsigned lengthOffset,
-                           Operand* index, intptr_t handler)
+  virtual void checkBounds(ir::Value* object,
+                           unsigned lengthOffset,
+                           ir::Value* index,
+                           intptr_t handler)
   {
     appendBoundsCheck(&c, static_cast<Value*>(object), lengthOffset,
                       static_cast<Value*>(index), handler);
   }
 
-  virtual Operand* truncateThenExtend(ir::SignExtendMode signExtend,
-                                      ir::Type extendType,
-                                      ir::Type truncateType,
-                                      Operand* src)
+  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+                                        ir::Type extendType,
+                                        ir::Type truncateType,
+                                        ir::Value* src)
   {
     Value* dst = value(&c, extendType);
     appendMove(&c,
@@ -2631,9 +2636,7 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual void store(ir::Type srcType,
-                     Operand* src,
-                     Operand* dst)
+  virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst)
   {
     assert(&c, srcType.flavor() == static_cast<Value*>(src)->type.flavor());
     assert(&c, srcType.flavor() == static_cast<Value*>(dst)->type.flavor());
@@ -2649,10 +2652,10 @@ class MyCompiler: public Compiler {
                static_cast<Value*>(dst));
   }
 
-  virtual Operand* load(ir::SignExtendMode signExtend,
-                        ir::Type srcType,
-                        Operand* src,
-                        ir::Type dstType)
+  virtual ir::Value* load(ir::SignExtendMode signExtend,
+                          ir::Type srcType,
+                          ir::Value* src,
+                          ir::Type dstType)
   {
     assert(&c, dstType.size() >= TargetBytesPerWord);
     assert(&c, srcType.flavor() == dstType.flavor());
@@ -2670,9 +2673,9 @@ class MyCompiler: public Compiler {
 
   virtual void condJump(lir::TernaryOperation op,
                         ir::Type type,
-                        Operand* a,
-                        Operand* b,
-                        Operand* address)
+                        ir::Value* a,
+                        ir::Value* b,
+                        ir::Value* address)
   {
     assert(&c,
            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
@@ -2692,18 +2695,20 @@ class MyCompiler: public Compiler {
                  static_cast<Value*>(address));
   }
 
-  virtual void jmp(Operand* address) {
+  virtual void jmp(ir::Value* address)
+  {
     appendJump(&c, lir::Jump, static_cast<Value*>(address));
   }
 
-  virtual void exit(Operand* address) {
+  virtual void exit(ir::Value* address)
+  {
     appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
   }
 
-  virtual Operand* binaryOp(lir::TernaryOperation op,
-                            ir::Type type,
-                            Operand* a,
-                            Operand* b)
+  virtual ir::Value* binaryOp(lir::TernaryOperation op,
+                              ir::Type type,
+                              ir::Value* a,
+                              ir::Value* b)
   {
     assert(&c,
            (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
@@ -2722,7 +2727,9 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* unaryOp(lir::BinaryOperation op, ir::Type type, Operand* a)
+  virtual ir::Value* unaryOp(lir::BinaryOperation op,
+                             ir::Type type,
+                             ir::Value* a)
   {
     assert(&c,
            (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
@@ -2733,7 +2740,7 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* f2f(ir::Type aType, ir::Type resType, Operand* a)
+  virtual ir::Value* f2f(ir::Type aType, ir::Type resType, ir::Value* a)
   {
     assert(&c, aType == static_cast<Value*>(a)->type);
     assert(&c, isFloatValue(a));
@@ -2749,7 +2756,7 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* f2i(ir::Type aType, ir::Type resType, Operand* a)
+  virtual ir::Value* f2i(ir::Type aType, ir::Type resType, ir::Value* a)
   {
     // TODO: enable when possible
     // assert(&c, aType == static_cast<Value*>(a)->type);
@@ -2766,7 +2773,7 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* i2f(ir::Type aType, ir::Type resType, Operand* a)
+  virtual ir::Value* i2f(ir::Type aType, ir::Type resType, ir::Value* a)
   {
     // TODO: enable when possible
     // assert(&c, aType == static_cast<Value*>(a)->type);

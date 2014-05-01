@@ -18,7 +18,7 @@ namespace codegen {
 namespace compiler {
 
 Value::Value(Site* site, Site* target, ir::Type type)
-    : Compiler::Operand(type),
+    : ir::Value(type),
       reads(0),
       lastRead(0),
       sites(site),

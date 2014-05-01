@@ -26,7 +26,7 @@ const int NoFrameIndex = -1;
 
 const bool DebugSites = false;
 
-class Value: public Compiler::Operand {
+class Value : public ir::Value {
  public:
   Read* reads;
   Read* lastRead;
@@ -66,12 +66,12 @@ class Value: public Compiler::Operand {
 
 };
 
-inline bool isFloatValue(Compiler::Operand* a)
+inline bool isFloatValue(ir::Value* a)
 {
   return static_cast<Value*>(a)->type.flavor() == ir::Type::Float;
 }
 
-inline bool isGeneralValue(Compiler::Operand* a)
+inline bool isGeneralValue(ir::Value* a)
 {
   return !isFloatValue(a);
 }

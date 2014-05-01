@@ -40,15 +40,6 @@ class Compiler {
   static const unsigned TailJump = 1 << 2;
   static const unsigned LongJumpOrCall = 1 << 3;
 
-  class Operand {
-   public:
-    ir::Type type;
-
-    Operand(ir::Type type) : type(type)
-    {
-    }
-  };
-
   class State { };
   class Subroutine { };
 
@@ -56,8 +47,8 @@ class Compiler {
   virtual void restoreState(State* state) = 0;
 
   virtual Subroutine* startSubroutine() = 0;
-  virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address)
-  = 0;
+  virtual void returnFromSubroutine(Subroutine* subroutine, ir::Value* address)
+      = 0;
   virtual void linkSubroutine(Subroutine* subroutine) = 0;
 
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
@@ -71,83 +62,84 @@ class Compiler {
   virtual Promise* poolAppend(intptr_t value) = 0;
   virtual Promise* poolAppendPromise(Promise* value) = 0;
 
-  virtual Operand* constant(int64_t value, ir::Type type) = 0;
-  virtual Operand* promiseConstant(Promise* value, ir::Type type) = 0;
-  virtual Operand* address(ir::Type type, Promise* address) = 0;
-  virtual Operand* memory(Operand* base,
-                          ir::Type type,
-                          int displacement = 0,
-                          Operand* index = 0) = 0;
+  virtual ir::Value* constant(int64_t value, ir::Type type) = 0;
+  virtual ir::Value* promiseConstant(Promise* value, ir::Type type) = 0;
+  virtual ir::Value* address(ir::Type type, Promise* address) = 0;
+  virtual ir::Value* memory(ir::Value* base,
+                            ir::Type type,
+                            int displacement = 0,
+                            ir::Value* index = 0) = 0;
 
-  virtual Operand* threadRegister() = 0;
+  virtual ir::Value* threadRegister() = 0;
 
-  virtual void push(ir::Type type, Operand* value) = 0;
-  virtual void save(ir::Type type, Operand* value) = 0;
-  virtual Operand* pop(ir::Type type) = 0;
+  virtual void push(ir::Type type, ir::Value* value) = 0;
+  virtual void save(ir::Type type, ir::Value* value) = 0;
+  virtual ir::Value* pop(ir::Type type) = 0;
   virtual void pushed() = 0;
   virtual void popped(unsigned footprint) = 0;
   virtual unsigned topOfStack() = 0;
-  virtual Operand* peek(unsigned footprint, unsigned index) = 0;
+  virtual ir::Value* peek(unsigned footprint, unsigned index) = 0;
 
-  virtual Operand* call(Operand* address,
-                        unsigned flags,
-                        TraceHandler* traceHandler,
-                        ir::Type resultType,
-                        unsigned argumentCount,
-                        ...) = 0;
+  virtual ir::Value* call(ir::Value* address,
+                          unsigned flags,
+                          TraceHandler* traceHandler,
+                          ir::Type resultType,
+                          unsigned argumentCount,
+                          ...) = 0;
 
-  virtual Operand* stackCall(Operand* address,
-                             unsigned flags,
-                             TraceHandler* traceHandler,
-                             ir::Type resultType,
-                             unsigned argumentFootprint) = 0;
+  virtual ir::Value* stackCall(ir::Value* address,
+                               unsigned flags,
+                               TraceHandler* traceHandler,
+                               ir::Type resultType,
+                               unsigned argumentFootprint) = 0;
 
-  virtual void return_(ir::Type type, Operand* value) = 0;
+  virtual void return_(ir::Type type, ir::Value* value) = 0;
   virtual void return_() = 0;
 
   virtual void initLocal(unsigned size, unsigned index, ir::Type type) = 0;
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
-  virtual void storeLocal(unsigned footprint, Operand* src,
-                          unsigned index) = 0;
-  virtual Operand* loadLocal(ir::Type type, unsigned index) = 0;
+  virtual void storeLocal(unsigned footprint, ir::Value* src, unsigned index)
+      = 0;
+  virtual ir::Value* loadLocal(ir::Type type, unsigned index) = 0;
   virtual void saveLocals() = 0;
 
-  virtual void checkBounds(Operand* object, unsigned lengthOffset,
-                           Operand* index, intptr_t handler) = 0;
+  virtual void checkBounds(ir::Value* object,
+                           unsigned lengthOffset,
+                           ir::Value* index,
+                           intptr_t handler) = 0;
 
-  virtual Operand* truncateThenExtend(ir::SignExtendMode signExtend,
-                                      ir::Type extendType,
-                                      ir::Type truncateType,
-                                      Operand* src) = 0;
+  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+                                        ir::Type extendType,
+                                        ir::Type truncateType,
+                                        ir::Value* src) = 0;
 
-  virtual void store(ir::Type srcType,
-                     Operand* src,
-                     Operand* dst) = 0;
-  virtual Operand* load(ir::SignExtendMode signExtend,
-                        ir::Type srcType,
-                        Operand* src,
-                        ir::Type dstType) = 0;
+  virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst) = 0;
+  virtual ir::Value* load(ir::SignExtendMode signExtend,
+                          ir::Type srcType,
+                          ir::Value* src,
+                          ir::Type dstType) = 0;
 
   virtual void condJump(lir::TernaryOperation op,
                         ir::Type type,
-                        Operand* a,
-                        Operand* b,
-                        Operand* address) = 0;
+                        ir::Value* a,
+                        ir::Value* b,
+                        ir::Value* address) = 0;
 
-  virtual void jmp(Operand* address) = 0;
-  virtual void exit(Operand* address) = 0;
+  virtual void jmp(ir::Value* address) = 0;
+  virtual void exit(ir::Value* address) = 0;
 
-  virtual Operand* binaryOp(lir::TernaryOperation op,
-                            ir::Type type,
-                            Operand* a,
-                            Operand* b) = 0;
-  virtual Operand* unaryOp(lir::BinaryOperation op, ir::Type type, Operand* a)
-      = 0;
+  virtual ir::Value* binaryOp(lir::TernaryOperation op,
+                              ir::Type type,
+                              ir::Value* a,
+                              ir::Value* b) = 0;
+  virtual ir::Value* unaryOp(lir::BinaryOperation op,
+                             ir::Type type,
+                             ir::Value* a) = 0;
   virtual void nullaryOp(lir::Operation op) = 0;
 
-  virtual Operand* f2f(ir::Type aType, ir::Type resType, Operand* a) = 0;
-  virtual Operand* f2i(ir::Type aType, ir::Type resType, Operand* a) = 0;
-  virtual Operand* i2f(ir::Type aType, ir::Type resType, Operand* a) = 0;
+  virtual ir::Value* f2f(ir::Type aType, ir::Type resType, ir::Value* a) = 0;
+  virtual ir::Value* f2i(ir::Type aType, ir::Type resType, ir::Value* a) = 0;
+  virtual ir::Value* i2f(ir::Type aType, ir::Type resType, ir::Value* a) = 0;
 
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset) = 0;
