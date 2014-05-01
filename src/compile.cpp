@@ -1414,14 +1414,14 @@ class Frame {
 
       return c->binaryOp(
           lir::Add,
-          types.address,
+          types.object,
           c->memory(
-              c->threadRegister(), types.address, TARGET_THREAD_HEAPIMAGE),
-          c->promiseConstant(p, types.address));
+              c->threadRegister(), types.object, TARGET_THREAD_HEAPIMAGE),
+          c->promiseConstant(p, types.object));
     } else {
       for (PoolElement* e = context->objectPool; e; e = e->next) {
         if (o == e->target) {
-          return c->address(e);
+          return c->address(types.object, e);
         }
       }
 
@@ -1429,7 +1429,7 @@ class Frame {
 
       ++ context->objectPoolCount;
 
-      return c->address(context->objectPool);
+      return c->address(types.object, context->objectPool);
     }
   }
 
@@ -1711,7 +1711,7 @@ class Frame {
   }
 
   void pushObject(Value o) {
-    // assert(t, o->type == types.object);
+    assert(t, o->type == types.object || o->type.flavor() == ir::Type::Address);
     pushQuiet(types.object, o);
     pushedObject();
   }
@@ -3130,7 +3130,7 @@ ir::Type operandTypeForFieldCode(Thread* t, unsigned code)
     return types.i8;
 
   case ObjectField:
-    return types.address;
+    return types.object;
 
   case FloatField:
     return types.f4;

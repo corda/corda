@@ -73,7 +73,7 @@ class Compiler {
 
   virtual Operand* constant(int64_t value, ir::Type type) = 0;
   virtual Operand* promiseConstant(Promise* value, ir::Type type) = 0;
-  virtual Operand* address(Promise* address) = 0;
+  virtual Operand* address(ir::Type type, Promise* address) = 0;
   virtual Operand* memory(Operand* base,
                           ir::Type type,
                           int displacement = 0,

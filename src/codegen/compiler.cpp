@@ -1252,6 +1252,13 @@ Value* loadLocal(Context* c, ir::Type type, unsigned index)
     fprintf(stderr, "load local %p at %d\n", c->locals[index].value, index);
   }
 
+  assert(c,
+         type.flavor() != ir::Type::Object
+         || c->locals[index].value->type.flavor() == ir::Type::Object
+            // TODO: this is a very java-specific hole in the type system.  Get
+            // rid of it:
+         || c->locals[index].value->type.flavor() == ir::Type::Address);
+
   return c->locals[index].value;
 }
 
@@ -2311,10 +2318,9 @@ class MyCompiler: public Compiler {
     return compiler::value(&c, type, compiler::constantSite(&c, value));
   }
 
-  virtual Operand* address(Promise* address) {
-    return value(&c,
-                 ir::Type(ir::Type::Address, TargetBytesPerWord),
-                 compiler::addressSite(&c, address));
+  virtual Operand* address(ir::Type type, Promise* address)
+  {
+    return value(&c, type, compiler::addressSite(&c, address));
   }
 
   virtual Operand* memory(Operand* base,
