@@ -2619,6 +2619,7 @@ class MyCompiler: public Compiler {
     assert(&c,
            srcType.flavor() != ir::Type::Float
            || srcType.size() == static_cast<Value*>(src)->type.size());
+    assert(&c, dstType == static_cast<Value*>(dst)->type);
     appendMove(&c,
                lir::Move,
                srcType.size(),

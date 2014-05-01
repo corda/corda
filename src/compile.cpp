@@ -3746,7 +3746,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(
-          c->load(1, 1, c->memory(address, types.i4), TargetBytesPerWord));
+          c->load(1, 1, c->memory(address, types.i1), TargetBytesPerWord));
       return true;
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
@@ -3754,7 +3754,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address, value, types.i1, c->memory(address, types.i4));
+      c->store(types.address, value, types.i1, c->memory(address, types.i1));
       return true;
     } else if ((MATCH(methodName(t, target), "getShort")
                 and MATCH(methodSpec(t, target), "(J)S"))
@@ -3764,7 +3764,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(
-          c->load(2, 2, c->memory(address, types.i4), TargetBytesPerWord));
+          c->load(2, 2, c->memory(address, types.i2), TargetBytesPerWord));
       return true;
     } else if ((MATCH(methodName(t, target), "putShort")
                 and MATCH(methodSpec(t, target), "(JS)V"))
@@ -3774,7 +3774,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       Compiler::Operand* value = frame->popInt();
       Compiler::Operand* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address, value, types.i2, c->memory(address, types.i4));
+      c->store(types.address, value, types.i2, c->memory(address, types.i2));
       return true;
     } else if ((MATCH(methodName(t, target), "getInt")
                 and MATCH(methodSpec(t, target), "(J)I"))
@@ -3814,8 +3814,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
           c->load(8,
                   8,
                   c->memory(address,
-                            MATCH(methodName(t, target), "getLong") ? types.i4
-                                                                    : types.f4),
+                            MATCH(methodName(t, target), "getLong") ? types.i8
+                                                                    : types.f8),
                   8));
       return true;
     } else if ((MATCH(methodName(t, target), "putLong")
@@ -5764,7 +5764,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.address,
               value,
               types.i1,
-              c->memory(table, types.i4, targetFieldOffset(context, field)));
+              c->memory(table, types.i1, targetFieldOffset(context, field)));
           break;
 
         case CharField:
@@ -5773,7 +5773,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.address,
               value,
               types.i2,
-              c->memory(table, types.i4, targetFieldOffset(context, field)));
+              c->memory(table, types.i2, targetFieldOffset(context, field)));
           break;
             
         case FloatField:
@@ -5797,7 +5797,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.f8,
               value,
               types.f8,
-              c->memory(table, types.f4, targetFieldOffset(context, field)));
+              c->memory(table, types.f8, targetFieldOffset(context, field)));
           break;
 
         case LongField:
@@ -5805,7 +5805,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               types.i8,
               value,
               types.i8,
-              c->memory(table, types.i4, targetFieldOffset(context, field)));
+              c->memory(table, types.i8, targetFieldOffset(context, field)));
           break;
 
         case ObjectField:
