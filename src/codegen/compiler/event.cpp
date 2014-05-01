@@ -187,21 +187,27 @@ Link* link(Context* c, Event* predecessor, Link* nextPredecessor, Event* success
 
 class CallEvent: public Event {
  public:
-  CallEvent(Context* c, Value* address, unsigned flags,
-            TraceHandler* traceHandler, Value* result, unsigned resultSize,
-            Stack* argumentStack, unsigned argumentCount,
-            unsigned stackArgumentFootprint):
-    Event(c),
-    address(address),
-    traceHandler(traceHandler),
-    result(result),
-    returnAddressSurrogate(0),
-    framePointerSurrogate(0),
-    popIndex(0),
-    stackArgumentIndex(0),
-    flags(flags),
-    resultSize(resultSize),
-    stackArgumentFootprint(stackArgumentFootprint)
+  CallEvent(Context* c,
+            Value* address,
+            unsigned flags,
+            TraceHandler* traceHandler,
+            Value* result,
+            unsigned resultSize,
+            Stack* argumentStack,
+            unsigned argumentCount,
+            unsigned stackArgumentFootprint,
+            util::Slice<ir::Value*> arguments UNUSED)
+      : Event(c),
+        address(address),
+        traceHandler(traceHandler),
+        result(result),
+        returnAddressSurrogate(0),
+        framePointerSurrogate(0),
+        popIndex(0),
+        stackArgumentIndex(0),
+        flags(flags),
+        resultSize(resultSize),
+        stackArgumentFootprint(stackArgumentFootprint)
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
@@ -280,10 +286,12 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (stackArgumentFootprint) {
-      RUNTIME_ARRAY(Value*, arguments, stackArgumentFootprint);
+      RUNTIME_ARRAY(Value*, argsArr, stackArgumentFootprint);
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = stack->value;
+        ir::Value* v2 UNUSED = arguments[i];
         stack = stack->next;
+        assert(c, v == v2);
 
         if ((vm::TargetBytesPerWord == 8
              and (v == 0 or (i >= 1 and stack->value == 0)))
@@ -291,10 +299,10 @@ class CallEvent: public Event {
         {
           assert(c, vm::TargetBytesPerWord == 8 or v->nextWord == stack->value);
 
-          RUNTIME_ARRAY_BODY(arguments)[i--] = stack->value;
+          RUNTIME_ARRAY_BODY(argsArr)[i--] = stack->value;
           stack = stack->next;
         }
-        RUNTIME_ARRAY_BODY(arguments)[i] = v;
+        RUNTIME_ARRAY_BODY(argsArr)[i] = v;
       }
 
       int returnAddressIndex;
@@ -321,7 +329,7 @@ class CallEvent: public Event {
       }
 
       for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
-        Value* v = RUNTIME_ARRAY_BODY(arguments)[i];
+        Value* v = RUNTIME_ARRAY_BODY(argsArr)[i];
         if (v) {
           int frameIndex = i + frameOffset;
 
@@ -493,16 +501,28 @@ class CallEvent: public Event {
   unsigned stackArgumentFootprint;
 };
 
-void
-appendCall(Context* c, Value* address, unsigned flags,
-           TraceHandler* traceHandler, Value* result, unsigned resultSize,
-           Stack* argumentStack, unsigned argumentCount,
-           unsigned stackArgumentFootprint)
+void appendCall(Context* c,
+                Value* address,
+                unsigned flags,
+                TraceHandler* traceHandler,
+                Value* result,
+                unsigned resultSize,
+                Stack* argumentStack,
+                unsigned argumentCount,
+                unsigned stackArgumentFootprint,
+                util::Slice<ir::Value*> arguments)
 {
-  append(c, new(c->zone)
-         CallEvent(c, address, flags, traceHandler, result,
-                   resultSize, argumentStack, argumentCount,
-                   stackArgumentFootprint));
+  append(c,
+         new (c->zone) CallEvent(c,
+                                 address,
+                                 flags,
+                                 traceHandler,
+                                 result,
+                                 resultSize,
+                                 argumentStack,
+                                 argumentCount,
+                                 stackArgumentFootprint,
+                                 arguments));
 }
 
 
@@ -944,7 +964,8 @@ appendCombine(Context* c, lir::TernaryOperation type,
                resultSize,
                argumentStack,
                stackSize,
-               0);
+               0,
+               util::Slice<ir::Value*>(0, 0));
   } else {
     append
       (c, new(c->zone)
@@ -1067,7 +1088,8 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                resultSize,
                argumentStack,
                ceilingDivide(firstSize, vm::TargetBytesPerWord),
-               0);
+               0,
+               util::Slice<ir::Value*>(0, 0));
   } else {
     append(c, new(c->zone)
            TranslateEvent
@@ -1432,7 +1454,8 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                4,
                argumentStack,
                ceilingDivide(size, vm::TargetBytesPerWord) * 2,
-               0);
+               0,
+               util::Slice<ir::Value*>(0, 0));
 
     appendBranch(c,
                  thunkBranch(c, type),

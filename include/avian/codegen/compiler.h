@@ -12,6 +12,7 @@
 #define AVIAN_CODEGEN_COMPILER_H
 
 #include <avian/system/system.h>
+#include <avian/util/slice.h>
 #include "avian/zone.h"
 #include "assembler.h"
 #include "ir.h"
@@ -91,8 +92,8 @@ class Compiler {
                                unsigned flags,
                                TraceHandler* traceHandler,
                                ir::Type resultType,
-                               unsigned argumentFootprint /*,
-                               util::Slice<ir::Value*> arguments*/) = 0;
+                               unsigned argumentFootprint,
+                               util::Slice<ir::Value*> arguments) = 0;
 
   virtual void return_(ir::Type type, ir::Value* value) = 0;
   virtual void return_() = 0;

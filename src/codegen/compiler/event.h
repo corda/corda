@@ -113,11 +113,16 @@ Link*
 link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
      Link* nextSuccessor, ForkState* forkState);
 
-void
-appendCall(Context* c, Value* address, unsigned flags,
-           TraceHandler* traceHandler, Value* result, unsigned resultSize,
-           Stack* argumentStack, unsigned argumentCount,
-           unsigned stackArgumentFootprint);
+void appendCall(Context* c,
+                Value* address,
+                unsigned flags,
+                TraceHandler* traceHandler,
+                Value* result,
+                unsigned resultSize,
+                Stack* argumentStack,
+                unsigned argumentCount,
+                unsigned stackArgumentFootprint,
+                util::Slice<ir::Value*> arguments);
 
 void
 appendReturn(Context* c, unsigned size, Value* value);

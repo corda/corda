@@ -1221,56 +1221,60 @@ class Context {
     MyThread* t;
   };
 
-  Context(MyThread* t, BootContext* bootContext, object method):
-    thread(t),
-    zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
-    assembler(t->arch->makeAssembler(t->m->heap, &zone)),
-    client(t),
-    compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
-    method(method),
-    bootContext(bootContext),
-    objectPool(0),
-    subroutines(0),
-    traceLog(0),
-    visitTable(makeVisitTable(t, &zone, method)),
-    rootTable(makeRootTable(t, &zone, method)),
-    subroutineTable(0),
-    executableAllocator(0),
-    executableStart(0),
-    executableSize(0),
-    objectPoolCount(0),
-    traceLogCount(0),
-    dirtyRoots(false),
-    leaf(true),
-    eventLog(t->m->system, t->m->heap, 1024),
-    protector(this),
-    resource(this)
+  Context(MyThread* t, BootContext* bootContext, object method)
+      : thread(t),
+        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        assembler(t->arch->makeAssembler(t->m->heap, &zone)),
+        client(t),
+        compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
+        method(method),
+        bootContext(bootContext),
+        objectPool(0),
+        subroutines(0),
+        traceLog(0),
+        visitTable(makeVisitTable(t, &zone, method)),
+        rootTable(makeRootTable(t, &zone, method)),
+        subroutineTable(0),
+        executableAllocator(0),
+        executableStart(0),
+        executableSize(0),
+        objectPoolCount(0),
+        traceLogCount(0),
+        dirtyRoots(false),
+        leaf(true),
+        eventLog(t->m->system, t->m->heap, 1024),
+        protector(this),
+        resource(this),
+        argumentBuffer(
+            (ir::Value**)t->m->heap->allocate(256 * sizeof(ir::Value*)),
+            256)  // below the maximal allowed parameter count for Java
   { }
 
-  Context(MyThread* t):
-    thread(t),
-    zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
-    assembler(t->arch->makeAssembler(t->m->heap, &zone)),
-    client(t),
-    compiler(0),
-    method(0),
-    bootContext(0),
-    objectPool(0),
-    subroutines(0),
-    traceLog(0),
-    visitTable(0),
-    rootTable(0),
-    subroutineTable(0),
-    executableAllocator(0),
-    executableStart(0),
-    executableSize(0),
-    objectPoolCount(0),
-    traceLogCount(0),
-    dirtyRoots(false),
-    leaf(true),
-    eventLog(t->m->system, t->m->heap, 0),
-    protector(this),
-    resource(this)
+  Context(MyThread* t)
+      : thread(t),
+        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        assembler(t->arch->makeAssembler(t->m->heap, &zone)),
+        client(t),
+        compiler(0),
+        method(0),
+        bootContext(0),
+        objectPool(0),
+        subroutines(0),
+        traceLog(0),
+        visitTable(0),
+        rootTable(0),
+        subroutineTable(0),
+        executableAllocator(0),
+        executableStart(0),
+        executableSize(0),
+        objectPoolCount(0),
+        traceLogCount(0),
+        dirtyRoots(false),
+        leaf(true),
+        eventLog(t->m->system, t->m->heap, 0),
+        protector(this),
+        resource(this),
+        argumentBuffer(0, 0)
   { }
 
   ~Context() {
@@ -1291,6 +1295,10 @@ class Context {
     eventLog.dispose();
 
     zone.dispose();
+
+    if (argumentBuffer.begin()) {
+      thread->m->heap->free(argumentBuffer.begin(), 256 * sizeof(ir::Value*));
+    }
   }
 
   MyThread* thread;
@@ -1316,6 +1324,7 @@ class Context {
   Vector eventLog;
   MyProtector protector;
   MyResource resource;
+  Slice<ir::Value*> argumentBuffer;
 };
 
 unsigned
@@ -2024,6 +2033,17 @@ class Frame {
     }
   }
 
+  Slice<ir::Value*> peekMethodArguments(unsigned footprint UNUSED)
+  {
+    ir::Value** ptr = context->argumentBuffer.items;
+
+    for (unsigned i = 0; i < footprint; i++) {
+      *(ptr++) = c->peek(1, footprint - i - 1);
+    }
+
+    return Slice<ir::Value*>(context->argumentBuffer.items, footprint);
+  }
+
   void stackCall(ir::Value* methodValue,
                  object methodObject,
                  unsigned flags,
@@ -2035,7 +2055,8 @@ class Frame {
                                      flags,
                                      trace,
                                      operandTypeForFieldCode(t, returnCode),
-                                     footprint);
+                                     footprint,
+                                     peekMethodArguments(footprint));
 
     pop(footprint);
 
@@ -2057,7 +2078,8 @@ class Frame {
                                      flags,
                                      trace,
                                      operandTypeForFieldCode(t, returnCode),
-                                     footprint);
+                                     footprint,
+                                     peekMethodArguments(footprint));
 
     pop(footprint);
 
@@ -5087,7 +5109,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                          tailCall ? Compiler::TailJump : 0,
                          frame->trace(0, 0),
                          operandTypeForFieldCode(t, returnCode),
-                         parameterFootprint);
+                         parameterFootprint,
+                         frame->peekMethodArguments(parameterFootprint));
 
       frame->pop(parameterFootprint);
 
