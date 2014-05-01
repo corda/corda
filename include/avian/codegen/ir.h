@@ -115,6 +115,8 @@ class Types {
 
 enum SignExtendMode { SignExtend, ZeroExtend };
 
+enum CallingConvention { NativeCallingConvention, AvianCallingConvention };
+
 class Value {
  public:
   ir::Type type;

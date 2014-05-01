@@ -115,6 +115,7 @@ link(Context* c, Event* predecessor, Link* nextPredecessor, Event* successor,
 
 void appendCall(Context* c,
                 Value* address,
+                ir::CallingConvention callingConvention,
                 unsigned flags,
                 TraceHandler* traceHandler,
                 Value* result,
@@ -167,6 +168,8 @@ appendSaveLocals(Context* c);
 
 void
 appendDummy(Context* c);
+
+void appendBuddy(Context* c, Value* original, Value* buddy);
 
 } // namespace compiler
 } // namespace codegen

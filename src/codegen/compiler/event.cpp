@@ -184,11 +184,110 @@ Link* link(Context* c, Event* predecessor, Link* nextPredecessor, Event* success
     (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
 }
 
+Value* maybeBuddySlice(Context* c, Value* v)
+{
+  if (v->home >= 0) {
+    Value* n = value(c, v->type);
+    appendBuddy(c, v, n);
+    return n;
+  } else {
+    return v;
+  }
+}
+
+template <class T>
+struct SliceStack : public Slice<T> {
+  size_t capacity;
+
+  SliceStack(T* items, size_t capacity)
+      : Slice<T>(items + capacity, 0), capacity(capacity)
+  {
+  }
+
+  void push(const T& item)
+  {
+    --Slice<T>::items;
+    ++Slice<T>::count;
+    *Slice<T>::items = item;
+  }
+};
+
+template <class T, size_t Capacity>
+struct FixedSliceStack : public SliceStack<T> {
+  T itemArray[Capacity];
+
+  FixedSliceStack() : SliceStack<T>(&itemArray[0], Capacity)
+  {
+  }
+};
+
+Value* pushWordSlice(Context* c, Value* v, SliceStack<ir::Value*>& slice)
+{
+  if (v) {
+    v = maybeBuddySlice(c, v);
+  }
+
+  Stack* s = stack(c, v, c->stack);
+  assert(c, index > 0);
+  slice.push(v);
+
+  // if (DebugFrame) {
+  //   fprintf(stderr, "push %p\n", v);
+  // }
+
+  if (v) {
+    v->home = frameIndex(c, s->index + c->localFootprint);
+  }
+  c->stack = s;
+
+  return v;
+}
+
+void pushSlice(Context* c,
+               unsigned footprint,
+               Value* v,
+               SliceStack<ir::Value*>& slice)
+{
+  assert(c, footprint);
+
+  bool bigEndian = c->arch->bigEndian();
+
+  Value* low = v;
+
+  if (bigEndian) {
+    v = pushWordSlice(c, v, slice);
+  }
+
+  Value* high;
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+
+    if (vm::TargetBytesPerWord == 4) {
+      low->maybeSplit(c);
+      high = pushWordSlice(c, low->nextWord, slice);
+    } else {
+      high = pushWordSlice(c, 0, slice);
+    }
+  } else {
+    high = 0;
+  }
+
+  if (not bigEndian) {
+    v = pushWordSlice(c, v, slice);
+  }
+
+  if (high) {
+    v->nextWord = high;
+    high->nextWord = v;
+    high->wordIndex = 1;
+  }
+}
 
 class CallEvent: public Event {
  public:
   CallEvent(Context* c,
             Value* address,
+            ir::CallingConvention callingConvention UNUSED,
             unsigned flags,
             TraceHandler* traceHandler,
             Value* result,
@@ -206,13 +305,19 @@ class CallEvent: public Event {
         stackArgumentIndex(0),
         flags(flags),
         resultSize(resultSize),
-        stackArgumentFootprint(arguments.count)
+        stackArgumentFootprint(callingConvention == ir::AvianCallingConvention
+                                   ? arguments.count
+                                   : 0)
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
+    assert(c,
+           callingConvention == ir::AvianCallingConvention
+           || argumentCount == arguments.count);
+
     if (argumentCount) {
       assert(c, (flags & Compiler::TailJump) == 0);
-      assert(c, arguments.count == 0);
+      assert(c, stackArgumentFootprint == 0);
 
       Stack* s = argumentStack;
       unsigned index = 0;
@@ -501,6 +606,7 @@ class CallEvent: public Event {
 
 void appendCall(Context* c,
                 Value* address,
+                ir::CallingConvention callingConvention,
                 unsigned flags,
                 TraceHandler* traceHandler,
                 Value* result,
@@ -512,6 +618,7 @@ void appendCall(Context* c,
   append(c,
          new (c->zone) CallEvent(c,
                                  address,
+                                 callingConvention,
                                  flags,
                                  traceHandler,
                                  result,
@@ -929,6 +1036,7 @@ appendCombine(Context* c, lir::TernaryOperation type,
                       &thunk);
 
   if (thunk) {
+    FixedSliceStack<ir::Value*, 6> slice;
     Stack* oldStack = c->stack;
 
     bool threadParameter;
@@ -938,13 +1046,17 @@ appendCombine(Context* c, lir::TernaryOperation type,
     unsigned stackSize = ceilingDivide(secondSize, vm::TargetBytesPerWord)
       + ceilingDivide(firstSize, vm::TargetBytesPerWord);
 
-    compiler::push(c, ceilingDivide(secondSize, vm::TargetBytesPerWord), secondValue);
-    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue);
+    pushSlice(c,
+              ceilingDivide(secondSize, vm::TargetBytesPerWord),
+              secondValue,
+              slice);
+    pushSlice(
+        c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue, slice);
 
     if (threadParameter) {
       ++ stackSize;
 
-      compiler::push(c, 1, threadRegister(c));
+      pushSlice(c, 1, threadRegister(c), slice);
     }
 
     Stack* argumentStack = c->stack;
@@ -954,13 +1066,14 @@ appendCombine(Context* c, lir::TernaryOperation type,
                value(c,
                      ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
                      constantSite(c, handler)),
+               ir::NativeCallingConvention,
                0,
                0,
                resultValue,
                resultSize,
                argumentStack,
                stackSize,
-               util::Slice<ir::Value*>(0, 0));
+               slice);
   } else {
     append
       (c, new(c->zone)
@@ -1066,8 +1179,10 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
 
   if (thunk) {
     Stack* oldStack = c->stack;
+    FixedSliceStack<ir::Value*, 2> slice;
 
-    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue);
+    pushSlice(
+        c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue, slice);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -1077,13 +1192,14 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                      ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
                      constantSite(
                          c, c->client->getThunk(type, firstSize, resultSize))),
+               ir::NativeCallingConvention,
                0,
                0,
                resultValue,
                resultSize,
                argumentStack,
                ceilingDivide(firstSize, vm::TargetBytesPerWord),
-               util::Slice<ir::Value*>(0, 0));
+               slice);
   } else {
     append(c, new(c->zone)
            TranslateEvent
@@ -1422,6 +1538,7 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
     vm::TargetBytesPerWord, &thunk);
 
   if (thunk) {
+    FixedSliceStack<ir::Value*, 4> slice;
     Stack* oldStack = c->stack;
 
     bool threadParameter;
@@ -1430,8 +1547,10 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
 
     assert(c, not threadParameter);
 
-    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), secondValue);
-    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), firstValue);
+    pushSlice(
+        c, ceilingDivide(size, vm::TargetBytesPerWord), secondValue, slice);
+    pushSlice(
+        c, ceilingDivide(size, vm::TargetBytesPerWord), firstValue, slice);
 
     Stack* argumentStack = c->stack;
     c->stack = oldStack;
@@ -1442,13 +1561,14 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                value(c,
                      ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
                      constantSite(c, handler)),
+               ir::NativeCallingConvention,
                0,
                0,
                result,
                4,
                argumentStack,
                ceilingDivide(size, vm::TargetBytesPerWord) * 2,
-               util::Slice<ir::Value*>(0, 0));
+               slice);
 
     appendBranch(c,
                  thunkBranch(c, type),
