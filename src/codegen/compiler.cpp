@@ -2630,28 +2630,43 @@ class MyCompiler: public Compiler {
     appendTranslate(&c, type, size, static_cast<Value*>(a), size, result);
     return result;
   }
-  
-  virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) {
+
+  virtual Operand* f2f(unsigned aSize, ir::Type resType, Operand* a)
+  {
     assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
     Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::Float2Float, aSize, static_cast<Value*>(a), resSize, result);
+    appendTranslate(&c,
+                    lir::Float2Float,
+                    aSize,
+                    static_cast<Value*>(a),
+                    resType.size(),
+                    result);
     return result;
   }
-  
-  virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) {
+
+  virtual Operand* f2i(unsigned aSize, ir::Type resType, Operand* a)
+  {
     assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
     Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate
-      (&c, lir::Float2Int, aSize, static_cast<Value*>(a), resSize, result);
+    appendTranslate(&c,
+                    lir::Float2Int,
+                    aSize,
+                    static_cast<Value*>(a),
+                    resType.size(),
+                    result);
     return result;
   }
-  
-  virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) {
+
+  virtual Operand* i2f(unsigned aSize, ir::Type resType, Operand* a)
+  {
     assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
     Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::Int2Float, aSize, static_cast<Value*>(a), resSize, result);
+    appendTranslate(&c,
+                    lir::Int2Float,
+                    aSize,
+                    static_cast<Value*>(a),
+                    resType.size(),
+                    result);
     return result;
   }
 

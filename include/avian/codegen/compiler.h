@@ -14,6 +14,7 @@
 #include <avian/system/system.h>
 #include "avian/zone.h"
 #include "assembler.h"
+#include "ir.h"
 
 namespace avian {
 namespace codegen {
@@ -134,9 +135,9 @@ class Compiler {
   virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) = 0;
   virtual void nullaryOp(lir::Operation type) = 0;
 
-  virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
-  virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) = 0;
-  virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) = 0;
+  virtual Operand* f2f(unsigned aSize, ir::Type resType, Operand* a) = 0;
+  virtual Operand* f2i(unsigned aSize, ir::Type resType, Operand* a) = 0;
+  virtual Operand* i2f(unsigned aSize, ir::Type resType, Operand* a) = 0;
 
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset) = 0;
