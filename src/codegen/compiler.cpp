@@ -2645,20 +2645,17 @@ class MyCompiler: public Compiler {
 
   virtual Operand* load(ir::SignExtendMode signExtend,
                         ir::Type srcType,
-                        ir::Type srcSelectType,
                         Operand* src,
                         ir::Type dstType)
   {
     assert(&c, dstType.size() >= TargetBytesPerWord);
-    assert(&c, srcType.flavor() == srcSelectType.flavor());
     assert(&c, srcType.flavor() == dstType.flavor());
-    assert(&c, srcType == srcSelectType);
 
     Value* dst = value(&c, static_cast<Value*>(src)->type);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
                srcType.size(),
-               srcSelectType.size(),
+               srcType.size(),
                static_cast<Value*>(src),
                dstType.size(),
                dst);

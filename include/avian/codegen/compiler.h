@@ -117,7 +117,6 @@ class Compiler {
                      Operand* dst) = 0;
   virtual Operand* load(ir::SignExtendMode signExtend,
                         ir::Type srcType,
-                        ir::Type srcSelectType,
                         Operand* src,
                         ir::Type dstType) = 0;
 
