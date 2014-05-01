@@ -4417,15 +4417,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case d2f: {
-      frame->pushInt(c->f2f(8, types.f4, frame->popLong()));
+      frame->pushInt(c->f2f(types.f8, types.f4, frame->popLong()));
     } break;
 
     case d2i: {
-      frame->pushInt(c->f2i(8, types.i4, frame->popLong()));
+      frame->pushInt(c->f2i(types.f8, types.i4, frame->popLong()));
     } break;
 
     case d2l: {
-      frame->pushLong(c->f2i(8, types.i8, frame->popLong()));
+      frame->pushLong(c->f2i(types.f8, types.i8, frame->popLong()));
     } break;
 
     case dadd:
@@ -4518,15 +4518,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case f2d: {
-      frame->pushLong(c->f2f(4, types.f8, frame->popInt()));
+      frame->pushLong(c->f2f(types.f4, types.f8, frame->popInt()));
     } break;
 
     case f2i: {
-      frame->pushInt(c->f2i(4, types.i4, frame->popInt()));
+      frame->pushInt(c->f2i(types.f4, types.i4, frame->popInt()));
     } break;
 
     case f2l: {
-      frame->pushLong(c->f2i(4, types.i8, frame->popInt()));
+      frame->pushLong(c->f2i(types.f4, types.i8, frame->popInt()));
     } break;
 
     case fadd:
@@ -4706,7 +4706,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               8,
               8,
               c->memory(
-                  table, types.f4, targetFieldOffset(context, field), 0, 1),
+                  table, types.f8, targetFieldOffset(context, field), 0, 1),
               8));
           break;
 
@@ -4715,7 +4715,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               8,
               8,
               c->memory(
-                  table, types.i4, targetFieldOffset(context, field), 0, 1),
+                  table, types.i8, targetFieldOffset(context, field), 0, 1),
               8));
           break;
 
@@ -4828,11 +4828,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case i2d: {
-      frame->pushLong(c->i2f(4, types.f8, frame->popInt()));
+      frame->pushLong(c->i2f(types.i4, types.f8, frame->popInt()));
     } break;
 
     case i2f: {
-      frame->pushInt(c->i2f(4, types.f4, frame->popInt()));
+      frame->pushInt(c->i2f(types.i4, types.f4, frame->popInt()));
     } break;
 
     case i2l:
@@ -5331,11 +5331,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto start;
 
     case l2d: {
-      frame->pushLong(c->i2f(8, types.f8, frame->popLong()));
+      frame->pushLong(c->i2f(types.i8, types.f8, frame->popLong()));
     } break;
 
     case l2f: {
-      frame->pushInt(c->i2f(8, types.f4, frame->popLong()));
+      frame->pushInt(c->i2f(types.i8, types.f4, frame->popLong()));
     } break;
 
     case l2i:

@@ -127,9 +127,9 @@ class Compiler {
   virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) = 0;
   virtual void nullaryOp(lir::Operation type) = 0;
 
-  virtual Operand* f2f(unsigned aSize, ir::Type resType, Operand* a) = 0;
-  virtual Operand* f2i(unsigned aSize, ir::Type resType, Operand* a) = 0;
-  virtual Operand* i2f(unsigned aSize, ir::Type resType, Operand* a) = 0;
+  virtual Operand* f2f(ir::Type aType, ir::Type resType, Operand* a) = 0;
+  virtual Operand* f2i(ir::Type aType, ir::Type resType, Operand* a) = 0;
+  virtual Operand* i2f(ir::Type aType, ir::Type resType, Operand* a) = 0;
 
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset) = 0;

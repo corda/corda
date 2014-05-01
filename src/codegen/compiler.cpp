@@ -2649,42 +2649,50 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual Operand* f2f(unsigned aSize, ir::Type resType, Operand* a)
+  virtual Operand* f2f(ir::Type aType, ir::Type resType, Operand* a)
   {
+    assert(&c, aType == static_cast<Value*>(a)->type);
     assert(&c, isFloatValue(a));
     assert(&c, resType.flavor() == ir::Type::Float);
+    assert(&c, aType.flavor() == ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Float,
-                    aSize,
+                    aType.size(),
                     static_cast<Value*>(a),
                     resType.size(),
                     result);
     return result;
   }
 
-  virtual Operand* f2i(unsigned aSize, ir::Type resType, Operand* a)
+  virtual Operand* f2i(ir::Type aType, ir::Type resType, Operand* a)
   {
+    // TODO: enable when possible
+    // assert(&c, aType == static_cast<Value*>(a)->type);
     assert(&c, isFloatValue(a));
     assert(&c, resType.flavor() != ir::Type::Float);
+    assert(&c, aType.flavor() == ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Int,
-                    aSize,
+                    aType.size(),
                     static_cast<Value*>(a),
                     resType.size(),
                     result);
     return result;
   }
 
-  virtual Operand* i2f(unsigned aSize, ir::Type resType, Operand* a)
+  virtual Operand* i2f(ir::Type aType, ir::Type resType, Operand* a)
   {
+    // TODO: enable when possible
+    // assert(&c, aType == static_cast<Value*>(a)->type);
     assert(&c, isGeneralValue(a));
     assert(&c, resType.flavor() == ir::Type::Float);
+    assert(&c, aType.flavor() != ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Int2Float,
-                    aSize,
+                    aType.size(),
                     static_cast<Value*>(a),
                     resType.size(),
                     result);
