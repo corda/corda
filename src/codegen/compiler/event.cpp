@@ -1029,7 +1029,6 @@ appendCombine(Context* c, lir::TernaryOperation type,
 
   if (thunk) {
     FixedSliceStack<ir::Value*, 6> slice;
-    Stack* oldStack UNUSED = c->stack;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
@@ -1055,8 +1054,6 @@ appendCombine(Context* c, lir::TernaryOperation type,
 
       pushSlice(c, 1, threadRegister(c), stackBase, slice);
     }
-
-    assert(c, c->stack == oldStack);
 
     appendCall(c,
                value(c,
@@ -1172,7 +1169,6 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                 resultSize, &thunk);
 
   if (thunk) {
-    Stack* oldStack UNUSED = c->stack;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
     FixedSliceStack<ir::Value*, 2> slice;
 
@@ -1181,8 +1177,6 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
               firstValue,
               stackBase,
               slice);
-
-    assert(c, c->stack == oldStack);
 
     appendCall(c,
                value(c,
@@ -1534,7 +1528,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
 
   if (thunk) {
     FixedSliceStack<ir::Value*, 4> slice;
-    Stack* oldStack UNUSED = c->stack;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
@@ -1553,8 +1546,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
               firstValue,
               stackBase,
               slice);
-
-    assert(c, c->stack == oldStack);
 
     Value* result
         = value(c, ir::Type(ir::Type::Address, vm::TargetBytesPerWord));
