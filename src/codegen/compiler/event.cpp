@@ -319,6 +319,10 @@ class CallEvent: public Event {
       unsigned argumentIndex = 0;
 
       while (true) {
+        assert(c, arguments[index] == s->value);
+        assert(c,
+               argumentIndex + 1 >= arguments.count || arguments[index + 1]
+                                                       == s->next->value);
         unsigned footprint
             = (argumentIndex + 1 < arguments.count and s->value->nextWord
                == s->next->value)
