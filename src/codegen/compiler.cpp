@@ -2515,12 +2515,12 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void return_(ir::Type type, ir::Value* value)
+  virtual void return_(ir::Type type, ir::Value* a)
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
-    // assert(&c, static_cast<Value*>(value)->type == type);
-    appendReturn(&c, type.size(), static_cast<Value*>(value));
+    // assert(&c, a->type == type);
+    appendReturn(&c, type.size(), static_cast<Value*>(a));
   }
 
   virtual void return_()
@@ -2612,6 +2612,19 @@ class MyCompiler: public Compiler {
   {
     appendBoundsCheck(&c, static_cast<Value*>(object), lengthOffset,
                       static_cast<Value*>(index), handler);
+  }
+
+  virtual ir::Value* truncate(ir::Type type, ir::Type srcType, ir::Value* src)
+  {
+    Value* dst = value(&c, type);
+    appendMove(&c,
+               lir::Move,
+               srcType.size(),
+               srcType.size(),
+               static_cast<Value*>(src),
+               type.size(),
+               dst);
+    return dst;
   }
 
   virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,

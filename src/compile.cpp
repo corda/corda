@@ -1760,6 +1760,7 @@ class Frame {
 
   void pushLongQuiet(ir::Value* o)
   {
+    // assert(t, o->type == types.i8);
     pushQuiet(types.i8, o);
   }
 
@@ -4357,7 +4358,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(types.address, frame->popObject());
+      c->return_(types.object, frame->popObject());
     } goto next;
 
     case arraylength: {
@@ -5329,8 +5330,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case l2i:
-      frame->pushInt(
-          c->load(ir::SignExtend, types.i8, frame->popLong(), types.address));
+      frame->pushInt(c->truncate(types.i4, types.i8, frame->popLong()));
       break;
 
     case ladd:
@@ -5366,11 +5366,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lconst_0:
-      frame->pushLong(c->constant(0, types.i4));
+      frame->pushLong(c->constant(0, types.i8));
       break;
 
     case lconst_1:
-      frame->pushLong(c->constant(1, types.i4));
+      frame->pushLong(c->constant(1, types.i8));
       break;
 
     case ldc:
@@ -5388,7 +5388,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
 
-        loadMemoryBarrier();  
+        loadMemoryBarrier();
 
         if (objectClass(t, v) == type(t, Machine::ReferenceType)) {
           object reference = v;
@@ -5809,7 +5809,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case ByteField:
         case BooleanField:
           c->store(
-              types.address,
+              types.i4,
               value,
               c->memory(table, types.i1, targetFieldOffset(context, field)));
           break;
@@ -5817,7 +5817,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case CharField:
         case ShortField:
           c->store(
-              types.address,
+              types.i4,
               value,
               c->memory(table, types.i2, targetFieldOffset(context, field)));
           break;
@@ -5831,7 +5831,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         case IntField:
           c->store(
-              types.address,
+              types.i4,
               value,
               c->memory(table, types.i4, targetFieldOffset(context, field)));
           break;
