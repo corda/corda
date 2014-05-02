@@ -2667,16 +2667,17 @@ class MyCompiler: public Compiler {
                           ir::Value* src,
                           ir::Type dstType)
   {
-    assert(&c, dstType.size() >= TargetBytesPerWord);
     assert(&c, srcType.flavor() == dstType.flavor());
+    assert(&c, src->type.flavor() == dstType.flavor());
 
-    Value* dst = value(&c, src->type);
+    Value* dst = value(&c, dstType);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
                srcType.size(),
                srcType.size(),
                static_cast<Value*>(src),
-               dstType.size(),
+               dstType.size() < TargetBytesPerWord ? TargetBytesPerWord
+                                                   : dstType.size(),
                dst);
     return dst;
   }
