@@ -293,7 +293,6 @@ class CallEvent: public Event {
             Value* result,
             unsigned resultSize,
             Stack* argumentStack,
-            unsigned argumentCount,
             util::Slice<ir::Value*> arguments)
       : Event(c),
         address(address),
@@ -311,11 +310,7 @@ class CallEvent: public Event {
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
-    assert(c,
-           callingConvention == ir::AvianCallingConvention
-           || argumentCount == arguments.count);
-
-    if (argumentCount) {
+    if (callingConvention == ir::NativeCallingConvention) {
       assert(c, (flags & Compiler::TailJump) == 0);
       assert(c, stackArgumentFootprint == 0);
 
@@ -325,9 +320,10 @@ class CallEvent: public Event {
 
       while (true) {
         unsigned footprint
-          = (argumentIndex + 1 < argumentCount
-             and s->value->nextWord == s->next->value)
-          ? 2 : 1;
+            = (argumentIndex + 1 < arguments.count and s->value->nextWord
+               == s->next->value)
+                  ? 2
+                  : 1;
 
         if (index % (c->arch->argumentAlignment() ? footprint : 1)) {
           ++ index;
@@ -363,7 +359,7 @@ class CallEvent: public Event {
 
         ++ index;
 
-        if ((++ argumentIndex) < argumentCount) {
+        if ((++argumentIndex) < arguments.count) {
           s = s->next;
         } else {
           break;
@@ -389,7 +385,7 @@ class CallEvent: public Event {
 
     Stack* stack = stackBefore;
 
-    if (stackArgumentFootprint) {
+    if (callingConvention == ir::AvianCallingConvention) {
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = static_cast<Value*>(arguments[i]);
         stack = stack->next;
@@ -413,7 +409,7 @@ class CallEvent: public Event {
       int frameOffset;
 
       if (TailCalls and (flags & Compiler::TailJump)) {
-        assert(c, argumentCount == 0);
+        assert(c, arguments.count == 0);
 
         int base = frameBase(c);
         returnAddressIndex = base + c->arch->returnAddressOffset();
@@ -612,7 +608,6 @@ void appendCall(Context* c,
                 Value* result,
                 unsigned resultSize,
                 Stack* argumentStack,
-                unsigned argumentCount,
                 util::Slice<ir::Value*> arguments)
 {
   append(c,
@@ -624,7 +619,6 @@ void appendCall(Context* c,
                                  result,
                                  resultSize,
                                  argumentStack,
-                                 argumentCount,
                                  arguments));
 }
 
@@ -1072,7 +1066,6 @@ appendCombine(Context* c, lir::TernaryOperation type,
                resultValue,
                resultSize,
                argumentStack,
-               stackSize,
                slice);
   } else {
     append
@@ -1198,7 +1191,6 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                resultValue,
                resultSize,
                argumentStack,
-               ceilingDivide(firstSize, vm::TargetBytesPerWord),
                slice);
   } else {
     append(c, new(c->zone)
@@ -1567,7 +1559,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                result,
                4,
                argumentStack,
-               ceilingDivide(size, vm::TargetBytesPerWord) * 2,
                slice);
 
     appendBranch(c,
