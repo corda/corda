@@ -386,6 +386,10 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (callingConvention == ir::AvianCallingConvention) {
+      Stack* s2 = stack;
+      for (size_t i = 0; i < arguments.count; i++) {
+        s2 = s2->next;
+      }
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = static_cast<Value*>(arguments[i]);
         stack = stack->next;
@@ -403,6 +407,8 @@ class CallEvent: public Event {
         }
         arguments[i] = v;
       }
+
+      assert(c, s2 == stack);
 
       int returnAddressIndex;
       int framePointerIndex;
@@ -492,6 +498,8 @@ class CallEvent: public Event {
   virtual void compile(Context* c) {
     lir::UnaryOperation op;
 
+    unsigned footprint = c->arch->argumentFootprint(stackArgumentFootprint);
+
     if (TailCalls and (flags & Compiler::TailJump)) {
       if (flags & Compiler::LongJumpOrCall) {
         if (flags & Compiler::Aligned) {
@@ -530,9 +538,9 @@ class CallEvent: public Event {
         fps = lir::NoRegister;
       }
 
-      int offset
-        = static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint))
-        - static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint));
+      int offset = static_cast<int>(footprint)
+                   - static_cast<int>(
+                         c->arch->argumentFootprint(c->parameterFootprint));
 
       c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
     } else if (flags & Compiler::LongJumpOrCall) {
@@ -563,14 +571,8 @@ class CallEvent: public Event {
         if (framePointerSurrogate) {
           framePointerSurrogate->source->thaw(c, framePointerSurrogate);
         }
-      } else {
-        unsigned footprint = c->arch->argumentFootprint
-          (stackArgumentFootprint);
-
-        if (footprint > c->arch->stackAlignmentInWords()) {
-          c->assembler->adjustFrame
-            (footprint - c->arch->stackAlignmentInWords());
-        }
+      } else if (footprint > c->arch->stackAlignmentInWords()) {
+        c->assembler->adjustFrame(footprint - c->arch->stackAlignmentInWords());
       }
     }
 
