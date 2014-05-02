@@ -1224,6 +1224,7 @@ unsigned typeFootprint(Context* c, ir::Type type)
   case ir::Type::Object:
   case ir::Type::Address:
   case ir::Type::Half:
+  case ir::Type::Invalid:
     return 1;
   case ir::Type::Void:
     return 0;
@@ -1257,7 +1258,9 @@ Value* loadLocal(Context* c, ir::Type type, unsigned index)
          || c->locals[index].value->type.flavor() == ir::Type::Object
             // TODO: this is a very java-specific hole in the type system.  Get
             // rid of it:
-         || c->locals[index].value->type.flavor() == ir::Type::Address);
+         || c->locals[index].value->type.flavor() == ir::Type::Address
+            // TODO Temporary hack for Subroutine test!!!
+         || c->locals[index].value->type.flavor() == ir::Type::Invalid);
 
   return c->locals[index].value;
 }
@@ -2279,7 +2282,7 @@ class MyCompiler: public Compiler {
       for (unsigned li = 0; li < c.localFootprint; ++li) {
         Local* local = c.locals + li;
         if (local->value == 0) {
-          initLocal(1, li, ir::Type(ir::Type::Address, TargetBytesPerWord));
+          initLocal(1, li, ir::Type(ir::Type::Invalid, TargetBytesPerWord));
         }
       }
     }

@@ -1774,10 +1774,25 @@ class Frame {
     return popQuiet(types.i8);
   }
 
-  void pushInt(ir::Value* o)
+  void pushSmall(ir::Value* o)
   {
     pushQuiet(types.i4, o);
     pushedInt();
+  }
+
+  void pushInt(ir::Value* o)
+  {
+    assert(t,
+           o->type.flavor() == ir::Type::Integer
+           // TODO Temporary hack for Subroutine test!!!
+           || o->type.flavor() == ir::Type::Invalid);
+    pushSmall(o);
+  }
+
+  void pushFloat(ir::Value* o)
+  {
+    assert(t, o->type.flavor() == ir::Type::Float);
+    pushSmall(o);
   }
 
   void pushAddress(ir::Value* o)
@@ -1788,7 +1803,11 @@ class Frame {
 
   void pushObject(ir::Value* o)
   {
-    assert(t, o->type == types.object || o->type.flavor() == ir::Type::Address);
+    assert(t,
+           o->type == types.object
+           || o->type.flavor() == ir::Type::Address
+              // TODO Temporary hack for Subroutine test!!!
+           || o->type.flavor() == ir::Type::Invalid);
     pushQuiet(types.object, o);
     pushedObject();
   }
@@ -1799,10 +1818,25 @@ class Frame {
     pushedObject();
   }
 
-  void pushLong(ir::Value* o)
+  void pushLarge(ir::Value* o)
   {
     pushLongQuiet(o);
     pushedLong();
+  }
+
+  void pushLong(ir::Value* o)
+  {
+    assert(t,
+           o->type.flavor() == ir::Type::Integer
+           // TODO Temporary hack for Subroutine test!!!
+           || o->type.flavor() == ir::Type::Invalid);
+    pushLarge(o);
+  }
+
+  void pushDouble(ir::Value* o)
+  {
+    assert(t, o->type.flavor() == ir::Type::Float);
+    pushLarge(o);
   }
 
   void pop(unsigned count) {
@@ -1833,9 +1867,21 @@ class Frame {
     pushInt(loadLocal(context, 1, types.i4, index));
   }
 
+  void loadFloat(unsigned index)
+  {
+    assert(t, index < localSize());
+    pushFloat(loadLocal(context, 1, types.f4, index));
+  }
+
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
     pushLong(loadLocal(context, 2, types.i8, index));
+  }
+
+  void loadDouble(unsigned index)
+  {
+    assert(t, index < static_cast<unsigned>(localSize() - 1));
+    pushDouble(loadLocal(context, 2, types.f8, index));
   }
 
   void loadObject(unsigned index) {
@@ -2018,16 +2064,18 @@ class Frame {
     case BooleanField:
     case CharField:
     case ShortField:
-    case FloatField:
     case IntField:
       return pushInt(result);
+    case FloatField:
+      return pushFloat(result);
 
     case ObjectField:
       return pushObject(result);
 
     case LongField:
-    case DoubleField:
       return pushLong(result);
+    case DoubleField:
+      return pushDouble(result);
 
     default:
       abort(t);
@@ -3776,7 +3824,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "sqrt")
         and MATCH(methodSpec(t, target), "(D)D"))
     {
-      frame->pushLong(
+      frame->pushDouble(
           c->unaryOp(lir::FloatSquareRoot, types.f8, frame->popLong()));
       return true;
     } else if (MATCH(methodName(t, target), "abs")) {
@@ -3787,7 +3835,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
         frame->pushLong(c->unaryOp(lir::Absolute, types.i8, frame->popLong()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(F)F")) {
-        frame->pushInt(
+        frame->pushFloat(
             c->unaryOp(lir::FloatAbsolute, types.f4, frame->popInt()));
         return true;
       }
@@ -3841,7 +3889,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushInt(
+      frame->pushSmall(
           c->load(ir::SignExtend,
                   types.i4,
                   c->memory(address,
@@ -3868,7 +3916,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushLong(
+      frame->pushLarge(
           c->load(ir::SignExtend,
                   types.i8,
                   c->memory(address,
@@ -4149,13 +4197,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case aaload:
         frame->pushObject(
             c->load(ir::SignExtend,
-                    types.address,
+                    types.object,
                     c->memory(array, types.object, TargetArrayBody, index),
-                    types.address));
+                    types.object));
         break;
 
       case faload:
-        frame->pushInt(
+        frame->pushFloat(
             c->load(ir::SignExtend,
                     types.f4,
                     c->memory(array, types.f4, TargetArrayBody, index),
@@ -4187,7 +4235,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         break;
 
       case daload:
-        frame->pushLong(
+        frame->pushDouble(
             c->load(ir::SignExtend,
                     types.f8,
                     c->memory(array, types.f8, TargetArrayBody, index),
@@ -4440,7 +4488,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case d2f: {
-      frame->pushInt(c->f2f(types.f8, types.f4, frame->popLong()));
+      frame->pushFloat(c->f2f(types.f8, types.f4, frame->popLong()));
     } break;
 
     case d2i: {
@@ -4459,7 +4507,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ir::Value* a = frame->popLong();
       ir::Value* b = frame->popLong();
 
-      frame->pushLong(
+      frame->pushDouble(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f8, a, b));
     } break;
 
@@ -4504,15 +4552,16 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case dconst_0:
-      frame->pushLong(c->constant(doubleToBits(0.0), types.f4));
+      frame->pushDouble(c->constant(doubleToBits(0.0), types.f4));
       break;
       
     case dconst_1:
-      frame->pushLong(c->constant(doubleToBits(1.0), types.f4));
+      frame->pushDouble(c->constant(doubleToBits(1.0), types.f4));
       break;
 
     case dneg: {
-      frame->pushLong(c->unaryOp(lir::FloatNegate, types.f8, frame->popLong()));
+      frame->pushDouble(
+          c->unaryOp(lir::FloatNegate, types.f8, frame->popLong()));
     } break;
 
     case dup:
@@ -4540,7 +4589,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case f2d: {
-      frame->pushLong(c->f2f(types.f4, types.f8, frame->popInt()));
+      frame->pushDouble(c->f2f(types.f4, types.f8, frame->popInt()));
     } break;
 
     case f2i: {
@@ -4559,7 +4608,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ir::Value* a = frame->popInt();
       ir::Value* b = frame->popInt();
 
-      frame->pushInt(
+      frame->pushFloat(
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f4, a, b));
     } break;
 
@@ -4600,19 +4649,19 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case fconst_0:
-      frame->pushInt(c->constant(floatToBits(0.0), types.f4));
+      frame->pushFloat(c->constant(floatToBits(0.0), types.f4));
       break;
       
     case fconst_1:
-      frame->pushInt(c->constant(floatToBits(1.0), types.f4));
+      frame->pushFloat(c->constant(floatToBits(1.0), types.f4));
       break;
       
     case fconst_2:
-      frame->pushInt(c->constant(floatToBits(2.0), types.f4));
+      frame->pushFloat(c->constant(floatToBits(2.0), types.f4));
       break;
 
     case fneg: {
-      frame->pushInt(c->unaryOp(lir::FloatNegate, types.f4, frame->popInt()));
+      frame->pushFloat(c->unaryOp(lir::FloatNegate, types.f4, frame->popInt()));
     } break;
 
     case getfield:
@@ -4700,7 +4749,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           break;
 
         case FloatField:
-          frame->pushInt(c->load(
+          frame->pushFloat(c->load(
               ir::SignExtend,
               types.f4,
               c->memory(table, types.f4, targetFieldOffset(context, field)),
@@ -4716,7 +4765,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           break;
 
         case DoubleField:
-          frame->pushLong(c->load(
+          frame->pushDouble(c->load(
               ir::SignExtend,
               types.f8,
               c->memory(table, types.f8, targetFieldOffset(context, field)),
@@ -4734,9 +4783,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case ObjectField:
           frame->pushObject(c->load(
               ir::SignExtend,
-              types.address,
+              types.object,
               c->memory(table, types.object, targetFieldOffset(context, field)),
-              types.address));
+              types.object));
           break;
 
         default:
@@ -4835,11 +4884,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case i2d: {
-      frame->pushLong(c->i2f(types.i4, types.f8, frame->popInt()));
+      frame->pushDouble(c->i2f(types.i4, types.f8, frame->popInt()));
     } break;
 
     case i2f: {
-      frame->pushInt(c->i2f(types.i4, types.f4, frame->popInt()));
+      frame->pushFloat(c->i2f(types.i4, types.f4, frame->popInt()));
     } break;
 
     case i2l:
@@ -4998,28 +5047,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case iload:
-    case fload:
       frame->loadInt(codeBody(t, code, ip++));
+      break;
+    case fload:
+      frame->loadFloat(codeBody(t, code, ip++));
       break;
 
     case iload_0:
-    case fload_0:
       frame->loadInt(0);
+      break;
+    case fload_0:
+      frame->loadFloat(0);
       break;
 
     case iload_1:
-    case fload_1:
       frame->loadInt(1);
+      break;
+    case fload_1:
+      frame->loadFloat(1);
       break;
 
     case iload_2:
-    case fload_2:
       frame->loadInt(2);
+      break;
+    case fload_2:
+      frame->loadFloat(2);
       break;
 
     case iload_3:
-    case fload_3:
       frame->loadInt(3);
+      break;
+    case fload_3:
+      frame->loadFloat(3);
       break;
 
     case ineg: {
@@ -5322,11 +5381,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto start;
 
     case l2d: {
-      frame->pushLong(c->i2f(types.i8, types.f8, frame->popLong()));
+      frame->pushDouble(c->i2f(types.i8, types.f8, frame->popLong()));
     } break;
 
     case l2f: {
-      frame->pushInt(c->i2f(types.i8, types.f4, frame->popLong()));
+      frame->pushFloat(c->i2f(types.i8, types.f4, frame->popLong()));
     } break;
 
     case l2i:
@@ -5424,7 +5483,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
       } else {
-        frame->pushInt(c->constant(
+        frame->pushSmall(c->constant(
             singletonValue(t, pool, index - 1),
             singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f4
                                                                 : types.i4));
@@ -5438,7 +5497,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
-      frame->pushLong(c->constant(
+      frame->pushLarge(c->constant(
           v,
           singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f8
                                                               : types.i8));
@@ -5457,28 +5516,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lload:
-    case dload:
       frame->loadLong(codeBody(t, code, ip++));
+      break;
+    case dload:
+      frame->loadDouble(codeBody(t, code, ip++));
       break;
 
     case lload_0:
-    case dload_0:
       frame->loadLong(0);
+      break;
+    case dload_0:
+      frame->loadDouble(0);
       break;
 
     case lload_1:
-    case dload_1:
       frame->loadLong(1);
+      break;
+    case dload_1:
+      frame->loadDouble(1);
       break;
 
     case lload_2:
-    case dload_2:
       frame->loadLong(2);
+      break;
+    case dload_2:
+      frame->loadDouble(2);
       break;
 
     case lload_3:
-    case dload_3:
       frame->loadLong(3);
+      break;
+    case dload_3:
+      frame->loadDouble(3);
       break;
 
     case lneg:
@@ -5821,7 +5890,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               value,
               c->memory(table, types.i2, targetFieldOffset(context, field)));
           break;
-            
+
         case FloatField:
           c->store(
               types.f4,
