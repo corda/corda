@@ -1345,15 +1345,34 @@ ir::Value* loadLocal(Context* context,
                      ir::Type type,
                      unsigned index)
 {
-  return context->compiler->loadLocal(
+  ir::Value* result = context->compiler->loadLocal(
       type, translateLocalIndex(context, footprint, index));
+
+  assert(context->thread,
+         (type.flavor() != ir::Type::Object && type == result->type)
+         || (type.flavor() == ir::Type::Object
+             && (result->type.flavor() == ir::Type::Object
+                 || result->type.flavor() == ir::Type::Address))
+         // TODO Temporary hack for Subroutine test!!!
+         || result->type.flavor() == ir::Type::Invalid
+         || result->type.flavor() == ir::Type::Integer);
+  return result;
 }
 
 void storeLocal(Context* context,
                 unsigned footprint,
+                ir::Type type UNUSED,
                 ir::Value* value,
                 unsigned index)
 {
+  assert(context->thread,
+         (type.flavor() != ir::Type::Object && type == value->type)
+         || (type.flavor() == ir::Type::Object
+             && (value->type.flavor() == ir::Type::Object
+                 || value->type.flavor() == ir::Type::Address))
+         // TODO Temporary hack for Subroutine test!!!
+         || value->type.flavor() == ir::Type::Invalid
+         || value->type.flavor() == ir::Type::Integer);
   context->compiler->storeLocal
     (footprint, value, translateLocalIndex(context, footprint, index));
 }
@@ -1783,15 +1802,15 @@ class Frame {
   void pushInt(ir::Value* o)
   {
     assert(t,
-           o->type.flavor() == ir::Type::Integer
-           // TODO Temporary hack for Subroutine test!!!
+           o->type == types.i4
+                      // TODO Temporary hack for Subroutine test!!!
            || o->type.flavor() == ir::Type::Invalid);
     pushSmall(o);
   }
 
   void pushFloat(ir::Value* o)
   {
-    assert(t, o->type.flavor() == ir::Type::Float);
+    assert(t, o->type == types.f4);
     pushSmall(o);
   }
 
@@ -1827,15 +1846,15 @@ class Frame {
   void pushLong(ir::Value* o)
   {
     assert(t,
-           o->type.flavor() == ir::Type::Integer
-           // TODO Temporary hack for Subroutine test!!!
+           o->type == types.i8
+                      // TODO Temporary hack for Subroutine test!!!
            || o->type.flavor() == ir::Type::Invalid);
     pushLarge(o);
   }
 
   void pushDouble(ir::Value* o)
   {
-    assert(t, o->type.flavor() == ir::Type::Float);
+    assert(t, o->type == types.f8);
     pushLarge(o);
   }
 
@@ -1890,22 +1909,34 @@ class Frame {
   }
 
   void storeInt(unsigned index) {
-    storeLocal(context, 1, popInt(), index);
+    storeLocal(context, 1, types.i4, popInt(), index);
+    storedInt(translateLocalIndex(context, 1, index));
+  }
+
+  void storeFloat(unsigned index)
+  {
+    storeLocal(context, 1, types.f4, popInt(), index);
     storedInt(translateLocalIndex(context, 1, index));
   }
 
   void storeLong(unsigned index) {
-    storeLocal(context, 2, popLong(), index);
+    storeLocal(context, 2, types.i8, popLong(), index);
+    storedLong(translateLocalIndex(context, 2, index));
+  }
+
+  void storeDouble(unsigned index)
+  {
+    storeLocal(context, 2, types.f8, popLong(), index);
     storedLong(translateLocalIndex(context, 2, index));
   }
 
   void storeObject(unsigned index) {
-    storeLocal(context, 1, popObject(), index);
+    storeLocal(context, 1, types.object, popObject(), index);
     storedObject(translateLocalIndex(context, 1, index));
   }
 
   void storeObjectOrAddress(unsigned index) {
-    storeLocal(context, 1, popQuiet(types.i4), index);
+    storeLocal(context, 1, types.object, popQuiet(types.object), index);
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
@@ -3534,6 +3565,7 @@ handleEntrance(MyThread* t, Frame* frame)
     unsigned index = savedTargetIndex(t, method);
     storeLocal(frame->context,
                1,
+               frame->types.object,
                loadLocal(frame->context, 1, frame->types.object, 0),
                index);
     frame->set(index, Frame::Object);
@@ -3847,10 +3879,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushInt(c->load(ir::SignExtend,
-                             types.i1,
-                             c->memory(address, types.i1),
-                             types.address));
+      frame->pushInt(c->load(
+          ir::SignExtend, types.i1, c->memory(address, types.i1), types.i4));
       return true;
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
@@ -3867,10 +3897,8 @@ intrinsic(MyThread* t, Frame* frame, object target)
     {
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      frame->pushInt(c->load(ir::SignExtend,
-                             types.i2,
-                             c->memory(address, types.i2),
-                             types.address));
+      frame->pushInt(c->load(
+          ir::SignExtend, types.i2, c->memory(address, types.i2), types.i4));
       return true;
     } else if ((MATCH(methodName(t, target), "putShort")
                 and MATCH(methodSpec(t, target), "(JS)V"))
@@ -4201,7 +4229,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(ir::SignExtend,
                     types.f4,
                     c->memory(array, types.f4, TargetArrayBody, index),
-                    types.f8));
+                    types.f4));
         break;
 
       case iaload:
@@ -4209,7 +4237,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(ir::SignExtend,
                     types.i4,
                     c->memory(array, types.i4, TargetArrayBody, index),
-                    types.address));
+                    types.i4));
         break;
 
       case baload:
@@ -4217,7 +4245,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(ir::SignExtend,
                     types.i1,
                     c->memory(array, types.i1, TargetArrayBody, index),
-                    types.address));
+                    types.i4));
         break;
 
       case caload:
@@ -4225,7 +4253,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(ir::ZeroExtend,
                     types.i2,
                     c->memory(array, types.i2, TargetArrayBody, index),
-                    types.address));
+                    types.i4));
         break;
 
       case daload:
@@ -4249,7 +4277,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             c->load(ir::SignExtend,
                     types.i2,
                     c->memory(array, types.i2, TargetArrayBody, index),
-                    types.address));
+                    types.i4));
         break;
       }
     } break;
@@ -4546,11 +4574,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case dconst_0:
-      frame->pushDouble(c->constant(doubleToBits(0.0), types.f4));
+      frame->pushDouble(c->constant(doubleToBits(0.0), types.f8));
       break;
       
     case dconst_1:
-      frame->pushDouble(c->constant(doubleToBits(1.0), types.f4));
+      frame->pushDouble(c->constant(doubleToBits(1.0), types.f8));
       break;
 
     case dneg: {
@@ -4723,7 +4751,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               ir::SignExtend,
               types.i1,
               c->memory(table, types.i4, targetFieldOffset(context, field)),
-              types.address));
+              types.i4));
           break;
 
         case CharField:
@@ -4731,7 +4759,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               ir::ZeroExtend,
               types.i2,
               c->memory(table, types.i4, targetFieldOffset(context, field)),
-              types.address));
+              types.i4));
           break;
 
         case ShortField:
@@ -4739,7 +4767,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               ir::SignExtend,
               types.i2,
               c->memory(table, types.i4, targetFieldOffset(context, field)),
-              types.address));
+              types.i4));
           break;
 
         case FloatField:
@@ -4755,7 +4783,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               ir::SignExtend,
               types.i4,
               c->memory(table, types.i4, targetFieldOffset(context, field)),
-              types.address));
+              types.i4));
           break;
 
         case DoubleField:
@@ -4869,12 +4897,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case i2b: {
       frame->pushInt(c->truncateThenExtend(
-          ir::SignExtend, types.address, types.i1, frame->popInt()));
+          ir::SignExtend, types.i4, types.i1, frame->popInt()));
     } break;
 
     case i2c: {
       frame->pushInt(c->truncateThenExtend(
-          ir::ZeroExtend, types.address, types.i2, frame->popInt()));
+          ir::ZeroExtend, types.i4, types.i2, frame->popInt()));
     } break;
 
     case i2d: {
@@ -4892,7 +4920,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case i2s: {
       frame->pushInt(c->truncateThenExtend(
-          ir::SignExtend, types.address, types.i2, frame->popInt()));
+          ir::SignExtend, types.i4, types.i2, frame->popInt()));
     } break;
       
     case iadd:
@@ -5033,6 +5061,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       storeLocal(context,
                  1,
+                 types.i4,
                  c->binaryOp(lir::Add,
                              types.i4,
                              c->constant(count, types.i4),
@@ -5324,28 +5353,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto next;
 
     case istore:
-    case fstore:
       frame->storeInt(codeBody(t, code, ip++));
+      break;
+    case fstore:
+      frame->storeFloat(codeBody(t, code, ip++));
       break;
 
     case istore_0:
-    case fstore_0:
       frame->storeInt(0);
+      break;
+    case fstore_0:
+      frame->storeFloat(0);
       break;
 
     case istore_1:
-    case fstore_1:
       frame->storeInt(1);
+      break;
+    case fstore_1:
+      frame->storeFloat(1);
       break;
 
     case istore_2:
-    case fstore_2:
       frame->storeInt(2);
+      break;
+    case fstore_2:
+      frame->storeFloat(2);
       break;
 
     case istore_3:
-    case fstore_3:
       frame->storeInt(3);
+      break;
+    case fstore_3:
+      frame->storeFloat(3);
       break;
 
     case jsr:
@@ -5648,28 +5687,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lstore:
-    case dstore:
       frame->storeLong(codeBody(t, code, ip++));
+      break;
+    case dstore:
+      frame->storeDouble(codeBody(t, code, ip++));
       break;
 
     case lstore_0:
-    case dstore_0:
       frame->storeLong(0);
+      break;
+    case dstore_0:
+      frame->storeDouble(0);
       break;
 
     case lstore_1:
-    case dstore_1:
       frame->storeLong(1);
+      break;
+    case dstore_1:
+      frame->storeDouble(1);
       break;
 
     case lstore_2:
-    case dstore_2:
       frame->storeLong(2);
+      break;
+    case dstore_2:
+      frame->storeDouble(2);
       break;
 
     case lstore_3:
-    case dstore_3:
       frame->storeLong(3);
+      break;
+    case dstore_3:
+      frame->storeDouble(3);
       break;
 
     case monitorenter: {
@@ -6152,6 +6201,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         storeLocal(context,
                    1,
+                   types.i4,
                    c->binaryOp(lir::Add,
                                types.i4,
                                c->constant(count, types.i4),

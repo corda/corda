@@ -1253,15 +1253,6 @@ Value* loadLocal(Context* c, ir::Type type, unsigned index)
     fprintf(stderr, "load local %p at %d\n", c->locals[index].value, index);
   }
 
-  assert(c,
-         type.flavor() != ir::Type::Object
-         || c->locals[index].value->type.flavor() == ir::Type::Object
-            // TODO: this is a very java-specific hole in the type system.  Get
-            // rid of it:
-         || c->locals[index].value->type.flavor() == ir::Type::Address
-            // TODO Temporary hack for Subroutine test!!!
-         || c->locals[index].value->type.flavor() == ir::Type::Invalid);
-
   return c->locals[index].value;
 }
 
@@ -2522,7 +2513,10 @@ class MyCompiler: public Compiler {
   {
     // TODO: once type information is flowed properly, enable this assert.
     // Some time later, we can remove the parameter.
-    // assert(&c, a->type == type);
+    assert(&c,
+           a->type == type
+           // TODO Temporary hack for Subroutine test!!!
+           || a->type.flavor() == ir::Type::Invalid);
     appendReturn(&c, type.size(), static_cast<Value*>(a));
   }
 
@@ -2641,7 +2635,8 @@ class MyCompiler: public Compiler {
                TargetBytesPerWord,
                truncateType.size(),
                static_cast<Value*>(src),
-               extendType.size(),
+               extendType.size() < TargetBytesPerWord ? TargetBytesPerWord
+                                                      : extendType.size(),
                dst);
     return dst;
   }
@@ -2724,7 +2719,7 @@ class MyCompiler: public Compiler {
            (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
            or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
-    Value* result = value(&c, a->type);
+    Value* result = value(&c, type);
 
     appendCombine(&c,
                   op,
