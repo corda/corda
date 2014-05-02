@@ -2033,7 +2033,7 @@ class Frame {
     }
   }
 
-  Slice<ir::Value*> peekMethodArguments(unsigned footprint UNUSED)
+  Slice<ir::Value*> peekMethodArguments(unsigned footprint)
   {
     ir::Value** ptr = context->argumentBuffer.items;
 

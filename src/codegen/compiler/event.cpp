@@ -386,13 +386,11 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (callingConvention == ir::AvianCallingConvention) {
-      Stack* s2 = stack;
       for (size_t i = 0; i < arguments.count; i++) {
-        s2 = s2->next;
+        stack = stack->next;
       }
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = static_cast<Value*>(arguments[i]);
-        stack = stack->next;
 
         if ((vm::TargetBytesPerWord == 8
              && (v == 0 || (i >= 1 && arguments[i - 1] == 0)))
@@ -403,12 +401,9 @@ class CallEvent: public Event {
 
           arguments[i] = arguments[i - 1];
           --i;
-          stack = stack->next;
         }
         arguments[i] = v;
       }
-
-      assert(c, s2 == stack);
 
       int returnAddressIndex;
       int framePointerIndex;
