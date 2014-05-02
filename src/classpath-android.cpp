@@ -2227,11 +2227,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_nio_ByteOrder_isLittleEndian
 (Thread*, object, uintptr_t*)
 {
-#ifdef ARCH_powerpc
-  return false;
-#else
   return true;
-#endif
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -2432,8 +2428,6 @@ Avian_libcore_io_Posix_uname(Thread* t, object, uintptr_t*)
   object arch = makeString(t, "x86");
 #elif defined ARCH_x86_64
   object arch = makeString(t, "x86_64");
-#elif defined ARCH_powerpc
-  object arch = makeString(t, "ppc");
 #elif defined ARCH_arm
   object arch = makeString(t, "arm");
 #else

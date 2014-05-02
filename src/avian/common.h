@@ -28,10 +28,6 @@
 #include "float.h"
 #include <stdint.h>
 
-#ifdef powerpc
-#  undef powerpc
-#endif
-
 #ifdef linux
 #  undef linux
 #endif
@@ -126,8 +122,6 @@ typedef intptr_t intptr_alias_t;
 #    define ARCH_x86_32
 #  elif defined __x86_64__
 #    define ARCH_x86_64
-#  elif (defined __POWERPC__) || (defined __powerpc__)
-#    define ARCH_powerpc
 #  elif defined __arm__
 #    define ARCH_arm
 #  else
@@ -151,7 +145,7 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
 #  define PATH_SEPARATOR ':'
 #endif // not PLATFORM_WINDOWS
 
-#if (defined ARCH_x86_32) || (defined ARCH_powerpc) || (defined ARCH_arm)
+#if (defined ARCH_x86_32) || (defined ARCH_arm)
 #  define LD "ld"
 #  if (defined _MSC_VER) || ((defined __MINGW32__) && __GNUC__ >= 4)
 #    define LLD "I64d"

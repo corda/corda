@@ -8981,10 +8981,10 @@ class MyProcessor: public Processor {
         } else if (isThunk(t, ip) or isVirtualThunk(t, ip)) {
           // we caught the thread in a thunk where the stack register
           // indicates the most recent Java frame on the stack
-          
+
           // On e.g. x86, the return address will have already been
           // pushed onto the stack, in which case we use getIp to
-          // retrieve it.  On e.g. PowerPC and ARM, it will be in the
+          // retrieve it.  On e.g. ARM, it will be in the
           // link register.  Note that we can't just check if the link
           // argument is null here, since we use ecx/rcx as a
           // pseudo-link register on x86 for the purpose of tail

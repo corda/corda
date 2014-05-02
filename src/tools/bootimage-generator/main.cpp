@@ -1907,9 +1907,9 @@ main(int ac, const char** av)
 
   // todo: currently, the compiler cannot compile code with jumps or
   // calls spanning more than the maximum size of an immediate value
-  // in a branch instruction for the target architecture (~32MB on
-  // PowerPC and ARM).  When that limitation is removed, we'll be able
-  // to specify a capacity as large as we like here:
+  // in a branch instruction for the target architecture (~32MB on ARM).
+  // When that limitation is removed, we'll be able to specify a
+  // capacity as large as we like here:
 #if (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64) \
   || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
   const unsigned CodeCapacity = 128 * 1024 * 1024;

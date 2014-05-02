@@ -2986,8 +2986,6 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty(t, method, *properties, "os.arch", "x86");
 #elif defined ARCH_x86_64
   local::setProperty(t, method, *properties, "os.arch", "x86_64");
-#elif defined ARCH_powerpc
-  local::setProperty(t, method, *properties, "os.arch", "ppc");
 #elif defined ARCH_arm
   local::setProperty(t, method, *properties, "os.arch", "arm");
 #else

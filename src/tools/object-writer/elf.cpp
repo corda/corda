@@ -49,7 +49,6 @@
 #define EM_386 3
 #define EM_X86_64 62
 #define EM_ARM 40
-#define EM_PPC 20
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -130,8 +129,6 @@ unsigned getElfPlatform(PlatformInfo::Architecture arch) {
     return EM_386;
   case PlatformInfo::Arm:
     return EM_ARM;
-  case PlatformInfo::PowerPC:
-    return EM_PPC;
   default:
     return ~0;
   }
@@ -375,7 +372,6 @@ public:
 
 ElfPlatform<uint32_t> elfX86Platform(PlatformInfo::x86);
 ElfPlatform<uint32_t> elfArmPlatform(PlatformInfo::Arm);
-ElfPlatform<uint32_t, false> elfPowerPCPlatform(PlatformInfo::PowerPC);
 ElfPlatform<uint64_t> elfX86_64Platform(PlatformInfo::x86_64);
 
 } // namespace
