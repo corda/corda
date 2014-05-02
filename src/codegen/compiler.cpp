@@ -2482,14 +2482,6 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    Stack* argumentStack = c.stack;
-    for (int i = index - 1; i >= 0; --i) {
-      argumentStack = compiler::stack(
-          &c,
-          static_cast<Value*>(RUNTIME_ARRAY_BODY(arguments)[i]),
-          argumentStack);
-    }
-
     Value* result = value(&c, resultType);
     appendCall(&c,
                static_cast<Value*>(address),
@@ -2498,7 +2490,6 @@ class MyCompiler: public Compiler {
                traceHandler,
                result,
                resultType.size(),
-               argumentStack,
                util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(arguments), index));
 
     return result;
@@ -2518,7 +2509,6 @@ class MyCompiler: public Compiler {
                traceHandler,
                result,
                resultType.size(),
-               c.stack,
                arguments);
     return result;
   }

@@ -221,19 +221,26 @@ struct FixedSliceStack : public SliceStack<T> {
   }
 };
 
-Value* pushWordSlice(Context* c, Value* v, SliceStack<ir::Value*>& slice)
+Value* pushWordSlice(Context* c,
+                     Value* v,
+                     size_t stackBase UNUSED,
+                     SliceStack<ir::Value*>& slice)
 {
   if (v) {
     v = maybeBuddySlice(c, v);
   }
 
+  size_t index UNUSED = slice.count;
+
   Stack* s = stack(c, v, c->stack);
-  assert(c, index > 0);
+  assert(c, slice.count < slice.capacity);
   slice.push(v);
 
   // if (DebugFrame) {
   //   fprintf(stderr, "push %p\n", v);
   // }
+
+  assert(c, s->index == index + stackBase);
 
   if (v) {
     v->home = frameIndex(c, s->index + c->localFootprint);
@@ -246,6 +253,7 @@ Value* pushWordSlice(Context* c, Value* v, SliceStack<ir::Value*>& slice)
 void pushSlice(Context* c,
                unsigned footprint,
                Value* v,
+               size_t stackBase,
                SliceStack<ir::Value*>& slice)
 {
   assert(c, footprint);
@@ -255,7 +263,7 @@ void pushSlice(Context* c,
   Value* low = v;
 
   if (bigEndian) {
-    v = pushWordSlice(c, v, slice);
+    v = pushWordSlice(c, v, stackBase, slice);
   }
 
   Value* high;
@@ -264,16 +272,16 @@ void pushSlice(Context* c,
 
     if (vm::TargetBytesPerWord == 4) {
       low->maybeSplit(c);
-      high = pushWordSlice(c, low->nextWord, slice);
+      high = pushWordSlice(c, low->nextWord, stackBase, slice);
     } else {
-      high = pushWordSlice(c, 0, slice);
+      high = pushWordSlice(c, 0, stackBase, slice);
     }
   } else {
     high = 0;
   }
 
   if (not bigEndian) {
-    v = pushWordSlice(c, v, slice);
+    v = pushWordSlice(c, v, stackBase, slice);
   }
 
   if (high) {
@@ -292,7 +300,6 @@ class CallEvent: public Event {
             TraceHandler* traceHandler,
             Value* result,
             unsigned resultSize,
-            Stack* argumentStack,
             util::Slice<ir::Value*> arguments)
       : Event(c),
         address(address),
@@ -314,18 +321,15 @@ class CallEvent: public Event {
       assert(c, (flags & Compiler::TailJump) == 0);
       assert(c, stackArgumentFootprint == 0);
 
-      Stack* s = argumentStack;
       unsigned index = 0;
       unsigned argumentIndex = 0;
 
       while (true) {
-        assert(c, arguments[index] == s->value);
-        assert(c,
-               argumentIndex + 1 >= arguments.count || arguments[index + 1]
-                                                       == s->next->value);
+        Value* v = static_cast<Value*>(arguments[index]);
+
         unsigned footprint
-            = (argumentIndex + 1 < arguments.count and s->value->nextWord
-               == s->next->value)
+            = (argumentIndex + 1 < arguments.count and v->nextWord
+               == arguments[index + 1])
                   ? 2
                   : 1;
 
@@ -338,9 +342,9 @@ class CallEvent: public Event {
             <= c->arch->argumentRegisterCount())
         {
           int number = c->arch->argumentRegister(index);
-        
+
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", number, s->value);
+            fprintf(stderr, "reg %d arg read %p\n", number, v);
           }
 
           targetMask = SiteMask::fixedRegisterMask(number);
@@ -353,19 +357,17 @@ class CallEvent: public Event {
           unsigned frameIndex = index - c->arch->argumentRegisterCount();
 
           if (DebugReads) {
-            fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+            fprintf(stderr, "stack %d arg read %p\n", frameIndex, v);
           }
 
           targetMask = SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
         }
 
-        this->addRead(c, s->value, targetMask);
+        this->addRead(c, v, targetMask);
 
         ++ index;
 
-        if ((++argumentIndex) < arguments.count) {
-          s = s->next;
-        } else {
+        if ((++argumentIndex) >= arguments.count) {
           break;
         }
       }
@@ -390,6 +392,7 @@ class CallEvent: public Event {
     Stack* stack = stackBefore;
 
     if (callingConvention == ir::AvianCallingConvention) {
+      // assert(c, argumentStack = )
       for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
         Value* v = static_cast<Value*>(arguments[i]);
         stack = stack->next;
@@ -611,7 +614,6 @@ void appendCall(Context* c,
                 TraceHandler* traceHandler,
                 Value* result,
                 unsigned resultSize,
-                Stack* argumentStack,
                 util::Slice<ir::Value*> arguments)
 {
   append(c,
@@ -622,7 +624,6 @@ void appendCall(Context* c,
                                  traceHandler,
                                  result,
                                  resultSize,
-                                 argumentStack,
                                  arguments));
 }
 
@@ -1036,6 +1037,7 @@ appendCombine(Context* c, lir::TernaryOperation type,
   if (thunk) {
     FixedSliceStack<ir::Value*, 6> slice;
     Stack* oldStack = c->stack;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
     intptr_t handler = c->client->getThunk
@@ -1047,17 +1049,21 @@ appendCombine(Context* c, lir::TernaryOperation type,
     pushSlice(c,
               ceilingDivide(secondSize, vm::TargetBytesPerWord),
               secondValue,
+              stackBase,
               slice);
-    pushSlice(
-        c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue, slice);
+    pushSlice(c,
+              ceilingDivide(firstSize, vm::TargetBytesPerWord),
+              firstValue,
+              stackBase,
+              slice);
 
     if (threadParameter) {
       ++ stackSize;
 
-      pushSlice(c, 1, threadRegister(c), slice);
+      pushSlice(c, 1, threadRegister(c), stackBase, slice);
     }
 
-    Stack* argumentStack = c->stack;
+    // assert(c, c->stack == oldStack);
     c->stack = oldStack;
 
     appendCall(c,
@@ -1069,7 +1075,6 @@ appendCombine(Context* c, lir::TernaryOperation type,
                0,
                resultValue,
                resultSize,
-               argumentStack,
                slice);
   } else {
     append
@@ -1176,12 +1181,16 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
 
   if (thunk) {
     Stack* oldStack = c->stack;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
     FixedSliceStack<ir::Value*, 2> slice;
 
-    pushSlice(
-        c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue, slice);
+    pushSlice(c,
+              ceilingDivide(firstSize, vm::TargetBytesPerWord),
+              firstValue,
+              stackBase,
+              slice);
 
-    Stack* argumentStack = c->stack;
+    // assert(c, c->stack == oldStack);
     c->stack = oldStack;
 
     appendCall(c,
@@ -1194,7 +1203,6 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
                0,
                resultValue,
                resultSize,
-               argumentStack,
                slice);
   } else {
     append(c, new(c->zone)
@@ -1536,6 +1544,7 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
   if (thunk) {
     FixedSliceStack<ir::Value*, 4> slice;
     Stack* oldStack = c->stack;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
     intptr_t handler = c->client->getThunk
@@ -1543,12 +1552,18 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
 
     assert(c, not threadParameter);
 
-    pushSlice(
-        c, ceilingDivide(size, vm::TargetBytesPerWord), secondValue, slice);
-    pushSlice(
-        c, ceilingDivide(size, vm::TargetBytesPerWord), firstValue, slice);
+    pushSlice(c,
+              ceilingDivide(size, vm::TargetBytesPerWord),
+              secondValue,
+              stackBase,
+              slice);
+    pushSlice(c,
+              ceilingDivide(size, vm::TargetBytesPerWord),
+              firstValue,
+              stackBase,
+              slice);
 
-    Stack* argumentStack = c->stack;
+    // assert(c, c->stack == oldStack);
     c->stack = oldStack;
 
     Value* result
@@ -1562,7 +1577,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                0,
                result,
                4,
-               argumentStack,
                slice);
 
     appendBranch(c,

@@ -120,7 +120,6 @@ void appendCall(Context* c,
                 TraceHandler* traceHandler,
                 Value* result,
                 unsigned resultSize,
-                Stack* argumentStack,
                 util::Slice<ir::Value*> arguments);
 
 void
