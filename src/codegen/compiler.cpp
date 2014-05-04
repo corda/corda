@@ -2562,6 +2562,10 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* truncate(ir::Type type, ir::Type srcType, ir::Value* src)
   {
+    assert(&c, srcType == src->type);
+    assert(&c, src->type.flavor() == type.flavor());
+    assert(&c, type.flavor() != ir::Type::Float);
+    assert(&c, type.size() < src->type.size());
     Value* dst = value(&c, type);
     appendMove(&c,
                lir::Move,
