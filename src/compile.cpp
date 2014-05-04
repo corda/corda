@@ -1715,7 +1715,6 @@ class Frame {
 
   void pushLongQuiet(ir::Value* o)
   {
-    // assert(t, o->type == types.i8);
     pushQuiet(types.i8, o);
   }
 
@@ -4358,7 +4357,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(types.object, frame->popObject());
+      c->return_(frame->popObject());
     } goto next;
 
     case arraylength: {
@@ -5273,13 +5272,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case ireturn: {
       handleExit(t, frame);
-      c->return_(types.i4, frame->popInt());
+      c->return_(frame->popInt());
     }
       goto next;
 
     case freturn: {
       handleExit(t, frame);
-      c->return_(types.f4, frame->popInt());
+      c->return_(frame->popInt());
     } goto next;
 
     case istore:
@@ -5594,13 +5593,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case lreturn: {
       handleExit(t, frame);
-      c->return_(types.i8, frame->popLong());
+      c->return_(frame->popLong());
     }
       goto next;
 
     case dreturn: {
       handleExit(t, frame);
-      c->return_(types.f8, frame->popLong());
+      c->return_(frame->popLong());
     } goto next;
 
     case lshl:

@@ -2462,10 +2462,9 @@ class MyCompiler: public Compiler {
     return result;
   }
 
-  virtual void return_(ir::Type type, ir::Value* a)
+  virtual void return_(ir::Value* a)
   {
-    assert(&c, a->type == type);
-    appendReturn(&c, type.size(), static_cast<Value*>(a));
+    appendReturn(&c, a->type.size(), static_cast<Value*>(a));
   }
 
   virtual void return_()
