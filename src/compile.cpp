@@ -5178,12 +5178,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
             ir::Value* instance = c->peek(1, parameterFootprint - 1);
 
             frame->stackCall(
-                c->memory(c->binaryOp(lir::And,
-                                      types.address,
-                                      c->constant(TargetPointerMask, types.i4),
-                                      c->memory(instance, types.object)),
-                          types.object,
-                          offset),
+                c->memory(
+                    c->binaryOp(lir::And,
+                                types.address,
+                                c->constant(TargetPointerMask, types.address),
+                                c->memory(instance, types.object)),
+                    types.object,
+                    offset),
                 target,
                 tailCall ? Compiler::TailJump : 0,
                 frame->trace(0, 0));

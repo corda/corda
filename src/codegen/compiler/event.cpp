@@ -1008,29 +1008,32 @@ class CombineEvent: public Event {
   Value* resultValue;
 };
 
-void
-appendCombine(Context* c, lir::TernaryOperation type,
-              unsigned firstSize, Value* firstValue,
-              unsigned secondSize, Value* secondValue,
-              unsigned resultSize, Value* resultValue)
+void appendCombine(Context* c,
+                   lir::TernaryOperation op,
+                   unsigned firstSize,
+                   Value* firstValue,
+                   unsigned secondSize,
+                   Value* secondValue,
+                   unsigned resultSize,
+                   Value* resultValue)
 {
+  assert(c, firstSize == firstValue->type.size());
+  assert(c, secondSize == secondValue->type.size());
+  assert(c, resultSize == resultValue->type.size());
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
 
-  c->arch->planSource(type,
-                      firstSize, firstMask,
-                      secondSize, secondMask,
-                      resultSize,
-                      &thunk);
+  c->arch->planSource(
+      op, firstSize, firstMask, secondSize, secondMask, resultSize, &thunk);
 
   if (thunk) {
     FixedSliceStack<ir::Value*, 6> slice;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
-    intptr_t handler = c->client->getThunk
-      (type, firstSize, resultSize, &threadParameter);
+    intptr_t handler
+        = c->client->getThunk(op, firstSize, resultSize, &threadParameter);
 
     unsigned stackSize = ceilingDivide(secondSize, vm::TargetBytesPerWord)
       + ceilingDivide(firstSize, vm::TargetBytesPerWord);
@@ -1063,17 +1066,19 @@ appendCombine(Context* c, lir::TernaryOperation type,
                resultSize,
                slice);
   } else {
-    append
-      (c, new(c->zone)
-       CombineEvent
-       (c, type,
-        firstSize, firstValue,
-        secondSize, secondValue,
-        resultSize, resultValue,
-        SiteMask::lowPart(firstMask),
-        SiteMask::highPart(firstMask),
-        SiteMask::lowPart(secondMask),
-        SiteMask::highPart(secondMask)));
+    append(c,
+           new (c->zone) CombineEvent(c,
+                                      op,
+                                      firstSize,
+                                      firstValue,
+                                      secondSize,
+                                      secondValue,
+                                      resultSize,
+                                      resultValue,
+                                      SiteMask::lowPart(firstMask),
+                                      SiteMask::highPart(firstMask),
+                                      SiteMask::lowPart(secondMask),
+                                      SiteMask::highPart(secondMask)));
   }
 }
 
@@ -1155,15 +1160,20 @@ class TranslateEvent: public Event {
   SiteMask resultHighMask;
 };
 
-void
-appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
-                Value* firstValue, unsigned resultSize, Value* resultValue)
+void appendTranslate(Context* c,
+                     lir::BinaryOperation op,
+                     unsigned firstSize,
+                     Value* firstValue,
+                     unsigned resultSize,
+                     Value* resultValue)
 {
+  assert(c, firstSize == firstValue->type.size());
+  assert(c, resultSize == resultValue->type.size());
+
   bool thunk;
   OperandMask first;
 
-  c->arch->planSource(type, firstSize, first,
-                resultSize, &thunk);
+  c->arch->planSource(op, firstSize, first, resultSize, &thunk);
 
   if (thunk) {
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
@@ -1175,23 +1185,27 @@ appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
               stackBase,
               slice);
 
-    appendCall(c,
-               value(c,
-                     ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
-                     constantSite(
-                         c, c->client->getThunk(type, firstSize, resultSize))),
-               ir::NativeCallingConvention,
-               0,
-               0,
-               resultValue,
-               resultSize,
-               slice);
+    appendCall(
+        c,
+        value(c,
+              ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
+              constantSite(c, c->client->getThunk(op, firstSize, resultSize))),
+        ir::NativeCallingConvention,
+        0,
+        0,
+        resultValue,
+        resultSize,
+        slice);
   } else {
-    append(c, new(c->zone)
-           TranslateEvent
-           (c, type, firstSize, firstValue, resultSize, resultValue,
-            SiteMask::lowPart(first),
-            SiteMask::highPart(first)));
+    append(c,
+           new (c->zone) TranslateEvent(c,
+                                        op,
+                                        firstSize,
+                                        firstValue,
+                                        resultSize,
+                                        resultValue,
+                                        SiteMask::lowPart(first),
+                                        SiteMask::highPart(first)));
   }
 }
 

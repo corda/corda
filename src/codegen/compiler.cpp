@@ -2668,9 +2668,9 @@ class MyCompiler: public Compiler {
 
     appendCombine(&c,
                   op,
-                  type.size(),
+                  a->type.size(),
                   static_cast<Value*>(a),
-                  type.size(),
+                  b->type.size(),
                   static_cast<Value*>(b),
                   type.size(),
                   result);
