@@ -115,7 +115,6 @@ class Compiler {
 
   virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst) = 0;
   virtual ir::Value* load(ir::SignExtendMode signExtend,
-                          ir::Type srcType,
                           ir::Value* src,
                           ir::Type dstType) = 0;
 

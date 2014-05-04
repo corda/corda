@@ -3739,7 +3739,6 @@ ir::Value* popLongAddress(Frame* frame)
   ir::Types types(TargetBytesPerWord);
   return TargetBytesPerWord == 8 ? frame->popLong()
                                  : frame->c->load(ir::SignExtend,
-                                                  types.i8,
                                                   frame->popLong(),
                                                   types.address);
 }
@@ -3783,7 +3782,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(c->load(
-          ir::SignExtend, types.i1, c->memory(address, types.i1), types.i4));
+          ir::SignExtend, c->memory(address, types.i1), types.i4));
       return true;
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
@@ -3801,7 +3800,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushInt(c->load(
-          ir::SignExtend, types.i2, c->memory(address, types.i2), types.i4));
+          ir::SignExtend, c->memory(address, types.i2), types.i4));
       return true;
     } else if ((MATCH(methodName(t, target), "putShort")
                 and MATCH(methodSpec(t, target), "(JS)V"))
@@ -3823,7 +3822,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Type type = MATCH(methodName(t, target), "getInt") ? types.i4
                                                              : types.f4;
       frame->pushSmall(
-          c->load(ir::SignExtend, type, c->memory(address, type), type));
+          c->load(ir::SignExtend, c->memory(address, type), type));
       return true;
     } else if ((MATCH(methodName(t, target), "putInt")
                 and MATCH(methodSpec(t, target), "(JI)V"))
@@ -3847,7 +3846,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Type type = MATCH(methodName(t, target), "getLong") ? types.i8
                                                               : types.f8;
       frame->pushLarge(
-          c->load(ir::SignExtend, type, c->memory(address, type), type));
+          c->load(ir::SignExtend, c->memory(address, type), type));
       return true;
     } else if ((MATCH(methodName(t, target), "putLong")
                 and MATCH(methodSpec(t, target), "(JJ)V"))
@@ -3867,7 +3866,6 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
       frame->pushLong(c->load(ir::SignExtend,
-                              types.address,
                               c->memory(address, types.address),
                               types.i8));
       return true;
@@ -4148,7 +4146,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case aaload:
         frame->pushObject(
             c->load(ir::SignExtend,
-                    types.object,
                     c->memory(array, types.object, TargetArrayBody, index),
                     types.object));
         break;
@@ -4156,7 +4153,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case faload:
         frame->pushFloat(
             c->load(ir::SignExtend,
-                    types.f4,
                     c->memory(array, types.f4, TargetArrayBody, index),
                     types.f4));
         break;
@@ -4164,7 +4160,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case iaload:
         frame->pushInt(
             c->load(ir::SignExtend,
-                    types.i4,
                     c->memory(array, types.i4, TargetArrayBody, index),
                     types.i4));
         break;
@@ -4172,7 +4167,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case baload:
         frame->pushInt(
             c->load(ir::SignExtend,
-                    types.i1,
                     c->memory(array, types.i1, TargetArrayBody, index),
                     types.i4));
         break;
@@ -4180,7 +4174,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case caload:
         frame->pushInt(
             c->load(ir::ZeroExtend,
-                    types.i2,
                     c->memory(array, types.i2, TargetArrayBody, index),
                     types.i4));
         break;
@@ -4188,7 +4181,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case daload:
         frame->pushDouble(
             c->load(ir::SignExtend,
-                    types.f8,
                     c->memory(array, types.f8, TargetArrayBody, index),
                     types.f8));
         break;
@@ -4196,7 +4188,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case laload:
         frame->pushLong(
             c->load(ir::SignExtend,
-                    types.i8,
                     c->memory(array, types.i8, TargetArrayBody, index),
                     types.i8));
         break;
@@ -4204,7 +4195,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       case saload:
         frame->pushInt(
             c->load(ir::SignExtend,
-                    types.i2,
                     c->memory(array, types.i2, TargetArrayBody, index),
                     types.i4));
         break;
@@ -4363,7 +4353,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case arraylength: {
       frame->pushInt(c->load(
           ir::SignExtend,
-          types.address,
           c->memory(frame->popObject(), types.address, TargetArrayLength),
           types.i4));
     } break;
@@ -4678,7 +4667,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case BooleanField:
           frame->pushInt(c->load(
               ir::SignExtend,
-              types.i1,
               c->memory(table, types.i1, targetFieldOffset(context, field)),
               types.i4));
           break;
@@ -4686,7 +4674,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case CharField:
           frame->pushInt(c->load(
               ir::ZeroExtend,
-              types.i2,
               c->memory(table, types.i2, targetFieldOffset(context, field)),
               types.i4));
           break;
@@ -4694,7 +4681,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case ShortField:
           frame->pushInt(c->load(
               ir::SignExtend,
-              types.i2,
               c->memory(table, types.i2, targetFieldOffset(context, field)),
               types.i4));
           break;
@@ -4702,7 +4688,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case FloatField:
           frame->pushFloat(c->load(
               ir::SignExtend,
-              types.f4,
               c->memory(table, types.f4, targetFieldOffset(context, field)),
               types.f4));
           break;
@@ -4710,7 +4695,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case IntField:
           frame->pushInt(c->load(
               ir::SignExtend,
-              types.i4,
               c->memory(table, types.i4, targetFieldOffset(context, field)),
               types.i4));
           break;
@@ -4718,7 +4702,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case DoubleField:
           frame->pushDouble(c->load(
               ir::SignExtend,
-              types.f8,
               c->memory(table, types.f8, targetFieldOffset(context, field)),
               types.f8));
           break;
@@ -4726,7 +4709,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case LongField:
           frame->pushLong(c->load(
               ir::SignExtend,
-              types.i8,
               c->memory(table, types.i8, targetFieldOffset(context, field)),
               types.i8));
           break;
@@ -4734,7 +4716,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         case ObjectField:
           frame->pushObject(c->load(
               ir::SignExtend,
-              types.object,
               c->memory(table, types.object, targetFieldOffset(context, field)),
               types.object));
           break;
@@ -6233,7 +6214,6 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                  normalizedKey);
 
     c->jmp(c->load(ir::SignExtend,
-                   types.address,
                    context->bootContext
                        ? c->binaryOp(lir::Add,
                                      types.address,

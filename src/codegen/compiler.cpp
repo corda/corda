@@ -2607,19 +2607,16 @@ class MyCompiler: public Compiler {
   }
 
   virtual ir::Value* load(ir::SignExtendMode signExtend,
-                          ir::Type srcType,
                           ir::Value* src,
                           ir::Type dstType)
   {
-    assert(&c, srcType.flavor() == dstType.flavor());
     assert(&c, src->type.flavor() == dstType.flavor());
-    assert(&c, src->type == srcType);
 
     Value* dst = value(&c, dstType);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
-               srcType.size(),
-               srcType.size(),
+               src->type.size(),
+               src->type.size(),
                static_cast<Value*>(src),
                dstType.size() < TargetBytesPerWord ? TargetBytesPerWord
                                                    : dstType.size(),
