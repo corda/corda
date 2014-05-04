@@ -2534,10 +2534,9 @@ class MyCompiler: public Compiler {
     linkLocals(&c, e->locals(), newLocals);
   }
 
-  virtual void storeLocal(unsigned footprint, ir::Value* src, unsigned index)
+  virtual void storeLocal(ir::Value* src, unsigned index)
   {
-    assert(&c, typeFootprint(src->type) == footprint);
-    compiler::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
+    compiler::storeLocal(&c, typeFootprint(&c, src->type), static_cast<Value*>(src), index, true);
   }
 
   virtual ir::Value* loadLocal(ir::Type type, unsigned index)
