@@ -3790,7 +3790,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Value* value = frame->popInt();
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address, value, c->memory(address, types.i1));
+      c->store(types.i4, value, c->memory(address, types.i1));
       return true;
     } else if ((MATCH(methodName(t, target), "getShort")
                 and MATCH(methodSpec(t, target), "(J)S"))
@@ -3810,7 +3810,7 @@ intrinsic(MyThread* t, Frame* frame, object target)
       ir::Value* value = frame->popInt();
       ir::Value* address = popLongAddress(frame);
       frame->popObject();
-      c->store(types.address, value, c->memory(address, types.i2));
+      c->store(types.i4, value, c->memory(address, types.i2));
       return true;
     } else if ((MATCH(methodName(t, target), "getInt")
                 and MATCH(methodSpec(t, target), "(J)I"))
@@ -4257,20 +4257,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         break;
 
       case iastore:
-        c->store(types.address,
+        c->store(types.i4,
                  value,
                  c->memory(array, types.i4, TargetArrayBody, index));
         break;
 
       case bastore:
-        c->store(types.address,
+        c->store(types.i4,
                  value,
                  c->memory(array, types.i1, TargetArrayBody, index));
         break;
 
       case castore:
       case sastore:
-        c->store(types.address,
+        c->store(types.i4,
                  value,
                  c->memory(array, types.i2, TargetArrayBody, index));
         break;

@@ -2595,6 +2595,7 @@ class MyCompiler: public Compiler {
 
   virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst)
   {
+    assert(&c, srcType == src->type);
     assert(&c, srcType.flavor() == src->type.flavor());
     assert(&c, srcType.flavor() == dst->type.flavor());
     assert(&c,
