@@ -42,18 +42,14 @@ class Compiler {
   static const unsigned LongJumpOrCall = 1 << 3;
 
   class State { };
-  class Subroutine { };
 
   virtual State* saveState() = 0;
   virtual void restoreState(State* state) = 0;
 
-  virtual Subroutine* startSubroutine() = 0;
-  virtual void returnFromSubroutine(Subroutine* subroutine, ir::Value* address)
-      = 0;
-  virtual void linkSubroutine(Subroutine* subroutine) = 0;
-
   virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize) = 0;
+
+  virtual void extendLogicalCode(unsigned more) = 0;
 
   virtual void visitLogicalIp(unsigned logicalIp) = 0;
   virtual void startLogicalIp(unsigned logicalIp) = 0;
@@ -76,7 +72,7 @@ class Compiler {
   virtual void push(ir::Type type, ir::Value* value) = 0;
   virtual void save(ir::Type type, ir::Value* value) = 0;
   virtual ir::Value* pop(ir::Type type) = 0;
-  virtual void pushed() = 0;
+  virtual void pushed(ir::Type type) = 0;
   virtual void popped(unsigned footprint) = 0;
   virtual unsigned topOfStack() = 0;
   virtual ir::Value* peek(unsigned footprint, unsigned index) = 0;

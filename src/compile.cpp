@@ -759,110 +759,43 @@ class PoolElement: public avian::codegen::Promise {
   PoolElement* next;
 };
 
-class Context;
-class SubroutineCall;
-
 class Subroutine {
  public:
-  Subroutine(unsigned ip, unsigned logIndex, Subroutine* listNext,
-             Subroutine* stackNext):
-    listNext(listNext),
-    stackNext(stackNext),
-    calls(0),
-    handle(0),
-    ip(ip),
-    logIndex(logIndex),
-    stackIndex(0),
-    callCount(0),
-    tableIndex(0),
-    visited(false)
+  Subroutine(unsigned index,
+             unsigned returnAddress,
+             unsigned methodSize,
+             Subroutine* outer)
+      : index(index),
+        outer(outer),
+        returnAddress(returnAddress),
+        duplicatedBaseIp(methodSize * index),
+        visited(false)
   { }
 
-  Subroutine* listNext;
-  Subroutine* stackNext;
-  SubroutineCall* calls;
-  Compiler::Subroutine* handle;
-  unsigned ip;
-  unsigned logIndex;
-  unsigned stackIndex;
-  unsigned callCount;
-  unsigned tableIndex;
+  // Index of this subroutine, in the (unmaterialized) list of subroutines in
+  // this method.
+  // Note that in the presence of nested finalls, this could theoretically end
+  // up being greater than the number of jsr instructions (but this will be
+  // extremely rare - I don't think we've seen this in practice).
+  const unsigned index;
+
+  // Subroutine outer to this one (if, for instance, we have nested finallys)
+  Subroutine* const outer;
+
+  // How many levels deep of subroutines we're nested in.
+  // Note: This should always be len(outer), when treated as a list.
+  // const unsigned nesting;
+
+  // Starting ip in the original bytecode (always < original bytecode size)
+  const unsigned returnAddress;
+
+  // Starting ip for this subroutine's copy of the method bytecode
+  const unsigned duplicatedBaseIp;
+
   bool visited;
 };
 
-class SubroutinePath;
-
-class SubroutineCall {
- public:
-  SubroutineCall(Subroutine* subroutine, avian::codegen::Promise* returnAddress):
-    subroutine(subroutine),
-    returnAddress(returnAddress),
-    paths(0),
-    next(subroutine->calls)
-  {
-    subroutine->calls = this;
-    ++ subroutine->callCount;
-  }
-
-  Subroutine* subroutine;
-  avian::codegen::Promise* returnAddress;
-  SubroutinePath* paths;
-  SubroutineCall* next;
-};
-
-class SubroutinePath {
- public:
-  SubroutinePath(SubroutineCall* call, SubroutinePath* stackNext,
-                 uintptr_t* rootTable):
-    call(call),
-    stackNext(stackNext),
-    listNext(call->paths),
-    rootTable(rootTable)
-  {
-    call->paths = this;
-  }
-
-  SubroutineCall* call;
-  SubroutinePath* stackNext;
-  SubroutinePath* listNext;
-  uintptr_t* rootTable;
-};
-
-void
-print(SubroutinePath* path)
-{
-  if (path) {
-    fprintf(stderr, " (");
-    while (true) {
-      fprintf(stderr, "%p", path->call->returnAddress->resolved() ?
-              reinterpret_cast<void*>(path->call->returnAddress->value()) : 0);
-      path = path->stackNext;
-      if (path) {
-        fprintf(stderr, ", ");
-      } else {
-        break;
-      }
-    }
-    fprintf(stderr, ")");
-  }
-}
-
-class SubroutineTrace {
- public:
-  SubroutineTrace(SubroutinePath* path, SubroutineTrace* next,
-                  unsigned mapSize):
-    path(path),
-    next(next),
-    watch(false)
-  {
-    memset(map, 0, mapSize * BytesPerWord);
-  }
-
-  SubroutinePath* path;
-  SubroutineTrace* next;
-  bool watch;
-  uintptr_t map[0];
-};
+class Context;
 
 class TraceElement: public avian::codegen::TraceHandler {
  public:
@@ -875,10 +808,8 @@ class TraceElement: public avian::codegen::TraceHandler {
     context(context),
     address(0),
     next(next),
-    subroutineTrace(0),
     target(target),
     ip(ip),
-    subroutineTraceCount(0),
     argumentIndex(0),
     flags(flags),
     watch(false)
@@ -896,10 +827,8 @@ class TraceElement: public avian::codegen::TraceHandler {
   Context* context;
   avian::codegen::Promise* address;
   TraceElement* next;
-  SubroutineTrace* subroutineTrace;
   object target;
   unsigned ip;
-  unsigned subroutineTraceCount;
   unsigned argumentIndex;
   unsigned flags;
   bool watch;
@@ -931,8 +860,6 @@ enum Event {
   ClearEvent,
   PushExceptionHandlerEvent,
   TraceEvent,
-  PushSubroutineEvent,
-  PopSubroutineEvent
 };
 
 unsigned
@@ -945,26 +872,6 @@ unsigned
 frameMapSizeInWords(MyThread* t, object method)
 {
   return ceilingDivide(frameMapSizeInBits(t, method), BitsPerWord);
-}
-
-uint16_t*
-makeVisitTable(MyThread* t, Zone* zone, object method)
-{
-  unsigned size = codeLength(t, methodCode(t, method)) * 2;
-  uint16_t* table = static_cast<uint16_t*>(zone->allocate(size));
-  memset(table, 0, size);
-  return table;
-}
-
-uintptr_t*
-makeRootTable(MyThread* t, Zone* zone, object method)
-{
-  unsigned size = frameMapSizeInWords(t, method)
-    * codeLength(t, methodCode(t, method))
-    * BytesPerWord;
-  uintptr_t* table = static_cast<uintptr_t*>(zone->allocate(size));
-  memset(table, 0xFF, size);
-  return table;
 }
 
 enum Thunk {
@@ -1124,7 +1031,7 @@ class Context {
             assert(t, resultSize == 8);
             return local::getThunk(t, intToDoubleThunk);
           }
-          
+
         default: abort(t);
         }
       }
@@ -1233,11 +1140,17 @@ class Context {
         method(method),
         bootContext(bootContext),
         objectPool(0),
-        subroutines(0),
+        subroutineCount(0),
         traceLog(0),
-        visitTable(makeVisitTable(t, &zone, method)),
-        rootTable(makeRootTable(t, &zone, method)),
-        subroutineTable(0),
+        visitTable(
+            Slice<uint16_t>::allocAndSet(&zone,
+                                         codeLength(t, methodCode(t, method)),
+                                         0)),
+        rootTable(
+            Slice<uintptr_t>::allocAndSet(&zone,
+                                          codeLength(t, methodCode(t, method))
+                                          * frameMapSizeInWords(t, method),
+                                          ~(uintptr_t)0)),
         executableAllocator(0),
         executableStart(0),
         executableSize(0),
@@ -1262,11 +1175,10 @@ class Context {
         method(0),
         bootContext(0),
         objectPool(0),
-        subroutines(0),
+        subroutineCount(0),
         traceLog(0),
-        visitTable(0),
-        rootTable(0),
-        subroutineTable(0),
+        visitTable(0, 0),
+        rootTable(0, 0),
         executableAllocator(0),
         executableStart(0),
         executableSize(0),
@@ -1304,6 +1216,16 @@ class Context {
     }
   }
 
+  void extendLogicalCode(unsigned more)
+  {
+    compiler->extendLogicalCode(more);
+    visitTable = visitTable.cloneAndSet(&zone, visitTable.count + more, 0);
+    rootTable = rootTable.cloneAndSet(
+        &zone,
+        rootTable.count + more * frameMapSizeInWords(thread, method),
+        ~(uintptr_t)0);
+  }
+
   MyThread* thread;
   Zone zone;
   avian::codegen::Assembler* assembler;
@@ -1312,11 +1234,10 @@ class Context {
   object method;
   BootContext* bootContext;
   PoolElement* objectPool;
-  Subroutine* subroutines;
+  unsigned subroutineCount;
   TraceElement* traceLog;
-  uint16_t* visitTable;
-  uintptr_t* rootTable;
-  Subroutine** subroutineTable;
+  Slice<uint16_t> visitTable;
+  Slice<uintptr_t> rootTable;
   Allocator* executableAllocator;
   void* executableStart;
   unsigned executableSize;
@@ -1750,29 +1671,43 @@ class Frame {
                : addressOperand(p);
   }
 
-  ir::Value* machineIp(unsigned logicalIp)
+  ir::Value* machineIpValue(unsigned logicalIp)
   {
-    return c->promiseConstant(c->machineIp(logicalIp), types.address);
+    return c->promiseConstant(machineIp(logicalIp), types.address);
   }
 
-  void visitLogicalIp(unsigned ip) {
-    c->visitLogicalIp(ip);
-
-    context->eventLog.append(IpEvent);
-    context->eventLog.append2(ip);
-  }
-
-  void startLogicalIp(unsigned ip) {
-    if (subroutine) {
-      context->subroutineTable[ip] = subroutine;
+  unsigned duplicatedIp(unsigned bytecodeIp)
+  {
+    if (UNLIKELY(subroutine)) {
+      return bytecodeIp + subroutine->duplicatedBaseIp;
+    } else {
+      return bytecodeIp;
     }
+  }
 
-    c->startLogicalIp(ip);
+  Promise* machineIp(unsigned bytecodeIp)
+  {
+    return c->machineIp(duplicatedIp(bytecodeIp));
+  }
+
+  void visitLogicalIp(unsigned bytecodeIp)
+  {
+    unsigned dupIp = duplicatedIp(bytecodeIp);
+    c->visitLogicalIp(dupIp);
 
     context->eventLog.append(IpEvent);
-    context->eventLog.append2(ip);
+    context->eventLog.append2(bytecodeIp);
+  }
 
-    this->ip = ip;
+  void startLogicalIp(unsigned bytecodeIp)
+  {
+    unsigned dupIp = duplicatedIp(bytecodeIp);
+    c->startLogicalIp(dupIp);
+
+    context->eventLog.append(IpEvent);
+    context->eventLog.append2(bytecodeIp);
+
+    this->ip = bytecodeIp;
   }
 
   void pushQuiet(ir::Type type, ir::Value* o)
@@ -1817,25 +1752,22 @@ class Frame {
     pushSmall(o);
   }
 
-  void pushAddress(ir::Value* o)
+  void pushAddress()
   {
-    pushQuiet(types.i4, o);
+    c->pushed(ir::Type(ir::Type::Address, TargetBytesPerWord));
+
     pushedInt();
   }
 
   void pushObject(ir::Value* o)
   {
-    assert(t,
-           o->type == types.object
-           || o->type.flavor() == ir::Type::Address
-              // TODO Temporary hack for Subroutine test!!!
-           || o->type.flavor() == ir::Type::Invalid);
+    assert(t, o->type == types.object || o->type.flavor() == ir::Type::Address);
     pushQuiet(types.object, o);
     pushedObject();
   }
 
   void pushObject() {
-    c->pushed();
+    c->pushed(types.object);
 
     pushedObject();
   }
@@ -2079,9 +2011,14 @@ class Frame {
   TraceElement* trace(object target, unsigned flags) {
     unsigned mapSize = frameMapSizeInWords(t, context->method);
 
-    TraceElement* e = context->traceLog = new
-      (context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
-      TraceElement(context, ip, target, flags, context->traceLog, mapSize);
+    TraceElement* e = context->traceLog = new (
+        context->zone.allocate(sizeof(TraceElement) + (mapSize * BytesPerWord)))
+        TraceElement(context,
+                     duplicatedIp(ip),
+                     target,
+                     flags,
+                     context->traceLog,
+                     mapSize);
 
     ++ context->traceLogCount;
 
@@ -2169,80 +2106,52 @@ class Frame {
     }
   }
 
-  unsigned startSubroutine(unsigned ip, avian::codegen::Promise* returnAddress) {
-    pushAddress(absoluteAddressOperand(returnAddress));
+  void startSubroutine(unsigned ip, unsigned returnAddress)
+  {
+    // TODO: in the future, push a value that we can track through type checking
+    pushAddress();  // push a dummy value to the stack, representing the return
+                    // address (which we don't need, since we're expanding
+                    // everything statically)
 
-    Subroutine* subroutine = 0;
-    for (Subroutine* s = context->subroutines; s; s = s->listNext) {
-      if (s->ip == ip) {
-        subroutine = s;
-        break;
-      }
+    if (DebugInstructions) {
+      fprintf(stderr, "startSubroutine %u %u\n", ip, returnAddress);
     }
 
-    if (subroutine == 0) {
-      context->subroutines = subroutine = new
-        (context->zone.allocate(sizeof(Subroutine)))
-        Subroutine(ip, context->eventLog.length() + 1 + BytesPerWord + 2,
-                   context->subroutines, this->subroutine);
+    Subroutine* subroutine = new (&context->zone)
+        Subroutine(context->subroutineCount++,
+                   returnAddress,
+                   codeLength(t, methodCode(t, context->method)),
+                   this->subroutine);
 
-      if (context->subroutineTable == 0) {
-        unsigned size = codeLength(t, methodCode(t, context->method))
-          * sizeof(Subroutine*);
+    context->extendLogicalCode(codeLength(t, methodCode(t, context->method)));
 
-        context->subroutineTable = static_cast<Subroutine**>
-          (context->zone.allocate(size));
-
-        memset(context->subroutineTable, 0, size);
-      }
-    }
-
-    subroutine->handle = c->startSubroutine();
     this->subroutine = subroutine;
-
-    SubroutineCall* call = new(&context->zone)
-      SubroutineCall(subroutine, returnAddress);
-
-    context->eventLog.append(PushSubroutineEvent);
-    context->eventLog.appendAddress(call);
-
-    unsigned nextIndexIndex = context->eventLog.length();
-    context->eventLog.append2(0);
-
-    c->saveLocals();
-
-    return nextIndexIndex;
   }
 
-  void returnFromSubroutine(unsigned returnAddressLocal) {
-    c->returnFromSubroutine(
-        subroutine->handle,
-        loadLocal(context,
-                  1,
-                  ir::Type(ir::Type::Address, TargetBytesPerWord),
-                  returnAddressLocal));
+  unsigned endSubroutine(unsigned returnAddressLocal UNUSED)
+  {
+    // TODO: use returnAddressLocal to decide which subroutine we're returning
+    // from (in case it's ever not the most recent one entered).  I'm unsure of
+    // whether such a subroutine pattern would pass bytecode verification.
 
-    subroutine->stackIndex = localOffsetFromStack
-      (t, translateLocalIndex(context, 1, returnAddressLocal),
-       context->method);
+    unsigned returnAddress = subroutine->returnAddress;
+
+    if (DebugInstructions) {
+      fprintf(stderr, "endSubroutine %u %u\n", ip, returnAddress);
+    }
+
+    subroutine = subroutine->outer;
+
+    return returnAddress;
   }
 
-  void endSubroutine(unsigned nextIndexIndex) {
-    c->linkSubroutine(subroutine->handle);
-
-    poppedInt();
-
-    context->eventLog.append(PopSubroutineEvent);
-
-    context->eventLog.set2(nextIndexIndex, context->eventLog.length());
-
-    subroutine = subroutine->stackNext;
-  }
-  
   Context* context;
   MyThread* t;
   avian::codegen::Compiler* c;
+
+  // Innermost subroutine we're compiling code for
   Subroutine* subroutine;
+
   uint8_t* stackMap;
   unsigned ip;
   unsigned sp;
@@ -3730,7 +3639,7 @@ bool integerBranch(MyThread* t,
   uint32_t newIp = (ip - 3) + offset;
   assert(t, newIp < codeLength(t, code));
 
-  ir::Value* target = frame->machineIp(newIp);
+  ir::Value* target = frame->machineIpValue(newIp);
 
   switch (instruction) {
   case ifeq:
@@ -3809,7 +3718,7 @@ bool floatBranch(MyThread* t,
   uint32_t newIp = (ip - 3) + offset;
   assert(t, newIp < codeLength(t, code));
 
-  ir::Value* target = frame->machineIp(newIp);
+  ir::Value* target = frame->machineIpValue(newIp);
 
   switch (instruction) {
   case ifeq:
@@ -4170,7 +4079,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   PROTECT(t, code);
   
   while (ip < codeLength(t, code)) {
-    if (context->visitTable[ip] ++) {
+    if (context->visitTable[frame->duplicatedIp(ip)]++) {
       // we've already visited this part of the code
       frame->visitLogicalIp(ip);
       goto next;
@@ -4907,7 +4816,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         compileSafePoint(t, c, frame);
       }
 
-      c->jmp(frame->machineIp(newIp));
+      c->jmp(frame->machineIpValue(newIp));
       ip = newIp;
     } break;
 
@@ -4920,7 +4829,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         compileSafePoint(t, c, frame);
       }
 
-      c->jmp(frame->machineIp(newIp));
+      c->jmp(frame->machineIpValue(newIp));
       ip = newIp;
     } break;
 
@@ -5019,7 +4928,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       ir::Value* a = frame->popObject();
       ir::Value* b = frame->popObject();
-      ir::Value* target = frame->machineIp(newIp);
+      ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
@@ -5040,7 +4949,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       ir::Value* a = frame->popInt();
       ir::Value* b = frame->popInt();
-      ir::Value* target = frame->machineIp(newIp);
+      ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.i4, a, b, target);
     } goto branch;
@@ -5055,7 +4964,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       newIp = (ip - 3) + offset;
       assert(t, newIp < codeLength(t, code));
 
-      ir::Value* target = frame->machineIp(newIp);
+      ir::Value* target = frame->machineIpValue(newIp);
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -5079,7 +4988,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       ir::Value* a = c->constant(0, types.object);
       ir::Value* b = frame->popObject();
-      ir::Value* target = frame->machineIp(newIp);
+      ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), types.object, a, b, target);
     } goto branch;
@@ -5432,15 +5341,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       assert(t, newIp < codeLength(t, code));
 
-      unsigned start = frame->startSubroutine(newIp, c->machineIp(ip));
+      frame->startSubroutine(newIp, ip);
 
-      c->jmp(frame->machineIp(newIp));
+      c->jmp(frame->machineIpValue(newIp));
 
-      stack.pushValue(start);
-      stack.pushValue(ip);
-      stack.pushValue(Unsubroutine);
       ip = newIp;
-    } goto start;
+    } break;
 
     case l2d: {
       frame->pushDouble(c->i2f(types.i8, types.f8, frame->popLong()));
@@ -5630,7 +5536,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       if (pairCount) {
         ir::Value* default_ = frame->addressOperand(
-            frame->addressPromise(c->machineIp(defaultIp)));
+            frame->addressPromise(frame->machineIp(defaultIp)));
 
         avian::codegen::Promise* start = 0;
         uint32_t* ipTable = static_cast<uint32_t*>
@@ -5647,8 +5553,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           if (i == 0) {
             start = p;
           }
-          c->poolAppendPromise
-            (frame->addressPromise(c->machineIp(newIp)));
+          c->poolAppendPromise(frame->addressPromise(frame->machineIp(newIp)));
         }
         assert(t, start);
 
@@ -5678,7 +5583,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         goto switchloop;
       } else {
         // a switch statement with no cases, apparently
-        c->jmp(frame->machineIp(defaultIp));
+        c->jmp(frame->machineIpValue(defaultIp));
         ip = defaultIp;
       }
     } break;
@@ -6146,8 +6051,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case ret: {
       unsigned index = codeBody(t, code, ip);
-      frame->returnFromSubroutine(index);
-    } goto next;
+
+      unsigned returnAddress = frame->endSubroutine(index);
+      c->jmp(frame->machineIpValue(returnAddress));
+      ip = returnAddress;
+    } break;
 
     case return_:
       if (needsReturnBarrier(t, context->method)) {
@@ -6189,8 +6097,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
         ipTable[i] = newIp;
 
-        avian::codegen::Promise* p = c->poolAppendPromise
-          (frame->addressPromise(c->machineIp(newIp)));
+        avian::codegen::Promise* p = c->poolAppendPromise(
+            frame->addressPromise(frame->machineIp(newIp)));
         if (i == 0) {
           start = p;
         }
@@ -6203,7 +6111,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                   types.i4,
                   c->constant(bottom, types.i4),
                   key,
-                  frame->machineIp(defaultIp));
+                  frame->machineIpValue(defaultIp));
 
       c->save(types.i4, key);
 
@@ -6256,12 +6164,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       case ret: {
         unsigned index = codeReadInt16(t, code, ip);
-        c->jmp(loadLocal(context,
-                         1,
-                         ir::Type(ir::Type::Address, TargetBytesPerWord),
-                         index));
-        frame->returnFromSubroutine(index);
-      } goto next;
+
+        unsigned returnAddress = frame->endSubroutine(index);
+        c->jmp(frame->machineIpValue(returnAddress));
+        ip = returnAddress;
+      } break;
 
       default: abort(t);
       }
@@ -6281,12 +6188,18 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     return;
 
   case Unbranch:
+    if (DebugInstructions) {
+      fprintf(stderr, "Unbranch\n");
+    }
     ip = stack.popValue();
     c->restoreState(reinterpret_cast<Compiler::State*>(stack.popValue()));
     frame = static_cast<Frame*>(stack.peek(sizeof(Frame)));
     goto loop;
 
   case Untable0: {
+    if (DebugInstructions) {
+      fprintf(stderr, "Untable0\n");
+    }
     SwitchState* s = static_cast<SwitchState*>
       (stack.peek(sizeof(SwitchState)));
 
@@ -6298,7 +6211,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 types.i4,
                 c->constant(s->top, types.i4),
                 s->key,
-                frame->machineIp(s->defaultIp));
+                frame->machineIpValue(s->defaultIp));
 
     c->save(types.i4, s->key);
     ip = s->defaultIp;
@@ -6306,6 +6219,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   } goto start;
 
   case Untable1: {
+    if (DebugInstructions) {
+      fprintf(stderr, "Untable1\n");
+    }
     SwitchState* s = static_cast<SwitchState*>
       (stack.peek(sizeof(SwitchState)));
 
@@ -6341,6 +6257,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   } goto switchloop;
 
   case Unswitch: {
+    if (DebugInstructions) {
+      fprintf(stderr, "Unswitch\n");
+    }
     SwitchState* s = static_cast<SwitchState*>
       (stack.peek(sizeof(SwitchState)));
 
@@ -6351,6 +6270,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   } goto switchloop;
 
   case Unsubroutine: {
+    if (DebugInstructions) {
+      fprintf(stderr, "Unsubroutine\n");
+    }
     ip = stack.popValue();
     unsigned start = stack.popValue();
     frame = reinterpret_cast<Frame*>(stack.peek(sizeof(Frame)));
@@ -6415,9 +6337,8 @@ int
 resolveIpBackwards(Context* context, int start, int end)
 {
   Thread* t = context->thread;
-  if (start >= static_cast<int>
-      (codeLength(t, methodCode(t, context->method))))
-  {
+  if (start >= static_cast<int>(codeLength(t, methodCode(t, context->method))
+                                * (context->subroutineCount + 1))) {
     start = codeLength(t, methodCode(t, context->method));
   } else {
     while (start >= end and context->visitTable[start] == 0) {
@@ -6481,9 +6402,10 @@ truncateLineNumberTable(Thread* t, object table, unsigned length)
   return newTable;
 }
 
-object
-translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start,
-                               intptr_t end)
+object translateExceptionHandlerTable(MyThread* t,
+                                      Context* context,
+                                      intptr_t start,
+                                      intptr_t end)
 {
   avian::codegen::Compiler* c = context->compiler;
 
@@ -6495,55 +6417,68 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start,
 
     unsigned length = exceptionHandlerTableLength(t, oldTable);
 
-    object newIndex = makeIntArray(t, length * 3);
+    object newIndex
+        = makeIntArray(t, length * (context->subroutineCount + 1) * 3);
     PROTECT(t, newIndex);
 
-    object newTable = makeArray(t, length + 1);
+    object newTable = makeArray(t, length * (context->subroutineCount + 1) + 1);
     PROTECT(t, newTable);
 
     unsigned ni = 0;
-    for (unsigned oi = 0; oi < length; ++ oi) {
-      uint64_t oldHandler = exceptionHandlerTableBody
-        (t, oldTable, oi);
+    for (unsigned subI = 0; subI <= context->subroutineCount; ++subI) {
+      unsigned duplicatedBaseIp
+          = subI * codeLength(t, methodCode(t, context->method));
 
-      int handlerStart = resolveIpForwards
-        (context, exceptionHandlerStart(oldHandler),
-         exceptionHandlerEnd(oldHandler));
+      for (unsigned oi = 0; oi < length; ++oi) {
+        uint64_t oldHandler = exceptionHandlerTableBody(t, oldTable, oi);
 
-      if (LIKELY(handlerStart >= 0)) {
-        assert(t, handlerStart < static_cast<int>
-               (codeLength(t, methodCode(t, context->method))));
+        int handlerStart = resolveIpForwards(
+            context,
+            duplicatedBaseIp + exceptionHandlerStart(oldHandler),
+            duplicatedBaseIp + exceptionHandlerEnd(oldHandler));
 
-        int handlerEnd = resolveIpBackwards
-          (context, exceptionHandlerEnd(oldHandler),
-           exceptionHandlerStart(oldHandler));
+        if (LIKELY(handlerStart >= 0)) {
+          assert(
+              t,
+              handlerStart
+              < static_cast<int>(codeLength(t, methodCode(t, context->method))
+                                 * (context->subroutineCount + 1)));
 
-        assert(t, handlerEnd >= 0);
-        assert(t, handlerEnd <= static_cast<int>
-               (codeLength(t, methodCode(t, context->method))));
+          int handlerEnd = resolveIpBackwards(
+              context,
+              duplicatedBaseIp + exceptionHandlerEnd(oldHandler),
+              duplicatedBaseIp + exceptionHandlerStart(oldHandler));
 
-        intArrayBody(t, newIndex, ni * 3)
-          = c->machineIp(handlerStart)->value() - start;
+          assert(t, handlerEnd >= 0);
+          assert(t,
+                 handlerEnd <= static_cast<int>(
+                                   codeLength(t, methodCode(t, context->method))
+                                   * (context->subroutineCount + 1)));
 
-        intArrayBody(t, newIndex, (ni * 3) + 1)
-          = (handlerEnd == static_cast<int>
-             (codeLength(t, methodCode(t, context->method)))
-             ? end : c->machineIp(handlerEnd)->value()) - start;
+          intArrayBody(t, newIndex, ni* 3) = c->machineIp(handlerStart)->value()
+                                             - start;
 
-        intArrayBody(t, newIndex, (ni * 3) + 2)
-          = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+          intArrayBody(t, newIndex, (ni* 3) + 1)
+              = (handlerEnd == static_cast<int>(codeLength(
+                                   t, methodCode(t, context->method)))
+                     ? end
+                     : c->machineIp(handlerEnd)->value()) - start;
 
-        object type;
-        if (exceptionHandlerCatchType(oldHandler)) {
-          type = resolveClassInPool
-            (t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
-        } else {
-          type = 0;
+          intArrayBody(t, newIndex, (ni* 3) + 2)
+              = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
+
+          object type;
+          if (exceptionHandlerCatchType(oldHandler)) {
+            type = resolveClassInPool(
+                t, context->method, exceptionHandlerCatchType(oldHandler) - 1);
+          } else {
+            type = 0;
+          }
+
+          set(t, newTable, ArrayBody + ((ni + 1) * BytesPerWord), type);
+
+          ++ni;
         }
-
-        set(t, newTable, ArrayBody + ((ni + 1) * BytesPerWord), type);
-
-        ++ ni;
       }
     }
 
@@ -6563,6 +6498,7 @@ translateExceptionHandlerTable(MyThread* t, Context* context, intptr_t start,
 object
 translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
+  // TODO: add line number table entries for subroutines (duplicated code)
   object oldTable = codeLineNumberTable(t, methodCode(t, context->method));
   if (oldTable) {
     PROTECT(t, oldTable);
@@ -6586,7 +6522,7 @@ translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
     }
 
     if (UNLIKELY(ni < length)) {
-      newTable = truncateLineNumberTable(t, newTable, ni);      
+      newTable = truncateLineNumberTable(t, newTable, ni);
     }
 
     return newTable;
@@ -6609,37 +6545,24 @@ printSet(uintptr_t* m, unsigned limit)
   }
 }
 
-void
-calculateTryCatchRoots(Context* context, SubroutinePath* subroutinePath,
-                       uintptr_t* roots, unsigned mapSize, unsigned start,
-                       unsigned end)
+void calculateTryCatchRoots(
+    Context* context,
+    uintptr_t* roots,
+    unsigned mapSize,
+    unsigned start,
+    unsigned end)
 {
   memset(roots, 0xFF, mapSize * BytesPerWord);
 
   if (DebugFrameMaps) {
-    fprintf(stderr, "calculate try/catch roots from %d to %d", start, end);
-    if (subroutinePath) {
-      fprintf(stderr, " ");
-      print(subroutinePath);
-    }
-    fprintf(stderr, "\n");
+    fprintf(stderr, "calculate try/catch roots from %d to %d\n", start, end);
   }
 
   for (TraceElement* te = context->traceLog; te; te = te->next) {
     if (te->ip >= start and te->ip < end) {
       uintptr_t* traceRoots = 0;
-      if (subroutinePath == 0) {
-        traceRoots = te->map;
-        te->watch = true;
-      } else {
-        for (SubroutineTrace* t = te->subroutineTrace; t; t = t->next) {
-          if (t->path == subroutinePath) {
-            traceRoots = t->map;
-            t->watch = true;
-            break;
-          }
-        }        
-      }
+      traceRoots = te->map;
+      te->watch = true;
 
       if (traceRoots) {
         if (DebugFrameMaps) {
@@ -6666,10 +6589,11 @@ calculateTryCatchRoots(Context* context, SubroutinePath* subroutinePath,
   }
 }
 
-unsigned
-calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
-                   unsigned eventIndex, SubroutinePath* subroutinePath = 0,
-                   uintptr_t* resultRoots = 0)
+unsigned calculateFrameMaps(MyThread* t,
+                            Context* context,
+                            uintptr_t* originalRoots,
+                            unsigned eventIndex,
+                            uintptr_t* resultRoots)
 {
   // for each instruction with more than one predecessor, and for each
   // stack position, determine if there exists a path to that
@@ -6701,9 +6625,11 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     Event e = static_cast<Event>(context->eventLog.get(eventIndex++));
     switch (e) {
     case PushContextEvent: {
-      eventIndex = calculateFrameMaps
-        (t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, subroutinePath,
-         resultRoots);
+      eventIndex = calculateFrameMaps(t,
+                                      context,
+                                      RUNTIME_ARRAY_BODY(roots),
+                                      eventIndex, /*subroutinePath,*/
+                                      resultRoots);
     } break;
 
     case PopContextEvent:
@@ -6719,9 +6645,8 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
         fprintf(stderr, "\n");
       }
 
-      uintptr_t* tableRoots
-        = (subroutinePath ? subroutinePath->rootTable : context->rootTable)
-        + (ip * mapSize);
+      assert(context->thread, ip * mapSize <= context->rootTable.count);
+      uintptr_t* tableRoots = context->rootTable.begin() + (ip * mapSize);
 
       if (context->visitTable[ip] > 1) {
         for (unsigned wi = 0; wi < mapSize; ++wi) {
@@ -6772,26 +6697,11 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       unsigned end = context->eventLog.get2(eventIndex);
       eventIndex += 2;
 
-      if (context->subroutineTable and context->subroutineTable[start]) {
-        Subroutine* s = context->subroutineTable[start];
-        unsigned originalEventIndex = eventIndex;
+      calculateTryCatchRoots(
+          context, RUNTIME_ARRAY_BODY(roots), mapSize, start, end);
 
-        for (SubroutineCall* c = s->calls; c; c = c->next) {
-          for (SubroutinePath* p = c->paths; p; p = p->listNext) {
-            calculateTryCatchRoots
-              (context, p, RUNTIME_ARRAY_BODY(roots), mapSize, start, end);
-
-            eventIndex = calculateFrameMaps
-              (t, context, RUNTIME_ARRAY_BODY(roots), originalEventIndex, p);
-          }
-        }
-      } else {
-        calculateTryCatchRoots
-          (context, 0, RUNTIME_ARRAY_BODY(roots), mapSize, start, end);
-
-        eventIndex = calculateFrameMaps
-          (t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, 0);
-      }
+      eventIndex = calculateFrameMaps(
+          t, context, RUNTIME_ARRAY_BODY(roots), eventIndex, 0);
     } break;
 
     case TraceEvent: {
@@ -6799,39 +6709,13 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       if (DebugFrameMaps) {
         fprintf(stderr, " trace roots at ip %3d: ", ip);
         printSet(RUNTIME_ARRAY_BODY(roots), mapSize);
-        if (subroutinePath) {
-          fprintf(stderr, " ");
-          print(subroutinePath);
-        }
         fprintf(stderr, "\n");
       }
         
       uintptr_t* map;
       bool watch;
-      if (subroutinePath == 0) {
-        map = te->map;
-        watch = te->watch;
-      } else {
-        SubroutineTrace* trace = 0;
-        for (SubroutineTrace* t = te->subroutineTrace; t; t = t->next) {
-          if (t->path == subroutinePath) {
-            trace = t;
-            break;
-          }
-        }
-
-        if (trace == 0) {
-          te->subroutineTrace = trace = new
-            (context->zone.allocate
-             (sizeof(SubroutineTrace) + (mapSize * BytesPerWord)))
-            SubroutineTrace(subroutinePath, te->subroutineTrace, mapSize);
-
-          ++ te->subroutineTraceCount;
-        }
-
-        map = trace->map;
-        watch = trace->watch;
-      }
+      map = te->map;
+      watch = te->watch;
 
       for (unsigned wi = 0; wi < mapSize; ++wi) {
         uintptr_t v = RUNTIME_ARRAY_BODY(roots)[wi];
@@ -6850,45 +6734,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
       eventIndex += BytesPerWord;
     } break;
 
-    case PushSubroutineEvent: {
-      SubroutineCall* call;
-      context->eventLog.get(eventIndex, &call, BytesPerWord);
-      eventIndex += BytesPerWord;
-
-      unsigned nextIndex = context->eventLog.get2(eventIndex);
-
-      eventIndex = nextIndex;
-
-      SubroutinePath* path = 0;
-      for (SubroutinePath* p = call->paths; p; p = p->listNext) {
-        if (p->stackNext == subroutinePath) {
-          path = p;
-          break;
-        }
-      }
-
-      if (path == 0) {
-        path = new(&context->zone)
-          SubroutinePath(call, subroutinePath,
-                         makeRootTable(t, &(context->zone), context->method));
-      }
-
-      THREAD_RUNTIME_ARRAY(t, uintptr_t, subroutineRoots, mapSize);
-
-      calculateFrameMaps
-        (t, context, RUNTIME_ARRAY_BODY(roots), call->subroutine->logIndex,
-         path, RUNTIME_ARRAY_BODY(subroutineRoots));
-
-      for (unsigned wi = 0; wi < mapSize; ++wi) {
-        RUNTIME_ARRAY_BODY(roots)[wi]
-          &= RUNTIME_ARRAY_BODY(subroutineRoots)[wi];
-      }      
-    } break;
-
-    case PopSubroutineEvent:
-      eventIndex = static_cast<unsigned>(-1);
-      goto exit;
-
     default: abort(t);
     }
   }
@@ -6898,10 +6743,6 @@ calculateFrameMaps(MyThread* t, Context* context, uintptr_t* originalRoots,
     if (DebugFrameMaps) {
       fprintf(stderr, "result roots at ip %3d: ", ip);
       printSet(RUNTIME_ARRAY_BODY(roots), mapSize);
-      if (subroutinePath) {
-        fprintf(stderr, " ");
-        print(subroutinePath);
-      }
       fprintf(stderr, "\n");
     }
 
@@ -6959,15 +6800,16 @@ clearBit(int32_t* dst, unsigned index)
   dst[index / 32] &= ~(static_cast<int32_t>(1) << (index % 32));
 }
 
-void
-copyFrameMap(int32_t* dst, uintptr_t* src, unsigned mapSizeInBits,
-             unsigned offset, TraceElement* p,
-             SubroutinePath* subroutinePath)
+void copyFrameMap(int32_t* dst,
+                  uintptr_t* src,
+                  unsigned mapSizeInBits,
+                  unsigned offset,
+                  TraceElement* p /*,
+             SubroutinePath* subroutinePath*/)
 {
   if (DebugFrameMaps) {
     fprintf(stderr, "  orig roots at ip %3d: ", p->ip);
     printSet(src, ceilingDivide(mapSizeInBits, BitsPerWord));
-    print(subroutinePath);
     fprintf(stderr, "\n");
 
     fprintf(stderr, " final roots at ip %3d: ", p->ip);
@@ -6988,7 +6830,6 @@ copyFrameMap(int32_t* dst, uintptr_t* src, unsigned mapSizeInBits,
   }
 
   if (DebugFrameMaps) {
-    print(subroutinePath);
     fprintf(stderr, "\n");
   }
 }
@@ -7029,157 +6870,6 @@ class FrameMapTablePath {
   int32_t elements[0];
 };
 
-int
-compareInt32s(const void* va, const void* vb)
-{
-  return *static_cast<int32_t const*>(va) - *static_cast<int32_t const*>(vb);
-}
-
-int
-compare(SubroutinePath* a, SubroutinePath* b)
-{
-  if (a->stackNext) {
-    int d = compare(a->stackNext, b->stackNext);
-    if (d) return d;
-  }
-  int64_t av = a->call->returnAddress->value();
-  int64_t bv = b->call->returnAddress->value();
-  if (av > bv) {
-    return 1;
-  } else if (av < bv) {
-    return -1;
-  } else {
-    return 0;
-  }
-}
-
-int
-compareSubroutineTracePointers(const void* va, const void* vb)
-{
-  return compare((*static_cast<SubroutineTrace* const*>(va))->path,
-                 (*static_cast<SubroutineTrace* const*>(vb))->path);
-}
-
-object
-makeGeneralFrameMapTable(MyThread* t, Context* context, uint8_t* start,
-                         TraceElement** elements, unsigned elementCount,
-                         unsigned pathFootprint, unsigned mapCount)
-{
-  unsigned mapSize = frameMapSizeInBits(t, context->method);
-  unsigned indexOffset = sizeof(FrameMapTableHeader);
-  unsigned mapsOffset = indexOffset
-    + (elementCount * sizeof(FrameMapTableIndexElement));
-  unsigned pathsOffset = mapsOffset + (ceilingDivide(mapCount * mapSize, 32) * 4);
-
-  object table = makeByteArray(t, pathsOffset + pathFootprint);
-  
-  int8_t* body = &byteArrayBody(t, table, 0);
-  new (body) FrameMapTableHeader(elementCount);
- 
-  unsigned nextTableIndex = pathsOffset;
-  unsigned nextMapIndex = 0;
-  for (unsigned i = 0; i < elementCount; ++i) {
-    TraceElement* p = elements[i];
-    unsigned mapBase = nextMapIndex;
-
-    unsigned pathIndex;
-    if (p->subroutineTrace) {
-      FrameMapTablePath* previous = 0;
-      Subroutine* subroutine = p->subroutineTrace->path->call->subroutine;
-      for (Subroutine* s = subroutine; s; s = s->stackNext) {
-        if (s->tableIndex == 0) {
-          unsigned pathObjectSize = sizeof(FrameMapTablePath)
-            + (sizeof(int32_t) * s->callCount);
-
-          assert(t, nextTableIndex + pathObjectSize
-                 <= byteArrayLength(t, table));
-
-          s->tableIndex = nextTableIndex;
-          
-          nextTableIndex += pathObjectSize;
-
-          FrameMapTablePath* current = new (body + s->tableIndex)
-            FrameMapTablePath
-            (s->stackIndex, s->callCount,
-             s->stackNext ? s->stackNext->tableIndex : 0);
-
-          unsigned i = 0;
-          for (SubroutineCall* c = subroutine->calls; c; c = c->next) {
-            assert(t, i < s->callCount);
-
-            current->elements[i++]
-              = static_cast<intptr_t>(c->returnAddress->value())
-              - reinterpret_cast<intptr_t>(start);
-          }
-          assert(t, i == s->callCount);
-
-          qsort(current->elements, s->callCount, sizeof(int32_t),
-                compareInt32s);
-
-          if (previous) {
-            previous->next = s->tableIndex;
-          }
-
-          previous = current;
-        } else {
-          break;
-        }
-      }
-
-      pathIndex = subroutine->tableIndex;
-
-      THREAD_RUNTIME_ARRAY
-        (t, SubroutineTrace*, traces, p->subroutineTraceCount);
-
-      unsigned i = 0;
-      for (SubroutineTrace* trace = p->subroutineTrace;
-           trace; trace = trace->next)
-      {
-        assert(t, i < p->subroutineTraceCount);
-        RUNTIME_ARRAY_BODY(traces)[i++] = trace;
-      }
-      assert(t, i == p->subroutineTraceCount);
-
-      qsort(RUNTIME_ARRAY_BODY(traces), p->subroutineTraceCount,
-            sizeof(SubroutineTrace*), compareSubroutineTracePointers);
-
-      for (unsigned i = 0; i < p->subroutineTraceCount; ++i) {
-        assert(t, mapsOffset + ceilingDivide(nextMapIndex + mapSize, 32) * 4
-               <= pathsOffset);
-
-        copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset),
-                     RUNTIME_ARRAY_BODY(traces)[i]->map, mapSize,
-                     nextMapIndex, p, RUNTIME_ARRAY_BODY(traces)[i]->path);
-
-        nextMapIndex += mapSize;
-      }
-    } else {
-      pathIndex = 0;
-
-      assert(t, mapsOffset + ceilingDivide(nextMapIndex + mapSize, 32) * 4
-             <= pathsOffset);
-
-      copyFrameMap(reinterpret_cast<int32_t*>(body + mapsOffset), p->map,
-                   mapSize, nextMapIndex, p, 0);
-      
-      nextMapIndex += mapSize;
-    }
-
-    unsigned elementIndex = indexOffset
-      + (i * sizeof(FrameMapTableIndexElement));
-
-    assert(t, elementIndex + sizeof(FrameMapTableIndexElement) <= mapsOffset);
-
-    new (body + elementIndex) FrameMapTableIndexElement
-      (static_cast<intptr_t>(p->address->value())
-       - reinterpret_cast<intptr_t>(start), mapBase, pathIndex);
-  }
-
-  assert(t, nextMapIndex == mapCount * mapSize);
-
-  return table;
-}
-
 object
 makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start, 
                         TraceElement** elements, unsigned elementCount)
@@ -7201,8 +6891,11 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
            <= intArrayLength(t, table));
 
     if (mapSize) {
-      copyFrameMap(&intArrayBody(t, table, elementCount), p->map,
-                   mapSize, i * mapSize, p, 0);
+      copyFrameMap(&intArrayBody(t, table, elementCount),
+                   p->map,
+                   mapSize,
+                   i * mapSize,
+                   p);
     }
   }
 
@@ -7321,29 +7014,12 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   if (context->traceLogCount) {
     THREAD_RUNTIME_ARRAY(t, TraceElement*, elements, context->traceLogCount);
     unsigned index = 0;
-    unsigned pathFootprint = 0;
-    unsigned mapCount = 0;
+    // unsigned pathFootprint = 0;
+    // unsigned mapCount = 0;
     for (TraceElement* p = context->traceLog; p; p = p->next) {
       assert(t, index < context->traceLogCount);
 
       if (p->address) {
-        SubroutineTrace* trace = p->subroutineTrace;
-        unsigned myMapCount = 1;
-        if (trace) {
-          for (Subroutine* s = trace->path->call->subroutine;
-               s; s = s->stackNext)
-          {
-            unsigned callCount = s->callCount;
-            myMapCount *= callCount;
-            if (not s->visited) {
-              s->visited = true;
-              pathFootprint += sizeof(FrameMapTablePath)
-                + (sizeof(int32_t) * callCount);
-            }
-          }
-        }
-      
-        mapCount += myMapCount;
 
         RUNTIME_ARRAY_BODY(elements)[index++] = p;
 
@@ -7359,14 +7035,15 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
           sizeof(TraceElement*), compareTraceElementPointers);
 
     object map;
-    if (pathFootprint) {
-      map = makeGeneralFrameMapTable
-        (t, context, start, RUNTIME_ARRAY_BODY(elements), index, pathFootprint,
-         mapCount);
-    } else {
+    // if (pathFootprint) {
+    //   map = makeGeneralFrameMapTable
+    //     (t, context, start, RUNTIME_ARRAY_BODY(elements), index,
+    // pathFootprint,
+    //      mapCount);
+    // } else {
       map = makeSimpleFrameMapTable
         (t, context, start, RUNTIME_ARRAY_BODY(elements), index);
-    }
+      // }
 
     set(t, methodCode(t, context->method), CodePool, map);
   }
@@ -7466,7 +7143,7 @@ compile(MyThread* t, Context* context)
   compile(t, &frame, 0);
 
   context->dirtyRoots = false;
-  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0);
+  unsigned eventIndex = calculateFrameMaps(t, context, 0, 0, 0);
 
   object eht = codeExceptionHandlerTable(t, methodCode(t, context->method));
   if (eht) {
@@ -7481,48 +7158,53 @@ compile(MyThread* t, Context* context)
     while (progress) {
       progress = false;
 
-      for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-        uint64_t eh = exceptionHandlerTableBody(t, eht, i);
-        int start = resolveIpForwards
-          (context, exceptionHandlerStart(eh), exceptionHandlerEnd(eh));
+      for (unsigned subI = 0; subI <= context->subroutineCount; ++subI) {
+        unsigned duplicatedBaseIp
+            = subI * codeLength(t, methodCode(t, context->method));
 
-        if ((not RUNTIME_ARRAY_BODY(visited)[i])
-            and start >= 0
-            and context->visitTable[start])
-        {
-          RUNTIME_ARRAY_BODY(visited)[i] = true;
-          progress = true;
+        for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
+          uint64_t eh = exceptionHandlerTableBody(t, eht, i);
+          int start
+              = resolveIpForwards(context,
+                                  duplicatedBaseIp + exceptionHandlerStart(eh),
+                                  duplicatedBaseIp + exceptionHandlerEnd(eh));
 
-          c->restoreState(state);
+          if ((not RUNTIME_ARRAY_BODY(visited)[i])and start
+              >= 0 and context->visitTable[start]) {
+            RUNTIME_ARRAY_BODY(visited)[i] = true;
+            progress = true;
 
-          THREAD_RUNTIME_ARRAY
-            (t, uint8_t, stackMap,
-             codeMaxStack(t, methodCode(t, context->method)));
-          Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
+            c->restoreState(state);
 
-          unsigned end = exceptionHandlerEnd(eh);
-          if (exceptionHandlerIp(eh) >= static_cast<unsigned>(start)
-              and exceptionHandlerIp(eh) < end)
-          {
-            end = exceptionHandlerIp(eh);
+            THREAD_RUNTIME_ARRAY(
+                t,
+                uint8_t,
+                stackMap,
+                codeMaxStack(t, methodCode(t, context->method)));
+            Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
+
+            unsigned end = duplicatedBaseIp + exceptionHandlerEnd(eh);
+            if (exceptionHandlerIp(eh) >= static_cast<unsigned>(start)
+                and exceptionHandlerIp(eh) < end) {
+              end = duplicatedBaseIp + exceptionHandlerIp(eh);
+            }
+
+            context->eventLog.append(PushExceptionHandlerEvent);
+            context->eventLog.append2(start);
+            context->eventLog.append2(end);
+
+            for (unsigned i = 1;
+                 i < codeMaxStack(t, methodCode(t, context->method));
+                 ++i) {
+              frame2.set(localSize(t, context->method) + i, Frame::Integer);
+            }
+
+            compile(t, &frame2, exceptionHandlerIp(eh), start);
+
+            context->eventLog.append(PopContextEvent);
+
+            eventIndex = calculateFrameMaps(t, context, 0, eventIndex, 0);
           }
-
-          context->eventLog.append(PushExceptionHandlerEvent);
-          context->eventLog.append2(start);
-          context->eventLog.append2(end);
-
-          for (unsigned i = 1;
-               i < codeMaxStack(t, methodCode(t, context->method));
-               ++i)
-          {
-            frame2.set(localSize(t, context->method) + i, Frame::Integer);
-          }
-
-          compile(t, &frame2, exceptionHandlerIp(eh), start);
-
-          context->eventLog.append(PopContextEvent);
-
-          eventIndex = calculateFrameMaps(t, context, 0, eventIndex);
         }
       }
     }
@@ -7530,7 +7212,7 @@ compile(MyThread* t, Context* context)
 
   while (context->dirtyRoots) {
     context->dirtyRoots = false;
-    calculateFrameMaps(t, context, 0, 0);
+    calculateFrameMaps(t, context, 0, 0, 0);
   }
 }
 

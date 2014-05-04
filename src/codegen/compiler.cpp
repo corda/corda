@@ -2141,27 +2141,9 @@ class MyCompiler: public Compiler {
     compiler::restoreState(&c, static_cast<ForkState*>(state));
   }
 
-  virtual Subroutine* startSubroutine() {
-    return c.subroutine = new(c.zone) MySubroutine;
-  }
-
-  virtual void returnFromSubroutine(Subroutine* subroutine, ir::Value* address)
-  {
-    appendSaveLocals(&c);
-    appendJump(&c, lir::Jump, static_cast<Value*>(address), false, true);
-    static_cast<MySubroutine*>(subroutine)->forkState = compiler::saveState(&c);
-  }
-
-  virtual void linkSubroutine(Subroutine* subroutine) {
-    Local* oldLocals = c.locals;
-    restoreState(static_cast<MySubroutine*>(subroutine)->forkState);
-    linkLocals(&c, oldLocals, c.locals);
-  }
-
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize)
   {
-    c.logicalCodeLength = logicalCodeLength;
     c.parameterFootprint = parameterFootprint;
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
@@ -2180,23 +2162,23 @@ class MyCompiler: public Compiler {
     c.frameResources[base + c.arch->framePointerOffset()].reserved
       = UseFramePointer;
 
-    // leave room for logical instruction -1
-    unsigned codeSize = sizeof(LogicalInstruction*) * (logicalCodeLength + 1);
-    c.logicalCode = static_cast<LogicalInstruction**>
-      (c.zone->allocate(codeSize));
-    memset(c.logicalCode, 0, codeSize);
-    c.logicalCode++;
+    c.logicalCode.init(c.zone, logicalCodeLength);
+
+    c.logicalCode[-1] = new (c.zone) LogicalInstruction(-1, c.stack, c.locals);
 
     c.locals = static_cast<Local*>
       (c.zone->allocate(sizeof(Local) * localFootprint));
 
     memset(c.locals, 0, sizeof(Local) * localFootprint);
+  }
 
-    c.logicalCode[-1] = new(c.zone) LogicalInstruction(-1, c.stack, c.locals);
+  virtual void extendLogicalCode(unsigned more)
+  {
+    c.logicalCode.extend(c.zone, more);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
@@ -2228,17 +2210,11 @@ class MyCompiler: public Compiler {
       populateJunctionReads(&c, link);
     }
 
-    if (c.subroutine) {
-      c.subroutine->forkState
-        = c.logicalCode[logicalIp]->subroutine->forkState;
-      c.subroutine = 0;
-    }
-
     c.forkState = 0;
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
     assert(&c, c.logicalCode[logicalIp] == 0);
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
@@ -2253,30 +2229,7 @@ class MyCompiler: public Compiler {
 
     c.logicalCode[logicalIp] = new(c.zone) LogicalInstruction(logicalIp, c.stack, c.locals);
 
-    bool startSubroutine = c.subroutine != 0;
-    if (startSubroutine) {
-      c.logicalCode[logicalIp]->subroutine = c.subroutine;
-      c.subroutine = 0;
-    }
-
     c.logicalIp = logicalIp;
-
-    if (startSubroutine) {
-      // assume all local variables are initialized on entry to a
-      // subroutine, since other calls to the subroutine may
-      // initialize them:
-      unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
-      Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
-      memcpy(newLocals, c.locals, sizeInBytes);
-      c.locals = newLocals;
-
-      for (unsigned li = 0; li < c.localFootprint; ++li) {
-        Local* local = c.locals + li;
-        if (local->value == 0) {
-          initLocal(1, li, ir::Type(ir::Type::Invalid, TargetBytesPerWord));
-        }
-      }
-    }
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
@@ -2377,8 +2330,9 @@ class MyCompiler: public Compiler {
     return value;
   }
 
-  virtual void pushed() {
-    Value* v = value(&c, ir::Type(ir::Type::Object, TargetBytesPerWord));
+  virtual void pushed(ir::Type type)
+  {
+    Value* v = value(&c, type);
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
@@ -2570,7 +2524,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
 
     unsigned footprint = sizeof(Local) * c.localFootprint;
     Local* newLocals = static_cast<Local*>(c.zone->allocate(footprint));
@@ -2599,7 +2553,9 @@ class MyCompiler: public Compiler {
   }
 
   virtual void saveLocals() {
+    int oldIp UNUSED = c.logicalIp;
     appendSaveLocals(&c);
+    assert(&c, oldIp == c.logicalIp);
   }
 
   virtual void checkBounds(ir::Value* object,

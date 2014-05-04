@@ -57,15 +57,7 @@ class LogicalInstruction {
   Stack* stack;
   Local* locals;
   Promise* machineOffset;
-  MySubroutine* subroutine;
   int index;
-};
-
-class MySubroutine: public Compiler::Subroutine {
- public:
-  MySubroutine(): forkState(0) { }
-
-  ForkState* forkState;
 };
 
 class Block {

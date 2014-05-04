@@ -15,14 +15,19 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
-LogicalInstruction::LogicalInstruction(int index, Stack* stack, Local* locals):
-  firstEvent(0), lastEvent(0), immediatePredecessor(0), stack(stack),
-  locals(locals), machineOffset(0), subroutine(0), index(index)
+LogicalInstruction::LogicalInstruction(int index, Stack* stack, Local* locals)
+    : firstEvent(0),
+      lastEvent(0),
+      immediatePredecessor(0),
+      stack(stack),
+      locals(locals),
+      machineOffset(0),
+      /*subroutine(0), */ index(index)
 { }
 
 LogicalInstruction* LogicalInstruction::next(Context* c) {
   LogicalInstruction* i = this;
-  for (unsigned n = i->index + 1; n < c->logicalCodeLength; ++n) {
+  for (size_t n = i->index + 1; n < c->logicalCode.count(); ++n) {
     i = c->logicalCode[n];
     if (i) return i;
   }
