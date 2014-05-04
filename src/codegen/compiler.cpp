@@ -2638,7 +2638,6 @@ class MyCompiler: public Compiler {
 
     appendBranch(&c,
                  op,
-                 a->type.size(),
                  static_cast<Value*>(a),
                  static_cast<Value*>(b),
                  static_cast<Value*>(address));

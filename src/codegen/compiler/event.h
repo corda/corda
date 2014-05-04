@@ -123,19 +123,24 @@ void appendCall(Context* c,
 
 void appendReturn(Context* c, Value* value);
 
-void
-appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-           unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst);
+void appendMove(Context* c,
+                lir::BinaryOperation op,
+                unsigned srcSize,
+                unsigned srcSelectSize,
+                Value* src,
+                unsigned dstSize,
+                Value* dst);
 
-void
-appendCombine(Context* c, lir::TernaryOperation type,
-              Value* first,
-              Value* second,
-              Value* result);
+void appendCombine(Context* c,
+                   lir::TernaryOperation op,
+                   Value* first,
+                   Value* second,
+                   Value* result);
 
-void
-appendTranslate(Context* c, lir::BinaryOperation type,
-                Value* first, Value* result);
+void appendTranslate(Context* c,
+                     lir::BinaryOperation op,
+                     Value* first,
+                     Value* result);
 
 void
 appendOperation(Context* c, lir::Operation op);
@@ -144,13 +149,17 @@ void
 appendMemory(Context* c, Value* base, int displacement, Value* index,
              unsigned scale, Value* result);
 
-void
-appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first,
-             Value* second, Value* address);
+void appendBranch(Context* c,
+                  lir::TernaryOperation op,
+                  Value* first,
+                  Value* second,
+                  Value* address);
 
-void
-appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit = false,
-           bool cleanLocals = false);
+void appendJump(Context* c,
+                lir::UnaryOperation op,
+                Value* address,
+                bool exit = false,
+                bool cleanLocals = false);
 
 void
 appendBoundsCheck(Context* c, Value* object, unsigned lengthOffset,

@@ -60,10 +60,14 @@ Read* live(Context* c UNUSED, Value* v);
 
 void popRead(Context* c, Event* e UNUSED, Value* v);
 
-void
-maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-          unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
-          const SiteMask& dstMask);
+void maybeMove(Context* c,
+               lir::BinaryOperation op,
+               unsigned srcSize,
+               unsigned srcSelectSize,
+               Value* src,
+               unsigned dstSize,
+               Value* dst,
+               const SiteMask& dstMask);
 
 Site*
 maybeMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
@@ -654,11 +658,22 @@ void appendReturn(Context* c, Value* value)
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, lir::BinaryOperation type, unsigned srcSize,
-            unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue,
-            const SiteMask& srcLowMask, const SiteMask& srcHighMask):
-    Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
-    srcValue(srcValue), dstSize(dstSize), dstValue(dstValue)
+  MoveEvent(Context* c,
+            lir::BinaryOperation op,
+            unsigned srcSize,
+            unsigned srcSelectSize,
+            Value* srcValue,
+            unsigned dstSize,
+            Value* dstValue,
+            const SiteMask& srcLowMask,
+            const SiteMask& srcHighMask)
+      : Event(c),
+        op(op),
+        srcSize(srcSize),
+        srcSelectSize(srcSelectSize),
+        srcValue(srcValue),
+        dstSize(dstSize),
+        dstValue(dstValue)
   {
     assert(c, srcSelectSize <= srcSize);
 
@@ -684,14 +699,15 @@ class MoveEvent: public Event {
   virtual void compile(Context* c) {
     OperandMask dst;
 
-    c->arch->planDestination
-      (type,
-       srcSelectSize,
-       OperandMask(
-         1 << srcValue->source->type(c), 
-         (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c)) << 32)
-            | static_cast<uint64_t>(srcValue->source->registerMask(c))),
-       dstSize, dst);
+    c->arch->planDestination(
+        op,
+        srcSelectSize,
+        OperandMask(
+            1 << srcValue->source->type(c),
+            (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c))
+             << 32) | static_cast<uint64_t>(srcValue->source->registerMask(c))),
+        dstSize,
+        dst);
 
     SiteMask dstLowMask = SiteMask::lowPart(dst);
     SiteMask dstHighMask = SiteMask::highPart(dst);
@@ -737,7 +753,13 @@ class MoveEvent: public Event {
     } else if (srcSelectSize <= vm::TargetBytesPerWord
                and dstSize <= vm::TargetBytesPerWord)
     {
-      maybeMove(c, type, srcSize, srcSelectSize, srcValue, dstSize, dstValue,
+      maybeMove(c,
+                op,
+                srcSize,
+                srcSelectSize,
+                srcValue,
+                dstSize,
+                dstValue,
                 dstLowMask);
     } else {
       assert(c, srcSize == vm::TargetBytesPerWord);
@@ -800,7 +822,7 @@ class MoveEvent: public Event {
     }
   }
 
-  lir::BinaryOperation type;
+  lir::BinaryOperation op;
   unsigned srcSize;
   unsigned srcSelectSize;
   Value* srcValue;
@@ -808,23 +830,31 @@ class MoveEvent: public Event {
   Value* dstValue;
 };
 
-void
-appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-           unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue)
+void appendMove(Context* c,
+                lir::BinaryOperation op,
+                unsigned srcSize,
+                unsigned srcSelectSize,
+                Value* srcValue,
+                unsigned dstSize,
+                Value* dstValue)
 {
   bool thunk;
   OperandMask src;
 
-  c->arch->planSource
-    (type, srcSelectSize, src, dstSize, &thunk);
+  c->arch->planSource(op, srcSelectSize, src, dstSize, &thunk);
 
   assert(c, not thunk);
 
-  append(c, new(c->zone)
-         MoveEvent
-         (c, type, srcSize, srcSelectSize, srcValue, dstSize, dstValue,
-          SiteMask::lowPart(src),
-          SiteMask::highPart(src)));
+  append(c,
+         new (c->zone) MoveEvent(c,
+                                 op,
+                                 srcSize,
+                                 srcSelectSize,
+                                 srcValue,
+                                 dstSize,
+                                 dstValue,
+                                 SiteMask::lowPart(src),
+                                 SiteMask::highPart(src)));
 }
 
 
@@ -899,17 +929,20 @@ Site* getTarget(Context* c, Value* value, Value* result, const SiteMask& resultM
 
 class CombineEvent: public Event {
  public:
-  CombineEvent(Context* c, lir::TernaryOperation type,
+  CombineEvent(Context* c,
+               lir::TernaryOperation op,
                Value* firstValue,
                Value* secondValue,
                Value* resultValue,
                const SiteMask& firstLowMask,
                const SiteMask& firstHighMask,
                const SiteMask& secondLowMask,
-               const SiteMask& secondHighMask):
-    Event(c), type(type), firstValue(firstValue),
-    secondValue(secondValue),
-    resultValue(resultValue)
+               const SiteMask& secondHighMask)
+      : Event(c),
+        op(op),
+        firstValue(firstValue),
+        secondValue(secondValue),
+        resultValue(resultValue)
   {
     this->addReads(c, firstValue, firstValue->type.size(), firstLowMask, firstHighMask);
 
@@ -917,7 +950,7 @@ class CombineEvent: public Event {
       resultValue->grow(c);
     }
 
-    bool condensed = c->arch->alwaysCondensed(type);
+    bool condensed = c->arch->alwaysCondensed(op);
 
     this->addReads(c, secondValue, secondValue->type.size(),
              secondLowMask, condensed ? resultValue : 0,
@@ -944,20 +977,24 @@ class CombineEvent: public Event {
     
     OperandMask cMask;
 
-    c->arch->planDestination
-      (type,
-       firstValue->type.size(),
-       OperandMask(
-          1 << firstValue->source->type(c),
-          (static_cast<uint64_t>(firstValue->nextWord->source->registerMask(c)) << 32)
+    c->arch->planDestination(
+        op,
+        firstValue->type.size(),
+        OperandMask(
+            1 << firstValue->source->type(c),
+            (static_cast<uint64_t>(
+                 firstValue->nextWord->source->registerMask(c))
+             << 32)
             | static_cast<uint64_t>(firstValue->source->registerMask(c))),
-       secondValue->type.size(),
-       OperandMask(
-          1 << secondValue->source->type(c),
-          (static_cast<uint64_t>(secondValue->nextWord->source->registerMask(c)) << 32)
+        secondValue->type.size(),
+        OperandMask(
+            1 << secondValue->source->type(c),
+            (static_cast<uint64_t>(
+                 secondValue->nextWord->source->registerMask(c))
+             << 32)
             | static_cast<uint64_t>(secondValue->source->registerMask(c))),
-       resultValue->type.size(),
-       cMask);
+        resultValue->type.size(),
+        cMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(cMask);
     SiteMask resultHighMask = SiteMask::highPart(cMask);
@@ -974,10 +1011,17 @@ class CombineEvent: public Event {
 //             secondValue, secondValue->nextWord,
 //             resultValue, resultValue->nextWord);
 
-    apply(c, type,
-          firstValue->type.size(), firstValue->source, firstValue->nextWord->source,
-          secondValue->type.size(), secondValue->source, secondValue->nextWord->source,
-          resultValue->type.size(), low, high);
+    apply(c,
+          op,
+          firstValue->type.size(),
+          firstValue->source,
+          firstValue->nextWord->source,
+          secondValue->type.size(),
+          secondValue->source,
+          secondValue->nextWord->source,
+          resultValue->type.size(),
+          low,
+          high);
 
     thawSource(c, firstValue->type.size(), firstValue);
 
@@ -998,7 +1042,7 @@ class CombineEvent: public Event {
     }
   }
 
-  lir::TernaryOperation type;
+  lir::TernaryOperation op;
   Value* firstValue;
   Value* secondValue;
   Value* resultValue;
@@ -1076,14 +1120,15 @@ void appendCombine(Context* c,
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, lir::BinaryOperation type,
-                 Value* firstValue, Value* resultValue,
+  TranslateEvent(Context* c,
+                 lir::BinaryOperation op,
+                 Value* firstValue,
+                 Value* resultValue,
                  const SiteMask& valueLowMask,
-                 const SiteMask& valueHighMask):
-    Event(c), type(type),
-    firstValue(firstValue), resultValue(resultValue)
+                 const SiteMask& valueHighMask)
+      : Event(c), op(op), firstValue(firstValue), resultValue(resultValue)
   {
-    bool condensed = c->arch->alwaysCondensed(type);
+    bool condensed = c->arch->alwaysCondensed(op);
 
     if (resultValue->type.size() > vm::TargetBytesPerWord) {
       resultValue->grow(c);
@@ -1101,16 +1146,18 @@ class TranslateEvent: public Event {
     assert(c, firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
     OperandMask bMask;
-    
-    c->arch->planDestination
-      (type,
-       firstValue->type.size(),
-       OperandMask(
-          1 << firstValue->source->type(c),
-          (static_cast<uint64_t>(firstValue->nextWord->source->registerMask(c)) << 32)
+
+    c->arch->planDestination(
+        op,
+        firstValue->type.size(),
+        OperandMask(
+            1 << firstValue->source->type(c),
+            (static_cast<uint64_t>(
+                 firstValue->nextWord->source->registerMask(c))
+             << 32)
             | static_cast<uint64_t>(firstValue->source->registerMask(c))),
-       resultValue->type.size(),
-       bMask);
+        resultValue->type.size(),
+        bMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(bMask);
     SiteMask resultHighMask = SiteMask::highPart(bMask);
@@ -1122,8 +1169,14 @@ class TranslateEvent: public Event {
          ? getTarget(c, firstValue->nextWord, resultValue->nextWord, resultHighMask)
          : low);
 
-    apply(c, type, firstValue->type.size(), firstValue->source, firstValue->nextWord->source,
-          resultValue->type.size(), low, high);
+    apply(c,
+          op,
+          firstValue->type.size(),
+          firstValue->source,
+          firstValue->nextWord->source,
+          resultValue->type.size(),
+          low,
+          high);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
@@ -1142,7 +1195,7 @@ class TranslateEvent: public Event {
     }
   }
 
-  lir::BinaryOperation type;
+  lir::BinaryOperation op;
   Value* firstValue;
   Value* resultValue;
   Read* resultRead;
@@ -1341,11 +1394,13 @@ unordered(double a, double b)
   return not (a >= b or a < b);
 }
 
-bool
-shouldJump(Context* c, lir::TernaryOperation type, unsigned size, int64_t b,
-           int64_t a)
+bool shouldJump(Context* c,
+                lir::TernaryOperation op,
+                unsigned size,
+                int64_t b,
+                int64_t a)
 {
-  switch (type) {
+  switch (op) {
   case lir::JumpIfEqual:
     return a == b;
 
@@ -1403,10 +1458,9 @@ shouldJump(Context* c, lir::TernaryOperation type, unsigned size, int64_t b,
   }
 }
 
-lir::TernaryOperation
-thunkBranch(Context* c, lir::TernaryOperation type)
+lir::TernaryOperation thunkBranch(Context* c, lir::TernaryOperation op)
 {
-  switch (type) {
+  switch (op) {
   case lir::JumpIfFloatEqual:
     return lir::JumpIfEqual;
 
@@ -1436,23 +1490,34 @@ thunkBranch(Context* c, lir::TernaryOperation type)
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, lir::TernaryOperation type, unsigned size,
-              Value* firstValue, Value* secondValue, Value* addressValue,
+  BranchEvent(Context* c,
+              lir::TernaryOperation op,
+              Value* firstValue,
+              Value* secondValue,
+              Value* addressValue,
               const SiteMask& firstLowMask,
               const SiteMask& firstHighMask,
               const SiteMask& secondLowMask,
-              const SiteMask& secondHighMask):
-    Event(c), type(type), size(size), firstValue(firstValue), secondValue(secondValue),
-    addressValue(addressValue)
+              const SiteMask& secondHighMask)
+      : Event(c),
+        op(op),
+        firstValue(firstValue),
+        secondValue(secondValue),
+        addressValue(addressValue)
   {
-    this->addReads(c, firstValue, size, firstLowMask, firstHighMask);
-    this->addReads(c, secondValue, size, secondLowMask, secondHighMask);
+    this->addReads(
+        c, firstValue, firstValue->type.size(), firstLowMask, firstHighMask);
+    this->addReads(
+        c, secondValue, firstValue->type.size(), secondLowMask, secondHighMask);
 
     OperandMask dstMask;
-    c->arch->planDestination(type,
-      size, OperandMask(0, 0),
-      size, OperandMask(0, 0),
-      vm::TargetBytesPerWord, dstMask);
+    c->arch->planDestination(op,
+                             firstValue->type.size(),
+                             OperandMask(0, 0),
+                             firstValue->type.size(),
+                             OperandMask(0, 0),
+                             vm::TargetBytesPerWord,
+                             dstMask);
 
     this->addRead(c, addressValue, SiteMask::lowPart(dstMask));
   }
@@ -1474,28 +1539,40 @@ class BranchEvent: public Event {
         int64_t firstConstVal = firstConstant->value->value();
         int64_t secondConstVal = secondConstant->value->value();
 
-        if (size > vm::TargetBytesPerWord) {
+        if (firstValue->type.size() > vm::TargetBytesPerWord) {
           firstConstVal |= findConstantSite
             (c, firstValue->nextWord)->value->value() << 32;
           secondConstVal |= findConstantSite
             (c, secondValue->nextWord)->value->value() << 32;
         }
 
-        if (shouldJump(c, type, size, firstConstVal, secondConstVal)) {
+        if (shouldJump(c,
+                       op,
+                       firstValue->type.size(),
+                       firstConstVal,
+                       secondConstVal)) {
           apply(c, lir::Jump, vm::TargetBytesPerWord, addressValue->source, addressValue->source);
         }      
       } else {
-        freezeSource(c, size, firstValue);
-        freezeSource(c, size, secondValue);
+        freezeSource(c, firstValue->type.size(), firstValue);
+        freezeSource(c, firstValue->type.size(), secondValue);
         freezeSource(c, vm::TargetBytesPerWord, addressValue);
 
-        apply(c, type, size, firstValue->source, firstValue->nextWord->source,
-              size, secondValue->source, secondValue->nextWord->source,
-              vm::TargetBytesPerWord, addressValue->source, addressValue->source);
+        apply(c,
+              op,
+              firstValue->type.size(),
+              firstValue->source,
+              firstValue->nextWord->source,
+              firstValue->type.size(),
+              secondValue->source,
+              secondValue->nextWord->source,
+              vm::TargetBytesPerWord,
+              addressValue->source,
+              addressValue->source);
 
         thawSource(c, vm::TargetBytesPerWord, addressValue);
-        thawSource(c, size, secondValue);
-        thawSource(c, size, firstValue);
+        thawSource(c, firstValue->type.size(), secondValue);
+        thawSource(c, firstValue->type.size(), firstValue);
       }
     }
 
@@ -1506,45 +1583,47 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
-  lir::TernaryOperation type;
-  unsigned size;
+  lir::TernaryOperation op;
   Value* firstValue;
   Value* secondValue;
   Value* addressValue;
 };
 
-void
-appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* firstValue,
-             Value* secondValue, Value* addressValue)
+void appendBranch(Context* c,
+                  lir::TernaryOperation op,
+                  Value* firstValue,
+                  Value* secondValue,
+                  Value* addressValue)
 {
-  assert(c, size == firstValue->type.size());
-  assert(c, size == secondValue->type.size());
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
 
-  c->arch->planSource(type,
-    size, firstMask,
-    size, secondMask,
-    vm::TargetBytesPerWord, &thunk);
+  c->arch->planSource(op,
+                      firstValue->type.size(),
+                      firstMask,
+                      firstValue->type.size(),
+                      secondMask,
+                      vm::TargetBytesPerWord,
+                      &thunk);
 
   if (thunk) {
     FixedSliceStack<ir::Value*, 4> slice;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
-    intptr_t handler = c->client->getThunk
-      (type, size, size, &threadParameter);
+    intptr_t handler = c->client->getThunk(
+        op, firstValue->type.size(), firstValue->type.size(), &threadParameter);
 
     assert(c, not threadParameter);
 
     pushSlice(c,
-              ceilingDivide(size, vm::TargetBytesPerWord),
+              ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               secondValue,
               stackBase,
               slice);
     pushSlice(c,
-              ceilingDivide(size, vm::TargetBytesPerWord),
+              ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
               slice);
@@ -1562,22 +1641,23 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                slice);
 
     appendBranch(c,
-                 thunkBranch(c, type),
-                 4,
+                 thunkBranch(c, op),
                  value(c,
                        ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
                        constantSite(c, static_cast<int64_t>(0))),
                  result,
                  addressValue);
   } else {
-    append
-      (c, new(c->zone)
-       BranchEvent
-       (c, type, size, firstValue, secondValue, addressValue,
-        SiteMask::lowPart(firstMask),
-        SiteMask::highPart(firstMask),
-        SiteMask::lowPart(secondMask),
-        SiteMask::highPart(secondMask)));
+    append(c,
+           new (c->zone) BranchEvent(c,
+                                     op,
+                                     firstValue,
+                                     secondValue,
+                                     addressValue,
+                                     SiteMask::lowPart(firstMask),
+                                     SiteMask::highPart(firstMask),
+                                     SiteMask::lowPart(secondMask),
+                                     SiteMask::highPart(secondMask)));
   }
 }
 
@@ -1619,14 +1699,16 @@ clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
 
 class JumpEvent: public Event {
  public:
-  JumpEvent(Context* c, lir::UnaryOperation type, Value* address, bool exit,
-            bool cleanLocals):
-    Event(c), type(type), address(address), exit(exit),
-    cleanLocals(cleanLocals)
+  JumpEvent(Context* c,
+            lir::UnaryOperation op,
+            Value* address,
+            bool exit,
+            bool cleanLocals)
+      : Event(c), op(op), address(address), exit(exit), cleanLocals(cleanLocals)
   {
     bool thunk;
     OperandMask mask;
-    c->arch->plan(type, vm::TargetBytesPerWord, mask, &thunk);
+    c->arch->plan(op, vm::TargetBytesPerWord, mask, &thunk);
 
     assert(c, not thunk);
 
@@ -1639,7 +1721,7 @@ class JumpEvent: public Event {
 
   virtual void compile(Context* c) {
     if (not this->isUnreachable()) {
-      apply(c, type, vm::TargetBytesPerWord, address->source, address->source);
+      apply(c, op, vm::TargetBytesPerWord, address->source, address->source);
     }
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -1660,14 +1742,19 @@ class JumpEvent: public Event {
     return exit or this->isUnreachable();
   }
 
-  lir::UnaryOperation type;
+  lir::UnaryOperation op;
   Value* address;
   bool exit;
   bool cleanLocals;
 };
 
-void appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit, bool cleanLocals) {
-  append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
+void appendJump(Context* c,
+                lir::UnaryOperation op,
+                Value* address,
+                bool exit,
+                bool cleanLocals)
+{
+  append(c, new (c->zone) JumpEvent(c, op, address, exit, cleanLocals));
 }
 
 class BoundsCheckEvent: public Event {
