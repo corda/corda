@@ -6431,7 +6431,6 @@ object translateExceptionHandlerTable(MyThread* t,
 object
 translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  // TODO: add line number table entries for subroutines (duplicated code)
   object oldTable = codeLineNumberTable(t, methodCode(t, context->method));
   if (oldTable) {
     PROTECT(t, oldTable);
