@@ -606,6 +606,7 @@ void appendCall(Context* c,
                 unsigned resultSize,
                 util::Slice<ir::Value*> arguments)
 {
+  assert(c, resultSize == result->type.size());
   append(c,
          new (c->zone) CallEvent(c,
                                  address,
@@ -650,6 +651,7 @@ class ReturnEvent: public Event {
 };
 
 void appendReturn(Context* c, unsigned size, Value* value) {
+  assert(c, (value == 0 && size == 0) || size == value->type.size());
   append(c, new(c->zone) ReturnEvent(c, size, value));
 }
 
