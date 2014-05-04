@@ -2613,6 +2613,7 @@ class MyCompiler: public Compiler {
   {
     assert(&c, srcType.flavor() == dstType.flavor());
     assert(&c, src->type.flavor() == dstType.flavor());
+    assert(&c, src->type == srcType);
 
     Value* dst = value(&c, dstType);
     appendMove(&c,

@@ -4361,11 +4361,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto next;
 
     case arraylength: {
-      frame->pushInt(
-          c->load(ir::SignExtend,
-                  types.address,
-                  c->memory(frame->popObject(), types.i4, TargetArrayLength),
-                  types.i4));
+      frame->pushInt(c->load(
+          ir::SignExtend,
+          types.address,
+          c->memory(frame->popObject(), types.address, TargetArrayLength),
+          types.i4));
     } break;
 
     case astore:
@@ -4679,7 +4679,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               ir::SignExtend,
               types.i1,
-              c->memory(table, types.i4, targetFieldOffset(context, field)),
+              c->memory(table, types.i1, targetFieldOffset(context, field)),
               types.i4));
           break;
 
@@ -4687,7 +4687,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               ir::ZeroExtend,
               types.i2,
-              c->memory(table, types.i4, targetFieldOffset(context, field)),
+              c->memory(table, types.i2, targetFieldOffset(context, field)),
               types.i4));
           break;
 
@@ -4695,7 +4695,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           frame->pushInt(c->load(
               ir::SignExtend,
               types.i2,
-              c->memory(table, types.i4, targetFieldOffset(context, field)),
+              c->memory(table, types.i2, targetFieldOffset(context, field)),
               types.i4));
           break;
 
