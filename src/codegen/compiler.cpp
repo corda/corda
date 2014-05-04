@@ -2436,7 +2436,6 @@ class MyCompiler: public Compiler {
                flags,
                traceHandler,
                result,
-               resultType.size(),
                util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(arguments), index));
 
     return result;
@@ -2456,7 +2455,6 @@ class MyCompiler: public Compiler {
                flags,
                traceHandler,
                result,
-               resultType.size(),
                arguments);
     assert(&c, c.stack == b);
     return result;
@@ -2464,12 +2462,13 @@ class MyCompiler: public Compiler {
 
   virtual void return_(ir::Value* a)
   {
-    appendReturn(&c, a->type.size(), static_cast<Value*>(a));
+    assert(&c, a);
+    appendReturn(&c, static_cast<Value*>(a));
   }
 
   virtual void return_()
   {
-    appendReturn(&c, 0, 0);
+    appendReturn(&c, 0);
   }
 
   virtual void initLocal(unsigned footprint, unsigned index, ir::Type type)

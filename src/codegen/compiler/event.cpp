@@ -292,19 +292,17 @@ class CallEvent: public Event {
             ir::CallingConvention callingConvention,
             unsigned flags,
             TraceHandler* traceHandler,
-            Value* result,
-            unsigned resultSize,
+            Value* resultValue,
             util::Slice<ir::Value*> arguments)
       : Event(c),
         address(address),
         traceHandler(traceHandler),
-        result(result),
+        resultValue(resultValue),
         returnAddressSurrogate(0),
         framePointerSurrogate(0),
         popIndex(0),
         stackArgumentIndex(0),
         flags(flags),
-        resultSize(resultSize),
         stackArgumentFootprint(callingConvention == ir::AvianCallingConvention
                                    ? arguments.count
                                    : 0)
@@ -573,10 +571,12 @@ class CallEvent: public Event {
 
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
-    if (resultSize and live(c, result)) {
-      result->addSite(c, registerSite(c, c->arch->returnLow()));
-      if (resultSize > vm::TargetBytesPerWord and live(c, result->nextWord)) {
-        result->nextWord->addSite(c, registerSite(c, c->arch->returnHigh()));
+    if (resultValue->type.size() and live(c, resultValue)) {
+      resultValue->addSite(c, registerSite(c, c->arch->returnLow()));
+      if (resultValue->type.size()
+          > vm::TargetBytesPerWord and live(c, resultValue->nextWord)) {
+        resultValue->nextWord->addSite(c,
+                                       registerSite(c, c->arch->returnHigh()));
       }
     }
   }
@@ -587,13 +587,12 @@ class CallEvent: public Event {
 
   Value* address;
   TraceHandler* traceHandler;
-  Value* result;
+  Value* resultValue;
   Value* returnAddressSurrogate;
   Value* framePointerSurrogate;
   unsigned popIndex;
   unsigned stackArgumentIndex;
   unsigned flags;
-  unsigned resultSize;
   unsigned stackArgumentFootprint;
 };
 
@@ -603,10 +602,8 @@ void appendCall(Context* c,
                 unsigned flags,
                 TraceHandler* traceHandler,
                 Value* result,
-                unsigned resultSize,
                 util::Slice<ir::Value*> arguments)
 {
-  assert(c, resultSize == result->type.size());
   append(c,
          new (c->zone) CallEvent(c,
                                  address,
@@ -614,20 +611,20 @@ void appendCall(Context* c,
                                  flags,
                                  traceHandler,
                                  result,
-                                 resultSize,
                                  arguments));
 }
 
 
 class ReturnEvent: public Event {
  public:
-  ReturnEvent(Context* c, unsigned size, Value* value):
-    Event(c), value(value)
+  ReturnEvent(Context* c, Value* value) : Event(c), value(value)
   {
     if (value) {
-      this->addReads(c, value, size,
-        SiteMask::fixedRegisterMask(c->arch->returnLow()),
-        SiteMask::fixedRegisterMask(c->arch->returnHigh()));
+      this->addReads(c,
+                     value,
+                     value->type.size(),
+                     SiteMask::fixedRegisterMask(c->arch->returnLow()),
+                     SiteMask::fixedRegisterMask(c->arch->returnHigh()));
     }
   }
 
@@ -650,9 +647,9 @@ class ReturnEvent: public Event {
   Value* value;
 };
 
-void appendReturn(Context* c, unsigned size, Value* value) {
-  assert(c, (value == 0 && size == 0) || size == value->type.size());
-  append(c, new(c->zone) ReturnEvent(c, size, value));
+void appendReturn(Context* c, Value* value)
+{
+  append(c, new (c->zone) ReturnEvent(c, value));
 }
 
 class MoveEvent: public Event {
@@ -1062,7 +1059,6 @@ void appendCombine(Context* c,
                0,
                0,
                resultValue,
-               resultValue->type.size(),
                slice);
   } else {
     append(c,
@@ -1190,7 +1186,6 @@ void appendTranslate(Context* c,
         0,
         0,
         resultValue,
-        resultValue->type.size(),
         slice);
   } else {
     append(c,
@@ -1562,7 +1557,6 @@ appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* first
                0,
                0,
                result,
-               4,
                slice);
 
     appendBranch(c,

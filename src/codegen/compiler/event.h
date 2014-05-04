@@ -119,11 +119,9 @@ void appendCall(Context* c,
                 unsigned flags,
                 TraceHandler* traceHandler,
                 Value* result,
-                unsigned resultSize,
                 util::Slice<ir::Value*> arguments);
 
-void
-appendReturn(Context* c, unsigned size, Value* value);
+void appendReturn(Context* c, Value* value);
 
 void
 appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
