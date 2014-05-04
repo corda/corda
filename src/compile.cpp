@@ -1272,13 +1272,7 @@ ir::Value* loadLocal(Context* context,
   ir::Value* result = context->compiler->loadLocal(
       type, translateLocalIndex(context, footprint, index));
 
-  assert(context->thread,
-         (type.flavor() != ir::Type::Object && type == result->type)
-         || (type.flavor() == ir::Type::Object
-             && (result->type.flavor() == ir::Type::Object
-                 || result->type.flavor() == ir::Type::Address))
-         // TODO Temporary hack for Subroutine test!!!
-         || result->type.flavor() == ir::Type::Integer);
+  assert(context->thread, type == result->type);
   return result;
 }
 
@@ -1288,13 +1282,7 @@ void storeLocal(Context* context,
                 ir::Value* value,
                 unsigned index)
 {
-  assert(context->thread,
-         (type.flavor() != ir::Type::Object && type == value->type)
-         || (type.flavor() == ir::Type::Object
-             && (value->type.flavor() == ir::Type::Object
-                 || value->type.flavor() == ir::Type::Address))
-         // TODO Temporary hack for Subroutine test!!!
-         || value->type.flavor() == ir::Type::Integer);
+  assert(context->thread, type == value->type);
   context->compiler->storeLocal(value,
                                 translateLocalIndex(context, footprint, index));
 }
@@ -2099,10 +2087,10 @@ class Frame {
 
   void startSubroutine(unsigned ip, unsigned returnAddress)
   {
+    // Push a dummy value to the stack, representing the return address (which
+    // we don't need, since we're expanding everything statically).
     // TODO: in the future, push a value that we can track through type checking
-    pushAddress();  // push a dummy value to the stack, representing the return
-                    // address (which we don't need, since we're expanding
-                    // everything statically)
+    pushObject(c->constant(0, types.object));
 
     if (DebugInstructions) {
       fprintf(stderr, "startSubroutine %u %u\n", ip, returnAddress);
