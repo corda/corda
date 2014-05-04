@@ -2634,8 +2634,8 @@ class MyCompiler: public Compiler {
            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
                isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
-    // assert(&c, type.flavor() == a->type.flavor());
-    // assert(&c, type.flavor() == b->type.flavor());
+    assert(&c, type == a->type);
+    assert(&c, type == b->type);
     assert(&c,
            address->type == ir::Type(ir::Type::Integer, TargetBytesPerWord));
 
