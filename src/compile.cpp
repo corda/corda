@@ -27,6 +27,8 @@
 #include <avian/util/slice.h>
 #include <avian/util/fixed-allocator.h>
 
+#include "debug-util.h"
+
 using namespace vm;
 
 extern "C" uint64_t
@@ -56,6 +58,7 @@ const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
 const bool DebugFrameMaps = false;
+const bool DebugInstructions = false;
 
 const bool CheckArrayBounds = true;
 
@@ -4189,8 +4192,34 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               1,
               c->threadRegister());
     }
-    
+
 //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
+
+    if (DebugInstructions) {
+      unsigned startingIp = ip;
+      // TODO: fix stack printing
+      fprintf(stderr, " stack: [");
+      for (size_t i = frame->localSize(); i < frame->sp; i++) {
+        switch (frame->get(i)) {
+        case Frame::Integer:
+          fprintf(stderr, "I");
+          break;
+        case Frame::Long:
+          fprintf(stderr, "L");
+          break;
+        case Frame::Object:
+          fprintf(stderr, "O");
+          break;
+        default:
+          fprintf(stderr, "?");
+          break;
+        }
+      }
+      fprintf(stderr, "]\n");
+      fprintf(stderr, "% 5d: ", startingIp);
+      avian::jvm::debug::printInstruction(&codeBody(t, code, 0), startingIp);
+      fprintf(stderr, "\n");
+    }
 
     unsigned instruction = codeBody(t, code, ip++);
 
