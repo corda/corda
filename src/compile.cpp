@@ -5329,7 +5329,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case l2i:
-      frame->pushInt(c->truncate(types.i4, types.i8, frame->popLong()));
+      frame->pushInt(c->truncate(types.i4, frame->popLong()));
       break;
 
     case ladd:
