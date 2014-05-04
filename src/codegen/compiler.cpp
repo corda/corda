@@ -2709,8 +2709,7 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* f2i(ir::Type aType, ir::Type resType, ir::Value* a)
   {
-    // TODO: enable when possible
-    // assert(&c, aType == a->type);
+    assert(&c, aType == a->type);
     assert(&c, isFloatValue(a));
     assert(&c, resType.flavor() != ir::Type::Float);
     assert(&c, aType.flavor() == ir::Type::Float);
@@ -2726,8 +2725,7 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* i2f(ir::Type aType, ir::Type resType, ir::Value* a)
   {
-    // TODO: enable when possible
-    // assert(&c, aType == a->type);
+    assert(&c, aType == a->type);
     assert(&c, isGeneralValue(a));
     assert(&c, resType.flavor() == ir::Type::Float);
     assert(&c, aType.flavor() != ir::Type::Float);
