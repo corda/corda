@@ -2471,10 +2471,28 @@ class MyCompiler: public Compiler {
     appendReturn(&c, 0);
   }
 
+  void initLocalPart(unsigned index, ir::Type type)
+  {
+    Value* v = value(&c, type);
+
+    if (DebugFrame) {
+      fprintf(stderr,
+              "init local %p at %d (%d)\n",
+              v,
+              index,
+              frameIndex(&c, index));
+    }
+
+    appendFrameSite(&c, v, frameIndex(&c, index));
+
+    Local* local = c.locals + index;
+    local->value = v;
+    v->home = frameIndex(&c, index);
+  }
+
   virtual void initLocal(unsigned footprint, unsigned index, ir::Type type)
   {
-    // TODO: enable the following assertion when possible:
-    // assert(&c, footprint == typeFootprint(type));
+    assert(&c, footprint == typeFootprint(&c, type));
     assert(&c, index + footprint <= c.localFootprint);
 
     Value* v = value(&c, type);
@@ -2493,7 +2511,7 @@ class MyCompiler: public Compiler {
       }
 
       if (TargetBytesPerWord == 4) {
-        initLocal(1, highIndex, type);
+        initLocalPart(highIndex, type);
         Value* next = c.locals[highIndex].value;
         v->nextWord = next;
         next->nextWord = v;
@@ -2527,7 +2545,7 @@ class MyCompiler: public Compiler {
     for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
       Local* local = e->locals() + i;
       if (local->value) {
-        initLocal(1, i, local->value->type);
+        initLocalPart(i, local->value->type);
       }
     }
 
