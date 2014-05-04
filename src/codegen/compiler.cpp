@@ -2593,18 +2593,14 @@ class MyCompiler: public Compiler {
     return dst;
   }
 
-  virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst)
+  virtual void store(ir::Value* src, ir::Value* dst)
   {
-    assert(&c, srcType == src->type);
-    assert(&c, srcType.flavor() == src->type.flavor());
-    assert(&c, srcType.flavor() == dst->type.flavor());
-    assert(&c,
-           srcType.flavor() != ir::Type::Float || srcType.size()
-                                                  == src->type.size());
+    assert(&c, src->type.flavor() == dst->type.flavor());
+
     appendMove(&c,
                lir::Move,
-               srcType.size(),
-               srcType.size(),
+               src->type.size(),
+               src->type.size(),
                static_cast<Value*>(src),
                dst->type.size(),
                static_cast<Value*>(dst));

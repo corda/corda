@@ -112,7 +112,7 @@ class Compiler {
 
   virtual ir::Value* truncate(ir::Type type, ir::Value* src) = 0;
 
-  virtual void store(ir::Type srcType, ir::Value* src, ir::Value* dst) = 0;
+  virtual void store(ir::Value* src, ir::Value* dst) = 0;
   virtual ir::Value* load(ir::SignExtendMode signExtend,
                           ir::Value* src,
                           ir::Type dstType) = 0;
