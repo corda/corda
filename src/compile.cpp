@@ -7030,7 +7030,7 @@ compile(MyThread* t, Context* context)
   unsigned index = methodParameterFootprint(t, context->method);
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
     frame.set(--index, Frame::Object);
-    c->initLocal(1, index, frame.types.object);
+    c->initLocal(index, frame.types.object);
   }
 
   for (MethodSpecIterator it
@@ -7042,29 +7042,29 @@ compile(MyThread* t, Context* context)
     case 'L':
     case '[':
       frame.set(--index, Frame::Object);
-      c->initLocal(1, index, frame.types.object);
+      c->initLocal(index, frame.types.object);
       break;
 
     case 'J':
       frame.set(--index, Frame::Long);
       frame.set(--index, Frame::Long);
-      c->initLocal(2, index, frame.types.i8);
+      c->initLocal(index, frame.types.i8);
       break;
 
     case 'D':
       frame.set(--index, Frame::Long);
       frame.set(--index, Frame::Long);
-      c->initLocal(2, index, frame.types.f8);
+      c->initLocal(index, frame.types.f8);
       break;
 
     case 'F':
       frame.set(--index, Frame::Integer);
-      c->initLocal(1, index, frame.types.f4);
+      c->initLocal(index, frame.types.f4);
       break;
 
     default:
       frame.set(--index, Frame::Integer);
-      c->initLocal(1, index, frame.types.i4);
+      c->initLocal(index, frame.types.i4);
       break;
     }
   }

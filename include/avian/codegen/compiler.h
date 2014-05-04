@@ -93,10 +93,9 @@ class Compiler {
   virtual void return_(ir::Value* value) = 0;
   virtual void return_() = 0;
 
-  virtual void initLocal(unsigned size, unsigned index, ir::Type type) = 0;
+  virtual void initLocal(unsigned index, ir::Type type) = 0;
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) = 0;
-  virtual void storeLocal(ir::Value* src, unsigned index)
-      = 0;
+  virtual void storeLocal(ir::Value* src, unsigned index) = 0;
   virtual ir::Value* loadLocal(ir::Type type, unsigned index) = 0;
   virtual void saveLocals() = 0;
 

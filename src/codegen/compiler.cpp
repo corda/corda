@@ -2490,9 +2490,10 @@ class MyCompiler: public Compiler {
     v->home = frameIndex(&c, index);
   }
 
-  virtual void initLocal(unsigned footprint, unsigned index, ir::Type type)
+  virtual void initLocal(unsigned index, ir::Type type)
   {
-    assert(&c, footprint == typeFootprint(&c, type));
+    unsigned footprint = typeFootprint(&c, type);
+
     assert(&c, index + footprint <= c.localFootprint);
 
     Value* v = value(&c, type);
