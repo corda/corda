@@ -137,8 +137,8 @@ class Compiler {
   virtual void nullaryOp(lir::Operation op) = 0;
 
   virtual ir::Value* f2f(ir::Type resType, ir::Value* a) = 0;
-  virtual ir::Value* f2i(ir::Type aType, ir::Type resType, ir::Value* a) = 0;
-  virtual ir::Value* i2f(ir::Type aType, ir::Type resType, ir::Value* a) = 0;
+  virtual ir::Value* f2i(ir::Type resType, ir::Value* a) = 0;
+  virtual ir::Value* i2f(ir::Type resType, ir::Value* a) = 0;
 
   virtual void compile(uintptr_t stackOverflowHandler,
                        unsigned stackLimitOffset) = 0;
