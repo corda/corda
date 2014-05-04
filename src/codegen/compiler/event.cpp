@@ -901,26 +901,26 @@ Site* getTarget(Context* c, Value* value, Value* result, const SiteMask& resultM
 class CombineEvent: public Event {
  public:
   CombineEvent(Context* c, lir::TernaryOperation type,
-               unsigned firstSize, Value* firstValue,
-               unsigned secondSize, Value* secondValue,
-               unsigned resultSize, Value* resultValue,
+               Value* firstValue,
+               Value* secondValue,
+               Value* resultValue,
                const SiteMask& firstLowMask,
                const SiteMask& firstHighMask,
                const SiteMask& secondLowMask,
                const SiteMask& secondHighMask):
-    Event(c), type(type), firstSize(firstSize), firstValue(firstValue),
-    secondSize(secondSize), secondValue(secondValue), resultSize(resultSize),
+    Event(c), type(type), firstValue(firstValue),
+    secondValue(secondValue),
     resultValue(resultValue)
   {
-    this->addReads(c, firstValue, firstSize, firstLowMask, firstHighMask);
+    this->addReads(c, firstValue, firstValue->type.size(), firstLowMask, firstHighMask);
 
-    if (resultSize > vm::TargetBytesPerWord) {
+    if (resultValue->type.size() > vm::TargetBytesPerWord) {
       resultValue->grow(c);
     }
 
     bool condensed = c->arch->alwaysCondensed(type);
 
-    this->addReads(c, secondValue, secondSize,
+    this->addReads(c, secondValue, secondValue->type.size(),
              secondLowMask, condensed ? resultValue : 0,
              secondHighMask, condensed ? resultValue->nextWord : 0);
   }
@@ -941,23 +941,23 @@ class CombineEvent: public Event {
 
     assert(c, secondValue->source->type(c) == secondValue->nextWord->source->type(c));
     
-    freezeSource(c, firstSize, firstValue);
+    freezeSource(c, firstValue->type.size(), firstValue);
     
     OperandMask cMask;
 
     c->arch->planDestination
       (type,
-       firstSize,
+       firstValue->type.size(),
        OperandMask(
           1 << firstValue->source->type(c),
           (static_cast<uint64_t>(firstValue->nextWord->source->registerMask(c)) << 32)
             | static_cast<uint64_t>(firstValue->source->registerMask(c))),
-       secondSize,
+       secondValue->type.size(),
        OperandMask(
           1 << secondValue->source->type(c),
           (static_cast<uint64_t>(secondValue->nextWord->source->registerMask(c)) << 32)
             | static_cast<uint64_t>(secondValue->source->registerMask(c))),
-       resultSize,
+       resultValue->type.size(),
        cMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(cMask);
@@ -966,7 +966,7 @@ class CombineEvent: public Event {
     Site* low = getTarget(c, secondValue, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
     Site* high
-      = (resultSize > lowSize
+      = (resultValue->type.size() > lowSize
          ? getTarget(c, secondValue->nextWord, resultValue->nextWord, resultHighMask)
          : low);
 
@@ -976,75 +976,72 @@ class CombineEvent: public Event {
 //             resultValue, resultValue->nextWord);
 
     apply(c, type,
-          firstSize, firstValue->source, firstValue->nextWord->source,
-          secondSize, secondValue->source, secondValue->nextWord->source,
-          resultSize, low, high);
+          firstValue->type.size(), firstValue->source, firstValue->nextWord->source,
+          secondValue->type.size(), secondValue->source, secondValue->nextWord->source,
+          resultValue->type.size(), low, high);
 
-    thawSource(c, firstSize, firstValue);
+    thawSource(c, firstValue->type.size(), firstValue);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
     }
 
     low->thaw(c, secondValue);
-    if (resultSize > lowSize) {
+    if (resultValue->type.size() > lowSize) {
       high->thaw(c, secondValue->nextWord);
     }
 
     if (live(c, resultValue)) {
       resultValue->addSite(c, low);
-      if (resultSize > lowSize and live(c, resultValue->nextWord)) {
+      if (resultValue->type.size() > lowSize and live(c, resultValue->nextWord)) {
         resultValue->nextWord->addSite(c, high);
       }
     }
   }
 
   lir::TernaryOperation type;
-  unsigned firstSize;
   Value* firstValue;
-  unsigned secondSize;
   Value* secondValue;
-  unsigned resultSize;
   Value* resultValue;
 };
 
 void appendCombine(Context* c,
                    lir::TernaryOperation op,
-                   unsigned firstSize,
                    Value* firstValue,
-                   unsigned secondSize,
                    Value* secondValue,
-                   unsigned resultSize,
                    Value* resultValue)
 {
-  assert(c, firstSize == firstValue->type.size());
-  assert(c, secondSize == secondValue->type.size());
-  assert(c, resultSize == resultValue->type.size());
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
-
-  c->arch->planSource(
-      op, firstSize, firstMask, secondSize, secondMask, resultSize, &thunk);
+  c->arch->planSource(op,
+                      firstValue->type.size(),
+                      firstMask,
+                      secondValue->type.size(),
+                      secondMask,
+                      resultValue->type.size(),
+                      &thunk);
 
   if (thunk) {
     FixedSliceStack<ir::Value*, 6> slice;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
-    intptr_t handler
-        = c->client->getThunk(op, firstSize, resultSize, &threadParameter);
+    intptr_t handler = c->client->getThunk(op,
+                                           firstValue->type.size(),
+                                           resultValue->type.size(),
+                                           &threadParameter);
 
-    unsigned stackSize = ceilingDivide(secondSize, vm::TargetBytesPerWord)
-      + ceilingDivide(firstSize, vm::TargetBytesPerWord);
+    unsigned stackSize = ceilingDivide(secondValue->type.size(), vm::TargetBytesPerWord)
+      + ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord);
 
     pushSlice(c,
-              ceilingDivide(secondSize, vm::TargetBytesPerWord),
+              ceilingDivide(secondValue->type.size(), vm::TargetBytesPerWord),
               secondValue,
               stackBase,
               slice);
     pushSlice(c,
-              ceilingDivide(firstSize, vm::TargetBytesPerWord),
+              ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
               slice);
@@ -1063,17 +1060,14 @@ void appendCombine(Context* c,
                0,
                0,
                resultValue,
-               resultSize,
+               resultValue->type.size(),
                slice);
   } else {
     append(c,
            new (c->zone) CombineEvent(c,
                                       op,
-                                      firstSize,
                                       firstValue,
-                                      secondSize,
                                       secondValue,
-                                      resultSize,
                                       resultValue,
                                       SiteMask::lowPart(firstMask),
                                       SiteMask::highPart(firstMask),
@@ -1084,20 +1078,20 @@ void appendCombine(Context* c,
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, lir::BinaryOperation type, unsigned valueSize,
-                 Value* value, unsigned resultSize, Value* resultValue,
+  TranslateEvent(Context* c, lir::BinaryOperation type,
+                 Value* firstValue, Value* resultValue,
                  const SiteMask& valueLowMask,
                  const SiteMask& valueHighMask):
-    Event(c), type(type), valueSize(valueSize), resultSize(resultSize),
-    value(value), resultValue(resultValue)
+    Event(c), type(type),
+    firstValue(firstValue), resultValue(resultValue)
   {
     bool condensed = c->arch->alwaysCondensed(type);
 
-    if (resultSize > vm::TargetBytesPerWord) {
+    if (resultValue->type.size() > vm::TargetBytesPerWord) {
       resultValue->grow(c);
     }
 
-    this->addReads(c, value, valueSize, valueLowMask, condensed ? resultValue : 0,
+    this->addReads(c, firstValue, firstValue->type.size(), valueLowMask, condensed ? resultValue : 0,
              valueHighMask, condensed ? resultValue->nextWord : 0);
   }
 
@@ -1106,54 +1100,52 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assert(c, value->source->type(c) == value->nextWord->source->type(c));
+    assert(c, firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
     OperandMask bMask;
     
     c->arch->planDestination
       (type,
-       valueSize,
+       firstValue->type.size(),
        OperandMask(
-          1 << value->source->type(c),
-          (static_cast<uint64_t>(value->nextWord->source->registerMask(c)) << 32)
-            | static_cast<uint64_t>(value->source->registerMask(c))),
-       resultSize,
+          1 << firstValue->source->type(c),
+          (static_cast<uint64_t>(firstValue->nextWord->source->registerMask(c)) << 32)
+            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+       resultValue->type.size(),
        bMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(bMask);
     SiteMask resultHighMask = SiteMask::highPart(bMask);
     
-    Site* low = getTarget(c, value, resultValue, resultLowMask);
+    Site* low = getTarget(c, firstValue, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
     Site* high
-      = (resultSize > lowSize
-         ? getTarget(c, value->nextWord, resultValue->nextWord, resultHighMask)
+      = (resultValue->type.size() > lowSize
+         ? getTarget(c, firstValue->nextWord, resultValue->nextWord, resultHighMask)
          : low);
 
-    apply(c, type, valueSize, value->source, value->nextWord->source,
-          resultSize, low, high);
+    apply(c, type, firstValue->type.size(), firstValue->source, firstValue->nextWord->source,
+          resultValue->type.size(), low, high);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
     }
 
-    low->thaw(c, value);
-    if (resultSize > lowSize) {
-      high->thaw(c, value->nextWord);
+    low->thaw(c, firstValue);
+    if (resultValue->type.size() > lowSize) {
+      high->thaw(c, firstValue->nextWord);
     }
 
     if (live(c, resultValue)) {
       resultValue->addSite(c, low);
-      if (resultSize > lowSize and live(c, resultValue->nextWord)) {
+      if (resultValue->type.size() > lowSize and live(c, resultValue->nextWord)) {
         resultValue->nextWord->addSite(c, high);
       }
     }
   }
 
   lir::BinaryOperation type;
-  unsigned valueSize;
-  unsigned resultSize;
-  Value* value;
+  Value* firstValue;
   Value* resultValue;
   Read* resultRead;
   SiteMask resultLowMask;
@@ -1162,25 +1154,24 @@ class TranslateEvent: public Event {
 
 void appendTranslate(Context* c,
                      lir::BinaryOperation op,
-                     unsigned firstSize,
                      Value* firstValue,
-                     unsigned resultSize,
                      Value* resultValue)
 {
-  assert(c, firstSize == firstValue->type.size());
-  assert(c, resultSize == resultValue->type.size());
+  assert(c, firstValue->type.size() == firstValue->type.size());
+  assert(c, resultValue->type.size() == resultValue->type.size());
 
   bool thunk;
   OperandMask first;
 
-  c->arch->planSource(op, firstSize, first, resultSize, &thunk);
+  c->arch->planSource(
+      op, firstValue->type.size(), first, resultValue->type.size(), &thunk);
 
   if (thunk) {
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
     FixedSliceStack<ir::Value*, 2> slice;
 
     pushSlice(c,
-              ceilingDivide(firstSize, vm::TargetBytesPerWord),
+              ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
               slice);
@@ -1189,20 +1180,21 @@ void appendTranslate(Context* c,
         c,
         value(c,
               ir::Type(ir::Type::Address, vm::TargetBytesPerWord),
-              constantSite(c, c->client->getThunk(op, firstSize, resultSize))),
+              constantSite(
+                  c,
+                  c->client->getThunk(
+                      op, firstValue->type.size(), resultValue->type.size()))),
         ir::NativeCallingConvention,
         0,
         0,
         resultValue,
-        resultSize,
+        resultValue->type.size(),
         slice);
   } else {
     append(c,
            new (c->zone) TranslateEvent(c,
                                         op,
-                                        firstSize,
                                         firstValue,
-                                        resultSize,
                                         resultValue,
                                         SiteMask::lowPart(first),
                                         SiteMask::highPart(first)));

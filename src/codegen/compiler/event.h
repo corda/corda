@@ -131,13 +131,13 @@ appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
 
 void
 appendCombine(Context* c, lir::TernaryOperation type,
-              unsigned firstSize, Value* first,
-              unsigned secondSize, Value* second,
-              unsigned resultSize, Value* result);
+              Value* first,
+              Value* second,
+              Value* result);
 
 void
-appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
-                Value* first, unsigned resultSize, Value* result);
+appendTranslate(Context* c, lir::BinaryOperation type,
+                Value* first, Value* result);
 
 void
 appendOperation(Context* c, lir::Operation op);
