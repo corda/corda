@@ -2536,6 +2536,7 @@ class MyCompiler: public Compiler {
 
   virtual void storeLocal(unsigned footprint, ir::Value* src, unsigned index)
   {
+    assert(&c, typeFootprint(src->type) == footprint);
     compiler::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
   }
 
