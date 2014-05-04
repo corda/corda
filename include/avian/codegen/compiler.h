@@ -118,7 +118,6 @@ class Compiler {
                           ir::Type dstType) = 0;
 
   virtual void condJump(lir::TernaryOperation op,
-                        ir::Type type,
                         ir::Value* a,
                         ir::Value* b,
                         ir::Value* address) = 0;
