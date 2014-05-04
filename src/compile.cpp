@@ -1278,7 +1278,6 @@ ir::Value* loadLocal(Context* context,
              && (result->type.flavor() == ir::Type::Object
                  || result->type.flavor() == ir::Type::Address))
          // TODO Temporary hack for Subroutine test!!!
-         || result->type.flavor() == ir::Type::Invalid
          || result->type.flavor() == ir::Type::Integer);
   return result;
 }
@@ -1295,7 +1294,6 @@ void storeLocal(Context* context,
              && (value->type.flavor() == ir::Type::Object
                  || value->type.flavor() == ir::Type::Address))
          // TODO Temporary hack for Subroutine test!!!
-         || value->type.flavor() == ir::Type::Invalid
          || value->type.flavor() == ir::Type::Integer);
   context->compiler->storeLocal
     (footprint, value, translateLocalIndex(context, footprint, index));
@@ -1739,10 +1737,7 @@ class Frame {
 
   void pushInt(ir::Value* o)
   {
-    assert(t,
-           o->type == types.i4
-                      // TODO Temporary hack for Subroutine test!!!
-           || o->type.flavor() == ir::Type::Invalid);
+    assert(t, o->type == types.i4);
     pushSmall(o);
   }
 
@@ -1780,10 +1775,7 @@ class Frame {
 
   void pushLong(ir::Value* o)
   {
-    assert(t,
-           o->type == types.i8
-                      // TODO Temporary hack for Subroutine test!!!
-           || o->type.flavor() == ir::Type::Invalid);
+    assert(t, o->type == types.i8);
     pushLarge(o);
   }
 

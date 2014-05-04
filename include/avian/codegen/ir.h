@@ -34,10 +34,6 @@ class Type {
     // Represents the lack of a return value
     // TODO: remove when possible
     Void,
-
-    // Represents some arbitrary type that should not be accessed
-    // TODO: remove when possible
-    Invalid
   };
 
  private:

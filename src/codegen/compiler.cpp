@@ -1224,7 +1224,6 @@ unsigned typeFootprint(Context* c, ir::Type type)
   case ir::Type::Object:
   case ir::Type::Address:
   case ir::Type::Half:
-  case ir::Type::Invalid:
     return 1;
   case ir::Type::Void:
     return 0;
@@ -2465,12 +2464,7 @@ class MyCompiler: public Compiler {
 
   virtual void return_(ir::Type type, ir::Value* a)
   {
-    // TODO: once type information is flowed properly, enable this assert.
-    // Some time later, we can remove the parameter.
-    assert(&c,
-           a->type == type
-           // TODO Temporary hack for Subroutine test!!!
-           || a->type.flavor() == ir::Type::Invalid);
+    assert(&c, a->type == type);
     appendReturn(&c, type.size(), static_cast<Value*>(a));
   }
 
