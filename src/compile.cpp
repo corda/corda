@@ -4428,7 +4428,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case d2f: {
-      frame->pushFloat(c->f2f(types.f8, types.f4, frame->popLong()));
+      frame->pushFloat(c->f2f(types.f4, frame->popLong()));
     } break;
 
     case d2i: {
@@ -4529,7 +4529,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case f2d: {
-      frame->pushDouble(c->f2f(types.f4, types.f8, frame->popInt()));
+      frame->pushDouble(c->f2f(types.f8, frame->popInt()));
     } break;
 
     case f2i: {
