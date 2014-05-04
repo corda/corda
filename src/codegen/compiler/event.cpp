@@ -1517,6 +1517,8 @@ void
 appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* firstValue,
              Value* secondValue, Value* addressValue)
 {
+  assert(c, size == firstValue->type.size());
+  assert(c, size == secondValue->type.size());
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
