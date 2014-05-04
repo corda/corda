@@ -3754,19 +3754,17 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "sqrt")
         and MATCH(methodSpec(t, target), "(D)D"))
     {
-      frame->pushDouble(
-          c->unaryOp(lir::FloatSquareRoot, types.f8, frame->popLong()));
+      frame->pushDouble(c->unaryOp(lir::FloatSquareRoot, frame->popLong()));
       return true;
     } else if (MATCH(methodName(t, target), "abs")) {
       if (MATCH(methodSpec(t, target), "(I)I")) {
-        frame->pushInt(c->unaryOp(lir::Absolute, types.i4, frame->popInt()));
+        frame->pushInt(c->unaryOp(lir::Absolute, frame->popInt()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(J)J")) {
-        frame->pushLong(c->unaryOp(lir::Absolute, types.i8, frame->popLong()));
+        frame->pushLong(c->unaryOp(lir::Absolute, frame->popLong()));
         return true;
       } else if (MATCH(methodSpec(t, target), "(F)F")) {
-        frame->pushFloat(
-            c->unaryOp(lir::FloatAbsolute, types.f4, frame->popInt()));
+        frame->pushFloat(c->unaryOp(lir::FloatAbsolute, frame->popInt()));
         return true;
       }
     }
@@ -4484,8 +4482,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case dneg: {
-      frame->pushDouble(
-          c->unaryOp(lir::FloatNegate, types.f8, frame->popLong()));
+      frame->pushDouble(c->unaryOp(lir::FloatNegate, frame->popLong()));
     } break;
 
     case dup:
@@ -4585,7 +4582,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case fneg: {
-      frame->pushFloat(c->unaryOp(lir::FloatNegate, types.f4, frame->popInt()));
+      frame->pushFloat(c->unaryOp(lir::FloatNegate, frame->popInt()));
     } break;
 
     case getfield:
@@ -4999,7 +4996,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case ineg: {
-      frame->pushInt(c->unaryOp(lir::Negate, types.i4, frame->popInt()));
+      frame->pushInt(c->unaryOp(lir::Negate, frame->popInt()));
     } break;
 
     case instanceof: {
@@ -5475,7 +5472,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case lneg:
-      frame->pushLong(c->unaryOp(lir::Negate, types.i8, frame->popLong()));
+      frame->pushLong(c->unaryOp(lir::Negate, frame->popLong()));
       break;
 
     case lookupswitch: {

@@ -130,7 +130,6 @@ class Compiler {
                               ir::Value* a,
                               ir::Value* b) = 0;
   virtual ir::Value* unaryOp(lir::BinaryOperation op,
-                             ir::Type type,
                              ir::Value* a) = 0;
   virtual void nullaryOp(lir::Operation op) = 0;
 

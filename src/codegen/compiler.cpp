@@ -2678,16 +2678,14 @@ class MyCompiler: public Compiler {
   }
 
   virtual ir::Value* unaryOp(lir::BinaryOperation op,
-                             ir::Type type,
                              ir::Value* a)
   {
-    assert(&c, a->type == type);
     assert(&c,
            (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
                                                           and isFloatValue(a)));
     Value* result = value(&c, a->type);
     appendTranslate(
-        &c, op, type.size(), static_cast<Value*>(a), type.size(), result);
+        &c, op, a->type.size(), static_cast<Value*>(a), a->type.size(), result);
     return result;
   }
 
