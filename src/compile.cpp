@@ -1350,13 +1350,7 @@ int methodReferenceReturnCode(Thread* t, object reference)
 
 class Frame {
  public:
-  enum StackType {
-    Integer,
-    Long,
-    Object
-  };
-
-  Frame(Context* context, uint8_t* stackMap)
+  Frame(Context* context, ir::Type* stackMap)
       : context(context),
         t(context->thread),
         c(context->compiler),
@@ -1367,10 +1361,12 @@ class Frame {
         level(0),
         types(TargetBytesPerWord)
   {
-    memset(stackMap, 0, codeMaxStack(t, methodCode(t, context->method)));
+    memset(stackMap,
+           0,
+           codeMaxStack(t, methodCode(t, context->method)) * sizeof(ir::Type));
   }
 
-  Frame(Frame* f, uint8_t* stackMap)
+  Frame(Frame* f, ir::Type* stackMap)
       : context(f->context),
         t(context->thread),
         c(context->compiler),
@@ -1381,8 +1377,9 @@ class Frame {
         level(f->level + 1),
         types(TargetBytesPerWord)
   {
-    memcpy(stackMap, f->stackMap, codeMaxStack
-           (t, methodCode(t, context->method)));
+    memcpy(stackMap,
+           f->stackMap,
+           codeMaxStack(t, methodCode(t, context->method)) * sizeof(ir::Type));
 
     if (level > 1) {
       context->eventLog.append(PushContextEvent);
@@ -1442,10 +1439,11 @@ class Frame {
     return localSize() + stackSize();
   }
 
-  void set(unsigned index, uint8_t type) {
+  void set(unsigned index, ir::Type type)
+  {
     assert(t, index < frameSize());
 
-    if (type == Object) {
+    if (type == types.object) {
       context->eventLog.append(MarkEvent);
       context->eventLog.append2(index);
     } else {
@@ -1459,7 +1457,8 @@ class Frame {
     }
   }
 
-  uint8_t get(unsigned index) {
+  ir::Type get(unsigned index)
+  {
     assert(t, index < frameSize());
     int si = index - localSize();
     assert(t, si >= 0);
@@ -1468,25 +1467,25 @@ class Frame {
 
   void pushedInt() {
     assert(t, sp + 1 <= frameSize());
-    set(sp++, Integer);
+    set(sp++, types.i4);
   }
 
   void pushedLong() {
     assert(t, sp + 2 <= frameSize());
-    set(sp++, Long);
-    set(sp++, Long);
+    set(sp++, types.i8);
+    set(sp++, types.i8);
   }
 
   void pushedObject() {
     assert(t, sp + 1 <= frameSize());
-    set(sp++, Object);
+    set(sp++, types.object);
   }
 
   void popped(unsigned count) {
     assert(t, sp >= count);
     assert(t, sp - count >= localSize());
     while (count) {
-      set(--sp, Integer);
+      set(--sp, types.i4);
       -- count;
     }
   }
@@ -1494,39 +1493,39 @@ class Frame {
   void poppedInt() {
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
-    assert(t, get(sp - 1) == Integer);
+    assert(t, get(sp - 1) == types.i4);
     -- sp;
   }
   
   void poppedLong() {
     assert(t, sp >= 1);
     assert(t, sp - 2 >= localSize());
-    assert(t, get(sp - 1) == Long);
-    assert(t, get(sp - 2) == Long);
+    assert(t, get(sp - 1) == types.i8);
+    assert(t, get(sp - 2) == types.i8);
     sp -= 2;
   }
   
   void poppedObject() {
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
-    assert(t, get(sp - 1) == Object);
-    set(--sp, Integer);
+    assert(t, get(sp - 1) == types.object);
+    set(--sp, types.i4);
   }
 
   void storedInt(unsigned index) {
     assert(t, index < localSize());
-    set(index, Integer);
+    set(index, types.i4);
   }
 
   void storedLong(unsigned index) {
     assert(t, index + 1 < localSize());
-    set(index, Long);
-    set(index + 1, Long);
+    set(index, types.i8);
+    set(index + 1, types.i8);
   }
 
   void storedObject(unsigned index) {
     assert(t, index < localSize());
-    set(index, Object);
+    set(index, types.object);
   }
 
   void dupped() {
@@ -1540,8 +1539,8 @@ class Frame {
     assert(t, sp + 1 <= frameSize());
     assert(t, sp - 2 >= localSize());
 
-    uint8_t b2 = get(sp - 2);
-    uint8_t b1 = get(sp - 1);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
 
     set(sp - 1, b2);
     set(sp - 2, b1);
@@ -1554,9 +1553,9 @@ class Frame {
     assert(t, sp + 1 <= frameSize());
     assert(t, sp - 3 >= localSize());
 
-    uint8_t b3 = get(sp - 3);
-    uint8_t b2 = get(sp - 2);
-    uint8_t b1 = get(sp - 1);
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
 
     set(sp - 2, b3);
     set(sp - 1, b2);
@@ -1570,8 +1569,8 @@ class Frame {
     assert(t, sp + 2 <= frameSize());
     assert(t, sp - 2 >= localSize());
 
-    uint8_t b2 = get(sp - 2);
-    uint8_t b1 = get(sp - 1);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
 
     set(sp, b2);
     set(sp + 1, b1);
@@ -1583,9 +1582,9 @@ class Frame {
     assert(t, sp + 2 <= frameSize());
     assert(t, sp - 3 >= localSize());
 
-    uint8_t b3 = get(sp - 3);
-    uint8_t b2 = get(sp - 2);
-    uint8_t b1 = get(sp - 1);
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
 
     set(sp - 1, b3);
     set(sp - 3, b2);
@@ -1600,10 +1599,10 @@ class Frame {
     assert(t, sp + 2 <= frameSize());
     assert(t, sp - 4 >= localSize());
 
-    uint8_t b4 = get(sp - 4);
-    uint8_t b3 = get(sp - 3);
-    uint8_t b2 = get(sp - 2);
-    uint8_t b1 = get(sp - 1);
+    ir::Type b4 = get(sp - 4);
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
 
     set(sp - 2, b4);
     set(sp - 1, b3);
@@ -1618,7 +1617,7 @@ class Frame {
   void swapped() {
     assert(t, sp - 2 >= localSize());
 
-    uint8_t saved = get(sp - 1);
+    ir::Type saved = get(sp - 1);
 
     set(sp - 1, get(sp - 2));
     set(sp - 2, saved);
@@ -1854,7 +1853,7 @@ class Frame {
 
     assert(t, sp >= 1);
     assert(t, sp - 1 >= localSize());
-    if (get(sp - 1) == Object) {
+    if (get(sp - 1) == types.object) {
       storedObject(translateLocalIndex(context, 1, index));
     } else {
       storedInt(translateLocalIndex(context, 1, index));
@@ -1883,7 +1882,7 @@ class Frame {
   void dupX2() {
     ir::Value* s0 = popQuiet(types.i4);
 
-    if (get(sp - 2) == Long) {
+    if (get(sp - 2) == types.i8) {
       ir::Value* s1 = popLongQuiet();
 
       pushQuiet(types.i4, s0);
@@ -1903,7 +1902,7 @@ class Frame {
   }
 
   void dup2() {
-    if (get(sp - 1) == Long) {
+    if (get(sp - 1) == types.i8) {
       pushLongQuiet(c->peek(2, 0));
     } else {
       ir::Value* s0 = popQuiet(types.i4);
@@ -1919,7 +1918,7 @@ class Frame {
   }
 
   void dup2X1() {
-    if (get(sp - 1) == Long) {
+    if (get(sp - 1) == types.i8) {
       ir::Value* s0 = popLongQuiet();
       ir::Value* s1 = popQuiet(types.i4);
 
@@ -1942,10 +1941,10 @@ class Frame {
   }
 
   void dup2X2() {
-    if (get(sp - 1) == Long) {
+    if (get(sp - 1) == types.i8) {
       ir::Value* s0 = popLongQuiet();
 
-      if (get(sp - 3) == Long) {
+      if (get(sp - 3) == types.i8) {
         ir::Value* s1 = popLongQuiet();
 
         pushLongQuiet(s0);
@@ -2131,7 +2130,7 @@ class Frame {
   // Innermost subroutine we're compiling code for
   Subroutine* subroutine;
 
-  uint8_t* stackMap;
+  ir::Type* stackMap;
   unsigned ip;
   unsigned sp;
   unsigned level;
@@ -3446,6 +3445,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
 void
 handleEntrance(MyThread* t, Frame* frame)
 {
+  ir::Types types(TargetBytesPerWord);
   object method = frame->context->method;
 
   if ((methodFlags(t, method) & (ACC_SYNCHRONIZED | ACC_STATIC))
@@ -3458,7 +3458,7 @@ handleEntrance(MyThread* t, Frame* frame)
                frame->types.object,
                loadLocal(frame->context, 1, frame->types.object, 0),
                index);
-    frame->set(index, Frame::Object);
+    frame->set(index, types.object);
   }
 
   handleMonitorEvent
@@ -4042,7 +4042,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   ir::Types types(TargetBytesPerWord);
 
  start:
-  uint8_t* stackMap = static_cast<uint8_t*>(stack.push(stackSize));
+   ir::Type* stackMap
+       = static_cast<ir::Type*>(stack.push(stackSize * sizeof(ir::Type)));
   frame = new (stack.push(sizeof(Frame))) Frame(frame, stackMap);
 
  loop:
@@ -4077,22 +4078,21 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     if (DebugInstructions) {
       unsigned startingIp = ip;
-      // TODO: fix stack printing
       fprintf(stderr, " stack: [");
       for (size_t i = frame->localSize(); i < frame->sp; i++) {
-        switch (frame->get(i)) {
-        case Frame::Integer:
+        ir::Type ty = frame->get(i);
+        if (ty == types.i4) {
           fprintf(stderr, "I");
-          break;
-        case Frame::Long:
+        } else if (ty == types.i8) {
           fprintf(stderr, "L");
-          break;
-        case Frame::Object:
+        } else if (ty == types.f4) {
+          fprintf(stderr, "F");
+        } else if (ty == types.f8) {
+          fprintf(stderr, "D");
+        } else if (ty == types.object) {
           fprintf(stderr, "O");
-          break;
-        default:
+        } else {
           fprintf(stderr, "?");
-          break;
         }
       }
       fprintf(stderr, "]\n");
@@ -6117,7 +6117,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   frame->dispose();
   frame = 0;
   stack.pop(sizeof(Frame));
-  stack.pop(stackSize);
+  stack.pop(stackSize * sizeof(ir::Type));
   switch (stack.popValue()) {
   case Return:
     return;
@@ -7022,13 +7022,13 @@ compile(MyThread* t, Context* context)
   c->init(codeLength(t, methodCode(t, context->method)), footprint, locals,
           alignedFrameSize(t, context->method));
 
-  THREAD_RUNTIME_ARRAY(t, uint8_t, stackMap,
-                codeMaxStack(t, methodCode(t, context->method)));
-  Frame frame(context, RUNTIME_ARRAY_BODY(stackMap));
+  ir::Type* stackMap = (ir::Type*)malloc(
+      sizeof(ir::Type) * codeMaxStack(t, methodCode(t, context->method)));
+  Frame frame(context, stackMap);
 
   unsigned index = methodParameterFootprint(t, context->method);
   if ((methodFlags(t, context->method) & ACC_STATIC) == 0) {
-    frame.set(--index, Frame::Object);
+    frame.set(--index, frame.types.object);
     c->initLocal(index, frame.types.object);
   }
 
@@ -7040,29 +7040,29 @@ compile(MyThread* t, Context* context)
     switch (*it.next()) {
     case 'L':
     case '[':
-      frame.set(--index, Frame::Object);
+      frame.set(--index, frame.types.object);
       c->initLocal(index, frame.types.object);
       break;
 
     case 'J':
-      frame.set(--index, Frame::Long);
-      frame.set(--index, Frame::Long);
+      frame.set(--index, frame.types.i8);
+      frame.set(--index, frame.types.i8);
       c->initLocal(index, frame.types.i8);
       break;
 
     case 'D':
-      frame.set(--index, Frame::Long);
-      frame.set(--index, Frame::Long);
+      frame.set(--index, frame.types.f8);
+      frame.set(--index, frame.types.f8);
       c->initLocal(index, frame.types.f8);
       break;
 
     case 'F':
-      frame.set(--index, Frame::Integer);
+      frame.set(--index, frame.types.i4);
       c->initLocal(index, frame.types.f4);
       break;
 
     default:
-      frame.set(--index, Frame::Integer);
+      frame.set(--index, frame.types.i4);
       c->initLocal(index, frame.types.i4);
       break;
     }
@@ -7108,12 +7108,10 @@ compile(MyThread* t, Context* context)
 
             c->restoreState(state);
 
-            THREAD_RUNTIME_ARRAY(
-                t,
-                uint8_t,
-                stackMap,
-                codeMaxStack(t, methodCode(t, context->method)));
-            Frame frame2(&frame, RUNTIME_ARRAY_BODY(stackMap));
+            ir::Type* stackMap = (ir::Type*)malloc(
+                sizeof(ir::Type)
+                * codeMaxStack(t, methodCode(t, context->method)));
+            Frame frame2(&frame, stackMap);
 
             unsigned end = duplicatedBaseIp + exceptionHandlerEnd(eh);
             if (exceptionHandlerIp(eh) >= static_cast<unsigned>(start)
@@ -7128,7 +7126,7 @@ compile(MyThread* t, Context* context)
             for (unsigned i = 1;
                  i < codeMaxStack(t, methodCode(t, context->method));
                  ++i) {
-              frame2.set(localSize(t, context->method) + i, Frame::Integer);
+              frame2.set(localSize(t, context->method) + i, frame2.types.i4);
             }
 
             compile(t, &frame2, exceptionHandlerIp(eh), start);
@@ -7146,6 +7144,7 @@ compile(MyThread* t, Context* context)
     context->dirtyRoots = false;
     calculateFrameMaps(t, context, 0, 0, 0);
   }
+  free(stackMap);
 }
 
 void
