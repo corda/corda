@@ -1264,7 +1264,7 @@ class Context {
   TraceElement* traceLog;
   Slice<uint16_t> visitTable;
   Slice<uintptr_t> rootTable;
-  Allocator* executableAllocator;
+  Alloc* executableAllocator;
   void* executableStart;
   unsigned executableSize;
   unsigned objectPoolCount;

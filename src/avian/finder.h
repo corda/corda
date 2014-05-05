@@ -16,7 +16,7 @@
 
 namespace avian {
 namespace util {
-class Allocator;
+class Alloc;
 }
 }
 
@@ -202,12 +202,12 @@ class Finder {
 };
 
 AVIAN_EXPORT Finder* makeFinder(System* s,
-                                avian::util::Allocator* a,
+                                avian::util::Alloc* a,
                                 const char* path,
                                 const char* bootLibrary);
 
 Finder* makeFinder(System* s,
-                   avian::util::Allocator* a,
+                   avian::util::Alloc* a,
                    const uint8_t* jarData,
                    unsigned jarLength);
 

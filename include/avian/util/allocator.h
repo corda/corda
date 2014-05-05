@@ -21,10 +21,14 @@ class AllocOnly {
   virtual void* allocate(size_t size) = 0;
 };
 
-class Allocator : public AllocOnly {
+class Alloc : public AllocOnly {
+ public:
+  virtual void free(const void* p, size_t size) = 0;
+};
+
+class Allocator : public Alloc {
  public:
   virtual void* tryAllocate(size_t size) = 0;
-  virtual void free(const void* p, size_t size) = 0;
 };
 
 }  // namespace util

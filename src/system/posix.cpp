@@ -856,7 +856,7 @@ class MySystem : public System {
     return SO_SUFFIX;
   }
 
-  virtual const char* toAbsolutePath(Allocator* allocator, const char* name)
+  virtual const char* toAbsolutePath(AllocOnly* allocator, const char* name)
   {
     if (name[0] == '/') {
       return copy(allocator, name);

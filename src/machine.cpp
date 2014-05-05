@@ -4175,7 +4175,7 @@ object allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
 }
 
 object allocate3(Thread* t,
-                 Allocator* allocator,
+                 Alloc* allocator,
                  Machine::AllocationType type,
                  unsigned sizeInBytes,
                  bool objectMask)

@@ -1994,7 +1994,7 @@ class MyHeap : public Heap {
     return Fixie::totalSize(sizeInWords, objectMask);
   }
 
-  void* allocateFixed(Allocator* allocator,
+  void* allocateFixed(Alloc* allocator,
                       unsigned sizeInWords,
                       bool objectMask,
                       Fixie** handle,
@@ -2011,7 +2011,7 @@ class MyHeap : public Heap {
         ->body();
   }
 
-  virtual void* allocateFixed(Allocator* allocator,
+  virtual void* allocateFixed(Alloc* allocator,
                               unsigned sizeInWords,
                               bool objectMask)
   {
@@ -2019,7 +2019,7 @@ class MyHeap : public Heap {
         allocator, sizeInWords, objectMask, &(c.fixies), false);
   }
 
-  virtual void* allocateImmortalFixed(Allocator* allocator,
+  virtual void* allocateImmortalFixed(Alloc* allocator,
                                       unsigned sizeInWords,
                                       bool objectMask)
   {

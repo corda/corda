@@ -62,20 +62,15 @@ const char* mainClass(const char* jar)
 
   System* system = makeSystem();
 
-  class MyAllocator : public avian::util::Allocator {
+  class MyAllocator : public avian::util::Alloc {
    public:
     MyAllocator(System* s) : s(s)
     {
     }
 
-    virtual void* tryAllocate(size_t size)
-    {
-      return s->tryAllocate(size);
-    }
-
     virtual void* allocate(size_t size)
     {
-      void* p = tryAllocate(size);
+      void* p = s->tryAllocate(size);
       if (p == 0) {
         abort(s);
       }

@@ -20,7 +20,7 @@ namespace util {
 
 // An Allocator that allocates, bump-pointer style, out of a pre-defined chunk
 // of memory.
-class FixedAllocator : public Allocator {
+class FixedAllocator : public Alloc {
  public:
   FixedAllocator(Aborter* a, Slice<uint8_t> memory);
 

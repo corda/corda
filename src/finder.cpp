@@ -56,7 +56,7 @@ class DirectoryElement : public Element {
  public:
   class Iterator : public Element::Iterator {
    public:
-    Iterator(System* s, Allocator* allocator, const char* name, unsigned skip)
+    Iterator(System* s, Alloc* allocator, const char* name, unsigned skip)
         : s(s),
           allocator(allocator),
           name(name),
@@ -113,7 +113,7 @@ class DirectoryElement : public Element {
     }
 
     System* s;
-    Allocator* allocator;
+    Alloc* allocator;
     const char* name;
     unsigned skip;
     System::Directory* directory;
@@ -121,7 +121,7 @@ class DirectoryElement : public Element {
     Iterator* it;
   };
 
-  DirectoryElement(System* s, Allocator* allocator, const char* name)
+  DirectoryElement(System* s, Alloc* allocator, const char* name)
       : s(s),
         allocator(allocator),
         originalName(name),
@@ -188,7 +188,7 @@ class DirectoryElement : public Element {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   const char* originalName;
   const char* name;
   const char* urlPrefix_;
@@ -198,7 +198,7 @@ class DirectoryElement : public Element {
 class PointerRegion : public System::Region {
  public:
   PointerRegion(System* s,
-                Allocator* allocator,
+                Alloc* allocator,
                 const uint8_t* start,
                 size_t length,
                 bool freePointer = false)
@@ -229,7 +229,7 @@ class PointerRegion : public System::Region {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   const uint8_t* start_;
   size_t length_;
   bool freePointer;
@@ -237,7 +237,7 @@ class PointerRegion : public System::Region {
 
 class DataRegion : public System::Region {
  public:
-  DataRegion(System* s, Allocator* allocator, size_t length)
+  DataRegion(System* s, Alloc* allocator, size_t length)
       : s(s), allocator(allocator), length_(length)
   {
   }
@@ -258,7 +258,7 @@ class DataRegion : public System::Region {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   size_t length_;
   uint8_t data[0];
 };
@@ -277,7 +277,7 @@ class JarIndex {
     const uint8_t* entry;
   };
 
-  JarIndex(System* s, Allocator* allocator, unsigned capacity)
+  JarIndex(System* s, Alloc* allocator, unsigned capacity)
       : s(s),
         allocator(allocator),
         capacity(capacity),
@@ -288,14 +288,14 @@ class JarIndex {
     memset(table, 0, sizeof(List<Entry>*) * capacity);
   }
 
-  static JarIndex* make(System* s, Allocator* allocator, unsigned capacity)
+  static JarIndex* make(System* s, Alloc* allocator, unsigned capacity)
   {
     return new (allocator->allocate(sizeof(JarIndex)
                                     + (sizeof(List<Entry>*) * capacity)))
         JarIndex(s, allocator, capacity);
   }
 
-  static JarIndex* open(System* s, Allocator* allocator, System::Region* region)
+  static JarIndex* open(System* s, Alloc* allocator, System::Region* region)
   {
     JarIndex* index = make(s, allocator, 32);
 
@@ -438,7 +438,7 @@ class JarIndex {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   unsigned capacity;
   unsigned position;
 
@@ -450,7 +450,7 @@ class JarElement : public Element {
  public:
   class Iterator : public Element::Iterator {
    public:
-    Iterator(System* s, Allocator* allocator, JarIndex* index)
+    Iterator(System* s, Alloc* allocator, JarIndex* index)
         : s(s), allocator(allocator), index(index), position(0)
     {
     }
@@ -472,13 +472,13 @@ class JarElement : public Element {
     }
 
     System* s;
-    Allocator* allocator;
+    Alloc* allocator;
     JarIndex* index;
     unsigned position;
   };
 
   JarElement(System* s,
-             Allocator* allocator,
+             Alloc* allocator,
              const char* name,
              bool canonicalizePath = true)
       : s(s),
@@ -495,7 +495,7 @@ class JarElement : public Element {
   }
 
   JarElement(System* s,
-             Allocator* allocator,
+             Alloc* allocator,
              const uint8_t* jarData,
              unsigned jarLength)
       : s(s),
@@ -599,7 +599,7 @@ class JarElement : public Element {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   const char* originalName;
   const char* name;
   const char* urlPrefix_;
@@ -611,7 +611,7 @@ class JarElement : public Element {
 class BuiltinElement : public JarElement {
  public:
   BuiltinElement(System* s,
-                 Allocator* allocator,
+                 Alloc* allocator,
                  const char* name,
                  const char* libraryName)
       : JarElement(s, allocator, name, false),
@@ -711,7 +711,7 @@ unsigned baseName(const char* name, char fileSeparator)
 void add(System* s,
          Element** first,
          Element** last,
-         Allocator* allocator,
+         Alloc* allocator,
          const char* name,
          unsigned nameLength,
          const char* bootLibrary);
@@ -719,7 +719,7 @@ void add(System* s,
 void addTokens(System* s,
                Element** first,
                Element** last,
-               Allocator* allocator,
+               Alloc* allocator,
                const char* jarName,
                unsigned jarNameBase,
                const char* tokens,
@@ -756,7 +756,7 @@ bool continuationLine(const uint8_t* base,
 void addJar(System* s,
             Element** first,
             Element** last,
-            Allocator* allocator,
+            Alloc* allocator,
             const char* name,
             const char* bootLibrary)
 {
@@ -852,7 +852,7 @@ void addJar(System* s,
 void add(System* s,
          Element** first,
          Element** last,
-         Allocator* allocator,
+         Alloc* allocator,
          const char* token,
          unsigned tokenLength,
          const char* bootLibrary)
@@ -904,7 +904,7 @@ void add(System* s,
 }
 
 Element* parsePath(System* s,
-                   Allocator* allocator,
+                   Alloc* allocator,
                    const char* path,
                    const char* bootLibrary)
 {
@@ -921,7 +921,7 @@ Element* parsePath(System* s,
 
 class MyIterator : public Finder::IteratorImp {
  public:
-  MyIterator(System* s, Allocator* allocator, Element* path)
+  MyIterator(System* s, Alloc* allocator, Element* path)
       : s(s),
         allocator(allocator),
         e(path ? path->next : 0),
@@ -956,7 +956,7 @@ class MyIterator : public Finder::IteratorImp {
   }
 
   System* s;
-  Allocator* allocator;
+  Alloc* allocator;
   Element* e;
   Element::Iterator* it;
 };
@@ -964,7 +964,7 @@ class MyIterator : public Finder::IteratorImp {
 class MyFinder : public Finder {
  public:
   MyFinder(System* system,
-           Allocator* allocator,
+           Alloc* allocator,
            const char* path,
            const char* bootLibrary)
       : system(system),
@@ -975,7 +975,7 @@ class MyFinder : public Finder {
   }
 
   MyFinder(System* system,
-           Allocator* allocator,
+           Alloc* allocator,
            const uint8_t* jarData,
            unsigned jarLength)
       : system(system),
@@ -1071,7 +1071,7 @@ class MyFinder : public Finder {
   }
 
   System* system;
-  Allocator* allocator;
+  Alloc* allocator;
   Element* path_;
   const char* pathString;
 };
@@ -1081,7 +1081,7 @@ class MyFinder : public Finder {
 namespace vm {
 
 AVIAN_EXPORT Finder* makeFinder(System* s,
-                                Allocator* a,
+                                Alloc* a,
                                 const char* path,
                                 const char* bootLibrary)
 {
@@ -1089,7 +1089,7 @@ AVIAN_EXPORT Finder* makeFinder(System* s,
 }
 
 Finder* makeFinder(System* s,
-                   Allocator* a,
+                   Alloc* a,
                    const uint8_t* jarData,
                    unsigned jarLength)
 {
