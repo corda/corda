@@ -69,12 +69,12 @@ class Slice {
     return Slice<T>(this->begin() + begin, count);
   }
 
-  static Slice<T> alloc(Allocator* a, size_t count)
+  static Slice<T> alloc(AllocOnly* a, size_t count)
   {
     return Slice<T>((T*)a->allocate(sizeof(T) * count), count);
   }
 
-  static Slice<T> allocAndSet(Allocator* a, size_t count, const T& item)
+  static Slice<T> allocAndSet(AllocOnly* a, size_t count, const T& item)
   {
     Slice<T> slice(alloc(a, count));
     for (size_t i = 0; i < count; i++) {
@@ -83,14 +83,14 @@ class Slice {
     return slice;
   }
 
-  Slice<T> clone(Allocator* a, size_t newCount)
+  Slice<T> clone(AllocOnly* a, size_t newCount)
   {
     T* newItems = (T*)a->allocate(newCount * sizeof(T));
     memcpy(newItems, items, min(count, newCount) * sizeof(T));
     return Slice<T>(newItems, newCount);
   }
 
-  Slice<T> cloneAndSet(Allocator* a, size_t newCount, const T& item)
+  Slice<T> cloneAndSet(AllocOnly* a, size_t newCount, const T& item)
   {
     Slice<T> slice(clone(a, newCount));
     for (size_t i = count; i < newCount; i++) {

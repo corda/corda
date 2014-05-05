@@ -1158,7 +1158,7 @@ class Context {
 
   Context(MyThread* t, BootContext* bootContext, GcMethod* method)
       : thread(t),
-        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        zone(t->m->heap, InitialZoneCapacityInBytes),
         assembler(t->arch->makeAssembler(t->m->heap, &zone)),
         client(t),
         compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
@@ -1191,7 +1191,7 @@ class Context {
 
   Context(MyThread* t)
       : thread(t),
-        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        zone(t->m->heap, InitialZoneCapacityInBytes),
         assembler(t->arch->makeAssembler(t->m->heap, &zone)),
         client(t),
         compiler(0),
@@ -3743,8 +3743,7 @@ class Stack {
     Stack* s;
   };
 
-  Stack(MyThread* t)
-      : thread(t), zone(t->m->system, t->m->heap, 0), resource(this)
+  Stack(MyThread* t) : thread(t), zone(t->m->heap, 0), resource(this)
   {
   }
 

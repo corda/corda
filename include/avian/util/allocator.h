@@ -16,24 +16,21 @@
 namespace avian {
 namespace util {
 
-class Allocator {
+class AllocOnly {
  public:
-
-  // Returns null on failure
-  virtual void* tryAllocate(size_t size) = 0;
-
-  // Aborts on failure
   virtual void* allocate(size_t size) = 0;
+};
 
-  // By contract, size MUST be the original size of the allocated data, and p
-  // MUST point to the original base of the allocated data. No partial frees.
+class Allocator : public AllocOnly {
+ public:
+  virtual void* tryAllocate(size_t size) = 0;
   virtual void free(const void* p, size_t size) = 0;
 };
 
 }  // namespace util
 }  // namespace avian
 
-inline void* operator new(size_t size, avian::util::Allocator* allocator)
+inline void* operator new(size_t size, avian::util::AllocOnly* allocator)
 {
   return allocator->allocate(size);
 }

@@ -118,7 +118,7 @@ class OffsetPromise : public Promise {
 
 class ListenPromise : public Promise {
  public:
-  ListenPromise(vm::System* s, util::Allocator* allocator)
+  ListenPromise(vm::System* s, util::AllocOnly* allocator)
       : s(s), allocator(allocator), listener(0)
   {
   }
@@ -142,7 +142,7 @@ class ListenPromise : public Promise {
   }
 
   vm::System* s;
-  util::Allocator* allocator;
+  util::AllocOnly* allocator;
   Listener* listener;
   Promise* promise;
 };
@@ -150,7 +150,7 @@ class ListenPromise : public Promise {
 class DelayedPromise : public ListenPromise {
  public:
   DelayedPromise(vm::System* s,
-                 util::Allocator* allocator,
+                 util::AllocOnly* allocator,
                  Promise* basis,
                  DelayedPromise* next)
       : ListenPromise(s, allocator), basis(basis), next(next)
