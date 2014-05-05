@@ -1465,22 +1465,6 @@ class Frame {
     return stackMap[si];
   }
 
-  void pushedInt() {
-    assert(t, sp + 1 <= frameSize());
-    set(sp++, types.i4);
-  }
-
-  void pushedLong() {
-    assert(t, sp + 2 <= frameSize());
-    set(sp++, types.i8);
-    set(sp++, types.i8);
-  }
-
-  void pushedObject() {
-    assert(t, sp + 1 <= frameSize());
-    set(sp++, types.object);
-  }
-
   void popped(unsigned count) {
     assert(t, sp >= count);
     assert(t, sp - count >= localSize());
@@ -1488,28 +1472,6 @@ class Frame {
       set(--sp, types.i4);
       -- count;
     }
-  }
-  
-  void poppedInt() {
-    assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize());
-    assert(t, get(sp - 1) == types.i4);
-    -- sp;
-  }
-  
-  void poppedLong() {
-    assert(t, sp >= 1);
-    assert(t, sp - 2 >= localSize());
-    assert(t, get(sp - 1) == types.i8);
-    assert(t, get(sp - 2) == types.i8);
-    sp -= 2;
-  }
-  
-  void poppedObject() {
-    assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize());
-    assert(t, get(sp - 1) == types.object);
-    set(--sp, types.i4);
   }
 
   void storedInt(unsigned index) {
@@ -1521,11 +1483,6 @@ class Frame {
     assert(t, index + 1 < localSize());
     set(index, types.i8);
     set(index + 1, types.i8);
-  }
-
-  void storedObject(unsigned index) {
-    assert(t, index < localSize());
-    set(index, types.object);
   }
 
   void dupped() {
@@ -1695,207 +1652,160 @@ class Frame {
     this->ip = bytecodeIp;
   }
 
-  void pushQuiet(ir::Type type, ir::Value* o)
-  {
-    c->push(type, o);
-  }
+  // void c->push(ir::Type type, ir::Value* o)
+  // {
+  //   c->push(type, o);
+  // }
 
-  void pushLongQuiet(ir::Value* o)
-  {
-    pushQuiet(types.i8, o);
-  }
+  // void c->push(types.i8, ir::Value* o)
+  // {
+  //   c->push(types.i8, o);
+  // }
 
-  ir::Value* popQuiet(ir::Type type)
-  {
-    return c->pop(type);
-  }
+  // ir::Value* c->pop(ir::Type type)
+  // {
+  //   return c->pop(type);
+  // }
 
-  ir::Value* popLongQuiet()
-  {
-    return popQuiet(types.i8);
-  }
+  // ir::Value* c->pop(types.i8)
+  // {
+  //   return c->pop(types.i8);
+  // }
 
-  void pushSmall(ir::Value* o)
+  void push(ir::Type type, ir::Value* o)
   {
-    pushQuiet(types.i4, o);
-    pushedInt();
-  }
-
-  void pushInt(ir::Value* o)
-  {
-    assert(t, o->type == types.i4);
-    pushSmall(o);
-  }
-
-  void pushFloat(ir::Value* o)
-  {
-    assert(t, o->type == types.f4);
-    pushSmall(o);
-  }
-
-  void pushAddress()
-  {
-    c->pushed(ir::Type(ir::Type::Address, TargetBytesPerWord));
-
-    pushedInt();
-  }
-
-  void pushObject(ir::Value* o)
-  {
-    assert(t, o->type == types.object || o->type.flavor() == ir::Type::Address);
-    pushQuiet(types.object, o);
-    pushedObject();
+    assert(t, type == o->type);
+    c->push(o->type, o);
+    assert(t, sp + 1 <= frameSize());
+    set(sp++, type);
   }
 
   void pushObject() {
     c->pushed(types.object);
 
-    pushedObject();
+    assert(t, sp + 1 <= frameSize());
+    set(sp++, types.object);
   }
 
-  void pushLarge(ir::Value* o)
+  void pushLarge(ir::Type type, ir::Value* o)
   {
-    pushLongQuiet(o);
-    pushedLong();
+    assert(t, o->type == type);
+    c->push(type, o);
+    assert(t, sp + 2 <= frameSize());
+    set(sp++, type);
+    set(sp++, type);
   }
 
-  void pushLong(ir::Value* o)
-  {
-    assert(t, o->type == types.i8);
-    pushLarge(o);
-  }
+  // void pushLarge(types.i8, ir::Value* o)
+  // {
+  //   pushLarge(types.i8, o);
+  // }
 
-  void pushDouble(ir::Value* o)
-  {
-    assert(t, o->type == types.f8);
-    pushLarge(o);
-  }
+  // void pushLarge(types.f8, ir::Value* o)
+  // {
+  //   pushLarge(types.f8, o);
+  // }
 
   void pop(unsigned count) {
     popped(count);
     c->popped(count);
   }
 
-  ir::Value* popInt()
+  ir::Value* pop(ir::Type type)
   {
-    poppedInt();
-    return popQuiet(types.i4);
+    assert(t, sp >= 1);
+    assert(t, sp - 1 >= localSize());
+    assert(t, get(sp - 1) == type);
+    set(--sp, types.i4);
+    return c->pop(type);
   }
 
-  ir::Value* popLong()
+  ir::Value* popLarge(ir::Type type)
   {
-    poppedLong();
-    return popLongQuiet();
+    assert(t, sp >= 1);
+    assert(t, sp - 2 >= localSize());
+    assert(t, get(sp - 1) == type);
+    assert(t, get(sp - 2) == type);
+    sp -= 2;
+    return c->pop(type);
   }
 
-  ir::Value* popObject()
-  {
-    poppedObject();
-    return popQuiet(types.object);
-  }
-
-  void loadInt(unsigned index) {
-    assert(t, index < localSize());
-    pushInt(loadLocal(context, 1, types.i4, index));
-  }
-
-  void loadFloat(unsigned index)
+  void load(ir::Type type, unsigned index)
   {
     assert(t, index < localSize());
-    pushFloat(loadLocal(context, 1, types.f4, index));
+    push(type, loadLocal(context, 1, type, index));
   }
 
   void loadLong(unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLong(loadLocal(context, 2, types.i8, index));
+    pushLarge(types.i8, loadLocal(context, 2, types.i8, index));
   }
 
   void loadDouble(unsigned index)
   {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushDouble(loadLocal(context, 2, types.f8, index));
+    pushLarge(types.f8, loadLocal(context, 2, types.f8, index));
   }
 
   void loadObject(unsigned index) {
     assert(t, index < localSize());
-    pushObject(loadLocal(context, 1, types.object, index));
+    push(types.object, loadLocal(context, 1, types.object, index));
   }
 
-  void storeInt(unsigned index) {
-    storeLocal(context, 1, types.i4, popInt(), index);
-    storedInt(translateLocalIndex(context, 1, index));
-  }
-
-  void storeFloat(unsigned index)
+  void store(ir::Type type, unsigned index)
   {
-    storeLocal(context, 1, types.f4, popInt(), index);
-    storedInt(translateLocalIndex(context, 1, index));
+    assert(t, type == types.i4 || type == types.f4 || type == types.object);
+    storeLocal(context, 1, type, pop(type), index);
+    unsigned ti = translateLocalIndex(context, 1, index);
+    assert(t, ti < localSize());
+    set(ti, type);
   }
 
   void storeLong(unsigned index) {
-    storeLocal(context, 2, types.i8, popLong(), index);
+    storeLocal(context, 2, types.i8, popLarge(types.i8), index);
     storedLong(translateLocalIndex(context, 2, index));
   }
 
   void storeDouble(unsigned index)
   {
-    storeLocal(context, 2, types.f8, popLong(), index);
+    storeLocal(context, 2, types.f8, popLarge(types.f8), index);
     storedLong(translateLocalIndex(context, 2, index));
   }
 
-  void storeObject(unsigned index) {
-    storeLocal(context, 1, types.object, popObject(), index);
-    storedObject(translateLocalIndex(context, 1, index));
-  }
-
-  void storeObjectOrAddress(unsigned index) {
-    storeLocal(context, 1, types.object, popQuiet(types.object), index);
-
-    assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize());
-    if (get(sp - 1) == types.object) {
-      storedObject(translateLocalIndex(context, 1, index));
-    } else {
-      storedInt(translateLocalIndex(context, 1, index));
-    }
-
-    popped(1);
-  }
-
   void dup() {
-    pushQuiet(types.i4, c->peek(1, 0));
+    c->push(types.i4, c->peek(1, 0));
 
     dupped();
   }
 
   void dupX1() {
-    ir::Value* s0 = popQuiet(types.i4);
-    ir::Value* s1 = popQuiet(types.i4);
+    ir::Value* s0 = c->pop(types.i4);
+    ir::Value* s1 = c->pop(types.i4);
 
-    pushQuiet(types.i4, s0);
-    pushQuiet(types.i4, s1);
-    pushQuiet(types.i4, s0);
+    c->push(types.i4, s0);
+    c->push(types.i4, s1);
+    c->push(types.i4, s0);
 
     duppedX1();
   }
 
   void dupX2() {
-    ir::Value* s0 = popQuiet(types.i4);
+    ir::Value* s0 = c->pop(types.i4);
 
     if (get(sp - 2) == types.i8) {
-      ir::Value* s1 = popLongQuiet();
+      ir::Value* s1 = c->pop(types.i8);
 
-      pushQuiet(types.i4, s0);
-      pushLongQuiet(s1);
-      pushQuiet(types.i4, s0);
+      c->push(types.i4, s0);
+      c->push(types.i8, s1);
+      c->push(types.i4, s0);
     } else {
-      ir::Value* s1 = popQuiet(types.i4);
-      ir::Value* s2 = popQuiet(types.i4);
+      ir::Value* s1 = c->pop(types.i4);
+      ir::Value* s2 = c->pop(types.i4);
 
-      pushQuiet(types.i4, s0);
-      pushQuiet(types.i4, s2);
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
+      c->push(types.i4, s0);
+      c->push(types.i4, s2);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
     }
 
     duppedX2();
@@ -1903,15 +1813,15 @@ class Frame {
 
   void dup2() {
     if (get(sp - 1) == types.i8) {
-      pushLongQuiet(c->peek(2, 0));
+      c->push(types.i8, c->peek(2, 0));
     } else {
-      ir::Value* s0 = popQuiet(types.i4);
-      ir::Value* s1 = popQuiet(types.i4);
+      ir::Value* s0 = c->pop(types.i4);
+      ir::Value* s1 = c->pop(types.i4);
 
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
     }
 
     dupped2();
@@ -1919,22 +1829,22 @@ class Frame {
 
   void dup2X1() {
     if (get(sp - 1) == types.i8) {
-      ir::Value* s0 = popLongQuiet();
-      ir::Value* s1 = popQuiet(types.i4);
+      ir::Value* s0 = c->pop(types.i8);
+      ir::Value* s1 = c->pop(types.i4);
 
-      pushLongQuiet(s0);
-      pushQuiet(types.i4, s1);
-      pushLongQuiet(s0);
+      c->push(types.i8, s0);
+      c->push(types.i4, s1);
+      c->push(types.i8, s0);
     } else {
-      ir::Value* s0 = popQuiet(types.i4);
-      ir::Value* s1 = popQuiet(types.i4);
-      ir::Value* s2 = popQuiet(types.i4);
+      ir::Value* s0 = c->pop(types.i4);
+      ir::Value* s1 = c->pop(types.i4);
+      ir::Value* s2 = c->pop(types.i4);
 
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
-      pushQuiet(types.i4, s2);
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
+      c->push(types.i4, s2);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
     }
 
     dupped2X1();
@@ -1942,46 +1852,46 @@ class Frame {
 
   void dup2X2() {
     if (get(sp - 1) == types.i8) {
-      ir::Value* s0 = popLongQuiet();
+      ir::Value* s0 = c->pop(types.i8);
 
       if (get(sp - 3) == types.i8) {
-        ir::Value* s1 = popLongQuiet();
+        ir::Value* s1 = c->pop(types.i8);
 
-        pushLongQuiet(s0);
-        pushLongQuiet(s1);
-        pushLongQuiet(s0);
+        c->push(types.i8, s0);
+        c->push(types.i8, s1);
+        c->push(types.i8, s0);
       } else {
-        ir::Value* s1 = popQuiet(types.i4);
-        ir::Value* s2 = popQuiet(types.i4);
+        ir::Value* s1 = c->pop(types.i4);
+        ir::Value* s2 = c->pop(types.i4);
 
-        pushLongQuiet(s0);
-        pushQuiet(types.i4, s2);
-        pushQuiet(types.i4, s1);
-        pushLongQuiet(s0);
+        c->push(types.i8, s0);
+        c->push(types.i4, s2);
+        c->push(types.i4, s1);
+        c->push(types.i8, s0);
       }
     } else {
-      ir::Value* s0 = popQuiet(types.i4);
-      ir::Value* s1 = popQuiet(types.i4);
-      ir::Value* s2 = popQuiet(types.i4);
-      ir::Value* s3 = popQuiet(types.i4);
+      ir::Value* s0 = c->pop(types.i4);
+      ir::Value* s1 = c->pop(types.i4);
+      ir::Value* s2 = c->pop(types.i4);
+      ir::Value* s3 = c->pop(types.i4);
 
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
-      pushQuiet(types.i4, s3);
-      pushQuiet(types.i4, s2);
-      pushQuiet(types.i4, s1);
-      pushQuiet(types.i4, s0);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
+      c->push(types.i4, s3);
+      c->push(types.i4, s2);
+      c->push(types.i4, s1);
+      c->push(types.i4, s0);
     }
 
     dupped2X2();
   }
 
   void swap() {
-    ir::Value* s0 = popQuiet(types.i4);
-    ir::Value* s1 = popQuiet(types.i4);
+    ir::Value* s0 = c->pop(types.i4);
+    ir::Value* s1 = c->pop(types.i4);
 
-    pushQuiet(types.i4, s0);
-    pushQuiet(types.i4, s1);
+    c->push(types.i4, s0);
+    c->push(types.i4, s1);
 
     swapped();
   }
@@ -2014,17 +1924,17 @@ class Frame {
     case CharField:
     case ShortField:
     case IntField:
-      return pushInt(result);
+      return push(types.i4, result);
     case FloatField:
-      return pushFloat(result);
+      return push(types.f4, result);
 
     case ObjectField:
-      return pushObject(result);
+      return push(types.object, result);
 
     case LongField:
-      return pushLong(result);
+      return pushLarge(types.i8, result);
     case DoubleField:
-      return pushDouble(result);
+      return pushLarge(types.f8, result);
 
     default:
       abort(t);
@@ -2089,7 +1999,7 @@ class Frame {
     // Push a dummy value to the stack, representing the return address (which
     // we don't need, since we're expanding everything statically).
     // TODO: in the future, push a value that we can track through type checking
-    pushObject(c->constant(0, types.object));
+    push(types.object, c->constant(0, types.object));
 
     if (DebugInstructions) {
       fprintf(stderr, "startSubroutine %u %u\n", ip, returnAddress);
@@ -3193,21 +3103,24 @@ resultSize(MyThread* t, unsigned code)
 
 ir::Value* popField(MyThread* t, Frame* frame, int code)
 {
+  ir::Types types(TargetBytesPerWord);
   switch (code) {
   case ByteField:
   case BooleanField:
   case CharField:
   case ShortField:
-  case FloatField:
   case IntField:
-    return frame->popInt();
+    return frame->pop(types.i4);
+  case FloatField:
+    return frame->pop(types.f4);
 
-  case DoubleField:
   case LongField:
-    return frame->popLong();
+    return frame->popLarge(types.i8);
+  case DoubleField:
+    return frame->popLarge(types.f8);
 
   case ObjectField:
-    return frame->popObject();
+    return frame->pop(types.object);
 
   default: abort(t);
   }
@@ -3721,10 +3634,10 @@ bool floatBranch(MyThread* t,
 ir::Value* popLongAddress(Frame* frame)
 {
   ir::Types types(TargetBytesPerWord);
-  return TargetBytesPerWord == 8 ? frame->popLong()
-                                 : frame->c->load(ir::SignExtend,
-                                                  frame->popLong(),
-                                                  types.address);
+  return TargetBytesPerWord == 8
+             ? frame->popLarge(types.i8)
+             : frame->c->load(
+                   ir::SignExtend, frame->popLarge(types.i8), types.address);
 }
 
 bool
@@ -3742,17 +3655,21 @@ intrinsic(MyThread* t, Frame* frame, object target)
     if (MATCH(methodName(t, target), "sqrt")
         and MATCH(methodSpec(t, target), "(D)D"))
     {
-      frame->pushDouble(c->unaryOp(lir::FloatSquareRoot, frame->popLong()));
+      frame->pushLarge(
+          types.f8,
+          c->unaryOp(lir::FloatSquareRoot, frame->popLarge(types.f8)));
       return true;
     } else if (MATCH(methodName(t, target), "abs")) {
       if (MATCH(methodSpec(t, target), "(I)I")) {
-        frame->pushInt(c->unaryOp(lir::Absolute, frame->popInt()));
+        frame->push(types.i4, c->unaryOp(lir::Absolute, frame->pop(types.i4)));
         return true;
       } else if (MATCH(methodSpec(t, target), "(J)J")) {
-        frame->pushLong(c->unaryOp(lir::Absolute, frame->popLong()));
+        frame->pushLarge(types.i8,
+                         c->unaryOp(lir::Absolute, frame->popLarge(types.i8)));
         return true;
       } else if (MATCH(methodSpec(t, target), "(F)F")) {
-        frame->pushFloat(c->unaryOp(lir::FloatAbsolute, frame->popInt()));
+        frame->push(types.f4,
+                    c->unaryOp(lir::FloatAbsolute, frame->pop(types.f4)));
         return true;
       }
     }
@@ -3762,16 +3679,17 @@ intrinsic(MyThread* t, Frame* frame, object target)
         and MATCH(methodSpec(t, target), "(J)B"))
     {
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
-      frame->pushInt(c->load(
-          ir::SignExtend, c->memory(address, types.i1), types.i4));
+      frame->pop(types.object);
+      frame->push(
+          types.i4,
+          c->load(ir::SignExtend, c->memory(address, types.i1), types.i4));
       return true;
     } else if (MATCH(methodName(t, target), "putByte")
                and MATCH(methodSpec(t, target), "(JB)V"))
     {
-      ir::Value* value = frame->popInt();
+      ir::Value* value = frame->pop(types.i4);
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
+      frame->pop(types.object);
       c->store(value, c->memory(address, types.i1));
       return true;
     } else if ((MATCH(methodName(t, target), "getShort")
@@ -3780,18 +3698,19 @@ intrinsic(MyThread* t, Frame* frame, object target)
                    and MATCH(methodSpec(t, target), "(J)C")))
     {
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
-      frame->pushInt(c->load(
-          ir::SignExtend, c->memory(address, types.i2), types.i4));
+      frame->pop(types.object);
+      frame->push(
+          types.i4,
+          c->load(ir::SignExtend, c->memory(address, types.i2), types.i4));
       return true;
     } else if ((MATCH(methodName(t, target), "putShort")
                 and MATCH(methodSpec(t, target), "(JS)V"))
                or (MATCH(methodName(t, target), "putChar")
                    and MATCH(methodSpec(t, target), "(JC)V")))
     {
-      ir::Value* value = frame->popInt();
+      ir::Value* value = frame->pop(types.i4);
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
+      frame->pop(types.object);
       c->store(value, c->memory(address, types.i2));
       return true;
     } else if ((MATCH(methodName(t, target), "getInt")
@@ -3800,22 +3719,22 @@ intrinsic(MyThread* t, Frame* frame, object target)
                    and MATCH(methodSpec(t, target), "(J)F")))
     {
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
+      frame->pop(types.object);
       ir::Type type = MATCH(methodName(t, target), "getInt") ? types.i4
                                                              : types.f4;
-      frame->pushSmall(
-          c->load(ir::SignExtend, c->memory(address, type), type));
+      frame->push(type,
+                  c->load(ir::SignExtend, c->memory(address, type), type));
       return true;
     } else if ((MATCH(methodName(t, target), "putInt")
                 and MATCH(methodSpec(t, target), "(JI)V"))
                or (MATCH(methodName(t, target), "putFloat")
                    and MATCH(methodSpec(t, target), "(JF)V")))
     {
-      ir::Value* value = frame->popInt();
-      ir::Value* address = popLongAddress(frame);
-      frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putInt") ? types.i4
                                                              : types.f4;
+      ir::Value* value = frame->pop(type);
+      ir::Value* address = popLongAddress(frame);
+      frame->pop(types.object);
       c->store(value, c->memory(address, type));
       return true;
     } else if ((MATCH(methodName(t, target), "getLong")
@@ -3824,39 +3743,39 @@ intrinsic(MyThread* t, Frame* frame, object target)
                    and MATCH(methodSpec(t, target), "(J)D")))
     {
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
+      frame->pop(types.object);
       ir::Type type = MATCH(methodName(t, target), "getLong") ? types.i8
                                                               : types.f8;
-      frame->pushLarge(
-          c->load(ir::SignExtend, c->memory(address, type), type));
+      frame->pushLarge(type,
+                       c->load(ir::SignExtend, c->memory(address, type), type));
       return true;
     } else if ((MATCH(methodName(t, target), "putLong")
                 and MATCH(methodSpec(t, target), "(JJ)V"))
                or (MATCH(methodName(t, target), "putDouble")
                    and MATCH(methodSpec(t, target), "(JD)V")))
     {
-      ir::Value* value = frame->popLong();
-      ir::Value* address = popLongAddress(frame);
-      frame->popObject();
       ir::Type type = MATCH(methodName(t, target), "putLong") ? types.i8
                                                               : types.f8;
+      ir::Value* value = frame->popLarge(type);
+      ir::Value* address = popLongAddress(frame);
+      frame->pop(types.object);
       c->store(value, c->memory(address, type));
       return true;
     } else if (MATCH(methodName(t, target), "getAddress")
                 and MATCH(methodSpec(t, target), "(J)J"))
     {
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
-      frame->pushLong(c->load(ir::SignExtend,
-                              c->memory(address, types.address),
-                              types.i8));
+      frame->pop(types.object);
+      frame->pushLarge(
+          types.i8,
+          c->load(ir::SignExtend, c->memory(address, types.address), types.i8));
       return true;
     } else if (MATCH(methodName(t, target), "putAddress")
                and MATCH(methodSpec(t, target), "(JJ)V"))
     {
-      ir::Value* value = frame->popLong();
+      ir::Value* value = frame->popLarge(types.i8);
       ir::Value* address = popLongAddress(frame);
-      frame->popObject();
+      frame->pop(types.object);
       c->store(value, c->memory(address, types.address));
       return true;
     }
@@ -4112,8 +4031,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case iaload:
     case laload:
     case saload: {
-      ir::Value* index = frame->popInt();
-      ir::Value* array = frame->popObject();
+      ir::Value* index = frame->pop(types.i4);
+      ir::Value* array = frame->pop(types.object);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -4126,59 +4045,62 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       switch (instruction) {
       case aaload:
-        frame->pushObject(
+        frame->push(
+            types.object,
             c->load(ir::SignExtend,
                     c->memory(array, types.object, TargetArrayBody, index),
                     types.object));
         break;
 
       case faload:
-        frame->pushFloat(
-            c->load(ir::SignExtend,
-                    c->memory(array, types.f4, TargetArrayBody, index),
-                    types.f4));
+        frame->push(types.f4,
+                    c->load(ir::SignExtend,
+                            c->memory(array, types.f4, TargetArrayBody, index),
+                            types.f4));
         break;
 
       case iaload:
-        frame->pushInt(
-            c->load(ir::SignExtend,
-                    c->memory(array, types.i4, TargetArrayBody, index),
-                    types.i4));
+        frame->push(types.i4,
+                    c->load(ir::SignExtend,
+                            c->memory(array, types.i4, TargetArrayBody, index),
+                            types.i4));
         break;
 
       case baload:
-        frame->pushInt(
-            c->load(ir::SignExtend,
-                    c->memory(array, types.i1, TargetArrayBody, index),
-                    types.i4));
+        frame->push(types.i4,
+                    c->load(ir::SignExtend,
+                            c->memory(array, types.i1, TargetArrayBody, index),
+                            types.i4));
         break;
 
       case caload:
-        frame->pushInt(
-            c->load(ir::ZeroExtend,
-                    c->memory(array, types.i2, TargetArrayBody, index),
-                    types.i4));
+        frame->push(types.i4,
+                    c->load(ir::ZeroExtend,
+                            c->memory(array, types.i2, TargetArrayBody, index),
+                            types.i4));
         break;
 
       case daload:
-        frame->pushDouble(
+        frame->pushLarge(
+            types.f8,
             c->load(ir::SignExtend,
                     c->memory(array, types.f8, TargetArrayBody, index),
                     types.f8));
         break;
 
       case laload:
-        frame->pushLong(
+        frame->pushLarge(
+            types.i8,
             c->load(ir::SignExtend,
                     c->memory(array, types.i8, TargetArrayBody, index),
                     types.i8));
         break;
 
       case saload:
-        frame->pushInt(
-            c->load(ir::SignExtend,
-                    c->memory(array, types.i2, TargetArrayBody, index),
-                    types.i4));
+        frame->push(types.i4,
+                    c->load(ir::SignExtend,
+                            c->memory(array, types.i2, TargetArrayBody, index),
+                            types.i4));
         break;
       }
     } break;
@@ -4192,16 +4114,20 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lastore:
     case sastore: {
       ir::Value* value;
-      if (instruction == dastore or instruction == lastore) {
-        value = frame->popLong();
+      if (instruction == lastore) {
+        value = frame->popLarge(types.i8);
+      } else if (instruction == dastore) {
+        value = frame->popLarge(types.f8);
       } else if (instruction == aastore) {
-        value = frame->popObject();
+        value = frame->pop(types.object);
+      } else if (instruction == fastore) {
+        value = frame->pop(types.f4);
       } else {
-        value = frame->popInt();
+        value = frame->pop(types.i4);
       }
 
-      ir::Value* index = frame->popInt();
-      ir::Value* array = frame->popObject();
+      ir::Value* index = frame->pop(types.i4);
+      ir::Value* array = frame->pop(types.object);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
@@ -4260,7 +4186,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case aconst_null:
-      frame->pushObject(c->constant(0, types.object));
+      frame->push(types.object, c->constant(0, types.object));
       break;
 
     case aload:
@@ -4293,7 +4219,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       object class_ = resolveClassInPool(t, context->method, index - 1, false);
 
-      ir::Value* length = frame->popInt();
+      ir::Value* length = frame->pop(types.i4);
 
       object argument;
       Thunk thunk;
@@ -4305,50 +4231,53 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         thunk = makeBlankObjectArrayFromReferenceThunk;
       }
 
-      frame->pushObject(c->call(c->constant(getThunk(t, thunk), types.address),
-                                0,
-                                frame->trace(0, 0),
-                                types.object,
-                                3,
-                                c->threadRegister(),
-                                frame->append(argument),
-                                length));
+      frame->push(types.object,
+                  c->call(c->constant(getThunk(t, thunk), types.address),
+                          0,
+                          frame->trace(0, 0),
+                          types.object,
+                          3,
+                          c->threadRegister(),
+                          frame->append(argument),
+                          length));
     } break;
 
     case areturn: {
       handleExit(t, frame);
-      c->return_(frame->popObject());
+      c->return_(frame->pop(types.object));
     } goto next;
 
     case arraylength: {
-      frame->pushInt(c->load(
-          ir::SignExtend,
-          c->memory(frame->popObject(), types.address, TargetArrayLength),
-          types.i4));
+      frame->push(types.i4,
+                  c->load(ir::SignExtend,
+                          c->memory(frame->pop(types.object),
+                                    types.address,
+                                    TargetArrayLength),
+                          types.i4));
     } break;
 
     case astore:
-      frame->storeObjectOrAddress(codeBody(t, code, ip++));
+      frame->store(types.object, codeBody(t, code, ip++));
       break;
 
     case astore_0:
-      frame->storeObjectOrAddress(0);
+      frame->store(types.object, 0);
       break;
 
     case astore_1:
-      frame->storeObjectOrAddress(1);
+      frame->store(types.object, 1);
       break;
 
     case astore_2:
-      frame->storeObjectOrAddress(2);
+      frame->store(types.object, 2);
       break;
 
     case astore_3:
-      frame->storeObjectOrAddress(3);
+      frame->store(types.object, 3);
       break;
 
     case athrow: {
-      ir::Value* target = frame->popObject();
+      ir::Value* target = frame->pop(types.object);
       c->call(c->constant(getThunk(t, throw_Thunk), types.address),
               Compiler::NoReturn,
               frame->trace(0, 0),
@@ -4361,7 +4290,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto next;
 
     case bipush:
-      frame->pushInt(
+      frame->push(
+          types.i4,
           c->constant(static_cast<int8_t>(codeBody(t, code, ip++)), types.i4));
       break;
 
@@ -4398,15 +4328,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case d2f: {
-      frame->pushFloat(c->f2f(types.f4, frame->popLong()));
+      frame->push(types.f4, c->f2f(types.f4, frame->popLarge(types.f8)));
     } break;
 
     case d2i: {
-      frame->pushInt(c->f2i(types.i4, frame->popLong()));
+      frame->push(types.i4, c->f2i(types.i4, frame->popLarge(types.f8)));
     } break;
 
     case d2l: {
-      frame->pushLong(c->f2i(types.i8, frame->popLong()));
+      frame->pushLarge(types.i8, c->f2i(types.i8, frame->popLarge(types.f8)));
     } break;
 
     case dadd:
@@ -4414,63 +4344,67 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case dmul:
     case ddiv:
     case vm::drem: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.f8);
+      ir::Value* b = frame->popLarge(types.f8);
 
-      frame->pushDouble(
+      frame->pushLarge(
+          types.f8,
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f8, a, b));
     } break;
 
     case dcmpg: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.f8);
+      ir::Value* b = frame->popLarge(types.f8);
 
       if (floatBranch(t, frame, code, ip, false, a, b, &newIp)) {
         goto branch;
       } else {
-        frame->pushInt(c->call(
-            c->constant(getThunk(t, compareDoublesGThunk), types.address),
-            0,
-            0,
-            types.i4,
-            4,
-            static_cast<ir::Value*>(0),
-            a,
-            static_cast<ir::Value*>(0),
-            b));
+        frame->push(types.i4,
+                    c->call(c->constant(getThunk(t, compareDoublesGThunk),
+                                        types.address),
+                            0,
+                            0,
+                            types.i4,
+                            4,
+                            static_cast<ir::Value*>(0),
+                            a,
+                            static_cast<ir::Value*>(0),
+                            b));
       }
     } break;
 
     case dcmpl: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.f8);
+      ir::Value* b = frame->popLarge(types.f8);
 
       if (floatBranch(t, frame, code, ip, true, a, b, &newIp)) {
         goto branch;
       } else {
-        frame->pushInt(c->call(
-            c->constant(getThunk(t, compareDoublesLThunk), types.address),
-            0,
-            0,
-            types.i4,
-            4,
-            static_cast<ir::Value*>(0),
-            a,
-            static_cast<ir::Value*>(0),
-            b));
+        frame->push(types.i4,
+                    c->call(c->constant(getThunk(t, compareDoublesLThunk),
+                                        types.address),
+                            0,
+                            0,
+                            types.i4,
+                            4,
+                            static_cast<ir::Value*>(0),
+                            a,
+                            static_cast<ir::Value*>(0),
+                            b));
       }
     } break;
 
     case dconst_0:
-      frame->pushDouble(c->constant(doubleToBits(0.0), types.f8));
+      frame->pushLarge(types.f8, c->constant(doubleToBits(0.0), types.f8));
       break;
-      
+
     case dconst_1:
-      frame->pushDouble(c->constant(doubleToBits(1.0), types.f8));
+      frame->pushLarge(types.f8, c->constant(doubleToBits(1.0), types.f8));
       break;
 
     case dneg: {
-      frame->pushDouble(c->unaryOp(lir::FloatNegate, frame->popLong()));
+      frame->pushLarge(types.f8,
+                       c->unaryOp(lir::FloatNegate, frame->popLarge(types.f8)));
     } break;
 
     case dup:
@@ -4498,15 +4432,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case f2d: {
-      frame->pushDouble(c->f2f(types.f8, frame->popInt()));
+      frame->pushLarge(types.f8, c->f2f(types.f8, frame->pop(types.f4)));
     } break;
 
     case f2i: {
-      frame->pushInt(c->f2i(types.i4, frame->popInt()));
+      frame->push(types.i4, c->f2i(types.i4, frame->pop(types.f4)));
     } break;
 
     case f2l: {
-      frame->pushLong(c->f2i(types.i8, frame->popInt()));
+      frame->pushLarge(types.i8, c->f2i(types.i8, frame->pop(types.f4)));
     } break;
 
     case fadd:
@@ -4514,63 +4448,66 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case fmul:
     case fdiv:
     case frem: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.f4);
+      ir::Value* b = frame->pop(types.f4);
 
-      frame->pushFloat(
+      frame->push(
+          types.f4,
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.f4, a, b));
     } break;
 
     case fcmpg: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.f4);
+      ir::Value* b = frame->pop(types.f4);
 
       if (floatBranch(t, frame, code, ip, false, a, b, &newIp)) {
         goto branch;
       } else {
-        frame->pushInt(c->call(
-            c->constant(getThunk(t, compareFloatsGThunk), types.address),
-            0,
-            0,
-            types.i4,
-            2,
-            a,
-            b));
+        frame->push(types.i4,
+                    c->call(c->constant(getThunk(t, compareFloatsGThunk),
+                                        types.address),
+                            0,
+                            0,
+                            types.i4,
+                            2,
+                            a,
+                            b));
       }
     } break;
 
     case fcmpl: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.f4);
+      ir::Value* b = frame->pop(types.f4);
 
       if (floatBranch(t, frame, code, ip, true, a, b, &newIp)) {
         goto branch;
       } else {
-        frame->pushInt(c->call(
-            c->constant(getThunk(t, compareFloatsLThunk), types.address),
-            0,
-            0,
-            types.i4,
-            2,
-            a,
-            b));
+        frame->push(types.i4,
+                    c->call(c->constant(getThunk(t, compareFloatsLThunk),
+                                        types.address),
+                            0,
+                            0,
+                            types.i4,
+                            2,
+                            a,
+                            b));
       }
     } break;
 
     case fconst_0:
-      frame->pushFloat(c->constant(floatToBits(0.0), types.f4));
+      frame->push(types.f4, c->constant(floatToBits(0.0), types.f4));
       break;
       
     case fconst_1:
-      frame->pushFloat(c->constant(floatToBits(1.0), types.f4));
+      frame->push(types.f4, c->constant(floatToBits(1.0), types.f4));
       break;
       
     case fconst_2:
-      frame->pushFloat(c->constant(floatToBits(2.0), types.f4));
+      frame->push(types.f4, c->constant(floatToBits(2.0), types.f4));
       break;
 
     case fneg: {
-      frame->pushFloat(c->unaryOp(lir::FloatNegate, frame->popInt()));
+      frame->push(types.f4, c->unaryOp(lir::FloatNegate, frame->pop(types.f4)));
     } break;
 
     case getfield:
@@ -4623,7 +4560,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         } else {
           checkField(t, field, false);
 
-          table = frame->popObject();
+          table = frame->pop(types.object);
 
           if (inTryBlock(t, code, ip - 3)) {
             c->saveLocals();
@@ -4634,59 +4571,75 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         switch (fieldCode(t, field)) {
         case ByteField:
         case BooleanField:
-          frame->pushInt(c->load(
-              ir::SignExtend,
-              c->memory(table, types.i1, targetFieldOffset(context, field)),
-              types.i4));
+          frame->push(
+              types.i4,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.i1, targetFieldOffset(context, field)),
+                  types.i4));
           break;
 
         case CharField:
-          frame->pushInt(c->load(
-              ir::ZeroExtend,
-              c->memory(table, types.i2, targetFieldOffset(context, field)),
-              types.i4));
+          frame->push(
+              types.i4,
+              c->load(
+                  ir::ZeroExtend,
+                  c->memory(table, types.i2, targetFieldOffset(context, field)),
+                  types.i4));
           break;
 
         case ShortField:
-          frame->pushInt(c->load(
-              ir::SignExtend,
-              c->memory(table, types.i2, targetFieldOffset(context, field)),
-              types.i4));
+          frame->push(
+              types.i4,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.i2, targetFieldOffset(context, field)),
+                  types.i4));
           break;
 
         case FloatField:
-          frame->pushFloat(c->load(
-              ir::SignExtend,
-              c->memory(table, types.f4, targetFieldOffset(context, field)),
-              types.f4));
+          frame->push(
+              types.f4,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.f4, targetFieldOffset(context, field)),
+                  types.f4));
           break;
 
         case IntField:
-          frame->pushInt(c->load(
-              ir::SignExtend,
-              c->memory(table, types.i4, targetFieldOffset(context, field)),
-              types.i4));
+          frame->push(
+              types.i4,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.i4, targetFieldOffset(context, field)),
+                  types.i4));
           break;
 
         case DoubleField:
-          frame->pushDouble(c->load(
-              ir::SignExtend,
-              c->memory(table, types.f8, targetFieldOffset(context, field)),
-              types.f8));
+          frame->pushLarge(
+              types.f8,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.f8, targetFieldOffset(context, field)),
+                  types.f8));
           break;
 
         case LongField:
-          frame->pushLong(c->load(
-              ir::SignExtend,
-              c->memory(table, types.i8, targetFieldOffset(context, field)),
-              types.i8));
+          frame->pushLarge(
+              types.i8,
+              c->load(
+                  ir::SignExtend,
+                  c->memory(table, types.i8, targetFieldOffset(context, field)),
+                  types.i8));
           break;
 
         case ObjectField:
-          frame->pushObject(c->load(
-              ir::SignExtend,
-              c->memory(table, types.object, targetFieldOffset(context, field)),
-              types.object));
+          frame->push(types.object,
+                      c->load(ir::SignExtend,
+                              c->memory(table,
+                                        types.object,
+                                        targetFieldOffset(context, field)),
+                              types.object));
           break;
 
         default:
@@ -4730,7 +4683,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               c->threadRegister(),
               frame->append(pair));
         } else {
-          ir::Value* instance = frame->popObject();
+          ir::Value* instance = frame->pop(types.object);
 
           result = c->call(
               c->constant(getThunk(t, getFieldValueFromReferenceThunk),
@@ -4775,31 +4728,39 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case i2b: {
-      frame->pushInt(c->truncateThenExtend(
-          ir::SignExtend, types.i4, types.i1, frame->popInt()));
+      frame->push(
+          types.i4,
+          c->truncateThenExtend(
+              ir::SignExtend, types.i4, types.i1, frame->pop(types.i4)));
     } break;
 
     case i2c: {
-      frame->pushInt(c->truncateThenExtend(
-          ir::ZeroExtend, types.i4, types.i2, frame->popInt()));
+      frame->push(
+          types.i4,
+          c->truncateThenExtend(
+              ir::ZeroExtend, types.i4, types.i2, frame->pop(types.i4)));
     } break;
 
     case i2d: {
-      frame->pushDouble(c->i2f(types.f8, frame->popInt()));
+      frame->pushLarge(types.f8, c->i2f(types.f8, frame->pop(types.i4)));
     } break;
 
     case i2f: {
-      frame->pushFloat(c->i2f(types.f4, frame->popInt()));
+      frame->push(types.f4, c->i2f(types.f4, frame->pop(types.i4)));
     } break;
 
     case i2l:
-      frame->pushLong(c->truncateThenExtend(
-          ir::SignExtend, types.i8, types.i4, frame->popInt()));
+      frame->pushLarge(
+          types.i8,
+          c->truncateThenExtend(
+              ir::SignExtend, types.i8, types.i4, frame->pop(types.i4)));
       break;
 
     case i2s: {
-      frame->pushInt(c->truncateThenExtend(
-          ir::SignExtend, types.i4, types.i2, frame->popInt()));
+      frame->push(
+          types.i4,
+          c->truncateThenExtend(
+              ir::SignExtend, types.i4, types.i2, frame->pop(types.i4)));
     } break;
       
     case iadd:
@@ -4811,50 +4772,51 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case isub:
     case ixor:
     case imul: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
-      frame->pushInt(
+      ir::Value* a = frame->pop(types.i4);
+      ir::Value* b = frame->pop(types.i4);
+      frame->push(
+          types.i4,
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i4, a, b));
     } break;
 
     case iconst_m1:
-      frame->pushInt(c->constant(-1, types.i4));
+      frame->push(types.i4, c->constant(-1, types.i4));
       break;
 
     case iconst_0:
-      frame->pushInt(c->constant(0, types.i4));
+      frame->push(types.i4, c->constant(0, types.i4));
       break;
 
     case iconst_1:
-      frame->pushInt(c->constant(1, types.i4));
+      frame->push(types.i4, c->constant(1, types.i4));
       break;
 
     case iconst_2:
-      frame->pushInt(c->constant(2, types.i4));
+      frame->push(types.i4, c->constant(2, types.i4));
       break;
 
     case iconst_3:
-      frame->pushInt(c->constant(3, types.i4));
+      frame->push(types.i4, c->constant(3, types.i4));
       break;
 
     case iconst_4:
-      frame->pushInt(c->constant(4, types.i4));
+      frame->push(types.i4, c->constant(4, types.i4));
       break;
 
     case iconst_5:
-      frame->pushInt(c->constant(5, types.i4));
+      frame->push(types.i4, c->constant(5, types.i4));
       break;
 
     case idiv: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.i4);
+      ir::Value* b = frame->pop(types.i4);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->binaryOp(lir::Divide, types.i4, a, b));
+      frame->push(types.i4, c->binaryOp(lir::Divide, types.i4, a, b));
     } break;
 
     case if_acmpeq:
@@ -4867,8 +4829,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         compileSafePoint(t, c, frame);
       }
 
-      ir::Value* a = frame->popObject();
-      ir::Value* b = frame->popObject();
+      ir::Value* a = frame->pop(types.object);
+      ir::Value* b = frame->pop(types.object);
       ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), a, b, target);
@@ -4888,8 +4850,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         compileSafePoint(t, c, frame);
       }
 
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.i4);
+      ir::Value* b = frame->pop(types.i4);
       ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), a, b, target);
@@ -4912,7 +4874,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
 
       ir::Value* a = c->constant(0, types.i4);
-      ir::Value* b = frame->popInt();
+      ir::Value* b = frame->pop(types.i4);
 
       c->condJump(toCompilerJumpOp(t, instruction), a, b, target);
     } goto branch;
@@ -4928,7 +4890,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
 
       ir::Value* a = c->constant(0, types.object);
-      ir::Value* b = frame->popObject();
+      ir::Value* b = frame->pop(types.object);
       ir::Value* target = frame->machineIpValue(newIp);
 
       c->condJump(toCompilerJumpOp(t, instruction), a, b, target);
@@ -4949,42 +4911,42 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case iload:
-      frame->loadInt(codeBody(t, code, ip++));
+      frame->load(types.i4, codeBody(t, code, ip++));
       break;
     case fload:
-      frame->loadFloat(codeBody(t, code, ip++));
+      frame->load(types.f4, codeBody(t, code, ip++));
       break;
 
     case iload_0:
-      frame->loadInt(0);
+      frame->load(types.i4, 0);
       break;
     case fload_0:
-      frame->loadFloat(0);
+      frame->load(types.f4, 0);
       break;
 
     case iload_1:
-      frame->loadInt(1);
+      frame->load(types.i4, 1);
       break;
     case fload_1:
-      frame->loadFloat(1);
+      frame->load(types.f4, 1);
       break;
 
     case iload_2:
-      frame->loadInt(2);
+      frame->load(types.i4, 2);
       break;
     case fload_2:
-      frame->loadFloat(2);
+      frame->load(types.f4, 2);
       break;
 
     case iload_3:
-      frame->loadInt(3);
+      frame->load(types.i4, 3);
       break;
     case fload_3:
-      frame->loadFloat(3);
+      frame->load(types.f4, 3);
       break;
 
     case ineg: {
-      frame->pushInt(c->unaryOp(lir::Negate, frame->popInt()));
+      frame->push(types.i4, c->unaryOp(lir::Negate, frame->pop(types.i4)));
     } break;
 
     case instanceof: {
@@ -4997,7 +4959,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       object class_ = resolveClassInPool(t, context->method, index - 1, false);
 
-      ir::Value* instance = frame->popObject();
+      ir::Value* instance = frame->pop(types.object);
 
       object argument;
       Thunk thunk;
@@ -5009,14 +4971,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         thunk = instanceOfFromReferenceThunk;
       }
 
-      frame->pushInt(c->call(c->constant(getThunk(t, thunk), types.address),
-                             0,
-                             frame->trace(0, 0),
-                             types.i4,
-                             3,
-                             c->threadRegister(),
-                             frame->append(argument),
-                             instance));
+      frame->push(types.i4,
+                  c->call(c->constant(getThunk(t, thunk), types.address),
+                          0,
+                          frame->trace(0, 0),
+                          types.i4,
+                          3,
+                          c->threadRegister(),
+                          frame->append(argument),
+                          instance));
     } break;
 
     case invokeinterface: {
@@ -5210,61 +5173,61 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case irem: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popInt();
+      ir::Value* a = frame->pop(types.i4);
+      ir::Value* b = frame->pop(types.i4);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
         frame->trace(0, 0);
       }
 
-      frame->pushInt(c->binaryOp(lir::Remainder, types.i4, a, b));
+      frame->push(types.i4, c->binaryOp(lir::Remainder, types.i4, a, b));
     } break;
 
     case ireturn: {
       handleExit(t, frame);
-      c->return_(frame->popInt());
+      c->return_(frame->pop(types.i4));
     }
       goto next;
 
     case freturn: {
       handleExit(t, frame);
-      c->return_(frame->popInt());
+      c->return_(frame->pop(types.f4));
     } goto next;
 
     case istore:
-      frame->storeInt(codeBody(t, code, ip++));
+      frame->store(types.i4, codeBody(t, code, ip++));
       break;
     case fstore:
-      frame->storeFloat(codeBody(t, code, ip++));
+      frame->store(types.f4, codeBody(t, code, ip++));
       break;
 
     case istore_0:
-      frame->storeInt(0);
+      frame->store(types.i4, 0);
       break;
     case fstore_0:
-      frame->storeFloat(0);
+      frame->store(types.f4, 0);
       break;
 
     case istore_1:
-      frame->storeInt(1);
+      frame->store(types.i4, 1);
       break;
     case fstore_1:
-      frame->storeFloat(1);
+      frame->store(types.f4, 1);
       break;
 
     case istore_2:
-      frame->storeInt(2);
+      frame->store(types.i4, 2);
       break;
     case fstore_2:
-      frame->storeFloat(2);
+      frame->store(types.f4, 2);
       break;
 
     case istore_3:
-      frame->storeInt(3);
+      frame->store(types.i4, 3);
       break;
     case fstore_3:
-      frame->storeFloat(3);
+      frame->store(types.f4, 3);
       break;
 
     case jsr:
@@ -5291,15 +5254,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case l2d: {
-      frame->pushDouble(c->i2f(types.f8, frame->popLong()));
+      frame->pushLarge(types.f8, c->i2f(types.f8, frame->popLarge(types.i8)));
     } break;
 
     case l2f: {
-      frame->pushFloat(c->i2f(types.f4, frame->popLong()));
+      frame->push(types.f4, c->i2f(types.f4, frame->popLarge(types.i8)));
     } break;
 
     case l2i:
-      frame->pushInt(c->truncate(types.i4, frame->popLong()));
+      frame->push(types.i4, c->truncate(types.i4, frame->popLarge(types.i8)));
       break;
 
     case ladd:
@@ -5308,20 +5271,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case lsub:
     case lxor:
     case lmul: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
-      frame->pushLong(
+      ir::Value* a = frame->popLarge(types.i8);
+      ir::Value* b = frame->popLarge(types.i8);
+      frame->pushLarge(
+          types.i8,
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
 
     case lcmp: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.i8);
+      ir::Value* b = frame->popLarge(types.i8);
 
       if (integerBranch(t, frame, code, ip, a, b, &newIp)) {
         goto branch;
       } else {
-        frame->pushInt(
+        frame->push(
+            types.i4,
             c->call(c->constant(getThunk(t, compareLongsThunk), types.address),
                     0,
                     0,
@@ -5335,11 +5300,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lconst_0:
-      frame->pushLong(c->constant(0, types.i8));
+      frame->pushLarge(types.i8, c->constant(0, types.i8));
       break;
 
     case lconst_1:
-      frame->pushLong(c->constant(1, types.i8));
+      frame->pushLarge(types.i8, c->constant(1, types.i8));
       break;
 
     case ldc:
@@ -5366,37 +5331,41 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           v = resolveClassInPool(t, context->method, index - 1, false);
 
           if (UNLIKELY(v == 0)) {
-            frame->pushObject(c->call(
-                c->constant(getThunk(t, getJClassFromReferenceThunk),
-                            types.address),
-                0,
-                frame->trace(0, 0),
+            frame->push(
                 types.object,
-                2,
-                c->threadRegister(),
-                frame->append(makePair(t, context->method, reference))));
+                c->call(
+                    c->constant(getThunk(t, getJClassFromReferenceThunk),
+                                types.address),
+                    0,
+                    frame->trace(0, 0),
+                    types.object,
+                    2,
+                    c->threadRegister(),
+                    frame->append(makePair(t, context->method, reference))));
           }
         }
 
         if (v) {
           if (objectClass(t, v) == type(t, Machine::ClassType)) {
-            frame->pushObject(c->call(
-                c->constant(getThunk(t, getJClass64Thunk), types.address),
-                0,
-                frame->trace(0, 0),
-                types.object,
-                2,
-                c->threadRegister(),
-                frame->append(v)));
+            frame->push(types.object,
+                        c->call(c->constant(getThunk(t, getJClass64Thunk),
+                                            types.address),
+                                0,
+                                frame->trace(0, 0),
+                                types.object,
+                                2,
+                                c->threadRegister(),
+                                frame->append(v)));
           } else {
-            frame->pushObject(frame->append(v));
+            frame->push(types.object, frame->append(v));
           }
         }
       } else {
-        frame->pushSmall(c->constant(
-            singletonValue(t, pool, index - 1),
-            singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f4
-                                                                : types.i4));
+        ir::Type type = singletonBit(t, pool, poolSize(t, pool), index - 1)
+                            ? types.f4
+                            : types.i4;
+        frame->push(type,
+                    c->constant(singletonValue(t, pool, index - 1), type));
       }
     } break;
 
@@ -5407,22 +5376,22 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
-      frame->pushLarge(c->constant(
-          v,
-          singletonBit(t, pool, poolSize(t, pool), index - 1) ? types.f8
-                                                              : types.i8));
+      ir::Type type = singletonBit(t, pool, poolSize(t, pool), index - 1)
+                          ? types.f8
+                          : types.i8;
+      frame->pushLarge(type, c->constant(v, type));
     } break;
 
     case ldiv_: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.i8);
+      ir::Value* b = frame->popLarge(types.i8);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->binaryOp(lir::Divide, types.i8, a, b));
+      frame->pushLarge(types.i8, c->binaryOp(lir::Divide, types.i8, a, b));
     } break;
 
     case lload:
@@ -5461,7 +5430,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case lneg:
-      frame->pushLong(c->unaryOp(lir::Negate, frame->popLong()));
+      frame->pushLarge(types.i8,
+                       c->unaryOp(lir::Negate, frame->popLarge(types.i8)));
       break;
 
     case lookupswitch: {
@@ -5469,7 +5439,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
-      ir::Value* key = frame->popInt();
+      ir::Value* key = frame->pop(types.i4);
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
       assert(t, defaultIp < codeLength(t, code));
@@ -5531,34 +5501,35 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lrem: {
-      ir::Value* a = frame->popLong();
-      ir::Value* b = frame->popLong();
+      ir::Value* a = frame->popLarge(types.i8);
+      ir::Value* b = frame->popLarge(types.i8);
 
       if (inTryBlock(t, code, ip - 1)) {
         c->saveLocals();
         frame->trace(0, 0);
       }
 
-      frame->pushLong(c->binaryOp(lir::Remainder, types.i8, a, b));
+      frame->pushLarge(types.i8, c->binaryOp(lir::Remainder, types.i8, a, b));
     } break;
 
     case lreturn: {
       handleExit(t, frame);
-      c->return_(frame->popLong());
+      c->return_(frame->popLarge(types.i8));
     }
       goto next;
 
     case dreturn: {
       handleExit(t, frame);
-      c->return_(frame->popLong());
+      c->return_(frame->popLarge(types.f8));
     } goto next;
 
     case lshl:
     case lshr:
     case lushr: {
-      ir::Value* a = frame->popInt();
-      ir::Value* b = frame->popLong();
-      frame->pushLong(
+      ir::Value* a = frame->pop(types.i4);
+      ir::Value* b = frame->popLarge(types.i8);
+      frame->pushLarge(
+          types.i8,
           c->binaryOp(toCompilerBinaryOp(t, instruction), types.i8, a, b));
     } break;
 
@@ -5598,7 +5569,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case monitorenter: {
-      ir::Value* target = frame->popObject();
+      ir::Value* target = frame->pop(types.object);
       c->call(
           c->constant(getThunk(t, acquireMonitorForObjectThunk), types.address),
           0,
@@ -5610,7 +5581,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case monitorexit: {
-      ir::Value* target = frame->popObject();
+      ir::Value* target = frame->pop(types.object);
       c->call(
           c->constant(getThunk(t, releaseMonitorForObjectThunk), types.address),
           0,
@@ -5659,7 +5630,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     c->constant(offset, types.i4));
 
       frame->pop(dimensions);
-      frame->pushObject(result);
+      frame->push(types.object, result);
     } break;
 
     case new_: {
@@ -5686,21 +5657,23 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         thunk = makeNewFromReferenceThunk;
       }
 
-      frame->pushObject(c->call(c->constant(getThunk(t, thunk), types.address),
-                                0,
-                                frame->trace(0, 0),
-                                types.object,
-                                2,
-                                c->threadRegister(),
-                                frame->append(argument)));
+      frame->push(types.object,
+                  c->call(c->constant(getThunk(t, thunk), types.address),
+                          0,
+                          frame->trace(0, 0),
+                          types.object,
+                          2,
+                          c->threadRegister(),
+                          frame->append(argument)));
     } break;
 
     case newarray: {
       uint8_t type = codeBody(t, code, ip++);
 
-      ir::Value* length = frame->popInt();
+      ir::Value* length = frame->pop(types.i4);
 
-      frame->pushObject(
+      frame->push(
+          types.object,
           c->call(c->constant(getThunk(t, makeBlankArrayThunk), types.address),
                   0,
                   frame->trace(0, 0),
@@ -5790,7 +5763,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
           table = frame->append(staticTable);
         } else {
-          table = frame->popObject();
+          table = frame->pop(types.object);
         }
 
         switch (fieldCode) {
@@ -5903,7 +5876,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 frame->append(pair),
                 value);
           } else {
-            ir::Value* instance = frame->popObject();
+            ir::Value* instance = frame->pop(types.object);
 
             c->call(c->constant(getThunk(t, setFieldValueFromReferenceThunk),
                                 types.address),
@@ -5933,7 +5906,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     static_cast<ir::Value*>(0),
                     value);
           } else {
-            ir::Value* instance = frame->popObject();
+            ir::Value* instance = frame->pop(types.object);
 
             c->call(
                 c->constant(getThunk(t, setLongFieldValueFromReferenceThunk),
@@ -5964,7 +5937,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 frame->append(pair),
                 value);
           } else {
-            ir::Value* instance = frame->popObject();
+            ir::Value* instance = frame->pop(types.object);
 
             c->call(
                 c->constant(getThunk(t, setObjectFieldValueFromReferenceThunk),
@@ -6003,8 +5976,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       goto next;
 
     case sipush:
-      frame->pushInt(c->constant(
-          static_cast<int16_t>(codeReadInt16(t, code, ip)), types.i4));
+      frame->push(types.i4,
+                  c->constant(static_cast<int16_t>(codeReadInt16(t, code, ip)),
+                              types.i4));
       break;
 
     case swap:
@@ -6041,7 +6015,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
       assert(t, start);
 
-      ir::Value* key = frame->popInt();
+      ir::Value* key = frame->pop(types.i4);
 
       c->condJump(lir::JumpIfLess,
                   c->constant(bottom, types.i4),
@@ -6064,7 +6038,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       } break;
 
       case astore: {
-        frame->storeObject(codeReadInt16(t, code, ip));
+        frame->store(types.object, codeReadInt16(t, code, ip));
       } break;
 
       case iinc: {
@@ -6082,11 +6056,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       } break;
 
       case iload: {
-        frame->loadInt(codeReadInt16(t, code, ip));
+        frame->load(types.i4, codeReadInt16(t, code, ip));
       } break;
 
       case istore: {
-        frame->storeInt(codeReadInt16(t, code, ip));
+        frame->store(types.i4, codeReadInt16(t, code, ip));
       } break;
 
       case lload: {
