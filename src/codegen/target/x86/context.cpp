@@ -24,7 +24,7 @@ ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures)
 }
 
 Context::Context(vm::System* s,
-                 util::Allocator* a,
+                 util::Alloc* a,
                  vm::Zone* zone,
                  ArchitectureContext* ac)
     : s(s),

@@ -15,7 +15,7 @@ namespace avian {
 namespace codegen {
 namespace arm {
 
-Context::Context(vm::System* s, util::Allocator* a, vm::Zone* zone)
+Context::Context(vm::System* s, util::Alloc* a, vm::Zone* zone)
     : s(s),
       zone(zone),
       client(0),

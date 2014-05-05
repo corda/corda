@@ -25,7 +25,7 @@ SRes myProgress(void*, UInt64, UInt64)
 namespace vm {
 
 uint8_t* encodeLZMA(System* s,
-                    Allocator* a,
+                    AllocOnly* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize)

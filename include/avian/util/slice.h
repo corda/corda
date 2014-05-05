@@ -99,7 +99,7 @@ class Slice {
     return slice;
   }
 
-  void resize(Allocator* a, size_t newCount)
+  void resize(Alloc* a, size_t newCount)
   {
     Slice<T> slice(clone(a, newCount));
     a->free(items, count);

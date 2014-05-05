@@ -20,7 +20,7 @@ class Zone;
 namespace avian {
 
 namespace util {
-class Allocator;
+class Alloc;
 }
 
 namespace codegen {
@@ -143,7 +143,7 @@ class Architecture {
                                unsigned cSize,
                                OperandMask& cMask) = 0;
 
-  virtual Assembler* makeAssembler(util::Allocator*, vm::Zone*) = 0;
+  virtual Assembler* makeAssembler(util::Alloc*, vm::Zone*) = 0;
 
   virtual void acquire() = 0;
   virtual void release() = 0;

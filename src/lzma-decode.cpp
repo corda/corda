@@ -27,7 +27,7 @@ int32_t read4(const uint8_t* in)
 namespace vm {
 
 uint8_t* decodeLZMA(System* s,
-                    avian::util::Allocator* a,
+                    avian::util::AllocOnly* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize)

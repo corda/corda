@@ -24,7 +24,7 @@ namespace avian {
 
 namespace util {
 class Aborter;
-class Allocator;
+class Alloc;
 }  // namespace util
 
 namespace codegen {
@@ -37,7 +37,7 @@ class ConstantPoolEntry;
 
 class Context {
  public:
-  Context(vm::System* s, util::Allocator* a, vm::Zone* zone);
+  Context(vm::System* s, util::Alloc* a, vm::Zone* zone);
 
   vm::System* s;
   vm::Zone* zone;

@@ -26,7 +26,7 @@ namespace vm {
 class Vector {
  public:
   Vector(avian::util::Aborter* a,
-         avian::util::Allocator* allocator,
+         avian::util::Alloc* allocator,
          size_t minimumCapacity)
       : a(a),
         allocator(allocator),
@@ -175,7 +175,7 @@ class Vector {
   }
 
   avian::util::Aborter* a;
-  avian::util::Allocator* allocator;
+  avian::util::Alloc* allocator;
   avian::util::Slice<uint8_t> data;
   size_t position;
   size_t minimumCapacity;
