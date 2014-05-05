@@ -1474,112 +1474,6 @@ class Frame {
     }
   }
 
-  void storedInt(unsigned index) {
-    assert(t, index < localSize());
-    set(index, types.i4);
-  }
-
-  void storedLong(unsigned index) {
-    assert(t, index + 1 < localSize());
-    set(index, types.i8);
-    set(index + 1, types.i8);
-  }
-
-  void dupped() {
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 1 >= localSize());
-    set(sp, get(sp - 1));
-    ++ sp;
-  }
-
-  void duppedX1() {
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 2 >= localSize());
-
-    ir::Type b2 = get(sp - 2);
-    ir::Type b1 = get(sp - 1);
-
-    set(sp - 1, b2);
-    set(sp - 2, b1);
-    set(sp    , b1);
-
-    ++ sp;
-  }
-
-  void duppedX2() {
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 3 >= localSize());
-
-    ir::Type b3 = get(sp - 3);
-    ir::Type b2 = get(sp - 2);
-    ir::Type b1 = get(sp - 1);
-
-    set(sp - 2, b3);
-    set(sp - 1, b2);
-    set(sp - 3, b1);
-    set(sp    , b1);
-
-    ++ sp;
-  }
-
-  void dupped2() {
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 2 >= localSize());
-
-    ir::Type b2 = get(sp - 2);
-    ir::Type b1 = get(sp - 1);
-
-    set(sp, b2);
-    set(sp + 1, b1);
-
-    sp += 2;
-  }
-
-  void dupped2X1() {
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 3 >= localSize());
-
-    ir::Type b3 = get(sp - 3);
-    ir::Type b2 = get(sp - 2);
-    ir::Type b1 = get(sp - 1);
-
-    set(sp - 1, b3);
-    set(sp - 3, b2);
-    set(sp    , b2);
-    set(sp - 2, b1);
-    set(sp + 1, b1);
-
-    sp += 2;
-  }
-
-  void dupped2X2() {
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 4 >= localSize());
-
-    ir::Type b4 = get(sp - 4);
-    ir::Type b3 = get(sp - 3);
-    ir::Type b2 = get(sp - 2);
-    ir::Type b1 = get(sp - 1);
-
-    set(sp - 2, b4);
-    set(sp - 1, b3);
-    set(sp - 4, b2);
-    set(sp    , b2);
-    set(sp - 3, b1);
-    set(sp + 1, b1);
-
-    sp += 2;
-  }
-
-  void swapped() {
-    assert(t, sp - 2 >= localSize());
-
-    ir::Type saved = get(sp - 1);
-
-    set(sp - 1, get(sp - 2));
-    set(sp - 2, saved);
-  }
-
   avian::codegen::Promise* addressPromise(avian::codegen::Promise* p) {
     BootContext* bc = context->bootContext;
     if (bc) {
@@ -1652,26 +1546,6 @@ class Frame {
     this->ip = bytecodeIp;
   }
 
-  // void c->push(ir::Type type, ir::Value* o)
-  // {
-  //   c->push(type, o);
-  // }
-
-  // void c->push(types.i8, ir::Value* o)
-  // {
-  //   c->push(types.i8, o);
-  // }
-
-  // ir::Value* c->pop(ir::Type type)
-  // {
-  //   return c->pop(type);
-  // }
-
-  // ir::Value* c->pop(types.i8)
-  // {
-  //   return c->pop(types.i8);
-  // }
-
   void push(ir::Type type, ir::Value* o)
   {
     assert(t, type == o->type);
@@ -1695,16 +1569,6 @@ class Frame {
     set(sp++, type);
     set(sp++, type);
   }
-
-  // void pushLarge(types.i8, ir::Value* o)
-  // {
-  //   pushLarge(types.i8, o);
-  // }
-
-  // void pushLarge(types.f8, ir::Value* o)
-  // {
-  //   pushLarge(types.f8, o);
-  // }
 
   void pop(unsigned count) {
     popped(count);
@@ -1736,20 +1600,9 @@ class Frame {
     push(type, loadLocal(context, 1, type, index));
   }
 
-  void loadLong(unsigned index) {
+  void loadLarge(ir::Type type, unsigned index) {
     assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLarge(types.i8, loadLocal(context, 2, types.i8, index));
-  }
-
-  void loadDouble(unsigned index)
-  {
-    assert(t, index < static_cast<unsigned>(localSize() - 1));
-    pushLarge(types.f8, loadLocal(context, 2, types.f8, index));
-  }
-
-  void loadObject(unsigned index) {
-    assert(t, index < localSize());
-    push(types.object, loadLocal(context, 1, types.object, index));
+    pushLarge(type, loadLocal(context, 2, type, index));
   }
 
   void store(ir::Type type, unsigned index)
@@ -1761,21 +1614,21 @@ class Frame {
     set(ti, type);
   }
 
-  void storeLong(unsigned index) {
-    storeLocal(context, 2, types.i8, popLarge(types.i8), index);
-    storedLong(translateLocalIndex(context, 2, index));
-  }
-
-  void storeDouble(unsigned index)
-  {
-    storeLocal(context, 2, types.f8, popLarge(types.f8), index);
-    storedLong(translateLocalIndex(context, 2, index));
+  void storeLarge(ir::Type type, unsigned index) {
+    storeLocal(context, 2, type, popLarge(type), index);
+    unsigned ti = translateLocalIndex(context, 2, index);
+    assert(t, ti + 1 < localSize());
+    set(ti, type);
+    set(ti + 1, type);
   }
 
   void dup() {
     c->push(types.i4, c->peek(1, 0));
 
-    dupped();
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 1 >= localSize());
+    set(sp, get(sp - 1));
+    ++ sp;
   }
 
   void dupX1() {
@@ -1786,7 +1639,17 @@ class Frame {
     c->push(types.i4, s1);
     c->push(types.i4, s0);
 
-    duppedX1();
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 2 >= localSize());
+
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
+
+    set(sp - 1, b2);
+    set(sp - 2, b1);
+    set(sp    , b1);
+
+    ++ sp;
   }
 
   void dupX2() {
@@ -1808,7 +1671,19 @@ class Frame {
       c->push(types.i4, s0);
     }
 
-    duppedX2();
+    assert(t, sp + 1 <= frameSize());
+    assert(t, sp - 3 >= localSize());
+
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
+
+    set(sp - 2, b3);
+    set(sp - 1, b2);
+    set(sp - 3, b1);
+    set(sp    , b1);
+
+    ++ sp;
   }
 
   void dup2() {
@@ -1824,7 +1699,16 @@ class Frame {
       c->push(types.i4, s0);
     }
 
-    dupped2();
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 2 >= localSize());
+
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
+
+    set(sp, b2);
+    set(sp + 1, b1);
+
+    sp += 2;
   }
 
   void dup2X1() {
@@ -1847,7 +1731,20 @@ class Frame {
       c->push(types.i4, s0);
     }
 
-    dupped2X1();
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 3 >= localSize());
+
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
+
+    set(sp - 1, b3);
+    set(sp - 3, b2);
+    set(sp    , b2);
+    set(sp - 2, b1);
+    set(sp + 1, b1);
+
+    sp += 2;
   }
 
   void dup2X2() {
@@ -1883,7 +1780,22 @@ class Frame {
       c->push(types.i4, s0);
     }
 
-    dupped2X2();
+    assert(t, sp + 2 <= frameSize());
+    assert(t, sp - 4 >= localSize());
+
+    ir::Type b4 = get(sp - 4);
+    ir::Type b3 = get(sp - 3);
+    ir::Type b2 = get(sp - 2);
+    ir::Type b1 = get(sp - 1);
+
+    set(sp - 2, b4);
+    set(sp - 1, b3);
+    set(sp - 4, b2);
+    set(sp    , b2);
+    set(sp - 3, b1);
+    set(sp + 1, b1);
+
+    sp += 2;
   }
 
   void swap() {
@@ -1893,7 +1805,12 @@ class Frame {
     c->push(types.i4, s0);
     c->push(types.i4, s1);
 
-    swapped();
+    assert(t, sp - 2 >= localSize());
+
+    ir::Type saved = get(sp - 1);
+
+    set(sp - 1, get(sp - 2));
+    set(sp - 2, saved);
   }
 
   TraceElement* trace(object target, unsigned flags) {
@@ -4190,23 +4107,23 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case aload:
-      frame->loadObject(codeBody(t, code, ip++));
+      frame->load(types.object, codeBody(t, code, ip++));
       break;
 
     case aload_0:
-      frame->loadObject(0);
+      frame->load(types.object, 0);
       break;
 
     case aload_1:
-      frame->loadObject(1);
+      frame->load(types.object, 1);
       break;
 
     case aload_2:
-      frame->loadObject(2);
+      frame->load(types.object, 2);
       break;
 
     case aload_3:
-      frame->loadObject(3);
+      frame->load(types.object, 3);
       break;
 
     case anewarray: {
@@ -5395,38 +5312,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lload:
-      frame->loadLong(codeBody(t, code, ip++));
+      frame->loadLarge(types.i8, codeBody(t, code, ip++));
       break;
     case dload:
-      frame->loadDouble(codeBody(t, code, ip++));
+      frame->loadLarge(types.f8, codeBody(t, code, ip++));
       break;
 
     case lload_0:
-      frame->loadLong(0);
+      frame->loadLarge(types.i8, 0);
       break;
     case dload_0:
-      frame->loadDouble(0);
+      frame->loadLarge(types.f8, 0);
       break;
 
     case lload_1:
-      frame->loadLong(1);
+      frame->loadLarge(types.i8, 1);
       break;
     case dload_1:
-      frame->loadDouble(1);
+      frame->loadLarge(types.f8, 1);
       break;
 
     case lload_2:
-      frame->loadLong(2);
+      frame->loadLarge(types.i8, 2);
       break;
     case dload_2:
-      frame->loadDouble(2);
+      frame->loadLarge(types.f8, 2);
       break;
 
     case lload_3:
-      frame->loadLong(3);
+      frame->loadLarge(types.i8, 3);
       break;
     case dload_3:
-      frame->loadDouble(3);
+      frame->loadLarge(types.f8, 3);
       break;
 
     case lneg:
@@ -5534,38 +5451,38 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lstore:
-      frame->storeLong(codeBody(t, code, ip++));
+      frame->storeLarge(types.i8, codeBody(t, code, ip++));
       break;
     case dstore:
-      frame->storeDouble(codeBody(t, code, ip++));
+      frame->storeLarge(types.f8, codeBody(t, code, ip++));
       break;
 
     case lstore_0:
-      frame->storeLong(0);
+      frame->storeLarge(types.i8, 0);
       break;
     case dstore_0:
-      frame->storeDouble(0);
+      frame->storeLarge(types.f8, 0);
       break;
 
     case lstore_1:
-      frame->storeLong(1);
+      frame->storeLarge(types.i8, 1);
       break;
     case dstore_1:
-      frame->storeDouble(1);
+      frame->storeLarge(types.f8, 1);
       break;
 
     case lstore_2:
-      frame->storeLong(2);
+      frame->storeLarge(types.i8, 2);
       break;
     case dstore_2:
-      frame->storeDouble(2);
+      frame->storeLarge(types.f8, 2);
       break;
 
     case lstore_3:
-      frame->storeLong(3);
+      frame->storeLarge(types.i8, 3);
       break;
     case dstore_3:
-      frame->storeDouble(3);
+      frame->storeLarge(types.f8, 3);
       break;
 
     case monitorenter: {
@@ -6034,7 +5951,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case wide: {
       switch (codeBody(t, code, ip++)) {
       case aload: {
-        frame->loadObject(codeReadInt16(t, code, ip));
+        frame->load(types.object, codeReadInt16(t, code, ip));
       } break;
 
       case astore: {
@@ -6064,11 +5981,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       } break;
 
       case lload: {
-        frame->loadLong(codeReadInt16(t, code, ip));
+        frame->loadLarge(types.i8, codeReadInt16(t, code, ip));
       } break;
 
       case lstore: {
-        frame->storeLong(codeReadInt16(t, code, ip));
+        frame->storeLarge(types.i8, codeReadInt16(t, code, ip));
       } break;
 
       case ret: {
