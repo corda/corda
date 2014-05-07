@@ -1456,7 +1456,7 @@ run: build
 
 .PHONY: debug
 debug: build
-	$(library-path) gdb --args $(test-executable) $(test-args)
+	$(library-path) $(db) $(test-executable) $(test-args)
 
 .PHONY: vg
 vg: build
