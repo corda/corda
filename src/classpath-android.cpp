@@ -1969,6 +1969,62 @@ Avian_java_lang_reflect_Method_getDeclaredAnnotations
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_reflect_Field_getDeclaredAnnotations(Thread* t,
+                                                         object,
+                                                         uintptr_t* arguments)
+{
+  object field = arrayBody(
+      t,
+      classFieldTable(
+          t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))),
+      arguments[1]);
+
+  object addendum = fieldAddendum(t, field);
+  if (addendum) {
+    object table = addendumAnnotationTable(t, addendum);
+    if (table) {
+      PROTECT(t, field);
+      PROTECT(t, table);
+
+      object array
+          = makeObjectArray(t,
+                            resolveClass(t,
+                                         root(t, Machine::BootLoader),
+                                         "java/lang/annotation/Annotation"),
+                            objectArrayLength(t, table));
+      PROTECT(t, array);
+
+      object get = resolveMethod(t,
+                                 root(t, Machine::BootLoader),
+                                 "avian/Classes",
+                                 "getAnnotation",
+                                 "(Ljava/lang/ClassLoader;[Ljava/lang/Object;)"
+                                 "Ljava/lang/annotation/Annotation;");
+      PROTECT(t, get);
+
+      for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
+        object a
+            = t->m->processor->invoke(t,
+                                      get,
+                                      0,
+                                      classLoader(t, reinterpret_cast<object>(arguments[0])),
+                                      objectArrayBody(t, table, i));
+
+        set(t, array, ArrayBody + (i * BytesPerWord), a);
+      }
+
+      return reinterpret_cast<uintptr_t>(array);
+    }
+  }
+
+  return reinterpret_cast<uintptr_t>(makeObjectArray(
+      t,
+      resolveClass(
+          t, root(t, Machine::BootLoader), "java/lang/annotation/Annotation"),
+      0));
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_reflect_Method_getDefaultValue
 (Thread* t, object, uintptr_t* arguments)
 {
