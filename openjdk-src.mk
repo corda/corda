@@ -305,7 +305,12 @@ else
 		"-I$(openjdk-src)/solaris/native/sun/nio/ch" \
 		"-I$(openjdk-src)/solaris/javavm/include" \
 		"-I$(openjdk-src)/solaris/hpi/include" \
-		"-I$(openjdk-src)/solaris/native/common/deps"
+		"-I$(openjdk-src)/solaris/native/common/deps" \
+		"-I$(openjdk-src)/solaris/native/common/deps/fontconfig2" \
+		"-I$(openjdk-src)/solaris/native/common/deps/gconf2" \
+		"-I$(openjdk-src)/solaris/native/common/deps/glib2" \
+		"-I$(openjdk-src)/solaris/native/common/deps/gtk2" \
+		"-DX11_PATH=\"/usr/X11R6\""
 
 	ifeq ($(platform),linux)
 		openjdk-sources += \
