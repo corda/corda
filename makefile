@@ -50,6 +50,22 @@ ifeq ($(codegen-targets),all)
 	options := $(options)-all
 endif
 
+ifeq ($(filter debug debug-fast fast small,$(mode)),)
+	x := $(error "'$(mode)' is not a valid mode (choose one of: debug debug-fast fast small)")
+endif
+
+ifeq ($(filter compile interpret,$(process)),)
+	x := $(error "'$(process)' is not a valid process (choose one of: compile interpret)")
+endif
+
+ifeq ($(filter x86_64 i386 arm,$(arch)),)
+	x := $(error "'$(arch)' is not a supported architecture (choose one of: x86_64 i386 arm)")
+endif
+
+ifeq ($(filter linux windows darwin freebsd,$(platform)),)
+	x := $(error "'$(platform)' is not a supported platform (choose one of: linux windows darwin freebsd)")
+endif
+
 aot-only = false
 root := $(shell (cd .. && pwd))
 build = build/$(platform)-$(arch)$(options)
@@ -105,6 +121,10 @@ ifneq ($(openjdk),)
 	openjdk-arch = $(arch)
 	ifeq ($(arch),x86_64)
 		openjdk-arch = amd64
+	endif
+
+	ifneq ($(android),)
+		x := $(error "android and openjdk are incompatible")
 	endif
 
 	ifneq ($(openjdk-src),)
