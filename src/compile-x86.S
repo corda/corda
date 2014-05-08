@@ -400,9 +400,10 @@ GLOBAL(vmJumpAndInvoke):
 
    movl   12(%esp),%ecx
    
-   // allocate new frame, adding room for callee-saved registers
+   // allocate new frame, adding room for callee-saved registers,
+   // return address, and frame pointer
    subl   24(%esp),%ecx
-   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT,%ecx
+   subl   $CALLEE_SAVED_REGISTER_FOOTPRINT+8,%ecx
    
    movl   4(%esp),%ebx
    
