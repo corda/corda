@@ -24,6 +24,17 @@ public class PrintStream extends OutputStream {
     this.autoFlush = autoFlush;
   }
 
+  public PrintStream(OutputStream out, boolean autoFlush, String encoding)
+    throws UnsupportedEncodingException
+  {
+    this.out = out;
+    this.autoFlush = autoFlush;
+
+    if (! (encoding.equals("UTF-8") || encoding.equals("ISO-8859-1"))) {
+      throw new UnsupportedEncodingException(encoding);
+    }
+  }
+
   public PrintStream(OutputStream out) {
     this(out, false);
   }

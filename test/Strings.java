@@ -199,7 +199,7 @@ public class Strings {
        .equals("I enjoy grape nuts.  do you?  you do?"));
 
     { java.io.ByteArrayOutputStream bout = new java.io.ByteArrayOutputStream();
-      java.io.PrintStream pout = new java.io.PrintStream(bout);
+      java.io.PrintStream pout = new java.io.PrintStream(bout, true, "UTF-8");
       String s = "I ♥ grape nuts";
       System.out.println(s);
       pout.println(s);
@@ -207,17 +207,14 @@ public class Strings {
       expect
         (arraysEqual
          (bout.toByteArray(),
-          (s + System.getProperty("line.separator")).getBytes()));
+          (s + System.getProperty("line.separator")).getBytes("UTF-8")));
 
-      // note that this effectively asserts that the VM's default
-      // charset is UTF-8.  If we want to make this test more
-      // portable, we should specify the charset explicitly.
       expect
         (arraysEqual
          (bout.toByteArray(), append
           (new byte[] { 73, 32, -30, -103, -91, 32, 103, 114, 97, 112, 101,
                         32, 110, 117, 116, 115 },
-            System.getProperty("line.separator").getBytes())));
+            System.getProperty("line.separator").getBytes("UTF-8"))));
     }
 
     expect("abc".lastIndexOf('b', 100) == 1);
