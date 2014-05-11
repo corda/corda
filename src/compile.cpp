@@ -1009,9 +1009,9 @@ class BootContext {
 
 class Context {
  public:
-  class MyResource: public Thread::Resource {
+  class MyResource: public Thread::AutoResource {
    public:
-    MyResource(Context* c): Resource(c->thread), c(c) { }
+    MyResource(Context* c): AutoResource(c->thread), c(c) { }
 
     virtual void release() {
       c->dispose();
@@ -3857,9 +3857,9 @@ targetFieldOffset(Context* context, object field)
 
 class Stack {
  public:
-  class MyResource: public Thread::Resource {
+  class MyResource: public Thread::AutoResource {
    public:
-    MyResource(Stack* s): Resource(s->thread), s(s) { }
+    MyResource(Stack* s): AutoResource(s->thread), s(s) { }
 
     virtual void release() {
       s->zone.dispose();

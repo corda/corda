@@ -48,19 +48,19 @@ using namespace avian::util;
 #define ENTER(t, state) StateResource MAKE_NAME(stateResource_) (t, state)
 
 #define THREAD_RESOURCE0(t, releaseBody)                                \
-  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  class MAKE_NAME(Resource_): public Thread::AutoResource {             \
   public:                                                               \
-    MAKE_NAME(Resource_)(Thread* t): Resource(t) { }                    \
+    MAKE_NAME(Resource_)(Thread* t): AutoResource(t) { }                \
     ~MAKE_NAME(Resource_)() { releaseBody; }                            \
     virtual void release()                                              \
     { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
   } MAKE_NAME(resource_)(t);
 
 #define OBJECT_RESOURCE(t, name, releaseBody)                           \
-  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  class MAKE_NAME(Resource_): public Thread::AutoResource {             \
   public:                                                               \
     MAKE_NAME(Resource_)(Thread* t, object name):                       \
-      Resource(t), name(name), protector(t, &(this->name)) { }          \
+      AutoResource(t), name(name), protector(t, &(this->name)) { }      \
     ~MAKE_NAME(Resource_)() { releaseBody; }                            \
     virtual void release()                                              \
     { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
@@ -71,10 +71,10 @@ using namespace avian::util;
   } MAKE_NAME(resource_)(t, name);
 
 #define THREAD_RESOURCE(t, type, name, releaseBody)                     \
-  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  class MAKE_NAME(Resource_): public Thread::AutoResource {             \
   public:                                                               \
     MAKE_NAME(Resource_)(Thread* t, type name):                         \
-      Resource(t), name(name) { }                                       \
+      AutoResource(t), name(name) { }                                   \
     ~MAKE_NAME(Resource_)() { releaseBody; }                            \
     virtual void release()                                              \
     { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
@@ -84,10 +84,10 @@ using namespace avian::util;
   } MAKE_NAME(resource_)(t, name);
 
 #define THREAD_RESOURCE2(t, type1, name1, type2, name2, releaseBody)    \
-  class MAKE_NAME(Resource_): public Thread::Resource {                 \
+  class MAKE_NAME(Resource_): public Thread::AutoResource {             \
   public:                                                               \
     MAKE_NAME(Resource_)(Thread* t, type1 name1, type2 name2):          \
-      Resource(t), name1(name1), name2(name2) { }                       \
+      AutoResource(t), name1(name1), name2(name2) { }                   \
     ~MAKE_NAME(Resource_)() { releaseBody; }                            \
     virtual void release()                                              \
     { this->MAKE_NAME(Resource_)::~MAKE_NAME(Resource_)(); }            \
@@ -1375,12 +1375,8 @@ class Thread {
 
   class Resource {
    public:
-    Resource(Thread* t): t(t), next(t->resource) {
+    Resource(Thread* t, Resource* next): t(t), next(next) {
       t->resource = this;
-    }
-
-    ~Resource() {
-      t->resource = next;
     }
 
     virtual void release() = 0;
@@ -1389,10 +1385,22 @@ class Thread {
     Resource* next;
   };
 
-  class ClassInitStack: public Resource {
+  class AutoResource: public Resource {
+   public:
+    AutoResource(Thread* t): Resource(t, t->resource) { }
+
+    ~AutoResource() {
+      t->resource = next;
+    }
+
+    virtual void release() = 0;
+
+  };
+
+  class ClassInitStack: public AutoResource {
    public:
     ClassInitStack(Thread* t, object class_):
-      Resource(t),
+      AutoResource(t),
       next(t->classInitStack),
       class_(class_),
       protector(t, &(this->class_))
@@ -1587,10 +1595,10 @@ class Classpath {
 #ifdef _MSC_VER
 
 template <class T>
-class ThreadRuntimeArray: public Thread::Resource {
+class ThreadRuntimeArray: public Thread::AutoResource {
  public:
   ThreadRuntimeArray(Thread* t, unsigned size):
-    Resource(t),
+    AutoResource(t),
     body(static_cast<T*>(t->m->heap->allocate(size * sizeof(T)))),
     size(size)
   { }
@@ -1644,10 +1652,10 @@ enterActiveState(Thread* t)
   enter(t, Thread::ActiveState);
 }
 
-class StateResource: public Thread::Resource {
+class StateResource: public Thread::AutoResource {
  public:
   StateResource(Thread* t, Thread::State state):
-    Resource(t), oldState(t->state)
+    AutoResource(t), oldState(t->state)
   {
     enter(t, state);
   }
@@ -1733,10 +1741,10 @@ release(Thread* t, System::Monitor* m)
   m->release(t->systemThread);
 }
 
-class MonitorResource: public Thread::Resource {
+class MonitorResource: public Thread::AutoResource {
  public:
   MonitorResource(Thread* t, System::Monitor* m):
-    Resource(t), m(m)
+    AutoResource(t), m(m)
   {
     acquire(t, m);
   }
@@ -1756,12 +1764,13 @@ class MonitorResource: public Thread::Resource {
 class RawMonitorResource: public Thread::Resource {
  public:
   RawMonitorResource(Thread* t, System::Monitor* m):
-    Resource(t), m(m)
+    Resource(t, t->resource), m(m)
   {
     m->acquire(t->systemThread);
   }
 
   ~RawMonitorResource() {
+    t->resource = next;
     vm::release(t, m);
   }
 
