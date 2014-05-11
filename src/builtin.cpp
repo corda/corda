@@ -303,6 +303,20 @@ Avian_java_lang_Runtime_exit
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_java_lang_Runtime_freeMemory
+(Thread* t, object, uintptr_t*)
+{
+  return t->m->heap->remaining();
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+Avian_java_lang_Runtime_totalMemory
+(Thread* t, object, uintptr_t*)
+{
+  return t->m->heap->limit();
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_avianvmresource_Handler_00024ResourceInputStream_getContentLength
 (Thread* t, object, uintptr_t* arguments)
 {

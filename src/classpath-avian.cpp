@@ -571,20 +571,6 @@ Avian_java_lang_Runtime_gc
   collect(t, Heap::MajorCollection);
 }
 
-extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_java_lang_Runtime_freeMemory
-(Thread* t, object, uintptr_t*)
-{
-  return t->m->heap->remaining();
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-Avian_java_lang_Runtime_totalMemory
-(Thread* t, object, uintptr_t*)
-{
-  return t->m->heap->limit();
-}
-
 extern "C" AVIAN_EXPORT void JNICALL
 Avian_java_lang_Runtime_addShutdownHook
 (Thread* t, object, uintptr_t* arguments)

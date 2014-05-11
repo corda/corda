@@ -298,8 +298,14 @@ public class Misc {
       throw new RuntimeException(e);
     }
 
-    expect(new URL("http://oss.readytalk.com")
-           .getHost().equals("oss.readytalk.com"));
+    // as of this writing, we don't support URLs on Android, since it
+    // pulls in a third-party library we don't include:
+    if (! "http://www.android.com/".equals
+        (System.getProperty("java.vendor.url")))
+    {
+      expect(new URL("http://oss.readytalk.com")
+             .getHost().equals("oss.readytalk.com"));
+    }
 
     expect(java.util.Arrays.equals
 	   (new byte[] { 0, 0, 0, 0 },
@@ -336,6 +342,9 @@ public class Misc {
 
     expect(System.getProperty("buzzy.buzzy.bim.bam").equals
            ("yippy yappy yin yang"));
+
+    // just test that it's there; don't care what it returns:
+    Runtime.getRuntime().totalMemory();
   }
 
   protected class Protected { }
