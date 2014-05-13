@@ -228,7 +228,7 @@ ifneq ($(android),)
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
-		platform-lflags := -lgdi32
+		platform-lflags := -lgdi32 -lshlwapi -lwsock32
 	else
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
