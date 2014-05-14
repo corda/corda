@@ -97,6 +97,11 @@ public class ByteArrayOutputStream extends OutputStream {
     }
     return array;
   }
+  
+  @Override
+  public String toString() {
+    return new String(toByteArray());
+  }
 
   public String toString(String encoding) throws UnsupportedEncodingException {
     return new String(toByteArray(), encoding);
