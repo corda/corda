@@ -237,6 +237,9 @@
 # loaded reflectively to handle embedded resources:
 -keep class avian.avianvmresource.Handler
 
+# loaded reflectively by sun.misc.Launcher:
+-keep class avian.file.Handler
+
 # refered to symbolically in MethodAccessorGenerator:
 -keep class sun.reflect.MethodAccessorImpl {
    <methods>;

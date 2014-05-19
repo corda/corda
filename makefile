@@ -687,9 +687,6 @@ ifeq ($(platform),darwin)
 			cxx = $(ios-bin)/g++
 			cc = $(ios-bin)/gcc
 		endif
-		ar = $(ios-bin)/ar
-		ranlib = $(ios-bin)/ranlib
-		strip = $(ios-bin)/strip
 
 		flags = -isysroot $(sdk-dir)/$(target)$(ios-version).sdk \
 			$(arch-flag)
@@ -1342,7 +1339,8 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMClass.java \
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
-		$(classpath-src)/avian/avianvmresource/Handler.java
+		$(classpath-src)/avian/avianvmresource/Handler.java \
+		$(classpath-src)/avian/file/Handler.java
 
 	ifeq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
