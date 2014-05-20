@@ -95,6 +95,10 @@ public class Logging {
   private void e() throws Exception {
     throw new Exception("Started here");
   }
+  
+  private static void expect(boolean v) {
+    if (! v) throw new RuntimeException();
+  }
 
   private static final boolean useCustomHandler = true;
   public static void main(String args[]) {
@@ -107,5 +111,37 @@ public class Logging {
 
     Logging me = new Logging();
     me.run();
+
+    { final boolean[] logged = new boolean[1];
+      Logger root = Logger.getLogger("");
+      for (Handler h : root.getHandlers()) root.removeHandler(h);
+      root.setLevel(Level.FINER);
+      root.addHandler(new Handler() {
+          public void publish(LogRecord r) {
+            logged[0] = true;
+          }
+        });
+      
+      Logger foo = Logger.getLogger("foo");
+      expect(foo.getLevel() == null);
+      expect(foo.getParent() == root);
+
+      foo.info("hi");
+      expect(logged[0]);
+
+      logged[0] = false;
+      foo.fine("hi");
+      expect(logged[0]);
+
+      logged[0] = false;
+      foo.finest("hi");
+      expect(! logged[0]);
+
+      root.setLevel(Level.FINEST);
+
+      logged[0] = false;
+      foo.finest("hi");
+      expect(logged[0]);
+    }      
   }
 }
