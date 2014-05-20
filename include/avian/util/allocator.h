@@ -18,10 +18,16 @@ namespace util {
 
 class Allocator {
  public:
-  // TODO: use size_t instead of unsigned
-  virtual void* tryAllocate(unsigned size) = 0;
-  virtual void* allocate(unsigned size) = 0;
-  virtual void free(const void* p, unsigned size) = 0;
+
+  // Returns null on failure
+  virtual void* tryAllocate(size_t size) = 0;
+
+  // Aborts on failure
+  virtual void* allocate(size_t size) = 0;
+
+  // By contract, size MUST be the original size of the allocated data, and p
+  // MUST point to the original base of the allocated data. No partial frees.
+  virtual void free(const void* p, size_t size) = 0;
 };
 
 }  // namespace util

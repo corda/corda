@@ -1636,12 +1636,12 @@ int main(int ac, char** av)
     {
     }
 
-    virtual void* tryAllocate(unsigned size)
+    virtual void* tryAllocate(size_t size)
     {
       return s->tryAllocate(size);
     }
 
-    virtual void* allocate(unsigned size)
+    virtual void* allocate(size_t size)
     {
       void* p = tryAllocate(size);
       if (p == 0) {
@@ -1650,7 +1650,7 @@ int main(int ac, char** av)
       return p;
     }
 
-    virtual void free(const void* p, unsigned)
+    virtual void free(const void* p, size_t)
     {
       s->free(p);
     }

@@ -95,7 +95,7 @@ class Zone : public avian::util::Allocator {
     }
   }
 
-  virtual void* tryAllocate(unsigned size)
+  virtual void* tryAllocate(size_t size)
   {
     size = pad(size);
     if (tryEnsure(size)) {
@@ -107,7 +107,7 @@ class Zone : public avian::util::Allocator {
     }
   }
 
-  virtual void* allocate(unsigned size)
+  virtual void* allocate(size_t size)
   {
     size = pad(size);
     void* p = tryAllocate(size);
@@ -146,7 +146,7 @@ class Zone : public avian::util::Allocator {
     segment = s;
   }
 
-  virtual void free(const void*, unsigned)
+  virtual void free(const void*, size_t)
   {
     // not supported
     abort(s);

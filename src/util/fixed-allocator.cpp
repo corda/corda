@@ -20,14 +20,14 @@ FixedAllocator::FixedAllocator(Aborter* a, Slice<uint8_t> memory)
 {
 }
 
-void* FixedAllocator::tryAllocate(unsigned size)
+void* FixedAllocator::tryAllocate(size_t size)
 {
   return allocate(size);
 }
 
-void* FixedAllocator::allocate(unsigned size, unsigned padAlignment)
+void* FixedAllocator::allocate(size_t size, unsigned padAlignment)
 {
-  unsigned paddedSize = vm::pad(size, padAlignment);
+  size_t paddedSize = vm::pad(size, padAlignment);
   expect(a, offset + paddedSize < memory.count);
 
   void* p = memory.begin() + offset;
@@ -35,12 +35,12 @@ void* FixedAllocator::allocate(unsigned size, unsigned padAlignment)
   return p;
 }
 
-void* FixedAllocator::allocate(unsigned size)
+void* FixedAllocator::allocate(size_t size)
 {
   return allocate(size, vm::BytesPerWord);
 }
 
-void FixedAllocator::free(const void* p, unsigned size)
+void FixedAllocator::free(const void* p, size_t size)
 {
   if (p >= memory.begin()
       and static_cast<const uint8_t*>(p) + size == memory.begin() + offset) {

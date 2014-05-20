@@ -60,10 +60,10 @@ class Context;
 
 Aborter* getAborter(Context* c);
 
-void* tryAllocate(Context* c, unsigned size);
-void* allocate(Context* c, unsigned size);
-void* allocate(Context* c, unsigned size, bool limit);
-void free(Context* c, const void* p, unsigned size);
+void* tryAllocate(Context* c, size_t size);
+void* allocate(Context* c, size_t size);
+void* allocate(Context* c, size_t size, bool limit);
+void free(Context* c, const void* p, size_t size);
 
 #ifdef USE_ATOMIC_OPERATIONS
 inline void markBitAtomic(uintptr_t* map, unsigned i)
@@ -1863,7 +1863,7 @@ void collect(Context* c)
   }
 }
 
-void* allocate(Context* c, unsigned size, bool limit)
+void* allocate(Context* c, size_t size, bool limit)
 {
   ACQUIRE(c->lock);
 
@@ -1888,12 +1888,12 @@ void* allocate(Context* c, unsigned size, bool limit)
   return 0;
 }
 
-void* tryAllocate(Context* c, unsigned size)
+void* tryAllocate(Context* c, size_t size)
 {
   return allocate(c, size, true);
 }
 
-void* allocate(Context* c, unsigned size)
+void* allocate(Context* c, size_t size)
 {
   void* p = allocate(c, size, false);
   expect(c->system, p);
@@ -1901,7 +1901,7 @@ void* allocate(Context* c, unsigned size)
   return p;
 }
 
-void free(Context* c, const void* p, unsigned size)
+void free(Context* c, const void* p, size_t size)
 {
   ACQUIRE(c->lock);
 
@@ -1925,7 +1925,7 @@ void free(Context* c, const void* p, unsigned size)
   c->count -= size;
 }
 
-void free_(Context* c, const void* p, unsigned size)
+void free_(Context* c, const void* p, size_t size)
 {
   free(c, p, size);
 }
@@ -1963,17 +1963,17 @@ class MyHeap : public Heap {
     return local::limitExceeded(&c, pendingAllocation);
   }
 
-  virtual void* tryAllocate(unsigned size)
+  virtual void* tryAllocate(size_t size)
   {
     return local::tryAllocate(&c, size);
   }
 
-  virtual void* allocate(unsigned size)
+  virtual void* allocate(size_t size)
   {
     return local::allocate(&c, size);
   }
 
-  virtual void free(const void* p, unsigned size)
+  virtual void free(const void* p, size_t size)
   {
     free_(&c, p, size);
   }
