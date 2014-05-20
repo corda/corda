@@ -32,7 +32,6 @@ public class Logger {
     if (name.equals("")) return rootLogger;
     Logger logger = new Logger(name);
     logger.parent = rootLogger;
-    logger.setLevel(Level.INFO);
     return logger;
   }
 
@@ -58,6 +57,14 @@ public class Logger {
 
   public void fine(String message) {
     log(Level.FINE, Method.getCaller(), message, null);
+  }
+
+  public void finer(String message) {
+    log(Level.FINER, Method.getCaller(), message, null);
+  }
+
+  public void finest(String message) {
+    log(Level.FINEST, Method.getCaller(), message, null);
   }
 
   public void info(String message) {
@@ -155,7 +162,7 @@ public class Logger {
   }
   
   public boolean isLoggable(Level level) {
-    return level.intValue() >= levelValue.intValue();
+    return level.intValue() >= getEffectiveLevel().intValue();
   }
   
   private static class DefaultHandler extends Handler {
