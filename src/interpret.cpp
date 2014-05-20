@@ -3263,8 +3263,9 @@ class MyProcessor: public Processor {
   }
 
   virtual void dispose() {
-    allocator->free(this, sizeof(*this));
     signals.setCrashDumpDirectory(0);
+    this->~MyProcessor();
+    allocator->free(this, sizeof(*this));
   }
   
   System* s;
