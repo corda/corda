@@ -149,23 +149,21 @@ main(int ac, const char** av)
   const char* classpath = ".";
 
   for (int i = 1; i < ac; ++i) {
-    if (strcmp(av[i], "-cp") == 0
-        or strcmp(av[i], "-classpath") == 0)
-    {
-      if (i + 1 == ac) usageAndExit(av[0]);
+    if (strcmp(av[i], "-cp") == 0 or strcmp(av[i], "-classpath") == 0) {
+      if (i + 1 == ac)
+        usageAndExit(av[0]);
       classpath = av[++i];
-    } else if (strcmp(av[i], "-jar") == 0)
-    {
-      if (i + 1 == ac) usageAndExit(av[0]);
+    } else if (strcmp(av[i], "-jar") == 0) {
+      if (i + 1 == ac)
+        usageAndExit(av[0]);
       jar = av[++i];
-    } else if (strncmp(av[i], "-X", 2) == 0
-               or strncmp(av[i], "-D", 2) == 0)
-    {
-      ++ vmArgs.nOptions;
-    } else if (strcmp(av[i], "-client") == 0
-               or strcmp(av[i], "-server") == 0)
-    {
+    } else if (strncmp(av[i], "-X", 2) == 0 or strncmp(av[i], "-D", 2) == 0) {
+      ++vmArgs.nOptions;
+    } else if (strcmp(av[i], "-client") == 0 or strcmp(av[i], "-server") == 0) {
       // ignore
+    } else if (strcmp(av[i], "-version") == 0) {
+      fprintf(stderr, "Avian " AVIAN_VERSION "\n");
+      exit(0);
     } else {
       if (jar == 0) {
         class_ = av[i++];
