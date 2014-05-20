@@ -8,11 +8,17 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-package java.io;
+package avian;
 
 import avian.VMClass;
 
 import java.util.HashMap;
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.PushbackReader;
+import java.io.StreamCorruptedException;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -39,7 +45,7 @@ public class LegacyObjectInputStream extends InputStream {
   }
 
   public Object readObject() throws IOException, ClassNotFoundException {
-    return readObject(new HashMap());
+    return readObject(new HashMap<Integer, Object>());
   }
 
   public boolean readBoolean() throws IOException {
@@ -188,9 +194,9 @@ public class LegacyObjectInputStream extends InputStream {
   {
     read('(');
     int id = (int) readLongToken();
-    Class c = Class.forName(readStringToken());
+    Class<?> c = Class.forName(readStringToken());
     int length = (int) readLongToken();
-    Class t = c.getComponentType();
+    Class<?> t = c.getComponentType();
     Object o = Array.newInstance(t, length);
 
     map.put(id, o);
@@ -211,12 +217,12 @@ public class LegacyObjectInputStream extends InputStream {
   {
     read('(');
     int id = (int) readLongToken();
-    Class c = Class.forName(readStringToken());
+    Class<?> c = Class.forName(readStringToken());
     Object o = makeInstance(c.vmClass);
 
     map.put(id, o);
 
-    for (Field f: c.getAllFields()) {
+    for (Field<?> f: c.getAllFields()) {
       int modifiers = f.getModifiers();
       if ((modifiers & (Modifier.TRANSIENT | Modifier.STATIC)) == 0) {
         try {
