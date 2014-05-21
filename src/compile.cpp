@@ -15,6 +15,8 @@
 #include "avian/target.h"
 #include "avian/arch.h"
 
+#include <avian/system/memory.h>
+
 #include <avian/codegen/assembler.h>
 #include <avian/codegen/architecture.h>
 #include <avian/codegen/compiler.h>
@@ -8842,8 +8844,7 @@ class MyProcessor : public Processor {
   {
     if (codeAllocator.memory.begin()) {
 #if !defined(AVIAN_AOT_ONLY)
-      s->freeExecutable(codeAllocator.memory.begin(),
-                        codeAllocator.memory.count);
+      Memory::free(codeAllocator.memory);
 #endif
     }
 
@@ -9023,12 +9024,10 @@ class MyProcessor : public Processor {
   {
 #if !defined(AVIAN_AOT_ONLY)
     if (codeAllocator.memory.begin() == 0) {
-      codeAllocator.memory.items = static_cast<uint8_t*>(
-          s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
+      codeAllocator.memory = Memory::allocate(ExecutableAreaSizeInBytes,
+                                              Memory::ReadWriteExecute);
 
-      expect(t, codeAllocator.memory.items);
-
-      codeAllocator.memory.count = ExecutableAreaSizeInBytes;
+      expect(t, codeAllocator.memory.begin());
     }
 #endif
 

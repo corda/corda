@@ -54,6 +54,7 @@ typedef struct ucontext {
 
 #include <avian/system/system.h>
 #include <avian/system/signal.h>
+#include <avian/system/memory.h>
 #include <avian/util/math.h>
 
 #define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_)(x)
@@ -664,39 +665,7 @@ class MySystem : public System {
       ::free(const_cast<void*>(p));
   }
 
-  virtual void* tryAllocateExecutable(unsigned sizeInBytes)
-  {
-#ifdef MAP_32BIT
-    // map to the lower 32 bits of memory when possible so as to avoid
-    // expensive relative jumps
-    const unsigned Extra = MAP_32BIT;
-#else
-    const unsigned Extra = 0;
-#endif
-
-    void* p = mmap(0,
-                   sizeInBytes,
-                   PROT_EXEC | PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANON | Extra,
-                   -1,
-                   0);
-
-    if (p == MAP_FAILED) {
-      return 0;
-    } else {
-      //       fprintf(stderr, "executable from %p to %p\n", p,
-      //               static_cast<uint8_t*>(p) + sizeInBytes);
-      return static_cast<uint8_t*>(p);
-    }
-  }
-
-  virtual void freeExecutable(const void* p, unsigned sizeInBytes)
-  {
-    munmap(const_cast<void*>(p), sizeInBytes);
-  }
-
-  virtual bool success(Status s)
-  {
+  virtual bool success(Status s) {
     return s == 0;
   }
 
