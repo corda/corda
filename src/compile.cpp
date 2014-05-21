@@ -8935,6 +8935,8 @@ class MyProcessor: public Processor {
     signals.unregisterHandler(SignalRegistrar::DivideByZero);
     signals.setCrashDumpDirectory(0);
 
+    this->~MyProcessor();
+
     allocator->free(this, sizeof(*this));
   }
 
