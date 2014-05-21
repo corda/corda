@@ -120,6 +120,9 @@ public class Logging {
           public void publish(LogRecord r) {
             logged[0] = true;
           }
+
+          public void close() { }
+          public void flush() { }
         });
       
       Logger foo = Logger.getLogger("foo");
