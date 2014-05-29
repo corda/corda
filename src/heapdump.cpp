@@ -80,7 +80,7 @@ dumpHeap(Thread* t, FILE* out)
         local::write1(out, local::Size);
         local::write4(out, local::objectSize(t, p));
 
-        if (objectClass(t, p) == type(t, Machine::ClassType)) {
+        if (objectClass(t, p) == type(t, GcClass::Type)) {
           object name = className(t, p);
           if (name) {
             local::write1(out, local::ClassName);

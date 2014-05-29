@@ -17,12 +17,12 @@
 namespace vm {
 
 object
-hashMapFindNode(Thread* t, object map, object key,
+hashMapFindNode(Thread* t, GcHashMap* map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object));
 
 inline object
-hashMapFind(Thread* t, object map, object key,
+hashMapFind(Thread* t, GcHashMap* map, object key,
             uint32_t (*hash)(Thread*, object),
             bool (*equal)(Thread*, object, object))
 {
@@ -31,15 +31,15 @@ hashMapFind(Thread* t, object map, object key,
 }
 
 void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
+hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
               unsigned size);
 
 void
-hashMapInsert(Thread* t, object map, object key, object value,
+hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
               uint32_t (*hash)(Thread*, object));
 
 inline bool
-hashMapInsertOrReplace(Thread* t, object map, object key, object value,
+hashMapInsertOrReplace(Thread* t, GcHashMap* map, object key, object value,
                        uint32_t (*hash)(Thread*, object),
                        bool (*equal)(Thread*, object, object))
 {
@@ -54,7 +54,7 @@ hashMapInsertOrReplace(Thread* t, object map, object key, object value,
 }
 
 inline bool
-hashMapInsertMaybe(Thread* t, object map, object key, object value,
+hashMapInsertMaybe(Thread* t, GcHashMap* map, object key, object value,
                    uint32_t (*hash)(Thread*, object),
                    bool (*equal)(Thread*, object, object))
 {
@@ -68,12 +68,12 @@ hashMapInsertMaybe(Thread* t, object map, object key, object value,
 }
 
 object
-hashMapRemove(Thread* t, object map, object key,
+hashMapRemove(Thread* t, GcHashMap* map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object));
 
 object
-hashMapIterator(Thread* t, object map);
+hashMapIterator(Thread* t, GcHashMap* map);
 
 object
 hashMapIteratorNext(Thread* t, object it);
@@ -102,14 +102,14 @@ treeUpdate(Thread* t, object tree, intptr_t key, object value, object sentinal,
 
 class HashMapIterator: public Thread::Protector {
  public:
-  HashMapIterator(Thread* t, object map):
+  HashMapIterator(Thread* t, GcHashMap* map):
     Protector(t), map(map), node(0), index(0)
   {
     find();
   }
 
   void find() {
-    object array = hashMapArray(t, map);
+    object array = map->array();
     if (array) {
       for (unsigned i = index; i < arrayLength(t, array); ++i) {
         if (arrayBody(t, array, i)) {
@@ -145,7 +145,7 @@ class HashMapIterator: public Thread::Protector {
     v->visit(&node);
   }
 
-  object map;
+  GcHashMap* map;
   object node;
   unsigned index;
 };

@@ -176,7 +176,7 @@ endsWith(const char* suffix, const char* s, unsigned length)
 }
 
 object
-getNonStaticFields(Thread* t, object typeMaps, object c, object fields,
+getNonStaticFields(Thread* t, GcHashMap* typeMaps, object c, object fields,
                    unsigned* count, object* array)
 {
   PROTECT(t, typeMaps);
@@ -210,12 +210,12 @@ getNonStaticFields(Thread* t, object typeMaps, object c, object fields,
 }
 
 object
-allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
+allFields(Thread* t, GcHashMap* typeMaps, object c, unsigned* count, object* array)
 {
   PROTECT(t, typeMaps);
   PROTECT(t, c);
 
-  object fields = makeVector(t, 0, 0);
+  object fields = reinterpret_cast<object>(makeVector(t, 0, 0));
   PROTECT(t, fields);
 
   *array = hashMapFind(t, typeMaps, c, objectHash, objectEqual);
@@ -248,7 +248,7 @@ allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
 }
 
 TypeMap*
-classTypeMap(Thread* t, object typeMaps, object p)
+classTypeMap(Thread* t, GcHashMap* typeMaps, object p)
 {
   return reinterpret_cast<TypeMap*>
     (&byteArrayBody
@@ -256,18 +256,18 @@ classTypeMap(Thread* t, object typeMaps, object p)
 }
 
 TypeMap*
-typeMap(Thread* t, object typeMaps, object p)
+typeMap(Thread* t, GcHashMap* typeMaps, object p)
 {
   return reinterpret_cast<TypeMap*>
     (&byteArrayBody
-     (t, objectClass(t, p) == type(t, Machine::SingletonType)
+     (t, objectClass(t, p) == type(t, GcSingleton::Type)
       ? hashMapFind(t, typeMaps, p, objectHash, objectEqual)
-      : hashMapFind(t, typeMaps, objectClass(t, p), objectHash, objectEqual),
+      : hashMapFind(t, typeMaps, reinterpret_cast<object>(objectClass(t, p)), objectHash, objectEqual),
       0));
 }
 
 unsigned
-targetFieldOffset(Thread* t, object typeMaps, object field)
+targetFieldOffset(Thread* t, GcHashMap* typeMaps, object field)
 {
   // if (strcmp(reinterpret_cast<const char*>
   //            (&byteArrayBody(t, className(t, fieldClass(t, field)), 0)),
@@ -282,7 +282,7 @@ targetFieldOffset(Thread* t, object typeMaps, object field)
 object
 makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               const char* className, const char* methodName,
-              const char* methodSpec, object typeMaps)
+              const char* methodSpec, GcHashMap* typeMaps)
 {
   PROTECT(t, typeMaps);
 
@@ -301,13 +301,13 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
   class MyOffsetResolver: public OffsetResolver {
    public:
-    MyOffsetResolver(object* typeMaps): typeMaps(typeMaps) { }
+    MyOffsetResolver(GcHashMap** typeMaps): typeMaps(typeMaps) { }
 
     virtual unsigned fieldOffset(Thread* t, object field) {
       return targetFieldOffset(t, *typeMaps, field);
     }
 
-    object* typeMaps;
+    GcHashMap** typeMaps;
   } resolver(&typeMaps);
 
   Finder* finder = static_cast<Finder*>
@@ -321,9 +321,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
       // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
-      object c = resolveSystemClass
+      object c = reinterpret_cast<object>(resolveSystemClass
         (t, root(t, Machine::BootLoader),
-         makeByteArray(t, "%.*s", nameSize - 6, name), true);
+         makeByteArray(t, "%.*s", nameSize - 6, name), true));
 
       PROTECT(t, c);
 
@@ -399,8 +399,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
             }
           }
 
-          object array = makeByteArray
-            (t, TypeMap::sizeInBytes(count + 2, count + 2));
+          object array = reinterpret_cast<object>(makeByteArray
+            (t, TypeMap::sizeInBytes(count + 2, count + 2)));
 
           TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
             (count + 2, count + 2, count + 2, TypeMap::PoolKind);
@@ -417,8 +417,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           }
 
           hashMapInsert
-            (t, typeMaps, hashMapFind
-             (t, root(t, Machine::PoolMap), c, objectHash, objectEqual), array,
+            (t, typeMaps, reinterpret_cast<object>(hashMapFind
+             (t, cast<GcHashMap>(t, root(t, Machine::PoolMap)), c, objectHash, objectEqual)), array,
              objectHash);
         }
       }
@@ -548,9 +548,9 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         }
      
         if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
-          object array = makeByteArray
+          object array = reinterpret_cast<object>(makeByteArray
             (t, TypeMap::sizeInBytes
-             (ceilingDivide(classFixedSize(t, c), BytesPerWord), memberIndex));
+             (ceilingDivide(classFixedSize(t, c), BytesPerWord), memberIndex)));
 
           TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
             (ceilingDivide(classFixedSize(t, c), BytesPerWord),
@@ -571,12 +571,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         }
 
         if (classStaticTable(t, c)) {
-          object array = makeByteArray
+          object array = reinterpret_cast<object>(makeByteArray
             (t, TypeMap::sizeInBytes
-             (singletonCount(t, classStaticTable(t, c)) + 2, staticIndex));
+             (singletonCount(t, cast<GcSingleton>(t, classStaticTable(t, c))) + 2, staticIndex)));
 
           TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-            (singletonCount(t, classStaticTable(t, c)) + 2,
+            (singletonCount(t, cast<GcSingleton>(t, classStaticTable(t, c))) + 2,
              ceilingDivide(targetStaticOffset, TargetBytesPerWord), staticIndex,
              TypeMap::SingletonKind);
 
@@ -606,41 +606,41 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
     {
       // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
-      object c = resolveSystemClass
+      object c = reinterpret_cast<object>(resolveSystemClass
         (t, root(t, Machine::BootLoader),
-         makeByteArray(t, "%.*s", nameSize - 6, name), true);
+         makeByteArray(t, "%.*s", nameSize - 6, name), true));
 
       PROTECT(t, c);
 
       if (classMethodTable(t, c)) {
         for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-          object method = arrayBody(t, classMethodTable(t, c), i);
+          GcMethod* method = cast<GcMethod>(t, arrayBody(t, classMethodTable(t, c), i));
           if (((methodName == 0
                 or ::strcmp
                 (reinterpret_cast<char*>
                  (&byteArrayBody
-                  (t, vm::methodName(t, method), 0)), methodName) == 0)
+                  (t, method->name(), 0)), methodName) == 0)
                and (methodSpec == 0
                     or ::strcmp
                     (reinterpret_cast<char*>
                      (&byteArrayBody
-                      (t, vm::methodSpec(t, method), 0)), methodSpec)
+                      (t, method->spec(), 0)), methodSpec)
                     == 0)))
           {
-            if (methodCode(t, method)
-                or (methodFlags(t, method) & ACC_NATIVE))
+            if (method->code()
+                or (method->flags() & ACC_NATIVE))
             {
               PROTECT(t, method);
 
               t->m->processor->compileMethod
                 (t, zone, &constants, &calls, &addresses, method, &resolver);
 
-              if (methodCode(t, method)) {
-                methods = makePair(t, method, methods);
+              if (method->code()) {
+                methods = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(method), methods));
               }
             }
 
-            object addendum = methodAddendum(t, method);
+            object addendum = method->addendum();
             if (addendum and methodAddendumExceptionTable(t, addendum)) {
               PROTECT(t, addendum);
 
@@ -653,11 +653,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
                   (t, methodAddendumExceptionTable(t, addendum), i) - 1;
 
                 object o = singletonObject
-                  (t, addendumPool(t, addendum), index);
+                  (t, cast<GcSingleton>(t, addendumPool(t, addendum)), index);
 
-                if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
-                  o = resolveClass
-                    (t, root(t, Machine::BootLoader), referenceName(t, o));
+                if (objectClass(t, o) == type(t, GcReference::Type)) {
+                  o = reinterpret_cast<object>(resolveClass
+                    (t, root(t, Machine::BootLoader), referenceName(t, o)));
     
                   set(t, addendumPool(t, addendum),
                       SingletonBody + (index * BytesPerWord), o);
@@ -671,12 +671,12 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   }
 
   for (; calls; calls = tripleThird(t, calls)) {
-    object method = tripleFirst(t, calls);
+    GcMethod* method = cast<GcMethod>(t, tripleFirst(t, calls));
     uintptr_t address;
-    if (methodFlags(t, method) & ACC_NATIVE) {
+    if (method->flags() & ACC_NATIVE) {
       address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
-      address = codeCompiled(t, methodCode(t, method));
+      address = codeCompiled(t, method->code());
     }
 
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
@@ -706,7 +706,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 {
   Machine* m = t->m;
 
-  for (HashMapIterator it(t, classLoaderMap(t, root(t, Machine::BootLoader)));
+  for (HashMapIterator it(t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))));
        it.hasMore();)
   {
     w->visitRoot(tripleSecond(t, it.next()));
@@ -724,7 +724,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 }
 
 unsigned
-targetOffset(Thread* t, object typeMaps, object p, unsigned offset)
+targetOffset(Thread* t, GcHashMap* typeMaps, object p, unsigned offset)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
 
@@ -741,7 +741,7 @@ targetOffset(Thread* t, object typeMaps, object p, unsigned offset)
 }
 
 unsigned
-targetSize(Thread* t, object typeMaps, object p)
+targetSize(Thread* t, GcHashMap* typeMaps, object p)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
 
@@ -786,11 +786,11 @@ objectMaskCount(TypeMap* map)
 }
 
 unsigned
-targetSize(Thread* t, object typeMaps, object referer, unsigned refererOffset,
+targetSize(Thread* t, GcHashMap* typeMaps, object referer, unsigned refererOffset,
            object p)
 {
   if (referer
-      and objectClass(t, referer) == type(t, Machine::ClassType)
+      and objectClass(t, referer) == type(t, GcClass::Type)
       and (refererOffset * BytesPerWord) == ClassObjectMask)
   {
     return (TargetBytesPerWord * 2)
@@ -913,7 +913,7 @@ nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
 }
 
 void
-copy(Thread* t, object typeMaps, object p, uint8_t* dst)
+copy(Thread* t, GcHashMap* typeMaps, object p, uint8_t* dst)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
   
@@ -935,7 +935,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
            + (i * map->targetArrayElementSizeInBytes), map->arrayElementType);
     }
 
-    if (objectClass(t, p) == type(t, Machine::ClassType)) {
+    if (objectClass(t, p) == type(t, GcClass::Type)) {
       uint16_t fixedSize;
       uint8_t arrayElementSize;
       object array = hashMapFind(t, typeMaps, p, objectHash, objectEqual);
@@ -971,7 +971,7 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
   } else {
     switch (map->kind) {
     case TypeMap::NormalKind:
-      if (objectClass(t, p) == type(t, Machine::FieldType)) {
+      if (objectClass(t, p) == type(t, GcField::Type)) {
         uint16_t offset = targetV2(targetFieldOffset(t, typeMaps, p));
         memcpy(dst + TargetFieldOffset, &offset, 2);
       }
@@ -1066,11 +1066,11 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
 }
 
 void
-copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
+copy(Thread* t, GcHashMap* typeMaps, object referer, unsigned refererOffset,
      object p, uint8_t* dst)
 {
   if (referer
-      and objectClass(t, referer) == type(t, Machine::ClassType)
+      and objectClass(t, referer) == type(t, GcClass::Type)
       and (refererOffset * BytesPerWord) == ClassObjectMask)
   {
     TypeMap* map = classTypeMap(t, typeMaps, referer);
@@ -1115,11 +1115,11 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
 HeapWalker*
 makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
               target_uintptr_t* map, unsigned capacity, object constants,
-              object typeMaps)
+              GcHashMap* typeMaps)
 {
   class Visitor: public HeapVisitor {
    public:
-    Visitor(Thread* t, object typeMaps, target_uintptr_t* heap,
+    Visitor(Thread* t, GcHashMap* typeMaps, target_uintptr_t* heap,
             target_uintptr_t* map, unsigned capacity):
       t(t), typeMaps(typeMaps), currentObject(0), currentNumber(0),
       currentOffset(0), heap(heap), map(map), position(0), capacity(capacity)
@@ -1159,9 +1159,9 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 
         unsigned number;
         if ((currentObject
-             and objectClass(t, currentObject) == type(t, Machine::ClassType)
+             and objectClass(t, currentObject) == type(t, GcClass::Type)
              and (currentOffset * BytesPerWord) == ClassStaticTable)
-            or instanceOf(t, type(t, Machine::SystemClassLoaderType), p))
+            or instanceOf(t, type(t, GcSystemClassLoader::Type), p))
         {
           // Static tables and system classloaders must be allocated
           // as fixed objects in the heap image so that they can be
@@ -1235,7 +1235,7 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
     }
 
     Thread* t;
-    object typeMaps;
+    GcHashMap* typeMaps;
     object currentObject;
     unsigned currentNumber;
     unsigned currentOffset;
@@ -1285,7 +1285,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
                 bool useLZMA)
 {
   setRoot(t, Machine::OutOfMemoryError,
-          make(t, type(t, Machine::OutOfMemoryErrorType)));
+          make(t, type(t, GcOutOfMemoryError::Type)));
 
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -1320,14 +1320,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
   t->m->processor->addCompilationHandler(&compilationHandler);
 
-  object classPoolMap;
-  object typeMaps;
+  GcHashMap* classPoolMap;
+  GcHashMap* typeMaps;
   object constants;
 
   { classPoolMap = makeHashMap(t, 0, 0);
     PROTECT(t, classPoolMap);
 
-    setRoot(t, Machine::PoolMap, classPoolMap);
+    setRoot(t, Machine::PoolMap, reinterpret_cast<object>(classPoolMap));
 
     typeMaps = makeHashMap(t, 0, 0);
     PROTECT(t, typeMaps);
@@ -1456,9 +1456,9 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
         targetArrayElementSize = 0;
       }
 
-      object array = makeByteArray
+      object array = reinterpret_cast<object>(makeByteArray
         (t, TypeMap::sizeInBytes
-         (ceilingDivide(buildOffset, BytesPerWord), fixedFieldCount));
+         (ceilingDivide(buildOffset, BytesPerWord), fixedFieldCount)));
 
       TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
         (ceilingDivide(buildOffset, BytesPerWord),
@@ -1478,7 +1478,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       }
 
       hashMapInsert
-        (t, typeMaps, vm::type(t, static_cast<Machine::Type>(i)), array,
+        (t, typeMaps, reinterpret_cast<object>(vm::type(t, static_cast<Gc::Type>(i))), array,
          objectHash);
     }
 
@@ -1490,62 +1490,62 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     // these roots will not be used when the bootimage is loaded, so
     // there's no need to preserve them:
     setRoot(t, Machine::PoolMap, 0);
-    setRoot(t, Machine::ByteArrayMap, makeWeakHashMap(t, 0, 0));
+    setRoot(t, Machine::ByteArrayMap, reinterpret_cast<object>(makeWeakHashMap(t, 0, 0)));
 
     // name all primitive classes so we don't try to update immutable
     // references at runtime:
-    { object name = makeByteArray(t, "void");
-      set(t, type(t, Machine::JvoidType), ClassName, name);
+    { object name = reinterpret_cast<object>(makeByteArray(t, "void"));
+      set(t, reinterpret_cast<object>(type(t, GcJvoid::Type)), ClassName, name);
     
-      name = makeByteArray(t, "boolean");
-      set(t, type(t, Machine::JbooleanType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "boolean"));
+      set(t, reinterpret_cast<object>(type(t, GcJboolean::Type)), ClassName, name);
 
-      name = makeByteArray(t, "byte");
-      set(t, type(t, Machine::JbyteType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "byte"));
+      set(t, reinterpret_cast<object>(type(t, GcJbyte::Type)), ClassName, name);
 
-      name = makeByteArray(t, "short");
-      set(t, type(t, Machine::JshortType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "short"));
+      set(t, reinterpret_cast<object>(type(t, GcJshort::Type)), ClassName, name);
 
-      name = makeByteArray(t, "char");
-      set(t, type(t, Machine::JcharType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "char"));
+      set(t, reinterpret_cast<object>(type(t, GcJchar::Type)), ClassName, name);
 
-      name = makeByteArray(t, "int");
-      set(t, type(t, Machine::JintType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "int"));
+      set(t, reinterpret_cast<object>(type(t, GcJint::Type)), ClassName, name);
 
-      name = makeByteArray(t, "float");
-      set(t, type(t, Machine::JfloatType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "float"));
+      set(t, reinterpret_cast<object>(type(t, GcJfloat::Type)), ClassName, name);
 
-      name = makeByteArray(t, "long");
-      set(t, type(t, Machine::JlongType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "long"));
+      set(t, reinterpret_cast<object>(type(t, GcJlong::Type)), ClassName, name);
 
-      name = makeByteArray(t, "double");
-      set(t, type(t, Machine::JdoubleType), ClassName, name);
+      name = reinterpret_cast<object>(makeByteArray(t, "double"));
+      set(t, reinterpret_cast<object>(type(t, GcJdouble::Type)), ClassName, name);
     }
 
     // resolve primitive array classes in case they are needed at
     // runtime:
-    { object name = makeByteArray(t, "[B");
+    { object name = reinterpret_cast<object>(makeByteArray(t, "[B"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[Z");
+      name = reinterpret_cast<object>(makeByteArray(t, "[Z"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[S");
+      name = reinterpret_cast<object>(makeByteArray(t, "[S"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[C");
+      name = reinterpret_cast<object>(makeByteArray(t, "[C"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[I");
+      name = reinterpret_cast<object>(makeByteArray(t, "[I"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[J");
+      name = reinterpret_cast<object>(makeByteArray(t, "[J"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[F");
+      name = reinterpret_cast<object>(makeByteArray(t, "[F"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
 
-      name = makeByteArray(t, "[D");
+      name = reinterpret_cast<object>(makeByteArray(t, "[D"));
       resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
     }
   }
@@ -1570,7 +1570,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
   { unsigned i = 0;
     for (HashMapIterator it
-           (t, classLoaderMap(t, root(t, Machine::BootLoader)));
+           (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))));
          it.hasMore();)
     {
       bootClassTable[i++] = targetVW
@@ -1586,7 +1586,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
   { unsigned i = 0;
     for (HashMapIterator it
-           (t, classLoaderMap(t, root(t, Machine::AppLoader)));
+           (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::AppLoader))));
          it.hasMore();)
     {
       appClassTable[i++] = targetVW
@@ -1599,7 +1599,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     (t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
 
   { unsigned i = 0;
-    for (HashMapIterator it(t, root(t, Machine::StringMap)); it.hasMore();) {
+    for (HashMapIterator it(t, cast<GcHashMap>(t, root(t, Machine::StringMap))); it.hasMore();) {
       stringTable[i++] = targetVW
         (heapWalker->map()->find
          (jreferenceTarget(t, tripleFirst(t, it.next()))));

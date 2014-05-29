@@ -32,6 +32,11 @@ class Slice;
 
 namespace vm {
 
+class GcByteArray;
+class GcCode;
+class GcClass;
+class GcMethod;
+
 class Processor {
  public:
   class StackWalker;
@@ -45,7 +50,7 @@ class Processor {
    public:
     virtual void walk(StackVisitor* v) = 0;
 
-    virtual object method() = 0;
+    virtual GcMethod* method() = 0;
 
     virtual int ip() = 0;
 
@@ -62,7 +67,7 @@ class Processor {
   virtual Thread*
   makeThread(Machine* m, object javaThread, Thread* parent) = 0;
 
-  virtual object
+  virtual GcMethod*
   makeMethod(Thread* t,
              uint8_t vmFlags,
              uint8_t returnCode,
@@ -70,13 +75,13 @@ class Processor {
              uint8_t parameterFootprint,
              uint16_t flags,
              uint16_t offset,
-             object name,
-             object spec,
+             GcByteArray* name,
+             GcByteArray* spec,
              object addendum,
-             object class_,
-             object code) = 0;
+             GcClass* class_,
+             GcCode* code) = 0;
 
-  virtual object
+  virtual GcClass*
   makeClass(Thread* t,
             uint16_t flags,
             uint16_t vmFlags,
@@ -97,7 +102,7 @@ class Processor {
             unsigned vtableLength) = 0;
 
   virtual void
-  initVtable(Thread* t, object c) = 0;
+  initVtable(Thread* t, GcClass* c) = 0;
 
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
@@ -106,7 +111,7 @@ class Processor {
   walkStack(Thread* t, StackVisitor* v) = 0;
 
   virtual int
-  lineNumber(Thread* t, object method, int ip) = 0;
+  lineNumber(Thread* t, GcMethod* method, int ip) = 0;
 
   virtual object*
   makeLocalReference(Thread* t, object o) = 0;
@@ -121,14 +126,14 @@ class Processor {
   popLocalFrame(Thread* t) = 0;
 
   virtual object
-  invokeArray(Thread* t, object method, object this_, object arguments) = 0;
+  invokeArray(Thread* t, GcMethod* method, object this_, object arguments) = 0;
 
   virtual object
-  invokeArray(Thread* t, object method, object this_, const jvalue* arguments)
+  invokeArray(Thread* t, GcMethod* method, object this_, const jvalue* arguments)
   = 0;
 
   virtual object
-  invokeList(Thread* t, object method, object this_, bool indirectObjects,
+  invokeList(Thread* t, GcMethod* method, object this_, bool indirectObjects,
              va_list arguments) = 0;
 
   virtual object
@@ -153,7 +158,7 @@ class Processor {
 
   virtual void
   compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
-                avian::codegen::DelayedPromise** addresses, object method,
+                avian::codegen::DelayedPromise** addresses, GcMethod* method,
                 OffsetResolver* resolver) = 0;
 
   virtual void
@@ -186,7 +191,7 @@ class Processor {
   = 0;
 
   object
-  invoke(Thread* t, object method, object this_, ...)
+  invoke(Thread* t, GcMethod* method, object this_, ...)
   {
     va_list a;
     va_start(a, this_);

@@ -37,9 +37,9 @@ codeReadInt32(Thread* t, object code, unsigned& ip)
 }
 
 inline bool
-isSuperclass(Thread* t, object class_, object base)
+isSuperclass(Thread* t, GcClass* class_, GcClass* base)
 {
-  for (object oc = classSuper(t, base); oc; oc = classSuper(t, oc)) {
+  for (GcClass* oc = cast<GcClass>(t, base->super()); oc; oc = cast<GcClass>(t, oc->super())) {
     if (oc == class_) {
       return true;
     }
@@ -48,19 +48,19 @@ isSuperclass(Thread* t, object class_, object base)
 }
 
 inline bool
-isSpecialMethod(Thread* t, object method, object class_)
+isSpecialMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
-  return (classFlags(t, class_) & ACC_SUPER)
+  return (class_->flags() & ACC_SUPER)
     and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-               &byteArrayBody(t, methodName(t, method), 0)) != 0
-    and isSuperclass(t, methodClass(t, method), class_);
+               &byteArrayBody(t, method->name(), 0)) != 0
+    and isSuperclass(t, cast<GcClass>(t, method->class_()), class_);
 }
 
 void
-resolveNative(Thread* t, object method);
+resolveNative(Thread* t, GcMethod* method);
 
 int
-findLineNumber(Thread* t, object method, unsigned ip);
+findLineNumber(Thread* t, GcMethod* method, unsigned ip);
 
 } // namespace vm
 

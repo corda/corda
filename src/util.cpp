@@ -93,8 +93,8 @@ cloneTreeNode(Thread* t, object n)
 {
   PROTECT(t, n);
 
-  object newNode = makeTreeNode
-    (t, getTreeNodeValue(t, n), treeNodeLeft(t, n), treeNodeRight(t, n));
+  object newNode = reinterpret_cast<object>(makeTreeNode
+    (t, getTreeNodeValue(t, n), treeNodeLeft(t, n), treeNodeRight(t, n)));
   setTreeNodeRed(t, newNode, treeNodeRed(t, n));
   return newNode;
 }
@@ -315,13 +315,13 @@ treeAdd(Thread* t, TreeContext* c)
 namespace vm {
 
 object
-hashMapFindNode(Thread* t, object map, object key,
+hashMapFindNode(Thread* t, GcHashMap* map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
 
-  object array = hashMapArray(t, map);
+  object array = map->array();
   if (array) {
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
     for (object n = arrayBody(t, array, index); n; n = tripleThird(t, n)) {
@@ -342,7 +342,7 @@ hashMapFindNode(Thread* t, object map, object key,
 }
 
 void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
+hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
               unsigned size)
 {
   PROTECT(t, map);
@@ -350,7 +350,7 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
   object newArray = 0;
 
   if (size) {
-    object oldArray = hashMapArray(t, map);
+    object oldArray = map->array();
     PROTECT(t, oldArray);
 
     unsigned newLength = nextPowerOfTwo(size);
@@ -358,16 +358,16 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
       return;
     }
 
-    newArray = makeArray(t, newLength);
+    newArray = reinterpret_cast<object>(makeArray(t, newLength));
 
-    if (oldArray != hashMapArray(t, map)) {
+    if (oldArray != map->array()) {
       // a resize was performed during a GC via the makeArray call
       // above; nothing left to do
       return;
     }
 
     if (oldArray) {
-      bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
+      bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
       for (unsigned i = 0; i < arrayLength(t, oldArray); ++i) {
         object next;
         for (object p = arrayBody(t, oldArray, i); p; p = next) {
@@ -390,11 +390,11 @@ hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
     }
   }
   
-  set(t, map, HashMapArray, newArray);
+  set(t, reinterpret_cast<object>(map), HashMapArray, newArray);
 }
 
 void
-hashMapInsert(Thread* t, object map, object key, object value,
+hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
               uint32_t (*hash)(Thread*, object))
 {
   // note that we reinitialize the array variable whenever an
@@ -405,19 +405,19 @@ hashMapInsert(Thread* t, object map, object key, object value,
 
   uint32_t h = hash(t, key);
 
-  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
 
-  object array = hashMapArray(t, map);
+  object array = map->array();
 
-  ++ hashMapSize(t, map);
+  ++ map->size();
 
-  if (array == 0 or hashMapSize(t, map) >= arrayLength(t, array) * 2) { 
+  if (array == 0 or map->size() >= arrayLength(t, array) * 2) { 
     PROTECT(t, key);
     PROTECT(t, value);
 
     hashMapResize(t, map, hash, array ? arrayLength(t, array) * 2 : 16);
 
-    array = hashMapArray(t, map);
+    array = map->array();
   }
 
   object k = key;
@@ -426,25 +426,25 @@ hashMapInsert(Thread* t, object map, object key, object value,
     PROTECT(t, key);
     PROTECT(t, value);
 
-    object r = makeWeakReference(t, 0, 0, 0, 0);
+    object r = reinterpret_cast<object>(makeWeakReference(t, 0, 0, 0, 0));
     jreferenceTarget(t, r) = key;
     jreferenceVmNext(t, r) = t->m->weakReferences;
     t->m->weakReferences = r;
     k = r;
 
-    array = hashMapArray(t, map);
+    array = map->array();
   }
 
-  object n = makeTriple(t, k, value, 0);
+  object n = reinterpret_cast<object>(makeTriple(t, k, value, 0));
 
-  array = hashMapArray(t, map);
+  array = map->array();
 
   unsigned index = h & (arrayLength(t, array) - 1);
 
   set(t, n, TripleThird, arrayBody(t, array, index));
   set(t, array, ArrayBody + (index * BytesPerWord), n);
 
-  if (hashMapSize(t, map) <= arrayLength(t, array) / 3) {
+  if (map->size() <= arrayLength(t, array) / 3) {
     // this might happen if nodes were removed during GC in which case
     // we weren't able to resize at the time
     hashMapResize(t, map, hash, arrayLength(t, array) / 2);
@@ -452,26 +452,26 @@ hashMapInsert(Thread* t, object map, object key, object value,
 }
 
 object
-hashMapRemoveNode(Thread* t, object map, unsigned index, object p, object n)
+hashMapRemoveNode(Thread* t, GcHashMap* map, unsigned index, object p, object n)
 {
   if (p) {
     set(t, p, TripleThird, tripleThird(t, n));
   } else {
-    set(t, hashMapArray(t, map), ArrayBody + (index * BytesPerWord),
+    set(t, map->array(), ArrayBody + (index * BytesPerWord),
         tripleThird(t, n));
   }
-  -- hashMapSize(t, map);
+  -- map->size();
   return n;
 }
 
 object
-hashMapRemove(Thread* t, object map, object key,
+hashMapRemove(Thread* t, GcHashMap* map, object key,
               uint32_t (*hash)(Thread*, object),
               bool (*equal)(Thread*, object, object))
 {
-  bool weak = objectClass(t, map) == type(t, Machine::WeakHashMapType);
+  bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
 
-  object array = hashMapArray(t, map);
+  object array = map->array();
   object o = 0;
   if (array) {
     unsigned index = hash(t, key) & (arrayLength(t, array) - 1);
@@ -496,7 +496,7 @@ hashMapRemove(Thread* t, object map, object key,
     }
 
     if ((not t->m->collecting)
-        and hashMapSize(t, map) <= arrayLength(t, array) / 3)
+        and map->size() <= arrayLength(t, array) / 3)
     {
       PROTECT(t, o);
       hashMapResize(t, map, hash, arrayLength(t, array) / 2);
@@ -513,7 +513,7 @@ listAppend(Thread* t, object list, object value)
 
   ++ listSize(t, list);
   
-  object p = makePair(t, value, 0);
+  object p = reinterpret_cast<object>(makePair(t, value, 0));
   if (listFront(t, list)) {
     set(t, listRear(t, list), PairSecond, p);
   } else {
@@ -529,8 +529,8 @@ vectorAppend(Thread* t, object vector, object value)
     PROTECT(t, vector);
     PROTECT(t, value);
 
-    object newVector = makeVector
-      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2));
+    object newVector = reinterpret_cast<object>(makeVector
+      (t, vectorSize(t, vector), max(16, vectorSize(t, vector) * 2)));
 
     if (vectorSize(t, vector)) {
       memcpy(&vectorBody(t, newVector, 0),
@@ -551,8 +551,8 @@ growArray(Thread* t, object array)
 {
   PROTECT(t, array);
 
-  object newArray = makeArray
-    (t, array == 0 ? 16 : (arrayLength(t, array) * 2));
+  object newArray = reinterpret_cast<object>(makeArray
+    (t, array == 0 ? 16 : (arrayLength(t, array) * 2)));
 
   if (array) {
     memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
@@ -578,7 +578,7 @@ treeInsert(Thread* t, Zone* zone, object tree, intptr_t key, object value,
   PROTECT(t, tree);
   PROTECT(t, sentinal);
 
-  object node = makeTreeNode(t, value, sentinal, sentinal);
+  object node = reinterpret_cast<object>(makeTreeNode(t, value, sentinal, sentinal));
 
   TreeContext c(t, zone);
   treeFind(t, &c, tree, key, node, sentinal, compare);

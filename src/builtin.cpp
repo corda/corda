@@ -21,37 +21,37 @@ namespace {
 
 int64_t
 search(Thread* t, object loader, object name,
-       object (*op)(Thread*, object, object), bool replaceDots)
+       GcClass* (*op)(Thread*, object, object), bool replaceDots)
 {
   if (LIKELY(name)) {
     PROTECT(t, loader);
     PROTECT(t, name);
 
-    object n = makeByteArray(t, stringLength(t, name) + 1);
+    object n = reinterpret_cast<object>(makeByteArray(t, stringLength(t, name) + 1));
     char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
     stringChars(t, name, s);
-    
+
     if (replaceDots) {
       replace('.', '/', s);
     }
 
     return reinterpret_cast<int64_t>(op(t, loader, n));
   } else {
-    throwNew(t, Machine::NullPointerExceptionType);
+    throwNew(t, GcNullPointerException::Type);
   }
 }
 
-object
+GcClass*
 resolveSystemClassThrow(Thread* t, object loader, object spec)
 {
   return resolveSystemClass
-    (t, loader, spec, true, Machine::ClassNotFoundExceptionType);
+    (t, loader, spec, true, GcClassNotFoundException::Type);
 }
 
 object
-fieldForOffsetInClass(Thread* t, object c, unsigned offset)
+fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
 {
-  object super = classSuper(t, c);
+  GcClass* super = cast<GcClass>(t, c->super());
   if (super) {
     object field = fieldForOffsetInClass(t, super, offset);
     if (field) {
@@ -59,7 +59,7 @@ fieldForOffsetInClass(Thread* t, object c, unsigned offset)
     }
   }
 
-  object table = classFieldTable(t, c);
+  object table = c->fieldTable();
   if (table) {
     for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
       object field = objectArrayBody(t, table, i);
@@ -75,12 +75,12 @@ fieldForOffsetInClass(Thread* t, object c, unsigned offset)
 }
 
 object
-fieldForOffset(Thread* t, object o, unsigned offset)
+fieldForOffset(Thread* t, GcSingleton* o, unsigned offset)
 {
-  object c = objectClass(t, o);
-  if (classVmFlags(t, c) & SingletonFlag) {
-    c = singletonObject(t, o, 0);
-    object table = classFieldTable(t, c);
+  GcClass* c = objectClass(t, o);
+  if (c->vmFlags() & SingletonFlag) {
+    c = cast<GcClass>(t, singletonObject(t, o, 0));
+    object table = c->fieldTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
         object field = objectArrayBody(t, table, i);
@@ -108,7 +108,7 @@ extern "C" AVIAN_EXPORT void JNICALL
 Avian_avian_Classes_initialize
 (Thread* t, object, uintptr_t* arguments)
 {
-  object this_ = reinterpret_cast<object>(arguments[0]);
+  GcClass* this_ = cast<GcClass>(t, reinterpret_cast<object>(arguments[0]));
 
   initClass(t, this_);
 }
@@ -135,7 +135,7 @@ Avian_avian_Classes_resolveVMClass
   object spec = reinterpret_cast<object>(arguments[1]);
 
   return reinterpret_cast<int64_t>
-    (resolveClass(t, loader, spec, true, Machine::ClassNotFoundExceptionType));
+    (resolveClass(t, loader, spec, true, GcClassNotFoundException::Type));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -149,7 +149,7 @@ Avian_avian_Classes_defineVMClass
 
   uint8_t* buffer = static_cast<uint8_t*>
     (t->m->heap->allocate(length));
-  
+
   THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
                    t->m->heap->free(buffer, length));
 
@@ -202,7 +202,7 @@ Avian_avian_SystemClassLoader_resourceURLPrefix
 
     return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;
   } else {
-    throwNew(t, Machine::NullPointerExceptionType);
+    throwNew(t, GcNullPointerException::Type);
   }
 }
 
@@ -226,7 +226,7 @@ Avian_avian_SystemClassLoader_00024ResourceEnumeration_nextResourceURLPrefix
 
     return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;
   } else {
-    throwNew(t, Machine::NullPointerExceptionType);
+    throwNew(t, GcNullPointerException::Type);
   }
 }
 
@@ -235,7 +235,7 @@ Avian_avian_SystemClassLoader_getClass
 (Thread* t, object, uintptr_t* arguments)
 {
   return reinterpret_cast<int64_t>
-    (getJClass(t, reinterpret_cast<object>(arguments[0])));
+    (getJClass(t, cast<GcClass>(t, reinterpret_cast<object>(arguments[0]))));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -256,7 +256,7 @@ Avian_avian_SystemClassLoader_getPackageSource
   object key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
 
   object array = hashMapFind
-    (t, root(t, Machine::PackageMap), key, byteArrayHash, byteArrayEqual);
+    (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), key, byteArrayHash, byteArrayEqual);
 
   if (array) {
     return reinterpret_cast<uintptr_t>
@@ -286,7 +286,7 @@ Avian_avian_Machine_dumpHeap
     }
     fclose(out);
   } else {
-    throwNew(t, Machine::RuntimeExceptionType, "file not found: %s",
+    throwNew(t, GcRuntimeException::Type, "file not found: %s",
              RUNTIME_ARRAY_BODY(n));
   }
 }
@@ -357,7 +357,7 @@ Avian_avian_avianvmresource_Handler_00024ResourceInputStream_open
 
     return reinterpret_cast<int64_t>(r);
   } else {
-    throwNew(t, Machine::NullPointerExceptionType);
+    throwNew(t, GcNullPointerException::Type);
   }
 }
 
@@ -398,7 +398,7 @@ Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI_3BII
   int32_t length = arguments[5];
 
   if (length == 0) return 0;
-  
+
   System::Region* region = reinterpret_cast<System::Region*>(peer);
   if (length > static_cast<jint>(region->length()) - position) {
     length = static_cast<jint>(region->length()) - position;
@@ -469,7 +469,7 @@ Avian_avian_Singleton_getObject
 (Thread* t, object, uintptr_t* arguments)
 {
   return reinterpret_cast<int64_t>
-    (singletonObject(t, reinterpret_cast<object>(arguments[0]), arguments[1]));
+    (singletonObject(t, cast<GcSingleton>(t, reinterpret_cast<object>(arguments[0])), arguments[1]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -477,7 +477,7 @@ Avian_avian_Singleton_getInt
 (Thread* t, object, uintptr_t* arguments)
 {
   return singletonValue
-    (t, reinterpret_cast<object>(arguments[0]), arguments[1]);
+    (t, cast<GcSingleton>(t, reinterpret_cast<object>(arguments[0])), arguments[1]);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -486,7 +486,7 @@ Avian_avian_Singleton_getLong
 {
   int64_t v;
   memcpy(&v, &singletonValue
-         (t, reinterpret_cast<object>(arguments[0]), arguments[1]), 8);
+         (t, cast<GcSingleton>(t, reinterpret_cast<object>(arguments[0])), arguments[1]), 8);
   return v;
 }
 
@@ -499,7 +499,7 @@ Avian_sun_misc_Unsafe_allocateMemory
   if (p) {
     return reinterpret_cast<int64_t>(p);
   } else {
-    throwNew(t, Machine::OutOfMemoryErrorType);
+    throwNew(t, GcOutOfMemoryError::Type);
   }
 }
 
@@ -711,19 +711,19 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_arrayIndexScale
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = jclassVmClass(t, reinterpret_cast<object>(arguments[1]));
+  GcClass* c = cast<GcClass>(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1])));
 
-  if (c == type(t, Machine::BooleanArrayType)
-      || c == type(t, Machine::ByteArrayType))
+  if (c == type(t, GcBooleanArray::Type)
+      || c == type(t, GcByteArray::Type))
     return 1;
-  else if (c == type(t, Machine::ShortArrayType)
-           || c == type(t, Machine::CharArrayType))
+  else if (c == type(t, GcShortArray::Type)
+           || c == type(t, GcCharArray::Type))
     return 2;
-  else if (c == type(t, Machine::IntArrayType)
-           || c == type(t, Machine::FloatArrayType))
+  else if (c == type(t, GcIntArray::Type)
+           || c == type(t, GcFloatArray::Type))
     return 4;
-  else if (c == type(t, Machine::LongArrayType)
-           || c == type(t, Machine::DoubleArrayType))
+  else if (c == type(t, GcLongArray::Type)
+           || c == type(t, GcDoubleArray::Type))
     return 8;
   else
     return BytesPerWord;
@@ -740,7 +740,7 @@ Avian_java_nio_FixedArrayByteBuffer_allocateFixed
   object array = allocate3
     (t, t->m->heap, Machine::FixedAllocation, ArrayBody + capacity, false);
 
-  setObjectClass(t, array, type(t, Machine::ByteArrayType));
+  setObjectClass(t, array, type(t, GcByteArray::Type));
   byteArrayLength(t, array) = capacity;
 
   longArrayBody(t, address, 0) = reinterpret_cast<intptr_t>(array) + ArrayBody;
@@ -776,7 +776,7 @@ Avian_sun_misc_Unsafe_putObjectVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   object value = reinterpret_cast<object>(arguments[4]);
-  
+
   storeStoreMemoryBarrier();
   set(t, o, offset, reinterpret_cast<object>(value));
   storeLoadMemoryBarrier();
@@ -795,7 +795,7 @@ Avian_sun_misc_Unsafe_getObjectVolatile
 {
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
-  
+
   uintptr_t value = fieldAtOffset<uintptr_t>(o, offset);
   loadMemoryBarrier();
   return value;
@@ -866,21 +866,21 @@ Avian_sun_misc_Unsafe_getLongVolatile
 
   object lock;
   if (BytesPerWord < 8) {
-    if (classArrayDimensions(t, objectClass(t, o))) {
-      lock = objectClass(t, o);
+    if (objectClass(t, o)->arrayDimensions()) {
+      lock = reinterpret_cast<object>(objectClass(t, o));
     } else {
-      lock = fieldForOffset(t, o, offset);
+      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
     }
 
     PROTECT(t, o);
     PROTECT(t, lock);
-    acquire(t, lock);        
+    acquire(t, lock);
   }
 
   int64_t result = fieldAtOffset<int64_t>(o, offset);
 
   if (BytesPerWord < 8) {
-    release(t, lock);        
+    release(t, lock);
   } else {
     loadMemoryBarrier();
   }
@@ -898,15 +898,15 @@ Avian_sun_misc_Unsafe_putLongVolatile
 
   object lock;
   if (BytesPerWord < 8) {
-    if (classArrayDimensions(t, objectClass(t, o))) {
-      lock = objectClass(t, o);
+    if (objectClass(t, o)->arrayDimensions()) {
+      lock = reinterpret_cast<object>(objectClass(t, o));
     } else {
-      lock = fieldForOffset(t, o, offset);
+      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
     }
 
     PROTECT(t, o);
     PROTECT(t, lock);
-    acquire(t, lock);        
+    acquire(t, lock);
   } else {
     storeStoreMemoryBarrier();
   }
@@ -934,7 +934,7 @@ Avian_sun_misc_Unsafe_unpark
 (Thread* t, object, uintptr_t* arguments)
 {
   object thread = reinterpret_cast<object>(arguments[1]);
-  
+
   monitorAcquire(t, interruptLock(t, thread));
   threadUnparked(t, thread) = true;
   monitorNotify(t, interruptLock(t, thread));
@@ -947,7 +947,7 @@ Avian_sun_misc_Unsafe_park
 {
   bool absolute = arguments[1];
   int64_t time; memcpy(&time, arguments + 2, 8);
-  
+
   int64_t then = t->m->system->now();
 
   if (absolute) {
@@ -973,7 +973,7 @@ Avian_sun_misc_Unsafe_park
     int64_t now = t->m->system->now();
     time -= now - then;
     then = now;
-    
+
     if (time == 0) {
       break;
     }
@@ -992,7 +992,7 @@ Avian_sun_misc_Unsafe_putIntVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int32_t value = arguments[4];
-  
+
   storeStoreMemoryBarrier();
   fieldAtOffset<int32_t>(o, offset) = value;
   storeLoadMemoryBarrier();
@@ -1024,7 +1024,7 @@ Avian_sun_misc_Unsafe_putByteVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int8_t value = arguments[4];
-  
+
   storeStoreMemoryBarrier();
   fieldAtOffset<int8_t>(o, offset) = value;
   storeLoadMemoryBarrier();
@@ -1063,7 +1063,7 @@ Avian_sun_misc_Unsafe_putShortVolatile
   object o = reinterpret_cast<object>(arguments[1]);
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   int16_t value = arguments[4];
-  
+
   storeStoreMemoryBarrier();
   fieldAtOffset<int16_t>(o, offset) = value;
   storeLoadMemoryBarrier();

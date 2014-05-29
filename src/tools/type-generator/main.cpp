@@ -309,7 +309,7 @@ class Type : public Object {
     o->methods.first = o->methods.last = 0;
     o->overridesMethods = false;
     return o;
-  }  
+  }
 };
 
 const char*
@@ -470,7 +470,7 @@ class String : public Object {
 
     String* o = allocate<String>();
     o->type = Object::String;
-    
+
     unsigned length = 0;
     for (Object* p = s; p; p = cdr(p)) ++ length;
 
@@ -506,7 +506,7 @@ endsWith(char c, const char* s)
 {
   assert(s);
   if (*s == 0) return false;
-  
+
   while (*s) ++ s;
   return (*(s - 1) == c);
 }
@@ -653,7 +653,7 @@ class MemberIterator {
     padding_(0),
     alignment_(BytesPerWord),
     sawSuperclassBoundary(true)
-  { 
+  {
     while (skipSupers and hasMore() and this->type != type) next();
     padding_ = 0;
     alignment_ = BytesPerWord;
@@ -701,7 +701,7 @@ class MemberIterator {
     case Object::Scalar: {
       size_ = memberSize(member);
       padding_ = pad(size_, alignment_);
-      alignment_ = (alignment_ + size_ + padding_) % 8; 
+      alignment_ = (alignment_ + size_ + padding_) % 8;
     } break;
 
     case Object::Array: {
@@ -784,7 +784,7 @@ sizeOf(const char* type)
     return BytesPerWord;
   } else {
     fprintf(stderr, "unexpected type: %s\n", type);
-    abort();    
+    abort();
   }
 }
 
@@ -980,7 +980,7 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
   s->skip(interfaceCount * 2);
 //   for (unsigned i = 0; i < interfaceCount; ++i) {
 //     const char* name = reinterpret_cast<const char*>
-//       (pool[pool[s->read2() - 1] - 1]);    
+//       (pool[pool[s->read2() - 1] - 1]);
 //   }
 
   unsigned fieldCount = s->read2();
@@ -1037,7 +1037,7 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
       Object* method = Method::make(type, name, spec);
       addMethod(type, method);
       typeOverridesMethods(type) = true;
-    }    
+    }
   }
 }
 
@@ -1220,10 +1220,10 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
   if (memberOwner(member)->type == Object::Type) {
     if (not unsafe) {
       out->write("  assert(t, t->m->unsafe or ");
-      out->write("instanceOf(t, arrayBodyUnsafe");
-      out->write("(t, t->m->types, Machine::");
+      out->write("instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe");
+      out->write("(t, t->m->types, Gc::");
       out->write(capitalize(local::typeName(memberOwner(member))));
-      out->write("Type)");
+      out->write("Type))");
       out->write(", o));\n");
 
       if (member->type != Object::Scalar) {
@@ -1435,9 +1435,9 @@ writeConstructorParameters(Output* out, Object* t)
       out->write(" ");
       out->write(obfuscate(memberName(m)));
     } break;
-            
+
     default: break;
-    }    
+    }
   }
 }
 
@@ -1451,9 +1451,9 @@ writeConstructorArguments(Output* out, Object* t)
       out->write(", ");
       out->write(obfuscate(memberName(m)));
     } break;
-            
+
     default: break;
-    }    
+    }
   }
 }
 
@@ -1472,7 +1472,59 @@ writeConstructorInitializations(Output* out, Object* t)
     } break;
 
     default: break;
-    }    
+    }
+  }
+}
+
+void writeClassAccessors(Output* out, Object* t)
+{
+  for (MemberIterator it(t); it.hasMore();) {
+    Object* m = it.next();
+    switch (m->type) {
+    case Object::Scalar: {
+      out->write("  ");
+      out->write(memberTypeName(m));
+      out->write("& ");
+      out->write(obfuscate(memberName(m)));
+      out->write("() { return field_at<");
+      out->write(memberTypeName(m));
+      out->write(">(");
+      out->write(capitalize(local::typeName(memberOwner(m))));
+      out->write(capitalize(memberName(m)));
+      out->write("); }\n");
+    } break;
+
+    default:
+      break;
+    }
+  }
+}
+
+void writeClassDeclarations(Output* out, Object* declarations)
+{
+  for (Object* p = declarations; p; p = cdr(p)) {
+    Object* o = car(p);
+    switch (o->type) {
+    case Object::Type: {
+      out->write("class Gc");
+      out->write(capitalize(typeName(o)));
+      out->write(": public GcObject {\n");
+      out->write(" public:\n");
+      out->write("  static const Gc::Type Type = Gc::");
+      out->write(capitalize(typeName(o)));
+      out->write("Type;\n");
+      out->write("  static const size_t FixedSize = FixedSizeOf");
+      out->write(capitalize(typeName(o)));
+      out->write(";\n\n");
+
+      writeClassAccessors(out, o);
+
+      out->write("};\n\n");
+    } break;
+
+    default:
+      break;
+    }
   }
 }
 
@@ -1486,7 +1538,7 @@ writeInitializerDeclarations(Output* out, Object* declarations)
       out->write("void init");
       out->write(capitalize(typeName(o)));
       out->write("(Thread* t, object o");
-      
+
       writeConstructorParameters(out, o);
 
       out->write(");\n\n");
@@ -1504,10 +1556,12 @@ writeConstructorDeclarations(Output* out, Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      out->write("object make");
+      out->write("Gc");
+      out->write(capitalize(typeName(o)));
+      out->write("* make");
       out->write(capitalize(typeName(o)));
       out->write("(Thread* t");
-      
+
       writeConstructorParameters(out, o);
 
       out->write(");\n\n");
@@ -1528,15 +1582,15 @@ writeInitializers(Output* out, Object* declarations)
       out->write("void\ninit");
       out->write(capitalize(typeName(o)));
       out->write("(Thread* t, object o");
-      
+
       writeConstructorParameters(out, o);
 
       out->write(")\n{\n");
 
       out->write("  setObjectClass(t, o, ");
-      out->write("arrayBody(t, t->m->types, Machine::");
+      out->write("reinterpret_cast<GcClass*>(arrayBody(t, t->m->types, Gc::");
       out->write(capitalize(typeName(o)));
-      out->write("Type));\n");
+      out->write("Type)));\n");
 
       writeConstructorInitializations(out, o);
 
@@ -1555,10 +1609,12 @@ writeConstructors(Output* out, Object* declarations)
     Object* o = car(p);
     switch (o->type) {
     case Object::Type: {
-      out->write("object make");
+      out->write("Gc");
+      out->write(capitalize(typeName(o)));
+      out->write("* make");
       out->write(capitalize(typeName(o)));
       out->write("(Thread* t");
-      
+
       writeConstructorParameters(out, o);
 
       out->write(")\n{\n");
@@ -1598,7 +1654,9 @@ writeConstructors(Output* out, Object* declarations)
       writeConstructorArguments(out, o);
       out->write(");\n");
 
-      out->write("  return o;\n}\n\n");
+      out->write("  return reinterpret_cast<Gc");
+      out->write(capitalize(typeName(o)));
+      out->write("*>(o);\n}\n\n");
     } break;
 
     default: break;
@@ -1629,7 +1687,7 @@ writeEnums(Output* out, Object* declarations)
 
   if (wrote) {
     out->write("\n");
-  } 
+  }
 }
 
 unsigned
@@ -1685,23 +1743,23 @@ typeObjectMask(Object* type)
 void
 writeInitialization(Output* out, Object* type)
 {
-  out->write("bootClass(t, Machine::");
+  out->write("bootClass(t, Gc::");
   out->write(capitalize(typeName(type)));
   out->write("Type, ");
 
   if (typeSuper(type)) {
-    out->write("Machine::");
+    out->write("Gc::");
     out->write(capitalize(typeName(typeSuper(type))));
     out->write("Type");
   } else {
-    out->write("-1");   
+    out->write("-1");
   }
   out->write(", ");
 
   if (typeObjectMask(type) != 1) {
     out->write(typeObjectMask(type));
   } else {
-    out->write("0");    
+    out->write("0");
   }
   out->write(", ");
 
@@ -1769,16 +1827,16 @@ writeInitializations(Output* out, Object* declarations)
 void
 writeJavaInitialization(Output* out, Object* type)
 {
-  out->write("bootJavaClass(t, Machine::");
+  out->write("bootJavaClass(t, Gc::");
   out->write(capitalize(typeName(type)));
   out->write("Type, ");
 
   if (typeSuper(type)) {
-    out->write("Machine::");
+    out->write("Gc::");
     out->write(capitalize(typeName(typeSuper(type))));
     out->write("Type");
   } else {
-    out->write("-1");   
+    out->write("-1");
   }
   out->write(", \"");
 
@@ -1807,7 +1865,7 @@ writeJavaInitializations(Output* out, Object* declarations)
 void
 writeNameInitialization(Output* out, Object* type)
 {
-  out->write("nameClass(t, Machine::");
+  out->write("nameClass(t, Gc::");
   out->write(capitalize(typeName(type)));
   out->write("Type, \"");
   if (equal(typeName(type), "jbyte")
@@ -1820,7 +1878,7 @@ writeNameInitialization(Output* out, Object* type)
       or equal(typeName(type), "jdouble")
       or equal(typeName(type), "jvoid"))
   {
-    out->write(typeName(type) + 1);    
+    out->write(typeName(type) + 1);
   } else {
     out->write("vm::");
     out->write(typeName(type));
@@ -2012,6 +2070,7 @@ int main(int ac, char** av)
 
     local::writeAccessors(&out, declarations);
     local::writeSizes(&out, declarations);
+    local::writeClassDeclarations(&out, declarations);
     local::writeInitializerDeclarations(&out, declarations);
     local::writeConstructorDeclarations(&out, declarations);
   } else if (local::equal(outputType.value, "constructors")) {

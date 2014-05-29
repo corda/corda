@@ -29,16 +29,16 @@ getTrace(Thread* t, unsigned skipCount)
 
     virtual bool visit(Processor::StackWalker* walker) {
       if (skipCount == 0) {
-        object method = walker->method();
+        GcMethod* method = walker->method();
         if (isAssignableFrom
-            (t, type(t, Machine::ThrowableType), methodClass(t, method))
+            (t, type(t, GcThrowable::Type), cast<GcClass>(t, method->class_()))
             and vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                           &byteArrayBody(t, methodName(t, method), 0))
+                           &byteArrayBody(t, method->name(), 0))
             == 0)
         {
           return true;
         } else {
-          trace = makeTrace(t, walker);
+          trace = reinterpret_cast<object>(makeTrace(t, walker));
           return false;
         }
       } else {
@@ -75,9 +75,9 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
 {
   if (LIKELY(src and dst)) {
     if (LIKELY(compatibleArrayTypes
-               (t, objectClass(t, src), objectClass(t, dst))))
+               (t, reinterpret_cast<object>(objectClass(t, src)), reinterpret_cast<object>(objectClass(t, dst)))))
     {
-      unsigned elementSize = classArrayElementSize(t, objectClass(t, src));
+      unsigned elementSize = objectClass(t, src)->arrayElementSize();
 
       if (LIKELY(elementSize)) {
         intptr_t sl = fieldAtOffset<uintptr_t>(src, BytesPerWord);
@@ -98,13 +98,13 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
                      length * elementSize);
             }
 
-            if (classObjectMask(t, objectClass(t, dst))) {
+            if (objectClass(t, dst)->objectMask()) {
               mark(t, dst, ArrayBody + (dstOffset * BytesPerWord), length);
             }
 
             return;
           } else {
-            throwNew(t, Machine::IndexOutOfBoundsExceptionType);
+            throwNew(t, GcIndexOutOfBoundsException::Type);
           }
         } else {
           return;
@@ -112,11 +112,11 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
       }
     }
   } else {
-    throwNew(t, Machine::NullPointerExceptionType);
+    throwNew(t, GcNullPointerException::Type);
     return;
   }
 
-  throwNew(t, Machine::ArrayStoreExceptionType);
+  throwNew(t, GcArrayStoreException::Type);
 }
 
 void
@@ -239,7 +239,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
       runOnLoadIfFound(t, lib);
     }
   } else if (throw_) {
-    throwNew(t, Machine::UnsatisfiedLinkErrorType,
+    throwNew(t, GcUnsatisfiedLinkError::Type,
              "library not found in %s: %s", path, name);
   }
 
@@ -251,26 +251,26 @@ clone(Thread* t, object o)
 {
   PROTECT(t, o);
 
-  object class_ = objectClass(t, o);
+  GcClass* class_ = objectClass(t, o);
   unsigned size = baseSize(t, o, class_) * BytesPerWord;
   object clone;
 
-  if (classArrayElementSize(t, class_)) {
-    clone = static_cast<object>(allocate(t, size, classObjectMask(t, class_)));
+  if (class_->arrayElementSize()) {
+    clone = static_cast<object>(allocate(t, size, class_->objectMask()));
     memcpy(clone, o, size);
     // clear any object header flags:
     setObjectClass(t, o, objectClass(t, o));
-  } else if (instanceOf(t, type(t, Machine::CloneableType), o)) {
+  } else if (instanceOf(t, type(t, GcCloneable::Type), o)) {
     clone = make(t, class_);
     memcpy(reinterpret_cast<void**>(clone) + 1,
            reinterpret_cast<void**>(o) + 1,
            size - BytesPerWord);
   } else {
-    object classNameSlash = className(t, objectClass(t, o));
+    object classNameSlash = objectClass(t, o)->name();
     THREAD_RUNTIME_ARRAY(t, char, classNameDot, byteArrayLength(t, classNameSlash));
     replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
             reinterpret_cast<char*>(&byteArrayBody(t, classNameSlash, 0)));
-    throwNew(t, Machine::CloneNotSupportedExceptionType, "%s",
+    throwNew(t, GcCloneNotSupportedException::Type, "%s",
              RUNTIME_ARRAY_BODY(classNameDot));
   }
 
@@ -282,13 +282,13 @@ makeStackTraceElement(Thread* t, object e)
 {
   PROTECT(t, e);
 
-  object class_ = className(t, methodClass(t, traceElementMethod(t, e)));
-  PROTECT(t, class_);
+  object class_name = className(t, methodClass(t, traceElementMethod(t, e)));
+  PROTECT(t, class_name);
 
-  THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_));
+  THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_name));
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
-          reinterpret_cast<char*>(&byteArrayBody(t, class_, 0)));
-  class_ = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
+          reinterpret_cast<char*>(&byteArrayBody(t, class_name, 0)));
+  class_name = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
   object method = methodName(t, traceElementMethod(t, e));
   PROTECT(t, method);
@@ -297,13 +297,13 @@ makeStackTraceElement(Thread* t, object e)
     (t, method, 0, byteArrayLength(t, method) - 1);
 
   unsigned line = t->m->processor->lineNumber
-    (t, traceElementMethod(t, e), traceElementIp(t, e));
+    (t, cast<GcMethod>(t, traceElementMethod(t, e)), traceElementIp(t, e));
 
   object file = classSourceFile(t, methodClass(t, traceElementMethod(t, e)));
   file = file ? t->m->classpath->makeString
     (t, file, 0, byteArrayLength(t, file) - 1) : 0;
 
-  return makeStackTraceElement(t, class_, method, file, line);
+  return reinterpret_cast<object>(makeStackTraceElement(t, class_name, method, file, line));
 }
 
 object
@@ -311,19 +311,19 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
 {
   switch (returnCode) {
   case ByteField:
-    return makeByte(t, intValue(t, o));
+    return reinterpret_cast<object>(makeByte(t, intValue(t, o)));
 
   case BooleanField:
-    return makeBoolean(t, intValue(t, o) != 0);
+    return reinterpret_cast<object>(makeBoolean(t, intValue(t, o) != 0));
 
   case CharField:
-    return makeChar(t, intValue(t, o));
+    return reinterpret_cast<object>(makeChar(t, intValue(t, o)));
 
   case ShortField:
-    return makeShort(t, intValue(t, o));
+    return reinterpret_cast<object>(makeShort(t, intValue(t, o)));
 
   case FloatField:
-    return makeFloat(t, intValue(t, o));
+    return reinterpret_cast<object>(makeFloat(t, intValue(t, o)));
 
   case IntField:
   case LongField:
@@ -332,14 +332,14 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
     return o;
 
   case DoubleField:
-    return makeDouble(t, longValue(t, o));
+    return reinterpret_cast<object>(makeDouble(t, longValue(t, o)));
 
   default:
     abort(t);
   }
 }
 
-object
+GcClass*
 resolveClassBySpec(Thread* t, object loader, const char* spec,
                    unsigned specLength)
 {
@@ -350,7 +350,7 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
     RUNTIME_ARRAY_BODY(s)[specLength - 2] = 0;
     return resolveClass(t, loader, RUNTIME_ARRAY_BODY(s));
   }
-  
+
   case '[': {
     THREAD_RUNTIME_ARRAY(t, char, s, specLength + 1);
     memcpy(RUNTIME_ARRAY_BODY(s), spec, specLength);
@@ -389,15 +389,15 @@ resolveParameterTypes(Thread* t, object loader, object spec,
       while (byteArrayBody(t, spec, offset) != ';') ++ offset;
       ++ offset;
 
-      object type = resolveClassBySpec
+      GcClass* type = resolveClassBySpec
         (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
          offset - start);
-      
-      list = makePair(t, type, list);
+
+      list = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(type), list));
 
       ++ count;
     } break;
-  
+
     case '[': {
       unsigned start = offset;
       while (byteArrayBody(t, spec, offset) == '[') ++ offset;
@@ -412,18 +412,18 @@ resolveParameterTypes(Thread* t, object loader, object spec,
         ++ offset;
         break;
       }
-      
-      object type = resolveClassBySpec
+
+      GcClass* type = resolveClassBySpec
         (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
          offset - start);
-      
-      list = makePair(t, type, list);
+
+      list = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(type), list));
       ++ count;
     } break;
 
     default:
-      list = makePair
-        (t, primitiveClass(t, byteArrayBody(t, spec, offset)), list);
+      list = reinterpret_cast<object>(makePair
+        (t, reinterpret_cast<object>(primitiveClass(t, byteArrayBody(t, spec, offset))), list));
       ++ offset;
       ++ count;
       break;
@@ -443,13 +443,13 @@ resolveParameterJTypes(Thread* t, object loader, object spec,
     (t, loader, spec, parameterCount, returnTypeSpec);
 
   PROTECT(t, list);
-  
+
   object array = makeObjectArray
-    (t, type(t, Machine::JclassType), *parameterCount);
+    (t, type(t, GcJclass::Type), *parameterCount);
   PROTECT(t, array);
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
-    object c = getJClass(t, pairFirst(t, list));
+    object c = getJClass(t, cast<GcClass>(t, pairFirst(t, list)));
     set(t, array, ArrayBody + (i * BytesPerWord), c);
     list = pairSecond(t, list);
   }
@@ -461,14 +461,14 @@ object
 resolveExceptionJTypes(Thread* t, object loader, object addendum)
 {
   if (addendum == 0 or methodAddendumExceptionTable(t, addendum) == 0) {
-    return makeObjectArray(t, type(t, Machine::JclassType), 0);
+    return makeObjectArray(t, type(t, GcJclass::Type), 0);
   }
 
   PROTECT(t, loader);
   PROTECT(t, addendum);
 
   object array = makeObjectArray
-    (t, type(t, Machine::JclassType),
+    (t, type(t, GcJclass::Type),
      shortArrayLength(t, methodAddendumExceptionTable(t, addendum)));
   PROTECT(t, array);
 
@@ -478,16 +478,16 @@ resolveExceptionJTypes(Thread* t, object loader, object addendum)
     uint16_t index = shortArrayBody
       (t, methodAddendumExceptionTable(t, addendum), i) - 1;
 
-    object o = singletonObject(t, addendumPool(t, addendum), index);
+    object o = singletonObject(t, cast<GcSingleton>(t, addendumPool(t, addendum)), index);
 
-    if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
-      o = resolveClass(t, loader, referenceName(t, o));
-    
+    if (objectClass(t, o) == type(t, GcReference::Type)) {
+      o = reinterpret_cast<object>(resolveClass(t, loader, referenceName(t, o)));
+
       set(t, addendumPool(t, addendum), SingletonBody + (index * BytesPerWord),
           o);
     }
 
-    o = getJClass(t, o);
+    o = getJClass(t, cast<GcClass>(t, o));
 
     set(t, array, ArrayBody + (i * BytesPerWord), o);
   }
@@ -496,41 +496,41 @@ resolveExceptionJTypes(Thread* t, object loader, object addendum)
 }
 
 object
-invoke(Thread* t, object method, object instance, object args)
+invoke(Thread* t, GcMethod* method, object instance, object args)
 {
   PROTECT(t, method);
   PROTECT(t, instance);
   PROTECT(t, args);
 
-  if (methodFlags(t, method) & ACC_STATIC) {
+  if (method->flags() & ACC_STATIC) {
     instance = 0;
   }
 
   if ((args == 0 ? 0 : objectArrayLength(t, args))
-      != methodParameterCount(t, method))
+      != method->parameterCount())
   {
-    throwNew(t, Machine::IllegalArgumentExceptionType);
+    throwNew(t, GcIllegalArgumentException::Type);
   }
 
-  if (methodParameterCount(t, method)) {
-    unsigned specLength = byteArrayLength(t, methodSpec(t, method));
+  if (method->parameterCount()) {
+    unsigned specLength = byteArrayLength(t, method->spec());
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
     memcpy(RUNTIME_ARRAY_BODY(spec),
-           &byteArrayBody(t, methodSpec(t, method), 0), specLength);
+           &byteArrayBody(t, method->spec(), 0), specLength);
     unsigned i = 0;
     for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
-      object type;
+      GcClass* type;
       bool objectType = false;
       const char* p = it.next();
       switch (*p) {
-      case 'Z': type = vm::type(t, Machine::BooleanType); break;
-      case 'B': type = vm::type(t, Machine::ByteType); break;
-      case 'S': type = vm::type(t, Machine::ShortType); break;
-      case 'C': type = vm::type(t, Machine::CharType); break;
-      case 'I': type = vm::type(t, Machine::IntType); break;
-      case 'F': type = vm::type(t, Machine::FloatType); break;
-      case 'J': type = vm::type(t, Machine::LongType); break;
-      case 'D': type = vm::type(t, Machine::DoubleType); break;
+      case 'Z': type = vm::type(t, GcBoolean::Type); break;
+      case 'B': type = vm::type(t, GcByte::Type); break;
+      case 'S': type = vm::type(t, GcShort::Type); break;
+      case 'C': type = vm::type(t, GcChar::Type); break;
+      case 'I': type = vm::type(t, GcInt::Type); break;
+      case 'F': type = vm::type(t, GcFloat::Type); break;
+      case 'J': type = vm::type(t, GcLong::Type); break;
+      case 'D': type = vm::type(t, GcDouble::Type); break;
 
       case 'L':
       case '[': {
@@ -546,7 +546,7 @@ invoke(Thread* t, object method, object instance, object args)
         memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
         RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
         type = resolveClass
-          (t, classLoader(t, methodClass(t, method)),
+          (t, classLoader(t, method->class_()),
            RUNTIME_ARRAY_BODY(name));
       } break;
 
@@ -560,20 +560,20 @@ invoke(Thread* t, object method, object instance, object args)
       {
         // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
 
-        throwNew(t, Machine::IllegalArgumentExceptionType);
+        throwNew(t, GcIllegalArgumentException::Type);
       }
     }
   }
 
-  initClass(t, methodClass(t, method));
+  initClass(t, cast<GcClass>(t, method->class_()));
 
-  unsigned returnCode = methodReturnCode(t, method);
+  unsigned returnCode = method->returnCode();
 
   THREAD_RESOURCE0(t, {
       if (t->exception) {
         t->exception = makeThrowable
-          (t, Machine::InvocationTargetExceptionType, 0, 0, t->exception);
-        
+          (t, GcInvocationTargetException::Type, 0, 0, t->exception);
+
         set(t, t->exception, InvocationTargetExceptionTarget,
             throwableCause(t, t->exception));
       }
@@ -592,29 +592,29 @@ invoke(Thread* t, object method, object instance, object args)
 // only safe to call during bootstrap when there's only one thread
 // running:
 void
-intercept(Thread* t, object c, const char* name, const char* spec,
+intercept(Thread* t, GcClass* c, const char* name, const char* spec,
           void* function, bool updateRuntimeData)
 {
-  object m = findMethodOrNull(t, c, name, spec);
+  GcMethod* m = findMethodOrNull(t, c, name, spec);
   if (m) {
     PROTECT(t, m);
 
-    methodFlags(t, m) |= ACC_NATIVE;
+    m->flags() |= ACC_NATIVE;
 
     if (updateRuntimeData) {
-      object clone = methodClone(t, m);
+      GcMethod* clone = methodClone(t, m);
 
       // make clone private to prevent vtable updates at compilation
       // time.  Otherwise, our interception might be bypassed by calls
       // through the vtable.
-      methodFlags(t, clone) |= ACC_PRIVATE;
+      clone->flags() |= ACC_PRIVATE;
 
-      object native = makeNativeIntercept(t, function, true, clone);
-      
+      object native = reinterpret_cast<object>(makeNativeIntercept(t, function, true, reinterpret_cast<object>(clone)));
+
       PROTECT(t, native);
-      
+
       object runtimeData = getMethodRuntimeData(t, m);
-      
+
       set(t, runtimeData, MethodRuntimeDataNative, native);
     }
   } else {
@@ -633,7 +633,7 @@ Finder*
 getFinder(Thread* t, const char* name, unsigned nameLength)
 {
   ACQUIRE(t, t->m->referenceLock);
-    
+
   for (object p = root(t, Machine::VirtualFileFinders);
        p; p = finderNext(t, p))
   {
@@ -646,7 +646,7 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
     }
   }
 
-  object n = makeByteArray(t, nameLength + 1);
+  object n = reinterpret_cast<object>(makeByteArray(t, nameLength + 1));
   memcpy(&byteArrayBody(t, n, 0), name, nameLength);
 
   void* p = t->m->libraries->resolve
@@ -660,8 +660,8 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
     uint8_t* data = function(&size);
     if (data) {
       Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
-      object finder = makeFinder
-        (t, f, n, root(t, Machine::VirtualFileFinders));
+      object finder = reinterpret_cast<object>(makeFinder
+        (t, f, n, root(t, Machine::VirtualFileFinders)));
 
       setRoot(t, Machine::VirtualFileFinders, finder);
 
@@ -693,7 +693,7 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
         }
       }
 
-      object result = makeObjectArray(t, type(t, Machine::JclassType), count);
+      object result = makeObjectArray(t, type(t, GcJclass::Type), count);
       PROTECT(t, result);
 
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
@@ -703,11 +703,13 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
             and ((not publicOnly)
                  or (innerClassReferenceFlags(t, reference) & ACC_PUBLIC)))
         {
-          object inner = getJClass
-            (t, resolveClass
-             (t, classLoader(t, c),
-              innerClassReferenceInner(t, arrayBody(t, table, i))));
-          
+          object inner = getJClass(
+              t,
+              resolveClass(
+                  t,
+                  classLoader(t, c),
+                  innerClassReferenceInner(t, arrayBody(t, table, i))));
+
           -- count;
           set(t, result, ArrayBody + (count * BytesPerWord), inner);
         }
@@ -717,7 +719,7 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
     }
   }
 
-  return makeObjectArray(t, type(t, Machine::JclassType), 0);
+  return makeObjectArray(t, type(t, GcJclass::Type), 0);
 }
 
 object
@@ -733,9 +735,11 @@ getDeclaringClass(Thread* t, object c)
             (&byteArrayBody(t, innerClassReferenceInner(t, reference), 0),
              &byteArrayBody(t, className(t, c), 0)) == 0)
         {
-          return getJClass
-            (t, resolveClass
-             (t, classLoader(t, c), innerClassReferenceOuter(t, reference)));
+          return getJClass(
+              t,
+              resolveClass(t,
+                           classLoader(t, c),
+                           innerClassReferenceOuter(t, reference)));
         }
       }
     }
@@ -758,7 +762,7 @@ classModifiers(Thread* t, object c)
              &byteArrayBody(t, innerClassReferenceInner(t, reference), 0)))
         {
           return innerClassReferenceFlags(t, reference);
-        }        
+        }
       }
     }
   }
