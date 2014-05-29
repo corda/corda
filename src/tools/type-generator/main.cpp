@@ -16,12 +16,16 @@
 
 #include "avian/constants.h"
 #include "avian/finder.h"
+
+#include <avian/util/arg-parser.h>
 #include <avian/util/stream.h>
 
 #include "io.h"
 #include "sexpr.h"
 
 #include "assert.h"
+
+using namespace avian::util;
 
 #define UNREACHABLE abort()
 
@@ -1903,17 +1907,6 @@ writeMaps(Output* out, Object* declarations)
   out->write("\n};");
 }
 
-void
-usageAndExit(const char* command)
-{
-  fprintf(stderr,
-          "usage: %s <classpath> <input file> <output file> "
-          "{enums,declarations,constructors,initializations,"
-          "java-initializations,name-initializations,maps}\n",
-          command);
-  exit(-1);
-}
-
 } // namespace local
 
 } // namespace
@@ -1930,32 +1923,49 @@ vmJump(void*, void*, void*, void*, uintptr_t, uintptr_t)
   abort();
 }
 
-int
-main(int ac, char** av)
+int main(int ac, char** av)
 {
-  if (ac != 5
-      or not (local::equal(av[4], "enums")
-              or local::equal(av[4], "declarations")
-              or local::equal(av[4], "constructors")
-              or local::equal(av[4], "initializations")
-              or local::equal(av[4], "java-initializations")
-              or local::equal(av[4], "name-initializations")
-              or local::equal(av[4], "maps")))
-  {
-    local::usageAndExit(av[0]);
+  ArgParser parser;
+  Arg classpath(parser, true, "cp", "<classpath>");
+  Arg input(parser, true, "i", "<input.def>");
+  Arg output(parser, true, "o", "<output.cpp/h>");
+  Arg outputType(parser,
+                 true,
+                 "t",
+                 "<enums|declarations|constructors|initializations|java-"
+                 "initializations|name-initializations|maps>");
+
+  if (!parser.parse(ac, av)) {
+    parser.printUsage(av[0]);
+    exit(1);
+  }
+
+  if (!(local::equal(outputType.value, "enums")
+        || local::equal(outputType.value, "declarations")
+        || local::equal(outputType.value, "constructors")
+        || local::equal(outputType.value, "initializations")
+        || local::equal(outputType.value, "java-initializations")
+        || local::equal(outputType.value, "name-initializations")
+        || local::equal(outputType.value, "maps"))) {
+    parser.printUsage(av[0]);
+    exit(1);
   }
 
   System* system = makeSystem();
 
   class MyAllocator : public avian::util::Allocator {
    public:
-    MyAllocator(System* s): s(s) { }
+    MyAllocator(System* s) : s(s)
+    {
+    }
 
-    virtual void* tryAllocate(unsigned size) {
+    virtual void* tryAllocate(unsigned size)
+    {
       return s->tryAllocate(size);
     }
 
-    virtual void* allocate(unsigned size) {
+    virtual void* allocate(unsigned size)
+    {
       void* p = tryAllocate(size);
       if (p == 0) {
         abort(s);
@@ -1963,20 +1973,22 @@ main(int ac, char** av)
       return p;
     }
 
-    virtual void free(const void* p, unsigned) {
+    virtual void free(const void* p, unsigned)
+    {
       s->free(p);
     }
 
     System* s;
   } allocator(system);
 
-  Finder* finder = makeFinder(system, &allocator, av[1], 0);
+  Finder* finder = makeFinder(system, &allocator, classpath.value, 0);
 
-  FILE* inStream = ::fopen(av[2], "rb");
+  FILE* inStream = ::fopen(input.value, "rb");
   if (inStream == 0) {
-    fprintf(stderr, "unable to open %s: %s\n", av[2], strerror(errno));
-    return -1;
+    fprintf(stderr, "unable to open %s: %s\n", input.value, strerror(errno));
+    exit(1);
   }
+
   FileInput in(0, inStream, false);
 
   Object* declarations = local::parse(finder, &in);
@@ -1984,16 +1996,16 @@ main(int ac, char** av)
   finder->dispose();
   system->dispose();
 
-  FILE* outStream = ::fopen(av[3], "wb");
+  FILE* outStream = ::fopen(output.value, "wb");
   if (outStream == 0) {
-    fprintf(stderr, "unable to open %s: %s\n", av[3], strerror(errno));
-    return -1;
+    fprintf(stderr, "unable to open %s: %s\n", output.value, strerror(errno));
+    exit(1);
   }
   FileOutput out(0, outStream, false);
 
-  if (local::equal(av[4], "enums")) {
+  if (local::equal(outputType.value, "enums")) {
     local::writeEnums(&out, declarations);
-  } else if (local::equal(av[4], "declarations")) {
+  } else if (local::equal(outputType.value, "declarations")) {
     out.write("const unsigned TypeCount = ");
     out.Output::write(local::typeCount(declarations));
     out.write(";\n\n");
@@ -2002,20 +2014,18 @@ main(int ac, char** av)
     local::writeSizes(&out, declarations);
     local::writeInitializerDeclarations(&out, declarations);
     local::writeConstructorDeclarations(&out, declarations);
-  } else if (local::equal(av[4], "constructors")) {
+  } else if (local::equal(outputType.value, "constructors")) {
     local::writeInitializers(&out, declarations);
     local::writeConstructors(&out, declarations);
-  } else if (local::equal(av[4], "initializations")) {
+  } else if (local::equal(outputType.value, "initializations")) {
     local::writeInitializations(&out, declarations);
-  } else if (local::equal(av[4], "java-initializations")) {
+  } else if (local::equal(outputType.value, "java-initializations")) {
     local::writeJavaInitializations(&out, declarations);
-  } else if (local::equal(av[4], "name-initializations")) {
+  } else if (local::equal(outputType.value, "name-initializations")) {
     local::writeNameInitializations(&out, declarations);
-  } else if (local::equal(av[4], "maps")) {
+  } else if (local::equal(outputType.value, "maps")) {
     local::writeMaps(&out, declarations);
   }
 
   out.write("\n");
-
-  return 0;
 }

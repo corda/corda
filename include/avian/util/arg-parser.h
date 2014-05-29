@@ -17,14 +17,17 @@ namespace util {
 class Arg;
 
 class ArgParser {
-public:
-  Arg* first;
-  Arg** last;
-
+ public:
   ArgParser();
 
   bool parse(int ac, const char* const* av);
   void printUsage(const char* exe);
+
+ private:
+  friend class Arg;
+
+  Arg* first;
+  Arg** last;
 };
 
 class Arg {

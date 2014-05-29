@@ -1268,7 +1268,8 @@ generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
 	$(src)/system/$(build-system).cpp \
 	$(src)/system/$(build-system)/signal.cpp \
-	$(src)/finder.cpp
+	$(src)/finder.cpp \
+	$(src)/util/arg-parser.cpp
 
 ifneq ($(lzma),)
 	common-cflags += -I$(lzma) -DAVIAN_USE_LZMA -D_7ZIP_ST
@@ -1573,7 +1574,7 @@ gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
-	$(generator) $(boot-classpath) $(<) $(@) $(call gen-arg,$(@))
+	$(generator) -cp $(boot-classpath) -i $(<) -o $(@) -t $(call gen-arg,$(@))
 
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
