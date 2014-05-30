@@ -12,7 +12,6 @@ package java.lang;
 
 import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.IOException;
 import java.io.Serializable;
 
 public class Throwable implements Serializable {
@@ -113,9 +112,9 @@ public class Throwable implements Serializable {
       sb.append("  at ").append(trace[i].toString()).append(nl);
     }
 
-    if (cause != null) {
+    if (getCause() != null) {
       sb.append("caused by: ");
-      cause.printStackTrace(sb, nl);
+      getCause().printStackTrace(sb, nl);
     }
   }
 
