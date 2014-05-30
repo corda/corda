@@ -1,0 +1,97 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.4'
+  }
+}
+
+apply plugin: 'native-binaries'
+apply plugin: 'ivy-publish'
+apply plugin: 'artifactory-publish'
+
+artifactory {
+  contextUrl = "http://oss.jfrog.org"
+
+  resolve {
+    repository {
+      repoKey = 'libs-releases'
+    }
+  }
+
+  publish {
+    repository {
+      repoKey = 'oss-snapshot-local'
+      username = System.env.BINTRAY_USER
+      password = System.env.BINRAY_KEY
+    }
+
+    defaults {
+      publications 'linux-x86_64'
+    }
+  }
+}
+
+model {
+  platforms {
+    create("linux-x86_64") {
+      operatingSystem "linux"
+      architecture "x86_64"
+    }
+  }
+}
+
+publishing {
+  repositories {
+    ivy {
+      url "${System.env.HOME}/.ivy2/local"
+      layout 'maven'
+    }
+  }
+
+  publications {
+
+    platforms.each { platform ->
+      create(platform.name, IvyPublication) {
+        def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
+
+        module "${project.name}-${platform.name}"
+
+        artifact("${nativeBuildDir}/avian") {
+          name "avian"
+          type "bin"
+          extension "bin"
+        }
+
+        artifact("${nativeBuildDir}/classpath.jar") {
+          name "classpath"
+          type "jar"
+        }
+
+        artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
+          name "binaryToObject"
+          type "bin"
+          extension "bin"
+        }
+
+        artifact("${nativeBuildDir}/libavian.a") {
+          name "libavian"
+          type "a"
+          extension "a"
+        }
+
+        artifact("${nativeBuildDir}/generator") {
+          name "generator"
+          type "bin"
+          extension "bin"
+        }
+      }
+    }
+  }
+}
+
+task wrapper(type: Wrapper) {
+  gradleVersion = '1.12'
+}
