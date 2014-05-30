@@ -112,9 +112,10 @@ public class Throwable implements Serializable {
       sb.append("  at ").append(trace[i].toString()).append(nl);
     }
 
-    if (getCause() != null) {
+    Throwable printCause = getCause();
+    if (printCause != null) {
       sb.append("caused by: ");
-      getCause().printStackTrace(sb, nl);
+      printCause.printStackTrace(sb, nl);
     }
   }
 
