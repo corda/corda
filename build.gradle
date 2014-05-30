@@ -25,7 +25,7 @@ artifactory {
     repository {
       repoKey = 'oss-snapshot-local'
       username = System.env.BINTRAY_USER
-      password = System.env.BINRAY_KEY
+      password = System.env.BINTRAY_API_KEY
     }
 
     defaults {
