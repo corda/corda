@@ -774,17 +774,13 @@ class Subroutine {
 
   // Index of this subroutine, in the (unmaterialized) list of subroutines in
   // this method.
-  // Note that in the presence of nested finalls, this could theoretically end
+  // Note that in the presence of nested finallys, this could theoretically end
   // up being greater than the number of jsr instructions (but this will be
   // extremely rare - I don't think we've seen this in practice).
   const unsigned index;
 
   // Subroutine outer to this one (if, for instance, we have nested finallys)
   Subroutine* const outer;
-
-  // How many levels deep of subroutines we're nested in.
-  // Note: This should always be len(outer), when treated as a list.
-  // const unsigned nesting;
 
   // Starting ip in the original bytecode (always < original bytecode size)
   const unsigned returnAddress;
