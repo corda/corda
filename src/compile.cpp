@@ -6623,8 +6623,7 @@ void copyFrameMap(int32_t* dst,
                   uintptr_t* src,
                   unsigned mapSizeInBits,
                   unsigned offset,
-                  TraceElement* p /*,
-             SubroutinePath* subroutinePath*/)
+                  TraceElement* p)
 {
   if (DebugFrameMaps) {
     fprintf(stderr, "  orig roots at ip %3d: ", p->ip);
@@ -6853,16 +6852,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     qsort(RUNTIME_ARRAY_BODY(elements), index,
           sizeof(TraceElement*), compareTraceElementPointers);
 
-    object map;
-    // if (pathFootprint) {
-    //   map = makeGeneralFrameMapTable
-    //     (t, context, start, RUNTIME_ARRAY_BODY(elements), index,
-    // pathFootprint,
-    //      mapCount);
-    // } else {
-      map = makeSimpleFrameMapTable
-        (t, context, start, RUNTIME_ARRAY_BODY(elements), index);
-      // }
+    object map = makeSimpleFrameMapTable(
+        t, context, start, RUNTIME_ARRAY_BODY(elements), index);
 
     set(t, methodCode(t, context->method), CodePool, map);
   }
