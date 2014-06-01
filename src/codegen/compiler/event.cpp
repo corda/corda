@@ -208,6 +208,7 @@ struct SliceStack : public Slice<T> {
 
   void push(const T& item)
   {
+    ASSERT(Slice<T>::count < capacity);
     --Slice<T>::items;
     ++Slice<T>::count;
     *Slice<T>::items = item;
@@ -223,7 +224,7 @@ struct FixedSliceStack : public SliceStack<T> {
   }
 };
 
-Value* pushWordSlice(Context* c,
+Value* slicePushWord(Context* c,
                      Value* v,
                      size_t stackBase UNUSED,
                      SliceStack<ir::Value*>& slice)
@@ -248,7 +249,7 @@ Value* pushWordSlice(Context* c,
   return v;
 }
 
-void pushSlice(Context* c,
+void slicePush(Context* c,
                unsigned footprint,
                Value* v,
                size_t stackBase,
@@ -261,7 +262,7 @@ void pushSlice(Context* c,
   Value* low = v;
 
   if (bigEndian) {
-    v = pushWordSlice(c, v, stackBase, slice);
+    v = slicePushWord(c, v, stackBase, slice);
   }
 
   Value* high;
@@ -270,16 +271,16 @@ void pushSlice(Context* c,
 
     if (vm::TargetBytesPerWord == 4) {
       low->maybeSplit(c);
-      high = pushWordSlice(c, low->nextWord, stackBase, slice);
+      high = slicePushWord(c, low->nextWord, stackBase, slice);
     } else {
-      high = pushWordSlice(c, 0, stackBase, slice);
+      high = slicePushWord(c, 0, stackBase, slice);
     }
   } else {
     high = 0;
   }
 
   if (not bigEndian) {
-    v = pushWordSlice(c, v, stackBase, slice);
+    v = slicePushWord(c, v, stackBase, slice);
   }
 
   if (high) {
@@ -1066,7 +1067,8 @@ void appendCombine(Context* c,
                       &thunk);
 
   if (thunk) {
-    FixedSliceStack<ir::Value*, 6> slice;
+    const size_t MaxValueCount = 6;
+    FixedSliceStack<ir::Value*, MaxValueCount> slice;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
@@ -1078,12 +1080,12 @@ void appendCombine(Context* c,
     unsigned stackSize = ceilingDivide(secondValue->type.size(), vm::TargetBytesPerWord)
       + ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord);
 
-    pushSlice(c,
+    slicePush(c,
               ceilingDivide(secondValue->type.size(), vm::TargetBytesPerWord),
               secondValue,
               stackBase,
               slice);
-    pushSlice(c,
+    slicePush(c,
               ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
@@ -1092,7 +1094,7 @@ void appendCombine(Context* c,
     if (threadParameter) {
       ++ stackSize;
 
-      pushSlice(c, 1, threadRegister(c), stackBase, slice);
+      slicePush(c, 1, threadRegister(c), stackBase, slice);
     }
 
     appendCall(c,
@@ -1221,7 +1223,7 @@ void appendTranslate(Context* c,
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
     FixedSliceStack<ir::Value*, 2> slice;
 
-    pushSlice(c,
+    slicePush(c,
               ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
@@ -1608,7 +1610,8 @@ void appendBranch(Context* c,
                       &thunk);
 
   if (thunk) {
-    FixedSliceStack<ir::Value*, 4> slice;
+    const size_t MaxValueCount = 4;
+    FixedSliceStack<ir::Value*, MaxValueCount> slice;
     size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
@@ -1617,12 +1620,12 @@ void appendBranch(Context* c,
 
     assert(c, not threadParameter);
 
-    pushSlice(c,
+    slicePush(c,
               ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               secondValue,
               stackBase,
               slice);
-    pushSlice(c,
+    slicePush(c,
               ceilingDivide(firstValue->type.size(), vm::TargetBytesPerWord),
               firstValue,
               stackBase,
