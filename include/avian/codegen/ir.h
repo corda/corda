@@ -15,6 +15,15 @@ namespace avian {
 namespace codegen {
 namespace ir {
 
+class TargetInfo {
+ public:
+  unsigned pointerSize;
+
+  TargetInfo(unsigned pointerSize) : pointerSize(pointerSize)
+  {
+  }
+};
+
 class Type {
  public:
   enum Flavor {
@@ -36,80 +45,95 @@ class Type {
     Void,
   };
 
+  typedef int16_t TypeDesc;
+
+#define TY_DESC(flavor, size) ((flavor & 0xff) | ((size & 0xff) << 8))
+  // TODO: once we upgrade to c++11, these should become plain constants (rather
+  // than function calls).
+  // The constructor will need to be declared 'constexpr'.
+  static inline Type void_()
+  {
+    return TY_DESC(Void, 0);
+  }
+  static inline Type object()
+  {
+    return TY_DESC(Object, -1);
+  }
+  static inline Type iptr()
+  {
+    return TY_DESC(Integer, -1);
+  }
+  static inline Type i1()
+  {
+    return TY_DESC(Integer, 1);
+  }
+  static inline Type i2()
+  {
+    return TY_DESC(Integer, 2);
+  }
+  static inline Type i4()
+  {
+    return TY_DESC(Integer, 4);
+  }
+  static inline Type i8()
+  {
+    return TY_DESC(Integer, 8);
+  }
+  static inline Type f4()
+  {
+    return TY_DESC(Float, 4);
+  }
+  static inline Type f8()
+  {
+    return TY_DESC(Float, 8);
+  }
+  static inline Type addr()
+  {
+    return TY_DESC(Address, -1);
+  }
+#undef TY_DESC
+
  private:
-  uint8_t flavor_;
-  uint8_t size_;
+  TypeDesc desc;
 
   friend class Types;
 
- public:
-  Type(uint8_t flavor_, uint8_t size_) : flavor_(flavor_), size_(size_)
+  // TODO: once we move to c++11, declare this 'constexpr', to allow
+  // compile-time constants of this type.
+  /* constexpr */ Type(TypeDesc desc) : desc(desc)
   {
   }
 
+ public:
   inline Flavor flavor() const
   {
-    return (Flavor)flavor_;
+    return (Flavor)(desc & 0xff);
   }
 
-  inline unsigned size() const
+  // If the size isn't known without inspecting the TargetInfo, returns -1.
+  // Otherwise, matches size(TargetInfo).
+  inline int rawSize() const
   {
-    return size_;
+    return desc >> 8;
+  }
+
+  inline unsigned size(const TargetInfo& t) const
+  {
+    int s = rawSize();
+    if (s < 0) {
+      return t.pointerSize;
+    }
+    return (unsigned)s;
   }
 
   inline bool operator==(const Type& other) const
   {
-    return flavor_ == other.flavor_ && size_ == other.size_;
+    return desc == other.desc;
   }
 
   inline bool operator!=(const Type& other) const
   {
     return !(*this == other);
-  }
-};
-
-class Types {
- public:
-  // An object reference type, which will be treated as a GC root
-  Type object;
-
-  // A pointer-sized integer type (neither/both signed or unsigned)
-  // Note that these are just integers from the GC's perspective.
-  Type address;
-
-  // A 1-byte integer type (neither/both signed or unsigned)
-  Type i1;
-
-  // A 2-byte integer type (neither/both signed or unsigned)
-  Type i2;
-
-  // A 4-byte integer type (neither/both signed or unsigned)
-  Type i4;
-
-  // A 8-byte integer type (neither/both signed or unsigned)
-  Type i8;
-
-  // A 4-byte floating point type
-  Type f4;
-
-  // A 8-byte floating point type
-  Type f8;
-
-  // A type representing the lack of a return value
-  // TODO: remove when possible
-  Type void_;
-
-  Types(unsigned bytesPerWord)
-      : object(Type::Object, bytesPerWord),
-        address(Type::Integer, bytesPerWord),
-        i1(Type::Integer, 1),
-        i2(Type::Integer, 2),
-        i4(Type::Integer, 4),
-        i8(Type::Integer, 8),
-        f4(Type::Float, 4),
-        f8(Type::Float, 8),
-        void_(Type::Void, 0)
-  {
   }
 };
 

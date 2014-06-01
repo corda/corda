@@ -1220,7 +1220,7 @@ unsigned typeFootprint(Context* c, ir::Type type)
   switch (type.flavor()) {
   case ir::Type::Float:
   case ir::Type::Integer:
-    return type.size() / 4;
+    return type.rawSize() / 4;
   case ir::Type::Object:
   case ir::Type::Address:
   case ir::Type::Half:
@@ -1258,7 +1258,7 @@ Value* loadLocal(Context* c, ir::Type type, unsigned index)
 Value* threadRegister(Context* c)
 {
   Site* s = registerSite(c, c->arch->thread());
-  return value(c, ir::Type(ir::Type::Address, TargetBytesPerWord), s, s);
+  return value(c, ir::Type::addr(), s, s);
 }
 
 unsigned
@@ -1518,7 +1518,7 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
                 buffer, v, el.localIndex, el.frameIndex(c));
       }
 
-      Value dummy(0, 0, ir::Type(ir::Type::Integer, TargetBytesPerWord));
+      Value dummy(0, 0, ir::Type::addr());
       dummy.addSite(c, s);
       dummy.removeSite(c, s);
       freeze(c, frozen, s, 0);
@@ -2281,7 +2281,7 @@ class MyCompiler: public Compiler {
                  static_cast<Value*>(base),
                  displacement,
                  static_cast<Value*>(index),
-                 index == 0 ? 1 : type.size(),
+                 index == 0 ? 1 : type.size(TargetBytesPerWord),
                  result);
 
     return result;
@@ -2315,8 +2315,7 @@ class MyCompiler: public Compiler {
       assert(&c, footprint == 2);
       assert(&c, static_cast<Value*>(value)->nextWord);
 
-      save(ir::Type(ir::Type::Integer, 4),
-           static_cast<Value*>(value)->nextWord);
+      save(ir::Type::i4(), static_cast<Value*>(value)->nextWord);
     }
   }
 
@@ -2582,14 +2581,14 @@ class MyCompiler: public Compiler {
   {
     assert(&c, src->type.flavor() == type.flavor());
     assert(&c, type.flavor() != ir::Type::Float);
-    assert(&c, type.size() < src->type.size());
+    assert(&c, type.rawSize() < src->type.rawSize());
     Value* dst = value(&c, type);
     appendMove(&c,
                lir::Move,
-               src->type.size(),
-               src->type.size(),
+               src->type.size(TargetBytesPerWord),
+               src->type.size(TargetBytesPerWord),
                static_cast<Value*>(src),
-               type.size(),
+               type.size(TargetBytesPerWord),
                dst);
     return dst;
   }
@@ -2603,10 +2602,11 @@ class MyCompiler: public Compiler {
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
                TargetBytesPerWord,
-               truncateType.size(),
+               truncateType.size(TargetBytesPerWord),
                static_cast<Value*>(src),
-               extendType.size() < TargetBytesPerWord ? TargetBytesPerWord
-                                                      : extendType.size(),
+               extendType.size(TargetBytesPerWord) < TargetBytesPerWord
+                   ? TargetBytesPerWord
+                   : extendType.size(TargetBytesPerWord),
                dst);
     return dst;
   }
@@ -2617,10 +2617,10 @@ class MyCompiler: public Compiler {
 
     appendMove(&c,
                lir::Move,
-               src->type.size(),
-               src->type.size(),
+               src->type.size(TargetBytesPerWord),
+               src->type.size(TargetBytesPerWord),
                static_cast<Value*>(src),
-               dst->type.size(),
+               dst->type.size(TargetBytesPerWord),
                static_cast<Value*>(dst));
   }
 
@@ -2633,11 +2633,12 @@ class MyCompiler: public Compiler {
     Value* dst = value(&c, dstType);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
-               src->type.size(),
-               src->type.size(),
+               src->type.size(TargetBytesPerWord),
+               src->type.size(TargetBytesPerWord),
                static_cast<Value*>(src),
-               dstType.size() < TargetBytesPerWord ? TargetBytesPerWord
-                                                   : dstType.size(),
+               dstType.size(TargetBytesPerWord) < TargetBytesPerWord
+                   ? TargetBytesPerWord
+                   : dstType.size(TargetBytesPerWord),
                dst);
     return dst;
   }
@@ -2645,31 +2646,30 @@ class MyCompiler: public Compiler {
   virtual void condJump(lir::TernaryOperation op,
                         ir::Value* a,
                         ir::Value* b,
-                        ir::Value* address)
+                        ir::Value* addr)
   {
     assert(&c,
            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
                isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
     assert(&c, a->type == b->type);
-    assert(&c,
-           address->type == ir::Type(ir::Type::Integer, TargetBytesPerWord));
+    assert(&c, addr->type == ir::Type::iptr());
 
     appendBranch(&c,
                  op,
                  static_cast<Value*>(a),
                  static_cast<Value*>(b),
-                 static_cast<Value*>(address));
+                 static_cast<Value*>(addr));
   }
 
-  virtual void jmp(ir::Value* address)
+  virtual void jmp(ir::Value* addr)
   {
-    appendJump(&c, lir::Jump, static_cast<Value*>(address));
+    appendJump(&c, lir::Jump, static_cast<Value*>(addr));
   }
 
-  virtual void exit(ir::Value* address)
+  virtual void exit(ir::Value* addr)
   {
-    appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
+    appendJump(&c, lir::Jump, static_cast<Value*>(addr), true);
   }
 
   virtual ir::Value* binaryOp(lir::TernaryOperation op,
