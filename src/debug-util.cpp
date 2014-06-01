@@ -446,12 +446,6 @@ int printInstruction(uint8_t* code, unsigned& ip, const char* prefix)
     fprintf(
         stderr, "lookupswitch default: %d pairCount: %d", default_, pairCount);
 
-    bool good = true;
-    if (pairCount >= 1000) {
-      pairCount = 1;
-      good = false;
-    }
-
     for (int i = 0; i < pairCount; i++) {
       int32_t k = read32(code, ip);
       int32_t d = read32(code, ip) + startIp;
@@ -459,8 +453,6 @@ int printInstruction(uint8_t* code, unsigned& ip, const char* prefix)
     }
     fprintf(stderr, "\n");
     fflush(stderr);
-    if (!good)
-      asm("int3");
     return 0;
   }
 

@@ -52,7 +52,7 @@ SiteIterator::SiteIterator(Context* c, Value* v, bool includeBuddies,
 Site** SiteIterator::findNext(Site** p) {
   while (true) {
     if (*p) {
-      if (pass == 0 or (*p)->registerSize(c) > vm::TargetBytesPerWord) {
+      if (pass == 0 or (*p)->registerSize(c) > c->targetInfo.pointerSize) {
         return p;
       } else {
         p = &((*p)->next);
@@ -103,13 +103,10 @@ void SiteIterator::remove(Context* c) {
   previous = 0;
 }
 
-
-
-unsigned Site::registerSize(Context*) {
-  return vm::TargetBytesPerWord;
+unsigned Site::registerSize(Context* c)
+{
+  return c->targetInfo.pointerSize;
 }
-
-
 
 Site* constantSite(Context* c, Promise* value) {
   return new(c->zone) ConstantSite(value);
@@ -250,7 +247,7 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned) {
 
   RegisterSite* rs = static_cast<RegisterSite*>(s);
   unsigned size = rs->registerSize(c);
-  if (size > vm::TargetBytesPerWord) {
+  if (size > c->targetInfo.pointerSize) {
     assert(c, number != lir::NoRegister);
     return number == rs->number;
   } else {
@@ -352,7 +349,7 @@ SiteMask RegisterSite::mask(Context* c UNUSED) {
 SiteMask RegisterSite::nextWordMask(Context* c, unsigned) {
   assert(c, number != lir::NoRegister);
 
-  if (registerSize(c) > vm::TargetBytesPerWord) {
+  if (registerSize(c) > c->targetInfo.pointerSize) {
     return SiteMask
       (1 << lir::RegisterOperand, number, NoFrameIndex);
   } else {
@@ -367,7 +364,7 @@ unsigned RegisterSite::registerSize(Context* c) {
   if ((1 << number) & c->regFile->floatRegisters.mask) {
     return c->arch->floatRegisterSize();
   } else {
-    return vm::TargetBytesPerWord;
+    return c->targetInfo.pointerSize;
   }
 }
 
@@ -469,12 +466,15 @@ bool MemorySite::matchNextWord(Context* c, Site* s, unsigned index) {
   if (s->type(c) == lir::MemoryOperand) {
     MemorySite* ms = static_cast<MemorySite*>(s);
     return ms->base == this->base
-      and ((index == 1 and ms->offset == static_cast<int>
-            (this->offset + vm::TargetBytesPerWord))
-           or (index == 0 and this->offset == static_cast<int>
-               (ms->offset + vm::TargetBytesPerWord)))
-      and ms->index == this->index
-      and ms->scale == this->scale;
+           and ((index == 1
+                 and ms->offset
+                     == static_cast<int>(this->offset
+                                         + c->targetInfo.pointerSize))
+                or (index == 0
+                    and this->offset
+                        == static_cast<int>(ms->offset
+                                            + c->targetInfo.pointerSize)))
+           and ms->index == this->index and ms->scale == this->scale;
   } else {
     return false;
   }
@@ -551,10 +551,11 @@ void MemorySite::asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
                                 lir::Operand* result)
 {
   // todo: endianness?
-  assert(c, high == this
+  assert(c,
+         high == this
          or (static_cast<MemorySite*>(high)->base == base
              and static_cast<MemorySite*>(high)->offset
-             == static_cast<int>(offset + vm::TargetBytesPerWord)
+                 == static_cast<int>(offset + c->targetInfo.pointerSize)
              and static_cast<MemorySite*>(high)->index == index
              and static_cast<MemorySite*>(high)->scale == scale));
 
@@ -569,7 +570,8 @@ Site* MemorySite::copy(Context* c) {
 
 Site* MemorySite::copyHalf(Context* c, bool add) {
   if (add) {
-    return memorySite(c, base, offset + vm::TargetBytesPerWord, index, scale);
+    return memorySite(
+        c, base, offset + c->targetInfo.pointerSize, index, scale);
   } else {
     return copy(c);
   }
@@ -584,10 +586,13 @@ Site* MemorySite::copyHigh(Context* c) {
 }
 
 Site* MemorySite::makeNextWord(Context* c, unsigned index) {
-  return memorySite
-    (c, base, offset + ((index == 1) xor c->arch->bigEndian()
-                        ? vm::TargetBytesPerWord : -vm::TargetBytesPerWord),
-     this->index, scale);
+  return memorySite(c,
+                    base,
+                    offset + ((index == 1) xor c->arch->bigEndian()
+                                  ? c->targetInfo.pointerSize
+                                  : -c->targetInfo.pointerSize),
+                    this->index,
+                    scale);
 }
 
 SiteMask MemorySite::mask(Context* c) {

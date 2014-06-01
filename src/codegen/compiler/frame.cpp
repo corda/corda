@@ -45,16 +45,18 @@ int frameIndex(Context* c, int localIndex) {
 unsigned frameIndexToOffset(Context* c, unsigned frameIndex) {
   assert(c, frameIndex < totalFrameSize(c));
 
-  return (frameIndex + c->arch->frameFooterSize()) * vm::TargetBytesPerWord;
+  return (frameIndex + c->arch->frameFooterSize()) * c->targetInfo.pointerSize;
 }
 
 unsigned offsetToFrameIndex(Context* c, unsigned offset) {
-  assert(c, static_cast<int>
-         ((offset / vm::TargetBytesPerWord) - c->arch->frameFooterSize()) >= 0);
-  assert(c, ((offset / vm::TargetBytesPerWord) - c->arch->frameFooterSize())
+  assert(c,
+         static_cast<int>((offset / c->targetInfo.pointerSize)
+                          - c->arch->frameFooterSize()) >= 0);
+  assert(c,
+         ((offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize())
          < totalFrameSize(c));
 
-  return (offset / vm::TargetBytesPerWord) - c->arch->frameFooterSize();
+  return (offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize();
 }
 
 unsigned frameBase(Context* c) {

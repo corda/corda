@@ -90,9 +90,10 @@ class PoolPromise: public Promise {
 
   virtual int64_t value() {
     if (resolved()) {
-      return reinterpret_cast<int64_t>
-        (c->machineCode + vm::pad(c->machineCodeSize, vm::TargetBytesPerWord)
-         + (key * vm::TargetBytesPerWord));
+      return reinterpret_cast<int64_t>(
+          c->machineCode
+          + vm::pad(c->machineCodeSize, c->targetInfo.pointerSize)
+          + (key * c->targetInfo.pointerSize));
     }
     
     abort(c);

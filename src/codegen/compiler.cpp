@@ -2281,7 +2281,7 @@ class MyCompiler: public Compiler {
                  static_cast<Value*>(base),
                  displacement,
                  static_cast<Value*>(index),
-                 index == 0 ? 1 : type.size(TargetBytesPerWord),
+                 index == 0 ? 1 : type.size(c.targetInfo),
                  result);
 
     return result;
@@ -2585,10 +2585,10 @@ class MyCompiler: public Compiler {
     Value* dst = value(&c, type);
     appendMove(&c,
                lir::Move,
-               src->type.size(TargetBytesPerWord),
-               src->type.size(TargetBytesPerWord),
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
                static_cast<Value*>(src),
-               type.size(TargetBytesPerWord),
+               type.size(c.targetInfo),
                dst);
     return dst;
   }
@@ -2602,11 +2602,11 @@ class MyCompiler: public Compiler {
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
                TargetBytesPerWord,
-               truncateType.size(TargetBytesPerWord),
+               truncateType.size(c.targetInfo),
                static_cast<Value*>(src),
-               extendType.size(TargetBytesPerWord) < TargetBytesPerWord
+               extendType.size(c.targetInfo) < TargetBytesPerWord
                    ? TargetBytesPerWord
-                   : extendType.size(TargetBytesPerWord),
+                   : extendType.size(c.targetInfo),
                dst);
     return dst;
   }
@@ -2617,10 +2617,10 @@ class MyCompiler: public Compiler {
 
     appendMove(&c,
                lir::Move,
-               src->type.size(TargetBytesPerWord),
-               src->type.size(TargetBytesPerWord),
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
                static_cast<Value*>(src),
-               dst->type.size(TargetBytesPerWord),
+               dst->type.size(c.targetInfo),
                static_cast<Value*>(dst));
   }
 
@@ -2633,12 +2633,12 @@ class MyCompiler: public Compiler {
     Value* dst = value(&c, dstType);
     appendMove(&c,
                signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
-               src->type.size(TargetBytesPerWord),
-               src->type.size(TargetBytesPerWord),
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
                static_cast<Value*>(src),
-               dstType.size(TargetBytesPerWord) < TargetBytesPerWord
+               dstType.size(c.targetInfo) < TargetBytesPerWord
                    ? TargetBytesPerWord
-                   : dstType.size(TargetBytesPerWord),
+                   : dstType.size(c.targetInfo),
                dst);
     return dst;
   }

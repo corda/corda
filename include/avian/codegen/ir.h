@@ -19,7 +19,7 @@ class TargetInfo {
  public:
   unsigned pointerSize;
 
-  TargetInfo(unsigned pointerSize) : pointerSize(pointerSize)
+  explicit TargetInfo(unsigned pointerSize) : pointerSize(pointerSize)
   {
   }
 };

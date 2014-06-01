@@ -125,6 +125,7 @@ class Context {
   unsigned machineCodeSize;
   unsigned alignedFrameSize;
   unsigned availableGeneralRegisterCount;
+  ir::TargetInfo targetInfo;
 };
 
 inline Aborter* getAborter(Context* c) {

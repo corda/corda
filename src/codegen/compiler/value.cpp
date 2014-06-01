@@ -115,7 +115,8 @@ bool Value::uniqueSite(Context* c, Site* s) {
   if (it.hasMore()) {
     // the site is not this word's only site, but if the site is
     // shared with the next word, it may be that word's only site
-    if (this->nextWord != this and s->registerSize(c) > vm::TargetBytesPerWord) {
+    if (this->nextWord != this
+        and s->registerSize(c) > c->targetInfo.pointerSize) {
       SiteIterator nit(c, this->nextWord);
       Site* p = nit.next();
       if (nit.hasMore()) {
