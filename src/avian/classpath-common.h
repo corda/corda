@@ -282,7 +282,10 @@ makeStackTraceElement(Thread* t, object e)
 {
   PROTECT(t, e);
 
-  object class_name = className(t, methodClass(t, traceElementMethod(t, e)));
+  GcMethod* method = cast<GcMethod>(t, traceElementMethod(t, e));
+  PROTECT(t, method);
+
+  object class_name = className(t, method->class_());
   PROTECT(t, class_name);
 
   THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_name));
@@ -290,20 +293,20 @@ makeStackTraceElement(Thread* t, object e)
           reinterpret_cast<char*>(&byteArrayBody(t, class_name, 0)));
   class_name = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
-  object method = methodName(t, traceElementMethod(t, e));
-  PROTECT(t, method);
+  object method_name = method->name();
+  PROTECT(t, method_name);
 
-  method = t->m->classpath->makeString
-    (t, method, 0, byteArrayLength(t, method) - 1);
+  method_name = t->m->classpath->makeString
+    (t, method_name, 0, byteArrayLength(t, method_name) - 1);
 
   unsigned line = t->m->processor->lineNumber
-    (t, cast<GcMethod>(t, traceElementMethod(t, e)), traceElementIp(t, e));
+    (t, method, traceElementIp(t, e));
 
-  object file = classSourceFile(t, methodClass(t, traceElementMethod(t, e)));
+  object file = classSourceFile(t, method->class_());
   file = file ? t->m->classpath->makeString
     (t, file, 0, byteArrayLength(t, file) - 1) : 0;
 
-  return reinterpret_cast<object>(makeStackTraceElement(t, class_name, method, file, line));
+  return reinterpret_cast<object>(makeStackTraceElement(t, class_name, method_name, file, line));
 }
 
 object

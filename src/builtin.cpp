@@ -27,15 +27,15 @@ search(Thread* t, object loader, object name,
     PROTECT(t, loader);
     PROTECT(t, name);
 
-    object n = reinterpret_cast<object>(makeByteArray(t, stringLength(t, name) + 1));
-    char* s = reinterpret_cast<char*>(&byteArrayBody(t, n, 0));
+    GcByteArray* n = makeByteArray(t, stringLength(t, name) + 1);
+    char* s = reinterpret_cast<char*>(n->body().begin());
     stringChars(t, name, s);
 
     if (replaceDots) {
       replace('.', '/', s);
     }
 
-    return reinterpret_cast<int64_t>(op(t, loader, n));
+    return reinterpret_cast<int64_t>(op(t, loader, reinterpret_cast<object>(n)));
   } else {
     throwNew(t, GcNullPointerException::Type);
   }

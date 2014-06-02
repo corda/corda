@@ -16,6 +16,7 @@
 #include <avian/system/system.h>
 #include <avian/system/signal.h>
 #include <avian/heap/heap.h>
+#include <avian/util/slice.h>
 #include "avian/finder.h"
 #include "avian/processor.h"
 #include "avian/constants.h"

@@ -1493,6 +1493,22 @@ void writeClassAccessors(Output* out, Object* t)
       out->write(capitalize(memberName(m)));
       out->write("); }\n");
     } break;
+    case Object::Array: {
+      out->write("  avian::util::Slice<");
+      out->write(memberTypeName(m));
+      out->write("> ");
+      out->write(obfuscate(memberName(m)));
+      out->write("() { return avian::util::Slice<");
+      out->write(memberTypeName(m));
+      out->write("> (&field_at<");
+      out->write(memberTypeName(m));
+      out->write(">(");
+      out->write(capitalize(local::typeName(memberOwner(m))));
+      out->write(capitalize(memberName(m)));
+      out->write("), field_at<uintptr_t>(");
+      out->write(capitalize(local::typeName(memberOwner(m))));
+      out->write("Length)); }\n");
+    } break;
 
     default:
       break;
