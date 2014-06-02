@@ -1354,6 +1354,7 @@ ifneq ($(classpath),avian)
 # them to synthesize a class:
 	classpath-sources := \
 		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/Code.java \
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \

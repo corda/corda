@@ -78,7 +78,7 @@
 (type lineNumberTable
   (array uint64_t body))
 
-(type code
+(type code avian/Code
   (object pool)
   (object exceptionHandlerTable)
   (object lineNumberTable)
