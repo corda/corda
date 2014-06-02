@@ -156,7 +156,7 @@ popRead(Context* c, Event* e UNUSED, Value* v)
       if (valid(nextWord->reads)) {
         deadWord(c, v);
       } else {
-        deadWord(c, nextWord);        
+        deadWord(c, nextWord);
       }
     }
 
@@ -183,22 +183,6 @@ addBuddy(Value* original, Value* buddy)
       fprintf(stderr, " %p", p);
     }
     fprintf(stderr, "\n");
-  }
-}
-
-lir::ValueType
-valueType(Context* c, Compiler::OperandType type)
-{
-  switch (type) {
-  case Compiler::ObjectType:
-  case Compiler::AddressType:
-  case Compiler::IntegerType:
-  case Compiler::VoidType:
-    return lir::ValueGeneral;
-  case Compiler::FloatType:
-    return lir::ValueFloat;
-  default:
-    abort(c);
   }
 }
 
@@ -751,10 +735,14 @@ saveLocals(Context* c, Event* e)
   }
 }
 
-void
-maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-          unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue,
-          const SiteMask& dstMask)
+void maybeMove(Context* c,
+               lir::BinaryOperation op,
+               unsigned srcSize,
+               unsigned srcSelectSize,
+               Value* srcValue,
+               unsigned dstSize,
+               Value* dstValue,
+               const SiteMask& dstMask)
 {
   Read* read = live(c, dstValue);
   bool isStore = read == 0;
@@ -806,8 +794,14 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
 
       srcValue->source->freeze(c, srcValue);
 
-      apply(c, type, min(srcSelectSize, dstSize), srcValue->source, srcValue->source,
-            dstSize, target, target);
+      apply(c,
+            op,
+            min(srcSelectSize, dstSize),
+            srcValue->source,
+            srcValue->source,
+            dstSize,
+            target,
+            target);
 
       srcValue->source->thaw(c, srcValue);
     } else {
@@ -819,9 +813,9 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
       bool thunk;
       OperandMask src;
 
-      c->arch->planSource(type, dstSize, src, dstSize, &thunk);
+      c->arch->planSource(op, dstSize, src, dstSize, &thunk);
 
-      if (srcValue->type == lir::ValueGeneral) {
+      if (isGeneralValue(srcValue)) {
         src.registerMask &= c->regFile->generalRegisters.mask;
       }
 
@@ -844,8 +838,14 @@ maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
                 srcb, dstb, srcValue, dstValue);
       }
 
-      apply(c, type, srcSelectSize, srcValue->source, srcValue->source,
-            dstSize, tmpTarget, tmpTarget);
+      apply(c,
+            op,
+            srcSelectSize,
+            srcValue->source,
+            srcValue->source,
+            dstSize,
+            tmpTarget,
+            tmpTarget);
 
       tmpTarget->thaw(c, dstValue);
 
@@ -1214,9 +1214,27 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
   return v;
 }
 
-Value*
-loadLocal(Context* c, unsigned footprint, unsigned index)
+unsigned typeFootprint(Context* c, ir::Type type)
 {
+  // TODO: this function is very Java-specific in nature. Generalize.
+  switch (type.flavor()) {
+  case ir::Type::Float:
+  case ir::Type::Integer:
+    return type.rawSize() / 4;
+  case ir::Type::Object:
+  case ir::Type::Address:
+  case ir::Type::Half:
+    return 1;
+  case ir::Type::Void:
+    return 0;
+  default:
+    abort(c);
+  }
+}
+
+Value* loadLocal(Context* c, ir::Type type, unsigned index)
+{
+  unsigned footprint = typeFootprint(c, type);
   assert(c, index + footprint <= c->localFootprint);
 
   if (footprint > 1) {
@@ -1237,17 +1255,10 @@ loadLocal(Context* c, unsigned footprint, unsigned index)
   return c->locals[index].value;
 }
 
-Value*
-register_(Context* c, int number)
+Value* threadRegister(Context* c)
 {
-  assert(c, (1 << number) & (c->regFile->generalRegisters.mask
-                             | c->regFile->floatRegisters.mask));
-
-  Site* s = registerSite(c, number);
-  lir::ValueType type = ((1 << number) & c->regFile->floatRegisters.mask)
-    ? lir::ValueFloat: lir::ValueGeneral;
-
-  return value(c, type, s, s);
+  Site* s = registerSite(c, c->arch->thread());
+  return value(c, ir::Type::addr(), s, s);
 }
 
 unsigned
@@ -1506,8 +1517,8 @@ resolveOriginalSites(Context* c, Event* e, SiteRecordList* frozen,
         fprintf(stderr, "freeze original %s for %p local %d frame %d\n",
                 buffer, v, el.localIndex, el.frameIndex(c));
       }
-      
-      Value dummy(0, 0, lir::ValueGeneral);
+
+      Value dummy(0, 0, ir::Type::addr());
       dummy.addSite(c, s);
       dummy.removeSite(c, s);
       freeze(c, frozen, s, 0);
@@ -2129,26 +2140,9 @@ class MyCompiler: public Compiler {
     compiler::restoreState(&c, static_cast<ForkState*>(state));
   }
 
-  virtual Subroutine* startSubroutine() {
-    return c.subroutine = new(c.zone) MySubroutine;
-  }
-
-  virtual void returnFromSubroutine(Subroutine* subroutine, Operand* address) {
-    appendSaveLocals(&c);
-    appendJump(&c, lir::Jump, static_cast<Value*>(address), false, true);
-    static_cast<MySubroutine*>(subroutine)->forkState = compiler::saveState(&c);
-  }
-
-  virtual void linkSubroutine(Subroutine* subroutine) {
-    Local* oldLocals = c.locals;
-    restoreState(static_cast<MySubroutine*>(subroutine)->forkState);
-    linkLocals(&c, oldLocals, c.locals);
-  }
-
   virtual void init(unsigned logicalCodeLength, unsigned parameterFootprint,
                     unsigned localFootprint, unsigned alignedFrameSize)
   {
-    c.logicalCodeLength = logicalCodeLength;
     c.parameterFootprint = parameterFootprint;
     c.localFootprint = localFootprint;
     c.alignedFrameSize = alignedFrameSize;
@@ -2167,23 +2161,23 @@ class MyCompiler: public Compiler {
     c.frameResources[base + c.arch->framePointerOffset()].reserved
       = UseFramePointer;
 
-    // leave room for logical instruction -1
-    unsigned codeSize = sizeof(LogicalInstruction*) * (logicalCodeLength + 1);
-    c.logicalCode = static_cast<LogicalInstruction**>
-      (c.zone->allocate(codeSize));
-    memset(c.logicalCode, 0, codeSize);
-    c.logicalCode++;
+    c.logicalCode.init(c.zone, logicalCodeLength);
+
+    c.logicalCode[-1] = new (c.zone) LogicalInstruction(-1, c.stack, c.locals);
 
     c.locals = static_cast<Local*>
       (c.zone->allocate(sizeof(Local) * localFootprint));
 
     memset(c.locals, 0, sizeof(Local) * localFootprint);
+  }
 
-    c.logicalCode[-1] = new(c.zone) LogicalInstruction(-1, c.stack, c.locals);
+  virtual void extendLogicalCode(unsigned more)
+  {
+    c.logicalCode.extend(c.zone, more);
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
@@ -2215,17 +2209,11 @@ class MyCompiler: public Compiler {
       populateJunctionReads(&c, link);
     }
 
-    if (c.subroutine) {
-      c.subroutine->forkState
-        = c.logicalCode[logicalIp]->subroutine->forkState;
-      c.subroutine = 0;
-    }
-
     c.forkState = 0;
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
     assert(&c, c.logicalCode[logicalIp] == 0);
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
@@ -2240,30 +2228,7 @@ class MyCompiler: public Compiler {
 
     c.logicalCode[logicalIp] = new(c.zone) LogicalInstruction(logicalIp, c.stack, c.locals);
 
-    bool startSubroutine = c.subroutine != 0;
-    if (startSubroutine) {
-      c.logicalCode[logicalIp]->subroutine = c.subroutine;
-      c.subroutine = 0;
-    }
-
     c.logicalIp = logicalIp;
-
-    if (startSubroutine) {
-      // assume all local variables are initialized on entry to a
-      // subroutine, since other calls to the subroutine may
-      // initialize them:
-      unsigned sizeInBytes = sizeof(Local) * c.localFootprint;
-      Local* newLocals = static_cast<Local*>(c.zone->allocate(sizeInBytes));
-      memcpy(newLocals, c.locals, sizeInBytes);
-      c.locals = newLocals;
-
-      for (unsigned li = 0; li < c.localFootprint; ++li) {
-        Local* local = c.locals + li;
-        if (local->value == 0) {
-          initLocal(1, li, IntegerType); 
-        }
-      }
-    }
   }
 
   virtual Promise* machineIp(unsigned logicalIp) {
@@ -2290,71 +2255,82 @@ class MyCompiler: public Compiler {
     return p;
   }
 
-  virtual Operand* constant(int64_t value, Compiler::OperandType type) {
+  virtual ir::Value* constant(int64_t value, ir::Type type)
+  {
     return promiseConstant(resolvedPromise(&c, value), type);
   }
 
-  virtual Operand* promiseConstant(Promise* value, Compiler::OperandType type) {
-    return compiler::value
-      (&c, valueType(&c, type), compiler::constantSite(&c, value));
-  }
-
-  virtual Operand* address(Promise* address) {
-    return value(&c, lir::ValueGeneral, compiler::addressSite(&c, address));
-  }
-
-  virtual Operand* memory(Operand* base,
-                          OperandType type,
-                          int displacement = 0,
-                          Operand* index = 0,
-                          unsigned scale = 1)
+  virtual ir::Value* promiseConstant(Promise* value, ir::Type type)
   {
-    Value* result = value(&c, valueType(&c, type));
+    return compiler::value(&c, type, compiler::constantSite(&c, value));
+  }
 
-    appendMemory(&c, static_cast<Value*>(base), displacement,
-                 static_cast<Value*>(index), scale, result);
+  virtual ir::Value* address(ir::Type type, Promise* address)
+  {
+    return value(&c, type, compiler::addressSite(&c, address));
+  }
+
+  virtual ir::Value* memory(ir::Value* base,
+                            ir::Type type,
+                            int displacement = 0,
+                            ir::Value* index = 0)
+  {
+    Value* result = value(&c, type);
+
+    appendMemory(&c,
+                 static_cast<Value*>(base),
+                 displacement,
+                 static_cast<Value*>(index),
+                 index == 0 ? 1 : type.size(c.targetInfo),
+                 result);
 
     return result;
   }
 
-  virtual Operand* register_(int number) {
-    return compiler::register_(&c, number);
+  virtual ir::Value* threadRegister()
+  {
+    return compiler::threadRegister(&c);
   }
 
   Promise* machineIp() {
     return c.logicalCode[c.logicalIp]->lastEvent->makeCodePromise(&c);
   }
 
-  virtual void push(unsigned footprint UNUSED) {
-    assert(&c, footprint == 1);
-
-    Value* v = value(&c, lir::ValueGeneral);
-    Stack* s = compiler::stack(&c, v, c.stack);
-
-    v->home = frameIndex(&c, s->index + c.localFootprint);
-    c.stack = s;
+  virtual void push(ir::Type type, ir::Value* value)
+  {
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, value->type == type);
+    compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
-  virtual void push(unsigned footprint, Operand* value) {
-    compiler::push(&c, footprint, static_cast<Value*>(value));
-  }
-
-  virtual void save(unsigned footprint, Operand* value) {
+  virtual void save(ir::Type type, ir::Value* value)
+  {
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, value->type == type);
+    unsigned footprint = typeFootprint(&c, type);
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (TargetBytesPerWord == 4 and footprint > 1) {
       assert(&c, footprint == 2);
       assert(&c, static_cast<Value*>(value)->nextWord);
 
-      save(1, static_cast<Value*>(value)->nextWord);
+      save(ir::Type::i4(), static_cast<Value*>(value)->nextWord);
     }
   }
 
-  virtual Operand* pop(unsigned footprint) {
-    return compiler::pop(&c, footprint);
+  virtual ir::Value* pop(ir::Type type)
+  {
+    ir::Value* value = compiler::pop(&c, typeFootprint(&c, type));
+    // TODO: once type information is flowed properly, enable this assert.
+    // Some time later, we can remove the parameter.
+    // assert(&c, static_cast<Value*>(value)->type == type);
+    return value;
   }
 
-  virtual void pushed() {
-    Value* v = value(&c, lir::ValueGeneral);
+  virtual void pushed(ir::Type type)
+  {
+    Value* v = value(&c, type);
     appendFrameSite
       (&c, v, frameIndex
        (&c, (c.stack ? c.stack->index : 0) + c.localFootprint));
@@ -2380,7 +2356,8 @@ class MyCompiler: public Compiler {
     return c.stack->index;
   }
 
-  virtual Operand* peek(unsigned footprint, unsigned index) {
+  virtual ir::Value* peek(unsigned footprint, unsigned index)
+  {
     Stack* s = c.stack;
     for (unsigned i = index; i > 0; --i) {
       s = s->next;
@@ -2416,13 +2393,12 @@ class MyCompiler: public Compiler {
     return s->value;
   }
 
-  virtual Operand* call(Operand* address,
-                        unsigned flags,
-                        TraceHandler* traceHandler,
-                        unsigned resultSize,
-                        OperandType resultType,
-                        unsigned argumentCount,
-                        ...)
+  virtual ir::Value* call(ir::Value* address,
+                          unsigned flags,
+                          TraceHandler* traceHandler,
+                          ir::Type resultType,
+                          unsigned argumentCount,
+                          ...)
   {
     va_list a; va_start(a, argumentCount);
 
@@ -2430,7 +2406,7 @@ class MyCompiler: public Compiler {
 
     unsigned footprint = 0;
     unsigned size = TargetBytesPerWord;
-    RUNTIME_ARRAY(Value*, arguments, argumentCount);
+    RUNTIME_ARRAY(ir::Value*, arguments, argumentCount);
     int index = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       Value* o = va_arg(a, Value*);
@@ -2452,41 +2428,74 @@ class MyCompiler: public Compiler {
 
     va_end(a);
 
-    Stack* argumentStack = c.stack;
-    for (int i = index - 1; i >= 0; --i) {
-      argumentStack = compiler::stack
-        (&c, RUNTIME_ARRAY_BODY(arguments)[i], argumentStack);
+    Value* result = value(&c, resultType);
+    appendCall(&c,
+               static_cast<Value*>(address),
+               ir::NativeCallingConvention,
+               flags,
+               traceHandler,
+               result,
+               util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(arguments), index));
+
+    return result;
+  }
+
+  virtual ir::Value* stackCall(ir::Value* address,
+                               unsigned flags,
+                               TraceHandler* traceHandler,
+                               ir::Type resultType,
+                               Slice<ir::Value*> arguments)
+  {
+    Value* result = value(&c, resultType);
+    Stack* b UNUSED = c.stack;
+    appendCall(&c,
+               static_cast<Value*>(address),
+               ir::AvianCallingConvention,
+               flags,
+               traceHandler,
+               result,
+               arguments);
+    assert(&c, c.stack == b);
+    return result;
+  }
+
+  virtual void return_(ir::Value* a)
+  {
+    assert(&c, a);
+    appendReturn(&c, static_cast<Value*>(a));
+  }
+
+  virtual void return_()
+  {
+    appendReturn(&c, 0);
+  }
+
+  void initLocalPart(unsigned index, ir::Type type)
+  {
+    Value* v = value(&c, type);
+
+    if (DebugFrame) {
+      fprintf(stderr,
+              "init local %p at %d (%d)\n",
+              v,
+              index,
+              frameIndex(&c, index));
     }
 
-    Value* result = value(&c, valueType(&c, resultType));
-    appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
-               resultSize, argumentStack, index, 0);
+    appendFrameSite(&c, v, frameIndex(&c, index));
 
-    return result;
+    Local* local = c.locals + index;
+    local->value = v;
+    v->home = frameIndex(&c, index);
   }
 
-  virtual Operand* stackCall(Operand* address,
-                             unsigned flags,
-                             TraceHandler* traceHandler,
-                             unsigned resultSize,
-                             OperandType resultType,
-                             unsigned argumentFootprint)
+  virtual void initLocal(unsigned index, ir::Type type)
   {
-    Value* result = value(&c, valueType(&c, resultType));
-    appendCall(&c, static_cast<Value*>(address), flags, traceHandler, result,
-               resultSize, c.stack, 0, argumentFootprint);
-    return result;
-  }
+    unsigned footprint = typeFootprint(&c, type);
 
-  virtual void return_(unsigned size, Operand* value) {
-    appendReturn(&c, size, static_cast<Value*>(value));
-  }
-
-  virtual void initLocal(unsigned footprint, unsigned index, OperandType type)
-  {
     assert(&c, index + footprint <= c.localFootprint);
 
-    Value* v = value(&c, valueType(&c, type));
+    Value* v = value(&c, type);
 
     if (footprint > 1) {
       assert(&c, footprint == 2);
@@ -2498,11 +2507,11 @@ class MyCompiler: public Compiler {
         lowIndex = index;
       } else {
         lowIndex = index + 1;
-        highIndex = index;      
+        highIndex = index;
       }
 
       if (TargetBytesPerWord == 4) {
-        initLocal(1, highIndex, type);
+        initLocalPart(highIndex, type);
         Value* next = c.locals[highIndex].value;
         v->nextWord = next;
         next->nextWord = v;
@@ -2525,7 +2534,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCodeLength);
+    assert(&c, logicalIp < c.logicalCode.count());
 
     unsigned footprint = sizeof(Local) * c.localFootprint;
     Local* newLocals = static_cast<Local*>(c.zone->allocate(footprint));
@@ -2536,127 +2545,203 @@ class MyCompiler: public Compiler {
     for (int i = 0; i < static_cast<int>(c.localFootprint); ++i) {
       Local* local = e->locals() + i;
       if (local->value) {
-        initLocal
-          (1, i, local->value->type == lir::ValueGeneral ? IntegerType : FloatType);
+        initLocalPart(i, local->value->type);
       }
     }
 
     linkLocals(&c, e->locals(), newLocals);
   }
 
-  virtual void storeLocal(unsigned footprint, Operand* src, unsigned index) {
-    compiler::storeLocal(&c, footprint, static_cast<Value*>(src), index, true);
+  virtual void storeLocal(ir::Value* src, unsigned index)
+  {
+    compiler::storeLocal(&c, typeFootprint(&c, src->type), static_cast<Value*>(src), index, true);
   }
 
-  virtual Operand* loadLocal(unsigned footprint, unsigned index) {
-    return compiler::loadLocal(&c, footprint, index);
+  virtual ir::Value* loadLocal(ir::Type type, unsigned index)
+  {
+    return compiler::loadLocal(&c, type, index);
   }
 
   virtual void saveLocals() {
+    int oldIp UNUSED = c.logicalIp;
     appendSaveLocals(&c);
+    assert(&c, oldIp == c.logicalIp);
   }
 
-  virtual void checkBounds(Operand* object, unsigned lengthOffset,
-                           Operand* index, intptr_t handler)
+  virtual void checkBounds(ir::Value* object,
+                           unsigned lengthOffset,
+                           ir::Value* index,
+                           intptr_t handler)
   {
     appendBoundsCheck(&c, static_cast<Value*>(object), lengthOffset,
                       static_cast<Value*>(index), handler);
   }
 
-  virtual void store(unsigned srcSize, Operand* src, unsigned dstSize,
-                     Operand* dst)
+  virtual ir::Value* truncate(ir::Type type, ir::Value* src)
   {
-    appendMove(&c, lir::Move, srcSize, srcSize, static_cast<Value*>(src),
-               dstSize, static_cast<Value*>(dst));
-  }
-
-  virtual Operand* load(unsigned srcSize, unsigned srcSelectSize, Operand* src,
-                        unsigned dstSize)
-  {
-    assert(&c, dstSize >= TargetBytesPerWord);
-
-    Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, lir::Move, srcSize, srcSelectSize, static_cast<Value*>(src),
-               dstSize, dst);
+    assert(&c, src->type.flavor() == type.flavor());
+    assert(&c, type.flavor() != ir::Type::Float);
+    assert(&c, type.rawSize() < src->type.rawSize());
+    Value* dst = value(&c, type);
+    appendMove(&c,
+               lir::Move,
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
+               static_cast<Value*>(src),
+               type.size(c.targetInfo),
+               dst);
     return dst;
   }
 
-  virtual Operand* loadz(unsigned srcSize, unsigned srcSelectSize,
-                         Operand* src, unsigned dstSize)
+  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+                                        ir::Type extendType,
+                                        ir::Type truncateType,
+                                        ir::Value* src)
   {
-    assert(&c, dstSize >= TargetBytesPerWord);
-
-    Value* dst = value(&c, static_cast<Value*>(src)->type);
-    appendMove(&c, lir::MoveZ, srcSize, srcSelectSize, static_cast<Value*>(src),
-               dstSize, dst);
+    Value* dst = value(&c, extendType);
+    appendMove(&c,
+               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               TargetBytesPerWord,
+               truncateType.size(c.targetInfo),
+               static_cast<Value*>(src),
+               extendType.size(c.targetInfo) < TargetBytesPerWord
+                   ? TargetBytesPerWord
+                   : extendType.size(c.targetInfo),
+               dst);
     return dst;
   }
 
-  virtual void condJump(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b,
-                           Operand* address)
+  virtual void store(ir::Value* src, ir::Value* dst)
+  {
+    assert(&c, src->type.flavor() == dst->type.flavor());
+
+    appendMove(&c,
+               lir::Move,
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
+               static_cast<Value*>(src),
+               dst->type.size(c.targetInfo),
+               static_cast<Value*>(dst));
+  }
+
+  virtual ir::Value* load(ir::SignExtendMode signExtend,
+                          ir::Value* src,
+                          ir::Type dstType)
+  {
+    assert(&c, src->type.flavor() == dstType.flavor());
+
+    Value* dst = value(&c, dstType);
+    appendMove(&c,
+               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               src->type.size(c.targetInfo),
+               src->type.size(c.targetInfo),
+               static_cast<Value*>(src),
+               dstType.size(c.targetInfo) < TargetBytesPerWord
+                   ? TargetBytesPerWord
+                   : dstType.size(c.targetInfo),
+               dst);
+    return dst;
+  }
+
+  virtual void condJump(lir::TernaryOperation op,
+                        ir::Value* a,
+                        ir::Value* b,
+                        ir::Value* addr)
   {
     assert(&c,
-      (isGeneralBranch(type) and isGeneralValue(a) and isGeneralValue(b))
-      or (isFloatBranch(type) and isFloatValue(a) and isFloatValue(b)));
+           (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
+               isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
-    appendBranch(&c, type, size, static_cast<Value*>(a),
-                 static_cast<Value*>(b), static_cast<Value*>(address));
+    assert(&c, a->type == b->type);
+    assert(&c, addr->type == ir::Type::iptr());
+
+    appendBranch(&c,
+                 op,
+                 static_cast<Value*>(a),
+                 static_cast<Value*>(b),
+                 static_cast<Value*>(addr));
   }
 
-  virtual void jmp(Operand* address) {
-    appendJump(&c, lir::Jump, static_cast<Value*>(address));
+  virtual void jmp(ir::Value* addr)
+  {
+    appendJump(&c, lir::Jump, static_cast<Value*>(addr));
   }
 
-  virtual void exit(Operand* address) {
-    appendJump(&c, lir::Jump, static_cast<Value*>(address), true);
+  virtual void exit(ir::Value* addr)
+  {
+    appendJump(&c, lir::Jump, static_cast<Value*>(addr), true);
   }
 
-  virtual Operand* binaryOp(lir::TernaryOperation type, unsigned size, Operand* a, Operand* b) {
+  virtual ir::Value* binaryOp(lir::TernaryOperation op,
+                              ir::Type type,
+                              ir::Value* a,
+                              ir::Value* b)
+  {
     assert(&c,
-      (isGeneralBinaryOp(type) and isGeneralValue(a) and isGeneralValue(b))
-      or (isFloatBinaryOp(type) and isFloatValue(a) and isFloatValue(b)));
+           (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
+           or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
-    Value* result = value(&c, static_cast<Value*>(a)->type);
-    
-    appendCombine(&c, type, size, static_cast<Value*>(a),
-                  size, static_cast<Value*>(b), size, result);
-    return result;
-  }
+    Value* result = value(&c, type);
 
-  virtual Operand* unaryOp(lir::BinaryOperation type, unsigned size, Operand* a) {
-    assert(&c, (isGeneralUnaryOp(type) and isGeneralValue(a))or(
-                   isFloatUnaryOp(type) and isFloatValue(a)));
-    Value* result = value(&c, static_cast<Value*>(a)->type);
-    appendTranslate(&c, type, size, static_cast<Value*>(a), size, result);
-    return result;
-  }
-  
-  virtual Operand* f2f(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::Float2Float, aSize, static_cast<Value*>(a), resSize, result);
-    return result;
-  }
-  
-  virtual Operand* f2i(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueFloat);
-    Value* result = value(&c, lir::ValueGeneral);
-    appendTranslate
-      (&c, lir::Float2Int, aSize, static_cast<Value*>(a), resSize, result);
-    return result;
-  }
-  
-  virtual Operand* i2f(unsigned aSize, unsigned resSize, Operand* a) {
-    assert(&c, static_cast<Value*>(a)->type == lir::ValueGeneral);
-    Value* result = value(&c, lir::ValueFloat);
-    appendTranslate
-      (&c, lir::Int2Float, aSize, static_cast<Value*>(a), resSize, result);
+    appendCombine(&c,
+                  op,
+                  static_cast<Value*>(a),
+                  static_cast<Value*>(b),
+                  result);
     return result;
   }
 
-  virtual void nullaryOp(lir::Operation type) {
-    appendOperation(&c, type);
+  virtual ir::Value* unaryOp(lir::BinaryOperation op,
+                             ir::Value* a)
+  {
+    assert(&c,
+           (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
+                                                          and isFloatValue(a)));
+    Value* result = value(&c, a->type);
+    appendTranslate(
+        &c, op, static_cast<Value*>(a), result);
+    return result;
+  }
+
+  virtual ir::Value* f2f(ir::Type resType, ir::Value* a)
+  {
+    assert(&c, isFloatValue(a));
+    assert(&c, resType.flavor() == ir::Type::Float);
+    Value* result = value(&c, resType);
+    appendTranslate(&c,
+                    lir::Float2Float,
+                    static_cast<Value*>(a),
+                    result);
+    return result;
+  }
+
+  virtual ir::Value* f2i(ir::Type resType, ir::Value* a)
+  {
+    assert(&c, isFloatValue(a));
+    assert(&c, resType.flavor() != ir::Type::Float);
+    Value* result = value(&c, resType);
+    appendTranslate(&c,
+                    lir::Float2Int,
+                    static_cast<Value*>(a),
+                    result);
+    return result;
+  }
+
+  virtual ir::Value* i2f(ir::Type resType, ir::Value* a)
+  {
+    assert(&c, isGeneralValue(a));
+    assert(&c, resType.flavor() == ir::Type::Float);
+    Value* result = value(&c, resType);
+    appendTranslate(&c,
+                    lir::Int2Float,
+                    static_cast<Value*>(a),
+                    result);
+    return result;
+  }
+
+  virtual void nullaryOp(lir::Operation op)
+  {
+    appendOperation(&c, op);
   }
 
   virtual void compile(uintptr_t stackOverflowHandler,

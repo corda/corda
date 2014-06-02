@@ -215,12 +215,12 @@ pickTarget(Context* c, Read* read, bool intersectRead,
   Value* value = read->value;
 
   uint32_t registerMask
-    = (value->type == lir::ValueFloat ? ~0 : c->regFile->generalRegisters.mask);
+      = (isFloatValue(value) ? ~0 : c->regFile->generalRegisters.mask);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
-  if (value->type == lir::ValueFloat) {
+  if (isFloatValue(value)) {
     uint32_t floatMask = mask.registerMask & c->regFile->floatRegisters.mask;
     if (floatMask) {
       mask.registerMask = floatMask;

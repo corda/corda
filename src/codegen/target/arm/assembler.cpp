@@ -180,6 +180,11 @@ class MyArchitecture: public Architecture {
     return 3;
   }
 
+  virtual ir::TargetInfo targetInfo()
+  {
+    return ir::TargetInfo(TargetBytesPerWord);
+  }
+
   virtual bool bigEndian() {
     return false;
   }

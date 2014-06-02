@@ -13,6 +13,7 @@
 
 #include "allocator.h"
 #include "math.h"
+#include "assert.h"
 
 namespace avian {
 namespace util {
@@ -33,6 +34,7 @@ class Slice {
 
   inline T& operator[](size_t index)
   {
+    ASSERT(index < count);
     return items[index];
   }
 
@@ -51,20 +53,36 @@ class Slice {
     return Slice<T>((T*)a->allocate(sizeof(T) * count), count);
   }
 
-  Slice<T> clone(Allocator* a)
+  static Slice<T> allocAndSet(Allocator* a, size_t count, const T& item)
   {
-    Slice<T> ret((T*)a->allocate(count * sizeof(T)), count);
-    memcpy(ret.items, items, count * sizeof(T));
-    return ret;
+    Slice<T> slice(alloc(a, count));
+    for (size_t i = 0; i < count; i++) {
+      slice[i] = item;
+    }
+    return slice;
+  }
+
+  Slice<T> clone(Allocator* a, size_t newCount)
+  {
+    T* newItems = (T*)a->allocate(newCount * sizeof(T));
+    memcpy(newItems, items, min(count, newCount) * sizeof(T));
+    return Slice<T>(newItems, newCount);
+  }
+
+  Slice<T> cloneAndSet(Allocator* a, size_t newCount, const T& item)
+  {
+    Slice<T> slice(clone(a, newCount));
+    for (size_t i = count; i < newCount; i++) {
+      slice[i] = item;
+    }
+    return slice;
   }
 
   void resize(Allocator* a, size_t newCount)
   {
-    T* newItems = (T*)a->allocate(newCount * sizeof(T));
-    memcpy(newItems, items, min(count, newCount));
+    Slice<T> slice(clone(a, newCount));
     a->free(items, count);
-    items = newItems;
-    count = newCount;
+    *this = slice;
   }
 };
 

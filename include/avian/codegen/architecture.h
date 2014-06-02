@@ -11,6 +11,8 @@
 #ifndef AVIAN_CODEGEN_ARCHITECTURE_H
 #define AVIAN_CODEGEN_ARCHITECTURE_H
 
+#include "ir.h"
+
 namespace vm {
 class Zone;
 }
@@ -56,6 +58,8 @@ virtual int returnLow() = 0;
 virtual int returnHigh() = 0;
 virtual int virtualCallTarget() = 0;
 virtual int virtualCallIndex() = 0;
+
+virtual ir::TargetInfo targetInfo() = 0;
 
 virtual bool bigEndian() = 0;
 

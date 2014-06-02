@@ -24,6 +24,7 @@ run make ${flags} process=interpret ${test_target}
 # bootimage and openjdk builds without openjdk-src don't work:
 if [ -z "${openjdk}" ]; then
   run make ${flags} bootimage=true ${test_target}
+  run make ${flags} mode=debug bootimage=true ${test_target}
   # might as well do an openjdk test while we're here:
   run make openjdk=$JAVA_HOME ${flags} ${test_target}
 fi

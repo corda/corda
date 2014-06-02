@@ -17,10 +17,19 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
-Value::Value(Site* site, Site* target, lir::ValueType type):
-  reads(0), lastRead(0), sites(site), source(0), target(target), buddy(this),
-  nextWord(this), home(NoFrameIndex), type(type), wordIndex(0)
-{ }
+Value::Value(Site* site, Site* target, ir::Type type)
+    : ir::Value(type),
+      reads(0),
+      lastRead(0),
+      sites(site),
+      source(0),
+      target(target),
+      buddy(this),
+      nextWord(this),
+      home(NoFrameIndex),
+      wordIndex(0)
+{
+}
 
 bool Value::findSite(Site* site) {
   for (Site* s = this->sites; s; s = s->next) {
@@ -106,7 +115,8 @@ bool Value::uniqueSite(Context* c, Site* s) {
   if (it.hasMore()) {
     // the site is not this word's only site, but if the site is
     // shared with the next word, it may be that word's only site
-    if (this->nextWord != this and s->registerSize(c) > vm::TargetBytesPerWord) {
+    if (this->nextWord != this
+        and s->registerSize(c) > c->targetInfo.pointerSize) {
       SiteIterator nit(c, this->nextWord);
       Site* p = nit.next();
       if (nit.hasMore()) {
@@ -154,8 +164,8 @@ bool Value::hasBuddy(Context* c, Value* b) {
 }
 #endif // not NDEBUG
 
-
-Value* value(Context* c, lir::ValueType type, Site* site, Site* target) {
+Value* value(Context* c, ir::Type type, Site* site, Site* target)
+{
   return new(c->zone) Value(site, target, type);
 }
 

@@ -60,10 +60,14 @@ Read* live(Context* c UNUSED, Value* v);
 
 void popRead(Context* c, Event* e UNUSED, Value* v);
 
-void
-maybeMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-          unsigned srcSelectSize, Value* src, unsigned dstSize, Value* dst,
-          const SiteMask& dstMask);
+void maybeMove(Context* c,
+               lir::BinaryOperation op,
+               unsigned srcSize,
+               unsigned srcSelectSize,
+               Value* src,
+               unsigned dstSize,
+               Value* dst,
+               const SiteMask& dstMask);
 
 Site*
 maybeMove(Context* c, Value* v, const SiteMask& mask, bool intersectMask,
@@ -76,14 +80,11 @@ Site*
 pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
                unsigned index);
 
-void push(Context* c, unsigned footprint, Value* v);
-
 Site*
 pickTargetSite(Context* c, Read* read, bool intersectRead = false,
                unsigned registerReserveCount = 0,
                CostCalculator* costCalculator = 0);
-Value*
-register_(Context* c, int number);
+Value* threadRegister(Context* c);
 
 Event::Event(Context* c):
   next(0), stackBefore(c->stack), localsBefore(c->locals),
@@ -129,7 +130,7 @@ void Event::addReads(Context* c, Value* v, unsigned size,
 {
   SingleRead* r = read(c, lowMask, lowSuccessor);
   this->addRead(c, v, r);
-  if (size > vm::TargetBytesPerWord) {
+  if (size > c->targetInfo.pointerSize) {
     r->high_ = v->nextWord;
     this->addRead(c, v->nextWord, highMask, highSuccessor);
   }
@@ -185,40 +186,149 @@ Link* link(Context* c, Event* predecessor, Link* nextPredecessor, Event* success
     (predecessor, nextPredecessor, successor, nextSuccessor, forkState);
 }
 
+Value* maybeBuddySlice(Context* c, Value* v)
+{
+  if (v->home >= 0) {
+    Value* n = value(c, v->type);
+    appendBuddy(c, v, n);
+    return n;
+  } else {
+    return v;
+  }
+}
+
+template <class T>
+struct SliceStack : public Slice<T> {
+  size_t capacity;
+
+  SliceStack(T* items, size_t capacity)
+      : Slice<T>(items + capacity, 0), capacity(capacity)
+  {
+  }
+
+  void push(const T& item)
+  {
+    ASSERT(Slice<T>::count < capacity);
+    --Slice<T>::items;
+    ++Slice<T>::count;
+    *Slice<T>::items = item;
+  }
+};
+
+template <class T, size_t Capacity>
+struct FixedSliceStack : public SliceStack<T> {
+  T itemArray[Capacity];
+
+  FixedSliceStack() : SliceStack<T>(&itemArray[0], Capacity)
+  {
+  }
+};
+
+Value* slicePushWord(Context* c,
+                     Value* v,
+                     size_t stackBase UNUSED,
+                     SliceStack<ir::Value*>& slice)
+{
+  if (v) {
+    v = maybeBuddySlice(c, v);
+  }
+
+  size_t index UNUSED = slice.count;
+
+  assert(c, slice.count < slice.capacity);
+  slice.push(v);
+
+  // if (DebugFrame) {
+  //   fprintf(stderr, "push %p\n", v);
+  // }
+
+  if (v) {
+    v->home = frameIndex(c, index + stackBase + c->localFootprint);
+  }
+
+  return v;
+}
+
+void slicePush(Context* c,
+               unsigned footprint,
+               Value* v,
+               size_t stackBase,
+               SliceStack<ir::Value*>& slice)
+{
+  assert(c, footprint);
+
+  bool bigEndian = c->arch->bigEndian();
+
+  Value* low = v;
+
+  if (bigEndian) {
+    v = slicePushWord(c, v, stackBase, slice);
+  }
+
+  Value* high;
+  if (footprint > 1) {
+    assert(c, footprint == 2);
+
+    if (c->targetInfo.pointerSize == 4) {
+      low->maybeSplit(c);
+      high = slicePushWord(c, low->nextWord, stackBase, slice);
+    } else {
+      high = slicePushWord(c, 0, stackBase, slice);
+    }
+  } else {
+    high = 0;
+  }
+
+  if (not bigEndian) {
+    v = slicePushWord(c, v, stackBase, slice);
+  }
+
+  if (high) {
+    v->nextWord = high;
+    high->nextWord = v;
+    high->wordIndex = 1;
+  }
+}
 
 class CallEvent: public Event {
  public:
-  CallEvent(Context* c, Value* address, unsigned flags,
-            TraceHandler* traceHandler, Value* result, unsigned resultSize,
-            Stack* argumentStack, unsigned argumentCount,
-            unsigned stackArgumentFootprint):
-    Event(c),
-    address(address),
-    traceHandler(traceHandler),
-    result(result),
-    returnAddressSurrogate(0),
-    framePointerSurrogate(0),
-    popIndex(0),
-    stackArgumentIndex(0),
-    flags(flags),
-    resultSize(resultSize),
-    stackArgumentFootprint(stackArgumentFootprint)
+  CallEvent(Context* c,
+            Value* address,
+            ir::CallingConvention callingConvention,
+            unsigned flags,
+            TraceHandler* traceHandler,
+            Value* resultValue,
+            util::Slice<ir::Value*> arguments)
+      : Event(c),
+        address(address),
+        traceHandler(traceHandler),
+        resultValue(resultValue),
+        returnAddressSurrogate(0),
+        framePointerSurrogate(0),
+        popIndex(0),
+        stackArgumentIndex(0),
+        flags(flags),
+        stackArgumentFootprint(callingConvention == ir::AvianCallingConvention
+                                   ? arguments.count
+                                   : 0)
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
-    if (argumentCount) {
+    if (callingConvention == ir::NativeCallingConvention) {
       assert(c, (flags & Compiler::TailJump) == 0);
       assert(c, stackArgumentFootprint == 0);
 
-      Stack* s = argumentStack;
       unsigned index = 0;
       unsigned argumentIndex = 0;
 
       while (true) {
+        Value* v = static_cast<Value*>(arguments[index]);
+
         unsigned footprint
-          = (argumentIndex + 1 < argumentCount
-             and s->value->nextWord == s->next->value)
-          ? 2 : 1;
+            = (argumentIndex + 1 < arguments.count and v->nextWord
+               == arguments[index + 1])
+                  ? 2
+                  : 1;
 
         if (index % (c->arch->argumentAlignment() ? footprint : 1)) {
           ++ index;
@@ -229,9 +339,9 @@ class CallEvent: public Event {
             <= c->arch->argumentRegisterCount())
         {
           int number = c->arch->argumentRegister(index);
-        
+
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", number, s->value);
+            fprintf(stderr, "reg %d arg read %p\n", number, v);
           }
 
           targetMask = SiteMask::fixedRegisterMask(number);
@@ -244,19 +354,17 @@ class CallEvent: public Event {
           unsigned frameIndex = index - c->arch->argumentRegisterCount();
 
           if (DebugReads) {
-            fprintf(stderr, "stack %d arg read %p\n", frameIndex, s->value);
+            fprintf(stderr, "stack %d arg read %p\n", frameIndex, v);
           }
 
           targetMask = SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
         }
 
-        this->addRead(c, s->value, targetMask);
+        this->addRead(c, v, targetMask);
 
         ++ index;
 
-        if ((++ argumentIndex) < argumentCount) {
-          s = s->next;
-        } else {
+        if ((++argumentIndex) >= arguments.count) {
           break;
         }
       }
@@ -268,9 +376,10 @@ class CallEvent: public Event {
 
     { bool thunk;
       OperandMask op;
-      c->arch->plan
-        ((flags & Compiler::Aligned) ? lir::AlignedCall : lir::Call, vm::TargetBytesPerWord,
-         op, &thunk);
+      c->arch->plan((flags & Compiler::Aligned) ? lir::AlignedCall : lir::Call,
+                    c->targetInfo.pointerSize,
+                    op,
+                    &thunk);
 
       assert(c, not thunk);
 
@@ -280,22 +389,24 @@ class CallEvent: public Event {
 
     Stack* stack = stackBefore;
 
-    if (stackArgumentFootprint) {
-      RUNTIME_ARRAY(Value*, arguments, stackArgumentFootprint);
-      for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
-        Value* v = stack->value;
+    if (callingConvention == ir::AvianCallingConvention) {
+      for (size_t i = 0; i < arguments.count; i++) {
         stack = stack->next;
+      }
+      for (int i = stackArgumentFootprint - 1; i >= 0; --i) {
+        Value* v = static_cast<Value*>(arguments[i]);
 
-        if ((vm::TargetBytesPerWord == 8
-             and (v == 0 or (i >= 1 and stack->value == 0)))
-            or (vm::TargetBytesPerWord == 4 and v->nextWord != v))
-        {
-          assert(c, vm::TargetBytesPerWord == 8 or v->nextWord == stack->value);
+        if ((c->targetInfo.pointerSize == 8
+             && (v == 0 || (i >= 1 && arguments[i - 1] == 0)))
+            || (c->targetInfo.pointerSize == 4 && v->nextWord != v)) {
+          assert(c,
+                 c->targetInfo.pointerSize == 8
+                 or v->nextWord == arguments[i - 1]);
 
-          RUNTIME_ARRAY_BODY(arguments)[i--] = stack->value;
-          stack = stack->next;
+          arguments[i] = arguments[i - 1];
+          --i;
         }
-        RUNTIME_ARRAY_BODY(arguments)[i] = v;
+        arguments[i] = v;
       }
 
       int returnAddressIndex;
@@ -303,7 +414,7 @@ class CallEvent: public Event {
       int frameOffset;
 
       if (TailCalls and (flags & Compiler::TailJump)) {
-        assert(c, argumentCount == 0);
+        assert(c, arguments.count == 0);
 
         int base = frameBase(c);
         returnAddressIndex = base + c->arch->returnAddressOffset();
@@ -322,7 +433,7 @@ class CallEvent: public Event {
       }
 
       for (unsigned i = 0; i < stackArgumentFootprint; ++i) {
-        Value* v = RUNTIME_ARRAY_BODY(arguments)[i];
+        Value* v = static_cast<Value*>(arguments[i]);
         if (v) {
           int frameIndex = i + frameOffset;
 
@@ -386,6 +497,8 @@ class CallEvent: public Event {
   virtual void compile(Context* c) {
     lir::UnaryOperation op;
 
+    unsigned footprint = c->arch->argumentFootprint(stackArgumentFootprint);
+
     if (TailCalls and (flags & Compiler::TailJump)) {
       if (flags & Compiler::LongJumpOrCall) {
         if (flags & Compiler::Aligned) {
@@ -424,9 +537,9 @@ class CallEvent: public Event {
         fps = lir::NoRegister;
       }
 
-      int offset
-        = static_cast<int>(c->arch->argumentFootprint(stackArgumentFootprint))
-        - static_cast<int>(c->arch->argumentFootprint(c->parameterFootprint));
+      int offset = static_cast<int>(footprint)
+                   - static_cast<int>(
+                         c->arch->argumentFootprint(c->parameterFootprint));
 
       c->assembler->popFrameForTailCall(c->alignedFrameSize, offset, ras, fps);
     } else if (flags & Compiler::LongJumpOrCall) {
@@ -441,7 +554,7 @@ class CallEvent: public Event {
       op = lir::Call;
     }
 
-    apply(c, op, vm::TargetBytesPerWord, address->source, address->source);
+    apply(c, op, c->targetInfo.pointerSize, address->source, address->source);
 
     if (traceHandler) {
       traceHandler->handleTrace(codePromise(c, c->assembler->offset(true)),
@@ -457,23 +570,19 @@ class CallEvent: public Event {
         if (framePointerSurrogate) {
           framePointerSurrogate->source->thaw(c, framePointerSurrogate);
         }
-      } else {
-        unsigned footprint = c->arch->argumentFootprint
-          (stackArgumentFootprint);
-
-        if (footprint > c->arch->stackAlignmentInWords()) {
-          c->assembler->adjustFrame
-            (footprint - c->arch->stackAlignmentInWords());
-        }
+      } else if (footprint > c->arch->stackAlignmentInWords()) {
+        c->assembler->adjustFrame(footprint - c->arch->stackAlignmentInWords());
       }
     }
 
     clean(c, this, stackBefore, localsBefore, reads, popIndex);
 
-    if (resultSize and live(c, result)) {
-      result->addSite(c, registerSite(c, c->arch->returnLow()));
-      if (resultSize > vm::TargetBytesPerWord and live(c, result->nextWord)) {
-        result->nextWord->addSite(c, registerSite(c, c->arch->returnHigh()));
+    if (resultValue->type.size(c->targetInfo) and live(c, resultValue)) {
+      resultValue->addSite(c, registerSite(c, c->arch->returnLow()));
+      if (resultValue->type.size(c->targetInfo) > c->targetInfo.pointerSize
+          and live(c, resultValue->nextWord)) {
+        resultValue->nextWord->addSite(c,
+                                       registerSite(c, c->arch->returnHigh()));
       }
     }
   }
@@ -484,38 +593,44 @@ class CallEvent: public Event {
 
   Value* address;
   TraceHandler* traceHandler;
-  Value* result;
+  Value* resultValue;
   Value* returnAddressSurrogate;
   Value* framePointerSurrogate;
   unsigned popIndex;
   unsigned stackArgumentIndex;
   unsigned flags;
-  unsigned resultSize;
   unsigned stackArgumentFootprint;
 };
 
-void
-appendCall(Context* c, Value* address, unsigned flags,
-           TraceHandler* traceHandler, Value* result, unsigned resultSize,
-           Stack* argumentStack, unsigned argumentCount,
-           unsigned stackArgumentFootprint)
+void appendCall(Context* c,
+                Value* address,
+                ir::CallingConvention callingConvention,
+                unsigned flags,
+                TraceHandler* traceHandler,
+                Value* result,
+                util::Slice<ir::Value*> arguments)
 {
-  append(c, new(c->zone)
-         CallEvent(c, address, flags, traceHandler, result,
-                   resultSize, argumentStack, argumentCount,
-                   stackArgumentFootprint));
+  append(c,
+         new (c->zone) CallEvent(c,
+                                 address,
+                                 callingConvention,
+                                 flags,
+                                 traceHandler,
+                                 result,
+                                 arguments));
 }
 
 
 class ReturnEvent: public Event {
  public:
-  ReturnEvent(Context* c, unsigned size, Value* value):
-    Event(c), value(value)
+  ReturnEvent(Context* c, Value* value) : Event(c), value(value)
   {
     if (value) {
-      this->addReads(c, value, size,
-        SiteMask::fixedRegisterMask(c->arch->returnLow()),
-        SiteMask::fixedRegisterMask(c->arch->returnHigh()));
+      this->addReads(c,
+                     value,
+                     value->type.size(c->targetInfo),
+                     SiteMask::fixedRegisterMask(c->arch->returnLow()),
+                     SiteMask::fixedRegisterMask(c->arch->returnHigh()));
     }
   }
 
@@ -538,33 +653,50 @@ class ReturnEvent: public Event {
   Value* value;
 };
 
-void appendReturn(Context* c, unsigned size, Value* value) {
-  append(c, new(c->zone) ReturnEvent(c, size, value));
+void appendReturn(Context* c, Value* value)
+{
+  append(c, new (c->zone) ReturnEvent(c, value));
 }
 
 class MoveEvent: public Event {
  public:
-  MoveEvent(Context* c, lir::BinaryOperation type, unsigned srcSize,
-            unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue,
-            const SiteMask& srcLowMask, const SiteMask& srcHighMask):
-    Event(c), type(type), srcSize(srcSize), srcSelectSize(srcSelectSize),
-    srcValue(srcValue), dstSize(dstSize), dstValue(dstValue)
+  MoveEvent(Context* c,
+            lir::BinaryOperation op,
+            unsigned srcSize,
+            unsigned srcSelectSize,
+            Value* srcValue,
+            unsigned dstSize,
+            Value* dstValue,
+            const SiteMask& srcLowMask,
+            const SiteMask& srcHighMask)
+      : Event(c),
+        op(op),
+        srcSize(srcSize),
+        srcSelectSize(srcSelectSize),
+        srcValue(srcValue),
+        dstSize(dstSize),
+        dstValue(dstValue)
   {
     assert(c, srcSelectSize <= srcSize);
 
     bool noop = srcSelectSize >= dstSize;
-    
-    if (dstSize > vm::TargetBytesPerWord) {
+
+    if (dstSize > c->targetInfo.pointerSize) {
       dstValue->grow(c);
     }
 
-    if (srcSelectSize > vm::TargetBytesPerWord) {
+    if (srcSelectSize > c->targetInfo.pointerSize) {
       srcValue->maybeSplit(c);
     }
 
-    this->addReads(c, srcValue, srcSelectSize, srcLowMask, noop ? dstValue : 0,
-             srcHighMask,
-             noop and dstSize > vm::TargetBytesPerWord ? dstValue->nextWord : 0);
+    this->addReads(
+        c,
+        srcValue,
+        srcSelectSize,
+        srcLowMask,
+        noop ? dstValue : 0,
+        srcHighMask,
+        noop and dstSize > c->targetInfo.pointerSize ? dstValue->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -574,64 +706,85 @@ class MoveEvent: public Event {
   virtual void compile(Context* c) {
     OperandMask dst;
 
-    c->arch->planDestination
-      (type,
-       srcSelectSize,
-       OperandMask(
-         1 << srcValue->source->type(c), 
-         (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c)) << 32)
-            | static_cast<uint64_t>(srcValue->source->registerMask(c))),
-       dstSize, dst);
+    c->arch->planDestination(
+        op,
+        srcSelectSize,
+        OperandMask(
+            1 << srcValue->source->type(c),
+            (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c))
+             << 32) | static_cast<uint64_t>(srcValue->source->registerMask(c))),
+        dstSize,
+        dst);
 
     SiteMask dstLowMask = SiteMask::lowPart(dst);
     SiteMask dstHighMask = SiteMask::highPart(dst);
 
-    if (srcSelectSize >= vm::TargetBytesPerWord
-        and dstSize >= vm::TargetBytesPerWord
-        and srcSelectSize >= dstSize)
-    {
+    if (srcSelectSize >= c->targetInfo.pointerSize
+        and dstSize >= c->targetInfo.pointerSize and srcSelectSize >= dstSize) {
       if (dstValue->target) {
-        if (dstSize > vm::TargetBytesPerWord) {
-          if (srcValue->source->registerSize(c) > vm::TargetBytesPerWord) {
+        if (dstSize > c->targetInfo.pointerSize) {
+          if (srcValue->source->registerSize(c) > c->targetInfo.pointerSize) {
             apply(c, lir::Move, srcSelectSize, srcValue->source, srcValue->source,
                   dstSize, dstValue->target, dstValue->target);
             
             if (live(c, dstValue) == 0) {
               dstValue->removeSite(c, dstValue->target);
-              if (dstSize > vm::TargetBytesPerWord) {
+              if (dstSize > c->targetInfo.pointerSize) {
                 dstValue->nextWord->removeSite(c, dstValue->nextWord->target);
               }
             }
           } else {
             srcValue->nextWord->source->freeze(c, srcValue->nextWord);
 
-            maybeMove(c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, srcValue,
-                      vm::TargetBytesPerWord, dstValue, dstLowMask);
+            maybeMove(c,
+                      lir::Move,
+                      c->targetInfo.pointerSize,
+                      c->targetInfo.pointerSize,
+                      srcValue,
+                      c->targetInfo.pointerSize,
+                      dstValue,
+                      dstLowMask);
 
             srcValue->nextWord->source->thaw(c, srcValue->nextWord);
 
-            maybeMove
-              (c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, srcValue->nextWord,
-               vm::TargetBytesPerWord, dstValue->nextWord, dstHighMask);
+            maybeMove(c,
+                      lir::Move,
+                      c->targetInfo.pointerSize,
+                      c->targetInfo.pointerSize,
+                      srcValue->nextWord,
+                      c->targetInfo.pointerSize,
+                      dstValue->nextWord,
+                      dstHighMask);
           }
         } else {
-          maybeMove(c, lir::Move, vm::TargetBytesPerWord, vm::TargetBytesPerWord, srcValue,
-                    vm::TargetBytesPerWord, dstValue, dstLowMask);
+          maybeMove(c,
+                    lir::Move,
+                    c->targetInfo.pointerSize,
+                    c->targetInfo.pointerSize,
+                    srcValue,
+                    c->targetInfo.pointerSize,
+                    dstValue,
+                    dstLowMask);
         }
       } else {
         Site* low = pickSiteOrMove(c, srcValue, dstValue, 0, 0);
-        if (dstSize > vm::TargetBytesPerWord) {
+        if (dstSize > c->targetInfo.pointerSize) {
           pickSiteOrMove(c, srcValue->nextWord, dstValue->nextWord, low, 1);
         }
       }
-    } else if (srcSelectSize <= vm::TargetBytesPerWord
-               and dstSize <= vm::TargetBytesPerWord)
-    {
-      maybeMove(c, type, srcSize, srcSelectSize, srcValue, dstSize, dstValue,
+    } else if (srcSelectSize <= c->targetInfo.pointerSize
+               and dstSize <= c->targetInfo.pointerSize) {
+      maybeMove(c,
+                op,
+                srcSize,
+                srcSelectSize,
+                srcValue,
+                dstSize,
+                dstValue,
                 dstLowMask);
     } else {
-      assert(c, srcSize == vm::TargetBytesPerWord);
-      assert(c, srcSelectSize == vm::TargetBytesPerWord);
+      assert(c, srcSize == c->targetInfo.pointerSize);
+      assert(c, srcSelectSize == c->targetInfo.pointerSize);
 
       if (dstValue->nextWord->target or live(c, dstValue->nextWord)) {
         assert(c, dstLowMask.typeMask & (1 << lir::RegisterOperand));
@@ -651,8 +804,14 @@ class MoveEvent: public Event {
                   srcb, dstb, srcValue);
         }
 
-        apply(c, lir::Move, vm::TargetBytesPerWord, srcValue->source, srcValue->source,
-              vm::TargetBytesPerWord, low, low);
+        apply(c,
+              lir::Move,
+              c->targetInfo.pointerSize,
+              srcValue->source,
+              srcValue->source,
+              c->targetInfo.pointerSize,
+              low,
+              low);
 
         low->thaw(c, dstValue);
 
@@ -675,7 +834,14 @@ class MoveEvent: public Event {
                   srcb, dstb, dstValue, dstValue->nextWord);
         }
 
-        apply(c, lir::Move, vm::TargetBytesPerWord, low, low, dstSize, low, high);
+        apply(c,
+              lir::Move,
+              c->targetInfo.pointerSize,
+              low,
+              low,
+              dstSize,
+              low,
+              high);
 
         high->thaw(c, dstValue->nextWord);
 
@@ -690,7 +856,7 @@ class MoveEvent: public Event {
     }
   }
 
-  lir::BinaryOperation type;
+  lir::BinaryOperation op;
   unsigned srcSize;
   unsigned srcSelectSize;
   Value* srcValue;
@@ -698,23 +864,31 @@ class MoveEvent: public Event {
   Value* dstValue;
 };
 
-void
-appendMove(Context* c, lir::BinaryOperation type, unsigned srcSize,
-           unsigned srcSelectSize, Value* srcValue, unsigned dstSize, Value* dstValue)
+void appendMove(Context* c,
+                lir::BinaryOperation op,
+                unsigned srcSize,
+                unsigned srcSelectSize,
+                Value* srcValue,
+                unsigned dstSize,
+                Value* dstValue)
 {
   bool thunk;
   OperandMask src;
 
-  c->arch->planSource
-    (type, srcSelectSize, src, dstSize, &thunk);
+  c->arch->planSource(op, srcSelectSize, src, dstSize, &thunk);
 
   assert(c, not thunk);
 
-  append(c, new(c->zone)
-         MoveEvent
-         (c, type, srcSize, srcSelectSize, srcValue, dstSize, dstValue,
-          SiteMask::lowPart(src),
-          SiteMask::highPart(src)));
+  append(c,
+         new (c->zone) MoveEvent(c,
+                                 op,
+                                 srcSize,
+                                 srcSelectSize,
+                                 srcValue,
+                                 dstSize,
+                                 dstValue,
+                                 SiteMask::lowPart(src),
+                                 SiteMask::highPart(src)));
 }
 
 
@@ -722,7 +896,7 @@ void
 freezeSource(Context* c, unsigned size, Value* v)
 {
   v->source->freeze(c, v);
-  if (size > vm::TargetBytesPerWord) {
+  if (size > c->targetInfo.pointerSize) {
     v->nextWord->source->freeze(c, v->nextWord);
   }
 }
@@ -731,7 +905,7 @@ void
 thawSource(Context* c, unsigned size, Value* v)
 {
   v->source->thaw(c, v);
-  if (size > vm::TargetBytesPerWord) {
+  if (size > c->targetInfo.pointerSize) {
     v->nextWord->source->thaw(c, v->nextWord);
   }
 }
@@ -789,29 +963,40 @@ Site* getTarget(Context* c, Value* value, Value* result, const SiteMask& resultM
 
 class CombineEvent: public Event {
  public:
-  CombineEvent(Context* c, lir::TernaryOperation type,
-               unsigned firstSize, Value* firstValue,
-               unsigned secondSize, Value* secondValue,
-               unsigned resultSize, Value* resultValue,
+  CombineEvent(Context* c,
+               lir::TernaryOperation op,
+               Value* firstValue,
+               Value* secondValue,
+               Value* resultValue,
                const SiteMask& firstLowMask,
                const SiteMask& firstHighMask,
                const SiteMask& secondLowMask,
-               const SiteMask& secondHighMask):
-    Event(c), type(type), firstSize(firstSize), firstValue(firstValue),
-    secondSize(secondSize), secondValue(secondValue), resultSize(resultSize),
-    resultValue(resultValue)
+               const SiteMask& secondHighMask)
+      : Event(c),
+        op(op),
+        firstValue(firstValue),
+        secondValue(secondValue),
+        resultValue(resultValue)
   {
-    this->addReads(c, firstValue, firstSize, firstLowMask, firstHighMask);
+    this->addReads(c,
+                   firstValue,
+                   firstValue->type.size(c->targetInfo),
+                   firstLowMask,
+                   firstHighMask);
 
-    if (resultSize > vm::TargetBytesPerWord) {
+    if (resultValue->type.size(c->targetInfo) > c->targetInfo.pointerSize) {
       resultValue->grow(c);
     }
 
-    bool condensed = c->arch->alwaysCondensed(type);
+    bool condensed = c->arch->alwaysCondensed(op);
 
-    this->addReads(c, secondValue, secondSize,
-             secondLowMask, condensed ? resultValue : 0,
-             secondHighMask, condensed ? resultValue->nextWord : 0);
+    this->addReads(c,
+                   secondValue,
+                   secondValue->type.size(c->targetInfo),
+                   secondLowMask,
+                   condensed ? resultValue : 0,
+                   secondHighMask,
+                   condensed ? resultValue->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -829,147 +1014,182 @@ class CombineEvent: public Event {
     // }
 
     assert(c, secondValue->source->type(c) == secondValue->nextWord->source->type(c));
-    
-    freezeSource(c, firstSize, firstValue);
-    
+
+    freezeSource(c, firstValue->type.size(c->targetInfo), firstValue);
+
     OperandMask cMask;
 
-    c->arch->planDestination
-      (type,
-       firstSize,
-       OperandMask(
-          1 << firstValue->source->type(c),
-          (static_cast<uint64_t>(firstValue->nextWord->source->registerMask(c)) << 32)
+    c->arch->planDestination(
+        op,
+        firstValue->type.size(c->targetInfo),
+        OperandMask(
+            1 << firstValue->source->type(c),
+            (static_cast<uint64_t>(
+                 firstValue->nextWord->source->registerMask(c))
+             << 32)
             | static_cast<uint64_t>(firstValue->source->registerMask(c))),
-       secondSize,
-       OperandMask(
-          1 << secondValue->source->type(c),
-          (static_cast<uint64_t>(secondValue->nextWord->source->registerMask(c)) << 32)
+        secondValue->type.size(c->targetInfo),
+        OperandMask(
+            1 << secondValue->source->type(c),
+            (static_cast<uint64_t>(
+                 secondValue->nextWord->source->registerMask(c))
+             << 32)
             | static_cast<uint64_t>(secondValue->source->registerMask(c))),
-       resultSize,
-       cMask);
+        resultValue->type.size(c->targetInfo),
+        cMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(cMask);
     SiteMask resultHighMask = SiteMask::highPart(cMask);
 
     Site* low = getTarget(c, secondValue, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
-    Site* high
-      = (resultSize > lowSize
-         ? getTarget(c, secondValue->nextWord, resultValue->nextWord, resultHighMask)
-         : low);
+    Site* high = (resultValue->type.size(c->targetInfo) > lowSize
+                      ? getTarget(c,
+                                  secondValue->nextWord,
+                                  resultValue->nextWord,
+                                  resultHighMask)
+                      : low);
 
 //     fprintf(stderr, "combine %p:%p and %p:%p into %p:%p\n",
 //             firstValue, firstValue->nextWord,
 //             secondValue, secondValue->nextWord,
 //             resultValue, resultValue->nextWord);
 
-    apply(c, type,
-          firstSize, firstValue->source, firstValue->nextWord->source,
-          secondSize, secondValue->source, secondValue->nextWord->source,
-          resultSize, low, high);
+    apply(c,
+          op,
+          firstValue->type.size(c->targetInfo),
+          firstValue->source,
+          firstValue->nextWord->source,
+          secondValue->type.size(c->targetInfo),
+          secondValue->source,
+          secondValue->nextWord->source,
+          resultValue->type.size(c->targetInfo),
+          low,
+          high);
 
-    thawSource(c, firstSize, firstValue);
+    thawSource(c, firstValue->type.size(c->targetInfo), firstValue);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
     }
 
     low->thaw(c, secondValue);
-    if (resultSize > lowSize) {
+    if (resultValue->type.size(c->targetInfo) > lowSize) {
       high->thaw(c, secondValue->nextWord);
     }
 
     if (live(c, resultValue)) {
       resultValue->addSite(c, low);
-      if (resultSize > lowSize and live(c, resultValue->nextWord)) {
+      if (resultValue->type.size(c->targetInfo) > lowSize
+          and live(c, resultValue->nextWord)) {
         resultValue->nextWord->addSite(c, high);
       }
     }
   }
 
-  lir::TernaryOperation type;
-  unsigned firstSize;
+  lir::TernaryOperation op;
   Value* firstValue;
-  unsigned secondSize;
   Value* secondValue;
-  unsigned resultSize;
   Value* resultValue;
 };
 
-void
-appendCombine(Context* c, lir::TernaryOperation type,
-              unsigned firstSize, Value* firstValue,
-              unsigned secondSize, Value* secondValue,
-              unsigned resultSize, Value* resultValue)
+void appendCombine(Context* c,
+                   lir::TernaryOperation op,
+                   Value* firstValue,
+                   Value* secondValue,
+                   Value* resultValue)
 {
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
-
-  c->arch->planSource(type,
-                      firstSize, firstMask,
-                      secondSize, secondMask,
-                      resultSize,
+  c->arch->planSource(op,
+                      firstValue->type.size(c->targetInfo),
+                      firstMask,
+                      secondValue->type.size(c->targetInfo),
+                      secondMask,
+                      resultValue->type.size(c->targetInfo),
                       &thunk);
 
   if (thunk) {
-    Stack* oldStack = c->stack;
+    const size_t MaxValueCount = 6;
+    FixedSliceStack<ir::Value*, MaxValueCount> slice;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
-    intptr_t handler = c->client->getThunk
-      (type, firstSize, resultSize, &threadParameter);
+    intptr_t handler
+        = c->client->getThunk(op,
+                              firstValue->type.size(c->targetInfo),
+                              resultValue->type.size(c->targetInfo),
+                              &threadParameter);
 
-    unsigned stackSize = ceilingDivide(secondSize, vm::TargetBytesPerWord)
-      + ceilingDivide(firstSize, vm::TargetBytesPerWord);
+    unsigned stackSize = ceilingDivide(secondValue->type.size(c->targetInfo),
+                                       c->targetInfo.pointerSize)
+                         + ceilingDivide(firstValue->type.size(c->targetInfo),
+                                         c->targetInfo.pointerSize);
 
-    compiler::push(c, ceilingDivide(secondSize, vm::TargetBytesPerWord), secondValue);
-    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue);
+    slicePush(c,
+              ceilingDivide(secondValue->type.size(c->targetInfo),
+                            c->targetInfo.pointerSize),
+              secondValue,
+              stackBase,
+              slice);
+    slicePush(c,
+              ceilingDivide(firstValue->type.size(c->targetInfo),
+                            c->targetInfo.pointerSize),
+              firstValue,
+              stackBase,
+              slice);
 
     if (threadParameter) {
       ++ stackSize;
 
-      compiler::push(c, 1, register_(c, c->arch->thread()));
+      slicePush(c, 1, threadRegister(c), stackBase, slice);
     }
 
-    Stack* argumentStack = c->stack;
-    c->stack = oldStack;
-
-    appendCall
-      (c, value(c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, resultValue,
-       resultSize, argumentStack, stackSize, 0);
+    appendCall(c,
+               value(c, ir::Type::addr(), constantSite(c, handler)),
+               ir::NativeCallingConvention,
+               0,
+               0,
+               resultValue,
+               slice);
   } else {
-    append
-      (c, new(c->zone)
-       CombineEvent
-       (c, type,
-        firstSize, firstValue,
-        secondSize, secondValue,
-        resultSize, resultValue,
-        SiteMask::lowPart(firstMask),
-        SiteMask::highPart(firstMask),
-        SiteMask::lowPart(secondMask),
-        SiteMask::highPart(secondMask)));
+    append(c,
+           new (c->zone) CombineEvent(c,
+                                      op,
+                                      firstValue,
+                                      secondValue,
+                                      resultValue,
+                                      SiteMask::lowPart(firstMask),
+                                      SiteMask::highPart(firstMask),
+                                      SiteMask::lowPart(secondMask),
+                                      SiteMask::highPart(secondMask)));
   }
 }
 
 class TranslateEvent: public Event {
  public:
-  TranslateEvent(Context* c, lir::BinaryOperation type, unsigned valueSize,
-                 Value* value, unsigned resultSize, Value* resultValue,
+  TranslateEvent(Context* c,
+                 lir::BinaryOperation op,
+                 Value* firstValue,
+                 Value* resultValue,
                  const SiteMask& valueLowMask,
-                 const SiteMask& valueHighMask):
-    Event(c), type(type), valueSize(valueSize), resultSize(resultSize),
-    value(value), resultValue(resultValue)
+                 const SiteMask& valueHighMask)
+      : Event(c), op(op), firstValue(firstValue), resultValue(resultValue)
   {
-    bool condensed = c->arch->alwaysCondensed(type);
+    bool condensed = c->arch->alwaysCondensed(op);
 
-    if (resultSize > vm::TargetBytesPerWord) {
+    if (resultValue->type.size(c->targetInfo) > c->targetInfo.pointerSize) {
       resultValue->grow(c);
     }
 
-    this->addReads(c, value, valueSize, valueLowMask, condensed ? resultValue : 0,
-             valueHighMask, condensed ? resultValue->nextWord : 0);
+    this->addReads(c,
+                   firstValue,
+                   firstValue->type.size(c->targetInfo),
+                   valueLowMask,
+                   condensed ? resultValue : 0,
+                   valueHighMask,
+                   condensed ? resultValue->nextWord : 0);
   }
 
   virtual const char* name() {
@@ -977,90 +1197,122 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assert(c, value->source->type(c) == value->nextWord->source->type(c));
+    assert(c, firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
     OperandMask bMask;
-    
-    c->arch->planDestination
-      (type,
-       valueSize,
-       OperandMask(
-          1 << value->source->type(c),
-          (static_cast<uint64_t>(value->nextWord->source->registerMask(c)) << 32)
-            | static_cast<uint64_t>(value->source->registerMask(c))),
-       resultSize,
-       bMask);
+
+    c->arch->planDestination(
+        op,
+        firstValue->type.size(c->targetInfo),
+        OperandMask(
+            1 << firstValue->source->type(c),
+            (static_cast<uint64_t>(
+                 firstValue->nextWord->source->registerMask(c))
+             << 32)
+            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+        resultValue->type.size(c->targetInfo),
+        bMask);
 
     SiteMask resultLowMask = SiteMask::lowPart(bMask);
     SiteMask resultHighMask = SiteMask::highPart(bMask);
     
-    Site* low = getTarget(c, value, resultValue, resultLowMask);
+    Site* low = getTarget(c, firstValue, resultValue, resultLowMask);
     unsigned lowSize = low->registerSize(c);
-    Site* high
-      = (resultSize > lowSize
-         ? getTarget(c, value->nextWord, resultValue->nextWord, resultHighMask)
-         : low);
+    Site* high = (resultValue->type.size(c->targetInfo) > lowSize
+                      ? getTarget(c,
+                                  firstValue->nextWord,
+                                  resultValue->nextWord,
+                                  resultHighMask)
+                      : low);
 
-    apply(c, type, valueSize, value->source, value->nextWord->source,
-          resultSize, low, high);
+    apply(c,
+          op,
+          firstValue->type.size(c->targetInfo),
+          firstValue->source,
+          firstValue->nextWord->source,
+          resultValue->type.size(c->targetInfo),
+          low,
+          high);
 
     for (Read* r = reads; r; r = r->eventNext) {
       popRead(c, this, r->value);
     }
 
-    low->thaw(c, value);
-    if (resultSize > lowSize) {
-      high->thaw(c, value->nextWord);
+    low->thaw(c, firstValue);
+    if (resultValue->type.size(c->targetInfo) > lowSize) {
+      high->thaw(c, firstValue->nextWord);
     }
 
     if (live(c, resultValue)) {
       resultValue->addSite(c, low);
-      if (resultSize > lowSize and live(c, resultValue->nextWord)) {
+      if (resultValue->type.size(c->targetInfo) > lowSize
+          and live(c, resultValue->nextWord)) {
         resultValue->nextWord->addSite(c, high);
       }
     }
   }
 
-  lir::BinaryOperation type;
-  unsigned valueSize;
-  unsigned resultSize;
-  Value* value;
+  lir::BinaryOperation op;
+  Value* firstValue;
   Value* resultValue;
   Read* resultRead;
   SiteMask resultLowMask;
   SiteMask resultHighMask;
 };
 
-void
-appendTranslate(Context* c, lir::BinaryOperation type, unsigned firstSize,
-                Value* firstValue, unsigned resultSize, Value* resultValue)
+void appendTranslate(Context* c,
+                     lir::BinaryOperation op,
+                     Value* firstValue,
+                     Value* resultValue)
 {
+  assert(c,
+         firstValue->type.size(c->targetInfo)
+         == firstValue->type.size(c->targetInfo));
+  assert(c,
+         resultValue->type.size(c->targetInfo)
+         == resultValue->type.size(c->targetInfo));
+
   bool thunk;
   OperandMask first;
 
-  c->arch->planSource(type, firstSize, first,
-                resultSize, &thunk);
+  c->arch->planSource(op,
+                      firstValue->type.size(c->targetInfo),
+                      first,
+                      resultValue->type.size(c->targetInfo),
+                      &thunk);
 
   if (thunk) {
-    Stack* oldStack = c->stack;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
+    FixedSliceStack<ir::Value*, 2> slice;
 
-    compiler::push(c, ceilingDivide(firstSize, vm::TargetBytesPerWord), firstValue);
+    slicePush(c,
+              ceilingDivide(firstValue->type.size(c->targetInfo),
+                            c->targetInfo.pointerSize),
+              firstValue,
+              stackBase,
+              slice);
 
-    Stack* argumentStack = c->stack;
-    c->stack = oldStack;
-
-    appendCall
-      (c, value
-       (c, lir::ValueGeneral, constantSite
-        (c, c->client->getThunk(type, firstSize, resultSize))),
-       0, 0, resultValue, resultSize, argumentStack,
-       ceilingDivide(firstSize, vm::TargetBytesPerWord), 0);
+    appendCall(c,
+               value(c,
+                     ir::Type::addr(),
+                     constantSite(c,
+                                  c->client->getThunk(
+                                      op,
+                                      firstValue->type.size(c->targetInfo),
+                                      resultValue->type.size(c->targetInfo)))),
+               ir::NativeCallingConvention,
+               0,
+               0,
+               resultValue,
+               slice);
   } else {
-    append(c, new(c->zone)
-           TranslateEvent
-           (c, type, firstSize, firstValue, resultSize, resultValue,
-            SiteMask::lowPart(first),
-            SiteMask::highPart(first)));
+    append(c,
+           new (c->zone) TranslateEvent(c,
+                                        op,
+                                        firstValue,
+                                        resultValue,
+                                        SiteMask::lowPart(first),
+                                        SiteMask::highPart(first)));
   }
 }
 
@@ -1150,7 +1402,7 @@ class MemoryEvent: public Event {
 
     popRead(c, this, base);
     if (index) {
-      if (vm::TargetBytesPerWord == 8 and indexRegister != lir::NoRegister) {
+      if (c->targetInfo.pointerSize == 8 and indexRegister != lir::NoRegister) {
         apply(c, lir::Move, 4, index->source, index->source,
               8, index->source, index->source);
       }
@@ -1207,11 +1459,13 @@ unordered(double a, double b)
   return not (a >= b or a < b);
 }
 
-bool
-shouldJump(Context* c, lir::TernaryOperation type, unsigned size, int64_t b,
-           int64_t a)
+bool shouldJump(Context* c,
+                lir::TernaryOperation op,
+                unsigned size,
+                int64_t b,
+                int64_t a)
 {
-  switch (type) {
+  switch (op) {
   case lir::JumpIfEqual:
     return a == b;
 
@@ -1269,10 +1523,9 @@ shouldJump(Context* c, lir::TernaryOperation type, unsigned size, int64_t b,
   }
 }
 
-lir::TernaryOperation
-thunkBranch(Context* c, lir::TernaryOperation type)
+lir::TernaryOperation thunkBranch(Context* c, lir::TernaryOperation op)
 {
-  switch (type) {
+  switch (op) {
   case lir::JumpIfFloatEqual:
     return lir::JumpIfEqual;
 
@@ -1302,23 +1555,40 @@ thunkBranch(Context* c, lir::TernaryOperation type)
 
 class BranchEvent: public Event {
  public:
-  BranchEvent(Context* c, lir::TernaryOperation type, unsigned size,
-              Value* firstValue, Value* secondValue, Value* addressValue,
+  BranchEvent(Context* c,
+              lir::TernaryOperation op,
+              Value* firstValue,
+              Value* secondValue,
+              Value* addressValue,
               const SiteMask& firstLowMask,
               const SiteMask& firstHighMask,
               const SiteMask& secondLowMask,
-              const SiteMask& secondHighMask):
-    Event(c), type(type), size(size), firstValue(firstValue), secondValue(secondValue),
-    addressValue(addressValue)
+              const SiteMask& secondHighMask)
+      : Event(c),
+        op(op),
+        firstValue(firstValue),
+        secondValue(secondValue),
+        addressValue(addressValue)
   {
-    this->addReads(c, firstValue, size, firstLowMask, firstHighMask);
-    this->addReads(c, secondValue, size, secondLowMask, secondHighMask);
+    this->addReads(c,
+                   firstValue,
+                   firstValue->type.size(c->targetInfo),
+                   firstLowMask,
+                   firstHighMask);
+    this->addReads(c,
+                   secondValue,
+                   firstValue->type.size(c->targetInfo),
+                   secondLowMask,
+                   secondHighMask);
 
     OperandMask dstMask;
-    c->arch->planDestination(type,
-      size, OperandMask(0, 0),
-      size, OperandMask(0, 0),
-      vm::TargetBytesPerWord, dstMask);
+    c->arch->planDestination(op,
+                             firstValue->type.size(c->targetInfo),
+                             OperandMask(0, 0),
+                             firstValue->type.size(c->targetInfo),
+                             OperandMask(0, 0),
+                             c->targetInfo.pointerSize,
+                             dstMask);
 
     this->addRead(c, addressValue, SiteMask::lowPart(dstMask));
   }
@@ -1340,28 +1610,44 @@ class BranchEvent: public Event {
         int64_t firstConstVal = firstConstant->value->value();
         int64_t secondConstVal = secondConstant->value->value();
 
-        if (size > vm::TargetBytesPerWord) {
+        if (firstValue->type.size(c->targetInfo) > c->targetInfo.pointerSize) {
           firstConstVal |= findConstantSite
             (c, firstValue->nextWord)->value->value() << 32;
           secondConstVal |= findConstantSite
             (c, secondValue->nextWord)->value->value() << 32;
         }
 
-        if (shouldJump(c, type, size, firstConstVal, secondConstVal)) {
-          apply(c, lir::Jump, vm::TargetBytesPerWord, addressValue->source, addressValue->source);
+        if (shouldJump(c,
+                       op,
+                       firstValue->type.size(c->targetInfo),
+                       firstConstVal,
+                       secondConstVal)) {
+          apply(c,
+                lir::Jump,
+                c->targetInfo.pointerSize,
+                addressValue->source,
+                addressValue->source);
         }      
       } else {
-        freezeSource(c, size, firstValue);
-        freezeSource(c, size, secondValue);
-        freezeSource(c, vm::TargetBytesPerWord, addressValue);
+        freezeSource(c, firstValue->type.size(c->targetInfo), firstValue);
+        freezeSource(c, firstValue->type.size(c->targetInfo), secondValue);
+        freezeSource(c, c->targetInfo.pointerSize, addressValue);
 
-        apply(c, type, size, firstValue->source, firstValue->nextWord->source,
-              size, secondValue->source, secondValue->nextWord->source,
-              vm::TargetBytesPerWord, addressValue->source, addressValue->source);
+        apply(c,
+              op,
+              firstValue->type.size(c->targetInfo),
+              firstValue->source,
+              firstValue->nextWord->source,
+              firstValue->type.size(c->targetInfo),
+              secondValue->source,
+              secondValue->nextWord->source,
+              c->targetInfo.pointerSize,
+              addressValue->source,
+              addressValue->source);
 
-        thawSource(c, vm::TargetBytesPerWord, addressValue);
-        thawSource(c, size, secondValue);
-        thawSource(c, size, firstValue);
+        thawSource(c, c->targetInfo.pointerSize, addressValue);
+        thawSource(c, firstValue->type.size(c->targetInfo), secondValue);
+        thawSource(c, firstValue->type.size(c->targetInfo), firstValue);
       }
     }
 
@@ -1372,59 +1658,82 @@ class BranchEvent: public Event {
 
   virtual bool isBranch() { return true; }
 
-  lir::TernaryOperation type;
-  unsigned size;
+  lir::TernaryOperation op;
   Value* firstValue;
   Value* secondValue;
   Value* addressValue;
 };
 
-void
-appendBranch(Context* c, lir::TernaryOperation type, unsigned size, Value* firstValue,
-             Value* secondValue, Value* addressValue)
+void appendBranch(Context* c,
+                  lir::TernaryOperation op,
+                  Value* firstValue,
+                  Value* secondValue,
+                  Value* addressValue)
 {
   bool thunk;
   OperandMask firstMask;
   OperandMask secondMask;
 
-  c->arch->planSource(type,
-    size, firstMask,
-    size, secondMask,
-    vm::TargetBytesPerWord, &thunk);
+  c->arch->planSource(op,
+                      firstValue->type.size(c->targetInfo),
+                      firstMask,
+                      firstValue->type.size(c->targetInfo),
+                      secondMask,
+                      c->targetInfo.pointerSize,
+                      &thunk);
 
   if (thunk) {
-    Stack* oldStack = c->stack;
+    const size_t MaxValueCount = 4;
+    FixedSliceStack<ir::Value*, MaxValueCount> slice;
+    size_t stackBase = c->stack ? c->stack->index + 1 : 0;
 
     bool threadParameter;
-    intptr_t handler = c->client->getThunk
-      (type, size, size, &threadParameter);
+    intptr_t handler = c->client->getThunk(op,
+                                           firstValue->type.size(c->targetInfo),
+                                           firstValue->type.size(c->targetInfo),
+                                           &threadParameter);
 
     assert(c, not threadParameter);
 
-    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), secondValue);
-    compiler::push(c, ceilingDivide(size, vm::TargetBytesPerWord), firstValue);
+    slicePush(c,
+              ceilingDivide(firstValue->type.size(c->targetInfo),
+                            c->targetInfo.pointerSize),
+              secondValue,
+              stackBase,
+              slice);
+    slicePush(c,
+              ceilingDivide(firstValue->type.size(c->targetInfo),
+                            c->targetInfo.pointerSize),
+              firstValue,
+              stackBase,
+              slice);
 
-    Stack* argumentStack = c->stack;
-    c->stack = oldStack;
+    Value* result = value(c, ir::Type::addr());
+    appendCall(c,
+               value(c, ir::Type::addr(), constantSite(c, handler)),
+               ir::NativeCallingConvention,
+               0,
+               0,
+               result,
+               slice);
 
-    Value* result = value(c, lir::ValueGeneral);
-    appendCall
-      (c, value
-       (c, lir::ValueGeneral, constantSite(c, handler)), 0, 0, result, 4,
-       argumentStack, ceilingDivide(size, vm::TargetBytesPerWord) * 2, 0);
-
-    appendBranch(c, thunkBranch(c, type), 4, value
-                 (c, lir::ValueGeneral, constantSite(c, static_cast<int64_t>(0))),
-                 result, addressValue);
+    appendBranch(
+        c,
+        thunkBranch(c, op),
+        value(c, ir::Type::addr(), constantSite(c, static_cast<int64_t>(0))),
+        result,
+        addressValue);
   } else {
-    append
-      (c, new(c->zone)
-       BranchEvent
-       (c, type, size, firstValue, secondValue, addressValue,
-        SiteMask::lowPart(firstMask),
-        SiteMask::highPart(firstMask),
-        SiteMask::lowPart(secondMask),
-        SiteMask::highPart(secondMask)));
+    append(c,
+           new (c->zone) BranchEvent(c,
+                                     op,
+                                     firstValue,
+                                     secondValue,
+                                     addressValue,
+                                     SiteMask::lowPart(firstMask),
+                                     SiteMask::highPart(firstMask),
+                                     SiteMask::lowPart(secondMask),
+                                     SiteMask::highPart(secondMask)));
   }
 }
 
@@ -1466,14 +1775,16 @@ clean(Context* c, Event* e, Stack* stack, Local* locals, Read* reads,
 
 class JumpEvent: public Event {
  public:
-  JumpEvent(Context* c, lir::UnaryOperation type, Value* address, bool exit,
-            bool cleanLocals):
-    Event(c), type(type), address(address), exit(exit),
-    cleanLocals(cleanLocals)
+  JumpEvent(Context* c,
+            lir::UnaryOperation op,
+            Value* address,
+            bool exit,
+            bool cleanLocals)
+      : Event(c), op(op), address(address), exit(exit), cleanLocals(cleanLocals)
   {
     bool thunk;
     OperandMask mask;
-    c->arch->plan(type, vm::TargetBytesPerWord, mask, &thunk);
+    c->arch->plan(op, c->targetInfo.pointerSize, mask, &thunk);
 
     assert(c, not thunk);
 
@@ -1486,7 +1797,7 @@ class JumpEvent: public Event {
 
   virtual void compile(Context* c) {
     if (not this->isUnreachable()) {
-      apply(c, type, vm::TargetBytesPerWord, address->source, address->source);
+      apply(c, op, c->targetInfo.pointerSize, address->source, address->source);
     }
 
     for (Read* r = reads; r; r = r->eventNext) {
@@ -1507,14 +1818,19 @@ class JumpEvent: public Event {
     return exit or this->isUnreachable();
   }
 
-  lir::UnaryOperation type;
+  lir::UnaryOperation op;
   Value* address;
   bool exit;
   bool cleanLocals;
 };
 
-void appendJump(Context* c, lir::UnaryOperation type, Value* address, bool exit, bool cleanLocals) {
-  append(c, new(c->zone) JumpEvent(c, type, address, exit, cleanLocals));
+void appendJump(Context* c,
+                lir::UnaryOperation op,
+                Value* address,
+                bool exit,
+                bool cleanLocals)
+{
+  append(c, new (c->zone) JumpEvent(c, op, address, exit, cleanLocals));
 }
 
 class BoundsCheckEvent: public Event {
@@ -1542,17 +1858,26 @@ class BoundsCheckEvent: public Event {
       if (constant->value->value() < 0) {
         lir::Constant handlerConstant(resolvedPromise(c, handler));
         a->apply(lir::Call,
-          OperandInfo(vm::TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
+                 OperandInfo(c->targetInfo.pointerSize,
+                             lir::ConstantOperand,
+                             &handlerConstant));
       }
     } else {
       outOfBoundsPromise = compiler::codePromise(c, static_cast<Promise*>(0));
 
       ConstantSite zero(resolvedPromise(c, 0));
       ConstantSite oob(outOfBoundsPromise);
-      apply(c, lir::JumpIfLess,
-        4, &zero, &zero,
-        4, index->source, index->source,
-        vm::TargetBytesPerWord, &oob, &oob);
+      apply(c,
+            lir::JumpIfLess,
+            4,
+            &zero,
+            &zero,
+            4,
+            index->source,
+            index->source,
+            c->targetInfo.pointerSize,
+            &oob,
+            &oob);
     }
 
     if (constant == 0 or constant->value->value() >= 0) {
@@ -1563,15 +1888,22 @@ class BoundsCheckEvent: public Event {
 
       CodePromise* nextPromise = compiler::codePromise(c, static_cast<Promise*>(0));
 
-      freezeSource(c, vm::TargetBytesPerWord, index);
+      freezeSource(c, c->targetInfo.pointerSize, index);
 
       ConstantSite next(nextPromise);
-      apply(c, lir::JumpIfGreater,
-        4, index->source,
-        index->source, 4, &length,
-        &length, vm::TargetBytesPerWord, &next, &next);
+      apply(c,
+            lir::JumpIfGreater,
+            4,
+            index->source,
+            index->source,
+            4,
+            &length,
+            &length,
+            c->targetInfo.pointerSize,
+            &next,
+            &next);
 
-      thawSource(c, vm::TargetBytesPerWord, index);
+      thawSource(c, c->targetInfo.pointerSize, index);
 
       if (constant == 0) {
         outOfBoundsPromise->offset = a->offset();
@@ -1579,7 +1911,9 @@ class BoundsCheckEvent: public Event {
 
       lir::Constant handlerConstant(resolvedPromise(c, handler));
       a->apply(lir::Call,
-        OperandInfo(vm::TargetBytesPerWord, lir::ConstantOperand, &handlerConstant));
+               OperandInfo(c->targetInfo.pointerSize,
+                           lir::ConstantOperand,
+                           &handlerConstant));
 
       nextPromise->offset = a->offset();
     }

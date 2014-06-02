@@ -253,6 +253,16 @@ public class Subroutine {
     return true;
   }
 
+  private static int test6(boolean predicate) {
+    try {
+      if (predicate) {
+        return -2;
+      }
+    } finally {
+      return new Throwable().getStackTrace()[0].getLineNumber();
+    }
+  }
+
   public static void main(String[] args) throws Exception {
     test(false, false);
     test(false, true);
@@ -311,6 +321,15 @@ public class Subroutine {
       (null, new Object[0]);
 
     stackMap(new Object());
+
+    {
+      int f = test6(false);
+      int t = test6(true);
+      System.out.println("line: " + f);
+      expect(f > 0);
+      expect(f == t);
+    }
+
   }
 
   private static class DummyException extends RuntimeException { }
