@@ -15,6 +15,8 @@
 #  define __STDC_CONSTANT_MACROS
 #endif
 
+#include <new>
+
 #include "stdlib.h"
 #include "stdarg.h"
 #include "stddef.h"
@@ -208,7 +210,6 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
 #ifdef _MSC_VER
 #  pragma warning( disable : 4291 )
 #endif
-inline void* operator new(size_t, void* p) throw() { return p; }
 
 namespace vm {
 
