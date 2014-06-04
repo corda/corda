@@ -49,8 +49,8 @@ void
 join(Thread* t, Thread* o)
 {
   if (t != o) {
-    assert(t, o->state != Thread::JoinedState);
-    assert(t, (o->flags & Thread::SystemFlag) == 0);
+    assertT(t, o->state != Thread::JoinedState);
+    assertT(t, (o->flags & Thread::SystemFlag) == 0);
     if (o->flags & Thread::JoinFlag) {
       o->systemThread->join();
     }
@@ -508,7 +508,7 @@ postVisit(Thread* t, Heap::Visitor* v)
   Machine* m = t->m;
   bool major = m->heap->collectionType() == Heap::MajorCollection;
 
-  assert(t, m->finalizeQueue == 0);
+  assertT(t, m->finalizeQueue == 0);
 
   m->heap->postVisit();
 
@@ -796,7 +796,7 @@ parseUtf8NonAscii(Thread* t, AbstractStream& s, object bytesSoFar,
       if (a & 0x20) {
   // 3 bytes
   si += 2;
-  assert(t, si < length);
+  assertT(t, si < length);
         unsigned b = readByte(s, &byteB);
   unsigned c = s.read1();
   charArrayBody(t, value, vi++)
@@ -804,7 +804,7 @@ parseUtf8NonAscii(Thread* t, AbstractStream& s, object bytesSoFar,
       } else {
   // 2 bytes
   ++ si;
-  assert(t, si < length);
+  assertT(t, si < length);
         unsigned b = readByte(s, &byteB);
 
   if (a == 0xC0 and b == 0x80) {
@@ -846,7 +846,7 @@ parseUtf8(Thread* t, AbstractStream& s, unsigned length)
 
   if (a == 0xC0 and b == 0x80) {
           ++ si;
-          assert(t, si < length);
+          assertT(t, si < length);
     byteArrayBody(t, value, vi++) = 0;
   } else {
           return parseUtf8NonAscii(t, s, value, vi, si, a, b);
@@ -2281,7 +2281,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
       for (HashMapIterator it(t, virtualMap); it.hasMore();) {
         object method = tripleFirst(t, it.next());
-        assert(t, arrayBody(t, vtable, methodOffset(t, method)) == 0);
+        assertT(t, arrayBody(t, vtable, methodOffset(t, method)) == 0);
         set(t, vtable, ArrayBody + (methodOffset(t, method) * BytesPerWord),
             method);
         ++ i;
@@ -2340,12 +2340,12 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         }
       }
 
-      assert(t, arrayLength(t, newMethodTable) == mti);
+      assertT(t, arrayLength(t, newMethodTable) == mti);
 
       set(t, reinterpret_cast<object>(class_), ClassMethodTable, newMethodTable);
     }
 
-    assert(t, arrayLength(t, vtable) == i);
+    assertT(t, arrayLength(t, vtable) == i);
 
     set(t, reinterpret_cast<object>(class_), ClassVirtualTable, vtable);
   }
@@ -2365,7 +2365,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
             object method = arrayBody(t, ivtable, j);
             method = hashMapFind
               (t, virtualMap, method, methodHash, methodEqual);
-            assert(t, method);
+            assertT(t, method);
               
             set(t, vtable, ArrayBody + (j * BytesPerWord), method);
           }
@@ -2980,7 +2980,7 @@ class HeapClient: public Heap::Client {
     Thread* t = m->rootThread;
 
     object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
-    assert(t, not objectFixed(t, o));
+    assertT(t, not objectFixed(t, o));
 
     unsigned n = baseSize(t, o, cast<GcClass>(t, static_cast<object>
                           (m->heap->follow(objectClass(t, o)))));
@@ -2996,7 +2996,7 @@ class HeapClient: public Heap::Client {
     Thread* t = m->rootThread;
 
     object src = static_cast<object>(m->heap->follow(maskAlignedPointer(srcp)));
-    assert(t, not objectFixed(t, src));
+    assertT(t, not objectFixed(t, src));
 
     GcClass* class_ = cast<GcClass>(t, static_cast<object>
       (m->heap->follow(objectClass(t, src))));
@@ -3379,8 +3379,8 @@ Thread::init()
   memset(backupHeap, 0, ThreadBackupHeapSizeInBytes);
 
   if (parent == 0) {
-    assert(this, m->rootThread == 0);
-    assert(this, javaThread == 0);
+    assertT(this, m->rootThread == 0);
+    assertT(this, javaThread == 0);
 
     m->rootThread = this;
     m->unsafe = true;
@@ -3612,7 +3612,7 @@ enter(Thread* t, Thread::State s)
   case Thread::IdleState:
     if (LIKELY(t->state == Thread::ActiveState)) {
       // fast path
-      assert(t, t->m->activeCount > 0);
+      assertT(t, t->m->activeCount > 0);
       INCREMENT(&(t->m->activeCount), -1);
 
       t->state = s;
@@ -3633,7 +3633,7 @@ enter(Thread* t, Thread::State s)
 
     switch (t->state) {
     case Thread::ExclusiveState: {
-      assert(t, t->m->exclusive == t);
+      assertT(t, t->m->exclusive == t);
       t->m->exclusive = 0;
     } break;
 
@@ -3642,11 +3642,11 @@ enter(Thread* t, Thread::State s)
     default: abort(t);
     }
 
-    assert(t, t->m->activeCount > 0);
+    assertT(t, t->m->activeCount > 0);
     INCREMENT(&(t->m->activeCount), -1);
 
     if (s == Thread::ZombieState) {
-      assert(t, t->m->liveCount > 0);
+      assertT(t, t->m->liveCount > 0);
       -- t->m->liveCount;
 
       if (t->flags & Thread::DaemonFlag) {
@@ -3679,7 +3679,7 @@ enter(Thread* t, Thread::State s)
 
       switch (t->state) {
       case Thread::ExclusiveState: {
-        assert(t, t->m->exclusive == t);
+        assertT(t, t->m->exclusive == t);
 
         t->state = s;
         t->m->exclusive = 0;
@@ -3710,7 +3710,7 @@ enter(Thread* t, Thread::State s)
 
     switch (t->state) {
     case Thread::ExclusiveState: {
-      assert(t, t->m->exclusive == t);
+      assertT(t, t->m->exclusive == t);
       // exit state should also be exclusive, so don't set exclusive = 0
 
       t->m->stateLock->notifyAll(t->systemThread);
@@ -3721,7 +3721,7 @@ enter(Thread* t, Thread::State s)
     default: abort(t);
     }
 
-    assert(t, t->m->activeCount > 0);
+    assertT(t, t->m->activeCount > 0);
     INCREMENT(&(t->m->activeCount), -1);
 
     t->state = s;
@@ -3888,7 +3888,7 @@ collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 object
 makeNewGeneral(Thread* t, GcClass* class_)
 {
-  assert(t, t->state == Thread::ActiveState);
+  assertT(t, t->state == Thread::ActiveState);
 
   PROTECT(t, class_);
 
@@ -4039,7 +4039,7 @@ void
 stringUTFChars(Thread* t, object string, unsigned start, unsigned length,
                char* chars, unsigned charsLength UNUSED)
 {
-  assert(t, static_cast<unsigned>
+  assertT(t, static_cast<unsigned>
          (stringUTFLength(t, string, start, length)) == charsLength);
 
   object data = stringData(t, string);
@@ -4083,8 +4083,8 @@ resolveBootstrap(Thread* t, uintptr_t* arguments)
 bool
 isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
 {
-  assert(t, a);
-  assert(t, b);
+  assertT(t, a);
+  assertT(t, b);
 
   if (a == b) return true;
 
@@ -4872,7 +4872,7 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 object
 objectMonitor(Thread* t, object o, bool createNew)
 {
-  assert(t, t->state == Thread::ActiveState);
+  assertT(t, t->state == Thread::ActiveState);
 
   object m = hashMapFind
     (t, cast<GcHashMap>(t, root(t, Machine::MonitorMap)), o, objectHash, objectEqual);
@@ -5106,11 +5106,11 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
     virtual bool visit(Processor::StackWalker* walker) {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
-        assert(t, trace);
+        assertT(t, trace);
       }
 
       object e = reinterpret_cast<object>(makeTraceElement(t, reinterpret_cast<object>(walker->method()), walker->ip()));
-      assert(t, index < objectArrayLength(t, trace));
+      assertT(t, index < objectArrayLength(t, trace));
       set(t, trace, ArrayBody + (index * BytesPerWord), e);
       ++ index;
       return true;

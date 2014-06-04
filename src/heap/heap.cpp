@@ -115,9 +115,9 @@ class Segment {
       Iterator(Map* map, unsigned start, unsigned end):
         map(map)
       {
-        assert(map->segment->context, map->bitsPerRecord == 1);
-        assert(map->segment->context, map->segment);
-        assert(map->segment->context, start <= map->segment->position());
+        assertT(map->segment->context, map->bitsPerRecord == 1);
+        assertT(map->segment->context, map->segment);
+        assertT(map->segment->context, start <= map->segment->position());
 
         if (end > map->segment->position()) end = map->segment->position();
 
@@ -159,8 +159,8 @@ class Segment {
       }
       
       unsigned next() {
-        assert(map->segment->context, hasMore());
-        assert(map->segment->context, map->segment);
+        assertT(map->segment->context, hasMore());
+        assertT(map->segment->context, map->segment);
 
         return (index++) * map->scale;
       }
@@ -194,9 +194,9 @@ class Segment {
     { }
 
     void init() {
-      assert(segment->context, bitsPerRecord);
-      assert(segment->context, scale);
-      assert(segment->context, powerOfTwo(scale));
+      assertT(segment->context, bitsPerRecord);
+      assertT(segment->context, scale);
+      assertT(segment->context, powerOfTwo(scale));
 
       if (data == 0) {
         data = segment->data + segment->capacity()
@@ -223,7 +223,7 @@ class Segment {
     {
       unsigned result
         = ceilingDivide(ceilingDivide(capacity, scale) * bitsPerRecord, BitsPerWord);
-      assert(c, result);
+      assertT(c, result);
       return result;
     }
 
@@ -242,8 +242,8 @@ class Segment {
     }
 
     void replaceWith(Map* m) {
-      assert(segment->context, bitsPerRecord == m->bitsPerRecord);
-      assert(segment->context, scale == m->scale);
+      assertT(segment->context, bitsPerRecord == m->bitsPerRecord);
+      assertT(segment->context, scale == m->scale);
 
       data = m->data;
 
@@ -258,19 +258,19 @@ class Segment {
     }
 
     unsigned indexOf(void* p) {
-      assert(segment->context, segment->almostContains(p));
-      assert(segment->context, segment->capacity());
+      assertT(segment->context, segment->almostContains(p));
+      assertT(segment->context, segment->capacity());
       return indexOf(segment->indexOf(p));
     }
 
     void clearBit(unsigned i) {
-      assert(segment->context, wordOf(i) < size());
+      assertT(segment->context, wordOf(i) < size());
 
       vm::clearBit(data, i);
     }
 
     void setBit(unsigned i) {
-      assert(segment->context, wordOf(i) < size());
+      assertT(segment->context, wordOf(i) < size());
 
       vm::markBit(data, i);
     }
@@ -306,15 +306,15 @@ class Segment {
 
     void set(void* p, unsigned v = 1) {
       setOnly(p, v);
-      assert(segment->context, get(p) == v);
+      assertT(segment->context, get(p) == v);
       if (child) child->set(p, v);
     }
 
 #ifdef USE_ATOMIC_OPERATIONS
     void markAtomic(void* p) {
-      assert(segment->context, bitsPerRecord == 1);
+      assertT(segment->context, bitsPerRecord == 1);
       markBitAtomic(data, indexOf(p));
-      assert(segment->context, getBit(data, indexOf(p)));
+      assertT(segment->context, getBit(data, indexOf(p)));
       if (child) child->markAtomic(p);
     }
 #endif
@@ -343,7 +343,7 @@ class Segment {
         minimum = 1;
       }
       
-      assert(context, desired >= minimum);
+      assertT(context, desired >= minimum);
 
       capacity_ = desired;
 
@@ -453,7 +453,7 @@ class Segment {
         abort(context);
       }
     } else {
-      assert(context, map == 0);
+      assertT(context, map == 0);
     }    
   }
 
@@ -466,18 +466,18 @@ class Segment {
   }
 
   void* get(unsigned offset) {
-    assert(context, offset <= position());
+    assertT(context, offset <= position());
     return data + offset;
   }
 
   unsigned indexOf(void* p) {
-    assert(context, almostContains(p));
+    assertT(context, almostContains(p));
     return static_cast<uintptr_t*>(p) - data;
   }
 
   void* allocate(unsigned size) {
-    assert(context, size);
-    assert(context, position() + size <= capacity());
+    assertT(context, size);
+    assertT(context, position() + size <= capacity());
 
     void* p = data + position();
     position_ += size;
@@ -520,8 +520,8 @@ class Fixie {
   }
 
   void add(Context* c UNUSED, Fixie** handle) {
-    assert(c, this->handle == 0);
-    assert(c, next == 0);
+    assertT(c, this->handle == 0);
+    assertT(c, next == 0);
 
     this->handle = handle;
     if (handle) {
@@ -535,7 +535,7 @@ class Fixie {
 
   void remove(Context* c UNUSED) {
     if (handle) {
-      assert(c, *handle == this);
+      assertT(c, *handle == this);
       *handle = next;
     }
     if (next) {
@@ -878,21 +878,21 @@ wasCollected(Context* c, void* o)
 inline void*
 follow(Context* c UNUSED, void* o)
 {
-  assert(c, wasCollected(c, o));
+  assertT(c, wasCollected(c, o));
   return fieldAtOffset<void*>(o, 0);
 }
 
 inline void*&
 parent(Context* c UNUSED, void* o)
 {
-  assert(c, wasCollected(c, o));
+  assertT(c, wasCollected(c, o));
   return fieldAtOffset<void*>(o, BytesPerWord);
 }
 
 inline uintptr_t*
 bitset(Context* c UNUSED, void* o)
 {
-  assert(c, wasCollected(c, o));
+  assertT(c, wasCollected(c, o));
   return &fieldAtOffset<uintptr_t>(o, BytesPerWord * 2);
 }
 
@@ -939,7 +939,7 @@ kill(Fixie* fixies)
 void
 killFixies(Context* c)
 {
-  assert(c, c->markedFixies == 0);
+  assertT(c, c->markedFixies == 0);
 
   if (c->mode == Heap::MajorCollection) {
     kill(c->tenuredFixies);
@@ -951,7 +951,7 @@ killFixies(Context* c)
 void
 sweepFixies(Context* c)
 {
-  assert(c, c->markedFixies == 0);
+  assertT(c, c->markedFixies == 0);
 
   if (c->mode == Heap::MajorCollection) {
     free(c, &(c->tenuredFixies));
@@ -1007,7 +1007,7 @@ sweepFixies(Context* c)
 inline void*
 copyTo(Context* c, Segment* s, void* o, unsigned size)
 {
-  assert(c, s->remaining() >= size);
+  assertT(c, s->remaining() >= size);
   void* dst = s->allocate(size);
   c->client->copy(o, dst);
   return dst;
@@ -1025,14 +1025,14 @@ copy2(Context* c, void* o)
   unsigned size = c->client->copiedSizeInWords(o);
 
   if (c->gen2.contains(o)) {
-    assert(c, c->mode == Heap::MajorCollection);
+    assertT(c, c->mode == Heap::MajorCollection);
 
     return copyTo(c, &(c->nextGen2), o, size);
   } else if (c->gen1.contains(o)) {
     unsigned age = c->ageMap.get(o);
     if (age == TenureThreshold) {
       if (c->mode == Heap::MinorCollection) {
-        assert(c, c->gen2.remaining() >= size);
+        assertT(c, c->gen2.remaining() >= size);
 
         if (c->gen2Base == Top) {
           c->gen2Base = c->gen2.position();
@@ -1053,9 +1053,9 @@ copy2(Context* c, void* o)
       return o;
     }
   } else {
-    assert(c, not c->nextGen1.contains(o));
-    assert(c, not c->nextGen2.contains(o));
-    assert(c, not immortalHeapContains(c, o));
+    assertT(c, not c->nextGen1.contains(o));
+    assertT(c, not c->nextGen2.contains(o));
+    assertT(c, not immortalHeapContains(c, o));
 
     o = copyTo(c, &(c->nextGen1), o, size);
 
@@ -1171,7 +1171,7 @@ updateHeapMap(Context* c, void* p, void* target, unsigned offset, void* result)
   {
     if (target and c->client->isFixed(target)) {
       Fixie* f = fixie(target);
-      assert(c, offset == 0 or f->hasMask());
+      assertT(c, offset == 0 or f->hasMask());
 
       if (static_cast<unsigned>(f->age + 1) >= FixieTenureThreshold) {
         if (DebugFixies) {
@@ -1280,7 +1280,7 @@ unsigned
 bitsetNext(Context* c, uintptr_t* p)
 {
   bool more UNUSED = bitsetHasMore(p);
-  assert(c, more);
+  assertT(c, more);
 
   switch (*p) {
   case 0: abort(c);
@@ -1288,7 +1288,7 @@ bitsetNext(Context* c, uintptr_t* p)
   case BitsetExtensionBit: {
     uintptr_t i = p[1];
     uintptr_t word = wordOf(i);
-    assert(c, word < p[2]);
+    assertT(c, word < p[2]);
     for (uintptr_t bit = bitOf(i); bit < BitsPerWord; ++bit) {
       if (p[word + 3] & (static_cast<uintptr_t>(1) << bit)) {
         p[1] = indexOf(word, bit) + 1;
@@ -1477,7 +1477,7 @@ collect(Context* c, void** p, void* target, unsigned offset)
 
     c->client->walk(copy, &walker);
 
-    assert(c, walker.total > 1);
+    assertT(c, walker.total > 1);
 
     if (walker.total == 3 and bitsetHasMore(bitset(c, original))) {
       parent_ = original;
@@ -1568,7 +1568,7 @@ visitDirtyFixies(Context* c, Fixie** p)
       fprintf(stderr, "done cleaning fixie %p\n", f);
     }
 
-    assert(c, wasDirty);
+    assertT(c, wasDirty);
 
     if (clean) {
       markClean(c, f);
@@ -1618,7 +1618,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
   for (Segment::Map::Iterator it(map, start, end); it.hasMore();) {
     wasDirty = true;
     if (map->child) {
-      assert(c, map->scale > 1);
+      assertT(c, map->scale > 1);
       unsigned s = it.next();
       unsigned e = s + map->scale;
 
@@ -1630,7 +1630,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
         *dirty = true;
       }
     } else {
-      assert(c, map->scale == 1);
+      assertT(c, map->scale == 1);
       void** p = reinterpret_cast<void**>(map->segment->get(it.next()));
 
       map->clearOnly(p);
@@ -1648,7 +1648,7 @@ collect(Context* c, Segment::Map* map, unsigned start, unsigned end,
     }
   }
 
-  assert(c, wasDirty or not expectDirty);
+  assertT(c, wasDirty or not expectDirty);
 }
 
 void
@@ -1879,7 +1879,7 @@ class MyHeap: public Heap {
   { }
 
   virtual void setClient(Heap::Client* client) {
-    assert(&c, c.client == 0);
+    assertT(&c, c.client == 0);
     c.client = client;
   }
 
@@ -1954,7 +1954,7 @@ class MyHeap: public Heap {
   }
 
   bool needsMark(void* p) {
-    assert(&c, c.client->isFixed(p) or (not immortalHeapContains(&c, p)));
+    assertT(&c, c.client->isFixed(p) or (not immortalHeapContains(&c, p)));
 
     if (c.client->isFixed(p)) {
       return fixie(p)->age >= FixieTenureThreshold;
@@ -1980,7 +1980,7 @@ class MyHeap: public Heap {
 
       if (c.client->isFixed(p)) {
         Fixie* f = fixie(p);
-        assert(&c, offset == 0 or f->hasMask());
+        assertT(&c, offset == 0 or f->hasMask());
 
         bool dirty = false;
         for (unsigned i = 0; i < count; ++i) {
@@ -1997,7 +1997,7 @@ class MyHeap: public Heap {
 #else
             markBit(f->mask(), offset + i);
 #endif
-            assert(&c, getBit(f->mask(), offset + i));
+            assertT(&c, getBit(f->mask(), offset + i));
           }
         }
 
@@ -2007,7 +2007,7 @@ class MyHeap: public Heap {
         if (c.gen2.contains(p)) {
           map = &(c.heapMap);
         } else {
-          assert(&c, c.nextGen2.contains(p));
+          assertT(&c, c.nextGen2.contains(p));
           map = &(c.nextHeapMap);
         }
 
@@ -2097,7 +2097,7 @@ class MyHeap: public Heap {
 
   virtual void dispose() {
     c.dispose();
-    assert(&c, c.count == 0);
+    assertT(&c, c.count == 0);
     c.system->free(this);
   }
 

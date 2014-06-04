@@ -4283,7 +4283,7 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
       {
         object method = makeJmethod(t, vmMethod, i);
 
-        assert(t, ai < objectArrayLength(t, array));
+        assertT(t, ai < objectArrayLength(t, array));
 
         set(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
       }
@@ -4328,12 +4328,12 @@ jvmGetClassDeclaredFields(Thread* t, uintptr_t* arguments)
       if ((not publicOnly) or (fieldFlags(t, vmField) & ACC_PUBLIC)) {
         object field = makeJfield(t, vmField, i);
 
-        assert(t, ai < objectArrayLength(t, array));
+        assertT(t, ai < objectArrayLength(t, array));
 
         set(t, array, ArrayBody + ((ai++) * BytesPerWord), field);
       }
     }
-    assert(t, ai == objectArrayLength(t, array));
+    assertT(t, ai == objectArrayLength(t, array));
 
     return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
   } else {
@@ -4381,7 +4381,7 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
       {
         object method = makeJconstructor(t, vmMethod, i);
 
-        assert(t, ai < objectArrayLength(t, array));
+        assertT(t, ai < objectArrayLength(t, array));
 
         set(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
       }

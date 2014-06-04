@@ -73,7 +73,7 @@ class LogicalCode {
         = logicalCode.cloneAndSet(zone, logicalCode.count + more, 0);
 
     for (size_t i = 0; i < logicalCode.count; i++) {
-      assert((vm::System*)0, logicalCode[i] == newCode[i]);
+      assertT((vm::System*)0, logicalCode[i] == newCode[i]);
     }
 
     logicalCode = newCode;

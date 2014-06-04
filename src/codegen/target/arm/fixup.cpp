@@ -29,7 +29,7 @@ bool OffsetPromise::resolved() {
 }
 
 int64_t OffsetPromise::value() {
-  assert(con, resolved());
+  assertT(con, resolved());
 
   unsigned o = offset - block->offset;
   return block->start + padding
@@ -99,7 +99,7 @@ ConstantPoolEntry::ConstantPoolEntry(Context* con, Promise* constant, ConstantPo
 { }
 
 int64_t ConstantPoolEntry::value() {
-  assert(con, resolved());
+  assertT(con, resolved());
 
   return reinterpret_cast<int64_t>(address);
 }

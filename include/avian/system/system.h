@@ -168,18 +168,18 @@ sysAbort(System* s)
 
 // #ifdef NDEBUG
 
-// # define assert(a, b)
+// # define assertT(a, b)
 // # define vm_assert(a, b)
 
 // #else // not NDEBUG
 
 // inline void
-// assert(System* s, bool v)
+// assertT(System* s, bool v)
 // {
 //   expect(s, v);
 // }
 
-// # define vm_assert(a, b) vm::assert(a, b)
+// # define vm_assert(a, b) vm::assertT(a, b)
 
 // #endif // not NDEBUG
 

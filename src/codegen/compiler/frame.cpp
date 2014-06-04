@@ -26,7 +26,7 @@ unsigned totalFrameSize(Context* c) {
 }
 
 int frameIndex(Context* c, int localIndex) {
-  assert(c, localIndex >= 0);
+  assertT(c, localIndex >= 0);
 
   int index = c->alignedFrameSize + c->parameterFootprint - localIndex - 1;
 
@@ -36,23 +36,23 @@ int frameIndex(Context* c, int localIndex) {
     index -= c->arch->frameFooterSize();
   }
 
-  assert(c, index >= 0);
-  assert(c, static_cast<unsigned>(index) < totalFrameSize(c));
+  assertT(c, index >= 0);
+  assertT(c, static_cast<unsigned>(index) < totalFrameSize(c));
 
   return index;
 }
 
 unsigned frameIndexToOffset(Context* c, unsigned frameIndex) {
-  assert(c, frameIndex < totalFrameSize(c));
+  assertT(c, frameIndex < totalFrameSize(c));
 
   return (frameIndex + c->arch->frameFooterSize()) * c->targetInfo.pointerSize;
 }
 
 unsigned offsetToFrameIndex(Context* c, unsigned offset) {
-  assert(c,
+  assertT(c,
          static_cast<int>((offset / c->targetInfo.pointerSize)
                           - c->arch->frameFooterSize()) >= 0);
-  assert(c,
+  assertT(c,
          ((offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize())
          < totalFrameSize(c));
 

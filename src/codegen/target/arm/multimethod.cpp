@@ -34,7 +34,7 @@ unsigned index(ArchitectureContext* con UNUSED,
       lir::TernaryOperation operation,
       lir::OperandType operand1)
 {
-  assert(con, not isBranch(operation));
+  assertT(con, not isBranch(operation));
 
   return operation + (lir::NonBranchTernaryOperationCount * operand1);
 }

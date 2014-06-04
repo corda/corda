@@ -61,7 +61,7 @@ void Value::addSite(Context* c, Site* s) {
 
 
 void Value::grow(Context* c) {
-  assert(c, this->nextWord == this);
+  assertT(c, this->nextWord == this);
 
   Value* next = value(c, this->type);
   this->nextWord = next;
@@ -101,7 +101,7 @@ void Value::removeSite(Context* c, Site* s) {
   if (DebugSites) {
     fprintf(stderr, "%p has more: %d\n", this, this->hasSite(c));
   }
-  assert(c, not this->findSite(s));
+  assertT(c, not this->findSite(s));
 }
 
 bool Value::hasSite(Context* c) {
@@ -128,7 +128,7 @@ bool Value::uniqueSite(Context* c, Site* s) {
       return false;
     }    
   } else {
-    assert(c, p == s);
+    assertT(c, p == s);
     return true;
   }
 }

@@ -50,7 +50,7 @@ class Vector {
   void ensure(size_t space)
   {
     if (position + space > data.count) {
-      assert(a, minimumCapacity > 0);
+      assertT(a, minimumCapacity > 0);
 
       size_t newCapacity = avian::util::max(
           position + space, avian::util::max(minimumCapacity, data.count * 2));
@@ -64,13 +64,13 @@ class Vector {
 
   void get(size_t offset, void* dst, size_t size)
   {
-    assert(a, offset + size <= position);
+    assertT(a, offset + size <= position);
     memcpy(dst, data.begin() + offset, size);
   }
 
   void set(size_t offset, const void* src, size_t size)
   {
-    assert(a, offset + size <= position);
+    assertT(a, offset + size <= position);
     memcpy(data.begin() + offset, src, size);
   }
 
@@ -121,7 +121,7 @@ class Vector {
 
   void set2(size_t offset, uint16_t v)
   {
-    assert(a, offset <= position - 2);
+    assertT(a, offset <= position - 2);
     memcpy(data.begin() + offset, &v, 2);
   }
 
@@ -157,7 +157,7 @@ class Vector {
   template <class T>
   T* peek(size_t offset)
   {
-    assert(a, offset + sizeof(T) <= position);
+    assertT(a, offset + sizeof(T) <= position);
     return reinterpret_cast<T*>(data.begin() + offset);
   }
 

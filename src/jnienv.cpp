@@ -564,7 +564,7 @@ getMethodID(Thread* t, uintptr_t* arguments)
 
   GcMethod* method = findMethod(t, c, name, spec);
 
-  assert(t, (method->flags() & ACC_STATIC) == 0);
+  assertT(t, (method->flags() & ACC_STATIC) == 0);
 
   return methodID(t, method);
 }
@@ -588,7 +588,7 @@ getStaticMethodID(Thread* t, uintptr_t* arguments)
 
   GcMethod* method = findMethod(t, c, name, spec);
 
-  assert(t, method->flags() & ACC_STATIC);
+  assertT(t, method->flags() & ACC_STATIC);
 
   return methodID(t, method);
 }
@@ -606,11 +606,11 @@ GetStaticMethodID(Thread* t, jclass c, const char* name, const char* spec)
 GcMethod*
 getMethod(Thread* t, jmethodID m)
 {
-  assert(t, m);
+  assertT(t, m);
 
   GcMethod* method = cast<GcMethod>(t, vectorBody(t, root(t, Machine::JNIMethodTable), m - 1));
 
-  assert(t, (method->flags() & ACC_STATIC) == 0);
+  assertT(t, (method->flags() & ACC_STATIC) == 0);
 
   return method;
 }
@@ -1101,11 +1101,11 @@ CallVoidMethodA(Thread* t, jobject o, jmethodID m, const jvalue* a)
 GcMethod*
 getStaticMethod(Thread* t, jmethodID m)
 {
-  assert(t, m);
+  assertT(t, m);
 
   GcMethod* method = cast<GcMethod>(t, vectorBody(t, root(t, Machine::JNIMethodTable), m - 1));
 
-  assert(t, method->flags() & ACC_STATIC);
+  assertT(t, method->flags() & ACC_STATIC);
 
   return method;
 }
@@ -1540,11 +1540,11 @@ GetStaticFieldID(Thread* t, jclass c, const char* name, const char* spec)
 object
 getField(Thread* t, jfieldID f)
 {
-  assert(t, f);
+  assertT(t, f);
 
   object field = vectorBody(t, root(t, Machine::JNIFieldTable), f - 1);
 
-  assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+  assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
   return field;
 }
@@ -1969,11 +1969,11 @@ SetDoubleField(Thread* t, jobject o, jfieldID field, jdouble v)
 object
 getStaticField(Thread* t, jfieldID f)
 {
-  assert(t, f);
+  assertT(t, f);
 
   object field = vectorBody(t, root(t, Machine::JNIFieldTable), f - 1);
 
-  assert(t, fieldFlags(t, field) & ACC_STATIC);
+  assertT(t, fieldFlags(t, field) & ACC_STATIC);
 
   return field;
 }

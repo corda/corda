@@ -39,7 +39,7 @@ unsigned index(ArchitectureContext*, lir::BinaryOperation operation,
 unsigned index(ArchitectureContext* c UNUSED, lir::TernaryOperation operation,
       lir::OperandType operand1, lir::OperandType operand2)
 {
-  assert(c, not isBranch(operation));
+  assertT(c, not isBranch(operation));
 
   return lir::BinaryOperationCount + operation
     + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount) * operand1)

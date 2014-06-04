@@ -1872,7 +1872,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
 inline object
 allocateSmall(Thread* t, unsigned sizeInBytes)
 {
-  assert(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
+  assertT(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
          <= ThreadHeapSizeInWords);
 
   object o = reinterpret_cast<object>(t->heap + t->heapIndex);
@@ -1891,7 +1891,7 @@ allocate(Thread* t, unsigned sizeInBytes, bool objectMask)
   {
     return allocate2(t, sizeInBytes, objectMask);
   } else {
-    assert(t, t->criticalLevel == 0);
+    assertT(t, t->criticalLevel == 0);
     return allocateSmall(t, sizeInBytes);
   }
 }
@@ -1957,7 +1957,7 @@ instanceOf(Thread* t, GcClass* class_, object o);
 template <class T>
 T* GcObject::as(Thread* t UNUSED)
 {
-  assert(t,
+  assertT(t,
          t->m->unsafe
          || instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe(t, t->m->types, T::Type)), reinterpret_cast<object>(this)));
   return static_cast<T*>(this);
@@ -1975,7 +1975,7 @@ T* cast(Thread* t UNUSED, object o)
   if(o == 0) {
     return 0;
   }
-  assert(t,
+  assertT(t,
          t->m->unsafe || instanceOf(t,
                                     reinterpret_cast<GcClass*>(arrayBodyUnsafe(
                                         t, t->m->types, T::Type)),
@@ -2037,7 +2037,7 @@ addThread(Thread* t, Thread* p)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  assert(t, p->state == Thread::NoState);
+  assertT(t, p->state == Thread::NoState);
   expect(t, t->state == Thread::ActiveState || t->state == Thread::ExclusiveState || t->state == Thread::NoState);
 
   p->state = Thread::IdleState;
@@ -2057,7 +2057,7 @@ removeThread(Thread* t, Thread* p)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  assert(t, p->state == Thread::IdleState);
+  assertT(t, p->state == Thread::IdleState);
 
   -- t->m->liveCount;
   -- t->m->threadCount;
@@ -2205,7 +2205,7 @@ hashTaken(Thread*, object o)
 inline unsigned
 baseSize(Thread* t UNUSED, object o, GcClass* class_)
 {
-  assert(t, class_->fixedSize() >= BytesPerWord);
+  assertT(t, class_->fixedSize() >= BytesPerWord);
 
   return ceilingDivide(class_->fixedSize(), BytesPerWord)
     + ceilingDivide(class_->arrayElementSize()
@@ -2228,11 +2228,11 @@ makeTrace(Thread* t)
 inline object
 makeNew(Thread* t, GcClass* class_)
 {
-  assert(t, t->state == Thread::NoState or t->state == Thread::ActiveState);
+  assertT(t, t->state == Thread::NoState or t->state == Thread::ActiveState);
 
   PROTECT(t, class_);
   unsigned sizeInBytes = pad(class_->fixedSize());
-  assert(t, sizeInBytes);
+  assertT(t, sizeInBytes);
   object instance = allocate(t, sizeInBytes, class_->objectMask());
   setObjectClass(t, instance, class_);
 
@@ -2357,7 +2357,7 @@ frameMethod(Thread* t, int frame);
 inline uintptr_t&
 extendedWord(Thread* t UNUSED, object o, unsigned baseSize)
 {
-  assert(t, objectExtended(t, o));
+  assertT(t, objectExtended(t, o));
   return fieldAtOffset<uintptr_t>(o, baseSize * BytesPerWord);
 }
 
@@ -2370,8 +2370,8 @@ extendedSize(Thread* t, object o, unsigned baseSize)
 inline void
 markHashTaken(Thread* t, object o)
 {
-  assert(t, not objectExtended(t, o));
-  assert(t, not objectFixed(t, o));
+  assertT(t, not objectExtended(t, o));
+  assertT(t, not objectFixed(t, o));
 
   ACQUIRE_RAW(t, t->m->heapLock);
 
@@ -2498,7 +2498,7 @@ class MethodSpecIterator {
   { }
 
   const char* next() {
-    assert(t, *s != ')');
+    assertT(t, *s != ')');
 
     const char* p = s;
 
@@ -2535,7 +2535,7 @@ class MethodSpecIterator {
   }
 
   const char* returnSpec() {
-    assert(t, *s == ')');
+    assertT(t, *s == ')');
     return s + 1;
   }
 
@@ -2786,8 +2786,8 @@ dumpHeap(Thread* t, FILE* out);
 inline void NO_RETURN
 throw_(Thread* t, object e)
 {
-  assert(t, t->exception == 0);
-  assert(t, e);
+  assertT(t, t->exception == 0);
+  assertT(t, e);
 
   expect(t, not t->checkpoint->noThrow);
 
@@ -2897,7 +2897,7 @@ findVirtualMethod(Thread* t, GcMethod* method, GcClass* class_)
 inline GcMethod*
 findInterfaceMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
-  assert(t, (class_->vmFlags() & BootstrapFlag) == 0);
+  assertT(t, (class_->vmFlags() & BootstrapFlag) == 0);
 
   object interface = method->class_();
   object itable = class_->interfaceTable();
@@ -2913,17 +2913,17 @@ findInterfaceMethod(Thread* t, GcMethod* method, GcClass* class_)
 inline unsigned
 objectArrayLength(Thread* t UNUSED, object array)
 {
-  assert(t, objectClass(t, array)->fixedSize() == BytesPerWord * 2);
-  assert(t, objectClass(t, array)->arrayElementSize() == BytesPerWord);
+  assertT(t, objectClass(t, array)->fixedSize() == BytesPerWord * 2);
+  assertT(t, objectClass(t, array)->arrayElementSize() == BytesPerWord);
   return fieldAtOffset<uintptr_t>(array, BytesPerWord);
 }
 
 inline object&
 objectArrayBody(Thread* t UNUSED, object array, unsigned index)
 {
-  assert(t, objectClass(t, array)->fixedSize() == BytesPerWord * 2);
-  assert(t, objectClass(t, array)->arrayElementSize() == BytesPerWord);
-  assert(t, objectClass(t, array)->objectMask()
+  assertT(t, objectClass(t, array)->fixedSize() == BytesPerWord * 2);
+  assertT(t, objectClass(t, array)->arrayElementSize() == BytesPerWord);
+  assertT(t, objectClass(t, array)->objectMask()
          == classObjectMask(t, arrayBody
                             (t, t->m->types, GcArray::Type)));
   return fieldAtOffset<object>(array, ArrayBody + (index * BytesPerWord));
@@ -2953,7 +2953,7 @@ releaseSystem(Thread* t, Thread* target)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  assert(t, t->state != Thread::JoinedState);
+  assertT(t, t->state != Thread::JoinedState);
 
   atomicAnd(&(target->flags), ~Thread::SystemFlag);
 }
@@ -3093,7 +3093,7 @@ monitorAcquire(Thread* t, object monitor, object node = 0)
     ++ monitorDepth(t, monitor);
   }
 
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 }
 
 inline void
@@ -3121,7 +3121,7 @@ monitorRelease(Thread* t, object monitor)
 inline void
 monitorAppendWait(Thread* t, object monitor)
 {
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 
   expect(t, (t->flags & Thread::WaitingFlag) == 0);
   expect(t, t->waitNext == 0);
@@ -3140,7 +3140,7 @@ monitorAppendWait(Thread* t, object monitor)
 inline void
 monitorRemoveWait(Thread* t, object monitor)
 {
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 
   Thread* previous = 0;
   for (Thread* current = static_cast<Thread*>(monitorWaitHead(t, monitor));
@@ -3154,7 +3154,7 @@ monitorRemoveWait(Thread* t, object monitor)
       }
 
       if (t == monitorWaitTail(t, monitor)) {
-        assert(t, t->waitNext == 0);
+        assertT(t, t->waitNext == 0);
         monitorWaitTail(t, monitor) = previous;
       }
 
@@ -3173,7 +3173,7 @@ monitorRemoveWait(Thread* t, object monitor)
 inline bool
 monitorFindWait(Thread* t, object monitor)
 {
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 
   for (Thread* current = static_cast<Thread*>(monitorWaitHead(t, monitor));
        current; current = current->waitNext)
@@ -3225,7 +3225,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
     expect(t, not monitorFindWait(t, monitor));
   }
 
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 
   return interrupted;
 }
@@ -3233,7 +3233,7 @@ monitorWait(Thread* t, object monitor, int64_t time)
 inline Thread*
 monitorPollWait(Thread* t, object monitor)
 {
-  assert(t, monitorOwner(t, monitor) == t);
+  assertT(t, monitorOwner(t, monitor) == t);
 
   Thread* next = static_cast<Thread*>(monitorWaitHead(t, monitor));
 
@@ -3245,7 +3245,7 @@ monitorPollWait(Thread* t, object monitor)
       monitorWaitTail(t, monitor) = 0;
     }
   } else {
-    assert(t, monitorWaitTail(t, monitor) == 0);
+    assertT(t, monitorWaitTail(t, monitor) == 0);
   }
 
   return next;
@@ -3502,7 +3502,7 @@ singletonCount(Thread* t, GcSingleton* singleton)
 inline uint32_t*
 singletonMask(Thread* t, GcSingleton* singleton)
 {
-  assert(t, singleton->length());
+  assertT(t, singleton->length());
   return reinterpret_cast<uint32_t*>
     (&singletonBody(t, reinterpret_cast<object>(singleton), singletonCount(t, singleton)));
 }
@@ -3523,7 +3523,7 @@ singletonMarkObject(Thread* t, GcSingleton* singleton, unsigned index)
 inline bool
 singletonIsObject(Thread* t, GcSingleton* singleton, unsigned index)
 {
-  assert(t, index < singletonCount(t, singleton));
+  assertT(t, index < singletonCount(t, singleton));
 
   return (singletonMask(t, singleton)[(index + 2) / 32]
           & (static_cast<uint32_t>(1) << ((index + 2) % 32))) != 0;
@@ -3532,14 +3532,14 @@ singletonIsObject(Thread* t, GcSingleton* singleton, unsigned index)
 inline object&
 singletonObject(Thread* t, GcSingleton* singleton, unsigned index)
 {
-  assert(t, singletonIsObject(t, singleton, index));
+  assertT(t, singletonIsObject(t, singleton, index));
   return reinterpret_cast<object&>(singletonBody(t, reinterpret_cast<object>(singleton), index));
 }
 
 inline uintptr_t&
 singletonValue(Thread* t, GcSingleton* singleton, unsigned index)
 {
-  assert(t, not singletonIsObject(t, singleton, index));
+  assertT(t, not singletonIsObject(t, singleton, index));
   return singletonBody(t, reinterpret_cast<object>(singleton), index);
 }
 
@@ -3547,7 +3547,7 @@ inline GcSingleton*
 makeSingletonOfSize(Thread* t, unsigned count)
 {
   GcSingleton* o = makeSingleton(t, count + singletonMaskSize(count));
-  assert(t, o->length() == count + singletonMaskSize(t, o));
+  assertT(t, o->length() == count + singletonMaskSize(t, o));
   if (count) {
     singletonMask(t, o)[0] = 1;
   }

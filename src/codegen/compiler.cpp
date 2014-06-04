@@ -74,7 +74,7 @@ class ConstantPoolNode {
 Read*
 live(Context* c UNUSED, Value* v)
 {
-  assert(c, v->buddy->hasBuddy(c, v));
+  assertT(c, v->buddy->hasBuddy(c, v));
 
   Value* p = v;
   do {
@@ -94,7 +94,7 @@ void
 deadWord(Context* c, Value* v)
 {
   Value* nextWord = v->nextWord;
-  assert(c, nextWord != v);
+  assertT(c, nextWord != v);
 
   for (SiteIterator it(c, v, true, false); it.hasMore();) {
     Site* s = it.next();
@@ -109,8 +109,8 @@ deadWord(Context* c, Value* v)
 void
 deadBuddy(Context* c, Value* v, Read* r UNUSED)
 {
-  assert(c, v->buddy != v);
-  assert(c, r);
+  assertT(c, v->buddy != v);
+  assertT(c, r);
 
   if (DebugBuddies) {
     fprintf(stderr, "remove dead buddy %p from", v);
@@ -120,7 +120,7 @@ deadBuddy(Context* c, Value* v, Read* r UNUSED)
     fprintf(stderr, "\n");
   }
 
-  assert(c, v->buddy);
+  assertT(c, v->buddy);
 
   Value* next = v->buddy;
   v->buddy = v;
@@ -128,7 +128,7 @@ deadBuddy(Context* c, Value* v, Read* r UNUSED)
   while (p->buddy != v) p = p->buddy;
   p->buddy = next;
 
-  assert(c, p->buddy);
+  assertT(c, p->buddy);
 
   for (SiteIterator it(c, v, false, false); it.hasMore();) {
     Site* s = it.next();
@@ -141,7 +141,7 @@ deadBuddy(Context* c, Value* v, Read* r UNUSED)
 void
 popRead(Context* c, Event* e UNUSED, Value* v)
 {
-  assert(c, e == v->reads->event);
+  assertT(c, e == v->reads->event);
 
   if (DebugReads) {
     fprintf(stderr, "pop read %p from %p next %p event %p (%s)\n",
@@ -197,13 +197,13 @@ sitesToString(Context* c, Site* sites, char* buffer, unsigned size)
     total += s->toString(c, buffer + total, size - total);
 
     if (s->next) {
-      assert(c, size > total + 2);
+      assertT(c, size > total + 2);
       memcpy(buffer + total, ", ", 2);
       total += 2;
     }
   }
 
-  assert(c, size > total);
+  assertT(c, size > total);
   buffer[total] = 0;
 
   return total;
@@ -216,7 +216,7 @@ sitesToString(Context* c, Value* v, char* buffer, unsigned size)
   Value* p = v;
   do {
     if (total) {
-      assert(c, size > total + 2);
+      assertT(c, size > total + 2);
       memcpy(buffer + total, "; ", 2);
       total += 2;
     }
@@ -586,7 +586,7 @@ acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
     if (s->type(c) == lir::RegisterOperand) {
       return c->availableGeneralRegisterCount > ResolveRegisterReserveCount;
     } else {
-      assert(c, s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
+      assertT(c, s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
 
       return isHome(read->value, offsetToFrameIndex
                     (c, static_cast<MemorySite*>(s)->offset));
@@ -606,7 +606,7 @@ move(Context* c, Value* value, Site* src, Site* dst)
             srcb, dstb, value, value);
   }
 
-  assert(c, value->findSite(dst));
+  assertT(c, value->findSite(dst));
 
   src->freeze(c, value);
   dst->freeze(c, value);
@@ -662,7 +662,7 @@ void
 apply(Context* c, lir::UnaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High)
 {
-  assert(c, s1Low->type(c) == s1High->type(c));
+  assertT(c, s1Low->type(c) == s1High->type(c));
 
   lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
@@ -676,8 +676,8 @@ apply(Context* c, lir::BinaryOperation op,
       unsigned s1Size, Site* s1Low, Site* s1High,
       unsigned s2Size, Site* s2Low, Site* s2High)
 {
-  assert(c, s1Low->type(c) == s1High->type(c));
-  assert(c, s2Low->type(c) == s2High->type(c));
+  assertT(c, s1Low->type(c) == s1High->type(c));
+  assertT(c, s2Low->type(c) == s2High->type(c));
 
   lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
@@ -696,9 +696,9 @@ apply(Context* c, lir::TernaryOperation op,
       unsigned s2Size, Site* s2Low, Site* s2High,
       unsigned s3Size, Site* s3Low, Site* s3High)
 {
-  assert(c, s1Low->type(c) == s1High->type(c));
-  assert(c, s2Low->type(c) == s2High->type(c));
-  assert(c, s3Low->type(c) == s3High->type(c));
+  assertT(c, s1Low->type(c) == s1High->type(c));
+  assertT(c, s2Low->type(c) == s2High->type(c));
+  assertT(c, s3Low->type(c) == s3High->type(c));
 
   lir::OperandType s1Type = s1Low->type(c);
   OperandUnion s1Union; asAssemblerOperand(c, s1Low, s1High, &s1Union);
@@ -819,8 +819,8 @@ void maybeMove(Context* c,
         src.registerMask &= c->regFile->generalRegisters.mask;
       }
 
-      assert(c, thunk == 0);
-      assert(c, dstMask.typeMask & src.typeMask & (1 << lir::RegisterOperand));
+      assertT(c, thunk == 0);
+      assertT(c, dstMask.typeMask & src.typeMask & (1 << lir::RegisterOperand));
 
       Site* tmpTarget = freeRegisterSite
         (c, dstMask.registerMask & src.registerMask);
@@ -927,7 +927,7 @@ pickSiteOrMove(Context* c, Value* src, Value* dst, Site* nextWord,
         s = maybeMove(c, read, false, true);
       }
     }
-    assert(c, s);
+    assertT(c, s);
 
     addBuddy(src, dst);
 
@@ -965,7 +965,7 @@ removeBuddy(Context* c, Value* v)
       fprintf(stderr, "\n");
     }
 
-    assert(c, v->buddy);
+    assertT(c, v->buddy);
 
     Value* next = v->buddy;
     v->buddy = v;
@@ -973,7 +973,7 @@ removeBuddy(Context* c, Value* v)
     while (p->buddy != v) p = p->buddy;
     p->buddy = next;
 
-    assert(c, p->buddy);
+    assertT(c, p->buddy);
 
     if (not live(c, next)) {
       next->clearSites(c);
@@ -1063,7 +1063,7 @@ pushWord(Context* c, Value* v)
 void
 push(Context* c, unsigned footprint, Value* v)
 {
-  assert(c, footprint);
+  assertT(c, footprint);
 
   bool bigEndian = c->arch->bigEndian();
   
@@ -1075,7 +1075,7 @@ push(Context* c, unsigned footprint, Value* v)
 
   Value* high;
   if (footprint > 1) {
-    assert(c, footprint == 2);
+    assertT(c, footprint == 2);
 
     if (TargetBytesPerWord == 4) {
       low->maybeSplit(c);
@@ -1102,7 +1102,7 @@ void
 popWord(Context* c)
 {
   Stack* s = c->stack;
-  assert(c, s->value == 0 or s->value->home >= 0);
+  assertT(c, s->value == 0 or s->value->home >= 0);
 
   if (DebugFrame) {
     fprintf(stderr, "pop %p\n", s->value);
@@ -1114,7 +1114,7 @@ popWord(Context* c)
 Value*
 pop(Context* c, unsigned footprint)
 {
-  assert(c, footprint);
+  assertT(c, footprint);
 
   Stack* s = 0;
 
@@ -1125,7 +1125,7 @@ pop(Context* c, unsigned footprint)
   }
 
   if (footprint > 1) {
-    assert(c, footprint == 2);
+    assertT(c, footprint == 2);
 
 #ifndef NDEBUG
     Stack* low;
@@ -1138,7 +1138,7 @@ pop(Context* c, unsigned footprint)
       high = low->next;
     }
 
-    assert(c, (TargetBytesPerWord == 8
+    assertT(c, (TargetBytesPerWord == 8
                and low->value->nextWord == low->value and high->value == 0)
            or (TargetBytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
@@ -1158,7 +1158,7 @@ pop(Context* c, unsigned footprint)
 Value*
 storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
 {
-  assert(c, index + footprint <= c->localFootprint);
+  assertT(c, index + footprint <= c->localFootprint);
 
   if (copy) {
     unsigned sizeInBytes = sizeof(Local) * c->localFootprint;
@@ -1169,7 +1169,7 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
 
   Value* high;
   if (footprint > 1) {
-    assert(c, footprint == 2);
+    assertT(c, footprint == 2);
 
     unsigned highIndex;
     unsigned lowIndex;
@@ -1182,7 +1182,7 @@ storeLocal(Context* c, unsigned footprint, Value* v, unsigned index, bool copy)
     }
 
     if (TargetBytesPerWord == 4) {
-      assert(c, v->nextWord != v);
+      assertT(c, v->nextWord != v);
 
       high = storeLocal(c, 1, v->nextWord, highIndex, false);
     } else {
@@ -1235,18 +1235,18 @@ unsigned typeFootprint(Context* c, ir::Type type)
 Value* loadLocal(Context* c, ir::Type type, unsigned index)
 {
   unsigned footprint = typeFootprint(c, type);
-  assert(c, index + footprint <= c->localFootprint);
+  assertT(c, index + footprint <= c->localFootprint);
 
   if (footprint > 1) {
-    assert(c, footprint == 2);
+    assertT(c, footprint == 2);
 
     if (not c->arch->bigEndian()) {
       ++ index;
     }
   }
 
-  assert(c, c->locals[index].value);
-  assert(c, c->locals[index].value->home >= 0);
+  assertT(c, c->locals[index].value);
+  assertT(c, c->locals[index].value->home >= 0);
 
   if (DebugFrame) {
     fprintf(stderr, "load local %p at %d\n", c->locals[index].value, index);
@@ -1295,7 +1295,7 @@ visit(Context* c, Link* link)
       StubReadPair* p = junctionState->reads + i;
       
       if (p->value and p->value->reads) {
-        assert(c, p->value->reads == p->read);
+        assertT(c, p->value->reads == p->read);
         popRead(c, 0, p->value);
       }
     }
@@ -1319,10 +1319,10 @@ class BuddyEvent: public Event {
       fprintf(stderr, "original %p buddy %p\n", original, buddy);
     }
 
-    assert(c, original->hasSite(c));
+    assertT(c, original->hasSite(c));
 
-    assert(c, original);
-    assert(c, buddy);
+    assertT(c, original);
+    assertT(c, buddy);
 
     addBuddy(original, buddy);
 
@@ -1466,7 +1466,7 @@ class SiteRecordList {
 void
 freeze(Context* c, SiteRecordList* frozen, Site* s, Value* v)
 {
-  assert(c, frozen->index < frozen->capacity);
+  assertT(c, frozen->index < frozen->capacity);
 
   s->freeze(c, v);
   init(new (frozen->records + (frozen->index ++)) SiteRecord, s, v);
@@ -1667,7 +1667,7 @@ populateSiteTables(Context* c, Event* e, SiteRecordList* frozen)
 void
 setSites(Context* c, Value* v, Site* s)
 {
-  assert(c, live(c, v));
+  assertT(c, live(c, v));
 
   for (; s; s = s->next) {
     v->addSite(c, s->copy(c));
@@ -1738,7 +1738,7 @@ restore(Context* c, Event* e, Snapshot* snapshots)
   }
 
   for (Snapshot* s = snapshots; s; s = s->next) {
-    assert(c, s->buddy);
+    assertT(c, s->buddy);
 
     s->value->buddy = s->buddy;
   }
@@ -2109,9 +2109,9 @@ class Client: public Assembler::Client {
   virtual void save(int r) {
     RegisterResource* reg = c->registerResources + r;
 
-    assert(c, reg->referenceCount == 0);
-    assert(c, reg->freezeCount == 0);
-    assert(c, not reg->reserved);
+    assertT(c, reg->referenceCount == 0);
+    assertT(c, reg->freezeCount == 0);
+    assertT(c, not reg->reserved);
 
     if (reg->value) {
       steal(c, reg, 0);
@@ -2177,7 +2177,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void visitLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCode.count());
+    assertT(&c, logicalIp < c.logicalCode.count());
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
@@ -2213,8 +2213,8 @@ class MyCompiler: public Compiler {
   }
 
   virtual void startLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCode.count());
-    assert(&c, c.logicalCode[logicalIp] == 0);
+    assertT(&c, logicalIp < c.logicalCode.count());
+    assertT(&c, c.logicalCode[logicalIp] == 0);
 
     if (c.logicalCode[c.logicalIp]->lastEvent == 0) {
       appendDummy(&c);
@@ -2298,22 +2298,22 @@ class MyCompiler: public Compiler {
 
   virtual void push(ir::Type type, ir::Value* value)
   {
-    // TODO: once type information is flowed properly, enable this assert.
+    // TODO: once type information is flowed properly, enable this assertT.
     // Some time later, we can remove the parameter.
-    // assert(&c, value->type == type);
+    // assertT(&c, value->type == type);
     compiler::push(&c, typeFootprint(&c, type), static_cast<Value*>(value));
   }
 
   virtual void save(ir::Type type, ir::Value* value)
   {
-    // TODO: once type information is flowed properly, enable this assert.
+    // TODO: once type information is flowed properly, enable this assertT.
     // Some time later, we can remove the parameter.
-    // assert(&c, value->type == type);
+    // assertT(&c, value->type == type);
     unsigned footprint = typeFootprint(&c, type);
     c.saved = cons(&c, static_cast<Value*>(value), c.saved);
     if (TargetBytesPerWord == 4 and footprint > 1) {
-      assert(&c, footprint == 2);
-      assert(&c, static_cast<Value*>(value)->nextWord);
+      assertT(&c, footprint == 2);
+      assertT(&c, static_cast<Value*>(value)->nextWord);
 
       save(ir::Type::i4(), static_cast<Value*>(value)->nextWord);
     }
@@ -2322,9 +2322,9 @@ class MyCompiler: public Compiler {
   virtual ir::Value* pop(ir::Type type)
   {
     ir::Value* value = compiler::pop(&c, typeFootprint(&c, type));
-    // TODO: once type information is flowed properly, enable this assert.
+    // TODO: once type information is flowed properly, enable this assertT.
     // Some time later, we can remove the parameter.
-    // assert(&c, static_cast<Value*>(value)->type == type);
+    // assertT(&c, static_cast<Value*>(value)->type == type);
     return value;
   }
 
@@ -2342,7 +2342,7 @@ class MyCompiler: public Compiler {
 
   virtual void popped(unsigned footprint) {
     for (; footprint; -- footprint) {
-      assert(&c, c.stack->value == 0 or c.stack->value->home >= 0);
+      assertT(&c, c.stack->value == 0 or c.stack->value->home >= 0);
 
       if (DebugFrame) {
         fprintf(stderr, "popped %p\n", c.stack->value);
@@ -2364,7 +2364,7 @@ class MyCompiler: public Compiler {
     }
 
     if (footprint > 1) {
-      assert(&c, footprint == 2);
+      assertT(&c, footprint == 2);
 
       bool bigEndian = c.arch->bigEndian();
 
@@ -2379,7 +2379,7 @@ class MyCompiler: public Compiler {
         high = s->next;
       }
 
-      assert(&c, (TargetBytesPerWord == 8
+      assertT(&c, (TargetBytesPerWord == 8
                   and low->value->nextWord == low->value and high->value == 0)
              or (TargetBytesPerWord == 4
                  and low->value->nextWord == high->value));
@@ -2455,13 +2455,13 @@ class MyCompiler: public Compiler {
                traceHandler,
                result,
                arguments);
-    assert(&c, c.stack == b);
+    assertT(&c, c.stack == b);
     return result;
   }
 
   virtual void return_(ir::Value* a)
   {
-    assert(&c, a);
+    assertT(&c, a);
     appendReturn(&c, static_cast<Value*>(a));
   }
 
@@ -2493,12 +2493,12 @@ class MyCompiler: public Compiler {
   {
     unsigned footprint = typeFootprint(&c, type);
 
-    assert(&c, index + footprint <= c.localFootprint);
+    assertT(&c, index + footprint <= c.localFootprint);
 
     Value* v = value(&c, type);
 
     if (footprint > 1) {
-      assert(&c, footprint == 2);
+      assertT(&c, footprint == 2);
 
       unsigned highIndex;
       unsigned lowIndex;
@@ -2534,7 +2534,7 @@ class MyCompiler: public Compiler {
   }
 
   virtual void initLocalsFromLogicalIp(unsigned logicalIp) {
-    assert(&c, logicalIp < c.logicalCode.count());
+    assertT(&c, logicalIp < c.logicalCode.count());
 
     unsigned footprint = sizeof(Local) * c.localFootprint;
     Local* newLocals = static_cast<Local*>(c.zone->allocate(footprint));
@@ -2565,7 +2565,7 @@ class MyCompiler: public Compiler {
   virtual void saveLocals() {
     int oldIp UNUSED = c.logicalIp;
     appendSaveLocals(&c);
-    assert(&c, oldIp == c.logicalIp);
+    assertT(&c, oldIp == c.logicalIp);
   }
 
   virtual void checkBounds(ir::Value* object,
@@ -2579,9 +2579,9 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* truncate(ir::Type type, ir::Value* src)
   {
-    assert(&c, src->type.flavor() == type.flavor());
-    assert(&c, type.flavor() != ir::Type::Float);
-    assert(&c, type.rawSize() < src->type.rawSize());
+    assertT(&c, src->type.flavor() == type.flavor());
+    assertT(&c, type.flavor() != ir::Type::Float);
+    assertT(&c, type.rawSize() < src->type.rawSize());
     Value* dst = value(&c, type);
     appendMove(&c,
                lir::Move,
@@ -2613,7 +2613,7 @@ class MyCompiler: public Compiler {
 
   virtual void store(ir::Value* src, ir::Value* dst)
   {
-    assert(&c, src->type.flavor() == dst->type.flavor());
+    assertT(&c, src->type.flavor() == dst->type.flavor());
 
     appendMove(&c,
                lir::Move,
@@ -2628,7 +2628,7 @@ class MyCompiler: public Compiler {
                           ir::Value* src,
                           ir::Type dstType)
   {
-    assert(&c, src->type.flavor() == dstType.flavor());
+    assertT(&c, src->type.flavor() == dstType.flavor());
 
     Value* dst = value(&c, dstType);
     appendMove(&c,
@@ -2648,12 +2648,12 @@ class MyCompiler: public Compiler {
                         ir::Value* b,
                         ir::Value* addr)
   {
-    assert(&c,
+    assertT(&c,
            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
                isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
-    assert(&c, a->type == b->type);
-    assert(&c, addr->type == ir::Type::iptr());
+    assertT(&c, a->type == b->type);
+    assertT(&c, addr->type == ir::Type::iptr());
 
     appendBranch(&c,
                  op,
@@ -2677,7 +2677,7 @@ class MyCompiler: public Compiler {
                               ir::Value* a,
                               ir::Value* b)
   {
-    assert(&c,
+    assertT(&c,
            (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
            or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
@@ -2694,7 +2694,7 @@ class MyCompiler: public Compiler {
   virtual ir::Value* unaryOp(lir::BinaryOperation op,
                              ir::Value* a)
   {
-    assert(&c,
+    assertT(&c,
            (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
                                                           and isFloatValue(a)));
     Value* result = value(&c, a->type);
@@ -2705,8 +2705,8 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* f2f(ir::Type resType, ir::Value* a)
   {
-    assert(&c, isFloatValue(a));
-    assert(&c, resType.flavor() == ir::Type::Float);
+    assertT(&c, isFloatValue(a));
+    assertT(&c, resType.flavor() == ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Float,
@@ -2717,8 +2717,8 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* f2i(ir::Type resType, ir::Value* a)
   {
-    assert(&c, isFloatValue(a));
-    assert(&c, resType.flavor() != ir::Type::Float);
+    assertT(&c, isFloatValue(a));
+    assertT(&c, resType.flavor() != ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Float2Int,
@@ -2729,8 +2729,8 @@ class MyCompiler: public Compiler {
 
   virtual ir::Value* i2f(ir::Type resType, ir::Value* a)
   {
-    assert(&c, isGeneralValue(a));
-    assert(&c, resType.flavor() == ir::Type::Float);
+    assertT(&c, isGeneralValue(a));
+    assertT(&c, resType.flavor() == ir::Type::Float);
     Value* result = value(&c, resType);
     appendTranslate(&c,
                     lir::Int2Float,

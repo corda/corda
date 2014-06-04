@@ -135,7 +135,7 @@ class MyThread: public Thread {
     }
 
     ~CallTrace() {
-      assert(t, t->stack == 0);
+      assertT(t, t->stack == 0);
 
       t->scratch = scratch;
 
@@ -225,7 +225,7 @@ class MyThread: public Thread {
     // interrupt us at any time and still get a consistent, accurate
     // stack trace.  See MyProcessor::getStackTrace for details.
 
-    assert(t, t->transition == 0);
+    assertT(t, t->transition == 0);
 
     Context c(t, ip, stack, continuation, trace);
 
@@ -710,7 +710,7 @@ localOffset(MyThread* t, int v, GcMethod* method)
                  + parameterFootprint
                  - v - 1));
 
-  assert(t, offset >= 0);
+  assertT(t, offset >= 0);
   return offset;
 }
 
@@ -746,7 +746,7 @@ class PoolElement: public avian::codegen::Promise {
   { }
 
   virtual int64_t value() {
-    assert(t, resolved());
+    assertT(t, resolved());
     return address;
   }
 
@@ -837,7 +837,7 @@ class TraceElementPromise: public avian::codegen::Promise {
   TraceElementPromise(System* s, TraceElement* trace): s(s), trace(trace) { }
 
   virtual int64_t value() {
-    assert(s, resolved());
+    assertT(s, resolved());
     return trace->address->value();
   }
 
@@ -960,26 +960,26 @@ class Context {
       if (size == 8) {
         switch(op) {
         case avian::codegen::lir::Absolute:
-          assert(t, resultSize == 8);
+          assertT(t, resultSize == 8);
           return local::getThunk(t, absoluteLongThunk);
 
         case avian::codegen::lir::FloatNegate:
-          assert(t, resultSize == 8);
+          assertT(t, resultSize == 8);
           return local::getThunk(t, negateDoubleThunk);
 
         case avian::codegen::lir::FloatSquareRoot:
-          assert(t, resultSize == 8);
+          assertT(t, resultSize == 8);
           return local::getThunk(t, squareRootDoubleThunk);
 
         case avian::codegen::lir::Float2Float:
-          assert(t, resultSize == 4);
+          assertT(t, resultSize == 4);
           return local::getThunk(t, doubleToFloatThunk);
 
         case avian::codegen::lir::Float2Int:
           if (resultSize == 8) {
             return local::getThunk(t, doubleToLongThunk);
           } else {
-            assert(t, resultSize == 4);
+            assertT(t, resultSize == 4);
             return local::getThunk(t, doubleToIntThunk);
           }
 
@@ -987,37 +987,37 @@ class Context {
           if (resultSize == 8) {
             return local::getThunk(t, longToDoubleThunk);
           } else {
-            assert(t, resultSize == 4);
+            assertT(t, resultSize == 4);
             return local::getThunk(t, longToFloatThunk);
           }
 
         default: abort(t);
         }
       } else {
-        assert(t, size == 4);
+        assertT(t, size == 4);
 
         switch(op) {
         case avian::codegen::lir::Absolute:
-          assert(t, resultSize == 4);
+          assertT(t, resultSize == 4);
           return local::getThunk(t, absoluteIntThunk);
 
         case avian::codegen::lir::FloatNegate:
-          assert(t, resultSize == 4);
+          assertT(t, resultSize == 4);
           return local::getThunk(t, negateFloatThunk);
 
         case avian::codegen::lir::FloatAbsolute:
-          assert(t, resultSize == 4);
+          assertT(t, resultSize == 4);
           return local::getThunk(t, absoluteFloatThunk);
 
         case avian::codegen::lir::Float2Float:
-          assert(t, resultSize == 8);
+          assertT(t, resultSize == 8);
           return local::getThunk(t, floatToDoubleThunk);
 
         case avian::codegen::lir::Float2Int:
           if (resultSize == 4) {
             return local::getThunk(t, floatToIntThunk);
           } else {
-            assert(t, resultSize == 8);
+            assertT(t, resultSize == 8);
             return local::getThunk(t, floatToLongThunk);
           }
 
@@ -1025,7 +1025,7 @@ class Context {
           if (resultSize == 4) {
             return local::getThunk(t, intToFloatThunk);
           } else {
-            assert(t, resultSize == 8);
+            assertT(t, resultSize == 8);
             return local::getThunk(t, intToDoubleThunk);
           }
 
@@ -1081,7 +1081,7 @@ class Context {
         default: abort(t);
         }
       } else {
-        assert(t, size == 4);
+        assertT(t, size == 4);
         switch (op) {
         case avian::codegen::lir::Divide:
           *threadParameter = true;
@@ -1268,7 +1268,7 @@ ir::Value* loadLocal(Context* context,
   ir::Value* result = context->compiler->loadLocal(
       type, translateLocalIndex(context, footprint, index));
 
-  assert(context->thread, type == result->type);
+  assertT(context->thread, type == result->type);
   return result;
 }
 
@@ -1278,7 +1278,7 @@ void storeLocal(Context* context,
                 ir::Value* value,
                 unsigned index)
 {
-  assert(context->thread, type == value->type);
+  assertT(context->thread, type == value->type);
   context->compiler->storeLocal(value,
                                 translateLocalIndex(context, footprint, index));
 }
@@ -1432,7 +1432,7 @@ class Frame {
 
   void set(unsigned index, ir::Type type)
   {
-    assert(t, index < frameSize());
+    assertT(t, index < frameSize());
 
     if (type == ir::Type::object()) {
       context->eventLog.append(MarkEvent);
@@ -1450,15 +1450,15 @@ class Frame {
 
   ir::Type get(unsigned index)
   {
-    assert(t, index < frameSize());
+    assertT(t, index < frameSize());
     int si = index - localSize();
-    assert(t, si >= 0);
+    assertT(t, si >= 0);
     return stackMap[si];
   }
 
   void popped(unsigned count) {
-    assert(t, sp >= count);
-    assert(t, sp - count >= localSize());
+    assertT(t, sp >= count);
+    assertT(t, sp - count >= localSize());
     while (count) {
       set(--sp, ir::Type::i4());
       -- count;
@@ -1539,24 +1539,24 @@ class Frame {
 
   void push(ir::Type type, ir::Value* o)
   {
-    assert(t, type == o->type);
+    assertT(t, type == o->type);
     c->push(o->type, o);
-    assert(t, sp + 1 <= frameSize());
+    assertT(t, sp + 1 <= frameSize());
     set(sp++, type);
   }
 
   void pushObject() {
     c->pushed(ir::Type::object());
 
-    assert(t, sp + 1 <= frameSize());
+    assertT(t, sp + 1 <= frameSize());
     set(sp++, ir::Type::object());
   }
 
   void pushLarge(ir::Type type, ir::Value* o)
   {
-    assert(t, o->type == type);
+    assertT(t, o->type == type);
     c->push(type, o);
-    assert(t, sp + 2 <= frameSize());
+    assertT(t, sp + 2 <= frameSize());
     set(sp++, type);
     set(sp++, type);
   }
@@ -1569,49 +1569,49 @@ class Frame {
 
   ir::Value* pop(ir::Type type)
   {
-    assert(t, sp >= 1);
-    assert(t, sp - 1 >= localSize());
-    assert(t, get(sp - 1) == type);
+    assertT(t, sp >= 1);
+    assertT(t, sp - 1 >= localSize());
+    assertT(t, get(sp - 1) == type);
     set(--sp, ir::Type::i4());
     return c->pop(type);
   }
 
   ir::Value* popLarge(ir::Type type)
   {
-    assert(t, sp >= 1);
-    assert(t, sp - 2 >= localSize());
-    assert(t, get(sp - 1) == type);
-    assert(t, get(sp - 2) == type);
+    assertT(t, sp >= 1);
+    assertT(t, sp - 2 >= localSize());
+    assertT(t, get(sp - 1) == type);
+    assertT(t, get(sp - 2) == type);
     sp -= 2;
     return c->pop(type);
   }
 
   void load(ir::Type type, unsigned index)
   {
-    assert(t, index < localSize());
+    assertT(t, index < localSize());
     push(type, loadLocal(context, 1, type, index));
   }
 
   void loadLarge(ir::Type type, unsigned index) {
-    assert(t, index < static_cast<unsigned>(localSize() - 1));
+    assertT(t, index < static_cast<unsigned>(localSize() - 1));
     pushLarge(type, loadLocal(context, 2, type, index));
   }
 
   void store(ir::Type type, unsigned index)
   {
-    assert(t,
+    assertT(t,
            type == ir::Type::i4() || type == ir::Type::f4()
            || type == ir::Type::object());
     storeLocal(context, 1, type, pop(type), index);
     unsigned ti = translateLocalIndex(context, 1, index);
-    assert(t, ti < localSize());
+    assertT(t, ti < localSize());
     set(ti, type);
   }
 
   void storeLarge(ir::Type type, unsigned index) {
     storeLocal(context, 2, type, popLarge(type), index);
     unsigned ti = translateLocalIndex(context, 2, index);
-    assert(t, ti + 1 < localSize());
+    assertT(t, ti + 1 < localSize());
     set(ti, type);
     set(ti + 1, type);
   }
@@ -1619,8 +1619,8 @@ class Frame {
   void dup() {
     c->push(ir::Type::i4(), c->peek(1, 0));
 
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 1 >= localSize());
+    assertT(t, sp + 1 <= frameSize());
+    assertT(t, sp - 1 >= localSize());
     set(sp, get(sp - 1));
     ++ sp;
   }
@@ -1633,8 +1633,8 @@ class Frame {
     c->push(ir::Type::i4(), s1);
     c->push(ir::Type::i4(), s0);
 
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 2 >= localSize());
+    assertT(t, sp + 1 <= frameSize());
+    assertT(t, sp - 2 >= localSize());
 
     ir::Type b2 = get(sp - 2);
     ir::Type b1 = get(sp - 1);
@@ -1665,8 +1665,8 @@ class Frame {
       c->push(ir::Type::i4(), s0);
     }
 
-    assert(t, sp + 1 <= frameSize());
-    assert(t, sp - 3 >= localSize());
+    assertT(t, sp + 1 <= frameSize());
+    assertT(t, sp - 3 >= localSize());
 
     ir::Type b3 = get(sp - 3);
     ir::Type b2 = get(sp - 2);
@@ -1693,8 +1693,8 @@ class Frame {
       c->push(ir::Type::i4(), s0);
     }
 
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 2 >= localSize());
+    assertT(t, sp + 2 <= frameSize());
+    assertT(t, sp - 2 >= localSize());
 
     ir::Type b2 = get(sp - 2);
     ir::Type b1 = get(sp - 1);
@@ -1725,8 +1725,8 @@ class Frame {
       c->push(ir::Type::i4(), s0);
     }
 
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 3 >= localSize());
+    assertT(t, sp + 2 <= frameSize());
+    assertT(t, sp - 3 >= localSize());
 
     ir::Type b3 = get(sp - 3);
     ir::Type b2 = get(sp - 2);
@@ -1774,8 +1774,8 @@ class Frame {
       c->push(ir::Type::i4(), s0);
     }
 
-    assert(t, sp + 2 <= frameSize());
-    assert(t, sp - 4 >= localSize());
+    assertT(t, sp + 2 <= frameSize());
+    assertT(t, sp - 4 >= localSize());
 
     ir::Type b4 = get(sp - 4);
     ir::Type b3 = get(sp - 3);
@@ -1799,7 +1799,7 @@ class Frame {
     c->push(ir::Type::i4(), s0);
     c->push(ir::Type::i4(), s1);
 
-    assert(t, sp - 2 >= localSize());
+    assertT(t, sp - 2 >= localSize());
 
     ir::Type saved = get(sp - 1);
 
@@ -3028,7 +3028,7 @@ useLongJump(MyThread* t, uintptr_t target)
   uintptr_t start = reinterpret_cast<uintptr_t>(a->memory.begin());
   uintptr_t end = reinterpret_cast<uintptr_t>(a->memory.begin())
                   + a->memory.count;
-  assert(t, end - start < reach);
+  assertT(t, end - start < reach);
 
   return (target > end && (target - start) > reach)
     or (target < start && (end - target) > reach);
@@ -3315,7 +3315,7 @@ returnsNext(MyThread* t, object code, unsigned ip)
   case goto_: {
     uint32_t offset = codeReadInt16(t, code, ++ip);
     uint32_t newIp = (ip - 3) + offset;
-    assert(t, newIp < codeLength(t, code));
+    assertT(t, newIp < codeLength(t, code));
 
     return returnsNext(t, code, newIp);
   }
@@ -3323,7 +3323,7 @@ returnsNext(MyThread* t, object code, unsigned ip)
   case goto_w: {
     uint32_t offset = codeReadInt32(t, code, ++ip);
     uint32_t newIp = (ip - 5) + offset;
-    assert(t, newIp < codeLength(t, code));
+    assertT(t, newIp < codeLength(t, code));
 
     return returnsNext(t, code, newIp);
   }
@@ -3417,7 +3417,7 @@ bool integerBranch(MyThread* t,
   unsigned instruction = codeBody(t, code, ip++);
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
-  assert(t, newIp < codeLength(t, code));
+  assertT(t, newIp < codeLength(t, code));
 
   ir::Value* target = frame->machineIpValue(newIp);
 
@@ -3495,7 +3495,7 @@ bool floatBranch(MyThread* t,
   unsigned instruction = codeBody(t, code, ip++);
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
-  assert(t, newIp < codeLength(t, code));
+  assertT(t, newIp < codeLength(t, code));
 
   ir::Value* target = frame->machineIpValue(newIp);
 
@@ -4611,7 +4611,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case goto_: {
       uint32_t offset = codeReadInt16(t, code, ip);
       uint32_t newIp = (ip - 3) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4624,7 +4624,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case goto_w: {
       uint32_t offset = codeReadInt32(t, code, ip);
       uint32_t newIp = (ip - 5) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4738,7 +4738,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case if_acmpne: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4759,7 +4759,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case if_icmple: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4780,7 +4780,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ifle: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       ir::Value* target = frame->machineIpValue(newIp);
 
@@ -4798,7 +4798,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ifnonnull: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -5161,7 +5161,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         newIp = thisIp + offset;
       }
 
-      assert(t, newIp < codeLength(t, code));
+      assertT(t, newIp < codeLength(t, code));
 
       frame->startSubroutine(newIp, ip);
 
@@ -5365,7 +5365,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ir::Value* key = frame->pop(ir::Type::i4());
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
-      assert(t, defaultIp < codeLength(t, code));
+      assertT(t, defaultIp < codeLength(t, code));
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
@@ -5380,7 +5380,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           unsigned index = ip + (i * 8);
           int32_t key = codeReadInt32(t, code, index);
           uint32_t newIp = base + codeReadInt32(t, code, index);
-          assert(t, newIp < codeLength(t, code));
+          assertT(t, newIp < codeLength(t, code));
 
           ipTable[i] = newIp;
 
@@ -5390,7 +5390,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
           c->poolAppendPromise(frame->addressPromise(frame->machineIp(newIp)));
         }
-        assert(t, start);
+        assertT(t, start);
 
         ir::Value* address = c->call(
             c->constant(getThunk(t, lookUpAddressThunk), ir::Type::iptr()),
@@ -5925,7 +5925,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
-      assert(t, defaultIp < codeLength(t, code));
+      assertT(t, defaultIp < codeLength(t, code));
 
       int32_t bottom = codeReadInt32(t, code, ip);
       int32_t top = codeReadInt32(t, code, ip);
@@ -5937,7 +5937,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         unsigned index = ip + (i * 4);
         uint32_t newIp = base + codeReadInt32(t, code, index);
-        assert(t, newIp < codeLength(t, code));
+        assertT(t, newIp < codeLength(t, code));
 
         ipTable[i] = newIp;
 
@@ -5947,7 +5947,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           start = p;
         }
       }
-      assert(t, start);
+      assertT(t, start);
 
       ir::Value* key = frame->pop(ir::Type::i4());
 
@@ -6280,7 +6280,7 @@ object translateExceptionHandlerTable(MyThread* t,
             duplicatedBaseIp + exceptionHandlerEnd(oldHandler));
 
         if (LIKELY(handlerStart >= 0)) {
-          assert(
+          assertT(
               t,
               handlerStart
               < static_cast<int>(codeLength(t, context->method->code())
@@ -6291,8 +6291,8 @@ object translateExceptionHandlerTable(MyThread* t,
               duplicatedBaseIp + exceptionHandlerEnd(oldHandler),
               duplicatedBaseIp + exceptionHandlerStart(oldHandler));
 
-          assert(t, handlerEnd >= 0);
-          assert(t,
+          assertT(t, handlerEnd >= 0);
+          assertT(t,
                  handlerEnd <= static_cast<int>(
                                    codeLength(t, context->method->code())
                                    * (context->subroutineCount + 1)));
@@ -6486,7 +6486,7 @@ unsigned calculateFrameMaps(MyThread* t,
         fprintf(stderr, "\n");
       }
 
-      assert(context->thread, ip * mapSize <= context->rootTable.count);
+      assertT(context->thread, ip * mapSize <= context->rootTable.count);
       uintptr_t* tableRoots = context->rootTable.begin() + (ip * mapSize);
 
       if (context->visitTable[ip] > 1) {
@@ -6718,7 +6718,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
   object table = reinterpret_cast<object>(makeIntArray
     (t, elementCount + ceilingDivide(elementCount * mapSize, 32)));
 
-  assert(t, intArrayLength(t, table) == elementCount
+  assertT(t, intArrayLength(t, table) == elementCount
          + simpleFrameMapTableSize(t, context->method, table));
 
   for (unsigned i = 0; i < elementCount; ++i) {
@@ -6727,7 +6727,7 @@ makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
     intArrayBody(t, table, i) = static_cast<intptr_t>(p->address->value())
       - reinterpret_cast<intptr_t>(start);
 
-    assert(t, elementCount + ceilingDivide((i + 1) * mapSize, 32)
+    assertT(t, elementCount + ceilingDivide((i + 1) * mapSize, 32)
            <= intArrayLength(t, table));
 
     if (mapSize) {
@@ -6857,7 +6857,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     // unsigned pathFootprint = 0;
     // unsigned mapCount = 0;
     for (TraceElement* p = context->traceLog; p; p = p->next) {
-      assert(t, index < context->traceLogCount);
+      assertT(t, index < context->traceLogCount);
 
       if (p->address) {
 
@@ -7325,7 +7325,7 @@ invokeNative(MyThread* t)
     t->trace->nativeMethod = target;
   }
 
-  assert(t, t->tailAddress == 0);
+  assertT(t, t->tailAddress == 0);
 
   uint64_t result = 0;
 
@@ -7609,7 +7609,7 @@ void
 callContinuation(MyThread* t, object continuation, object result,
                  object exception, void* ip, void* stack)
 {
-  assert(t, t->exception == 0);
+  assertT(t, t->exception == 0);
 
   if (exception) {
     t->exception = exception;
@@ -7651,8 +7651,8 @@ returnClass(MyThread* t, GcMethod* method)
     name = reinterpret_cast<object>(makeByteArray(t, length + 1));
     memcpy(&byteArrayBody(t, name, 0), spec, length);
   } else {
-    assert(t, *spec == 'L');
-    assert(t, spec[length - 1] == ';');
+    assertT(t, *spec == 'L');
+    assertT(t, spec[length - 1] == ';');
     name = reinterpret_cast<object>(makeByteArray(t, length - 1));
     memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
   }
@@ -7703,7 +7703,7 @@ jumpAndInvoke(MyThread* t, GcMethod* method, void* stack, ...)
   }
   va_end(a);
 
-  assert(t, t->exception == 0);
+  assertT(t, t->exception == 0);
 
   popResources(t);
 
@@ -8030,7 +8030,7 @@ class ArgumentList {
   }
 
   void addObject(object v) {
-    assert(t, position < size);
+    assertT(t, position < size);
 
     array[position] = reinterpret_cast<uintptr_t>(v);
     objectMask[position] = true;
@@ -8038,7 +8038,7 @@ class ArgumentList {
   }
 
   void addInt(uintptr_t v) {
-    assert(t, position < size);
+    assertT(t, position < size);
 
     array[position] = v;
     objectMask[position] = false;
@@ -8046,7 +8046,7 @@ class ArgumentList {
   }
 
   void addLong(uint64_t v) {
-    assert(t, position < size - 1);
+    assertT(t, position < size - 1);
 
     memcpy(array + position, &v, 8);
 
@@ -8114,7 +8114,7 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
 
     MyCheckpoint checkpoint(t);
 
-    assert(t, arguments->position == arguments->size);
+    assertT(t, arguments->position == arguments->size);
 
     result = vmInvoke
       (t, reinterpret_cast<void*>(methodAddress(t, method)),
@@ -8616,12 +8616,12 @@ class MyProcessor: public Processor {
   virtual object
   invokeArray(Thread* t, GcMethod* method, object this_, object arguments)
   {
-    assert(t, t->exception == 0);
+    assertT(t, t->exception == 0);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     method = findMethod(t, method, this_);
 
@@ -8646,12 +8646,12 @@ class MyProcessor: public Processor {
   virtual object
   invokeArray(Thread* t, GcMethod* method, object this_, const jvalue* arguments)
   {
-    assert(t, t->exception == 0);
+    assertT(t, t->exception == 0);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     method = findMethod(t, method, this_);
 
@@ -8677,12 +8677,12 @@ class MyProcessor: public Processor {
   invokeList(Thread* t, GcMethod* method, object this_, bool indirectObjects,
              va_list arguments)
   {
-    assert(t, t->exception == 0);
+    assertT(t, t->exception == 0);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     method = findMethod(t, method, this_);
 
@@ -8709,9 +8709,9 @@ class MyProcessor: public Processor {
              const char* methodName, const char* methodSpec,
              object this_, va_list arguments)
   {
-    assert(t, t->exception == 0);
+    assertT(t, t->exception == 0);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
     unsigned size = parameterFootprint(t, methodSpec, this_ == 0);
@@ -8724,7 +8724,7 @@ class MyProcessor: public Processor {
     GcMethod* method = resolveMethod
       (t, loader, className, methodName, methodSpec);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     PROTECT(t, method);
 
@@ -9398,7 +9398,7 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
           unsigned index = indexOf(word, bit);
 
           uintptr_t* p = heap + index;
-          assert(t, *p);
+          assertT(t, *p);
 
           uintptr_t number = *p & BootMask;
           uintptr_t mark = *p >> BootShift;
@@ -9472,7 +9472,7 @@ fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
       for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
         GcMethod* method = cast<GcMethod>(t, arrayBody(t, classMethodTable(t, c), i));
         if (method->code()) {
-          assert(t, methodCompiled(t, method)
+          assertT(t, methodCompiled(t, method)
                  <= static_cast<int32_t>(image->codeSize));
 
           codeCompiled(t, method->code())
@@ -9536,7 +9536,7 @@ fixupVirtualThunks(MyThread* t, uint8_t* code)
 void
 boot(MyThread* t, BootImage* image, uint8_t* code)
 {
-  assert(t, image->magic == BootImage::Magic);
+  assertT(t, image->magic == BootImage::Magic);
 
   unsigned* bootClassTable = reinterpret_cast<unsigned*>(image + 1);
   unsigned* appClassTable = bootClassTable + image->bootClassCount;
@@ -10014,7 +10014,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
     return;
   }
 
-  assert(t, (method->flags() & ACC_NATIVE) == 0);
+  assertT(t, (method->flags() & ACC_NATIVE) == 0);
 
   // We must avoid acquiring any locks until after the first pass of
   // compilation, since this pass may trigger classloading operations

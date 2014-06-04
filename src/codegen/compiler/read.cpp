@@ -44,7 +44,7 @@ bool SingleRead::valid() {
 }
 
 void SingleRead::append(Context* c UNUSED, Read* r) {
-  assert(c, next_ == 0);
+  assertT(c, next_ == 0);
   next_ = r;
 }
 
@@ -170,7 +170,7 @@ bool StubRead::valid() {
 }
 
 void StubRead::append(Context* c UNUSED, Read* r) {
-  assert(c, next_ == 0);
+  assertT(c, next_ == 0);
   next_ = r;
 }
 
@@ -181,7 +181,7 @@ Read* StubRead::next(Context*) {
 
 
 SingleRead* read(Context* c, const SiteMask& mask, Value* successor) {
-  assert(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
+  assertT(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
 
   return new(c->zone) SingleRead(mask, successor);
 }

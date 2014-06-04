@@ -22,7 +22,7 @@ const bool DebugResources = false;
 void steal(Context* c, Resource* r, Value* thief);
 
 void decrementAvailableGeneralRegisterCount(Context* c) {
-  assert(c, c->availableGeneralRegisterCount);
+  assertT(c, c->availableGeneralRegisterCount);
   -- c->availableGeneralRegisterCount;
   
   if (DebugResources) {
@@ -56,7 +56,7 @@ void thawResource(Context* c, Resource* r, Value* v) {
       fprintf(stderr, "%p thaw %s to %d\n", v, buffer, r->freezeCount - 1);
     }
 
-    assert(c, r->freezeCount);
+    assertT(c, r->freezeCount);
 
     -- r->freezeCount;
   }
@@ -128,7 +128,7 @@ void RegisterResource::decrement(Context* c) {
       fprintf(stderr, "decrement %s to %d\n", buffer, this->referenceCount - 1);
     }
 
-    assert(c, this->referenceCount > 0);
+    assertT(c, this->referenceCount > 0);
 
     -- this->referenceCount;
 
@@ -160,8 +160,8 @@ unsigned FrameResource::index(Context* c) {
 
 
 void acquire(Context* c, Resource* resource, Value* value, Site* site) {
-  assert(c, value);
-  assert(c, site);
+  assertT(c, value);
+  assertT(c, site);
 
   if (not resource->reserved) {
     if (DebugResources) {
@@ -170,8 +170,8 @@ void acquire(Context* c, Resource* resource, Value* value, Site* site) {
     }
 
     if (resource->value) {
-      assert(c, resource->value->findSite(resource->site));
-      assert(c, not value->findSite(resource->site));
+      assertT(c, resource->value->findSite(resource->site));
+      assertT(c, not value->findSite(resource->site));
 
       steal(c, resource, value);
     }
@@ -194,11 +194,11 @@ void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNU
       fprintf(stderr, "%p release %s\n", resource->value, buffer);
     }
 
-    assert(c, resource->value);
-    assert(c, resource->site);
+    assertT(c, resource->value);
+    assertT(c, resource->site);
 
-    assert(c, resource->value->isBuddyOf(value));
-    assert(c, site == resource->site);
+    assertT(c, resource->value->isBuddyOf(value));
+    assertT(c, site == resource->site);
 
     Resource* next = resource->nextAcquired;
     if (next) {
@@ -211,7 +211,7 @@ void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNU
       previous->nextAcquired = next;
       resource->previousAcquired = 0;
     } else {
-      assert(c, c->acquiredResources == resource);
+      assertT(c, c->acquiredResources == resource);
       c->acquiredResources = next;
     }
     

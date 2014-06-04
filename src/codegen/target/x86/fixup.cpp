@@ -42,7 +42,7 @@ bool OffsetPromise::resolved() {
 }
 
 int64_t OffsetPromise::value() {
-  assert(c, resolved());
+  assertT(c, resolved());
 
   if (value_ == -1) {
     value_ = block->start + (offset - block->offset)

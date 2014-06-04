@@ -176,7 +176,7 @@ Set::dispose()
 Set::Entry*
 add(Context* c UNUSED, Set* set, object p, uint32_t number)
 {
-  assert(c->thread, set->size < set->capacity);
+  assertT(c->thread, set->size < set->capacity);
 
   unsigned index = hash(p, set->capacity);
 

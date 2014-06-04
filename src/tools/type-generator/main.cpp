@@ -1219,7 +1219,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
 
   if (memberOwner(member)->type == Object::Type) {
     if (not unsafe) {
-      out->write("  assert(t, t->m->unsafe or ");
+      out->write("  assertT(t, t->m->unsafe or ");
       out->write("instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe");
       out->write("(t, t->m->types, Gc::");
       out->write(capitalize(local::typeName(memberOwner(member))));
@@ -1227,7 +1227,7 @@ writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
       out->write(", o));\n");
 
       if (member->type != Object::Scalar) {
-        out->write("  assert(t, i < ");
+        out->write("  assertT(t, i < ");
         out->write(local::typeName(memberOwner(member)));
         out->write("Length(t, o));\n");
       }

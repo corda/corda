@@ -686,7 +686,7 @@ class MySystem: public System {
   virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
-    assert(this, st != sTarget);
+    assertT(this, st != sTarget);
 
     Thread* target = static_cast<Thread*>(sTarget);
 

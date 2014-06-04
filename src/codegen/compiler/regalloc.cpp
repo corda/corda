@@ -40,7 +40,7 @@ resourceCost(Context* c, Value* v, Resource* r, SiteMask mask,
       costCalculator ? costCalculator->cost(c, mask) : 0;
 
     if (r->value) {
-      assert(c, r->value->findSite(r->site));
+      assertT(c, r->value->findSite(r->site));
       
       if (v and r->value->isBuddyOf(v)) {
         return baseCost;
@@ -285,7 +285,7 @@ pickTarget(Context* c, Read* read, bool intersectRead,
     // memory isn't an option - try harder to find an available frame
     // site:
     best = pickAnyFrameTarget(c, value, costCalculator);
-    assert(c, best.cost <= 3);
+    assertT(c, best.cost <= 3);
   }
 
   if (best.cost == Target::Impossible) {

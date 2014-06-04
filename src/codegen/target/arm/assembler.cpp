@@ -85,8 +85,8 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
           unsigned footprint, void* link, bool,
           int targetParameterFootprint UNUSED, void** ip, void** stack)
 {
-  assert(con, *ip >= start);
-  assert(con, *ip <= start + (size / TargetBytesPerWord));
+  assertT(con, *ip >= start);
+  assertT(con, *ip <= start + (size / TargetBytesPerWord));
 
   uint32_t* instruction = static_cast<uint32_t*>(*ip);
 
@@ -235,7 +235,7 @@ class MyArchitecture: public Architecture {
   }
 
   virtual int argumentRegister(unsigned index) {
-    assert(&con, index < argumentRegisterCount());
+    assertT(&con, index < argumentRegisterCount());
 
     return index;
   }
@@ -576,7 +576,7 @@ class MyAssembler: public Assembler {
   { }
 
   virtual void setClient(Client* client) {
-    assert(&con, con.client == 0);
+    assertT(&con, con.client == 0);
     con.client = client;
   }
 
@@ -660,7 +660,7 @@ class MyAssembler: public Assembler {
     // larger frames may require multiple subtract/add instructions
     // to allocate/deallocate, and nextFrame will need to be taught
     // how to handle them:
-    assert(&con, footprint < 256);
+    assertT(&con, footprint < 256);
 
     lir::Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
@@ -701,7 +701,7 @@ class MyAssembler: public Assembler {
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate UNUSED)
   {
-    assert(&con, framePointerSurrogate == lir::NoRegister);
+    assertT(&con, framePointerSurrogate == lir::NoRegister);
 
     if (TailCalls) {
       if (offset) {
@@ -720,7 +720,7 @@ class MyAssembler: public Assembler {
         addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
         if (returnAddressSurrogate != lir::NoRegister) {
-          assert(&con, offset > 0);
+          assertT(&con, offset > 0);
 
           lir::Register ras(returnAddressSurrogate);
           lir::Memory dst(StackRegister, (offset - 1) * TargetBytesPerWord);
@@ -739,8 +739,8 @@ class MyAssembler: public Assembler {
   {
     popFrame(frameFootprint);
 
-    assert(&con, argumentFootprint >= StackAlignmentInWords);
-    assert(&con, (argumentFootprint % StackAlignmentInWords) == 0);
+    assertT(&con, argumentFootprint >= StackAlignmentInWords);
+    assertT(&con, (argumentFootprint % StackAlignmentInWords) == 0);
 
     unsigned offset;
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
@@ -788,16 +788,16 @@ class MyAssembler: public Assembler {
   virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c)
   {
     if (isBranch(op)) {
-      assert(&con, a.size == b.size);
-      assert(&con, c.size == TargetBytesPerWord);
-      assert(&con, c.type == lir::ConstantOperand);
+      assertT(&con, a.size == b.size);
+      assertT(&con, c.size == TargetBytesPerWord);
+      assertT(&con, c.type == lir::ConstantOperand);
 
       arch_->con.branchOperations[branchIndex(&(arch_->con), a.type, b.type)]
         (&con, op, a.size, a.operand, b.operand, c.operand);
     } else {
-      assert(&con, b.size == c.size);
-      assert(&con, b.type == lir::RegisterOperand);
-      assert(&con, c.type == lir::RegisterOperand);
+      assertT(&con, b.size == c.size);
+      assertT(&con, b.type == lir::RegisterOperand);
+      assertT(&con, c.type == lir::RegisterOperand);
 
       arch_->con.ternaryOperations[index(&(arch_->con), op, a.type)]
         (&con, b.size, a.operand, b.operand, c.operand);

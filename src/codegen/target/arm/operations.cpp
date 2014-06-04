@@ -61,7 +61,7 @@ void moveRR(Context* con, unsigned srcSize, lir::Register* src,
 
 void shiftLeftC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
     emit(con, lsli(t->low, b->low, getValue(a) & 0x1F));
   } else {
@@ -98,7 +98,7 @@ void shiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b
 
 void shiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
     emit(con, asri(t->low, b->low, getValue(a) & 0x1F));
   } else {
@@ -130,7 +130,7 @@ void unsignedShiftRightR(Context* con, unsigned size, lir::Register* a, lir::Reg
 
 void unsignedShiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
     emit(con, lsri(t->low, b->low, getValue(a) & 0x1F));
   } else {
@@ -223,15 +223,15 @@ void resolve(MyBlock* b)
 
 void jumpR(Context* con, unsigned size UNUSED, lir::Register* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
   emit(con, bx(target->low));
 }
 
 void swapRR(Context* con, unsigned aSize, lir::Register* a,
        unsigned bSize, lir::Register* b)
 {
-  assert(con, aSize == vm::TargetBytesPerWord);
-  assert(con, bSize == vm::TargetBytesPerWord);
+  assertT(con, aSize == vm::TargetBytesPerWord);
+  assertT(con, bSize == vm::TargetBytesPerWord);
 
   lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveRR(con, aSize, a, bSize, &tmp);
@@ -246,7 +246,7 @@ void moveRR(Context* con, unsigned srcSize, lir::Register* src,
   bool srcIsFpr = isFpr(src);
   bool dstIsFpr = isFpr(dst);
   if (srcIsFpr || dstIsFpr) {   // FPR(s) involved
-    assert(con, srcSize == dstSize);
+    assertT(con, srcSize == dstSize);
     const bool dprec = srcSize == 8;
     if (srcIsFpr && dstIsFpr) { // FPR to FPR
       if (dprec) emit(con, fcpyd(fpr64(dst), fpr64(src))); // double
@@ -370,7 +370,7 @@ void subR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::
 void addC(Context* con, unsigned size, lir::Constant* a,
      lir::Register* b, lir::Register* dst)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   int32_t v = a->value->value();
   if (v) {
@@ -390,7 +390,7 @@ void addC(Context* con, unsigned size, lir::Constant* a,
 void subC(Context* con, unsigned size, lir::Constant* a,
      lir::Register* b, lir::Register* dst)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   int32_t v = a->value->value();
   if (v) {
@@ -654,7 +654,7 @@ void store(Context* con, unsigned size, lir::Register* src,
 void moveRM(Context* con, unsigned srcSize, lir::Register* src,
        unsigned dstSize UNUSED, lir::Memory* dst)
 {
-  assert(con, srcSize == dstSize);
+  assertT(con, srcSize == dstSize);
 
   store(con, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
 }
@@ -866,7 +866,7 @@ void xorR(Context* con, unsigned size, lir::Register* a,
 void moveAR2(Context* con, unsigned srcSize, lir::Address* src,
        unsigned dstSize, lir::Register* dst)
 {
-  assert(con, srcSize == 4 and dstSize == 4);
+  assertT(con, srcSize == 4 and dstSize == 4);
 
   lir::Constant constant(src->address);
   moveCR(con, srcSize, &constant, dstSize, dst);
@@ -884,14 +884,14 @@ void moveAR(Context* con, unsigned srcSize, lir::Address* src,
 void compareRR(Context* con, unsigned aSize, lir::Register* a,
           unsigned bSize UNUSED, lir::Register* b)
 {
-  assert(con, !(isFpr(a) ^ isFpr(b))); // regs must be of the same type
+  assertT(con, !(isFpr(a) ^ isFpr(b))); // regs must be of the same type
 
   if (!isFpr(a)) { // GPR compare
-    assert(con, aSize == 4 && bSize == 4);
-    /**///assert(con, b->low != a->low);
+    assertT(con, aSize == 4 && bSize == 4);
+    /**///assertT(con, b->low != a->low);
     emit(con, cmp(b->low, a->low));
   } else {         // FPR compare
-    assert(con, aSize == bSize);
+    assertT(con, aSize == bSize);
     if (aSize == 8) emit(con, fcmpd(fpr64(b), fpr64(a))); // double
     else            emit(con, fcmps(fpr32(b), fpr32(a))); // single
     emit(con, fmstat());
@@ -901,7 +901,7 @@ void compareRR(Context* con, unsigned aSize, lir::Register* a,
 void compareCR(Context* con, unsigned aSize, lir::Constant* a,
           unsigned bSize, lir::Register* b)
 {
-  assert(con, aSize == 4 and bSize == 4);
+  assertT(con, aSize == 4 and bSize == 4);
 
   if (!isFpr(b) && a->value->resolved() &&
       isOfWidth(a->value->value(), 8)) {
@@ -917,7 +917,7 @@ void compareCR(Context* con, unsigned aSize, lir::Constant* a,
 void compareCM(Context* con, unsigned aSize, lir::Constant* a,
           unsigned bSize, lir::Memory* b)
 {
-  assert(con, aSize == 4 and bSize == 4);
+  assertT(con, aSize == 4 and bSize == 4);
 
   lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveMR(con, bSize, b, bSize, &tmp);
@@ -928,7 +928,7 @@ void compareCM(Context* con, unsigned aSize, lir::Constant* a,
 void compareRM(Context* con, unsigned aSize, lir::Register* a,
           unsigned bSize, lir::Memory* b)
 {
-  assert(con, aSize == 4 and bSize == 4);
+  assertT(con, aSize == 4 and bSize == 4);
 
   lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
   moveMR(con, bSize, b, bSize, &tmp);
@@ -1092,7 +1092,7 @@ void branchCR(Context* con, lir::TernaryOperation op, unsigned size,
          lir::Constant* a, lir::Register* b,
          lir::Constant* target)
 {
-  assert(con, !isFloatBranch(op));
+  assertT(con, !isFloatBranch(op));
 
   if (size > vm::TargetBytesPerWord) {
     int64_t v = a->value->value();
@@ -1117,8 +1117,8 @@ void branchRM(Context* con, lir::TernaryOperation op, unsigned size,
          lir::Register* a, lir::Memory* b,
          lir::Constant* target)
 {
-  assert(con, !isFloatBranch(op));
-  assert(con, size <= vm::TargetBytesPerWord);
+  assertT(con, !isFloatBranch(op));
+  assertT(con, size <= vm::TargetBytesPerWord);
 
   compareRM(con, size, a, size, b);
   branch(con, op, target);
@@ -1128,8 +1128,8 @@ void branchCM(Context* con, lir::TernaryOperation op, unsigned size,
          lir::Constant* a, lir::Memory* b,
          lir::Constant* target)
 {
-  assert(con, !isFloatBranch(op));
-  assert(con, size <= vm::TargetBytesPerWord);
+  assertT(con, !isFloatBranch(op));
+  assertT(con, size <= vm::TargetBytesPerWord);
 
   compareCM(con, size, a, size, b);
   branch(con, op, target);
@@ -1169,7 +1169,7 @@ void moveCM(Context* con, unsigned srcSize, lir::Constant* src,
 void negateRR(Context* con, unsigned srcSize, lir::Register* src,
          unsigned dstSize UNUSED, lir::Register* dst)
 {
-  assert(con, srcSize == dstSize);
+  assertT(con, srcSize == dstSize);
 
   emit(con, mvn(dst->low, src->low));
   emit(con, SETS(addi(dst->low, dst->low, 1)));
@@ -1181,13 +1181,13 @@ void negateRR(Context* con, unsigned srcSize, lir::Register* src,
 
 void callR(Context* con, unsigned size UNUSED, lir::Register* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
   emit(con, blx(target->low));
 }
 
 void callC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   appendOffsetTask(con, target->value, offsetPromise(con));
   emit(con, bl(0));
@@ -1195,7 +1195,7 @@ void callC(Context* con, unsigned size UNUSED, lir::Constant* target)
 
 void longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   lir::Register tmp(4);
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
@@ -1204,7 +1204,7 @@ void longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
 
 void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   lir::Register tmp(4); // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
@@ -1213,7 +1213,7 @@ void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 
 void jumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
-  assert(con, size == vm::TargetBytesPerWord);
+  assertT(con, size == vm::TargetBytesPerWord);
 
   appendOffsetTask(con, target->value, offsetPromise(con));
   emit(con, b(0));

@@ -230,7 +230,7 @@ resolveNative(Thread* t, GcMethod* method)
 {
   PROTECT(t, method);
 
-  assert(t, method->flags() & ACC_NATIVE);
+  assertT(t, method->flags() & ACC_NATIVE);
 
   initClass(t, cast<GcClass>(t, method->class_()));
 

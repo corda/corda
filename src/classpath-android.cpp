@@ -1556,7 +1556,7 @@ Avian_dalvik_system_VMStack_getClasses
 
         object c = getJClass(t, cast<GcClass>(t, walker->method()->class_()));
         
-        assert(t, counter - 2 < objectArrayLength(t, array));
+        assertT(t, counter - 2 < objectArrayLength(t, array));
 
         set(t, array, ArrayBody + ((counter - 2) * BytesPerWord), c);
 

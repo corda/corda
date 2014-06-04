@@ -103,12 +103,12 @@ class MutexResource {
  public:
   MutexResource(System* s, HANDLE m): s(s), m(m) {
     int r UNUSED = WaitForSingleObject(m, INFINITE);
-    assert(s, r == WAIT_OBJECT_0);
+    assertT(s, r == WAIT_OBJECT_0);
   }
 
   ~MutexResource() {
     bool success UNUSED = ReleaseMutex(m);
-    assert(s, success);
+    assertT(s, success);
   }
 
  private:
@@ -142,10 +142,10 @@ class MySystem: public System {
       flags(0)
     {
       mutex = CreateMutex(0, false, 0);
-      assert(s, mutex);
+      assertT(s, mutex);
 
       event = CreateEvent(0, true, false, 0);
-      assert(s, event);
+      assertT(s, event);
     }
 
     virtual void interrupt() {
@@ -155,7 +155,7 @@ class MySystem: public System {
 
       if (flags & Waiting) {
         int r UNUSED = SetEvent(event);
-        assert(s, r != 0);
+        assertT(s, r != 0);
       }
     }
 
@@ -171,7 +171,7 @@ class MySystem: public System {
 
     virtual void join() {
       int r UNUSED = WaitForSingleObject(thread, INFINITE);
-      assert(s, r == WAIT_OBJECT_0);
+      assertT(s, r == WAIT_OBJECT_0);
     }
 
     virtual void dispose() {
@@ -194,17 +194,17 @@ class MySystem: public System {
    public:
     Mutex(System* s): s(s) {
       mutex = CreateMutex(0, false, 0);
-      assert(s, mutex);
+      assertT(s, mutex);
     }
 
     virtual void acquire() {
       int r UNUSED = WaitForSingleObject(mutex, INFINITE);
-      assert(s, r == WAIT_OBJECT_0);
+      assertT(s, r == WAIT_OBJECT_0);
     }
 
     virtual void release() {
       bool success UNUSED = ReleaseMutex(mutex);
-      assert(s, success);
+      assertT(s, success);
     }
 
     virtual void dispose() {
@@ -220,12 +220,12 @@ class MySystem: public System {
    public:
     Monitor(System* s): s(s), owner_(0), first(0), last(0), depth(0) {
       mutex = CreateMutex(0, false, 0);
-      assert(s, mutex);
+      assertT(s, mutex);
     }
 
     virtual bool tryAcquire(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ == t) {
         ++ depth;
@@ -248,11 +248,11 @@ class MySystem: public System {
 
     virtual void acquire(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ != t) {
         int r UNUSED = WaitForSingleObject(mutex, INFINITE);
-        assert(s, r == WAIT_OBJECT_0);
+        assertT(s, r == WAIT_OBJECT_0);
         owner_ = t;
       }
       ++ depth;
@@ -260,13 +260,13 @@ class MySystem: public System {
 
     virtual void release(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ == t) {
         if (-- depth == 0) {
           owner_ = 0;
           bool success UNUSED = ReleaseMutex(mutex);
-          assert(s, success);
+          assertT(s, success);
         }
       } else {
         sysAbort(s);
@@ -329,7 +329,7 @@ class MySystem: public System {
 
     bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ == t) {
         // Initialized here to make gcc 4.2 a happy compiler
@@ -357,20 +357,20 @@ class MySystem: public System {
           owner_ = 0;
 
           bool success UNUSED = ReleaseMutex(mutex);
-          assert(s, success);
+          assertT(s, success);
 
           if (not interrupted) {
             success = ResetEvent(t->event);
-            assert(s, success);
+            assertT(s, success);
 
             success = ReleaseMutex(t->mutex);
-            assert(s, success);
+            assertT(s, success);
 
             r = WaitForSingleObject(t->event, (time ? time : INFINITE));
-            assert(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
+            assertT(s, r == WAIT_OBJECT_0 or r == WAIT_TIMEOUT);
 
             r = WaitForSingleObject(t->mutex, INFINITE);
-            assert(s, r == WAIT_OBJECT_0);
+            assertT(s, r == WAIT_OBJECT_0);
 
             interrupted = t->r->interrupted();
             if (interrupted and clearInterrupted) {
@@ -382,7 +382,7 @@ class MySystem: public System {
         }
 
         r = WaitForSingleObject(mutex, INFINITE);
-        assert(s, r == WAIT_OBJECT_0);
+        assertT(s, r == WAIT_OBJECT_0);
 
         { ACQUIRE(s, t->mutex);
           t->flags = 0;
@@ -415,12 +415,12 @@ class MySystem: public System {
       t->flags |= Notified;
 
       bool success UNUSED = SetEvent(t->event);
-      assert(s, success);
+      assertT(s, success);
     }
 
     virtual void notify(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ == t) {
         if (first) {
@@ -440,7 +440,7 @@ class MySystem: public System {
 
     virtual void notifyAll(System::Thread* context) {
       Thread* t = static_cast<Thread*>(context);
-      assert(s, t);
+      assertT(s, t);
 
       if (owner_ == t) {
         for (Thread* t = first; t; t = t->next) {
@@ -457,7 +457,7 @@ class MySystem: public System {
     }
 
     virtual void dispose() {
-      assert(s, owner_ == 0);
+      assertT(s, owner_ == 0);
       CloseHandle(mutex);
       ::free(this);
     }
@@ -474,7 +474,7 @@ class MySystem: public System {
    public:
     Local(System* s): s(s) {
       key = TlsAlloc();
-      assert(s, key != TLS_OUT_OF_INDEXES);
+      assertT(s, key != TLS_OUT_OF_INDEXES);
     }
 
     virtual void* get() {
@@ -483,12 +483,12 @@ class MySystem: public System {
 
     virtual void set(void* p) {
       bool r UNUSED = TlsSetValue(key, p);
-      assert(s, r);
+      assertT(s, r);
     }
 
     virtual void dispose() {
       bool r UNUSED = TlsFree(key);
-      assert(s, r);
+      assertT(s, r);
 
       ::free(this);
     }
@@ -623,7 +623,7 @@ class MySystem: public System {
     system = this;
 
     mutex = CreateMutex(0, false, 0);
-    assert(this, mutex);
+    assertT(this, mutex);
   }
 
   virtual void* tryAllocate(unsigned sizeInBytes) {
@@ -642,7 +642,7 @@ class MySystem: public System {
 
   virtual void freeExecutable(const void* p, unsigned) {
     int r UNUSED = VirtualFree(const_cast<void*>(p), 0, MEM_RELEASE);
-    assert(this, r);
+    assertT(this, r);
   }
   #endif
 
@@ -655,7 +655,7 @@ class MySystem: public System {
     bool success UNUSED = DuplicateHandle
       (GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
        &(t->thread), 0, false, DUPLICATE_SAME_ACCESS);
-    assert(this, success);
+    assertT(this, success);
     r->attach(t);
     return 0;
   }
@@ -665,7 +665,7 @@ class MySystem: public System {
     r->attach(t);
     DWORD id;
     t->thread = CreateThread(0, 0, run, r, 0, &id);
-    assert(this, t->thread);
+    assertT(this, t->thread);
     return 0;
   }
 
@@ -688,7 +688,7 @@ class MySystem: public System {
                        ThreadVisitor* visitor)
   {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    assert(this, st != sTarget);
+    assertT(this, st != sTarget);
 
     Thread* target = static_cast<Thread*>(sTarget);
 
@@ -873,7 +873,7 @@ class MySystem: public System {
       handle = GetModuleHandle(0);
 #else
       // Most of WinRT/WP8 applications can not host native object files inside main executable
-      assert(this, false);
+      assertT(this, false);
 #endif
     }
  

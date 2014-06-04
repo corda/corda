@@ -74,8 +74,8 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
           unsigned footprint, void*, bool mostRecent,
           int targetParameterFootprint, void** ip, void** stack)
 {
-  assert(c, *ip >= start);
-  assert(c, *ip <= start + size);
+  assertT(c, *ip >= start);
+  assertT(c, *ip <= start + size);
 
   uint8_t* instruction = static_cast<uint8_t*>(*ip);
 
@@ -89,7 +89,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   }
 
   if (instruction <= start) {
-    assert(c, mostRecent);
+    assertT(c, mostRecent);
     *ip = static_cast<void**>(*stack)[0];
     return;
   }
@@ -99,7 +99,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     start += (TargetBytesPerWord == 4 ? 3 : 4);
 
     if (instruction <= start or *instruction == 0x5d) {
-      assert(c, mostRecent);
+      assertT(c, mostRecent);
 
       *ip = static_cast<void**>(*stack)[1];
       *stack = static_cast<void**>(*stack) + 1;
@@ -143,10 +143,10 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   }
   
   if (UseFramePointer and not mostRecent) {
-    assert(c, static_cast<void***>(*stack)[-1] + 1
+    assertT(c, static_cast<void***>(*stack)[-1] + 1
            == static_cast<void**>(*stack) + offset);
 
-    assert(c, static_cast<void***>(*stack)[-1][1]
+    assertT(c, static_cast<void***>(*stack)[-1][1]
            == static_cast<void**>(*stack)[offset]);
   }
 
@@ -263,7 +263,7 @@ class MyArchitecture: public Architecture {
   }
 
   virtual int argumentRegister(unsigned index) {
-    assert(&c, TargetBytesPerWord == 8);
+    assertT(&c, TargetBytesPerWord == 8);
     switch (index) {
 #if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
     case 0:
@@ -312,45 +312,45 @@ class MyArchitecture: public Architecture {
   virtual void updateCall(lir::UnaryOperation op, void* returnAddress,
                           void* newTarget)
   {
-    bool assertAlignment UNUSED;
+    bool assertTAlignment UNUSED;
     switch (op) {
     case lir::AlignedCall:
       op = lir::Call;
-      assertAlignment = true;
+      assertTAlignment = true;
       break;
 
     case lir::AlignedJump:
       op = lir::Jump;
-      assertAlignment = true;
+      assertTAlignment = true;
       break;
 
     case lir::AlignedLongCall:
       op = lir::LongCall;
-      assertAlignment = true;
+      assertTAlignment = true;
       break;
 
     case lir::AlignedLongJump:
       op = lir::LongJump;
-      assertAlignment = true;
+      assertTAlignment = true;
       break;
 
     default:
-      assertAlignment = false;
+      assertTAlignment = false;
     }
 
     if (TargetBytesPerWord == 4 or op == lir::Call or op == lir::Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
       
-      assert(&c, ((op == lir::Call or op == lir::LongCall) and *instruction == 0xE8)
+      assertT(&c, ((op == lir::Call or op == lir::LongCall) and *instruction == 0xE8)
              or ((op == lir::Jump or op == lir::LongJump) and *instruction == 0xE9));
 
-      assert(&c, (not assertAlignment)
+      assertT(&c, (not assertTAlignment)
              or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
       
       intptr_t v = static_cast<uint8_t*>(newTarget)
         - static_cast<uint8_t*>(returnAddress);
 
-      assert(&c, vm::fitsInInt32(v));
+      assertT(&c, vm::fitsInInt32(v));
 
       int32_t v32 = v;
 
@@ -358,12 +358,12 @@ class MyArchitecture: public Architecture {
     } else {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 13;
 
-      assert(&c, instruction[0] == 0x49 and instruction[1] == 0xBA);
-      assert(&c, instruction[10] == 0x41 and instruction[11] == 0xFF);
-      assert(&c, (op == lir::LongCall and instruction[12] == 0xD2)
+      assertT(&c, instruction[0] == 0x49 and instruction[1] == 0xBA);
+      assertT(&c, instruction[10] == 0x41 and instruction[11] == 0xFF);
+      assertT(&c, (op == lir::LongCall and instruction[12] == 0xD2)
              or (op == lir::LongJump and instruction[12] == 0xE2));
 
-      assert(&c, (not assertAlignment)
+      assertT(&c, (not assertTAlignment)
              or reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
       
       memcpy(instruction + 2, &newTarget, 8);
@@ -827,7 +827,7 @@ class MyAssembler: public Assembler {
   { }
 
   virtual void setClient(Client* client) {
-    assert(&c, c.client == 0);
+    assertT(&c, c.client == 0);
     c.client = client;
   }
 
@@ -989,7 +989,7 @@ class MyAssembler: public Assembler {
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
         if (returnAddressSurrogate != lir::NoRegister) {
-          assert(&c, offset > 0);
+          assertT(&c, offset > 0);
 
           lir::Register ras(returnAddressSurrogate);
           lir::Memory dst(rsp, offset * TargetBytesPerWord);
@@ -997,7 +997,7 @@ class MyAssembler: public Assembler {
         }
 
         if (framePointerSurrogate != lir::NoRegister) {
-          assert(&c, offset > 0);
+          assertT(&c, offset > 0);
 
           lir::Register fps(framePointerSurrogate);
           lir::Memory dst(rsp, (offset - 1) * TargetBytesPerWord);
@@ -1016,8 +1016,8 @@ class MyAssembler: public Assembler {
   {
     popFrame(frameFootprint);
 
-    assert(&c, argumentFootprint >= StackAlignmentInWords);
-    assert(&c, (argumentFootprint % StackAlignmentInWords) == 0);
+    assertT(&c, argumentFootprint >= StackAlignmentInWords);
+    assertT(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       lir::Register returnAddress(rcx);
@@ -1069,15 +1069,15 @@ class MyAssembler: public Assembler {
   virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c)
   {
     if (isBranch(op)) {
-      assert(&this->c, a.size == b.size);
-      assert(&this->c, c.size == TargetBytesPerWord);
-      assert(&this->c, c.type == lir::ConstantOperand);
+      assertT(&this->c, a.size == b.size);
+      assertT(&this->c, c.size == TargetBytesPerWord);
+      assertT(&this->c, c.type == lir::ConstantOperand);
 
       arch_->c.branchOperations[branchIndex(&(arch_->c), a.type, b.type)]
         (&this->c, op, a.size, a.operand, b.operand, c.operand);
     } else {
-      assert(&this->c, b.size == c.size);
-      assert(&this->c, b.type == c.type);
+      assertT(&this->c, b.size == c.size);
+      assertT(&this->c, b.type == c.type);
 
       arch_->c.binaryOperations[index(&(arch_->c), op, a.type, b.type)]
         (&this->c, a.size, a.operand, b.size, b.operand);

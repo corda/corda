@@ -154,8 +154,8 @@ void conditional(Context* c, unsigned condition, lir::Constant* a) {
 void sseMoveRR(Context* c, unsigned aSize, lir::Register* a,
           unsigned bSize UNUSED, lir::Register* b)
 {
-  assert(c, aSize >= 4);
-  assert(c, aSize == bSize);
+  assertT(c, aSize >= 4);
+  assertT(c, aSize == bSize);
 
   if (isFloatReg(a) and isFloatReg(b)) {
     if (aSize == 4) {
@@ -185,7 +185,7 @@ void sseMoveRR(Context* c, unsigned aSize, lir::Register* a,
 void sseMoveCR(Context* c, unsigned aSize, lir::Constant* a,
           unsigned bSize, lir::Register* b)
 {
-  assert(c, aSize <= vm::TargetBytesPerWord);
+  assertT(c, aSize <= vm::TargetBytesPerWord);
   lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
   moveCR2(c, aSize, a, aSize, &tmp, 0);
   sseMoveRR(c, aSize, &tmp, bSize, b);
@@ -195,7 +195,7 @@ void sseMoveCR(Context* c, unsigned aSize, lir::Constant* a,
 void sseMoveMR(Context* c, unsigned aSize, lir::Memory* a,
           unsigned bSize UNUSED, lir::Register* b)
 {
-  assert(c, aSize >= 4);
+  assertT(c, aSize >= 4);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     opcode(c, 0xf3);
@@ -212,8 +212,8 @@ void sseMoveMR(Context* c, unsigned aSize, lir::Memory* a,
 void sseMoveRM(Context* c, unsigned aSize, lir::Register* a,
        UNUSED unsigned bSize, lir::Memory* b)
 {
-  assert(c, aSize >= 4);
-  assert(c, aSize == bSize);
+  assertT(c, aSize >= 4);
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     opcode(c, 0x66);

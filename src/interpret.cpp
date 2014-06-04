@@ -59,7 +59,7 @@ pushObject(Thread* t, object o)
     fprintf(stderr, "push object %p at %d\n", o, t->sp);
   }
 
-  assert(t, t->sp + 1 < stackSizeInWords(t) / 2);
+  assertT(t, t->sp + 1 < stackSizeInWords(t) / 2);
   t->stack[(t->sp * 2)    ] = ObjectTag;
   t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
   ++ t->sp;
@@ -72,7 +72,7 @@ pushInt(Thread* t, uint32_t v)
     fprintf(stderr, "push int %d at %d\n", v, t->sp);
   }
 
-  assert(t, t->sp + 1 < stackSizeInWords(t) / 2);
+  assertT(t, t->sp + 1 < stackSizeInWords(t) / 2);
   t->stack[(t->sp * 2)    ] = IntTag;
   t->stack[(t->sp * 2) + 1] = v;
   ++ t->sp;
@@ -111,7 +111,7 @@ popObject(Thread* t)
             t->sp - 1);
   }
 
-  assert(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
+  assertT(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
   return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
 }
 
@@ -124,7 +124,7 @@ popInt(Thread* t)
             t->sp - 1);
   }
 
-  assert(t, t->stack[(t->sp - 1) * 2] == IntTag);
+  assertT(t, t->stack[(t->sp - 1) * 2] == IntTag);
   return t->stack[((-- t->sp) * 2) + 1];
 }
 
@@ -165,8 +165,8 @@ peekObject(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < stackSizeInWords(t) / 2);
-  assert(t, t->stack[index * 2] == ObjectTag);
+  assertT(t, index < stackSizeInWords(t) / 2);
+  assertT(t, t->stack[index * 2] == ObjectTag);
   return reinterpret_cast<object>(t->stack[(index * 2) + 1]);
 }
 
@@ -179,8 +179,8 @@ peekInt(Thread* t, unsigned index)
             index);
   }
 
-  assert(t, index < stackSizeInWords(t) / 2);
-  assert(t, t->stack[index * 2] == IntTag);
+  assertT(t, index < stackSizeInWords(t) / 2);
+  assertT(t, t->stack[index * 2] == IntTag);
   return t->stack[(index * 2) + 1];
 }
 
@@ -1465,7 +1465,7 @@ interpret3(Thread* t, const int base)
 
       object field = resolveField(t, frameMethod(t, frame), index - 1);
 
-      assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+      assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
       PROTECT(t, field);
 
@@ -1483,7 +1483,7 @@ interpret3(Thread* t, const int base)
 
     object field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assert(t, fieldFlags(t, field) & ACC_STATIC);
+    assertT(t, fieldFlags(t, field) & ACC_STATIC);
 
     PROTECT(t, field);
 
@@ -2436,7 +2436,7 @@ interpret3(Thread* t, const int base)
 
     object field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assert(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+    assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
     PROTECT(t, field);
 
     { ACQUIRE_FIELD_FOR_WRITE(t, field);
@@ -2507,7 +2507,7 @@ interpret3(Thread* t, const int base)
 
     object field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assert(t, fieldFlags(t, field) & ACC_STATIC);
+    assertT(t, fieldFlags(t, field) & ACC_STATIC);
 
     PROTECT(t, field);
 
@@ -2657,10 +2657,10 @@ interpret3(Thread* t, const int base)
     // bootstrap class, so we need to load the real class to get the
     // real method and call it.
 
-    assert(t, frameNext(t, frame) >= base);
+    assertT(t, frameNext(t, frame) >= base);
     popFrame(t);
 
-    assert(t, codeBody(t, code, ip - 3) == invokevirtual);
+    assertT(t, codeBody(t, code, ip - 3) == invokevirtual);
     ip -= 2;
 
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2668,7 +2668,7 @@ interpret3(Thread* t, const int base)
 
     unsigned parameterFootprint = method->parameterFootprint();
     GcClass* class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
-    assert(t, class_->vmFlags() & BootstrapFlag);
+    assertT(t, class_->vmFlags() & BootstrapFlag);
 
     resolveClass(t, classLoader(t, frameMethod(t, frame)->class_()),
                  class_->name());
@@ -3121,10 +3121,10 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + method->parameterFootprint() + 1
                  > stackSizeInWords(t) / 2))
@@ -3145,10 +3145,10 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + method->parameterFootprint() + 1
                  > stackSizeInWords(t) / 2))
@@ -3169,10 +3169,10 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     if (UNLIKELY(t->sp + method->parameterFootprint() + 1
                  > stackSizeInWords(t) / 2))
@@ -3194,7 +3194,7 @@ class MyProcessor: public Processor {
   {
     Thread* t = static_cast<Thread*>(vmt);
 
-    assert(t, t->state == Thread::ActiveState
+    assertT(t, t->state == Thread::ActiveState
            or t->state == Thread::ExclusiveState);
 
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
@@ -3208,7 +3208,7 @@ class MyProcessor: public Processor {
     GcMethod* method = resolveMethod
       (t, loader, className, methodName, methodSpec);
 
-    assert(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
+    assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
     return local::invoke(t, method);
   }
