@@ -343,7 +343,7 @@ else
 		endif
 
 		openjdk-cflags += \
-			-DMACOSX
+			-DMACOSX -x objective-c
 	endif
 endif
 
