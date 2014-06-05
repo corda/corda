@@ -2981,7 +2981,9 @@ gcIfNecessary(MyThread* t)
 
 void idleIfNecessary(MyThread* t)
 {
-  ENTER(t, Thread::IdleState);
+  if (UNLIKELY(t->m->exclusive)) {
+    ENTER(t, Thread::IdleState);
+  }
 }
 
 unsigned

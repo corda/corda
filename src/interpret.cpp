@@ -768,7 +768,9 @@ pushField(Thread* t, object target, object field)
 }
 
 void safePoint(Thread* t) {
-  ENTER(t, Thread::IdleState);
+  if (UNLIKELY(t->m->exclusive)) {
+    ENTER(t, Thread::IdleState);
+  }
 }
 
 object
