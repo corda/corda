@@ -620,7 +620,7 @@ ifeq ($(platform),darwin)
 
 	soname-flag =
 	version-script-flag =
-	lflags = $(common-lflags) -ldl -framework CoreFoundation
+	lflags = $(common-lflags) -ldl -framework CoreFoundation -framework Foundation
 
 	ifeq (,$(shell ld -v 2>&1 | grep cctools))
 		lflags += -Wl,-compatibility_version,1.0.0
