@@ -2968,6 +2968,8 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty(t, method, *properties, "java.vm.info",AVIAN_INFO);
 #endif
 
+  local::setProperty(t, method, *properties, "java.vm.specification.name", "Java Virtual Machine Specification");
+
   local::setProperty
     (t, method, *properties, "java.home",
      static_cast<local::MyClasspath*>(t->m->classpath)->javaHome);
