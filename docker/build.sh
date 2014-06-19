@@ -8,7 +8,7 @@ if test $# -eq 0; then
     exit 1
 fi
 
-while test $# > 1 ; do
+while test $# -gt 1 ; do
     key="$1"
     case $key in
         -c|--container)

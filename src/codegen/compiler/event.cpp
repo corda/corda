@@ -322,11 +322,11 @@ class CallEvent: public Event {
       unsigned argumentIndex = 0;
 
       while (true) {
-        Value* v = static_cast<Value*>(arguments[index]);
+        Value* v = static_cast<Value*>(arguments[argumentIndex]);
 
         unsigned footprint
             = (argumentIndex + 1 < arguments.count and v->nextWord
-               == arguments[index + 1])
+               == arguments[argumentIndex + 1])
                   ? 2
                   : 1;
 
