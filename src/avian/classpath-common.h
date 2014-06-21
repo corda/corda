@@ -31,9 +31,9 @@ getTrace(Thread* t, unsigned skipCount)
       if (skipCount == 0) {
         GcMethod* method = walker->method();
         if (isAssignableFrom
-            (t, type(t, GcThrowable::Type), cast<GcClass>(t, method->class_()))
+            (t, type(t, GcThrowable::Type), method->class_())
             and vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                           &byteArrayBody(t, method->name(), 0))
+                           method->name()->body().begin())
             == 0)
         {
           return true;
@@ -266,7 +266,7 @@ clone(Thread* t, object o)
            reinterpret_cast<void**>(o) + 1,
            size - BytesPerWord);
   } else {
-    object classNameSlash = objectClass(t, o)->name();
+    object classNameSlash = reinterpret_cast<object>(objectClass(t, o)->name());
     THREAD_RUNTIME_ARRAY(t, char, classNameDot, byteArrayLength(t, classNameSlash));
     replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
             reinterpret_cast<char*>(&byteArrayBody(t, classNameSlash, 0)));
@@ -285,7 +285,7 @@ makeStackTraceElement(Thread* t, object e)
   GcMethod* method = cast<GcMethod>(t, traceElementMethod(t, e));
   PROTECT(t, method);
 
-  object class_name = className(t, method->class_());
+  object class_name = reinterpret_cast<object>(method->class_()->name());
   PROTECT(t, class_name);
 
   THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_name));
@@ -293,7 +293,7 @@ makeStackTraceElement(Thread* t, object e)
           reinterpret_cast<char*>(&byteArrayBody(t, class_name, 0)));
   class_name = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
 
-  object method_name = method->name();
+  object method_name = reinterpret_cast<object>(method->name());
   PROTECT(t, method_name);
 
   method_name = t->m->classpath->makeString
@@ -302,11 +302,11 @@ makeStackTraceElement(Thread* t, object e)
   unsigned line = t->m->processor->lineNumber
     (t, method, traceElementIp(t, e));
 
-  object file = classSourceFile(t, method->class_());
+  object file = reinterpret_cast<object>(method->class_()->sourceFile());
   file = file ? t->m->classpath->makeString
     (t, file, 0, byteArrayLength(t, file) - 1) : 0;
 
-  return reinterpret_cast<object>(makeStackTraceElement(t, class_name, method_name, file, line));
+  return reinterpret_cast<object>(makeStackTraceElement(t, cast<GcString>(t, class_name), cast<GcString>(t, method_name), cast<GcString>(t, file), line));
 }
 
 object
@@ -366,7 +366,7 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
   }
 }
 
-object
+GcJclass*
 resolveJType(Thread* t, object loader, const char* spec, unsigned specLength)
 {
   return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
@@ -452,7 +452,7 @@ resolveParameterJTypes(Thread* t, object loader, object spec,
   PROTECT(t, array);
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
-    object c = getJClass(t, cast<GcClass>(t, pairFirst(t, list)));
+    object c = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, pairFirst(t, list))));
     set(t, array, ArrayBody + (i * BytesPerWord), c);
     list = pairSecond(t, list);
   }
@@ -490,7 +490,7 @@ resolveExceptionJTypes(Thread* t, object loader, object addendum)
           o);
     }
 
-    o = getJClass(t, cast<GcClass>(t, o));
+    o = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, o)));
 
     set(t, array, ArrayBody + (i * BytesPerWord), o);
   }
@@ -516,10 +516,10 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
   }
 
   if (method->parameterCount()) {
-    unsigned specLength = byteArrayLength(t, method->spec());
+    unsigned specLength = method->spec()->length();
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
     memcpy(RUNTIME_ARRAY_BODY(spec),
-           &byteArrayBody(t, method->spec(), 0), specLength);
+           method->spec()->body().begin(), specLength);
     unsigned i = 0;
     for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
       GcClass* type;
@@ -549,7 +549,7 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
         memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
         RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
         type = resolveClass
-          (t, classLoader(t, method->class_()),
+          (t, reinterpret_cast<object>(method->class_()->loader()),
            RUNTIME_ARRAY_BODY(name));
       } break;
 
@@ -568,7 +568,7 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
     }
   }
 
-  initClass(t, cast<GcClass>(t, method->class_()));
+  initClass(t, method->class_());
 
   unsigned returnCode = method->returnCode();
 
@@ -706,12 +706,12 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
             and ((not publicOnly)
                  or (innerClassReferenceFlags(t, reference) & ACC_PUBLIC)))
         {
-          object inner = getJClass(
+          object inner = reinterpret_cast<object>(getJClass(
               t,
               resolveClass(
                   t,
                   classLoader(t, c),
-                  innerClassReferenceInner(t, arrayBody(t, table, i))));
+                  innerClassReferenceInner(t, arrayBody(t, table, i)))));
 
           -- count;
           set(t, result, ArrayBody + (count * BytesPerWord), inner);
@@ -725,7 +725,7 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
   return makeObjectArray(t, type(t, GcJclass::Type), 0);
 }
 
-object
+GcJclass*
 getDeclaringClass(Thread* t, object c)
 {
   object addendum = classAddendum(t, c);

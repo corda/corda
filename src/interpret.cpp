@@ -318,7 +318,7 @@ pushFrame(Thread* t, GcMethod* method)
     // to release a monitor we never successfully acquired when we try
     // to pop the frame back off.
     if (method->flags() & ACC_STATIC) {
-      acquire(t, method->class_());
+      acquire(t, reinterpret_cast<object>(method->class_()));
     } else {
       acquire(t, peekObject(t, base));
     }
@@ -356,7 +356,7 @@ popFrame(Thread* t)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, method->class_());
+      release(t, reinterpret_cast<object>(method->class_()));
     } else {
       release(t, peekObject(t, frameBase(t, t->frame)));
     }
@@ -494,7 +494,7 @@ marshalArguments(Thread* t, uintptr_t* args, uint8_t* types, unsigned sp,
 {
   MethodSpecIterator it
     (t, reinterpret_cast<const char*>
-     (&byteArrayBody(t, method->spec(), 0)));
+     (method->spec()->body().begin()));
 
   unsigned argOffset = 0;
   unsigned typeOffset = 0;
@@ -565,7 +565,7 @@ invokeNativeSlow(Thread* t, GcMethod* method, void* function)
   unsigned sp;
   if (method->flags() & ACC_STATIC) {
     sp = frameBase(t, t->frame);
-    jclass = getJClass(t, cast<GcClass>(t, method->class_()));
+    jclass = getJClass(t, method->class_());
     RUNTIME_ARRAY_BODY(args)[argOffset++]
       = reinterpret_cast<uintptr_t>(&jclass);
   } else {
@@ -588,8 +588,8 @@ invokeNativeSlow(Thread* t, GcMethod* method, void* function)
 
   if (DebugRun) {
     fprintf(stderr, "invoke native method %s.%s\n",
-            &byteArrayBody(t, className(t, method->class_()), 0),
-            &byteArrayBody(t, method->name(), 0));
+            method->class_()->name()->body().begin(),
+            method->name()->body().begin());
   }
 
   { ENTER(t, Thread::IdleState);
@@ -608,10 +608,8 @@ invokeNativeSlow(Thread* t, GcMethod* method, void* function)
 
   if (DebugRun) {
     fprintf(stderr, "return from native method %s.%s\n",
-            &byteArrayBody
-            (t, className(t, frameMethod(t, t->frame)->class_()), 0),
-            &byteArrayBody
-            (t, frameMethod(t, t->frame)->name(), 0));
+            frameMethod(t, t->frame)->class_()->name()->body().begin(),
+            frameMethod(t, t->frame)->name()->body().begin());
   }
 
   popFrame(t);
@@ -797,10 +795,8 @@ interpret3(Thread* t, const int base)
     fprintf(stderr, "ip: %d; instruction: 0x%x in %s.%s ",
             ip - 1,
             instruction,
-            &byteArrayBody
-            (t, className(t, frameMethod(t, frame)->class_()), 0),
-            &byteArrayBody
-            (t, frameMethod(t, frame)->name(), 0));
+            frameMethod(t, frame)->class_()->name()->body().begin(),
+            frameMethod(t, frame)->name()->body().begin());
 
     int line = findLineNumber(t, frameMethod(t, frame), ip);
     switch (line) {
@@ -1076,9 +1072,8 @@ interpret3(Thread* t, const int base)
       if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
         exception = makeThrowable
           (t, GcClassCastException::Type, "%s as %s",
-           &byteArrayBody
-           (t, objectClass(t, peekObject(t, sp - 1))->name(), 0),
-           &byteArrayBody(t, class_->name(), 0));
+           objectClass(t, peekObject(t, sp - 1))->name()->body().begin(),
+           class_->name()->body().begin());
         goto throw_;
       }
     }
@@ -1862,9 +1857,9 @@ interpret3(Thread* t, const int base)
 
     unsigned parameterFootprint = method->parameterFootprint();
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
-      GcClass* class_ = cast<GcClass>(t, frameMethod(t, frame)->class_());
+      GcClass* class_ = frameMethod(t, frame)->class_();
       if (isSpecialMethod(t, method, class_)) {
-        class_ = cast<GcClass>(t, class_->super());
+        class_ = class_->super();
         PROTECT(t, method);
         PROTECT(t, class_);
 
@@ -1888,7 +1883,7 @@ interpret3(Thread* t, const int base)
     GcMethod* method = resolveMethod(t, frameMethod(t, frame), index - 1);
     PROTECT(t, method);
 
-    initClass(t, cast<GcClass>(t, method->class_()));
+    initClass(t, method->class_());
 
     code = reinterpret_cast<object>(method);
   } goto invoke;
@@ -2563,7 +2558,7 @@ interpret3(Thread* t, const int base)
   case return_: {
     GcMethod* method = frameMethod(t, frame);
     if ((method->flags() & ConstructorFlag)
-        and (classVmFlags(t, method->class_()) & HasFinalMemberFlag))
+        and (method->class_()->vmFlags() & HasFinalMemberFlag))
     {
       storeStoreMemoryBarrier();
     }
@@ -2670,8 +2665,8 @@ interpret3(Thread* t, const int base)
     GcClass* class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
     assertT(t, class_->vmFlags() & BootstrapFlag);
 
-    resolveClass(t, classLoader(t, frameMethod(t, frame)->class_()),
-                 class_->name());
+    resolveClass(t, reinterpret_cast<object>(frameMethod(t, frame)->class_()->loader()),
+                 reinterpret_cast<object>(class_->name()));
 
     ip -= 3;
   } goto loop;
@@ -2896,16 +2891,16 @@ invoke(Thread* t, GcMethod* method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (class_->vmFlags() & BootstrapFlag) {
-      resolveClass(t, root(t, Machine::BootLoader), class_->name());
+      resolveClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
     }
 
-    if (classFlags(t, method->class_()) & ACC_INTERFACE) {
+    if (method->class_()->flags() & ACC_INTERFACE) {
       method = findInterfaceMethod(t, method, class_);
     } else {
       method = findVirtualMethod(t, method, class_);
     }
   } else {
-    class_ = cast<GcClass>(t, method->class_());
+    class_ = method->class_();
   }
 
   if (method->flags() & ACC_STATIC) {
@@ -3001,10 +2996,10 @@ class MyProcessor: public Processor {
                           offset,
                           0,
                           0,
-                          reinterpret_cast<object>(name),
-                          reinterpret_cast<object>(spec),
-                          addendum,
-                          reinterpret_cast<object>(class_),
+                          name,
+                          spec,
+                          cast<GcMethodAddendum>(t, addendum),
+                          class_,
                           reinterpret_cast<object>(code));
   }
 
@@ -3028,10 +3023,26 @@ class MyProcessor: public Processor {
             object loader,
             unsigned vtableLength UNUSED)
   {
-    return vm::makeClass
-      (t, flags, vmFlags, fixedSize, arrayElementSize, arrayDimensions, 0,
-       objectMask, name, sourceFile, super, interfaceTable, virtualTable,
-       fieldTable, methodTable, addendum, staticTable, loader, 0, 0);
+    return vm::makeClass(t,
+                         flags,
+                         vmFlags,
+                         fixedSize,
+                         arrayElementSize,
+                         arrayDimensions,
+                         0,
+                         cast<GcIntArray>(t, objectMask),
+                         cast<GcByteArray>(t, name),
+                         cast<GcByteArray>(t, sourceFile),
+                         cast<GcClass>(t, super),
+                         interfaceTable,
+                         virtualTable,
+                         fieldTable,
+                         methodTable,
+                         cast<GcClassAddendum>(t, addendum),
+                         staticTable,
+                         cast<GcClassLoader>(t, loader),
+                         0,
+                         0);
   }
 
   virtual void
@@ -3133,7 +3144,7 @@ class MyProcessor: public Processor {
     }
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
     pushArguments(t, this_, spec, arguments);
 
     return local::invoke(t, method);
@@ -3157,7 +3168,7 @@ class MyProcessor: public Processor {
     }
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
     pushArguments(t, this_, spec, arguments);
 
     return local::invoke(t, method);
@@ -3181,7 +3192,7 @@ class MyProcessor: public Processor {
     }
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
     pushArguments(t, this_, spec, indirectObjects, arguments);
 
     return local::invoke(t, method);

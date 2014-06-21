@@ -318,7 +318,7 @@ GcMethod*
 findMethod(Thread* t, GcMethod* method, object instance)
 {
   if ((method->flags() & ACC_STATIC) == 0) {
-    if (classFlags(t, method->class_()) & ACC_INTERFACE) {
+    if (method->class_()->flags() & ACC_INTERFACE) {
       return findInterfaceMethod(t, method, objectClass(t, instance));
     } else if (methodVirtual(t, method)) {
       return findVirtualMethod(t, method, objectClass(t, instance));
@@ -336,10 +336,10 @@ resolveTarget(MyThread* t, void* stack, GcMethod* method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveSystemClass(t, root(t, Machine::BootLoader), class_->name());
+    resolveSystemClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
   }
 
-  if (classFlags(t, method->class_()) & ACC_INTERFACE) {
+  if (method->class_()->flags() & ACC_INTERFACE) {
     return findInterfaceMethod(t, method, class_);
   } else {
     return findVirtualMethod(t, method, class_);
@@ -352,7 +352,7 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
   if (class_->vmFlags() & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveSystemClass(t, root(t, Machine::BootLoader), class_->name());
+    resolveSystemClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
   }
 
   return cast<GcMethod>(t, arrayBody(t, class_->virtualTable(), index));
@@ -456,11 +456,11 @@ nextFrame(MyThread* t, void** ip, void** sp, GcMethod* method, GcMethod* target,
   }
 
   // fprintf(stderr, "nextFrame %s.%s%s target %s.%s%s ip %p sp %p\n",
-  //         &byteArrayBody(t, className(t, method->class_()), 0),
-  //         &byteArrayBody(t, method->name(), 0),
-  //         &byteArrayBody(t, method->spec(), 0),
+  //         method->class_()->name()->body().begin(),
+  //         method->name()->body().begin(),
+  //         method->spec()->body().begin(),
   //         target
-  //         ? &byteArrayBody(t, className(t, target->class_()), 0)
+  //         ? &byteArrayBody(t, target->class_()->name(), 0)
   //         : 0,
   //         target
   //         ? &byteArrayBody(t, methodName(t, target), 0)
@@ -2006,7 +2006,7 @@ releaseLock(MyThread* t, GcMethod* method, void* stack)
     if (t->methodLockIsClean) {
       object lock;
       if (method->flags() & ACC_STATIC) {
-        lock = method->class_();
+        lock = reinterpret_cast<object>(method->class_());
       } else {
         lock = *localObject
           (t, stackForFrame(t, stack, method), method,
@@ -2301,9 +2301,9 @@ prepareMethodForCall(MyThread* t, GcMethod* target)
 {
   if (methodAbstract(t, target)) {
     throwNew(t, GcAbstractMethodError::Type, "%s.%s%s",
-             &byteArrayBody(t, className(t, target->class_()), 0),
-             &byteArrayBody(t, target->name(), 0),
-             &byteArrayBody(t, target->spec(), 0));
+             target->class_()->name()->body().begin(),
+             target->name()->body().begin(),
+             target->spec()->body().begin());
   } else {
     if (unresolved(t, methodAddress(t, target))) {
       PROTECT(t, target);
@@ -2347,9 +2347,9 @@ checkMethod(Thread* t, GcMethod* method, bool shouldBeStatic)
   if (((method->flags() & ACC_STATIC) == 0) == shouldBeStatic) {
     throwNew(t, GcIncompatibleClassChangeError::Type,
              "expected %s.%s%s to be %s",
-             &byteArrayBody(t, className(t, method->class_()), 0),
-             &byteArrayBody(t, method->name(), 0),
-             &byteArrayBody(t, method->spec(), 0),
+             method->class_()->name()->body().begin(),
+             method->name()->body().begin(),
+             method->spec()->body().begin(),
              shouldBeStatic ? "static" : "non-static");
   }
 }
@@ -2375,7 +2375,7 @@ findSpecialMethodFromReference(MyThread* t, object pair)
 
   GcClass* class_ = cast<GcClass>(t, methodClass(t, pairFirst(t, pair)));
   if (isSpecialMethod(t, target, class_)) {
-    target = findVirtualMethod(t, target, cast<GcClass>(t, class_->super()));
+    target = findVirtualMethod(t, target, class_->super());
   }
 
   checkMethod(t, target, false);
@@ -2440,8 +2440,8 @@ traceSize(Thread* t)
 
   t->m->processor->walkStack(t, &counter);
 
-  return GcArray::FixedSize + (counter.count * ArrayElementSizeOfArray)
-    + (counter.count * GcTraceElement::FixedSize);
+  return pad(GcArray::FixedSize) + (counter.count * pad(ArrayElementSizeOfArray))
+    + (counter.count * pad(GcTraceElement::FixedSize));
 }
 
 void NO_RETURN
@@ -2690,8 +2690,8 @@ void
 checkCast(MyThread* t, GcClass* class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
-    object classNameFrom = objectClass(t, o)->name();
-    object classNameTo   = class_->name();
+    object classNameFrom = reinterpret_cast<object>(objectClass(t, o)->name());
+    object classNameTo   = reinterpret_cast<object>(class_->name());
     THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
     THREAD_RUNTIME_ARRAY(t, char, classTo,   byteArrayLength(t, classNameTo));
     replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
@@ -3121,7 +3121,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, GcMethod* target, bool tailCall)
   // don't bother calling an empty method unless calling it might
   // cause the class to be initialized, which may have side effects
   if (emptyMethod(t, target)
-      and (not classNeedsInit(t, cast<GcClass>(t, target->class_()))))
+      and (not classNeedsInit(t, target->class_())))
   {
     frame->popFootprint(target->parameterFootprint());
     tailCall = false;
@@ -3129,7 +3129,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, GcMethod* target, bool tailCall)
     BootContext* bc = frame->context->bootContext;
     if (bc) {
       if ((target->class_() == frame->context->method->class_()
-           or (not classNeedsInit(t, cast<GcClass>(t, target->class_()))))
+           or (not classNeedsInit(t, target->class_())))
           and (not (avian::codegen::TailCalls and tailCall
                     and (target->flags() & ACC_NATIVE))))
       {
@@ -3144,7 +3144,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, GcMethod* target, bool tailCall)
         compileDirectInvoke(t, frame, target, tailCall, true, 0);
       }
     } else if (unresolved(t, methodAddress(t, target))
-               or classNeedsInit(t, cast<GcClass>(t, target->class_())))
+               or classNeedsInit(t, target->class_()))
     {
       compileDirectInvoke(t, frame, target, tailCall, true, 0);
     } else {
@@ -3230,7 +3230,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (method->flags() & ACC_STATIC) {
       PROTECT(t, method);
 
-      lock = frame->append(method->class_());
+      lock = frame->append(reinterpret_cast<object>(method->class_()));
     } else {
       lock = loadLocal(
           frame->context, 1, ir::Type::object(), savedTargetIndex(t, method));
@@ -3294,10 +3294,10 @@ inTryBlock(MyThread* t, object code, unsigned ip)
 }
 
 bool
-needsReturnBarrier(MyThread* t, GcMethod* method)
+needsReturnBarrier(MyThread* t UNUSED, GcMethod* method)
 {
   return (method->flags() & ConstructorFlag)
-    and (classVmFlags(t, method->class_()) & HasFinalMemberFlag);
+    and (method->class_()->vmFlags() & HasFinalMemberFlag);
 }
 
 bool
@@ -3354,8 +3354,8 @@ isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller, GcMethod* ca
 {
   return isTailCall
     (t, code, ip, caller, callee->returnCode(),
-     className(t, callee->class_()), callee->name(),
-     callee->spec());
+     reinterpret_cast<object>(callee->class_()->name()), reinterpret_cast<object>(callee->name()),
+     reinterpret_cast<object>(callee->spec()));
 }
 
 bool
@@ -3531,14 +3531,14 @@ ir::Value* popLongAddress(Frame* frame)
 }
 
 bool
-intrinsic(MyThread* t, Frame* frame, GcMethod* target)
+intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
 {
 #define MATCH(name, constant)       \
-  (byteArrayLength(t, name)         \
+  (name->length()                   \
    == sizeof(constant) and::strcmp( \
-          reinterpret_cast<char*>(&byteArrayBody(t, name, 0)), constant) == 0)
+          reinterpret_cast<char*>(name->body().begin()), constant) == 0)
 
-  object className = vm::className(t, target->class_());
+  GcByteArray* className = target->class_()->name();
   if (UNLIKELY(MATCH(className, "java/lang/Math"))) {
     avian::codegen::Compiler* c = frame->c;
     if (MATCH(target->name(), "sqrt") and MATCH(target->spec(), "(D)D")) {
@@ -4970,9 +4970,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       GcMethod* target = resolveMethod(t, context->method, index - 1, false);
 
       if (LIKELY(target)) {
-        GcClass* class_ = cast<GcClass>(t, context->method->class_());
+        GcClass* class_ = context->method->class_();
         if (isSpecialMethod(t, target, class_)) {
-          target = findVirtualMethod(t, target, cast<GcClass>(t, class_->super()));
+          target = findVirtualMethod(t, target, class_->super());
         }
 
         checkMethod(t, target, false);
@@ -6751,22 +6751,22 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     logCompile
       (t, 0, 0,
        reinterpret_cast<const char*>
-       (&byteArrayBody(t, className(t, context->method->class_()), 0)),
+       (context->method->class_()->name()->body().begin()),
        reinterpret_cast<const char*>
-       (&byteArrayBody(t, context->method->name(), 0)),
+       (context->method->name()->body().begin()),
        reinterpret_cast<const char*>
-       (&byteArrayBody(t, context->method->spec(), 0)));
+       (context->method->spec()->body().begin()));
   }
 
   // for debugging:
   if (false and
       ::strcmp
       (reinterpret_cast<const char*>
-       (&byteArrayBody(t, className(t, context->method->class_()), 0)),
+       (context->method->class_()->name()->body().begin()),
        "java/lang/System") == 0 and
       ::strcmp
       (reinterpret_cast<const char*>
-       (&byteArrayBody(t, context->method->name(), 0)),
+       (context->method->name()->body().begin()),
        "<clinit>") == 0)
   {
     trap();
@@ -6804,7 +6804,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     context->executableSize = (allocator->memory.begin() + allocator->offset)
                               - static_cast<uint8_t*>(context->executableStart);
 
-    initArray(t, pool, context->objectPoolCount + 1);
+    initArray(t, reinterpret_cast<GcArray*>(pool), context->objectPoolCount + 1);
     mark(t, pool, 0);
 
     set(t, pool, ArrayBody, root(t, ObjectPools));
@@ -6883,21 +6883,21 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
   logCompile
     (t, start, codeSize,
      reinterpret_cast<const char*>
-     (&byteArrayBody(t, className(t, context->method->class_()), 0)),
+     (context->method->class_()->name()->body().begin()),
      reinterpret_cast<const char*>
-     (&byteArrayBody(t, context->method->name(), 0)),
+     (context->method->name()->body().begin()),
      reinterpret_cast<const char*>
-     (&byteArrayBody(t, context->method->spec(), 0)));
+     (context->method->spec()->body().begin()));
 
   // for debugging:
   if (false and
       ::strcmp
       (reinterpret_cast<const char*>
-       (&byteArrayBody(t, className(t, context->method->class_()), 0)),
+       (context->method->class_()->name()->body().begin()),
        "java/lang/System") == 0 and
       ::strcmp
       (reinterpret_cast<const char*>
-       (&byteArrayBody(t, context->method->name(), 0)),
+       (context->method->name()->body().begin()),
        "<clinit>") == 0)
   {
     trap();
@@ -6913,9 +6913,9 @@ compile(MyThread* t, Context* context)
   avian::codegen::Compiler* c = context->compiler;
 
 //   fprintf(stderr, "compiling %s.%s%s\n",
-//           &byteArrayBody(t, className(t, context->method->class_()), 0),
-//           &byteArrayBody(t, context->method->name(), 0),
-//           &byteArrayBody(t, context->method->spec(), 0));
+//           context->method->class_()->name()->body().begin(),
+//           context->method->name()->body().begin(),
+//           context->method->spec()->body().begin());
 
   unsigned footprint = context->method->parameterFootprint();
   unsigned locals = localSize(t, context->method);
@@ -6934,7 +6934,7 @@ compile(MyThread* t, Context* context)
 
   for (MethodSpecIterator it
          (t, reinterpret_cast<const char*>
-          (&byteArrayBody(t, context->method->spec(), 0)));
+          (context->method->spec()->body().begin()));
        it.hasNext();)
   {
     switch (*it.next()) {
@@ -7148,11 +7148,11 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
     + t->arch->frameFooterSize()
     + t->arch->frameReturnAddressSize();
 
-  object jclass = 0;
+  GcJclass* jclass = 0;
   PROTECT(t, jclass);
 
   if (method->flags() & ACC_STATIC) {
-    jclass = getJClass(t, cast<GcClass>(t, method->class_()));
+    jclass = getJClass(t, method->class_());
     RUNTIME_ARRAY_BODY(args)[argOffset++]
       = reinterpret_cast<uintptr_t>(&jclass);
   } else {
@@ -7163,7 +7163,7 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   MethodSpecIterator it
     (t, reinterpret_cast<const char*>
-     (&byteArrayBody(t, method->spec(), 0)));
+     (method->spec()->body().begin()));
 
   while (it.hasNext()) {
     unsigned type = RUNTIME_ARRAY_BODY(types)[typeOffset++]
@@ -7204,13 +7204,13 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (DebugNatives) {
     fprintf(stderr, "invoke native method %s.%s\n",
-            &byteArrayBody(t, className(t, method->class_()), 0),
-            &byteArrayBody(t, method->name(), 0));
+            method->class_()->name()->body().begin(),
+            method->name()->body().begin());
   }
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      acquire(t, method->class_());
+      acquire(t, reinterpret_cast<object>(method->class_()));
     } else {
       acquire(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
@@ -7234,7 +7234,7 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, method->class_());
+      release(t, reinterpret_cast<object>(method->class_()));
     } else {
       release(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
@@ -7242,8 +7242,8 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (DebugNatives) {
     fprintf(stderr, "return from native method %s.%s\n",
-            &byteArrayBody(t, className(t, method->class_()), 0),
-            &byteArrayBody(t, method->name(), 0));
+            method->class_()->name()->body().begin(),
+            method->name()->body().begin());
   }
 
   if (UNLIKELY(t->exception)) {
@@ -7498,7 +7498,7 @@ visitArguments(MyThread* t, Heap::Visitor* v, void* stack, GcMethod* method)
 
   for (MethodSpecIterator it
          (t, reinterpret_cast<const char*>
-          (&byteArrayBody(t, method->spec(), 0)));
+          (method->spec()->body().begin()));
        it.hasNext();)
   {
     switch (*it.next()) {
@@ -7633,7 +7633,7 @@ callContinuation(MyThread* t, object continuation, object result,
 int8_t*
 returnSpec(MyThread* t, GcMethod* method)
 {
-  int8_t* s = &byteArrayBody(t, method->spec(), 0);
+  int8_t* s = method->spec()->body().begin();
   while (*s and *s != ')') ++ s;
   expect(t, *s == ')');
   return s + 1;
@@ -7657,7 +7657,7 @@ returnClass(MyThread* t, GcMethod* method)
     memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
   }
 
-  return resolveClass(t, classLoader(t, method->class_()), name);
+  return resolveClass(t, reinterpret_cast<object>(method->class_()->loader()), name);
 }
 
 bool
@@ -7769,7 +7769,7 @@ callContinuation(MyThread* t, object continuation, object result,
           and continuationContextContinuation(t, unwindContext))
       {
         nextContinuation = continuationContextContinuation(t, unwindContext);
-        result = reinterpret_cast<object>(makeUnwindResult(t, continuation, result, exception));
+        result = reinterpret_cast<object>(makeUnwindResult(t, continuation, result, cast<GcThrowable>(t, exception)));
         action = Unwind;
       } else if (rewindContext
                  and continuationContextContinuation(t, rewindContext))
@@ -8186,7 +8186,7 @@ class SignalHandler: public SignalRegistrar::Handler {
            static_cast<void**>(*stack) - t->arch->frameReturnAddressSize(),
            t->continuation, t->trace);
 
-        if (ensure(t, fixedSize + traceSize(t))) {
+        if (ensure(t, pad(fixedSize) + traceSize(t))) {
           atomicOr(&(t->flags), Thread::TracingFlag);
           t->exception = makeThrowable(t, type);
           atomicAnd(&(t->flags), ~Thread::TracingFlag);
@@ -8454,10 +8454,10 @@ class MyProcessor: public Processor {
                           offset,
                           0,
                           0,
-                          reinterpret_cast<object>(name),
-                          reinterpret_cast<object>(spec),
-                          addendum,
-                          reinterpret_cast<object>(class_),
+                          name,
+                          spec,
+                          cast<GcMethodAddendum>(t, addendum),
+                          class_,
                           reinterpret_cast<object>(code));
   }
 
@@ -8488,17 +8488,17 @@ class MyProcessor: public Processor {
                          arrayElementSize,
                          arrayDimensions,
                          0,
-                         objectMask,
-                         name,
-                         sourceFile,
-                         super,
+                         cast<GcIntArray>(t, objectMask),
+                         cast<GcByteArray>(t, name),
+                         cast<GcByteArray>(t, sourceFile),
+                         cast<GcClass>(t, super),
                          interfaceTable,
                          virtualTable,
                          fieldTable,
                          methodTable,
-                         staticTable,
+                         reinterpret_cast<GcClassAddendum*>(staticTable), // DANGER DANGER DANGER!!!!!!!!!
                          addendum,
-                         loader,
+                         cast<GcClassLoader>(t, loader),
                          0,
                          vtableLength);
   }
@@ -8626,7 +8626,7 @@ class MyProcessor: public Processor {
     method = findMethod(t, method, this_);
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
     THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
@@ -8656,7 +8656,7 @@ class MyProcessor: public Processor {
     method = findMethod(t, method, this_);
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
     THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
@@ -8687,7 +8687,7 @@ class MyProcessor: public Processor {
     method = findMethod(t, method, this_);
 
     const char* spec = reinterpret_cast<char*>
-      (&byteArrayBody(t, method->spec(), 0));
+      (method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
     THREAD_RUNTIME_ARRAY(t, uintptr_t, array, size);
@@ -9484,11 +9484,11 @@ fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
                reinterpret_cast<uint8_t*>(methodCompiled(t, method)),
                methodCompiledSize(t, method),
                reinterpret_cast<char*>
-               (&byteArrayBody(t, className(t, method->class_()), 0)),
+               (method->class_()->name()->body().begin()),
                reinterpret_cast<char*>
-               (&byteArrayBody(t, method->name(), 0)),
+               (method->name()->body().begin()),
                reinterpret_cast<char*>
-               (&byteArrayBody(t, method->spec(), 0)));
+               (method->spec()->body().begin()));
           }
         }
       }
@@ -10007,7 +10007,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   PROTECT(t, method);
 
   if (bootContext == 0 and method->flags() & ACC_STATIC) {
-    initClass(t, cast<GcClass>(t, method->class_()));
+    initClass(t, method->class_());
   }
 
   if (methodAddress(t, method) != defaultThunk(t)) {
@@ -10091,7 +10091,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   set(t, reinterpret_cast<object>(method), MethodCode, clone->code());
 
   if (methodVirtual(t, method)) {
-    classVtable(t, method->class_(), method->offset())
+    classVtable(t, reinterpret_cast<object>(method->class_()), method->offset())
       = reinterpret_cast<void*>(methodCompiled(t, clone));
   }
 

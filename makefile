@@ -443,6 +443,7 @@ asm-format = S
 as = $(cc)
 ld = $(cc)
 build-ld = $(build-cc)
+build-ld-cpp = $(build-cxx)
 
 default-remote-test-host = localhost
 default-remote-test-port = 22
@@ -1984,7 +1985,7 @@ endif
 
 $(generator): $(generator-objects) $(generator-lzma-objects)
 	@echo "linking $(@)"
-	$(build-ld) $(^) $(build-lflags) -o $(@)
+	$(build-ld-cpp) $(^) $(build-lflags) -o $(@)
 
 $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)

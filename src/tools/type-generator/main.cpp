@@ -14,6 +14,12 @@
 #include "string.h"
 #include "errno.h"
 
+#include <map>
+#include <string>
+#include <vector>
+#include <set>
+#include <sstream>
+
 #include "avian/constants.h"
 #include "avian/finder.h"
 
@@ -31,12 +37,148 @@ using namespace avian::util;
 
 #define UNUSED __attribute__((unused))
 
-void operator delete(void*) { abort(); }
-
-extern "C" void __cxa_pure_virtual(void) { abort(); }
-
 using namespace vm;
 using namespace avian::tools::typegenerator;
+
+namespace avian {
+namespace tools {
+namespace typegenerator {
+
+class Class;
+
+class Field {
+ public:
+  std::string name;
+  size_t elementSize;
+  size_t offset;
+  uintptr_t ownerId;
+  bool noassert;
+  bool nogc;
+
+  std::string javaSpec;
+  std::string typeName;
+
+  Field(Class* ownerId,
+        const std::string& typeName,
+        const std::string& javaSpec,
+        const std::string& name,
+        size_t elementSize)
+      : name(name),
+        elementSize(elementSize),
+        offset(0),
+        ownerId(reinterpret_cast<uintptr_t>(ownerId)),
+        noassert(false),
+        nogc(false),
+        javaSpec(javaSpec),
+        typeName(typeName)
+  {
+  }
+
+  std::string dump() const {
+    std::ostringstream ss;
+    ss << "field " << name << ":" << typeName << ":" << javaSpec << ", size=" << elementSize << ", offset=" << offset;
+    if(noassert) {
+      ss << " noassert";
+    }
+    if(nogc) {
+      ss << " nogc";
+    }
+    return ss.str();
+  }
+};
+
+class Method {
+ public:
+  std::string javaName;
+  std::string javaSpec;
+
+  Method(const std::string& javaName, const std::string& javaSpec)
+      : javaName(javaName), javaSpec(javaSpec)
+  {
+  }
+
+  bool operator == (const Method& o) const {
+    return javaName == o.javaName && javaSpec == o.javaSpec;
+  }
+
+  bool operator < (const Method& o) const {
+    return javaName < o.javaName || (javaName == o.javaName && javaSpec < o.javaSpec);
+  }
+  std::string dump() const {
+    return "method " + javaName + javaSpec;
+  }
+};
+
+class Class {
+ public:
+  // "simple" name, used for generated code, defined in types.def
+  std::string name;
+
+  // Name of the backing Java class, empty if there isn't one
+  std::string javaName;
+
+  Class* super;
+
+  std::vector<Field*> fields;
+  std::set<Method> methods;
+
+  Field* arrayField;
+
+  bool overridesMethods;
+
+  int fixedSize;
+
+  Class(const std::string& name) : name(name), super(0), arrayField(0), overridesMethods(false), fixedSize(-1)
+  {
+  }
+
+  std::string dump() const {
+    std::ostringstream ss;
+    ss << "class " << name;
+    if(javaName.size() > 0) {
+      ss << "(" << javaName << ")";
+    }
+    if(super) {
+      ss << " : " << super->name << "(" << super->javaName << ")";
+    }
+    ss << " {\n";
+
+    for(std::vector<Field*>::const_iterator it = fields.begin(); it != fields.end(); it++) {
+      ss << "  " << (*it)->dump() << "\n";
+    }
+
+    for(std::set<Method>::const_iterator it = methods.begin(); it != methods.end(); ++it) {
+      ss << "  " << it->dump() << "\n";
+    }
+    ss << "}";
+    return ss.str();
+  }
+
+  void dumpToStdout() const AVIAN_EXPORT {
+    printf("%s\n", dump().c_str());
+  }
+};
+
+class Module {
+ public:
+  // Map from java-level name to Class
+  std::map<std::string, Class*> javaClasses;
+
+  std::map<std::string, Class*> classes;
+
+  void add(Class* cl) {
+    assert(classes.find(cl->name) == classes.end());
+    classes[cl->name] = cl;
+    if(cl->javaName != "") {
+      assert(javaClasses.find(cl->javaName) == javaClasses.end());
+      javaClasses[cl->javaName] = cl;
+    }
+  }
+};
+
+}
+}
+}
 
 namespace {
 
@@ -48,21 +190,6 @@ namespace local {
 
 const unsigned BytesPerWord = POINTER_SIZE;
 
-inline unsigned
-pad(unsigned size, unsigned alignment)
-{
-  unsigned n = alignment;
-  while (size and n % size) ++ n;
-  return n - alignment;
-}
-
-inline unsigned
-pad(unsigned n)
-{
-  unsigned extra = n % BytesPerWord;
-  return (extra ? n + BytesPerWord - extra : n);
-}
-
 inline bool
 equal(const char* a, const char* b)
 {
@@ -70,376 +197,20 @@ equal(const char* a, const char* b)
 }
 
 inline bool
-endsWith(const char* a, const char* b)
+endsWith(const std::string& b, const std::string& a)
 {
-  unsigned al = strlen(a);
-  unsigned bl = strlen(b);
-  return (bl >= al) and strncmp(a, b + (bl - al), al) == 0;
+  if (b.size() > a.size()) {
+    return false;
+  }
+  return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 }
 
-inline const char*
-take(unsigned n, const char* c)
-{
-  char* r = static_cast<char*>(malloc(n + 1));
-  assert(r);
-  memcpy(r, c, n);
-  r[n] = 0;
-  return r;
-}
-
-class Scalar : public Object {
- public:
-  Object* owner;
-  const char* typeName;
-  const char* name;
-  unsigned elementSize;
-  bool noassert;
-  bool nogc;
-
-  static Scalar* make(Object* owner, const char* typeName, const char* name,
-                      unsigned size)
-  {
-    Scalar* o = allocate<Scalar>();
-    o->type = Object::Scalar;
-    o->owner = owner;
-    o->typeName = typeName;
-    o->name = name;
-    o->elementSize = size;
-    o->noassert = false;
-    o->nogc = false;
-    return o;
-  }
-};
-
-class Array : public Scalar {
- public:
-  static Array* make(Object* owner, const char* typeName, const char* name,
-                     unsigned elementSize)
-  {
-    Array* o = allocate<Array>();
-    o->type = Object::Array;
-    o->owner = owner;
-    o->typeName = typeName;
-    o->name = name;
-    o->elementSize = elementSize;
-    o->noassert = false;
-    o->nogc = false;
-    return o;
-  }
-};
-
-unsigned
-arrayElementSize(Object* o)
-{
-  switch (o->type) {
-  case Object::Array:
-    return static_cast<Array*>(o)->elementSize;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-Object*
-memberOwner(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->owner;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-memberTypeName(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->typeName;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-memberTypeEnumName(Object* o)
-{
-  const char* n = memberTypeName(o);
-  if (strcmp("void*", n) == 0) {
+std::string enumName(std::string& type) {
+  if (type == "void*") {
     return "word";
   } else {
-    return n;
+    return type;
   }
-}
-
-const char*&
-memberName(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->name;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-unsigned
-memberSize(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-    return static_cast<Scalar*>(o)->elementSize;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-unsigned
-memberElementSize(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->elementSize;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-memberNoAssert(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->noassert;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-memberNoGC(Object* o)
-{
-  switch (o->type) {
-  case Object::Scalar:
-  case Object::Array:
-    return static_cast<Scalar*>(o)->nogc;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool
-memberGC(Object* o)
-{
-  return not memberNoGC(o) and equal(memberTypeName(o), "object");
-}
-
-class Method : public Object {
- public:
-  Object* owner;
-  const char* name;
-  const char* spec;
-
-  static Method* make(Object* owner, const char* name, const char* spec)
-  {
-    Method* o = allocate<Method>();
-    o->type = Object::Method;
-    o->owner = owner;
-    o->name = name;
-    o->spec = spec;
-    return o;
-  }
-};
-
-const char*
-methodName(Object* o)
-{
-  switch (o->type) {
-  case Object::Method:
-    return static_cast<Method*>(o)->name;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-methodSpec(Object* o)
-{
-  switch (o->type) {
-  case Object::Method:
-    return static_cast<Method*>(o)->spec;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-class Type : public Object {
- public:
-  const char* name;
-  const char* javaName;
-  Object* super;
-  List members;
-  List methods;
-  bool overridesMethods;
-
-  static Type* make(Object::ObjectType type, const char* name,
-                    const char* javaName)
-  {
-    Type* o = allocate<Type>();
-    o->type = type;
-    o->name = name;
-    o->javaName = javaName;
-    o->super = 0;
-    o->members.first = o->members.last = 0;
-    o->methods.first = o->methods.last = 0;
-    o->overridesMethods = false;
-    return o;
-  }
-};
-
-const char*
-typeName(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->name;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-const char*
-typeJavaName(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->javaName;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-Object*
-typeMembers(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->members.first;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-Object*
-typeMethods(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->methods.first;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-bool&
-typeOverridesMethods(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->overridesMethods;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-void
-addMember(Object* o, Object* member)
-{
-  switch (o->type) {
-  case Object::Type:
-    if (member->type == Object::Array) {
-      static_cast<Type*>(o)->members.append
-        (Scalar::make(o, "uintptr_t", "length", BytesPerWord));
-    }
-    static_cast<Type*>(o)->members.append(member);
-    break;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-void
-addMethod(Object* o, Object* method)
-{
-  switch (o->type) {
-  case Object::Type:
-    for (Object* p = typeMethods(o); p; p = cdr(p)) {
-      Object* m = car(p);
-      if (equal(methodName(m), methodName(method))
-          and equal(methodSpec(m), methodSpec(method)))
-      {
-        setCar(p, method);
-        return;
-      }
-    }
-    static_cast<Type*>(o)->methods.append(method);
-    break;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-Object*&
-typeSuper(Object* o)
-{
-  switch (o->type) {
-  case Object::Type:
-    return static_cast<Type*>(o)->super;
-
-  default:
-    UNREACHABLE;
-  }
-}
-
-class Number : public Object {
- public:
-  unsigned value;
-
-  static Number* make(unsigned value) {
-    Number* o = allocate<Number>();
-    o->type = Object::Number;
-    o->value = value;
-    return o;
-  }
-};
-
-unsigned
-number(Object* o)
-{
-  assert(o->type == Object::Number);
-  return static_cast<Number*>(o)->value;
 }
 
 class Character : public Object {
@@ -501,29 +272,13 @@ class Singleton : public Object {
   }
 };
 
-bool
-endsWith(char c, const char* s)
+std::string
+capitalize(const std::string& s)
 {
-  assert(s);
-  if (*s == 0) return false;
-
-  while (*s) ++ s;
-  return (*(s - 1) == c);
-}
-
-const char*
-capitalize(const char* s)
-{
-  assert(s);
-  unsigned length = strlen(s);
-  assert(length);
-  char* r = static_cast<char*>(malloc(length + 1));
-  assert(r);
-
-  memcpy(r, s, length + 1);
-  if (r[0] >= 'a' and r[0] <= 'z') r[0] = (r[0] - 'a') + 'A';
-
-  return r;
+  if(s[0] >= 'a' && s[0] <= 'z') {
+    return (char)(s[0] + 'A' - 'a') + s.substr(1, s.size() - 1);
+  }
+  return s;
 }
 
 Object*
@@ -587,284 +342,180 @@ read(Input* in, Object* eos, int level)
   }
 }
 
-Object*
-declaration(const char* name, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type:
-      if (equal(name, typeName(o))) return o;
-      break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return 0;
-}
-
-Object*
-javaDeclaration(const char* name, Object* declarations)
-{
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type:
-      if (typeJavaName(o) and equal(name, typeJavaName(o))) return o;
-      break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return 0;
-}
-
-Object*
-derivationChain(Object* o)
-{
-  Object* chain = 0;
-  for (Object* p = o; p; p = typeSuper(p)) {
-    chain = cons(p, chain);
-  }
-  return chain;
-}
-
-class MemberIterator {
- public:
-  Object* types;
-  Object* type;
-  Object* members;
-  Object* member;
-  int index_;
-  unsigned offset_;
-  unsigned size_;
-  unsigned padding_;
-  unsigned alignment_;
-  unsigned sawSuperclassBoundary;
-
-  MemberIterator(Object* type, bool skipSupers = false):
-    types(derivationChain(type)),
-    type(car(types)),
-    members(0),
-    member(0),
-    index_(-1),
-    offset_(BytesPerWord),
-    size_(0),
-    padding_(0),
-    alignment_(BytesPerWord),
-    sawSuperclassBoundary(true)
-  {
-    while (skipSupers and hasMore() and this->type != type) next();
-    padding_ = 0;
-    alignment_ = BytesPerWord;
-  }
-
-  bool hasMore() {
-    if (members) {
-      return true;
-    } else {
-      while (types) {
-        if (member) {
-          assert(member->type == Object::Scalar);
-          offset_ = ((offset_ + size_) + (BytesPerWord - 1))
-            & ~(BytesPerWord - 1);
-          alignment_ = BytesPerWord;
-          sawSuperclassBoundary = true;
-          member = 0;
-        } else {
-          sawSuperclassBoundary = false;
-        }
-
-        type = car(types);
-        members = typeMembers(type);
-        types = cdr(types);
-        if (members) return true;
-      }
-      return false;
-    }
-  }
-
-  Object* next() {
-    assert(hasMore());
-
-    if (member) {
-      assert(member->type == Object::Scalar);
-      offset_ += size_;
-    }
-
-    member = car(members);
-    members = cdr(members);
-
-    ++ index_;
-
-    switch (member->type) {
-    case Object::Scalar: {
-      size_ = memberSize(member);
-      padding_ = pad(size_, alignment_);
-      alignment_ = (alignment_ + size_ + padding_) % 8;
-    } break;
-
-    case Object::Array: {
-      size_ = 0x7FFFFFFF;
-      padding_ = pad(memberElementSize(member), alignment_);
-      alignment_ = 0;
-    } break;
-
-    default: UNREACHABLE;
-    }
-
-    offset_ += padding_;
-
-    // fprintf(stderr,
-    //         "type: %s; member: %s; size: %d; padding: %d; alignment: %d;"
-    //         " offset: %d;\n",
-    //         typeName(type), memberName(member), size_, padding_, alignment_,
-    //         offset_);
-
-    return member;
-  }
-
-  unsigned offset() {
-    return offset_;
-  }
-
-  unsigned size() {
-    return size_;
-  }
-
-  unsigned padding() {
-    return padding_;
-  }
-
-  unsigned space() {
-    return size_ + padding_;
-  }
-
-  unsigned index() {
-    return index_;
-  }
-
-  unsigned alignment() {
-    return alignment_;
-  }
-};
-
 bool
-namesPointer(const char* s)
+namesPointer(const std::string& s)
 {
-  return equal(s, "Collector")
-    or equal(s, "Disposer")
-    or endsWith('*', s);
+  return s == "Collector"
+    or s == "Disposer"
+    or endsWith("*", s);
 }
 
 unsigned
-sizeOf(const char* type)
+sizeOf(Module& module, const std::string& type)
 {
-  if (equal(type, "object")
-      or equal(type, "intptr_t") or equal(type, "uintptr_t"))
+  if (type == "object"
+      or type == "intptr_t" or type == "uintptr_t")
   {
     return BytesPerWord;
-  } else if (equal(type, "unsigned") or equal(type, "int")) {
+  } else if (type == "unsigned" or type == "int") {
     return sizeof(int);
-  } else if (equal(type, "bool")) {
+  } else if (type == "bool") {
     return sizeof(bool);
-  } else if (equal(type, "int8_t") or equal(type, "uint8_t")) {
+  } else if (type == "int8_t" or type == "uint8_t") {
     return sizeof(uint8_t);
-  } else if (equal(type, "int16_t") or equal(type, "uint16_t")) {
+  } else if (type == "int16_t" or type == "uint16_t") {
     return sizeof(uint16_t);
-  } else if (equal(type, "int32_t") or equal(type, "uint32_t")) {
+  } else if (type == "int32_t" or type == "uint32_t") {
     return sizeof(uint32_t);
-  } else if (equal(type, "int64_t") or equal(type, "uint64_t")) {
+  } else if (type == "int64_t" or type == "uint64_t") {
     return sizeof(uint64_t);
-  } else if (equal(type, "char")) {
+  } else if (type == "char") {
     return sizeof(char);
   } else if (endsWith("[0]", type)) {
     return 0;
   } else if (namesPointer(type)) {
     return BytesPerWord;
   } else {
-    fprintf(stderr, "unexpected type: %s\n", type);
-    abort();
+    std::map<std::string, Class*>::iterator it = module.classes.find(type);
+    if(it != module.classes.end()) {
+      return BytesPerWord;
+    } else {
+      fprintf(stderr, "unexpected type: %s\n", type.c_str());
+      abort();
+    }
   }
 }
 
-Object*
-parseArray(Object* t, Object* p)
+struct FieldSpec {
+  bool isArray;
+  std::string aliasName;
+  bool require;
+  Field* field;
+
+  FieldSpec(){}
+
+  FieldSpec(bool isArray, Field* field) :isArray(isArray), require(false), field(field) {}
+};
+
+class ClassParser {
+ public:
+  Class* cl;
+  std::map<std::string, Field*> fields;
+
+  ClassParser(Class* cl) : cl(cl)
+  {
+  }
+
+  void add(FieldSpec f) {
+    if(f.aliasName.size() > 0) {
+      if(fields.find(f.aliasName) == fields.end()) {
+        if(fields.find(f.field->name) != fields.end()) {
+          // printf("alias %s.%s -> %s.%s\n", cl->name.c_str(), f.field->name.c_str(), cl->name.c_str(), f.aliasName.c_str());
+          std::map<std::string, Field*>::iterator it = fields.find(f.field->name);
+          assert(it != fields.end());
+          Field* renamed = it->second;
+          fields.erase(it);
+          fields[f.aliasName] = renamed;
+
+          renamed->name = f.aliasName;
+
+          // TODO: this currently works around how avian uses an object (either a char[] or byte[]) for String.data
+          renamed->typeName = f.field->typeName;
+          renamed->javaSpec = f.field->javaSpec;
+        } else {
+          // printf("ignoring absent alias %s.%s -> %s.%s\n", cl->name.c_str(), f.field->name.c_str(), cl->name.c_str(), f.  aliasName.c_str());
+        }
+      } else {
+        // printf("ignoring already defined alias %s.%s -> %s.%s\n", cl->name.c_str(), f.field->name.c_str(), cl->name.c_str(), f.  aliasName.c_str());
+      }
+    } else {
+      if(fields.find(f.field->name) == fields.end()) {
+        // printf("add %s.%s\n", cl->name.c_str(), f.field->name.c_str());
+        fields[f.field->name] = f.field;
+        if(f.isArray) {
+          add(FieldSpec(false, new Field(cl, "uintptr_t", "", "length", BytesPerWord)));
+          assert(!cl->arrayField);
+          cl->arrayField = f.field;
+        } else {
+          cl->fields.push_back(f.field);
+        }
+      } else {
+        // printf("required check %s.%s\n", cl->name.c_str(), f.field->name.c_str());
+        assert(f.aliasName.size() > 0 || f.require);
+        fields[f.field->name]->nogc |= f.field->nogc;
+        fields[f.field->name]->noassert |= f.field->noassert;
+      }
+    }
+  }
+
+  void setSuper(Class* super) {
+    assert(!cl->super);
+    cl->super = super;
+    assert(!super->arrayField);
+    assert(fields.size() == 0);
+    for(std::vector<Field*>::iterator it = super->fields.begin(); it != super->fields.end(); it++) {
+      add(FieldSpec(false, *it));
+    }
+  }
+};
+
+FieldSpec parseArray(Module& module, ClassParser& clparser, Object* p)
 {
   const char* typeName = string(car(p));
 
   p = cdr(p);
   const char* name = string(car(p));
 
-  return Array::make(t, typeName, name, sizeOf(typeName));
+  assert(!clparser.cl->arrayField);
+  return FieldSpec(true, new Field(clparser.cl, typeName, "", name, sizeOf(module, typeName)));
 }
 
-Object*
-parseMember(Object* t, Object* p);
-
-Object*
-parseMember(Object* t, Object* p, bool* isNew)
-{
-  Object* member = parseMember(t, p);
-  for (MemberIterator it(t); it.hasMore();) {
-    Object* m = it.next();
-    if (equal(memberName(m), memberName(member))) {
-      if (not equal(memberTypeName(m), memberTypeName(member))) {
-        abort();
-      }
-      *isNew = false;
-      return m;
-    }
-  }
-  *isNew = true;
-  return member;
-}
-
-Object*
-parseMember(Object* t, Object* p)
-{
+FieldSpec parseVerbatimField(Module& module, ClassParser& clparser, Object* p) {
   const char* spec = string(car(p));
-  if (equal(spec, "array")) {
-    return parseArray(t, cdr(p));
+  const char* name = string(car(cdr(p)));
+  return FieldSpec(
+      false,
+      new Field(clparser.cl, spec, "", name, sizeOf(module, spec)));
+}
+
+FieldSpec parseField(Module& module, ClassParser& clparser, Object* p)
+{
+  FieldSpec f;
+  const char* spec = string(car(p));
+  if (equal(spec, "field")) {
+    return parseVerbatimField(module, clparser, cdr(p));
+  } else if (equal(spec, "array")) {
+    return parseArray(module, clparser, cdr(p));
   } else if (equal(spec, "noassert")) {
-    bool isNew;
-    Object* member = parseMember(t, cdr(p), &isNew);
-    memberNoAssert(member) = true;
-    return isNew ? member : 0;
+    f = parseField(module, clparser, cdr(p));
+    f.field->noassert = true;
+    f.require = true;
   } else if (equal(spec, "nogc")) {
-    bool isNew;
-    Object* member = parseMember(t, cdr(p), &isNew);
-    memberNoGC(member) = true;
-    return isNew ? member : 0;
+    f = parseField(module, clparser, cdr(p));
+    f.field->nogc = true;
+    f.require = true;
   } else if (equal(spec, "require")) {
-    bool isNew;
-    Object* member = parseMember(t, cdr(p), &isNew);
-    return isNew ? member : 0;
+    f = parseField(module, clparser, cdr(p));
+    f.require = true;
   } else if (equal(spec, "alias")) {
-    bool isNew;
-    Object* member = parseMember(t, cdr(cdr(p)), &isNew);
-    memberName(member) = string(car(cdr(p)));
-    return 0;
+    const char* name = string(car(cdr(p)));
+    f = parseField(module, clparser, cdr(cdr(p)));
+    f.aliasName = name;
   } else {
-    return Scalar::make(t, spec, string(car(cdr(p))), sizeOf(spec));
+    return parseVerbatimField(module, clparser, p);
   }
+  return f;
 }
 
 void
-parseSubdeclaration(Object* t, Object* p, Object* declarations)
+parseSubdeclaration(Module& module, ClassParser& clparser, Object* p)
 {
   const char* front = string(car(p));
   if (equal(front, "extends")) {
-    assert(t->type == Object::Type);
-    assert(typeSuper(t) == 0);
-    typeSuper(t) = declaration(string(car(cdr(p))), declarations);
-    assert(typeSuper(t));
-    assert(typeSuper(t)->type == Object::Type);
+    Class* super = module.classes[string(car(cdr(p)))];
+    clparser.setSuper(super);
   } else {
-    Object* member = parseMember(t, p);
-    if (member) {
-      addMember(t, member);
-    }
+    clparser.add(parseField(module, clparser, p));
   }
 }
 
@@ -914,7 +565,7 @@ fieldType(const char* spec)
 }
 
 void
-parseJavaClass(Object* type, Stream* s, Object* declarations)
+parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
 {
   uint32_t magic = s->read4();
   assert(magic == 0xCAFEBABE);
@@ -972,8 +623,8 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
   if (superIndex) {
     const char* name = reinterpret_cast<const char*>
       (pool[pool[superIndex - 1] - 1]);
-    typeSuper(type) = javaDeclaration(name, declarations);
-    assert(typeSuper(type));
+    Class* super = module.javaClasses[name];
+    clparser.setSuper(super);
   }
 
   unsigned interfaceCount = s->read2();
@@ -1005,17 +656,12 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
       const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
       const char* memberType = fieldType(spec);
 
-      Object* member = Scalar::make
-        (type, memberType, name, sizeOf(memberType));
-
-      addMember(type, member);
+      clparser.add(FieldSpec(false, new Field(clparser.cl, memberType, spec, name, sizeOf(module, memberType))));
     }
   }
 
-  if (typeSuper(type)) {
-    for (Object* p = typeMethods(typeSuper(type)); p; p = cdr(p)) {
-      addMethod(type, car(p));
-    }
+  if (clparser.cl->super) {
+    clparser.cl->methods.insert(clparser.cl->super->methods.begin(), clparser.cl->super->methods.end());
   }
 
   unsigned methodCount = s->read2();
@@ -1034,26 +680,26 @@ parseJavaClass(Object* type, Stream* s, Object* declarations)
     const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
 
     if ((flags & (ACC_STATIC | ACC_PRIVATE)) == 0 and *name != '<') {
-      Object* method = Method::make(type, name, spec);
-      addMethod(type, method);
-      typeOverridesMethods(type) = true;
+      clparser.cl->methods.insert(Method(name, spec));
+      clparser.cl->overridesMethods = true;
     }
   }
 }
 
-Object*
-parseType(Finder* finder, Object::ObjectType type, Object* p,
-          Object* declarations)
+void parseType(Finder* finder, Module& module, Object* p)
 {
   const char* name = string(car(p));
+
+  Class* cl = new Class(name);
+
+  ClassParser clparser(cl);
 
   const char* javaName = 0;
   if (cdr(p) and car(cdr(p))->type == Object::String) {
     p = cdr(p);
     javaName = string(car(p));
+    cl->javaName = javaName;
   }
-
-  Type* t = Type::make(type, name, javaName);
 
   bool isJavaType = javaName and *javaName != '[';
 
@@ -1065,653 +711,522 @@ parseType(Finder* finder, Object::ObjectType type, Object* p,
       }
     } client;
     System::Region* region = finder->find(append(javaName, ".class"));
-    if (region == 0) return 0;
+    if (region == 0) {
+      return;
+    }
     Stream s(&client, region->start(), region->length());
-    parseJavaClass(t, &s, declarations);
+    parseJavaClass(module, clparser, &s);
     region->dispose();
   }
 
+  module.add(cl);
+
   for (p = cdr(p); p; p = cdr(p)) {
-    if (type == Object::Type) {
-      parseSubdeclaration(t, car(p), declarations);
-    } else {
-      Object* member = parseMember(t, car(p));
-      if (member) {
-        assert(member->type == Object::Scalar);
-        addMember(t, member);
-      }
-    }
+    parseSubdeclaration(module, clparser, car(p));
   }
 
   if (not isJavaType) {
-    if (type == Object::Type and typeSuper(t)) {
-      for (Object* p = typeMethods(typeSuper(t)); p; p = cdr(p)) {
-        addMethod(t, car(p));
-      }
+    if (cl->super) {
+      cl->methods.insert(cl->super->methods.begin(), cl->super->methods.end());
     }
   }
-
-  return t;
 }
 
-Object*
-parseDeclaration(Finder* finder, Object* p, Object* declarations)
+void parseDeclaration(Finder* finder, Module& module, Object* p)
 {
   const char* spec = string(car(p));
   if (equal(spec, "type")) {
-    return parseType(finder, Object::Type, cdr(p), declarations);
+    parseType(finder, module, cdr(p));
   } else {
     fprintf(stderr, "unexpected declaration spec: %s\n", spec);
     abort();
   }
 }
 
-Object*
-parse(Finder* finder, Input* in)
+void parse(Finder* finder, Input* in, Module& module)
 {
   Object* eos = Singleton::make(Object::Eos);
   List declarations;
 
   Object* o;
   while ((o = read(in, eos, 0)) != eos) {
-    Object* declaration = parseDeclaration(finder, o, declarations.first);
-    if (declaration) {
-      declarations.append(declaration);
-    }
-  }
-
-  return declarations.first;
-}
-
-void
-writeAccessorName(Output* out, Object* member, bool unsafe = false)
-{
-  const char* owner = typeName(memberOwner(member));
-  out->write(owner);
-  out->write(capitalize(memberName(member)));
-  if (unsafe) {
-    out->write("Unsafe");
+    parseDeclaration(finder, module, o);
   }
 }
 
-void
-writeOffset(Output* out, Object* offset, bool allocationStyle = false)
-{
-  if (offset) {
-    bool wrote = false;
-    unsigned padLevel = 0;
-    for (Object* p = offset; p; p = cdr(p)) {
-      Object* o = car(p);
-      if (wrote) {
-        out->write(" + ");
-      }
-      switch (o->type) {
-      case Object::Number: {
-        if (number(o)) {
-          out->write(number(o));
-          wrote = true;
-        }
-      } break;
+void layoutClass(Class* cl) {
+  if(cl->fixedSize >= 0) {
+    return;
+  }
 
-      case Object::Array: {
-        out->write("pad((");
-        if (allocationStyle) {
-          out->write("length");
+  unsigned offset = BytesPerWord;
+
+  unsigned size = 0;
+  unsigned alignment = BytesPerWord;
+
+  alignment = BytesPerWord;
+
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
+    Field& f = **it;
+
+    alignment = f.elementSize;
+    offset = (offset + alignment - 1) & ~(alignment - 1);
+    f.offset = offset;
+
+    size = f.elementSize;
+
+    offset += size;
+  }
+  if(cl->arrayField) {
+    Field& f = *cl->arrayField;
+
+    alignment = f.elementSize;
+    offset = (offset + alignment - 1) & ~(alignment - 1);
+    f.offset = offset;
+  }
+  // offset = (offset + BytesPerWord - 1) & ~(BytesPerWord - 1);
+  cl->fixedSize = offset;
+}
+
+void layoutClasses(Module& module)
+{
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    layoutClass(cl);
+  }
+}
+
+void
+writeOffset(Output* out, size_t offset)
+{
+  out->write(offset);
+}
+
+void
+writeOffset(Output* out, Class* cl)
+{
+  out->write(cl->fixedSize);
+  if(cl->arrayField) {
+    out->write(" + pad(length * ");
+    out->write(cl->arrayField->elementSize);
+    out->write(")");
+  }
+}
+
+void
+writeAccessorName(Output* out, Class* cl, Field& field)
+{
+  out->write(cl->name);
+  out->write(capitalize(field.name));
+}
+
+void writeFieldType(Output* out, Module& module, Field& f) {
+  if(f.javaSpec.size() != 0) {
+    if(f.javaSpec[0] == 'L') {
+      std::string className = f.javaSpec.substr(1, f.javaSpec.size() - 2);
+      std::map<std::string, Class*>::iterator it = module.javaClasses.find(className);
+      if(it != module.javaClasses.end()) {
+        if(it->second->name == "jobject") {
+          // TEMPORARY HACK!
+          out->write("object");
         } else {
-          out->write(typeName(memberOwner(o)));
-          out->write("Length");
-          out->write("(o)");
+          out->write("Gc");
+          out->write(capitalize(it->second->name));
+          out->write("*");
         }
-        out->write(" * ");
-        out->write(arrayElementSize(o));
-        out->write(")");
-        ++ padLevel;
-        wrote = true;
-      } break;
-
-      default: UNREACHABLE;
+        return;
+      }
+    } else if(f.javaSpec[0] == '[') {
+      std::map<std::string, Class*>::iterator it = module.javaClasses.find(f.javaSpec);
+      if(it != module.javaClasses.end()) {
+        out->write("Gc");
+        out->write(capitalize(it->second->name));
+        out->write("*");
+        return;
       }
     }
-
-    for (unsigned i = 0; i < padLevel; ++i) out->write(")");
+  }
+  std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
+  assert(f.typeName.size() > 0);
+  if(it != module.classes.end()) {
+    out->write("Gc");
+    out->write(capitalize(it->second->name));
+    out->write("*");
   } else {
-    out->write("0");
+    out->write(f.typeName);
+  }
+}
+
+void writeSimpleFieldType(Output* out, Module& module, Field& f) {
+  if(f.javaSpec.size() != 0 && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
+    out->write("object");
+  } else {
+    writeFieldType(out, module, f);
   }
 }
 
 void
-writeAccessor(Output* out, Object* member, Object* offset, bool unsafe = false)
+writeAccessor(Output* out, Module& module, Class* cl, Field& field, bool isArray)
 {
-  const char* typeName = memberTypeName(member);
+  std::string typeName = field.typeName;
 
-  if (not unsafe) {
-    out->write("const unsigned ");
-    out->write(capitalize(local::typeName(memberOwner(member))));
-    out->write(capitalize(memberName(member)));
-    out->write(" = ");
-    writeOffset(out, offset);
-    out->write(";\n\n");
+  out->write("const unsigned ");
+  out->write(capitalize(cl->name));
+  out->write(capitalize(field.name));
+  out->write(" = ");
+  writeOffset(out, field.offset);
+  out->write(";\n\n");
 
-    out->write("#define HAVE_");
-    out->write(capitalize(local::typeName(memberOwner(member))));
-    out->write(capitalize(memberName(member)));
-    out->write(" 1\n\n");
-  }
+  out->write("#define HAVE_");
+  out->write(capitalize(cl->name));
+  out->write(capitalize(field.name));
+  out->write(" 1\n\n");
 
   out->write("inline ");
 
-  if (endsWith("[0]", typeName)) {
-    out->write(take(strlen(typeName) - 3, typeName));
-    out->write("*");
-  } else {
-    out->write(typeName);
+  // if (endsWith("[0]", typeName)) {
+  //   out->write(take(strlen(typeName) - 3, typeName));
+  //   out->write("*");
+  // } else {
+    writeSimpleFieldType(out, module, field);
     out->write("&");
-  }
+  // }
 
   out->write("\n");
-  writeAccessorName(out, member, unsafe);
+  writeAccessorName(out, cl, field);
   out->write("(Thread* t UNUSED, object");
   out->write(" o");
-  if (member->type != Object::Scalar) {
+  if (isArray) {
     out->write(", unsigned i");
   }
   out->write(") {\n");
 
-  if (memberOwner(member)->type == Object::Type) {
-    if (not unsafe) {
-      out->write("  assertT(t, t->m->unsafe or ");
-      out->write("instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe");
-      out->write("(t, t->m->types, Gc::");
-      out->write(capitalize(local::typeName(memberOwner(member))));
-      out->write("Type))");
-      out->write(", o));\n");
+  out->write("  assertT(t, t->m->unsafe or ");
+  out->write("instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe");
+  out->write("(t, t->m->types, Gc::");
+  out->write(capitalize(cl->name));
+  out->write("Type))");
+  out->write(", o));\n");
 
-      if (member->type != Object::Scalar) {
-        out->write("  assertT(t, i < ");
-        out->write(local::typeName(memberOwner(member)));
-        out->write("Length(t, o));\n");
-      }
-    }
+  if (isArray) {
+    out->write("  assertT(t, i < ");
+    out->write(cl->name);
+    out->write("Length(t, o));\n");
   }
 
-  out->write("  return reinterpret_cast<");
+  out->write("  return *reinterpret_cast<");
 
-  if (endsWith("[0]", typeName)) {
-    out->write(take(strlen(typeName) - 3, typeName));
+  // if (endsWith("[0]", typeName)) {
+  //   out->write(take(strlen(typeName) - 3, typeName));
+  //   out->write("*");
+  // } else {
+    writeSimpleFieldType(out, module, field);
     out->write("*");
-  } else {
-    out->write(typeName);
-    out->write("&");
-  }
+  // }
 
-  out->write(">(reinterpret_cast<uint8_t*>(o)");
-  out->write("[");
+  out->write(">(reinterpret_cast<uint8_t*>(o) + ");
 
-  out->write(capitalize(local::typeName(memberOwner(member))));
-  out->write(capitalize(memberName(member)));
+  out->write(capitalize(cl->name));
+  out->write(capitalize(field.name));
 
-  if (member->type != Object::Scalar) {
+  if (isArray) {
     out->write(" + (i * ");
-    unsigned elementSize = sizeOf(memberTypeName(member));
+    unsigned elementSize = sizeOf(module, field.typeName);
     out->write(elementSize);
     out->write(")");
   }
-  out->write("]);\n}\n\n");
-}
-
-Object*
-typeBodyOffset(Object* type, Object* offset)
-{
-  MemberIterator it(type, true);
-  while (it.hasMore()) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      offset = cons(Number::make(it.space()), offset);
-    } break;
-
-    case Object::Array: {
-      if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-      offset = cons(m, offset);
-    } break;
-
-    default: UNREACHABLE;
-    }
-  }
-  unsigned padding = pad(BytesPerWord, it.alignment());
-  if (padding) offset = cons(Number::make(padding), offset);
-  return offset;
-}
-
-Object*
-typeOffset(Object* type, Object* super)
-{
-  if (super) {
-    return typeBodyOffset(super, typeOffset(super, typeSuper(super)));
-  } else {
-    return (type->type == Object::Type ?
-            cons(Number::make(BytesPerWord), 0) : 0);
-  }
-}
-
-Object*
-typeOffset(Object* type)
-{
-  return typeOffset(0, type);
+  out->write(");\n}\n\n");
 }
 
 void
-writeAccessors(Output* out, Object* declarations)
+writeAccessors(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      Object* offset = typeOffset
-        (o, o->type == Object::Type ? typeSuper(o) : 0);
-      for (MemberIterator it(o, true); it.hasMore();) {
-        Object* m = it.next();
-        switch (m->type) {
-        case Object::Scalar: {
-          if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset);
-          if (memberNoAssert(m)) {
-            writeAccessor(out, m, offset, true);
-          }
-          offset = cons(Number::make(it.size()), offset);
-        } break;
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
+      Field& f = **it;
 
-        case Object::Array: {
-          if (it.padding()) offset = cons(Number::make(it.padding()), offset);
-          writeAccessor(out, m, offset);
-          if (memberNoAssert(m)) {
-            writeAccessor(out, m, offset, true);
-          }
-          offset = cons(m, offset);
-        } break;
-
-        default: UNREACHABLE;
-        }
-      }
-    } break;
-
-    default: break;
+      writeAccessor(out, module, cl, f, false);
+    }
+    if(cl->arrayField) {
+      writeAccessor(out, module, cl, *cl->arrayField, true);
     }
   }
-}
-
-unsigned
-typeFixedSize(Object* type)
-{
-  unsigned length = BytesPerWord;
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      length = pad(it.offset() + it.size());
-    } break;
-
-    case Object::Array: break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return length;
-}
-
-unsigned
-typeArrayElementSize(Object* type)
-{
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: break;
-
-    case Object::Array: {
-      return memberElementSize(m);
-    } break;
-
-    default: UNREACHABLE;
-    }
-  }
-  return 0;
 }
 
 void
-writeSizes(Output* out, Object* declarations)
+writeSizes(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("const unsigned FixedSizeOf");
-      out->write(capitalize(typeName(o)));
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+
+    out->write("const unsigned FixedSizeOf");
+    out->write(capitalize(cl->name));
+    out->write(" = ");
+    out->write(cl->fixedSize);
+    out->write(";\n\n");
+
+    if (cl->arrayField) {
+      out->write("const unsigned ArrayElementSizeOf");
+      out->write(capitalize(cl->name));
       out->write(" = ");
-      out->write(typeFixedSize(o));
+      out->write(cl->arrayField->elementSize);
       out->write(";\n\n");
-
-      int aes = typeArrayElementSize(o);
-      if (aes) {
-        out->write("const unsigned ArrayElementSizeOf");
-        out->write(capitalize(typeName(o)));
-        out->write(" = ");
-        out->write(aes);
-        out->write(";\n\n");
-      }
-    } break;
-
-    default: break;
     }
   }
 }
 
-const char*
-obfuscate(const char* s)
+std::string
+obfuscate(const std::string& s)
 {
-  if (equal(s, "default")) {
-    return "default_";
-  } else if (equal(s, "template")) {
-    return "template_";
-  } else if (equal(s, "class")) {
-    return "class_";
-  } else if (equal(s, "register")) {
-    return "register_";
-  } else if (equal(s, "this")) {
-    return "this_";
+  if (s == "default" || s == "template" || s == "class" || s == "register"
+      || s == "this") {
+    return s + "_";
   } else {
     return s;
   }
 }
 
 void
-writeConstructorParameters(Output* out, Object* t)
+writeConstructorParameters(Output* out, Module& module, Class* cl)
 {
-  for (MemberIterator it(t); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      out->write(", ");
-      out->write(memberTypeName(m));
-      out->write(" ");
-      out->write(obfuscate(memberName(m)));
-    } break;
-
-    default: break;
-    }
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
+    Field& f = **it;
+    out->write(", ");
+    writeFieldType(out, module, f);
+    out->write(" ");
+    out->write(obfuscate(f.name));
   }
 }
 
 void
-writeConstructorArguments(Output* out, Object* t)
+writeConstructorArguments(Output* out, Class* cl)
 {
-  for (MemberIterator it(t); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      out->write(", ");
-      out->write(obfuscate(memberName(m)));
-    } break;
-
-    default: break;
-    }
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
+    Field& f = **it;
+    out->write(", ");
+    out->write(obfuscate(f.name));
   }
 }
 
 void
-writeConstructorInitializations(Output* out, Object* t)
+writeConstructorInitializations(Output* out, Class* cl)
 {
-  for (MemberIterator it(t); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      out->write("  ");
-      writeAccessorName(out, m);
-      out->write("(t, o) = ");
-      out->write(obfuscate(memberName(m)));
-      out->write(";\n");
-    } break;
-
-    default: break;
-    }
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
+    Field& f = **it;
+    out->write("  o->");
+    out->write(obfuscate(f.name));
+    out->write("() = ");
+    out->write(obfuscate(f.name));
+    out->write(";\n");
   }
 }
 
-void writeClassAccessors(Output* out, Object* t)
-{
-  for (MemberIterator it(t); it.hasMore();) {
-    Object* m = it.next();
-    switch (m->type) {
-    case Object::Scalar: {
-      out->write("  ");
-      out->write(memberTypeName(m));
-      out->write("& ");
-      out->write(obfuscate(memberName(m)));
-      out->write("() { return field_at<");
-      out->write(memberTypeName(m));
-      out->write(">(");
-      out->write(capitalize(local::typeName(memberOwner(m))));
-      out->write(capitalize(memberName(m)));
-      out->write("); }\n");
-    } break;
-    case Object::Array: {
-      out->write("  avian::util::Slice<");
-      out->write(memberTypeName(m));
-      out->write("> ");
-      out->write(obfuscate(memberName(m)));
-      out->write("() { return avian::util::Slice<");
-      out->write(memberTypeName(m));
-      out->write("> (&field_at<");
-      out->write(memberTypeName(m));
-      out->write(">(");
-      out->write(capitalize(local::typeName(memberOwner(m))));
-      out->write(capitalize(memberName(m)));
-      out->write("), field_at<uintptr_t>(");
-      out->write(capitalize(local::typeName(memberOwner(m))));
-      out->write("Length)); }\n");
-    } break;
 
-    default:
-      break;
-    }
+void writeClassDeclarations(Output* out, Module& module)
+{
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); it++) {
+    Class* cl = it->second;
+
+    out->write("class Gc");
+    out->write(capitalize(cl->name));
+    out->write(";\n");
+  }
+  out->write("\n");
+}
+
+void writeClassAccessors(Output* out, Module& module, Class* cl)
+{
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
+    Field& f = **it;
+    out->write("  ");
+    writeFieldType(out, module, f);
+    out->write("& ");
+    out->write(obfuscate(f.name));
+    out->write("() { return field_at<");
+    writeFieldType(out, module, f);
+    out->write(">(");
+    out->write(capitalize(cl->name));
+    out->write(capitalize(f.name));
+    out->write("); }\n");
+  }
+  if(cl->arrayField) {
+    Field& f = *cl->arrayField;
+    out->write("  avian::util::Slice<");
+    out->write(f.typeName);
+    out->write("> ");
+    out->write(obfuscate(f.name));
+    out->write("() { return avian::util::Slice<");
+    out->write(f.typeName);
+    out->write("> (&field_at<");
+    out->write(f.typeName);
+    out->write(">(");
+    out->write(capitalize(cl->name));
+    out->write(capitalize(f.name));
+    out->write("), field_at<uintptr_t>(");
+    out->write(capitalize(cl->name));
+    out->write("Length)); }\n");
   }
 }
 
-void writeClassDeclarations(Output* out, Object* declarations)
+void writeClasses(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("class Gc");
-      out->write(capitalize(typeName(o)));
-      out->write(": public GcObject {\n");
-      out->write(" public:\n");
-      out->write("  static const Gc::Type Type = Gc::");
-      out->write(capitalize(typeName(o)));
-      out->write("Type;\n");
-      out->write("  static const size_t FixedSize = FixedSizeOf");
-      out->write(capitalize(typeName(o)));
-      out->write(";\n\n");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); it++) {
+    Class* cl = it->second;
 
-      writeClassAccessors(out, o);
+    out->write("class Gc");
+    out->write(capitalize(cl->name));
+    out->write(": public GcObject {\n");
+    out->write(" public:\n");
+    out->write("  static const Gc::Type Type = Gc::");
+    out->write(capitalize(cl->name));
+    out->write("Type;\n");
+    out->write("  static const size_t FixedSize = FixedSizeOf");
+    out->write(capitalize(cl->name));
+    out->write(";\n\n");
 
-      out->write("};\n\n");
-    } break;
+    writeClassAccessors(out, module, cl);
 
-    default:
-      break;
-    }
+    out->write("};\n\n");
   }
 }
 
 void
-writeInitializerDeclarations(Output* out, Object* declarations)
+writeInitializerDeclarations(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("void init");
-      out->write(capitalize(typeName(o)));
-      out->write("(Thread* t, object o");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    out->write("void init");
+    out->write(capitalize(cl->name));
+    out->write("(Thread* t, Gc");
+    out->write(capitalize(cl->name));
+    out->write("* o");
 
-      writeConstructorParameters(out, o);
+    writeConstructorParameters(out, module, cl);
 
-      out->write(");\n\n");
-    } break;
-
-    default: break;
-    }
+    out->write(");\n\n");
   }
 }
 
 void
-writeConstructorDeclarations(Output* out, Object* declarations)
+writeConstructorDeclarations(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("Gc");
-      out->write(capitalize(typeName(o)));
-      out->write("* make");
-      out->write(capitalize(typeName(o)));
-      out->write("(Thread* t");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    out->write("Gc");
+    out->write(capitalize(cl->name));
+    out->write("* make");
+    out->write(capitalize(cl->name));
+    out->write("(Thread* t");
 
-      writeConstructorParameters(out, o);
+    writeConstructorParameters(out, module, cl);
 
-      out->write(");\n\n");
-    } break;
-
-    default: break;
-    }
+    out->write(");\n\n");
   }
 }
 
 void
-writeInitializers(Output* out, Object* declarations)
+writeInitializers(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("void\ninit");
-      out->write(capitalize(typeName(o)));
-      out->write("(Thread* t, object o");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    out->write("void init");
+    out->write(capitalize(cl->name));
+    out->write("(Thread* t, Gc");
+    out->write(capitalize(cl->name));
+    out->write("* o");
 
-      writeConstructorParameters(out, o);
+    writeConstructorParameters(out, module, cl);
 
-      out->write(")\n{\n");
+    out->write(")\n{\n");
 
-      out->write("  setObjectClass(t, o, ");
-      out->write("reinterpret_cast<GcClass*>(arrayBody(t, t->m->types, Gc::");
-      out->write(capitalize(typeName(o)));
-      out->write("Type)));\n");
+    out->write("  setObjectClass(t, reinterpret_cast<object>(o), ");
+    out->write("reinterpret_cast<GcClass*>(reinterpret_cast<GcArray*>(t->m->types)->body()[Gc::");
+    out->write(capitalize(cl->name));
+    out->write("Type]));\n");
 
-      writeConstructorInitializations(out, o);
+    writeConstructorInitializations(out, cl);
 
-      out->write("}\n\n");
-    } break;
-
-    default: break;
-    }
+    out->write("}\n\n");
   }
 }
 
 void
-writeConstructors(Output* out, Object* declarations)
+writeConstructors(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      out->write("Gc");
-      out->write(capitalize(typeName(o)));
-      out->write("* make");
-      out->write(capitalize(typeName(o)));
-      out->write("(Thread* t");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    out->write("Gc");
+    out->write(capitalize(cl->name));
+    out->write("* make");
+    out->write(capitalize(cl->name));
+    out->write("(Thread* t");
 
-      writeConstructorParameters(out, o);
+    writeConstructorParameters(out, module, cl);
 
-      out->write(")\n{\n");
+    out->write(")\n{\n");
 
-      bool hasObjectMask = strcmp(typeName(o), "singleton") == 0;
-      for (MemberIterator it(o); it.hasMore();) {
-        Object* m = it.next();
-        if (m->type == Object::Scalar
-            and equal(memberTypeName(m), "object")
-            and not memberNoGC(m))
-        {
-          out->write("  PROTECT(t, ");
-          out->write(obfuscate(memberName(m)));
-          out->write(");\n");
+    bool hasObjectMask = cl->name == "singleton";
+    for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
+      Field& f = **it;
+      if (f.typeName == "object"
+          and not f.nogc)
+      {
+        out->write("  PROTECT(t, ");
+        out->write(obfuscate(f.name));
+        out->write(");\n");
 
-          hasObjectMask = true;
-        } else if (m->type == Object::Array
-                   and equal(memberTypeName(m), "object")
-                   and not memberNoGC(m))
-        {
-          hasObjectMask = true;
-        }
+        hasObjectMask = true;
       }
-
-      out->write("  object o = allocate(t, ");
-      writeOffset(out, typeOffset(o), true);
-      if (hasObjectMask) {
-        out->write(", true");
-      } else {
-        out->write(", false");
-      }
-      out->write(");\n");
-
-      out->write("  init");
-      out->write(capitalize(typeName(o)));
-      out->write("(t, o");
-      writeConstructorArguments(out, o);
-      out->write(");\n");
-
-      out->write("  return reinterpret_cast<Gc");
-      out->write(capitalize(typeName(o)));
-      out->write("*>(o);\n}\n\n");
-    } break;
-
-    default: break;
     }
+    if(cl->arrayField) {
+      Field& f = *cl->arrayField;
+      if (f.typeName == "object" and not f.nogc) {
+        hasObjectMask = true;
+      }
+    }
+
+    out->write("  Gc");
+    out->write(capitalize(cl->name));
+    out->write("* o = reinterpret_cast<Gc");
+    out->write(capitalize(cl->name));
+    out->write("*>(allocate(t, ");
+    writeOffset(out, cl);
+    if (hasObjectMask) {
+      out->write(", true");
+    } else {
+      out->write(", false");
+    }
+    out->write("));\n");
+
+    out->write("  init");
+    out->write(capitalize(cl->name));
+    out->write("(t, o");
+    writeConstructorArguments(out, cl);
+    out->write(");\n");
+
+    out->write("  return o;\n}\n\n");
   }
 }
 
 void
-writeEnums(Output* out, Object* declarations)
+writeEnums(Output* out, Module& module)
 {
   bool wrote = false;
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      if (wrote) {
-        out->write(",\n");
-      } else {
-        wrote = true;
-      }
-      out->write(capitalize(typeName(o)));
-      out->write("Type");
-    } break;
-
-    default: break;
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    if (wrote) {
+      out->write(",\n");
+    } else {
+      wrote = true;
     }
+    out->write(capitalize(cl->name));
+    out->write("Type");
   }
 
   if (wrote) {
     out->write("\n");
   }
-}
-
-unsigned
-methodCount(Object* o)
-{
-  unsigned c = 0;
-  for (Object* p = typeMethods(o); p; p = cdr(p)) ++c;
-  return c;
 }
 
 void
@@ -1725,31 +1240,26 @@ set(uint32_t* mask, unsigned index)
 }
 
 uint32_t
-typeObjectMask(Object* type)
+typeObjectMask(Class* cl)
 {
-  assert(typeFixedSize(type) + typeArrayElementSize(type)
+  assert(cl->fixedSize + (cl->arrayField ? cl->arrayField->elementSize : 0)
          < 32 * BytesPerWord);
 
   uint32_t mask = 1;
 
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
-    unsigned offset = it.offset() / BytesPerWord;
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
+    Field& f = **it;
+    unsigned offset = f.offset / BytesPerWord;
+    if(f.typeName == "object" && !f.nogc) {
+      set(&mask, offset);
+    }
+  }
 
-    switch (m->type) {
-    case Object::Scalar: {
-      if (memberGC(m)) {
-        set(&mask, offset);
-      }
-    } break;
-
-    case Object::Array: {
-      if (memberGC(m)) {
-        set(&mask, offset);
-      }
-    } break;
-
-    default: UNREACHABLE;
+  if(cl->arrayField) {
+    Field& f = *cl->arrayField;
+    unsigned offset = f.offset / BytesPerWord;
+    if(f.typeName == "object" && !f.nogc) {
+      set(&mask, offset);
     }
   }
 
@@ -1757,110 +1267,82 @@ typeObjectMask(Object* type)
 }
 
 void
-writeInitialization(Output* out, Object* type)
+writeInitialization(Output* out, std::set<Class*>& alreadyInited, Class* cl)
 {
+  if(alreadyInited.find(cl) != alreadyInited.end()) {
+    return;
+  }
+  alreadyInited.insert(cl);
+  if(cl->super && cl->name != "intArray" && cl->name != "class") {
+    writeInitialization(out, alreadyInited, cl->super);
+  }
   out->write("bootClass(t, Gc::");
-  out->write(capitalize(typeName(type)));
+  out->write(capitalize(cl->name));
   out->write("Type, ");
 
-  if (typeSuper(type)) {
+  if (cl->super) {
     out->write("Gc::");
-    out->write(capitalize(typeName(typeSuper(type))));
+    out->write(capitalize(cl->super->name));
     out->write("Type");
   } else {
     out->write("-1");
   }
   out->write(", ");
 
-  if (typeObjectMask(type) != 1) {
-    out->write(typeObjectMask(type));
+  if (typeObjectMask(cl) != 1) {
+    out->write(typeObjectMask(cl));
   } else {
     out->write("0");
   }
   out->write(", ");
 
-  out->write(typeFixedSize(type));
+  out->write(cl->fixedSize);
   out->write(", ");
 
-  out->write(typeArrayElementSize(type));
+  out->write(cl->arrayField ? cl->arrayField->elementSize : 0);
   out->write(", ");
 
-  out->write(methodCount(type));
+  out->write(cl->methods.size());
   out->write(");\n");
 }
 
-unsigned
-typeCount(Object* declarations)
-{
-  unsigned count = 0;
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    switch (o->type) {
-    case Object::Type: {
-      ++ count;
-    } break;
-
-    default: break;
-    }
-  }
-  return count;
-}
-
-Object*
-reorder(Object* declarations)
-{
-  Object* intArrayType = 0;
-  Object* classType = 0;
-  for (Object** p = &declarations; *p;) {
-    Object* o = car(*p);
-    if (o->type == Object::Type and equal(typeName(o), "intArray")) {
-      intArrayType = o;
-      *p = cdr(*p);
-    } else if (o->type == Object::Type and equal(typeName(o), "class")) {
-      classType = o;
-      *p = cdr(*p);
-    } else {
-      p = &cdr(*p);
-    }
-  }
-
-  return cons(intArrayType, cons(classType, declarations));
-}
-
 void
-writeInitializations(Output* out, Object* declarations)
+writeInitializations(Output* out, Module& module)
 {
-  declarations = reorder(declarations);
+  std::set<Class*> alreadyInited;
 
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Object::Type) {
-      writeInitialization(out, o);
+  writeInitialization(out, alreadyInited, module.classes["intArray"]);
+  writeInitialization(out, alreadyInited, module.classes["class"]);
+
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    if(cl->name != "intArray" && cl->name != "class") {
+      writeInitialization(out, alreadyInited, cl);
     }
   }
 }
 
 void
-writeJavaInitialization(Output* out, Object* type)
+writeJavaInitialization(Output* out, Class* cl)
 {
   out->write("bootJavaClass(t, Gc::");
-  out->write(capitalize(typeName(type)));
+  out->write(capitalize(cl->name));
   out->write("Type, ");
 
-  if (typeSuper(type)) {
+  if (cl->super) {
     out->write("Gc::");
-    out->write(capitalize(typeName(typeSuper(type))));
+    out->write(capitalize(cl->super->name));
     out->write("Type");
   } else {
     out->write("-1");
   }
   out->write(", \"");
 
-  out->write(typeJavaName(type));
+  out->write(cl->javaName);
   out->write("\", ");
 
-  if (typeOverridesMethods(type)) {
-    out->write(methodCount(type));
+  if (cl->overridesMethods) {
+    out->write(cl->methods.size());
   } else {
     out->write("-1");
   }
@@ -1868,115 +1350,109 @@ writeJavaInitialization(Output* out, Object* type)
 }
 
 void
-writeJavaInitializations(Output* out, Object* declarations)
+writeJavaInitializations(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Object::Type and typeJavaName(o)) {
-      writeJavaInitialization(out, o);
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    if (cl->javaName.size()) {
+      writeJavaInitialization(out, cl);
     }
   }
 }
 
 void
-writeNameInitialization(Output* out, Object* type)
+writeNameInitialization(Output* out, Class* cl)
 {
   out->write("nameClass(t, Gc::");
-  out->write(capitalize(typeName(type)));
+  out->write(capitalize(cl->name));
   out->write("Type, \"");
-  if (equal(typeName(type), "jbyte")
-      or equal(typeName(type), "jboolean")
-      or equal(typeName(type), "jshort")
-      or equal(typeName(type), "jchar")
-      or equal(typeName(type), "jint")
-      or equal(typeName(type), "jlong")
-      or equal(typeName(type), "jfloat")
-      or equal(typeName(type), "jdouble")
-      or equal(typeName(type), "jvoid"))
+  if (cl->name == "jbyte"
+      or cl->name == "jboolean"
+      or cl->name == "jshort"
+      or cl->name == "jchar"
+      or cl->name == "jint"
+      or cl->name == "jlong"
+      or cl->name == "jfloat"
+      or cl->name == "jdouble"
+      or cl->name == "jvoid")
   {
-    out->write(typeName(type) + 1);
+    out->write(cl->name.substr(1, cl->name.size() - 1));
   } else {
     out->write("vm::");
-    out->write(typeName(type));
+    out->write(cl->name);
   }
   out->write("\");\n");
 }
 
 void
-writeNameInitializations(Output* out, Object* declarations)
+writeNameInitializations(Output* out, Module& module)
 {
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Object::Type and typeJavaName(o) == 0) {
-      writeNameInitialization(out, o);
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    if (!cl->javaName.size()) {
+      writeNameInitialization(out, cl);
     }
   }
 }
 
 void
-writeMap(Output* out, Object* type)
+writeMap(Output* out, Class* cl)
 {
-  for (MemberIterator it(type); it.hasMore();) {
-    Object* m = it.next();
+  std::ostringstream ss;
+  uintptr_t ownerId = 0;
+  for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
+    Field& f = **it;
 
-    if (it.sawSuperclassBoundary) {
-      it.sawSuperclassBoundary = false;
-      out->write("Type_pad, ");
+    if(ownerId && ownerId != f.ownerId) {
+      ss << "Type_pad, ";
+    }
+    ownerId = f.ownerId;
+
+    ss << "Type_";
+    ss << enumName(f.typeName);
+    if (f.nogc) {
+      ss << "_nogc";
     }
 
-    switch (m->type) {
-    case Object::Scalar: {
-      out->write("Type_");
-      out->write(memberTypeEnumName(m));
-      if (memberNoGC(m)) {
-        out->write("_nogc");
-      }
-    } break;
-
-    case Object::Array: {
-      out->write("Type_array, ");
-      out->write("Type_");
-      out->write(memberTypeEnumName(m));
-    } break;
-
-    default: UNREACHABLE;
-    }
-
-    out->write(", ");
+    ss << ", ";
   }
 
-  out->write("Type_none");
+  if(cl->arrayField) {
+    Field& f = *cl->arrayField;
+    if(ownerId && ownerId != f.ownerId) {
+      ss << "Type_pad, ";
+    }
+    ss << "Type_array, ";
+    ss << "Type_";
+    ss << enumName(f.typeName);
+    ss << ", ";
+  }
+
+  ss << "Type_none";
+
+  out->write(ss.str());
 }
 
 void
-writeMaps(Output* out, Object* declarations)
+writeMaps(Output* out, Module& module)
 {
-  unsigned count = 0;
-  for (Object* p = declarations; p; p = cdr(p)) {
-    if (car(p)->type == Object::Type) {
-      ++ count;
-    }
-  }
-
   out->write("Type types[][");
-  out->write(count);
+  out->write(module.classes.size());
   out->write("] = {\n");
   bool wrote = false;
-  for (Object* p = declarations; p; p = cdr(p)) {
-    Object* o = car(p);
-    if (o->type == Object::Type) {
-      if (wrote) {
-        out->write(",\n");
-      } else {
-        wrote = true;
-      }
-
-      out->write("// ");
-      out->write(typeName(o));
-      out->write("\n{ ");
-      writeMap(out, o);
-      out->write(" }");
+  for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
+    Class* cl = it->second;
+    if (wrote) {
+      out->write(",\n");
+    } else {
+      wrote = true;
     }
+
+    out->write("// ");
+    out->write(cl->name);
+    out->write("\n{ ");
+    writeMap(out, cl);
+    out->write(" }");
   }
   out->write("\n};");
 }
@@ -2065,7 +1541,9 @@ int main(int ac, char** av)
 
   FileInput in(0, inStream, false);
 
-  Object* declarations = local::parse(finder, &in);
+  Module module;
+  local::parse(finder, &in, module);
+  local::layoutClasses(module);
 
   finder->dispose();
   system->dispose();
@@ -2078,28 +1556,29 @@ int main(int ac, char** av)
   FileOutput out(0, outStream, false);
 
   if (local::equal(outputType.value, "enums")) {
-    local::writeEnums(&out, declarations);
+    local::writeEnums(&out, module);
   } else if (local::equal(outputType.value, "declarations")) {
     out.write("const unsigned TypeCount = ");
-    out.Output::write(local::typeCount(declarations));
+    out.Output::write(module.classes.size());
     out.write(";\n\n");
 
-    local::writeAccessors(&out, declarations);
-    local::writeSizes(&out, declarations);
-    local::writeClassDeclarations(&out, declarations);
-    local::writeInitializerDeclarations(&out, declarations);
-    local::writeConstructorDeclarations(&out, declarations);
+    local::writeClassDeclarations(&out, module);
+    local::writeAccessors(&out, module);
+    local::writeSizes(&out, module);
+    local::writeClasses(&out, module);
+    local::writeInitializerDeclarations(&out, module);
+    local::writeConstructorDeclarations(&out, module);
   } else if (local::equal(outputType.value, "constructors")) {
-    local::writeInitializers(&out, declarations);
-    local::writeConstructors(&out, declarations);
+    local::writeInitializers(&out, module);
+    local::writeConstructors(&out, module);
   } else if (local::equal(outputType.value, "initializations")) {
-    local::writeInitializations(&out, declarations);
+    local::writeInitializations(&out, module);
   } else if (local::equal(outputType.value, "java-initializations")) {
-    local::writeJavaInitializations(&out, declarations);
+    local::writeJavaInitializations(&out, module);
   } else if (local::equal(outputType.value, "name-initializations")) {
-    local::writeNameInitializations(&out, declarations);
+    local::writeNameInitializations(&out, module);
   } else if (local::equal(outputType.value, "maps")) {
-    local::writeMaps(&out, declarations);
+    local::writeMaps(&out, module);
   }
 
   out.write("\n");

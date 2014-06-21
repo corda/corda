@@ -7,7 +7,9 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-   
+
+#include <string>
+
 #include "assert.h"
 
 #ifndef AVIAN_TOOLS_TYPE_GENERATOR_IO_H
@@ -101,7 +103,7 @@ class Output {
   
   virtual void dispose() = 0;
 
-  virtual void write(const char* s) = 0;
+  virtual void write(const std::string& s) = 0;
 
   void write(int i) {
     static const int Size = 32;
@@ -133,8 +135,8 @@ class FileOutput : public Output {
     }
   }
 
-  virtual void write(const char* s) {
-    fputs(s, stream);
+  virtual void write(const std::string& s) {
+    fputs(s.c_str(), stream);
   }
 
   const char* filename() {

@@ -30,7 +30,6 @@ class Object {
     Method,
     Type,
     Pair,
-    Number,
     Character,
     String,
     Eos

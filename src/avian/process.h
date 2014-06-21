@@ -37,9 +37,9 @@ codeReadInt32(Thread* t, object code, unsigned& ip)
 }
 
 inline bool
-isSuperclass(Thread* t, GcClass* class_, GcClass* base)
+isSuperclass(Thread* t UNUSED, GcClass* class_, GcClass* base)
 {
-  for (GcClass* oc = cast<GcClass>(t, base->super()); oc; oc = cast<GcClass>(t, oc->super())) {
+  for (GcClass* oc = base->super(); oc; oc = oc->super()) {
     if (oc == class_) {
       return true;
     }
@@ -52,8 +52,8 @@ isSpecialMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
   return (class_->flags() & ACC_SUPER)
     and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-               &byteArrayBody(t, method->name(), 0)) != 0
-    and isSuperclass(t, cast<GcClass>(t, method->class_()), class_);
+               method->name()->body().begin()) != 0
+    and isSuperclass(t, method->class_(), class_);
 }
 
 void

@@ -51,7 +51,7 @@ resolveSystemClassThrow(Thread* t, object loader, object spec)
 object
 fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
 {
-  GcClass* super = cast<GcClass>(t, c->super());
+  GcClass* super = c->super();
   if (super) {
     object field = fieldForOffsetInClass(t, super, offset);
     if (field) {

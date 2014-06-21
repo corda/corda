@@ -29,7 +29,7 @@ class MyClasspath : public Classpath {
   virtual object
   makeJclass(Thread* t, GcClass* class_)
   {
-    return reinterpret_cast<object>(vm::makeJclass(t, reinterpret_cast<object>(class_)));
+    return reinterpret_cast<object>(vm::makeJclass(t, class_));
   }
 
   virtual object
@@ -53,7 +53,7 @@ class MyClasspath : public Classpath {
 
     return reinterpret_cast<object>(vm::makeThread
       (t, 0, 0, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
-       root(t, Machine::AppLoader), 0, 0, group, 0));
+       cast<GcClassLoader>(t, root(t, Machine::AppLoader)), 0, 0, cast<GcThreadGroup>(t, group), 0));
   }
 
   virtual object
@@ -61,10 +61,10 @@ class MyClasspath : public Classpath {
   {
     PROTECT(t, vmMethod);
 
-    object jmethod = reinterpret_cast<object>(makeJmethod(t, reinterpret_cast<object>(vmMethod), false));
+    object jmethod = reinterpret_cast<object>(makeJmethod(t, vmMethod, false));
 
-    return byteArrayBody(t, vmMethod->name(), 0) == '<'
-      ? reinterpret_cast<object>(makeJconstructor(t, jmethod)) : jmethod;
+    return vmMethod->name()->body()[0] == '<'
+      ? reinterpret_cast<object>(makeJconstructor(t, cast<GcJmethod>(t, jmethod))) : jmethod;
   }
 
   virtual object
@@ -78,7 +78,7 @@ class MyClasspath : public Classpath {
   virtual object
   makeJField(Thread* t, object vmField)
   {
-    return reinterpret_cast<object>(makeJfield(t, vmField, false));
+    return reinterpret_cast<object>(makeJfield(t, cast<GcField>(t, vmField), false));
   }
 
   virtual object
@@ -204,12 +204,12 @@ class MyClasspath : public Classpath {
                            &byteArrayBody(t, calleeClassName, 0)))));
   }
 
-  virtual object libraryClassLoader(Thread* t, GcMethod* caller)
+  virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller)
   {
-    return (caller->class_() == reinterpret_cast<object>(type(t, Gc::ClassLoaderType))
+    return (caller->class_() == type(t, Gc::ClassLoaderType)
             and t->libraryLoadStack)
                ? t->libraryLoadStack->classLoader
-               : classLoader(t, caller->class_());
+               : caller->class_()->loader();
   }
 
   virtual void
@@ -265,7 +265,7 @@ Avian_java_lang_Object_toString
   unsigned hash = objectHash(t, this_);
   object s = makeString
     (t, "%s@0x%x",
-     &byteArrayBody(t, objectClass(t, this_)->name(), 0),
+     objectClass(t, this_)->name()->body().begin(),
      hash);
 
   return reinterpret_cast<int64_t>(s);
@@ -581,7 +581,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_ClassLoader_getCaller(Thread* t, object, uintptr_t*)
 {
   return reinterpret_cast<int64_t>(
-      getJClass(t, cast<GcClass>(t, getCaller(t, 2)->class_())));
+      getJClass(t, getCaller(t, 2)->class_()));
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -591,7 +591,7 @@ extern "C" AVIAN_EXPORT void JNICALL
 
   Thread::LibraryLoadStack stack(
       t,
-      classLoader(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))));
+      cast<GcJclass>(t, reinterpret_cast<object>(arguments[1]))->vmClass()->loader());
 
   bool mapName = arguments[2];
 

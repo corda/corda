@@ -71,14 +71,14 @@ jniNameLength(Thread* t, GcMethod* method, bool decorate)
 {
   unsigned size = 0;
 
-  object className = ::className(t, method->class_());
+  object className = reinterpret_cast<object>(method->class_()->name());
   for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
     size += mangledSize(byteArrayBody(t, className, i));
   }
 
   ++ size;
 
-  object methodName = method->name();
+  object methodName = reinterpret_cast<object>(method->name());
   for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
     size += mangledSize(byteArrayBody(t, methodName, i));
   }
@@ -86,7 +86,7 @@ jniNameLength(Thread* t, GcMethod* method, bool decorate)
   if (decorate) {
     size += 2;
 
-    object methodSpec = method->spec();
+    object methodSpec = reinterpret_cast<object>(method->spec());
     for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
            and byteArrayBody(t, methodSpec, i) != ')'; ++i)
     {
@@ -104,14 +104,14 @@ makeJNIName(Thread* t, const char* prefix, unsigned prefixLength, char* name,
   memcpy(name, prefix, prefixLength);
   name += prefixLength;
 
-  object className = ::className(t, method->class_());
+  object className = reinterpret_cast<object>(method->class_()->name());
   for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
     name += mangle(byteArrayBody(t, className, i), name);
   }
 
   *(name++) = '_';
 
-  object methodName = method->name();
+  object methodName = reinterpret_cast<object>(method->name());
   for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
     name += mangle(byteArrayBody(t, methodName, i), name);
   }
@@ -120,7 +120,7 @@ makeJNIName(Thread* t, const char* prefix, unsigned prefixLength, char* name,
     *(name++) = '_';
     *(name++) = '_';
 
-    object methodSpec = method->spec();
+    object methodSpec = reinterpret_cast<object>(method->spec());
     for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
            and byteArrayBody(t, methodSpec, i) != ')'; ++i)
     {
@@ -232,15 +232,15 @@ resolveNative(Thread* t, GcMethod* method)
 
   assertT(t, method->flags() & ACC_NATIVE);
 
-  initClass(t, cast<GcClass>(t, method->class_()));
+  initClass(t, method->class_());
 
   if (methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0) {
     object native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
       throwNew(t, GcUnsatisfiedLinkError::Type, "%s.%s%s",
-               &byteArrayBody(t, className(t, method->class_()), 0),
-               &byteArrayBody(t, method->name(), 0),
-               &byteArrayBody(t, method->spec(), 0));
+               method->class_()->name()->body().begin(),
+               method->name()->body().begin(),
+               method->spec()->body().begin());
     }
 
     PROTECT(t, native);

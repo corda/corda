@@ -55,7 +55,8 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
 
-  Thread::LibraryLoadStack stack(t, reinterpret_cast<object>(arguments[2]));
+  Thread::LibraryLoadStack stack(
+      t, cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[2])));
 
   unsigned length = stringLength(t, name);
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
@@ -106,12 +107,12 @@ void JNICALL
 closeMemoryMappedFile(Thread*, GcMethod*, uintptr_t*);
 
 object
-makeMethodOrConstructor(Thread* t, object c, unsigned index)
+makeMethodOrConstructor(Thread* t, GcJclass* c, unsigned index)
 {
   PROTECT(t, c);
 
   object method = arrayBody
-    (t, classMethodTable(t, jclassVmClass(t, c)), index);
+    (t, classMethodTable(t, c->vmClass()), index);
   PROTECT(t, method);
 
   unsigned parameterCount;
@@ -121,7 +122,7 @@ makeMethodOrConstructor(Thread* t, object c, unsigned index)
      &parameterCount, &returnTypeSpec);
   PROTECT(t, parameterTypes);
 
-  object returnType = resolveJType
+  GcJclass* returnType = resolveJType
     (t, classLoader(t, methodClass(t, method)), reinterpret_cast<char*>
      (&byteArrayBody(t, methodSpec(t, method), returnTypeSpec)),
      byteArrayLength(t, methodSpec(t, method)) - 1 - returnTypeSpec);
@@ -136,9 +137,9 @@ makeMethodOrConstructor(Thread* t, object c, unsigned index)
   } else {
     PROTECT(t, exceptionTypes);
  
-    object name = t->m->classpath->makeString
+    GcString* name = cast<GcString>(t, t->m->classpath->makeString
       (t, methodName(t, method), 0,
-       byteArrayLength(t, methodName(t, method)) - 1);
+       byteArrayLength(t, methodName(t, method)) - 1));
 
     return reinterpret_cast<object>(makeJmethod
       (t, 0, index, c, name, parameterTypes, exceptionTypes, returnType, 0, 0,
@@ -147,16 +148,16 @@ makeMethodOrConstructor(Thread* t, object c, unsigned index)
 }
 
 object
-makeField(Thread* t, object c, unsigned index)
+makeField(Thread* t, GcJclass* c, unsigned index)
 {
   PROTECT(t, c);
 
   object field = arrayBody
-    (t, classFieldTable(t, jclassVmClass(t, c)), index);
+    (t, classFieldTable(t, c->vmClass()), index);
 
   PROTECT(t, field);
 
-  object type = getJClass
+  GcJclass* type = getJClass
     (t, resolveClassBySpec
      (t, classLoader(t, fieldClass(t, field)),
       reinterpret_cast<char*>
@@ -164,9 +165,9 @@ makeField(Thread* t, object c, unsigned index)
       byteArrayLength(t, fieldSpec(t, field)) - 1));
   PROTECT(t, type);
  
-  object name = t->m->classpath->makeString
+  GcString* name = cast<GcString>(t, t->m->classpath->makeString
     (t, fieldName(t, field), 0,
-     byteArrayLength(t, fieldName(t, field)) - 1);
+     byteArrayLength(t, fieldName(t, field)) - 1));
 
   return reinterpret_cast<object>(makeJfield(t, 0, c, type, 0, 0, name, index));
 }
@@ -279,7 +280,7 @@ class MyClasspath : public Classpath {
     } else {
       resolveSystemClass
         (t, root(t, Machine::BootLoader),
-         type(t, GcThreadGroup::Type)->name(), false);
+         reinterpret_cast<object>(type(t, GcThreadGroup::Type)->name()), false);
 
       group = makeNew(t, type(t, GcThreadGroup::Type));
 
@@ -291,7 +292,7 @@ class MyClasspath : public Classpath {
 
     resolveSystemClass
       (t, root(t, Machine::BootLoader),
-       type(t, GcThread::Type)->name(), false);
+       reinterpret_cast<object>(type(t, GcThread::Type)->name()), false);
     
     object thread = makeNew(t, type(t, GcThread::Type));
     PROTECT(t, thread);
@@ -313,11 +314,11 @@ class MyClasspath : public Classpath {
   virtual object
   makeJMethod(Thread* t, GcMethod* vmMethod)
   {
-    object table = classMethodTable(t, vmMethod->class_());
+    object table = vmMethod->class_()->methodTable();
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
       if (reinterpret_cast<object>(vmMethod) == arrayBody(t, table, i)) {
         return makeMethodOrConstructor
-          (t, getJClass(t, cast<GcClass>(t, vmMethod->class_())), i);
+          (t, getJClass(t, vmMethod->class_()), i);
       }
     }
     abort(t);
@@ -570,15 +571,15 @@ class MyClasspath : public Classpath {
     return true;
   }
 
-  virtual object libraryClassLoader(Thread* t, GcMethod* caller)
+  virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller)
   {
     return strcmp(
                "java/lang/Runtime",
                reinterpret_cast<char*>(
-                   &byteArrayBody(t, className(t, caller->class_()), 0)))
+                   caller->class_()->name()->body().begin()))
                == 0
                ? t->libraryLoadStack->classLoader
-               : classLoader(t, caller->class_());
+               : caller->class_()->loader();
   }
 
   virtual void
@@ -1088,9 +1089,9 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getInterfaces
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
 
-  object addendum = classAddendum(t, jclassVmClass(t, c));
+  object addendum = classAddendum(t, c->vmClass());
   if (addendum) {
     object table = classAddendumInterfaceTable(t, addendum);
     if (table) {
@@ -1100,8 +1101,8 @@ Avian_java_lang_Class_getInterfaces
       PROTECT(t, array);
 
       for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-        object c = getJClass(t, cast<GcClass>(t, arrayBody(t, table, i)));
-        set(t, array, ArrayBody + (i * BytesPerWord), c);
+        GcJclass* c = getJClass(t, cast<GcClass>(t, arrayBody(t, table, i)));
+        set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(c));
       }
 
       return reinterpret_cast<uintptr_t>(array);
@@ -1144,8 +1145,8 @@ Avian_java_lang_Class_getEnclosingMethod
     if (enclosingClass) {
       PROTECT(t, enclosingClass);
 
-      enclosingClass = getJClass
-        (t, resolveClass(t, classLoader(t, c), enclosingClass));
+      // enclosingClass = getJClass
+      //   (t, resolveClass(t, classLoader(t, c), enclosingClass));
 
       object enclosingMethod = classAddendumEnclosingMethod(t, addendum);
       if (enclosingMethod) {
@@ -1196,16 +1197,16 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getComponentType
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
 
-  if (classArrayDimensions(t, jclassVmClass(t, c))) {
-    uint8_t n = byteArrayBody(t, className(t, jclassVmClass(t, c)), 1);
+  if (classArrayDimensions(t, c->vmClass())) {
+    uint8_t n = byteArrayBody(t, className(t, c->vmClass()), 1);
     if (n != 'L' and n != '[') {
       return reinterpret_cast<uintptr_t>
         (getJClass(t, primitiveClass(t, n)));
     } else {
       return reinterpret_cast<uintptr_t>
-        (getJClass(t, cast<GcClass>(t, classStaticTable(t, jclassVmClass(t, c)))));
+        (getJClass(t, cast<GcClass>(t, classStaticTable(t, c->vmClass()))));
     }    
   } else {
     return 0;
@@ -1235,7 +1236,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getDeclaredField
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, c);
 
   object name = reinterpret_cast<object>(arguments[1]);
@@ -1247,7 +1248,7 @@ Avian_java_lang_Class_getDeclaredField
 
   int index = intValue
     (t, t->m->processor->invoke
-     (t, method, 0, jclassVmClass(t, c), name));
+     (t, method, 0, c->vmClass(), name));
 
   if (index >= 0) {
     return reinterpret_cast<uintptr_t>(local::makeField(t, c, index));
@@ -1260,7 +1261,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getDeclaredConstructorOrMethod
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, c);
 
   object name = reinterpret_cast<object>(arguments[1]);
@@ -1275,7 +1276,7 @@ Avian_java_lang_Class_getDeclaredConstructorOrMethod
 
   int index = intValue
     (t, t->m->processor->invoke
-     (t, method, 0, jclassVmClass(t, c), name, parameterTypes));
+     (t, method, 0, c->vmClass(), name, parameterTypes));
 
   if (index >= 0) {
     return reinterpret_cast<uintptr_t>
@@ -1520,13 +1521,13 @@ Avian_dalvik_system_VMStack_getCallingClassLoader
       if (counter--) {
         return true;
       } else {
-        this->loader = classLoader(t, walker->method()->class_());
+        this->loader = walker->method()->class_()->loader();
         return false;
       }
     }
 
     Thread* t;
-    object loader;
+    GcClassLoader* loader;
     unsigned counter;
   } v(t);
 
@@ -1554,11 +1555,11 @@ Avian_dalvik_system_VMStack_getClasses
             (t, type(t, GcJclass::Type), walker->count());
         }
 
-        object c = getJClass(t, cast<GcClass>(t, walker->method()->class_()));
+        GcJclass* c = getJClass(t, walker->method()->class_());
         
         assertT(t, counter - 2 < objectArrayLength(t, array));
 
-        set(t, array, ArrayBody + ((counter - 2) * BytesPerWord), c);
+        set(t, array, ArrayBody + ((counter - 2) * BytesPerWord), reinterpret_cast<object>(c));
 
         return true;
       }
@@ -1828,7 +1829,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getDeclaredMethods
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, c);
 
   bool publicOnly = arguments[1];
@@ -1838,14 +1839,14 @@ Avian_java_lang_Class_getDeclaredMethods
      "(Lavian/VMClass;Z)[Ljava/lang/reflect/Method;");
 
   return reinterpret_cast<uintptr_t>
-    (t->m->processor->invoke(t, get, 0, jclassVmClass(t, c), publicOnly));
+    (t->m->processor->invoke(t, get, 0, c->vmClass(), publicOnly));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_java_lang_Class_getDeclaredFields
 (Thread* t, object, uintptr_t* arguments)
 {
-  object c = reinterpret_cast<object>(arguments[0]);
+  GcJclass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, c);
 
   bool publicOnly = arguments[1];
@@ -1855,7 +1856,7 @@ Avian_java_lang_Class_getDeclaredFields
      "(Lavian/VMClass;Z)[Ljava/lang/reflect/Field;");
 
   return reinterpret_cast<uintptr_t>
-    (t->m->processor->invoke(t, get, 0, jclassVmClass(t, c), publicOnly));
+    (t->m->processor->invoke(t, get, 0, c->vmClass(), publicOnly));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -2282,7 +2283,7 @@ Avian_avian_Classes_makeMethod
 {
   return reinterpret_cast<uintptr_t>
     (local::makeMethodOrConstructor
-     (t, reinterpret_cast<object>(arguments[0]), arguments[1]));
+     (t, cast<GcJclass>(t, reinterpret_cast<object>(arguments[0])), arguments[1]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -2291,7 +2292,7 @@ Avian_avian_Classes_makeField
 {
   return reinterpret_cast<uintptr_t>
     (local::makeField
-     (t, reinterpret_cast<object>(arguments[0]), arguments[1]));
+     (t, cast<GcJclass>(t, reinterpret_cast<object>(arguments[0])), arguments[1]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL

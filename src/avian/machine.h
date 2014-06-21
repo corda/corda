@@ -1207,6 +1207,7 @@ class GcObject {
 };
 
 class GcFinalizer;
+class GcClassLoader;
 
 class Machine {
  public:
@@ -1447,7 +1448,7 @@ class Thread {
 
   class LibraryLoadStack: public AutoResource {
    public:
-    LibraryLoadStack(Thread* t, object classLoader)
+    LibraryLoadStack(Thread* t, GcClassLoader* classLoader)
         : AutoResource(t),
           next(t->libraryLoadStack),
           classLoader(classLoader),
@@ -1465,7 +1466,7 @@ class Thread {
     }
 
     LibraryLoadStack* next;
-    object classLoader;
+    GcClassLoader* classLoader;
     SingleProtector protector;
   };
 
@@ -1634,7 +1635,7 @@ class Classpath {
   canTailCall(Thread* t, GcMethod* caller, object calleeClassName,
               object calleeMethodName, object calleeMethodSpec) = 0;
 
-  virtual object libraryClassLoader(Thread* t, GcMethod* caller) = 0;
+  virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller) = 0;
 
   virtual void
   shutDown(Thread* t) = 0;
@@ -1984,6 +1985,12 @@ T* cast(Thread* t UNUSED, object o)
 }
 
 #include "type-declarations.cpp"
+
+inline object&
+arrayBodyUnsafe(Thread*, object a, unsigned index)
+{
+  return reinterpret_cast<GcArray*>(a)->body()[index];
+}
 
 inline uint64_t
 runRaw(Thread* t,
@@ -2433,7 +2440,7 @@ inline uint32_t
 stringHash(Thread* t, object s)
 {
   if (stringHashCode(t, s) == 0 and stringLength(t, s)) {
-    object data = stringData(t, s);
+    object data = reinterpret_cast<object>(stringData(t, s));
     if (objectClass(t, data) == type(t, GcByteArray::Type)) {
       stringHashCode(t, s) = hash
         (&byteArrayBody(t, data, stringOffset(t, s)), stringLength(t, s));
@@ -2448,7 +2455,7 @@ stringHash(Thread* t, object s)
 inline uint16_t
 stringCharAt(Thread* t, object s, int i)
 {
-  object data = stringData(t, s);
+  object data = reinterpret_cast<object>(stringData(t, s));
   if (objectClass(t, data) == type(t, GcByteArray::Type)) {
     return byteArrayBody(t, data, stringOffset(t, s) + i);
   } else {
@@ -2477,8 +2484,8 @@ inline uint32_t
 methodHash(Thread* t, object mo)
 {
   GcMethod* method = cast<GcMethod>(t, mo);
-  return byteArrayHash(t, method->name())
-    ^ byteArrayHash(t, method->spec());
+  return byteArrayHash(t, reinterpret_cast<object>(method->name()))
+    ^ byteArrayHash(t, reinterpret_cast<object>(method->spec()));
 }
 
 inline bool
@@ -2487,8 +2494,8 @@ methodEqual(Thread* t, object ao, object bo)
   GcMethod* a = cast<GcMethod>(t, ao);
   GcMethod* b = cast<GcMethod>(t, bo);
   return a == b or
-    (byteArrayEqual(t, a->name(), b->name()) and
-     byteArrayEqual(t, a->spec(), b->spec()));
+    (byteArrayEqual(t, reinterpret_cast<object>(a->name()), reinterpret_cast<object>(b->name())) and
+     byteArrayEqual(t, reinterpret_cast<object>(a->spec()), reinterpret_cast<object>(b->spec())));
 }
 
 class MethodSpecIterator {
@@ -2865,7 +2872,7 @@ findInHierarchy(Thread* t, GcClass* class_, object name, object spec,
     throwNew(t, errorType, "%s %s not found in %s",
              &byteArrayBody(t, name, 0),
              &byteArrayBody(t, spec, 0),
-             &byteArrayBody(t, class_->name(), 0));
+             class_->name()->body().begin());
   }
 
   return o;
@@ -2899,10 +2906,10 @@ findInterfaceMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
   assertT(t, (class_->vmFlags() & BootstrapFlag) == 0);
 
-  object interface = method->class_();
+  GcClass* interface = method->class_();
   object itable = class_->interfaceTable();
   for (unsigned i = 0; i < arrayLength(t, itable); i += 2) {
-    if (arrayBody(t, itable, i) == interface) {
+    if (arrayBody(t, itable, i) == reinterpret_cast<object>(interface)) {
       return cast<GcMethod>(t, arrayBody
         (t, arrayBody(t, itable, i + 1), method->offset()));
     }
@@ -2923,7 +2930,7 @@ objectArrayBody(Thread* t UNUSED, object array, unsigned index)
 {
   assertT(t, objectClass(t, array)->fixedSize() == BytesPerWord * 2);
   assertT(t, objectClass(t, array)->arrayElementSize() == BytesPerWord);
-  assertT(t, objectClass(t, array)->objectMask()
+  assertT(t, reinterpret_cast<object>(objectClass(t, array)->objectMask())
          == classObjectMask(t, arrayBody
                             (t, t->m->types, GcArray::Type)));
   return fieldAtOffset<object>(array, ArrayBody + (index * BytesPerWord));
@@ -3462,10 +3469,10 @@ disposeLocalReference(Thread* t, jobject r)
 }
 
 inline bool
-methodVirtual(Thread* t, GcMethod* method)
+methodVirtual(Thread* t UNUSED, GcMethod* method)
 {
   return (method->flags() & (ACC_STATIC | ACC_PRIVATE)) == 0
-    and byteArrayBody(t, method->name(), 0) != '<';
+    and method->name()->body()[0] != '<';
 }
 
 inline unsigned
@@ -3644,7 +3651,7 @@ inline GcClass*
 resolveClassInPool(Thread* t, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
-  return resolveClassInPool(t, classLoader(t, method->class_()),
+  return resolveClassInPool(t, reinterpret_cast<object>(method->class_()->loader()),
                             method, index, throw_);
 }
 
@@ -3696,7 +3703,7 @@ inline object
 resolveField(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
 {
   return resolveField
-    (t, classLoader(t, method->class_()), method, index, throw_);
+    (t, reinterpret_cast<object>(method->class_()->loader()), method, index, throw_);
 }
 
 inline void
@@ -3798,7 +3805,7 @@ inline GcMethod*
 resolveMethod(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
 {
   return resolveMethod
-    (t, classLoader(t, method->class_()), method, index, throw_);
+    (t, reinterpret_cast<object>(method->class_()->loader()), method, index, throw_);
 }
 
 object
@@ -3867,25 +3874,25 @@ getMethodRuntimeData(Thread* t, GcMethod* method)
                     method->runtimeDataIndex() - 1);
 }
 
-inline object
+inline GcJclass*
 getJClass(Thread* t, GcClass* c)
 {
   PROTECT(t, c);
 
-  object jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+  GcJclass* jclass = cast<GcJclass>(t, classRuntimeDataJclass(t, getClassRuntimeData(t, c)));
 
   loadMemoryBarrier();
 
   if (jclass == 0) {
     ACQUIRE(t, t->m->classLock);
 
-    jclass = classRuntimeDataJclass(t, getClassRuntimeData(t, c));
+    jclass = cast<GcJclass>(t, classRuntimeDataJclass(t, getClassRuntimeData(t, c)));
     if (jclass == 0) {
-      jclass = t->m->classpath->makeJclass(t, c);
+      jclass = cast<GcJclass>(t, t->m->classpath->makeJclass(t, c));
 
       storeStoreMemoryBarrier();
 
-      set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, jclass);
+      set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, reinterpret_cast<object>(jclass));
     }
   }
 

@@ -618,13 +618,11 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           if (((methodName == 0
                 or ::strcmp
                 (reinterpret_cast<char*>
-                 (&byteArrayBody
-                  (t, method->name(), 0)), methodName) == 0)
+                 (method->name()->body().begin()), methodName) == 0)
                and (methodSpec == 0
                     or ::strcmp
                     (reinterpret_cast<char*>
-                     (&byteArrayBody
-                      (t, method->spec(), 0)), methodSpec)
+                     (method->spec()->body().begin()), methodSpec)
                     == 0)))
           {
             if (method->code()
@@ -640,26 +638,26 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               }
             }
 
-            object addendum = method->addendum();
-            if (addendum and methodAddendumExceptionTable(t, addendum)) {
+            GcMethodAddendum* addendum = method->addendum();
+            if (addendum and addendum->exceptionTable()) {
               PROTECT(t, addendum);
 
               // resolve exception types now to avoid trying to update
               // immutable references at runtime
               for (unsigned i = 0; i < shortArrayLength
-                     (t, methodAddendumExceptionTable(t, addendum)); ++i)
+                     (t, addendum->exceptionTable()); ++i)
               {
                 uint16_t index = shortArrayBody
-                  (t, methodAddendumExceptionTable(t, addendum), i) - 1;
+                  (t, addendum->exceptionTable(), i) - 1;
 
                 object o = singletonObject
-                  (t, cast<GcSingleton>(t, addendumPool(t, addendum)), index);
+                  (t, cast<GcSingleton>(t, addendum->pool()), index);
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
                     (t, root(t, Machine::BootLoader), referenceName(t, o)));
     
-                  set(t, addendumPool(t, addendum),
+                  set(t, addendum->pool(),
                       SingletonBody + (index * BytesPerWord), o);
                 }
               }

@@ -323,11 +323,11 @@ defineClass(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>(makeLocalReference(
       t,
-      getJClass(t,
+      reinterpret_cast<object>(getJClass(t,
                 cast<GcClass>(t, defineClass(t,
                             loader ? *loader : root(t, Machine::BootLoader),
                             buffer,
-                            length)))));
+                            length))))));
 }
 
 jclass JNICALL
@@ -351,10 +351,12 @@ findClass(Thread* t, uintptr_t* arguments)
 
   GcMethod* caller = getCaller(t, 0);
 
-  GcClass* c = resolveClass(t,
-                          caller ? t->m->classpath->libraryClassLoader(t, caller)
-                                 : root(t, Machine::AppLoader),
-                          n);
+  GcClass* c = resolveClass(
+      t,
+      caller ? reinterpret_cast
+          <object>(t->m->classpath->libraryClassLoader(t, caller))
+             : root(t, Machine::AppLoader),
+      n);
 
   if (t->m->classpath->mayInitClasses()) {
     PROTECT(t, c);
@@ -362,7 +364,7 @@ findClass(Thread* t, uintptr_t* arguments)
     initClass(t, c);
   }
 
-  return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, reinterpret_cast<object>(getJClass(t, c))));
 }
 
 jclass JNICALL
@@ -451,7 +453,7 @@ getObjectClass(Thread* t, uintptr_t* arguments)
   jobject o = reinterpret_cast<jclass>(arguments[0]);
 
   return reinterpret_cast<uint64_t>(makeLocalReference(
-      t, getJClass(t, objectClass(t, *o))));
+      t, reinterpret_cast<object>(getJClass(t, objectClass(t, *o)))));
 }
 
 jclass JNICALL
@@ -471,7 +473,7 @@ getSuperclass(Thread* t, uintptr_t* arguments)
   } else {
     object super = classSuper(t, class_);
     return super ? reinterpret_cast<uint64_t>
-      (makeLocalReference(t, getJClass(t, cast<GcClass>(t, super)))) : 0;
+      (makeLocalReference(t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, super))))) : 0;
   }
 }
 
