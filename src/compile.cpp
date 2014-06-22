@@ -74,18 +74,6 @@ const unsigned InitialZoneCapacityInBytes = 64 * 1024;
 
 const unsigned ExecutableAreaSizeInBytes = 30 * 1024 * 1024;
 
-enum Root {
-  CallTable,
-  MethodTree,
-  MethodTreeSentinal,
-  ObjectPools,
-  StaticTableArray,
-  VirtualThunks,
-  ReceiveMethod,
-  WindMethod,
-  RewindMethod
-};
-
 enum ThunkIndex {
   compileMethodIndex,
   compileVirtualMethodIndex,
@@ -99,8 +87,6 @@ enum ThunkIndex {
 
   dummyIndex
 };
-
-const unsigned RootCount = RewindMethod + 1;
 
 inline bool
 isVmInvokeUnsafeStack(void* ip)
@@ -358,11 +344,8 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
   return cast<GcMethod>(t, cast<GcArray>(t, class_->virtualTable())->body()[index]);
 }
 
-object&
-root(Thread* t, Root root);
-
-void
-setRoot(Thread* t, Root root, object value);
+GcCompileRoots*
+compileRoots(Thread* t);
 
 intptr_t
 methodCompiled(Thread* t UNUSED, GcMethod* method)
@@ -415,9 +398,9 @@ methodForIp(MyThread* t, void* ip)
   return cast<GcMethod>(
       t,
       treeQuery(t,
-                cast<GcTreeNode>(t, root(t, MethodTree)),
+                compileRoots(t)->methodTree(),
                 reinterpret_cast<intptr_t>(ip),
-                cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
+                compileRoots(t)->methodTreeSentinal(),
                 compareIpToMethodBounds));
 }
 
@@ -6816,8 +6799,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     initArray(t, reinterpret_cast<GcArray*>(pool), context->objectPoolCount + 1);
     mark(t, pool, 0);
 
-    set(t, pool, ArrayBody, root(t, ObjectPools));
-    setRoot(t, ObjectPools, pool);
+    set(t, pool, ArrayBody, compileRoots(t)->objectPools());
+    set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsObjectPools, pool);
 
     unsigned i = 1;
     for (PoolElement* p = context->objectPool; p; p = p->next) {
@@ -7722,7 +7705,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
         nextContinuation = cast<GcContinuation>(t, rewindContext->continuation());
         action = Rewind;
 
-        if (root(t, RewindMethod) == 0) {
+        if (compileRoots(t)->rewindMethod() == 0) {
           PROTECT(t, nextContinuation);
 
           GcMethod* method = resolveMethod
@@ -7734,7 +7717,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
 
           compile(t, local::codeAllocator(t), 0, method);
 
-          setRoot(t, RewindMethod, reinterpret_cast<object>(method));
+          set(t, compileRoots(t), CompileRootsRewindMethod, method);
         }
       } else {
         action = Call;
@@ -7765,7 +7748,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
     transition(t, 0, 0, nextContinuation, t->trace);
 
     jumpAndInvoke
-      (t, cast<GcMethod>(t, root(t, RewindMethod)), stack,
+      (t, compileRoots(t)->rewindMethod(), stack,
        nextContinuation->context()->before(),
        continuation, result, exception);
   } break;
@@ -7784,13 +7767,13 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
   { PROTECT(t, receiver);
 
-    if (root(t, ReceiveMethod) == 0) {
+    if (compileRoots(t)->receiveMethod() == 0) {
       GcMethod* m = resolveMethod
         (t, roots(t)->bootLoader(), "avian/Function", "call",
          "(Ljava/lang/Object;)Ljava/lang/Object;");
 
       if (m) {
-        setRoot(t, ReceiveMethod, reinterpret_cast<object>(m));
+        set(t, compileRoots(t), CompileRootsReceiveMethod, m);
 
         GcClass* continuationClass = type(t, GcContinuation::Type);
 
@@ -7802,7 +7785,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
     }
 
     method = findInterfaceMethod
-      (t, cast<GcMethod>(t, root(t, ReceiveMethod)), objectClass(t, receiver));
+      (t, compileRoots(t)->receiveMethod(), objectClass(t, receiver));
     PROTECT(t, method);
 
     compile(t, local::codeAllocator(t), 0, method);
@@ -7823,14 +7806,14 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     PROTECT(t, thunk);
     PROTECT(t, after);
 
-    if (root(t, WindMethod) == 0) {
+    if (compileRoots(t)->windMethod() == 0) {
       GcMethod* method = resolveMethod
         (t, roots(t)->bootLoader(), "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
       if (method) {
-        setRoot(t, WindMethod, reinterpret_cast<object>(method));
+        set(t, compileRoots(t), CompileRootsWindMethod, method);
         compile(t, local::codeAllocator(t), 0, method);
       }
     }
@@ -7848,7 +7831,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
     set(t, t->continuation, ContinuationContext, newContext);
   }
 
-  jumpAndInvoke(t, cast<GcMethod>(t, root(t, WindMethod)), stack, before, thunk, after);
+  jumpAndInvoke(t, compileRoots(t)->windMethod(), stack, before, thunk, after);
 }
 
 class ArgumentList {
@@ -8829,13 +8812,16 @@ class MyProcessor: public Processor {
   }
 
   virtual void visitRoots(Thread* t, HeapWalker* w) {
-    bootImage->methodTree = w->visitRoot(root(t, MethodTree));
-    bootImage->methodTreeSentinal = w->visitRoot(root(t, MethodTreeSentinal));
-    bootImage->virtualThunks = w->visitRoot(root(t, VirtualThunks));
+    bootImage->methodTree
+        = w->visitRoot(reinterpret_cast<object>(compileRoots(t)->methodTree()));
+    bootImage->methodTreeSentinal = w->visitRoot(
+        reinterpret_cast<object>(compileRoots(t)->methodTreeSentinal()));
+    bootImage->virtualThunks = w->visitRoot(
+        reinterpret_cast<object>(compileRoots(t)->virtualThunks()));
   }
 
   virtual void normalizeVirtualThunks(Thread* t) {
-    GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+    GcWordArray* a = compileRoots(t)->virtualThunks();
     for (unsigned i = 0; i < a->length();
          i += 2)
     {
@@ -8854,7 +8840,7 @@ class MyProcessor: public Processor {
       (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
 
     unsigned index = 0;
-    GcArray* callTable = cast<GcArray>(t, root(t, CallTable));
+    GcArray* callTable = compileRoots(t)->callTable();
     for (unsigned i = 0; i < callTable->length(); ++i) {
       for (GcCallNode* p = cast<GcCallNode>(t, callTable->body()[i]);
            p; p = p->next())
@@ -8887,16 +8873,19 @@ class MyProcessor: public Processor {
     if (image and code) {
       local::boot(static_cast<MyThread*>(t), image, code);
     } else {
-      roots = makeArray(t, RootCount);
+      roots = makeCompileRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-      setRoot(t, CallTable, reinterpret_cast<object>(makeArray(t, 128)));
+      {
+        GcArray* ct = makeArray(t, 128);
+        // sequence point, for gc (don't recombine statements)
+        set(t, compileRoots(t), CompileRootsCallTable, ct);
+      }
 
-      setRoot(t, MethodTreeSentinal, reinterpret_cast<object>(makeTreeNode(t, 0, 0, 0)));
-      setRoot(t, MethodTree, root(t, MethodTreeSentinal));
-      set(t, root(t, MethodTree), TreeNodeLeft,
-          root(t, MethodTreeSentinal));
-      set(t, root(t, MethodTree), TreeNodeRight,
-          root(t, MethodTreeSentinal));
+      GcTreeNode* tree = makeTreeNode(t, 0, 0, 0);
+      set(t, compileRoots(t), CompileRootsMethodTreeSentinal, tree);
+      set(t, compileRoots(t), CompileRootsMethodTree, tree);
+      set(t, tree, TreeNodeLeft, tree);
+      set(t, tree, TreeNodeRight, tree);
     }
 
 #ifdef AVIAN_AOT_ONLY
@@ -8967,7 +8956,7 @@ class MyProcessor: public Processor {
   System* s;
   SignalRegistrar signals;
   Allocator* allocator;
-  GcArray* roots;
+  GcCompileRoots* roots;
   BootImage* bootImage;
   uintptr_t* heapImage;
   uint8_t* codeImage;
@@ -9147,7 +9136,7 @@ isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 bool
 isVirtualThunk(MyThread* t, void* ip)
 {
-  GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+  GcWordArray* a = compileRoots(t)->virtualThunks();
   for (unsigned i = 0; i < a->length(); i += 2)
   {
     uintptr_t start = a->body()[i];
@@ -9185,7 +9174,7 @@ findCallNode(MyThread* t, void* address)
   // compile(MyThread*, Allocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  GcArray* table = cast<GcArray>(t, root(t, CallTable));
+  GcArray* table = compileRoots(t)->callTable();
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) & (table->length() - 1);
@@ -9265,13 +9254,10 @@ insertCallNode(MyThread* t, GcArray* table, unsigned* size, GcCallNode* node)
 void
 insertCallNode(MyThread* t, GcCallNode* node)
 {
-  setRoot(t,
-          CallTable,
-          reinterpret_cast<object>(
-              insertCallNode(t,
-                             cast<GcArray>(t, root(t, CallTable)),
-                             &(processor(t)->callTableSize),
-                             node)));
+  GcArray* newArray = insertCallNode(
+      t, compileRoots(t)->callTable(), &(processor(t)->callTableSize), node);
+  // sequence point, for gc (don't recombine statements)
+  set(t, compileRoots(t), CompileRootsCallTable, newArray);
 }
 
 GcHashMap*
@@ -9484,7 +9470,7 @@ findThunks(MyThread* t, BootImage* image, uint8_t* code)
 void
 fixupVirtualThunks(MyThread* t, uint8_t* code)
 {
-  GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+  GcWordArray* a = compileRoots(t)->virtualThunks();
   for (unsigned i = 0; i < a->length(); i += 2)
   {
     if (a->body()[i]) {
@@ -9536,12 +9522,12 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   set(t, reinterpret_cast<object>(roots(t)), RootsBootLoader, bootObject(heap, image->bootLoader));
   set(t, reinterpret_cast<object>(roots(t)), RootsAppLoader, bootObject(heap, image->appLoader));
 
-  p->roots = makeArray(t, RootCount);
+  p->roots = makeCompileRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-  setRoot(t, MethodTree, bootObject(heap, image->methodTree));
-  setRoot(t, MethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
+  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsMethodTree, bootObject(heap, image->methodTree));
+  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsMethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
 
-  setRoot(t, VirtualThunks, bootObject(heap, image->virtualThunks));
+  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsVirtualThunks, bootObject(heap, image->virtualThunks));
 
   {
     GcHashMap* map = makeClassMap(t, bootClassTable, image->bootClassCount, heap);
@@ -9559,18 +9545,31 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   roots(t)->appLoader()->as<GcSystemClassLoader>(t)->finder() = t->m->appFinder;
 
-  set(t, roots(t), RootsStringMap, makeStringMap
-          (t, stringTable, image->stringCount, heap));
+  {
+    GcWeakHashMap* map = makeStringMap(t, stringTable, image->stringCount, heap);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsStringMap, map);
+  }
 
   p->callTableSize = image->callCount;
 
-  setRoot(t, CallTable, reinterpret_cast<object>(makeCallTable
-          (t, heap, callTable, image->callCount,
-           reinterpret_cast<uintptr_t>(code))));
+  {
+    GcArray* ct = makeCallTable(t,
+                                heap,
+                                callTable,
+                                image->callCount,
+                                reinterpret_cast<uintptr_t>(code));
+    // sequence point, for gc (don't recombine statements)
+    set(t, compileRoots(t), CompileRootsCallTable, ct);
+  }
 
-  setRoot(t, StaticTableArray, reinterpret_cast<object>(makeStaticTableArray
+  {
+    GcArray* staticTableArray = makeStaticTableArray
           (t, bootClassTable, image->bootClassCount,
-           appClassTable, image->appClassCount, heap)));
+           appClassTable, image->appClassCount, heap);
+    // sequence point, for gc (don't recombine statements)
+    set(t, compileRoots(t), CompileRootsStaticTableArray, staticTableArray);
+  }
 
   findThunks(t, image, code);
 
@@ -9944,17 +9943,17 @@ virtualThunk(MyThread* t, unsigned index)
 {
   ACQUIRE(t, t->m->classLock);
 
-  GcWordArray* oldArray = cast<GcWordArray>(t, root(t, VirtualThunks));
+  GcWordArray* oldArray = compileRoots(t)->virtualThunks();
   if (oldArray == 0
       or oldArray->length() <= index * 2)
   {
     GcWordArray* newArray = makeWordArray(t, nextPowerOfTwo((index + 1) * 2));
-    if (root(t, VirtualThunks)) {
+    if (compileRoots(t)->virtualThunks()) {
       memcpy(newArray->body().begin(),
              oldArray->body().begin(),
              oldArray->length() * BytesPerWord);
     }
-    setRoot(t, VirtualThunks, reinterpret_cast<object>(newArray));
+    set(t, compileRoots(t), CompileRootsVirtualThunks, newArray);
     oldArray = newArray;
   }
 
@@ -10044,15 +10043,15 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   // clone in its place.  Later, we'll replace the clone with the
   // original to save memory.
 
-  setRoot(t,
-          MethodTree,
-          reinterpret_cast<object>(treeInsert(t,
-                     &(context.zone),
-                     cast<GcTreeNode>(t, root(t, MethodTree)),
-                     methodCompiled(t, clone),
-                     reinterpret_cast<object>(clone),
-                     cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
-                     compareIpToMethodBounds)));
+  GcTreeNode* newTree = treeInsert(t,
+                                   &(context.zone),
+                                   compileRoots(t)->methodTree(),
+                                   methodCompiled(t, clone),
+                                   reinterpret_cast<object>(clone),
+                                   compileRoots(t)->methodTreeSentinal(),
+                                   compareIpToMethodBounds);
+  // sequence point, for gc (don't recombine statements)
+  set(t, compileRoots(t), CompileRootsMethodTree, newTree);
 
   storeStoreMemoryBarrier();
 
@@ -10069,24 +10068,17 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   context.executableAllocator = 0;
 
   treeUpdate(t,
-             cast<GcTreeNode>(t, root(t, MethodTree)),
+             compileRoots(t)->methodTree(),
              methodCompiled(t, clone),
              reinterpret_cast<object>(method),
-             cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
+             compileRoots(t)->methodTreeSentinal(),
              compareIpToMethodBounds);
 }
 
-object&
-root(Thread* t, Root root)
+GcCompileRoots*
+compileRoots(Thread* t)
 {
-  return processor(static_cast<MyThread*>(t))->roots->body()[root];
-}
-
-void
-setRoot(Thread* t, Root root, object value)
-{
-  set(t, processor(static_cast<MyThread*>(t))->roots,
-      ArrayBody + (root * BytesPerWord), reinterpret_cast<GcObject*>(value));
+  return processor(static_cast<MyThread*>(t))->roots;
 }
 
 avian::util::FixedAllocator* codeAllocator(MyThread* t)
