@@ -1845,6 +1845,9 @@ management_JNI_OnLoad(JavaVM*, void*);
 void JNICALL
 loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
+  Thread::LibraryLoadStack stack
+    (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
+
   object name = reinterpret_cast<object>(arguments[1]);
   THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
