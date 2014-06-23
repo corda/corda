@@ -513,8 +513,6 @@ invoke(Thread* t, object method, object instance, object args)
   }
 
   if (methodParameterCount(t, method)) {
-    PROTECT(t, method);
-
     unsigned specLength = byteArrayLength(t, methodSpec(t, method));
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
     memcpy(RUNTIME_ARRAY_BODY(spec),
