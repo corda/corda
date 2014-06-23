@@ -19,7 +19,7 @@ to use forward slashes in the path.
 #### on Mac OS X:
     $ export JAVA_HOME=$(/usr/libexec/java_home)
     $ make
-    $ build/darwin-x86_64/avian -cp build/darwin-x86_64/test Hello
+    $ build/macosx-x86_64/avian -cp build/macosx-x86_64/test Hello
  
 #### on Windows (MSYS):
     $ git clone git@github.com:ReadyTalk/win64.git ../win64
@@ -85,12 +85,11 @@ The build is directed by a single makefile and may be influenced via
 certain flags described below, all of which are optional.
 
     $ make \
-        platform={linux,windows,darwin,freebsd} \
+        platform={linux,windows,macosx,ios,freebsd} \
         arch={i386,x86_64,arm} \
         process={compile,interpret} \
         mode={debug,debug-fast,fast,small} \
         lzma=<lzma source directory> \
-        ios={true,false} \
         bootimage={true,false} \
         heapdump={true,false} \
         tails={true,false} \
@@ -121,13 +120,6 @@ boot images.  The value of this option should be a directory
 containing a recent LZMA SDK (available [here](http://www.7-zip.org/sdk.html)).  Currently, only version 9.20 of
 the SDK has been tested, but other versions might work.  
     * _default:_ not set
-
-  * `ios` - if true, cross-compile for iOS on OS X.  Note that
-non-jailbroken iOS devices do not allow JIT compilation, so only
-process=interpret or bootimage=true builds will run on such
-devices.  See [here](https://github.com/ReadyTalk/hello-ios) for an
-example of an Xcode project for iOS which uses Avian.  
-    * _default:_ false
 
   * `armv6` - if true, don't use any instructions newer than armv6.  By
 default, we assume the target is armv7 or later, and thus requires explicit
@@ -187,6 +179,12 @@ bootimage enabled on Linux/i386 would be built in
 _build/linux-i386-debug-bootimage_.  This allows you to build with
 several different sets of options independently and even
 simultaneously without doing a clean build each time.
+
+Note that not all combinations of these flags are valid.  For instance,
+non-jailbroken iOS devices do not allow JIT compilation, so only
+process=interpret or bootimage=true builds will run on such
+devices.  See [here](https://github.com/ReadyTalk/hello-ios) for an
+example of an Xcode project for iOS which uses Avian.  
 
 If you are compiling for Windows, you may either cross-compile using
 MinGW or build natively on Windows under MSYS or Cygwin.
