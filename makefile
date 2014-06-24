@@ -11,13 +11,17 @@ build-arch := $(shell uname -m \
 
 build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
-		| sed 's/^mingw32.*$$/mingw32/' \
-		| sed 's/^cygwin.*$$/cygwin/')
+		| sed \
+		  -e 's/^mingw32.*$$/mingw32/' \
+			-e 's/^cygwin.*$$/cygwin/' \
+			-e 's/^darwin.*$$/macosx/')
 
 arch = $(build-arch)
 target-arch = $(arch)
+
 bootimage-platform = \
 	$(subst cygwin,windows,$(subst mingw32,windows,$(build-platform)))
+
 platform = $(bootimage-platform)
 
 codegen-targets = native
@@ -62,8 +66,28 @@ ifeq ($(filter x86_64 i386 arm,$(arch)),)
 	x := $(error "'$(arch)' is not a supported architecture (choose one of: x86_64 i386 arm)")
 endif
 
-ifeq ($(filter linux windows darwin freebsd,$(platform)),)
-	x := $(error "'$(platform)' is not a supported platform (choose one of: linux windows darwin freebsd)")
+ifeq ($(platform),darwin)
+	x := $(error "please use 'platform=macosx' or 'platform=ios' instead of 'platform=$platform'")
+endif
+
+ifneq ($(ios),)
+	x := $(error "please use 'platform=ios' instead of 'ios=true'")
+endif
+
+ifeq ($(filter linux windows macosx ios freebsd,$(platform)),)
+	x := $(error "'$(platform)' is not a supported platform (choose one of: linux windows macosx ios freebsd)")
+endif
+
+ifeq ($(platform),macosx)
+	ifeq ($(arch),arm)
+		x := $(error "please use 'arch=arm' 'platform=ios' to build for ios-arm")
+	endif
+endif
+
+ifeq ($(platform),ios)
+	ifeq ($(filter arm i386,$(arch)),)
+		x := $(error "please specify 'arch=i386' or 'arch=arm' with 'platform=ios'")
+	endif
 endif
 
 aot-only = false
@@ -89,6 +113,11 @@ embed-prefix = /avian-embedded
 
 native-path = echo
 
+platform-kernel = $(subst macosx,darwin,$(subst ios,darwin,$1))
+
+build-kernel = $(call platform-kernel,$(build-platform))
+kernel = $(call platform-kernel,$(platform))
+
 ifeq ($(build-platform),cygwin)
 	native-path = cygpath -m
 endif
@@ -109,7 +138,7 @@ endif
 
 library-path-variable = LD_LIBRARY_PATH
 
-ifeq ($(build-platform),darwin)
+ifeq ($(build-kernel),darwin)
 	library-path-variable = DYLD_LIBRARY_PATH
 endif
 
@@ -168,7 +197,7 @@ ifneq ($(openjdk),)
 		version-script-flag = -Wl,--version-script=openjdk.ld
 		options := $(options)-openjdk
 		test-executable = $(shell pwd)/$(executable-dynamic)
-		ifeq ($(build-platform),darwin)
+		ifeq ($(build-kernel),darwin)
 			library-path = \
 				$(library-path-variable)=$(build):$(openjdk)/jre/lib
 		else
@@ -298,7 +327,7 @@ else
 endif
 
 mflag =
-ifneq ($(platform),darwin)
+ifneq ($(kernel),darwin)
 	ifeq ($(arch),i386)
 		mflag = -m32
 	endif
@@ -376,7 +405,7 @@ cflags = $(build-cflags)
 common-lflags = -lm -lz
 
 ifeq ($(use-clang),true)
-  ifeq ($(build-platform),darwin)
+  ifeq ($(build-kernel),darwin)
     common-lflags += -Wl,-export_dynamic
   else
     ifneq ($(platform),windows)
@@ -451,15 +480,17 @@ ifeq ($(arch),arm)
 	asm = arm
 	pointer-size = 4
 
-	ifeq ($(build-platform),darwin)
-		ios = true
-	else
+	ifneq ($(platform),ios)
 		no-psabi = -Wno-psabi
 		cflags += -marm $(no-psabi)
+
+		# By default, assume we can't use armv7-specific instructions on
+		# non-iOS platforms.  Ideally, we'd detect this at runtime.
+		armv6=true
 	endif
 
 	ifneq ($(arch),$(build-arch))
-		ifneq ($(platform),darwin)
+		ifneq ($(kernel),darwin)
 			cxx = arm-linux-gnueabi-g++
 			cc = arm-linux-gnueabi-gcc
 			ar = arm-linux-gnueabi-ar
@@ -469,22 +500,16 @@ ifeq ($(arch),arm)
 	endif
 endif
 
-ifneq ($(platform),darwin)
-# By default, assume we can't use armv7-specific instructions on
-# non-iOS platforms.  Ideally, we'd detect this at runtime.
-	armv6=true
-endif
-
 ifeq ($(armv6),true)
 	cflags += -DAVIAN_ASSUME_ARMV6
 endif
 
-ifeq ($(ios),true)
+ifeq ($(platform),ios)
 	cflags += -DAVIAN_IOS
 	use-lto = false
 endif
 
-ifeq ($(build-platform),darwin)
+ifeq ($(build-kernel),darwin)
 	build-cflags = $(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	cflags += -Wno-deprecated-declarations
 	build-lflags += -framework CoreFoundation
@@ -585,15 +610,15 @@ ifeq ($(platform),android)
 	strip = $(toolchain)/bin/$(android-toolchain-prefix)strip
 endif
 
-ifeq ($(platform),darwin)
+ifeq ($(kernel),darwin)
 	target-format = macho
 	ifeq (${OSX_SDK_SYSROOT},)
-		OSX_SDK_SYSROOT = 10.4u
+		OSX_SDK_SYSROOT = 10.6u
 	endif
 	ifeq (${OSX_SDK_VERSION},)
-		OSX_SDK_VERSION = 10.4
+		OSX_SDK_VERSION = 10.6
 	endif
-	ifneq ($(build-platform),darwin)
+	ifneq ($(build-kernel),darwin)
 		cxx = i686-apple-darwin8-g++ $(mflag)
 		cc = i686-apple-darwin8-gcc $(mflag)
 		ar = i686-apple-darwin8-ar
@@ -604,7 +629,7 @@ ifeq ($(platform),darwin)
 			$(common-cflags) -fPIC -fvisibility=hidden -I$(src)
 	endif
 
-	ifneq ($(ios),true)
+	ifneq ($(platform),ios)
 		platform-dir = $(developer-dir)/Platforms/MacOSX.platform
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
@@ -626,7 +651,7 @@ ifeq ($(platform),darwin)
 		lflags += -Wl,-compatibility_version,1.0.0
 	endif
 
-	ifneq ($(arch),arm)
+	ifneq ($(platform),ios)
 		lflags +=	-framework CoreServices -framework SystemConfiguration \
 			-framework Security
 	endif
@@ -639,17 +664,15 @@ ifeq ($(platform),darwin)
 	shared = -dynamiclib
 	rpath =
 
-	ifeq ($(ios),true)
+	ifeq ($(platform),ios)
 		ifeq ($(arch),i386)
 			target = iPhoneSimulator
 			sdk = iphonesimulator$(ios-version)
-			arch = i386
 			arch-flag = -arch i386
 			release = Release-iphonesimulator
 		else
 			target = iPhoneOS
 			sdk = iphoneos$(ios-version)
-			arch = arm
 			arch-flag = -arch armv7
 			release = Release-iphoneos
 		endif
@@ -698,11 +721,19 @@ ifeq ($(platform),darwin)
 	endif
 
 	ifeq ($(arch),i386)
-		classpath-extra-cflags += \
-			-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-		cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-		asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-		lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		ifeq ($(platform),ios)
+			classpath-extra-cflags += \
+				-arch i386 -miphoneos-version-min=$(ios-version)
+			cflags += -arch i386 -miphoneos-version-min=$(ios-version)
+			asmflags += -arch i386 -miphoneos-version-min=$(ios-version)
+			lflags += -arch i386 -miphoneos-version-min=$(ios-version)
+		else
+			classpath-extra-cflags += \
+				-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+			cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+			asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+			lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		endif
 	endif
 
 	ifeq ($(arch),x86_64)
@@ -1069,7 +1100,7 @@ endif
 cflags += $(optimization-cflags)
 
 ifndef ms_cl_compiler
-ifneq ($(platform),darwin)
+ifneq ($(kernel),darwin)
 ifeq ($(arch),i386)
 # this is necessary to support __sync_bool_compare_and_swap:
 	cflags += -march=i586
@@ -1875,7 +1906,6 @@ $(unittest-executable): $(unittest-executable-objects)
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
 	$(MAKE) mode=$(mode) \
-		ios=false \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
 		aot-only=false \
@@ -1956,7 +1986,7 @@ $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
 	sed 's/^static jclass ia_class;//' < $(<) > $(build)/openjdk/$(notdir $(<))
-ifeq ($(ios),true)
+ifeq ($(platform),ios)
 	sed \
 		-e 's/^#ifndef __APPLE__/#if 1/' \
 		-e 's/^#ifdef __APPLE__/#if 0/' \
@@ -2003,7 +2033,7 @@ ifeq ($(platform),windows)
 	echo 'static int getAddrsFromAdapter(IP_ADAPTER_ADDRESSES *ptr, netaddr **netaddrPP);' >> $(build)/openjdk/NetworkInterface.h
 endif
 
-ifeq ($(platform),darwin)
+ifeq ($(kernel),darwin)
 	mkdir -p $(build)/openjdk/netinet
 	for file in \
 		$(sysroot)/usr/include/netinet/ip.h \

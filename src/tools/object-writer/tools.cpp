@@ -95,7 +95,9 @@ PlatformInfo::Format PlatformInfo::formatFromString(const char* format) {
   {
     return Pe;
   } else if (strcmp(format, "macho") == 0
-             or strcmp(format, "darwin") == 0)
+             or strcmp(format, "darwin") == 0
+             or strcmp(format, "ios") == 0
+             or strcmp(format, "macosx") == 0)
   {
     return MachO;
   } else {
