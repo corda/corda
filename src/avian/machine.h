@@ -1923,7 +1923,7 @@ findProperty(Thread* t, const char* name)
   return findProperty(t->m, name);
 }
 
-object&
+object
 arrayBodyUnsafe(Thread*, GcArray*, unsigned);
 
 bool
@@ -1964,7 +1964,7 @@ T* cast(Thread* t UNUSED, object o)
 #include "type-declarations.cpp"
 
 
-inline object&
+inline object
 arrayBodyUnsafe(Thread*, GcArray* a, unsigned index)
 {
   return a->body()[index];
@@ -2180,7 +2180,7 @@ type(Thread* t, Gc::Type type)
 inline void
 setType(Thread* t, Gc::Type type, GcClass* value)
 {
-  set(t, t->m->types, ArrayBody + (type * BytesPerWord), value);
+  t->m->types->setBodyElement(t, type, reinterpret_cast<object>(value));
 }
 
 inline bool
@@ -2718,7 +2718,7 @@ findMethodInClass(Thread* t, GcClass* class_, GcByteArray* name, GcByteArray* sp
 
 inline GcThrowable*
 makeThrowable
-(Thread* t, Gc::Type type, object message = 0, object trace = 0,
+(Thread* t, Gc::Type type, GcString* message = 0, object trace = 0,
  GcThrowable* cause = 0)
 {
   PROTECT(t, message);
@@ -2731,9 +2731,9 @@ makeThrowable
 
   GcThrowable* result = cast<GcThrowable>(t, make(t, vm::type(t, type)));
 
-  set(t, reinterpret_cast<object>(result), ThrowableMessage, message);
-  set(t, reinterpret_cast<object>(result), ThrowableTrace, trace);
-  set(t, result, ThrowableCause, cause);
+  result->setMessage(t, message);
+  result->setTrace(t, reinterpret_cast<object>(trace));
+  result->setCause(t, cause);
 
   return result;
 }
@@ -2748,7 +2748,7 @@ makeThrowableV(Thread* t, Gc::Type type, const char* format, va_list a,
     GcString* message = t->m->classpath->makeString
       (t, reinterpret_cast<object>(s), 0, s->length() - 1);
 
-    return makeThrowable(t, type, reinterpret_cast<object>(message));
+    return makeThrowable(t, type, message);
   } else {
     return 0;
   }
@@ -2831,7 +2831,7 @@ throw_(Thread* t, GcThrowable* e)
 
 inline void NO_RETURN
 throwNew
-(Thread* t, Gc::Type type, object message = 0, object trace = 0,
+(Thread* t, Gc::Type type, GcString* message = 0, object trace = 0,
  GcThrowable* cause = 0)
 {
   throw_(t, makeThrowable(t, type, message, trace, cause));
@@ -3636,8 +3636,7 @@ resolveClassInPool(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned 
     if (c) {
       storeStoreMemoryBarrier();
 
-      set(t, method->code()->pool(),
-          SingletonBody + (index * BytesPerWord), c);
+      method->code()->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(c));
     }
     return c;
   }
@@ -3677,8 +3676,7 @@ resolve(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
       if (o) {
         storeStoreMemoryBarrier();
 
-        set(t, reinterpret_cast<object>(method->code()->pool()),
-            SingletonBody + (index * BytesPerWord), o);
+        method->code()->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
       }
     } else {
       o = 0;
@@ -3835,7 +3833,7 @@ getClassRuntimeData(Thread* t, GcClass* c)
         GcVector* v
             = vectorAppend(t, roots(t)->classRuntimeDataTable(), runtimeData);
         // sequence point, for gc (don't recombine statements)
-        set(t, roots(t), RootsClassRuntimeDataTable, v);
+        roots(t)->setClassRuntimeDataTable(t, v);
       }
 
       c->runtimeDataIndex() = roots(t)->classRuntimeDataTable()->size();
@@ -3867,7 +3865,7 @@ getMethodRuntimeData(Thread* t, GcMethod* method)
         GcVector* v
             = vectorAppend(t, roots(t)->methodRuntimeDataTable(), runtimeData);
         // sequence point, for gc (don't recombine statements)
-        set(t, roots(t), RootsMethodRuntimeDataTable, v);
+        roots(t)->setMethodRuntimeDataTable(t, v);
       }
 
       storeStoreMemoryBarrier();
@@ -3900,7 +3898,7 @@ getJClass(Thread* t, GcClass* c)
 
       storeStoreMemoryBarrier();
 
-      set(t, getClassRuntimeData(t, c), ClassRuntimeDataJclass, jclass);
+      getClassRuntimeData(t, c)->setJclass(t, reinterpret_cast<object>(jclass));
     }
   }
 
@@ -3940,7 +3938,7 @@ registerNative(Thread* t, GcMethod* method, void* function)
   // populated once the object it points to has been populated:
   storeStoreMemoryBarrier();
 
-  set(t, runtimeData, MethodRuntimeDataNative, native);
+  runtimeData->setNative(t, native);
 }
 
 inline void
@@ -3951,7 +3949,7 @@ unregisterNatives(Thread* t, GcClass* c)
     for (unsigned i = 0; i < table->length(); ++i) {
       GcMethod* method = cast<GcMethod>(t, table->body()[i]);
       if (method->flags() & ACC_NATIVE) {
-        set(t, getMethodRuntimeData(t, method), MethodRuntimeDataNative, 0);
+        getMethodRuntimeData(t, method)->setNative(t, 0);
       }
     }
   }

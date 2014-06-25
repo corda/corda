@@ -23,7 +23,7 @@
 (type cloneable java/lang/Cloneable)
 
 (type singleton avian/Singleton
-  (array uintptr_t body))
+  (array maybe_object body))
 
 (type classLoader java/lang/ClassLoader
   (object map))

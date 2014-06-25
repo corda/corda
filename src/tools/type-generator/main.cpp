@@ -1299,7 +1299,7 @@ typeObjectMask(Module& module, Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
     unsigned offset = f.offset / BytesPerWord;
-    if(isFieldGcVisible(module, f)) {
+    if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
@@ -1307,7 +1307,7 @@ typeObjectMask(Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     unsigned offset = f.offset / BytesPerWord;
-    if(isFieldGcVisible(module, f)) {
+    if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }

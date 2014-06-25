@@ -4605,7 +4605,7 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
         if (throw_) {
           GcThrowable* e = type(t, throwType) == objectClass(t, t->exception)
             ? t->exception
-            : makeThrowable(t, throwType, reinterpret_cast<object>(specString), 0, t->exception);
+            : makeThrowable(t, throwType, specString, 0, t->exception);
           t->exception = 0;
           vm::throw_(t, e);
         } else {
