@@ -216,8 +216,9 @@ std::string enumName(Module& module, Field& f) {
   std::string& type = f.typeName;
   if (type == "void*") {
     return "word";
-  }
-  if(f.javaSpec.size() != 0 && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
+  } else if(type == "maybe_object") {
+    return "uintptr_t";
+  } else if(f.javaSpec.size() != 0 && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
     return "object";
   }
   std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
@@ -370,7 +371,7 @@ unsigned
 sizeOf(Module& module, const std::string& type)
 {
   if (type == "object"
-      or type == "intptr_t" or type == "uintptr_t")
+      or type == "intptr_t" or type == "uintptr_t" or type == "maybe_object")
   {
     return BytesPerWord;
   } else if (type == "unsigned" or type == "int") {
@@ -870,6 +871,8 @@ std::string cppFieldType(Module& module, Field& f) {
   assert(f.typeName.size() > 0);
   if(it != module.classes.end()) {
     return cppClassName(it->second);
+  } else if(f.typeName == "maybe_object") {
+    return "uintptr_t";
   } else {
     return f.typeName;
   }
@@ -976,15 +979,11 @@ writeConstructorInitializations(Output* out, Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
     if(!f.polyfill) {
-      out->write("  o->");
+      out->write("  o->set");
+      out->write(capitalize(f.name));
+      out->write("(t, ");
       out->write(obfuscate(f.name));
-      out->write("(");
-      if(f.threadParam) {
-        out->write("t");
-      }
-      out->write(") = ");
-      out->write(obfuscate(f.name));
-      out->write(";\n");
+      out->write(");\n");
     }
   }
 }
@@ -1002,10 +1001,48 @@ void writeClassDeclarations(Output* out, Module& module)
   out->write("\n");
 }
 
+bool isFieldGcVisible(Module& module, Field& f) {
+  return (f.typeName == "maybe_object" || enumName(module, f) == "object") && !f.nogc;
+}
+
 void writeClassAccessors(Output* out, Module& module, Class* cl)
 {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
+
+    if(!f.polyfill) {
+      out->write("  void set");
+      out->write(capitalize(f.name));
+      out->write("(Thread* t UNUSED, ");
+      out->write(cppFieldType(module, f));
+      out->write(" value) { ");
+      if(isFieldGcVisible(module, f)) {
+        out->write("set(t, reinterpret_cast<object>(this), ");
+        out->write(capitalize(cl->name));
+        out->write(capitalize(f.name));
+        out->write(", reinterpret_cast<object>(value));");
+      } else {
+        out->write("field_at<");
+        out->write(cppFieldType(module, f));
+        out->write(">(");
+        out->write(capitalize(cl->name));
+        out->write(capitalize(f.name));
+        out->write(") = value;");
+      }
+      out->write(" }\n");
+
+      out->write("  ");
+      out->write(cppFieldType(module, f));
+      out->write("* ");
+      out->write(obfuscate(f.name));
+      out->write("Ptr() { return &field_at<");
+      out->write(cppFieldType(module, f));
+      out->write(">(");
+      out->write(capitalize(cl->name));
+      out->write(capitalize(f.name));
+      out->write("); }\n");
+    }
+
     out->write("  ");
     out->write(cppFieldType(module, f));
     if(!f.polyfill) {
@@ -1032,19 +1069,52 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     out->write("  avian::util::Slice<");
-    out->write(f.typeName);
+    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    //   out->write("const ");
+    // }
+    out->write(cppFieldType(module, f));
     out->write("> ");
     out->write(obfuscate(f.name));
     out->write("() { return avian::util::Slice<");
-    out->write(f.typeName);
+    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    //   out->write("const ");
+    // }
+    out->write(cppFieldType(module, f));
     out->write("> (&field_at<");
-    out->write(f.typeName);
+    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    //   out->write("const ");
+    // }
+    out->write(cppFieldType(module, f));
     out->write(">(");
     out->write(capitalize(cl->name));
     out->write(capitalize(f.name));
     out->write("), field_at<uintptr_t>(");
     out->write(capitalize(cl->name));
     out->write("Length)); }\n");
+
+    out->write("  void set");
+    out->write(capitalize(f.name));
+    out->write("Element(Thread* t UNUSED, size_t index, ");
+    out->write(cppFieldType(module, f));
+    out->write(" value) { ");
+    if(isFieldGcVisible(module, f)) {
+      out->write("set(t, reinterpret_cast<object>(this), ");
+      out->write(capitalize(cl->name));
+      out->write(capitalize(f.name));
+      out->write(" + index * (");
+      out->write(sizeOf(module, f.typeName));
+      out->write("), reinterpret_cast<object>(value));");
+    } else {
+      out->write("field_at<");
+      out->write(cppFieldType(module, f));
+      out->write(">(");
+      out->write(capitalize(cl->name));
+      out->write(capitalize(f.name));
+      out->write(" + index * (");
+      out->write(sizeOf(module, f.typeName));
+      out->write(")) = value;");
+    }
+    out->write(" }\n");
   }
 }
 
@@ -1229,7 +1299,7 @@ typeObjectMask(Module& module, Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
     unsigned offset = f.offset / BytesPerWord;
-    if(enumName(module, f) == "object" && !f.nogc) {
+    if(isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
@@ -1237,7 +1307,7 @@ typeObjectMask(Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     unsigned offset = f.offset / BytesPerWord;
-    if(enumName(module, f) == "object" && !f.nogc) {
+    if(isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
