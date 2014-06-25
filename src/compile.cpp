@@ -2171,7 +2171,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
       memcpy(c->body().begin(), top, totalSize * BytesPerWord);
 
       if (last) {
-        set(t, last, ContinuationNext, c);
+        last->setNext(t, c);
       } else {
         first = c;
       }
@@ -2190,7 +2190,7 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
   }
 
   expect(t, last);
-  set(t, last, ContinuationNext, t->continuation);
+  last->setNext(t, t->continuation);
 
   return first;
 }
@@ -6214,8 +6214,9 @@ truncateArray(Thread* t, GcArray* array, unsigned length)
 
   GcArray* newArray = makeArray(t, length);
   if (length) {
-    memcpy(newArray->body().begin(), array->body().begin(),
-           length * BytesPerWord);
+    for(size_t i = 0; i < length; i++) {
+      newArray->setBodyElement(t, i, array->body()[i]);
+    }
   }
 
   return newArray;
@@ -6309,7 +6310,7 @@ GcArray* translateExceptionHandlerTable(MyThread* t,
             type = 0;
           }
 
-          set(t, reinterpret_cast<object>(newTable), ArrayBody + ((ni + 1) * BytesPerWord), type);
+          newTable->setBodyElement(t, ni + 1, type);
 
           ++ni;
         }
@@ -6321,7 +6322,7 @@ GcArray* translateExceptionHandlerTable(MyThread* t,
       newTable = truncateArray(t, newTable, ni + 1);
     }
 
-    set(t, newTable, ArrayBody, newIndex);
+    newTable->setBodyElement(t, 0, reinterpret_cast<object>(newIndex));
 
     return newTable;
   } else {
@@ -6800,7 +6801,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     mark(t, pool, 0);
 
     set(t, pool, ArrayBody, compileRoots(t)->objectPools());
-    set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsObjectPools, pool);
+    compileRoots(t)->setObjectPools(t, pool);
 
     unsigned i = 1;
     for (PoolElement* p = context->objectPool; p; p = p->next) {
@@ -6840,7 +6841,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
        reinterpret_cast<uintptr_t>(start), codeSize, code->maxStack(),
        code->maxLocals(), 0);
 
-    set(t, context->method, MethodCode, code);
+    context->method->setCode(t, code);
   }
 
   if (context->traceLogCount) {
@@ -6869,7 +6870,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     GcIntArray* map = makeSimpleFrameMapTable(
         t, context, start, RUNTIME_ARRAY_BODY(elements), index);
 
-    set(t, context->method->code(), CodeStackMap, map);
+    context->method->code()->setStackMap(t, map);
   }
 
   logCompile
@@ -7717,7 +7718,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
 
           compile(t, local::codeAllocator(t), 0, method);
 
-          set(t, compileRoots(t), CompileRootsRewindMethod, method);
+          compileRoots(t)->setRewindMethod(t, method);
         }
       } else {
         action = Call;
@@ -7773,7 +7774,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
          "(Ljava/lang/Object;)Ljava/lang/Object;");
 
       if (m) {
-        set(t, compileRoots(t), CompileRootsReceiveMethod, m);
+        compileRoots(t)->setReceiveMethod(t, m);
 
         GcClass* continuationClass = type(t, GcContinuation::Type);
 
@@ -7813,7 +7814,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
       if (method) {
-        set(t, compileRoots(t), CompileRootsWindMethod, method);
+        compileRoots(t)->setWindMethod(t, method);
         compile(t, local::codeAllocator(t), 0, method);
       }
     }
@@ -7828,7 +7829,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
                                 reinterpret_cast<object>(t->continuation),
                                 t->trace->originalMethod);
 
-    set(t, t->continuation, ContinuationContext, newContext);
+    t->continuation->setContext(t, newContext);
   }
 
   jumpAndInvoke(t, compileRoots(t)->windMethod(), stack, before, thunk, after);
@@ -8878,14 +8879,14 @@ class MyProcessor: public Processor {
       {
         GcArray* ct = makeArray(t, 128);
         // sequence point, for gc (don't recombine statements)
-        set(t, compileRoots(t), CompileRootsCallTable, ct);
+        compileRoots(t)->setCallTable(t, ct);
       }
 
       GcTreeNode* tree = makeTreeNode(t, 0, 0, 0);
-      set(t, compileRoots(t), CompileRootsMethodTreeSentinal, tree);
-      set(t, compileRoots(t), CompileRootsMethodTree, tree);
-      set(t, tree, TreeNodeLeft, tree);
-      set(t, tree, TreeNodeRight, tree);
+      compileRoots(t)->setMethodTreeSentinal(t, tree);
+      compileRoots(t)->setMethodTree(t, tree);
+      tree->setLeft(t, tree);
+      tree->setRight(t, tree);
     }
 
 #ifdef AVIAN_AOT_ONLY
@@ -9218,7 +9219,7 @@ resizeTable(MyThread* t, GcArray* oldTable, unsigned newLength)
          oldNode->flags(),
          cast<GcCallNode>(t, newTable->body()[index]));
 
-      set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
+      newTable->setBodyElement(t, index, reinterpret_cast<object>(newNode));
     }
   }
 
@@ -9245,8 +9246,8 @@ insertCallNode(MyThread* t, GcArray* table, unsigned* size, GcCallNode* node)
   intptr_t key = node->address();
   unsigned index = static_cast<uintptr_t>(key) & (table->length() - 1);
 
-  set(t, reinterpret_cast<object>(node), CallNodeNext, table->body()[index]);
-  set(t, table, ArrayBody + (index * BytesPerWord), node);
+  node->setNext(t, cast<GcCallNode>(t, table->body()[index]));
+  table->setBodyElement(t, index, reinterpret_cast<object>(node));
 
   return table;
 }
@@ -9257,7 +9258,7 @@ insertCallNode(MyThread* t, GcCallNode* node)
   GcArray* newArray = insertCallNode(
       t, compileRoots(t)->callTable(), &(processor(t)->callTableSize), node);
   // sequence point, for gc (don't recombine statements)
-  set(t, compileRoots(t), CompileRootsCallTable, newArray);
+  compileRoots(t)->setCallTable(t, newArray);
 }
 
 GcHashMap*
@@ -9283,28 +9284,28 @@ makeStaticTableArray(Thread* t, unsigned* bootTable, unsigned bootCount,
   GcArray* array = makeArray(t, bootCount + appCount);
 
   for (unsigned i = 0; i < bootCount; ++i) {
-    set(t, array, ArrayBody + (i * BytesPerWord),
-        cast<GcClass>(t, bootObject(heap, bootTable[i]))->staticTable());
+    array->setBodyElement(t, i,
+        reinterpret_cast<object>(cast<GcClass>(t, bootObject(heap, bootTable[i]))->staticTable()));
   }
 
   for (unsigned i = 0; i < appCount; ++i) {
-    set(t, array, ArrayBody + ((bootCount + i) * BytesPerWord),
-        cast<GcClass>(t, bootObject(heap, appTable[i]))->staticTable());
+    array->setBodyElement(t, (bootCount + i),
+        reinterpret_cast<object>(cast<GcClass>(t, bootObject(heap, appTable[i]))->staticTable()));
   }
 
   return array;
 }
 
-GcWeakHashMap*
+GcHashMap*
 makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
 {
   GcArray* array = makeArray(t, nextPowerOfTwo(count));
-  GcWeakHashMap* map = makeWeakHashMap(t, 0, array);
+  GcHashMap* map = makeWeakHashMap(t, 0, array)->as<GcHashMap>(t);
   PROTECT(t, map);
 
   for (unsigned i = 0; i < count; ++i) {
     object s = bootObject(heap, table[i]);
-    hashMapInsert(t, map->as<GcHashMap>(t), s, 0, stringHash);
+    hashMapInsert(t, map, s, 0, stringHash);
   }
 
   return map;
@@ -9519,20 +9520,20 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   t->m->roots = makeRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);;
 
-  set(t, reinterpret_cast<object>(roots(t)), RootsBootLoader, bootObject(heap, image->bootLoader));
-  set(t, reinterpret_cast<object>(roots(t)), RootsAppLoader, bootObject(heap, image->appLoader));
+  roots(t)->setBootLoader(t, cast<GcClassLoader>(t, bootObject(heap, image->bootLoader)));
+  roots(t)->setAppLoader(t, cast<GcClassLoader>(t, bootObject(heap, image->appLoader)));
 
   p->roots = makeCompileRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsMethodTree, bootObject(heap, image->methodTree));
-  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsMethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
+  compileRoots(t)->setMethodTree(t, cast<GcTreeNode>(t, bootObject(heap, image->methodTree)));
+  compileRoots(t)->setMethodTreeSentinal(t, cast<GcTreeNode>(t, bootObject(heap, image->methodTreeSentinal)));
 
-  set(t, reinterpret_cast<object>(compileRoots(t)), CompileRootsVirtualThunks, bootObject(heap, image->virtualThunks));
+  compileRoots(t)->setVirtualThunks(t, cast<GcWordArray>(t, bootObject(heap, image->virtualThunks)));
 
   {
     GcHashMap* map = makeClassMap(t, bootClassTable, image->bootClassCount, heap);
     // sequence point, for gc (don't recombine statements)
-    set(t, roots(t)->bootLoader(), ClassLoaderMap, map);
+    roots(t)->bootLoader()->setMap(t, reinterpret_cast<object>(map));
   }
 
   roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder() = t->m->bootFinder;
@@ -9540,15 +9541,15 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   {
     GcHashMap* map = makeClassMap(t, appClassTable, image->appClassCount, heap);
     // sequence point, for gc (don't recombine statements)
-    set(t, roots(t)->appLoader(), ClassLoaderMap, map);
+    roots(t)->appLoader()->setMap(t, reinterpret_cast<object>(map));
   }
 
   roots(t)->appLoader()->as<GcSystemClassLoader>(t)->finder() = t->m->appFinder;
 
   {
-    GcWeakHashMap* map = makeStringMap(t, stringTable, image->stringCount, heap);
+    GcHashMap* map = makeStringMap(t, stringTable, image->stringCount, heap);
     // sequence point, for gc (don't recombine statements)
-    set(t, roots(t), RootsStringMap, map);
+    roots(t)->setStringMap(t, map);
   }
 
   p->callTableSize = image->callCount;
@@ -9560,7 +9561,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
                                 image->callCount,
                                 reinterpret_cast<uintptr_t>(code));
     // sequence point, for gc (don't recombine statements)
-    set(t, compileRoots(t), CompileRootsCallTable, ct);
+    compileRoots(t)->setCallTable(t, ct);
   }
 
   {
@@ -9568,7 +9569,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
           (t, bootClassTable, image->bootClassCount,
            appClassTable, image->appClassCount, heap);
     // sequence point, for gc (don't recombine statements)
-    set(t, compileRoots(t), CompileRootsStaticTableArray, staticTableArray);
+    compileRoots(t)->setStaticTableArray(t, reinterpret_cast<object>(staticTableArray));
   }
 
   findThunks(t, image, code);
@@ -9600,7 +9601,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   GcHashMap* map = makeHashMap(t, 0, 0);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsBootstrapClassMap, map);
+  roots(t)->setBootstrapClassMap(t, map);
 }
 
 intptr_t
@@ -9953,7 +9954,7 @@ virtualThunk(MyThread* t, unsigned index)
              oldArray->body().begin(),
              oldArray->length() * BytesPerWord);
     }
-    set(t, compileRoots(t), CompileRootsVirtualThunks, newArray);
+    compileRoots(t)->setVirtualThunks(t, newArray);
     oldArray = newArray;
   }
 
@@ -10051,11 +10052,11 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
                                    compileRoots(t)->methodTreeSentinal(),
                                    compareIpToMethodBounds);
   // sequence point, for gc (don't recombine statements)
-  set(t, compileRoots(t), CompileRootsMethodTree, newTree);
+  compileRoots(t)->setMethodTree(t, newTree);
 
   storeStoreMemoryBarrier();
 
-  set(t, reinterpret_cast<object>(method), MethodCode, reinterpret_cast<object>(clone->code()));
+  method->setCode(t, clone->code());
 
   if (methodVirtual(t, method)) {
     method->class_()->vtable()[method->offset()]
