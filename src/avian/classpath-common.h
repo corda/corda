@@ -457,7 +457,7 @@ resolveParameterJTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
     object c = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, list->first())));
-    set(t, array, ArrayBody + (i * BytesPerWord), c);
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, c);
     list = cast<GcPair>(t, list->second());
   }
 
@@ -491,13 +491,12 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
     if (objectClass(t, o) == type(t, GcReference::Type)) {
       o = reinterpret_cast<object>(resolveClass(t, loader, cast<GcReference>(t, o)->name()));
 
-      set(t, reinterpret_cast<object>(addendum->pool()), SingletonBody + (index * BytesPerWord),
-          o);
+      addendum->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
     }
 
     o = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, o)));
 
-    set(t, reinterpret_cast<object>(array), ArrayBody + (i * BytesPerWord), o);
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, o);
   }
 
   return array;
@@ -582,8 +581,7 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
         t->exception = makeThrowable
           (t, GcInvocationTargetException::Type, 0, 0, t->exception);
 
-        set(t, t->exception, InvocationTargetExceptionTarget,
-            t->exception->cause());
+        t->exception->as<GcInvocationTargetException>(t)->setTarget(t, t->exception->cause());
       }
     });
 
@@ -623,7 +621,7 @@ intercept(Thread* t, GcClass* c, const char* name, const char* spec,
 
       GcMethodRuntimeData* runtimeData = getMethodRuntimeData(t, m);
 
-      set(t, runtimeData, MethodRuntimeDataNative, native);
+      runtimeData->setNative(t, native->as<GcNative>(t));
     }
   } else {
     // If we can't find the method, just ignore it, since ProGuard may
@@ -671,7 +669,7 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
       GcFinder* finder = makeFinder
         (t, f, n, roots(t)->virtualFileFinders());
 
-      set(t, roots(t), RootsVirtualFileFinders, finder);
+      roots(t)->setVirtualFileFinders(t, finder);
 
       return f;
     }
@@ -719,7 +717,7 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
                   reference->inner())));
 
           -- count;
-          set(t, result, ArrayBody + (count * BytesPerWord), inner);
+          reinterpret_cast<GcArray*>(result)->setBodyElement(t, count, inner);
         }
       }
 
