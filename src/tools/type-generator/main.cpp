@@ -1009,7 +1009,7 @@ bool isFieldGcVisible(Module& module, Field& f) {
 }
 
 bool isFieldGcMarkable(Module& module, Field& f) {
-  return (f.typeName == "maybe_object" || enumName(module, f) == "object");
+  return (f.typeName == "maybe_object" || enumName(module, f) == "object") && !f.nogc;
 }
 
 void writeClassAccessors(Output* out, Module& module, Class* cl)
