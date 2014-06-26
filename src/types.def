@@ -274,13 +274,14 @@
 (type double java/lang/Double)
 
 (type referenceQueue java/lang/ref/ReferenceQueue
-  (alias front object head))
+  (alias front jreference head)
+  (require object jnext))
 
 (type jreference java/lang/ref/Reference
   (alias target object referent)
-  (alias queue object queue)
-  (alias jNext object next)
-  (alias jNext object queueNext)
+  (alias queue referenceQueue queue)
+  (alias jNext jreference next)
+  (alias jNext jreference queueNext)
   (alias vmNext object discovered)
   (alias vmNext object pendingNext)
   (nogc object target)

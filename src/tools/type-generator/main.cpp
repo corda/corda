@@ -63,10 +63,9 @@ class Field {
   Field(Class* ownerId,
         const std::string& typeName,
         const std::string& javaSpec,
-        const std::string& name,
-        size_t elementSize)
+        const std::string& name)
       : name(name),
-        elementSize(elementSize),
+        elementSize(-1),
         offset(0),
         ownerId(reinterpret_cast<uintptr_t>(ownerId)),
         noassert(false),
@@ -459,7 +458,7 @@ class ClassParser {
         // printf("add %s.%s\n", cl->name.c_str(), f.field->name.c_str());
         fields[f.field->name] = f.field;
         if(f.isArray) {
-          add(FieldSpec(false, new Field(cl, "uintptr_t", "", "length", BytesPerWord)));
+          add(FieldSpec(false, new Field(cl, "uintptr_t", "", "length")));
           assert(!cl->arrayField);
           cl->arrayField = f.field;
         } else {
@@ -485,7 +484,7 @@ class ClassParser {
   }
 };
 
-FieldSpec parseArray(Module& module, ClassParser& clparser, Object* p)
+FieldSpec parseArray(Module&, ClassParser& clparser, Object* p)
 {
   const char* typeName = string(car(p));
 
@@ -493,15 +492,15 @@ FieldSpec parseArray(Module& module, ClassParser& clparser, Object* p)
   const char* name = string(car(p));
 
   assert(!clparser.cl->arrayField);
-  return FieldSpec(true, new Field(clparser.cl, typeName, "", name, sizeOf(module, typeName)));
+  return FieldSpec(true, new Field(clparser.cl, typeName, "", name));
 }
 
-FieldSpec parseVerbatimField(Module& module, ClassParser& clparser, Object* p) {
+FieldSpec parseVerbatimField(Module&, ClassParser& clparser, Object* p) {
   const char* spec = string(car(p));
   const char* name = string(car(cdr(p)));
   return FieldSpec(
       false,
-      new Field(clparser.cl, spec, "", name, sizeOf(module, spec)));
+      new Field(clparser.cl, spec, "", name));
 }
 
 FieldSpec parseField(Module& module, ClassParser& clparser, Object* p)
@@ -685,7 +684,7 @@ parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
       const char* spec = reinterpret_cast<const char*>(pool[specIndex - 1]);
       const char* memberType = fieldType(spec);
 
-      clparser.add(FieldSpec(false, new Field(clparser.cl, memberType, spec, name, sizeOf(module, memberType))));
+      clparser.add(FieldSpec(false, new Field(clparser.cl, memberType, spec, name)));
     }
   }
 
@@ -783,7 +782,7 @@ void parse(Finder* finder, Input* in, Module& module)
   }
 }
 
-void layoutClass(Class* cl) {
+void layoutClass(Module& module, Class* cl) {
   if(cl->fixedSize >= 0) {
     return;
   }
@@ -798,6 +797,8 @@ void layoutClass(Class* cl) {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
 
+    f.elementSize = sizeOf(module, f.typeName);
+
     if(!f.polyfill) { // polyfills contribute no size
       alignment = f.elementSize;
       offset = (offset + alignment - 1) & ~(alignment - 1);
@@ -811,6 +812,8 @@ void layoutClass(Class* cl) {
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
 
+    f.elementSize = sizeOf(module, f.typeName);
+
     alignment = f.elementSize;
     offset = (offset + alignment - 1) & ~(alignment - 1);
     f.offset = offset;
@@ -823,7 +826,7 @@ void layoutClasses(Module& module)
 {
   for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
     Class* cl = it->second;
-    layoutClass(cl);
+    layoutClass(module, cl);
   }
 }
 
@@ -1002,7 +1005,11 @@ void writeClassDeclarations(Output* out, Module& module)
 }
 
 bool isFieldGcVisible(Module& module, Field& f) {
-  return (f.typeName == "maybe_object" || enumName(module, f) == "object") && !f.nogc;
+  return enumName(module, f) == "object" && !f.nogc;
+}
+
+bool isFieldGcMarkable(Module& module, Field& f) {
+  return (f.typeName == "maybe_object" || enumName(module, f) == "object");
 }
 
 void writeClassAccessors(Output* out, Module& module, Class* cl)
@@ -1016,7 +1023,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
       out->write("(Thread* t UNUSED, ");
       out->write(cppFieldType(module, f));
       out->write(" value) { ");
-      if(isFieldGcVisible(module, f)) {
+      if(isFieldGcMarkable(module, f)) {
         out->write("set(t, reinterpret_cast<object>(this), ");
         out->write(capitalize(cl->name));
         out->write(capitalize(f.name));
@@ -1069,19 +1076,19 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     out->write("  avian::util::Slice<");
-    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
     //   out->write("const ");
     // }
     out->write(cppFieldType(module, f));
     out->write("> ");
     out->write(obfuscate(f.name));
     out->write("() { return avian::util::Slice<");
-    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
     //   out->write("const ");
     // }
     out->write(cppFieldType(module, f));
     out->write("> (&field_at<");
-    // if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
     //   out->write("const ");
     // }
     out->write(cppFieldType(module, f));
@@ -1097,7 +1104,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
     out->write("Element(Thread* t UNUSED, size_t index, ");
     out->write(cppFieldType(module, f));
     out->write(" value) { ");
-    if(isFieldGcVisible(module, f)) {
+    if(isFieldGcMarkable(module, f)) {
       out->write("set(t, reinterpret_cast<object>(this), ");
       out->write(capitalize(cl->name));
       out->write(capitalize(f.name));
@@ -1299,7 +1306,7 @@ typeObjectMask(Module& module, Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
     unsigned offset = f.offset / BytesPerWord;
-    if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    if(isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
@@ -1307,7 +1314,7 @@ typeObjectMask(Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     unsigned offset = f.offset / BytesPerWord;
-    if(f.typeName != "maybe_object" && isFieldGcVisible(module, f)) {
+    if(isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
