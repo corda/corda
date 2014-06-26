@@ -659,8 +659,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
                   o = reinterpret_cast<object>(resolveClass
                     (t, roots(t)->bootLoader(), cast<GcReference>(t, o)->name()));
 
-                  set(t, reinterpret_cast<object>(addendum->pool()),
-                      SingletonBody + (index * BytesPerWord), o);
+                  addendum->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
                 }
               }
             }
@@ -1290,7 +1289,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 {
   GcThrowable* throwable = cast<GcThrowable>(t, make(t, type(t, GcOutOfMemoryError::Type)));
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsOutOfMemoryError, throwable);
+  roots(t)->setOutOfMemoryError(t, throwable);
 
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -1332,7 +1331,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   { classPoolMap = makeHashMap(t, 0, 0);
     PROTECT(t, classPoolMap);
 
-    set(t, roots(t), RootsPoolMap, classPoolMap);
+    roots(t)->setPoolMap(t, classPoolMap);
 
     typeMaps = makeHashMap(t, 0, 0);
     PROTECT(t, typeMaps);
@@ -1494,40 +1493,49 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     // these roots will not be used when the bootimage is loaded, so
     // there's no need to preserve them:
-    set(t, roots(t), RootsPoolMap, 0);
+    roots(t)->setPoolMap(t, 0);
 
     GcWeakHashMap* map = makeWeakHashMap(t, 0, 0);
     // sequence point, for gc (don't recombine statements)
-    set(t, roots(t), RootsByteArrayMap, map);
+    roots(t)->setByteArrayMap(t, map->as<GcHashMap>(t));
 
     // name all primitive classes so we don't try to update immutable
     // references at runtime:
-    { object name = reinterpret_cast<object>(makeByteArray(t, "void"));
-      set(t, reinterpret_cast<object>(type(t, GcJvoid::Type)), ClassName, name);
+    { GcByteArray* name = makeByteArray(t, "void");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJvoid::Type)->setName(t, name);
     
-      name = reinterpret_cast<object>(makeByteArray(t, "boolean"));
-      set(t, reinterpret_cast<object>(type(t, GcJboolean::Type)), ClassName, name);
+      name = makeByteArray(t, "boolean");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJboolean::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "byte"));
-      set(t, reinterpret_cast<object>(type(t, GcJbyte::Type)), ClassName, name);
+      name = makeByteArray(t, "byte");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJbyte::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "short"));
-      set(t, reinterpret_cast<object>(type(t, GcJshort::Type)), ClassName, name);
+      name = makeByteArray(t, "short");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJshort::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "char"));
-      set(t, reinterpret_cast<object>(type(t, GcJchar::Type)), ClassName, name);
+      name = makeByteArray(t, "char");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJchar::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "int"));
-      set(t, reinterpret_cast<object>(type(t, GcJint::Type)), ClassName, name);
+      name = makeByteArray(t, "int");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJint::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "float"));
-      set(t, reinterpret_cast<object>(type(t, GcJfloat::Type)), ClassName, name);
+      name = makeByteArray(t, "float");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJfloat::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "long"));
-      set(t, reinterpret_cast<object>(type(t, GcJlong::Type)), ClassName, name);
+      name = makeByteArray(t, "long");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJlong::Type)->setName(t, name);
 
-      name = reinterpret_cast<object>(makeByteArray(t, "double"));
-      set(t, reinterpret_cast<object>(type(t, GcJdouble::Type)), ClassName, name);
+      name = makeByteArray(t, "double");
+    // sequence point, for gc (don't recombine statements)
+      type(t, GcJdouble::Type)->setName(t, name);
     }
 
     // resolve primitive array classes in case they are needed at

@@ -844,7 +844,7 @@ interpret3(Thread* t, const int base)
       if (LIKELY(index >= 0 and
                  static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
       {
-        set(t, array, ArrayBody + (index * BytesPerWord), value);
+        setField(t, array, ArrayBody + (index * BytesPerWord), value);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
@@ -2498,7 +2498,7 @@ interpret3(Thread* t, const int base)
         object value = popObject(t);
         object o = popObject(t);
         if (LIKELY(o)) {
-          set(t, o, field->offset(), value);
+          setField(t, o, field->offset(), value);
         } else {
           exception = makeThrowable(t, GcNullPointerException::Type);
         }
@@ -2560,7 +2560,7 @@ interpret3(Thread* t, const int base)
     } break;
 
     case ObjectField: {
-      set(t, reinterpret_cast<object>(table), field->offset(), popObject(t));
+      setField(t, reinterpret_cast<object>(table), field->offset(), popObject(t));
     } break;
 
     default: abort(t);

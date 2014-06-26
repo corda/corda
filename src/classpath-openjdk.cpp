@@ -325,7 +325,7 @@ getClassName(Thread* t, GcClass* c)
       
       GcByteArray* name = makeByteArray(t, primitiveName(t, c));
 
-      set(t, c, ClassName, name);
+      c->setName(t, name);
     } else {
       abort(t);
     }
@@ -481,7 +481,7 @@ class MyClasspath : public Classpath {
     this->bufferSize = sb.bufferSize;
   }
 
-  virtual object
+  virtual GcJclass*
   makeJclass(Thread* t, GcClass* class_)
   {
     PROTECT(t, class_);
@@ -489,10 +489,10 @@ class MyClasspath : public Classpath {
     GcString* name = makeClassNameString(t, getClassName(t, class_));
     PROTECT(t, name);
 
-    object c = allocate(t, GcJclass::FixedSize, true);
-    setObjectClass(t, c, type(t, GcJclass::Type));
-    set(t, c, JclassName, reinterpret_cast<object>(name));
-    set(t, c, JclassVmClass, reinterpret_cast<object>(class_));
+    GcJclass* c = reinterpret_cast<GcJclass*>(allocate(t, GcJclass::FixedSize, true));
+    setObjectClass(t, reinterpret_cast<object>(c), type(t, GcJclass::Type));
+    c->setName(t, name);
+    c->setVmClass(t, class_);
 
     return c;
   }
@@ -556,16 +556,14 @@ class MyClasspath : public Classpath {
     setObjectClass(t, reinterpret_cast<object>(thread), type(t, GcThread::Type));
     thread->priority() = NormalPriority;
 
-    // TODO: use set / write barrier?
-    thread->group() = group;
+    thread->setGroup(t, group);
 
-    // TODO: use set / write barrier?
-    thread->contextClassLoader() = roots(t)->appLoader();
+    thread->setContextClassLoader(t, roots(t)->appLoader());
 
     PROTECT(t, thread);
 
     GcJobject* blockerLock = makeJobject(t);
-    set(t, thread, ThreadBlockerLock, blockerLock);
+    thread->setBlockerLock(t, reinterpret_cast<object>(blockerLock));
 
     const unsigned BufferSize = 256;
     char buffer[BufferSize];
@@ -574,7 +572,7 @@ class MyClasspath : public Classpath {
     for (unsigned i = 0; i < length; ++i) {
       name->body()[i] = buffer[i];
     }
-    set(t, thread, ThreadName, name);
+    thread->setName(t, name);
 
     return thread;
   }
@@ -710,7 +708,7 @@ class MyClasspath : public Classpath {
             (t, roots(t)->bootLoader(), "java/lang/ThreadGroup",
              "threadTerminated", "(Ljava/lang/Thread;)V");
     // sequence point, for gc (don't recombine statements)
-    set(t, roots(t), RootsThreadTerminated, method);
+    roots(t)->setThreadTerminated(t, reinterpret_cast<object>(method));
 
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t, true);
@@ -723,7 +721,7 @@ class MyClasspath : public Classpath {
         (t, type(t, GcClassLoader::Type), "assertionLock",
          "Ljava/lang/Object;");
 
-      set(t, roots(t)->bootLoader(), assertionLock->offset(),
+      setField(t, roots(t)->bootLoader(), assertionLock->offset(),
           roots(t)->bootLoader());
     }
 
@@ -768,7 +766,7 @@ class MyClasspath : public Classpath {
       GcField* sclSet = resolveField
         (t, type(t, GcClassLoader::Type), "sclSet", "Z");
 
-      set(t, type(t, GcClassLoader::Type)->staticTable(),
+      setField(t, type(t, GcClassLoader::Type)->staticTable(),
           scl->offset(), roots(t)->appLoader());
 
       fieldAtOffset<uint8_t>(type(t, GcClassLoader::Type)->staticTable(),
@@ -783,8 +781,7 @@ class MyClasspath : public Classpath {
       (t, roots(t)->bootLoader(), "sun/misc/Launcher",
        "getLauncher", "()Lsun/misc/Launcher;", 0);
 
-    set(t, t->javaThread, ThreadContextClassLoader,
-        roots(t)->appLoader());
+    t->javaThread->setContextClassLoader(t, roots(t)->appLoader());
   }
 
   virtual const char*
@@ -2292,8 +2289,8 @@ makeJmethod(Thread* t, GcMethod* vmMethod, int index)
   if (annotationTable or parameterAnnotationTable or annotationDefault) {
     GcClassRuntimeData* runtimeData = getClassRuntimeData(t, vmMethod->class_());
 
-    set(t, runtimeData, ClassRuntimeDataPool,
-        vmMethod->addendum()->pool());
+    runtimeData->setPool(t,
+        reinterpret_cast<object>(vmMethod->addendum()->pool()));
   }
 
   if (index == -1) {
@@ -2361,8 +2358,8 @@ makeJconstructor(Thread* t, GcMethod* vmMethod, int index)
   if (annotationTable or parameterAnnotationTable) {
     GcClassRuntimeData* runtimeData = getClassRuntimeData(t, vmMethod->class_());
 
-    set(t, runtimeData, ClassRuntimeDataPool,
-        vmMethod->addendum()->pool());
+    runtimeData->setPool(t,
+        reinterpret_cast<object>(vmMethod->addendum()->pool()));
   }
 
   if (index == -1) {
@@ -2440,8 +2437,8 @@ makeJfield(Thread* t, GcField* vmField, int index)
   if (annotationTable) {
     GcClassRuntimeData* runtimeData = getClassRuntimeData(t, vmField->class_());
 
-    set(t, runtimeData, ClassRuntimeDataPool,
-        vmField->addendum()->pool());
+    runtimeData->setPool(t,
+        reinterpret_cast<object>(vmField->addendum()->pool()));
   }
 
   if (index == -1) {
@@ -3199,10 +3196,10 @@ EXPORT(JVM_IsNaN)(jdouble) { abort(); }
 uint64_t
 jvmFillInStackTrace(Thread* t, uintptr_t* arguments)
 {
-  jobject throwable = reinterpret_cast<jobject>(arguments[0]);
+  GcThrowable* throwable = cast<GcThrowable>(t, *reinterpret_cast<jobject>(arguments[0]));
 
   object trace = getTrace(t, 2);
-  set(t, *throwable, ThrowableTrace, trace);
+  throwable->setTrace(t, trace);
 
   return 1;
 }
@@ -3337,7 +3334,7 @@ jvmSleep(Thread* t, uintptr_t* arguments)
 
   if (t->javaThread->sleepLock() == 0) {
     GcJobject* lock = makeJobject(t);
-    set(t, t->javaThread, ThreadSleepLock, lock);
+    t->javaThread->setSleepLock(t, reinterpret_cast<object>(lock));
   }
 
   acquire(t, t->javaThread->sleepLock());
@@ -3452,10 +3449,10 @@ jvmDumpThreads(Thread* t, uintptr_t* arguments)
       for (unsigned traceIndex = 0; traceIndex < traceLength; ++ traceIndex) {
         object ste = reinterpret_cast<object>(makeStackTraceElement
           (t, cast<GcTraceElement>(t, objectArrayBody(t, trace, traceIndex))));
-        set(t, array, ArrayBody + (traceIndex * BytesPerWord), ste);
+        setField(t, array, ArrayBody + (traceIndex * BytesPerWord), ste);
       }
 
-      set(t, result, ArrayBody + (threadsIndex * BytesPerWord), array);
+      setField(t, result, ArrayBody + (threadsIndex * BytesPerWord), array);
     }
   }
 
@@ -3497,7 +3494,7 @@ jvmGetClassContext(Thread* t, uintptr_t*)
         t,
         cast<GcMethod>(t, cast<GcTraceElement>(t, objectArrayBody(t, trace, i))->method())->class_()));
 
-    set(t, context, ArrayBody + (i * BytesPerWord), c);
+    setField(t, context, ArrayBody + (i * BytesPerWord), c);
   }
 
   return reinterpret_cast<uint64_t>(makeLocalReference(t, context));
@@ -3716,7 +3713,7 @@ EXPORT(JVM_SetArrayElement)(Thread* t, jobject array, jint index,
     break;
   case 'L':
   case '[':
-    set(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
+    setField(t, *array, ArrayBody + (index * BytesPerWord), (value ? *value : 0));
     break;
   default:
     abort(t);
@@ -4021,7 +4018,7 @@ jvmGetClassInterfaces(Thread* t, uintptr_t* arguments)
 
       for (unsigned i = 0; i < table->length(); ++i) {
         object c = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, table->body()[i])));
-        set(t, array, ArrayBody + (i * BytesPerWord), c);
+        setField(t, array, ArrayBody + (i * BytesPerWord), c);
       }
 
       return reinterpret_cast<uint64_t>(makeLocalReference(t, array));
@@ -4111,7 +4108,7 @@ EXPORT(JVM_SetClassSigners)(Thread* t, jclass c, jobjectArray signers)
 
   GcClassRuntimeData* runtimeData = getClassRuntimeData(t, (*c)->vmClass());
 
-  set(t, reinterpret_cast<object>(runtimeData), ClassRuntimeDataSigners, reinterpret_cast<object>(*signers));
+  runtimeData->setSigners(t, reinterpret_cast<object>(*signers));
 }
 
 uint64_t
@@ -4297,7 +4294,7 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
 
         assertT(t, ai < objectArrayLength(t, array));
 
-        set(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
+        setField(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
       }
     }
 
@@ -4342,7 +4339,7 @@ jvmGetClassDeclaredFields(Thread* t, uintptr_t* arguments)
 
         assertT(t, ai < objectArrayLength(t, array));
 
-        set(t, array, ArrayBody + ((ai++) * BytesPerWord), field);
+        setField(t, array, ArrayBody + ((ai++) * BytesPerWord), field);
       }
     }
     assertT(t, ai == objectArrayLength(t, array));
@@ -4395,7 +4392,7 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
 
         assertT(t, ai < objectArrayLength(t, array));
 
-        set(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
+        setField(t, array, ArrayBody + ((ai++) * BytesPerWord), method);
       }
     }
 
@@ -5142,7 +5139,7 @@ getInputArgumentArray(Thread* t, uintptr_t*)
 
   for (unsigned i = 0; i < t->m->argumentCount; ++i) {
     GcString* argument = makeString(t, t->m->arguments[i]);
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(argument));
+    setField(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(argument));
   }
 
   return reinterpret_cast<uintptr_t>(makeLocalReference(t, array));
@@ -5273,7 +5270,7 @@ getEnclosingMethodInfo(Thread* t, uintptr_t* arguments)
       enclosingClass = reinterpret_cast<object>(getJClass
         (t, resolveClass(t, class_->loader(), cast<GcByteArray>(t, enclosingClass))));
 
-      set(t, array, ArrayBody, enclosingClass);
+      setField(t, array, ArrayBody, enclosingClass);
 
       GcPair* enclosingMethod = cast<GcPair>(t, addendum->enclosingMethod());
 
@@ -5284,13 +5281,13 @@ getEnclosingMethodInfo(Thread* t, uintptr_t* arguments)
           (t, enclosingMethod->first(), 0,
            cast<GcByteArray>(t, enclosingMethod->first())->length() - 1);
 
-        set(t, array, ArrayBody + BytesPerWord, reinterpret_cast<object>(name));
+        setField(t, array, ArrayBody + BytesPerWord, reinterpret_cast<object>(name));
 
         GcString* spec = t->m->classpath->makeString
           (t, enclosingMethod->second(), 0,
            cast<GcByteArray>(t, enclosingMethod->second())->length() - 1);
 
-        set(t, array, ArrayBody + (2 * BytesPerWord), reinterpret_cast<object>(spec));
+        setField(t, array, ArrayBody + (2 * BytesPerWord), reinterpret_cast<object>(spec));
       }
 
       return reinterpret_cast<uintptr_t>(makeLocalReference(t, array));

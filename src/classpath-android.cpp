@@ -232,7 +232,7 @@ class MyClasspath : public Classpath {
       : allocator(allocator), tzdata(0), mayInitClasses_(false)
   { }
 
-  virtual object
+  virtual GcJclass*
   makeJclass(Thread* t, GcClass* class_)
   {
     PROTECT(t, class_);
@@ -241,7 +241,7 @@ class MyClasspath : public Classpath {
     setObjectClass(t, reinterpret_cast<object>(c), type(t, GcJclass::Type));
     c->setVmClass(t, class_);
 
-    return reinterpret_cast<object>(c);
+    return c;
   }
 
   virtual GcString*

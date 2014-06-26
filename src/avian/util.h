@@ -48,7 +48,7 @@ hashMapInsertOrReplace(Thread* t, GcHashMap* map, object key, object value,
     hashMapInsert(t, map, key, value, hash);
     return true;
   } else {
-    set(t, reinterpret_cast<object>(n), TripleSecond, value);
+    n->setSecond(t, value);
     return false;
   }
 }

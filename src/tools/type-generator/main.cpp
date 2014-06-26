@@ -1024,7 +1024,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
       out->write(cppFieldType(module, f));
       out->write(" value) { ");
       if(isFieldGcMarkable(module, f)) {
-        out->write("set(t, reinterpret_cast<object>(this), ");
+        out->write("setField(t, reinterpret_cast<object>(this), ");
         out->write(capitalize(cl->name));
         out->write(capitalize(f.name));
         out->write(", reinterpret_cast<object>(value));");
@@ -1052,7 +1052,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
 
     out->write("  ");
     out->write(cppFieldType(module, f));
-    if(!f.polyfill) {
+    if(!f.polyfill && !isFieldGcMarkable(module, f)) {
       out->write("&");
     }
     out->write(" ");
@@ -1076,21 +1076,21 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     out->write("  avian::util::Slice<");
-    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
-    //   out->write("const ");
-    // }
+    if(isFieldGcVisible(module, f)) {
+      out->write("const ");
+    }
     out->write(cppFieldType(module, f));
     out->write("> ");
     out->write(obfuscate(f.name));
     out->write("() { return avian::util::Slice<");
-    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
-    //   out->write("const ");
-    // }
+    if(isFieldGcVisible(module, f)) {
+      out->write("const ");
+    }
     out->write(cppFieldType(module, f));
     out->write("> (&field_at<");
-    // if(f.typeName != "maybe_object" && isFieldGcMarkable(module, f)) {
-    //   out->write("const ");
-    // }
+    if(isFieldGcVisible(module, f)) {
+      out->write("const ");
+    }
     out->write(cppFieldType(module, f));
     out->write(">(");
     out->write(capitalize(cl->name));
@@ -1105,7 +1105,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
     out->write(cppFieldType(module, f));
     out->write(" value) { ");
     if(isFieldGcMarkable(module, f)) {
-      out->write("set(t, reinterpret_cast<object>(this), ");
+      out->write("setField(t, reinterpret_cast<object>(this), ");
       out->write(capitalize(cl->name));
       out->write(capitalize(f.name));
       out->write(" + index * (");

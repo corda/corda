@@ -1539,7 +1539,7 @@ class GcJfield;
 
 class Classpath {
  public:
-  virtual object
+  virtual GcJclass*
   makeJclass(Thread* t, GcClass* class_) = 0;
 
   virtual GcString*
@@ -1871,14 +1871,14 @@ mark(Thread* t, object o, unsigned offset)
 }
 
 inline void
-set(Thread* t, object target, unsigned offset, object value)
+setField(Thread* t, object target, unsigned offset, object value)
 {
   fieldAtOffset<object>(target, offset) = value;
   mark(t, target, offset);
 }
 
 inline void
-set(Thread* t, GcObject* target, unsigned offset, GcObject* value)
+setField(Thread* t, GcObject* target, unsigned offset, GcObject* value)
 {
   fieldAtOffset<GcObject*>(target, offset) = value;
   mark(t, reinterpret_cast<object>(target), offset);
@@ -1887,7 +1887,7 @@ set(Thread* t, GcObject* target, unsigned offset, GcObject* value)
 inline void
 setObject(Thread* t, GcObject* target, unsigned offset, GcObject* value)
 {
-  set(t, target, offset, value);
+  setField(t, target, offset, value);
 }
 
 inline void
@@ -3612,7 +3612,7 @@ resolveClassInObject(Thread* t, GcClassLoader* loader, object container,
     if (c) {
       storeStoreMemoryBarrier();
 
-      set(t, container, classOffset, reinterpret_cast<object>(c));
+      setField(t, container, classOffset, reinterpret_cast<object>(c));
     }
 
     return c;
@@ -3894,7 +3894,7 @@ getJClass(Thread* t, GcClass* c)
 
     jclass = cast<GcJclass>(t, getClassRuntimeData(t, c)->jclass());
     if (jclass == 0) {
-      jclass = cast<GcJclass>(t, t->m->classpath->makeJclass(t, c));
+      jclass = t->m->classpath->makeJclass(t, c);
 
       storeStoreMemoryBarrier();
 

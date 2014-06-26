@@ -26,10 +26,10 @@ class MyClasspath : public Classpath {
     allocator(allocator)
   { }
 
-  virtual object
+  virtual GcJclass*
   makeJclass(Thread* t, GcClass* class_)
   {
-    return reinterpret_cast<object>(vm::makeJclass(t, class_));
+    return vm::makeJclass(t, class_);
   }
 
   virtual GcString*
@@ -228,11 +228,11 @@ class MyClasspath : public Classpath {
 };
 
 void
-enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
+enumerateThreads(Thread* t, Thread* x, GcArray* array, unsigned* index,
                  unsigned limit)
 {
   if (*index < limit) {
-    set(t, array, ArrayBody + (*index * BytesPerWord), reinterpret_cast<object>(x->javaThread));
+    array->setBodyElement(t, *index, reinterpret_cast<object>(x->javaThread));
     ++ (*index);
 
     if (x->peer) enumerateThreads(t, x->peer, array, index, limit);
@@ -427,7 +427,7 @@ Avian_java_lang_reflect_Field_setObject
   int offset = arguments[1];
   object value = reinterpret_cast<object>(arguments[2]);
 
-  set(t, instance, offset, value);
+  setField(t, instance, offset, value);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -547,7 +547,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 
   for (unsigned i = 0; i < t->m->propertyCount; ++i) {
     GcString* s = makeString(t, "%s", t->m->properties[i]);
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(s));
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, reinterpret_cast<object>(s));
   }
 
   return reinterpret_cast<int64_t>(array);
@@ -619,7 +619,8 @@ Avian_java_lang_Runtime_addShutdownHook
   ACQUIRE(t, t->m->shutdownLock);
 
   GcPair* p = makePair(t, hook, reinterpret_cast<object>(roots(t)->shutdownHooks()));
-  set(t, roots(t), RootsShutdownHooks, p);
+  // sequence point, for gc (don't recombine statements)
+  roots(t)->setShutdownHooks(t, p);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -643,7 +644,7 @@ Avian_java_lang_Throwable_resolveTrace
 
   for (unsigned i = 0; i < length; ++i) {
     GcStackTraceElement* ste = makeStackTraceElement(t, cast<GcTraceElement>(t, objectArrayBody(t, trace, i)));
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(ste));
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, reinterpret_cast<object>(ste));
   }
 
   return reinterpret_cast<int64_t>(array);
@@ -714,7 +715,7 @@ Avian_java_lang_Thread_enumerate
 
   unsigned count = min(t->m->liveCount, objectArrayLength(t, reinterpret_cast<object>(array)));
   unsigned index = 0;
-  local::enumerateThreads(t, t->m->rootThread, reinterpret_cast<object>(array), &index, count);
+  local::enumerateThreads(t, t->m->rootThread, array, &index, count);
   return count;
 }
 

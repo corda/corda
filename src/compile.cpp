@@ -2560,7 +2560,7 @@ void
 setMaybeNull(MyThread* t, object o, unsigned offset, object value)
 {
   if (LIKELY(o)) {
-    set(t, o, offset, value);
+    setField(t, o, offset, value);
   } else {
     throwNew(t, GcNullPointerException::Type);
   }
@@ -2813,7 +2813,7 @@ setStaticObjectFieldValueFromReference(MyThread* t, GcPair* pair, object value)
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, reinterpret_cast<object>(field->class_()->staticTable()), field->offset(),
+  setField(t, reinterpret_cast<object>(field->class_()->staticTable()), field->offset(),
       value);
 }
 
@@ -2829,7 +2829,7 @@ setObjectFieldValueFromReference(MyThread* t, GcPair* pair, object instance,
 
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, instance, field->offset(), value);
+  setField(t, instance, field->offset(), value);
 }
 
 void
@@ -6800,7 +6800,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     initArray(t, reinterpret_cast<GcArray*>(pool), context->objectPoolCount + 1);
     mark(t, pool, 0);
 
-    set(t, pool, ArrayBody, compileRoots(t)->objectPools());
+    setField(t, pool, ArrayBody, compileRoots(t)->objectPools());
     compileRoots(t)->setObjectPools(t, pool);
 
     unsigned i = 1;
@@ -6809,7 +6809,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
 
       p->address = reinterpret_cast<uintptr_t>(pool) + offset;
 
-      set(t, pool, offset, p->target);
+      setField(t, pool, offset, p->target);
     }
   }
 
@@ -8097,7 +8097,7 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
 
 class SignalHandler: public SignalRegistrar::Handler {
  public:
-  typedef GcThrowable*& (GcRoots::*ExceptionGetter)();
+  typedef GcThrowable* (GcRoots::*ExceptionGetter)();
   SignalHandler(Gc::Type type, ExceptionGetter exc, unsigned fixedSize):
     m(0), type(type), exc(exc), fixedSize(fixedSize) { }
 

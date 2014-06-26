@@ -205,17 +205,17 @@ resolveNativeMethod(Thread* t, GcMethod* method, const char* prefix,
   return 0;
 }
 
-object
+GcNative*
 resolveNativeMethod(Thread* t, GcMethod* method)
 {
   void* p = resolveNativeMethod(t, method, "Avian_", 6, 3);
   if (p) {
-    return reinterpret_cast<object>(makeNative(t, p, true));
+    return makeNative(t, p, true);
   }
 
   p = resolveNativeMethod(t, method, "Java_", 5, -1);
   if (p) {
-    return reinterpret_cast<object>(makeNative(t, p, false));
+    return makeNative(t, p, false);
   }
 
   return 0;
@@ -235,7 +235,7 @@ resolveNative(Thread* t, GcMethod* method)
   initClass(t, method->class_());
 
   if (getMethodRuntimeData(t, method)->native() == 0) {
-    object native = resolveNativeMethod(t, method);
+    GcNative* native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
       throwNew(t, GcUnsatisfiedLinkError::Type, "%s.%s%s",
                method->class_()->name()->body().begin(),
@@ -251,8 +251,8 @@ resolveNative(Thread* t, GcMethod* method)
     // populated once the object it points to has been populated:
     storeStoreMemoryBarrier();
 
-    set(t, reinterpret_cast<object>(runtimeData), MethodRuntimeDataNative, native);
-  } 
+    runtimeData->setNative(t, native);
+  }
 }
 
 int

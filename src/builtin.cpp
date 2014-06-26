@@ -765,7 +765,7 @@ Avian_sun_misc_Unsafe_putObject
   int64_t offset; memcpy(&offset, arguments + 2, 8);
   uintptr_t value = arguments[4];
 
-  set(t, o, offset, reinterpret_cast<object>(value));
+  setField(t, o, offset, reinterpret_cast<object>(value));
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -777,7 +777,7 @@ Avian_sun_misc_Unsafe_putObjectVolatile
   object value = reinterpret_cast<object>(arguments[4]);
 
   storeStoreMemoryBarrier();
-  set(t, o, offset, reinterpret_cast<object>(value));
+  setField(t, o, offset, reinterpret_cast<object>(value));
   storeLoadMemoryBarrier();
 }
 

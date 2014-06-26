@@ -1223,7 +1223,7 @@ getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
     PROTECT(t, class_);
 
     addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0);
-    set(t,
+    setField(t,
              reinterpret_cast<object>(class_),
              ClassAddendum,
              reinterpret_cast<object>(addendum));
@@ -2824,23 +2824,23 @@ boot(Thread* t)
 #include "type-initializations.cpp"
 
   GcClass* arrayClass = type(t, GcArray::Type);
-  set(t, m->types, 0, arrayClass);
+  setField(t, m->types, 0, arrayClass);
 
   GcClass* rootsClass = type(t, GcRoots::Type);
-  set(t, m->roots, 0, rootsClass);
+  setField(t, m->roots, 0, rootsClass);
 
   GcClass* loaderClass = type(t, GcSystemClassLoader::Type);
-  set(t, roots(t)->bootLoader(), 0, loaderClass);
-  set(t, roots(t)->appLoader(), 0, loaderClass);
+  setField(t, roots(t)->bootLoader(), 0, loaderClass);
+  setField(t, roots(t)->appLoader(), 0, loaderClass);
 
   GcClass* objectClass = type(t, GcJobject::Type);
 
   GcClass* classClass = type(t, GcClass::Type);
-  set(t, classClass, 0, classClass);
+  setField(t, classClass, 0, classClass);
   classClass->setSuper(t, objectClass);
 
   GcClass* intArrayClass = type(t, GcIntArray::Type);
-  set(t, intArrayClass, 0, classClass);
+  setField(t, intArrayClass, 0, classClass);
   intArrayClass->setSuper(t, objectClass);
 
   m->unsafe = false;
@@ -4810,19 +4810,19 @@ makeObjectArray(Thread* t, GcClass* elementClass, unsigned count)
 }
 
 static GcByteArray* getFieldName(Thread* t, object obj) {
-  return reinterpret_cast<GcByteArray*&>(cast<GcField>(t, obj)->name());
+  return reinterpret_cast<GcByteArray*>(cast<GcField>(t, obj)->name());
 }
 
 static GcByteArray* getFieldSpec(Thread* t, object obj) {
-  return reinterpret_cast<GcByteArray*&>(cast<GcField>(t, obj)->spec());
+  return reinterpret_cast<GcByteArray*>(cast<GcField>(t, obj)->spec());
 }
 
 static GcByteArray* getMethodName(Thread* t, object obj) {
-  return reinterpret_cast<GcByteArray*&>(cast<GcMethod>(t, obj)->name());
+  return reinterpret_cast<GcByteArray*>(cast<GcMethod>(t, obj)->name());
 }
 
 static GcByteArray* getMethodSpec(Thread* t, object obj) {
-  return reinterpret_cast<GcByteArray*&>(cast<GcMethod>(t, obj)->spec());
+  return reinterpret_cast<GcByteArray*>(cast<GcMethod>(t, obj)->spec());
 }
 
 object
@@ -5400,7 +5400,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
        (counts[index + 1] * class_->arrayElementSize(), BytesPerWord));
     a->length() = counts[index + 1];
     setObjectClass(t, reinterpret_cast<object>(a), class_);
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(a));
+    setField(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(a));
 
     populateMultiArray(t, reinterpret_cast<object>(a), counts, index + 1, dimensions);
   }

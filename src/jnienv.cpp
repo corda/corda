@@ -396,8 +396,8 @@ throwNew(Thread* t, uintptr_t* arguments)
   PROTECT(t, trace);
 
   t->exception = cast<GcThrowable>(t, make(t, (*c)->vmClass()));
-  set(t, t->exception, ThrowableMessage, m);
-  set(t, reinterpret_cast<object>(t->exception), ThrowableTrace, trace);
+  t->exception->setMessage(t, m);
+  t->exception->setTrace(t, trace);
 
   return 1;
 }
@@ -551,7 +551,7 @@ methodID(Thread* t, GcMethod* method)
       GcVector* v = vectorAppend(
           t, roots(t)->jNIMethodTable(), reinterpret_cast<object>(method));
       // sequence point, for gc (don't recombine statements)
-      set(t, roots(t), RootsJNIMethodTable, v);
+      roots(t)->setJNIMethodTable(t, v);
 
       storeStoreMemoryBarrier();
 
@@ -1505,7 +1505,7 @@ fieldID(Thread* t, GcField* field)
       GcVector* v = vectorAppend(
           t, roots(t)->jNIFieldTable(), reinterpret_cast<object>(field));
       // sequence point, for gc (don't recombine statements)
-      set(t, roots(t), RootsJNIFieldTable, v);
+      roots(t)->setJNIFieldTable(t, v);
 
       storeStoreMemoryBarrier();
 
@@ -1758,7 +1758,7 @@ setObjectField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, *o, field->offset(), (v ? *v : 0));
+  setField(t, *o, field->offset(), (v ? *v : 0));
 
   return 1;
 }
@@ -2229,7 +2229,7 @@ setStaticObjectField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, reinterpret_cast<object>(c->vmClass()->staticTable()), field->offset(),
+  setField(t, reinterpret_cast<object>(c->vmClass()->staticTable()), field->offset(),
       (v ? *v : 0));
 
   return 1;
@@ -2576,7 +2576,7 @@ newObjectArray(Thread* t, uintptr_t* arguments)
   object a = makeObjectArray(t, (*class_)->vmClass(), length);
   object value = (init ? *init : 0);
   for (jsize i = 0; i < length; ++i) {
-    set(t, reinterpret_cast<object>(a), ArrayBody + (i * BytesPerWord), value);
+    reinterpret_cast<GcArray*>(a)->setBodyElement(t, i, value);
   }
   return reinterpret_cast<uint64_t>(makeLocalReference(t, reinterpret_cast<object>(a)));
 }
@@ -2605,7 +2605,7 @@ SetObjectArrayElement(Thread* t, jobjectArray array, jsize index,
 {
   ENTER(t, Thread::ActiveState);
 
-  set(t, reinterpret_cast<object>(*array), ArrayBody + (index * BytesPerWord), (value ? *value : 0));
+  setField(t, reinterpret_cast<object>(*array), ArrayBody + (index * BytesPerWord), (value ? *value : 0));
 }
 
 uint64_t
@@ -3541,23 +3541,23 @@ boot(Thread* t, uintptr_t*)
 {
   GcThrowable* throwable = makeThrowable(t, GcNullPointerException::Type);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsNullPointerException, throwable);
+  roots(t)->setNullPointerException(t, throwable);
 
   throwable = makeThrowable(t, GcArithmeticException::Type);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsArithmeticException, throwable);
+  roots(t)->setArithmeticException(t, throwable);
 
   throwable = makeThrowable(t, GcArrayIndexOutOfBoundsException::Type);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsArrayIndexOutOfBoundsException, throwable);
+  roots(t)->setArrayIndexOutOfBoundsException(t, throwable);
 
   throwable = makeThrowable(t, GcOutOfMemoryError::Type);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsOutOfMemoryError, throwable);
+  roots(t)->setOutOfMemoryError(t, throwable);
 
   throwable = makeThrowable(t, GcThrowable::Type);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsShutdownInProgress, throwable);
+  roots(t)->setShutdownInProgress(t, throwable);
 
   t->m->classpath->preBoot(t);
 
@@ -3567,7 +3567,7 @@ boot(Thread* t, uintptr_t*)
 
   GcThread* jthread = t->m->classpath->makeThread(t, t);
   // sequence point, for gc (don't recombine statements)
-  set(t, roots(t), RootsFinalizerThread, jthread);
+  roots(t)->setFinalizerThread(t, jthread);
 
   roots(t)->finalizerThread()->daemon() = true;
 
