@@ -497,7 +497,7 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
 
     o = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, o)));
 
-    set(t, array, ArrayBody + (i * BytesPerWord), o);
+    set(t, reinterpret_cast<object>(array), ArrayBody + (i * BytesPerWord), o);
   }
 
   return array;

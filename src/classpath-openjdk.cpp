@@ -351,7 +351,7 @@ object
 makeJconstructor(Thread* t, GcMethod* vmMethod, int index = -1);
 
 object
-makeJfield(Thread* t, object vmField, int index = -1);
+makeJfield(Thread* t, GcField* vmField, int index = -1);
 
 #ifdef AVIAN_OPENJDK_SRC
 void
@@ -593,24 +593,24 @@ class MyClasspath : public Classpath {
   {
     return cast<GcMethod>(t, objectClass(t, jmethod) == type(t, GcJmethod::Type)
       ? arrayBody
-      (t, jclassVmClass(t, jmethodClazz(t, jmethod))->methodTable(),
+      (t, jmethodClazz(t, jmethod)->vmClass()->methodTable(),
        jmethodSlot(t, jmethod))
       : arrayBody
-      (t, jclassVmClass(t, jconstructorClazz(t, jmethod))->methodTable(),
+      (t, jconstructorClazz(t, jmethod)->vmClass()->methodTable(),
        jconstructorSlot(t, jmethod)));
   }
 
   virtual object
   makeJField(Thread* t, GcField* vmField)
   {
-    return reinterpret_cast<object>(makeJfield(t, reinterpret_cast<object>(vmField)));
+    return reinterpret_cast<object>(makeJfield(t, vmField));
   }
 
   virtual GcField*
   getVMField(Thread* t, object jfield)
   {
     return cast<GcField>(t, arrayBody
-      (t, jclassVmClass(t, jfieldClazz(t, jfield))->fieldTable(), jfieldSlot(t, jfield)));
+      (t, jfieldClazz(t, jfield)->vmClass()->fieldTable(), jfieldSlot(t, jfield)));
   }
 
   virtual void
@@ -2136,8 +2136,8 @@ countFields(Thread* t, GcClass* c, bool publicOnly)
   if (publicOnly) {
     unsigned count = 0;
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object vmField = arrayBody(t, table, i);
-      if (fieldFlags(t, vmField) & ACC_PUBLIC) {
+      GcField* vmField = cast<GcField>(t, arrayBody(t, table, i));
+      if (vmField->flags() & ACC_PUBLIC) {
         ++ count;
       }
     }
@@ -2387,30 +2387,29 @@ makeJconstructor(Thread* t, GcMethod* vmMethod, int index)
 }
 
 object
-makeJfield(Thread* t, object vmField, int index)
+makeJfield(Thread* t, GcField* vmField, int index)
 {
   PROTECT(t, vmField);
 
   object name = intern
     (t, reinterpret_cast<object>(t->m->classpath->makeString
-     (t, fieldName(t, vmField), 0, byteArrayLength
-      (t, fieldName(t, vmField)) - 1)));
+     (t, reinterpret_cast<object>(vmField->name()), 0, vmField->name()->length() - 1)));
   PROTECT(t, name);
 
   GcClass* type = resolveClassBySpec
-    (t, cast<GcClassLoader>(t, classLoader(t, fieldClass(t, vmField))),
+    (t, vmField->class_()->loader(),
      reinterpret_cast<char*>
-     (&byteArrayBody(t, fieldSpec(t, vmField), 0)),
-     byteArrayLength(t, fieldSpec(t, vmField)) - 1);
+     (vmField->spec()->body().begin()),
+     vmField->spec()->length() - 1);
   PROTECT(t, type);
 
   GcJclass* jtype = getJClass(t, type);
 
   object signature;
   object annotationTable;
-  object addendum = fieldAddendum(t, vmField);
+  GcFieldAddendum* addendum = vmField->addendum();
   if (addendum) {
-    signature = addendumSignature(t, addendum);
+    signature = addendum->signature();
     if (signature) {
       PROTECT(t, addendum);
 
@@ -2418,7 +2417,7 @@ makeJfield(Thread* t, object vmField, int index)
         (t, signature, 0, byteArrayLength(t, signature) - 1));
     }
 
-    annotationTable = addendumAnnotationTable(t, addendum);
+    annotationTable = addendum->annotationTable();
   } else {
     signature = 0;
     annotationTable = 0;
@@ -2428,16 +2427,16 @@ makeJfield(Thread* t, object vmField, int index)
   PROTECT(t, annotationTable);
 
   if (annotationTable) {
-    GcClassRuntimeData* runtimeData = getClassRuntimeData(t, cast<GcClass>(t, fieldClass(t, vmField)));
+    GcClassRuntimeData* runtimeData = getClassRuntimeData(t, vmField->class_());
 
-    set(t, reinterpret_cast<object>(runtimeData), ClassRuntimeDataPool,
-        addendumPool(t, fieldAddendum(t, vmField)));
+    set(t, runtimeData, ClassRuntimeDataPool,
+        vmField->addendum()->pool());
   }
 
   if (index == -1) {
-    object table = classFieldTable(t, fieldClass(t, vmField));
+    object table = vmField->class_()->fieldTable();
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      if (vmField == arrayBody(t, table, i)) {
+      if (reinterpret_cast<object>(vmField) == arrayBody(t, table, i)) {
         index = i;
         break;
       }
@@ -2446,11 +2445,10 @@ makeJfield(Thread* t, object vmField, int index)
 
   expect(t, index != -1);
 
-  GcJclass* jclass = getJClass(t, cast<GcClass>(t, fieldClass(t, vmField)));
+  GcJclass* jclass = getJClass(t, vmField->class_());
 
   return reinterpret_cast<object>(makeJfield
-    (t, true, 0, jclass, index, cast<GcString>(t, name), jtype, fieldFlags
-     (t, vmField), cast<GcString>(t, signature), 0, cast<GcByteArray>(t, annotationTable), 0, 0, 0, 0));
+    (t, true, 0, jclass, index, cast<GcString>(t, name), jtype, vmField->flags(), cast<GcString>(t, signature), 0, cast<GcByteArray>(t, annotationTable), 0, 0, 0, 0));
 }
 
 void
@@ -2595,7 +2593,7 @@ Avian_sun_misc_Unsafe_staticFieldOffset
   object jfield = reinterpret_cast<object>(arguments[1]);
   return fieldOffset
     (t, arrayBody
-     (t, jclassVmClass(t, jfieldClazz(t, jfield))->fieldTable(), jfieldSlot(t, jfield)));
+     (t, jfieldClazz(t, jfield)->vmClass()->fieldTable(), jfieldSlot(t, jfield)));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -2603,8 +2601,7 @@ Avian_sun_misc_Unsafe_staticFieldBase
 (Thread* t, object, uintptr_t* arguments)
 {
   return reinterpret_cast<int64_t>
-    (jclassVmClass
-      (t, jfieldClazz(t, reinterpret_cast<object>(arguments[1])))->staticTable());
+    (jfieldClazz(t, reinterpret_cast<object>(arguments[1]))->vmClass()->staticTable());
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -2614,7 +2611,7 @@ Avian_sun_misc_Unsafe_objectFieldOffset
   object jfield = reinterpret_cast<object>(arguments[1]);
   return fieldOffset
     (t, arrayBody
-     (t, jclassVmClass(t, jfieldClazz(t, jfield))->fieldTable(), jfieldSlot(t, jfield)));
+     (t, jfieldClazz(t, jfield)->vmClass()->fieldTable(), jfieldSlot(t, jfield)));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -3487,10 +3484,8 @@ jvmGetClassContext(Thread* t, uintptr_t*)
   for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
     object c = reinterpret_cast<object>(getJClass(
         t,
-        cast<GcClass>(
-            t,
-            methodClass(t,
-                        traceElementMethod(t, objectArrayBody(t, trace, i))))));
+        methodClass(t,
+                        traceElementMethod(t, objectArrayBody(t, trace, i)))));
 
     set(t, context, ArrayBody + (i * BytesPerWord), c);
   }
@@ -3902,7 +3897,7 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
 
 extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
-                                     jboolean init, jobject* loader,
+                                     jboolean init, jobject loader,
                                      jboolean throwError)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(name),
@@ -3944,7 +3939,7 @@ jvmFindLoadedClass(Thread* t, uintptr_t* arguments)
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_FindLoadedClass)(Thread* t, jobject* loader, jstring name)
+EXPORT(JVM_FindLoadedClass)(Thread* t, jobject loader, jstring name)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
                             reinterpret_cast<uintptr_t>(name) };
@@ -3965,7 +3960,7 @@ jvmDefineClass(Thread* t, uintptr_t* arguments)
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject* loader,
+EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
                         const uint8_t* data, jsize length, jobject)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
@@ -3976,7 +3971,7 @@ EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject* loader,
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject* loader,
+EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
                           const uint8_t* data, jsize length, jobject,
                           const char*)
 {
@@ -3984,7 +3979,7 @@ EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject* loader,
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClassWithSourceCond)(Thread* t, const char*, jobject* loader,
+EXPORT(JVM_DefineClassWithSourceCond)(Thread* t, const char*, jobject loader,
                                       const uint8_t* data, jsize length,
                                       jobject, const char*, jboolean)
 {
@@ -4329,10 +4324,10 @@ jvmGetClassDeclaredFields(Thread* t, uintptr_t* arguments)
 
     unsigned ai = 0;
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      object vmField = arrayBody(t, table, i);
+      GcField* vmField = cast<GcField>(t, arrayBody(t, table, i));
       PROTECT(t, vmField);
 
-      if ((not publicOnly) or (fieldFlags(t, vmField) & ACC_PUBLIC)) {
+      if ((not publicOnly) or (vmField->flags() & ACC_PUBLIC)) {
         object field = makeJfield(t, vmField, i);
 
         assertT(t, ai < objectArrayLength(t, array));
@@ -4428,7 +4423,7 @@ jvmInvokeMethod(Thread* t, uintptr_t* arguments)
   jobjectArray args = reinterpret_cast<jobjectArray>(arguments[2]);
 
   GcMethod* vmMethod = cast<GcMethod>(t, arrayBody
-    (t, jclassVmClass(t, jmethodClazz(t, *method))->methodTable(),
+    (t, jmethodClazz(t, *method)->vmClass()->methodTable(),
       jmethodSlot(t, *method)));
 
   if (vmMethod->flags() & ACC_STATIC) {
@@ -4463,11 +4458,11 @@ jvmNewInstanceFromConstructor(Thread* t, uintptr_t* arguments)
   jobjectArray args = reinterpret_cast<jobjectArray>(arguments[1]);
 
   object instance = make
-    (t, jclassVmClass(t, jconstructorClazz(t, *constructor)));
+    (t, jconstructorClazz(t, *constructor)->vmClass());
   PROTECT(t, instance);
 
   GcMethod* method = cast<GcMethod>(t, arrayBody
-    (t, jclassVmClass(t, jconstructorClazz(t, *constructor))->methodTable(),
+    (t, jconstructorClazz(t, *constructor)->vmClass()->methodTable(),
       jconstructorSlot(t, *constructor)));
 
   invoke(t, method, reinterpret_cast<object>(instance), args ? reinterpret_cast<object>(*args) : 0);

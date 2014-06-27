@@ -12,7 +12,6 @@
 #include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
-#include <avian/util/slice.h>
 #include <avian/util/hash.h>
 
 #include "avian/zlib-custom.h"
@@ -285,7 +284,7 @@ class JarIndex {
 
         while (p < end) {
           if (signature(p) == EntrySignature) {
-            index = index->add(Entry(hash(avian::util::Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(fileName(p)), fileNameLength(p))), p));
+            index = index->add(Entry(hash(Slice<const uint8_t>(fileName(p), fileNameLength(p))), p));
 
             p = endOfEntry(p);
           } else {

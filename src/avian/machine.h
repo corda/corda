@@ -1356,7 +1356,6 @@ vmRun_returnAddress();
 class GcThread;
 class GcThrowable;
 class GcString;
-class GcField;
 
 class Thread {
  public:

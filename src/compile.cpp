@@ -7519,7 +7519,7 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, GcContinuation* c, int start)
 {
   const int BodyOffset = ContinuationBody / BytesPerWord;
 
-  GcMethod* method = cast<GcMethod>(t, reinterpret_cast<object>(t->m->heap->follow(c->method())));
+  GcMethod* method = t->m->heap->follow(c->method());
   int count = frameMapSizeInBits(t, method);
 
   if (count) {

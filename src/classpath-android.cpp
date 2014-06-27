@@ -327,10 +327,10 @@ class MyClasspath : public Classpath {
   {
     return cast<GcMethod>(t, objectClass(t, jmethod) == type(t, GcJmethod::Type)
       ? arrayBody
-      (t, jclassVmClass(t, jmethodDeclaringClass(t, jmethod))->methodTable(),
+      (t, jmethodDeclaringClass(t, jmethod)->vmClass()->methodTable(),
        jmethodSlot(t, jmethod))
       : arrayBody
-      (t,jclassVmClass(t, jconstructorDeclaringClass(t, jmethod))->methodTable(),
+      (t, jconstructorDeclaringClass(t, jmethod)->vmClass()->methodTable(),
        jconstructorSlot(t, jmethod)));
   }
 
@@ -350,7 +350,7 @@ class MyClasspath : public Classpath {
   getVMField(Thread* t, object jfield)
   {
     return cast<GcField>(t, arrayBody
-      (t, jclassVmClass(t, jfieldDeclaringClass(t, jfield))->fieldTable(),
+      (t, jfieldDeclaringClass(t, jfield)->vmClass()->fieldTable(),
        jfieldSlot(t, jfield)));
   }
 
@@ -1402,7 +1402,7 @@ Avian_sun_misc_Unsafe_objectFieldOffset
   object jfield = reinterpret_cast<object>(arguments[1]);
   return fieldOffset
     (t, arrayBody
-     (t, jclassVmClass(t, jfieldDeclaringClass(t, jfield))->fieldTable(),
+     (t, jfieldDeclaringClass(t, jfield)->vmClass()->fieldTable(),
       jfieldSlot(t, jfield)));
 }
 
@@ -1878,9 +1878,9 @@ Avian_java_lang_reflect_Method_isAnnotationPresent
      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))->methodTable(),
       arguments[1]);
 
-  object addendum = methodAddendum(t, method);
+  GcMethodAddendum* addendum = methodAddendum(t, method);
   if (addendum) {
-    object table = addendumAnnotationTable(t, addendum);
+    object table = addendum->annotationTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
         if (objectArrayBody(t, objectArrayBody(t, table, i), 1)
@@ -1903,9 +1903,9 @@ Avian_java_lang_reflect_Method_getAnnotation
      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))->methodTable(),
       arguments[1]);
 
-  object addendum = methodAddendum(t, method);
+  GcMethodAddendum* addendum = methodAddendum(t, method);
   if (addendum) {
-    object table = addendumAnnotationTable(t, addendum);
+    object table = addendum->annotationTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
         if (objectArrayBody(t, objectArrayBody(t, table, i), 1)
@@ -1921,7 +1921,7 @@ Avian_java_lang_reflect_Method_getAnnotation
 
           return reinterpret_cast<uintptr_t>
             (t->m->processor->invoke
-             (t, get, 0, classLoader(t, methodClass(t, method)),
+             (t, get, 0, methodClass(t, method)->loader(),
               objectArrayBody(t, table, i)));
         }
       }
@@ -1939,9 +1939,9 @@ Avian_java_lang_reflect_Method_getDeclaredAnnotations
      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))->methodTable(),
       arguments[1]);
 
-  object addendum = methodAddendum(t, method);
+  GcMethodAddendum* addendum = methodAddendum(t, method);
   if (addendum) {
-    object table = addendumAnnotationTable(t, addendum);
+    object table = addendum->annotationTable();
     if (table) {
       PROTECT(t, method);
       PROTECT(t, table);
@@ -1960,7 +1960,7 @@ Avian_java_lang_reflect_Method_getDeclaredAnnotations
 
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
         object a = t->m->processor->invoke
-          (t, get, 0, classLoader(t, methodClass(t, method)),
+          (t, get, 0, methodClass(t, method)->loader(),
            objectArrayBody(t, table, i));
 
         set(t, array, ArrayBody + (i * BytesPerWord), a);
@@ -1987,9 +1987,9 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
       jclassVmClass(t, reinterpret_cast<object>(arguments[0]))->fieldTable(),
       arguments[1]));
 
-  object addendum = reinterpret_cast<object>(field->addendum());
+  GcFieldAddendum* addendum = field->addendum();
   if (addendum) {
-    object table = addendumAnnotationTable(t, addendum);
+    object table = addendum->annotationTable();
     if (table) {
       PROTECT(t, field);
       PROTECT(t, table);
@@ -2040,7 +2040,7 @@ Avian_java_lang_reflect_Method_getDefaultValue
      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))->methodTable(),
       arguments[2]);
 
-  object addendum = methodAddendum(t, method);
+  GcMethodAddendum* addendum = methodAddendum(t, method);
   if (addendum) {
     GcMethod* get = resolveMethod
       (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Classes",
@@ -2050,7 +2050,7 @@ Avian_java_lang_reflect_Method_getDefaultValue
 
     return reinterpret_cast<uintptr_t>
       (t->m->processor->invoke
-       (t, get, 0, classLoader(t, methodClass(t, method)), addendum));
+       (t, get, 0, methodClass(t, method)->loader(), addendum));
   }
 
   return 0;
@@ -2180,9 +2180,9 @@ Avian_java_lang_reflect_Field_getAnnotation
      (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))->fieldTable(),
       arguments[1]));
 
-  object addendum = reinterpret_cast<object>(field->addendum());
+  GcFieldAddendum* addendum = field->addendum();
   if (addendum) {
-    object table = addendumAnnotationTable(t, addendum);
+    object table = addendum->annotationTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
         if (objectArrayBody(t, objectArrayBody(t, table, i), 1)

@@ -122,13 +122,13 @@ int printInstruction(uint8_t* code, unsigned& ip, const char* prefix)
     return fprintf(stderr, "drem");
   case dsub:
     return fprintf(stderr, "dsub");
-  case dup:
+  case vm::dup:
     return fprintf(stderr, "dup");
   case dup_x1:
     return fprintf(stderr, "dup_x1");
   case dup_x2:
     return fprintf(stderr, "dup_x2");
-  case dup2:
+  case vm::dup2:
     return fprintf(stderr, "dup2");
   case dup2_x1:
     return fprintf(stderr, "dup2_x1");

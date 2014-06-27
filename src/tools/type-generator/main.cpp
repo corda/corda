@@ -843,56 +843,42 @@ writeOffset(Output* out, Class* cl)
   }
 }
 
-void
-writeAccessorName(Output* out, Class* cl, Field& field)
-{
-  out->write(cl->name);
-  out->write(capitalize(field.name));
+std::string cppClassName(Class* cl) {
+  if(cl->name == "jobject") {
+    return "object";
+  } else {
+    return "Gc" + capitalize(cl->name) + "*";
+  }
 }
 
-void writeFieldType(Output* out, Module& module, Field& f) {
+std::string cppFieldType(Module& module, Field& f) {
   if(f.javaSpec.size() != 0) {
     if(f.javaSpec[0] == 'L') {
       std::string className = f.javaSpec.substr(1, f.javaSpec.size() - 2);
       std::map<std::string, Class*>::iterator it = module.javaClasses.find(className);
       if(it != module.javaClasses.end()) {
-        if(it->second->name == "jobject") {
-          // TEMPORARY HACK!
-          out->write("object");
-        } else {
-          out->write("Gc");
-          out->write(capitalize(it->second->name));
-          out->write("*");
-        }
-        return;
+        return cppClassName(it->second);
       }
     } else if(f.javaSpec[0] == '[') {
       std::map<std::string, Class*>::iterator it = module.javaClasses.find(f.javaSpec);
       if(it != module.javaClasses.end()) {
-        out->write("Gc");
-        out->write(capitalize(it->second->name));
-        out->write("*");
-        return;
+        return cppClassName(it->second);
       }
     }
   }
   std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
   assert(f.typeName.size() > 0);
   if(it != module.classes.end()) {
-    out->write("Gc");
-    out->write(capitalize(it->second->name));
-    out->write("*");
+    return cppClassName(it->second);
   } else {
-    out->write(f.typeName);
+    return f.typeName;
   }
 }
 
-void writeSimpleFieldType(Output* out, Module& module, Field& f) {
-  if(f.javaSpec.size() != 0 && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
-    out->write("object");
-  } else {
-    writeFieldType(out, module, f);
-  }
+void writeAccessorName(Output* out, Class* cl, Field& field)
+{
+  out->write(cl->name);
+  out->write(capitalize(field.name));
 }
 
 void
@@ -918,7 +904,7 @@ writeAccessor(Output* out, Module& module, Class* cl, Field& field, bool isArray
   //   out->write(take(strlen(typeName) - 3, typeName));
   //   out->write("*");
   // } else {
-    writeSimpleFieldType(out, module, field);
+    out->write(cppFieldType(module, field));
     out->write("&");
   // }
 
@@ -950,7 +936,7 @@ writeAccessor(Output* out, Module& module, Class* cl, Field& field, bool isArray
   //   out->write(take(strlen(typeName) - 3, typeName));
   //   out->write("*");
   // } else {
-    writeSimpleFieldType(out, module, field);
+    out->write(cppFieldType(module, field));
     out->write("*");
   // }
 
@@ -1026,7 +1012,7 @@ writeConstructorParameters(Output* out, Module& module, Class* cl)
     Field& f = **it;
     if(!f.polyfill) {
       out->write(", ");
-      writeFieldType(out, module, f);
+      out->write(cppFieldType(module, f));
       out->write(" ");
       out->write(obfuscate(f.name));
     }
@@ -1082,7 +1068,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
     out->write("  ");
-    writeFieldType(out, module, f);
+    out->write(cppFieldType(module, f));
     if(!f.polyfill) {
       out->write("&");
     }
@@ -1097,7 +1083,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
       out->write("); // polyfill, assumed to be implemented elsewhere\n");
     } else {
       out->write(") { return field_at<");
-      writeFieldType(out, module, f);
+      out->write(cppFieldType(module, f));
       out->write(">(");
       out->write(capitalize(cl->name));
       out->write(capitalize(f.name));
