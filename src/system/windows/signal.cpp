@@ -155,6 +155,53 @@ void dump(LPEXCEPTION_POINTERS e, const char* directory)
   }
 }
 
+void logException(LPEXCEPTION_POINTERS e, const char* directory)
+{
+  char name[MAX_PATH];
+  _timeb tb;
+  FTIME(&tb);
+  vm::snprintf(name, MAX_PATH, "%s\\exceptions.txt", directory);
+
+  FILE* log = vm::fopen(name, "ab");
+  if (log) {
+#ifdef ARCH_x86_32
+    void* ip = reinterpret_cast<void*>(e->ContextRecord->Eip);
+    void* base = reinterpret_cast<void*>(e->ContextRecord->Ebp);
+    void* stack = reinterpret_cast<void*>(e->ContextRecord->Esp);
+    void* thread = reinterpret_cast<void*>(e->ContextRecord->Ebx);
+#elif defined ARCH_x86_64
+    void* ip = reinterpret_cast<void*>(e->ContextRecord->Rip);
+    void* base = reinterpret_cast<void*>(e->ContextRecord->Rbp);
+    void* stack = reinterpret_cast<void*>(e->ContextRecord->Rsp);
+    void* thread = reinterpret_cast<void*>(e->ContextRecord->Rbx);
+#endif
+
+    HMODULE module;
+    if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                          static_cast<LPCSTR>(ip),
+                          &module)) {
+      GetModuleFileName(module, name, MAX_PATH);
+    } else {
+      module = 0;
+    }
+
+    fprintf(log,
+            "timestamp %" LLD
+            " code %ld ip %p base %p stack %p thread %p module %s\n",
+            (static_cast<int64_t>(tb.time) * 1000)
+            + static_cast<int64_t>(tb.millitm),
+            e->ExceptionRecord->ExceptionCode,
+            ip,
+            base,
+            stack,
+            thread,
+            module ? name : "(unknown)");
+
+    fflush(log);
+    fclose(log);
+  }
+}
+
 LONG CALLBACK handleException(LPEXCEPTION_POINTERS e)
 {
   SignalRegistrar::Handler* handler = 0;
@@ -180,22 +227,36 @@ LONG CALLBACK handleException(LPEXCEPTION_POINTERS e)
 
     bool jump = handler->handleSignal(&ip, &base, &stack, &thread);
 
+    if (jump) {
 #ifdef ARCH_x86_32
-    e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
-    e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
-    e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
-    e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
+      e->ContextRecord->Eip = reinterpret_cast<DWORD>(ip);
+      e->ContextRecord->Ebp = reinterpret_cast<DWORD>(base);
+      e->ContextRecord->Esp = reinterpret_cast<DWORD>(stack);
+      e->ContextRecord->Ebx = reinterpret_cast<DWORD>(thread);
 #elif defined ARCH_x86_64
-    e->ContextRecord->Rip = reinterpret_cast<DWORD64>(ip);
-    e->ContextRecord->Rbp = reinterpret_cast<DWORD64>(base);
-    e->ContextRecord->Rsp = reinterpret_cast<DWORD64>(stack);
-    e->ContextRecord->Rbx = reinterpret_cast<DWORD64>(thread);
+      e->ContextRecord->Rip = reinterpret_cast<DWORD64>(ip);
+      e->ContextRecord->Rbp = reinterpret_cast<DWORD64>(base);
+      e->ContextRecord->Rsp = reinterpret_cast<DWORD64>(stack);
+      e->ContextRecord->Rbx = reinterpret_cast<DWORD64>(thread);
 #endif
 
-    if (jump) {
       return EXCEPTION_CONTINUE_EXECUTION;
     } else if (SignalRegistrar::Data::instance->crashDumpDirectory) {
-      dump(e, SignalRegistrar::Data::instance->crashDumpDirectory);
+      // We only generate a crash dump if exception occurred in code
+      // belonging to the current executable.  If the exception
+      // occurred in a library, there may be a handler available to
+      // handle it, in which case it is premature to assume we're
+      // going to crash.  Generating a full memory dump on each such
+      // event is time consuming and eats up disk space, so we'd
+      // prefer to avoid it unless we're really crashing.
+      HMODULE module;
+      if (GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                            static_cast<LPCSTR>(ip),
+                            &module) and module == GetModuleHandle(0)) {
+        dump(e, SignalRegistrar::Data::instance->crashDumpDirectory);
+      } else {
+        logException(e, SignalRegistrar::Data::instance->crashDumpDirectory);
+      }
     }
   }
 
