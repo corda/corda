@@ -1317,9 +1317,6 @@ class Machine {
 void
 printTrace(Thread* t, GcThrowable* exception);
 
-uint8_t&
-threadInterrupted(Thread* t, object thread);
-
 void
 enterActiveState(Thread* t);
 
@@ -1579,6 +1576,8 @@ class Thread {
   unsigned flags;
 };
 
+class GcJfield;
+
 class Classpath {
  public:
   virtual object
@@ -1600,7 +1599,7 @@ class Classpath {
   makeJField(Thread* t, GcField* vmField) = 0;
 
   virtual GcField*
-  getVMField(Thread* t, object jfield) = 0;
+  getVMField(Thread* t, GcJfield* jfield) = 0;
 
   virtual void
   clearInterrupted(Thread* t) = 0;
@@ -2321,19 +2320,20 @@ makeString(Thread* t, object data, int32_t hash, int32_t)
 #  endif // not HAVE_StringHash32
 
 inline GcString*
-makeString(Thread* t, object data, unsigned offset, unsigned length, unsigned)
+makeString(Thread* t, object odata, unsigned offset, unsigned length, unsigned)
 {
-  if (offset == 0 and length == charArrayLength(t, data)) {
-    return makeString(t, data, 0, 0);
+  GcCharArray* data = cast<GcCharArray>(t, odata);
+  if (offset == 0 and length == data->length()) {
+    return makeString(t, reinterpret_cast<object>(data), 0, 0);
   } else {
     PROTECT(t, data);
 
-    object array = reinterpret_cast<object>(makeCharArray(t, length));
+    GcCharArray* array = makeCharArray(t, length);
 
-    memcpy(&charArrayBody(t, array, 0), &charArrayBody(t, data, offset),
+    memcpy(array->body().begin(), &data->body()[offset],
            length * 2);
 
-    return makeString(t, array, 0, 0);
+    return makeString(t, reinterpret_cast<object>(array), 0, 0);
   }
 }
 
@@ -3843,11 +3843,11 @@ resolveMethod(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
 GcVector*
 vectorAppend(Thread*, GcVector*, object);
 
-inline object
+inline GcClassRuntimeData*
 getClassRuntimeDataIfExists(Thread* t, GcClass* c)
 {
   if (c->runtimeDataIndex()) {
-    return cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable))->body()[c->runtimeDataIndex() - 1];
+    return cast<GcClassRuntimeData>(t, cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable))->body()[c->runtimeDataIndex() - 1]);
   } else {
     return 0;
   }

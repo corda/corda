@@ -82,9 +82,9 @@ class MyClasspath : public Classpath {
   }
 
   virtual GcField*
-  getVMField(Thread* t, object jfield)
+  getVMField(Thread* t UNUSED, GcJfield* jfield)
   {
-    return cast<GcJfield>(t, jfield)->vmField();
+    return jfield->vmField();
   }
 
   virtual void

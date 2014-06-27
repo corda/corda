@@ -875,14 +875,8 @@ std::string cppFieldType(Module& module, Field& f) {
   }
 }
 
-void writeAccessorName(Output* out, Class* cl, Field& field)
-{
-  out->write(cl->name);
-  out->write(capitalize(field.name));
-}
-
 void
-writeAccessor(Output* out, Module& module, Class* cl, Field& field, bool isArray)
+writeAccessor(Output* out, Class* cl, Field& field)
 {
   std::string typeName = field.typeName;
 
@@ -897,61 +891,6 @@ writeAccessor(Output* out, Module& module, Class* cl, Field& field, bool isArray
   out->write(capitalize(cl->name));
   out->write(capitalize(field.name));
   out->write(" 1\n\n");
-
-  out->write("inline ");
-
-  // if (endsWith("[0]", typeName)) {
-  //   out->write(take(strlen(typeName) - 3, typeName));
-  //   out->write("*");
-  // } else {
-    out->write(cppFieldType(module, field));
-    out->write("&");
-  // }
-
-  out->write("\n");
-  writeAccessorName(out, cl, field);
-  out->write("(Thread* t UNUSED, object");
-  out->write(" o");
-  if (isArray) {
-    out->write(", unsigned i");
-  }
-  out->write(") {\n");
-
-  out->write("  assertT(t, t->m->unsafe or ");
-  out->write("instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe");
-  out->write("(t, t->m->types, Gc::");
-  out->write(capitalize(cl->name));
-  out->write("Type))");
-  out->write(", o));\n");
-
-  if (isArray) {
-    out->write("  assertT(t, i < ");
-    out->write(cl->name);
-    out->write("Length(t, o));\n");
-  }
-
-  out->write("  return *reinterpret_cast<");
-
-  // if (endsWith("[0]", typeName)) {
-  //   out->write(take(strlen(typeName) - 3, typeName));
-  //   out->write("*");
-  // } else {
-    out->write(cppFieldType(module, field));
-    out->write("*");
-  // }
-
-  out->write(">(reinterpret_cast<uint8_t*>(o) + ");
-
-  out->write(capitalize(cl->name));
-  out->write(capitalize(field.name));
-
-  if (isArray) {
-    out->write(" + (i * ");
-    unsigned elementSize = sizeOf(module, field.typeName);
-    out->write(elementSize);
-    out->write(")");
-  }
-  out->write(");\n}\n\n");
 }
 
 void
@@ -963,11 +902,11 @@ writeAccessors(Output* out, Module& module)
       Field& f = **it;
 
       if(!f.polyfill) {
-        writeAccessor(out, module, cl, f, false);
+        writeAccessor(out, cl, f);
       }
     }
     if(cl->arrayField) {
-      writeAccessor(out, module, cl, *cl->arrayField, true);
+      writeAccessor(out, cl, *cl->arrayField);
     }
   }
 }

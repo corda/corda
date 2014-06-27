@@ -3241,7 +3241,7 @@ fromReflectedField(Thread* t, uintptr_t* arguments)
 {
   jobject f = reinterpret_cast<jobject>(arguments[0]);
 
-  return fieldID(t, t->m->classpath->getVMField(t, *f));
+  return fieldID(t, t->m->classpath->getVMField(t, cast<GcJfield>(t, *f)));
 }
 
 jfieldID JNICALL
