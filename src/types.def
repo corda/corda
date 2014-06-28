@@ -78,15 +78,6 @@
 (type lineNumberTable
   (array uint64_t body))
 
-(type code avian/Code
-  (object pool)
-  (object exceptionHandlerTable)
-  (object lineNumberTable)
-  (intptr_t compiled)
-  (uint32_t compiledSize)
-  (uint16_t maxStack)
-  (uint16_t maxLocals)
-  (array uint8_t body))
 
 (type reference
   (uint8_t kind)
@@ -334,6 +325,16 @@
 (type intArray [I
   (extends jobject)
   (array int32_t body))
+
+(type code avian/Code
+  (object pool)
+  (object exceptionHandlerTable)
+  (lineNumberTable lineNumberTable)
+  (intptr_t compiled)
+  (uint32_t compiledSize)
+  (uint16_t maxStack)
+  (uint16_t maxLocals)
+  (array uint8_t body))
 
 (type longArray [J
   (extends jobject)

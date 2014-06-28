@@ -205,11 +205,20 @@ endsWith(const std::string& b, const std::string& a)
   return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 }
 
-std::string enumName(std::string& type) {
+std::string enumName(Module& module, Field& f) {
+  std::string& type = f.typeName;
   if (type == "void*") {
     return "word";
+  }
+  if(f.javaSpec.size() != 0 && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
+    return "object";
+  }
+  std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
+  assert(f.typeName.size() > 0);
+  if(it != module.classes.end()) {
+    return "object";
   } else {
-    return type;
+    return f.typeName;
   }
 }
 
@@ -1169,7 +1178,7 @@ writeConstructors(Output* out, Module& module)
     bool hasObjectMask = cl->name == "singleton";
     for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
       Field& f = **it;
-      if (f.typeName == "object"
+      if (enumName(module, f) == "object"
           and not f.nogc)
       {
         out->write("  PROTECT(t, ");
@@ -1240,7 +1249,7 @@ set(uint32_t* mask, unsigned index)
 }
 
 uint32_t
-typeObjectMask(Class* cl)
+typeObjectMask(Module& module, Class* cl)
 {
   assert(cl->fixedSize + (cl->arrayField ? cl->arrayField->elementSize : 0)
          < 32 * BytesPerWord);
@@ -1250,7 +1259,7 @@ typeObjectMask(Class* cl)
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
     unsigned offset = f.offset / BytesPerWord;
-    if(f.typeName == "object" && !f.nogc) {
+    if(enumName(module, f) == "object" && !f.nogc) {
       set(&mask, offset);
     }
   }
@@ -1258,7 +1267,7 @@ typeObjectMask(Class* cl)
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
     unsigned offset = f.offset / BytesPerWord;
-    if(f.typeName == "object" && !f.nogc) {
+    if(enumName(module, f) == "object" && !f.nogc) {
       set(&mask, offset);
     }
   }
@@ -1267,14 +1276,14 @@ typeObjectMask(Class* cl)
 }
 
 void
-writeInitialization(Output* out, std::set<Class*>& alreadyInited, Class* cl)
+writeInitialization(Output* out, Module& module, std::set<Class*>& alreadyInited, Class* cl)
 {
   if(alreadyInited.find(cl) != alreadyInited.end()) {
     return;
   }
   alreadyInited.insert(cl);
   if(cl->super && cl->name != "intArray" && cl->name != "class") {
-    writeInitialization(out, alreadyInited, cl->super);
+    writeInitialization(out, module, alreadyInited, cl->super);
   }
   out->write("bootClass(t, Gc::");
   out->write(capitalize(cl->name));
@@ -1289,8 +1298,8 @@ writeInitialization(Output* out, std::set<Class*>& alreadyInited, Class* cl)
   }
   out->write(", ");
 
-  if (typeObjectMask(cl) != 1) {
-    out->write(typeObjectMask(cl));
+  if (typeObjectMask(module, cl) != 1) {
+    out->write(typeObjectMask(module, cl));
   } else {
     out->write("0");
   }
@@ -1311,13 +1320,13 @@ writeInitializations(Output* out, Module& module)
 {
   std::set<Class*> alreadyInited;
 
-  writeInitialization(out, alreadyInited, module.classes["intArray"]);
-  writeInitialization(out, alreadyInited, module.classes["class"]);
+  writeInitialization(out, module, alreadyInited, module.classes["intArray"]);
+  writeInitialization(out, module, alreadyInited, module.classes["class"]);
 
   for(std::map<std::string, Class*>::iterator it = module.classes.begin(); it != module.classes.end(); ++it) {
     Class* cl = it->second;
     if(cl->name != "intArray" && cl->name != "class") {
-      writeInitialization(out, alreadyInited, cl);
+      writeInitialization(out, module, alreadyInited, cl);
     }
   }
 }
@@ -1396,7 +1405,7 @@ writeNameInitializations(Output* out, Module& module)
 }
 
 void
-writeMap(Output* out, Class* cl)
+writeMap(Output* out, Module& module, Class* cl)
 {
   std::ostringstream ss;
   uintptr_t ownerId = 0;
@@ -1409,7 +1418,7 @@ writeMap(Output* out, Class* cl)
     ownerId = f.ownerId;
 
     ss << "Type_";
-    ss << enumName(f.typeName);
+    ss << enumName(module, f);
     if (f.nogc) {
       ss << "_nogc";
     }
@@ -1424,7 +1433,7 @@ writeMap(Output* out, Class* cl)
     }
     ss << "Type_array, ";
     ss << "Type_";
-    ss << enumName(f.typeName);
+    ss << enumName(module, f);
     ss << ", ";
   }
 
@@ -1451,7 +1460,7 @@ writeMaps(Output* out, Module& module)
     out->write("// ");
     out->write(cl->name);
     out->write("\n{ ");
-    writeMap(out, cl);
+    writeMap(out, module, cl);
     out->write(" }");
   }
   out->write("\n};");

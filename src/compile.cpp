@@ -6340,7 +6340,7 @@ object translateExceptionHandlerTable(MyThread* t,
 object
 translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = codeLineNumberTable(t, context->method->code());
+  object oldTable = reinterpret_cast<object>(codeLineNumberTable(t, context->method->code()));
   if (oldTable) {
     PROTECT(t, oldTable);
 
@@ -6844,7 +6844,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     object code = context->method->code();
 
     code = reinterpret_cast<object>(makeCode
-      (t, 0, newExceptionHandlerTable, newLineNumberTable,
+      (t, 0, newExceptionHandlerTable, cast<GcLineNumberTable>(t, newLineNumberTable),
        reinterpret_cast<uintptr_t>(start), codeSize, codeMaxStack(t, code),
        codeMaxLocals(t, code), 0));
 

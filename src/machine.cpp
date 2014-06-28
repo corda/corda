@@ -5498,7 +5498,7 @@ vmAddressFromLine(Thread* t, object m, unsigned line)
 {
   object code = methodCode(t, m);
   printf("code: %p\n", code);
-  object lnt = codeLineNumberTable(t, code);
+  object lnt = reinterpret_cast<object>(codeLineNumberTable(t, code));
   printf("lnt: %p\n", lnt);
   
   if (lnt) {
