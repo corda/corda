@@ -1206,7 +1206,7 @@ Avian_java_lang_Class_getComponentType
         (getJClass(t, primitiveClass(t, n)));
     } else {
       return reinterpret_cast<uintptr_t>
-        (getJClass(t, cast<GcClass>(t, classStaticTable(t, c->vmClass()))));
+        (getJClass(t, cast<GcClass>(t, classArrayElementClass(t, c->vmClass()))));
     }    
   } else {
     return 0;

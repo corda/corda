@@ -8420,6 +8420,10 @@ class MyProcessor: public Processor {
       abort(t);
     }
 
+    expect(t, TargetClassArrayElementSize == ClassArrayElementSize);
+    expect(t, TargetClassFixedSize == ClassFixedSize);
+    expect(t, TargetClassVtable == ClassVtable);
+
 #endif
 
     t->init();
@@ -8468,6 +8472,7 @@ class MyProcessor: public Processor {
             uint16_t fixedSize,
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
+            GcClass* arrayElementClass,
             object objectMask,
             object name,
             object sourceFile,
@@ -8476,8 +8481,8 @@ class MyProcessor: public Processor {
             object virtualTable,
             object fieldTable,
             object methodTable,
+            GcClassAddendum* addendum,
             object staticTable,
-            object addendum,
             object loader,
             unsigned vtableLength)
   {
@@ -8487,6 +8492,7 @@ class MyProcessor: public Processor {
                          fixedSize,
                          arrayElementSize,
                          arrayDimensions,
+                         arrayElementClass,
                          0,
                          cast<GcIntArray>(t, objectMask),
                          cast<GcByteArray>(t, name),
@@ -8496,8 +8502,8 @@ class MyProcessor: public Processor {
                          virtualTable,
                          fieldTable,
                          methodTable,
-                         reinterpret_cast<GcClassAddendum*>(staticTable), // DANGER DANGER DANGER!!!!!!!!!
                          addendum,
+                         staticTable,
                          cast<GcClassLoader>(t, loader),
                          0,
                          vtableLength);

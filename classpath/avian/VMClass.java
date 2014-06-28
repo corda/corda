@@ -16,6 +16,7 @@ public class VMClass {
   public short fixedSize;
   public byte arrayElementSize;
   public byte arrayDimensions;
+  public VMClass arrayElementClass;
   public int runtimeDataIndex;
   public int[] objectMask;
   public byte[] name;
@@ -35,7 +36,7 @@ public class VMClass {
    */
   public VMMethod[] methodTable;
   public ClassAddendum addendum;
-  public Object staticTable;
+  public Singleton staticTable;
   public ClassLoader loader;
   public byte[] source;
 }

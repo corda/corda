@@ -36,6 +36,7 @@ class GcByteArray;
 class GcCode;
 class GcClass;
 class GcMethod;
+class GcClassAddendum;
 
 class Processor {
  public:
@@ -88,6 +89,7 @@ class Processor {
             uint16_t fixedSize,
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
+            GcClass* arrayElementClass,
             object objectMask,
             object name,
             object sourceFile,
@@ -96,7 +98,7 @@ class Processor {
             object virtualTable,
             object fieldTable,
             object methodTable,
-            object addendum,
+            GcClassAddendum* addendum,
             object staticTable,
             object loader,
             unsigned vtableLength) = 0;

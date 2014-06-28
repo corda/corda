@@ -559,7 +559,7 @@ invokeNativeSlow(Thread* t, GcMethod* method, void* function)
   RUNTIME_ARRAY_BODY(args)[argOffset++] = reinterpret_cast<uintptr_t>(t);
   RUNTIME_ARRAY_BODY(types)[typeOffset++] = POINTER_TYPE;
 
-  object jclass = 0;
+  GcJclass* jclass = 0;
   PROTECT(t, jclass);
 
   unsigned sp;
@@ -2114,9 +2114,9 @@ interpret3(Thread* t, const int base)
         GcClass* class_ = resolveClassInPool
           (t, frameMethod(t, frame), index - 1);
 
-        pushObject(t, getJClass(t, class_));
+        pushObject(t, reinterpret_cast<object>(getJClass(t, class_)));
       } else if (objectClass(t, v) == type(t, GcClass::Type)) {
-        pushObject(t, getJClass(t, cast<GcClass>(t, v)));
+        pushObject(t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, v))));
       } else {
         pushObject(t, v);
       }
@@ -3010,6 +3010,7 @@ class MyProcessor: public Processor {
             uint16_t fixedSize,
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
+            GcClass* arrayElementClass,
             object objectMask,
             object name,
             object sourceFile,
@@ -3018,7 +3019,7 @@ class MyProcessor: public Processor {
             object virtualTable,
             object fieldTable,
             object methodTable,
-            object addendum,
+            GcClassAddendum* addendum,
             object staticTable,
             object loader,
             unsigned vtableLength UNUSED)
@@ -3029,6 +3030,7 @@ class MyProcessor: public Processor {
                          fixedSize,
                          arrayElementSize,
                          arrayDimensions,
+                         arrayElementClass,
                          0,
                          cast<GcIntArray>(t, objectMask),
                          cast<GcByteArray>(t, name),
@@ -3038,7 +3040,7 @@ class MyProcessor: public Processor {
                          virtualTable,
                          fieldTable,
                          methodTable,
-                         cast<GcClassAddendum>(t, addendum),
+                         addendum,
                          staticTable,
                          cast<GcClassLoader>(t, loader),
                          0,

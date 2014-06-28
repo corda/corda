@@ -2510,6 +2510,7 @@ updateBootstrapClass(Thread* t, GcClass* bootstrapClass, GcClass* class_)
   bootstrapClass->vmFlags() |= class_->vmFlags();
   bootstrapClass->flags() |= class_->flags();
 
+  set(t, reinterpret_cast<object>(bootstrapClass), ClassArrayElementClass, reinterpret_cast<object>(class_->arrayElementClass()));
   set(t, reinterpret_cast<object>(bootstrapClass), ClassSuper, reinterpret_cast<object>(class_->super()));
   set(t, reinterpret_cast<object>(bootstrapClass), ClassInterfaceTable, reinterpret_cast<object>(class_->interfaceTable()));
   set(t, reinterpret_cast<object>(bootstrapClass), ClassVirtualTable, reinterpret_cast<object>(class_->virtualTable()));
@@ -2548,6 +2549,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      2 * BytesPerWord,
      BytesPerWord,
      dimensions,
+     cast<GcClass>(t, elementClass),
      reinterpret_cast<object>(type(t, GcArray::Type)->objectMask()),
      spec,
      0,
@@ -2557,7 +2559,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      0,
      0,
      0,
-     elementClass,
+     0,
      loader,
      arrayLength(t, vtable));
 
@@ -2742,7 +2744,7 @@ bootClass(Thread* t, Gc::Type type, int superType, uint32_t objectMask,
 
   GcClass* class_ = t->m->processor->makeClass
     (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
-     arrayElementSize ? 1 : 0, mask, 0, 0, reinterpret_cast<object>(super), 0, 0, 0, 0, 0, 0,
+     arrayElementSize ? 1 : 0, 0, mask, 0, 0, reinterpret_cast<object>(super), 0, 0, 0, 0, 0, 0,
      root(t, Machine::BootLoader), vtableLength);
 
   setType(t, type, class_);
@@ -2876,21 +2878,21 @@ boot(Thread* t)
   type(t, GcJvoid::Type)->vmFlags()
     |= PrimitiveFlag;
 
-  set(t, reinterpret_cast<object>(type(t, GcBooleanArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcBooleanArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJboolean::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcByteArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcByteArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJbyte::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcCharArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcCharArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJchar::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcShortArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcShortArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJshort::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcIntArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcIntArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJint::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcLongArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcLongArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJlong::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcFloatArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcFloatArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJfloat::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcDoubleArray::Type)), ClassStaticTable,
+  set(t, reinterpret_cast<object>(type(t, GcDoubleArray::Type)), ClassArrayElementClass,
       reinterpret_cast<object>(type(t, GcJdouble::Type)));
 
   { GcHashMap* map = makeHashMap(t, 0, 0);
@@ -4114,7 +4116,7 @@ isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
   } else if (a->arrayDimensions()) {
     if (b->arrayDimensions()) {
       return isAssignableFrom
-        (t, cast<GcClass>(t, a->staticTable()), cast<GcClass>(t, b->staticTable()));
+        (t, a->arrayElementClass(), b->arrayElementClass());
     }
   } else if ((a->vmFlags() & PrimitiveFlag)
              == (b->vmFlags() & PrimitiveFlag))
@@ -4275,6 +4277,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
                             0, // fixed size
                             0, // array size
                             0, // array dimensions
+                            0, // array element class
                             0, // runtime data index
                             0, // object mask
                             cast<GcByteArray>(t, referenceName(t, singletonObject(t, pool, name - 1))),
@@ -4327,6 +4330,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
      class_->fixedSize(),
      class_->arrayElementSize(),
      class_->arrayDimensions(),
+     class_->arrayElementClass(),
      reinterpret_cast<object>(class_->objectMask()),
      reinterpret_cast<object>(class_->name()),
      reinterpret_cast<object>(class_->sourceFile()),
@@ -4335,7 +4339,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
      reinterpret_cast<object>(class_->virtualTable()),
      reinterpret_cast<object>(class_->fieldTable()),
      reinterpret_cast<object>(class_->methodTable()),
-     reinterpret_cast<object>(class_->addendum()),
+     class_->addendum(),
      reinterpret_cast<object>(class_->staticTable()),
      reinterpret_cast<object>(class_->loader()),
      vtableLength);

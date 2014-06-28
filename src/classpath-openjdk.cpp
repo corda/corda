@@ -4154,7 +4154,7 @@ jvmGetComponentType(Thread* t, uintptr_t* arguments)
     } else {
       return reinterpret_cast<uintptr_t>
         (makeLocalReference
-         (t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, classStaticTable(t, jclassVmClass(t, *c)))))));
+         (t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, classArrayElementClass(t, jclassVmClass(t, *c)))))));
     }
   } else {
     return 0;

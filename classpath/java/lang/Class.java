@@ -171,8 +171,8 @@ public final class Class <T> implements Type, AnnotatedElement {
         return SystemClassLoader.getClass(Classes.primitiveClass('D'));
       }
 
-      if (vmClass.staticTable == null) throw new AssertionError();
-      return SystemClassLoader.getClass((VMClass) vmClass.staticTable);
+      if (vmClass.arrayElementClass == null) throw new AssertionError();
+      return SystemClassLoader.getClass((VMClass) vmClass.arrayElementClass);
     } else {
       return null;
     }
