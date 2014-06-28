@@ -35,8 +35,8 @@ const unsigned FrameFootprint = 4;
 class Thread: public vm::Thread {
  public:
 
-  Thread(Machine* m, object javaThread, vm::Thread* parent):
-    vm::Thread(m, javaThread, parent),
+  Thread(Machine* m, GcThread* javaThread, vm::Thread* parent):
+    vm::Thread(m, reinterpret_cast<object>(javaThread), parent),
     ip(0),
     sp(0),
     frame(-1),
@@ -2965,7 +2965,7 @@ class MyProcessor: public Processor {
   }
 
   virtual vm::Thread*
-  makeThread(Machine* m, object javaThread, vm::Thread* parent)
+  makeThread(Machine* m, GcThread* javaThread, vm::Thread* parent)
   {
     Thread* t = new (m->heap->allocate(sizeof(Thread) + m->stackSizeInBytes))
       Thread(m, javaThread, parent);
@@ -2983,7 +2983,7 @@ class MyProcessor: public Processor {
              uint16_t offset,
              GcByteArray* name,
              GcByteArray* spec,
-             object addendum,
+             GcMethodAddendum* addendum,
              GcClass* class_,
              GcCode* code)
   {
@@ -2998,7 +2998,7 @@ class MyProcessor: public Processor {
                           0,
                           name,
                           spec,
-                          cast<GcMethodAddendum>(t, addendum),
+                          addendum,
                           class_,
                           code);
   }
@@ -3011,17 +3011,17 @@ class MyProcessor: public Processor {
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
             GcClass* arrayElementClass,
-            object objectMask,
-            object name,
-            object sourceFile,
-            object super,
+            GcIntArray* objectMask,
+            GcByteArray* name,
+            GcByteArray* sourceFile,
+            GcClass* super,
             object interfaceTable,
             object virtualTable,
             object fieldTable,
             object methodTable,
             GcClassAddendum* addendum,
             GcSingleton* staticTable,
-            object loader,
+            GcClassLoader* loader,
             unsigned vtableLength UNUSED)
   {
     return vm::makeClass(t,
@@ -3032,17 +3032,17 @@ class MyProcessor: public Processor {
                          arrayDimensions,
                          arrayElementClass,
                          0,
-                         cast<GcIntArray>(t, objectMask),
-                         cast<GcByteArray>(t, name),
-                         cast<GcByteArray>(t, sourceFile),
-                         cast<GcClass>(t, super),
+                         objectMask,
+                         name,
+                         sourceFile,
+                         super,
                          interfaceTable,
                          virtualTable,
                          fieldTable,
                          methodTable,
                          addendum,
                          staticTable,
-                         cast<GcClassLoader>(t, loader),
+                         loader,
                          0,
                          0);
   }
@@ -3201,7 +3201,7 @@ class MyProcessor: public Processor {
   }
 
   virtual object
-  invokeList(vm::Thread* vmt, object loader, const char* className,
+  invokeList(vm::Thread* vmt, GcClassLoader* loader, const char* className,
              const char* methodName, const char* methodSpec, object this_,
              va_list arguments)
   {
@@ -3219,7 +3219,7 @@ class MyProcessor: public Processor {
     pushArguments(t, this_, methodSpec, false, arguments);
 
     GcMethod* method = resolveMethod
-      (t, loader, className, methodName, methodSpec);
+      (t, reinterpret_cast<object>(loader), className, methodName, methodSpec);
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
@@ -3240,7 +3240,7 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void compileMethod(vm::Thread*, Zone*, object*, object*,
+  virtual void compileMethod(vm::Thread*, Zone*, GcTriple**, GcTriple**,
                              avian::codegen::DelayedPromise**, GcMethod*, OffsetResolver*)
   {
     abort(s);
@@ -3270,11 +3270,11 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void feedResultToContinuation(vm::Thread*, object, object){
+  virtual void feedResultToContinuation(vm::Thread*, GcContinuation*, object){
     abort(s);
   }
 
-  virtual void feedExceptionToContinuation(vm::Thread*, object, object) {
+  virtual void feedExceptionToContinuation(vm::Thread*, GcContinuation*, GcThrowable*) {
     abort(s);
   }
 

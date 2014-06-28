@@ -36,8 +36,16 @@ class GcByteArray;
 class GcCode;
 class GcClass;
 class GcMethod;
+class GcMethodAddendum;
+class GcIntArray;
+class GcContinuation;
+class GcThrowable;
+class GcThread;
 class GcClassAddendum;
+class GcClassLoader;
+class GcArray;
 class GcSingleton;
+class GcTriple;
 
 class Processor {
  public:
@@ -67,7 +75,7 @@ class Processor {
   };
 
   virtual Thread*
-  makeThread(Machine* m, object javaThread, Thread* parent) = 0;
+  makeThread(Machine* m, GcThread* javaThread, Thread* parent) = 0;
 
   virtual GcMethod*
   makeMethod(Thread* t,
@@ -79,7 +87,7 @@ class Processor {
              uint16_t offset,
              GcByteArray* name,
              GcByteArray* spec,
-             object addendum,
+             GcMethodAddendum* addendum,
              GcClass* class_,
              GcCode* code) = 0;
 
@@ -91,17 +99,17 @@ class Processor {
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
             GcClass* arrayElementClass,
-            object objectMask,
-            object name,
-            object sourceFile,
-            object super,
+            GcIntArray* objectMask,
+            GcByteArray* name,
+            GcByteArray* sourceFile,
+            GcClass* super,
             object interfaceTable,
             object virtualTable,
             object fieldTable,
             object methodTable,
             GcClassAddendum* addendum,
             GcSingleton* staticTable,
-            object loader,
+            GcClassLoader* loader,
             unsigned vtableLength) = 0;
 
   virtual void
@@ -140,7 +148,7 @@ class Processor {
              va_list arguments) = 0;
 
   virtual object
-  invokeList(Thread* t, object loader, const char* className,
+  invokeList(Thread* t, GcClassLoader* loader, const char* className,
              const char* methodName, const char* methodSpec,
              object this_, va_list arguments) = 0;
 
@@ -160,7 +168,7 @@ class Processor {
   addCompilationHandler(CompilationHandler* handler) = 0;
 
   virtual void
-  compileMethod(Thread* t, Zone* zone, object* constants, object* calls,
+  compileMethod(Thread* t, Zone* zone, GcTriple** constants, GcTriple** calls,
                 avian::codegen::DelayedPromise** addresses, GcMethod* method,
                 OffsetResolver* resolver) = 0;
 
@@ -183,11 +191,11 @@ class Processor {
   dynamicWind(Thread* t, object before, object thunk, object after) = 0;
 
   virtual void
-  feedResultToContinuation(Thread* t, object continuation, object result) = 0;
+  feedResultToContinuation(Thread* t, GcContinuation* continuation, object result) = 0;
 
   virtual void
-  feedExceptionToContinuation(Thread* t, object continuation,
-                              object exception) = 0;
+  feedExceptionToContinuation(Thread* t, GcContinuation* continuation,
+                              GcThrowable* exception) = 0;
 
   virtual void
   walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
@@ -207,7 +215,7 @@ class Processor {
   }
 
   object
-  invoke(Thread* t, object loader, const char* className,
+  invoke(Thread* t, GcClassLoader* loader, const char* className,
          const char* methodName, const char* methodSpec, object this_, ...)
   {
     va_list a;

@@ -728,7 +728,7 @@ class MyClasspath : public Classpath {
       t->m->processor->invoke(t, constructor, instance);
 
       t->m->processor->invoke
-        (t, root(t, Machine::BootLoader), "java/lang/System",
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/System",
          "setProperties", "(Ljava/util/Properties;)V", 0, instance);
     }
 
@@ -762,11 +762,11 @@ class MyClasspath : public Classpath {
     }
 
     t->m->processor->invoke
-      (t, root(t, Machine::BootLoader), "java/lang/System",
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/System",
        "initializeSystemClass", "()V", 0);
 
     t->m->processor->invoke
-      (t, root(t, Machine::BootLoader), "sun/misc/Launcher",
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "sun/misc/Launcher",
        "getLauncher", "()Lsun/misc/Launcher;", 0);
 
     set(t, t->javaThread, ThreadContextClassLoader,
@@ -3268,7 +3268,7 @@ jvmStartThread(Thread* t, uintptr_t* arguments)
 {
   jobject thread = reinterpret_cast<jobject>(arguments[0]);
 
-  return startThread(t, *thread) != 0;
+  return startThread(t, cast<GcThread>(t, *thread)) != 0;
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

@@ -172,7 +172,7 @@ makeField(Thread* t, GcJclass* c, unsigned index)
   return reinterpret_cast<object>(makeJfield(t, 0, c, type, 0, 0, name, index));
 }
 
-void initVmThread(Thread* t, object thread, unsigned offset)
+void initVmThread(Thread* t, GcThread* thread, unsigned offset)
 {
   PROTECT(t, thread);
 
@@ -189,16 +189,16 @@ void initVmThread(Thread* t, object thread, unsigned offset)
 
     t->m->processor->invoke(t, constructor, instance, thread);
 
-    set(t, thread, offset, instance);
+    set(t, reinterpret_cast<object>(thread), offset, instance);
   }
 
-  if (threadGroup(t, thread) == 0) {
-    set(t, thread, ThreadGroup, threadGroup(t, t->javaThread));
-    expect(t, threadGroup(t, thread));
+  if (thread->group() == 0) {
+    set(t, reinterpret_cast<object>(thread), ThreadGroup, threadGroup(t, t->javaThread));
+    expect(t, thread->group());
   }
 }
 
-void initVmThread(Thread* t, object thread)
+void initVmThread(Thread* t, GcThread* thread)
 {
   initVmThread(
       t,
@@ -294,7 +294,7 @@ class MyClasspath : public Classpath {
       (t, root(t, Machine::BootLoader),
        reinterpret_cast<object>(type(t, GcThread::Type)->name()), false);
     
-    object thread = makeNew(t, type(t, GcThread::Type));
+    GcThread* thread = cast<GcThread>(t, makeNew(t, type(t, GcThread::Type)));
     PROTECT(t, thread);
 
     GcMethod* constructor = resolveMethod
@@ -302,13 +302,13 @@ class MyClasspath : public Classpath {
        "(Ljava/lang/ThreadGroup;Ljava/lang/String;IZ)V");
 
     t->m->processor->invoke
-      (t, constructor, thread, group, 0, NormalPriority, false);
+      (t, constructor, reinterpret_cast<object>(thread), group, 0, NormalPriority, false);
 
-    set(t, thread, ThreadContextClassLoader, root(t, Machine::AppLoader));
+    set(t, reinterpret_cast<object>(thread), ThreadContextClassLoader, root(t, Machine::AppLoader));
 
     initVmThread(t, thread);
 
-    return thread;
+    return reinterpret_cast<object>(thread);
   }
 
   virtual object
@@ -393,7 +393,7 @@ class MyClasspath : public Classpath {
       vm::release(t, t->javaThread);
     });
 
-    initVmThread(t, t->javaThread, offset);
+    initVmThread(t, cast<GcThread>(t, t->javaThread), offset);
 
     GcMethod* method = resolveMethod
       (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
@@ -1468,7 +1468,7 @@ extern "C" AVIAN_EXPORT void JNICALL
 Avian_java_lang_VMThread_create
 (Thread* t, object, uintptr_t* arguments)
 {
-  object thread = reinterpret_cast<object>(arguments[0]);
+  GcThread* thread = cast<GcThread>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, thread);
 
   local::initVmThread(t, thread);

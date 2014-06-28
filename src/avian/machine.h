@@ -2081,7 +2081,7 @@ removeThread(Thread* t, Thread* p)
 }
 
 inline Thread*
-startThread(Thread* t, object javaThread)
+startThread(Thread* t, GcThread* javaThread)
 {
   { PROTECT(t, javaThread);
 

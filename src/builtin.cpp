@@ -447,7 +447,7 @@ Avian_avian_Continuations_00024Continuation_handleResult
 (Thread* t, object, uintptr_t* arguments)
 {
   t->m->processor->feedResultToContinuation
-    (t, reinterpret_cast<object>(arguments[0]),
+    (t, cast<GcContinuation>(t, reinterpret_cast<object>(arguments[0])),
      reinterpret_cast<object>(arguments[1]));
 
   abort(t);
@@ -458,8 +458,8 @@ Avian_avian_Continuations_00024Continuation_handleException
 (Thread* t, object, uintptr_t* arguments)
 {
   t->m->processor->feedExceptionToContinuation
-    (t, reinterpret_cast<object>(arguments[0]),
-     reinterpret_cast<object>(arguments[1]));
+    (t, cast<GcContinuation>(t, reinterpret_cast<object>(arguments[0])),
+     cast<GcThrowable>(t, reinterpret_cast<object>(arguments[1])));
 
   abort(t);
 }

@@ -2184,7 +2184,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
          0, // offset
          cast<GcByteArray>(t, singletonObject(t, pool, name - 1)),
          cast<GcByteArray>(t, singletonObject(t, pool, spec - 1)),
-         addendum,
+         cast<GcMethodAddendum>(t, addendum),
          class_,
          cast<GcCode>(t, code));
 
@@ -2550,17 +2550,17 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      BytesPerWord,
      dimensions,
      cast<GcClass>(t, elementClass),
-     reinterpret_cast<object>(type(t, GcArray::Type)->objectMask()),
-     spec,
+     type(t, GcArray::Type)->objectMask(),
+     cast<GcByteArray>(t, spec),
      0,
-     reinterpret_cast<object>(type(t, GcJobject::Type)),
+     type(t, GcJobject::Type),
      root(t, Machine::ArrayInterfaceTable),
      vtable,
      0,
      0,
      0,
      0,
-     loader,
+     cast<GcClassLoader>(t, loader),
      arrayLength(t, vtable));
 
   PROTECT(t, c);
@@ -2744,8 +2744,8 @@ bootClass(Thread* t, Gc::Type type, int superType, uint32_t objectMask,
 
   GcClass* class_ = t->m->processor->makeClass
     (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
-     arrayElementSize ? 1 : 0, 0, mask, 0, 0, reinterpret_cast<object>(super), 0, 0, 0, 0, 0, 0,
-     root(t, Machine::BootLoader), vtableLength);
+     arrayElementSize ? 1 : 0, 0, cast<GcIntArray>(t, mask), 0, 0, super, 0, 0, 0, 0, 0, 0,
+     cast<GcClassLoader>(t, root(t, Machine::BootLoader)), vtableLength);
 
   setType(t, type, class_);
 }
@@ -3088,7 +3088,7 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
       and t->state != Thread::ExitState)
   {
     m->finalizeThread = m->processor->makeThread
-      (m, root(t, Machine::FinalizerThread), m->rootThread);
+      (m, cast<GcThread>(t, root(t, Machine::FinalizerThread)), m->rootThread);
     
     addThread(t, m->finalizeThread);
 
@@ -3509,7 +3509,7 @@ shutDown(Thread* t)
   object h = hooks;
   PROTECT(t, h);
   for (; h; h = pairSecond(t, h)) {
-    startThread(t, pairFirst(t, h));
+    startThread(t, cast<GcThread>(t, pairFirst(t, h)));
   }
 
   // wait for hooks to exit
@@ -4331,17 +4331,17 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
      class_->arrayElementSize(),
      class_->arrayDimensions(),
      class_->arrayElementClass(),
-     reinterpret_cast<object>(class_->objectMask()),
-     reinterpret_cast<object>(class_->name()),
-     reinterpret_cast<object>(class_->sourceFile()),
-     reinterpret_cast<object>(class_->super()),
-     reinterpret_cast<object>(class_->interfaceTable()),
-     reinterpret_cast<object>(class_->virtualTable()),
-     reinterpret_cast<object>(class_->fieldTable()),
-     reinterpret_cast<object>(class_->methodTable()),
+     class_->objectMask(),
+     class_->name(),
+     class_->sourceFile(),
+     class_->super(),
+     class_->interfaceTable(),
+     class_->virtualTable(),
+     class_->fieldTable(),
+     class_->methodTable(),
      class_->addendum(),
      class_->staticTable(),
-     reinterpret_cast<object>(class_->loader()),
+     class_->loader(),
      vtableLength);
 
   PROTECT(t, real);

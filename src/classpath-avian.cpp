@@ -661,7 +661,7 @@ Avian_java_lang_Thread_doStart
 (Thread* t, object, uintptr_t* arguments)
 {
   return reinterpret_cast<int64_t>
-    (startThread(t, reinterpret_cast<object>(*arguments)));
+    (startThread(t, cast<GcThread>(t, reinterpret_cast<object>(*arguments))));
 }
 
 extern "C" AVIAN_EXPORT void JNICALL

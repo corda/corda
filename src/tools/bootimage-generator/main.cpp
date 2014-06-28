@@ -631,7 +631,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               PROTECT(t, method);
 
               t->m->processor->compileMethod
-                (t, zone, &constants, &calls, &addresses, method, &resolver);
+                (t, zone, reinterpret_cast<GcTriple**>(&constants), reinterpret_cast<GcTriple**>(&calls), &addresses, method, &resolver);
 
               if (method->code()) {
                 methods = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(method), methods));

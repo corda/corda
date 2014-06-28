@@ -245,9 +245,9 @@ class MyThread: public Thread {
     t->transition = 0;
   }
 
-  MyThread(Machine* m, object javaThread, MyThread* parent,
+  MyThread(Machine* m, GcThread* javaThread, MyThread* parent,
            bool useNativeFeatures):
-    Thread(m, javaThread, parent),
+    Thread(m, reinterpret_cast<object>(javaThread), parent),
     ip(0),
     stack(0),
     newStack(0),
@@ -8285,7 +8285,7 @@ class MyProcessor: public Processor {
   }
 
   virtual Thread*
-  makeThread(Machine* m, object javaThread, Thread* parent)
+  makeThread(Machine* m, GcThread* javaThread, Thread* parent)
   {
     MyThread* t = new (m->heap->allocate(sizeof(MyThread)))
       MyThread(m, javaThread, static_cast<MyThread*>(parent),
@@ -8377,7 +8377,7 @@ class MyProcessor: public Processor {
              uint16_t offset,
              GcByteArray* name,
              GcByteArray* spec,
-             object addendum,
+             GcMethodAddendum* addendum,
              GcClass* class_,
              GcCode* code)
   {
@@ -8396,7 +8396,7 @@ class MyProcessor: public Processor {
                           0,
                           name,
                           spec,
-                          cast<GcMethodAddendum>(t, addendum),
+                          addendum,
                           class_,
                           code);
   }
@@ -8409,17 +8409,17 @@ class MyProcessor: public Processor {
             uint8_t arrayElementSize,
             uint8_t arrayDimensions,
             GcClass* arrayElementClass,
-            object objectMask,
-            object name,
-            object sourceFile,
-            object super,
+            GcIntArray* objectMask,
+            GcByteArray* name,
+            GcByteArray* sourceFile,
+            GcClass* super,
             object interfaceTable,
             object virtualTable,
             object fieldTable,
             object methodTable,
             GcClassAddendum* addendum,
             GcSingleton* staticTable,
-            object loader,
+            GcClassLoader* loader,
             unsigned vtableLength)
   {
     return vm::makeClass(t,
@@ -8430,17 +8430,17 @@ class MyProcessor: public Processor {
                          arrayDimensions,
                          arrayElementClass,
                          0,
-                         cast<GcIntArray>(t, objectMask),
-                         cast<GcByteArray>(t, name),
-                         cast<GcByteArray>(t, sourceFile),
-                         cast<GcClass>(t, super),
+                         objectMask,
+                         name,
+                         sourceFile,
+                         super,
                          interfaceTable,
                          virtualTable,
                          fieldTable,
                          methodTable,
                          addendum,
                          staticTable,
-                         cast<GcClassLoader>(t, loader),
+                         loader,
                          0,
                          vtableLength);
   }
@@ -8647,7 +8647,7 @@ class MyProcessor: public Processor {
   }
 
   virtual object
-  invokeList(Thread* t, object loader, const char* className,
+  invokeList(Thread* t, GcClassLoader* loader, const char* className,
              const char* methodName, const char* methodSpec,
              object this_, va_list arguments)
   {
@@ -8664,7 +8664,7 @@ class MyProcessor: public Processor {
        this_, methodSpec, false, arguments);
 
     GcMethod* method = resolveMethod
-      (t, loader, className, methodName, methodSpec);
+      (t, reinterpret_cast<object>(loader), className, methodName, methodSpec);
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
@@ -8805,17 +8805,17 @@ class MyProcessor: public Processor {
         CompilationHandlerList(compilationHandlers, handler);
   }
 
-  virtual void compileMethod(Thread* vmt, Zone* zone, object* constants,
-                             object* calls, avian::codegen::DelayedPromise** addresses,
+  virtual void compileMethod(Thread* vmt, Zone* zone, GcTriple** constants,
+                             GcTriple** calls, avian::codegen::DelayedPromise** addresses,
                              GcMethod* method, OffsetResolver* resolver)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
-    BootContext bootContext(t, *constants, *calls, *addresses, zone, resolver);
+    BootContext bootContext(t, reinterpret_cast<object>(*constants), reinterpret_cast<object>(*calls), *addresses, zone, resolver);
 
     compile(t, &codeAllocator, &bootContext, method);
 
-    *constants = bootContext.constants;
-    *calls = bootContext.calls;
+    *constants = cast<GcTriple>(t, bootContext.constants);
+    *calls = cast<GcTriple>(t, bootContext.calls);
     *addresses = bootContext.addresses;
   }
 
@@ -8923,21 +8923,21 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual void feedResultToContinuation(Thread* t, object continuation,
+  virtual void feedResultToContinuation(Thread* t, GcContinuation* continuation,
                                         object result)
   {
     if (Continuations) {
-      callContinuation(static_cast<MyThread*>(t), continuation, result, 0);
+      callContinuation(static_cast<MyThread*>(t), reinterpret_cast<object>(continuation), result, 0);
     } else {
       abort(t);
     }
   }
 
-  virtual void feedExceptionToContinuation(Thread* t, object continuation,
-                                           object exception)
+  virtual void feedExceptionToContinuation(Thread* t, GcContinuation* continuation,
+                                           GcThrowable* exception)
   {
     if (Continuations) {
-      callContinuation(static_cast<MyThread*>(t), continuation, 0, exception);
+      callContinuation(static_cast<MyThread*>(t), reinterpret_cast<object>(continuation), 0, reinterpret_cast<object>(exception));
     } else {
       abort(t);
     }
