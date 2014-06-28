@@ -365,15 +365,15 @@ void
 setRoot(Thread* t, Root root, object value);
 
 intptr_t
-methodCompiled(Thread* t, GcMethod* method)
+methodCompiled(Thread* t UNUSED, GcMethod* method)
 {
-  return codeCompiled(t, method->code());
+  return method->code()->compiled();
 }
 
 unsigned
-methodCompiledSize(Thread* t, GcMethod* method)
+methodCompiledSize(Thread* t UNUSED, GcMethod* method)
 {
-  return codeCompiledSize(t, method->code());
+  return method->code()->compiledSize();
 }
 
 intptr_t
@@ -417,9 +417,9 @@ methodForIp(MyThread* t, void* ip)
 }
 
 unsigned
-localSize(MyThread* t, GcMethod* method)
+localSize(MyThread* t UNUSED, GcMethod* method)
 {
-  unsigned size = codeMaxLocals(t, method->code());
+  unsigned size = method->code()->maxLocals();
   if ((method->flags() & (ACC_SYNCHRONIZED | ACC_STATIC))
       == ACC_SYNCHRONIZED)
   {
@@ -434,7 +434,7 @@ alignedFrameSize(MyThread* t, GcMethod* method)
   return t->arch->alignFrameSize
     (localSize(t, method)
      - method->parameterFootprint()
-     + codeMaxStack(t, method->code())
+     + method->code()->maxStack()
      + t->arch->frameFootprint(MaxNativeCallFootprint));
 }
 
@@ -442,7 +442,7 @@ void
 nextFrame(MyThread* t, void** ip, void** sp, GcMethod* method, GcMethod* target,
           bool mostRecent)
 {
-  object code = method->code();
+  object code = reinterpret_cast<object>(method->code());
   intptr_t start = codeCompiled(t, code);
   void* link;
   bool methodIsMostRecent;
@@ -862,7 +862,7 @@ enum Event {
 unsigned
 frameMapSizeInBits(MyThread* t, GcMethod* method)
 {
-  return localSize(t, method) + codeMaxStack(t, method->code());
+  return localSize(t, method) + method->code()->maxStack();
 }
 
 unsigned
@@ -1141,11 +1141,11 @@ class Context {
         traceLog(0),
         visitTable(
             Slice<uint16_t>::allocAndSet(&zone,
-                                         codeLength(t, method->code()),
+                                         method->code()->length(),
                                          0)),
         rootTable(
             Slice<uintptr_t>::allocAndSet(&zone,
-                                          codeLength(t, method->code())
+                                          method->code()->length()
                                           * frameMapSizeInWords(t, method),
                                           ~(uintptr_t)0)),
         executableAllocator(0),
@@ -1355,7 +1355,7 @@ class Frame {
   {
     memset(stackMap,
            0,
-           codeMaxStack(t, context->method->code()) * sizeof(ir::Type));
+           context->method->code()->maxStack() * sizeof(ir::Type));
   }
 
   Frame(Frame* f, ir::Type* stackMap)
@@ -1370,7 +1370,7 @@ class Frame {
   {
     memcpy(stackMap,
            f->stackMap,
-           codeMaxStack(t, context->method->code()) * sizeof(ir::Type));
+           context->method->code()->maxStack() * sizeof(ir::Type));
 
     if (level > 1) {
       context->eventLog.append(PushContextEvent);
@@ -1423,7 +1423,7 @@ class Frame {
   }
 
   unsigned stackSize() {
-    return codeMaxStack(t, context->method->code());
+    return context->method->code()->maxStack();
   }
 
   unsigned frameSize() {
@@ -1919,10 +1919,10 @@ class Frame {
     Subroutine* subroutine = new (&context->zone)
         Subroutine(context->subroutineCount++,
                    returnAddress,
-                   codeLength(t, context->method->code()),
+                   context->method->code()->length(),
                    this->subroutine);
 
-    context->extendLogicalCode(codeLength(t, context->method->code()));
+    context->extendLogicalCode(context->method->code()->length());
 
     this->subroutine = subroutine;
   }
@@ -1958,9 +1958,9 @@ class Frame {
 };
 
 unsigned
-savedTargetIndex(MyThread* t, GcMethod* method)
+savedTargetIndex(MyThread* t UNUSED, GcMethod* method)
 {
-  return codeMaxLocals(t, method->code());
+  return method->code()->maxLocals();
 }
 
 object
@@ -1973,7 +1973,7 @@ void*
 findExceptionHandler(Thread* t, GcMethod* method, void* ip)
 {
   if (t->exception) {
-    object table = codeExceptionHandlerTable(t, method->code());
+    object table = method->code()->exceptionHandlerTable();
     if (table) {
       object index = arrayBody(t, table, 0);
 
@@ -3833,7 +3833,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   Frame* frame = initialFrame;
   avian::codegen::Compiler* c = frame->c;
   Context* context = frame->context;
-  unsigned stackSize = codeMaxStack(t, context->method->code());
+  unsigned stackSize = context->method->code()->maxStack();
   Stack stack(t);
   unsigned ip = initialIp;
   unsigned newIp;
@@ -3846,7 +3846,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   frame = new (stack.push(sizeof(Frame))) Frame(frame, stackMap);
 
  loop:
-  object code = context->method->code();
+  object code = reinterpret_cast<object>(context->method->code());
   PROTECT(t, code);
 
   while (ip < codeLength(t, code)) {
@@ -4105,7 +4105,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4191,7 +4191,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4422,7 +4422,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4869,7 +4869,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4905,7 +4905,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ip += 2;
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4963,7 +4963,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -4998,7 +4998,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -5024,7 +5024,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -5522,7 +5522,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint8_t dimensions = codeBody(t, code, ip++);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -5562,7 +5562,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -5624,7 +5624,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, codePool(t, context->method->code()), index - 1);
+        (t, context->method->code()->pool(), index - 1);
 
       PROTECT(t, reference);
 
@@ -6178,10 +6178,9 @@ resolveIpForwards(Context* context, int start, int end)
 int
 resolveIpBackwards(Context* context, int start, int end)
 {
-  Thread* t = context->thread;
-  if (start >= static_cast<int>(codeLength(t, context->method->code())
+  if (start >= static_cast<int>(context->method->code()->length()
                                 * (context->subroutineCount + 1))) {
-    start = codeLength(t, context->method->code());
+    start = context->method->code()->length();
   } else {
     while (start >= end and context->visitTable[start] == 0) {
       -- start;
@@ -6251,8 +6250,7 @@ object translateExceptionHandlerTable(MyThread* t,
 {
   avian::codegen::Compiler* c = context->compiler;
 
-  object oldTable = codeExceptionHandlerTable
-    (t, context->method->code());
+  object oldTable = context->method->code()->exceptionHandlerTable();
 
   if (oldTable) {
     PROTECT(t, oldTable);
@@ -6269,7 +6267,7 @@ object translateExceptionHandlerTable(MyThread* t,
     unsigned ni = 0;
     for (unsigned subI = 0; subI <= context->subroutineCount; ++subI) {
       unsigned duplicatedBaseIp
-          = subI * codeLength(t, context->method->code());
+          = subI * context->method->code()->length();
 
       for (unsigned oi = 0; oi < length; ++oi) {
         uint64_t oldHandler = exceptionHandlerTableBody(t, oldTable, oi);
@@ -6283,7 +6281,7 @@ object translateExceptionHandlerTable(MyThread* t,
           assertT(
               t,
               handlerStart
-              < static_cast<int>(codeLength(t, context->method->code())
+              < static_cast<int>(context->method->code()->length()
                                  * (context->subroutineCount + 1)));
 
           int handlerEnd = resolveIpBackwards(
@@ -6294,15 +6292,14 @@ object translateExceptionHandlerTable(MyThread* t,
           assertT(t, handlerEnd >= 0);
           assertT(t,
                  handlerEnd <= static_cast<int>(
-                                   codeLength(t, context->method->code())
+                                   context->method->code()->length()
                                    * (context->subroutineCount + 1)));
 
           intArrayBody(t, newIndex, ni* 3) = c->machineIp(handlerStart)->value()
                                              - start;
 
           intArrayBody(t, newIndex, (ni* 3) + 1)
-              = (handlerEnd == static_cast<int>(codeLength(
-                                   t, context->method->code()))
+              = (handlerEnd == static_cast<int>(context->method->code()->length())
                      ? end
                      : c->machineIp(handlerEnd)->value()) - start;
 
@@ -6340,7 +6337,7 @@ object translateExceptionHandlerTable(MyThread* t,
 object
 translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = reinterpret_cast<object>(codeLineNumberTable(t, context->method->code()));
+  object oldTable = reinterpret_cast<object>(context->method->code()->lineNumberTable());
   if (oldTable) {
     PROTECT(t, oldTable);
 
@@ -6841,7 +6838,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     object newLineNumberTable = translateLineNumberTable
       (t, context, reinterpret_cast<intptr_t>(start));
 
-    object code = context->method->code();
+    object code = reinterpret_cast<object>(context->method->code());
 
     code = reinterpret_cast<object>(makeCode
       (t, 0, 0, newExceptionHandlerTable, cast<GcLineNumberTable>(t, newLineNumberTable),
@@ -6877,7 +6874,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     object map = makeSimpleFrameMapTable(
         t, context, start, RUNTIME_ARRAY_BODY(elements), index);
 
-    set(t, context->method->code(), CodeStackMap, map);
+    set(t, reinterpret_cast<object>(context->method->code()), CodeStackMap, map);
   }
 
   logCompile
@@ -6919,11 +6916,11 @@ compile(MyThread* t, Context* context)
 
   unsigned footprint = context->method->parameterFootprint();
   unsigned locals = localSize(t, context->method);
-  c->init(codeLength(t, context->method->code()), footprint, locals,
+  c->init(context->method->code()->length(), footprint, locals,
           alignedFrameSize(t, context->method));
 
   ir::Type* stackMap = (ir::Type*)malloc(
-      sizeof(ir::Type) * codeMaxStack(t, context->method->code()));
+      sizeof(ir::Type) * context->method->code()->maxStack());
   Frame frame(context, stackMap);
 
   unsigned index = context->method->parameterFootprint();
@@ -6977,7 +6974,7 @@ compile(MyThread* t, Context* context)
   context->dirtyRoots = false;
   unsigned eventIndex = calculateFrameMaps(t, context, 0, 0, 0);
 
-  object eht = codeExceptionHandlerTable(t, context->method->code());
+  object eht = context->method->code()->exceptionHandlerTable();
   if (eht) {
     PROTECT(t, eht);
 
@@ -6992,7 +6989,7 @@ compile(MyThread* t, Context* context)
 
       for (unsigned subI = 0; subI <= context->subroutineCount; ++subI) {
         unsigned duplicatedBaseIp
-            = subI * codeLength(t, context->method->code());
+            = subI * context->method->code()->length();
 
         for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
           uint64_t eh = exceptionHandlerTableBody(t, eht, i);
@@ -7010,7 +7007,7 @@ compile(MyThread* t, Context* context)
 
             ir::Type* stackMap = (ir::Type*)malloc(
                 sizeof(ir::Type)
-                * codeMaxStack(t, context->method->code()));
+                * context->method->code()->maxStack());
             Frame frame2(&frame, stackMap);
 
             unsigned end = duplicatedBaseIp + exceptionHandlerEnd(eh);
@@ -7024,7 +7021,7 @@ compile(MyThread* t, Context* context)
             context->eventLog.append2(end);
 
             for (unsigned i = 1;
-                 i < codeMaxStack(t, context->method->code());
+                 i < context->method->code()->maxStack();
                  ++i) {
               frame2.set(localSize(t, context->method) + i, ir::Type::i4());
             }
@@ -7389,7 +7386,7 @@ void
 findFrameMap(MyThread* t, void* stack UNUSED, GcMethod* method, int32_t offset,
              int32_t** map, unsigned* start)
 {
-  object table = reinterpret_cast<object>(codeStackMap(t, method->code()));
+  object table = reinterpret_cast<object>(method->code()->stackMap());
   findFrameMapInSimpleTable(t, method, table, offset, map, start);
 }
 
@@ -8401,7 +8398,7 @@ class MyProcessor: public Processor {
                           spec,
                           cast<GcMethodAddendum>(t, addendum),
                           class_,
-                          reinterpret_cast<object>(code));
+                          code);
   }
 
   virtual GcClass*
@@ -9420,7 +9417,7 @@ fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
           assertT(t, methodCompiled(t, method)
                  <= static_cast<int32_t>(image->codeSize));
 
-          codeCompiled(t, method->code())
+          method->code()->compiled()
             = methodCompiled(t, method) + reinterpret_cast<uintptr_t>(code);
 
           if (DebugCompile) {
@@ -9981,7 +9978,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   Context context(t, bootContext, clone);
   compile(t, &context);
 
-  { object ehTable = codeExceptionHandlerTable(t, clone->code());
+  { object ehTable = clone->code()->exceptionHandlerTable();
 
     if (ehTable) {
       PROTECT(t, ehTable);
@@ -10033,7 +10030,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
 
   storeStoreMemoryBarrier();
 
-  set(t, reinterpret_cast<object>(method), MethodCode, clone->code());
+  set(t, reinterpret_cast<object>(method), MethodCode, reinterpret_cast<object>(clone->code()));
 
   if (methodVirtual(t, method)) {
     classVtable(t, reinterpret_cast<object>(method->class_()), method->offset())

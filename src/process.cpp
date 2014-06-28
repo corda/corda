@@ -266,7 +266,7 @@ findLineNumber(Thread* t, GcMethod* method, unsigned ip)
   // about, so we back up first:
   -- ip;
 
-  object code = method->code();
+  object code = reinterpret_cast<object>(method->code());
   object lnt = reinterpret_cast<object>(codeLineNumberTable(t, code));
   if (lnt) {
     unsigned bottom = 0;

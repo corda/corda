@@ -330,7 +330,7 @@ pushFrame(Thread* t, GcMethod* method)
   t->ip = 0;
 
   if ((method->flags() & ACC_NATIVE) == 0) {
-    t->code = method->code();
+    t->code = reinterpret_cast<object>(method->code());
 
     locals = codeMaxLocals(t, t->code);
 
@@ -365,7 +365,7 @@ popFrame(Thread* t)
   t->sp = frameBase(t, t->frame);
   t->frame = frameNext(t, t->frame);
   if (t->frame >= 0) {
-    t->code = frameMethod(t, t->frame)->code();
+    t->code = reinterpret_cast<object>(frameMethod(t, t->frame)->code());
     t->ip = frameIp(t, t->frame);
   } else {
     t->code = 0;
@@ -411,9 +411,9 @@ checkStack(Thread* t, GcMethod* method)
 {
   if (UNLIKELY(t->sp
                + method->parameterFootprint()
-               + codeMaxLocals(t, method->code())
+               + method->code()->maxLocals()
                + FrameFootprint
-               + codeMaxStack(t, method->code())
+               + method->code()->maxStack()
                > stackSizeInWords(t) / 2))
   {
     throwNew(t, GcStackOverflowError::Type);
@@ -688,7 +688,7 @@ findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
 {
   PROTECT(t, method);
 
-  object eht = codeExceptionHandlerTable(t, method->code());
+  object eht = method->code()->exceptionHandlerTable();
 
   if (eht) {
     for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
@@ -782,7 +782,7 @@ interpret3(Thread* t, const int base)
   object& exception = t->exception;
   uintptr_t* stack = t->stack;
 
-  code = frameMethod(t, frame)->code();
+  code = reinterpret_cast<object>(frameMethod(t, frame)->code());
 
   if (UNLIKELY(exception)) {
     goto throw_;
@@ -3000,7 +3000,7 @@ class MyProcessor: public Processor {
                           spec,
                           cast<GcMethodAddendum>(t, addendum),
                           class_,
-                          reinterpret_cast<object>(code));
+                          code);
   }
 
   virtual GcClass*

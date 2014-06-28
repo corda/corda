@@ -674,7 +674,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     if (method->flags() & ACC_NATIVE) {
       address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
-      address = codeCompiled(t, method->code());
+      address = method->code()->compiled();
     }
 
     static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))

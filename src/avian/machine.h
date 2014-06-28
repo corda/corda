@@ -2610,11 +2610,11 @@ GcClass*
 findLoadedClass(Thread* t, object loader, object spec);
 
 inline bool
-emptyMethod(Thread* t, GcMethod* method)
+emptyMethod(Thread* t UNUSED, GcMethod* method)
 {
   return ((method->flags() & ACC_NATIVE) == 0)
-    and (codeLength(t, method->code()) == 1)
-    and (codeBody(t, method->code(), 0) == return_);
+    and (method->code()->length() == 1)
+    and (method->code()->body()[0] == return_);
 }
 
 object
@@ -3627,7 +3627,7 @@ inline GcClass*
 resolveClassInPool(Thread* t, object loader, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
-  object o = singletonObject(t, codePool(t, method->code()), index);
+  object o = singletonObject(t, method->code()->pool(), index);
 
   loadMemoryBarrier();
 
@@ -3639,7 +3639,7 @@ resolveClassInPool(Thread* t, object loader, GcMethod* method, unsigned index,
     if (c) {
       storeStoreMemoryBarrier();
 
-      set(t, reinterpret_cast<object>(codePool(t, method->code())),
+      set(t, reinterpret_cast<object>(method->code()->pool()),
           SingletonBody + (index * BytesPerWord), reinterpret_cast<object>(c));
     }
     return c;
@@ -3660,7 +3660,7 @@ resolve(Thread* t, object loader, GcMethod* method, unsigned index,
         object (*find)(vm::Thread*, GcClass*, object, object),
         Gc::Type errorType, bool throw_ = true)
 {
-  object o = singletonObject(t, codePool(t, method->code()), index);
+  object o = singletonObject(t, method->code()->pool(), index);
 
   loadMemoryBarrier();
 
@@ -3680,7 +3680,7 @@ resolve(Thread* t, object loader, GcMethod* method, unsigned index,
       if (o) {
         storeStoreMemoryBarrier();
 
-        set(t, reinterpret_cast<object>(codePool(t, method->code())),
+        set(t, reinterpret_cast<object>(method->code()->pool()),
             SingletonBody + (index * BytesPerWord), o);
       }
     } else {

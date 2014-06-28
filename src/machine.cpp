@@ -2938,7 +2938,7 @@ boot(Thread* t)
   { object bootCode = reinterpret_cast<object>(makeCode(t, 0, 0, 0, 0, 0, 0, 0, 0, 1));
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = reinterpret_cast<object>(makeMethod
-      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode));
+      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cast<GcCode>(t, bootCode)));
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
