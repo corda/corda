@@ -3627,7 +3627,7 @@ inline GcClass*
 resolveClassInPool(Thread* t, object loader, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
-  object o = singletonObject(t, cast<GcSingleton>(t, codePool(t, method->code())), index);
+  object o = singletonObject(t, codePool(t, method->code()), index);
 
   loadMemoryBarrier();
 
@@ -3639,7 +3639,7 @@ resolveClassInPool(Thread* t, object loader, GcMethod* method, unsigned index,
     if (c) {
       storeStoreMemoryBarrier();
 
-      set(t, codePool(t, method->code()),
+      set(t, reinterpret_cast<object>(codePool(t, method->code())),
           SingletonBody + (index * BytesPerWord), reinterpret_cast<object>(c));
     }
     return c;
@@ -3660,7 +3660,7 @@ resolve(Thread* t, object loader, GcMethod* method, unsigned index,
         object (*find)(vm::Thread*, GcClass*, object, object),
         Gc::Type errorType, bool throw_ = true)
 {
-  object o = singletonObject(t, cast<GcSingleton>(t, codePool(t, method->code())), index);
+  object o = singletonObject(t, codePool(t, method->code()), index);
 
   loadMemoryBarrier();
 
@@ -3680,7 +3680,7 @@ resolve(Thread* t, object loader, GcMethod* method, unsigned index,
       if (o) {
         storeStoreMemoryBarrier();
 
-        set(t, codePool(t, method->code()),
+        set(t, reinterpret_cast<object>(codePool(t, method->code())),
             SingletonBody + (index * BytesPerWord), o);
       }
     } else {

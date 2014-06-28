@@ -327,7 +327,7 @@
   (array int32_t body))
 
 (type code avian/Code
-  (object pool)
+  (singleton pool)
   (intArray stackMap)
   (object exceptionHandlerTable)
   (lineNumberTable lineNumberTable)

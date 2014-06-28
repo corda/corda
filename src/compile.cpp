@@ -4105,7 +4105,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4191,7 +4191,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4422,7 +4422,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4869,7 +4869,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4905,7 +4905,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ip += 2;
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4963,7 +4963,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -4998,7 +4998,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -5024,7 +5024,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -5238,7 +5238,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         index = codeReadInt16(t, code, ip);
       }
 
-      GcSingleton* pool = cast<GcSingleton>(t, codePool(t, code));
+      GcSingleton* pool = codePool(t, code);
 
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
@@ -5293,7 +5293,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ldc2_w: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      GcSingleton* pool = cast<GcSingleton>(t, codePool(t, code));
+      GcSingleton* pool = codePool(t, code);
 
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
@@ -5522,7 +5522,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint8_t dimensions = codeBody(t, code, ip++);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -5562,7 +5562,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 
@@ -5624,7 +5624,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index = codeReadInt16(t, code, ip);
 
       object reference = singletonObject
-        (t, cast<GcSingleton>(t, codePool(t, context->method->code())), index - 1);
+        (t, codePool(t, context->method->code()), index - 1);
 
       PROTECT(t, reference);
 

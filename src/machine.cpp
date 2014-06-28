@@ -1914,7 +1914,7 @@ parseCode(Thread* t, Stream& s, GcSingleton* pool)
     fprintf(stderr, "    code: maxStack %d maxLocals %d length %d\n", maxStack, maxLocals, length);
   }
 
-  object code = reinterpret_cast<object>(makeCode(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0, maxStack, maxLocals, length));
+  object code = reinterpret_cast<object>(makeCode(t, pool, 0, 0, 0, 0, 0, maxStack, maxLocals, length));
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 

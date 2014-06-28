@@ -2106,7 +2106,7 @@ interpret3(Thread* t, const int base)
       index = codeReadInt16(t, code, ip);
     }
 
-    GcSingleton* pool = cast<GcSingleton>(t, codePool(t, code));
+    GcSingleton* pool = codePool(t, code);
 
     if (singletonIsObject(t, pool, index - 1)) {
       object v = singletonObject(t, pool, index - 1);
@@ -2128,7 +2128,7 @@ interpret3(Thread* t, const int base)
   case ldc2_w: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    GcSingleton* pool = cast<GcSingleton>(t, codePool(t, code));
+    GcSingleton* pool = codePool(t, code);
 
     uint64_t v;
     memcpy(&v, &singletonValue(t, pool, index - 1), 8);
