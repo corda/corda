@@ -428,8 +428,8 @@ hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
 
     GcWeakReference* r = makeWeakReference(t, 0, 0, 0, 0);
     r->target() = key;
-    r->vmNext() = t->m->weakReferences;
-    t->m->weakReferences = reinterpret_cast<object>(r);
+    r->vmNext() = reinterpret_cast<object>(t->m->weakReferences);
+    t->m->weakReferences = r->as<GcJreference>(t);
     k = reinterpret_cast<object>(r);
 
     array = map->array();

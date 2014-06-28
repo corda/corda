@@ -655,7 +655,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
-                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), referenceName(t, o)));
+                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, referenceName(t, o))));
     
                   set(t, reinterpret_cast<object>(addendum->pool()),
                       SingletonBody + (index * BytesPerWord), o);
@@ -712,7 +712,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 
   image->bootLoader = w->visitRoot(root(t, Machine::BootLoader));
   image->appLoader = w->visitRoot(root(t, Machine::AppLoader));
-  image->types = w->visitRoot(m->types);
+  image->types = w->visitRoot(reinterpret_cast<object>(m->types));
 
   m->processor->visitRoots(t, w);
 
@@ -1332,7 +1332,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
 #include "type-maps.cpp"
 
-    for (unsigned i = 0; i < arrayLength(t, t->m->types); ++i) {
+    for (unsigned i = 0; i < t->m->types->length(); ++i) {
       Type* source = types[i];
       unsigned typeCount = 0;
       unsigned fieldCount = 1;
@@ -1523,28 +1523,28 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     // resolve primitive array classes in case they are needed at
     // runtime:
     { object name = reinterpret_cast<object>(makeByteArray(t, "[B"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[Z"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[S"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[C"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[I"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[J"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[F"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[D"));
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, name), true);
     }
   }
 

@@ -32,28 +32,28 @@ class MyClasspath : public Classpath {
     return reinterpret_cast<object>(vm::makeJclass(t, class_));
   }
 
-  virtual object
+  virtual GcString*
   makeString(Thread* t, object array, int32_t offset, int32_t length)
   {
-    return reinterpret_cast<object>(vm::makeString(t, array, offset, length, 0));
+    return vm::makeString(t, array, offset, length, 0);
   }
 
-  virtual object
+  virtual GcThread*
   makeThread(Thread* t, Thread* parent)
   {
-    object group;
+    GcThreadGroup* group;
     if (parent) {
-      group = threadGroup(t, parent->javaThread);
+      group = parent->javaThread->group();
     } else {
-      group = reinterpret_cast<object>(makeThreadGroup(t, 0, 0, 0));
+      group = makeThreadGroup(t, 0, 0, 0);
     }
 
     const unsigned NewState = 0;
     const unsigned NormalPriority = 5;
 
-    return reinterpret_cast<object>(vm::makeThread
+    return vm::makeThread
       (t, 0, 0, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
-       cast<GcClassLoader>(t, root(t, Machine::AppLoader)), 0, 0, cast<GcThreadGroup>(t, group), 0));
+       cast<GcClassLoader>(t, root(t, Machine::AppLoader)), 0, 0, group, 0);
   }
 
   virtual object
@@ -67,24 +67,24 @@ class MyClasspath : public Classpath {
       ? reinterpret_cast<object>(makeJconstructor(t, cast<GcJmethod>(t, jmethod))) : jmethod;
   }
 
-  virtual object
+  virtual GcMethod*
   getVMMethod(Thread* t, object jmethod)
   {
     return objectClass(t, jmethod) == type(t, GcJmethod::Type)
-      ? jmethodVmMethod(t, jmethod)
-      : jmethodVmMethod(t, jconstructorMethod(t, jmethod));
+      ? cast<GcMethod>(t, jmethodVmMethod(t, jmethod))
+      : cast<GcMethod>(t, jmethodVmMethod(t, jconstructorMethod(t, jmethod)));
   }
 
   virtual object
-  makeJField(Thread* t, object vmField)
+  makeJField(Thread* t, GcField* vmField)
   {
-    return reinterpret_cast<object>(makeJfield(t, cast<GcField>(t, vmField), false));
+    return reinterpret_cast<object>(makeJfield(t, vmField, false));
   }
 
-  virtual object
+  virtual GcField*
   getVMField(Thread* t, object jfield)
   {
-    return jfieldVmField(t, jfield);
+    return cast<GcField>(t, jfieldVmField(t, jfield));
   }
 
   virtual void
@@ -162,10 +162,10 @@ class MyClasspath : public Classpath {
   {
     PROTECT(t, b);
 
-    object field = resolveField(t, objectClass(t, b), "address", "J");
+    GcField* field = resolveField(t, objectClass(t, b), "address", "J");
 
     return reinterpret_cast<void*>
-      (fieldAtOffset<int64_t>(b, fieldOffset(t, field)));
+      (fieldAtOffset<int64_t>(b, field->offset()));
   }
 
   virtual int64_t
@@ -173,17 +173,17 @@ class MyClasspath : public Classpath {
   {
     PROTECT(t, b);
 
-    object field = resolveField
+    GcField* field = resolveField
       (t, objectClass(t, b), "capacity", "I");
 
-    return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
+    return fieldAtOffset<int32_t>(b, field->offset());
   }
 
-  virtual bool canTailCall(Thread* t,
+  virtual bool canTailCall(Thread* t UNUSED,
                            GcMethod*,
-                           object calleeClassName,
-                           object calleeMethodName,
-                           object)
+                           GcByteArray* calleeClassName,
+                           GcByteArray* calleeMethodName,
+                           GcByteArray*)
   {
     // we can't tail call System.load[Library] or
     // Runtime.load[Library] due to their use of
@@ -192,16 +192,16 @@ class MyClasspath : public Classpath {
 
     return (
         (strcmp("loadLibrary",
-                reinterpret_cast<char*>(&byteArrayBody(t, calleeMethodName, 0)))
+                reinterpret_cast<char*>(calleeMethodName->body().begin()))
          and strcmp("load",
                     reinterpret_cast<char*>(
-                        &byteArrayBody(t, calleeMethodName, 0))))
+                        calleeMethodName->body().begin())))
         or (strcmp(
                 "java/lang/System",
-                reinterpret_cast<char*>(&byteArrayBody(t, calleeClassName, 0)))
+                reinterpret_cast<char*>(calleeClassName->body().begin()))
             and strcmp("java/lang/Runtime",
                        reinterpret_cast<char*>(
-                           &byteArrayBody(t, calleeClassName, 0)))));
+                           calleeClassName->body().begin()))));
   }
 
   virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller)
@@ -232,7 +232,7 @@ enumerateThreads(Thread* t, Thread* x, object array, unsigned* index,
                  unsigned limit)
 {
   if (*index < limit) {
-    set(t, array, ArrayBody + (*index * BytesPerWord), x->javaThread);
+    set(t, array, ArrayBody + (*index * BytesPerWord), reinterpret_cast<object>(x->javaThread));
     ++ (*index);
 
     if (x->peer) enumerateThreads(t, x->peer, array, index, limit);
@@ -263,7 +263,7 @@ Avian_java_lang_Object_toString
   object this_ = reinterpret_cast<object>(arguments[0]);
 
   unsigned hash = objectHash(t, this_);
-  object s = makeString
+  GcString* s = makeString
     (t, "%s@0x%x",
      objectClass(t, this_)->name()->body().begin(),
      hash);
@@ -456,7 +456,7 @@ Avian_java_lang_reflect_Method_invoke
 
   THREAD_RESOURCE0(t, {
       if (t->exception) {
-        object exception = t->exception;
+        GcThrowable* exception = t->exception;
         t->exception = makeThrowable
           (t, GcInvocationTargetException::Type, 0, 0, exception);
       }
@@ -546,8 +546,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   PROTECT(t, array);
 
   for (unsigned i = 0; i < t->m->propertyCount; ++i) {
-    object s = makeString(t, "%s", t->m->properties[i]);
-    set(t, array, ArrayBody + (i * BytesPerWord), s);
+    GcString* s = makeString(t, "%s", t->m->properties[i]);
+    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(s));
   }
 
   return reinterpret_cast<int64_t>(array);
@@ -597,7 +597,7 @@ extern "C" AVIAN_EXPORT void JNICALL
 
   unsigned length = stringLength(t, name);
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
-  stringChars(t, name, RUNTIME_ARRAY_BODY(n));
+  stringChars(t, cast<GcString>(t, name), RUNTIME_ARRAY_BODY(n));
 
   loadLibrary(t, "", RUNTIME_ARRAY_BODY(n), mapName, true);
 }

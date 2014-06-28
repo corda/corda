@@ -58,7 +58,7 @@ DetachCurrentThread(Machine* m)
 
       enter(t, Thread::ActiveState);
 
-      threadPeer(t, t->javaThread) = 0;
+      t->javaThread->peer() = 0;
 
       enter(t, Thread::ZombieState);
 
@@ -142,7 +142,7 @@ GetStringLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
 
-  return stringLength(t, *s);
+  return cast<GcString>(t, *s)->length(t);
 }
 
 const jchar* JNICALL
@@ -151,8 +151,8 @@ GetStringChars(Thread* t, jstring s, jboolean* isCopy)
   ENTER(t, Thread::ActiveState);
 
   jchar* chars = static_cast<jchar*>
-    (t->m->heap->allocate((stringLength(t, *s) + 1) * sizeof(jchar)));
-  stringChars(t, *s, chars);
+    (t->m->heap->allocate((cast<GcString>(t, *s)->length(t) + 1) * sizeof(jchar)));
+  stringChars(t, cast<GcString>(t, *s), chars);
 
   if (isCopy) *isCopy = true;
   return chars;
@@ -163,7 +163,7 @@ ReleaseStringChars(Thread* t, jstring s, const jchar* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, (stringLength(t, *s) + 1) * sizeof(jchar));
+  t->m->heap->free(chars, (cast<GcString>(t, *s)->length(t) + 1) * sizeof(jchar));
 }
 
 void JNICALL
@@ -171,7 +171,7 @@ GetStringRegion(Thread* t, jstring s, jsize start, jsize length, jchar* dst)
 {
   ENTER(t, Thread::ActiveState);
 
-  stringChars(t, *s, start, length, dst);
+  stringChars(t, cast<GcString>(t, *s), start, length, dst);
 }
 
 const jchar* JNICALL
@@ -191,7 +191,7 @@ GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
   if (objectClass(t, data) == type(t, GcByteArray::Type)) {
     return GetStringChars(t, s, isCopy);
   } else {
-    return &charArrayBody(t, data, stringOffset(t, *s));
+    return &charArrayBody(t, data, cast<GcString>(t, *s)->offset(t));
   }
 }
 
@@ -212,7 +212,7 @@ GetStringUTFLength(Thread* t, jstring s)
 {
   ENTER(t, Thread::ActiveState);
 
-  return stringUTFLength(t, *s);
+  return stringUTFLength(t, cast<GcString>(t, *s));
 }
 
 const char* JNICALL
@@ -220,10 +220,10 @@ GetStringUTFChars(Thread* t, jstring s, jboolean* isCopy)
 {
   ENTER(t, Thread::ActiveState);
 
-  int length = stringUTFLength(t, *s);
+  int length = stringUTFLength(t, cast<GcString>(t, *s));
   char* chars = static_cast<char*>
     (t->m->heap->allocate(length + 1));
-  stringUTFChars(t, *s, chars, length);
+  stringUTFChars(t, cast<GcString>(t, *s), chars, length);
 
   if (isCopy) *isCopy = true;
   return chars;
@@ -234,7 +234,7 @@ ReleaseStringUTFChars(Thread* t, jstring s, const char* chars)
 {
   ENTER(t, Thread::ActiveState);
 
-  t->m->heap->free(chars, stringUTFLength(t, *s) + 1);
+  t->m->heap->free(chars, stringUTFLength(t, cast<GcString>(t, *s)) + 1);
 }
 
 void JNICALL
@@ -243,7 +243,7 @@ GetStringUTFRegion(Thread* t, jstring s, jsize start, jsize length, char* dst)
   ENTER(t, Thread::ActiveState);
 
   stringUTFChars
-    (t, *s, start, length, dst, stringUTFLength(t, *s, start, length));
+    (t, cast<GcString>(t, *s), start, length, dst, stringUTFLength(t, cast<GcString>(t, *s), start, length));
 }
 
 jsize JNICALL
@@ -266,7 +266,7 @@ newString(Thread* t, uintptr_t* arguments)
   }
 
   return reinterpret_cast<uint64_t>
-    (makeLocalReference(t, t->m->classpath->makeString(t, a, 0, size)));
+    (makeLocalReference(t, reinterpret_cast<object>(t->m->classpath->makeString(t, a, 0, size))));
 }
 
 jstring JNICALL
@@ -289,8 +289,8 @@ newStringUTF(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference
-     (t, t->m->classpath->makeString
-      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1)));
+     (t, reinterpret_cast<object>(t->m->classpath->makeString
+      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1))));
 }
 
 jstring JNICALL
@@ -355,7 +355,7 @@ findClass(Thread* t, uintptr_t* arguments)
       t,
       caller ? t->m->classpath->libraryClassLoader(t, caller) : cast
           <GcClassLoader>(t, root(t, Machine::AppLoader)),
-      n);
+      cast<GcByteArray>(t, n));
 
   if (t->m->classpath->mayInitClasses()) {
     PROTECT(t, c);
@@ -384,15 +384,15 @@ throwNew(Thread* t, uintptr_t* arguments)
   PROTECT(t, m);
 
   if (message) {
-    m = makeString(t, "%s", message);
+    m = reinterpret_cast<object>(makeString(t, "%s", message));
   }
 
   object trace = makeTrace(t);
   PROTECT(t, trace);
 
-  t->exception = make(t, cast<GcClass>(t, jclassVmClass(t, *c)));
-  set(t, t->exception, ThrowableMessage, m);
-  set(t, t->exception, ThrowableTrace, trace);
+  t->exception = cast<GcThrowable>(t, make(t, cast<GcClass>(t, jclassVmClass(t, *c))));
+  set(t, reinterpret_cast<object>(t->exception), ThrowableMessage, m);
+  set(t, reinterpret_cast<object>(t->exception), ThrowableTrace, trace);
 
   return 1;
 }
@@ -419,7 +419,7 @@ Throw(Thread* t, jthrowable throwable)
 
   ENTER(t, Thread::ActiveState);
 
-  t->exception = *throwable;
+  t->exception = cast<GcThrowable>(t, *throwable);
 
   return 0;
 }
@@ -523,10 +523,10 @@ IsAssignableFrom(Thread* t, jclass b, jclass a)
 GcMethod*
 findMethod(Thread* t, jclass c, const char* name, const char* spec)
 {
-  object n = makeByteArray(t, "%s", name);
+  GcByteArray* n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
 
-  object s = makeByteArray(t, "%s", spec);
+  GcByteArray* s = makeByteArray(t, "%s", spec);
   return vm::findMethod(t, cast<GcClass>(t, jclassVmClass(t, *c)), n, s);
 }
 
@@ -1484,9 +1484,9 @@ CallStaticVoidMethodA(Thread* t, jclass, jmethodID m, const jvalue* a)
 }
 
 jint
-fieldID(Thread* t, object field)
+fieldID(Thread* t, GcField* field)
 {
-  int id = fieldNativeID(t, field);
+  int id = field->nativeID();
 
   loadMemoryBarrier();
 
@@ -1495,17 +1495,17 @@ fieldID(Thread* t, object field)
 
     ACQUIRE(t, t->m->referenceLock);
 
-    if (fieldNativeID(t, field) == 0) {
+    if (field->nativeID() == 0) {
       setRoot(t, Machine::JNIFieldTable, reinterpret_cast<object>(vectorAppend
-              (t, cast<GcVector>(t, root(t, Machine::JNIFieldTable)), field)));
+              (t, cast<GcVector>(t, root(t, Machine::JNIFieldTable)), reinterpret_cast<object>(field))));
 
       storeStoreMemoryBarrier();
 
-      fieldNativeID(t, field) = vectorSize(t, root(t, Machine::JNIFieldTable));
+      field->nativeID() = vectorSize(t, root(t, Machine::JNIFieldTable));
     }
   }
 
-  return fieldNativeID(t, field);
+  return field->nativeID();
 }
 
 uint64_t
@@ -1557,7 +1557,7 @@ getObjectField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return reinterpret_cast<uintptr_t>
     (makeLocalReference(t, fieldAtOffset<object>(*o, fieldOffset(t, field))));
@@ -1579,7 +1579,7 @@ getBooleanField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jboolean>(*o, fieldOffset(t, field));
 }
@@ -1600,7 +1600,7 @@ getByteField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jbyte>(*o, fieldOffset(t, field));
 }
@@ -1621,7 +1621,7 @@ getCharField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jchar>(*o, fieldOffset(t, field));
 }
@@ -1642,7 +1642,7 @@ getShortField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jshort>(*o, fieldOffset(t, field));
 }
@@ -1663,7 +1663,7 @@ getIntField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jint>(*o, fieldOffset(t, field));
 }
@@ -1684,7 +1684,7 @@ getLongField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jlong>(*o, fieldOffset(t, field));
 }
@@ -1705,7 +1705,7 @@ getFloatField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return floatToBits(fieldAtOffset<jfloat>(*o, fieldOffset(t, field)));
 }
@@ -1726,7 +1726,7 @@ getDoubleField(Thread* t, uintptr_t* arguments)
   object field = getField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return doubleToBits(fieldAtOffset<jdouble>(*o, fieldOffset(t, field)));
 }
@@ -1748,7 +1748,7 @@ setObjectField(Thread* t, uintptr_t* arguments)
   jobject v = reinterpret_cast<jobject>(arguments[2]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   set(t, *o, fieldOffset(t, field), (v ? *v : 0));
 
@@ -1773,7 +1773,7 @@ setBooleanField(Thread* t, uintptr_t* arguments)
   jboolean v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jboolean>(*o, fieldOffset(t, field)) = v;
 
@@ -1798,7 +1798,7 @@ setByteField(Thread* t, uintptr_t* arguments)
   jbyte v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jbyte>(*o, fieldOffset(t, field)) = v;
 
@@ -1823,7 +1823,7 @@ setCharField(Thread* t, uintptr_t* arguments)
   jchar v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jchar>(*o, fieldOffset(t, field)) = v;
 
@@ -1848,7 +1848,7 @@ setShortField(Thread* t, uintptr_t* arguments)
   jshort v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jshort>(*o, fieldOffset(t, field)) = v;
 
@@ -1873,7 +1873,7 @@ setIntField(Thread* t, uintptr_t* arguments)
   jint v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jint>(*o, fieldOffset(t, field)) = v;
 
@@ -1898,7 +1898,7 @@ setLongField(Thread* t, uintptr_t* arguments)
   jlong v; memcpy(&v, arguments + 2, sizeof(jlong));
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jlong>(*o, fieldOffset(t, field)) = v;
 
@@ -1924,7 +1924,7 @@ setFloatField(Thread* t, uintptr_t* arguments)
   jfloat v = bitsToFloat(arguments[2]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jfloat>(*o, fieldOffset(t, field)) = v;
 
@@ -1949,7 +1949,7 @@ setDoubleField(Thread* t, uintptr_t* arguments)
   jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jdouble>(*o, fieldOffset(t, field)) = v;
 
@@ -1989,7 +1989,7 @@ getStaticObjectField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
@@ -2016,7 +2016,7 @@ getStaticBooleanField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jboolean>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2041,7 +2041,7 @@ getStaticByteField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jbyte>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2066,7 +2066,7 @@ getStaticCharField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jchar>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2091,7 +2091,7 @@ getStaticShortField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jshort>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2116,7 +2116,7 @@ getStaticIntField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jint>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2141,7 +2141,7 @@ getStaticLongField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return fieldAtOffset<jlong>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field));
@@ -2166,7 +2166,7 @@ getStaticFloatField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return floatToBits
     (fieldAtOffset<jfloat>
@@ -2192,7 +2192,7 @@ getStaticDoubleField(Thread* t, uintptr_t* arguments)
   object field = getStaticField(t, arguments[1]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return doubleToBits
     (fieldAtOffset<jdouble>
@@ -2219,7 +2219,7 @@ setStaticObjectField(Thread* t, uintptr_t* arguments)
   jobject v = reinterpret_cast<jobject>(arguments[2]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   set(t, classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field),
       (v ? *v : 0));
@@ -2248,7 +2248,7 @@ setStaticBooleanField(Thread* t, uintptr_t* arguments)
   jboolean v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jboolean>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2277,7 +2277,7 @@ setStaticByteField(Thread* t, uintptr_t* arguments)
   jbyte v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jbyte>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2306,7 +2306,7 @@ setStaticCharField(Thread* t, uintptr_t* arguments)
   jchar v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jchar>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2335,7 +2335,7 @@ setStaticShortField(Thread* t, uintptr_t* arguments)
   jshort v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jshort>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2364,7 +2364,7 @@ setStaticIntField(Thread* t, uintptr_t* arguments)
   jint v = arguments[2];
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jint>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2393,7 +2393,7 @@ setStaticLongField(Thread* t, uintptr_t* arguments)
   jlong v; memcpy(&v, arguments + 2, sizeof(jlong));
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jlong>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2423,7 +2423,7 @@ setStaticFloatField(Thread* t, uintptr_t* arguments)
   jfloat v = bitsToFloat(arguments[2]);
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jfloat>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2452,7 +2452,7 @@ setStaticDoubleField(Thread* t, uintptr_t* arguments)
   jdouble v; memcpy(&v, arguments + 2, sizeof(jdouble));
 
   PROTECT(t, field);
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<jdouble>
     (classStaticTable(t, jclassVmClass(t, *c)), fieldOffset(t, field)) = v;
@@ -2539,7 +2539,7 @@ ExceptionOccurred(Thread* t)
 {
   ENTER(t, Thread::ActiveState);
 
-  return makeLocalReference(t, t->exception);
+  return makeLocalReference(t, reinterpret_cast<object>(t->exception));
 }
 
 void JNICALL
@@ -3197,7 +3197,7 @@ fromReflectedMethod(Thread* t, uintptr_t* arguments)
 {
   jobject m = reinterpret_cast<jobject>(arguments[0]);
 
-  return methodID(t, cast<GcMethod>(t, t->m->classpath->getVMMethod(t, *m)));
+  return methodID(t, t->m->classpath->getVMMethod(t, *m));
 }
 
 jmethodID JNICALL
@@ -3255,7 +3255,7 @@ toReflectedField(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
      (t, t->m->classpath->makeJField
-      (t, isStatic ? getStaticField(t, f) : getField(t, f))));
+      (t, cast<GcField>(t, isStatic ? getStaticField(t, f) : getField(t, f)))));
 }
 
 jobject JNICALL
@@ -3318,7 +3318,7 @@ UnregisterNatives(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  unregisterNatives(t, *c);
+  unregisterNatives(t, cast<GcClass>(t, *c));
 
   return 0;
 }
@@ -3393,7 +3393,7 @@ pushLocalFrame(Thread* t, uintptr_t* arguments)
   if (t->m->processor->pushLocalFrame(t, arguments[0])) {
     return 1;
   } else {
-    throw_(t, root(t, Machine::OutOfMemoryError));
+    throw_(t, cast<GcThrowable>(t, root(t, Machine::OutOfMemoryError)));
   }
 }
 
@@ -3531,27 +3531,27 @@ append(char** p, const char* value, unsigned length, char tail)
 uint64_t
 boot(Thread* t, uintptr_t*)
 {
-  setRoot(t, Machine::NullPointerException, makeThrowable
-          (t, GcNullPointerException::Type));
+  setRoot(t, Machine::NullPointerException,
+    reinterpret_cast<object>(makeThrowable(t, GcNullPointerException::Type)));
 
   setRoot(t, Machine::ArithmeticException,
-          makeThrowable(t, GcArithmeticException::Type));
+          reinterpret_cast<object>(makeThrowable(t, GcArithmeticException::Type)));
 
   setRoot(t, Machine::ArrayIndexOutOfBoundsException,
-          makeThrowable(t, GcArrayIndexOutOfBoundsException::Type));
+          reinterpret_cast<object>(makeThrowable(t, GcArrayIndexOutOfBoundsException::Type)));
 
   setRoot(t, Machine::OutOfMemoryError,
-          makeThrowable(t, GcOutOfMemoryError::Type));
+          reinterpret_cast<object>(makeThrowable(t, GcOutOfMemoryError::Type)));
 
-  setRoot(t, Machine::Shutdown, makeThrowable(t, GcThrowable::Type));
+  setRoot(t, Machine::Shutdown, reinterpret_cast<object>(makeThrowable(t, GcThrowable::Type)));
 
   t->m->classpath->preBoot(t);
 
   t->javaThread = t->m->classpath->makeThread(t, 0);
 
-  threadPeer(t, t->javaThread) = reinterpret_cast<jlong>(t);
+  t->javaThread->peer() = reinterpret_cast<jlong>(t);
 
-  setRoot(t, Machine::FinalizerThread, t->m->classpath->makeThread(t, t));
+  setRoot(t, Machine::FinalizerThread, reinterpret_cast<object>(t->m->classpath->makeThread(t, t)));
 
   threadDaemon(t, root(t, Machine::FinalizerThread)) = true;
 
@@ -3559,7 +3559,7 @@ boot(Thread* t, uintptr_t*)
 
   const char* port = findProperty(t, "avian.trace.port");
   if (port) {
-    object host = makeString(t, "0.0.0.0");
+    object host = reinterpret_cast<object>(makeString(t, "0.0.0.0"));
     PROTECT(t, host);
 
     GcMethod* method = resolveMethod

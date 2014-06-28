@@ -291,20 +291,20 @@ makeStackTraceElement(Thread* t, object e)
   THREAD_RUNTIME_ARRAY(t, char, s, byteArrayLength(t, class_name));
   replace('/', '.', RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(&byteArrayBody(t, class_name, 0)));
-  class_name = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
+  class_name = reinterpret_cast<object>(makeString(t, "%s", RUNTIME_ARRAY_BODY(s)));
 
   object method_name = reinterpret_cast<object>(method->name());
   PROTECT(t, method_name);
 
-  method_name = t->m->classpath->makeString
-    (t, method_name, 0, byteArrayLength(t, method_name) - 1);
+  method_name = reinterpret_cast<object>(t->m->classpath->makeString
+    (t, method_name, 0, byteArrayLength(t, method_name) - 1));
 
   unsigned line = t->m->processor->lineNumber
     (t, method, traceElementIp(t, e));
 
   object file = reinterpret_cast<object>(method->class_()->sourceFile());
-  file = file ? t->m->classpath->makeString
-    (t, file, 0, byteArrayLength(t, file) - 1) : 0;
+  file = file ? reinterpret_cast<object>(t->m->classpath->makeString
+    (t, file, 0, byteArrayLength(t, file) - 1)) : 0;
 
   return reinterpret_cast<object>(makeStackTraceElement(t, cast<GcString>(t, class_name), cast<GcString>(t, method_name), cast<GcString>(t, file), line));
 }
@@ -484,7 +484,7 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
     object o = singletonObject(t, addendum->pool(), index);
 
     if (objectClass(t, o) == type(t, GcReference::Type)) {
-      o = reinterpret_cast<object>(resolveClass(t, loader, referenceName(t, o)));
+      o = reinterpret_cast<object>(resolveClass(t, loader, cast<GcByteArray>(t, referenceName(t, o))));
 
       set(t, reinterpret_cast<object>(addendum->pool()), SingletonBody + (index * BytesPerWord),
           o);
@@ -578,7 +578,7 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
           (t, GcInvocationTargetException::Type, 0, 0, t->exception);
 
         set(t, t->exception, InvocationTargetExceptionTarget,
-            throwableCause(t, t->exception));
+            t->exception->cause());
       }
     });
 
@@ -616,7 +616,7 @@ intercept(Thread* t, GcClass* c, const char* name, const char* spec,
 
       PROTECT(t, native);
 
-      object runtimeData = getMethodRuntimeData(t, m);
+      object runtimeData = reinterpret_cast<object>(getMethodRuntimeData(t, m));
 
       set(t, runtimeData, MethodRuntimeDataNative, native);
     }
@@ -711,7 +711,7 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
               resolveClass(
                   t,
                   cast<GcClassLoader>(t, classLoader(t, c)),
-                  innerClassReferenceInner(t, arrayBody(t, table, i)))));
+                  cast<GcByteArray>(t, innerClassReferenceInner(t, arrayBody(t, table, i))))));
 
           -- count;
           set(t, result, ArrayBody + (count * BytesPerWord), inner);
@@ -742,7 +742,7 @@ getDeclaringClass(Thread* t, object c)
               t,
               resolveClass(t,
                            cast<GcClassLoader>(t, classLoader(t, c)),
-                           innerClassReferenceOuter(t, reference)));
+                           cast<GcByteArray>(t, innerClassReferenceOuter(t, reference))));
         }
       }
     }

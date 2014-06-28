@@ -36,7 +36,7 @@ class Thread: public vm::Thread {
  public:
 
   Thread(Machine* m, GcThread* javaThread, vm::Thread* parent):
-    vm::Thread(m, reinterpret_cast<object>(javaThread), parent),
+    vm::Thread(m, javaThread, parent),
     ip(0),
     sp(0),
     frame(-1),
@@ -615,7 +615,7 @@ invokeNativeSlow(Thread* t, GcMethod* method, void* function)
   popFrame(t);
 
   if (UNLIKELY(t->exception)) {
-    object exception = t->exception;
+    GcThrowable* exception = t->exception;
     t->exception = 0;
     throw_(t, exception);
   }
@@ -632,7 +632,7 @@ invokeNative(Thread* t, GcMethod* method)
 
   resolveNative(t, method);
 
-  object native = methodRuntimeDataNative(t, getMethodRuntimeData(t, method));
+  object native = reinterpret_cast<object>(getMethodRuntimeData(t, method)->native());
   if (nativeFast(t, native)) {
     pushFrame(t, method);
 
@@ -699,7 +699,7 @@ findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
       {
         GcClass* catchType = 0;
         if (exceptionHandlerCatchType(eh)) {
-          object e = t->exception;
+          GcThrowable* e = t->exception;
           t->exception = 0;
           PROTECT(t, e);
 
@@ -779,7 +779,7 @@ interpret3(Thread* t, const int base)
   unsigned& sp = t->sp;
   int& frame = t->frame;
   object& code = t->code;
-  object& exception = t->exception;
+  GcThrowable*& exception = t->exception;
   uintptr_t* stack = t->stack;
 
   code = reinterpret_cast<object>(frameMethod(t, frame)->code());
@@ -937,7 +937,7 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case athrow: {
-    exception = popObject(t);
+    exception = cast<GcThrowable>(t, popObject(t));
     if (UNLIKELY(exception == 0)) {
       exception = makeThrowable(t, GcNullPointerException::Type);
     }
@@ -1458,13 +1458,13 @@ interpret3(Thread* t, const int base)
     if (LIKELY(peekObject(t, sp - 1))) {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object field = resolveField(t, frameMethod(t, frame), index - 1);
+      object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
 
       assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
 
       PROTECT(t, field);
 
-      ACQUIRE_FIELD_FOR_READ(t, field);
+      ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
       pushField(t, popObject(t), field);
     } else {
@@ -1476,7 +1476,7 @@ interpret3(Thread* t, const int base)
   case getstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = resolveField(t, frameMethod(t, frame), index - 1);
+    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
 
     assertT(t, fieldFlags(t, field) & ACC_STATIC);
 
@@ -1484,7 +1484,7 @@ interpret3(Thread* t, const int base)
 
     initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
-    ACQUIRE_FIELD_FOR_READ(t, field);
+    ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
     pushField(t, classStaticTable(t, fieldClass(t, field)), field);
   } goto loop;
@@ -2429,12 +2429,12 @@ interpret3(Thread* t, const int base)
   case putfield: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = resolveField(t, frameMethod(t, frame), index - 1);
+    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
 
     assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
     PROTECT(t, field);
 
-    { ACQUIRE_FIELD_FOR_WRITE(t, field);
+    { ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
       switch (fieldCode(t, field)) {
       case ByteField:
@@ -2500,13 +2500,13 @@ interpret3(Thread* t, const int base)
   case putstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = resolveField(t, frameMethod(t, frame), index - 1);
+    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
 
     assertT(t, fieldFlags(t, field) & ACC_STATIC);
 
     PROTECT(t, field);
 
-    ACQUIRE_FIELD_FOR_WRITE(t, field);
+    ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
     initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
@@ -2666,7 +2666,7 @@ interpret3(Thread* t, const int base)
     assertT(t, class_->vmFlags() & BootstrapFlag);
 
     resolveClass(t, frameMethod(t, frame)->class_()->loader(),
-                 reinterpret_cast<object>(class_->name()));
+                 class_->name());
 
     ip -= 3;
   } goto loop;
@@ -2738,7 +2738,7 @@ interpret3(Thread* t, const int base)
     if (eh) {
       sp = frame + FrameFootprint;
       ip = exceptionHandlerIp(eh);
-      pushObject(t, exception);
+      pushObject(t, reinterpret_cast<object>(exception));
       exception = 0;
       goto loop;
     }
@@ -2771,7 +2771,7 @@ interpret(Thread* t)
     uint64_t r = run(t, interpret2, arguments);
     if (success) {
       if (t->exception) {
-        object exception = t->exception;
+        GcThrowable* exception = t->exception;
         t->exception = 0;
         throw_(t, exception);
       } else {
@@ -2891,7 +2891,7 @@ invoke(Thread* t, GcMethod* method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (class_->vmFlags() & BootstrapFlag) {
-      resolveClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
+      resolveClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
     }
 
     if (method->class_()->flags() & ACC_INTERFACE) {
@@ -2947,7 +2947,7 @@ invoke(Thread* t, GcMethod* method)
     if (LIKELY(t->exception == 0)) {
       popFrame(t);
     } else {
-      object exception = t->exception;
+      GcThrowable* exception = t->exception;
       t->exception = 0;
       throw_(t, exception);
     }

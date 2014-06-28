@@ -54,6 +54,8 @@ class Field {
   uintptr_t ownerId;
   bool noassert;
   bool nogc;
+  bool polyfill;
+  bool threadParam;
 
   std::string javaSpec;
   std::string typeName;
@@ -69,6 +71,8 @@ class Field {
         ownerId(reinterpret_cast<uintptr_t>(ownerId)),
         noassert(false),
         nogc(false),
+        polyfill(false),
+        threadParam(false),
         javaSpec(javaSpec),
         typeName(typeName)
   {
@@ -82,6 +86,9 @@ class Field {
     }
     if(nogc) {
       ss << " nogc";
+    }
+    if(polyfill) {
+      ss << " polyfill";
     }
     return ss.str();
   }
@@ -416,6 +423,15 @@ class ClassParser {
   }
 
   void add(FieldSpec f) {
+    if(f.field->polyfill) {
+      if(fields.find(f.field->name) == fields.end()) {
+        fields[f.field->name] = f.field;
+        cl->fields.push_back(f.field);
+      } else {
+        fields[f.field->name]->threadParam = true;
+      }
+      return;
+    }
     if(f.aliasName.size() > 0) {
       if(fields.find(f.aliasName) == fields.end()) {
         if(fields.find(f.field->name) != fields.end()) {
@@ -510,6 +526,9 @@ FieldSpec parseField(Module& module, ClassParser& clparser, Object* p)
     const char* name = string(car(cdr(p)));
     f = parseField(module, clparser, cdr(cdr(p)));
     f.aliasName = name;
+  } else if (equal(spec, "polyfill")) {
+    f = parseField(module, clparser, cdr(p));
+    f.field->polyfill = true;
   } else {
     return parseVerbatimField(module, clparser, p);
   }
@@ -778,13 +797,15 @@ void layoutClass(Class* cl) {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); it++) {
     Field& f = **it;
 
-    alignment = f.elementSize;
-    offset = (offset + alignment - 1) & ~(alignment - 1);
-    f.offset = offset;
+    if(!f.polyfill) { // polyfills contribute no size
+      alignment = f.elementSize;
+      offset = (offset + alignment - 1) & ~(alignment - 1);
+      f.offset = offset;
 
-    size = f.elementSize;
+      size = f.elementSize;
 
-    offset += size;
+      offset += size;
+    }
   }
   if(cl->arrayField) {
     Field& f = *cl->arrayField;
@@ -955,7 +976,9 @@ writeAccessors(Output* out, Module& module)
     for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
       Field& f = **it;
 
-      writeAccessor(out, module, cl, f, false);
+      if(!f.polyfill) {
+        writeAccessor(out, module, cl, f, false);
+      }
     }
     if(cl->arrayField) {
       writeAccessor(out, module, cl, *cl->arrayField, true);
@@ -1001,10 +1024,12 @@ writeConstructorParameters(Output* out, Module& module, Class* cl)
 {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
-    out->write(", ");
-    writeFieldType(out, module, f);
-    out->write(" ");
-    out->write(obfuscate(f.name));
+    if(!f.polyfill) {
+      out->write(", ");
+      writeFieldType(out, module, f);
+      out->write(" ");
+      out->write(obfuscate(f.name));
+    }
   }
 }
 
@@ -1013,8 +1038,10 @@ writeConstructorArguments(Output* out, Class* cl)
 {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
-    out->write(", ");
-    out->write(obfuscate(f.name));
+    if(!f.polyfill) {
+      out->write(", ");
+      out->write(obfuscate(f.name));
+    }
   }
 }
 
@@ -1023,11 +1050,17 @@ writeConstructorInitializations(Output* out, Class* cl)
 {
   for(std::vector<Field*>::iterator it = cl->fields.begin(); it != cl->fields.end(); ++it) {
     Field& f = **it;
-    out->write("  o->");
-    out->write(obfuscate(f.name));
-    out->write("() = ");
-    out->write(obfuscate(f.name));
-    out->write(";\n");
+    if(!f.polyfill) {
+      out->write("  o->");
+      out->write(obfuscate(f.name));
+      out->write("(");
+      if(f.threadParam) {
+        out->write("t");
+      }
+      out->write(") = ");
+      out->write(obfuscate(f.name));
+      out->write(";\n");
+    }
   }
 }
 
@@ -1050,14 +1083,26 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
     Field& f = **it;
     out->write("  ");
     writeFieldType(out, module, f);
-    out->write("& ");
+    if(!f.polyfill) {
+      out->write("&");
+    }
+    out->write(" ");
     out->write(obfuscate(f.name));
-    out->write("() { return field_at<");
-    writeFieldType(out, module, f);
-    out->write(">(");
-    out->write(capitalize(cl->name));
-    out->write(capitalize(f.name));
-    out->write("); }\n");
+    if(f.threadParam || f.polyfill) {
+      out->write("(Thread*");
+    } else {
+      out->write("(");
+    }
+    if(f.polyfill) {
+      out->write("); // polyfill, assumed to be implemented elsewhere\n");
+    } else {
+      out->write(") { return field_at<");
+      writeFieldType(out, module, f);
+      out->write(">(");
+      out->write(capitalize(cl->name));
+      out->write(capitalize(f.name));
+      out->write("); }\n");
+    }
   }
   if(cl->arrayField) {
     Field& f = *cl->arrayField;

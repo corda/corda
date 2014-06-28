@@ -181,7 +181,9 @@
 (type string java/lang/String
   (alias data object value)
   (alias length uint32_t count)
-  (alias hashCode uint32_t hash))
+  (alias hashCode uint32_t hash)
+  (polyfill uint32_t offset)
+  (polyfill uint32_t length))
 
 (type thread java/lang/Thread
   (require object sleepLock)
@@ -196,7 +198,7 @@
 (type stackTraceElement java/lang/StackTraceElement)
 
 (type throwable java/lang/Throwable
-  (alias message object detailMessage)
+  (alias message string detailMessage)
   (alias trace object backtrace)
   (alias trace object stackState))
 

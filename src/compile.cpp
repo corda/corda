@@ -247,7 +247,7 @@ class MyThread: public Thread {
 
   MyThread(Machine* m, GcThread* javaThread, MyThread* parent,
            bool useNativeFeatures):
-    Thread(m, reinterpret_cast<object>(javaThread), parent),
+    Thread(m, javaThread, parent),
     ip(0),
     stack(0),
     newStack(0),
@@ -336,7 +336,7 @@ resolveTarget(MyThread* t, void* stack, GcMethod* method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
+    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
   }
 
   if (method->class_()->flags() & ACC_INTERFACE) {
@@ -352,7 +352,7 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
   if (class_->vmFlags() & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
+    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
   }
 
   return cast<GcMethod>(t, arrayBody(t, class_->virtualTable(), index));
@@ -2285,7 +2285,7 @@ resolveMethod(Thread* t, object pair)
      ReferenceClass);
 
   return cast<GcMethod>(t, findInHierarchy
-    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+    (t, class_, cast<GcByteArray>(t, referenceName(t, reference)), cast<GcByteArray>(t, referenceSpec(t, reference)),
      findMethodInClass, GcNoSuchMethodError::Type));
 }
 
@@ -2420,7 +2420,7 @@ getJClassFromReference(MyThread* t, object pair)
       t,
       resolveClass(t,
                        cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       referenceName(t, pairSecond(t, pair)))));
+                       cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))))));
 }
 
 unsigned
@@ -2455,7 +2455,7 @@ throwArithmetic(MyThread* t)
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    throw_(t, root(t, Machine::ArithmeticException));
+    throw_(t, cast<GcThrowable>(t, root(t, Machine::ArithmeticException)));
   }
 }
 
@@ -2513,7 +2513,7 @@ makeBlankObjectArrayFromReference(MyThread* t, object pair,
       t,
       resolveClass(t,
                        cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       referenceName(t, pairSecond(t, pair))),
+                       cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair)))),
       length);
 }
 
@@ -2652,7 +2652,7 @@ makeMultidimensionalArrayFromReference(MyThread* t, object pair,
   return makeMultidimensionalArray
     (t, resolveClass
      (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-      referenceName(t, pairSecond(t, pair))), dimensions, offset);
+      cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair)))), dimensions, offset);
 }
 
 void NO_RETURN
@@ -2666,7 +2666,7 @@ throwArrayIndexOutOfBounds(MyThread* t)
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    throw_(t, root(t, Machine::ArrayIndexOutOfBoundsException));
+    throw_(t, cast<GcThrowable>(t, root(t, Machine::ArrayIndexOutOfBoundsException)));
   }
 }
 
@@ -2677,7 +2677,7 @@ throwStackOverflow(MyThread* t)
 }
 
 void NO_RETURN
-throw_(MyThread* t, object o)
+throw_(MyThread* t, GcThrowable* o)
 {
   if (LIKELY(o)) {
     vm::throw_(t, o);
@@ -2691,13 +2691,13 @@ checkCast(MyThread* t, GcClass* class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
     object classNameFrom = reinterpret_cast<object>(objectClass(t, o)->name());
-    object classNameTo   = reinterpret_cast<object>(class_->name());
+    GcByteArray* classNameTo   = class_->name();
     THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
-    THREAD_RUNTIME_ARRAY(t, char, classTo,   byteArrayLength(t, classNameTo));
+    THREAD_RUNTIME_ARRAY(t, char, classTo,   classNameTo->length());
     replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
             reinterpret_cast<char*>(&byteArrayBody(t, classNameFrom, 0)));
     replace('/', '.', RUNTIME_ARRAY_BODY(classTo),
-            reinterpret_cast<char*>(&byteArrayBody(t, classNameTo,   0)));
+            reinterpret_cast<char*>(classNameTo->body().begin()));
     throwNew
       (t, GcClassCastException::Type, "%s cannot be cast to %s",
        RUNTIME_ARRAY_BODY(classFrom), RUNTIME_ARRAY_BODY(classTo));
@@ -2711,7 +2711,7 @@ checkCastFromReference(MyThread* t, object pair, object o)
 
   GcClass* c = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
 
   checkCast(t, c, o);
 }
@@ -2727,7 +2727,7 @@ resolveField(Thread* t, object pair)
      ReferenceClass);
 
   return findInHierarchy
-    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+    (t, class_, cast<GcByteArray>(t, referenceName(t, reference)), cast<GcByteArray>(t, referenceSpec(t, reference)),
      findFieldInClass, GcNoSuchFieldError::Type);
 }
 
@@ -2762,12 +2762,12 @@ getFieldValue(Thread* t, object target, object field)
 uint64_t
 getStaticFieldValueFromReference(MyThread* t, object pair)
 {
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
   initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return getFieldValue(t, classStaticTable(t, fieldClass(t, field)), field);
 }
@@ -2777,10 +2777,10 @@ getFieldValueFromReference(MyThread* t, object pair, object instance)
 {
   PROTECT(t, instance);
 
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_READ(t, field);
+  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
 
   return getFieldValue(t, instance, field);
 }
@@ -2788,12 +2788,12 @@ getFieldValueFromReference(MyThread* t, object pair, object instance)
 void
 setStaticLongFieldValueFromReference(MyThread* t, object pair, uint64_t value)
 {
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
   initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<int64_t>
     (classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field)) = value;
@@ -2805,10 +2805,10 @@ setLongFieldValueFromReference(MyThread* t, object pair, object instance,
 {
   PROTECT(t, instance);
 
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   fieldAtOffset<int64_t>(instance, fieldOffset(t, field)) = value;
 }
@@ -2818,12 +2818,12 @@ setStaticObjectFieldValueFromReference(MyThread* t, object pair, object value)
 {
   PROTECT(t, value);
 
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
   initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   set(t, classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field),
       value);
@@ -2836,10 +2836,10 @@ setObjectFieldValueFromReference(MyThread* t, object pair, object instance,
   PROTECT(t, instance);
   PROTECT(t, value);
 
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   set(t, instance, fieldOffset(t, field), value);
 }
@@ -2871,12 +2871,12 @@ setFieldValue(MyThread* t, object target, object field, uint32_t value)
 void
 setStaticFieldValueFromReference(MyThread* t, object pair, uint32_t value)
 {
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
   initClass(t, cast<GcClass>(t, fieldClass(t, field)));
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   setFieldValue(t, classStaticTable(t, fieldClass(t, field)), field, value);
 }
@@ -2886,10 +2886,10 @@ setFieldValueFromReference(MyThread* t, object pair, object instance,
                            uint32_t value)
 {
   PROTECT(t, instance);
-  object field = resolveField(t, pair);
+  object field = reinterpret_cast<object>(resolveField(t, pair));
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, field);
+  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
 
   setFieldValue(t, instance, field, value);
 }
@@ -2907,7 +2907,7 @@ instanceOfFromReference(Thread* t, object pair, object o)
 
   GcClass* c = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
 
   return instanceOf64(t, c, o);
 }
@@ -2937,7 +2937,7 @@ makeNewFromReference(Thread* t, object pair)
 {
   GcClass* class_ = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
 
   PROTECT(t, class_);
 
@@ -3335,8 +3335,8 @@ returnsNext(MyThread* t, object code, unsigned ip)
 
 bool
 isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
-           int calleeReturnCode, object calleeClassName,
-           object calleeMethodName, object calleeMethodSpec)
+           int calleeReturnCode, GcByteArray* calleeClassName,
+           GcByteArray* calleeMethodName, GcByteArray* calleeMethodSpec)
 {
   return avian::codegen::TailCalls
     and ((caller->flags() & ACC_SYNCHRONIZED) == 0)
@@ -3354,8 +3354,8 @@ isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller, GcMethod* ca
 {
   return isTailCall
     (t, code, ip, caller, callee->returnCode(),
-     reinterpret_cast<object>(callee->class_()->name()), reinterpret_cast<object>(callee->name()),
-     reinterpret_cast<object>(callee->spec()));
+     callee->class_()->name(), callee->name(),
+     callee->spec());
 }
 
 bool
@@ -3369,7 +3369,7 @@ isReferenceTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
 
   return isTailCall
     (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference),
-     c, referenceName(t, calleeReference), referenceSpec(t, calleeReference));
+     cast<GcByteArray>(t, c), cast<GcByteArray>(t, referenceName(t, calleeReference)), cast<GcByteArray>(t, referenceSpec(t, calleeReference)));
 }
 
 lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
@@ -4426,7 +4426,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       PROTECT(t, reference);
 
-      object field = resolveField(t, context->method, index - 1, false);
+      object field = reinterpret_cast<object>(resolveField(t, context->method, index - 1, false));
 
       if (LIKELY(field)) {
         if ((fieldFlags(t, field) & ACC_VOLATILE)
@@ -5628,7 +5628,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       PROTECT(t, reference);
 
-      object field = resolveField(t, context->method, index - 1, false);
+      object field = reinterpret_cast<object>(resolveField(t, context->method, index - 1, false));
 
       if (LIKELY(field)) {
         int fieldCode = vm::fieldCode(t, field);
@@ -7244,7 +7244,7 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
   }
 
   if (UNLIKELY(t->exception)) {
-    object exception = t->exception;
+    GcThrowable* exception = t->exception;
     t->exception = 0;
     vm::throw_(t, exception);
   }
@@ -7294,7 +7294,7 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 uint64_t
 invokeNative2(MyThread* t, GcMethod* method)
 {
-  object native = methodRuntimeDataNative(t, getMethodRuntimeData(t, method));
+  object native = reinterpret_cast<object>(getMethodRuntimeData(t, method)->native());
   if (nativeFast(t, native)) {
     return invokeNativeFast(t, method, nativeFunction(t, native));
   } else {
@@ -7543,7 +7543,7 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 
 void
 callContinuation(MyThread* t, object continuation, object result,
-                 object exception, void* ip, void* stack)
+                 GcThrowable* exception, void* ip, void* stack)
 {
   assertT(t, t->exception == 0);
 
@@ -7582,15 +7582,15 @@ returnClass(MyThread* t, GcMethod* method)
 
   int8_t* spec = returnSpec(t, method);
   unsigned length = strlen(reinterpret_cast<char*>(spec));
-  object name;
+  GcByteArray* name;
   if (*spec == '[') {
-    name = reinterpret_cast<object>(makeByteArray(t, length + 1));
-    memcpy(&byteArrayBody(t, name, 0), spec, length);
+    name = makeByteArray(t, length + 1);
+    memcpy(name->body().begin(), spec, length);
   } else {
     assertT(t, *spec == 'L');
     assertT(t, spec[length - 1] == ';');
-    name = reinterpret_cast<object>(makeByteArray(t, length - 1));
-    memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
+    name = makeByteArray(t, length - 1);
+    memcpy(name->body().begin(), spec + 1, length - 2);
   }
 
   return resolveClass(t, method->class_()->loader(), name);
@@ -7745,7 +7745,7 @@ callContinuation(MyThread* t, object continuation, object result,
 
   switch (action) {
   case Call: {
-    callContinuation(t, continuation, result, exception, ip, stack);
+    callContinuation(t, continuation, result, cast<GcThrowable>(t, exception), ip, stack);
   } break;
 
   case Unwind: {
@@ -7783,12 +7783,12 @@ callWithCurrentContinuation(MyThread* t, object receiver)
       if (m) {
         setRoot(t, ReceiveMethod, reinterpret_cast<object>(m));
 
-        object continuationClass = reinterpret_cast<object>(type(t, GcContinuation::Type));
+        GcClass* continuationClass = type(t, GcContinuation::Type);
 
-        if (classVmFlags(t, continuationClass) & BootstrapFlag) {
+        if (continuationClass->vmFlags() & BootstrapFlag) {
           resolveSystemClass
             (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
-             vm::className(t, continuationClass));
+             continuationClass->name());
         }
       }
     }
@@ -8067,7 +8067,7 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
       collect(t, Heap::MinorCollection);
     }
 
-    object exception = t->exception;
+    GcThrowable* exception = t->exception;
     t->exception = 0;
     vm::throw_(t, exception);
   }
@@ -8129,7 +8129,7 @@ class SignalHandler: public SignalRegistrar::Handler {
         } else {
           // not enough memory available for a new exception and stack
           // trace -- use a preallocated instance instead
-          t->exception = vm::root(t, root);
+          t->exception = cast<GcThrowable>(t, vm::root(t, root));
         }
 
         // printTrace(t, t->exception);
@@ -9511,9 +9511,9 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   t->m->heap->setImmortalHeap(heap, image->heapSize / BytesPerWord);
 
-  t->m->types = bootObject(heap, image->types);
+  t->m->types = reinterpret_cast<GcArray*>(bootObject(heap, image->types));
 
-  t->m->roots = reinterpret_cast<object>(makeArray(t, Machine::RootCount));
+  t->m->roots = makeArray(t, Machine::RootCount);
 
   setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
   setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
@@ -9561,7 +9561,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
       (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::AppLoader))), heap,
        image->heapSize);
 
-    for (unsigned i = 0; i < arrayLength(t, t->m->types); ++i) {
+    for (unsigned i = 0; i < t->m->types->length(); ++i) {
       resetClassRuntimeState
         (t, reinterpret_cast<object>(type(t, static_cast<Gc::Type>(i))), heap, image->heapSize);
     }

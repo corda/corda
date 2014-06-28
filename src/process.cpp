@@ -234,7 +234,7 @@ resolveNative(Thread* t, GcMethod* method)
 
   initClass(t, method->class_());
 
-  if (methodRuntimeDataNative(t, getMethodRuntimeData(t, method)) == 0) {
+  if (getMethodRuntimeData(t, method)->native() == 0) {
     object native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
       throwNew(t, GcUnsatisfiedLinkError::Type, "%s.%s%s",
@@ -245,7 +245,7 @@ resolveNative(Thread* t, GcMethod* method)
 
     PROTECT(t, native);
 
-    object runtimeData = getMethodRuntimeData(t, method);
+    object runtimeData = reinterpret_cast<object>(getMethodRuntimeData(t, method));
 
     // ensure other threads only see the methodRuntimeDataNative field
     // populated once the object it points to has been populated:
