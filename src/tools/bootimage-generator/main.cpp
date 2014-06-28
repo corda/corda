@@ -200,13 +200,13 @@ getNonStaticFields(Thread* t, GcHashMap* typeMaps, object c, object fields,
 
         if ((fieldFlags(t, field) & ACC_STATIC) == 0) {
           ++ (*count);
-          fields = vectorAppend(t, fields, field);
+          fields = reinterpret_cast<object>(vectorAppend(t, cast<GcVector>(t, fields), field));
         }
       }
     }
   }
 
-  return vectorAppend(t, fields, 0);
+  return reinterpret_cast<object>(vectorAppend(t, cast<GcVector>(t, fields), 0));
 }
 
 object
@@ -239,7 +239,7 @@ allFields(Thread* t, GcHashMap* typeMaps, object c, unsigned* count, object* arr
 
       if (includeMembers or (fieldFlags(t, field) & ACC_STATIC)) {
         ++ (*count);
-        fields = vectorAppend(t, fields, field);
+        fields = reinterpret_cast<object>(vectorAppend(t, cast<GcVector>(t, fields), field));
       }
     }
   }
@@ -707,7 +707,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
   for (HashMapIterator it(t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))));
        it.hasMore();)
   {
-    w->visitRoot(tripleSecond(t, it.next()));
+    w->visitRoot(it.next()->second());
   }
 
   image->bootLoader = w->visitRoot(root(t, Machine::BootLoader));
@@ -1572,7 +1572,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
          it.hasMore();)
     {
       bootClassTable[i++] = targetVW
-        (heapWalker->map()->find(tripleSecond(t, it.next())));
+        (heapWalker->map()->find(it.next()->second()));
     }
   }
 
@@ -1588,7 +1588,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
          it.hasMore();)
     {
       appClassTable[i++] = targetVW
-        (heapWalker->map()->find(tripleSecond(t, it.next())));
+        (heapWalker->map()->find(it.next()->second()));
     }
   }
 
@@ -1600,7 +1600,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     for (HashMapIterator it(t, cast<GcHashMap>(t, root(t, Machine::StringMap))); it.hasMore();) {
       stringTable[i++] = targetVW
         (heapWalker->map()->find
-         (jreferenceTarget(t, tripleFirst(t, it.next()))));
+         (jreferenceTarget(t, it.next()->first())));
     }
   }
 

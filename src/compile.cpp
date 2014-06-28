@@ -412,8 +412,8 @@ methodForIp(MyThread* t, void* ip)
   // compile(MyThread*, FixedAllocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  return cast<GcMethod>(t, treeQuery(t, root(t, MethodTree), reinterpret_cast<intptr_t>(ip),
-                   root(t, MethodTreeSentinal), compareIpToMethodBounds));
+  return cast<GcMethod>(t, treeQuery(t, cast<GcTreeNode>(t, root(t, MethodTree)), reinterpret_cast<intptr_t>(ip),
+                   cast<GcTreeNode>(t, root(t, MethodTreeSentinal)), compareIpToMethodBounds));
 }
 
 unsigned
@@ -5751,7 +5751,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 value);
           } else {
             c->call(
-                c->constant(getThunk(t, setThunk), ir::Type::iptr()),
+                c->constant(getThunk(t, setObjectThunk), ir::Type::iptr()),
                 0,
                 0,
                 ir::Type::void_(),
@@ -9261,7 +9261,7 @@ GcHashMap*
 makeClassMap(Thread* t, unsigned* table, unsigned count,
              uintptr_t* heap)
 {
-  object array = reinterpret_cast<object>(makeArray(t, nextPowerOfTwo(count)));
+  GcArray* array = makeArray(t, nextPowerOfTwo(count));
   GcHashMap* map = makeHashMap(t, 0, array);
   PROTECT(t, map);
 
@@ -9295,7 +9295,7 @@ makeStaticTableArray(Thread* t, unsigned* bootTable, unsigned bootCount,
 GcWeakHashMap*
 makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
 {
-  object array = reinterpret_cast<object>(makeArray(t, nextPowerOfTwo(count)));
+  GcArray* array = makeArray(t, nextPowerOfTwo(count));
   GcWeakHashMap* map = makeWeakHashMap(t, 0, array);
   PROTECT(t, map);
 
@@ -9400,7 +9400,7 @@ void
 resetRuntimeState(Thread* t, GcHashMap* map, uintptr_t* heap, unsigned heapSize)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
-    resetClassRuntimeState(t, tripleSecond(t, it.next()), heap, heapSize);
+    resetClassRuntimeState(t, it.next()->second(), heap, heapSize);
   }
 }
 
@@ -9408,7 +9408,7 @@ void
 fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
-    object c = tripleSecond(t, it.next());
+    object c = it.next()->second();
 
     if (classMethodTable(t, c)) {
       for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
@@ -10020,13 +10020,13 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
 
   setRoot(t,
           MethodTree,
-          treeInsert(t,
+          reinterpret_cast<object>(treeInsert(t,
                      &(context.zone),
-                     root(t, MethodTree),
+                     cast<GcTreeNode>(t, root(t, MethodTree)),
                      methodCompiled(t, clone),
                      reinterpret_cast<object>(clone),
-                     root(t, MethodTreeSentinal),
-                     compareIpToMethodBounds));
+                     cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
+                     compareIpToMethodBounds)));
 
   storeStoreMemoryBarrier();
 
@@ -10042,8 +10042,8 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   // when we dispose of the context:
   context.executableAllocator = 0;
 
-  treeUpdate(t, root(t, MethodTree), methodCompiled(t, clone),
-             reinterpret_cast<object>(method), root(t, MethodTreeSentinal), compareIpToMethodBounds);
+  treeUpdate(t, cast<GcTreeNode>(t, root(t, MethodTree)), methodCompiled(t, clone),
+             reinterpret_cast<object>(method), cast<GcTreeNode>(t, root(t, MethodTreeSentinal)), compareIpToMethodBounds);
 }
 
 object&

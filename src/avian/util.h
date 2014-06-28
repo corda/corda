@@ -16,7 +16,7 @@
 
 namespace vm {
 
-object
+GcTriple*
 hashMapFindNode(Thread* t, GcHashMap* map, object key,
                 uint32_t (*hash)(Thread*, object),
                 bool (*equal)(Thread*, object, object));
@@ -26,8 +26,8 @@ hashMapFind(Thread* t, GcHashMap* map, object key,
             uint32_t (*hash)(Thread*, object),
             bool (*equal)(Thread*, object, object))
 {
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  return (n ? tripleSecond(t, n) : 0);
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
+  return (n ? n->second() : 0);
 }
 
 void
@@ -43,12 +43,12 @@ hashMapInsertOrReplace(Thread* t, GcHashMap* map, object key, object value,
                        uint32_t (*hash)(Thread*, object),
                        bool (*equal)(Thread*, object, object))
 {
-  object n = hashMapFindNode(t, map, key, hash, equal);
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
   if (n == 0) {
     hashMapInsert(t, map, key, value, hash);
     return true;
   } else {
-    set(t, n, TripleSecond, value);
+    set(t, reinterpret_cast<object>(n), TripleSecond, value);
     return false;
   }
 }
@@ -58,7 +58,7 @@ hashMapInsertMaybe(Thread* t, GcHashMap* map, object key, object value,
                    uint32_t (*hash)(Thread*, object),
                    bool (*equal)(Thread*, object, object))
 {
-  object n = hashMapFindNode(t, map, key, hash, equal);
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
   if (n == 0) {
     hashMapInsert(t, map, key, value, hash);
     return true;
@@ -79,25 +79,25 @@ object
 hashMapIteratorNext(Thread* t, object it);
 
 void
-listAppend(Thread* t, object list, object value);
+listAppend(Thread* t, GcList* list, object value);
 
-object
-vectorAppend(Thread* t, object vector, object value);
+GcVector*
+vectorAppend(Thread* t, GcVector* vector, object value);
 
 object
 growArray(Thread* t, object array);
 
 object
-treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
+treeQuery(Thread* t, GcTreeNode* tree, intptr_t key, GcTreeNode* sentinal,
           intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
-object
-treeInsert(Thread* t, Zone* zone, object tree, intptr_t key, object value,
-           object sentinal,
+GcTreeNode*
+treeInsert(Thread* t, Zone* zone, GcTreeNode* tree, intptr_t key, object value,
+           GcTreeNode* sentinal,
            intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 void
-treeUpdate(Thread* t, object tree, intptr_t key, object value, object sentinal,
+treeUpdate(Thread* t, GcTreeNode* tree, intptr_t key, object value, GcTreeNode* sentinal,
            intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
 class HashMapIterator: public Thread::Protector {
@@ -109,11 +109,11 @@ class HashMapIterator: public Thread::Protector {
   }
 
   void find() {
-    object array = map->array();
+    GcArray* array = map->array();
     if (array) {
-      for (unsigned i = index; i < arrayLength(t, array); ++i) {
-        if (arrayBody(t, array, i)) {
-          node = arrayBody(t, array, i);
+      for (unsigned i = index; i < array->length(); ++i) {
+        if (array->body()[i]) {
+          node = cast<GcTriple>(t, array->body()[i]);
           index = i + 1;
           return;
         }
@@ -126,11 +126,11 @@ class HashMapIterator: public Thread::Protector {
     return node != 0;
   }
 
-  object next() {
+  GcTriple* next() {
     if (node) {
-      object n = node;
-      if (tripleThird(t, node)) {
-        node = tripleThird(t, node);
+      GcTriple* n = node;
+      if (node->third()) {
+        node = cast<GcTriple>(t, node->third());
       } else {
         find();
       }
@@ -146,7 +146,7 @@ class HashMapIterator: public Thread::Protector {
   }
 
   GcHashMap* map;
-  object node;
+  GcTriple* node;
   unsigned index;
 };
 

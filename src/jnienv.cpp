@@ -544,8 +544,8 @@ methodID(Thread* t, GcMethod* method)
     ACQUIRE(t, t->m->referenceLock);
 
     if (method->nativeID() == 0) {
-      setRoot(t, Machine::JNIMethodTable, vectorAppend
-              (t, root(t, Machine::JNIMethodTable), reinterpret_cast<object>(method)));
+      setRoot(t, Machine::JNIMethodTable, reinterpret_cast<object>(vectorAppend
+              (t, cast<GcVector>(t, root(t, Machine::JNIMethodTable)), reinterpret_cast<object>(method))));
 
       storeStoreMemoryBarrier();
 
@@ -1497,8 +1497,8 @@ fieldID(Thread* t, object field)
     ACQUIRE(t, t->m->referenceLock);
 
     if (fieldNativeID(t, field) == 0) {
-      setRoot(t, Machine::JNIFieldTable, vectorAppend
-              (t, root(t, Machine::JNIFieldTable), field));
+      setRoot(t, Machine::JNIFieldTable, reinterpret_cast<object>(vectorAppend
+              (t, cast<GcVector>(t, root(t, Machine::JNIFieldTable)), field)));
 
       storeStoreMemoryBarrier();
 

@@ -105,13 +105,6 @@
   (object queueTarget)
   (object queueNext))
 
-(type hashMap
-  (uint32_t size)
-  (object array))
-
-(type weakHashMap
-  (extends hashMap))
-
 (type list
   (uint32_t size)
   (object front)
@@ -127,8 +120,8 @@
 
 (type treeNode
   (object value)
-  (object left)
-  (object right))
+  (treeNode left)
+  (treeNode right))
 
 (type callNode
   (intptr_t address)
@@ -141,6 +134,13 @@
 
 (type array
   (noassert array object body))
+
+(type hashMap
+  (uint32_t size)
+  (field array array))
+
+(type weakHashMap
+  (extends hashMap))
 
 (type pair
   (object first)

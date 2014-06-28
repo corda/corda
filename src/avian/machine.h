@@ -1917,6 +1917,19 @@ set(Thread* t, object target, unsigned offset, object value)
 }
 
 inline void
+set(Thread* t, GcObject* target, unsigned offset, GcObject* value)
+{
+  fieldAtOffset<GcObject*>(target, offset) = value;
+  mark(t, reinterpret_cast<object>(target), offset);
+}
+
+inline void
+setObject(Thread* t, GcObject* target, unsigned offset, GcObject* value)
+{
+  set(t, target, offset, value);
+}
+
+inline void
 setObjectClass(Thread*, object o, GcClass* c)
 {
   fieldAtOffset<object>(o, 0)
@@ -3808,8 +3821,8 @@ resolveMethod(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
     (t, reinterpret_cast<object>(method->class_()->loader()), method, index, throw_);
 }
 
-object
-vectorAppend(Thread*, object, object);
+GcVector*
+vectorAppend(Thread*, GcVector*, object);
 
 inline object
 getClassRuntimeDataIfExists(Thread* t, object c)
@@ -3833,8 +3846,8 @@ getClassRuntimeData(Thread* t, GcClass* c)
     if (c->runtimeDataIndex() == 0) {
       object runtimeData = reinterpret_cast<object>(makeClassRuntimeData(t, 0, 0, 0, 0));
 
-      setRoot(t, Machine::ClassRuntimeDataTable, vectorAppend
-              (t, root(t, Machine::ClassRuntimeDataTable), runtimeData));
+      setRoot(t, Machine::ClassRuntimeDataTable, reinterpret_cast<object>(vectorAppend
+              (t, cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable)), runtimeData)));
 
       c->runtimeDataIndex() = vectorSize
         (t, root(t, Machine::ClassRuntimeDataTable));
@@ -3860,8 +3873,8 @@ getMethodRuntimeData(Thread* t, GcMethod* method)
     if (method->runtimeDataIndex() == 0) {
       object runtimeData = reinterpret_cast<object>(makeMethodRuntimeData(t, 0));
 
-      setRoot(t, Machine::MethodRuntimeDataTable, vectorAppend
-              (t, root(t, Machine::MethodRuntimeDataTable), runtimeData));
+      setRoot(t, Machine::MethodRuntimeDataTable, reinterpret_cast<object>(vectorAppend
+              (t, cast<GcVector>(t, root(t, Machine::MethodRuntimeDataTable)), runtimeData)));
 
       storeStoreMemoryBarrier();
 

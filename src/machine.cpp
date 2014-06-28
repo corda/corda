@@ -893,10 +893,10 @@ internByteArray(Thread* t, object array)
 
   ACQUIRE(t, t->m->referenceLock);
 
-  object n = hashMapFindNode
+  GcTriple* n = hashMapFindNode
     (t, cast<GcHashMap>(t, root(t, Machine::ByteArrayMap)), array, byteArrayHash, byteArrayEqual);
   if (n) {
-    return jreferenceTarget(t, tripleFirst(t, n));
+    return jreferenceTarget(t, n->first());
   } else {
     hashMapInsert(t, cast<GcHashMap>(t, root(t, Machine::ByteArrayMap)), array, 0, byteArrayHash);
     addFinalizer(t, array, removeByteArray);
@@ -1275,7 +1275,7 @@ parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
 
     unsigned i = 0;
     for (HashMapIterator it(t, map); it.hasMore();) {
-      GcClass* interface = cast<GcClass>(t, tripleSecond(t, it.next()));
+      GcClass* interface = cast<GcClass>(t, it.next()->second());
 
       set(t, interfaceTable, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(interface));
       ++ i;
@@ -1987,7 +1987,7 @@ addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
       if (vtable) {
         for (unsigned j = 0; j < arrayLength(t, vtable); ++j) {
           method = cast<GcMethod>(t, arrayBody(t, vtable, j));
-          object n = hashMapFindNode
+          GcTriple* n = hashMapFindNode
             (t, virtualMap, reinterpret_cast<object>(method), methodHash, methodEqual);
           if (n == 0) {
             method = makeMethod
@@ -2016,7 +2016,7 @@ addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
               if (list == 0) {
                 list = reinterpret_cast<object>(vm::makeList(t, 0, 0, 0));
               }
-              listAppend(t, list, reinterpret_cast<object>(method));
+              listAppend(t, cast<GcList>(t, list), reinterpret_cast<object>(method));
             }
           }
         }
@@ -2193,17 +2193,17 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       if (methodVirtual(t, method)) {
         ++ declaredVirtualCount;
 
-        object p = hashMapFindNode
+        GcTriple* p = hashMapFindNode
           (t, virtualMap, reinterpret_cast<object>(method), methodHash, methodEqual);
 
         if (p) {
-          method->offset() = methodOffset(t, tripleFirst(t, p));
+          method->offset() = methodOffset(t, p->first());
 
-          set(t, p, TripleSecond, reinterpret_cast<object>(method));
+          set(t, reinterpret_cast<object>(p), TripleSecond, reinterpret_cast<object>(method));
         } else {
           method->offset() = virtualCount++;
 
-          listAppend(t, newVirtuals, reinterpret_cast<object>(method));
+          listAppend(t, cast<GcList>(t, newVirtuals), reinterpret_cast<object>(method));
 
           hashMapInsert(t, virtualMap, reinterpret_cast<object>(method), reinterpret_cast<object>(method), methodHash);
         }
@@ -2284,7 +2284,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       PROTECT(t, vtable);
 
       for (HashMapIterator it(t, virtualMap); it.hasMore();) {
-        object method = tripleFirst(t, it.next());
+        object method = it.next()->first();
         assertT(t, arrayBody(t, vtable, methodOffset(t, method)) == 0);
         set(t, vtable, ArrayBody + (methodOffset(t, method) * BytesPerWord),
             method);
@@ -4933,11 +4933,11 @@ intern(Thread* t, object s)
 
   ACQUIRE(t, t->m->referenceLock);
 
-  object n = hashMapFindNode
+  GcTriple* n = hashMapFindNode
     (t, cast<GcHashMap>(t, root(t, Machine::StringMap)), s, stringHash, stringEqual);
 
   if (n) {
-    return jreferenceTarget(t, tripleFirst(t, n));
+    return jreferenceTarget(t, n->first());
   } else {
     hashMapInsert(t, cast<GcHashMap>(t, root(t, Machine::StringMap)), s, 0, stringHash);
     addFinalizer(t, s, removeString);
