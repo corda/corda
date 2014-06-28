@@ -1,5 +1,5 @@
 package avian;
 
-class Code {
+abstract class Code {
   // VM-visible fields in types.def
 }

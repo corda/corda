@@ -37,6 +37,7 @@ class GcCode;
 class GcClass;
 class GcMethod;
 class GcClassAddendum;
+class GcSingleton;
 
 class Processor {
  public:
@@ -99,7 +100,7 @@ class Processor {
             object fieldTable,
             object methodTable,
             GcClassAddendum* addendum,
-            object staticTable,
+            GcSingleton* staticTable,
             object loader,
             unsigned vtableLength) = 0;
 

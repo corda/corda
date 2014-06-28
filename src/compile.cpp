@@ -8418,7 +8418,7 @@ class MyProcessor: public Processor {
             object fieldTable,
             object methodTable,
             GcClassAddendum* addendum,
-            object staticTable,
+            GcSingleton* staticTable,
             object loader,
             unsigned vtableLength)
   {

@@ -1213,7 +1213,7 @@ getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, -1, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0);
     set(t,
         reinterpret_cast<object>(class_),
         ClassAddendum,
@@ -1350,7 +1350,7 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         {
           if (addendum == 0) {
             addendum = reinterpret_cast<object>(
-                makeFieldAddendum(t, reinterpret_cast<object>(pool), 0, 0));
+                makeFieldAddendum(t, pool, 0, 0));
           }
       
           set(t, addendum, AddendumSignature,
@@ -1361,7 +1361,7 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         {
           if (addendum == 0) {
             addendum = reinterpret_cast<object>(
-                makeFieldAddendum(t, reinterpret_cast<object>(pool), 0, 0));
+                makeFieldAddendum(t, pool, 0, 0));
           }
 
           object body = reinterpret_cast<object>(makeByteArray(t, length));
@@ -2104,7 +2104,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = reinterpret_cast<object>(makeMethodAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0));
+            addendum = reinterpret_cast<object>(makeMethodAddendum(t, pool, 0, 0, 0, 0, 0));
           }
           unsigned exceptionCount = s.read2();
           object body = reinterpret_cast<object>(makeShortArray(t, exceptionCount));
@@ -2117,7 +2117,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = reinterpret_cast<object>(makeMethodAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0));
+            addendum = reinterpret_cast<object>(makeMethodAddendum(t, pool, 0, 0, 0, 0, 0));
           }
 
           object body = reinterpret_cast<object>(makeByteArray(t, length));
@@ -2129,7 +2129,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = reinterpret_cast<object>(makeMethodAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0));
+            addendum = reinterpret_cast<object>(makeMethodAddendum(t, pool, 0, 0, 0, 0, 0));
           }
       
           set(t, addendum, AddendumSignature,
@@ -2139,7 +2139,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = reinterpret_cast<object>(makeMethodAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0));
+            addendum = reinterpret_cast<object>(makeMethodAddendum(t, pool, 0, 0, 0, 0, 0));
           }
 
           object body = reinterpret_cast<object>(makeByteArray(t, length));
@@ -2152,7 +2152,7 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                               &byteArrayBody(t, attributeName, 0)) == 0)
         {
           if (addendum == 0) {
-            addendum = reinterpret_cast<object>(makeMethodAddendum(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0));
+            addendum = reinterpret_cast<object>(makeMethodAddendum(t, pool, 0, 0, 0, 0, 0));
           }
 
           object body = reinterpret_cast<object>(makeByteArray(t, length));
@@ -2465,7 +2465,7 @@ updateClassTables(Thread* t, GcClass* newClass, GcClass* oldClass)
     }
   }
 
-  object staticTable = newClass->staticTable();
+  object staticTable = reinterpret_cast<object>(newClass->staticTable());
   if (staticTable) {
     set(t, staticTable, SingletonBody, reinterpret_cast<object>(newClass));
   }
@@ -4340,7 +4340,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
      reinterpret_cast<object>(class_->fieldTable()),
      reinterpret_cast<object>(class_->methodTable()),
      class_->addendum(),
-     reinterpret_cast<object>(class_->staticTable()),
+     class_->staticTable(),
      reinterpret_cast<object>(class_->loader()),
      vtableLength);
 

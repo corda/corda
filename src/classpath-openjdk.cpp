@@ -754,7 +754,7 @@ class MyClasspath : public Classpath {
       object sclSet = resolveField
         (t, type(t, GcClassLoader::Type), "sclSet", "Z");
 
-      set(t, type(t, GcClassLoader::Type)->staticTable(),
+      set(t, reinterpret_cast<object>(type(t, GcClassLoader::Type)->staticTable()),
           fieldOffset(t, scl), root(t, Machine::AppLoader));
 
       fieldAtOffset<uint8_t>(type(t, GcClassLoader::Type)->staticTable(),

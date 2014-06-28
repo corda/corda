@@ -651,13 +651,13 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
                   (t, addendum->exceptionTable(), i) - 1;
 
                 object o = singletonObject
-                  (t, cast<GcSingleton>(t, addendum->pool()), index);
+                  (t, addendum->pool(), index);
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
                     (t, root(t, Machine::BootLoader), referenceName(t, o)));
     
-                  set(t, addendum->pool(),
+                  set(t, reinterpret_cast<object>(addendum->pool()),
                       SingletonBody + (index * BytesPerWord), o);
                 }
               }
