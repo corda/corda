@@ -325,7 +325,7 @@ defineClass(Thread* t, uintptr_t* arguments)
       t,
       reinterpret_cast<object>(getJClass(t,
                 cast<GcClass>(t, defineClass(t,
-                            loader ? *loader : root(t, Machine::BootLoader),
+                            cast<GcClassLoader>(t, loader ? *loader : root(t, Machine::BootLoader)),
                             buffer,
                             length))))));
 }
@@ -353,9 +353,8 @@ findClass(Thread* t, uintptr_t* arguments)
 
   GcClass* c = resolveClass(
       t,
-      caller ? reinterpret_cast
-          <object>(t->m->classpath->libraryClassLoader(t, caller))
-             : root(t, Machine::AppLoader),
+      caller ? t->m->classpath->libraryClassLoader(t, caller) : cast
+          <GcClassLoader>(t, root(t, Machine::AppLoader)),
       n);
 
   if (t->m->classpath->mayInitClasses()) {
@@ -3564,7 +3563,7 @@ boot(Thread* t, uintptr_t*)
     PROTECT(t, host);
 
     GcMethod* method = resolveMethod
-      (t, root(t, Machine::BootLoader), "avian/Traces", "startTraceListener",
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Traces", "startTraceListener",
        "(Ljava/lang/String;I)V");
 
     t->m->processor->invoke(t, method, 0, host, atoi(port));

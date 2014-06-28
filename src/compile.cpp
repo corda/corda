@@ -336,7 +336,7 @@ resolveTarget(MyThread* t, void* stack, GcMethod* method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveSystemClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
+    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
   }
 
   if (method->class_()->flags() & ACC_INTERFACE) {
@@ -352,7 +352,7 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
   if (class_->vmFlags() & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveSystemClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
+    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
   }
 
   return cast<GcMethod>(t, arrayBody(t, class_->virtualTable(), index));
@@ -2281,7 +2281,7 @@ resolveMethod(Thread* t, object pair)
   PROTECT(t, reference);
 
   GcClass* class_ = resolveClassInObject
-    (t, classLoader(t, methodClass(t, pairFirst(t, pair))), reference,
+    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(), reference,
      ReferenceClass);
 
   return cast<GcMethod>(t, findInHierarchy
@@ -2419,7 +2419,7 @@ getJClassFromReference(MyThread* t, object pair)
   return reinterpret_cast<intptr_t>(getJClass(
       t,
       resolveClass(t,
-                       classLoader(t, methodClass(t, pairFirst(t, pair))),
+                       cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
                        referenceName(t, pairSecond(t, pair)))));
 }
 
@@ -2512,7 +2512,7 @@ makeBlankObjectArrayFromReference(MyThread* t, object pair,
   return makeBlankObjectArray(
       t,
       resolveClass(t,
-                       classLoader(t, methodClass(t, pairFirst(t, pair))),
+                       cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
                        referenceName(t, pairSecond(t, pair))),
       length);
 }
@@ -2651,7 +2651,7 @@ makeMultidimensionalArrayFromReference(MyThread* t, object pair,
 {
   return makeMultidimensionalArray
     (t, resolveClass
-     (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
       referenceName(t, pairSecond(t, pair))), dimensions, offset);
 }
 
@@ -2710,7 +2710,7 @@ checkCastFromReference(MyThread* t, object pair, object o)
   PROTECT(t, o);
 
   GcClass* c = resolveClass
-    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
      referenceName(t, pairSecond(t, pair)));
 
   checkCast(t, c, o);
@@ -2723,7 +2723,7 @@ resolveField(Thread* t, object pair)
   PROTECT(t, reference);
 
   GcClass* class_ = resolveClassInObject
-    (t, classLoader(t, methodClass(t, pairFirst(t, pair))), reference,
+    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(), reference,
      ReferenceClass);
 
   return findInHierarchy
@@ -2906,7 +2906,7 @@ instanceOfFromReference(Thread* t, object pair, object o)
   PROTECT(t, o);
 
   GcClass* c = resolveClass
-    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
      referenceName(t, pairSecond(t, pair)));
 
   return instanceOf64(t, c, o);
@@ -2936,7 +2936,7 @@ uint64_t
 makeNewFromReference(Thread* t, object pair)
 {
   GcClass* class_ = resolveClass
-    (t, classLoader(t, methodClass(t, pairFirst(t, pair))),
+    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
      referenceName(t, pairSecond(t, pair)));
 
   PROTECT(t, class_);
@@ -7593,7 +7593,7 @@ returnClass(MyThread* t, GcMethod* method)
     memcpy(&byteArrayBody(t, name, 0), spec + 1, length - 2);
   }
 
-  return resolveClass(t, reinterpret_cast<object>(method->class_()->loader()), name);
+  return resolveClass(t, method->class_()->loader(), name);
 }
 
 bool
@@ -7717,7 +7717,7 @@ callContinuation(MyThread* t, object continuation, object result,
           PROTECT(t, nextContinuation);
 
           GcMethod* method = resolveMethod
-            (t, root(t, Machine::BootLoader), "avian/Continuations", "rewind",
+            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Continuations", "rewind",
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
 
@@ -7777,7 +7777,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
     if (root(t, ReceiveMethod) == 0) {
       GcMethod* m = resolveMethod
-        (t, root(t, Machine::BootLoader), "avian/Function", "call",
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Function", "call",
          "(Ljava/lang/Object;)Ljava/lang/Object;");
 
       if (m) {
@@ -7787,7 +7787,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
         if (classVmFlags(t, continuationClass) & BootstrapFlag) {
           resolveSystemClass
-            (t, root(t, Machine::BootLoader),
+            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
              vm::className(t, continuationClass));
         }
       }
@@ -7817,7 +7817,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
 
     if (root(t, WindMethod) == 0) {
       GcMethod* method = resolveMethod
-        (t, root(t, Machine::BootLoader), "avian/Continuations", "wind",
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
@@ -8024,7 +8024,7 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
 
     compile(t, local::codeAllocator(static_cast<MyThread*>(t)), 0,
             resolveMethod
-            (t, root(t, Machine::AppLoader),
+            (t, cast<GcClassLoader>(t, root(t, Machine::AppLoader)),
              "foo/ClassName",
              "methodName",
              "()V"));
@@ -8664,7 +8664,7 @@ class MyProcessor: public Processor {
        this_, methodSpec, false, arguments);
 
     GcMethod* method = resolveMethod
-      (t, reinterpret_cast<object>(loader), className, methodName, methodSpec);
+      (t, loader, className, methodName, methodSpec);
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 

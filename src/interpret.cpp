@@ -2665,7 +2665,7 @@ interpret3(Thread* t, const int base)
     GcClass* class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
     assertT(t, class_->vmFlags() & BootstrapFlag);
 
-    resolveClass(t, reinterpret_cast<object>(frameMethod(t, frame)->class_()->loader()),
+    resolveClass(t, frameMethod(t, frame)->class_()->loader(),
                  reinterpret_cast<object>(class_->name()));
 
     ip -= 3;
@@ -2891,7 +2891,7 @@ invoke(Thread* t, GcMethod* method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (class_->vmFlags() & BootstrapFlag) {
-      resolveClass(t, root(t, Machine::BootLoader), reinterpret_cast<object>(class_->name()));
+      resolveClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), reinterpret_cast<object>(class_->name()));
     }
 
     if (method->class_()->flags() & ACC_INTERFACE) {
@@ -3219,7 +3219,7 @@ class MyProcessor: public Processor {
     pushArguments(t, this_, methodSpec, false, arguments);
 
     GcMethod* method = resolveMethod
-      (t, reinterpret_cast<object>(loader), className, methodName, methodSpec);
+      (t, loader, className, methodName, methodSpec);
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 

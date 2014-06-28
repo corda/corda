@@ -343,7 +343,7 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
 }
 
 GcClass*
-resolveClassBySpec(Thread* t, object loader, const char* spec,
+resolveClassBySpec(Thread* t, GcClassLoader* loader, const char* spec,
                    unsigned specLength)
 {
   switch (*spec) {
@@ -367,13 +367,13 @@ resolveClassBySpec(Thread* t, object loader, const char* spec,
 }
 
 GcJclass*
-resolveJType(Thread* t, object loader, const char* spec, unsigned specLength)
+resolveJType(Thread* t, GcClassLoader* loader, const char* spec, unsigned specLength)
 {
   return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
 }
 
 object
-resolveParameterTypes(Thread* t, object loader, object spec,
+resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
                       unsigned* parameterCount, unsigned* returnTypeSpec)
 {
   PROTECT(t, loader);
@@ -384,16 +384,16 @@ resolveParameterTypes(Thread* t, object loader, object spec,
 
   unsigned offset = 1;
   unsigned count = 0;
-  while (byteArrayBody(t, spec, offset) != ')') {
-    switch (byteArrayBody(t, spec, offset)) {
+  while (spec->body()[offset] != ')') {
+    switch (spec->body()[offset]) {
     case 'L': {
       unsigned start = offset;
       ++ offset;
-      while (byteArrayBody(t, spec, offset) != ';') ++ offset;
+      while (spec->body()[offset] != ';') ++ offset;
       ++ offset;
 
       GcClass* type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
+        (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
          offset - start);
 
       list = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(type), list));
@@ -403,11 +403,11 @@ resolveParameterTypes(Thread* t, object loader, object spec,
 
     case '[': {
       unsigned start = offset;
-      while (byteArrayBody(t, spec, offset) == '[') ++ offset;
-      switch (byteArrayBody(t, spec, offset)) {
+      while (spec->body()[offset] == '[') ++ offset;
+      switch (spec->body()[offset]) {
       case 'L':
         ++ offset;
-        while (byteArrayBody(t, spec, offset) != ';') ++ offset;
+        while (spec->body()[offset] != ';') ++ offset;
         ++ offset;
         break;
 
@@ -417,7 +417,7 @@ resolveParameterTypes(Thread* t, object loader, object spec,
       }
 
       GcClass* type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&byteArrayBody(t, spec, start)),
+        (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
          offset - start);
 
       list = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(type), list));
@@ -426,7 +426,7 @@ resolveParameterTypes(Thread* t, object loader, object spec,
 
     default:
       list = reinterpret_cast<object>(makePair
-        (t, reinterpret_cast<object>(primitiveClass(t, byteArrayBody(t, spec, offset))), list));
+        (t, reinterpret_cast<object>(primitiveClass(t, spec->body()[offset])), list));
       ++ offset;
       ++ count;
       break;
@@ -439,7 +439,7 @@ resolveParameterTypes(Thread* t, object loader, object spec,
 }
 
 object
-resolveParameterJTypes(Thread* t, object loader, object spec,
+resolveParameterJTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
                        unsigned* parameterCount, unsigned* returnTypeSpec)
 {
   object list = resolveParameterTypes
@@ -461,9 +461,9 @@ resolveParameterJTypes(Thread* t, object loader, object spec,
 }
 
 object
-resolveExceptionJTypes(Thread* t, object loader, object addendum)
+resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* addendum)
 {
-  if (addendum == 0 or methodAddendumExceptionTable(t, addendum) == 0) {
+  if (addendum == 0 or addendum->exceptionTable() == 0) {
     return makeObjectArray(t, type(t, GcJclass::Type), 0);
   }
 
@@ -472,21 +472,21 @@ resolveExceptionJTypes(Thread* t, object loader, object addendum)
 
   object array = makeObjectArray
     (t, type(t, GcJclass::Type),
-     shortArrayLength(t, methodAddendumExceptionTable(t, addendum)));
+     shortArrayLength(t, addendum->exceptionTable()));
   PROTECT(t, array);
 
   for (unsigned i = 0; i < shortArrayLength
-         (t, methodAddendumExceptionTable(t, addendum)); ++i)
+         (t, addendum->exceptionTable()); ++i)
   {
     uint16_t index = shortArrayBody
-      (t, methodAddendumExceptionTable(t, addendum), i) - 1;
+      (t, addendum->exceptionTable(), i) - 1;
 
-    object o = singletonObject(t, cast<GcSingleton>(t, addendumPool(t, addendum)), index);
+    object o = singletonObject(t, addendum->pool(), index);
 
     if (objectClass(t, o) == type(t, GcReference::Type)) {
       o = reinterpret_cast<object>(resolveClass(t, loader, referenceName(t, o)));
 
-      set(t, addendumPool(t, addendum), SingletonBody + (index * BytesPerWord),
+      set(t, reinterpret_cast<object>(addendum->pool()), SingletonBody + (index * BytesPerWord),
           o);
     }
 
@@ -549,7 +549,7 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
         memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
         RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
         type = resolveClass
-          (t, reinterpret_cast<object>(method->class_()->loader()),
+          (t, method->class_()->loader(),
            RUNTIME_ARRAY_BODY(name));
       } break;
 
@@ -710,7 +710,7 @@ getDeclaredClasses(Thread* t, object c, bool publicOnly)
               t,
               resolveClass(
                   t,
-                  classLoader(t, c),
+                  cast<GcClassLoader>(t, classLoader(t, c)),
                   innerClassReferenceInner(t, arrayBody(t, table, i)))));
 
           -- count;
@@ -741,7 +741,7 @@ getDeclaringClass(Thread* t, object c)
           return getJClass(
               t,
               resolveClass(t,
-                           classLoader(t, c),
+                           cast<GcClassLoader>(t, classLoader(t, c)),
                            innerClassReferenceOuter(t, reference)));
         }
       }

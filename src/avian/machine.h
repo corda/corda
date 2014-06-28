@@ -2620,7 +2620,7 @@ scanMethodSpec(Thread* t, const char* s, bool static_,
 }
 
 GcClass*
-findLoadedClass(Thread* t, object loader, object spec);
+findLoadedClass(Thread* t, GcClassLoader* loader, object spec);
 
 inline bool
 emptyMethod(Thread* t UNUSED, GcMethod* method)
@@ -2637,15 +2637,15 @@ object
 parseUtf8(Thread* t, object array);
 
 GcClass*
-parseClass(Thread* t, object loader, const uint8_t* data, unsigned length,
+parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned length,
            Gc::Type throwType = GcNoClassDefFoundError::Type);
 
 GcClass*
-resolveClass(Thread* t, object loader, object name, bool throw_ = true,
+resolveClass(Thread* t, GcClassLoader* loader, object name, bool throw_ = true,
              Gc::Type throwType = GcNoClassDefFoundError::Type);
 
 inline GcClass*
-resolveClass(Thread* t, object loader, const char* name, bool throw_ = true,
+resolveClass(Thread* t, GcClassLoader* loader, const char* name, bool throw_ = true,
              Gc::Type throwType = GcNoClassDefFoundError::Type)
 {
   PROTECT(t, loader);
@@ -2655,24 +2655,24 @@ resolveClass(Thread* t, object loader, const char* name, bool throw_ = true,
 
 GcClass*
 resolveSystemClass
-(Thread* t, object loader, object name, bool throw_ = true,
+(Thread* t, GcClassLoader* loader, object name, bool throw_ = true,
  Gc::Type throwType = GcNoClassDefFoundError::Type);
 
 inline GcClass*
-resolveSystemClass(Thread* t, object loader, const char* name)
+resolveSystemClass(Thread* t, GcClassLoader* loader, const char* name)
 {
   return resolveSystemClass(t, loader, makeByteArray(t, "%s", name));
 }
 
 void
-linkClass(Thread* t, object loader, GcClass* class_);
+linkClass(Thread* t, GcClassLoader* loader, GcClass* class_);
 
 GcMethod*
 resolveMethod(Thread* t, GcClass* class_, const char* methodName,
               const char* methodSpec);
 
 inline GcMethod*
-resolveMethod(Thread* t, object loader, const char* className,
+resolveMethod(Thread* t, GcClassLoader* loader, const char* className,
               const char* methodName, const char* methodSpec)
 {
   return resolveMethod
@@ -2684,7 +2684,7 @@ resolveField(Thread* t, GcClass* class_, const char* fieldName,
              const char* fieldSpec);
 
 inline object
-resolveField(Thread* t, object loader, const char* className,
+resolveField(Thread* t, GcClassLoader* loader, const char* className,
              const char* fieldName, const char* fieldSpec)
 {
   return resolveField
@@ -2704,7 +2704,7 @@ void
 initClass(Thread* t, GcClass* c);
 
 GcClass*
-resolveObjectArrayClass(Thread* t, object loader, object elementClass);
+resolveObjectArrayClass(Thread* t, GcClassLoader* loader, object elementClass);
 
 object
 makeObjectArray(Thread* t, GcClass* elementClass, unsigned count);
@@ -3613,7 +3613,7 @@ poolSize(Thread* t, GcSingleton* pool)
 }
 
 inline GcClass*
-resolveClassInObject(Thread* t, object loader, object container,
+resolveClassInObject(Thread* t, GcClassLoader* loader, object container,
                      unsigned classOffset, bool throw_ = true)
 {
   object o = fieldAtOffset<object>(container, classOffset);
@@ -3637,7 +3637,7 @@ resolveClassInObject(Thread* t, object loader, object container,
 }
 
 inline GcClass*
-resolveClassInPool(Thread* t, object loader, GcMethod* method, unsigned index,
+resolveClassInPool(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
   object o = singletonObject(t, method->code()->pool(), index);
@@ -3664,12 +3664,12 @@ inline GcClass*
 resolveClassInPool(Thread* t, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
-  return resolveClassInPool(t, reinterpret_cast<object>(method->class_()->loader()),
+  return resolveClassInPool(t, method->class_()->loader(),
                             method, index, throw_);
 }
 
 inline object
-resolve(Thread* t, object loader, GcMethod* method, unsigned index,
+resolve(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
         object (*find)(vm::Thread*, GcClass*, object, object),
         Gc::Type errorType, bool throw_ = true)
 {
@@ -3705,7 +3705,7 @@ resolve(Thread* t, object loader, GcMethod* method, unsigned index,
 }
 
 inline object
-resolveField(Thread* t, object loader, GcMethod* method, unsigned index,
+resolveField(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
              bool throw_ = true)
 {
   return resolve(t, loader, method, index, findFieldInClass,
@@ -3716,7 +3716,7 @@ inline object
 resolveField(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
 {
   return resolveField
-    (t, reinterpret_cast<object>(method->class_()->loader()), method, index, throw_);
+    (t, method->class_()->loader(), method, index, throw_);
 }
 
 inline void
@@ -3807,7 +3807,7 @@ class FieldWriteResource {
 };
 
 inline GcMethod*
-resolveMethod(Thread* t, object loader, GcMethod* method, unsigned index,
+resolveMethod(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
                    bool throw_ = true)
 {
   return cast<GcMethod>(t, resolve(t, loader, method, index, findMethodInClass,
@@ -3818,7 +3818,7 @@ inline GcMethod*
 resolveMethod(Thread* t, GcMethod* method, unsigned index, bool throw_ = true)
 {
   return resolveMethod
-    (t, reinterpret_cast<object>(method->class_()->loader()), method, index, throw_);
+    (t, method->class_()->loader(), method, index, throw_);
 }
 
 GcVector*
@@ -3969,7 +3969,7 @@ GcMethod*
 getCaller(Thread* t, unsigned target, bool skipMethodInvoke = false);
 
 object
-defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length);
+defineClass(Thread* t, GcClassLoader* loader, const uint8_t* buffer, unsigned length);
 
 inline GcMethod*
 methodClone(Thread* t, GcMethod* method)

@@ -20,8 +20,8 @@ using namespace vm;
 namespace {
 
 int64_t
-search(Thread* t, object loader, object name,
-       GcClass* (*op)(Thread*, object, object), bool replaceDots)
+search(Thread* t, GcClassLoader* loader, object name,
+       GcClass* (*op)(Thread*, GcClassLoader*, object), bool replaceDots)
 {
   if (LIKELY(name)) {
     PROTECT(t, loader);
@@ -42,7 +42,7 @@ search(Thread* t, object loader, object name,
 }
 
 GcClass*
-resolveSystemClassThrow(Thread* t, object loader, object spec)
+resolveSystemClassThrow(Thread* t, GcClassLoader* loader, object spec)
 {
   return resolveSystemClass
     (t, loader, spec, true, GcClassNotFoundException::Type);
@@ -131,7 +131,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_Classes_resolveVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   object spec = reinterpret_cast<object>(arguments[1]);
 
   return reinterpret_cast<int64_t>
@@ -142,7 +142,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_Classes_defineVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   object b = reinterpret_cast<object>(arguments[1]);
   int offset = arguments[2];
   int length = arguments[3];
@@ -162,7 +162,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   object name = reinterpret_cast<object>(arguments[1]);
 
   return search(t, loader, name, findLoadedClass, true);
@@ -180,7 +180,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_findVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   object name = reinterpret_cast<object>(arguments[1]);
 
   return search(t, loader, name, resolveSystemClassThrow, true);
@@ -190,7 +190,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_resourceURLPrefix
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   object name = reinterpret_cast<object>(arguments[1]);
 
   if (LIKELY(name)) {
@@ -198,7 +198,7 @@ Avian_avian_SystemClassLoader_resourceURLPrefix
     stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
     const char* name = static_cast<Finder*>
-      (systemClassLoaderFinder(t, loader))->urlPrefix(RUNTIME_ARRAY_BODY(n));
+      (loader->as<GcSystemClassLoader>(t)->finder())->urlPrefix(RUNTIME_ARRAY_BODY(n));
 
     return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;
   } else {
@@ -210,7 +210,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_00024ResourceEnumeration_nextResourceURLPrefix
 (Thread* t, object, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[1]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[1]));
   object name = reinterpret_cast<object>(arguments[2]);
   object finderElementPtrPtr = reinterpret_cast<object>(arguments[3]);
 
@@ -221,7 +221,7 @@ Avian_avian_SystemClassLoader_00024ResourceEnumeration_nextResourceURLPrefix
     void *&finderElementPtr = reinterpret_cast<void *&>(longArrayBody(t,
       finderElementPtrPtr, 0));
     const char* name = static_cast<Finder*>
-      (systemClassLoaderFinder(t, loader))->nextUrlPrefix(RUNTIME_ARRAY_BODY(n),
+      (loader->as<GcSystemClassLoader>(t)->finder())->nextUrlPrefix(RUNTIME_ARRAY_BODY(n),
         finderElementPtr);
 
     return name ? reinterpret_cast<uintptr_t>(makeString(t, "%s", name)) : 0;

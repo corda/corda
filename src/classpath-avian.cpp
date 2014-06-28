@@ -97,7 +97,7 @@ class MyClasspath : public Classpath {
   runThread(Thread* t)
   {
     GcMethod* method = resolveMethod
-      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run",
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Thread", "run",
        "(Ljava/lang/Thread;)V");
 
     t->m->processor->invoke(t, method, 0, t->javaThread);
@@ -142,7 +142,7 @@ class MyClasspath : public Classpath {
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
     GcClass* c = resolveClass
-      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/DirectByteBuffer");
     PROTECT(t, c);
 
     object instance = makeNew(t, c);
@@ -793,7 +793,7 @@ Avian_avian_Classes_makeMethod
   PROTECT(t, method);
 
   GcClass* c = resolveClass
-    (t, root(t, Machine::BootLoader), "java/lang/reflect/Method");
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/reflect/Method");
   PROTECT(t, c);
 
   object instance = makeNew(t, c);
@@ -807,7 +807,7 @@ Avian_avian_Classes_makeMethod
     method = instance;
 
     c = resolveClass
-      (t, root(t, Machine::BootLoader), "java/lang/reflect/Constructor");
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/reflect/Constructor");
 
     object instance = makeNew(t, c);
 

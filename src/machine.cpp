@@ -1253,7 +1253,7 @@ parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
     PROTECT(t, name);
 
     GcClass* interface = resolveClass
-      (t, reinterpret_cast<object>(class_->loader()), name, true, throwType);
+      (t, class_->loader(), name, true, throwType);
 
     PROTECT(t, interface);
 
@@ -2523,7 +2523,7 @@ updateBootstrapClass(Thread* t, GcClass* bootstrapClass, GcClass* class_)
 }
 
 GcClass*
-makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
+makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, object spec,
                object elementClass)
 {
   if (type(t, GcJobject::Type)->vmFlags() & BootstrapFlag) {
@@ -2536,7 +2536,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
     // avoid infinite recursion due to trying to create an array to
     // make a stack trace for a ClassNotFoundException.
     resolveSystemClass
-      (t, root(t, Machine::BootLoader),
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
        reinterpret_cast<object>(type(t, GcJobject::Type)->name()), false);
   }
 
@@ -2560,7 +2560,7 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
      0,
      0,
      0,
-     cast<GcClassLoader>(t, loader),
+     loader,
      arrayLength(t, vtable));
 
   PROTECT(t, c);
@@ -2571,27 +2571,27 @@ makeArrayClass(Thread* t, object loader, unsigned dimensions, object spec,
 }
 
 void
-saveLoadedClass(Thread* t, object loader, GcClass* c)
+saveLoadedClass(Thread* t, GcClassLoader* loader, GcClass* c)
 {
   PROTECT(t, loader);
   PROTECT(t, c);
 
   ACQUIRE(t, t->m->classLock);
 
-  if (classLoaderMap(t, loader) == 0) {
+  if (loader->map() == 0) {
     GcHashMap* map = makeHashMap(t, 0, 0);
-    set(t, loader, ClassLoaderMap, reinterpret_cast<object>(map));
+    set(t, reinterpret_cast<object>(loader), ClassLoaderMap, reinterpret_cast<object>(map));
   }
 
   hashMapInsert(t,
-                cast<GcHashMap>(t, classLoaderMap(t, loader)),
+                cast<GcHashMap>(t, loader->map()),
                 reinterpret_cast<object>(c->name()),
                 reinterpret_cast<object>(c),
                 byteArrayHash);
 }
 
 GcClass*
-makeArrayClass(Thread* t, object loader, object spec, bool throw_,
+makeArrayClass(Thread* t, GcClassLoader* loader, object spec, bool throw_,
                Gc::Type throwType)
 {
   PROTECT(t, loader);
@@ -2649,23 +2649,23 @@ makeArrayClass(Thread* t, object loader, object spec, bool throw_,
 
   ACQUIRE(t, t->m->classLock);
 
-  GcClass* class_ = findLoadedClass(t, reinterpret_cast<object>(elementClass->loader()), spec);
+  GcClass* class_ = findLoadedClass(t, elementClass->loader(), spec);
   if (class_) {
     return class_;
   }
 
   class_ = makeArrayClass
-    (t, reinterpret_cast<object>(elementClass->loader()), dimensions, spec, reinterpret_cast<object>(elementClass));
+    (t, elementClass->loader(), dimensions, spec, reinterpret_cast<object>(elementClass));
 
   PROTECT(t, class_);
 
-  saveLoadedClass(t, reinterpret_cast<object>(elementClass->loader()), class_);
+  saveLoadedClass(t, elementClass->loader(), class_);
 
   return class_;
 }
 
 GcClass*
-resolveArrayClass(Thread* t, object loader, object spec, bool throw_,
+resolveArrayClass(Thread* t, GcClassLoader* loader, object spec, bool throw_,
                   Gc::Type throwType)
 {
   GcClass* c = cast<GcClass>(t,
@@ -2684,7 +2684,7 @@ resolveArrayClass(Thread* t, object loader, object spec, bool throw_,
     PROTECT(t, loader);
     PROTECT(t, spec);
 
-    c = findLoadedClass(t, root(t, Machine::BootLoader), spec);
+    c = findLoadedClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), spec);
 
     if (c) {
       return c;
@@ -2899,13 +2899,13 @@ boot(Thread* t)
     set(t, root(t, Machine::BootLoader), ClassLoaderMap, reinterpret_cast<object>(map));
   }
 
-  systemClassLoaderFinder(t, root(t, Machine::BootLoader)) = m->bootFinder;
+  cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder() = m->bootFinder;
 
   { GcHashMap* map = makeHashMap(t, 0, 0);
     set(t, root(t, Machine::AppLoader), ClassLoaderMap, reinterpret_cast<object>(map));
   }
 
-  systemClassLoaderFinder(t, root(t, Machine::AppLoader)) = m->appFinder;
+  cast<GcSystemClassLoader>(t, root(t, Machine::AppLoader))->finder() = m->appFinder;
 
   set(t, root(t, Machine::AppLoader), ClassLoaderParent,
       root(t, Machine::BootLoader));
@@ -4081,7 +4081,7 @@ resolveBootstrap(Thread* t, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[0]);
 
-  resolveSystemClass(t, root(t, Machine::BootLoader), name);
+  resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name);
 
   return 1;
 }
@@ -4238,7 +4238,7 @@ primitiveSize(Thread* t, unsigned code)
 }
 
 GcClass*
-parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
+parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
            Gc::Type throwType)
 {
   PROTECT(t, loader);
@@ -4289,7 +4289,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
                             0, // methods
                             0, // addendum
                             0, // static table
-                            cast<GcClassLoader>(t, loader),
+                            loader,
                             0, // source
                             0);// vtable length
   PROTECT(t, class_);
@@ -4369,7 +4369,7 @@ parseClass(Thread* t, object loader, const uint8_t* data, unsigned size,
 uint64_t
 runParseClass(Thread* t, uintptr_t* arguments)
 {
-  object loader = reinterpret_cast<object>(arguments[0]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
   Gc::Type throwType = static_cast<Gc::Type>(arguments[2]);
 
@@ -4378,7 +4378,7 @@ runParseClass(Thread* t, uintptr_t* arguments)
 }
 
 GcClass*
-resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
+resolveSystemClass(Thread* t, GcClassLoader* loader, object spec, bool throw_,
                    Gc::Type throwType)
 {
   PROTECT(t, loader);
@@ -4387,14 +4387,14 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
   ACQUIRE(t, t->m->classLock);
 
   GcClass* class_ = cast<GcClass>(t, hashMapFind
-    (t, cast<GcHashMap>(t, classLoaderMap(t, loader)), spec, byteArrayHash, byteArrayEqual));
+    (t, cast<GcHashMap>(t, loader->map()), spec, byteArrayHash, byteArrayEqual));
 
   if (class_ == 0) {
     PROTECT(t, class_);
 
-    if (classLoaderParent(t, loader)) {
+    if (loader->parent()) {
       class_ = resolveSystemClass
-        (t, classLoaderParent(t, loader), spec, false);
+        (t, loader->parent(), spec, false);
       if (class_) {
         return class_;
       }
@@ -4412,7 +4412,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
              7);
 
       System::Region* region = static_cast<Finder*>
-        (systemClassLoaderFinder(t, loader))->find
+        (loader->as<GcSystemClassLoader>(t)->finder())->find
         (RUNTIME_ARRAY_BODY(file));
 
       if (region) {
@@ -4449,7 +4449,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
         }
 
         { const char* source = static_cast<Finder*>
-            (systemClassLoaderFinder(t, loader))->sourceUrl
+            (loader->as<GcSystemClassLoader>(t)->finder())->sourceUrl
             (RUNTIME_ARRAY_BODY(file));
           
           if (source) {
@@ -4476,7 +4476,7 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
     }
 
     if (class_) {
-      hashMapInsert(t, cast<GcHashMap>(t, classLoaderMap(t, loader)), spec, reinterpret_cast<object>(class_), byteArrayHash);
+      hashMapInsert(t, cast<GcHashMap>(t, loader->map()), spec, reinterpret_cast<object>(class_), byteArrayHash);
 
       updatePackageMap(t, class_);
     } else if (throw_) {
@@ -4488,19 +4488,19 @@ resolveSystemClass(Thread* t, object loader, object spec, bool throw_,
 }
 
 GcClass*
-findLoadedClass(Thread* t, object loader, object spec)
+findLoadedClass(Thread* t, GcClassLoader* loader, object spec)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
 
   ACQUIRE(t, t->m->classLock);
 
-  return classLoaderMap(t, loader) ? cast<GcClass>(t, hashMapFind
-    (t, cast<GcHashMap>(t, classLoaderMap(t, loader)), spec, byteArrayHash, byteArrayEqual)) : 0;
+  return loader->map() ? cast<GcClass>(t, hashMapFind
+    (t, cast<GcHashMap>(t, loader->map()), spec, byteArrayHash, byteArrayEqual)) : 0;
 }
 
 GcClass*
-resolveClass(Thread* t, object loader, object spec, bool throw_,
+resolveClass(Thread* t, GcClassLoader* loader, object spec, bool throw_,
              Gc::Type throwType)
 {
   if (objectClass(t, loader) == type(t, GcSystemClassLoader::Type)) {
@@ -4519,7 +4519,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_,
     } else {
       if (root(t, Machine::LoadClassMethod) == 0) {
         GcMethod* m = resolveMethod
-          (t, root(t, Machine::BootLoader), "java/lang/ClassLoader",
+          (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/ClassLoader",
            "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
 
         if (m) {
@@ -4529,7 +4529,7 @@ resolveClass(Thread* t, object loader, object spec, bool throw_,
         
           if (classLoaderClass->vmFlags() & BootstrapFlag) {
             resolveSystemClass
-              (t, root(t, Machine::BootLoader),
+              (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
                reinterpret_cast<object>(classLoaderClass->name()));
           }
         }      
@@ -4740,7 +4740,7 @@ initClass(Thread* t, GcClass* c)
 }
 
 GcClass*
-resolveObjectArrayClass(Thread* t, object loader, object elementClass)
+resolveObjectArrayClass(Thread* t, GcClassLoader* loader, object elementClass)
 {
   PROTECT(t, loader);
   PROTECT(t, elementClass);
@@ -4785,7 +4785,7 @@ object
 makeObjectArray(Thread* t, GcClass* elementClass, unsigned count)
 {
   GcClass* arrayClass = resolveObjectArrayClass
-    (t, reinterpret_cast<object>(elementClass->loader()), reinterpret_cast<object>(elementClass));
+    (t, elementClass->loader(), reinterpret_cast<object>(elementClass));
 
   PROTECT(t, arrayClass);
 
@@ -5315,7 +5315,7 @@ getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 }
 
 object
-defineClass(Thread* t, object loader, const uint8_t* buffer, unsigned length)
+defineClass(Thread* t, GcClassLoader* loader, const uint8_t* buffer, unsigned length)
 {
   PROTECT(t, loader);
 
@@ -5362,7 +5362,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
          byteArrayLength(t, spec) - 1);
 
   GcClass* class_ = resolveClass
-    (t, reinterpret_cast<object>(objectClass(t, array)->loader()), elementSpec);
+    (t, objectClass(t, array)->loader(), elementSpec);
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {

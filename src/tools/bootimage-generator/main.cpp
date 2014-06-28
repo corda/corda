@@ -311,7 +311,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   } resolver(&typeMaps);
 
   Finder* finder = static_cast<Finder*>
-    (systemClassLoaderFinder(t, root(t, Machine::BootLoader)));
+    (cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder());
 
   for (Finder::Iterator it(finder); it.hasMore();) {
     unsigned nameSize = 0;
@@ -322,7 +322,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     {
       // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
       object c = reinterpret_cast<object>(resolveSystemClass
-        (t, root(t, Machine::BootLoader),
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
          makeByteArray(t, "%.*s", nameSize - 6, name), true));
 
       PROTECT(t, c);
@@ -607,7 +607,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     {
       // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
       object c = reinterpret_cast<object>(resolveSystemClass
-        (t, root(t, Machine::BootLoader),
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
          makeByteArray(t, "%.*s", nameSize - 6, name), true));
 
       PROTECT(t, c);
@@ -655,7 +655,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
-                    (t, root(t, Machine::BootLoader), referenceName(t, o)));
+                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), referenceName(t, o)));
     
                   set(t, reinterpret_cast<object>(addendum->pool()),
                       SingletonBody + (index * BytesPerWord), o);
@@ -704,7 +704,7 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
 {
   Machine* m = t->m;
 
-  for (HashMapIterator it(t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))));
+  for (HashMapIterator it(t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()));
        it.hasMore();)
   {
     w->visitRoot(it.next()->second());
@@ -1523,28 +1523,28 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     // resolve primitive array classes in case they are needed at
     // runtime:
     { object name = reinterpret_cast<object>(makeByteArray(t, "[B"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[Z"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[S"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[C"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[I"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[J"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[F"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
 
       name = reinterpret_cast<object>(makeByteArray(t, "[D"));
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
     }
   }
 
@@ -1561,14 +1561,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   updateConstants(t, constants, heapWalker->map());
 
   image->bootClassCount = hashMapSize
-    (t, classLoaderMap(t, root(t, Machine::BootLoader)));
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map());
 
   unsigned* bootClassTable = static_cast<unsigned*>
     (t->m->heap->allocate(image->bootClassCount * sizeof(unsigned)));
 
   { unsigned i = 0;
     for (HashMapIterator it
-           (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))));
+           (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()));
          it.hasMore();)
     {
       bootClassTable[i++] = targetVW

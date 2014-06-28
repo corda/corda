@@ -345,10 +345,10 @@ makeClassNameString(Thread* t, object name)
 }
 
 object
-makeJmethod(Thread* t, object vmMethod, int index = -1);
+makeJmethod(Thread* t, GcMethod* vmMethod, int index = -1);
 
 object
-makeJconstructor(Thread* t, object vmMethod, int index = -1);
+makeJconstructor(Thread* t, GcMethod* vmMethod, int index = -1);
 
 object
 makeJfield(Thread* t, object vmField, int index = -1);
@@ -580,8 +580,8 @@ class MyClasspath : public Classpath {
     PROTECT(t, vmMethod);
 
     return vmMethod->name()->body()[0] == '<'
-      ? reinterpret_cast<object>(makeJconstructor(t, reinterpret_cast<object>(vmMethod)))
-      : reinterpret_cast<object>(makeJmethod(t, reinterpret_cast<object>(vmMethod)));
+      ? reinterpret_cast<object>(makeJconstructor(t, vmMethod))
+      : reinterpret_cast<object>(makeJmethod(t, vmMethod));
   }
 
   virtual object
@@ -644,7 +644,7 @@ class MyClasspath : public Classpath {
     });
 
     GcMethod* method = resolveMethod
-      (t, root(t, Machine::BootLoader), "java/lang/Thread", "run", "()V");
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Thread", "run", "()V");
 
     t->m->processor->invoke(t, method, t->javaThread);
   }
@@ -691,11 +691,11 @@ class MyClasspath : public Classpath {
   {
     globalMachine = t->m;
 
-    resolveSystemClass(t, root(t, Machine::BootLoader),
+    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
                        reinterpret_cast<object>(type(t, GcClassLoader::Type)->name()));
 
     setRoot(t, Machine::ThreadTerminated, reinterpret_cast<object>(resolveMethod
-            (t, root(t, Machine::BootLoader), "java/lang/ThreadGroup",
+            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/ThreadGroup",
              "threadTerminated", "(Ljava/lang/Thread;)V")));
 
 #ifdef AVIAN_OPENJDK_SRC
@@ -709,12 +709,12 @@ class MyClasspath : public Classpath {
         (t, type(t, GcClassLoader::Type), "assertionLock",
          "Ljava/lang/Object;");
 
-      set(t, root(t, Machine::BootLoader), fieldOffset(t, assertionLock),
-          root(t, Machine::BootLoader));
+      set(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), fieldOffset(t, assertionLock),
+          cast<GcClassLoader>(t, root(t, Machine::BootLoader)));
     }
 
     { GcClass* class_ = resolveClass
-        (t, root(t, Machine::BootLoader), "java/util/Properties", true,
+        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/Properties", true,
          GcNoClassDefFoundError::Type);
 
       PROTECT(t, class_);
@@ -742,7 +742,7 @@ class MyClasspath : public Classpath {
 
       t->m->processor->invoke
         (t, constructor, root(t, Machine::AppLoader),
-         root(t, Machine::BootLoader));
+         cast<GcClassLoader>(t, root(t, Machine::BootLoader)));
     }
 
     { object scl = resolveField
@@ -783,7 +783,7 @@ class MyClasspath : public Classpath {
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
     GcClass* c = resolveClass
-      (t, root(t, Machine::BootLoader), "java/nio/DirectByteBuffer");
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/DirectByteBuffer");
     PROTECT(t, c);
 
     object instance = makeNew(t, c);
@@ -872,7 +872,7 @@ class MyClasspath : public Classpath {
   shutDown(Thread* t)
   {
     GcClass* c = resolveClass
-      (t, root(t, Machine::BootLoader), "java/lang/Shutdown", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Shutdown", false);
 
     if (c) {
       GcMethod* m = findMethodOrNull(t, c, "shutdown", "()V");
@@ -1836,7 +1836,7 @@ getBootstrapResource(Thread* t, object, uintptr_t* arguments)
   
   if (m) {
     return reinterpret_cast<int64_t>
-      (t->m->processor->invoke(t, m, root(t, Machine::BootLoader), name));
+      (t->m->processor->invoke(t, m, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name));
   } else {
     return 0;
   }
@@ -1854,7 +1854,7 @@ getBootstrapResources(Thread* t, object, uintptr_t* arguments)
   
   if (m) {
     return reinterpret_cast<int64_t>
-      (t->m->processor->invoke(t, m, root(t, Machine::BootLoader), name));
+      (t->m->processor->invoke(t, m, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name));
   } else {
     return 0;
   }
@@ -1932,7 +1932,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   { object fileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/File", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/File", false);
 
     if (fileClass) {
       object filePathField = findFieldInClass2
@@ -1945,7 +1945,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object fileDescriptorClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/FileDescriptor", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/FileDescriptor", false);
 
     if (fileDescriptorClass) {
       object fileDescriptorFdField = findFieldInClass2
@@ -1958,7 +1958,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object fileInputStreamClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/io/FileInputStream", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/FileInputStream", false);
 
     if (fileInputStreamClass) {
       PROTECT(t, fileInputStreamClass);
@@ -1996,7 +1996,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object zipFileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/util/zip/ZipFile", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/zip/ZipFile", false);
 
     if (zipFileClass) {
       PROTECT(t, zipFileClass);
@@ -2049,7 +2049,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object jarFileClass = resolveClass
-      (t, root(t, Machine::BootLoader), "java/util/jar/JarFile", false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/jar/JarFile", false);
 
     if (jarFileClass) {
       intercept(t, jarFileClass, "getMetaInfEntryNames",
@@ -2068,7 +2068,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
 #endif
 
     object fsClass = resolveClass
-      (t, root(t, Machine::BootLoader), fsClassName, false);
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), fsClassName, false);
 
     if (fsClass) {
       PROTECT(t, fsClass);
@@ -2118,9 +2118,9 @@ countMethods(Thread* t, object c, bool publicOnly)
   object table = classMethodTable(t, c);
   unsigned count = 0;
   for (unsigned i = 0, j = classDeclaredMethodCount(t, c); i < j; ++i) {
-    object vmMethod = arrayBody(t, table, i);
-    if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
-        and byteArrayBody(t, methodName(t, vmMethod), 0) != '<')
+    GcMethod* vmMethod = cast<GcMethod>(t, arrayBody(t, table, i));
+    if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC))
+        and vmMethod->name()->body()[0] != '<')
     {
       ++ count;
     }
@@ -2152,10 +2152,10 @@ countConstructors(Thread* t, object c, bool publicOnly)
   object table = classMethodTable(t, c);
   unsigned count = 0;
   for (unsigned i = 0, j = classDeclaredMethodCount(t, c); i < j; ++i) {
-    object vmMethod = arrayBody(t, table, i);
-    if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
+    GcMethod* vmMethod = cast<GcMethod>(t, arrayBody(t, table, i));
+    if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC))
         and strcmp(reinterpret_cast<char*>
-                   (&byteArrayBody(t, methodName(t, vmMethod), 0)),
+                   (vmMethod->name()->body().begin()),
                    "<init>") == 0)
     {
       ++ count;
@@ -2217,39 +2217,38 @@ makeJconstructor(Thread* t,
 #endif // HAVE_JexecutableHasRealParameterData
 
 object
-makeJmethod(Thread* t, object vmMethod, int index)
+makeJmethod(Thread* t, GcMethod* vmMethod, int index)
 {
   PROTECT(t, vmMethod);
 
   object name = intern
     (t, t->m->classpath->makeString
-     (t, methodName(t, vmMethod), 0, byteArrayLength
-      (t, methodName(t, vmMethod)) - 1));
+     (t, reinterpret_cast<object>(vmMethod->name()), 0, vmMethod->name()->length() - 1));
   PROTECT(t, name);
 
   unsigned parameterCount;
   unsigned returnTypeSpec;
   object parameterTypes = resolveParameterJTypes
-    (t, classLoader(t, methodClass(t, vmMethod)), methodSpec(t, vmMethod),
+    (t, vmMethod->class_()->loader(), vmMethod->spec(),
      &parameterCount, &returnTypeSpec);
   PROTECT(t, parameterTypes);
 
   GcJclass* returnType = resolveJType
-    (t, classLoader(t, methodClass(t, vmMethod)), reinterpret_cast<char*>
-     (&byteArrayBody(t, methodSpec(t, vmMethod), returnTypeSpec)),
-     byteArrayLength(t, methodSpec(t, vmMethod)) - 1 - returnTypeSpec);
+    (t, vmMethod->class_()->loader(), reinterpret_cast<char*>
+     (&vmMethod->spec()->body()[returnTypeSpec]),
+     vmMethod->spec()->length() - 1 - returnTypeSpec);
   PROTECT(t, returnType);
 
   object exceptionTypes = resolveExceptionJTypes
-    (t, classLoader(t, methodClass(t, vmMethod)),
-     methodAddendum(t, vmMethod));
+    (t, vmMethod->class_()->loader(),
+     vmMethod->addendum());
   PROTECT(t, exceptionTypes);
 
   object signature;
   object annotationTable;
   object parameterAnnotationTable;
   object annotationDefault;
-  object addendum = methodAddendum(t, vmMethod);
+  object addendum = reinterpret_cast<object>(vmMethod->addendum());
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
@@ -2278,16 +2277,16 @@ makeJmethod(Thread* t, object vmMethod, int index)
   PROTECT(t, annotationDefault);
 
   if (annotationTable or parameterAnnotationTable or annotationDefault) {
-    object runtimeData = getClassRuntimeData(t, cast<GcClass>(t, methodClass(t, vmMethod)));
+    object runtimeData = getClassRuntimeData(t, vmMethod->class_());
 
     set(t, runtimeData, ClassRuntimeDataPool,
-        addendumPool(t, methodAddendum(t, vmMethod)));
+        reinterpret_cast<object>(vmMethod->addendum()->pool()));
   }
 
   if (index == -1) {
-    object table = classMethodTable(t, methodClass(t, vmMethod));
+    object table = vmMethod->class_()->methodTable();
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      if (vmMethod == arrayBody(t, table, i)) {
+      if (reinterpret_cast<object>(vmMethod) == arrayBody(t, table, i)) {
         index = i;
         break;
       }
@@ -2296,35 +2295,35 @@ makeJmethod(Thread* t, object vmMethod, int index)
 
   expect(t, index != -1);
 
-  GcJclass* jclass = getJClass(t, cast<GcClass>(t, methodClass(t, vmMethod)));
+  GcJclass* jclass = getJClass(t, vmMethod->class_());
 
   return reinterpret_cast<object>(makeJmethod
     (t, true, 0, jclass, index, cast<GcString>(t, name), returnType, parameterTypes,
-     exceptionTypes, methodFlags(t, vmMethod), cast<GcString>(t, signature), 0, cast<GcByteArray>(t, annotationTable),
+     exceptionTypes, vmMethod->flags(), cast<GcString>(t, signature), 0, cast<GcByteArray>(t, annotationTable),
      cast<GcByteArray>(t, parameterAnnotationTable), cast<GcByteArray>(t, annotationDefault), 0, 0, 0));
 }
 
 object
-makeJconstructor(Thread* t, object vmMethod, int index)
+makeJconstructor(Thread* t, GcMethod* vmMethod, int index)
 {
   PROTECT(t, vmMethod);
 
   unsigned parameterCount;
   unsigned returnTypeSpec;
   object parameterTypes = resolveParameterJTypes
-    (t, classLoader(t, methodClass(t, vmMethod)), methodSpec(t, vmMethod),
+    (t, vmMethod->class_()->loader(), vmMethod->spec(),
      &parameterCount, &returnTypeSpec);
   PROTECT(t, parameterTypes);
 
   object exceptionTypes = resolveExceptionJTypes
-    (t, classLoader(t, methodClass(t, vmMethod)),
-     methodAddendum(t, vmMethod));
+    (t, vmMethod->class_()->loader(),
+     vmMethod->addendum());
   PROTECT(t, exceptionTypes);
 
   object signature;
   object annotationTable;
   object parameterAnnotationTable;
-  object addendum = methodAddendum(t, vmMethod);
+  object addendum = reinterpret_cast<object>(vmMethod->addendum());
   if (addendum) {
     signature = addendumSignature(t, addendum);
     if (signature) {
@@ -2348,16 +2347,16 @@ makeJconstructor(Thread* t, object vmMethod, int index)
   PROTECT(t, parameterAnnotationTable);
 
   if (annotationTable or parameterAnnotationTable) {
-    object runtimeData = getClassRuntimeData(t, cast<GcClass>(t, methodClass(t, vmMethod)));
+    object runtimeData = getClassRuntimeData(t, vmMethod->class_());
 
     set(t, runtimeData, ClassRuntimeDataPool,
-        addendumPool(t, methodAddendum(t, vmMethod)));
+        reinterpret_cast<object>(vmMethod->addendum()->pool()));
   }
 
   if (index == -1) {
-    object table = classMethodTable(t, methodClass(t, vmMethod));
+    object table = vmMethod->class_()->methodTable();
     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-      if (vmMethod == arrayBody(t, table, i)) {
+      if (reinterpret_cast<object>(vmMethod) == arrayBody(t, table, i)) {
         index = i;
         break;
       }
@@ -2366,12 +2365,24 @@ makeJconstructor(Thread* t, object vmMethod, int index)
 
   expect(t, index != -1);
 
-  GcJclass* jclass = getJClass(t, cast<GcClass>(t, methodClass(t, vmMethod)));
+  GcJclass* jclass = getJClass(t, vmMethod->class_());
 
-  return reinterpret_cast<object>(makeJconstructor
-    (t, true, 0, jclass, index, parameterTypes, exceptionTypes, methodFlags
-     (t, vmMethod), cast<GcString>(t, signature), 0, cast<GcByteArray>(t, annotationTable), cast<GcByteArray>(t, parameterAnnotationTable),
-     0, 0, 0));
+  return reinterpret_cast<object>(
+      makeJconstructor(t,
+                       true,
+                       0,
+                       jclass,
+                       index,
+                       parameterTypes,
+                       exceptionTypes,
+                       vmMethod->flags(),
+                       cast<GcString>(t, signature),
+                       0,
+                       cast<GcByteArray>(t, annotationTable),
+                       cast<GcByteArray>(t, parameterAnnotationTable),
+                       0,
+                       0,
+                       0));
 }
 
 object
@@ -2386,7 +2397,7 @@ makeJfield(Thread* t, object vmField, int index)
   PROTECT(t, name);
 
   GcClass* type = resolveClassBySpec
-    (t, classLoader(t, fieldClass(t, vmField)),
+    (t, cast<GcClassLoader>(t, classLoader(t, fieldClass(t, vmField))),
      reinterpret_cast<char*>
      (&byteArrayBody(t, fieldSpec(t, vmField), 0)),
      byteArrayLength(t, fieldSpec(t, vmField)) - 1);
@@ -2531,7 +2542,7 @@ Avian_sun_misc_Perf_createLong
   return reinterpret_cast<int64_t>
     (t->m->processor->invoke
      (t, resolveMethod
-      (t, root(t, Machine::BootLoader), "java/nio/ByteBuffer", "allocate",
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/ByteBuffer", "allocate",
        "(I)Ljava/nio/ByteBuffer;"), 0, 8));
 }
 
@@ -2550,7 +2561,7 @@ Avian_sun_misc_Unsafe_defineClass__Ljava_lang_String_2_3BIILjava_lang_ClassLoade
   object data = reinterpret_cast<object>(arguments[2]);
   int32_t offset = arguments[3];
   int32_t length = arguments[4];
-  object loader = reinterpret_cast<object>(arguments[5]);
+  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[5]));
   //object domain = reinterpret_cast<object>(arguments[6]);
 
   uint8_t* buffer = static_cast<uint8_t*>(t->m->heap->allocate(length));
@@ -2941,7 +2952,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   jobject properties = reinterpret_cast<jobject>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, root(t, Machine::BootLoader), "java/util/Properties", "setProperty",
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/Properties", "setProperty",
      "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;");
 
   PROTECT(t, method);
@@ -3009,7 +3020,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty
     (t, method, *properties, "sun.boot.class.path",
      static_cast<Finder*>
-     (systemClassLoaderFinder(t, root(t, Machine::BootLoader)))->path());
+     (cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder())->path());
 
   local::setProperty(t, method, *properties, "file.encoding", "UTF-8");
 #ifdef ARCH_x86_32
@@ -3412,7 +3423,7 @@ jvmDumpThreads(Thread* t, uintptr_t* arguments)
 
   unsigned threadsLength = objectArrayLength(t, *threads);
   GcClass* arrayClass = resolveObjectArrayClass
-    (t, reinterpret_cast<object>(type(t, GcStackTraceElement::Type)->loader()),
+    (t, type(t, GcStackTraceElement::Type)->loader(),
      reinterpret_cast<object>(type(t, GcStackTraceElement::Type)));
   object result = makeObjectArray(t, arrayClass, threadsLength);
   PROTECT(t, result);
@@ -3542,7 +3553,7 @@ jvmGetSystemPackages(Thread* t, uintptr_t*)
       makeObjectArray(
           t,
           resolveClass(
-              t, root(t, Machine::BootLoader), "java/lang/Package"),
+              t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Package"),
           0)));
 }
 
@@ -3572,9 +3583,9 @@ EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
     { }
 
     virtual bool visit(Processor::StackWalker* walker) {
-      object loader = reinterpret_cast<object>(walker->method()->class_()->loader());
+      GcClassLoader* loader = walker->method()->class_()->loader();
       if (loader
-          and loader != root(t, Machine::BootLoader)
+          and loader != cast<GcClassLoader>(t, root(t, Machine::BootLoader))
           and strcmp
           (objectClass(t, loader)->name()->body().begin(),
            reinterpret_cast<const int8_t*>
@@ -3588,12 +3599,12 @@ EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
     }
 
     Thread* t;
-    object loader;
+    GcClassLoader* loader;
   } v(t);
 
   t->m->processor->walkStack(t, &v);
 
-  return makeLocalReference(t, v.loader);
+  return makeLocalReference(t, reinterpret_cast<object>(v.loader));
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
@@ -3853,7 +3864,7 @@ jvmResolveClass(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, root(t, Machine::BootLoader), "avian/Classes", "link",
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Classes", "link",
      "(Lavian/VMClass;)V");
 
   t->m->processor->invoke(t, method, 0, jclassVmClass(t, *c));
@@ -3878,7 +3889,7 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
   jboolean throwError = arguments[3];
 
   GcClass* c = resolveClass
-    (t, loader ? *loader : root(t, Machine::BootLoader), name, true,
+    (t, cast<GcClassLoader>(t, loader ? *loader : root(t, Machine::BootLoader)), name, true,
      throwError ? static_cast<Gc::Type>(GcNoClassDefFoundError::Type)
      : static_cast<Gc::Type>(GcClassNotFoundException::Type));
 
@@ -3893,7 +3904,7 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
 
 extern "C" AVIAN_EXPORT jclass JNICALL
 EXPORT(JVM_FindClassFromClassLoader)(Thread* t, const char* name,
-                                     jboolean init, jobject loader,
+                                     jboolean init, jobject* loader,
                                      jboolean throwError)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(name),
@@ -3928,14 +3939,14 @@ jvmFindLoadedClass(Thread* t, uintptr_t* arguments)
     replace('.', '/', s);
   }
 
-  GcClass* c = findLoadedClass(t, *loader, spec);
+  GcClass* c = findLoadedClass(t, cast<GcClassLoader>(t, *loader), spec);
     
   return reinterpret_cast<uint64_t>
     (c ? makeLocalReference(t, reinterpret_cast<object>(getJClass(t, c))) : 0);
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_FindLoadedClass)(Thread* t, jobject loader, jstring name)
+EXPORT(JVM_FindLoadedClass)(Thread* t, jobject* loader, jstring name)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
                             reinterpret_cast<uintptr_t>(name) };
@@ -3952,11 +3963,11 @@ jvmDefineClass(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference
-     (t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, defineClass(t, *loader, data, length))))));
+     (t, reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, defineClass(t, cast<GcClassLoader>(t, *loader), data, length))))));
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
+EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject* loader,
                         const uint8_t* data, jsize length, jobject)
 {
   uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
@@ -3967,7 +3978,7 @@ EXPORT(JVM_DefineClass)(Thread* t, const char*, jobject loader,
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
+EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject* loader,
                           const uint8_t* data, jsize length, jobject,
                           const char*)
 {
@@ -3975,7 +3986,7 @@ EXPORT(JVM_DefineClassWithSource)(Thread* t, const char*, jobject loader,
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
-EXPORT(JVM_DefineClassWithSourceCond)(Thread* t, const char*, jobject loader,
+EXPORT(JVM_DefineClassWithSourceCond)(Thread* t, const char*, jobject* loader,
                                       const uint8_t* data, jsize length,
                                       jobject, const char*, jboolean)
 {
@@ -4032,9 +4043,9 @@ EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
 {
   ENTER(t, Thread::ActiveState);
 
-  object loader = classLoader(t, jclassVmClass(t, *c));
+  GcClassLoader* loader = cast<GcClassLoader>(t, classLoader(t, jclassVmClass(t, *c)));
 
-  if (loader == root(t, Machine::BootLoader)) {
+  if (loader == cast<GcClassLoader>(t, root(t, Machine::BootLoader))) {
     // sun.misc.Unsafe.getUnsafe expects a null result if the class
     // loader is the boot classloader and will throw a
     // SecurityException otherwise.
@@ -4049,7 +4060,7 @@ EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
       return makeLocalReference(t, root(t, Machine::BootLoader));
     }
   } else {
-    return makeLocalReference(t, loader);
+    return makeLocalReference(t, reinterpret_cast<object>(loader));
   }
 }
 
@@ -4106,7 +4117,7 @@ jvmGetProtectionDomain(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, root(t, Machine::BootLoader), "avian/Classes", "getProtectionDomain",
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Classes", "getProtectionDomain",
      "(Lavian/VMClass;)Ljava/security/ProtectionDomain;");
 
   return reinterpret_cast<uint64_t>
@@ -4273,11 +4284,11 @@ jvmGetClassDeclaredMethods(Thread* t, uintptr_t* arguments)
     for (unsigned i = 0, j = classDeclaredMethodCount(t, jclassVmClass(t, *c));
          i < j; ++i)
     {
-      object vmMethod = arrayBody(t, table, i);
+      GcMethod* vmMethod = cast<GcMethod>(t, arrayBody(t, table, i));
       PROTECT(t, vmMethod);
 
-      if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
-          and byteArrayBody(t, methodName(t, vmMethod), 0) != '<')
+      if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC))
+          and vmMethod->name()->body()[0] != '<')
       {
         object method = makeJmethod(t, vmMethod, i);
 
@@ -4369,12 +4380,12 @@ jvmGetClassDeclaredConstructors(Thread* t, uintptr_t* arguments)
     for (unsigned i = 0, j = classDeclaredMethodCount(t, jclassVmClass(t, *c));
          i < j; ++i)
     {
-      object vmMethod = arrayBody(t, table, i);
+      GcMethod* vmMethod = cast<GcMethod>(t, arrayBody(t, table, i));
       PROTECT(t, vmMethod);
 
-      if (((not publicOnly) or (methodFlags(t, vmMethod) & ACC_PUBLIC))
+      if (((not publicOnly) or (vmMethod->flags() & ACC_PUBLIC))
           and strcmp(reinterpret_cast<char*>
-                     (&byteArrayBody(t, methodName(t, vmMethod), 0)),
+                     (vmMethod->name()->body().begin()),
                      "<init>") == 0)
       {
         object method = makeJconstructor(t, vmMethod, i);
@@ -4621,7 +4632,7 @@ maybeWrap(Thread* t, bool wrapException)
     PROTECT(t, exception);
 
     GcClass* paeClass = resolveClass
-      (t, root(t, Machine::BootLoader),
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
        "java/security/PrivilegedActionException");
     PROTECT(t, paeClass);
 
@@ -4648,7 +4659,7 @@ jvmDoPrivileged(Thread* t, uintptr_t* arguments)
   // object:
 
   GcClass* privilegedAction = resolveClass
-    (t, root(t, Machine::BootLoader), "java/security/PrivilegedAction");
+    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/security/PrivilegedAction");
 
   GcMethod* method;
   if (instanceOf(t, privilegedAction, *action)) {
@@ -4656,7 +4667,7 @@ jvmDoPrivileged(Thread* t, uintptr_t* arguments)
       (t, privilegedAction, "run", "()Ljava/lang/Object;");
   } else {
     GcClass* privilegedExceptionAction = resolveClass
-      (t, root(t, Machine::BootLoader),
+      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
        "java/security/PrivilegedExceptionAction");
 
     method = resolveMethod
@@ -5186,7 +5197,7 @@ getMemoryManagers(Thread* t, uintptr_t*)
       t,
       makeObjectArray(t,
                       resolveClass(t,
-                                   root(t, Machine::BootLoader),
+                                   cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
                                    "java/lang/management/MemoryManagerMXBean"),
                       0)));
 }
@@ -5204,7 +5215,7 @@ getMemoryPools(Thread* t, uintptr_t*)
       t,
       makeObjectArray(t,
                       resolveClass(t,
-                                   root(t, Machine::BootLoader),
+                                   cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
                                    "java/lang/management/MemoryPoolMXBean"),
                       0)));
 }
@@ -5259,7 +5270,7 @@ getEnclosingMethodInfo(Thread* t, uintptr_t* arguments)
       PROTECT(t, array);
 
       enclosingClass = reinterpret_cast<object>(getJClass
-        (t, resolveClass(t, classLoader(t, class_), enclosingClass)));
+        (t, resolveClass(t, cast<GcClassLoader>(t, classLoader(t, class_)), enclosingClass)));
 
       set(t, array, ArrayBody, enclosingClass);
 
