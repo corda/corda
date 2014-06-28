@@ -1914,7 +1914,7 @@ parseCode(Thread* t, Stream& s, GcSingleton* pool)
     fprintf(stderr, "    code: maxStack %d maxLocals %d length %d\n", maxStack, maxLocals, length);
   }
 
-  object code = reinterpret_cast<object>(makeCode(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, maxStack, maxLocals, length));
+  object code = reinterpret_cast<object>(makeCode(t, reinterpret_cast<object>(pool), 0, 0, 0, 0, 0, maxStack, maxLocals, length));
   s.read(&codeBody(t, code, 0), length);
   PROTECT(t, code);
 
@@ -2935,7 +2935,7 @@ boot(Thread* t)
 
   m->processor->boot(t, 0, 0);
 
-  { object bootCode = reinterpret_cast<object>(makeCode(t, 0, 0, 0, 0, 0, 0, 0, 1));
+  { object bootCode = reinterpret_cast<object>(makeCode(t, 0, 0, 0, 0, 0, 0, 0, 0, 1));
     codeBody(t, bootCode, 0) = impdep1;
     object bootMethod = reinterpret_cast<object>(makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode));

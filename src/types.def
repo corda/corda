@@ -328,6 +328,7 @@
 
 (type code avian/Code
   (object pool)
+  (intArray stackMap)
   (object exceptionHandlerTable)
   (lineNumberTable lineNumberTable)
   (intptr_t compiled)

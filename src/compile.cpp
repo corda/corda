@@ -6844,7 +6844,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     object code = context->method->code();
 
     code = reinterpret_cast<object>(makeCode
-      (t, 0, newExceptionHandlerTable, cast<GcLineNumberTable>(t, newLineNumberTable),
+      (t, 0, 0, newExceptionHandlerTable, cast<GcLineNumberTable>(t, newLineNumberTable),
        reinterpret_cast<uintptr_t>(start), codeSize, codeMaxStack(t, code),
        codeMaxLocals(t, code), 0));
 
@@ -6877,7 +6877,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     object map = makeSimpleFrameMapTable(
         t, context, start, RUNTIME_ARRAY_BODY(elements), index);
 
-    set(t, context->method->code(), CodePool, map);
+    set(t, context->method->code(), CodeStackMap, map);
   }
 
   logCompile
@@ -7385,73 +7385,12 @@ findFrameMapInSimpleTable(MyThread* t, GcMethod* method, object table,
   abort(t);
 }
 
-unsigned
-findFrameMap(MyThread* t, void* stack, GcMethod* method, object table,
-             unsigned pathIndex)
-{
-  if (pathIndex) {
-    FrameMapTablePath* path = reinterpret_cast<FrameMapTablePath*>
-      (&byteArrayBody(t, table, pathIndex));
-
-    void* address = static_cast<void**>(stack)[path->stackIndex];
-    uint8_t* base = reinterpret_cast<uint8_t*>(methodAddress(t, method));
-    for (unsigned i = 0; i < path->elementCount; ++i) {
-      if (address == base + path->elements[i]) {
-        return i + (path->elementCount * findFrameMap
-                    (t, stack, method, table, path->next));
-      }
-    }
-
-    abort(t);
-  } else {
-    return 0;
-  }
-}
-
 void
-findFrameMapInGeneralTable(MyThread* t, void* stack, GcMethod* method,
-                           object table, int32_t offset, int32_t** map,
-                           unsigned* start)
-{
-  FrameMapTableHeader* header = reinterpret_cast<FrameMapTableHeader*>
-    (&byteArrayBody(t, table, 0));
-
-  FrameMapTableIndexElement* index
-    = reinterpret_cast<FrameMapTableIndexElement*>
-    (&byteArrayBody(t, table, sizeof(FrameMapTableHeader)));
-
-  *map = reinterpret_cast<int32_t*>(index + header->indexCount);
-
-  unsigned bottom = 0;
-  unsigned top = header->indexCount;
-  for (unsigned span = top - bottom; span; span = top - bottom) {
-    unsigned middle = bottom + (span / 2);
-    FrameMapTableIndexElement* v = index + middle;
-
-    if (offset == v->offset) {
-      *start = v->base + (findFrameMap(t, stack, method, table, v->path)
-                          * frameMapSizeInBits(t, method));
-      return;
-    } else if (offset < v->offset) {
-      top = middle;
-    } else {
-      bottom = middle + 1;
-    }
-  }
-
-  abort(t);
-}
-
-void
-findFrameMap(MyThread* t, void* stack, GcMethod* method, int32_t offset,
+findFrameMap(MyThread* t, void* stack UNUSED, GcMethod* method, int32_t offset,
              int32_t** map, unsigned* start)
 {
-  object table = codePool(t, method->code());
-  if (objectClass(t, table) == type(t, GcIntArray::Type)) {
-    findFrameMapInSimpleTable(t, method, table, offset, map, start);
-  } else {
-    findFrameMapInGeneralTable(t, stack, method, table, offset, map, start);
-  }
+  object table = reinterpret_cast<object>(codeStackMap(t, method->code()));
+  findFrameMapInSimpleTable(t, method, table, offset, map, start);
 }
 
 void
