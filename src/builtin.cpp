@@ -48,12 +48,12 @@ resolveSystemClassThrow(Thread* t, GcClassLoader* loader, GcByteArray* spec)
     (t, loader, spec, true, GcClassNotFoundException::Type);
 }
 
-object
+GcField*
 fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
 {
   GcClass* super = c->super();
   if (super) {
-    object field = fieldForOffsetInClass(t, super, offset);
+    GcField* field = fieldForOffsetInClass(t, super, offset);
     if (field) {
       return field;
     }
@@ -62,9 +62,9 @@ fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
   object table = c->fieldTable();
   if (table) {
     for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-      object field = objectArrayBody(t, table, i);
-      if ((fieldFlags(t, field) & ACC_STATIC) == 0
-          and fieldOffset(t, field) == offset)
+      GcField* field = cast<GcField>(t, objectArrayBody(t, table, i));
+      if ((field->flags() & ACC_STATIC) == 0
+          and field->offset() == offset)
       {
         return field;
       }
@@ -74,7 +74,7 @@ fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
   return 0;
 }
 
-object
+GcField*
 fieldForOffset(Thread* t, GcSingleton* o, unsigned offset)
 {
   GcClass* c = objectClass(t, o);
@@ -83,9 +83,9 @@ fieldForOffset(Thread* t, GcSingleton* o, unsigned offset)
     object table = c->fieldTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
-        object field = objectArrayBody(t, table, i);
-        if ((fieldFlags(t, field) & ACC_STATIC)
-            and fieldOffset(t, field) == offset)
+        GcField* field = cast<GcField>(t, objectArrayBody(t, table, i));
+        if ((field->flags() & ACC_STATIC)
+            and field->offset() == offset)
         {
           return field;
         }
@@ -93,7 +93,7 @@ fieldForOffset(Thread* t, GcSingleton* o, unsigned offset)
     }
     abort(t);
   } else {
-    object field = fieldForOffsetInClass(t, c, offset);
+    GcField* field = fieldForOffsetInClass(t, c, offset);
     if (field) {
       return field;
     } else {
@@ -132,10 +132,10 @@ Avian_avian_Classes_resolveVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
-  object spec = reinterpret_cast<object>(arguments[1]);
+  GcByteArray* spec = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[1]));
 
   return reinterpret_cast<int64_t>
-    (resolveClass(t, loader, cast<GcByteArray>(t, spec), true, GcClassNotFoundException::Type));
+    (resolveClass(t, loader, spec, true, GcClassNotFoundException::Type));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -143,7 +143,7 @@ Avian_avian_Classes_defineVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
-  object b = reinterpret_cast<object>(arguments[1]);
+  GcByteArray* b = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[1]));
   int offset = arguments[2];
   int length = arguments[3];
 
@@ -153,7 +153,7 @@ Avian_avian_Classes_defineVMClass
   THREAD_RESOURCE2(t, uint8_t*, buffer, int, length,
                    t->m->heap->free(buffer, length));
 
-  memcpy(buffer, &byteArrayBody(t, b, offset), length);
+  memcpy(buffer, &b->body()[offset], length);
 
   return reinterpret_cast<int64_t>(defineClass(t, loader, buffer, length));
 }
@@ -163,9 +163,9 @@ Avian_avian_SystemClassLoader_findLoadedVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
-  object name = reinterpret_cast<object>(arguments[1]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
-  return search(t, loader, cast<GcString>(t, name), findLoadedClass, true);
+  return search(t, loader, name, findLoadedClass, true);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -173,7 +173,7 @@ Avian_avian_SystemClassLoader_vmClass
 (Thread* t, object, uintptr_t* arguments)
 {
   return reinterpret_cast<int64_t>
-    (jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
+    (cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass());
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -181,9 +181,9 @@ Avian_avian_SystemClassLoader_findVMClass
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
-  object name = reinterpret_cast<object>(arguments[1]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
-  return search(t, loader, cast<GcString>(t, name), resolveSystemClassThrow, true);
+  return search(t, loader, name, resolveSystemClassThrow, true);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -191,11 +191,11 @@ Avian_avian_SystemClassLoader_resourceURLPrefix
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
-  object name = reinterpret_cast<object>(arguments[1]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
   if (LIKELY(name)) {
-    THREAD_RUNTIME_ARRAY(t, char, n, cast<GcString>(t, name)->length(t) + 1);
-    stringChars(t, cast<GcString>(t, name), RUNTIME_ARRAY_BODY(n));
+    THREAD_RUNTIME_ARRAY(t, char, n, name->length(t) + 1);
+    stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
     const char* name = static_cast<Finder*>
       (loader->as<GcSystemClassLoader>(t)->finder())->urlPrefix(RUNTIME_ARRAY_BODY(n));
@@ -211,15 +211,14 @@ Avian_avian_SystemClassLoader_00024ResourceEnumeration_nextResourceURLPrefix
 (Thread* t, object, uintptr_t* arguments)
 {
   GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[1]));
-  object name = reinterpret_cast<object>(arguments[2]);
-  object finderElementPtrPtr = reinterpret_cast<object>(arguments[3]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[2]));
+  GcLongArray* finderElementPtrPtr = cast<GcLongArray>(t, reinterpret_cast<object>(arguments[3]));
 
   if (LIKELY(name) && LIKELY(finderElementPtrPtr)) {
-    THREAD_RUNTIME_ARRAY(t, char, n, cast<GcString>(t, name)->length(t) + 1);
-    stringChars(t, cast<GcString>(t, name), RUNTIME_ARRAY_BODY(n));
+    THREAD_RUNTIME_ARRAY(t, char, n, name->length(t) + 1);
+    stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
-    void *&finderElementPtr = reinterpret_cast<void *&>(longArrayBody(t,
-      finderElementPtrPtr, 0));
+    void *&finderElementPtr = reinterpret_cast<void *&>(finderElementPtrPtr->body()[0]);
     const char* name = static_cast<Finder*>
       (loader->as<GcSystemClassLoader>(t)->finder())->nextUrlPrefix(RUNTIME_ARRAY_BODY(n),
         finderElementPtr);
@@ -242,27 +241,27 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_SystemClassLoader_getPackageSource
 (Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[0]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[0]));
   PROTECT(t, name);
 
   ACQUIRE(t, t->m->classLock);
 
-  THREAD_RUNTIME_ARRAY(t, char, chars, cast<GcString>(t, name)->length(t) + 2);
-  stringChars(t, cast<GcString>(t, name), RUNTIME_ARRAY_BODY(chars));
+  THREAD_RUNTIME_ARRAY(t, char, chars, name->length(t) + 2);
+  stringChars(t, name, RUNTIME_ARRAY_BODY(chars));
   replace('.', '/', RUNTIME_ARRAY_BODY(chars));
-  RUNTIME_ARRAY_BODY(chars)[cast<GcString>(t, name)->length(t)] = '/';
-  RUNTIME_ARRAY_BODY(chars)[cast<GcString>(t, name)->length(t) + 1] = 0;
+  RUNTIME_ARRAY_BODY(chars)[name->length(t)] = '/';
+  RUNTIME_ARRAY_BODY(chars)[name->length(t) + 1] = 0;
 
-  object key = reinterpret_cast<object>(makeByteArray(t, RUNTIME_ARRAY_BODY(chars)));
+  GcByteArray* key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
 
-  object array = hashMapFind
-    (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), key, byteArrayHash, byteArrayEqual);
+  GcByteArray* array = cast<GcByteArray>(t, hashMapFind
+    (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), reinterpret_cast<object>(key), byteArrayHash, byteArrayEqual));
 
   if (array) {
-    return reinterpret_cast<uintptr_t>
-      (makeLocalReference
-       (t, reinterpret_cast<object>(t->m->classpath->makeString
-        (t, array, 0, byteArrayLength(t, array)))));
+    return reinterpret_cast<uintptr_t>(makeLocalReference(
+        t,
+        reinterpret_cast<object>(t->m->classpath->makeString(
+            t, reinterpret_cast<object>(array), 0, array->length()))));
   } else {
     return 0;
   }
@@ -320,11 +319,11 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_avianvmresource_Handler_00024ResourceInputStream_getContentLength
 (Thread* t, object, uintptr_t* arguments)
 {
-  object path = reinterpret_cast<object>(*arguments);
+  GcString* path = cast<GcString>(t, reinterpret_cast<object>(*arguments));
 
   if (LIKELY(path)) {
-    THREAD_RUNTIME_ARRAY(t, char, p, cast<GcString>(t, path)->length(t) + 1);
-    stringChars(t, cast<GcString>(t, path), RUNTIME_ARRAY_BODY(p));
+    THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
     System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
     if (r == 0) {
@@ -344,11 +343,11 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_avian_avianvmresource_Handler_00024ResourceInputStream_open
 (Thread* t, object, uintptr_t* arguments)
 {
-  object path = reinterpret_cast<object>(*arguments);
+  GcString* path = cast<GcString>(t, reinterpret_cast<object>(*arguments));
 
   if (LIKELY(path)) {
-    THREAD_RUNTIME_ARRAY(t, char, p, cast<GcString>(t, path)->length(t) + 1);
-    stringChars(t, cast<GcString>(t, path), RUNTIME_ARRAY_BODY(p));
+    THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
+    stringChars(t, path, RUNTIME_ARRAY_BODY(p));
 
     System::Region* r = t->m->bootFinder->find(RUNTIME_ARRAY_BODY(p));
     if (r == 0) {
@@ -393,7 +392,7 @@ Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI_3BII
 {
   int64_t peer; memcpy(&peer, arguments, 8);
   int32_t position = arguments[2];
-  object buffer = reinterpret_cast<object>(arguments[3]);
+  GcByteArray* buffer = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[3]));
   int32_t offset = arguments[4];
   int32_t length = arguments[5];
 
@@ -406,7 +405,7 @@ Avian_avian_avianvmresource_Handler_00024ResourceInputStream_read__JI_3BII
   if (length <= 0) {
     return -1;
   } else {
-    memcpy(&byteArrayBody(t, buffer, offset), region->start() + position,
+    memcpy(&buffer->body()[offset], region->start() + position,
            length);
     return length;
   }
@@ -734,16 +733,16 @@ Avian_java_nio_FixedArrayByteBuffer_allocateFixed
 (Thread* t, object, uintptr_t* arguments)
 {
   int capacity = arguments[0];
-  object address = reinterpret_cast<object>(arguments[1]);
+  GcLongArray* address = cast<GcLongArray>(t, reinterpret_cast<object>(arguments[1]));
   PROTECT(t, address);
 
-  object array = allocate3
-    (t, t->m->heap, Machine::FixedAllocation, ArrayBody + capacity, false);
+  GcArray* array = reinterpret_cast<GcArray*>(allocate3
+    (t, t->m->heap, Machine::FixedAllocation, ArrayBody + capacity, false));
 
-  setObjectClass(t, array, type(t, GcByteArray::Type));
-  byteArrayLength(t, array) = capacity;
+  setObjectClass(t, reinterpret_cast<object>(array), type(t, GcByteArray::Type));
+  array->length() = capacity;
 
-  longArrayBody(t, address, 0) = reinterpret_cast<intptr_t>(array) + ArrayBody;
+  address->body()[0] = reinterpret_cast<intptr_t>(array) + ArrayBody;
 
   return reinterpret_cast<intptr_t>(array);
 }
@@ -869,7 +868,7 @@ Avian_sun_misc_Unsafe_getLongVolatile
     if (objectClass(t, o)->arrayDimensions()) {
       lock = reinterpret_cast<object>(objectClass(t, o));
     } else {
-      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
+      lock = reinterpret_cast<object>(fieldForOffset(t, cast<GcSingleton>(t, o), offset));
     }
 
     PROTECT(t, o);
@@ -901,7 +900,7 @@ Avian_sun_misc_Unsafe_putLongVolatile
     if (objectClass(t, o)->arrayDimensions()) {
       lock = reinterpret_cast<object>(objectClass(t, o));
     } else {
-      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
+      lock = reinterpret_cast<object>(fieldForOffset(t, cast<GcSingleton>(t, o), offset));
     }
 
     PROTECT(t, o);
