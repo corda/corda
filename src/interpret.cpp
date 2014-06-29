@@ -47,7 +47,7 @@ class Thread: public vm::Thread {
   unsigned ip;
   unsigned sp;
   int frame;
-  object code;
+  GcCode* code;
   List<unsigned>* stackPointers;
   uintptr_t stack[0];
 };
@@ -330,9 +330,9 @@ pushFrame(Thread* t, GcMethod* method)
   t->ip = 0;
 
   if ((method->flags() & ACC_NATIVE) == 0) {
-    t->code = reinterpret_cast<object>(method->code());
+    t->code = method->code();
 
-    locals = codeMaxLocals(t, t->code);
+    locals = t->code->maxLocals();
 
     memset(t->stack + ((base + parameterFootprint) * 2), 0,
            (locals - parameterFootprint) * BytesPerWord * 2);
@@ -365,7 +365,7 @@ popFrame(Thread* t)
   t->sp = frameBase(t, t->frame);
   t->frame = frameNext(t, t->frame);
   if (t->frame >= 0) {
-    t->code = reinterpret_cast<object>(frameMethod(t, t->frame)->code());
+    t->code = frameMethod(t, t->frame)->code();
     t->ip = frameIp(t, t->frame);
   } else {
     t->code = 0;
@@ -632,8 +632,8 @@ invokeNative(Thread* t, GcMethod* method)
 
   resolveNative(t, method);
 
-  object native = reinterpret_cast<object>(getMethodRuntimeData(t, method)->native());
-  if (nativeFast(t, native)) {
+  GcNative* native = getMethodRuntimeData(t, method)->native();
+  if (native->fast()) {
     pushFrame(t, method);
 
     uint64_t result;
@@ -652,14 +652,14 @@ invokeNative(Thread* t, GcMethod* method)
         (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
 
       result = reinterpret_cast<FastNativeFunction>
-        (nativeFunction(t, native))(t, method, RUNTIME_ARRAY_BODY(args));
+        (native->function())(t, method, RUNTIME_ARRAY_BODY(args));
     }
 
     pushResult(t, method->returnCode(), result, false);
 
     return method->returnCode();
   } else {
-    return invokeNativeSlow(t, method, nativeFunction(t, native));
+    return invokeNativeSlow(t, method, native->function());
   }
 }
 
@@ -688,11 +688,11 @@ findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
 {
   PROTECT(t, method);
 
-  object eht = method->code()->exceptionHandlerTable();
+  GcExceptionHandlerTable* eht = cast<GcExceptionHandlerTable>(t, method->code()->exceptionHandlerTable());
 
   if (eht) {
-    for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-      uint64_t eh = exceptionHandlerTableBody(t, eht, i);
+    for (unsigned i = 0; i < eht->length(); ++i) {
+      uint64_t eh = eht->body()[i];
 
       if (ip - 1 >= exceptionHandlerStart(eh)
           and ip - 1 < exceptionHandlerEnd(eh))
@@ -708,7 +708,7 @@ findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
             (t, method, exceptionHandlerCatchType(eh) - 1);
 
           if (catchType) {
-            eh = exceptionHandlerTableBody(t, eht, i);
+            eh = eht->body()[i];
             t->exception = e;
           } else {
             // can't find what we're supposed to catch - move on.
@@ -733,31 +733,31 @@ findExceptionHandler(Thread* t, int frame)
 }
 
 void
-pushField(Thread* t, object target, object field)
+pushField(Thread* t, object target, GcField* field)
 {
-  switch (fieldCode(t, field)) {
+  switch (field->code()) {
   case ByteField:
   case BooleanField:
-    pushInt(t, fieldAtOffset<int8_t>(target, fieldOffset(t, field)));
+    pushInt(t, fieldAtOffset<int8_t>(target, field->offset()));
     break;
 
   case CharField:
   case ShortField:
-    pushInt(t, fieldAtOffset<int16_t>(target, fieldOffset(t, field)));
+    pushInt(t, fieldAtOffset<int16_t>(target, field->offset()));
     break;
 
   case FloatField:
   case IntField:
-    pushInt(t, fieldAtOffset<int32_t>(target, fieldOffset(t, field)));
+    pushInt(t, fieldAtOffset<int32_t>(target, field->offset()));
     break;
 
   case DoubleField:
   case LongField:
-    pushLong(t, fieldAtOffset<int64_t>(target, fieldOffset(t, field)));
+    pushLong(t, fieldAtOffset<int64_t>(target, field->offset()));
     break;
 
   case ObjectField:
-    pushObject(t, fieldAtOffset<object>(target, fieldOffset(t, field)));
+    pushObject(t, fieldAtOffset<object>(target, field->offset()));
     break;
 
   default:
@@ -778,18 +778,20 @@ interpret3(Thread* t, const int base)
   unsigned& ip = t->ip;
   unsigned& sp = t->sp;
   int& frame = t->frame;
-  object& code = t->code;
+  GcCode*& code = t->code;
+  GcMethod* method = 0;
+  PROTECT(t, method);
   GcThrowable*& exception = t->exception;
   uintptr_t* stack = t->stack;
 
-  code = reinterpret_cast<object>(frameMethod(t, frame)->code());
+  code = frameMethod(t, frame)->code();
 
   if (UNLIKELY(exception)) {
     goto throw_;
   }
 
  loop:
-  instruction = codeBody(t, code, ip++);
+  instruction = code->body()[ip++];
 
   if (DebugRun) {
     fprintf(stderr, "ip: %d; instruction: 0x%x in %s.%s ",
@@ -860,7 +862,7 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case aload: {
-    pushObject(t, localObject(t, codeBody(t, code, ip++)));
+    pushObject(t, localObject(t, code->body()[ip++]));
   } goto loop;
 
   case aload_0: {
@@ -887,7 +889,7 @@ interpret3(Thread* t, const int base)
 
       GcClass* class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
 
-      pushObject(t, makeObjectArray(t, class_, count));
+      pushObject(t, reinterpret_cast<object>(makeObjectArray(t, class_, count)));
     } else {
       exception = makeThrowable
         (t, GcNegativeArraySizeException::Type, "%d", count);
@@ -917,7 +919,7 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case astore: {
-    store(t, codeBody(t, code, ip++));
+    store(t, code->body()[ip++]);
   } goto loop;
 
   case astore_0: {
@@ -949,27 +951,29 @@ interpret3(Thread* t, const int base)
 
     if (LIKELY(array)) {
       if (objectClass(t, array) == type(t, GcBooleanArray::Type)) {
+        GcBooleanArray* a = cast<GcBooleanArray>(t, array);
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
-                   < booleanArrayLength(t, array)))
+                   < a->length()))
         {
-          pushInt(t, booleanArrayBody(t, array, index));
+          pushInt(t, a->body()[index]);
         } else {
           exception = makeThrowable
             (t, GcArrayIndexOutOfBoundsException::Type,
-             "%d not in [0,%d)", index, booleanArrayLength(t, array));
+             "%d not in [0,%d)", index, a->length());
           goto throw_;
         }
       } else {
+        GcByteArray* a = cast<GcByteArray>(t, array);
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
-                   < byteArrayLength(t, array)))
+                   < a->length()))
         {
-          pushInt(t, byteArrayBody(t, array, index));
+          pushInt(t, a->body()[index]);
         } else {
           exception = makeThrowable
             (t, GcArrayIndexOutOfBoundsException::Type,
-             "%d not in [0,%d)", index, byteArrayLength(t, array));
+             "%d not in [0,%d)", index, a->length());
           goto throw_;
         }
       }
@@ -986,26 +990,28 @@ interpret3(Thread* t, const int base)
 
     if (LIKELY(array)) {
       if (objectClass(t, array) == type(t, GcBooleanArray::Type)) {
+        GcBooleanArray* a = cast<GcBooleanArray>(t, array);
         if (LIKELY(index >= 0 and
                    static_cast<uintptr_t>(index)
-                   < booleanArrayLength(t, array)))
+                   < a->length()))
         {
-          booleanArrayBody(t, array, index) = value;
+          a->body()[index] = value;
         } else {
           exception = makeThrowable
             (t, GcArrayIndexOutOfBoundsException::Type,
-             "%d not in [0,%d)", index, booleanArrayLength(t, array));
+             "%d not in [0,%d)", index, a->length());
           goto throw_;
         }
       } else {
+        GcByteArray* a = cast<GcByteArray>(t, array);
         if (LIKELY(index >= 0 and
-                   static_cast<uintptr_t>(index) < byteArrayLength(t, array)))
+                   static_cast<uintptr_t>(index) < a->length()))
         {
-          byteArrayBody(t, array, index) = value;
+          a->body()[index] = value;
         } else {
           exception = makeThrowable
             (t, GcArrayIndexOutOfBoundsException::Type,
-             "%d not in [0,%d)", index, byteArrayLength(t, array));
+             "%d not in [0,%d)", index, a->length());
           goto throw_;
         }
       }
@@ -1016,7 +1022,7 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case bipush: {
-    pushInt(t, static_cast<int8_t>(codeBody(t, code, ip++)));
+    pushInt(t, static_cast<int8_t>(code->body()[ip++]));
   } goto loop;
 
   case caload: {
@@ -1024,14 +1030,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcCharArray* a = cast<GcCharArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < charArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushInt(t, charArrayBody(t, array, index));
+        pushInt(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, charArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1046,14 +1053,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcCharArray* a = cast<GcCharArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < charArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        charArrayBody(t, array, index) = value;
+        a->body()[index] = value;
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, charArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1119,14 +1127,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcDoubleArray* a = cast<GcDoubleArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < doubleArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushLong(t, doubleArrayBody(t, array, index));
+        pushLong(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, doubleArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1141,14 +1150,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcDoubleArray* a = cast<GcDoubleArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < doubleArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        memcpy(&doubleArrayBody(t, array, index), &value, sizeof(uint64_t));
+        memcpy(&a->body()[index], &value, sizeof(uint64_t));
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, doubleArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1336,14 +1346,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcFloatArray* a = cast<GcFloatArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < floatArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushInt(t, floatArrayBody(t, array, index));
+        pushInt(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, floatArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1358,14 +1369,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcFloatArray* a = cast<GcFloatArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < floatArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        memcpy(&floatArrayBody(t, array, index), &value, sizeof(uint32_t));
+        memcpy(&a->body()[index], &value, sizeof(uint32_t));
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, floatArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1458,13 +1470,13 @@ interpret3(Thread* t, const int base)
     if (LIKELY(peekObject(t, sp - 1))) {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
+      GcField* field = resolveField(t, frameMethod(t, frame), index - 1);
 
-      assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+      assertT(t, (field->flags() & ACC_STATIC) == 0);
 
       PROTECT(t, field);
 
-      ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
+      ACQUIRE_FIELD_FOR_READ(t, field);
 
       pushField(t, popObject(t), field);
     } else {
@@ -1476,17 +1488,17 @@ interpret3(Thread* t, const int base)
   case getstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
+    GcField* field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assertT(t, fieldFlags(t, field) & ACC_STATIC);
+    assertT(t, field->flags() & ACC_STATIC);
 
     PROTECT(t, field);
 
-    initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+    initClass(t, field->class_());
 
-    ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
+    ACQUIRE_FIELD_FOR_READ(t, field);
 
-    pushField(t, classStaticTable(t, fieldClass(t, field)), field);
+    pushField(t, reinterpret_cast<object>(field->class_()->staticTable()), field);
   } goto loop;
 
   case goto_: {
@@ -1535,14 +1547,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcIntArray* a = cast<GcIntArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < intArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushInt(t, intArrayBody(t, array, index));
+        pushInt(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, intArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1564,14 +1577,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcIntArray* a = cast<GcIntArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < intArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        intArrayBody(t, array, index) = value;
+        a->body()[index] = value;
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, intArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -1773,15 +1787,15 @@ interpret3(Thread* t, const int base)
   } goto back_branch;
 
   case iinc: {
-    uint8_t index = codeBody(t, code, ip++);
-    int8_t c = codeBody(t, code, ip++);
+    uint8_t index = code->body()[ip++];
+    int8_t c = code->body()[ip++];
 
     setLocalInt(t, index, localInt(t, index) + c);
   } goto loop;
 
   case iload:
   case fload: {
-    pushInt(t, localInt(t, codeBody(t, code, ip++)));
+    pushInt(t, localInt(t, code->body()[ip++]));
   } goto loop;
 
   case iload_0:
@@ -1837,12 +1851,12 @@ interpret3(Thread* t, const int base)
 
     ip += 2;
 
-    GcMethod* method = resolveMethod(t, frameMethod(t, frame), index - 1);
+    GcMethod* m = resolveMethod(t, frameMethod(t, frame), index - 1);
 
-    unsigned parameterFootprint = method->parameterFootprint();
+    unsigned parameterFootprint = m->parameterFootprint();
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
-      code = reinterpret_cast<object>(findInterfaceMethod
-        (t, method, objectClass(t, peekObject(t, sp - parameterFootprint))));
+      method = findInterfaceMethod
+        (t, m, objectClass(t, peekObject(t, sp - parameterFootprint)));
       goto invoke;
     } else {
       exception = makeThrowable(t, GcNullPointerException::Type);
@@ -1853,21 +1867,21 @@ interpret3(Thread* t, const int base)
   case invokespecial: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    GcMethod* method = resolveMethod(t, frameMethod(t, frame), index - 1);
+    GcMethod* m = resolveMethod(t, frameMethod(t, frame), index - 1);
 
-    unsigned parameterFootprint = method->parameterFootprint();
+    unsigned parameterFootprint = m->parameterFootprint();
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       GcClass* class_ = frameMethod(t, frame)->class_();
-      if (isSpecialMethod(t, method, class_)) {
+      if (isSpecialMethod(t, m, class_)) {
         class_ = class_->super();
-        PROTECT(t, method);
+        PROTECT(t, m);
         PROTECT(t, class_);
 
         initClass(t, class_);
 
-        code = reinterpret_cast<object>(findVirtualMethod(t, method, class_));
+        method = findVirtualMethod(t, m, class_);
       } else {
-        code = reinterpret_cast<object>(method);
+        method = m;
       }
 
       goto invoke;
@@ -1880,26 +1894,26 @@ interpret3(Thread* t, const int base)
   case invokestatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    GcMethod* method = resolveMethod(t, frameMethod(t, frame), index - 1);
-    PROTECT(t, method);
+    GcMethod* m = resolveMethod(t, frameMethod(t, frame), index - 1);
+    PROTECT(t, m);
 
-    initClass(t, method->class_());
+    initClass(t, m->class_());
 
-    code = reinterpret_cast<object>(method);
+    method = m;
   } goto invoke;
 
   case invokevirtual: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    GcMethod* method = resolveMethod(t, frameMethod(t, frame), index - 1);
+    GcMethod* m = resolveMethod(t, frameMethod(t, frame), index - 1);
 
-    unsigned parameterFootprint = method->parameterFootprint();
+    unsigned parameterFootprint = m->parameterFootprint();
     if (LIKELY(peekObject(t, sp - parameterFootprint))) {
       GcClass* class_ = objectClass(t, peekObject(t, sp - parameterFootprint));
-      PROTECT(t, method);
+      PROTECT(t, m);
       PROTECT(t, class_);
 
-      code = reinterpret_cast<object>(findVirtualMethod(t, method, class_));
+      method = findVirtualMethod(t, m, class_);
       goto invoke;
     } else {
       exception = makeThrowable(t, GcNullPointerException::Type);
@@ -1954,7 +1968,7 @@ interpret3(Thread* t, const int base)
 
   case istore:
   case fstore: {
-    setLocalInt(t, codeBody(t, code, ip++), popInt(t));
+    setLocalInt(t, code->body()[ip++], popInt(t));
   } goto loop;
 
   case istore_0:
@@ -2036,14 +2050,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcLongArray* a = cast<GcLongArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < longArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushLong(t, longArrayBody(t, array, index));
+        pushLong(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, longArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -2065,14 +2080,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcLongArray* a = cast<GcLongArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < longArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        longArrayBody(t, array, index) = value;
+        a->body()[index] = value;
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, longArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -2101,12 +2117,12 @@ interpret3(Thread* t, const int base)
     uint16_t index;
 
     if (instruction == ldc) {
-      index = codeBody(t, code, ip++);
+      index = code->body()[ip++];
     } else {
       index = codeReadInt16(t, code, ip);
     }
 
-    GcSingleton* pool = codePool(t, code);
+    GcSingleton* pool = code->pool();
 
     if (singletonIsObject(t, pool, index - 1)) {
       object v = singletonObject(t, pool, index - 1);
@@ -2128,7 +2144,7 @@ interpret3(Thread* t, const int base)
   case ldc2_w: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    GcSingleton* pool = codePool(t, code);
+    GcSingleton* pool = code->pool();
 
     uint64_t v;
     memcpy(&v, &singletonValue(t, pool, index - 1), 8);
@@ -2149,7 +2165,7 @@ interpret3(Thread* t, const int base)
 
   case lload:
   case dload: {
-    pushLong(t, localLong(t, codeBody(t, code, ip++)));
+    pushLong(t, localLong(t, code->body()[ip++]));
   } goto loop;
 
   case lload_0:
@@ -2262,7 +2278,7 @@ interpret3(Thread* t, const int base)
 
   case lstore:
   case dstore: {
-    setLocalLong(t, codeBody(t, code, ip++), popLong(t));
+    setLocalLong(t, code->body()[ip++], popLong(t));
   } goto loop;
 
   case lstore_0:
@@ -2328,7 +2344,7 @@ interpret3(Thread* t, const int base)
 
   case multianewarray: {
     uint16_t index = codeReadInt16(t, code, ip);
-    uint8_t dimensions = codeBody(t, code, ip++);
+    uint8_t dimensions = code->body()[ip++];
 
     GcClass* class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
     PROTECT(t, class_);
@@ -2368,7 +2384,7 @@ interpret3(Thread* t, const int base)
     int32_t count = popInt(t);
 
     if (LIKELY(count >= 0)) {
-      uint8_t type = codeBody(t, code, ip++);
+      uint8_t type = code->body()[ip++];
 
       object array;
 
@@ -2429,14 +2445,14 @@ interpret3(Thread* t, const int base)
   case putfield: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
+    GcField* field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assertT(t, (fieldFlags(t, field) & ACC_STATIC) == 0);
+    assertT(t, (field->flags() & ACC_STATIC) == 0);
     PROTECT(t, field);
 
-    { ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+    { ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-      switch (fieldCode(t, field)) {
+      switch (field->code()) {
       case ByteField:
       case BooleanField:
       case CharField:
@@ -2446,20 +2462,20 @@ interpret3(Thread* t, const int base)
         int32_t value = popInt(t);
         object o = popObject(t);
         if (LIKELY(o)) {
-          switch (fieldCode(t, field)) {
+          switch (field->code()) {
           case ByteField:
           case BooleanField:
-            fieldAtOffset<int8_t>(o, fieldOffset(t, field)) = value;
+            fieldAtOffset<int8_t>(o, field->offset()) = value;
             break;
 
           case CharField:
           case ShortField:
-            fieldAtOffset<int16_t>(o, fieldOffset(t, field)) = value;
+            fieldAtOffset<int16_t>(o, field->offset()) = value;
             break;
 
           case FloatField:
           case IntField:
-            fieldAtOffset<int32_t>(o, fieldOffset(t, field)) = value;
+            fieldAtOffset<int32_t>(o, field->offset()) = value;
             break;
           }
         } else {
@@ -2472,7 +2488,7 @@ interpret3(Thread* t, const int base)
         int64_t value = popLong(t);
         object o = popObject(t);
         if (LIKELY(o)) {
-          fieldAtOffset<int64_t>(o, fieldOffset(t, field)) = value;
+          fieldAtOffset<int64_t>(o, field->offset()) = value;
         } else {
           exception = makeThrowable(t, GcNullPointerException::Type);
         }
@@ -2482,7 +2498,7 @@ interpret3(Thread* t, const int base)
         object value = popObject(t);
         object o = popObject(t);
         if (LIKELY(o)) {
-          set(t, o, fieldOffset(t, field), value);
+          set(t, o, field->offset(), value);
         } else {
           exception = makeThrowable(t, GcNullPointerException::Type);
         }
@@ -2500,19 +2516,19 @@ interpret3(Thread* t, const int base)
   case putstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
 
-    object field = reinterpret_cast<object>(resolveField(t, frameMethod(t, frame), index - 1));
+    GcField* field = resolveField(t, frameMethod(t, frame), index - 1);
 
-    assertT(t, fieldFlags(t, field) & ACC_STATIC);
+    assertT(t, field->flags() & ACC_STATIC);
 
     PROTECT(t, field);
 
-    ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+    ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-    initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+    initClass(t, field->class_());
 
-    object table = classStaticTable(t, fieldClass(t, field));
+    GcSingleton* table = field->class_()->staticTable();
 
-    switch (fieldCode(t, field)) {
+    switch (field->code()) {
     case ByteField:
     case BooleanField:
     case CharField:
@@ -2520,31 +2536,31 @@ interpret3(Thread* t, const int base)
     case FloatField:
     case IntField: {
       int32_t value = popInt(t);
-      switch (fieldCode(t, field)) {
+      switch (field->code()) {
       case ByteField:
       case BooleanField:
-        fieldAtOffset<int8_t>(table, fieldOffset(t, field)) = value;
+        fieldAtOffset<int8_t>(table, field->offset()) = value;
         break;
 
       case CharField:
       case ShortField:
-        fieldAtOffset<int16_t>(table, fieldOffset(t, field)) = value;
+        fieldAtOffset<int16_t>(table, field->offset()) = value;
         break;
 
       case FloatField:
       case IntField:
-        fieldAtOffset<int32_t>(table, fieldOffset(t, field)) = value;
+        fieldAtOffset<int32_t>(table, field->offset()) = value;
         break;
       }
     } break;
 
     case DoubleField:
     case LongField: {
-      fieldAtOffset<int64_t>(table, fieldOffset(t, field)) = popLong(t);
+      fieldAtOffset<int64_t>(table, field->offset()) = popLong(t);
     } break;
 
     case ObjectField: {
-      set(t, table, fieldOffset(t, field), popObject(t));
+      set(t, reinterpret_cast<object>(table), field->offset(), popObject(t));
     } break;
 
     default: abort(t);
@@ -2552,7 +2568,7 @@ interpret3(Thread* t, const int base)
   } goto loop;
 
   case ret: {
-    ip = localInt(t, codeBody(t, code, ip));
+    ip = localInt(t, code->body()[ip]);
   } goto loop;
 
   case return_: {
@@ -2576,14 +2592,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcShortArray* a = cast<GcShortArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < shortArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        pushInt(t, shortArrayBody(t, array, index));
+        pushInt(t, a->body()[index]);
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, shortArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -2598,14 +2615,15 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
+      GcShortArray* a = cast<GcShortArray>(t, array);
       if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < shortArrayLength(t, array)))
+                 static_cast<uintptr_t>(index) < a->length()))
       {
-        shortArrayBody(t, array, index) = value;
+        a->body()[index] = value;
       } else {
         exception = makeThrowable
           (t, GcArrayIndexOutOfBoundsException::Type, "%d not in [0,%d)",
-           index, shortArrayLength(t, array));
+           index, a->length());
         goto throw_;
       }
     } else {
@@ -2655,7 +2673,7 @@ interpret3(Thread* t, const int base)
     assertT(t, frameNext(t, frame) >= base);
     popFrame(t);
 
-    assertT(t, codeBody(t, code, ip - 3) == invokevirtual);
+    assertT(t, code->body()[ip - 3] == invokevirtual);
     ip -= 2;
 
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2675,7 +2693,7 @@ interpret3(Thread* t, const int base)
   }
 
  wide:
-  switch (codeBody(t, code, ip++)) {
+  switch (code->body()[ip++]) {
   case aload: {
     pushObject(t, localObject(t, codeReadInt16(t, code, ip)));
   } goto loop;
@@ -2719,11 +2737,11 @@ interpret3(Thread* t, const int base)
   goto loop;
 
  invoke: {
-    if (methodFlags(t, code) & ACC_NATIVE) {
-      invokeNative(t, cast<GcMethod>(t, code));
+    if (method->flags() & ACC_NATIVE) {
+      invokeNative(t, method);
     } else {
-      checkStack(t, cast<GcMethod>(t, code));
-      pushFrame(t, cast<GcMethod>(t, code));
+      checkStack(t, method);
+      pushFrame(t, method);
     }
   } goto loop;
 
