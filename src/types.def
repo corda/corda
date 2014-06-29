@@ -149,16 +149,16 @@
 (type innerClassReference avian/InnerClassReference)
 
 (type continuationContext
-  (object next)
+  (continuationContext next)
   (object before)
   (object after)
   (object continuation)
-  (object method))
+  (method method))
 
 (type continuation avian/Continuations$Continuation
-  (object next)
-  (object context)
-  (object method)
+  (continuation next)
+  (continuationContext context)
+  (method method)
   (void* address)
   (uintptr_t returnAddressOffset)
   (uintptr_t framePointerOffset)

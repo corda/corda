@@ -302,11 +302,11 @@ public class Continuations {
   }
 
   private static class UnwindResult {
-    public final Callback continuation;
+    public final Continuation continuation;
     public final Object result;
     public final Throwable exception;
 
-    public UnwindResult(Callback continuation, Object result,
+    public UnwindResult(Continuation continuation, Object result,
                         Throwable exception)
     {
       this.continuation = continuation;

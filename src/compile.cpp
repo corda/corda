@@ -146,7 +146,7 @@ class MyThread: public Thread {
     void* ip;
     void* stack;
     void* scratch;
-    object continuation;
+    GcContinuation* continuation;
     GcMethod* nativeMethod;
     GcMethod* targetMethod;
     GcMethod* originalMethod;
@@ -168,7 +168,7 @@ class MyThread: public Thread {
       Context* context;
     };
 
-    Context(MyThread* t, void* ip, void* stack, object continuation,
+    Context(MyThread* t, void* ip, void* stack, GcContinuation* continuation,
             CallTrace* trace):
       ip(ip),
       stack(stack),
@@ -179,14 +179,14 @@ class MyThread: public Thread {
 
     void* ip;
     void* stack;
-    object continuation;
+    GcContinuation* continuation;
     CallTrace* trace;
     MyProtector protector;
   };
 
   class TraceContext: public Context {
    public:
-    TraceContext(MyThread* t, void* ip, void* stack, object continuation,
+    TraceContext(MyThread* t, void* ip, void* stack, GcContinuation* continuation,
                  CallTrace* trace):
       Context(t, ip, stack, continuation, trace),
       t(t),
@@ -218,7 +218,7 @@ class MyThread: public Thread {
   };
 
   static void doTransition(MyThread* t, void* ip, void* stack,
-                           object continuation, MyThread::CallTrace* trace)
+                           GcContinuation* continuation, MyThread::CallTrace* trace)
   {
     // in this function, we "atomically" update the thread context
     // fields in such a way to ensure that another thread may
@@ -280,7 +280,7 @@ class MyThread: public Thread {
   void* stack;
   void* newStack;
   void* scratch;
-  object continuation;
+  GcContinuation* continuation;
   uintptr_t exceptionStackAdjustment;
   uintptr_t exceptionOffset;
   void* exceptionHandler;
@@ -301,7 +301,7 @@ class MyThread: public Thread {
 };
 
 void
-transition(MyThread* t, void* ip, void* stack, object continuation,
+transition(MyThread* t, void* ip, void* stack, GcContinuation* continuation,
            MyThread::CallTrace* trace)
 {
   MyThread::doTransition(t, ip, stack, continuation, trace);
@@ -586,7 +586,7 @@ class MyStackWalker: public Processor::StackWalker {
           if (method_) {
             state = Method;
           } else if (continuation) {
-            method_ = cast<GcMethod>(t, continuationMethod(t, continuation));
+            method_ = continuation->method();
             state = Continuation;
           } else {
             state = Trace;
@@ -628,7 +628,7 @@ class MyStackWalker: public Processor::StackWalker {
 
     switch (state) {
     case Continuation:
-      continuation = continuationNext(t, continuation);
+      continuation = continuation->next();
       break;
 
     case Method:
@@ -657,8 +657,8 @@ class MyStackWalker: public Processor::StackWalker {
   virtual int ip() {
     switch (state) {
     case Continuation:
-      return reinterpret_cast<intptr_t>(continuationAddress(t, continuation))
-        - methodCompiled(t, cast<GcMethod>(t, continuationMethod(t, continuation)));
+      return reinterpret_cast<intptr_t>(continuation->address())
+        - methodCompiled(t, continuation->method());
 
     case Method:
       return reinterpret_cast<intptr_t>(ip_) - methodCompiled(t, method_);
@@ -689,7 +689,7 @@ class MyStackWalker: public Processor::StackWalker {
   MyThread::CallTrace* trace;
   GcMethod* method_;
   GcMethod* target;
-  object continuation;
+  GcContinuation* continuation;
   unsigned count_;
   MyProtector protector;
 };
@@ -2025,11 +2025,11 @@ releaseLock(MyThread* t, GcMethod* method, void* stack)
 
 void
 findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
-                 void** targetStack, object* targetContinuation)
+                 void** targetStack, GcContinuation** targetContinuation)
 {
   void* ip;
   void* stack;
-  object continuation;
+  GcContinuation* continuation;
 
   if (t->traceContext) {
     ip = t->traceContext->ip;
@@ -2084,19 +2084,19 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
       *targetContinuation = continuation;
 
       while (Continuations and *targetContinuation) {
-        object c = *targetContinuation;
+        GcContinuation* c = *targetContinuation;
 
-        GcMethod* method = cast<GcMethod>(t, continuationMethod(t, c));
+        GcMethod* method = c->method();
 
         void* handler = findExceptionHandler
-          (t, method, continuationAddress(t, c));
+          (t, method, c->address());
 
         if (handler) {
           t->exceptionHandler = handler;
 
           t->exceptionStackAdjustment
             = (stackOffsetFromFrame(t, method)
-               - ((continuationFramePointerOffset(t, c) / BytesPerWord)
+               - ((c->framePointerOffset() / BytesPerWord)
                   - t->arch->framePointerOffset()
                   + t->arch->frameReturnAddressSize())) * BytesPerWord;
 
@@ -2108,11 +2108,11 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
           releaseLock(t, method,
                       reinterpret_cast<uint8_t*>(c)
                       + ContinuationBody
-                      + continuationReturnAddressOffset(t, c)
+                      + c->returnAddressOffset()
                       - t->arch->returnAddressOffset());
         }
 
-        *targetContinuation = continuationNext(t, c);
+        *targetContinuation = c->next();
       }
     }
 
@@ -2120,24 +2120,24 @@ findUnwindTarget(MyThread* t, void** targetIp, void** targetFrame,
   }
 }
 
-object
+GcContinuation*
 makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
 {
   void* ip = getIp(t);
   void* stack = t->stack;
 
-  object context = t->continuation
-    ? continuationContext(t, t->continuation)
-    : reinterpret_cast<object>(makeContinuationContext(t, 0, 0, 0, 0, reinterpret_cast<object>(t->trace->originalMethod)));
+  GcContinuationContext* context = t->continuation
+    ? t->continuation->context()
+    : makeContinuationContext(t, 0, 0, 0, 0, t->trace->originalMethod);
   PROTECT(t, context);
 
   GcMethod* target = t->trace->targetMethod;
   PROTECT(t, target);
 
-  object first = 0;
+  GcContinuation* first = 0;
   PROTECT(t, first);
 
-  object last = 0;
+  GcContinuation* last = 0;
   PROTECT(t, last);
 
   bool mostRecent = true;
@@ -2168,8 +2168,8 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
         + t->arch->frameFooterSize()
         + t->arch->argumentFootprint(method->parameterFootprint());
 
-      object c = reinterpret_cast<object>(makeContinuation
-        (t, 0, context, reinterpret_cast<object>(method), ip,
+      GcContinuation* c = makeContinuation
+        (t, 0, context, method, ip,
          (frameSize
           + t->arch->frameFooterSize()
           + t->arch->returnAddressOffset()
@@ -2178,9 +2178,9 @@ makeCurrentContinuation(MyThread* t, void** targetIp, void** targetStack)
           + t->arch->frameFooterSize()
           + t->arch->framePointerOffset()
           - t->arch->frameReturnAddressSize()) * BytesPerWord,
-         totalSize));
+         totalSize);
 
-      memcpy(&continuationBody(t, c, 0), top, totalSize * BytesPerWord);
+      memcpy(c->body().begin(), top, totalSize * BytesPerWord);
 
       if (last) {
         set(t, last, ContinuationNext, c);
@@ -2213,7 +2213,7 @@ unwind(MyThread* t)
   void* ip;
   void* frame;
   void* stack;
-  object continuation;
+  GcContinuation* continuation;
   findUnwindTarget(t, &ip, &frame, &stack, &continuation);
 
   t->trace->targetMethod = 0;
@@ -7537,7 +7537,7 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
 }
 
 void
-callContinuation(MyThread* t, object continuation, object result,
+callContinuation(MyThread* t, GcContinuation* continuation, object result,
                  GcThrowable* exception, void* ip, void* stack)
 {
   assertT(t, t->exception == 0);
@@ -7649,7 +7649,7 @@ jumpAndInvoke(MyThread* t, GcMethod* method, void* stack, ...)
 }
 
 void
-callContinuation(MyThread* t, object continuation, object result,
+callContinuation(MyThread* t, GcContinuation* continuation, object result,
                  object exception)
 {
   enum {
@@ -7658,35 +7658,34 @@ callContinuation(MyThread* t, object continuation, object result,
     Rewind
   } action;
 
-  object nextContinuation = 0;
+  GcContinuation* nextContinuation = 0;
 
   if (t->continuation == 0
-      or continuationContext(t, t->continuation)
-      != continuationContext(t, continuation))
+      or t->continuation->context()
+      != continuation->context())
   {
     PROTECT(t, continuation);
     PROTECT(t, result);
     PROTECT(t, exception);
 
     if (compatibleReturnType
-        (t, t->trace->originalMethod, cast<GcMethod>(t, continuationContextMethod
-         (t, continuationContext(t, continuation)))))
+        (t, t->trace->originalMethod, continuation->context()->method()))
     {
-      object oldContext;
-      object unwindContext;
+      GcContinuationContext* oldContext;
+      GcContinuationContext* unwindContext;
 
       if (t->continuation) {
-        oldContext = continuationContext(t, t->continuation);
+        oldContext = t->continuation->context();
         unwindContext = oldContext;
       } else {
         oldContext = 0;
         unwindContext = 0;
       }
 
-      object rewindContext = 0;
+      GcContinuationContext* rewindContext = 0;
 
-      for (object newContext = continuationContext(t, continuation);
-           newContext; newContext = continuationContextNext(t, newContext))
+      for (GcContinuationContext* newContext = continuation->context();
+           newContext; newContext = newContext->next())
       {
         if (newContext == oldContext) {
           unwindContext = 0;
@@ -7697,15 +7696,15 @@ callContinuation(MyThread* t, object continuation, object result,
       }
 
       if (unwindContext
-          and continuationContextContinuation(t, unwindContext))
+          and unwindContext->continuation())
       {
-        nextContinuation = continuationContextContinuation(t, unwindContext);
+        nextContinuation = cast<GcContinuation>(t, unwindContext->continuation());
         result = reinterpret_cast<object>(makeUnwindResult(t, continuation, result, cast<GcThrowable>(t, exception)));
         action = Unwind;
       } else if (rewindContext
-                 and continuationContextContinuation(t, rewindContext))
+                 and rewindContext->continuation())
       {
-        nextContinuation = continuationContextContinuation(t, rewindContext);
+        nextContinuation = cast<GcContinuation>(t, rewindContext->continuation());
         action = Rewind;
 
         if (root(t, RewindMethod) == 0) {
@@ -7735,7 +7734,7 @@ callContinuation(MyThread* t, object continuation, object result,
   void* ip;
   void* frame;
   void* stack;
-  object threadContinuation;
+  GcContinuation* threadContinuation;
   findUnwindTarget(t, &ip, &frame, &stack, &threadContinuation);
 
   switch (action) {
@@ -7752,7 +7751,7 @@ callContinuation(MyThread* t, object continuation, object result,
 
     jumpAndInvoke
       (t, cast<GcMethod>(t, root(t, RewindMethod)), stack,
-       continuationContextBefore(t, continuationContext(t, nextContinuation)),
+       nextContinuation->context()->before(),
        continuation, result, exception);
   } break;
 
@@ -7824,13 +7823,13 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
 
     t->continuation = makeCurrentContinuation(t, &ip, &stack);
 
-    object newContext = reinterpret_cast<object>(
+    GcContinuationContext* newContext =
         makeContinuationContext(t,
-                                continuationContext(t, t->continuation),
+                                t->continuation->context(),
                                 before,
                                 after,
-                                t->continuation,
-                                reinterpret_cast<object>(t->trace->originalMethod)));
+                                reinterpret_cast<object>(t->continuation),
+                                t->trace->originalMethod);
 
     set(t, t->continuation, ContinuationContext, newContext);
   }
@@ -8129,7 +8128,7 @@ class SignalHandler: public SignalRegistrar::Handler {
 
         // printTrace(t, t->exception);
 
-        object continuation;
+        GcContinuation* continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);
 
         transition(t, ip, stack, continuation, t->trace);
@@ -8922,7 +8921,7 @@ class MyProcessor: public Processor {
                                         object result)
   {
     if (Continuations) {
-      callContinuation(static_cast<MyThread*>(t), reinterpret_cast<object>(continuation), result, 0);
+      callContinuation(static_cast<MyThread*>(t), continuation, result, 0);
     } else {
       abort(t);
     }
@@ -8932,7 +8931,7 @@ class MyProcessor: public Processor {
                                            GcThrowable* exception)
   {
     if (Continuations) {
-      callContinuation(static_cast<MyThread*>(t), reinterpret_cast<object>(continuation), 0, reinterpret_cast<object>(exception));
+      callContinuation(static_cast<MyThread*>(t), continuation, 0, reinterpret_cast<object>(exception));
     } else {
       abort(t);
     }

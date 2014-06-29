@@ -655,7 +655,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
-                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcByteArray>(t, referenceName(t, o))));
+                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), referenceName(t, o)));
     
                   set(t, reinterpret_cast<object>(addendum->pool()),
                       SingletonBody + (index * BytesPerWord), o);
