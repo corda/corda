@@ -1963,7 +1963,7 @@ savedTargetIndex(MyThread* t UNUSED, GcMethod* method)
   return method->code()->maxLocals();
 }
 
-object
+GcCallNode*
 findCallNode(MyThread* t, void* address);
 
 void
@@ -6863,7 +6863,7 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
         if (p->target) {
           insertCallNode
             (t, reinterpret_cast<object>(makeCallNode
-             (t, p->address->value(), reinterpret_cast<object>(p->target), p->flags, 0)));
+             (t, p->address->value(), p->target, p->flags, 0)));
         }
       }
     }
@@ -7314,9 +7314,9 @@ invokeNative(MyThread* t)
       ip = getIp(t);
     }
 
-    object node = findCallNode(t, ip);
-    GcMethod* target = cast<GcMethod>(t, callNodeTarget(t, node));
-    if (callNodeFlags(t, node) & TraceElement::VirtualCall) {
+    GcCallNode* node = findCallNode(t, ip);
+    GcMethod* target = node->target();
+    if (node->flags() & TraceElement::VirtualCall) {
       target = resolveTarget(t, t->stack, target);
     }
     t->trace->nativeMethod = target;
@@ -8845,15 +8845,15 @@ class MyProcessor: public Processor {
 
     unsigned index = 0;
     for (unsigned i = 0; i < arrayLength(t, root(t, CallTable)); ++i) {
-      for (object p = arrayBody(t, root(t, CallTable), i);
-           p; p = callNodeNext(t, p))
+      for (GcCallNode* p = cast<GcCallNode>(t, arrayBody(t, root(t, CallTable), i));
+           p; p = p->next())
       {
         table[index++] = targetVW(
-            callNodeAddress(t, p)
+            p->address()
             - reinterpret_cast<uintptr_t>(codeAllocator.memory.begin()));
         table[index++] = targetVW(
-            w->map()->find(callNodeTarget(t, p))
-            | (static_cast<unsigned>(callNodeFlags(t, p)) << TargetBootShift));
+            w->map()->find(reinterpret_cast<object>(p->target()))
+            | (static_cast<unsigned>(p->flags()) << TargetBootShift));
       }
     }
 
@@ -9027,8 +9027,8 @@ logCompile(MyThread* t, const void* code, unsigned size, const char* class_,
 void*
 compileMethod2(MyThread* t, void* ip)
 {
-  object node = findCallNode(t, ip);
-  GcMethod* target = cast<GcMethod>(t, callNodeTarget(t, node));
+  GcCallNode* node = findCallNode(t, ip);
+  GcMethod* target = node->target();
 
   PROTECT(t, node);
   PROTECT(t, target);
@@ -9056,13 +9056,13 @@ compileMethod2(MyThread* t, void* ip)
 
   if (updateCaller) {
     avian::codegen::lir::UnaryOperation op;
-    if (callNodeFlags(t, node) & TraceElement::LongCall) {
-      if (callNodeFlags(t, node) & TraceElement::TailCall) {
+    if (node->flags() & TraceElement::LongCall) {
+      if (node->flags() & TraceElement::TailCall) {
         op = avian::codegen::lir::AlignedLongJump;
       } else {
         op = avian::codegen::lir::AlignedLongCall;
       }
-    } else if (callNodeFlags(t, node) & TraceElement::TailCall) {
+    } else if (node->flags() & TraceElement::TailCall) {
       op = avian::codegen::lir::AlignedJump;
     } else {
       op = avian::codegen::lir::AlignedCall;
@@ -9161,7 +9161,7 @@ isThunkUnsafeStack(MyThread* t, void* ip)
          or isThunkUnsafeStack(&(p->bootThunks), ip));
 }
 
-object
+GcCallNode*
 findCallNode(MyThread* t, void* address)
 {
   if (DebugCallTable) {
@@ -9178,10 +9178,10 @@ findCallNode(MyThread* t, void* address)
   intptr_t key = reinterpret_cast<intptr_t>(address);
   unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
 
-  for (object n = arrayBody(t, table, index);
-       n; n = callNodeNext(t, n))
+  for (GcCallNode* n = cast<GcCallNode>(t, arrayBody(t, table, index));
+       n; n = n->next())
   {
-    intptr_t k = callNodeAddress(t, n);
+    intptr_t k = n->address();
 
     if (k == key) {
       return n;
@@ -9196,26 +9196,26 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 {
   PROTECT(t, oldTable);
 
-  object oldNode = 0;
+  GcCallNode* oldNode = 0;
   PROTECT(t, oldNode);
 
   object newTable = reinterpret_cast<object>(makeArray(t, newLength));
   PROTECT(t, newTable);
 
   for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
-    for (oldNode = arrayBody(t, oldTable, i);
+    for (oldNode = cast<GcCallNode>(t, arrayBody(t, oldTable, i));
          oldNode;
-         oldNode = callNodeNext(t, oldNode))
+         oldNode = oldNode->next())
     {
-      intptr_t k = callNodeAddress(t, oldNode);
+      intptr_t k = oldNode->address();
 
       unsigned index = k & (newLength - 1);
 
       object newNode = reinterpret_cast<object>(makeCallNode
-        (t, callNodeAddress(t, oldNode),
-         callNodeTarget(t, oldNode),
-         callNodeFlags(t, oldNode),
-         arrayBody(t, newTable, index)));
+        (t, oldNode->address(),
+         oldNode->target(),
+         oldNode->flags(),
+         cast<GcCallNode>(t, arrayBody(t, newTable, index))));
 
       set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
     }
@@ -9320,7 +9320,7 @@ makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
     unsigned target = calls[(i * 2) + 1];
 
     object node = reinterpret_cast<object>(makeCallNode
-       (t, base + address, bootObject(heap, target & BootMask),
+       (t, base + address, cast<GcMethod>(t, bootObject(heap, target & BootMask)),
         target >> BootShift, 0));
 
     table = insertCallNode(t, table, &size, node);

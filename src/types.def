@@ -49,15 +49,15 @@
   (object pool)
   (object signers))
 
-(type methodRuntimeData
-  (object native))
-
-(type pointer
-  (void* value))
-
 (type native
   (void* function)
   (uint8_t fast))
+
+(type methodRuntimeData
+  (native native))
+
+(type pointer
+  (void* value))
 
 (type nativeIntercept
   (extends native)
@@ -120,9 +120,9 @@
 
 (type callNode
   (intptr_t address)
-  (object target)
+  (method target)
   (uintptr_t flags)
-  (object next))
+  (callNode next))
 
 (type wordArray
   (array uintptr_t body))

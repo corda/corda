@@ -654,8 +654,8 @@ closeMemoryMappedFile(Thread* t, GcMethod* method, uintptr_t* arguments)
   }
 
   t->m->processor->invoke
-    (t, cast<GcMethod>(t, nativeInterceptOriginal
-     (t, getMethodRuntimeData(t, method)->native())),
+    (t, cast<GcMethod>(t,
+     getMethodRuntimeData(t, method)->native()->as<GcNativeIntercept>(t)->original()),
      file);
 }
 
