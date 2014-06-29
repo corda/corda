@@ -91,7 +91,7 @@
   (void* finalize)
   (nogc object next)
   (object queueTarget)
-  (object queueNext))
+  (finalizer queueNext))
 
 (type list
   (uint32_t size)
@@ -294,7 +294,7 @@
 (type phantomReference java/lang/ref/PhantomReference)
 
 (type cleaner sun/misc/Cleaner
-  (object queueNext))
+  (cleaner queueNext))
 
 (type byteArray [B
   (extends jobject)

@@ -5182,11 +5182,11 @@ runFinalizeThread(Thread* t)
       }
     }
 
-    for (; finalizeList; finalizeList = finalizerQueueNext(t, finalizeList)) {
+    for (; finalizeList; finalizeList = reinterpret_cast<object>(finalizerQueueNext(t, finalizeList))) {
       finalizeObject(t, finalizerQueueTarget(t, finalizeList), "finalize");
     }
 
-    for (; cleanList; cleanList = cleanerQueueNext(t, cleanList)) {
+    for (; cleanList; cleanList = reinterpret_cast<object>(cleanerQueueNext(t, cleanList))) {
       finalizeObject(t, cleanList, "clean");
     }
   }
