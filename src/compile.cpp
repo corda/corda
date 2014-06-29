@@ -3667,7 +3667,7 @@ unsigned
 targetFieldOffset(Context* context, GcField* field)
 {
   if (context->bootContext) {
-    return context->bootContext->resolver->fieldOffset(context->thread, reinterpret_cast<object>(field));
+    return context->bootContext->resolver->fieldOffset(context->thread, field);
   } else {
     return field->offset();
   }

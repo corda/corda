@@ -53,9 +53,11 @@ class BootImage {
   ThunkCollection thunks;
 } PACKED;
 
+class GcField;
+
 class OffsetResolver {
  public:
-  virtual unsigned fieldOffset(Thread*, object) = 0;
+  virtual unsigned fieldOffset(Thread*, GcField*) = 0;
 };
 
 #define NAME(x) Target##x
