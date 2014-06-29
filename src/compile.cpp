@@ -355,7 +355,7 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
     resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
   }
 
-  return cast<GcMethod>(t, arrayBody(t, class_->virtualTable(), index));
+  return cast<GcMethod>(t, cast<GcArray>(t, class_->virtualTable())->body()[index]);
 }
 
 object&
@@ -412,8 +412,13 @@ methodForIp(MyThread* t, void* ip)
   // compile(MyThread*, FixedAllocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  return cast<GcMethod>(t, treeQuery(t, cast<GcTreeNode>(t, root(t, MethodTree)), reinterpret_cast<intptr_t>(ip),
-                   cast<GcTreeNode>(t, root(t, MethodTreeSentinal)), compareIpToMethodBounds));
+  return cast<GcMethod>(
+      t,
+      treeQuery(t,
+                cast<GcTreeNode>(t, root(t, MethodTree)),
+                reinterpret_cast<intptr_t>(ip),
+                cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
+                compareIpToMethodBounds));
 }
 
 unsigned
@@ -442,8 +447,8 @@ void
 nextFrame(MyThread* t, void** ip, void** sp, GcMethod* method, GcMethod* target,
           bool mostRecent)
 {
-  object code = reinterpret_cast<object>(method->code());
-  intptr_t start = codeCompiled(t, code);
+  GcCode* code = method->code();
+  intptr_t start = code->compiled();
   void* link;
   bool methodIsMostRecent;
 
@@ -463,15 +468,15 @@ nextFrame(MyThread* t, void** ip, void** sp, GcMethod* method, GcMethod* target,
   //         ? &byteArrayBody(t, target->class_()->name(), 0)
   //         : 0,
   //         target
-  //         ? &byteArrayBody(t, methodName(t, target), 0)
+  //         ? &byteArrayBody(t, target->name(), 0)
   //         : 0,
   //         target
-  //         ? &byteArrayBody(t, methodSpec(t, target), 0)
+  //         ? &byteArrayBody(t, target->spec(), 0)
   //         : 0,
   //         *ip, *sp);
 
   t->arch->nextFrame
-    (reinterpret_cast<void*>(start), codeCompiledSize(t, code),
+    (reinterpret_cast<void*>(start), code->compiledSize(),
      alignedFrameSize(t, method), link, methodIsMostRecent,
      target ? target->parameterFootprint() : -1, ip, sp);
 
@@ -898,7 +903,7 @@ class BootContext {
     BootContext* c;
   };
 
-  BootContext(Thread* t, object constants, object calls,
+  BootContext(Thread* t, GcTriple* constants, GcTriple* calls,
               avian::codegen::DelayedPromise* addresses, Zone* zone, OffsetResolver* resolver):
     protector(t, this), constants(constants), calls(calls),
     addresses(addresses), addressSentinal(addresses), zone(zone),
@@ -906,8 +911,8 @@ class BootContext {
   { }
 
   MyProtector protector;
-  object constants;
-  object calls;
+  GcTriple* constants;
+  GcTriple* calls;
   avian::codegen::DelayedPromise* addresses;
   avian::codegen::DelayedPromise* addressSentinal;
   Zone* zone;
@@ -1315,24 +1320,24 @@ ir::Type operandTypeForFieldCode(Thread* t, unsigned code)
 }
 
 unsigned methodReferenceParameterFootprint(Thread* t,
-                                           object reference,
+                                           GcReference* reference,
                                            bool isStatic)
 {
   return parameterFootprint(
       t,
       reinterpret_cast<const char*>(
-          referenceSpec(t, reference)->body().begin()),
+          reference->spec()->body().begin()),
       isStatic);
 }
 
-int methodReferenceReturnCode(Thread* t, object reference)
+int methodReferenceReturnCode(Thread* t, GcReference* reference)
 {
   unsigned parameterCount;
   unsigned parameterFootprint;
   unsigned returnCode;
   scanMethodSpec(t,
                  reinterpret_cast<const char*>(
-                     referenceSpec(t, reference)->body().begin()),
+                     reference->spec()->body().begin()),
                  true,
                  &parameterCount,
                  &parameterFootprint,
@@ -1387,7 +1392,7 @@ class Frame {
     }
   }
 
-  ir::Value* append(object o)
+  ir::Value* append(GcObject* o)
   {
     BootContext* bc = context->bootContext;
     if (bc) {
@@ -1395,7 +1400,7 @@ class Frame {
 
       PROTECT(t, o);
       object pointer = reinterpret_cast<object>(makePointer(t, p));
-      bc->constants = reinterpret_cast<object>(makeTriple(t, o, pointer, bc->constants));
+      bc->constants = makeTriple(t, reinterpret_cast<object>(o), pointer, reinterpret_cast<object>(bc->constants));
 
       return c->binaryOp(
           lir::Add,
@@ -1405,12 +1410,12 @@ class Frame {
           c->promiseConstant(p, ir::Type::object()));
     } else {
       for (PoolElement* e = context->objectPool; e; e = e->next) {
-        if (o == e->target) {
+        if (reinterpret_cast<object>(o) == e->target) {
           return c->address(ir::Type::object(), e);
         }
       }
 
-      context->objectPool = new(&context->zone) PoolElement(t, o, context->objectPool);
+      context->objectPool = new(&context->zone) PoolElement(t, reinterpret_cast<object>(o), context->objectPool);
 
       ++ context->objectPoolCount;
 
@@ -1885,7 +1890,7 @@ class Frame {
 
   void referenceStackCall(bool isStatic,
                           ir::Value* methodValue,
-                          object methodReference,
+                          GcReference* methodReference,
                           unsigned flags,
                           TraceElement* trace)
   {
@@ -1967,29 +1972,29 @@ GcCallNode*
 findCallNode(MyThread* t, void* address);
 
 void
-insertCallNode(MyThread* t, object node);
+insertCallNode(MyThread* t, GcCallNode* node);
 
 void*
 findExceptionHandler(Thread* t, GcMethod* method, void* ip)
 {
   if (t->exception) {
-    object table = method->code()->exceptionHandlerTable();
+    GcArray* table = cast<GcArray>(t, method->code()->exceptionHandlerTable());
     if (table) {
-      object index = arrayBody(t, table, 0);
+      GcIntArray* index = cast<GcIntArray>(t, table->body()[0]);
 
       uint8_t* compiled = reinterpret_cast<uint8_t*>
         (methodCompiled(t, method));
 
-      for (unsigned i = 0; i < arrayLength(t, table) - 1; ++i) {
-        unsigned start = intArrayBody(t, index, i * 3);
-        unsigned end = intArrayBody(t, index, (i * 3) + 1);
+      for (unsigned i = 0; i < table->length() - 1; ++i) {
+        unsigned start = index->body()[i * 3];
+        unsigned end = index->body()[(i * 3) + 1];
         unsigned key = difference(ip, compiled) - 1;
 
         if (key >= start and key < end) {
-          GcClass* catchType = cast<GcClass>(t, arrayBody(t, table, i + 1));
+          GcClass* catchType = cast<GcClass>(t, table->body()[i + 1]);
 
           if (exceptionMatch(t, catchType, t->exception)) {
-            return compiled + intArrayBody(t, index, (i * 3) + 2);
+            return compiled + index->body()[(i * 3) + 2];
           }
         }
       }
@@ -2275,17 +2280,17 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
         GcMethod* method);
 
 GcMethod*
-resolveMethod(Thread* t, object pair)
+resolveMethod(Thread* t, GcPair* pair)
 {
-  object reference = pairSecond(t, pair);
+  GcReference* reference = cast<GcReference>(t, pair->second());
   PROTECT(t, reference);
 
   GcClass* class_ = resolveClassInObject
-    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(), reference,
+    (t, cast<GcMethod>(t, pair->first())->class_()->loader(), reinterpret_cast<object>(reference),
      ReferenceClass);
 
   return cast<GcMethod>(t, findInHierarchy
-    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
+    (t, class_, reference->name(), reference->spec(),
      findMethodInClass, GcNoSuchMethodError::Type));
 }
 
@@ -2332,7 +2337,7 @@ findInterfaceMethodFromInstance(MyThread* t, GcMethod* method, object instance)
 
 int64_t
 findInterfaceMethodFromInstanceAndReference
-(MyThread* t, object pair, object instance)
+(MyThread* t, GcPair* pair, object instance)
 {
   PROTECT(t, instance);
 
@@ -2355,25 +2360,25 @@ checkMethod(Thread* t, GcMethod* method, bool shouldBeStatic)
 }
 
 void
-checkField(Thread* t, object field, bool shouldBeStatic)
+checkField(Thread* t, GcField* field, bool shouldBeStatic)
 {
-  if (((fieldFlags(t, field) & ACC_STATIC) == 0) == shouldBeStatic) {
+  if (((field->flags() & ACC_STATIC) == 0) == shouldBeStatic) {
     throwNew(t, GcIncompatibleClassChangeError::Type,
              "expected %s.%s to be %s",
-             &byteArrayBody(t, className(t, fieldClass(t, field)), 0),
-             &byteArrayBody(t, fieldName(t, field), 0),
+             field->class_()->name()->body().begin(),
+             field->name()->body().begin(),
              shouldBeStatic ? "static" : "non-static");
   }
 }
 
 int64_t
-findSpecialMethodFromReference(MyThread* t, object pair)
+findSpecialMethodFromReference(MyThread* t, GcPair* pair)
 {
   PROTECT(t, pair);
 
   GcMethod* target = resolveMethod(t, pair);
 
-  GcClass* class_ = cast<GcClass>(t, methodClass(t, pairFirst(t, pair)));
+  GcClass* class_ = cast<GcMethod>(t, pair->first())->class_();
   if (isSpecialMethod(t, target, class_)) {
     target = findVirtualMethod(t, target, class_->super());
   }
@@ -2384,7 +2389,7 @@ findSpecialMethodFromReference(MyThread* t, object pair)
 }
 
 int64_t
-findStaticMethodFromReference(MyThread* t, object pair)
+findStaticMethodFromReference(MyThread* t, GcPair* pair)
 {
   GcMethod* target = resolveMethod(t, pair);
 
@@ -2394,7 +2399,7 @@ findStaticMethodFromReference(MyThread* t, object pair)
 }
 
 int64_t
-findVirtualMethodFromReference(MyThread* t, object pair, object instance)
+findVirtualMethodFromReference(MyThread* t, GcPair* pair, object instance)
 {
   PROTECT(t, instance);
 
@@ -2414,13 +2419,13 @@ getMethodAddress(MyThread* t, GcMethod* target)
 }
 
 int64_t
-getJClassFromReference(MyThread* t, object pair)
+getJClassFromReference(MyThread* t, GcPair* pair)
 {
   return reinterpret_cast<intptr_t>(getJClass(
       t,
       resolveClass(t,
-                       cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       referenceName(t, pairSecond(t, pair)))));
+                       cast<GcMethod>(t, pair->first())->class_()->loader(),
+                       cast<GcReference>(t, pair->second())->name())));
 }
 
 unsigned
@@ -2506,14 +2511,14 @@ makeBlankObjectArray(MyThread* t, GcClass* class_, int32_t length)
 }
 
 uint64_t
-makeBlankObjectArrayFromReference(MyThread* t, object pair,
+makeBlankObjectArrayFromReference(MyThread* t, GcPair* pair,
                                   int32_t length)
 {
   return makeBlankObjectArray(
       t,
       resolveClass(t,
-                       cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       referenceName(t, pairSecond(t, pair))),
+                       cast<GcMethod>(t, pair->first())->class_()->loader(),
+                       cast<GcReference>(t, pair->second())->name()),
       length);
 }
 
@@ -2645,14 +2650,14 @@ makeMultidimensionalArray(MyThread* t, GcClass* class_, int32_t dimensions,
 }
 
 uint64_t
-makeMultidimensionalArrayFromReference(MyThread* t, object pair,
+makeMultidimensionalArrayFromReference(MyThread* t, GcPair* pair,
                                        int32_t dimensions,
                                        int32_t offset)
 {
   return makeMultidimensionalArray
     (t, resolveClass
-     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-      referenceName(t, pairSecond(t, pair))), dimensions, offset);
+     (t, cast<GcMethod>(t, pair->first())->class_()->loader(),
+      cast<GcReference>(t, pair->second())->name()), dimensions, offset);
 }
 
 void NO_RETURN
@@ -2690,12 +2695,12 @@ void
 checkCast(MyThread* t, GcClass* class_, object o)
 {
   if (UNLIKELY(o and not isAssignableFrom(t, class_, objectClass(t, o)))) {
-    object classNameFrom = reinterpret_cast<object>(objectClass(t, o)->name());
+    GcByteArray* classNameFrom = objectClass(t, o)->name();
     GcByteArray* classNameTo   = class_->name();
-    THREAD_RUNTIME_ARRAY(t, char, classFrom, byteArrayLength(t, classNameFrom));
+    THREAD_RUNTIME_ARRAY(t, char, classFrom, classNameFrom->length());
     THREAD_RUNTIME_ARRAY(t, char, classTo,   classNameTo->length());
     replace('/', '.', RUNTIME_ARRAY_BODY(classFrom),
-            reinterpret_cast<char*>(&byteArrayBody(t, classNameFrom, 0)));
+            reinterpret_cast<char*>(classNameFrom->body().begin()));
     replace('/', '.', RUNTIME_ARRAY_BODY(classTo),
             reinterpret_cast<char*>(classNameTo->body().begin()));
     throwNew
@@ -2705,54 +2710,54 @@ checkCast(MyThread* t, GcClass* class_, object o)
 }
 
 void
-checkCastFromReference(MyThread* t, object pair, object o)
+checkCastFromReference(MyThread* t, GcPair* pair, object o)
 {
   PROTECT(t, o);
 
   GcClass* c = resolveClass
-    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+    (t, cast<GcMethod>(t, pair->first())->class_()->loader(),
+     cast<GcReference>(t, pair->second())->name());
 
   checkCast(t, c, o);
 }
 
-object
-resolveField(Thread* t, object pair)
+GcField*
+resolveField(Thread* t, GcPair* pair)
 {
-  object reference = pairSecond(t, pair);
+  GcReference* reference = cast<GcReference>(t, pair->second());
   PROTECT(t, reference);
 
   GcClass* class_ = resolveClassInObject
-    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(), reference,
+    (t, cast<GcMethod>(t, pair->first())->class_()->loader(), reinterpret_cast<object>(reference),
      ReferenceClass);
 
-  return findInHierarchy
-    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
-     findFieldInClass, GcNoSuchFieldError::Type);
+  return cast<GcField>(t, findInHierarchy
+    (t, class_, reference->name(), reference->spec(),
+     findFieldInClass, GcNoSuchFieldError::Type));
 }
 
 uint64_t
-getFieldValue(Thread* t, object target, object field)
+getFieldValue(Thread* t, object target, GcField* field)
 {
-  switch (fieldCode(t, field)) {
+  switch (field->code()) {
   case ByteField:
   case BooleanField:
-    return fieldAtOffset<int8_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int8_t>(target, field->offset());
 
   case CharField:
   case ShortField:
-    return fieldAtOffset<int16_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int16_t>(target, field->offset());
 
   case FloatField:
   case IntField:
-    return fieldAtOffset<int32_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int32_t>(target, field->offset());
 
   case DoubleField:
   case LongField:
-    return fieldAtOffset<int64_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<int64_t>(target, field->offset());
 
   case ObjectField:
-    return fieldAtOffset<intptr_t>(target, fieldOffset(t, field));
+    return fieldAtOffset<intptr_t>(target, field->offset());
 
   default:
     abort(t);
@@ -2760,107 +2765,107 @@ getFieldValue(Thread* t, object target, object field)
 }
 
 uint64_t
-getStaticFieldValueFromReference(MyThread* t, object pair)
+getStaticFieldValueFromReference(MyThread* t, GcPair* pair)
 {
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+  initClass(t, field->class_());
 
-  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_READ(t, field);
 
-  return getFieldValue(t, classStaticTable(t, fieldClass(t, field)), field);
+  return getFieldValue(t, reinterpret_cast<object>(field->class_()->staticTable()), field);
 }
 
 uint64_t
-getFieldValueFromReference(MyThread* t, object pair, object instance)
+getFieldValueFromReference(MyThread* t, GcPair* pair, object instance)
 {
   PROTECT(t, instance);
 
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_READ(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_READ(t, field);
 
   return getFieldValue(t, instance, field);
 }
 
 void
-setStaticLongFieldValueFromReference(MyThread* t, object pair, uint64_t value)
+setStaticLongFieldValueFromReference(MyThread* t, GcPair* pair, uint64_t value)
 {
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+  initClass(t, field->class_());
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
   fieldAtOffset<int64_t>
-    (classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field)) = value;
+    (field->class_()->staticTable(), field->offset()) = value;
 }
 
 void
-setLongFieldValueFromReference(MyThread* t, object pair, object instance,
+setLongFieldValueFromReference(MyThread* t, GcPair* pair, object instance,
                                uint64_t value)
 {
   PROTECT(t, instance);
 
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  fieldAtOffset<int64_t>(instance, fieldOffset(t, field)) = value;
+  fieldAtOffset<int64_t>(instance, field->offset()) = value;
 }
 
 void
-setStaticObjectFieldValueFromReference(MyThread* t, object pair, object value)
+setStaticObjectFieldValueFromReference(MyThread* t, GcPair* pair, object value)
 {
   PROTECT(t, value);
 
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+  initClass(t, field->class_());
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, classStaticTable(t, fieldClass(t, field)), fieldOffset(t, field),
+  set(t, reinterpret_cast<object>(field->class_()->staticTable()), field->offset(),
       value);
 }
 
 void
-setObjectFieldValueFromReference(MyThread* t, object pair, object instance,
+setObjectFieldValueFromReference(MyThread* t, GcPair* pair, object instance,
                                  object value)
 {
   PROTECT(t, instance);
   PROTECT(t, value);
 
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  set(t, instance, fieldOffset(t, field), value);
+  set(t, instance, field->offset(), value);
 }
 
 void
-setFieldValue(MyThread* t, object target, object field, uint32_t value)
+setFieldValue(MyThread* t, object target, GcField* field, uint32_t value)
 {
-  switch (fieldCode(t, field)) {
+  switch (field->code()) {
   case ByteField:
   case BooleanField:
-    fieldAtOffset<int8_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int8_t>(target, field->offset()) = value;
     break;
 
   case CharField:
   case ShortField:
-    fieldAtOffset<int16_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int16_t>(target, field->offset()) = value;
     break;
 
   case FloatField:
   case IntField:
-    fieldAtOffset<int32_t>(target, fieldOffset(t, field)) = value;
+    fieldAtOffset<int32_t>(target, field->offset()) = value;
     break;
 
   default:
@@ -2869,27 +2874,27 @@ setFieldValue(MyThread* t, object target, object field, uint32_t value)
 }
 
 void
-setStaticFieldValueFromReference(MyThread* t, object pair, uint32_t value)
+setStaticFieldValueFromReference(MyThread* t, GcPair* pair, uint32_t value)
 {
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  initClass(t, cast<GcClass>(t, fieldClass(t, field)));
+  initClass(t, field->class_());
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  setFieldValue(t, classStaticTable(t, fieldClass(t, field)), field, value);
+  setFieldValue(t, reinterpret_cast<object>(field->class_()->staticTable()), field, value);
 }
 
 void
-setFieldValueFromReference(MyThread* t, object pair, object instance,
+setFieldValueFromReference(MyThread* t, GcPair* pair, object instance,
                            uint32_t value)
 {
   PROTECT(t, instance);
-  object field = reinterpret_cast<object>(resolveField(t, pair));
+  GcField* field = resolveField(t, pair);
   PROTECT(t, field);
 
-  ACQUIRE_FIELD_FOR_WRITE(t, cast<GcField>(t, field));
+  ACQUIRE_FIELD_FOR_WRITE(t, field);
 
   setFieldValue(t, instance, field, value);
 }
@@ -2901,13 +2906,13 @@ instanceOf64(Thread* t, GcClass* class_, object o)
 }
 
 uint64_t
-instanceOfFromReference(Thread* t, object pair, object o)
+instanceOfFromReference(Thread* t, GcPair* pair, object o)
 {
   PROTECT(t, o);
 
   GcClass* c = resolveClass
-    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+    (t, cast<GcMethod>(t, pair->first())->class_()->loader(),
+     cast<GcReference>(t, pair->second())->name());
 
   return instanceOf64(t, c, o);
 }
@@ -2933,11 +2938,11 @@ makeNew64(Thread* t, GcClass* class_)
 }
 
 uint64_t
-makeNewFromReference(Thread* t, object pair)
+makeNewFromReference(Thread* t, GcPair* pair)
 {
   GcClass* class_ = resolveClass
-    (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     referenceName(t, pairSecond(t, pair)));
+    (t, cast<GcMethod>(t, pair->first())->class_()->loader(),
+     cast<GcReference>(t, pair->second())->name());
 
   PROTECT(t, class_);
 
@@ -3137,7 +3142,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, GcMethod* target, bool tailCall)
 
         PROTECT(t, target);
         object pointer = reinterpret_cast<object>(makePointer(t, p));
-        bc->calls = reinterpret_cast<object>(makeTriple(t, reinterpret_cast<object>(target), pointer, bc->calls));
+        bc->calls = makeTriple(t, reinterpret_cast<object>(target), pointer, reinterpret_cast<object>(bc->calls));
 
         compileDirectInvoke(t, frame, target, tailCall, false, p);
       } else {
@@ -3157,7 +3162,7 @@ compileDirectInvoke(MyThread* t, Frame* frame, GcMethod* target, bool tailCall)
 
 void compileReferenceInvoke(Frame* frame,
                             ir::Value* method,
-                            object reference,
+                            GcReference* reference,
                             bool isStatic,
                             bool tailCall)
 {
@@ -3170,13 +3175,13 @@ void compileReferenceInvoke(Frame* frame,
 
 void
 compileDirectReferenceInvoke(MyThread* t, Frame* frame, Thunk thunk,
-                             object reference, bool isStatic, bool tailCall)
+                             GcReference* reference, bool isStatic, bool tailCall)
 {
   avian::codegen::Compiler* c = frame->c;
 
   PROTECT(t, reference);
 
-  object pair = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(frame->context->method), reference));
+  GcPair* pair = makePair(t, reinterpret_cast<object>(frame->context->method), reinterpret_cast<object>(reference));
 
   compileReferenceInvoke(
       frame,
@@ -3214,7 +3219,7 @@ compileDirectAbstractInvoke(MyThread* t, Frame* frame, Thunk thunk,
                                 ir::Type::iptr(),
                                 2,
                                 c->threadRegister(),
-                                frame->append(reinterpret_cast<object>(target))),
+                                frame->append(target)),
                         target,
                         tailCall);
 }
@@ -3230,7 +3235,7 @@ handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (method->flags() & ACC_STATIC) {
       PROTECT(t, method);
 
-      lock = frame->append(reinterpret_cast<object>(method->class_()));
+      lock = frame->append(method->class_());
     } else {
       lock = loadLocal(
           frame->context, 1, ir::Type::object(), savedTargetIndex(t, method));
@@ -3276,13 +3281,13 @@ handleExit(MyThread* t, Frame* frame)
 }
 
 bool
-inTryBlock(MyThread* t, object code, unsigned ip)
+inTryBlock(MyThread* t UNUSED, GcCode* code, unsigned ip)
 {
-  object table = codeExceptionHandlerTable(t, code);
+  GcExceptionHandlerTable* table = cast<GcExceptionHandlerTable>(t, code->exceptionHandlerTable());
   if (table) {
-    unsigned length = exceptionHandlerTableLength(t, table);
+    unsigned length = table->length();
     for (unsigned i = 0; i < length; ++i) {
-      uint64_t eh = exceptionHandlerTableBody(t, table, i);
+      uint64_t eh = table->body()[i];
       if (ip >= exceptionHandlerStart(eh)
           and ip < exceptionHandlerEnd(eh))
       {
@@ -3301,9 +3306,9 @@ needsReturnBarrier(MyThread* t UNUSED, GcMethod* method)
 }
 
 bool
-returnsNext(MyThread* t, object code, unsigned ip)
+returnsNext(MyThread* t, GcCode* code, unsigned ip)
 {
-  switch (codeBody(t, code, ip)) {
+  switch (code->body()[ip]) {
   case return_:
   case areturn:
   case ireturn:
@@ -3315,7 +3320,7 @@ returnsNext(MyThread* t, object code, unsigned ip)
   case goto_: {
     uint32_t offset = codeReadInt16(t, code, ++ip);
     uint32_t newIp = (ip - 3) + offset;
-    assertT(t, newIp < codeLength(t, code));
+    assertT(t, newIp < code->length());
 
     return returnsNext(t, code, newIp);
   }
@@ -3323,7 +3328,7 @@ returnsNext(MyThread* t, object code, unsigned ip)
   case goto_w: {
     uint32_t offset = codeReadInt32(t, code, ++ip);
     uint32_t newIp = (ip - 5) + offset;
-    assertT(t, newIp < codeLength(t, code));
+    assertT(t, newIp < code->length());
 
     return returnsNext(t, code, newIp);
   }
@@ -3334,7 +3339,7 @@ returnsNext(MyThread* t, object code, unsigned ip)
 }
 
 bool
-isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
+isTailCall(MyThread* t, GcCode* code, unsigned ip, GcMethod* caller,
            int calleeReturnCode, GcByteArray* calleeClassName,
            GcByteArray* calleeMethodName, GcByteArray* calleeMethodSpec)
 {
@@ -3350,7 +3355,7 @@ isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
 }
 
 bool
-isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller, GcMethod* callee)
+isTailCall(MyThread* t, GcCode* code, unsigned ip, GcMethod* caller, GcMethod* callee)
 {
   return isTailCall
     (t, code, ip, caller, callee->returnCode(),
@@ -3359,12 +3364,12 @@ isTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller, GcMethod* ca
 }
 
 bool
-isReferenceTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
-                    object calleeReference)
+isReferenceTailCall(MyThread* t, GcCode* code, unsigned ip, GcMethod* caller,
+                    GcReference* calleeReference)
 {
   return isTailCall
     (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference),
-     referenceClass(t, calleeReference), referenceName(t, calleeReference), referenceSpec(t, calleeReference));
+     calleeReference->class_(), calleeReference->name(), calleeReference->spec());
 }
 
 lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
@@ -3398,21 +3403,21 @@ lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
 
 bool integerBranch(MyThread* t,
                    Frame* frame,
-                   object code,
+                   GcCode* code,
                    unsigned& ip,
                    ir::Value* a,
                    ir::Value* b,
                    unsigned* newIpp)
 {
-  if (ip + 3 > codeLength(t, code)) {
+  if (ip + 3 > code->length()) {
     return false;
   }
 
   avian::codegen::Compiler* c = frame->c;
-  unsigned instruction = codeBody(t, code, ip++);
+  unsigned instruction = code->body()[ip++];
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
-  assertT(t, newIp < codeLength(t, code));
+  assertT(t, newIp < code->length());
 
   ir::Value* target = frame->machineIpValue(newIp);
 
@@ -3475,22 +3480,22 @@ lir::TernaryOperation toCompilerFloatJumpOp(MyThread* t,
 
 bool floatBranch(MyThread* t,
                  Frame* frame,
-                 object code,
+                 GcCode* code,
                  unsigned& ip,
                  bool lessIfUnordered,
                  ir::Value* a,
                  ir::Value* b,
                  unsigned* newIpp)
 {
-  if (ip + 3 > codeLength(t, code)) {
+  if (ip + 3 > code->length()) {
     return false;
   }
 
   avian::codegen::Compiler* c = frame->c;
-  unsigned instruction = codeBody(t, code, ip++);
+  unsigned instruction = code->body()[ip++];
   uint32_t offset = codeReadInt16(t, code, ip);
   uint32_t newIp = (ip - 3) + offset;
-  assertT(t, newIp < codeLength(t, code));
+  assertT(t, newIp < code->length());
 
   ir::Value* target = frame->machineIpValue(newIp);
 
@@ -3528,10 +3533,9 @@ ir::Value* popLongAddress(Frame* frame)
 bool
 intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
 {
-#define MATCH(name, constant)       \
-  (name->length()                   \
-   == sizeof(constant) and::strcmp( \
-          reinterpret_cast<char*>(name->body().begin()), constant) == 0)
+#define MATCH(name, constant)         \
+  (name->length() == sizeof(constant) \
+   and ::strcmp(reinterpret_cast<char*>(name->body().begin()), constant) == 0)
 
   GcByteArray* className = target->class_()->name();
   if (UNLIKELY(MATCH(className, "java/lang/Math"))) {
@@ -3660,12 +3664,12 @@ intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
 }
 
 unsigned
-targetFieldOffset(Context* context, object field)
+targetFieldOffset(Context* context, GcField* field)
 {
   if (context->bootContext) {
-    return context->bootContext->resolver->fieldOffset(context->thread, field);
+    return context->bootContext->resolver->fieldOffset(context->thread, reinterpret_cast<object>(field));
   } else {
-    return fieldOffset(context->thread, field);
+    return field->offset();
   }
 }
 
@@ -3841,10 +3845,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
   frame = new (stack.push(sizeof(Frame))) Frame(frame, stackMap);
 
  loop:
-  object code = reinterpret_cast<object>(context->method->code());
+  GcCode* code = context->method->code();
   PROTECT(t, code);
 
-  while (ip < codeLength(t, code)) {
+  while (ip < code->length()) {
     if (context->visitTable[frame->duplicatedIp(ip)]++) {
       // we've already visited this part of the code
       frame->visitLogicalIp(ip);
@@ -3891,11 +3895,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       }
       fprintf(stderr, "]\n");
       fprintf(stderr, "% 5d: ", startingIp);
-      avian::jvm::debug::printInstruction(&codeBody(t, code, 0), startingIp);
+      avian::jvm::debug::printInstruction(code->body().begin(), startingIp);
       fprintf(stderr, "\n");
     }
 
-    unsigned instruction = codeBody(t, code, ip++);
+    unsigned instruction = code->body()[ip++];
 
     switch (instruction) {
     case aaload:
@@ -4077,7 +4081,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       break;
 
     case aload:
-      frame->load(ir::Type::object(), codeBody(t, code, ip++));
+      frame->load(ir::Type::object(), code->body()[ip++]);
       break;
 
     case aload_0:
@@ -4114,7 +4118,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         argument = reinterpret_cast<object>(class_);
         thunk = makeBlankObjectArrayThunk;
       } else {
-        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reinterpret_cast<object>(reference)));
         thunk = makeBlankObjectArrayFromReferenceThunk;
       }
 
@@ -4125,7 +4129,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                           ir::Type::object(),
                           3,
                           c->threadRegister(),
-                          frame->append(argument),
+                          frame->append(reinterpret_cast<GcObject*>(argument)),
                           length));
     } break;
 
@@ -4144,7 +4148,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case astore:
-      frame->store(ir::Type::object(), codeBody(t, code, ip++));
+      frame->store(ir::Type::object(), code->body()[ip++]);
       break;
 
     case astore_0:
@@ -4178,7 +4182,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case bipush:
       frame->push(ir::Type::i4(),
-                  c->constant(static_cast<int8_t>(codeBody(t, code, ip++)),
+                  c->constant(static_cast<int8_t>(code->body()[ip++]),
                               ir::Type::i4()));
       break;
 
@@ -4198,7 +4202,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         argument = reinterpret_cast<object>(class_);
         thunk = checkCastThunk;
       } else {
-        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reinterpret_cast<object>(reference)));
         thunk = checkCastFromReferenceThunk;
       }
 
@@ -4210,7 +4214,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
               ir::Type::void_(),
               3,
               c->threadRegister(),
-              frame->append(argument),
+              frame->append(reinterpret_cast<GcObject*>(argument)),
               instance);
     } break;
 
@@ -4301,7 +4305,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           c->unaryOp(lir::FloatNegate, frame->popLarge(ir::Type::f8())));
     } break;
 
-    case dup:
+    case vm::dup:
       frame->dup();
       break;
 
@@ -4313,7 +4317,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       frame->dupX2();
       break;
 
-    case dup2:
+    case vm::dup2:
       frame->dup2();
       break;
 
@@ -4421,13 +4425,13 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       PROTECT(t, reference);
 
-      object field = reinterpret_cast<object>(resolveField(t, context->method, index - 1, false));
+      GcField* field = resolveField(t, context->method, index - 1, false);
 
       if (LIKELY(field)) {
-        if ((fieldFlags(t, field) & ACC_VOLATILE)
+        if ((field->flags() & ACC_VOLATILE)
             and TargetBytesPerWord == 4
-            and (fieldCode(t, field) == DoubleField
-                 or fieldCode(t, field) == LongField))
+            and (field->code() == DoubleField
+                 or field->code() == LongField))
         {
           PROTECT(t, field);
 
@@ -4448,17 +4452,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
           PROTECT(t, field);
 
-          if (classNeedsInit(t, cast<GcClass>(t, fieldClass(t, field)))) {
+          if (classNeedsInit(t, field->class_())) {
             c->call(c->constant(getThunk(t, tryInitClassThunk), ir::Type::iptr()),
                     0,
                     frame->trace(0, 0),
                     ir::Type::void_(),
                     2,
                     c->threadRegister(),
-                    frame->append(fieldClass(t, field)));
+                    frame->append(field->class_()));
           }
 
-          table = frame->append(classStaticTable(t, fieldClass(t, field)));
+          table = frame->append(field->class_()->staticTable());
         } else {
           checkField(t, field, false);
 
@@ -4470,7 +4474,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
 
-        switch (fieldCode(t, field)) {
+        switch (field->code()) {
         case ByteField:
         case BooleanField:
           frame->push(ir::Type::i4(),
@@ -4548,10 +4552,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           abort(t);
         }
 
-        if (fieldFlags(t, field) & ACC_VOLATILE) {
+        if (field->flags() & ACC_VOLATILE) {
           if (TargetBytesPerWord == 4
-              and (fieldCode(t, field) == DoubleField
-                   or fieldCode(t, field) == LongField))
+              and (field->code() == DoubleField
+                   or field->code() == LongField))
           {
             c->call(c->constant(getThunk(t, releaseMonitorForObjectThunk),
                                 ir::Type::iptr()),
@@ -4566,10 +4570,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
+        PROTECT(t, ref);
         int fieldCode = vm::fieldCode
-          (t, referenceSpec(t, reference)->body()[0]);
+          (t, ref->spec()->body()[0]);
 
-        object pair = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        GcPair* pair = makePair(t, reinterpret_cast<object>(context->method), reference);
 
         ir::Type rType = operandTypeForFieldCode(t, fieldCode);
 
@@ -4606,7 +4612,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case goto_: {
       uint32_t offset = codeReadInt16(t, code, ip);
       uint32_t newIp = (ip - 3) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4619,7 +4625,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case goto_w: {
       uint32_t offset = codeReadInt32(t, code, ip);
       uint32_t newIp = (ip - 5) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4733,7 +4739,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case if_acmpne: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4754,7 +4760,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case if_icmple: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4775,7 +4781,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ifle: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       ir::Value* target = frame->machineIpValue(newIp);
 
@@ -4793,7 +4799,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ifnonnull: {
       uint32_t offset = codeReadInt16(t, code, ip);
       newIp = (ip - 3) + offset;
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       if(newIp <= ip) {
         compileSafePoint(t, c, frame);
@@ -4807,8 +4813,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto branch;
 
     case iinc: {
-      uint8_t index = codeBody(t, code, ip++);
-      int8_t count = codeBody(t, code, ip++);
+      uint8_t index = code->body()[ip++];
+      int8_t count = code->body()[ip++];
 
       storeLocal(context,
                  1,
@@ -4821,10 +4827,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case iload:
-      frame->load(ir::Type::i4(), codeBody(t, code, ip++));
+      frame->load(ir::Type::i4(), code->body()[ip++]);
       break;
     case fload:
-      frame->load(ir::Type::f4(), codeBody(t, code, ip++));
+      frame->load(ir::Type::f4(), code->body()[ip++]);
       break;
 
     case iload_0:
@@ -4878,7 +4884,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         argument = reinterpret_cast<object>(class_);
         thunk = instanceOf64Thunk;
       } else {
-        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reinterpret_cast<object>(reference)));
         thunk = instanceOfFromReferenceThunk;
       }
 
@@ -4889,7 +4895,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                           ir::Type::i4(),
                           3,
                           c->threadRegister(),
-                          frame->append(argument),
+                          frame->append(reinterpret_cast<GcObject*>(argument)),
                           instance));
     } break;
 
@@ -4920,13 +4926,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         returnCode = target->returnCode();
         tailCall = isTailCall(t, code, ip, context->method, target);
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
+        PROTECT(t, ref);
         argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
         thunk = findInterfaceMethodFromInstanceAndReferenceThunk;
         parameterFootprint = methodReferenceParameterFootprint
-          (t, reference, false);
-        returnCode = methodReferenceReturnCode(t, reference);
+          (t, ref, false);
+        returnCode = methodReferenceReturnCode(t, ref);
         tailCall = isReferenceTailCall
-          (t, code, ip, context->method, reference);
+          (t, code, ip, context->method, ref);
       }
 
       unsigned rSize = resultSize(t, returnCode);
@@ -4938,7 +4946,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                   ir::Type::iptr(),
                   3,
                   c->threadRegister(),
-                  frame->append(argument),
+                  frame->append(reinterpret_cast<GcObject*>(argument)),
                   c->peek(1, parameterFootprint - 1)),
           tailCall ? Compiler::TailJump : 0,
           frame->trace(0, 0),
@@ -4981,9 +4989,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           compileDirectInvoke(t, frame, target, tailCall);
         }
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
+        PROTECT(t, ref);
         compileDirectReferenceInvoke
-          (t, frame, findSpecialMethodFromReferenceThunk, reference, false,
-           isReferenceTailCall(t, code, ip, context->method, reference));
+          (t, frame, findSpecialMethodFromReferenceThunk, ref, false,
+           isReferenceTailCall(t, code, ip, context->method, ref));
       }
     } break;
 
@@ -5007,9 +5017,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           compileDirectInvoke(t, frame, target, tailCall);
         }
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
+        PROTECT(t, ref);
         compileDirectReferenceInvoke
-          (t, frame, findStaticMethodFromReferenceThunk, reference, true,
-           isReferenceTailCall(t, code, ip, context->method, reference));
+          (t, frame, findStaticMethodFromReferenceThunk, ref, true,
+           isReferenceTailCall(t, code, ip, context->method, ref));
       }
     } break;
 
@@ -5059,9 +5071,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
         PROTECT(t, reference);
+        PROTECT(t, ref);
 
-        object pair = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        GcPair* pair = makePair(t, reinterpret_cast<object>(context->method), reference);
 
         compileReferenceInvoke(
             frame,
@@ -5075,11 +5089,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 c->threadRegister(),
                 frame->append(pair),
                 c->peek(1,
-                        methodReferenceParameterFootprint(t, reference, false)
+                        methodReferenceParameterFootprint(t, ref, false)
                         - 1)),
-            reference,
+            ref,
             false,
-            isReferenceTailCall(t, code, ip, context->method, reference));
+            isReferenceTailCall(t, code, ip, context->method, ref));
       }
     } break;
 
@@ -5108,10 +5122,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto next;
 
     case istore:
-      frame->store(ir::Type::i4(), codeBody(t, code, ip++));
+      frame->store(ir::Type::i4(), code->body()[ip++]);
       break;
     case fstore:
-      frame->store(ir::Type::f4(), codeBody(t, code, ip++));
+      frame->store(ir::Type::f4(), code->body()[ip++]);
       break;
 
     case istore_0:
@@ -5156,7 +5170,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         newIp = thisIp + offset;
       }
 
-      assertT(t, newIp < codeLength(t, code));
+      assertT(t, newIp < code->length());
 
       frame->startSubroutine(newIp, ip);
 
@@ -5228,12 +5242,12 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       uint16_t index;
 
       if (instruction == ldc) {
-        index = codeBody(t, code, ip++);
+        index = code->body()[ip++];
       } else {
         index = codeReadInt16(t, code, ip);
       }
 
-      GcSingleton* pool = codePool(t, code);
+      GcSingleton* pool = code->pool();
 
       if (singletonIsObject(t, pool, index - 1)) {
         object v = singletonObject(t, pool, index - 1);
@@ -5241,7 +5255,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         loadMemoryBarrier();
 
         if (objectClass(t, v) == type(t, GcReference::Type)) {
-          object reference = v;
+          GcReference* reference = cast<GcReference>(t, v);
           PROTECT(t, reference);
 
           v = reinterpret_cast<object>(resolveClassInPool(t, context->method, index - 1, false));
@@ -5257,7 +5271,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     ir::Type::object(),
                     2,
                     c->threadRegister(),
-                    frame->append(reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference)))));
+                    frame->append(makePair(t, reinterpret_cast<object>(context->method), reinterpret_cast<object>(reference)))));
           }
         }
 
@@ -5271,9 +5285,9 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                                 ir::Type::object(),
                                 2,
                                 c->threadRegister(),
-                                frame->append(v)));
+                                frame->append(reinterpret_cast<GcObject*>(v))));
           } else {
-            frame->push(ir::Type::object(), frame->append(v));
+            frame->push(ir::Type::object(), frame->append(reinterpret_cast<GcObject*>(v)));
           }
         }
       } else {
@@ -5288,7 +5302,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     case ldc2_w: {
       uint16_t index = codeReadInt16(t, code, ip);
 
-      GcSingleton* pool = codePool(t, code);
+      GcSingleton* pool = code->pool();
 
       uint64_t v;
       memcpy(&v, &singletonValue(t, pool, index - 1), 8);
@@ -5312,10 +5326,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lload:
-      frame->loadLarge(ir::Type::i8(), codeBody(t, code, ip++));
+      frame->loadLarge(ir::Type::i8(), code->body()[ip++]);
       break;
     case dload:
-      frame->loadLarge(ir::Type::f8(), codeBody(t, code, ip++));
+      frame->loadLarge(ir::Type::f8(), code->body()[ip++]);
       break;
 
     case lload_0:
@@ -5360,7 +5374,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ir::Value* key = frame->pop(ir::Type::i4());
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
-      assertT(t, defaultIp < codeLength(t, code));
+      assertT(t, defaultIp < code->length());
 
       int32_t pairCount = codeReadInt32(t, code, ip);
 
@@ -5375,7 +5389,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           unsigned index = ip + (i * 8);
           int32_t key = codeReadInt32(t, code, index);
           uint32_t newIp = base + codeReadInt32(t, code, index);
-          assertT(t, newIp < codeLength(t, code));
+          assertT(t, newIp < code->length());
 
           ipTable[i] = newIp;
 
@@ -5454,10 +5468,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case lstore:
-      frame->storeLarge(ir::Type::i8(), codeBody(t, code, ip++));
+      frame->storeLarge(ir::Type::i8(), code->body()[ip++]);
       break;
     case dstore:
-      frame->storeLarge(ir::Type::f8(), codeBody(t, code, ip++));
+      frame->storeLarge(ir::Type::f8(), code->body()[ip++]);
       break;
 
     case lstore_0:
@@ -5514,7 +5528,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
     case multianewarray: {
       uint16_t index = codeReadInt16(t, code, ip);
-      uint8_t dimensions = codeBody(t, code, ip++);
+      uint8_t dimensions = code->body()[ip++];
 
       object reference = singletonObject
         (t, context->method->code()->pool(), index - 1);
@@ -5529,7 +5543,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         argument = reinterpret_cast<object>(class_);
         thunk = makeMultidimensionalArrayThunk;
       } else {
-        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reinterpret_cast<object>(reference)));
         thunk = makeMultidimensionalArrayFromReferenceThunk;
       }
 
@@ -5545,7 +5559,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                     ir::Type::object(),
                     4,
                     c->threadRegister(),
-                    frame->append(argument),
+                    frame->append(reinterpret_cast<GcObject*>(argument)),
                     c->constant(dimensions, ir::Type::i4()),
                     c->constant(offset, ir::Type::i4()));
 
@@ -5573,7 +5587,8 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           thunk = makeNew64Thunk;
         }
       } else {
-        argument = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        argument = reinterpret_cast<object>(
+            makePair(t, reinterpret_cast<object>(context->method), reference));
         thunk = makeNewFromReferenceThunk;
       }
 
@@ -5584,11 +5599,11 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                           ir::Type::object(),
                           2,
                           c->threadRegister(),
-                          frame->append(argument)));
+                          frame->append(reinterpret_cast<GcObject*>(argument))));
     } break;
 
     case newarray: {
-      uint8_t type = codeBody(t, code, ip++);
+      uint8_t type = code->body()[ip++];
 
       ir::Value* length = frame->pop(ir::Type::i4());
 
@@ -5623,17 +5638,17 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
 
       PROTECT(t, reference);
 
-      object field = reinterpret_cast<object>(resolveField(t, context->method, index - 1, false));
+      GcField* field = resolveField(t, context->method, index - 1, false);
 
       if (LIKELY(field)) {
-        int fieldCode = vm::fieldCode(t, field);
+        int fieldCode = field->code();
 
         object staticTable = 0;
 
         if (instruction == putstatic) {
           checkField(t, field, true);
 
-          if (classNeedsInit(t, cast<GcClass>(t, fieldClass(t, field)))) {
+          if (classNeedsInit(t, field->class_())) {
             PROTECT(t, field);
 
             c->call(
@@ -5643,10 +5658,10 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
                 ir::Type::void_(),
                 2,
                 c->threadRegister(),
-                frame->append(fieldClass(t, field)));
+                frame->append(field->class_()));
           }
 
-          staticTable = classStaticTable(t, fieldClass(t, field));
+          staticTable = reinterpret_cast<object>(field->class_()->staticTable());
         } else {
           checkField(t, field, false);
 
@@ -5656,7 +5671,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
 
-        if (fieldFlags(t, field) & ACC_VOLATILE) {
+        if (field->flags() & ACC_VOLATILE) {
           if (TargetBytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
           {
@@ -5682,7 +5697,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         if (instruction == putstatic) {
           PROTECT(t, field);
 
-          table = frame->append(staticTable);
+          table = frame->append(reinterpret_cast<GcObject*>(staticTable));
         } else {
           table = frame->pop(ir::Type::object());
         }
@@ -5761,7 +5776,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         default: abort(t);
         }
 
-        if (fieldFlags(t, field) & ACC_VOLATILE) {
+        if (field->flags() & ACC_VOLATILE) {
           if (TargetBytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField))
           {
@@ -5778,13 +5793,15 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
           }
         }
       } else {
+        GcReference* ref = cast<GcReference>(t, reference);
+        PROTECT(t, ref);
         int fieldCode = vm::fieldCode
-          (t, referenceSpec(t, reference)->body()[0]);
+          (t, ref->spec()->body()[0]);
 
         ir::Value* value = popField(t, frame, fieldCode);
         ir::Type rType = operandTypeForFieldCode(t, fieldCode);
 
-        object pair = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
+        GcPair* pair = makePair(t, reinterpret_cast<object>(context->method), reference);
 
         switch (fieldCode) {
         case ByteField:
@@ -5888,7 +5905,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } break;
 
     case ret: {
-      unsigned index = codeBody(t, code, ip);
+      unsigned index = code->body()[ip];
 
       unsigned returnAddress = frame->endSubroutine(index);
       c->jmp(frame->machineIpValue(returnAddress));
@@ -5920,7 +5937,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       ip = (ip + 3) & ~3; // pad to four byte boundary
 
       uint32_t defaultIp = base + codeReadInt32(t, code, ip);
-      assertT(t, defaultIp < codeLength(t, code));
+      assertT(t, defaultIp < code->length());
 
       int32_t bottom = codeReadInt32(t, code, ip);
       int32_t top = codeReadInt32(t, code, ip);
@@ -5932,7 +5949,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
       for (int32_t i = 0; i < top - bottom + 1; ++i) {
         unsigned index = ip + (i * 4);
         uint32_t newIp = base + codeReadInt32(t, code, index);
-        assertT(t, newIp < codeLength(t, code));
+        assertT(t, newIp < code->length());
 
         ipTable[i] = newIp;
 
@@ -5961,7 +5978,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
     } goto start;
 
     case wide: {
-      switch (codeBody(t, code, ip++)) {
+      switch (code->body()[ip++]) {
       case aload: {
         frame->load(ir::Type::object(), codeReadInt16(t, code, ip));
       } break;
@@ -6189,74 +6206,74 @@ resolveIpBackwards(Context* context, int start, int end)
   }
 }
 
-object
-truncateIntArray(Thread* t, object array, unsigned length)
+GcIntArray*
+truncateIntArray(Thread* t, GcIntArray* array, unsigned length)
 {
-  expect(t, intArrayLength(t, array) > length);
+  expect(t, array->length() > length);
 
   PROTECT(t, array);
 
-  object newArray = reinterpret_cast<object>(makeIntArray(t, length));
+  GcIntArray* newArray = makeIntArray(t, length);
   if (length) {
-    memcpy(&intArrayBody(t, newArray, 0), &intArrayBody(t, array, 0),
+    memcpy(newArray->body().begin(), array->body().begin(),
            length * 4);
   }
 
   return newArray;
 }
 
-object
-truncateArray(Thread* t, object array, unsigned length)
+GcArray*
+truncateArray(Thread* t, GcArray* array, unsigned length)
 {
-  expect(t, arrayLength(t, array) > length);
+  expect(t, array->length() > length);
 
   PROTECT(t, array);
 
-  object newArray = reinterpret_cast<object>(makeArray(t, length));
+  GcArray* newArray = makeArray(t, length);
   if (length) {
-    memcpy(&arrayBody(t, newArray, 0), &arrayBody(t, array, 0),
+    memcpy(newArray->body().begin(), array->body().begin(),
            length * BytesPerWord);
   }
 
   return newArray;
 }
 
-object
-truncateLineNumberTable(Thread* t, object table, unsigned length)
+GcLineNumberTable*
+truncateLineNumberTable(Thread* t, GcLineNumberTable* table, unsigned length)
 {
-  expect(t, lineNumberTableLength(t, table) > length);
+  expect(t, table->length() > length);
 
   PROTECT(t, table);
 
-  object newTable = reinterpret_cast<object>(makeLineNumberTable(t, length));
+  GcLineNumberTable* newTable = makeLineNumberTable(t, length);
   if (length) {
-    memcpy(&lineNumberTableBody(t, newTable, 0),
-           &lineNumberTableBody(t, table, 0),
+    memcpy(newTable->body().begin(),
+           table->body().begin(),
            length * sizeof(uint64_t));
   }
 
   return newTable;
 }
 
-object translateExceptionHandlerTable(MyThread* t,
+GcArray* translateExceptionHandlerTable(MyThread* t,
                                       Context* context,
                                       intptr_t start,
                                       intptr_t end)
 {
   avian::codegen::Compiler* c = context->compiler;
 
-  object oldTable = context->method->code()->exceptionHandlerTable();
+  GcExceptionHandlerTable* oldTable = cast<GcExceptionHandlerTable>(t, context->method->code()->exceptionHandlerTable());
 
   if (oldTable) {
     PROTECT(t, oldTable);
 
-    unsigned length = exceptionHandlerTableLength(t, oldTable);
+    unsigned length = oldTable->length();
 
-    object newIndex
-        = reinterpret_cast<object>(makeIntArray(t, length * (context->subroutineCount + 1) * 3));
+    GcIntArray* newIndex
+        = makeIntArray(t, length * (context->subroutineCount + 1) * 3);
     PROTECT(t, newIndex);
 
-    object newTable = reinterpret_cast<object>(makeArray(t, length * (context->subroutineCount + 1) + 1));
+    GcArray* newTable = makeArray(t, length * (context->subroutineCount + 1) + 1);
     PROTECT(t, newTable);
 
     unsigned ni = 0;
@@ -6265,7 +6282,7 @@ object translateExceptionHandlerTable(MyThread* t,
           = subI * context->method->code()->length();
 
       for (unsigned oi = 0; oi < length; ++oi) {
-        uint64_t oldHandler = exceptionHandlerTableBody(t, oldTable, oi);
+        uint64_t oldHandler = oldTable->body()[oi];
 
         int handlerStart = resolveIpForwards(
             context,
@@ -6290,15 +6307,15 @@ object translateExceptionHandlerTable(MyThread* t,
                                    context->method->code()->length()
                                    * (context->subroutineCount + 1)));
 
-          intArrayBody(t, newIndex, ni* 3) = c->machineIp(handlerStart)->value()
+          newIndex->body()[ni* 3] = c->machineIp(handlerStart)->value()
                                              - start;
 
-          intArrayBody(t, newIndex, (ni* 3) + 1)
+          newIndex->body()[(ni* 3) + 1]
               = (handlerEnd == static_cast<int>(context->method->code()->length())
                      ? end
                      : c->machineIp(handlerEnd)->value()) - start;
 
-          intArrayBody(t, newIndex, (ni* 3) + 2)
+          newIndex->body()[(ni* 3) + 2]
               = c->machineIp(exceptionHandlerIp(oldHandler))->value() - start;
 
           object type;
@@ -6309,7 +6326,7 @@ object translateExceptionHandlerTable(MyThread* t,
             type = 0;
           }
 
-          set(t, newTable, ArrayBody + ((ni + 1) * BytesPerWord), type);
+          set(t, reinterpret_cast<object>(newTable), ArrayBody + ((ni + 1) * BytesPerWord), type);
 
           ++ni;
         }
@@ -6329,26 +6346,26 @@ object translateExceptionHandlerTable(MyThread* t,
   }
 }
 
-object
+GcLineNumberTable*
 translateLineNumberTable(MyThread* t, Context* context, intptr_t start)
 {
-  object oldTable = reinterpret_cast<object>(context->method->code()->lineNumberTable());
+  GcLineNumberTable* oldTable = context->method->code()->lineNumberTable();
   if (oldTable) {
     PROTECT(t, oldTable);
 
-    unsigned length = lineNumberTableLength(t, oldTable);
-    object newTable = reinterpret_cast<object>(makeLineNumberTable(t, length));
+    unsigned length = oldTable->length();
+    GcLineNumberTable* newTable = makeLineNumberTable(t, length);
     unsigned ni = 0;
     for (unsigned oi = 0; oi < length; ++oi) {
-      uint64_t oldLine = lineNumberTableBody(t, oldTable, oi);
+      uint64_t oldLine = oldTable->body()[oi];
 
       int ip = resolveIpForwards
         (context, lineNumberIp(oldLine), oi + 1 < length
-         ? lineNumberIp(lineNumberTableBody(t, oldTable, oi + 1)) - 1
+         ? lineNumberIp(oldTable->body()[oi + 1]) - 1
          : lineNumberIp(oldLine) + 1);
 
       if (LIKELY(ip >= 0)) {
-        lineNumberTableBody(t, newTable, ni++) = lineNumber
+        newTable->body()[ni++] = lineNumber
           (context->compiler->machineIp(ip)->value() - start,
            lineNumberLine(oldLine));
       }
@@ -6600,10 +6617,10 @@ compareTraceElementPointers(const void* va, const void* vb)
 }
 
 unsigned
-simpleFrameMapTableSize(MyThread* t, GcMethod* method, object map)
+simpleFrameMapTableSize(MyThread* t, GcMethod* method, GcIntArray* map)
 {
   int size = frameMapSizeInBits(t, method);
-  return ceilingDivide(intArrayLength(t, map) * size, 32 + size);
+  return ceilingDivide(map->length() * size, 32 + size);
 }
 
 uint8_t*
@@ -6702,28 +6719,28 @@ class FrameMapTablePath {
   int32_t elements[0];
 };
 
-object
+GcIntArray*
 makeSimpleFrameMapTable(MyThread* t, Context* context, uint8_t* start,
                         TraceElement** elements, unsigned elementCount)
 {
   unsigned mapSize = frameMapSizeInBits(t, context->method);
-  object table = reinterpret_cast<object>(makeIntArray
-    (t, elementCount + ceilingDivide(elementCount * mapSize, 32)));
+  GcIntArray* table = makeIntArray
+    (t, elementCount + ceilingDivide(elementCount * mapSize, 32));
 
-  assertT(t, intArrayLength(t, table) == elementCount
+  assertT(t, table->length() == elementCount
          + simpleFrameMapTableSize(t, context->method, table));
 
   for (unsigned i = 0; i < elementCount; ++i) {
     TraceElement* p = elements[i];
 
-    intArrayBody(t, table, i) = static_cast<intptr_t>(p->address->value())
+    table->body()[i] = static_cast<intptr_t>(p->address->value())
       - reinterpret_cast<intptr_t>(start);
 
     assertT(t, elementCount + ceilingDivide((i + 1) * mapSize, 32)
-           <= intArrayLength(t, table));
+           <= table->length());
 
     if (mapSize) {
-      copyFrameMap(&intArrayBody(t, table, elementCount),
+      copyFrameMap(&table->body()[elementCount],
                    p->map,
                    mapSize,
                    i * mapSize,
@@ -6824,23 +6841,23 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     }
   }
 
-  { object newExceptionHandlerTable = translateExceptionHandlerTable
+  { GcArray* newExceptionHandlerTable = translateExceptionHandlerTable
       (t, context, reinterpret_cast<intptr_t>(start),
        reinterpret_cast<intptr_t>(start) + codeSize);
 
     PROTECT(t, newExceptionHandlerTable);
 
-    object newLineNumberTable = translateLineNumberTable
+    GcLineNumberTable* newLineNumberTable = translateLineNumberTable
       (t, context, reinterpret_cast<intptr_t>(start));
 
-    object code = reinterpret_cast<object>(context->method->code());
+    GcCode* code = context->method->code();
 
-    code = reinterpret_cast<object>(makeCode
-      (t, 0, 0, newExceptionHandlerTable, cast<GcLineNumberTable>(t, newLineNumberTable),
-       reinterpret_cast<uintptr_t>(start), codeSize, codeMaxStack(t, code),
-       codeMaxLocals(t, code), 0));
+    code = makeCode
+      (t, 0, 0, reinterpret_cast<object>(newExceptionHandlerTable), newLineNumberTable,
+       reinterpret_cast<uintptr_t>(start), codeSize, code->maxStack(),
+       code->maxLocals(), 0);
 
-    set(t, reinterpret_cast<object>(context->method), MethodCode, code);
+    set(t, context->method, MethodCode, code);
   }
 
   if (context->traceLogCount) {
@@ -6857,8 +6874,8 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
 
         if (p->target) {
           insertCallNode
-            (t, reinterpret_cast<object>(makeCallNode
-             (t, p->address->value(), p->target, p->flags, 0)));
+            (t, makeCallNode
+             (t, p->address->value(), p->target, p->flags, 0));
         }
       }
     }
@@ -6866,10 +6883,10 @@ finish(MyThread* t, FixedAllocator* allocator, Context* context)
     qsort(RUNTIME_ARRAY_BODY(elements), index,
           sizeof(TraceElement*), compareTraceElementPointers);
 
-    object map = makeSimpleFrameMapTable(
+    GcIntArray* map = makeSimpleFrameMapTable(
         t, context, start, RUNTIME_ARRAY_BODY(elements), index);
 
-    set(t, reinterpret_cast<object>(context->method->code()), CodeStackMap, map);
+    set(t, context->method->code(), CodeStackMap, map);
   }
 
   logCompile
@@ -6969,11 +6986,11 @@ compile(MyThread* t, Context* context)
   context->dirtyRoots = false;
   unsigned eventIndex = calculateFrameMaps(t, context, 0, 0, 0);
 
-  object eht = context->method->code()->exceptionHandlerTable();
+  GcExceptionHandlerTable* eht = cast<GcExceptionHandlerTable>(t, context->method->code()->exceptionHandlerTable());
   if (eht) {
     PROTECT(t, eht);
 
-    unsigned visitCount = exceptionHandlerTableLength(t, eht);
+    unsigned visitCount = eht->length();
 
     THREAD_RUNTIME_ARRAY(t, bool, visited, visitCount);
     memset(RUNTIME_ARRAY_BODY(visited), 0, visitCount * sizeof(bool));
@@ -6986,8 +7003,8 @@ compile(MyThread* t, Context* context)
         unsigned duplicatedBaseIp
             = subI * context->method->code()->length();
 
-        for (unsigned i = 0; i < exceptionHandlerTableLength(t, eht); ++i) {
-          uint64_t eh = exceptionHandlerTableBody(t, eht, i);
+        for (unsigned i = 0; i < eht->length(); ++i) {
+          uint64_t eh = eht->body()[i];
           int start
               = resolveIpForwards(context,
                                   duplicatedBaseIp + exceptionHandlerStart(eh),
@@ -7071,11 +7088,11 @@ compileVirtualMethod2(MyThread* t, GcClass* class_, unsigned index)
   // GC roots.  We find such a method by looking for a superclass with
   // a vtable and using it instead:
 
-  object c = reinterpret_cast<object>(class_);
-  while (classVmFlags(t, c) & BootstrapFlag) {
-    c = classSuper(t, c);
+  GcClass* c = class_;
+  while (c->vmFlags() & BootstrapFlag) {
+    c = c->super();
   }
-  t->trace->targetMethod = cast<GcMethod>(t, arrayBody(t, classVirtualTable(t, c), index));
+  t->trace->targetMethod = cast<GcMethod>(t, cast<GcArray>(t, c->virtualTable())->body()[index]);
 
   THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0;);
 
@@ -7090,7 +7107,7 @@ compileVirtualMethod2(MyThread* t, GcClass* class_, unsigned index)
   if (target->flags() & ACC_NATIVE) {
     t->trace->nativeMethod = target;
   } else {
-    classVtable(t, reinterpret_cast<object>(class_), target->offset()) = address;
+    class_->vtable()[target->offset()] = address;
   }
   return address;
 }
@@ -7289,11 +7306,11 @@ invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 uint64_t
 invokeNative2(MyThread* t, GcMethod* method)
 {
-  object native = reinterpret_cast<object>(getMethodRuntimeData(t, method)->native());
-  if (nativeFast(t, native)) {
-    return invokeNativeFast(t, method, nativeFunction(t, native));
+  GcNative* native = getMethodRuntimeData(t, method)->native();
+  if (native->fast()) {
+    return invokeNativeFast(t, method, native->function());
   } else {
-    return invokeNativeSlow(t, method, nativeFunction(t, native));
+    return invokeNativeSlow(t, method, native->function());
   }
 }
 
@@ -7350,19 +7367,19 @@ invokeNative(MyThread* t)
 }
 
 void
-findFrameMapInSimpleTable(MyThread* t, GcMethod* method, object table,
+findFrameMapInSimpleTable(MyThread* t, GcMethod* method, GcIntArray* table,
                           int32_t offset, int32_t** map, unsigned* start)
 {
   unsigned tableSize = simpleFrameMapTableSize(t, method, table);
-  unsigned indexSize = intArrayLength(t, table) - tableSize;
+  unsigned indexSize = table->length() - tableSize;
 
-  *map = &intArrayBody(t, table, indexSize);
+  *map = &table->body()[indexSize];
 
   unsigned bottom = 0;
   unsigned top = indexSize;
   for (unsigned span = top - bottom; span; span = top - bottom) {
     unsigned middle = bottom + (span / 2);
-    int32_t v = intArrayBody(t, table, middle);
+    int32_t v = table->body()[middle];
 
     if (offset == v) {
       *start = frameMapSizeInBits(t, method) * middle;
@@ -7381,8 +7398,7 @@ void
 findFrameMap(MyThread* t, void* stack UNUSED, GcMethod* method, int32_t offset,
              int32_t** map, unsigned* start)
 {
-  object table = reinterpret_cast<object>(method->code()->stackMap());
-  findFrameMapInSimpleTable(t, method, table, offset, map, start);
+  findFrameMapInSimpleTable(t, method, method->code()->stackMap(), offset, map, start);
 }
 
 void
@@ -7499,17 +7515,16 @@ visitStack(MyThread* t, Heap::Visitor* v)
 }
 
 void
-walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
+walkContinuationBody(MyThread* t, Heap::Walker* w, GcContinuation* c, int start)
 {
   const int BodyOffset = ContinuationBody / BytesPerWord;
 
-  GcMethod* method = cast<GcMethod>(t, static_cast<object>
-    (t->m->heap->follow(continuationMethod(t, c))));
+  GcMethod* method = cast<GcMethod>(t, reinterpret_cast<object>(t->m->heap->follow(c->method())));
   int count = frameMapSizeInBits(t, method);
 
   if (count) {
     int stack = BodyOffset
-      + (continuationFramePointerOffset(t, c) / BytesPerWord)
+      + (c->framePointerOffset() / BytesPerWord)
       - t->arch->framePointerOffset()
       - stackOffsetFromFrame(t, method);
 
@@ -7522,7 +7537,7 @@ walkContinuationBody(MyThread* t, Heap::Walker* w, object c, int start)
     unsigned offset;
     findFrameMap
       (t, reinterpret_cast<uintptr_t*>(c) + stack, method, difference
-       (continuationAddress(t, c),
+       (c->address(),
         reinterpret_cast<void*>(methodAddress(t, method))), &map, &offset);
 
     for (int i = count - 1; i >= 0; --i) {
@@ -7650,7 +7665,7 @@ jumpAndInvoke(MyThread* t, GcMethod* method, void* stack, ...)
 
 void
 callContinuation(MyThread* t, GcContinuation* continuation, object result,
-                 object exception)
+                 GcThrowable* exception)
 {
   enum {
     Call,
@@ -7699,7 +7714,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
           and unwindContext->continuation())
       {
         nextContinuation = cast<GcContinuation>(t, unwindContext->continuation());
-        result = reinterpret_cast<object>(makeUnwindResult(t, continuation, result, cast<GcThrowable>(t, exception)));
+        result = reinterpret_cast<object>(makeUnwindResult(t, continuation, result, exception));
         action = Unwind;
       } else if (rewindContext
                  and rewindContext->continuation())
@@ -7739,7 +7754,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
 
   switch (action) {
   case Call: {
-    callContinuation(t, continuation, result, cast<GcThrowable>(t, exception), ip, stack);
+    callContinuation(t, continuation, result, exception, ip, stack);
   } break;
 
   case Unwind: {
@@ -7780,9 +7795,8 @@ callWithCurrentContinuation(MyThread* t, object receiver)
         GcClass* continuationClass = type(t, GcContinuation::Type);
 
         if (continuationClass->vmFlags() & BootstrapFlag) {
-          resolveSystemClass
-            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
-             continuationClass->name());
+          resolveSystemClass(
+              t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), continuationClass->name());
         }
       }
     }
@@ -8446,7 +8460,7 @@ class MyProcessor: public Processor {
     for (int i = c->length() - 1; i >= 0; --i) {
       void* thunk = reinterpret_cast<void*>
         (virtualThunk(static_cast<MyThread*>(t), i));
-      classVtable(t, reinterpret_cast<object>(c), i) = thunk;
+      c->vtable()[i] = thunk;
     }
   }
 
@@ -8804,12 +8818,12 @@ class MyProcessor: public Processor {
                              GcMethod* method, OffsetResolver* resolver)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
-    BootContext bootContext(t, reinterpret_cast<object>(*constants), reinterpret_cast<object>(*calls), *addresses, zone, resolver);
+    BootContext bootContext(t, *constants, *calls, *addresses, zone, resolver);
 
     compile(t, &codeAllocator, &bootContext, method);
 
-    *constants = cast<GcTriple>(t, bootContext.constants);
-    *calls = cast<GcTriple>(t, bootContext.calls);
+    *constants = bootContext.constants;
+    *calls = bootContext.calls;
     *addresses = bootContext.addresses;
   }
 
@@ -8820,11 +8834,12 @@ class MyProcessor: public Processor {
   }
 
   virtual void normalizeVirtualThunks(Thread* t) {
-    for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks));
+    GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+    for (unsigned i = 0; i < a->length();
          i += 2)
     {
-      if (wordArrayBody(t, root(t, VirtualThunks), i)) {
-        wordArrayBody(t, root(t, VirtualThunks), i)
+      if (a->body()[i]) {
+        a->body()[i]
             -= reinterpret_cast<uintptr_t>(codeAllocator.memory.begin());
       }
     }
@@ -8838,8 +8853,9 @@ class MyProcessor: public Processor {
       (t->m->heap->allocate(callTableSize * sizeof(unsigned) * 2));
 
     unsigned index = 0;
-    for (unsigned i = 0; i < arrayLength(t, root(t, CallTable)); ++i) {
-      for (GcCallNode* p = cast<GcCallNode>(t, arrayBody(t, root(t, CallTable), i));
+    GcArray* callTable = cast<GcArray>(t, root(t, CallTable));
+    for (unsigned i = 0; i < callTable->length(); ++i) {
+      for (GcCallNode* p = cast<GcCallNode>(t, callTable->body()[i]);
            p; p = p->next())
       {
         table[index++] = targetVW(
@@ -8870,7 +8886,7 @@ class MyProcessor: public Processor {
     if (image and code) {
       local::boot(static_cast<MyThread*>(t), image, code);
     } else {
-      roots = reinterpret_cast<object>(makeArray(t, RootCount));
+      roots = makeArray(t, RootCount);
 
       setRoot(t, CallTable, reinterpret_cast<object>(makeArray(t, 128)));
 
@@ -8931,7 +8947,7 @@ class MyProcessor: public Processor {
                                            GcThrowable* exception)
   {
     if (Continuations) {
-      callContinuation(static_cast<MyThread*>(t), continuation, 0, reinterpret_cast<object>(exception));
+      callContinuation(static_cast<MyThread*>(t), continuation, 0, exception);
     } else {
       abort(t);
     }
@@ -8941,7 +8957,7 @@ class MyProcessor: public Processor {
                                     unsigned start)
   {
     if (Continuations) {
-      local::walkContinuationBody(static_cast<MyThread*>(t), w, o, start);
+      local::walkContinuationBody(static_cast<MyThread*>(t), w, cast<GcContinuation>(t, o), start);
     } else {
       abort(t);
     }
@@ -8950,7 +8966,7 @@ class MyProcessor: public Processor {
   System* s;
   SignalRegistrar signals;
   Allocator* allocator;
-  object roots;
+  GcArray* roots;
   BootImage* bootImage;
   uintptr_t* heapImage;
   uint8_t* codeImage;
@@ -9130,10 +9146,11 @@ isThunkUnsafeStack(MyProcessor::ThunkCollection* thunks, void* ip)
 bool
 isVirtualThunk(MyThread* t, void* ip)
 {
-  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2)
+  GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+  for (unsigned i = 0; i < a->length(); i += 2)
   {
-    uintptr_t start = wordArrayBody(t, root(t, VirtualThunks), i);
-    uintptr_t end = start + wordArrayBody(t, root(t, VirtualThunks), i + 1);
+    uintptr_t start = a->body()[i];
+    uintptr_t end = start + a->body()[i + 1];
 
     if (reinterpret_cast<uintptr_t>(ip) >= start
         and reinterpret_cast<uintptr_t>(ip) < end)
@@ -9167,12 +9184,12 @@ findCallNode(MyThread* t, void* address)
   // compile(MyThread*, Allocator*, BootContext*, object)):
   loadMemoryBarrier();
 
-  object table = root(t, CallTable);
+  GcArray* table = cast<GcArray>(t, root(t, CallTable));
 
   intptr_t key = reinterpret_cast<intptr_t>(address);
-  unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
+  unsigned index = static_cast<uintptr_t>(key) & (table->length() - 1);
 
-  for (GcCallNode* n = cast<GcCallNode>(t, arrayBody(t, table, index));
+  for (GcCallNode* n = cast<GcCallNode>(t, table->body()[index]);
        n; n = n->next())
   {
     intptr_t k = n->address();
@@ -9185,19 +9202,19 @@ findCallNode(MyThread* t, void* address)
   return 0;
 }
 
-object
-resizeTable(MyThread* t, object oldTable, unsigned newLength)
+GcArray*
+resizeTable(MyThread* t, GcArray* oldTable, unsigned newLength)
 {
   PROTECT(t, oldTable);
 
   GcCallNode* oldNode = 0;
   PROTECT(t, oldNode);
 
-  object newTable = reinterpret_cast<object>(makeArray(t, newLength));
+  GcArray* newTable = makeArray(t, newLength);
   PROTECT(t, newTable);
 
-  for (unsigned i = 0; i < arrayLength(t, oldTable); ++i) {
-    for (oldNode = cast<GcCallNode>(t, arrayBody(t, oldTable, i));
+  for (unsigned i = 0; i < oldTable->length(); ++i) {
+    for (oldNode = cast<GcCallNode>(t, oldTable->body()[i]);
          oldNode;
          oldNode = oldNode->next())
     {
@@ -9205,11 +9222,11 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
 
       unsigned index = k & (newLength - 1);
 
-      object newNode = reinterpret_cast<object>(makeCallNode
+      GcCallNode* newNode = makeCallNode
         (t, oldNode->address(),
          oldNode->target(),
          oldNode->flags(),
-         cast<GcCallNode>(t, arrayBody(t, newTable, index))));
+         cast<GcCallNode>(t, newTable->body()[index]));
 
       set(t, newTable, ArrayBody + (index * BytesPerWord), newNode);
     }
@@ -9218,12 +9235,12 @@ resizeTable(MyThread* t, object oldTable, unsigned newLength)
   return newTable;
 }
 
-object
-insertCallNode(MyThread* t, object table, unsigned* size, object node)
+GcArray*
+insertCallNode(MyThread* t, GcArray* table, unsigned* size, GcCallNode* node)
 {
   if (DebugCallTable) {
     fprintf(stderr, "insert call node %p\n",
-            reinterpret_cast<void*>(callNodeAddress(t, node)));
+            reinterpret_cast<void*>(node->address()));
   }
 
   PROTECT(t, table);
@@ -9231,24 +9248,29 @@ insertCallNode(MyThread* t, object table, unsigned* size, object node)
 
   ++ (*size);
 
-  if (*size >= arrayLength(t, table) * 2) {
-    table = resizeTable(t, table, arrayLength(t, table) * 2);
+  if (*size >= table->length() * 2) {
+    table = resizeTable(t, table, table->length() * 2);
   }
 
-  intptr_t key = callNodeAddress(t, node);
-  unsigned index = static_cast<uintptr_t>(key) & (arrayLength(t, table) - 1);
+  intptr_t key = node->address();
+  unsigned index = static_cast<uintptr_t>(key) & (table->length() - 1);
 
-  set(t, node, CallNodeNext, arrayBody(t, table, index));
+  set(t, reinterpret_cast<object>(node), CallNodeNext, table->body()[index]);
   set(t, table, ArrayBody + (index * BytesPerWord), node);
 
   return table;
 }
 
 void
-insertCallNode(MyThread* t, object node)
+insertCallNode(MyThread* t, GcCallNode* node)
 {
-  setRoot(t, CallTable, insertCallNode
-          (t, root(t, CallTable), &(processor(t)->callTableSize), node));
+  setRoot(t,
+          CallTable,
+          reinterpret_cast<object>(
+              insertCallNode(t,
+                             cast<GcArray>(t, root(t, CallTable)),
+                             &(processor(t)->callTableSize),
+                             node)));
 }
 
 GcHashMap*
@@ -9260,27 +9282,27 @@ makeClassMap(Thread* t, unsigned* table, unsigned count,
   PROTECT(t, map);
 
   for (unsigned i = 0; i < count; ++i) {
-    object c = bootObject(heap, table[i]);
-    hashMapInsert(t, map, className(t, c), c, byteArrayHash);
+    GcClass* c = cast<GcClass>(t, bootObject(heap, table[i]));
+    hashMapInsert(t, map, reinterpret_cast<object>(c->name()), reinterpret_cast<object>(c), byteArrayHash);
   }
 
   return map;
 }
 
-object
+GcArray*
 makeStaticTableArray(Thread* t, unsigned* bootTable, unsigned bootCount,
                      unsigned* appTable, unsigned appCount, uintptr_t* heap)
 {
-  object array = reinterpret_cast<object>(makeArray(t, bootCount + appCount));
+  GcArray* array = makeArray(t, bootCount + appCount);
 
   for (unsigned i = 0; i < bootCount; ++i) {
     set(t, array, ArrayBody + (i * BytesPerWord),
-        classStaticTable(t, bootObject(heap, bootTable[i])));
+        cast<GcClass>(t, bootObject(heap, bootTable[i]))->staticTable());
   }
 
   for (unsigned i = 0; i < appCount; ++i) {
     set(t, array, ArrayBody + ((bootCount + i) * BytesPerWord),
-        classStaticTable(t, bootObject(heap, appTable[i])));
+        cast<GcClass>(t, bootObject(heap, appTable[i]))->staticTable());
   }
 
   return array;
@@ -9301,11 +9323,11 @@ makeStringMap(Thread* t, unsigned* table, unsigned count, uintptr_t* heap)
   return map;
 }
 
-object
+GcArray*
 makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
               uintptr_t base)
 {
-  object table = reinterpret_cast<object>(makeArray(t, nextPowerOfTwo(count)));
+  GcArray* table = makeArray(t, nextPowerOfTwo(count));
   PROTECT(t, table);
 
   unsigned size = 0;
@@ -9313,9 +9335,9 @@ makeCallTable(MyThread* t, uintptr_t* heap, unsigned* calls, unsigned count,
     unsigned address = calls[i * 2];
     unsigned target = calls[(i * 2) + 1];
 
-    object node = reinterpret_cast<object>(makeCallNode
+    GcCallNode* node = makeCallNode
        (t, base + address, cast<GcMethod>(t, bootObject(heap, target & BootMask)),
-        target >> BootShift, 0));
+        target >> BootShift, 0);
 
     table = insertCallNode(t, table, &size, node);
   }
@@ -9353,12 +9375,12 @@ fixupHeap(MyThread* t UNUSED, uintptr_t* map, unsigned size, uintptr_t* heap)
 }
 
 void
-resetClassRuntimeState(Thread* t, object c, uintptr_t* heap, unsigned heapSize)
+resetClassRuntimeState(Thread* t, GcClass* c, uintptr_t* heap, unsigned heapSize)
 {
-  classRuntimeDataIndex(t, c) = 0;
+  c->runtimeDataIndex() = 0;
 
-  if (classArrayElementSize(t, c) == 0) {
-    GcSingleton* staticTable = cast<GcSingleton>(t, classStaticTable(t, c));
+  if (c->arrayElementSize() == 0) {
+    GcSingleton* staticTable = c->staticTable()->as<GcSingleton>(t);
     if (staticTable) {
       for (unsigned i = 0; i < singletonCount(t, staticTable); ++i) {
         if (singletonIsObject(t, staticTable, i)
@@ -9373,28 +9395,29 @@ resetClassRuntimeState(Thread* t, object c, uintptr_t* heap, unsigned heapSize)
     }
   }
 
-  if (classMethodTable(t, c)) {
-    for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-      object m = arrayBody(t, classMethodTable(t, c), i);
+  if (GcArray* mtable = cast<GcArray>(t, c->methodTable())) {
+    PROTECT(t, mtable);
+    for (unsigned i = 0; i < mtable->length(); ++i) {
+      GcMethod* m = cast<GcMethod>(t, mtable->body()[i]);
 
-      methodNativeID(t, m) = 0;
-      methodRuntimeDataIndex(t, m) = 0;
+      m->nativeID() = 0;
+      m->runtimeDataIndex() = 0;
 
-      if (methodVmFlags(t, m) & ClassInitFlag) {
-        classVmFlags(t, c) |= NeedInitFlag;
-        classVmFlags(t, c) &= ~InitErrorFlag;
+      if (m->vmFlags() & ClassInitFlag) {
+        c->vmFlags() |= NeedInitFlag;
+        c->vmFlags() &= ~InitErrorFlag;
       }
     }
   }
 
-  t->m->processor->initVtable(t, cast<GcClass>(t, c));
+  t->m->processor->initVtable(t, c);
 }
 
 void
 resetRuntimeState(Thread* t, GcHashMap* map, uintptr_t* heap, unsigned heapSize)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
-    resetClassRuntimeState(t, it.next()->second(), heap, heapSize);
+    resetClassRuntimeState(t, cast<GcClass>(t, it.next()->second()), heap, heapSize);
   }
 }
 
@@ -9402,11 +9425,12 @@ void
 fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
 {
   for (HashMapIterator it(t, map); it.hasMore();) {
-    object c = it.next()->second();
+    GcClass* c = cast<GcClass>(t, it.next()->second());
 
-    if (classMethodTable(t, c)) {
-      for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-        GcMethod* method = cast<GcMethod>(t, arrayBody(t, classMethodTable(t, c), i));
+    if (GcArray* mtable = cast<GcArray>(t, c->methodTable())) {
+      PROTECT(t, mtable);
+      for (unsigned i = 0; i < mtable->length(); ++i) {
+        GcMethod* method = cast<GcMethod>(t, mtable->body()[i]);
         if (method->code()) {
           assertT(t, methodCompiled(t, method)
                  <= static_cast<int32_t>(image->codeSize));
@@ -9430,7 +9454,7 @@ fixupMethods(Thread* t, GcHashMap* map, BootImage* image UNUSED, uint8_t* code)
       }
     }
 
-    t->m->processor->initVtable(t, cast<GcClass>(t, c));
+    t->m->processor->initVtable(t, c);
   }
 }
 
@@ -9459,12 +9483,11 @@ findThunks(MyThread* t, BootImage* image, uint8_t* code)
 void
 fixupVirtualThunks(MyThread* t, uint8_t* code)
 {
-  for (unsigned i = 0; i < wordArrayLength(t, root(t, VirtualThunks)); i += 2)
+  GcWordArray* a = cast<GcWordArray>(t, root(t, VirtualThunks));
+  for (unsigned i = 0; i < a->length(); i += 2)
   {
-    if (wordArrayBody(t, root(t, VirtualThunks), i)) {
-      wordArrayBody(t, root(t, VirtualThunks), i)
-        = wordArrayBody(t, root(t, VirtualThunks), i)
-        + reinterpret_cast<uintptr_t>(code);
+    if (a->body()[i]) {
+      a->body()[i] += reinterpret_cast<uintptr_t>(code);
     }
   }
 }
@@ -9512,7 +9535,7 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
   setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
   setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
 
-  p->roots = reinterpret_cast<object>(makeArray(t, RootCount));
+  p->roots = makeArray(t, RootCount);
 
   setRoot(t, MethodTree, bootObject(heap, image->methodTree));
   setRoot(t, MethodTreeSentinal, bootObject(heap, image->methodTreeSentinal));
@@ -9523,13 +9546,13 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
     set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
   }
 
-  systemClassLoaderFinder(t, root(t, Machine::BootLoader)) = t->m->bootFinder;
+  cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder() = t->m->bootFinder;
 
   { object map = reinterpret_cast<object>(makeClassMap(t, appClassTable, image->appClassCount, heap));
     set(t, root(t, Machine::AppLoader), ClassLoaderMap, map);
   }
 
-  systemClassLoaderFinder(t, root(t, Machine::AppLoader)) = t->m->appFinder;
+  cast<GcSystemClassLoader>(t, root(t, Machine::AppLoader))->finder() = t->m->appFinder;
 
   setRoot(t, Machine::StringMap, reinterpret_cast<object>(makeStringMap
           (t, stringTable, image->stringCount, heap)));
@@ -9548,25 +9571,25 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   if (image->initialized) {
     resetRuntimeState
-      (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))), heap,
+      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()), heap,
        image->heapSize);
 
     resetRuntimeState
-      (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::AppLoader))), heap,
+      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map()), heap,
        image->heapSize);
 
     for (unsigned i = 0; i < t->m->types->length(); ++i) {
       resetClassRuntimeState
-        (t, reinterpret_cast<object>(type(t, static_cast<Gc::Type>(i))), heap, image->heapSize);
+        (t, type(t, static_cast<Gc::Type>(i)), heap, image->heapSize);
     }
   } else {
     fixupVirtualThunks(t, code);
 
     fixupMethods
-      (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::BootLoader))), image, code);
+      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()), image, code);
 
     fixupMethods
-      (t, cast<GcHashMap>(t, classLoaderMap(t, root(t, Machine::AppLoader))), image, code);
+      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map()), image, code);
   }
 
   image->initialized = true;
@@ -9914,26 +9937,28 @@ virtualThunk(MyThread* t, unsigned index)
 {
   ACQUIRE(t, t->m->classLock);
 
-  if (root(t, VirtualThunks) == 0
-      or wordArrayLength(t, root(t, VirtualThunks)) <= index * 2)
+  GcWordArray* oldArray = cast<GcWordArray>(t, root(t, VirtualThunks));
+  if (oldArray == 0
+      or oldArray->length() <= index * 2)
   {
-    object newArray = reinterpret_cast<object>(makeWordArray(t, nextPowerOfTwo((index + 1) * 2)));
+    GcWordArray* newArray = makeWordArray(t, nextPowerOfTwo((index + 1) * 2));
     if (root(t, VirtualThunks)) {
-      memcpy(&wordArrayBody(t, newArray, 0),
-             &wordArrayBody(t, root(t, VirtualThunks), 0),
-             wordArrayLength(t, root(t, VirtualThunks)) * BytesPerWord);
+      memcpy(newArray->body().begin(),
+             oldArray->body().begin(),
+             oldArray->length() * BytesPerWord);
     }
-    setRoot(t, VirtualThunks, newArray);
+    setRoot(t, VirtualThunks, reinterpret_cast<object>(newArray));
+    oldArray = newArray;
   }
 
-  if (wordArrayBody(t, root(t, VirtualThunks), index * 2) == 0) {
+  if (oldArray->body()[index * 2] == 0) {
     unsigned size;
     uintptr_t thunk = compileVirtualThunk(t, index, &size);
-    wordArrayBody(t, root(t, VirtualThunks), index * 2) = thunk;
-    wordArrayBody(t, root(t, VirtualThunks), (index * 2) + 1) = size;
+    oldArray->body()[index * 2] = thunk;
+    oldArray->body()[(index * 2) + 1] = size;
   }
 
-  return wordArrayBody(t, root(t, VirtualThunks), index * 2);
+  return oldArray->body()[index * 2];
 }
 
 void
@@ -9972,15 +9997,15 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   Context context(t, bootContext, clone);
   compile(t, &context);
 
-  { object ehTable = clone->code()->exceptionHandlerTable();
+  { GcExceptionHandlerTable* ehTable = cast<GcExceptionHandlerTable>(t, clone->code()->exceptionHandlerTable());
 
     if (ehTable) {
       PROTECT(t, ehTable);
 
       // resolve all exception handler catch types before we acquire
       // the class lock:
-      for (unsigned i = 0; i < exceptionHandlerTableLength(t, ehTable); ++i) {
-        uint64_t handler = exceptionHandlerTableBody(t, ehTable, i);
+      for (unsigned i = 0; i < ehTable->length(); ++i) {
+        uint64_t handler = ehTable->body()[i];
         if (exceptionHandlerCatchType(handler)) {
           resolveClassInPool
             (t, clone, exceptionHandlerCatchType(handler) - 1);
@@ -10027,7 +10052,7 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   set(t, reinterpret_cast<object>(method), MethodCode, reinterpret_cast<object>(clone->code()));
 
   if (methodVirtual(t, method)) {
-    classVtable(t, reinterpret_cast<object>(method->class_()), method->offset())
+    method->class_()->vtable()[method->offset()]
       = reinterpret_cast<void*>(methodCompiled(t, clone));
   }
 
@@ -10036,21 +10061,25 @@ compile(MyThread* t, FixedAllocator* allocator, BootContext* bootContext,
   // when we dispose of the context:
   context.executableAllocator = 0;
 
-  treeUpdate(t, cast<GcTreeNode>(t, root(t, MethodTree)), methodCompiled(t, clone),
-             reinterpret_cast<object>(method), cast<GcTreeNode>(t, root(t, MethodTreeSentinal)), compareIpToMethodBounds);
+  treeUpdate(t,
+             cast<GcTreeNode>(t, root(t, MethodTree)),
+             methodCompiled(t, clone),
+             reinterpret_cast<object>(method),
+             cast<GcTreeNode>(t, root(t, MethodTreeSentinal)),
+             compareIpToMethodBounds);
 }
 
 object&
 root(Thread* t, Root root)
 {
-  return arrayBody(t, processor(static_cast<MyThread*>(t))->roots, root);
+  return processor(static_cast<MyThread*>(t))->roots->body()[root];
 }
 
 void
 setRoot(Thread* t, Root root, object value)
 {
   set(t, processor(static_cast<MyThread*>(t))->roots,
-      ArrayBody + (root * BytesPerWord), value);
+      ArrayBody + (root * BytesPerWord), reinterpret_cast<GcObject*>(value));
 }
 
 avian::util::FixedAllocator* codeAllocator(MyThread* t)
