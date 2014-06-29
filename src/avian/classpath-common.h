@@ -489,7 +489,7 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
     object o = singletonObject(t, addendum->pool()->as<GcSingleton>(t), index);
 
     if (objectClass(t, o) == type(t, GcReference::Type)) {
-      o = reinterpret_cast<object>(resolveClass(t, loader, cast<GcByteArray>(t, cast<GcReference>(t, o)->name())));
+      o = reinterpret_cast<object>(resolveClass(t, loader, cast<GcReference>(t, o)->name()));
 
       set(t, reinterpret_cast<object>(addendum->pool()), SingletonBody + (index * BytesPerWord),
           o);

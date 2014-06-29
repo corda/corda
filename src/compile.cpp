@@ -1321,7 +1321,7 @@ unsigned methodReferenceParameterFootprint(Thread* t,
   return parameterFootprint(
       t,
       reinterpret_cast<const char*>(
-          &byteArrayBody(t, referenceSpec(t, reference), 0)),
+          referenceSpec(t, reference)->body().begin()),
       isStatic);
 }
 
@@ -1332,7 +1332,7 @@ int methodReferenceReturnCode(Thread* t, object reference)
   unsigned returnCode;
   scanMethodSpec(t,
                  reinterpret_cast<const char*>(
-                     &byteArrayBody(t, referenceSpec(t, reference), 0)),
+                     referenceSpec(t, reference)->body().begin()),
                  true,
                  &parameterCount,
                  &parameterFootprint,
@@ -2285,7 +2285,7 @@ resolveMethod(Thread* t, object pair)
      ReferenceClass);
 
   return cast<GcMethod>(t, findInHierarchy
-    (t, class_, cast<GcByteArray>(t, referenceName(t, reference)), cast<GcByteArray>(t, referenceSpec(t, reference)),
+    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
      findMethodInClass, GcNoSuchMethodError::Type));
 }
 
@@ -2420,7 +2420,7 @@ getJClassFromReference(MyThread* t, object pair)
       t,
       resolveClass(t,
                        cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))))));
+                       referenceName(t, pairSecond(t, pair)))));
 }
 
 unsigned
@@ -2513,7 +2513,7 @@ makeBlankObjectArrayFromReference(MyThread* t, object pair,
       t,
       resolveClass(t,
                        cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-                       cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair)))),
+                       referenceName(t, pairSecond(t, pair))),
       length);
 }
 
@@ -2652,7 +2652,7 @@ makeMultidimensionalArrayFromReference(MyThread* t, object pair,
   return makeMultidimensionalArray
     (t, resolveClass
      (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-      cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair)))), dimensions, offset);
+      referenceName(t, pairSecond(t, pair))), dimensions, offset);
 }
 
 void NO_RETURN
@@ -2711,7 +2711,7 @@ checkCastFromReference(MyThread* t, object pair, object o)
 
   GcClass* c = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
+     referenceName(t, pairSecond(t, pair)));
 
   checkCast(t, c, o);
 }
@@ -2727,7 +2727,7 @@ resolveField(Thread* t, object pair)
      ReferenceClass);
 
   return findInHierarchy
-    (t, class_, cast<GcByteArray>(t, referenceName(t, reference)), cast<GcByteArray>(t, referenceSpec(t, reference)),
+    (t, class_, referenceName(t, reference), referenceSpec(t, reference),
      findFieldInClass, GcNoSuchFieldError::Type);
 }
 
@@ -2907,7 +2907,7 @@ instanceOfFromReference(Thread* t, object pair, object o)
 
   GcClass* c = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
+     referenceName(t, pairSecond(t, pair)));
 
   return instanceOf64(t, c, o);
 }
@@ -2937,7 +2937,7 @@ makeNewFromReference(Thread* t, object pair)
 {
   GcClass* class_ = resolveClass
     (t, cast<GcMethod>(t, cast<GcPair>(t, pair)->first())->class_()->loader(),
-     cast<GcByteArray>(t, referenceName(t, pairSecond(t, pair))));
+     referenceName(t, pairSecond(t, pair)));
 
   PROTECT(t, class_);
 
@@ -3362,14 +3362,9 @@ bool
 isReferenceTailCall(MyThread* t, object code, unsigned ip, GcMethod* caller,
                     object calleeReference)
 {
-  object c = referenceClass(t, calleeReference);
-  if (objectClass(t, c) == type(t, GcClass::Type)) {
-    c = className(t, c);
-  }
-
   return isTailCall
     (t, code, ip, caller, methodReferenceReturnCode(t, calleeReference),
-     cast<GcByteArray>(t, c), cast<GcByteArray>(t, referenceName(t, calleeReference)), cast<GcByteArray>(t, referenceSpec(t, calleeReference)));
+     referenceClass(t, calleeReference), referenceName(t, calleeReference), referenceSpec(t, calleeReference));
 }
 
 lir::TernaryOperation toCompilerJumpOp(MyThread* t, unsigned instruction) {
@@ -4572,7 +4567,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         }
       } else {
         int fieldCode = vm::fieldCode
-          (t, byteArrayBody(t, referenceSpec(t, reference), 0));
+          (t, referenceSpec(t, reference)->body()[0]);
 
         object pair = reinterpret_cast<object>(makePair(t, reinterpret_cast<object>(context->method), reference));
 
@@ -5784,7 +5779,7 @@ compile(MyThread* t, Frame* initialFrame, unsigned initialIp,
         }
       } else {
         int fieldCode = vm::fieldCode
-          (t, byteArrayBody(t, referenceSpec(t, reference), 0));
+          (t, referenceSpec(t, reference)->body()[0]);
 
         ir::Value* value = popField(t, frame, fieldCode);
         ir::Type rType = operandTypeForFieldCode(t, fieldCode);

@@ -73,13 +73,6 @@
 (type lineNumberTable
   (array uint64_t body))
 
-
-(type reference
-  (uint8_t kind)
-  (object class)
-  (object name)
-  (object spec))
-
 (type invocation
   (uint16_t bootstrap)
   (int32_t index)
@@ -306,6 +299,12 @@
 (type byteArray [B
   (extends jobject)
   (array int8_t body))
+
+(type reference
+  (uint8_t kind)
+  (byteArray class)
+  (byteArray name)
+  (byteArray spec))
 
 (type finder
   (void* finder)

@@ -3667,7 +3667,7 @@ resolveClassInPool(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned 
   if (objectClass(t, o) == type(t, GcReference::Type)) {
     PROTECT(t, method);
 
-    GcClass* c = resolveClass(t, loader, cast<GcByteArray>(t, cast<GcReference>(t, o)->name()), throw_);
+    GcClass* c = resolveClass(t, loader, cast<GcReference>(t, o)->name(), throw_);
 
     if (c) {
       storeStoreMemoryBarrier();
@@ -3707,7 +3707,7 @@ resolve(Thread* t, GcClassLoader* loader, GcMethod* method, unsigned index,
 
     if (class_) {
       o = findInHierarchy
-        (t, class_, cast<GcByteArray>(t, reference->name()), cast<GcByteArray>(t, reference->spec()),
+        (t, class_, reference->name(), reference->spec(),
          find, errorType, throw_);
 
       if (o) {

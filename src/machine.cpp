@@ -948,7 +948,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
         
-      object value = reinterpret_cast<object>(makeReference(t, 0, 0, singletonObject(t, pool, si), 0));
+      object value = reinterpret_cast<object>(makeReference(t, 0, 0, cast<GcByteArray>(t, singletonObject(t, pool, si)), 0));
       set(t, reinterpret_cast<object>(pool), SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
@@ -1003,15 +1003,15 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
       parsePoolEntry(t, s, index, pool, ci);
       parsePoolEntry(t, s, index, pool, nti);
 
-      object className = referenceName(t, singletonObject(t, pool, ci));
+      GcByteArray* className = referenceName(t, singletonObject(t, pool, ci));
       object nameAndType = singletonObject(t, pool, nti);
 
       object value = reinterpret_cast<object>(makeReference
-        (t, 0, className, pairFirst(t, nameAndType), pairSecond(t, nameAndType)));
+        (t, 0, className, cast<GcByteArray>(t, pairFirst(t, nameAndType)), cast<GcByteArray>(t, pairSecond(t, nameAndType))));
       set(t, reinterpret_cast<object>(pool), SingletonBody + (i * BytesPerWord), value);
 
       if(DebugClassReader) {
-        fprintf(stderr, "    consts[%d] = method %s.%s%s\n", i, &byteArrayBody(t, className, 0), &byteArrayBody(t, pairFirst(t, nameAndType), 0), &byteArrayBody(t, pairSecond(t, nameAndType), 0));
+        fprintf(stderr, "    consts[%d] = method %s.%s%s\n", i, className->body().begin(), &byteArrayBody(t, pairFirst(t, nameAndType), 0), &byteArrayBody(t, pairSecond(t, nameAndType), 0));
       }
     }
   } return 1;
@@ -1027,9 +1027,9 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
 
       if (DebugClassReader) {
         fprintf(stderr, "   consts[%d] = method handle %d %s.%s%s\n", i, kind,
-                &byteArrayBody(t, referenceClass(t, value), 0),
-                &byteArrayBody(t, referenceName(t, value), 0),
-                &byteArrayBody(t, referenceSpec(t, value), 0));
+                referenceClass(t, value)->body().begin(),
+                referenceName(t, value)->body().begin(),
+                referenceSpec(t, value)->body().begin());
       }
 
       value = reinterpret_cast<object>(makeReference
@@ -1249,7 +1249,7 @@ parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
   }
 
   for (unsigned i = 0; i < count; ++i) {
-    GcByteArray* name = cast<GcByteArray>(t, referenceName(t, singletonObject(t, pool, s.read2() - 1)));
+    GcByteArray* name = referenceName(t, singletonObject(t, pool, s.read2() - 1));
     PROTECT(t, name);
 
     GcClass* interface = resolveClass
@@ -2415,8 +2415,8 @@ parseAttributeTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
         object reference = reinterpret_cast<object>(makeInnerClassReference
           (t,
-           cast<GcByteArray>(t, inner ? referenceName(t, singletonObject(t, pool, inner - 1)) : 0),
-           cast<GcByteArray>(t, outer ? referenceName(t, singletonObject(t, pool, outer - 1)) : 0),
+           inner ? referenceName(t, singletonObject(t, pool, inner - 1)) : 0,
+           outer ? referenceName(t, singletonObject(t, pool, outer - 1)) : 0,
            cast<GcByteArray>(t, name ? singletonObject(t, pool, name - 1) : 0),
            flags));
 
@@ -2444,7 +2444,7 @@ parseAttributeTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
 
-      set(t, reinterpret_cast<object>(addendum), ClassAddendumEnclosingClass,
+      set(t, addendum, ClassAddendumEnclosingClass,
           referenceName(t, singletonObject(t, pool, enclosingClass - 1)));
 
       set(t, reinterpret_cast<object>(addendum), ClassAddendumEnclosingMethod, enclosingMethod
@@ -4280,7 +4280,7 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
                             0, // array element class
                             0, // runtime data index
                             0, // object mask
-                            cast<GcByteArray>(t, referenceName(t, singletonObject(t, pool, name - 1))),
+                            referenceName(t, singletonObject(t, pool, name - 1)),
                             0, // source file
                             0, // super
                             0, // interfaces
@@ -4297,7 +4297,7 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
   unsigned super = s.read2();
   if (super) {
     GcClass* sc = resolveClass
-      (t, loader, cast<GcByteArray>(t, referenceName(t, singletonObject(t, pool, super - 1))),
+      (t, loader, referenceName(t, singletonObject(t, pool, super - 1)),
        true, throwType);
 
     set(t, reinterpret_cast<object>(class_), ClassSuper, reinterpret_cast<object>(sc));
