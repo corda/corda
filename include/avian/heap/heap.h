@@ -74,6 +74,13 @@ class Heap : public avian::util::Allocator {
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;
   virtual void* follow(void* p) = 0;
+
+  template<class T>
+  T* follow(T* p)
+  {
+    return static_cast<T*>(follow((void*)p));
+  }
+
   virtual void postVisit() = 0;
   virtual Status status(void* p) = 0;
   virtual CollectionType collectionType() = 0;
