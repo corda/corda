@@ -711,7 +711,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 Avian_sun_misc_Unsafe_arrayIndexScale
 (Thread* t, object, uintptr_t* arguments)
 {
-  GcClass* c = cast<GcClass>(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1])));
+  GcClass* c = cast<GcJclass>(t, reinterpret_cast<object>(arguments[1]))->vmClass();
 
   if (c == type(t, GcBooleanArray::Type)
       || c == type(t, GcByteArray::Type))

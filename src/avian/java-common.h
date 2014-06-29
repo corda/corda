@@ -33,21 +33,34 @@ typedef jint jsize;
 
 typedef object* jobject;
 
-typedef jobject jclass;
-typedef jobject jthrowable;
-typedef jobject jstring;
+class GcString;
+class GcJclass;
+class GcThrowable;
+class GcBooleanArray;
+class GcByteArray;
+class GcCharArray;
+class GcShortArray;
+class GcIntArray;
+class GcLongArray;
+class GcFloatArray;
+class GcDoubleArray;
+class GcObjectArray;
+
+typedef GcJclass** jclass;
+typedef GcThrowable** jthrowable;
+typedef GcString** jstring;
 typedef jobject jweak;
 
 typedef jobject jarray;
-typedef jarray jbooleanArray;
-typedef jarray jbyteArray;
-typedef jarray jcharArray;
-typedef jarray jshortArray;
-typedef jarray jintArray;
-typedef jarray jlongArray;
-typedef jarray jfloatArray;
-typedef jarray jdoubleArray;
-typedef jarray jobjectArray;
+typedef GcBooleanArray** jbooleanArray;
+typedef GcByteArray** jbyteArray;
+typedef GcCharArray** jcharArray;
+typedef GcShortArray** jshortArray;
+typedef GcIntArray** jintArray;
+typedef GcLongArray** jlongArray;
+typedef GcFloatArray** jfloatArray;
+typedef GcDoubleArray** jdoubleArray;
+typedef GcObjectArray** jobjectArray;
 
 typedef uintptr_t jfieldID;
 typedef uintptr_t jmethodID;

@@ -4,7 +4,7 @@
   (array void* vtable))
 
 (type jclass java/lang/Class
-  (require object vmClass))
+  (require class vmClass))
 
 (type jaccessibleObject java/lang/reflect/AccessibleObject)
 

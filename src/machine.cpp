@@ -4555,7 +4555,7 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
         (runRaw(t, invokeLoadClass, arguments));
 
       if (LIKELY(jc)) {
-        c = cast<GcClass>(t, jclassVmClass(t, jc));
+        c = reinterpret_cast<GcClass*>(jclassVmClass(t, jc));
       } else if (t->exception) {
         if (throw_) {
           GcThrowable* e = type(t, throwType) == objectClass(t, t->exception)
