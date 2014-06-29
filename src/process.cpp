@@ -61,36 +61,36 @@ mangle(int8_t c, char* dst)
     return 6;
 
   default:
-    dst[0] = c;    
+    dst[0] = c;
     return 1;
   }
 }
 
 unsigned
-jniNameLength(Thread* t, GcMethod* method, bool decorate)
+jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
 {
   unsigned size = 0;
 
-  object className = reinterpret_cast<object>(method->class_()->name());
-  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
-    size += mangledSize(byteArrayBody(t, className, i));
+  GcByteArray* className = method->class_()->name();
+  for (unsigned i = 0; i < className->length() - 1; ++i) {
+    size += mangledSize(className->body()[i]);
   }
 
   ++ size;
 
-  object methodName = reinterpret_cast<object>(method->name());
-  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
-    size += mangledSize(byteArrayBody(t, methodName, i));
+  GcByteArray* methodName = method->name();
+  for (unsigned i = 0; i < methodName->length() - 1; ++i) {
+    size += mangledSize(methodName->body()[i]);
   }
 
   if (decorate) {
     size += 2;
 
-    object methodSpec = reinterpret_cast<object>(method->spec());
-    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
-           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
+    GcByteArray* methodSpec = method->spec();
+    for (unsigned i = 1; i < methodSpec->length() - 1
+           and methodSpec->body()[i] != ')'; ++i)
     {
-      size += mangledSize(byteArrayBody(t, methodSpec, i));
+      size += mangledSize(methodSpec->body()[i]);
     }
   }
 
@@ -98,33 +98,33 @@ jniNameLength(Thread* t, GcMethod* method, bool decorate)
 }
 
 void
-makeJNIName(Thread* t, const char* prefix, unsigned prefixLength, char* name,
+makeJNIName(Thread* t UNUSED, const char* prefix, unsigned prefixLength, char* name,
             GcMethod* method, bool decorate)
 {
   memcpy(name, prefix, prefixLength);
   name += prefixLength;
 
-  object className = reinterpret_cast<object>(method->class_()->name());
-  for (unsigned i = 0; i < byteArrayLength(t, className) - 1; ++i) {
-    name += mangle(byteArrayBody(t, className, i), name);
+  GcByteArray* className = method->class_()->name();
+  for (unsigned i = 0; i < className->length() - 1; ++i) {
+    name += mangle(className->body()[i], name);
   }
 
   *(name++) = '_';
 
-  object methodName = reinterpret_cast<object>(method->name());
-  for (unsigned i = 0; i < byteArrayLength(t, methodName) - 1; ++i) {
-    name += mangle(byteArrayBody(t, methodName, i), name);
+  GcByteArray* methodName = method->name();
+  for (unsigned i = 0; i < methodName->length() - 1; ++i) {
+    name += mangle(methodName->body()[i], name);
   }
   
   if (decorate) {
     *(name++) = '_';
     *(name++) = '_';
 
-    object methodSpec = reinterpret_cast<object>(method->spec());
-    for (unsigned i = 1; i < byteArrayLength(t, methodSpec) - 1
-           and byteArrayBody(t, methodSpec, i) != ')'; ++i)
+    GcByteArray* methodSpec = method->spec();
+    for (unsigned i = 1; i < methodSpec->length() - 1
+           and methodSpec->body()[i] != ')'; ++i)
     {
-      name += mangle(byteArrayBody(t, methodSpec, i), name);
+      name += mangle(methodSpec->body()[i], name);
     }
   }
 
@@ -245,18 +245,18 @@ resolveNative(Thread* t, GcMethod* method)
 
     PROTECT(t, native);
 
-    object runtimeData = reinterpret_cast<object>(getMethodRuntimeData(t, method));
+    GcMethodRuntimeData* runtimeData = getMethodRuntimeData(t, method);
 
     // ensure other threads only see the methodRuntimeDataNative field
     // populated once the object it points to has been populated:
     storeStoreMemoryBarrier();
 
-    set(t, runtimeData, MethodRuntimeDataNative, native);
+    set(t, reinterpret_cast<object>(runtimeData), MethodRuntimeDataNative, native);
   } 
 }
 
 int
-findLineNumber(Thread* t, GcMethod* method, unsigned ip)
+findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
 {
   if (method->flags() & ACC_NATIVE) {
     return NativeLine;
@@ -266,18 +266,17 @@ findLineNumber(Thread* t, GcMethod* method, unsigned ip)
   // about, so we back up first:
   -- ip;
 
-  object code = reinterpret_cast<object>(method->code());
-  object lnt = reinterpret_cast<object>(codeLineNumberTable(t, code));
+  GcLineNumberTable* lnt = method->code()->lineNumberTable();
   if (lnt) {
     unsigned bottom = 0;
-    unsigned top = lineNumberTableLength(t, lnt);
+    unsigned top = lnt->length();
     for (unsigned span = top - bottom; span; span = top - bottom) {
       unsigned middle = bottom + (span / 2);
-      uint64_t ln = lineNumberTableBody(t, lnt, middle);
+      uint64_t ln = lnt->body()[middle];
 
       if (ip >= lineNumberIp(ln)
-          and (middle + 1 == lineNumberTableLength(t, lnt)
-               or ip < lineNumberIp(lineNumberTableBody(t, lnt, middle + 1))))
+          and (middle + 1 == lnt->length()
+               or ip < lineNumberIp(lnt->body()[middle + 1])))
       {
         return lineNumberLine(ln);
       } else if (ip < lineNumberIp(ln)) {
@@ -287,8 +286,8 @@ findLineNumber(Thread* t, GcMethod* method, unsigned ip)
       }
     }
 
-    if (top < lineNumberTableLength(t, lnt)) {
-      return lineNumberLine(lineNumberTableBody(t, lnt, top));
+    if (top < lnt->length()) {
+      return lineNumberLine(lnt->body()[top]);
     } else {
       return UnknownLine;
     }
