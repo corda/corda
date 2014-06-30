@@ -119,11 +119,6 @@ class MutexResource {
 class MySystem;
 MySystem* system;
 
-#if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-LONG CALLBACK
-handleException(LPEXCEPTION_POINTERS e);
-#endif
-
 DWORD WINAPI
 run(void* r)
 {
