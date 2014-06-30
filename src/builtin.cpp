@@ -255,7 +255,7 @@ Avian_avian_SystemClassLoader_getPackageSource
   GcByteArray* key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
 
   GcByteArray* array = cast<GcByteArray>(t, hashMapFind
-    (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), reinterpret_cast<object>(key), byteArrayHash, byteArrayEqual));
+    (t, roots(t)->packageMap(), reinterpret_cast<object>(key), byteArrayHash, byteArrayEqual));
 
   if (array) {
     return reinterpret_cast<uintptr_t>(makeLocalReference(

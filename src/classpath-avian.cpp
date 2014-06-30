@@ -53,7 +53,7 @@ class MyClasspath : public Classpath {
 
     return vm::makeThread
       (t, 0, 0, 0, 0, 0, NewState, NormalPriority, 0, 0, 0,
-       cast<GcClassLoader>(t, root(t, Machine::AppLoader)), 0, 0, group, 0);
+       roots(t)->appLoader(), 0, 0, group, 0);
   }
 
   virtual object
@@ -97,7 +97,7 @@ class MyClasspath : public Classpath {
   runThread(Thread* t)
   {
     GcMethod* method = resolveMethod
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Thread", "run",
+      (t, roots(t)->bootLoader(), "java/lang/Thread", "run",
        "(Ljava/lang/Thread;)V");
 
     t->m->processor->invoke(t, method, 0, t->javaThread);
@@ -142,7 +142,7 @@ class MyClasspath : public Classpath {
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
     GcClass* c = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/DirectByteBuffer");
+      (t, roots(t)->bootLoader(), "java/nio/DirectByteBuffer");
     PROTECT(t, c);
 
     object instance = makeNew(t, c);
@@ -618,8 +618,8 @@ Avian_java_lang_Runtime_addShutdownHook
 
   ACQUIRE(t, t->m->shutdownLock);
 
-  setRoot(t, Machine::ShutdownHooks,
-          reinterpret_cast<object>(makePair(t, hook, root(t, Machine::ShutdownHooks))));
+  GcPair* p = makePair(t, hook, reinterpret_cast<object>(roots(t)->shutdownHooks()));
+  set(t, roots(t), RootsShutdownHooks, p);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -793,7 +793,7 @@ Avian_avian_Classes_makeMethod
   PROTECT(t, method);
 
   GcClass* c = resolveClass
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/reflect/Method");
+    (t, roots(t)->bootLoader(), "java/lang/reflect/Method");
   PROTECT(t, c);
 
   object instance = makeNew(t, c);
@@ -807,7 +807,7 @@ Avian_avian_Classes_makeMethod
     object oldInstance = instance;
 
     c = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/reflect/Constructor");
+      (t, roots(t)->bootLoader(), "java/lang/reflect/Constructor");
 
     object instance = makeNew(t, c);
 

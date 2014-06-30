@@ -215,7 +215,7 @@ turnOffTheLights(Thread* t)
     }
   }
 
-  if (GcArray* files = cast<GcArray>(t, root(t, Machine::VirtualFiles))) {
+  if (GcArray* files = roots(t)->virtualFiles()) {
     PROTECT(t, files);
     for (unsigned i = 0; i < files->length();
          ++i)
@@ -227,7 +227,7 @@ turnOffTheLights(Thread* t)
     }
   }
 
-  for (GcFinder* p = cast<GcFinder>(t, root(t, Machine::VirtualFileFinders));
+  for (GcFinder* p = roots(t)->virtualFileFinders();
        p; p = p->next())
   {
     static_cast<Finder*>(p->finder())->dispose();
@@ -402,8 +402,8 @@ finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, GcFinalizer** p)
     t->m->finalizeQueue = finalizer;
   } else {
     set(t, reinterpret_cast<object>(finalizer), FinalizerQueueTarget, finalizer->target());
-    set(t, reinterpret_cast<object>(finalizer), FinalizerQueueNext, root(t, Machine::ObjectsToFinalize));
-    setRoot(t, Machine::ObjectsToFinalize, reinterpret_cast<object>(finalizer));
+    set(t, finalizer, FinalizerQueueNext, roots(t)->objectsToFinalize());
+    set(t, roots(t), RootsObjectsToFinalize, finalizer);
   }
 }
 
@@ -422,8 +422,8 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
     GcJreference* reference = *p;
     *p = cast<GcJreference>(t, reference->vmNext());
 
-    set(t, reinterpret_cast<object>(reference), CleanerQueueNext, root(t, Machine::ObjectsToClean));
-    setRoot(t, Machine::ObjectsToClean, reinterpret_cast<object>(reference));
+    set(t, reference, CleanerQueueNext, roots(t)->objectsToClean());
+    set(t, roots(t), RootsObjectsToClean, reference);
   } else {
     if ((*p)->queue()
         and t->m->heap->status((*p)->queue()) != Heap::Unreachable)
@@ -437,9 +437,9 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
       if (q->front()) {
         set(t, reinterpret_cast<object>(*p), JreferenceJNext, reinterpret_cast<object>(q->front()));
       } else {
-        set(t, reinterpret_cast<object>(*p), JreferenceJNext, reinterpret_cast<object>(*p));
+        set(t, *p, JreferenceJNext, *p);
       }
-      set(t, reinterpret_cast<object>(q), ReferenceQueueFront, reinterpret_cast<object>(*p));
+      set(t, q, ReferenceQueueFront, *p);
 
       (*p)->queue() = 0;
     }
@@ -880,7 +880,7 @@ void
 removeByteArray(Thread* t, object o)
 {
   hashMapRemove(t,
-                cast<GcHashMap>(t, root(t, Machine::ByteArrayMap)),
+                roots(t)->byteArrayMap(),
                 o,
                 byteArrayHash,
                 objectEqual);
@@ -894,11 +894,11 @@ internByteArray(Thread* t, GcByteArray* array)
   ACQUIRE(t, t->m->referenceLock);
 
   GcTriple* n = hashMapFindNode
-    (t, cast<GcHashMap>(t, root(t, Machine::ByteArrayMap)), reinterpret_cast<object>(array), byteArrayHash, byteArrayEqual);
+    (t, roots(t)->byteArrayMap(), reinterpret_cast<object>(array), byteArrayHash, byteArrayEqual);
   if (n) {
     return cast<GcByteArray>(t, cast<GcJreference>(t, n->first())->target());
   } else {
-    hashMapInsert(t, cast<GcHashMap>(t, root(t, Machine::ByteArrayMap)), reinterpret_cast<object>(array), 0, byteArrayHash);
+    hashMapInsert(t, roots(t)->byteArrayMap(), reinterpret_cast<object>(array), 0, byteArrayHash);
     addFinalizer(t, reinterpret_cast<object>(array), removeByteArray);
     return array;
   }
@@ -2546,7 +2546,7 @@ makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, GcByteArra
     // avoid infinite recursion due to trying to create an array to
     // make a stack trace for a ClassNotFoundException.
     resolveSystemClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+      (t, roots(t)->bootLoader(),
        type(t, GcJobject::Type)->name(), false);
   }
 
@@ -2564,7 +2564,7 @@ makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, GcByteArra
      spec,
      0,
      type(t, GcJobject::Type),
-     root(t, Machine::ArrayInterfaceTable),
+     reinterpret_cast<object>(roots(t)->arrayInterfaceTable()),
      reinterpret_cast<object>(vtable),
      0,
      0,
@@ -2647,7 +2647,7 @@ makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
   }
 
   GcClass* elementClass = cast<GcClass>(t, hashMapFind
-    (t, cast<GcHashMap>(t, root(t, Machine::BootstrapClassMap)), reinterpret_cast<object>(elementSpec), byteArrayHash,
+    (t, roots(t)->bootstrapClassMap(), reinterpret_cast<object>(elementSpec), byteArrayHash,
      byteArrayEqual));
   
   if (elementClass == 0) {
@@ -2680,7 +2680,7 @@ resolveArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thro
 {
   GcClass* c = cast<GcClass>(t,
                              hashMapFind(t,
-                                         cast<GcHashMap>(t, root(t, Machine::BootstrapClassMap)),
+                                         roots(t)->bootstrapClassMap(),
                                          reinterpret_cast<object>(spec),
                                          byteArrayHash,
                                          byteArrayEqual));
@@ -2694,7 +2694,7 @@ resolveArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thro
     PROTECT(t, loader);
     PROTECT(t, spec);
 
-    c = findLoadedClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), spec);
+    c = findLoadedClass(t, roots(t)->bootLoader(), spec);
 
     if (c) {
       return c;
@@ -2713,7 +2713,7 @@ removeMonitor(Thread* t, object o)
   }
 
   object m = hashMapRemove
-    (t, cast<GcHashMap>(t, root(t, Machine::MonitorMap)), o, objectHash, objectEqual);
+    (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n", m, hash);
@@ -2723,7 +2723,7 @@ removeMonitor(Thread* t, object o)
 void
 removeString(Thread* t, object o)
 {
-  hashMapRemove(t, cast<GcHashMap>(t, root(t, Machine::StringMap)), o, stringHash, objectEqual);
+  hashMapRemove(t, roots(t)->stringMap(), o, stringHash, objectEqual);
 }
 
 void
@@ -2755,7 +2755,7 @@ bootClass(Thread* t, Gc::Type type, int superType, uint32_t objectMask,
   GcClass* class_ = t->m->processor->makeClass
     (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
      arrayElementSize ? 1 : 0, 0, mask, 0, 0, super, 0, 0, 0, 0, 0, 0,
-     cast<GcClassLoader>(t, root(t, Machine::BootLoader)), vtableLength);
+     roots(t)->bootLoader(), vtableLength);
 
   setType(t, type, class_);
 }
@@ -2789,7 +2789,7 @@ bootJavaClass(Thread* t, Gc::Type type, int superType, const char* name,
   t->m->processor->initVtable(t, class_);
 
   hashMapInsert
-    (t, cast<GcHashMap>(t, root(t, Machine::BootstrapClassMap)), reinterpret_cast<object>(n), reinterpret_cast<object>(class_), byteArrayHash);
+    (t, roots(t)->bootstrapClassMap(), reinterpret_cast<object>(n), reinterpret_cast<object>(class_), byteArrayHash);
 }
 
 void
@@ -2810,7 +2810,7 @@ makeArrayInterfaceTable(Thread* t)
   set(t, interfaceTable, ArrayBody + (2 * BytesPerWord),
       type(t, GcCloneable::Type));
   
-  setRoot(t, Machine::ArrayInterfaceTable, reinterpret_cast<object>(interfaceTable));
+  set(t, roots(t), RootsArrayInterfaceTable, interfaceTable);
 }
 
 void
@@ -2820,14 +2820,15 @@ boot(Thread* t)
 
   m->unsafe = true;
 
-  m->roots = reinterpret_cast<GcArray*>(allocate(t, pad((Machine::RootCount + 2) * BytesPerWord), true));
-  m->roots->length() = Machine::RootCount;
+  m->roots = reinterpret_cast<GcRoots*>(allocate(t, GcRoots::FixedSize, true));
 
-  setRoot(t, Machine::BootLoader,
-          allocate(t, GcSystemClassLoader::FixedSize, true));
+  object classLoader = allocate(t, GcSystemClassLoader::FixedSize, true);
+  // sequence point, for gc (don't recombine statements)
+  set(t, reinterpret_cast<object>(roots(t)), RootsBootLoader, classLoader);
 
-  setRoot(t, Machine::AppLoader,
-          allocate(t, GcSystemClassLoader::FixedSize, true));
+  classLoader = allocate(t, GcSystemClassLoader::FixedSize, true);
+  // sequence point, for gc (don't recombine statements)
+  set(t, reinterpret_cast<object>(roots(t)), RootsAppLoader, classLoader);
 
   m->types = reinterpret_cast<GcArray*>(allocate(t, pad((TypeCount + 2) * BytesPerWord), true));
   m->types->length() = TypeCount;
@@ -2836,21 +2837,23 @@ boot(Thread* t)
 
   GcClass* arrayClass = type(t, GcArray::Type);
   set(t, m->types, 0, arrayClass);
-  set(t, m->roots, 0, arrayClass);
+
+  GcClass* rootsClass = type(t, GcRoots::Type);
+  set(t, m->roots, 0, rootsClass);
 
   GcClass* loaderClass = type(t, GcSystemClassLoader::Type);
-  set(t, root(t, Machine::BootLoader), 0, reinterpret_cast<object>(loaderClass));
-  set(t, root(t, Machine::AppLoader), 0, reinterpret_cast<object>(loaderClass));
+  set(t, roots(t)->bootLoader(), 0, loaderClass);
+  set(t, roots(t)->appLoader(), 0, loaderClass);
 
   GcClass* objectClass = type(t, GcJobject::Type);
 
   GcClass* classClass = type(t, GcClass::Type);
-  set(t, reinterpret_cast<object>(classClass), 0, reinterpret_cast<object>(classClass));
-  set(t, reinterpret_cast<object>(classClass), ClassSuper, reinterpret_cast<object>(objectClass));
+  set(t, classClass, 0, classClass);
+  set(t, classClass, ClassSuper, objectClass);
 
   GcClass* intArrayClass = type(t, GcIntArray::Type);
-  set(t, reinterpret_cast<object>(intArrayClass), 0, reinterpret_cast<object>(classClass));
-  set(t, reinterpret_cast<object>(intArrayClass), ClassSuper, reinterpret_cast<object>(objectClass));
+  set(t, intArrayClass, 0, classClass);
+  set(t, intArrayClass, ClassSuper, objectClass);
 
   m->unsafe = false;
 
@@ -2888,60 +2891,68 @@ boot(Thread* t)
   type(t, GcJvoid::Type)->vmFlags()
     |= PrimitiveFlag;
 
-  set(t, reinterpret_cast<object>(type(t, GcBooleanArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJboolean::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcByteArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJbyte::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcCharArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJchar::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcShortArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJshort::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcIntArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJint::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcLongArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJlong::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcFloatArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJfloat::Type)));
-  set(t, reinterpret_cast<object>(type(t, GcDoubleArray::Type)), ClassArrayElementClass,
-      reinterpret_cast<object>(type(t, GcJdouble::Type)));
+  set(t, type(t, GcBooleanArray::Type), ClassArrayElementClass,
+      type(t, GcJboolean::Type));
+  set(t, type(t, GcByteArray::Type), ClassArrayElementClass,
+      type(t, GcJbyte::Type));
+  set(t, type(t, GcCharArray::Type), ClassArrayElementClass,
+      type(t, GcJchar::Type));
+  set(t, type(t, GcShortArray::Type), ClassArrayElementClass,
+      type(t, GcJshort::Type));
+  set(t, type(t, GcIntArray::Type), ClassArrayElementClass,
+      type(t, GcJint::Type));
+  set(t, type(t, GcLongArray::Type), ClassArrayElementClass,
+      type(t, GcJlong::Type));
+  set(t, type(t, GcFloatArray::Type), ClassArrayElementClass,
+      type(t, GcJfloat::Type));
+  set(t, type(t, GcDoubleArray::Type), ClassArrayElementClass,
+      type(t, GcJdouble::Type));
 
   { GcHashMap* map = makeHashMap(t, 0, 0);
-    set(t, root(t, Machine::BootLoader), ClassLoaderMap, reinterpret_cast<object>(map));
+    set(t, roots(t)->bootLoader(), ClassLoaderMap, map);
   }
 
-  cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder() = m->bootFinder;
+  roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder() = m->bootFinder;
 
   { GcHashMap* map = makeHashMap(t, 0, 0);
-    set(t, root(t, Machine::AppLoader), ClassLoaderMap, reinterpret_cast<object>(map));
+    set(t, roots(t)->appLoader(), ClassLoaderMap, map);
   }
 
-  cast<GcSystemClassLoader>(t, root(t, Machine::AppLoader))->finder() = m->appFinder;
+  roots(t)->appLoader()->as<GcSystemClassLoader>(t)->finder() = m->appFinder;
 
-  set(t, root(t, Machine::AppLoader), ClassLoaderParent,
-      root(t, Machine::BootLoader));
+  set(t, roots(t)->appLoader(), ClassLoaderParent,
+      roots(t)->bootLoader());
 
-  setRoot(t, Machine::BootstrapClassMap, reinterpret_cast<object>(makeHashMap(t, 0, 0)));
+  {
+    GcHashMap* map = makeHashMap(t, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsBootstrapClassMap, map);
+  }
 
-  setRoot(t, Machine::StringMap, reinterpret_cast<object>(makeWeakHashMap(t, 0, 0)));
+  {
+    GcWeakHashMap* map = makeWeakHashMap(t, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsStringMap, map);
+  }
 
   makeArrayInterfaceTable(t);
 
-  set(t, reinterpret_cast<object>(type(t, GcBooleanArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcByteArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcCharArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcShortArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcIntArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcLongArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcFloatArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
-  set(t, reinterpret_cast<object>(type(t, GcDoubleArray::Type)), ClassInterfaceTable,
-      root(t, Machine::ArrayInterfaceTable));
+  set(t, type(t, GcBooleanArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcByteArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcCharArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcShortArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcIntArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcLongArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcFloatArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
+  set(t, type(t, GcDoubleArray::Type), ClassInterfaceTable,
+      roots(t)->arrayInterfaceTable());
 
   m->processor->boot(t, 0, 0);
 
@@ -3090,12 +3101,12 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
     function(t, finalizeQueue->target());
   }
 
-  if ((root(t, Machine::ObjectsToFinalize) or root(t, Machine::ObjectsToClean))
+  if ((roots(t)->objectsToFinalize() or roots(t)->objectsToClean())
       and m->finalizeThread == 0
       and t->state != Thread::ExitState)
   {
     m->finalizeThread = m->processor->makeThread
-      (m, cast<GcThread>(t, root(t, Machine::FinalizerThread)), m->rootThread);
+      (m, roots(t)->finalizerThread(), m->rootThread);
     
     addThread(t, m->finalizeThread);
 
@@ -3165,8 +3176,10 @@ updatePackageMap(Thread* t, GcClass* class_)
 {
   PROTECT(t, class_);
 
-  if (root(t, Machine::PackageMap) == 0) {
-    setRoot(t, Machine::PackageMap, reinterpret_cast<object>(makeHashMap(t, 0, 0)));
+  if (roots(t)->packageMap() == 0) {
+    GcHashMap* map = makeHashMap(t, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsPackageMap, map);
   }
 
   GcByteArray* className = class_->name();
@@ -3189,7 +3202,7 @@ updatePackageMap(Thread* t, GcClass* class_)
       PROTECT(t, key);
 
       hashMapRemove
-        (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), reinterpret_cast<object>(key), byteArrayHash,
+        (t, roots(t)->packageMap(), reinterpret_cast<object>(key), byteArrayHash,
          byteArrayEqual);
 
       GcByteArray* source = class_->source();
@@ -3210,7 +3223,7 @@ updatePackageMap(Thread* t, GcClass* class_)
       }
 
       hashMapInsert
-        (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), reinterpret_cast<object>(key), reinterpret_cast<object>(source), byteArrayHash);
+        (t, roots(t)->packageMap(), reinterpret_cast<object>(key), reinterpret_cast<object>(source), byteArrayHash);
     }
   }
 }
@@ -3453,13 +3466,29 @@ Thread::init()
       boot(this);
     }
 
-    setRoot(this, Machine::ByteArrayMap, reinterpret_cast<object>(makeWeakHashMap(this, 0, 0)));
-    setRoot(this, Machine::MonitorMap, reinterpret_cast<object>(makeWeakHashMap(this, 0, 0)));
+    GcWeakHashMap* map = makeWeakHashMap(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsByteArrayMap, map);
 
-    setRoot(this, Machine::ClassRuntimeDataTable, reinterpret_cast<object>(makeVector(this, 0, 0)));
-    setRoot(this, Machine::MethodRuntimeDataTable, reinterpret_cast<object>(makeVector(this, 0, 0)));
-    setRoot(this, Machine::JNIMethodTable, reinterpret_cast<object>(makeVector(this, 0, 0)));
-    setRoot(this, Machine::JNIFieldTable, reinterpret_cast<object>(makeVector(this, 0, 0)));
+    map = makeWeakHashMap(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsMonitorMap, map);
+
+    GcVector* v = makeVector(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsClassRuntimeDataTable, v);
+
+    v = makeVector(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsMethodRuntimeDataTable, v);
+
+    v = makeVector(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsJNIMethodTable, v);
+
+    v = makeVector(this, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(this, roots(this), RootsJNIFieldTable, v);
 
     m->localThread->set(this);
   }
@@ -3508,10 +3537,10 @@ shutDown(Thread* t)
 {
   ACQUIRE(t, t->m->shutdownLock);
 
-  GcPair* hooks = cast<GcPair>(t, root(t, Machine::ShutdownHooks));
+  GcPair* hooks = roots(t)->shutdownHooks();
   PROTECT(t, hooks);
 
-  setRoot(t, Machine::ShutdownHooks, 0);
+  set(t, roots(t), RootsShutdownHooks, 0);
 
   GcPair* h = hooks;
   PROTECT(t, h);
@@ -3835,7 +3864,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     }
 
     if (t->m->heap->limitExceeded(pendingAllocation)) {
-      throw_(t, cast<GcThrowable>(t, root(t, Machine::OutOfMemoryError)));
+      throw_(t, roots(t)->outOfMemoryError());
     }
   } while (type == Machine::MovableAllocation
            and t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
@@ -4093,7 +4122,7 @@ resolveBootstrap(Thread* t, uintptr_t* arguments)
 {
   GcByteArray* name = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[0]));
 
-  resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name);
+  resolveSystemClass(t, roots(t)->bootLoader(), name);
 
   return 1;
 }
@@ -4363,14 +4392,14 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
 
   updateClassTables(t, real, class_);
 
-  if (root(t, Machine::PoolMap)) {
+  if (roots(t)->poolMap()) {
     object bootstrapClass = hashMapFind
-      (t, cast<GcHashMap>(t, root(t, Machine::BootstrapClassMap)), reinterpret_cast<object>(class_->name()),
+      (t, roots(t)->bootstrapClassMap(), reinterpret_cast<object>(class_->name()),
        byteArrayHash, byteArrayEqual);
 
     hashMapInsert(
         t,
-        cast<GcHashMap>(t, root(t, Machine::PoolMap)),
+        roots(t)->poolMap(),
         bootstrapClass ? bootstrapClass : reinterpret_cast<object>(real),
         reinterpret_cast<object>(pool),
         objectHash);
@@ -4479,7 +4508,7 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
         }
 
         GcClass* bootstrapClass = cast<GcClass>(t, hashMapFind
-          (t, cast<GcHashMap>(t, root(t, Machine::BootstrapClassMap)), reinterpret_cast<object>(spec), byteArrayHash,
+          (t, roots(t)->bootstrapClassMap(), reinterpret_cast<object>(spec), byteArrayHash,
            byteArrayEqual));
 
         if (bootstrapClass) {
@@ -4533,26 +4562,26 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
     if (spec->body()[0] == '[') {
       c = resolveArrayClass(t, loader, spec, throw_, throwType);
     } else {
-      if (root(t, Machine::LoadClassMethod) == 0) {
+      if (roots(t)->loadClassMethod() == 0) {
         GcMethod* m = resolveMethod
-          (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/ClassLoader",
+          (t, roots(t)->bootLoader(), "java/lang/ClassLoader",
            "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
 
         if (m) {
-          setRoot(t, Machine::LoadClassMethod, reinterpret_cast<object>(m));
+          set(t, roots(t), RootsLoadClassMethod, m);
 
           GcClass* classLoaderClass = type(t, GcClassLoader::Type);
         
           if (classLoaderClass->vmFlags() & BootstrapFlag) {
             resolveSystemClass
-              (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+              (t, roots(t)->bootLoader(),
                classLoaderClass->name());
           }
         }      
       }
 
       GcMethod* method = findVirtualMethod
-        (t, cast<GcMethod>(t, root(t, Machine::LoadClassMethod)), objectClass(t, loader));
+        (t, roots(t)->loadClassMethod(), objectClass(t, loader));
 
       PROTECT(t, method);
         
@@ -4912,7 +4941,7 @@ objectMonitor(Thread* t, object o, bool createNew)
   assertT(t, t->state == Thread::ActiveState);
 
   object m = hashMapFind
-    (t, cast<GcHashMap>(t, root(t, Machine::MonitorMap)), o, objectHash, objectEqual);
+    (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
   if (m) {
     if (DebugMonitors) {
@@ -4927,7 +4956,7 @@ objectMonitor(Thread* t, object o, bool createNew)
     { ENTER(t, Thread::ExclusiveState);
 
       m = hashMapFind
-        (t, cast<GcHashMap>(t, root(t, Machine::MonitorMap)), o, objectHash, objectEqual);
+        (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
       if (m) {
         if (DebugMonitors) {
@@ -4946,7 +4975,7 @@ objectMonitor(Thread* t, object o, bool createNew)
                 objectHash(t, o));
       }
 
-      hashMapInsert(t, cast<GcHashMap>(t, root(t, Machine::MonitorMap)), o, m, objectHash);
+      hashMapInsert(t, roots(t)->monitorMap(), o, m, objectHash);
 
       addFinalizer(t, o, removeMonitor);
     }
@@ -4965,12 +4994,12 @@ intern(Thread* t, object s)
   ACQUIRE(t, t->m->referenceLock);
 
   GcTriple* n = hashMapFindNode
-    (t, cast<GcHashMap>(t, root(t, Machine::StringMap)), s, stringHash, stringEqual);
+    (t, roots(t)->stringMap(), s, stringHash, stringEqual);
 
   if (n) {
     return reinterpret_cast<object>(cast<GcJreference>(t, n->first())->target());
   } else {
-    hashMapInsert(t, cast<GcHashMap>(t, root(t, Machine::StringMap)), s, 0, stringHash);
+    hashMapInsert(t, roots(t)->stringMap(), s, 0, stringHash);
     addFinalizer(t, s, removeString);
     return s;
   }
@@ -5196,8 +5225,8 @@ runFinalizeThread(Thread* t)
     { ACQUIRE(t, t->m->stateLock);
 
       while (t->m->finalizeThread
-             and root(t, Machine::ObjectsToFinalize) == 0
-             and root(t, Machine::ObjectsToClean) == 0)
+             and roots(t)->objectsToFinalize() == 0
+             and roots(t)->objectsToClean() == 0)
       {
         ENTER(t, Thread::IdleState);
         t->m->stateLock->wait(t->systemThread, 0);
@@ -5206,11 +5235,11 @@ runFinalizeThread(Thread* t)
       if (t->m->finalizeThread == 0) {
         return;
       } else {
-        finalizeList = cast<GcFinalizer>(t, root(t, Machine::ObjectsToFinalize));
-        setRoot(t, Machine::ObjectsToFinalize, 0);
+        finalizeList = roots(t)->objectsToFinalize();
+        set(t, roots(t), RootsObjectsToFinalize, 0);
 
-        cleanList = cast<GcCleaner>(t, root(t, Machine::ObjectsToClean));
-        setRoot(t, Machine::ObjectsToClean, 0);
+        cleanList = roots(t)->objectsToClean();
+        set(t, roots(t), RootsObjectsToClean, 0);
       }
     }
 

@@ -2909,7 +2909,7 @@ invoke(Thread* t, GcMethod* method)
     class_ = objectClass(t, peekObject(t, t->sp - parameterFootprint));
 
     if (class_->vmFlags() & BootstrapFlag) {
-      resolveClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
+      resolveClass(t, roots(t)->bootLoader(), class_->name());
     }
 
     if (method->class_()->flags() & ACC_INTERFACE) {

@@ -312,7 +312,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   } resolver(&typeMaps);
 
   Finder* finder = static_cast<Finder*>
-    (cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder());
+    (roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder());
 
   for (Finder::Iterator it(finder); it.hasMore();) {
     unsigned nameSize = 0;
@@ -323,7 +323,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     {
       // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
       GcClass* c = resolveSystemClass
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+        (t, roots(t)->bootLoader(),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
 
       PROTECT(t, c);
@@ -419,7 +419,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
           hashMapInsert
             (t, typeMaps, reinterpret_cast<object>(hashMapFind
-             (t, cast<GcHashMap>(t, root(t, Machine::PoolMap)), reinterpret_cast<object>(c), objectHash, objectEqual)), reinterpret_cast<object>(array),
+             (t, roots(t)->poolMap(), reinterpret_cast<object>(c), objectHash, objectEqual)), reinterpret_cast<object>(array),
              objectHash);
         }
       }
@@ -611,7 +611,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
       PROTECT(t, c);
 
       c = resolveSystemClass
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+        (t, roots(t)->bootLoader(),
          makeByteArray(t, "%.*s", nameSize - 6, name), true);
 
       if (GcArray* mtable = cast<GcArray>(t, c->methodTable())) {
@@ -657,7 +657,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
                 if (objectClass(t, o) == type(t, GcReference::Type)) {
                   o = reinterpret_cast<object>(resolveClass
-                    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), cast<GcReference>(t, o)->name()));
+                    (t, roots(t)->bootLoader(), cast<GcReference>(t, o)->name()));
 
                   set(t, reinterpret_cast<object>(addendum->pool()),
                       SingletonBody + (index * BytesPerWord), o);
@@ -706,14 +706,14 @@ visitRoots(Thread* t, BootImage* image, HeapWalker* w, GcTriple* constants)
 {
   Machine* m = t->m;
 
-  for (HashMapIterator it(t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()));
+  for (HashMapIterator it(t, cast<GcHashMap>(t, roots(t)->bootLoader()->map()));
        it.hasMore();)
   {
     w->visitRoot(it.next()->second());
   }
 
-  image->bootLoader = w->visitRoot(root(t, Machine::BootLoader));
-  image->appLoader = w->visitRoot(root(t, Machine::AppLoader));
+  image->bootLoader = w->visitRoot(reinterpret_cast<object>(roots(t)->bootLoader()));
+  image->appLoader = w->visitRoot(reinterpret_cast<object>(roots(t)->appLoader()));
   image->types = w->visitRoot(reinterpret_cast<object>(m->types));
 
   m->processor->visitRoots(t, w);
@@ -1288,8 +1288,9 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
                 const char* codeimageStart, const char* codeimageEnd,
                 bool useLZMA)
 {
-  setRoot(t, Machine::OutOfMemoryError,
-          make(t, type(t, GcOutOfMemoryError::Type)));
+  GcThrowable* throwable = cast<GcThrowable>(t, make(t, type(t, GcOutOfMemoryError::Type)));
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsOutOfMemoryError, throwable);
 
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
@@ -1331,7 +1332,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   { classPoolMap = makeHashMap(t, 0, 0);
     PROTECT(t, classPoolMap);
 
-    setRoot(t, Machine::PoolMap, reinterpret_cast<object>(classPoolMap));
+    set(t, roots(t), RootsPoolMap, classPoolMap);
 
     typeMaps = makeHashMap(t, 0, 0);
     PROTECT(t, typeMaps);
@@ -1493,8 +1494,11 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
     // these roots will not be used when the bootimage is loaded, so
     // there's no need to preserve them:
-    setRoot(t, Machine::PoolMap, 0);
-    setRoot(t, Machine::ByteArrayMap, reinterpret_cast<object>(makeWeakHashMap(t, 0, 0)));
+    set(t, roots(t), RootsPoolMap, 0);
+
+    GcWeakHashMap* map = makeWeakHashMap(t, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsByteArrayMap, map);
 
     // name all primitive classes so we don't try to update immutable
     // references at runtime:
@@ -1529,28 +1533,28 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     // resolve primitive array classes in case they are needed at
     // runtime:
     { GcByteArray* name = makeByteArray(t, "[B");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[Z");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[S");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[C");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[I");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[J");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[F");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[D");
-      resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
     }
   }
 
@@ -1567,14 +1571,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   updateConstants(t, constants, heapWalker->map());
 
   image->bootClassCount = cast<GcHashMap>
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map())->size();
+    (t, roots(t)->bootLoader()->map())->size();
 
   unsigned* bootClassTable = static_cast<unsigned*>
     (t->m->heap->allocate(image->bootClassCount * sizeof(unsigned)));
 
   { unsigned i = 0;
     for (HashMapIterator it
-           (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()));
+           (t, cast<GcHashMap>(t, roots(t)->bootLoader()->map()));
          it.hasMore();)
     {
       bootClassTable[i++] = targetVW
@@ -1583,14 +1587,14 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   }
 
   image->appClassCount = cast<GcHashMap>
-    (t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map())->size();
+    (t, roots(t)->appLoader()->map())->size();
 
   unsigned* appClassTable = static_cast<unsigned*>
     (t->m->heap->allocate(image->appClassCount * sizeof(unsigned)));
 
   { unsigned i = 0;
     for (HashMapIterator it
-           (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map()));
+           (t, cast<GcHashMap>(t, roots(t)->appLoader()->map()));
          it.hasMore();)
     {
       appClassTable[i++] = targetVW
@@ -1598,12 +1602,12 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     }
   }
 
-  image->stringCount = cast<GcHashMap>(t, root(t, Machine::StringMap))->size();
+  image->stringCount = roots(t)->stringMap()->size();
   unsigned* stringTable = static_cast<unsigned*>
     (t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
 
   { unsigned i = 0;
-    for (HashMapIterator it(t, cast<GcHashMap>(t, root(t, Machine::StringMap))); it.hasMore();) {
+    for (HashMapIterator it(t, roots(t)->stringMap()); it.hasMore();) {
       stringTable[i++] = targetVW
         (heapWalker->map()->find
          (reinterpret_cast<object>(cast<GcJreference>(t, it.next()->first())->target())));

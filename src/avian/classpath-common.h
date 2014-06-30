@@ -642,7 +642,7 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
 {
   ACQUIRE(t, t->m->referenceLock);
 
-  for (GcFinder* p = cast<GcFinder>(t, root(t, Machine::VirtualFileFinders));
+  for (GcFinder* p = roots(t)->virtualFileFinders();
        p; p = p->next())
   {
     if (p->name()->length() == nameLength
@@ -669,9 +669,9 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
     if (data) {
       Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
       GcFinder* finder = makeFinder
-        (t, f, n, cast<GcFinder>(t, root(t, Machine::VirtualFileFinders)));
+        (t, f, n, roots(t)->virtualFileFinders());
 
-      setRoot(t, Machine::VirtualFileFinders, reinterpret_cast<object>(finder));
+      set(t, roots(t), RootsVirtualFileFinders, finder);
 
       return f;
     }

@@ -560,7 +560,7 @@ class MyClasspath : public Classpath {
     thread->group() = group;
 
     // TODO: use set / write barrier?
-    thread->contextClassLoader() = cast<GcClassLoader>(t, root(t, Machine::AppLoader));
+    thread->contextClassLoader() = roots(t)->appLoader();
 
     PROTECT(t, thread);
 
@@ -649,14 +649,14 @@ class MyClasspath : public Classpath {
         t->exception = 0;
 
         t->m->processor->invoke
-          (t, cast<GcMethod>(t, root(t, Machine::ThreadTerminated)),
+          (t, cast<GcMethod>(t, roots(t)->threadTerminated()),
            reinterpret_cast<object>(t->javaThread->group()), t->javaThread);
 
         t->exception = e;
     });
 
     GcMethod* method = resolveMethod
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Thread", "run", "()V");
+      (t, roots(t)->bootLoader(), "java/lang/Thread", "run", "()V");
 
     t->m->processor->invoke(t, method, reinterpret_cast<object>(t->javaThread));
   }
@@ -703,12 +703,14 @@ class MyClasspath : public Classpath {
   {
     globalMachine = t->m;
 
-    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+    resolveSystemClass(t, roots(t)->bootLoader(),
                        type(t, GcClassLoader::Type)->name());
 
-    setRoot(t, Machine::ThreadTerminated, reinterpret_cast<object>(resolveMethod
-            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/ThreadGroup",
-             "threadTerminated", "(Ljava/lang/Thread;)V")));
+    GcMethod* method = resolveMethod
+            (t, roots(t)->bootLoader(), "java/lang/ThreadGroup",
+             "threadTerminated", "(Ljava/lang/Thread;)V");
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t), RootsThreadTerminated, method);
 
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t, true);
@@ -721,12 +723,12 @@ class MyClasspath : public Classpath {
         (t, type(t, GcClassLoader::Type), "assertionLock",
          "Ljava/lang/Object;");
 
-      set(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), assertionLock->offset(),
-          cast<GcClassLoader>(t, root(t, Machine::BootLoader)));
+      set(t, roots(t)->bootLoader(), assertionLock->offset(),
+          roots(t)->bootLoader());
     }
 
     { GcClass* class_ = resolveClass
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/Properties", true,
+        (t, roots(t)->bootLoader(), "java/util/Properties", true,
          GcNoClassDefFoundError::Type);
 
       PROTECT(t, class_);
@@ -740,7 +742,7 @@ class MyClasspath : public Classpath {
       t->m->processor->invoke(t, constructor, instance);
 
       t->m->processor->invoke
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/System",
+        (t, roots(t)->bootLoader(), "java/lang/System",
          "setProperties", "(Ljava/util/Properties;)V", 0, instance);
     }
 
@@ -750,11 +752,11 @@ class MyClasspath : public Classpath {
 
       PROTECT(t, constructor);
 
-      t->m->processor->invoke(t, constructor, root(t, Machine::BootLoader), 0);
+      t->m->processor->invoke(t, constructor, reinterpret_cast<object>(roots(t)->bootLoader()), 0);
 
       t->m->processor->invoke
-        (t, constructor, root(t, Machine::AppLoader),
-         cast<GcClassLoader>(t, root(t, Machine::BootLoader)));
+        (t, constructor, reinterpret_cast<object>(roots(t)->appLoader()),
+         roots(t)->bootLoader());
     }
 
     { GcField* scl = resolveField
@@ -766,23 +768,23 @@ class MyClasspath : public Classpath {
       GcField* sclSet = resolveField
         (t, type(t, GcClassLoader::Type), "sclSet", "Z");
 
-      set(t, reinterpret_cast<object>(type(t, GcClassLoader::Type)->staticTable()),
-          scl->offset(), root(t, Machine::AppLoader));
+      set(t, type(t, GcClassLoader::Type)->staticTable(),
+          scl->offset(), roots(t)->appLoader());
 
       fieldAtOffset<uint8_t>(type(t, GcClassLoader::Type)->staticTable(),
                     sclSet->offset()) = true;
     }
 
     t->m->processor->invoke
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/System",
+      (t, roots(t)->bootLoader(), "java/lang/System",
        "initializeSystemClass", "()V", 0);
 
     t->m->processor->invoke
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "sun/misc/Launcher",
+      (t, roots(t)->bootLoader(), "sun/misc/Launcher",
        "getLauncher", "()Lsun/misc/Launcher;", 0);
 
-    set(t, reinterpret_cast<object>(t->javaThread), ThreadContextClassLoader,
-        root(t, Machine::AppLoader));
+    set(t, t->javaThread, ThreadContextClassLoader,
+        roots(t)->appLoader());
   }
 
   virtual const char*
@@ -795,7 +797,7 @@ class MyClasspath : public Classpath {
   makeDirectByteBuffer(Thread* t, void* p, jlong capacity)
   {
     GcClass* c = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/DirectByteBuffer");
+      (t, roots(t)->bootLoader(), "java/nio/DirectByteBuffer");
     PROTECT(t, c);
 
     object instance = makeNew(t, c);
@@ -884,7 +886,7 @@ class MyClasspath : public Classpath {
   shutDown(Thread* t)
   {
     GcClass* c = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Shutdown", false);
+      (t, roots(t)->bootLoader(), "java/lang/Shutdown", false);
 
     if (c) {
       GcMethod* m = findMethodOrNull(t, c, "shutdown", "()V");
@@ -1168,24 +1170,24 @@ openFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
 
     int index = -1;
-    unsigned oldLength = root(t, Machine::VirtualFiles)
-      ? arrayLength(t, root(t, Machine::VirtualFiles)) : 0;
+    unsigned oldLength = roots(t)->virtualFiles()
+      ? arrayLength(t, roots(t)->virtualFiles()) : 0;
 
     for (unsigned i = 0; i < oldLength; ++i) {
-      if (arrayBody(t, root(t, Machine::VirtualFiles), i) == 0) {
+      if (arrayBody(t, roots(t)->virtualFiles(), i) == 0) {
         index = i;
         break;
       }
     }
 
     if (index == -1) {
-      object newArray = growArray(t, root(t, Machine::VirtualFiles));
+      object newArray = growArray(t, roots(t)->virtualFiles());
       setRoot(t, Machine::VirtualFiles, newArray);
       index = oldLength;
     }
 
     object region = makeRegion(t, r, 0);
-    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+    set(t, roots(t)->virtualFiles(), ArrayBody + (index * BytesPerWord),
         region);
 
     fieldAtOffset<int32_t>
@@ -1215,7 +1217,7 @@ readByteFromFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
-      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+      (t, roots(t)->virtualFiles(), fd - VirtualFileBase);
 
     if (region) {
       System::Region* r = static_cast<System::Region*>
@@ -1258,7 +1260,7 @@ readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
-      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+      (t, roots(t)->virtualFiles(), fd - VirtualFileBase);
 
     if (region) {
       System::Region* r = static_cast<System::Region*>
@@ -1308,7 +1310,7 @@ skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
-      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+      (t, roots(t)->virtualFiles(), fd - VirtualFileBase);
 
     if (region) {
       System::Region* r = static_cast<System::Region*>
@@ -1349,7 +1351,7 @@ availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
     
     object region = arrayBody
-      (t, root(t, Machine::VirtualFiles), fd - VirtualFileBase);
+      (t, roots(t)->virtualFiles(), fd - VirtualFileBase);
 
     if (region) {
       return static_cast<System::Region*>(regionRegion(t, region))->length()
@@ -1382,13 +1384,13 @@ closeFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
 
     int index = fd - VirtualFileBase;
-    object region = arrayBody(t, root(t, Machine::VirtualFiles), index);
+    object region = arrayBody(t, roots(t)->virtualFiles(), index);
 
     if (region) {
       static_cast<System::Region*>(regionRegion(t, region))->dispose();
     }
 
-    set(t, root(t, Machine::VirtualFiles), ArrayBody + (index * BytesPerWord),
+    set(t, roots(t)->virtualFiles(), ArrayBody + (index * BytesPerWord),
         0);
   } else {
     t->m->processor->invoke
@@ -1848,7 +1850,7 @@ getBootstrapResource(Thread* t, object, uintptr_t* arguments)
   
   if (m) {
     return reinterpret_cast<int64_t>
-      (t->m->processor->invoke(t, m, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name));
+      (t->m->processor->invoke(t, m, roots(t)->bootLoader(), name));
   } else {
     return 0;
   }
@@ -1866,7 +1868,7 @@ getBootstrapResources(Thread* t, object, uintptr_t* arguments)
   
   if (m) {
     return reinterpret_cast<int64_t>
-      (t->m->processor->invoke(t, m, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), name));
+      (t->m->processor->invoke(t, m, roots(t)->bootLoader(), name));
   } else {
     return 0;
   }
@@ -1944,7 +1946,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   { object fileClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/File", false);
+      (t, roots(t)->bootLoader(), "java/io/File", false);
 
     if (fileClass) {
       object filePathField = findFieldInClass2
@@ -1957,7 +1959,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object fileDescriptorClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/FileDescriptor", false);
+      (t, roots(t)->bootLoader(), "java/io/FileDescriptor", false);
 
     if (fileDescriptorClass) {
       object fileDescriptorFdField = findFieldInClass2
@@ -1970,7 +1972,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object fileInputStreamClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/io/FileInputStream", false);
+      (t, roots(t)->bootLoader(), "java/io/FileInputStream", false);
 
     if (fileInputStreamClass) {
       PROTECT(t, fileInputStreamClass);
@@ -2008,7 +2010,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object zipFileClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/zip/ZipFile", false);
+      (t, roots(t)->bootLoader(), "java/util/zip/ZipFile", false);
 
     if (zipFileClass) {
       PROTECT(t, zipFileClass);
@@ -2061,7 +2063,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   { object jarFileClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/jar/JarFile", false);
+      (t, roots(t)->bootLoader(), "java/util/jar/JarFile", false);
 
     if (jarFileClass) {
       intercept(t, jarFileClass, "getMetaInfEntryNames",
@@ -2080,7 +2082,7 @@ interceptFileOperations(Thread* t, bool updateRuntimeData)
 #endif
 
     object fsClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), fsClassName, false);
+      (t, roots(t)->bootLoader(), fsClassName, false);
 
     if (fsClass) {
       PROTECT(t, fsClass);
@@ -2550,7 +2552,7 @@ Avian_sun_misc_Perf_createLong
   return reinterpret_cast<int64_t>
     (t->m->processor->invoke
      (t, resolveMethod
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/nio/ByteBuffer", "allocate",
+      (t, roots(t)->bootLoader(), "java/nio/ByteBuffer", "allocate",
        "(I)Ljava/nio/ByteBuffer;"), 0, 8));
 }
 
@@ -2956,7 +2958,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   jobject properties = reinterpret_cast<jobject>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/util/Properties", "setProperty",
+    (t, roots(t)->bootLoader(), "java/util/Properties", "setProperty",
      "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;");
 
   PROTECT(t, method);
@@ -3024,7 +3026,7 @@ jvmInitProperties(Thread* t, uintptr_t* arguments)
   local::setProperty
     (t, method, *properties, "sun.boot.class.path",
      static_cast<Finder*>
-     (cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder())->path());
+     (roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder())->path());
 
   local::setProperty(t, method, *properties, "file.encoding", "UTF-8");
 #ifdef ARCH_x86_32
@@ -3526,7 +3528,7 @@ jvmGetSystemPackage(Thread* t, uintptr_t* arguments)
   object key = reinterpret_cast<object>(makeByteArray(t, RUNTIME_ARRAY_BODY(chars)));
 
   GcByteArray* array = cast<GcByteArray>(t, hashMapFind
-    (t, cast<GcHashMap>(t, root(t, Machine::PackageMap)), key, byteArrayHash, byteArrayEqual));
+    (t, roots(t)->packageMap(), key, byteArrayHash, byteArrayEqual));
 
   if (array) {
     return reinterpret_cast<uintptr_t>
@@ -3554,7 +3556,7 @@ jvmGetSystemPackages(Thread* t, uintptr_t*)
       makeObjectArray(
           t,
           resolveClass(
-              t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/lang/Package"),
+              t, roots(t)->bootLoader(), "java/lang/Package"),
           0)));
 }
 
@@ -3586,7 +3588,7 @@ EXPORT(JVM_LatestUserDefinedLoader)(Thread* t)
     virtual bool visit(Processor::StackWalker* walker) {
       GcClassLoader* loader = walker->method()->class_()->loader();
       if (loader
-          and loader != cast<GcClassLoader>(t, root(t, Machine::BootLoader))
+          and loader != roots(t)->bootLoader()
           and strcmp
           (objectClass(t, loader)->name()->body().begin(),
            reinterpret_cast<const int8_t*>
@@ -3865,7 +3867,7 @@ jvmResolveClass(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Classes", "link",
+    (t, roots(t)->bootLoader(), "avian/Classes", "link",
      "(Lavian/VMClass;)V");
 
   t->m->processor->invoke(t, method, 0, (*c)->vmClass());
@@ -3890,7 +3892,7 @@ jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
   jboolean throwError = arguments[3];
 
   GcClass* c = resolveClass
-    (t, cast<GcClassLoader>(t, loader ? *loader : root(t, Machine::BootLoader)), name, true,
+    (t, loader ? cast<GcClassLoader>(t, *loader) : roots(t)->bootLoader(), name, true,
      throwError ? static_cast<Gc::Type>(GcNoClassDefFoundError::Type)
      : static_cast<Gc::Type>(GcClassNotFoundException::Type));
 
@@ -4046,7 +4048,7 @@ EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
 
   GcClassLoader* loader = (*c)->vmClass()->loader();
 
-  if (loader == cast<GcClassLoader>(t, root(t, Machine::BootLoader))) {
+  if (loader == roots(t)->bootLoader()) {
     // sun.misc.Unsafe.getUnsafe expects a null result if the class
     // loader is the boot classloader and will throw a
     // SecurityException otherwise.
@@ -4058,7 +4060,7 @@ EXPORT(JVM_GetClassLoader)(Thread* t, jclass c)
     {
       return 0;
     } else {
-      return makeLocalReference(t, root(t, Machine::BootLoader));
+      return makeLocalReference(t, reinterpret_cast<object>(roots(t)->bootLoader()));
     }
   } else {
     return makeLocalReference(t, reinterpret_cast<object>(loader));
@@ -4118,7 +4120,7 @@ jvmGetProtectionDomain(Thread* t, uintptr_t* arguments)
   jclass c = reinterpret_cast<jclass>(arguments[0]);
 
   GcMethod* method = resolveMethod
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Classes", "getProtectionDomain",
+    (t, roots(t)->bootLoader(), "avian/Classes", "getProtectionDomain",
      "(Lavian/VMClass;)Ljava/security/ProtectionDomain;");
 
   return reinterpret_cast<uint64_t>
@@ -4631,7 +4633,7 @@ maybeWrap(Thread* t, bool wrapException)
     PROTECT(t, exception);
 
     GcClass* paeClass = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+      (t, roots(t)->bootLoader(),
        "java/security/PrivilegedActionException");
     PROTECT(t, paeClass);
 
@@ -4658,7 +4660,7 @@ jvmDoPrivileged(Thread* t, uintptr_t* arguments)
   // object:
 
   GcClass* privilegedAction = resolveClass
-    (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "java/security/PrivilegedAction");
+    (t, roots(t)->bootLoader(), "java/security/PrivilegedAction");
 
   GcMethod* method;
   if (instanceOf(t, privilegedAction, *action)) {
@@ -4666,7 +4668,7 @@ jvmDoPrivileged(Thread* t, uintptr_t* arguments)
       (t, privilegedAction, "run", "()Ljava/lang/Object;");
   } else {
     GcClass* privilegedExceptionAction = resolveClass
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+      (t, roots(t)->bootLoader(),
        "java/security/PrivilegedExceptionAction");
 
     method = resolveMethod
@@ -5196,7 +5198,7 @@ getMemoryManagers(Thread* t, uintptr_t*)
       t,
       makeObjectArray(t,
                       resolveClass(t,
-                                   cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+                                   roots(t)->bootLoader(),
                                    "java/lang/management/MemoryManagerMXBean"),
                       0)));
 }
@@ -5214,7 +5216,7 @@ getMemoryPools(Thread* t, uintptr_t*)
       t,
       makeObjectArray(t,
                       resolveClass(t,
-                                   cast<GcClassLoader>(t, root(t, Machine::BootLoader)),
+                                   roots(t)->bootLoader(),
                                    "java/lang/management/MemoryPoolMXBean"),
                       0)));
 }

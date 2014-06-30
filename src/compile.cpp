@@ -336,7 +336,7 @@ resolveTarget(MyThread* t, void* stack, GcMethod* method)
     PROTECT(t, method);
     PROTECT(t, class_);
 
-    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
+    resolveSystemClass(t, roots(t)->bootLoader(), class_->name());
   }
 
   if (method->class_()->flags() & ACC_INTERFACE) {
@@ -352,7 +352,7 @@ resolveTarget(MyThread* t, GcClass* class_, unsigned index)
   if (class_->vmFlags() & BootstrapFlag) {
     PROTECT(t, class_);
 
-    resolveSystemClass(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), class_->name());
+    resolveSystemClass(t, roots(t)->bootLoader(), class_->name());
   }
 
   return cast<GcMethod>(t, cast<GcArray>(t, class_->virtualTable())->body()[index]);
@@ -2460,7 +2460,7 @@ throwArithmetic(MyThread* t)
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    throw_(t, cast<GcThrowable>(t, root(t, Machine::ArithmeticException)));
+    throw_(t, roots(t)->arithmeticException());
   }
 }
 
@@ -2671,7 +2671,7 @@ throwArrayIndexOutOfBounds(MyThread* t)
   } else {
     // not enough memory available for a new exception and stack trace
     // -- use a preallocated instance instead
-    throw_(t, cast<GcThrowable>(t, root(t, Machine::ArrayIndexOutOfBoundsException)));
+    throw_(t, roots(t)->arrayIndexOutOfBoundsException());
   }
 }
 
@@ -7726,7 +7726,7 @@ callContinuation(MyThread* t, GcContinuation* continuation, object result,
           PROTECT(t, nextContinuation);
 
           GcMethod* method = resolveMethod
-            (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Continuations", "rewind",
+            (t, roots(t)->bootLoader(), "avian/Continuations", "rewind",
              "(Ljava/lang/Runnable;Lavian/Callback;Ljava/lang/Object;"
              "Ljava/lang/Throwable;)V");
 
@@ -7786,7 +7786,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
     if (root(t, ReceiveMethod) == 0) {
       GcMethod* m = resolveMethod
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Function", "call",
+        (t, roots(t)->bootLoader(), "avian/Function", "call",
          "(Ljava/lang/Object;)Ljava/lang/Object;");
 
       if (m) {
@@ -7796,7 +7796,7 @@ callWithCurrentContinuation(MyThread* t, object receiver)
 
         if (continuationClass->vmFlags() & BootstrapFlag) {
           resolveSystemClass(
-              t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), continuationClass->name());
+              t, roots(t)->bootLoader(), continuationClass->name());
         }
       }
     }
@@ -7825,7 +7825,7 @@ dynamicWind(MyThread* t, object before, object thunk, object after)
 
     if (root(t, WindMethod) == 0) {
       GcMethod* method = resolveMethod
-        (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Continuations", "wind",
+        (t, roots(t)->bootLoader(), "avian/Continuations", "wind",
          "(Ljava/lang/Runnable;Ljava/util/concurrent/Callable;"
          "Ljava/lang/Runnable;)Lavian/Continuations$UnwindResult;");
 
@@ -8032,7 +8032,7 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
 
     compile(t, local::codeAllocator(static_cast<MyThread*>(t)), 0,
             resolveMethod
-            (t, cast<GcClassLoader>(t, root(t, Machine::AppLoader)),
+            (t, roots(t)->appLoader(),
              "foo/ClassName",
              "methodName",
              "()V"));
@@ -8113,8 +8113,9 @@ invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
 
 class SignalHandler: public SignalRegistrar::Handler {
  public:
-  SignalHandler(Gc::Type type, Machine::Root root, unsigned fixedSize):
-    m(0), type(type), root(root), fixedSize(fixedSize) { }
+  typedef GcThrowable*& (GcRoots::*ExceptionGetter)();
+  SignalHandler(Gc::Type type, ExceptionGetter exc, unsigned fixedSize):
+    m(0), type(type), exc(exc), fixedSize(fixedSize) { }
 
   virtual bool handleSignal(void** ip, void** frame, void** stack,
                             void** thread)
@@ -8137,7 +8138,7 @@ class SignalHandler: public SignalRegistrar::Handler {
         } else {
           // not enough memory available for a new exception and stack
           // trace -- use a preallocated instance instead
-          t->exception = cast<GcThrowable>(t, vm::root(t, root));
+          t->exception = (vm::roots(t)->*exc)();
         }
 
         // printTrace(t, t->exception);
@@ -8162,7 +8163,7 @@ class SignalHandler: public SignalRegistrar::Handler {
 
   Machine* m;
   Gc::Type type;
-  Machine::Root root;
+  ExceptionGetter exc;
   unsigned fixedSize;
 };
 
@@ -8258,10 +8259,10 @@ class MyProcessor: public Processor {
         codeImage(0),
         codeImageSize(0),
         segFaultHandler(GcNullPointerException::Type,
-                        Machine::NullPointerException,
+                        &GcRoots::nullPointerException,
                         GcNullPointerException::FixedSize),
         divideByZeroHandler(GcArithmeticException::Type,
-                            Machine::ArithmeticException,
+                            &GcRoots::arithmeticException,
                             GcArithmeticException::FixedSize),
         codeAllocator(s, Slice<uint8_t>(0, 0)),
         callTableSize(0),
@@ -9530,10 +9531,10 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   t->m->types = reinterpret_cast<GcArray*>(bootObject(heap, image->types));
 
-  t->m->roots = makeArray(t, Machine::RootCount);
+  t->m->roots = makeRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);;
 
-  setRoot(t, Machine::BootLoader, bootObject(heap, image->bootLoader));
-  setRoot(t, Machine::AppLoader, bootObject(heap, image->appLoader));
+  set(t, reinterpret_cast<object>(roots(t)), RootsBootLoader, bootObject(heap, image->bootLoader));
+  set(t, reinterpret_cast<object>(roots(t)), RootsAppLoader, bootObject(heap, image->appLoader));
 
   p->roots = makeArray(t, RootCount);
 
@@ -9542,20 +9543,24 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   setRoot(t, VirtualThunks, bootObject(heap, image->virtualThunks));
 
-  { object map = reinterpret_cast<object>(makeClassMap(t, bootClassTable, image->bootClassCount, heap));
-    set(t, root(t, Machine::BootLoader), ClassLoaderMap, map);
+  {
+    GcHashMap* map = makeClassMap(t, bootClassTable, image->bootClassCount, heap);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t)->bootLoader(), ClassLoaderMap, map);
   }
 
-  cast<GcSystemClassLoader>(t, root(t, Machine::BootLoader))->finder() = t->m->bootFinder;
+  roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder() = t->m->bootFinder;
 
-  { object map = reinterpret_cast<object>(makeClassMap(t, appClassTable, image->appClassCount, heap));
-    set(t, root(t, Machine::AppLoader), ClassLoaderMap, map);
+  {
+    GcHashMap* map = makeClassMap(t, appClassTable, image->appClassCount, heap);
+    // sequence point, for gc (don't recombine statements)
+    set(t, roots(t)->appLoader(), ClassLoaderMap, map);
   }
 
-  cast<GcSystemClassLoader>(t, root(t, Machine::AppLoader))->finder() = t->m->appFinder;
+  roots(t)->appLoader()->as<GcSystemClassLoader>(t)->finder() = t->m->appFinder;
 
-  setRoot(t, Machine::StringMap, reinterpret_cast<object>(makeStringMap
-          (t, stringTable, image->stringCount, heap)));
+  set(t, roots(t), RootsStringMap, makeStringMap
+          (t, stringTable, image->stringCount, heap));
 
   p->callTableSize = image->callCount;
 
@@ -9571,11 +9576,11 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
 
   if (image->initialized) {
     resetRuntimeState
-      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()), heap,
+      (t, cast<GcHashMap>(t, roots(t)->bootLoader()->map()), heap,
        image->heapSize);
 
     resetRuntimeState
-      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map()), heap,
+      (t, cast<GcHashMap>(t, roots(t)->appLoader()->map()), heap,
        image->heapSize);
 
     for (unsigned i = 0; i < t->m->types->length(); ++i) {
@@ -9586,15 +9591,17 @@ boot(MyThread* t, BootImage* image, uint8_t* code)
     fixupVirtualThunks(t, code);
 
     fixupMethods
-      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::BootLoader))->map()), image, code);
+      (t, cast<GcHashMap>(t, roots(t)->bootLoader()->map()), image, code);
 
     fixupMethods
-      (t, cast<GcHashMap>(t, cast<GcClassLoader>(t, root(t, Machine::AppLoader))->map()), image, code);
+      (t, cast<GcHashMap>(t, roots(t)->appLoader()->map()), image, code);
   }
 
   image->initialized = true;
 
-  setRoot(t, Machine::BootstrapClassMap, reinterpret_cast<object>(makeHashMap(t, 0, 0)));
+  GcHashMap* map = makeHashMap(t, 0, 0);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsBootstrapClassMap, map);
 }
 
 intptr_t

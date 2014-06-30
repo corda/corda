@@ -1211,6 +1211,7 @@ class GcClassLoader;
 class GcJreference;
 class GcArray;
 class GcThrowable;
+class GcRoots;
 
 class Machine {
  public:
@@ -1220,38 +1221,6 @@ class Machine {
     FixedAllocation,
     ImmortalAllocation
   };
-
-  enum Root {
-    BootLoader,
-    AppLoader,
-    BootstrapClassMap,
-    PackageMap,
-    FindLoadedClassMethod,
-    LoadClassMethod,
-    MonitorMap,
-    StringMap,
-    ByteArrayMap,
-    PoolMap,
-    ClassRuntimeDataTable,
-    MethodRuntimeDataTable,
-    JNIMethodTable,
-    JNIFieldTable,
-    ShutdownHooks,
-    FinalizerThread,
-    ObjectsToFinalize,
-    ObjectsToClean,
-    NullPointerException,
-    ArithmeticException,
-    ArrayIndexOutOfBoundsException,
-    OutOfMemoryError,
-    Shutdown,
-    VirtualFileFinders,
-    VirtualFiles,
-    ArrayInterfaceTable,
-    ThreadTerminated
-  };
-
-  static const unsigned RootCount = ThreadTerminated + 1;
 
   Machine(System* system, Heap* heap, Finder* bootFinder, Finder* appFinder,
           Processor* processor, Classpath* classpath, const char** properties,
@@ -1296,7 +1265,7 @@ class Machine {
   FILE* errorLog;
   BootImage* bootimage;
   GcArray* types;
-  GcArray* roots;
+  GcRoots* roots;
   GcFinalizer* finalizers;
   GcFinalizer* tenuredFinalizers;
   GcFinalizer* finalizeQueue;
@@ -1340,8 +1309,8 @@ run(Thread* t, uint64_t (*function)(Thread*, uintptr_t*),
 void
 checkDaemon(Thread* t);
 
-object&
-root(Thread* t, Machine::Root root);
+GcRoots*
+roots(Thread* t);
 
 extern "C" uint64_t
 vmRun(uint64_t (*function)(Thread*, uintptr_t*), uintptr_t* arguments,
@@ -1524,17 +1493,7 @@ class Thread {
       t->systemThread = st;
     }
 
-    virtual void run() {
-      enterActiveState(t);
-
-      vm::run(t, runThread, 0);
-
-      if (t->exception and reinterpret_cast<object>(t->exception) != root(t, Machine::Shutdown)) {
-        printTrace(t, t->exception);
-      }
-
-      t->exit();
-    }
+    virtual void run();
 
     virtual bool interrupted();
 
@@ -2011,6 +1970,18 @@ arrayBodyUnsafe(Thread*, GcArray* a, unsigned index)
   return a->body()[index];
 }
 
+inline void Thread::Runnable::run() {
+  enterActiveState(t);
+
+  vm::run(t, runThread, 0);
+
+  if (t->exception and t->exception != roots(t)->shutdownInProgress()) {
+    printTrace(t, t->exception);
+  }
+
+  t->exit();
+}
+
 inline bool Thread::Runnable::interrupted() {
   return t->javaThread and t->javaThread->interrupted();
 }
@@ -2194,16 +2165,10 @@ attachThread(Machine* m, bool daemon)
   }
 }
 
-inline object&
-root(Thread* t, Machine::Root root)
+inline GcRoots*
+roots(Thread* t)
 {
-  return t->m->roots->body()[root];
-}
-
-inline void
-setRoot(Thread* t, Machine::Root root, object value)
-{
-  set(t, reinterpret_cast<object>(t->m->roots), ArrayBody + (root * BytesPerWord), value);
+  return t->m->roots;
 }
 
 inline GcClass*
@@ -3392,7 +3357,7 @@ wait(Thread* t, object o, int64_t milliseconds)
         t->m->classpath->clearInterrupted(t);
         throwNew(t, GcInterruptedException::Type);
       } else {
-        throw_(t, cast<GcThrowable>(t, root(t, Machine::Shutdown)));
+        throw_(t, roots(t)->shutdownInProgress());
       }
     }
   } else {
@@ -3471,7 +3436,7 @@ inline bool
 exceptionMatch(Thread* t, GcClass* type, GcThrowable* exception)
 {
   return type == 0
-    or (reinterpret_cast<object>(exception) != root(t, Machine::Shutdown)
+    or (exception != roots(t)->shutdownInProgress()
         and instanceOf(t, type, reinterpret_cast<object>(t->exception)));
 }
 
@@ -3847,7 +3812,9 @@ inline GcClassRuntimeData*
 getClassRuntimeDataIfExists(Thread* t, GcClass* c)
 {
   if (c->runtimeDataIndex()) {
-    return cast<GcClassRuntimeData>(t, cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable))->body()[c->runtimeDataIndex() - 1]);
+    return cast<GcClassRuntimeData>(
+        t,
+        roots(t)->classRuntimeDataTable()->body()[c->runtimeDataIndex() - 1]);
   } else {
     return 0;
   }
@@ -3864,16 +3831,20 @@ getClassRuntimeData(Thread* t, GcClass* c)
     if (c->runtimeDataIndex() == 0) {
       object runtimeData = reinterpret_cast<object>(makeClassRuntimeData(t, 0, 0, 0, 0));
 
-      setRoot(t, Machine::ClassRuntimeDataTable, reinterpret_cast<object>(vectorAppend
-              (t, cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable)), runtimeData)));
+      {
+        GcVector* v
+            = vectorAppend(t, roots(t)->classRuntimeDataTable(), runtimeData);
+        // sequence point, for gc (don't recombine statements)
+        set(t, roots(t), RootsClassRuntimeDataTable, v);
+      }
 
-      c->runtimeDataIndex() = cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable))->size();
+      c->runtimeDataIndex() = roots(t)->classRuntimeDataTable()->size();
     }
   }
 
   return cast<GcClassRuntimeData>(
       t,
-      cast<GcVector>(t, root(t, Machine::ClassRuntimeDataTable))
+      roots(t)->classRuntimeDataTable()
           ->body()[c->runtimeDataIndex() - 1]);
 }
 
@@ -3892,18 +3863,22 @@ getMethodRuntimeData(Thread* t, GcMethod* method)
     if (method->runtimeDataIndex() == 0) {
       object runtimeData = reinterpret_cast<object>(makeMethodRuntimeData(t, 0));
 
-      setRoot(t, Machine::MethodRuntimeDataTable, reinterpret_cast<object>(vectorAppend
-              (t, cast<GcVector>(t, root(t, Machine::MethodRuntimeDataTable)), runtimeData)));
+      {
+        GcVector* v
+            = vectorAppend(t, roots(t)->methodRuntimeDataTable(), runtimeData);
+        // sequence point, for gc (don't recombine statements)
+        set(t, roots(t), RootsMethodRuntimeDataTable, v);
+      }
 
       storeStoreMemoryBarrier();
 
-      method->runtimeDataIndex() = cast<GcVector>(t, root(t, Machine::MethodRuntimeDataTable))->size();
+      method->runtimeDataIndex() = roots(t)->methodRuntimeDataTable()->size();
     }
   }
 
   return cast<GcMethodRuntimeData>(
       t,
-      cast<GcVector>(t, root(t, Machine::MethodRuntimeDataTable))
+      roots(t)->methodRuntimeDataTable()
           ->body()[method->runtimeDataIndex() - 1]);
 }
 

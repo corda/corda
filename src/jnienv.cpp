@@ -330,8 +330,7 @@ defineClass(Thread* t, uintptr_t* arguments)
                     t,
                     defineClass(t,
                                 loader ? cast<GcClassLoader>(t, *loader)
-                                       : cast<GcClassLoader>(
-                                             t, root(t, Machine::BootLoader)),
+                                       : roots(t)->bootLoader(),
                                 buffer,
                                 length))))));
 }
@@ -357,11 +356,11 @@ findClass(Thread* t, uintptr_t* arguments)
 
   GcMethod* caller = getCaller(t, 0);
 
-  GcClass* c = resolveClass(
-      t,
-      caller ? t->m->classpath->libraryClassLoader(t, caller) : cast
-          <GcClassLoader>(t, root(t, Machine::AppLoader)),
-      n);
+  GcClass* c
+      = resolveClass(t,
+                     caller ? t->m->classpath->libraryClassLoader(t, caller)
+                            : roots(t)->appLoader(),
+                     n);
 
   if (t->m->classpath->mayInitClasses()) {
     PROTECT(t, c);
@@ -549,13 +548,14 @@ methodID(Thread* t, GcMethod* method)
     ACQUIRE(t, t->m->referenceLock);
 
     if (method->nativeID() == 0) {
-      setRoot(t, Machine::JNIMethodTable, reinterpret_cast<object>(vectorAppend
-              (t, cast<GcVector>(t, root(t, Machine::JNIMethodTable)), reinterpret_cast<object>(method))));
+      GcVector* v = vectorAppend(
+          t, roots(t)->jNIMethodTable(), reinterpret_cast<object>(method));
+      // sequence point, for gc (don't recombine statements)
+      set(t, roots(t), RootsJNIMethodTable, v);
 
       storeStoreMemoryBarrier();
 
-      method->nativeID() = cast<GcVector>
-        (t, root(t, Machine::JNIMethodTable))->size();
+      method->nativeID() = roots(t)->jNIMethodTable()->size();
     }
   }
 
@@ -615,7 +615,7 @@ getMethod(Thread* t, jmethodID m)
 {
   assertT(t, m);
 
-  GcMethod* method = cast<GcMethod>(t, cast<GcVector>(t, root(t, Machine::JNIMethodTable))->body()[m - 1]);
+  GcMethod* method = cast<GcMethod>(t, roots(t)->jNIMethodTable()->body()[m - 1]);
 
   assertT(t, (method->flags() & ACC_STATIC) == 0);
 
@@ -1110,7 +1110,7 @@ getStaticMethod(Thread* t, jmethodID m)
 {
   assertT(t, m);
 
-  GcMethod* method = cast<GcMethod>(t, cast<GcVector>(t, root(t, Machine::JNIMethodTable))->body()[m - 1]);
+  GcMethod* method = cast<GcMethod>(t, roots(t)->jNIMethodTable()->body()[m - 1]);
 
   assertT(t, method->flags() & ACC_STATIC);
 
@@ -1502,12 +1502,14 @@ fieldID(Thread* t, GcField* field)
     ACQUIRE(t, t->m->referenceLock);
 
     if (field->nativeID() == 0) {
-      setRoot(t, Machine::JNIFieldTable, reinterpret_cast<object>(vectorAppend
-              (t, cast<GcVector>(t, root(t, Machine::JNIFieldTable)), reinterpret_cast<object>(field))));
+      GcVector* v = vectorAppend(
+          t, roots(t)->jNIFieldTable(), reinterpret_cast<object>(field));
+      // sequence point, for gc (don't recombine statements)
+      set(t, roots(t), RootsJNIFieldTable, v);
 
       storeStoreMemoryBarrier();
 
-      field->nativeID() = cast<GcVector>(t, root(t, Machine::JNIFieldTable))->size();
+      field->nativeID() = roots(t)->jNIFieldTable()->size();
     }
   }
 
@@ -1549,7 +1551,7 @@ getField(Thread* t, jfieldID f)
 {
   assertT(t, f);
 
-  GcField* field = cast<GcField>(t, cast<GcVector>(t, root(t, Machine::JNIFieldTable))->body()[f - 1]);
+  GcField* field = cast<GcField>(t, roots(t)->jNIFieldTable()->body()[f - 1]);
 
   assertT(t, (field->flags() & ACC_STATIC) == 0);
 
@@ -1978,7 +1980,7 @@ getStaticField(Thread* t, jfieldID f)
 {
   assertT(t, f);
 
-  GcField* field = cast<GcField>(t, cast<GcVector>(t, root(t, Machine::JNIFieldTable))->body()[f - 1]);
+  GcField* field = cast<GcField>(t, roots(t)->jNIFieldTable()->body()[f - 1]);
 
   assertT(t, field->flags() & ACC_STATIC);
 
@@ -3399,7 +3401,7 @@ pushLocalFrame(Thread* t, uintptr_t* arguments)
   if (t->m->processor->pushLocalFrame(t, arguments[0])) {
     return 1;
   } else {
-    throw_(t, cast<GcThrowable>(t, root(t, Machine::OutOfMemoryError)));
+    throw_(t, roots(t)->outOfMemoryError());
   }
 }
 
@@ -3537,22 +3539,25 @@ append(char** p, const char* value, unsigned length, char tail)
 uint64_t
 boot(Thread* t, uintptr_t*)
 {
-  setRoot(t,
-          Machine::NullPointerException,
-          reinterpret_cast<object>(makeThrowable(t, GcNullPointerException::Type)));
+  GcThrowable* throwable = makeThrowable(t, GcNullPointerException::Type);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsNullPointerException, throwable);
 
-  setRoot(t,
-          Machine::ArithmeticException,
-          reinterpret_cast<object>(makeThrowable(t, GcArithmeticException::Type)));
+  throwable = makeThrowable(t, GcArithmeticException::Type);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsArithmeticException, throwable);
 
-  setRoot(t,
-          Machine::ArrayIndexOutOfBoundsException,
-          reinterpret_cast<object>(makeThrowable(t, GcArrayIndexOutOfBoundsException::Type)));
+  throwable = makeThrowable(t, GcArrayIndexOutOfBoundsException::Type);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsArrayIndexOutOfBoundsException, throwable);
 
-  setRoot(
-      t, Machine::OutOfMemoryError, reinterpret_cast<object>(makeThrowable(t, GcOutOfMemoryError::Type)));
+  throwable = makeThrowable(t, GcOutOfMemoryError::Type);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsOutOfMemoryError, throwable);
 
-  setRoot(t, Machine::Shutdown, reinterpret_cast<object>(makeThrowable(t, GcThrowable::Type)));
+  throwable = makeThrowable(t, GcThrowable::Type);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsShutdownInProgress, throwable);
 
   t->m->classpath->preBoot(t);
 
@@ -3560,9 +3565,11 @@ boot(Thread* t, uintptr_t*)
 
   t->javaThread->peer() = reinterpret_cast<jlong>(t);
 
-  setRoot(t, Machine::FinalizerThread, reinterpret_cast<object>(t->m->classpath->makeThread(t, t)));
+  GcThread* jthread = t->m->classpath->makeThread(t, t);
+  // sequence point, for gc (don't recombine statements)
+  set(t, roots(t), RootsFinalizerThread, jthread);
 
-  cast<GcThread>(t, root(t, Machine::FinalizerThread))->daemon() = true;
+  roots(t)->finalizerThread()->daemon() = true;
 
   t->m->classpath->boot(t);
 
@@ -3572,7 +3579,7 @@ boot(Thread* t, uintptr_t*)
     PROTECT(t, host);
 
     GcMethod* method = resolveMethod
-      (t, cast<GcClassLoader>(t, root(t, Machine::BootLoader)), "avian/Traces", "startTraceListener",
+      (t, roots(t)->bootLoader(), "avian/Traces", "startTraceListener",
        "(Ljava/lang/String;I)V");
 
     t->m->processor->invoke(t, method, 0, host, atoi(port));
