@@ -14,6 +14,8 @@
 
 namespace {
 
+#if (!defined PLATFORM_WINDOWS) || (defined _MSC_VER)
+
 void
 removeNewline(char* s)
 {
@@ -24,6 +26,8 @@ removeNewline(char* s)
     }
   }
 }
+
+#endif
 
 } // namespace
 
