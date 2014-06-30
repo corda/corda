@@ -54,8 +54,8 @@ ifeq ($(codegen-targets),all)
 	options := $(options)-all
 endif
 
-ifeq ($(filter debug debug-fast fast small,$(mode)),)
-	x := $(error "'$(mode)' is not a valid mode (choose one of: debug debug-fast fast small)")
+ifeq ($(filter debug debug-fast fast stress stress-major small,$(mode)),)
+	x := $(error "'$(mode)' is not a valid mode (choose one of: debug debug-fast fast stress stress-major small)")
 endif
 
 ifeq ($(filter compile interpret,$(process)),)
