@@ -54,8 +54,8 @@ ifeq ($(codegen-targets),all)
 	options := $(options)-all
 endif
 
-ifeq ($(filter debug debug-fast fast small,$(mode)),)
-	x := $(error "'$(mode)' is not a valid mode (choose one of: debug debug-fast fast small)")
+ifeq ($(filter debug debug-fast fast stress stress-major small,$(mode)),)
+	x := $(error "'$(mode)' is not a valid mode (choose one of: debug debug-fast fast stress stress-major small)")
 endif
 
 ifeq ($(filter compile interpret,$(process)),)
@@ -932,7 +932,7 @@ ifeq ($(platform),wp8)
 	ifeq ($(mode),debug-fast)
 		build-type = Debug
 	endif
-	ifeq ($(mode),stress_major)
+	ifeq ($(mode),stress-major)
 		build-type = Release
 	endif
 	ifeq ($(mode),fast)
@@ -987,7 +987,7 @@ ifeq ($(platform),wp8)
 		cflags += -DNDEBUG
 		lflags +=
 	endif
-	ifeq ($(mode),stress_major)
+	ifeq ($(mode),stress-major)
 		cflags +=
 		lflags +=
 	endif
