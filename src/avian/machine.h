@@ -1421,6 +1421,30 @@ class Thread {
     SingleProtector protector;
   };
 
+  class LibraryLoadStack: public AutoResource {
+   public:
+    LibraryLoadStack(Thread* t, object class_):
+      AutoResource(t),
+      next(t->libraryLoadStack),
+      class_(class_),
+      protector(t, &(this->class_))
+    {
+      t->libraryLoadStack = this;
+    }
+
+    ~LibraryLoadStack() {
+      t->libraryLoadStack = next;
+    }
+
+    virtual void release() {
+      this->LibraryLoadStack::~LibraryLoadStack();
+    }
+
+    LibraryLoadStack* next;
+    object class_;
+    SingleProtector protector;
+  };
+
   class Checkpoint {
    public:
     Checkpoint(Thread* t):
@@ -1516,6 +1540,7 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   ClassInitStack* classInitStack;
+  LibraryLoadStack* libraryLoadStack;
   Resource* resource;
   Checkpoint* checkpoint;
   Runnable runnable;
