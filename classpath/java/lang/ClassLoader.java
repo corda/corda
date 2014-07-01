@@ -195,5 +195,8 @@ public abstract class ClassLoader {
     }
     return urls;
   }
-  
+
+  static native Class getCaller();
+
+  static native void load(String name, Class caller, boolean mapName);  
 }

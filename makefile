@@ -260,6 +260,9 @@ ifneq ($(android),)
 		platform-lflags := -lgdi32 -lshlwapi -lwsock32
 	else
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
+		blacklist = $(luni-native)/java_math_NativeBN.cpp
+
+		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
 			$(android)/external/icu4c/lib/libicudata.a

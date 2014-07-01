@@ -349,20 +349,11 @@ findClass(Thread* t, uintptr_t* arguments)
 
   object caller = getCaller(t, 0);
 
-  object loader;
-  if (caller) {
-    if (methodClass(t, caller) == type(t, Machine::ClassLoaderType)
-        and t->libraryLoadStack)
-    {
-      loader = classLoader(t, t->libraryLoadStack->class_);
-    } else {
-      loader = classLoader(t, methodClass(t, caller));
-    }
-  } else {
-    loader = root(t, Machine::AppLoader);
-  }
-
-  object c = resolveClass(t, loader, n);
+  object c
+      = resolveClass(t,
+                     caller ? t->m->classpath->libraryClassLoader(t, caller)
+                            : root(t, Machine::AppLoader),
+                     n);
 
   if (t->m->classpath->mayInitClasses()) {
     PROTECT(t, c);

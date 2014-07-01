@@ -1,6 +1,24 @@
 #include <jni.h>
 #include "jni-util.h"
 
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
+{
+  JNIEnv* e;
+  if (vm->GetEnv(reinterpret_cast<void**>(&e), JNI_VERSION_1_6) != JNI_OK) {
+    return -1;
+  }
+
+  jclass c = e->FindClass("JNI");
+  if (c == 0) {
+    return -1;
+  }
+
+  e->SetStaticBooleanField(
+      c, e->GetStaticFieldID(c, "onLoadCalled", "Z"), true);
+
+  return JNI_VERSION_1_6;
+}
+
 extern "C" JNIEXPORT jdouble JNICALL
 Java_JNI_addDoubles
 (JNIEnv*, jclass,

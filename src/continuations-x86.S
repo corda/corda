@@ -10,12 +10,6 @@
 
 #ifdef __x86_64__
 
-#define THREAD_CONTINUATION 2256
-#define THREAD_EXCEPTION 80
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2264
-#define THREAD_EXCEPTION_OFFSET 2272
-#define THREAD_EXCEPTION_HANDLER 2280
-
 #define CONTINUATION_NEXT 8
 #define CONTINUATION_ADDRESS 32
 #define CONTINUATION_RETURN_ADDRESS_OFFSET 40
@@ -24,7 +18,7 @@
 #define CONTINUATION_BODY 64
 
    // call the next continuation, if any
-   movq   THREAD_CONTINUATION(%rbx),%rcx
+   movq   TARGET_THREAD_CONTINUATION(%rbx),%rcx
    cmpq   $0,%rcx
    je     LOCAL(vmInvoke_exit)
 
@@ -69,33 +63,27 @@ LOCAL(vmInvoke_continuationTest):
 
    // consume the continuation
    movq   CONTINUATION_NEXT(%rcx),%rdi
-   movq   %rdi,THREAD_CONTINUATION(%rbx)
+   movq   %rdi,TARGET_THREAD_CONTINUATION(%rbx)
 
    // call the continuation unless we're handling an exception
-   movq   THREAD_EXCEPTION(%rbx),%rsi
+   movq   TARGET_THREAD_EXCEPTION(%rbx),%rsi
    cmpq   $0,%rsi
    jne    LOCAL(vmInvoke_handleException)
    jmp    *CONTINUATION_ADDRESS(%rcx)
 
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
-   movq   $0,THREAD_EXCEPTION(%rbx)
-   movq   THREAD_EXCEPTION_STACK_ADJUSTMENT(%rbx),%rdi
+   movq   $0,TARGET_THREAD_EXCEPTION(%rbx)
+   movq   TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT(%rbx),%rdi
    subq   %rdi,%rsp
-   movq   THREAD_EXCEPTION_OFFSET(%rbx),%rdi
+   movq   TARGET_THREAD_EXCEPTIONOFFSET(%rbx),%rdi
    movq   %rsi,(%rsp,%rdi,1)
    
-   jmp    *THREAD_EXCEPTION_HANDLER(%rbx)
+   jmp    *TARGET_THREAD_EXCEPTIONHANDLER(%rbx)
 
 LOCAL(vmInvoke_exit):
 
 #elif defined __i386__
-
-#define THREAD_CONTINUATION 2164
-#define THREAD_EXCEPTION 44
-#define THREAD_EXCEPTION_STACK_ADJUSTMENT 2168
-#define THREAD_EXCEPTION_OFFSET 2172
-#define THREAD_EXCEPTION_HANDLER 2176
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -111,7 +99,7 @@ LOCAL(vmInvoke_exit):
 #endif
 
    // call the next continuation, if any
-   movl   THREAD_CONTINUATION(%ebx),%ecx
+   movl   TARGET_THREAD_CONTINUATION(%ebx),%ecx
    cmpl   $0,%ecx
    je     LOCAL(vmInvoke_exit)
 
@@ -169,10 +157,10 @@ LOCAL(vmInvoke_offset):
    
    // consume the continuation
    movl   CONTINUATION_NEXT(%ecx),%edi
-   movl   %edi,THREAD_CONTINUATION(%ebx)
+   movl   %edi,TARGET_THREAD_CONTINUATION(%ebx)
 
    // call the continuation unless we're handling an exception
-   movl   THREAD_EXCEPTION(%ebx),%esi
+   movl   TARGET_THREAD_EXCEPTION(%ebx),%esi
    cmpl   $0,%esi
    jne    LOCAL(vmInvoke_handleException)
 
@@ -180,13 +168,13 @@ LOCAL(vmInvoke_offset):
 
 LOCAL(vmInvoke_handleException):
    // we're handling an exception - call the exception handler instead
-   movl   $0,THREAD_EXCEPTION(%ebx)
-   movl   THREAD_EXCEPTION_STACK_ADJUSTMENT(%ebx),%edi
+   movl   $0,TARGET_THREAD_EXCEPTION(%ebx)
+   movl   TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT(%ebx),%edi
    subl   %edi,%esp
-   movl   THREAD_EXCEPTION_OFFSET(%ebx),%edi
+   movl   TARGET_THREAD_EXCEPTIONOFFSET(%ebx),%edi
    movl   %esi,(%esp,%edi,1)
    
-   jmp    *THREAD_EXCEPTION_HANDLER(%ebx)
+   jmp    *TARGET_THREAD_EXCEPTIONHANDLER(%ebx)
 
 LOCAL(vmInvoke_exit):
 

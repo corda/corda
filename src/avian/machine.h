@@ -1423,11 +1423,11 @@ class Thread {
 
   class LibraryLoadStack: public AutoResource {
    public:
-    LibraryLoadStack(Thread* t, object class_):
-      AutoResource(t),
-      next(t->libraryLoadStack),
-      class_(class_),
-      protector(t, &(this->class_))
+    LibraryLoadStack(Thread* t, object classLoader)
+        : AutoResource(t),
+          next(t->libraryLoadStack),
+          classLoader(classLoader),
+          protector(t, &(this->classLoader))
     {
       t->libraryLoadStack = this;
     }
@@ -1441,7 +1441,7 @@ class Thread {
     }
 
     LibraryLoadStack* next;
-    object class_;
+    object classLoader;
     SingleProtector protector;
   };
 
@@ -1609,6 +1609,8 @@ class Classpath {
   virtual bool
   canTailCall(Thread* t, object caller, object calleeClassName,
               object calleeMethodName, object calleeMethodSpec) = 0;
+
+  virtual object libraryClassLoader(Thread* t, object caller) = 0;
 
   virtual void
   shutDown(Thread* t) = 0;

@@ -388,7 +388,7 @@ the following, starting from the Avian directory:
     git clone https://android.googlesource.com/platform/external/openssl \
       external/openssl
     (cd external/openssl && \
-       git checkout 7b972f1aa23172c4430ada7f3236fa1fd9b31756)
+       git checkout 1417357d893849c4b6afdd98c32b6ca1b4b19a8b)
 
     git clone https://android.googlesource.com/platform/external/zlib \
       external/zlib
@@ -396,12 +396,11 @@ the following, starting from the Avian directory:
        git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
 
     git clone git://git.openssl.org/openssl.git openssl-upstream
-    (cd openssl-upstream && \
-       git checkout OpenSSL_1_0_1e)
+    (cd openssl-upstream && git checkout OpenSSL_1_0_1h)
 
     git clone https://github.com/dicej/android-libcore64 libcore
 
-    curl -Of http://oss.readytalk.com/avian/expat-2.1.0.tar.gz
+    curl -Of http://oss.readytalk.com/avian-web/expat-2.1.0.tar.gz
     (cd external && tar xzf ../expat-2.1.0.tar.gz && mv expat-2.1.0 expat)
 
     (cd external/expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
@@ -417,16 +416,8 @@ NB: use 'CC="gcc -fPIC" ./Configure darwin64-x86_64-cc' when building
 for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
 
     (cd openssl-upstream \
-       && (for x in \
-               progs \
-               handshake_cutthrough \
-               jsse \
-               channelid \
-               eng_dyn_dirs \
-               fix_clang_build \
-               tls12_digests \
-               alpn; \
-             do patch -p1 < ../external/openssl/patches/$x.patch; done) \
+       && (for x in ../external/openssl/patches/*.patch; \
+             do patch -p1 < $x; done) \
        && CC="gcc -fPIC" ./config && make)
 
     cd ../avian

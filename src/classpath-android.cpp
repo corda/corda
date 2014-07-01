@@ -55,6 +55,8 @@ loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[1]);
 
+  Thread::LibraryLoadStack stack(t, reinterpret_cast<object>(arguments[2]));
+
   unsigned length = stringLength(t, name);
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
@@ -568,6 +570,17 @@ class MyClasspath : public Classpath {
     return true;
   }
 
+  virtual object libraryClassLoader(Thread* t, object caller)
+  {
+    return strcmp(
+               "java/lang/Runtime",
+               reinterpret_cast<char*>(
+                   &byteArrayBody(t, className(t, methodClass(t, caller)), 0)))
+               == 0
+               ? t->libraryLoadStack->classLoader
+               : classLoader(t, methodClass(t, caller));
+  }
+
   virtual void
   shutDown(Thread*)
   {
@@ -983,6 +996,12 @@ jniCreateFileDescriptor(JNIEnv* e, int fd)
 
 int
 register_org_apache_harmony_dalvik_NativeTestTarget(_JNIEnv*)
+{
+  // ignore
+  return 0;
+}
+
+int register_java_math_NativeBN(_JNIEnv*)
 {
   // ignore
   return 0;

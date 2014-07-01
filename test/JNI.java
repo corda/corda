@@ -3,6 +3,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 
 public class JNI {
+  private static boolean onLoadCalled;
+
   static {
     System.loadLibrary("test");
   }
@@ -64,6 +66,8 @@ public class JNI {
   public static final int field950 = 950;
 
   public static void main(String[] args) throws Exception {
+    expect(onLoadCalled);
+
     expect(addDoubles
            (1.0d, 2.0d, 3.0d, 4.0d, 5.0d, 6.0d, 7.0d, 8.0d, 9.0d, 10.0d, 11.0d,
             12.0d, 13.0d, 14.0d, 15.0d, 16.0d, 17.0d, 18.0d, 19.0d, 20.0d)
