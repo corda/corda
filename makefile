@@ -932,7 +932,7 @@ ifeq ($(platform),wp8)
 	ifeq ($(mode),debug-fast)
 		build-type = Debug
 	endif
-	ifeq ($(mode),stress_major)
+	ifeq ($(mode),stress-major)
 		build-type = Release
 	endif
 	ifeq ($(mode),fast)
@@ -987,7 +987,7 @@ ifeq ($(platform),wp8)
 		cflags += -DNDEBUG
 		lflags +=
 	endif
-	ifeq ($(mode),stress_major)
+	ifeq ($(mode),stress-major)
 		cflags +=
 		lflags +=
 	endif
