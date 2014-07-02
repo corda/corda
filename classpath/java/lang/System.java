@@ -108,11 +108,11 @@ public abstract class System {
   private static native String doMapLibraryName(String name);
 
   public static void load(String path) {
-    Runtime.getRuntime().load(path);
+    ClassLoader.load(path, ClassLoader.getCaller(), false);
   }
 
   public static void loadLibrary(String name) {
-    Runtime.getRuntime().loadLibrary(name);
+    ClassLoader.load(name, ClassLoader.getCaller(), true);
   }
 
   public static void gc() {

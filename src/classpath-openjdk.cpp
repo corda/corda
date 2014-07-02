@@ -844,6 +844,32 @@ class MyClasspath : public Classpath {
                      (&byteArrayBody(t, calleeClassName, 0))));
   }
 
+  virtual object libraryClassLoader(Thread* t, object caller)
+  {
+#ifdef AVIAN_OPENJDK_SRC
+    return (methodClass(t, caller) == type(t, Machine::ClassLoaderType)
+            and t->libraryLoadStack)
+               ? t->libraryLoadStack->classLoader
+#else
+    return strcmp(
+               "java/lang/ClassLoader$NativeLibrary",
+               reinterpret_cast<char*>(
+                   &byteArrayBody(t, className(t, methodClass(t, caller)), 0)))
+               == 0
+               ? classLoader(
+                     t,
+                     jclassVmClass(t,
+                                   t->m->processor->invoke(
+                                       t,
+                                       resolveMethod(t,
+                                                     methodClass(t, caller),
+                                                     "getFromClass",
+                                                     "()Ljava/lang/Class;"),
+                                       0)))
+#endif
+               : classLoader(t, methodClass(t, caller));
+  }
+
   virtual void
   shutDown(Thread* t)
   {
@@ -1845,6 +1871,10 @@ management_JNI_OnLoad(JavaVM*, void*);
 void JNICALL
 loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
+  Thread::LibraryLoadStack stack(
+      t,
+      classLoader(t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))));
+
   object name = reinterpret_cast<object>(arguments[1]);
   THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));

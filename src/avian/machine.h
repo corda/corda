@@ -1421,6 +1421,30 @@ class Thread {
     SingleProtector protector;
   };
 
+  class LibraryLoadStack: public AutoResource {
+   public:
+    LibraryLoadStack(Thread* t, object classLoader)
+        : AutoResource(t),
+          next(t->libraryLoadStack),
+          classLoader(classLoader),
+          protector(t, &(this->classLoader))
+    {
+      t->libraryLoadStack = this;
+    }
+
+    ~LibraryLoadStack() {
+      t->libraryLoadStack = next;
+    }
+
+    virtual void release() {
+      this->LibraryLoadStack::~LibraryLoadStack();
+    }
+
+    LibraryLoadStack* next;
+    object classLoader;
+    SingleProtector protector;
+  };
+
   class Checkpoint {
    public:
     Checkpoint(Thread* t):
@@ -1516,6 +1540,7 @@ class Thread {
   unsigned heapOffset;
   Protector* protector;
   ClassInitStack* classInitStack;
+  LibraryLoadStack* libraryLoadStack;
   Resource* resource;
   Checkpoint* checkpoint;
   Runnable runnable;
@@ -1584,6 +1609,8 @@ class Classpath {
   virtual bool
   canTailCall(Thread* t, object caller, object calleeClassName,
               object calleeMethodName, object calleeMethodSpec) = 0;
+
+  virtual object libraryClassLoader(Thread* t, object caller) = 0;
 
   virtual void
   shutDown(Thread* t) = 0;

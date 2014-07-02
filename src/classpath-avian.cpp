@@ -179,10 +179,37 @@ class MyClasspath : public Classpath {
     return fieldAtOffset<int32_t>(b, fieldOffset(t, field));
   }
 
-  virtual bool
-  canTailCall(Thread*, object, object, object, object)
+  virtual bool canTailCall(Thread* t,
+                           object,
+                           object calleeClassName,
+                           object calleeMethodName,
+                           object)
   {
-    return true;
+    // we can't tail call System.load[Library] or
+    // Runtime.load[Library] due to their use of
+    // ClassLoader.getCaller, which gets confused if we elide stack
+    // frames.
+
+    return (
+        (strcmp("loadLibrary",
+                reinterpret_cast<char*>(&byteArrayBody(t, calleeMethodName, 0)))
+         and strcmp("load",
+                    reinterpret_cast<char*>(
+                        &byteArrayBody(t, calleeMethodName, 0))))
+        or (strcmp(
+                "java/lang/System",
+                reinterpret_cast<char*>(&byteArrayBody(t, calleeClassName, 0)))
+            and strcmp("java/lang/Runtime",
+                       reinterpret_cast<char*>(
+                           &byteArrayBody(t, calleeClassName, 0)))));
+  }
+
+  virtual object libraryClassLoader(Thread* t, object caller)
+  {
+    return (methodClass(t, caller) == type(t, Machine::ClassLoaderType)
+            and t->libraryLoadStack)
+               ? t->libraryLoadStack->classLoader
+               : classLoader(t, methodClass(t, caller));
   }
 
   virtual void
@@ -550,12 +577,23 @@ Avian_java_lang_System_identityHashCode
   }
 }
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_ClassLoader_getCaller(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<int64_t>(
+      getJClass(t, methodClass(t, getCaller(t, 2))));
+}
+
 extern "C" AVIAN_EXPORT void JNICALL
-Avian_java_lang_Runtime_load
-(Thread* t, object, uintptr_t* arguments)
+    Avian_java_lang_ClassLoader_load(Thread* t, object, uintptr_t* arguments)
 {
   object name = reinterpret_cast<object>(arguments[0]);
-  bool mapName = arguments[1];
+
+  Thread::LibraryLoadStack stack(
+      t,
+      classLoader(t, jclassVmClass(t, reinterpret_cast<object>(arguments[1]))));
+
+  bool mapName = arguments[2];
 
   unsigned length = stringLength(t, name);
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);

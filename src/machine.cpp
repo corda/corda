@@ -3337,6 +3337,7 @@ Thread::Thread(Machine* m, object javaThread, Thread* parent):
   heapOffset(0),
   protector(0),
   classInitStack(0),
+  libraryLoadStack(0),
   runnable(this),
   defaultHeap(static_cast<uintptr_t*>
               (m->heap->allocate(ThreadHeapSizeInBytes))),

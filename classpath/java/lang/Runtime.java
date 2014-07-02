@@ -29,7 +29,7 @@ public class Runtime {
 
   public void load(String path) {
     if (path != null) {
-      load(path, false);
+      ClassLoader.load(path, ClassLoader.getCaller(), false);
     } else {
       throw new NullPointerException();
     }
@@ -37,7 +37,7 @@ public class Runtime {
 
   public void loadLibrary(String path) {
     if (path != null) {
-      load(path, true);
+      ClassLoader.load(path, ClassLoader.getCaller(), true);
     } else {
       throw new NullPointerException();
     }
@@ -119,8 +119,6 @@ public class Runtime {
     throws IOException;
 
   private static native int waitFor(long pid, long tid);
-
-  private static native void load(String name, boolean mapName);
 
   private static native void kill(long pid);
 
