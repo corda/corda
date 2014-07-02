@@ -69,7 +69,7 @@ using namespace avian::util;
   private:                                                              \
     object name;                                                        \
     Thread::SingleProtector protector;                                  \
-  } MAKE_NAME(resource_)(t, reinterpret_cast<object>(name));
+  } MAKE_NAME(resource_)(t, name);
 
 #define THREAD_RESOURCE(t, type, name, releaseBody)                     \
   class MAKE_NAME(Resource_): public Thread::AutoResource {             \
@@ -1649,11 +1649,6 @@ objectClass(Thread*, object o)
 {
   return reinterpret_cast<GcClass*>(maskAlignedPointer(fieldAtOffset<object>(o, 0)));
 }
-inline GcClass*
-objectClass(Thread*, GcObject* o)
-{
-  return reinterpret_cast<GcClass*>(maskAlignedPointer(fieldAtOffset<object>(o, 0)));
-}
 
 inline unsigned
 stackSizeInWords(Thread* t)
@@ -1878,13 +1873,6 @@ setField(Thread* t, object target, unsigned offset, object value)
 }
 
 inline void
-setField(Thread* t, GcObject* target, unsigned offset, GcObject* value)
-{
-  fieldAtOffset<GcObject*>(target, offset) = value;
-  mark(t, reinterpret_cast<object>(target), offset);
-}
-
-inline void
 setObject(Thread* t, GcObject* target, unsigned offset, GcObject* value)
 {
   setField(t, target, offset, value);
@@ -1937,14 +1925,14 @@ T* GcObject::as(Thread* t UNUSED)
   }
   assertT(t,
          t->m->unsafe
-         || instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe(t, t->m->types, T::Type)), reinterpret_cast<object>(this)));
+         || instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe(t, t->m->types, T::Type)), this));
   return static_cast<T*>(this);
 }
 
 template <class T>
 bool GcObject::isa(Thread* t)
 {
-  return instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe(t, t->m->types, T::Type)), reinterpret_cast<object>(this));
+  return instanceOf(t, reinterpret_cast<GcClass*>(arrayBodyUnsafe(t, t->m->types, T::Type)), this);
 }
 
 template <class T>
@@ -2180,7 +2168,7 @@ type(Thread* t, Gc::Type type)
 inline void
 setType(Thread* t, Gc::Type type, GcClass* value)
 {
-  t->m->types->setBodyElement(t, type, reinterpret_cast<object>(value));
+  t->m->types->setBodyElement(t, type, value);
 }
 
 inline bool
@@ -2436,13 +2424,12 @@ stringHash(Thread* t, object so)
 {
   GcString* s = cast<GcString>(t, so);
   if (s->hashCode() == 0 and s->length(t)) {
-    object data = reinterpret_cast<object>(s->data());
-    if (objectClass(t, data) == type(t, GcByteArray::Type)) {
+    if (objectClass(t, s->data()) == type(t, GcByteArray::Type)) {
       s->hashCode() = hash
-        (cast<GcByteArray>(t, data)->body().subslice(s->offset(t), s->length(t)));
+        (cast<GcByteArray>(t, s->data())->body().subslice(s->offset(t), s->length(t)));
     } else {
       s->hashCode() = hash
-        (cast<GcCharArray>(t, data)->body().subslice(s->offset(t), s->length(t)));
+        (cast<GcCharArray>(t, s->data())->body().subslice(s->offset(t), s->length(t)));
     }
   }
   return s->hashCode();
@@ -2451,11 +2438,10 @@ stringHash(Thread* t, object so)
 inline uint16_t
 stringCharAt(Thread* t, GcString* s, int i)
 {
-  object data = reinterpret_cast<object>(s->data());
-  if (objectClass(t, data) == type(t, GcByteArray::Type)) {
-    return cast<GcByteArray>(t, data)->body()[s->offset(t) + i];
+  if (objectClass(t, s->data()) == type(t, GcByteArray::Type)) {
+    return cast<GcByteArray>(t, s->data())->body()[s->offset(t) + i];
   } else {
-    return cast<GcCharArray>(t, data)->body()[s->offset(t) + i];
+    return cast<GcCharArray>(t, s->data())->body()[s->offset(t) + i];
   }
 }
 
@@ -2482,8 +2468,8 @@ inline uint32_t
 methodHash(Thread* t, object mo)
 {
   GcMethod* method = cast<GcMethod>(t, mo);
-  return byteArrayHash(t, reinterpret_cast<object>(method->name()))
-    ^ byteArrayHash(t, reinterpret_cast<object>(method->spec()));
+  return byteArrayHash(t, method->name())
+    ^ byteArrayHash(t, method->spec());
 }
 
 inline bool
@@ -2492,8 +2478,8 @@ methodEqual(Thread* t, object ao, object bo)
   GcMethod* a = cast<GcMethod>(t, ao);
   GcMethod* b = cast<GcMethod>(t, bo);
   return a == b or
-    (byteArrayEqual(t, reinterpret_cast<object>(a->name()), reinterpret_cast<object>(b->name())) and
-     byteArrayEqual(t, reinterpret_cast<object>(a->spec()), reinterpret_cast<object>(b->spec())));
+    (byteArrayEqual(t, a->name(), b->name()) and
+     byteArrayEqual(t, a->spec(), b->spec()));
 }
 
 class MethodSpecIterator {
@@ -2732,7 +2718,7 @@ makeThrowable
   GcThrowable* result = cast<GcThrowable>(t, make(t, vm::type(t, type)));
 
   result->setMessage(t, message);
-  result->setTrace(t, reinterpret_cast<object>(trace));
+  result->setTrace(t, trace);
   result->setCause(t, cause);
 
   return result;
@@ -2746,7 +2732,7 @@ makeThrowableV(Thread* t, Gc::Type type, const char* format, va_list a,
 
   if (s) {
     GcString* message = t->m->classpath->makeString
-      (t, reinterpret_cast<object>(s), 0, s->length() - 1);
+      (t, s, 0, s->length() - 1);
 
     return makeThrowable(t, type, message);
   } else {
@@ -2904,7 +2890,7 @@ findInterfaceMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
   assertT(t, (class_->vmFlags() & BootstrapFlag) == 0);
 
-  object interface = reinterpret_cast<object>(method->class_());
+  GcClass* interface = method->class_();
   GcArray* itable = cast<GcArray>(t, class_->interfaceTable());
   for (unsigned i = 0; i < itable->length(); i += 2) {
     if (itable->body()[i] == interface) {
@@ -3001,12 +2987,12 @@ monitorAtomicAppendAcquire(Thread* t, GcMonitor* monitor, GcMonitorNode* node)
     if (tail == cast<GcMonitorNode>(t, monitor->acquireTail())) {
       if (next) {
         atomicCompareAndSwapObject
-          (t, reinterpret_cast<object>(monitor), MonitorAcquireTail, reinterpret_cast<object>(tail), next);
+          (t, monitor, MonitorAcquireTail, tail, next);
       } else if (atomicCompareAndSwapObject
-                 (t, reinterpret_cast<object>(tail), MonitorNodeNext, 0, reinterpret_cast<object>(node)))
+                 (t, tail, MonitorNodeNext, 0, node))
       {
         atomicCompareAndSwapObject
-          (t, reinterpret_cast<object>(monitor), MonitorAcquireTail, reinterpret_cast<object>(tail), reinterpret_cast<object>(node));
+          (t, monitor, MonitorAcquireTail, tail, node);
         return;
       }
     }
@@ -3033,7 +3019,7 @@ monitorAtomicPollAcquire(Thread* t, GcMonitor* monitor, bool remove)
       if (head == tail) {
         if (next) {
           atomicCompareAndSwapObject
-            (t, reinterpret_cast<object>(monitor), MonitorAcquireTail, reinterpret_cast<object>(tail), reinterpret_cast<object>(next));
+            (t, monitor, MonitorAcquireTail, tail, next);
         } else {
           return 0;
         }
@@ -3041,7 +3027,7 @@ monitorAtomicPollAcquire(Thread* t, GcMonitor* monitor, bool remove)
         Thread* value = static_cast<Thread*>(next->value());
         if ((not remove)
             or atomicCompareAndSwapObject
-            (t, reinterpret_cast<object>(monitor), MonitorAcquireHead, reinterpret_cast<object>(head), reinterpret_cast<object>(next)))
+            (t, monitor, MonitorAcquireHead, head, next))
         {
           return value;
         }
@@ -3437,7 +3423,7 @@ exceptionMatch(Thread* t, GcClass* type, GcThrowable* exception)
 {
   return type == 0
     or (exception != roots(t)->shutdownInProgress()
-        and instanceOf(t, type, reinterpret_cast<object>(t->exception)));
+        and instanceOf(t, type, t->exception));
 }
 
 object
@@ -3612,7 +3598,7 @@ resolveClassInObject(Thread* t, GcClassLoader* loader, object container,
     if (c) {
       storeStoreMemoryBarrier();
 
-      setField(t, container, classOffset, reinterpret_cast<object>(c));
+      setField(t, container, classOffset, c);
     }
 
     return c;
@@ -3709,7 +3695,7 @@ acquireFieldForRead(Thread* t, GcField* field)
                and (field->code() == DoubleField
                     or field->code() == LongField)))
   {
-    acquire(t, reinterpret_cast<object>(field));
+    acquire(t, field);
   }
 }
 
@@ -3721,7 +3707,7 @@ releaseFieldForRead(Thread* t, GcField* field)
         and (field->code() == DoubleField
              or field->code() == LongField))
     {
-      release(t, reinterpret_cast<object>(field));
+      release(t, field);
     } else {
       loadMemoryBarrier();
     }
@@ -3751,7 +3737,7 @@ acquireFieldForWrite(Thread* t, GcField* field)
         and (field->code() == DoubleField
              or field->code() == LongField))
     {
-      acquire(t, reinterpret_cast<object>(field));
+      acquire(t, field);
     } else {
       storeStoreMemoryBarrier();
     }
@@ -3766,7 +3752,7 @@ releaseFieldForWrite(Thread* t, GcField* field)
         and (field->code() == DoubleField
              or field->code() == LongField))
     {
-      release(t, reinterpret_cast<object>(field));
+      release(t, field);
     } else {
       storeLoadMemoryBarrier();
     }
@@ -3827,7 +3813,7 @@ getClassRuntimeData(Thread* t, GcClass* c)
     ACQUIRE(t, t->m->classLock);
 
     if (c->runtimeDataIndex() == 0) {
-      object runtimeData = reinterpret_cast<object>(makeClassRuntimeData(t, 0, 0, 0, 0));
+      GcClassRuntimeData* runtimeData = makeClassRuntimeData(t, 0, 0, 0, 0);
 
       {
         GcVector* v
@@ -3859,7 +3845,7 @@ getMethodRuntimeData(Thread* t, GcMethod* method)
     ACQUIRE(t, t->m->classLock);
 
     if (method->runtimeDataIndex() == 0) {
-      object runtimeData = reinterpret_cast<object>(makeMethodRuntimeData(t, 0));
+      GcMethodRuntimeData* runtimeData = makeMethodRuntimeData(t, 0);
 
       {
         GcVector* v
@@ -3898,7 +3884,7 @@ getJClass(Thread* t, GcClass* c)
 
       storeStoreMemoryBarrier();
 
-      getClassRuntimeData(t, c)->setJclass(t, reinterpret_cast<object>(jclass));
+      getClassRuntimeData(t, c)->setJclass(t, jclass);
     }
   }
 

@@ -16,9 +16,9 @@ namespace vm {
 class Machine;
 class Thread;
 
-struct Object { };
+class GcObject;;
 
-typedef Object* object;
+typedef GcObject* object;
 
 typedef uint8_t jboolean;
 typedef int8_t jbyte;

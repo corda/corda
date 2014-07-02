@@ -64,7 +64,7 @@ class MyClasspath : public Classpath {
     GcJmethod* jmethod = makeJmethod(t, vmMethod, false);
 
     return vmMethod->name()->body()[0] == '<'
-      ? reinterpret_cast<object>(makeJconstructor(t, jmethod)) : reinterpret_cast<object>(jmethod);
+      ? (object)makeJconstructor(t, jmethod) : (object)jmethod;
   }
 
   virtual GcMethod*
@@ -78,7 +78,7 @@ class MyClasspath : public Classpath {
   virtual object
   makeJField(Thread* t, GcField* vmField)
   {
-    return reinterpret_cast<object>(makeJfield(t, vmField, false));
+    return makeJfield(t, vmField, false);
   }
 
   virtual GcField*
@@ -232,7 +232,7 @@ enumerateThreads(Thread* t, Thread* x, GcArray* array, unsigned* index,
                  unsigned limit)
 {
   if (*index < limit) {
-    array->setBodyElement(t, *index, reinterpret_cast<object>(x->javaThread));
+    array->setBodyElement(t, *index, x->javaThread);
     ++ (*index);
 
     if (x->peer) enumerateThreads(t, x->peer, array, index, limit);
@@ -547,7 +547,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 
   for (unsigned i = 0; i < t->m->propertyCount; ++i) {
     GcString* s = makeString(t, "%s", t->m->properties[i]);
-    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, reinterpret_cast<object>(s));
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, s);
   }
 
   return reinterpret_cast<int64_t>(array);
@@ -618,7 +618,7 @@ Avian_java_lang_Runtime_addShutdownHook
 
   ACQUIRE(t, t->m->shutdownLock);
 
-  GcPair* p = makePair(t, hook, reinterpret_cast<object>(roots(t)->shutdownHooks()));
+  GcPair* p = makePair(t, hook, roots(t)->shutdownHooks());
   // sequence point, for gc (don't recombine statements)
   roots(t)->setShutdownHooks(t, p);
 }
@@ -644,7 +644,7 @@ Avian_java_lang_Throwable_resolveTrace
 
   for (unsigned i = 0; i < length; ++i) {
     GcStackTraceElement* ste = makeStackTraceElement(t, cast<GcTraceElement>(t, objectArrayBody(t, trace, i)));
-    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, reinterpret_cast<object>(ste));
+    reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, ste);
   }
 
   return reinterpret_cast<int64_t>(array);

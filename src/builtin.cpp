@@ -255,13 +255,13 @@ Avian_avian_SystemClassLoader_getPackageSource
   GcByteArray* key = makeByteArray(t, RUNTIME_ARRAY_BODY(chars));
 
   GcByteArray* array = cast<GcByteArray>(t, hashMapFind
-    (t, roots(t)->packageMap(), reinterpret_cast<object>(key), byteArrayHash, byteArrayEqual));
+    (t, roots(t)->packageMap(), key, byteArrayHash, byteArrayEqual));
 
   if (array) {
     return reinterpret_cast<uintptr_t>(makeLocalReference(
         t,
-        reinterpret_cast<object>(t->m->classpath->makeString(
-            t, reinterpret_cast<object>(array), 0, array->length()))));
+        t->m->classpath->makeString(
+            t, array, 0, array->length())));
   } else {
     return 0;
   }
@@ -777,7 +777,7 @@ Avian_sun_misc_Unsafe_putObjectVolatile
   object value = reinterpret_cast<object>(arguments[4]);
 
   storeStoreMemoryBarrier();
-  setField(t, o, offset, reinterpret_cast<object>(value));
+  setField(t, o, offset, value);
   storeLoadMemoryBarrier();
 }
 
@@ -866,9 +866,9 @@ Avian_sun_misc_Unsafe_getLongVolatile
   object lock;
   if (BytesPerWord < 8) {
     if (objectClass(t, o)->arrayDimensions()) {
-      lock = reinterpret_cast<object>(objectClass(t, o));
+      lock = objectClass(t, o);
     } else {
-      lock = reinterpret_cast<object>(fieldForOffset(t, cast<GcSingleton>(t, o), offset));
+      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
     }
 
     PROTECT(t, o);
@@ -898,9 +898,9 @@ Avian_sun_misc_Unsafe_putLongVolatile
   object lock;
   if (BytesPerWord < 8) {
     if (objectClass(t, o)->arrayDimensions()) {
-      lock = reinterpret_cast<object>(objectClass(t, o));
+      lock = objectClass(t, o);
     } else {
-      lock = reinterpret_cast<object>(fieldForOffset(t, cast<GcSingleton>(t, o), offset));
+      lock = fieldForOffset(t, cast<GcSingleton>(t, o), offset);
     }
 
     PROTECT(t, o);

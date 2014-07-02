@@ -327,7 +327,7 @@ hashMapFindNode(Thread* t, GcHashMap* map, object key,
     for (GcTriple* n = cast<GcTriple>(t, array->body()[index]); n; n = cast<GcTriple>(t, n->third())) {
       object k = n->first();
       if (weak) {
-        k = reinterpret_cast<object>(cast<GcJreference>(t, k)->target());
+        k = cast<GcJreference>(t, k)->target();
         if (k == 0) {
           continue;
         }
@@ -375,7 +375,7 @@ hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
 
           object k = p->first();
           if (weak) {
-            k = reinterpret_cast<object>(cast<GcJreference>(t, k)->target());
+            k = cast<GcJreference>(t, k)->target();
             if (k == 0) {
               continue;
             }
@@ -384,7 +384,7 @@ hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
           unsigned index = hash(t, k) & (newLength - 1);
 
           p->setThird(t, newArray->body()[index]);
-          newArray->setBodyElement(t, index, reinterpret_cast<object>(p));
+          newArray->setBodyElement(t, index, p);
         }
       }
     }
@@ -429,9 +429,9 @@ hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
     GcWeakReference* r = makeWeakReference(t, 0, 0, 0, 0);
 
     r->setTarget(t, key);
-    r->setVmNext(t, reinterpret_cast<object>(t->m->weakReferences));
+    r->setVmNext(t, t->m->weakReferences);
     t->m->weakReferences = r->as<GcJreference>(t);
-    k = reinterpret_cast<object>(r);
+    k = r;
 
     array = map->array();
   }
@@ -443,7 +443,7 @@ hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
   unsigned index = h & (array->length() - 1);
 
   n->setThird(t, array->body()[index]);
-  array->setBodyElement(t, index, reinterpret_cast<object>(n));
+  array->setBodyElement(t, index, n);
 
   if (map->size() <= array->length() / 3) {
     // this might happen if nodes were removed during GC in which case
@@ -479,7 +479,7 @@ hashMapRemove(Thread* t, GcHashMap* map, object key,
     for (GcTriple* n = cast<GcTriple>(t, array->body()[index]); n;) {
       object k = n->first();
       if (weak) {
-        k = reinterpret_cast<object>(cast<GcJreference>(t, k)->target());
+        k = cast<GcJreference>(t, k)->target();
         if (k == 0) {
           n = cast<GcTriple>(t, hashMapRemoveNode(t, map, index, p, n)->third());
           continue;
@@ -513,7 +513,7 @@ listAppend(Thread* t, GcList* list, object value)
 
   ++ list->size();
   
-  object p = reinterpret_cast<object>(makePair(t, value, 0));
+  object p = makePair(t, value, 0);
   if (list->front()) {
     cast<GcPair>(t, list->rear())->setSecond(t, p);
   } else {

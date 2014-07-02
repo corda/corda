@@ -1024,7 +1024,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
       out->write(cppFieldType(module, f));
       out->write(" value) { ");
       if(isFieldGcMarkable(module, f)) {
-        out->write("setField(t, reinterpret_cast<object>(this), ");
+        out->write("setField(t, this , ");
         out->write(capitalize(cl->name));
         out->write(capitalize(f.name));
         out->write(", reinterpret_cast<object>(value));");
@@ -1105,7 +1105,7 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
     out->write(cppFieldType(module, f));
     out->write(" value) { ");
     if(isFieldGcMarkable(module, f)) {
-      out->write("setField(t, reinterpret_cast<object>(this), ");
+      out->write("setField(t, this , ");
       out->write(capitalize(cl->name));
       out->write(capitalize(f.name));
       out->write(" + index * (");

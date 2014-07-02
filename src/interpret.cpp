@@ -318,7 +318,7 @@ pushFrame(Thread* t, GcMethod* method)
     // to release a monitor we never successfully acquired when we try
     // to pop the frame back off.
     if (method->flags() & ACC_STATIC) {
-      acquire(t, reinterpret_cast<object>(method->class_()));
+      acquire(t, method->class_());
     } else {
       acquire(t, peekObject(t, base));
     }
@@ -345,7 +345,7 @@ pushFrame(Thread* t, GcMethod* method)
   t->sp = frame + FrameFootprint;
 
   pokeInt(t, frame + FrameBaseOffset, base);
-  pokeObject(t, frame + FrameMethodOffset, reinterpret_cast<object>(method));
+  pokeObject(t, frame + FrameMethodOffset, method);
   pokeInt(t, t->frame + FrameIpOffset, 0);
 }
 
@@ -356,7 +356,7 @@ popFrame(Thread* t)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, reinterpret_cast<object>(method->class_()));
+      release(t, method->class_());
     } else {
       release(t, peekObject(t, frameBase(t, t->frame)));
     }
@@ -889,7 +889,7 @@ interpret3(Thread* t, const int base)
 
       GcClass* class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
 
-      pushObject(t, reinterpret_cast<object>(makeObjectArray(t, class_, count)));
+      pushObject(t, makeObjectArray(t, class_, count));
     } else {
       exception = makeThrowable
         (t, GcNegativeArraySizeException::Type, "%d", count);
@@ -1498,7 +1498,7 @@ interpret3(Thread* t, const int base)
 
     ACQUIRE_FIELD_FOR_READ(t, field);
 
-    pushField(t, reinterpret_cast<object>(field->class_()->staticTable()), field);
+    pushField(t, field->class_()->staticTable(), field);
   } goto loop;
 
   case goto_: {
@@ -1948,7 +1948,7 @@ interpret3(Thread* t, const int base)
       pushInt(t, result);
       goto loop;
     } else {
-      return reinterpret_cast<object>(makeInt(t, result));
+      return makeInt(t, result);
     }
   } goto loop;
 
@@ -2258,7 +2258,7 @@ interpret3(Thread* t, const int base)
       pushLong(t, result);
       goto loop;
     } else {
-      return reinterpret_cast<object>(makeLong(t, result));
+      return makeLong(t, result);
     }
   } goto loop;
 
@@ -2360,7 +2360,7 @@ interpret3(Thread* t, const int base)
       }
     }
 
-    object array = reinterpret_cast<object>(makeArray(t, RUNTIME_ARRAY_BODY(counts)[0]));
+    object array = makeArray(t, RUNTIME_ARRAY_BODY(counts)[0]);
     setObjectClass(t, array, class_);
     PROTECT(t, array);
 
@@ -2390,35 +2390,35 @@ interpret3(Thread* t, const int base)
 
       switch (type) {
       case T_BOOLEAN:
-        array = reinterpret_cast<object>(makeBooleanArray(t, count));
+        array = makeBooleanArray(t, count);
         break;
 
       case T_CHAR:
-        array = reinterpret_cast<object>(makeCharArray(t, count));
+        array = makeCharArray(t, count);
         break;
 
       case T_FLOAT:
-        array = reinterpret_cast<object>(makeFloatArray(t, count));
+        array = makeFloatArray(t, count);
         break;
 
       case T_DOUBLE:
-        array = reinterpret_cast<object>(makeDoubleArray(t, count));
+        array = makeDoubleArray(t, count);
         break;
 
       case T_BYTE:
-        array = reinterpret_cast<object>(makeByteArray(t, count));
+        array = makeByteArray(t, count);
         break;
 
       case T_SHORT:
-        array = reinterpret_cast<object>(makeShortArray(t, count));
+        array = makeShortArray(t, count);
         break;
 
       case T_INT:
-        array = reinterpret_cast<object>(makeIntArray(t, count));
+        array = makeIntArray(t, count);
         break;
 
       case T_LONG:
-        array = reinterpret_cast<object>(makeLongArray(t, count));
+        array = makeLongArray(t, count);
         break;
 
       default: abort(t);
@@ -2560,7 +2560,7 @@ interpret3(Thread* t, const int base)
     } break;
 
     case ObjectField: {
-      setField(t, reinterpret_cast<object>(table), field->offset(), popObject(t));
+      setField(t, table, field->offset(), popObject(t));
     } break;
 
     default: abort(t);
@@ -2756,7 +2756,7 @@ interpret3(Thread* t, const int base)
     if (eh) {
       sp = frame + FrameFootprint;
       ip = exceptionHandlerIp(eh);
-      pushObject(t, reinterpret_cast<object>(exception));
+      pushObject(t, exception);
       exception = 0;
       goto loop;
     }
@@ -2937,12 +2937,12 @@ invoke(Thread* t, GcMethod* method)
     case ShortField:
     case FloatField:
     case IntField:
-      result = reinterpret_cast<object>(makeInt(t, popInt(t)));
+      result = makeInt(t, popInt(t));
       break;
 
     case LongField:
     case DoubleField:
-      result = reinterpret_cast<object>(makeLong(t, popLong(t)));
+      result = makeLong(t, popLong(t));
       break;
 
     case ObjectField:

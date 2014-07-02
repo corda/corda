@@ -187,7 +187,7 @@ GetStringCritical(Thread* t, jstring s, jboolean* isCopy)
     *isCopy = true;
   }
 
-  object data = reinterpret_cast<object>((*s)->data());
+  object data = (*s)->data();
   if (objectClass(t, data) == type(t, GcByteArray::Type)) {
     return GetStringChars(t, s, isCopy);
   } else {
@@ -267,8 +267,8 @@ newString(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>(
       makeLocalReference(t,
-                         reinterpret_cast<object>(t->m->classpath->makeString(
-                             t, reinterpret_cast<object>(a), 0, size))));
+                         t->m->classpath->makeString(
+                             t, a, 0, size)));
 }
 
 jstring JNICALL
@@ -291,8 +291,8 @@ newStringUTF(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference
-     (t, reinterpret_cast<object>(t->m->classpath->makeString
-      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1))));
+     (t, t->m->classpath->makeString
+      (t, array, 0, fieldAtOffset<uintptr_t>(array, BytesPerWord) - 1)));
 }
 
 jstring JNICALL
@@ -325,14 +325,14 @@ defineClass(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>(makeLocalReference(
       t,
-      reinterpret_cast<object>(getJClass(t,
+      getJClass(t,
                 cast<GcClass>(
                     t,
                     defineClass(t,
                                 loader ? cast<GcClassLoader>(t, *loader)
                                        : roots(t)->bootLoader(),
                                 buffer,
-                                length))))));
+                                length)))));
 }
 
 jclass JNICALL
@@ -368,7 +368,7 @@ findClass(Thread* t, uintptr_t* arguments)
     initClass(t, c);
   }
 
-  return reinterpret_cast<uint64_t>(makeLocalReference(t, reinterpret_cast<object>(getJClass(t, c))));
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
 }
 
 jclass JNICALL
@@ -457,7 +457,7 @@ getObjectClass(Thread* t, uintptr_t* arguments)
   jobject o = reinterpret_cast<jobject>(arguments[0]);
 
   return reinterpret_cast<uint64_t>(makeLocalReference(
-      t, reinterpret_cast<object>(getJClass(t, objectClass(t, *o)))));
+      t, getJClass(t, objectClass(t, *o))));
 }
 
 jclass JNICALL
@@ -477,7 +477,7 @@ getSuperclass(Thread* t, uintptr_t* arguments)
   } else {
     GcClass* super = class_->super();
     return super ? reinterpret_cast<uint64_t>
-      (makeLocalReference(t, reinterpret_cast<object>(getJClass(t, super)))) : 0;
+      (makeLocalReference(t, getJClass(t, super))) : 0;
   }
 }
 
@@ -549,7 +549,7 @@ methodID(Thread* t, GcMethod* method)
 
     if (method->nativeID() == 0) {
       GcVector* v = vectorAppend(
-          t, roots(t)->jNIMethodTable(), reinterpret_cast<object>(method));
+          t, roots(t)->jNIMethodTable(), method);
       // sequence point, for gc (don't recombine statements)
       roots(t)->setJNIMethodTable(t, v);
 
@@ -1503,7 +1503,7 @@ fieldID(Thread* t, GcField* field)
 
     if (field->nativeID() == 0) {
       GcVector* v = vectorAppend(
-          t, roots(t)->jNIFieldTable(), reinterpret_cast<object>(field));
+          t, roots(t)->jNIFieldTable(), field);
       // sequence point, for gc (don't recombine statements)
       roots(t)->setJNIFieldTable(t, v);
 
@@ -2229,7 +2229,7 @@ setStaticObjectField(Thread* t, uintptr_t* arguments)
   PROTECT(t, field);
   ACQUIRE_FIELD_FOR_WRITE(t, field);
 
-  setField(t, reinterpret_cast<object>(c->vmClass()->staticTable()), field->offset(),
+  setField(t, c->vmClass()->staticTable(), field->offset(),
       (v ? *v : 0));
 
   return 1;
@@ -2547,7 +2547,7 @@ ExceptionOccurred(Thread* t)
 {
   ENTER(t, Thread::ActiveState);
 
-  return reinterpret_cast<jthrowable>(makeLocalReference(t, reinterpret_cast<object>(t->exception)));
+  return reinterpret_cast<jthrowable>(makeLocalReference(t, t->exception));
 }
 
 void JNICALL
@@ -2578,7 +2578,7 @@ newObjectArray(Thread* t, uintptr_t* arguments)
   for (jsize i = 0; i < length; ++i) {
     reinterpret_cast<GcArray*>(a)->setBodyElement(t, i, value);
   }
-  return reinterpret_cast<uint64_t>(makeLocalReference(t, reinterpret_cast<object>(a)));
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, a));
 }
 
 jobjectArray JNICALL
@@ -2633,7 +2633,7 @@ NewBooleanArray(Thread* t, jsize length)
 object
 makeByteArray0(Thread* t, unsigned length)
 {
-  return reinterpret_cast<object>(makeByteArray(t, length));
+  return makeByteArray(t, length);
 }
 
 jbyteArray JNICALL

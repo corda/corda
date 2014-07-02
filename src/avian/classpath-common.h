@@ -38,7 +38,7 @@ getTrace(Thread* t, unsigned skipCount)
         {
           return true;
         } else {
-          trace = reinterpret_cast<object>(makeTrace(t, walker));
+          trace = makeTrace(t, walker);
           return false;
         }
       } else {
@@ -54,16 +54,14 @@ getTrace(Thread* t, unsigned skipCount)
 
   t->m->processor->walkStack(t, &v);
 
-  if (v.trace == 0) v.trace = reinterpret_cast<object>(makeObjectArray(t, 0));
+  if (v.trace == 0) v.trace = makeObjectArray(t, 0);
 
   return v.trace;
 }
 
 bool
-compatibleArrayTypes(Thread* t, object ao, object bo)
+compatibleArrayTypes(Thread* t UNUSED, GcClass* a, GcClass* b)
 {
-  GcClass* a = cast<GcClass>(t, ao);
-  GcClass* b = cast<GcClass>(t, bo);
   return a->arrayElementSize()
     and b->arrayElementSize()
     and (a == b
@@ -77,7 +75,7 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
 {
   if (LIKELY(src and dst)) {
     if (LIKELY(compatibleArrayTypes
-               (t, reinterpret_cast<object>(objectClass(t, src)), reinterpret_cast<object>(objectClass(t, dst)))))
+               (t, objectClass(t, src), objectClass(t, dst))))
     {
       unsigned elementSize = objectClass(t, src)->arrayElementSize();
 
@@ -300,7 +298,7 @@ makeStackTraceElement(Thread* t, GcTraceElement* e)
   PROTECT(t, method_name);
 
   GcString* method_name_string = t->m->classpath->makeString
-    (t, reinterpret_cast<object>(method_name), 0, method_name->length() - 1);
+    (t, method_name, 0, method_name->length() - 1);
   PROTECT(t, method_name_string);
 
   unsigned line = t->m->processor->lineNumber
@@ -308,38 +306,38 @@ makeStackTraceElement(Thread* t, GcTraceElement* e)
 
   GcByteArray* file = method->class_()->sourceFile();
   GcString* file_string = file ? t->m->classpath->makeString
-    (t, reinterpret_cast<object>(file), 0, file->length() - 1) : 0;
+    (t, file, 0, file->length() - 1) : 0;
 
   return makeStackTraceElement(t, class_name_string, method_name_string, file_string, line);
 }
 
-object
+GcObject*
 translateInvokeResult(Thread* t, unsigned returnCode, object o)
 {
   switch (returnCode) {
   case ByteField:
-    return reinterpret_cast<object>(makeByte(t, cast<GcInt>(t, o)->value()));
+    return makeByte(t, cast<GcInt>(t, o)->value());
 
   case BooleanField:
-    return reinterpret_cast<object>(makeBoolean(t, cast<GcInt>(t, o)->value() != 0));
+    return makeBoolean(t, cast<GcInt>(t, o)->value() != 0);
 
   case CharField:
-    return reinterpret_cast<object>(makeChar(t, cast<GcInt>(t, o)->value()));
+    return makeChar(t, cast<GcInt>(t, o)->value());
 
   case ShortField:
-    return reinterpret_cast<object>(makeShort(t, cast<GcInt>(t, o)->value()));
+    return makeShort(t, cast<GcInt>(t, o)->value());
 
   case FloatField:
-    return reinterpret_cast<object>(makeFloat(t, cast<GcInt>(t, o)->value()));
+    return makeFloat(t, cast<GcInt>(t, o)->value());
 
   case IntField:
   case LongField:
   case ObjectField:
   case VoidField:
-    return o;
+    return reinterpret_cast<GcObject*>(o);
 
   case DoubleField:
-    return reinterpret_cast<object>(makeDouble(t, cast<GcLong>(t, o)->value()));
+    return makeDouble(t, cast<GcLong>(t, o)->value());
 
   default:
     abort(t);
@@ -400,7 +398,7 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
         (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
          offset - start);
 
-      list = makePair(t, reinterpret_cast<object>(type), reinterpret_cast<object>(list));
+      list = makePair(t, type, list);
 
       ++ count;
     } break;
@@ -424,13 +422,13 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
         (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
          offset - start);
 
-      list = makePair(t, reinterpret_cast<object>(type), reinterpret_cast<object>(list));
+      list = makePair(t, type, list);
       ++ count;
     } break;
 
     default:
       list = makePair
-        (t, reinterpret_cast<object>(primitiveClass(t, spec->body()[offset])), reinterpret_cast<object>(list));
+        (t, primitiveClass(t, spec->body()[offset]), list);
       ++ offset;
       ++ count;
       break;
@@ -456,7 +454,7 @@ resolveParameterJTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
   PROTECT(t, array);
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
-    object c = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, list->first())));
+    object c = getJClass(t, cast<GcClass>(t, list->first()));
     reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, c);
     list = cast<GcPair>(t, list->second());
   }
@@ -489,12 +487,12 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
     object o = singletonObject(t, addendum->pool()->as<GcSingleton>(t), index);
 
     if (objectClass(t, o) == type(t, GcReference::Type)) {
-      o = reinterpret_cast<object>(resolveClass(t, loader, cast<GcReference>(t, o)->name()));
+      o = resolveClass(t, loader, cast<GcReference>(t, o)->name());
 
       addendum->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
     }
 
-    o = reinterpret_cast<object>(getJClass(t, cast<GcClass>(t, o)));
+    o = getJClass(t, cast<GcClass>(t, o));
 
     reinterpret_cast<GcArray*>(array)->setBodyElement(t, i, o);
   }
@@ -615,7 +613,7 @@ intercept(Thread* t, GcClass* c, const char* name, const char* spec,
       // through the vtable.
       clone->flags() |= ACC_PRIVATE;
 
-      GcNativeIntercept* native = makeNativeIntercept(t, function, true, reinterpret_cast<object>(clone));
+      GcNativeIntercept* native = makeNativeIntercept(t, function, true, clone);
 
       PROTECT(t, native);
 
@@ -691,7 +689,7 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
       for (unsigned i = 0; i < table->length(); ++i) {
         GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
         GcByteArray* outer = reference->outer();
-        if (outer and byteArrayEqual(t, reinterpret_cast<object>(outer), reinterpret_cast<object>(c->name()))
+        if (outer and byteArrayEqual(t, outer, c->name())
             and ((not publicOnly)
                  or (reference->flags() & ACC_PUBLIC)))
         {
@@ -705,16 +703,16 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
       for (unsigned i = 0; i < table->length(); ++i) {
         GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
         GcByteArray* outer = reference->outer();
-        if (outer and byteArrayEqual(t, reinterpret_cast<object>(outer), reinterpret_cast<object>(c->name()))
+        if (outer and byteArrayEqual(t, outer, c->name())
             and ((not publicOnly)
                  or (reference->flags() & ACC_PUBLIC)))
         {
-          object inner = reinterpret_cast<object>(getJClass(
+          object inner = getJClass(
               t,
               resolveClass(
                   t,
                   c->loader(),
-                  reference->inner())));
+                  reference->inner()));
 
           -- count;
           reinterpret_cast<GcArray*>(result)->setBodyElement(t, count, inner);
