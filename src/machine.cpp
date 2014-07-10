@@ -4660,7 +4660,8 @@ postInitClass(Thread* t, object c)
   PROTECT(t, c);
   ACQUIRE(t, t->m->classLock);
 
-  if (t->exception) {
+  if (t->exception
+      and instanceOf(t, type(t, Machine::ExceptionType), t->exception)) {
     classVmFlags(t, c) |= NeedInitFlag | InitErrorFlag;
     classVmFlags(t, c) &= ~InitFlag;
 
