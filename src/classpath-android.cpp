@@ -188,11 +188,11 @@ void initVmThread(Thread* t, GcThread* thread, unsigned offset)
 
     t->m->processor->invoke(t, constructor, instance, thread);
 
-    set(t, reinterpret_cast<object>(thread), offset, instance);
+    setField(t, reinterpret_cast<object>(thread), offset, instance);
   }
 
   if (thread->group() == 0) {
-    set(t, thread, ThreadGroup, t->javaThread->group());
+    thread->setGroup(t, t->javaThread->group());
     expect(t, thread->group());
   }
 }
@@ -220,7 +220,7 @@ translateStackTrace(Thread* t, object raw)
   for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
     GcStackTraceElement* e = makeStackTraceElement(t, cast<GcTraceElement>(t, objectArrayBody(t, raw, i)));
 
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(e));
+    setField(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(e));
   }
 
   return array;
@@ -237,11 +237,11 @@ class MyClasspath : public Classpath {
   {
     PROTECT(t, class_);
 
-    object c = allocate(t, GcJclass::FixedSize, true);
-    setObjectClass(t, c, type(t, GcJclass::Type));
-    set(t, c, JclassVmClass, reinterpret_cast<object>(class_));
+    GcJclass* c = reinterpret_cast<GcJclass*>(allocate(t, GcJclass::FixedSize, true));
+    setObjectClass(t, reinterpret_cast<object>(c), type(t, GcJclass::Type));
+    c->setVmClass(t, class_);
 
-    return c;
+    return reinterpret_cast<object>(c);
   }
 
   virtual GcString*
@@ -303,7 +303,7 @@ class MyClasspath : public Classpath {
     t->m->processor->invoke
       (t, constructor, reinterpret_cast<object>(thread), group, 0, NormalPriority, false);
 
-    set(t, thread, ThreadContextClassLoader, roots(t)->appLoader());
+    thread->setContextClassLoader(t, roots(t)->appLoader());
 
     initVmThread(t, thread);
 
@@ -823,7 +823,7 @@ setField(Thread* t, GcField* field, object instance, object value)
     break;
 
   case ObjectField:
-    set(t, target, offset, value);
+    setField(t, target, offset, value);
     break;
 
   default: abort(t);
@@ -1097,7 +1097,7 @@ Avian_java_lang_Class_getInterfaces
 
       for (unsigned i = 0; i < table->length(); ++i) {
         GcJclass* c = getJClass(t, cast<GcClass>(t, table->body()[i]));
-        set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(c));
+        setField(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(c));
       }
 
       return reinterpret_cast<uintptr_t>(array);
@@ -1349,12 +1349,12 @@ Avian_dalvik_system_VMRuntime_properties
   unsigned i;
   for (i = 0; i < t->m->propertyCount; ++i) {
     GcString* s = makeString(t, "%s", t->m->properties[i]);
-    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(s));
+    setField(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(s));
   }
 
   {
     GcString* s = makeString(t, "%s", "java.protocol.handler.pkgs=avian");
-    set(t, array, ArrayBody + (i++ * BytesPerWord), reinterpret_cast<object>(s));
+    setField(t, array, ArrayBody + (i++ * BytesPerWord), reinterpret_cast<object>(s));
   }
 
   return reinterpret_cast<uintptr_t>(array);
@@ -1478,7 +1478,7 @@ Avian_java_lang_VMThread_sleep
 
   if (t->javaThread->sleepLock() == 0) {
     object lock = reinterpret_cast<object>(makeJobject(t));
-    set(t, reinterpret_cast<object>(t->javaThread), ThreadSleepLock, lock);
+    t->javaThread->setSleepLock(t, lock);
   }
 
   acquire(t, t->javaThread->sleepLock());
@@ -1552,7 +1552,7 @@ Avian_dalvik_system_VMStack_getClasses
         
         assertT(t, counter - 2 < objectArrayLength(t, array));
 
-        set(t, array, ArrayBody + ((counter - 2) * BytesPerWord), reinterpret_cast<object>(c));
+        setField(t, array, ArrayBody + ((counter - 2) * BytesPerWord), reinterpret_cast<object>(c));
 
         return true;
       }
@@ -1963,7 +1963,7 @@ Avian_java_lang_reflect_Method_getDeclaredAnnotations
           (t, get, 0, method->class_()->loader(),
            objectArrayBody(t, table, i));
 
-        set(t, array, ArrayBody + (i * BytesPerWord), a);
+        setField(t, array, ArrayBody + (i * BytesPerWord), a);
       }
 
       return reinterpret_cast<uintptr_t>(array);
@@ -2018,7 +2018,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
                                       cast<GcClass>(t, reinterpret_cast<object>(arguments[0]))->loader(),
                                       objectArrayBody(t, table, i));
 
-        set(t, array, ArrayBody + (i * BytesPerWord), a);
+        setField(t, array, ArrayBody + (i * BytesPerWord), a);
       }
 
       return reinterpret_cast<uintptr_t>(array);
@@ -2226,7 +2226,7 @@ Avian_java_lang_reflect_Field_getSignatureAnnotation
       GcString* string = t->m->classpath->makeString
         (t, reinterpret_cast<object>(signature), 0, signature->length() - 1);
       
-      set(t, array, ArrayBody, reinterpret_cast<object>(string));
+      setField(t, array, ArrayBody, reinterpret_cast<object>(string));
 
       return reinterpret_cast<uintptr_t>(array);
     }
