@@ -20,4 +20,4 @@
 #define DOUBLE_TYPE 6
 #define POINTER_TYPE 7
 
-#endif//TYPES_H
+#endif  // TYPES_H

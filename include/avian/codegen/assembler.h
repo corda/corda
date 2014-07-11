@@ -23,16 +23,17 @@ namespace codegen {
 class Architecture;
 
 class OperandInfo {
-public:
+ public:
   const unsigned size;
   const lir::OperandType type;
   lir::Operand* const operand;
 
-  inline OperandInfo(unsigned size, lir::OperandType type, lir::Operand* operand):
-    size(size),
-    type(type),
-    operand(operand)
-  { }
+  inline OperandInfo(unsigned size,
+                     lir::OperandType type,
+                     lir::Operand* operand)
+      : size(size), type(type), operand(operand)
+  {
+  }
 };
 
 #ifdef AVIAN_TAILS
@@ -49,11 +50,9 @@ const bool UseFramePointer = false;
 
 class Assembler {
  public:
-
   class Client {
    public:
-    virtual int acquireTemporary
-    (uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
+    virtual int acquireTemporary(uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
     virtual void releaseTemporary(int r) = 0;
 
     virtual void save(int r) = 0;
@@ -75,20 +74,23 @@ class Assembler {
   virtual void allocateFrame(unsigned footprint) = 0;
   virtual void adjustFrame(unsigned difference) = 0;
   virtual void popFrame(unsigned footprint) = 0;
-  virtual void popFrameForTailCall(unsigned footprint, int offset,
+  virtual void popFrameForTailCall(unsigned footprint,
+                                   int offset,
                                    int returnAddressSurrogate,
                                    int framePointerSurrogate) = 0;
   virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
-                                                unsigned argumentFootprint)
-  = 0;
+                                                unsigned argumentFootprint) = 0;
   virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
                                                unsigned stackOffsetFromThread)
-  = 0;
+      = 0;
 
   virtual void apply(lir::Operation op) = 0;
   virtual void apply(lir::UnaryOperation op, OperandInfo a) = 0;
   virtual void apply(lir::BinaryOperation op, OperandInfo a, OperandInfo b) = 0;
-  virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c) = 0;
+  virtual void apply(lir::TernaryOperation op,
+                     OperandInfo a,
+                     OperandInfo b,
+                     OperandInfo c) = 0;
 
   virtual void setDestination(uint8_t* dst) = 0;
 
@@ -107,7 +109,7 @@ class Assembler {
   virtual void dispose() = 0;
 };
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_H

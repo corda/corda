@@ -84,15 +84,13 @@ object hashMapRemove(Thread* t,
 
 object hashMapIterator(Thread* t, GcHashMap* map);
 
-object
-hashMapIteratorNext(Thread* t, object it);
+object hashMapIteratorNext(Thread* t, object it);
 
 void listAppend(Thread* t, GcList* list, object value);
 
 GcVector* vectorAppend(Thread* t, GcVector* vector, object value);
 
-object
-growArray(Thread* t, object array);
+object growArray(Thread* t, object array);
 
 object treeQuery(Thread* t,
                  GcTreeNode* tree,
@@ -115,7 +113,7 @@ void treeUpdate(Thread* t,
                 GcTreeNode* sentinal,
                 intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
-class HashMapIterator: public Thread::Protector {
+class HashMapIterator : public Thread::Protector {
  public:
   HashMapIterator(Thread* t, GcHashMap* map)
       : Protector(t), map(map), node(0), index(0)
@@ -123,7 +121,8 @@ class HashMapIterator: public Thread::Protector {
     find();
   }
 
-  void find() {
+  void find()
+  {
     GcArray* array = map->array();
     if (array) {
       for (unsigned i = index; i < array->length(); ++i) {
@@ -137,7 +136,8 @@ class HashMapIterator: public Thread::Protector {
     node = 0;
   }
 
-  bool hasMore() {
+  bool hasMore()
+  {
     return node != 0;
   }
 
@@ -156,7 +156,8 @@ class HashMapIterator: public Thread::Protector {
     }
   }
 
-  virtual void visit(Heap::Visitor* v) {
+  virtual void visit(Heap::Visitor* v)
+  {
     v->visit(&map);
     v->visit(&node);
   }
@@ -166,6 +167,6 @@ class HashMapIterator: public Thread::Protector {
   unsigned index;
 };
 
-} // vm
+}  // vm
 
-#endif//UTIL_H
+#endif  // UTIL_H

@@ -16,8 +16,7 @@ using namespace vm;
 
 namespace {
 
-unsigned
-mangledSize(int8_t c)
+unsigned mangledSize(int8_t c)
 {
   switch (c) {
   case '_':
@@ -33,8 +32,7 @@ mangledSize(int8_t c)
   }
 }
 
-unsigned
-mangle(int8_t c, char* dst)
+unsigned mangle(int8_t c, char* dst)
 {
   switch (c) {
   case '/':
@@ -75,7 +73,7 @@ unsigned jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
     size += mangledSize(className->body()[i]);
   }
 
-  ++ size;
+  ++size;
 
   GcByteArray* methodName = method->name();
   for (unsigned i = 0; i < methodName->length() - 1; ++i) {
@@ -117,7 +115,7 @@ void makeJNIName(Thread* t UNUSED,
   for (unsigned i = 0; i < methodName->length() - 1; ++i) {
     name += mangle(methodName->body()[i], name);
   }
-  
+
   if (decorate) {
     *(name++) = '_';
     *(name++) = '_';
@@ -133,8 +131,9 @@ void makeJNIName(Thread* t UNUSED,
   *(name++) = 0;
 }
 
-void*
-resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
+void* resolveNativeMethod(Thread* t,
+                          const char* undecorated,
+                          const char* decorated)
 {
   for (System::Library* lib = t->m->libraries; lib; lib = lib->next()) {
     void* p = lib->resolve(undecorated);
@@ -160,16 +159,21 @@ void* resolveNativeMethod(Thread* t,
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   // extra 6 is for code below:
   THREAD_RUNTIME_ARRAY(t, char, undecorated, undecoratedSize + 1 + 6);
-  makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(undecorated) + 1,
-              method, false);
+  makeJNIName(t,
+              prefix,
+              prefixLength,
+              RUNTIME_ARRAY_BODY(undecorated) + 1,
+              method,
+              false);
 
   unsigned decoratedSize = prefixLength + jniNameLength(t, method, true);
   // extra 6 is for code below:
   THREAD_RUNTIME_ARRAY(t, char, decorated, decoratedSize + 1 + 6);
-  makeJNIName(t, prefix, prefixLength, RUNTIME_ARRAY_BODY(decorated) + 1,
-              method, true);
+  makeJNIName(
+      t, prefix, prefixLength, RUNTIME_ARRAY_BODY(decorated) + 1, method, true);
 
-  void* p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated) + 1,
+  void* p = resolveNativeMethod(t,
+                                RUNTIME_ARRAY_BODY(undecorated) + 1,
                                 RUNTIME_ARRAY_BODY(decorated) + 1);
   if (p) {
     return p;
@@ -180,26 +184,31 @@ void* resolveNativeMethod(Thread* t,
   if (footprint == -1) {
     footprint = methodParameterFootprint(t, method) + 1;
     if (method->flags() & ACC_STATIC) {
-      ++ footprint;
+      ++footprint;
     }
   }
 
   *RUNTIME_ARRAY_BODY(undecorated) = '_';
-  vm::snprintf(RUNTIME_ARRAY_BODY(undecorated) + undecoratedSize + 1, 5, "@%d",
+  vm::snprintf(RUNTIME_ARRAY_BODY(undecorated) + undecoratedSize + 1,
+               5,
+               "@%d",
                footprint * BytesPerWord);
 
   *RUNTIME_ARRAY_BODY(decorated) = '_';
-  vm::snprintf(RUNTIME_ARRAY_BODY(decorated) + decoratedSize + 1, 5, "@%d",
+  vm::snprintf(RUNTIME_ARRAY_BODY(decorated) + decoratedSize + 1,
+               5,
+               "@%d",
                footprint * BytesPerWord);
 
-  p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated),
-                          RUNTIME_ARRAY_BODY(decorated));
+  p = resolveNativeMethod(
+      t, RUNTIME_ARRAY_BODY(undecorated), RUNTIME_ARRAY_BODY(decorated));
   if (p) {
     return p;
   }
 
   // one more try without the leading underscore
-  p = resolveNativeMethod(t, RUNTIME_ARRAY_BODY(undecorated) + 1,
+  p = resolveNativeMethod(t,
+                          RUNTIME_ARRAY_BODY(undecorated) + 1,
                           RUNTIME_ARRAY_BODY(decorated) + 1);
   if (p) {
     return p;
@@ -224,7 +233,7 @@ GcNative* resolveNativeMethod(Thread* t, GcMethod* method)
   return 0;
 }
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
@@ -267,7 +276,7 @@ int findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
 
   // our parameter indicates the instruction following the one we care
   // about, so we back up first:
-  -- ip;
+  --ip;
 
   GcLineNumberTable* lnt = method->code()->lineNumberTable();
   if (lnt) {
@@ -298,4 +307,4 @@ int findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
   }
 }
 
-} // namespace vm
+}  // namespace vm

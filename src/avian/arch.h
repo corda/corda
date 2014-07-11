@@ -12,39 +12,41 @@
 #define ARCH_H
 
 #ifdef _MSC_VER
-#  include "windows.h"
-#  pragma push_macro("assert")
-#  include "intrin.h"
-#  pragma pop_macro("assert")
-#  undef interface
+#include "windows.h"
+#pragma push_macro("assert")
+#include "intrin.h"
+#pragma pop_macro("assert")
+#undef interface
 #endif
 
 #include "avian/common.h"
 
-extern "C" void NO_RETURN
-vmJump(void* address, void* frame, void* stack, void* thread,
-       uintptr_t returnLow, uintptr_t returnHigh);
+extern "C" void NO_RETURN vmJump(void* address,
+                                 void* frame,
+                                 void* stack,
+                                 void* thread,
+                                 uintptr_t returnLow,
+                                 uintptr_t returnHigh);
 
 namespace vm {
 
-inline void
-compileTimeMemoryBarrier()
+inline void compileTimeMemoryBarrier()
 {
 #ifdef _MSC_VER
   _ReadWriteBarrier();
 #else
-  __asm__ __volatile__("": : :"memory");
+  __asm__ __volatile__("" : : : "memory");
 #endif
 }
 
-} // namespace vm
+}  // namespace vm
 
 #if (defined ARCH_x86_32) || (defined ARCH_x86_64)
-#  include "x86.h"
+#include "x86.h"
 #elif defined ARCH_arm
-#  include "arm.h"
+#include "arm.h"
 #else
-#  error unsupported architecture
+#error unsupported architecture
 #endif
 
-#endif//ARCH_H
+#endif  // ARCH_H

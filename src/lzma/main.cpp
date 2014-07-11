@@ -17,46 +17,40 @@
 
 namespace {
 
-int32_t
-read4(const uint8_t* in)
+int32_t read4(const uint8_t* in)
 {
   return (static_cast<int32_t>(in[3]) << 24)
-    |    (static_cast<int32_t>(in[2]) << 16)
-    |    (static_cast<int32_t>(in[1]) <<  8)
-    |    (static_cast<int32_t>(in[0])      );
+         | (static_cast<int32_t>(in[2]) << 16)
+         | (static_cast<int32_t>(in[1]) << 8) | (static_cast<int32_t>(in[0]));
 }
 
-void*
-myAllocate(void*, size_t size)
+void* myAllocate(void*, size_t size)
 {
   return malloc(size);
 }
 
-void
-myFree(void*, void* address)
+void myFree(void*, void* address)
 {
   free(address);
 }
 
-SRes
-myProgress(void*, UInt64, UInt64)
+SRes myProgress(void*, UInt64, UInt64)
 {
   return SZ_OK;
 }
 
-void
-usageAndExit(const char* program)
+void usageAndExit(const char* program)
 {
   fprintf(stderr,
           "usage: %s {encode|decode} <input file> <output file> "
-          "[<uncompressed size>]", program);
+          "[<uncompressed size>]",
+          program);
   exit(-1);
 }
 
-} // namespace
+}  // namespace
 
-int
-main(int argc, const char** argv)
+int main(int argc, const char** argv)
 {
   if (argc < 4 or argc > 5) {
     usageAndExit(argv[0]);
@@ -73,26 +67,16 @@ main(int argc, const char** argv)
     if (r != -1) {
 #ifdef WIN32
       HANDLE fm;
-      HANDLE h = (HANDLE) _get_osfhandle (fd);
+      HANDLE h = (HANDLE)_get_osfhandle(fd);
 
-      fm = CreateFileMapping(
-               h,
-               NULL,
-               PAGE_READONLY,
-               0,
-               0,
-               NULL);
-      data = static_cast<uint8_t*>(MapViewOfFile(
-                fm,
-                FILE_MAP_READ,
-                0,
-                0,
-                s.st_size));
+      fm = CreateFileMapping(h, NULL, PAGE_READONLY, 0, 0, NULL);
+      data = static_cast<uint8_t*>(
+          MapViewOfFile(fm, FILE_MAP_READ, 0, 0, s.st_size));
 
       CloseHandle(fm);
 #else
-      data = static_cast<uint8_t*>
-        (mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+      data = static_cast<uint8_t*>(
+          mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
 #endif
       size = s.st_size;
     }
@@ -123,7 +107,7 @@ main(int argc, const char** argv)
       uint8_t* out = static_cast<uint8_t*>(malloc(outSize));
       if (out) {
         SizeT inSize = size;
-        ISzAlloc allocator = { myAllocate, myFree };
+        ISzAlloc allocator = {myAllocate, myFree};
         ELzmaStatus status = LZMA_STATUS_NOT_SPECIFIED;
         int result;
         if (encode) {
@@ -132,22 +116,36 @@ main(int argc, const char** argv)
           props.level = 9;
           props.writeEndMark = 1;
 
-          ICompressProgress progress = { myProgress };
+          ICompressProgress progress = {myProgress};
 
           SizeT propsSize = PropHeaderSize;
 
           int32_t inSize32 = inSize;
           memcpy(out + PropHeaderSize, &inSize32, 4);
-          
-          result = LzmaEncode
-            (out + HeaderSize, &outSize, data, inSize, &props, out,
-             &propsSize, 1, &progress, &allocator, &allocator);
+
+          result = LzmaEncode(out + HeaderSize,
+                              &outSize,
+                              data,
+                              inSize,
+                              &props,
+                              out,
+                              &propsSize,
+                              1,
+                              &progress,
+                              &allocator,
+                              &allocator);
 
           outSize += HeaderSize;
         } else {
-          result = LzmaDecode
-            (out, &outSize, data + HeaderSize, &inSize, data, PropHeaderSize,
-             LZMA_FINISH_END, &status, &allocator);
+          result = LzmaDecode(out,
+                              &outSize,
+                              data + HeaderSize,
+                              &inSize,
+                              data,
+                              PropHeaderSize,
+                              LZMA_FINISH_END,
+                              &status,
+                              &allocator);
         }
 
         if (result == SZ_OK) {
@@ -165,8 +163,11 @@ main(int argc, const char** argv)
             fprintf(stderr, "unable to open %s\n", argv[3]);
           }
         } else {
-          fprintf(stderr, "unable to %s data: result %d status %d\n",
-                  encode ? "encode" : "decode", result, status);
+          fprintf(stderr,
+                  "unable to %s data: result %d status %d\n",
+                  encode ? "encode" : "decode",
+                  result,
+                  status);
         }
 
         free(out);

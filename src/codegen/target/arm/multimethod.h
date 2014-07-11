@@ -24,21 +24,22 @@ namespace codegen {
 namespace arm {
 
 unsigned index(ArchitectureContext*,
-      lir::BinaryOperation operation,
-      lir::OperandType operand1,
-      lir::OperandType operand2);
+               lir::BinaryOperation operation,
+               lir::OperandType operand1,
+               lir::OperandType operand2);
 
 unsigned index(ArchitectureContext* con UNUSED,
-      lir::TernaryOperation operation,
-      lir::OperandType operand1);
+               lir::TernaryOperation operation,
+               lir::OperandType operand1);
 
-unsigned branchIndex(ArchitectureContext* con UNUSED, lir::OperandType operand1,
-            lir::OperandType operand2);
+unsigned branchIndex(ArchitectureContext* con UNUSED,
+                     lir::OperandType operand1,
+                     lir::OperandType operand2);
 
 void populateTables(ArchitectureContext* con);
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_ARM_MULTIMETHOD_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_ARM_MULTIMETHOD_H

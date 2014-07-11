@@ -33,13 +33,16 @@ class Vector {
         data(0, 0),
         position(0),
         minimumCapacity(minimumCapacity)
-  { }
+  {
+  }
 
-  ~Vector() {
+  ~Vector()
+  {
     dispose();
   }
 
-  void dispose() {
+  void dispose()
+  {
     if (data.items and minimumCapacity > 0) {
       allocator->free(data.items, data.count);
       data.items = 0;
@@ -95,27 +98,33 @@ class Vector {
     return r;
   }
 
-  void append(uint8_t v) {
+  void append(uint8_t v)
+  {
     append(&v, 1);
   }
 
-  void append2(uint16_t v) {
+  void append2(uint16_t v)
+  {
     append(&v, 2);
   }
 
-  void append4(uint32_t v) {
+  void append4(uint32_t v)
+  {
     append(&v, 4);
   }
 
-  void appendTargetAddress(target_uintptr_t v) {
+  void appendTargetAddress(target_uintptr_t v)
+  {
     append(&v, TargetBytesPerWord);
   }
 
-  void appendAddress(uintptr_t v) {
+  void appendAddress(uintptr_t v)
+  {
     append(&v, BytesPerWord);
   }
 
-  void appendAddress(void* v) {
+  void appendAddress(void* v)
+  {
     append(&v, BytesPerWord);
   }
 
@@ -127,25 +136,29 @@ class Vector {
 
   size_t get(size_t offset)
   {
-    uint8_t v; get(offset, &v, 1);
+    uint8_t v;
+    get(offset, &v, 1);
     return v;
   }
 
   size_t get2(size_t offset)
   {
-    uint16_t v; get(offset, &v, 2);
+    uint16_t v;
+    get(offset, &v, 2);
     return v;
   }
 
   size_t get4(size_t offset)
   {
-    uint32_t v; get(offset, &v, 4);
+    uint32_t v;
+    get(offset, &v, 4);
     return v;
   }
 
   uintptr_t getAddress(size_t offset)
   {
-    uintptr_t v; get(offset, &v, BytesPerWord);
+    uintptr_t v;
+    get(offset, &v, BytesPerWord);
     return v;
   }
 
@@ -168,6 +181,6 @@ class Vector {
   size_t minimumCapacity;
 };
 
-} // namespace vm
+}  // namespace vm
 
-#endif//VECTOR_H
+#endif  // VECTOR_H

@@ -20,7 +20,7 @@ namespace avian {
 
 namespace util {
 class Aborter;
-} // namespace util
+}  // namespace util
 
 namespace codegen {
 namespace compiler {
@@ -33,14 +33,12 @@ class SiteMask;
 class Resource;
 class Read;
 
-
 class RegisterAllocator {
-public:
+ public:
   Aborter* a;
   const RegisterFile* registerFile;
 
   RegisterAllocator(Aborter* a, const RegisterFile* registerFile);
-
 };
 
 class Target {
@@ -53,11 +51,14 @@ class Target {
   static const unsigned LowRegisterPenalty = 10;
   static const unsigned Impossible = 20;
 
-  Target(): cost(Impossible) { }
+  Target() : cost(Impossible)
+  {
+  }
 
-  Target(int index, lir::OperandType type, unsigned cost):
-    index(index), type(type), cost(cost)
-  { }
+  Target(int index, lir::OperandType type, unsigned cost)
+      : index(index), type(type), cost(cost)
+  {
+  }
 
   int16_t index;
   lir::OperandType type;
@@ -69,43 +70,55 @@ class CostCalculator {
   virtual unsigned cost(Context* c, SiteMask mask) = 0;
 };
 
-unsigned
-resourceCost(Context* c, Value* v, Resource* r, SiteMask mask,
-             CostCalculator* costCalculator);
+unsigned resourceCost(Context* c,
+                      Value* v,
+                      Resource* r,
+                      SiteMask mask,
+                      CostCalculator* costCalculator);
 
+bool pickRegisterTarget(Context* c,
+                        int i,
+                        Value* v,
+                        uint32_t mask,
+                        int* target,
+                        unsigned* cost,
+                        CostCalculator* costCalculator = 0);
 
-bool
-pickRegisterTarget(Context* c, int i, Value* v, uint32_t mask, int* target,
-                   unsigned* cost, CostCalculator* costCalculator = 0);
+int pickRegisterTarget(Context* c,
+                       Value* v,
+                       uint32_t mask,
+                       unsigned* cost,
+                       CostCalculator* costCalculator = 0);
 
-int
-pickRegisterTarget(Context* c, Value* v, uint32_t mask, unsigned* cost,
-                   CostCalculator* costCalculator = 0);
+Target pickRegisterTarget(Context* c,
+                          Value* v,
+                          uint32_t mask,
+                          CostCalculator* costCalculator = 0);
 
-Target
-pickRegisterTarget(Context* c, Value* v, uint32_t mask,
-                   CostCalculator* costCalculator = 0);
+unsigned frameCost(Context* c,
+                   Value* v,
+                   int frameIndex,
+                   CostCalculator* costCalculator);
 
-unsigned
-frameCost(Context* c, Value* v, int frameIndex, CostCalculator* costCalculator);
+Target pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator);
 
-Target
-pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator);
+Target pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator);
 
-Target
-pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator);
+Target pickTarget(Context* c,
+                  Value* value,
+                  const SiteMask& mask,
+                  unsigned registerPenalty,
+                  Target best,
+                  CostCalculator* costCalculator);
 
-Target
-pickTarget(Context* c, Value* value, const SiteMask& mask,
-           unsigned registerPenalty, Target best,
-           CostCalculator* costCalculator);
+Target pickTarget(Context* c,
+                  Read* read,
+                  bool intersectRead,
+                  unsigned registerReserveCount,
+                  CostCalculator* costCalculator);
 
-Target
-pickTarget(Context* c, Read* read, bool intersectRead,
-           unsigned registerReserveCount, CostCalculator* costCalculator);
+}  // namespace regalloc
+}  // namespace codegen
+}  // namespace avian
 
-} // namespace regalloc
-} // namespace codegen
-} // namespace avian
-
-#endif // AVIAN_CODEGEN_COMPILER_REGALLOC_H
+#endif  // AVIAN_CODEGEN_COMPILER_REGALLOC_H

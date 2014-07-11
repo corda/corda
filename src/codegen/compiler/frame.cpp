@@ -19,13 +19,14 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
-unsigned totalFrameSize(Context* c) {
-  return c->alignedFrameSize
-    + c->arch->frameHeaderSize()
-    + c->arch->argumentFootprint(c->parameterFootprint);
+unsigned totalFrameSize(Context* c)
+{
+  return c->alignedFrameSize + c->arch->frameHeaderSize()
+         + c->arch->argumentFootprint(c->parameterFootprint);
 }
 
-int frameIndex(Context* c, int localIndex) {
+int frameIndex(Context* c, int localIndex)
+{
   assertT(c, localIndex >= 0);
 
   int index = c->alignedFrameSize + c->parameterFootprint - localIndex - 1;
@@ -42,13 +43,15 @@ int frameIndex(Context* c, int localIndex) {
   return index;
 }
 
-unsigned frameIndexToOffset(Context* c, unsigned frameIndex) {
+unsigned frameIndexToOffset(Context* c, unsigned frameIndex)
+{
   assertT(c, frameIndex < totalFrameSize(c));
 
   return (frameIndex + c->arch->frameFooterSize()) * c->targetInfo.pointerSize;
 }
 
-unsigned offsetToFrameIndex(Context* c, unsigned offset) {
+unsigned offsetToFrameIndex(Context* c, unsigned offset)
+{
   assertT(c,
           static_cast<int>((offset / c->targetInfo.pointerSize)
                            - c->arch->frameFooterSize()) >= 0);
@@ -59,43 +62,50 @@ unsigned offsetToFrameIndex(Context* c, unsigned offset) {
   return (offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize();
 }
 
-unsigned frameBase(Context* c) {
-  return c->alignedFrameSize
-    - c->arch->frameReturnAddressSize()
-    - c->arch->frameFooterSize()
-    + c->arch->frameHeaderSize();
-} 
+unsigned frameBase(Context* c)
+{
+  return c->alignedFrameSize - c->arch->frameReturnAddressSize()
+         - c->arch->frameFooterSize() + c->arch->frameHeaderSize();
+}
 
-FrameIterator::Element::Element(Value* value, unsigned localIndex):
-  value(value), localIndex(localIndex)
-{ }
+FrameIterator::Element::Element(Value* value, unsigned localIndex)
+    : value(value), localIndex(localIndex)
+{
+}
 
-
-int FrameIterator::Element::frameIndex(Context* c) {
+int FrameIterator::Element::frameIndex(Context* c)
+{
   return compiler::frameIndex(c, this->localIndex);
 }
 
-FrameIterator::FrameIterator(Context* c, Stack* stack, Local* locals,
-              bool includeEmpty):
-  stack(stack), locals(locals), localIndex(c->localFootprint - 1),
-  includeEmpty(includeEmpty)
-{ }
+FrameIterator::FrameIterator(Context* c,
+                             Stack* stack,
+                             Local* locals,
+                             bool includeEmpty)
+    : stack(stack),
+      locals(locals),
+      localIndex(c->localFootprint - 1),
+      includeEmpty(includeEmpty)
+{
+}
 
-bool FrameIterator::hasMore() {
+bool FrameIterator::hasMore()
+{
   if (not includeEmpty) {
     while (stack and stack->value == 0) {
       stack = stack->next;
     }
 
     while (localIndex >= 0 and locals[localIndex].value == 0) {
-      -- localIndex;
+      --localIndex;
     }
   }
 
   return stack != 0 or localIndex >= 0;
 }
 
-FrameIterator::Element FrameIterator::next(Context* c) {
+FrameIterator::Element FrameIterator::next(Context* c)
+{
   Value* v;
   unsigned li;
   if (stack) {
@@ -107,17 +117,16 @@ FrameIterator::Element FrameIterator::next(Context* c) {
     Local* l = locals + localIndex;
     v = l->value;
     li = localIndex;
-    -- localIndex;
+    --localIndex;
   }
   return Element(v, li);
 }
 
-Stack* stack(Context* c, Value* value, Stack* next) {
-  return new(c->zone) Stack(next ? next->index + 1 : 0, value, next);
+Stack* stack(Context* c, Value* value, Stack* next)
+{
+  return new (c->zone) Stack(next ? next->index + 1 : 0, value, next);
 }
 
-
-
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian

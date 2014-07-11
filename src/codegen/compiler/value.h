@@ -62,8 +62,7 @@ class Value : public ir::Value {
 
 #ifndef NDEBUG
   bool hasBuddy(Context* c, Value* b);
-#endif // not NDEBUG
-
+#endif  // not NDEBUG
 };
 
 inline bool isFloatValue(ir::Value* a)
@@ -78,8 +77,8 @@ inline bool isGeneralValue(ir::Value* a)
 
 Value* value(Context* c, ir::Type type, Site* site = 0, Site* target = 0);
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_VALUE_H
+#endif  // AVIAN_CODEGEN_COMPILER_VALUE_H

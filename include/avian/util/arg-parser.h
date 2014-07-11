@@ -31,7 +31,7 @@ class ArgParser {
 };
 
 class Arg {
-public:
+ public:
   Arg* next;
   bool required;
   const char* name;
@@ -42,8 +42,7 @@ public:
   Arg(ArgParser& parser, bool required, const char* name, const char* desc);
 };
 
-
-} // namespace avian
-} // namespace util
+}  // namespace avian
+}  // namespace util
 
 #endif  // AVIAN_UTIL_ARG_PARSER_H

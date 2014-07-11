@@ -38,7 +38,7 @@ class Resource {
   bool reserved;
 };
 
-class RegisterResource: public Resource {
+class RegisterResource : public Resource {
  public:
   RegisterResource(bool reserved);
 
@@ -55,7 +55,7 @@ class RegisterResource: public Resource {
   void decrement(Context*);
 };
 
-class FrameResource: public Resource {
+class FrameResource : public Resource {
  public:
   virtual void freeze(Context*, Value*);
 
@@ -70,8 +70,8 @@ void acquire(Context* c, Resource* resource, Value* value, Site* site);
 
 void release(Context* c, Resource* resource, Value* value, Site* site);
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_RESOURCE_H
+#endif  // AVIAN_CODEGEN_COMPILER_RESOURCE_H

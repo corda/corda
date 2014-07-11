@@ -28,12 +28,13 @@ class AlignmentPadding {
   int padding;
 };
 
-unsigned
-padding(AlignmentPadding* p, unsigned start, unsigned offset,
-        AlignmentPadding* limit);
+unsigned padding(AlignmentPadding* p,
+                 unsigned start,
+                 unsigned offset,
+                 AlignmentPadding* limit);
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_PADDING_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_PADDING_H

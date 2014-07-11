@@ -27,9 +27,8 @@
 
 namespace vm {
 
-void
-populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable);
+void populateJNITables(JavaVMVTable* vmTable, JNIEnvVTable* envTable);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//JNIENV_H
+#endif  // JNIENV_H

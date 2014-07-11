@@ -17,14 +17,15 @@ namespace {
 
 class TreeContext {
  public:
-
-  class MyProtector: public Thread::Protector {
+  class MyProtector : public Thread::Protector {
    public:
-    MyProtector(Thread* thread, TreeContext* context):
-      Protector(thread), context(context)
-    { }
+    MyProtector(Thread* thread, TreeContext* context)
+        : Protector(thread), context(context)
+    {
+    }
 
-    virtual void visit(Heap::Visitor* v) {
+    virtual void visit(Heap::Visitor* v)
+    {
       v->visit(&(context->root));
       v->visit(&(context->node));
 
@@ -36,11 +37,16 @@ class TreeContext {
     TreeContext* context;
   };
 
-  TreeContext(Thread* thread, Zone* zone):
-    zone(zone), root(0), node(0), ancestors(0), protector(thread, this),
-    fresh(false)
-  { }
-  
+  TreeContext(Thread* thread, Zone* zone)
+      : zone(zone),
+        root(0),
+        node(0),
+        ancestors(0),
+        protector(thread, this),
+        fresh(false)
+  {
+  }
+
   Zone* zone;
   GcTreeNode* root;
   GcTreeNode* node;
@@ -58,8 +64,7 @@ List<GcTreeNode*>* path(TreeContext* c,
 
 inline object getTreeNodeValue(Thread*, GcTreeNode* n)
 {
-  return reinterpret_cast<object>
-    (alias(n, TreeNodeValue) & PointerMask);
+  return reinterpret_cast<object>(alias(n, TreeNodeValue) & PointerMask);
 }
 
 inline void setTreeNodeValue(Thread* t, GcTreeNode* n, object value)
@@ -158,7 +163,7 @@ void treeFind(Thread* t,
       return;
     }
 
-    if (++ count > 100) {
+    if (++count > 100) {
       // if we've gone this deep, we probably have an unbalanced tree,
       // which should only happen if there's a serious bug somewhere
       // in our insertion process
@@ -247,8 +252,8 @@ GcTreeNode* treeAdd(Thread* t, TreeContext* c)
         }
         // done
       }
-    } else { // this is just the reverse of the code above (right and
-             // left swapped):
+    } else {  // this is just the reverse of the code above (right and
+              // left swapped):
       if (treeNodeRed(t, c->ancestors->next->item->left())) {
         setTreeNodeRed(t, c->ancestors->item, false);
 
@@ -298,7 +303,7 @@ GcTreeNode* treeAdd(Thread* t, TreeContext* c)
   return newRoot;
 }
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
@@ -596,4 +601,4 @@ void treeUpdate(Thread* t,
   setTreeNodeValue(t, treeFind(t, tree, key, sentinal, compare), value);
 }
 
-} // namespace vm
+}  // namespace vm

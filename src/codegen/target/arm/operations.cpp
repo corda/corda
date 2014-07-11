@@ -22,14 +22,27 @@ namespace arm {
 using namespace isa;
 using namespace avian::util;
 
-inline bool isOfWidth(int64_t i, int size) { return static_cast<uint64_t>(i) >> size == 0; }
+inline bool isOfWidth(int64_t i, int size)
+{
+  return static_cast<uint64_t>(i) >> size == 0;
+}
 
-inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
+inline unsigned lo8(int64_t i)
+{
+  return (unsigned)(i & MASK_LO8);
+}
 
-void andC(Context* con, unsigned size, lir::Constant* a,
-     lir::Register* b, lir::Register* dst);
+void andC(Context* con,
+          unsigned size,
+          lir::Constant* a,
+          lir::Register* b,
+          lir::Register* dst);
 
-void shiftLeftR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
+void shiftLeftR(Context* con,
+                unsigned size,
+                lir::Register* a,
+                lir::Register* b,
+                lir::Register* t)
 {
   if (size == 8) {
     int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
@@ -44,7 +57,9 @@ void shiftLeftR(Context* con, unsigned size, lir::Register* a, lir::Register* b,
     emit(con, SETCOND(mov(t->high, tmp1), MI));
     emit(con, SETCOND(lsl(t->high, b->low, t->high), PL));
     emit(con, lsl(t->low, b->low, tmp3));
-    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
+    freeTemp(con, tmp1);
+    freeTemp(con, tmp2);
+    freeTemp(con, tmp3);
   } else {
     int tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
@@ -56,10 +71,17 @@ void shiftLeftR(Context* con, unsigned size, lir::Register* a, lir::Register* b,
   }
 }
 
-void moveRR(Context* con, unsigned srcSize, lir::Register* src,
-       unsigned dstSize, lir::Register* dst);
+void moveRR(Context* con,
+            unsigned srcSize,
+            lir::Register* src,
+            unsigned dstSize,
+            lir::Register* dst);
 
-void shiftLeftC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
+void shiftLeftC(Context* con,
+                unsigned size UNUSED,
+                lir::Constant* a,
+                lir::Register* b,
+                lir::Register* t)
 {
   assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -69,7 +91,11 @@ void shiftLeftC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Regis
   }
 }
 
-void shiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
+void shiftRightR(Context* con,
+                 unsigned size,
+                 lir::Register* a,
+                 lir::Register* b,
+                 lir::Register* t)
 {
   if (size == 8) {
     int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
@@ -84,7 +110,9 @@ void shiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b
     emit(con, SETCOND(mov(t->low, tmp1), MI));
     emit(con, SETCOND(asr(t->low, b->high, t->low), PL));
     emit(con, asr(t->high, b->high, tmp3));
-    freeTemp(con, tmp1); freeTemp(con, tmp2); freeTemp(con, tmp3);
+    freeTemp(con, tmp1);
+    freeTemp(con, tmp2);
+    freeTemp(con, tmp3);
   } else {
     int tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
@@ -96,7 +124,11 @@ void shiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b
   }
 }
 
-void shiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
+void shiftRightC(Context* con,
+                 unsigned size UNUSED,
+                 lir::Constant* a,
+                 lir::Register* b,
+                 lir::Register* t)
 {
   assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -106,7 +138,11 @@ void shiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Regi
   }
 }
 
-void unsignedShiftRightR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t)
+void unsignedShiftRightR(Context* con,
+                         unsigned size,
+                         lir::Register* a,
+                         lir::Register* b,
+                         lir::Register* t)
 {
   int tmpShift = newTemp(con);
   ResolvedPromise maskPromise(size == 8 ? 0x3F : 0x1F);
@@ -123,12 +159,17 @@ void unsignedShiftRightR(Context* con, unsigned size, lir::Register* a, lir::Reg
     emit(con, lsr(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
     emit(con, lsr(t->high, b->high, tmpShift));
-    freeTemp(con, tmpHi); freeTemp(con, tmpLo);
+    freeTemp(con, tmpHi);
+    freeTemp(con, tmpLo);
   }
   freeTemp(con, tmpShift);
 }
 
-void unsignedShiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, lir::Register* b, lir::Register* t)
+void unsignedShiftRightC(Context* con,
+                         unsigned size UNUSED,
+                         lir::Constant* a,
+                         lir::Register* b,
+                         lir::Register* t)
 {
   assertT(con, size == vm::TargetBytesPerWord);
   if (getValue(a) & 0x1F) {
@@ -138,14 +179,12 @@ void unsignedShiftRightC(Context* con, unsigned size UNUSED, lir::Constant* a, l
   }
 }
 
-bool
-needJump(MyBlock* b)
+bool needJump(MyBlock* b)
 {
   return b->next or b->size != (b->size & PoolOffsetMask);
 }
 
-unsigned
-padding(MyBlock* b, unsigned offset)
+unsigned padding(MyBlock* b, unsigned offset)
 {
   unsigned total = 0;
   for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
@@ -181,37 +220,51 @@ void resolve(MyBlock* b)
     if (b->next == 0 or b->next->poolEventHead) {
       append = true;
     } else {
-      int32_t v = (b->start + b->size + b->next->size + vm::TargetBytesPerWord - 8)
-        - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
+      int32_t v
+          = (b->start + b->size + b->next->size + vm::TargetBytesPerWord - 8)
+            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
 
       append = (v != (v & PoolOffsetMask));
 
       if (DebugPool) {
         fprintf(stderr,
                 "current %p %d %d next %p %d %d\n",
-                b, b->start, b->size, b->next, b->start + b->size,
+                b,
+                b->start,
+                b->size,
+                b->next,
+                b->start + b->size,
                 b->next->size);
         fprintf(stderr,
                 "offset %p %d is of distance %d to next block; append? %d\n",
-                con->poolOffsetHead, con->poolOffsetHead->offset, v, append);
+                con->poolOffsetHead,
+                con->poolOffsetHead->offset,
+                v,
+                append);
       }
     }
 
     if (append) {
 #ifndef NDEBUG
-      int32_t v = (b->start + b->size - 8)
-        - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
-      
-      expect(con, v == (v & PoolOffsetMask));
-#endif // not NDEBUG
+      int32_t v
+          = (b->start + b->size - 8)
+            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
 
-      appendPoolEvent(con, b, b->size, con->poolOffsetHead, con->poolOffsetTail);
+      expect(con, v == (v & PoolOffsetMask));
+#endif  // not NDEBUG
+
+      appendPoolEvent(
+          con, b, b->size, con->poolOffsetHead, con->poolOffsetTail);
 
       if (DebugPool) {
         for (PoolOffset* o = con->poolOffsetHead; o; o = o->next) {
           fprintf(stderr,
                   "include %p %d in pool event %p at offset %d in block %p\n",
-                  o, o->offset, b->poolEventTail, b->size, b);
+                  o,
+                  o->offset,
+                  b->poolEventTail,
+                  b->size,
+                  b);
         }
       }
 
@@ -227,8 +280,11 @@ void jumpR(Context* con, unsigned size UNUSED, lir::Register* target)
   emit(con, bx(target->low));
 }
 
-void swapRR(Context* con, unsigned aSize, lir::Register* a,
-       unsigned bSize, lir::Register* b)
+void swapRR(Context* con,
+            unsigned aSize,
+            lir::Register* a,
+            unsigned bSize,
+            lir::Register* b)
 {
   assertT(con, aSize == vm::TargetBytesPerWord);
   assertT(con, bSize == vm::TargetBytesPerWord);
@@ -240,23 +296,32 @@ void swapRR(Context* con, unsigned aSize, lir::Register* a,
   con->client->releaseTemporary(tmp.low);
 }
 
-void moveRR(Context* con, unsigned srcSize, lir::Register* src,
-       unsigned dstSize, lir::Register* dst)
+void moveRR(Context* con,
+            unsigned srcSize,
+            lir::Register* src,
+            unsigned dstSize,
+            lir::Register* dst)
 {
   bool srcIsFpr = isFpr(src);
   bool dstIsFpr = isFpr(dst);
-  if (srcIsFpr || dstIsFpr) {   // FPR(s) involved
+  if (srcIsFpr || dstIsFpr) {  // FPR(s) involved
     assertT(con, srcSize == dstSize);
     const bool dprec = srcSize == 8;
-    if (srcIsFpr && dstIsFpr) { // FPR to FPR
-      if (dprec) emit(con, fcpyd(fpr64(dst), fpr64(src))); // double
-      else       emit(con, fcpys(fpr32(dst), fpr32(src))); // single
-    } else if (srcIsFpr) {      // FPR to GPR
-      if (dprec) emit(con, fmrrd(dst->low, dst->high, fpr64(src)));
-      else       emit(con, fmrs(dst->low, fpr32(src)));
-    } else {                    // GPR to FPR
-      if (dprec) emit(con, fmdrr(fpr64(dst->low), src->low, src->high));
-      else       emit(con, fmsr(fpr32(dst), src->low));
+    if (srcIsFpr && dstIsFpr) {  // FPR to FPR
+      if (dprec)
+        emit(con, fcpyd(fpr64(dst), fpr64(src)));  // double
+      else
+        emit(con, fcpys(fpr32(dst), fpr32(src)));  // single
+    } else if (srcIsFpr) {                         // FPR to GPR
+      if (dprec)
+        emit(con, fmrrd(dst->low, dst->high, fpr64(src)));
+      else
+        emit(con, fmrs(dst->low, fpr32(src)));
+    } else {  // GPR to FPR
+      if (dprec)
+        emit(con, fmdrr(fpr64(dst->low), src->low, src->high));
+      else
+        emit(con, fmsr(fpr32(dst), src->low));
     }
     return;
   }
@@ -297,12 +362,16 @@ void moveRR(Context* con, unsigned srcSize, lir::Register* src,
     }
     break;
 
-  default: abort(con);
+  default:
+    abort(con);
   }
 }
 
-void moveZRR(Context* con, unsigned srcSize, lir::Register* src,
-        unsigned, lir::Register* dst)
+void moveZRR(Context* con,
+             unsigned srcSize,
+             lir::Register* src,
+             unsigned,
+             lir::Register* dst)
 {
   switch (srcSize) {
   case 2:
@@ -310,46 +379,60 @@ void moveZRR(Context* con, unsigned srcSize, lir::Register* src,
     emit(con, lsri(dst->low, dst->low, 16));
     break;
 
-  default: abort(con);
+  default:
+    abort(con);
   }
 }
 
-void moveCR(Context* con, unsigned size, lir::Constant* src,
-            unsigned, lir::Register* dst);
+void moveCR(Context* con,
+            unsigned size,
+            lir::Constant* src,
+            unsigned,
+            lir::Register* dst);
 
-void moveCR2(Context* con, unsigned size, lir::Constant* src,
-        lir::Register* dst, Promise* callOffset)
+void moveCR2(Context* con,
+             unsigned size,
+             lir::Constant* src,
+             lir::Register* dst,
+             Promise* callOffset)
 {
-  if (isFpr(dst)) { // floating-point
-    lir::Register tmp = size > 4 ? makeTemp64(con) :
-                                         makeTemp(con);
+  if (isFpr(dst)) {  // floating-point
+    lir::Register tmp = size > 4 ? makeTemp64(con) : makeTemp(con);
     moveCR(con, size, src, size, &tmp);
     moveRR(con, size, &tmp, size, dst);
     freeTemp(con, tmp);
-  } else if (size > 4) { 
+  } else if (size > 4) {
     uint64_t value = (uint64_t)src->value->value();
     ResolvedPromise loBits(value & MASK_LO32);
     lir::Constant srcLo(&loBits);
-    ResolvedPromise hiBits(value >> 32); 
+    ResolvedPromise hiBits(value >> 32);
     lir::Constant srcHi(&hiBits);
     lir::Register dstHi(dst->high);
     moveCR(con, 4, &srcLo, 4, dst);
     moveCR(con, 4, &srcHi, 4, &dstHi);
   } else if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
-    emit(con, movi(dst->low, lo8(getValue(src)))); // fits in immediate
+    emit(con, movi(dst->low, lo8(getValue(src))));  // fits in immediate
   } else {
     appendConstantPoolEntry(con, src->value, callOffset);
-    emit(con, ldri(dst->low, ProgramCounter, 0)); // load 32 bits
+    emit(con, ldri(dst->low, ProgramCounter, 0));  // load 32 bits
   }
 }
 
-void moveCR(Context* con, unsigned size, lir::Constant* src,
-       unsigned, lir::Register* dst)
+void moveCR(Context* con,
+            unsigned size,
+            lir::Constant* src,
+            unsigned,
+            lir::Register* dst)
 {
   moveCR2(con, size, src, dst, 0);
 }
 
-void addR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void addR(Context* con,
+          unsigned size,
+          lir::Register* a,
+          lir::Register* b,
+          lir::Register* t)
+{
   if (size == 8) {
     emit(con, SETS(add(t->low, a->low, b->low)));
     emit(con, adc(t->high, a->high, b->high));
@@ -358,7 +441,12 @@ void addR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::
   }
 }
 
-void subR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void subR(Context* con,
+          unsigned size,
+          lir::Register* a,
+          lir::Register* b,
+          lir::Register* t)
+{
   if (size == 8) {
     emit(con, SETS(rsb(t->low, a->low, b->low)));
     emit(con, rsc(t->high, a->high, b->high));
@@ -367,8 +455,11 @@ void subR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::
   }
 }
 
-void addC(Context* con, unsigned size, lir::Constant* a,
-     lir::Register* b, lir::Register* dst)
+void addC(Context* con,
+          unsigned size,
+          lir::Constant* a,
+          lir::Register* b,
+          lir::Register* dst)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
@@ -387,8 +478,11 @@ void addC(Context* con, unsigned size, lir::Constant* a,
   }
 }
 
-void subC(Context* con, unsigned size, lir::Constant* a,
-     lir::Register* b, lir::Register* dst)
+void subC(Context* con,
+          unsigned size,
+          lir::Constant* a,
+          lir::Register* b,
+          lir::Register* dst)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
@@ -407,11 +501,18 @@ void subC(Context* con, unsigned size, lir::Constant* a,
   }
 }
 
-void multiplyR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void multiplyR(Context* con,
+               unsigned size,
+               lir::Register* a,
+               lir::Register* b,
+               lir::Register* t)
+{
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
-    int tmpLow  = useTemporaries ? con->client->acquireTemporary(GPR_MASK) : t->low;
-    int tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK) : t->high;
+    int tmpLow = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
+                                : t->low;
+    int tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
+                                 : t->high;
 
     emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
     emit(con, mla(tmpHigh, a->low, b->high, tmpHigh));
@@ -428,7 +529,12 @@ void multiplyR(Context* con, unsigned size, lir::Register* a, lir::Register* b, 
   }
 }
 
-void floatAbsoluteRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
+void floatAbsoluteRR(Context* con,
+                     unsigned size,
+                     lir::Register* a,
+                     unsigned,
+                     lir::Register* b)
+{
   if (size == 8) {
     emit(con, fabsd(fpr64(b), fpr64(a)));
   } else {
@@ -436,7 +542,12 @@ void floatAbsoluteRR(Context* con, unsigned size, lir::Register* a, unsigned, li
   }
 }
 
-void floatNegateRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
+void floatNegateRR(Context* con,
+                   unsigned size,
+                   lir::Register* a,
+                   unsigned,
+                   lir::Register* b)
+{
   if (size == 8) {
     emit(con, fnegd(fpr64(b), fpr64(a)));
   } else {
@@ -444,7 +555,12 @@ void floatNegateRR(Context* con, unsigned size, lir::Register* a, unsigned, lir:
   }
 }
 
-void float2FloatRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
+void float2FloatRR(Context* con,
+                   unsigned size,
+                   lir::Register* a,
+                   unsigned,
+                   lir::Register* b)
+{
   if (size == 8) {
     emit(con, fcvtsd(fpr32(b), fpr64(a)));
   } else {
@@ -452,28 +568,43 @@ void float2FloatRR(Context* con, unsigned size, lir::Register* a, unsigned, lir:
   }
 }
 
-void float2IntRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
+void float2IntRR(Context* con,
+                 unsigned size,
+                 lir::Register* a,
+                 unsigned,
+                 lir::Register* b)
+{
   int tmp = newTemp(con, FPR_MASK);
   int ftmp = fpr32(tmp);
-  if (size == 8) { // double to int
+  if (size == 8) {  // double to int
     emit(con, ftosizd(ftmp, fpr64(a)));
-  } else {         // float to int
+  } else {  // float to int
     emit(con, ftosizs(ftmp, fpr32(a)));
-  }                // else thunked
+  }  // else thunked
   emit(con, fmrs(b->low, ftmp));
   freeTemp(con, tmp);
 }
 
-void int2FloatRR(Context* con, unsigned, lir::Register* a, unsigned size, lir::Register* b) {
+void int2FloatRR(Context* con,
+                 unsigned,
+                 lir::Register* a,
+                 unsigned size,
+                 lir::Register* b)
+{
   emit(con, fmsr(fpr32(b), a->low));
-  if (size == 8) { // int to double
+  if (size == 8) {  // int to double
     emit(con, fsitod(fpr64(b), fpr32(b)));
-  } else {         // int to float
+  } else {  // int to float
     emit(con, fsitos(fpr32(b), fpr32(b)));
-  }                // else thunked
+  }  // else thunked
 }
 
-void floatSqrtRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::Register* b) {
+void floatSqrtRR(Context* con,
+                 unsigned size,
+                 lir::Register* a,
+                 unsigned,
+                 lir::Register* b)
+{
   if (size == 8) {
     emit(con, fsqrtd(fpr64(b), fpr64(a)));
   } else {
@@ -481,7 +612,12 @@ void floatSqrtRR(Context* con, unsigned size, lir::Register* a, unsigned, lir::R
   }
 }
 
-void floatAddR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void floatAddR(Context* con,
+               unsigned size,
+               lir::Register* a,
+               lir::Register* b,
+               lir::Register* t)
+{
   if (size == 8) {
     emit(con, faddd(fpr64(t), fpr64(a), fpr64(b)));
   } else {
@@ -489,7 +625,12 @@ void floatAddR(Context* con, unsigned size, lir::Register* a, lir::Register* b, 
   }
 }
 
-void floatSubtractR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void floatSubtractR(Context* con,
+                    unsigned size,
+                    lir::Register* a,
+                    lir::Register* b,
+                    lir::Register* t)
+{
   if (size == 8) {
     emit(con, fsubd(fpr64(t), fpr64(b), fpr64(a)));
   } else {
@@ -497,7 +638,12 @@ void floatSubtractR(Context* con, unsigned size, lir::Register* a, lir::Register
   }
 }
 
-void floatMultiplyR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
+void floatMultiplyR(Context* con,
+                    unsigned size,
+                    lir::Register* a,
+                    lir::Register* b,
+                    lir::Register* t)
+{
   if (size == 8) {
     emit(con, fmuld(fpr64(t), fpr64(a), fpr64(b)));
   } else {
@@ -505,21 +651,30 @@ void floatMultiplyR(Context* con, unsigned size, lir::Register* a, lir::Register
   }
 }
 
-void floatDivideR(Context* con, unsigned size, lir::Register* a, lir::Register* b, lir::Register* t) {
-  if (size == 8) { 
+void floatDivideR(Context* con,
+                  unsigned size,
+                  lir::Register* a,
+                  lir::Register* b,
+                  lir::Register* t)
+{
+  if (size == 8) {
     emit(con, fdivd(fpr64(t), fpr64(b), fpr64(a)));
   } else {
     emit(con, fdivs(fpr32(t), fpr32(b), fpr32(a)));
   }
 }
 
-int normalize(Context* con, int offset, int index, unsigned scale, 
-          bool* preserveIndex, bool* release)
+int normalize(Context* con,
+              int offset,
+              int index,
+              unsigned scale,
+              bool* preserveIndex,
+              bool* release)
 {
   if (offset != 0 or scale != 1) {
-    lir::Register normalizedIndex
-      (*preserveIndex ? con->client->acquireTemporary(GPR_MASK) : index);
-    
+    lir::Register normalizedIndex(
+        *preserveIndex ? con->client->acquireTemporary(GPR_MASK) : index);
+
     if (*preserveIndex) {
       *release = true;
       *preserveIndex = false;
@@ -534,9 +689,12 @@ int normalize(Context* con, int offset, int index, unsigned scale,
 
       ResolvedPromise scalePromise(log(scale));
       lir::Constant scaleConstant(&scalePromise);
-      
-      shiftLeftC(con, vm::TargetBytesPerWord, &scaleConstant,
-                 &unscaledIndex, &normalizedIndex);
+
+      shiftLeftC(con,
+                 vm::TargetBytesPerWord,
+                 &scaleConstant,
+                 &unscaledIndex,
+                 &normalizedIndex);
 
       scaled = normalizedIndex.low;
     } else {
@@ -550,8 +708,16 @@ int normalize(Context* con, int offset, int index, unsigned scale,
       lir::Constant offsetConstant(&offsetPromise);
 
       lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
-      moveCR(con, vm::TargetBytesPerWord, &offsetConstant, vm::TargetBytesPerWord, &tmp);
-      addR(con, vm::TargetBytesPerWord, &tmp, &untranslatedIndex, &normalizedIndex);
+      moveCR(con,
+             vm::TargetBytesPerWord,
+             &offsetConstant,
+             vm::TargetBytesPerWord,
+             &tmp);
+      addR(con,
+           vm::TargetBytesPerWord,
+           &tmp,
+           &untranslatedIndex,
+           &normalizedIndex);
       con->client->releaseTemporary(tmp.low);
     }
 
@@ -562,15 +728,21 @@ int normalize(Context* con, int offset, int index, unsigned scale,
   }
 }
 
-void store(Context* con, unsigned size, lir::Register* src,
-      int base, int offset, int index, unsigned scale, bool preserveIndex)
+void store(Context* con,
+           unsigned size,
+           lir::Register* src,
+           int base,
+           int offset,
+           int index,
+           unsigned scale,
+           bool preserveIndex)
 {
   if (index != lir::NoRegister) {
     bool release;
-    int normalized = normalize
-      (con, offset, index, scale, &preserveIndex, &release);
+    int normalized
+        = normalize(con, offset, index, scale, &preserveIndex, &release);
 
-    if (!isFpr(src)) { // GPR store
+    if (!isFpr(src)) {  // GPR store
       switch (size) {
       case 1:
         emit(con, strb(src->low, base, normalized));
@@ -584,33 +756,34 @@ void store(Context* con, unsigned size, lir::Register* src,
         emit(con, str(src->low, base, normalized));
         break;
 
-      case 8: { // split into 2 32-bit stores
+      case 8: {  // split into 2 32-bit stores
         lir::Register srcHigh(src->high);
         store(con, 4, &srcHigh, base, 0, normalized, 1, preserveIndex);
         store(con, 4, src, base, 4, normalized, 1, preserveIndex);
       } break;
 
-      default: abort(con);
+      default:
+        abort(con);
       }
-    } else { // FPR store
-      lir::Register base_(base),
-                          normalized_(normalized),
-                          absAddr = makeTemp(con);
+    } else {  // FPR store
+      lir::Register base_(base), normalized_(normalized),
+          absAddr = makeTemp(con);
       // FPR stores have only bases, so we must add the index
       addR(con, vm::TargetBytesPerWord, &base_, &normalized_, &absAddr);
       // double-precision
-      if (size == 8) emit(con, fstd(fpr64(src), absAddr.low));
+      if (size == 8)
+        emit(con, fstd(fpr64(src), absAddr.low));
       // single-precision
-      else           emit(con, fsts(fpr32(src), absAddr.low));
+      else
+        emit(con, fsts(fpr32(src), absAddr.low));
       freeTemp(con, absAddr);
     }
 
-    if (release) con->client->releaseTemporary(normalized);
-  } else if (size == 8
-             or abs(offset) == (abs(offset) & 0xFF)
-             or (size != 2 and abs(offset) == (abs(offset) & 0xFFF)))
-  {
-    if (!isFpr(src)) { // GPR store
+    if (release)
+      con->client->releaseTemporary(normalized);
+  } else if (size == 8 or abs(offset) == (abs(offset) & 0xFF)
+             or (size != 2 and abs(offset) == (abs(offset) & 0xFFF))) {
+    if (!isFpr(src)) {  // GPR store
       switch (size) {
       case 1:
         emit(con, strbi(src->low, base, offset));
@@ -624,51 +797,68 @@ void store(Context* con, unsigned size, lir::Register* src,
         emit(con, stri(src->low, base, offset));
         break;
 
-      case 8: { // split into 2 32-bit stores
+      case 8: {  // split into 2 32-bit stores
         lir::Register srcHigh(src->high);
         store(con, 4, &srcHigh, base, offset, lir::NoRegister, 1, false);
         store(con, 4, src, base, offset + 4, lir::NoRegister, 1, false);
       } break;
 
-      default: abort(con);
+      default:
+        abort(con);
       }
-    } else { // FPR store
+    } else {  // FPR store
       // double-precision
-      if (size == 8) emit(con, fstd(fpr64(src), base, offset));
+      if (size == 8)
+        emit(con, fstd(fpr64(src), base, offset));
       // single-precision
-      else           emit(con, fsts(fpr32(src), base, offset));
+      else
+        emit(con, fsts(fpr32(src), base, offset));
     }
   } else {
     lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
     lir::Constant offsetConstant(&offsetPromise);
-    moveCR(con, vm::TargetBytesPerWord, &offsetConstant,
-           vm::TargetBytesPerWord, &tmp);
-    
+    moveCR(con,
+           vm::TargetBytesPerWord,
+           &offsetConstant,
+           vm::TargetBytesPerWord,
+           &tmp);
+
     store(con, size, src, base, 0, tmp.low, 1, false);
 
     con->client->releaseTemporary(tmp.low);
   }
 }
 
-void moveRM(Context* con, unsigned srcSize, lir::Register* src,
-       unsigned dstSize UNUSED, lir::Memory* dst)
+void moveRM(Context* con,
+            unsigned srcSize,
+            lir::Register* src,
+            unsigned dstSize UNUSED,
+            lir::Memory* dst)
 {
   assertT(con, srcSize == dstSize);
 
-  store(con, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
+  store(
+      con, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
 }
 
-void load(Context* con, unsigned srcSize, int base, int offset, int index,
-     unsigned scale, unsigned dstSize, lir::Register* dst,
-     bool preserveIndex, bool signExtend)
+void load(Context* con,
+          unsigned srcSize,
+          int base,
+          int offset,
+          int index,
+          unsigned scale,
+          unsigned dstSize,
+          lir::Register* dst,
+          bool preserveIndex,
+          bool signExtend)
 {
   if (index != lir::NoRegister) {
     bool release;
-    int normalized = normalize
-      (con, offset, index, scale, &preserveIndex, &release);
+    int normalized
+        = normalize(con, offset, index, scale, &preserveIndex, &release);
 
-    if (!isFpr(dst)) { // GPR load
+    if (!isFpr(dst)) {  // GPR load
       switch (srcSize) {
       case 1:
         if (signExtend) {
@@ -689,43 +879,50 @@ void load(Context* con, unsigned srcSize, int base, int offset, int index,
       case 4:
       case 8: {
         if (srcSize == 4 and dstSize == 8) {
-          load(con, 4, base, 0, normalized, 1, 4, dst, preserveIndex,
-               false);
+          load(con, 4, base, 0, normalized, 1, 4, dst, preserveIndex, false);
           moveRR(con, 4, dst, 8, dst);
         } else if (srcSize == 8 and dstSize == 8) {
           lir::Register dstHigh(dst->high);
-          load(con, 4, base, 0, normalized, 1, 4, &dstHigh,
-              preserveIndex, false);
-          load(con, 4, base, 4, normalized, 1, 4, dst, preserveIndex,
+          load(con,
+               4,
+               base,
+               0,
+               normalized,
+               1,
+               4,
+               &dstHigh,
+               preserveIndex,
                false);
+          load(con, 4, base, 4, normalized, 1, 4, dst, preserveIndex, false);
         } else {
           emit(con, ldr(dst->low, base, normalized));
         }
       } break;
 
-      default: abort(con);
+      default:
+        abort(con);
       }
-    } else { // FPR load
-      lir::Register base_(base),
-                          normalized_(normalized),
-                          absAddr = makeTemp(con);
+    } else {  // FPR load
+      lir::Register base_(base), normalized_(normalized),
+          absAddr = makeTemp(con);
       // VFP loads only have bases, so we must add the index
       addR(con, vm::TargetBytesPerWord, &base_, &normalized_, &absAddr);
       // double-precision
-      if (srcSize == 8) emit(con, fldd(fpr64(dst), absAddr.low));
+      if (srcSize == 8)
+        emit(con, fldd(fpr64(dst), absAddr.low));
       // single-precision
-      else              emit(con, flds(fpr32(dst), absAddr.low));
+      else
+        emit(con, flds(fpr32(dst), absAddr.low));
       freeTemp(con, absAddr);
     }
 
-    if (release) con->client->releaseTemporary(normalized);
+    if (release)
+      con->client->releaseTemporary(normalized);
   } else if ((srcSize == 8 and dstSize == 8)
              or abs(offset) == (abs(offset) & 0xFF)
-             or (srcSize != 2
-                 and (srcSize != 1 or not signExtend)
-                 and abs(offset) == (abs(offset) & 0xFFF)))
-  {
-    if (!isFpr(dst)) { // GPR load
+             or (srcSize != 2 and (srcSize != 1 or not signExtend)
+                 and abs(offset) == (abs(offset) & 0xFFF))) {
+    if (!isFpr(dst)) {  // GPR load
       switch (srcSize) {
       case 1:
         if (signExtend) {
@@ -750,60 +947,110 @@ void load(Context* con, unsigned srcSize, int base, int offset, int index,
       case 8: {
         if (dstSize == 8) {
           lir::Register dstHigh(dst->high);
-          load(con, 4, base, offset, lir::NoRegister, 1, 4, &dstHigh, false,
+          load(con,
+               4,
+               base,
+               offset,
+               lir::NoRegister,
+               1,
+               4,
+               &dstHigh,
+               false,
                false);
-          load(con, 4, base, offset + 4, lir::NoRegister, 1, 4, dst, false,
+          load(con,
+               4,
+               base,
+               offset + 4,
+               lir::NoRegister,
+               1,
+               4,
+               dst,
+               false,
                false);
         } else {
           emit(con, ldri(dst->low, base, offset));
         }
       } break;
 
-      default: abort(con);
+      default:
+        abort(con);
       }
-    } else { // FPR load
+    } else {  // FPR load
       // double-precision
-      if (srcSize == 8) emit(con, fldd(fpr64(dst), base, offset));
+      if (srcSize == 8)
+        emit(con, fldd(fpr64(dst), base, offset));
       // single-precision
-      else              emit(con, flds(fpr32(dst), base, offset));
+      else
+        emit(con, flds(fpr32(dst), base, offset));
     }
   } else {
     lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
     ResolvedPromise offsetPromise(offset);
     lir::Constant offsetConstant(&offsetPromise);
-    moveCR(con, vm::TargetBytesPerWord, &offsetConstant, vm::TargetBytesPerWord,
+    moveCR(con,
+           vm::TargetBytesPerWord,
+           &offsetConstant,
+           vm::TargetBytesPerWord,
            &tmp);
-    
-    load(con, srcSize, base, 0, tmp.low, 1, dstSize, dst, false,
-         signExtend);
+
+    load(con, srcSize, base, 0, tmp.low, 1, dstSize, dst, false, signExtend);
 
     con->client->releaseTemporary(tmp.low);
   }
 }
 
-void moveMR(Context* con, unsigned srcSize, lir::Memory* src,
-       unsigned dstSize, lir::Register* dst)
+void moveMR(Context* con,
+            unsigned srcSize,
+            lir::Memory* src,
+            unsigned dstSize,
+            lir::Register* dst)
 {
-  load(con, srcSize, src->base, src->offset, src->index, src->scale,
-       dstSize, dst, true, true);
+  load(con,
+       srcSize,
+       src->base,
+       src->offset,
+       src->index,
+       src->scale,
+       dstSize,
+       dst,
+       true,
+       true);
 }
 
-void moveZMR(Context* con, unsigned srcSize, lir::Memory* src,
-        unsigned dstSize, lir::Register* dst)
+void moveZMR(Context* con,
+             unsigned srcSize,
+             lir::Memory* src,
+             unsigned dstSize,
+             lir::Register* dst)
 {
-  load(con, srcSize, src->base, src->offset, src->index, src->scale,
-       dstSize, dst, true, false);
+  load(con,
+       srcSize,
+       src->base,
+       src->offset,
+       src->index,
+       src->scale,
+       dstSize,
+       dst,
+       true,
+       false);
 }
 
-void andR(Context* con, unsigned size, lir::Register* a,
-     lir::Register* b, lir::Register* dst)
+void andR(Context* con,
+          unsigned size,
+          lir::Register* a,
+          lir::Register* b,
+          lir::Register* dst)
 {
-  if (size == 8) emit(con, and_(dst->high, a->high, b->high));
+  if (size == 8)
+    emit(con, and_(dst->high, a->high, b->high));
   emit(con, and_(dst->low, a->low, b->low));
 }
 
-void andC(Context* con, unsigned size, lir::Constant* a,
-     lir::Register* b, lir::Register* dst)
+void andC(Context* con,
+          unsigned size,
+          lir::Constant* a,
+          lir::Register* b,
+          lir::Register* dst)
 {
   int64_t v = a->value->value();
 
@@ -838,7 +1085,7 @@ void andC(Context* con, unsigned size, lir::Constant* a,
 
         moveCR(con, 4, a, 4, &tmp);
         andR(con, 4, b, &tmp, dst);
-        
+
         if (useTemporary) {
           con->client->releaseTemporary(tmp.low);
         }
@@ -849,22 +1096,33 @@ void andC(Context* con, unsigned size, lir::Constant* a,
   }
 }
 
-void orR(Context* con, unsigned size, lir::Register* a,
-    lir::Register* b, lir::Register* dst)
+void orR(Context* con,
+         unsigned size,
+         lir::Register* a,
+         lir::Register* b,
+         lir::Register* dst)
 {
-  if (size == 8) emit(con, orr(dst->high, a->high, b->high));
+  if (size == 8)
+    emit(con, orr(dst->high, a->high, b->high));
   emit(con, orr(dst->low, a->low, b->low));
 }
 
-void xorR(Context* con, unsigned size, lir::Register* a,
-     lir::Register* b, lir::Register* dst)
+void xorR(Context* con,
+          unsigned size,
+          lir::Register* a,
+          lir::Register* b,
+          lir::Register* dst)
 {
-  if (size == 8) emit(con, eor(dst->high, a->high, b->high));
+  if (size == 8)
+    emit(con, eor(dst->high, a->high, b->high));
   emit(con, eor(dst->low, a->low, b->low));
 }
 
-void moveAR2(Context* con, unsigned srcSize, lir::Address* src,
-       unsigned dstSize, lir::Register* dst)
+void moveAR2(Context* con,
+             unsigned srcSize,
+             lir::Address* src,
+             unsigned dstSize,
+             lir::Register* dst)
 {
   assertT(con, srcSize == 4 and dstSize == 4);
 
@@ -875,36 +1133,46 @@ void moveAR2(Context* con, unsigned srcSize, lir::Address* src,
   moveMR(con, dstSize, &memory, dstSize, dst);
 }
 
-void moveAR(Context* con, unsigned srcSize, lir::Address* src,
-       unsigned dstSize, lir::Register* dst)
+void moveAR(Context* con,
+            unsigned srcSize,
+            lir::Address* src,
+            unsigned dstSize,
+            lir::Register* dst)
 {
   moveAR2(con, srcSize, src, dstSize, dst);
 }
 
-void compareRR(Context* con, unsigned aSize, lir::Register* a,
-          unsigned bSize UNUSED, lir::Register* b)
+void compareRR(Context* con,
+               unsigned aSize,
+               lir::Register* a,
+               unsigned bSize UNUSED,
+               lir::Register* b)
 {
   assertT(con, !(isFpr(a) ^ isFpr(b)));  // regs must be of the same type
 
-  if (!isFpr(a)) { // GPR compare
+  if (!isFpr(a)) {  // GPR compare
     assertT(con, aSize == 4 && bSize == 4);
     /**/  // assertT(con, b->low != a->low);
     emit(con, cmp(b->low, a->low));
-  } else {         // FPR compare
+  } else {  // FPR compare
     assertT(con, aSize == bSize);
-    if (aSize == 8) emit(con, fcmpd(fpr64(b), fpr64(a))); // double
-    else            emit(con, fcmps(fpr32(b), fpr32(a))); // single
+    if (aSize == 8)
+      emit(con, fcmpd(fpr64(b), fpr64(a)));  // double
+    else
+      emit(con, fcmps(fpr32(b), fpr32(a)));  // single
     emit(con, fmstat());
   }
 }
 
-void compareCR(Context* con, unsigned aSize, lir::Constant* a,
-          unsigned bSize, lir::Register* b)
+void compareCR(Context* con,
+               unsigned aSize,
+               lir::Constant* a,
+               unsigned bSize,
+               lir::Register* b)
 {
   assertT(con, aSize == 4 and bSize == 4);
 
-  if (!isFpr(b) && a->value->resolved() &&
-      isOfWidth(a->value->value(), 8)) {
+  if (!isFpr(b) && a->value->resolved() && isOfWidth(a->value->value(), 8)) {
     emit(con, cmpi(b->low, a->value->value()));
   } else {
     lir::Register tmp(con->client->acquireTemporary(GPR_MASK));
@@ -914,8 +1182,11 @@ void compareCR(Context* con, unsigned aSize, lir::Constant* a,
   }
 }
 
-void compareCM(Context* con, unsigned aSize, lir::Constant* a,
-          unsigned bSize, lir::Memory* b)
+void compareCM(Context* con,
+               unsigned aSize,
+               lir::Constant* a,
+               unsigned bSize,
+               lir::Memory* b)
 {
   assertT(con, aSize == 4 and bSize == 4);
 
@@ -925,8 +1196,11 @@ void compareCM(Context* con, unsigned aSize, lir::Constant* a,
   con->client->releaseTemporary(tmp.low);
 }
 
-void compareRM(Context* con, unsigned aSize, lir::Register* a,
-          unsigned bSize, lir::Memory* b)
+void compareRM(Context* con,
+               unsigned aSize,
+               lir::Register* a,
+               unsigned bSize,
+               lir::Memory* b)
 {
   assertT(con, aSize == 4 and bSize == 4);
 
@@ -936,8 +1210,7 @@ void compareRM(Context* con, unsigned aSize, lir::Register* a,
   con->client->releaseTemporary(tmp.low);
 }
 
-int32_t
-branch(Context* con, lir::TernaryOperation op)
+int32_t branch(Context* con, lir::TernaryOperation op)
 {
   switch (op) {
   case lir::JumpIfEqual:
@@ -971,7 +1244,7 @@ branch(Context* con, lir::TernaryOperation op)
 
   case lir::JumpIfFloatGreaterOrEqualOrUnordered:
     return bpl(0);
- 
+
   default:
     abort(con);
   }
@@ -988,16 +1261,20 @@ void branch(Context* con, lir::TernaryOperation op, lir::Constant* target)
   conditional(con, branch(con, op), target);
 }
 
-void branchLong(Context* con, lir::TernaryOperation op, lir::Operand* al,
-           lir::Operand* ah, lir::Operand* bl,
-           lir::Operand* bh, lir::Constant* target,
-           BinaryOperationType compareSigned,
-           BinaryOperationType compareUnsigned)
+void branchLong(Context* con,
+                lir::TernaryOperation op,
+                lir::Operand* al,
+                lir::Operand* ah,
+                lir::Operand* bl,
+                lir::Operand* bh,
+                lir::Constant* target,
+                BinaryOperationType compareSigned,
+                BinaryOperationType compareUnsigned)
 {
   compareSigned(con, 4, ah, 4, bh);
 
   unsigned next = 0;
-  
+
   switch (op) {
   case lir::JumpIfEqual:
   case lir::JumpIfFloatEqual:
@@ -1072,25 +1349,31 @@ void branchLong(Context* con, lir::TernaryOperation op, lir::Operand* al,
   }
 }
 
-void branchRR(Context* con, lir::TernaryOperation op, unsigned size,
-         lir::Register* a, lir::Register* b,
-         lir::Constant* target)
+void branchRR(Context* con,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Register* a,
+              lir::Register* b,
+              lir::Constant* target)
 {
   if (!isFpr(a) && size > vm::TargetBytesPerWord) {
     lir::Register ah(a->high);
     lir::Register bh(b->high);
 
-    branchLong(con, op, a, &ah, b, &bh, target, CAST2(compareRR),
-               CAST2(compareRR));
+    branchLong(
+        con, op, a, &ah, b, &bh, target, CAST2(compareRR), CAST2(compareRR));
   } else {
     compareRR(con, size, a, size, b);
     branch(con, op, target);
   }
 }
 
-void branchCR(Context* con, lir::TernaryOperation op, unsigned size,
-         lir::Constant* a, lir::Register* b,
-         lir::Constant* target)
+void branchCR(Context* con,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Constant* a,
+              lir::Register* b,
+              lir::Constant* target)
 {
   assertT(con, !isFloatBranch(op));
 
@@ -1105,17 +1388,20 @@ void branchCR(Context* con, lir::TernaryOperation op, unsigned size,
 
     lir::Register bh(b->high);
 
-    branchLong(con, op, &al, &ah, b, &bh, target, CAST2(compareCR),
-               CAST2(compareCR));
+    branchLong(
+        con, op, &al, &ah, b, &bh, target, CAST2(compareCR), CAST2(compareCR));
   } else {
     compareCR(con, size, a, size, b);
     branch(con, op, target);
   }
 }
 
-void branchRM(Context* con, lir::TernaryOperation op, unsigned size,
-         lir::Register* a, lir::Memory* b,
-         lir::Constant* target)
+void branchRM(Context* con,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Register* a,
+              lir::Memory* b,
+              lir::Constant* target)
 {
   assertT(con, !isFloatBranch(op));
   assertT(con, size <= vm::TargetBytesPerWord);
@@ -1124,9 +1410,12 @@ void branchRM(Context* con, lir::TernaryOperation op, unsigned size,
   branch(con, op, target);
 }
 
-void branchCM(Context* con, lir::TernaryOperation op, unsigned size,
-         lir::Constant* a, lir::Memory* b,
-         lir::Constant* target)
+void branchCM(Context* con,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Constant* a,
+              lir::Memory* b,
+              lir::Constant* target)
 {
   assertT(con, !isFloatBranch(op));
   assertT(con, size <= vm::TargetBytesPerWord);
@@ -1135,25 +1424,27 @@ void branchCM(Context* con, lir::TernaryOperation op, unsigned size,
   branch(con, op, target);
 }
 
-ShiftMaskPromise*
-shiftMaskPromise(Context* con, Promise* base, unsigned shift, int64_t mask)
+ShiftMaskPromise* shiftMaskPromise(Context* con,
+                                   Promise* base,
+                                   unsigned shift,
+                                   int64_t mask)
 {
-  return new(con->zone) ShiftMaskPromise(base, shift, mask);
+  return new (con->zone) ShiftMaskPromise(base, shift, mask);
 }
 
-void moveCM(Context* con, unsigned srcSize, lir::Constant* src,
-       unsigned dstSize, lir::Memory* dst)
+void moveCM(Context* con,
+            unsigned srcSize,
+            lir::Constant* src,
+            unsigned dstSize,
+            lir::Memory* dst)
 {
   switch (dstSize) {
   case 8: {
-    lir::Constant srcHigh
-      (shiftMaskPromise(con, src->value, 32, 0xFFFFFFFF));
-    lir::Constant srcLow
-      (shiftMaskPromise(con, src->value, 0, 0xFFFFFFFF));
-    
-    lir::Memory dstLow
-      (dst->base, dst->offset + 4, dst->index, dst->scale);
-    
+    lir::Constant srcHigh(shiftMaskPromise(con, src->value, 32, 0xFFFFFFFF));
+    lir::Constant srcLow(shiftMaskPromise(con, src->value, 0, 0xFFFFFFFF));
+
+    lir::Memory dstLow(dst->base, dst->offset + 4, dst->index, dst->scale);
+
     moveCM(con, 4, &srcLow, 4, &dstLow);
     moveCM(con, 4, &srcHigh, 4, dst);
   } break;
@@ -1166,8 +1457,11 @@ void moveCM(Context* con, unsigned srcSize, lir::Constant* src,
   }
 }
 
-void negateRR(Context* con, unsigned srcSize, lir::Register* src,
-         unsigned dstSize UNUSED, lir::Register* dst)
+void negateRR(Context* con,
+              unsigned srcSize,
+              lir::Register* src,
+              unsigned dstSize UNUSED,
+              lir::Register* dst)
 {
   assertT(con, srcSize == dstSize);
 
@@ -1206,7 +1500,7 @@ void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
-  lir::Register tmp(4); // a non-arg reg that we don't mind clobbering
+  lir::Register tmp(4);  // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, vm::TargetBytesPerWord, &tmp);
 }
@@ -1257,6 +1551,6 @@ void storeLoadBarrier(Context* con)
   memoryBarrier(con);
 }
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian

@@ -20,19 +20,18 @@
 #undef JNIEXPORT
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
-#  define PLATFORM_WINDOWS
-#  define PATH_SEPARATOR ';'
-#  define JNIEXPORT __declspec(dllexport)
-#else // not (defined __MINGW32__) || (defined _MSC_VER)
-#  define PLATFORM_POSIX
-#  define PATH_SEPARATOR ':'
-#  define JNIEXPORT __attribute__ ((visibility("default"))) \
-  __attribute__ ((used))
-#endif // not (defined __MINGW32__) || (defined _MSC_VER)
+#define PLATFORM_WINDOWS
+#define PATH_SEPARATOR ';'
+#define JNIEXPORT __declspec(dllexport)
+#else  // not (defined __MINGW32__) || (defined _MSC_VER)
+#define PLATFORM_POSIX
+#define PATH_SEPARATOR ':'
+#define JNIEXPORT __attribute__((visibility("default"))) __attribute__((used))
+#endif  // not (defined __MINGW32__) || (defined _MSC_VER)
 
 #ifdef _MSC_VER
 
-#  define UNUSED
+#define UNUSED
 
 typedef char int8_t;
 typedef unsigned char uint8_t;
@@ -43,38 +42,37 @@ typedef unsigned int uint32_t;
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 
-#  define INT32_MAX 2147483647
+#define INT32_MAX 2147483647
 
-#  define not !
-#  define or ||
-#  define and &&
-#  define xor ^
+#define not!
+#define or ||
+#define and &&
+#define xor ^
 
-#  ifdef _M_IX86
-#    define ARCH_x86_32
-#  elif defined _M_X64
-#    define ARCH_x86_64
-#  endif
+#ifdef _M_IX86
+#define ARCH_x86_32
+#elif defined _M_X64
+#define ARCH_x86_64
+#endif
 
-#else // not _MSC_VER
+#else  // not _MSC_VER
 
-#  define UNUSED __attribute__((unused))
+#define UNUSED __attribute__((unused))
 
-#  include "stdint.h"
-#  include "errno.h"
+#include "stdint.h"
+#include "errno.h"
 
-#  ifdef __i386__
-#    define ARCH_x86_32
-#  elif defined __x86_64__
-#    define ARCH_x86_64
-#  elif defined __arm__
-#    define ARCH_arm
-#  endif
+#ifdef __i386__
+#define ARCH_x86_32
+#elif defined __x86_64__
+#define ARCH_x86_64
+#elif defined __arm__
+#define ARCH_arm
+#endif
 
-#endif // not _MSC_VER
+#endif  // not _MSC_VER
 
-inline void
-throwNew(JNIEnv* e, const char* class_, const char* message, ...)
+inline void throwNew(JNIEnv* e, const char* class_, const char* message, ...)
 {
   jclass c = e->FindClass(class_);
   if (c) {
@@ -90,7 +88,7 @@ throwNew(JNIEnv* e, const char* class_, const char* message, ...)
       vsnprintf(buffer, BufferSize - 1, message, list);
 #endif
       va_end(list);
-      
+
       e->ThrowNew(c, buffer);
     } else {
       e->ThrowNew(c, 0);
@@ -99,8 +97,7 @@ throwNew(JNIEnv* e, const char* class_, const char* message, ...)
   }
 }
 
-inline void
-throwNewErrno(JNIEnv* e, const char* class_)
+inline void throwNewErrno(JNIEnv* e, const char* class_)
 {
 #ifdef _MSC_VER
   const unsigned size = 128;
@@ -112,8 +109,7 @@ throwNewErrno(JNIEnv* e, const char* class_)
 #endif
 }
 
-inline void*
-allocate(JNIEnv* e, unsigned size)
+inline void* allocate(JNIEnv* e, unsigned size)
 {
   void* p = malloc(size);
   if (p == 0) {
@@ -122,4 +118,4 @@ allocate(JNIEnv* e, unsigned size)
   return p;
 }
 
-#endif//JNI_UTIL
+#endif  // JNI_UTIL

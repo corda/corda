@@ -49,9 +49,10 @@ struct SignalRegistrar::Data {
   LPTOP_LEVEL_EXCEPTION_FILTER oldHandler;
 #endif
 
-  Data() : crashDumpDirectory(0),
+  Data()
+      : crashDumpDirectory(0),
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    oldHandler(0)
+        oldHandler(0)
 #endif
   {
     if (instance) {
@@ -68,9 +69,11 @@ struct SignalRegistrar::Data {
 
   bool registerHandler(Handler* handler, int index);
 
-  bool findHandler() {
+  bool findHandler()
+  {
     for (unsigned i = 0; i < windows::HandlerCount; ++i) {
-      if (handlers[i]) return true;
+      if (handlers[i])
+        return true;
     }
     return false;
   }
@@ -95,21 +98,16 @@ struct MINIDUMP_EXCEPTION_INFORMATION {
 struct MINIDUMP_USER_STREAM_INFORMATION;
 struct MINIDUMP_CALLBACK_INFORMATION;
 
-enum MINIDUMP_TYPE {
-  MiniDumpNormal = 0,
-  MiniDumpWithFullMemory = 2
-};
+enum MINIDUMP_TYPE { MiniDumpNormal = 0, MiniDumpWithFullMemory = 2 };
 
-typedef BOOL (*MiniDumpWriteDumpType)(HANDLE processHandle,
-                                      DWORD processId,
-                                      HANDLE file,
-                                      MINIDUMP_TYPE type,
-                                      const MINIDUMP_EXCEPTION_INFORMATION
-                                      * exception,
-                                      const MINIDUMP_USER_STREAM_INFORMATION
-                                      * userStream,
-                                      const MINIDUMP_CALLBACK_INFORMATION
-                                      * callback);
+typedef BOOL (*MiniDumpWriteDumpType)(
+    HANDLE processHandle,
+    DWORD processId,
+    HANDLE file,
+    MINIDUMP_TYPE type,
+    const MINIDUMP_EXCEPTION_INFORMATION* exception,
+    const MINIDUMP_USER_STREAM_INFORMATION* userStream,
+    const MINIDUMP_CALLBACK_INFORMATION* callback);
 
 #endif
 
@@ -118,8 +116,9 @@ void dump(LPEXCEPTION_POINTERS e, const char* directory)
   HINSTANCE dbghelp = LoadLibrary("dbghelp.dll");
 
   if (dbghelp) {
-    MiniDumpWriteDumpType MiniDumpWriteDump = reinterpret_cast
-        <MiniDumpWriteDumpType>(GetProcAddress(dbghelp, "MiniDumpWriteDump"));
+    MiniDumpWriteDumpType MiniDumpWriteDump
+        = reinterpret_cast<MiniDumpWriteDumpType>(
+            GetProcAddress(dbghelp, "MiniDumpWriteDump"));
 
     if (MiniDumpWriteDump) {
       char name[MAX_PATH];
@@ -129,8 +128,8 @@ void dump(LPEXCEPTION_POINTERS e, const char* directory)
                    MAX_PATH,
                    "%s\\crash-%" LLD ".mdmp",
                    directory,
-                   (static_cast<int64_t>(tb.time) * 1000) + static_cast
-                   <int64_t>(tb.millitm));
+                   (static_cast<int64_t>(tb.time) * 1000)
+                   + static_cast<int64_t>(tb.millitm));
 
       HANDLE file
           = CreateFile(name, FILE_WRITE_DATA, 0, 0, CREATE_ALWAYS, 0, 0);
@@ -206,10 +205,12 @@ LONG CALLBACK handleException(LPEXCEPTION_POINTERS e)
 {
   SignalRegistrar::Handler* handler = 0;
   if (e->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-    handler = SignalRegistrar::Data::instance->handlers[SignalRegistrar::SegFault];
+    handler
+        = SignalRegistrar::Data::instance->handlers[SignalRegistrar::SegFault];
   } else if (e->ExceptionRecord->ExceptionCode
              == EXCEPTION_INT_DIVIDE_BY_ZERO) {
-    handler = SignalRegistrar::Data::instance->handlers[SignalRegistrar::DivideByZero];
+    handler = SignalRegistrar::Data::instance
+                  ->handlers[SignalRegistrar::DivideByZero];
   }
 
   if (handler) {
@@ -278,7 +279,7 @@ SignalRegistrar::~SignalRegistrar()
 
 bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
 {
-  if(index != SegFault && index != DivideByZero) {
+  if (index != SegFault && index != DivideByZero) {
     crash();
   }
 

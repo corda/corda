@@ -22,60 +22,69 @@ static union {
 
 const bool LittleEndian = _DetectEndianness.c[0] == 1;
 
-template<bool TargetLittleEndian>
+template <bool TargetLittleEndian>
 class Endianness {
-public:
-  static inline uint8_t v1(uint8_t v) {
+ public:
+  static inline uint8_t v1(uint8_t v)
+  {
     return v;
   }
 
-  static inline uint16_t v2(uint16_t v) {
-    if(LittleEndian == TargetLittleEndian) {
+  static inline uint16_t v2(uint16_t v)
+  {
+    if (LittleEndian == TargetLittleEndian) {
       return v;
     } else {
       return ((v >> 8) & 0xFF) | (v << 8);
     }
   }
 
-  static inline uint32_t v4(uint32_t v) {
-    if(LittleEndian == TargetLittleEndian) {
+  static inline uint32_t v4(uint32_t v)
+  {
+    if (LittleEndian == TargetLittleEndian) {
       return v;
     } else {
-      return
-        ((v >> 24) & 0x000000FF) |
-         ((v >>  8) & 0x0000FF00) |
-         ((v <<  8) & 0x00FF0000) |
-         ((v << 24));
+      return ((v >> 24) & 0x000000FF) | ((v >> 8) & 0x0000FF00)
+             | ((v << 8) & 0x00FF0000) | ((v << 24));
     }
   }
 
-  static inline uint32_t vAny(uint32_t v) {
+  static inline uint32_t vAny(uint32_t v)
+  {
     return v4(v);
   }
 
-  static inline uint64_t v8(uint64_t v) {
-    if(LittleEndian == TargetLittleEndian) {
+  static inline uint64_t v8(uint64_t v)
+  {
+    if (LittleEndian == TargetLittleEndian) {
       return v;
     } else {
-      return
-        ((static_cast<uint64_t>(v) >> 56) & (static_cast<uint64_t>(0xff) << 0)) |
-        ((static_cast<uint64_t>(v) >> 40) & (static_cast<uint64_t>(0xff) << 8)) |
-        ((static_cast<uint64_t>(v) >> 24) & (static_cast<uint64_t>(0xff) << 16)) |
-        ((static_cast<uint64_t>(v) >>  8) & (static_cast<uint64_t>(0xff) << 24)) |
-        ((static_cast<uint64_t>(v) <<  8) & (static_cast<uint64_t>(0xff) << 32)) |
-        ((static_cast<uint64_t>(v) << 24) & (static_cast<uint64_t>(0xff) << 40)) |
-        ((static_cast<uint64_t>(v) << 40) & (static_cast<uint64_t>(0xff) << 48)) |
-        ((static_cast<uint64_t>(v) << 56));
+      return ((static_cast<uint64_t>(v) >> 56)
+              & (static_cast<uint64_t>(0xff) << 0))
+             | ((static_cast<uint64_t>(v) >> 40)
+                & (static_cast<uint64_t>(0xff) << 8))
+             | ((static_cast<uint64_t>(v) >> 24)
+                & (static_cast<uint64_t>(0xff) << 16))
+             | ((static_cast<uint64_t>(v) >> 8)
+                & (static_cast<uint64_t>(0xff) << 24))
+             | ((static_cast<uint64_t>(v) << 8)
+                & (static_cast<uint64_t>(0xff) << 32))
+             | ((static_cast<uint64_t>(v) << 24)
+                & (static_cast<uint64_t>(0xff) << 40))
+             | ((static_cast<uint64_t>(v) << 40)
+                & (static_cast<uint64_t>(0xff) << 48))
+             | ((static_cast<uint64_t>(v) << 56));
     }
   }
 
-  static inline uint64_t vAny(uint64_t v) {
+  static inline uint64_t vAny(uint64_t v)
+  {
     return v8(v);
   }
 };
 
-} // namespace endian
+}  // namespace endian
 
-} // namespace avian
+}  // namespace avian
 
-#endif // AVIAN_ENDIANNESS_H
+#endif  // AVIAN_ENDIANNESS_H

@@ -277,6 +277,6 @@ uint64_t longToFloat(int64_t a)
   return vm::floatToBits(static_cast<float>(a));
 }
 
-} // namespace runtime
-} // namespace codegen
-} // namespace avian
+}  // namespace runtime
+}  // namespace codegen
+}  // namespace avian

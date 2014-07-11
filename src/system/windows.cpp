@@ -12,11 +12,11 @@
 #include "windows.h"
 
 #ifdef _MSC_VER
-#  define S_ISREG(x) ((x) & _S_IFREG)
-#  define S_ISDIR(x) ((x) & _S_IFDIR)
-#  define FTIME _ftime_s
+#define S_ISREG(x) ((x)&_S_IFREG)
+#define S_ISDIR(x) ((x)&_S_IFDIR)
+#define FTIME _ftime_s
 #else
-#  define FTIME _ftime
+#define FTIME _ftime
 #endif
 
 #undef max
@@ -36,50 +36,46 @@
   WaitForSingleObjectEx((hHandle), (dwMilliseconds), FALSE)
 
 #define CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName) \
-  CreateEventEx((lpEventAttributes), (lpName), ((bManualReset)?CREATE_EVENT_MANUAL_RESET:0)|((bInitialState)?CREATE_EVENT_INITIAL_SET:0), EVENT_ALL_ACCESS)
+  CreateEventEx((lpEventAttributes),                                        \
+                (lpName),                                                   \
+                ((bManualReset) ? CREATE_EVENT_MANUAL_RESET : 0)            \
+                | ((bInitialState) ? CREATE_EVENT_INITIAL_SET : 0),         \
+                EVENT_ALL_ACCESS)
 
-#define CreateMutex(lpEventAttributes, bInitialOwner, lpName) \
-  CreateMutexEx((lpEventAttributes), (lpName), (bInitialOwner)?CREATE_MUTEX_INITIAL_OWNER:0, MUTEX_ALL_ACCESS)
+#define CreateMutex(lpEventAttributes, bInitialOwner, lpName)     \
+  CreateMutexEx((lpEventAttributes),                              \
+                (lpName),                                         \
+                (bInitialOwner) ? CREATE_MUTEX_INITIAL_OWNER : 0, \
+                MUTEX_ALL_ACCESS)
 
 #include "thread-emulation.h"
 
 #endif
 
-#if defined(WINAPI_PARTITION_PHONE) && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
-// Headers in Windows Phone 8 DevKit contain severe error, so let's define needed functions on our own
-extern "C"
-{
+#if defined(WINAPI_PARTITION_PHONE) \
+    && WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
+// Headers in Windows Phone 8 DevKit contain severe error, so let's define
+// needed functions on our own
+extern "C" {
 WINBASEAPI
-_Ret_maybenull_
-HANDLE
-WINAPI
-CreateFileMappingFromApp(
-    _In_ HANDLE hFile,
-    _In_opt_ PSECURITY_ATTRIBUTES SecurityAttributes,
-    _In_ ULONG PageProtection,
-    _In_ ULONG64 MaximumSize,
-    _In_opt_ PCWSTR Name
-    );
+_Ret_maybenull_ HANDLE WINAPI
+    CreateFileMappingFromApp(_In_ HANDLE hFile,
+                             _In_opt_ PSECURITY_ATTRIBUTES SecurityAttributes,
+                             _In_ ULONG PageProtection,
+                             _In_ ULONG64 MaximumSize,
+                             _In_opt_ PCWSTR Name);
 
 WINBASEAPI
-_Ret_maybenull_  __out_data_source(FILE)
-PVOID
-WINAPI
-MapViewOfFileFromApp(
-    _In_ HANDLE hFileMappingObject,
-    _In_ ULONG DesiredAccess,
-    _In_ ULONG64 FileOffset,
-    _In_ SIZE_T NumberOfBytesToMap
-    );
+_Ret_maybenull_ __out_data_source(FILE) PVOID WINAPI
+    MapViewOfFileFromApp(_In_ HANDLE hFileMappingObject,
+                         _In_ ULONG DesiredAccess,
+                         _In_ ULONG64 FileOffset,
+                         _In_ SIZE_T NumberOfBytesToMap);
 
 WINBASEAPI
-BOOL
-WINAPI
-UnmapViewOfFile(
-    _In_ LPCVOID lpBaseAddress
-    );
+BOOL WINAPI UnmapViewOfFile(_In_ LPCVOID lpBaseAddress);
 }
-#endif // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
+#endif  // WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_PHONE)
 
 #else
 
@@ -93,7 +89,7 @@ UnmapViewOfFile(
 
 #endif
 
-#define ACQUIRE(s, x) MutexResource MAKE_NAME(mutexResource_) (s, x)
+#define ACQUIRE(s, x) MutexResource MAKE_NAME(mutexResource_)(s, x)
 
 using namespace vm;
 
@@ -101,26 +97,27 @@ namespace {
 
 class MutexResource {
  public:
-  MutexResource(System* s, HANDLE m): s(s), m(m) {
+  MutexResource(System* s, HANDLE m) : s(s), m(m)
+  {
     int r UNUSED = WaitForSingleObject(m, INFINITE);
     assertT(s, r == WAIT_OBJECT_0);
   }
 
-  ~MutexResource() {
+  ~MutexResource()
+  {
     bool success UNUSED = ReleaseMutex(m);
     assertT(s, success);
   }
 
  private:
-  System* s; 
+  System* s;
   HANDLE m;
 };
 
 class MySystem;
 MySystem* system;
 
-DWORD WINAPI
-run(void* r)
+DWORD WINAPI run(void* r)
 {
   static_cast<System::Runnable*>(r)->run();
   return 0;
@@ -131,15 +128,11 @@ const bool Verbose = false;
 const unsigned Waiting = 1 << 0;
 const unsigned Notified = 1 << 1;
 
-class MySystem: public System {
+class MySystem : public System {
  public:
-  class Thread: public System::Thread {
+  class Thread : public System::Thread {
    public:
-    Thread(System* s, System::Runnable* r):
-      s(s),
-      r(r),
-      next(0),
-      flags(0)
+    Thread(System* s, System::Runnable* r) : s(s), r(r), next(0), flags(0)
     {
       mutex = CreateMutex(0, false, 0);
       assertT(s, mutex);
@@ -148,7 +141,8 @@ class MySystem: public System {
       assertT(s, event);
     }
 
-    virtual void interrupt() {
+    virtual void interrupt()
+    {
       ACQUIRE(s, mutex);
 
       r->setInterrupted(true);
@@ -159,7 +153,8 @@ class MySystem: public System {
       }
     }
 
-    virtual bool getAndClearInterrupted() {
+    virtual bool getAndClearInterrupted()
+    {
       ACQUIRE(s, mutex);
 
       bool interrupted = r->interrupted();
@@ -169,12 +164,14 @@ class MySystem: public System {
       return interrupted;
     }
 
-    virtual void join() {
+    virtual void join()
+    {
       int r UNUSED = WaitForSingleObject(thread, INFINITE);
       assertT(s, r == WAIT_OBJECT_0);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       CloseHandle(event);
       CloseHandle(mutex);
       CloseHandle(thread);
@@ -190,24 +187,28 @@ class MySystem: public System {
     unsigned flags;
   };
 
-  class Mutex: public System::Mutex {
+  class Mutex : public System::Mutex {
    public:
-    Mutex(System* s): s(s) {
+    Mutex(System* s) : s(s)
+    {
       mutex = CreateMutex(0, false, 0);
       assertT(s, mutex);
     }
 
-    virtual void acquire() {
+    virtual void acquire()
+    {
       int r UNUSED = WaitForSingleObject(mutex, INFINITE);
       assertT(s, r == WAIT_OBJECT_0);
     }
 
-    virtual void release() {
+    virtual void release()
+    {
       bool success UNUSED = ReleaseMutex(mutex);
       assertT(s, success);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       CloseHandle(mutex);
       ::free(this);
     }
@@ -216,19 +217,21 @@ class MySystem: public System {
     HANDLE mutex;
   };
 
-  class Monitor: public System::Monitor {
+  class Monitor : public System::Monitor {
    public:
-    Monitor(System* s): s(s), owner_(0), first(0), last(0), depth(0) {
+    Monitor(System* s) : s(s), owner_(0), first(0), last(0), depth(0)
+    {
       mutex = CreateMutex(0, false, 0);
       assertT(s, mutex);
     }
 
-    virtual bool tryAcquire(System::Thread* context) {
+    virtual bool tryAcquire(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
       if (owner_ == t) {
-        ++ depth;
+        ++depth;
         return true;
       } else {
         switch (WaitForSingleObject(mutex, 0)) {
@@ -237,7 +240,7 @@ class MySystem: public System {
 
         case WAIT_OBJECT_0:
           owner_ = t;
-          ++ depth;
+          ++depth;
           return true;
 
         default:
@@ -246,7 +249,8 @@ class MySystem: public System {
       }
     }
 
-    virtual void acquire(System::Thread* context) {
+    virtual void acquire(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
@@ -255,15 +259,16 @@ class MySystem: public System {
         assertT(s, r == WAIT_OBJECT_0);
         owner_ = t;
       }
-      ++ depth;
+      ++depth;
     }
 
-    virtual void release(System::Thread* context) {
+    virtual void release(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
       if (owner_ == t) {
-        if (-- depth == 0) {
+        if (--depth == 0) {
           owner_ = 0;
           bool success UNUSED = ReleaseMutex(mutex);
           assertT(s, success);
@@ -273,7 +278,8 @@ class MySystem: public System {
       }
     }
 
-    void append(Thread* t) {
+    void append(Thread* t)
+    {
 #ifndef NDEBUG
       for (Thread* x = first; x; x = x->next) {
         expect(s, t != x);
@@ -288,7 +294,8 @@ class MySystem: public System {
       }
     }
 
-    void remove(Thread* t) {
+    void remove(Thread* t)
+    {
       Thread* previous = 0;
       for (Thread* current = first; current;) {
         if (t == current) {
@@ -318,7 +325,8 @@ class MySystem: public System {
 #endif
     }
 
-    virtual void wait(System::Thread* context, int64_t time) {
+    virtual void wait(System::Thread* context, int64_t time)
+    {
       wait(context, time, false);
     }
 
@@ -327,7 +335,8 @@ class MySystem: public System {
       return wait(context, time, true);
     }
 
-    bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
+    bool wait(System::Thread* context, int64_t time, bool clearInterrupted)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
@@ -339,7 +348,8 @@ class MySystem: public System {
 
         int r UNUSED;
 
-        { ACQUIRE(s, t->mutex);
+        {
+          ACQUIRE(s, t->mutex);
 
           expect(s, (t->flags & Notified) == 0);
 
@@ -384,7 +394,8 @@ class MySystem: public System {
         r = WaitForSingleObject(mutex, INFINITE);
         assertT(s, r == WAIT_OBJECT_0);
 
-        { ACQUIRE(s, t->mutex);
+        {
+          ACQUIRE(s, t->mutex);
           t->flags = 0;
         }
 
@@ -409,7 +420,8 @@ class MySystem: public System {
       }
     }
 
-    void doNotify(Thread* t) {
+    void doNotify(Thread* t)
+    {
       ACQUIRE(s, t->mutex);
 
       t->flags |= Notified;
@@ -418,7 +430,8 @@ class MySystem: public System {
       assertT(s, success);
     }
 
-    virtual void notify(System::Thread* context) {
+    virtual void notify(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
@@ -438,7 +451,8 @@ class MySystem: public System {
       }
     }
 
-    virtual void notifyAll(System::Thread* context) {
+    virtual void notifyAll(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
       assertT(s, t);
 
@@ -451,12 +465,14 @@ class MySystem: public System {
         sysAbort(s);
       }
     }
-    
-    virtual System::Thread* owner() {
+
+    virtual System::Thread* owner()
+    {
       return owner_;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       assertT(s, owner_ == 0);
       CloseHandle(mutex);
       ::free(this);
@@ -470,23 +486,27 @@ class MySystem: public System {
     unsigned depth;
   };
 
-  class Local: public System::Local {
+  class Local : public System::Local {
    public:
-    Local(System* s): s(s) {
+    Local(System* s) : s(s)
+    {
       key = TlsAlloc();
       assertT(s, key != TLS_OUT_OF_INDEXES);
     }
 
-    virtual void* get() {
+    virtual void* get()
+    {
       return TlsGetValue(key);
     }
 
-    virtual void set(void* p) {
+    virtual void set(void* p)
+    {
       bool r UNUSED = TlsSetValue(key, p);
       assertT(s, r);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       bool r UNUSED = TlsFree(key);
       assertT(s, r);
 
@@ -497,30 +517,40 @@ class MySystem: public System {
     unsigned key;
   };
 
-  class Region: public System::Region {
+  class Region : public System::Region {
    public:
-    Region(System* system, uint8_t* start, size_t length, HANDLE mapping,
-           HANDLE file):
-      system(system),
-      start_(start),
-      length_(length),
-      mapping(mapping),
-      file(file)
-    { }
+    Region(System* system,
+           uint8_t* start,
+           size_t length,
+           HANDLE mapping,
+           HANDLE file)
+        : system(system),
+          start_(start),
+          length_(length),
+          mapping(mapping),
+          file(file)
+    {
+    }
 
-    virtual const uint8_t* start() {
+    virtual const uint8_t* start()
+    {
       return start_;
     }
 
-    virtual size_t length() {
+    virtual size_t length()
+    {
       return length_;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       if (start_) {
-        if (start_) UnmapViewOfFile(start_);
-        if (mapping) CloseHandle(mapping);
-        if (file) CloseHandle(file);
+        if (start_)
+          UnmapViewOfFile(start_);
+        if (mapping)
+          CloseHandle(mapping);
+        if (file)
+          CloseHandle(file);
       }
       system->free(this);
     }
@@ -532,11 +562,14 @@ class MySystem: public System {
     HANDLE file;
   };
 
-  class Directory: public System::Directory {
+  class Directory : public System::Directory {
    public:
-    Directory(System* s): s(s), handle(0), findNext(false) { }
+    Directory(System* s) : s(s), handle(0), findNext(false)
+    {
+    }
 
-    virtual const char* next() {
+    virtual const char* next()
+    {
       if (handle and handle != INVALID_HANDLE_VALUE) {
         if (findNext) {
           if (FindNextFile(handle, &data)) {
@@ -550,7 +583,8 @@ class MySystem: public System {
       return 0;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       if (handle and handle != INVALID_HANDLE_VALUE) {
         FindClose(handle);
       }
@@ -563,37 +597,41 @@ class MySystem: public System {
     bool findNext;
   };
 
-  class Library: public System::Library {
+  class Library : public System::Library {
    public:
-    Library(System* s, HMODULE handle, const char* name):
-      s(s),
-      handle(handle),
-      name_(name),
-      next_(0)
-    { }
+    Library(System* s, HMODULE handle, const char* name)
+        : s(s), handle(handle), name_(name), next_(0)
+    {
+    }
 
-    virtual void* resolve(const char* function) {
+    virtual void* resolve(const char* function)
+    {
       void* address;
       FARPROC p = GetProcAddress(handle, function);
       memcpy(&address, &p, BytesPerWord);
       return address;
     }
 
-    virtual const char* name() {
+    virtual const char* name()
+    {
       return name_;
     }
 
-    virtual System::Library* next() {
+    virtual System::Library* next()
+    {
       return next_;
     }
 
-    virtual void setNext(System::Library* lib) {
+    virtual void setNext(System::Library* lib)
+    {
       next_ = lib;
     }
 
-    virtual void disposeAll() {
+    virtual void disposeAll()
+    {
       if (Verbose) {
-        fprintf(stderr, "close %p\n", handle); fflush(stderr);
+        fprintf(stderr, "close %p\n", handle);
+        fflush(stderr);
       }
 
       if (name_) {
@@ -626,41 +664,53 @@ class MySystem: public System {
     assertT(this, mutex);
   }
 
-  virtual void* tryAllocate(unsigned sizeInBytes) {
+  virtual void* tryAllocate(unsigned sizeInBytes)
+  {
     return malloc(sizeInBytes);
   }
 
-  virtual void free(const void* p) {
-    if (p) ::free(const_cast<void*>(p));
+  virtual void free(const void* p)
+  {
+    if (p)
+      ::free(const_cast<void*>(p));
   }
 
-  #if !defined(AVIAN_AOT_ONLY)
-  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
-    return VirtualAlloc
-      (0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+#if !defined(AVIAN_AOT_ONLY)
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes)
+  {
+    return VirtualAlloc(
+        0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   }
 
-  virtual void freeExecutable(const void* p, unsigned) {
+  virtual void freeExecutable(const void* p, unsigned)
+  {
     int r UNUSED = VirtualFree(const_cast<void*>(p), 0, MEM_RELEASE);
     assertT(this, r);
   }
-  #endif
+#endif
 
-  virtual bool success(Status s) {
+  virtual bool success(Status s)
+  {
     return s == 0;
   }
 
-  virtual Status attach(Runnable* r) {
+  virtual Status attach(Runnable* r)
+  {
     Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
-    bool success UNUSED = DuplicateHandle
-      (GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(),
-       &(t->thread), 0, false, DUPLICATE_SAME_ACCESS);
+    bool success UNUSED = DuplicateHandle(GetCurrentProcess(),
+                                          GetCurrentThread(),
+                                          GetCurrentProcess(),
+                                          &(t->thread),
+                                          0,
+                                          false,
+                                          DUPLICATE_SAME_ACCESS);
     assertT(this, success);
     r->attach(t);
     return 0;
   }
 
-  virtual Status start(Runnable* r) {
+  virtual Status start(Runnable* r)
+  {
     Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     r->attach(t);
     DWORD id;
@@ -669,22 +719,26 @@ class MySystem: public System {
     return 0;
   }
 
-  virtual Status make(System::Mutex** m) {
+  virtual Status make(System::Mutex** m)
+  {
     *m = new (allocate(this, sizeof(Mutex))) Mutex(this);
     return 0;
   }
 
-  virtual Status make(System::Monitor** m) {
+  virtual Status make(System::Monitor** m)
+  {
     *m = new (allocate(this, sizeof(Monitor))) Monitor(this);
     return 0;
   }
 
-  virtual Status make(System::Local** l) {
+  virtual Status make(System::Local** l)
+  {
     *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
   }
 
-  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
+  virtual Status visit(System::Thread* st UNUSED,
+                       System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -703,15 +757,15 @@ class MySystem: public System {
       rv = GetThreadContext(target->thread, &context);
 
       if (rv) {
-#  ifdef ARCH_x86_32
+#ifdef ARCH_x86_32
         visitor->visit(reinterpret_cast<void*>(context.Eip),
                        reinterpret_cast<void*>(context.Esp),
                        reinterpret_cast<void*>(context.Ebp));
-#  elif defined ARCH_x86_64
+#elif defined ARCH_x86_64
         visitor->visit(reinterpret_cast<void*>(context.Rip),
                        reinterpret_cast<void*>(context.Rsp),
                        reinterpret_cast<void*>(context.Rbp));
-#  endif
+#endif
         success = true;
       }
 
@@ -721,22 +775,33 @@ class MySystem: public System {
 
     return (success ? 0 : 1);
 #else
-    #pragma message("TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
+#pragma message( \
+    "TODO: http://msdn.microsoft.com/en-us/library/windowsphone/develop/system.windows.application.unhandledexception(v=vs.105).aspx")
     return false;
 #endif
   }
 
-  virtual Status map(System::Region** region, const char* name) {
+  virtual Status map(System::Region** region, const char* name)
+  {
     Status status = 1;
     size_t nameLen = strlen(name) * 2;
     RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-    MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
+    MultiByteToWideChar(
+        CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    HANDLE file = CreateFileW(RUNTIME_ARRAY_BODY(wideName), FILE_READ_DATA, FILE_SHARE_READ, 0,
-    OPEN_EXISTING, 0, 0);
+    HANDLE file = CreateFileW(RUNTIME_ARRAY_BODY(wideName),
+                              FILE_READ_DATA,
+                              FILE_SHARE_READ,
+                              0,
+                              OPEN_EXISTING,
+                              0,
+                              0);
 #else
-    HANDLE file = CreateFile2(RUNTIME_ARRAY_BODY(wideName), GENERIC_READ, FILE_SHARE_READ,
-                             OPEN_EXISTING, 0);
+    HANDLE file = CreateFile2(RUNTIME_ARRAY_BODY(wideName),
+                              GENERIC_READ,
+                              FILE_SHARE_READ,
+                              OPEN_EXISTING,
+                              0);
 #endif
     if (file != INVALID_HANDLE_VALUE) {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -744,14 +809,16 @@ class MySystem: public System {
 #else
       FILE_STANDARD_INFO info;
       unsigned size = INVALID_FILE_SIZE;
-      if(GetFileInformationByHandleEx(file,  FileStandardInfo, &info, sizeof(info)))
+      if (GetFileInformationByHandleEx(
+              file, FileStandardInfo, &info, sizeof(info)))
         size = info.EndOfFile.QuadPart;
 #endif
       if (size != INVALID_FILE_SIZE) {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         HANDLE mapping = CreateFileMapping(file, 0, PAGE_READONLY, 0, size, 0);
 #else
-        HANDLE mapping = CreateFileMappingFromApp(file, 0, PAGE_READONLY, size, 0);
+        HANDLE mapping
+            = CreateFileMappingFromApp(file, 0, PAGE_READONLY, size, 0);
 #endif
         if (mapping) {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
@@ -761,8 +828,8 @@ class MySystem: public System {
 #endif
           if (data) {
             *region = new (allocate(this, sizeof(Region)))
-              Region(this, static_cast<uint8_t*>(data), size, file, mapping);
-            status = 0;        
+                Region(this, static_cast<uint8_t*>(data), size, file, mapping);
+            status = 0;
           }
 
           if (status) {
@@ -775,11 +842,12 @@ class MySystem: public System {
         CloseHandle(file);
       }
     }
-    
+
     return status;
   }
 
-  virtual Status open(System::Directory** directory, const char* name) {
+  virtual Status open(System::Directory** directory, const char* name)
+  {
     Status status = 1;
 
     unsigned length = strlen(name);
@@ -792,7 +860,12 @@ class MySystem: public System {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     d->handle = FindFirstFile(RUNTIME_ARRAY_BODY(buffer), &(d->data));
 #else
-    d->handle = FindFirstFileEx(RUNTIME_ARRAY_BODY(buffer), FindExInfoStandard, &(d->data), FindExSearchNameMatch, 0, 0);
+    d->handle = FindFirstFileEx(RUNTIME_ARRAY_BODY(buffer),
+                                FindExInfoStandard,
+                                &(d->data),
+                                FindExSearchNameMatch,
+                                0,
+                                0);
 #endif
     if (d->handle == INVALID_HANDLE_VALUE) {
       d->dispose();
@@ -800,23 +873,24 @@ class MySystem: public System {
       *directory = d;
       status = 0;
     }
-    
+
     return status;
   }
 
-  virtual FileType stat(const char* name, unsigned* length) {
+  virtual FileType stat(const char* name, unsigned* length)
+  {
     size_t nameLen = strlen(name) * 2;
     RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-    MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
+    MultiByteToWideChar(
+        CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
     WIN32_FILE_ATTRIBUTE_DATA data;
-    if (GetFileAttributesExW
-        (RUNTIME_ARRAY_BODY(wideName), GetFileExInfoStandard, &data))
-    {
+    if (GetFileAttributesExW(
+            RUNTIME_ARRAY_BODY(wideName), GetFileExInfoStandard, &data)) {
       if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         return TypeDirectory;
       } else {
         *length = (data.nFileSizeHigh * static_cast<int64_t>(MAXDWORD + 1))
-          + data.nFileSizeLow;
+                  + data.nFileSizeLow;
         return TypeFile;
       }
     } else {
@@ -824,11 +898,13 @@ class MySystem: public System {
     }
   }
 
-  virtual const char* libraryPrefix() {
+  virtual const char* libraryPrefix()
+  {
     return SO_PREFIX;
   }
 
-  virtual const char* librarySuffix() {
+  virtual const char* librarySuffix()
+  {
     return SO_SUFFIX;
   }
 
@@ -836,11 +912,9 @@ class MySystem: public System {
                                      const char* name)
   {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
-    if (strncmp(name, "//", 2) == 0
-        or strncmp(name, "\\\\", 2) == 0
+    if (strncmp(name, "//", 2) == 0 or strncmp(name, "\\\\", 2) == 0
         or strncmp(name + 1, ":/", 2) == 0
-        or strncmp(name + 1, ":\\", 2) == 0)
-    {
+        or strncmp(name + 1, ":\\", 2) == 0) {
       return copy(allocator, name);
     } else {
       TCHAR buffer[MAX_PATH];
@@ -848,20 +922,21 @@ class MySystem: public System {
       return append(allocator, buffer, "\\", name);
     }
 #else
-    #pragma message("TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
+#pragma message( \
+    "TODO:http://lunarfrog.com/blog/2012/05/21/winrt-folders-access/ Windows.ApplicationModel.Package.Current.InstalledLocation")
     return copy(allocator, name);
 #endif
   }
 
-  virtual Status load(System::Library** lib,
-                      const char* name)
+  virtual Status load(System::Library** lib, const char* name)
   {
     HMODULE handle;
     unsigned nameLength = (name ? strlen(name) : 0);
     if (name) {
       size_t nameLen = nameLength * 2;
       RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);
-      MultiByteToWideChar(CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
+      MultiByteToWideChar(
+          CP_UTF8, 0, name, -1, RUNTIME_ARRAY_BODY(wideName), nameLen + 1);
 
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       handle = LoadLibraryW(RUNTIME_ARRAY_BODY(wideName));
@@ -872,14 +947,16 @@ class MySystem: public System {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
       handle = GetModuleHandle(0);
 #else
-      // Most of WinRT/WP8 applications can not host native object files inside main executable
+      // Most of WinRT/WP8 applications can not host native object files inside
+      // main executable
       assertT(this, false);
 #endif
     }
- 
+
     if (handle) {
       if (Verbose) {
-        fprintf(stderr, "open %s as %p\n", name, handle); fflush(stderr);
+        fprintf(stderr, "open %s as %p\n", name, handle);
+        fflush(stderr);
       }
 
       char* n;
@@ -903,15 +980,18 @@ class MySystem: public System {
     }
   }
 
-  virtual char pathSeparator() {
+  virtual char pathSeparator()
+  {
     return ';';
   }
 
-  virtual char fileSeparator() {
+  virtual char fileSeparator()
+  {
     return '\\';
   }
 
-  virtual int64_t now() {
+  virtual int64_t now()
+  {
     // We used to use _ftime here, but that only gives us 1-second
     // resolution on Windows 7.  _ftime_s might work better, but MinGW
     // doesn't have it as of this writing.  So we use this mess instead:
@@ -921,7 +1001,8 @@ class MySystem: public System {
              | time.dwLowDateTime) / 10000) - 11644473600000LL;
   }
 
-  virtual void yield() {
+  virtual void yield()
+  {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
     SwitchToThread();
 #else
@@ -929,15 +1010,18 @@ class MySystem: public System {
 #endif
   }
 
-  virtual void exit(int code) {
+  virtual void exit(int code)
+  {
     ::exit(code);
   }
 
-  virtual void abort() {
+  virtual void abort()
+  {
     avian::system::crash();
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     system = 0;
     CloseHandle(mutex);
     ::free(this);
@@ -946,14 +1030,13 @@ class MySystem: public System {
   HANDLE mutex;
 };
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-AVIAN_EXPORT System*
-makeSystem()
+AVIAN_EXPORT System* makeSystem()
 {
   return new (malloc(sizeof(MySystem))) MySystem();
 }
 
-} // namespace vm
+}  // namespace vm

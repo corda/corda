@@ -22,7 +22,8 @@ const unsigned Padding = 16;
 
 class LzmaAllocator {
  public:
-  LzmaAllocator(avian::util::Allocator* a): a(a) {
+  LzmaAllocator(avian::util::Allocator* a) : a(a)
+  {
     allocator.Alloc = allocate;
     allocator.Free = free;
   }
@@ -30,15 +31,17 @@ class LzmaAllocator {
   ISzAlloc allocator;
   avian::util::Allocator* a;
 
-  static void* allocate(void* allocator, size_t size) {
-    uint8_t* p = static_cast<uint8_t*>
-      (static_cast<LzmaAllocator*>(allocator)->a->allocate(size + Padding));
+  static void* allocate(void* allocator, size_t size)
+  {
+    uint8_t* p = static_cast<uint8_t*>(
+        static_cast<LzmaAllocator*>(allocator)->a->allocate(size + Padding));
     int32_t size32 = size;
     memcpy(p, &size32, 4);
     return p + Padding;
   }
 
-  static void free(void* allocator, void* address) {
+  static void free(void* allocator, void* address)
+  {
     if (address) {
       void* p = static_cast<uint8_t*>(address) - Padding;
       int32_t size32;
@@ -48,6 +51,6 @@ class LzmaAllocator {
   }
 };
 
-} // namespace vm
+}  // namespace vm
 
-#endif // LZMA_UTIL_H
+#endif  // LZMA_UTIL_H

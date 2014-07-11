@@ -69,7 +69,10 @@ class Processor {
 
   class CompilationHandler {
    public:
-    virtual void compiled(const void* code, unsigned size, unsigned frameSize, const char* name) = 0;
+    virtual void compiled(const void* code,
+                          unsigned size,
+                          unsigned frameSize,
+                          const char* name) = 0;
 
     virtual void dispose() = 0;
   };
@@ -112,25 +115,19 @@ class Processor {
 
   virtual void initVtable(Thread* t, GcClass* c) = 0;
 
-  virtual void
-  visitObjects(Thread* t, Heap::Visitor* v) = 0;
+  virtual void visitObjects(Thread* t, Heap::Visitor* v) = 0;
 
-  virtual void
-  walkStack(Thread* t, StackVisitor* v) = 0;
+  virtual void walkStack(Thread* t, StackVisitor* v) = 0;
 
   virtual int lineNumber(Thread* t, GcMethod* method, int ip) = 0;
 
-  virtual object*
-  makeLocalReference(Thread* t, object o) = 0;
+  virtual object* makeLocalReference(Thread* t, object o) = 0;
 
-  virtual void
-  disposeLocalReference(Thread* t, object* r) = 0;
+  virtual void disposeLocalReference(Thread* t, object* r) = 0;
 
-  virtual bool
-  pushLocalFrame(Thread* t, unsigned capacity) = 0;
+  virtual bool pushLocalFrame(Thread* t, unsigned capacity) = 0;
 
-  virtual void
-  popLocalFrame(Thread* t) = 0;
+  virtual void popLocalFrame(Thread* t) = 0;
 
   virtual object invokeArray(Thread* t,
                              GcMethod* method,
@@ -156,20 +153,16 @@ class Processor {
                             object this_,
                             va_list arguments) = 0;
 
-  virtual void
-  dispose(Thread* t) = 0;
+  virtual void dispose(Thread* t) = 0;
 
-  virtual void
-  dispose() = 0;
+  virtual void dispose() = 0;
 
-  virtual object
-  getStackTrace(Thread* t, Thread* target) = 0;
+  virtual object getStackTrace(Thread* t, Thread* target) = 0;
 
   virtual void initialize(BootImage* image, avian::util::Slice<uint8_t> code)
       = 0;
 
-  virtual void
-  addCompilationHandler(CompilationHandler* handler) = 0;
+  virtual void addCompilationHandler(CompilationHandler* handler) = 0;
 
   virtual void compileMethod(Thread* t,
                              Zone* zone,
@@ -179,23 +172,18 @@ class Processor {
                              GcMethod* method,
                              OffsetResolver* resolver) = 0;
 
-  virtual void
-  visitRoots(Thread* t, HeapWalker* w) = 0;
+  virtual void visitRoots(Thread* t, HeapWalker* w) = 0;
 
-  virtual void
-  normalizeVirtualThunks(Thread* t) = 0;
+  virtual void normalizeVirtualThunks(Thread* t) = 0;
 
-  virtual unsigned*
-  makeCallTable(Thread* t, HeapWalker* w) = 0;
+  virtual unsigned* makeCallTable(Thread* t, HeapWalker* w) = 0;
 
-  virtual void
-  boot(Thread* t, BootImage* image, uint8_t* code) = 0;
+  virtual void boot(Thread* t, BootImage* image, uint8_t* code) = 0;
 
-  virtual void
-  callWithCurrentContinuation(Thread* t, object receiver) = 0;
+  virtual void callWithCurrentContinuation(Thread* t, object receiver) = 0;
 
-  virtual void
-  dynamicWind(Thread* t, object before, object thunk, object after) = 0;
+  virtual void dynamicWind(Thread* t, object before, object thunk, object after)
+      = 0;
 
   virtual void feedResultToContinuation(Thread* t,
                                         GcContinuation* continuation,
@@ -205,9 +193,10 @@ class Processor {
                                            GcContinuation* continuation,
                                            GcThrowable* exception) = 0;
 
-  virtual void
-  walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
-  = 0;
+  virtual void walkContinuationBody(Thread* t,
+                                    Heap::Walker* w,
+                                    object o,
+                                    unsigned start) = 0;
 
   object invoke(Thread* t, GcMethod* method, object this_, ...)
   {
@@ -232,8 +221,8 @@ class Processor {
     va_list a;
     va_start(a, this_);
 
-    object r = invokeList
-      (t, loader, className, methodName, methodSpec, this_, a);
+    object r
+        = invokeList(t, loader, className, methodName, methodSpec, this_, a);
 
     va_end(a);
 
@@ -246,6 +235,6 @@ Processor* makeProcessor(System* system,
                          const char* crashDumpDirectory,
                          bool useNativeFeatures);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//PROCESSOR_H
+#endif  // PROCESSOR_H

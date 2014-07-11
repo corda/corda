@@ -16,8 +16,7 @@ namespace {
 
 #if (!defined PLATFORM_WINDOWS) || (defined _MSC_VER)
 
-void
-removeNewline(char* s)
+void removeNewline(char* s)
 {
   for (; s; ++s) {
     if (*s == '\n') {
@@ -29,10 +28,10 @@ removeNewline(char* s)
 
 #endif
 
-} // namespace
+}  // namespace
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_java_util_Date_toString(JNIEnv* e, jclass c UNUSED, jlong when)
+    Java_java_util_Date_toString(JNIEnv* e, jclass c UNUSED, jlong when)
 {
   const unsigned BufferSize UNUSED = 27;
 
@@ -40,13 +39,13 @@ Java_java_util_Date_toString(JNIEnv* e, jclass c UNUSED, jlong when)
 
 #ifdef PLATFORM_WINDOWS
   e->MonitorEnter(c);
-#  ifdef _MSC_VER
+#ifdef _MSC_VER
   char buffer[BufferSize];
   ctime_s(buffer, BufferSize, &time);
   removeNewline(buffer);
-#  else
+#else
   char* buffer = ctime(&time);
-#  endif
+#endif
   jstring r = e->NewStringUTF(buffer);
   e->MonitorExit(c);
   return r;

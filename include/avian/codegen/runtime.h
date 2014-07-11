@@ -47,8 +47,8 @@ uint64_t intToFloat(int32_t a);
 uint64_t longToDouble(int64_t a);
 uint64_t longToFloat(int64_t a);
 
-} // namespace runtime
-} // namespace codegen
-} // namespace avian
+}  // namespace runtime
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_RUNTIME_H
+#endif  // AVIAN_CODEGEN_RUNTIME_H

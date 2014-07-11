@@ -17,7 +17,7 @@ namespace avian {
 namespace codegen {
 
 class RegisterMask {
-public:
+ public:
   uint32_t mask;
   uint8_t start;
   uint8_t limit;
@@ -25,49 +25,52 @@ public:
   static unsigned maskStart(uint32_t mask);
   static unsigned maskLimit(uint32_t mask);
 
-  inline RegisterMask(uint32_t mask):
-    mask(mask),
-    start(maskStart(mask)),
-    limit(maskLimit(mask))
-  { }
+  inline RegisterMask(uint32_t mask)
+      : mask(mask), start(maskStart(mask)), limit(maskLimit(mask))
+  {
+  }
 };
 
 class RegisterFile {
-public:
+ public:
   RegisterMask allRegisters;
   RegisterMask generalRegisters;
   RegisterMask floatRegisters;
 
-  inline RegisterFile(uint32_t generalRegisterMask, uint32_t floatRegisterMask):
-    allRegisters(generalRegisterMask | floatRegisterMask),
-    generalRegisters(generalRegisterMask),
-    floatRegisters(floatRegisterMask)
-  { }
+  inline RegisterFile(uint32_t generalRegisterMask, uint32_t floatRegisterMask)
+      : allRegisters(generalRegisterMask | floatRegisterMask),
+        generalRegisters(generalRegisterMask),
+        floatRegisters(floatRegisterMask)
+  {
+  }
 };
 
 class RegisterIterator {
-public:
+ public:
   int index;
   const RegisterMask& mask;
 
-  inline RegisterIterator(const RegisterMask& mask):
-    index(mask.start),
-    mask(mask) {}
+  inline RegisterIterator(const RegisterMask& mask)
+      : index(mask.start), mask(mask)
+  {
+  }
 
-  inline bool hasNext() {
+  inline bool hasNext()
+  {
     return index < mask.limit;
   }
 
-  inline int next() {
+  inline int next()
+  {
     int r = index;
     do {
       index++;
-    } while(index < mask.limit && !(mask.mask & (1 << index)));
+    } while (index < mask.limit && !(mask.mask & (1 << index)));
     return r;
   }
 };
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
 #endif  // AVIAN_CODEGEN_REGISTERS_H

@@ -11,19 +11,19 @@
 #ifndef AVIAN_CODEGEN_TARGET_MULTIMETHOD_H
 #define AVIAN_CODEGEN_TARGET_MULTIMETHOD_H
 
-
 namespace avian {
 namespace codegen {
 
 class Multimethod {
-public:
-  inline static unsigned index(lir::UnaryOperation operation, lir::OperandType operand) {
+ public:
+  inline static unsigned index(lir::UnaryOperation operation,
+                               lir::OperandType operand)
+  {
     return operation + (lir::UnaryOperationCount * operand);
   }
 };
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_TARGET_MULTIMETHOD_H
-
+#endif  // AVIAN_CODEGEN_TARGET_MULTIMETHOD_H

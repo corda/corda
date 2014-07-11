@@ -31,19 +31,21 @@ const int32_t PoolOffsetMask = 0xFFF;
 
 class Task {
  public:
-  Task(Task* next): next(next) { }
+  Task(Task* next) : next(next)
+  {
+  }
 
   virtual void run(Context* con) = 0;
 
   Task* next;
 };
 
-class OffsetPromise: public Promise {
+class OffsetPromise : public Promise {
  public:
   OffsetPromise(Context* con, MyBlock* block, unsigned offset, bool forTrace);
 
   virtual bool resolved();
-  
+
   virtual int64_t value();
 
   Context* con;
@@ -54,7 +56,7 @@ class OffsetPromise: public Promise {
 
 Promise* offsetPromise(Context* con, bool forTrace = false);
 
-class OffsetListener: public Promise::Listener {
+class OffsetListener : public Promise::Listener {
  public:
   OffsetListener(vm::System* s, uint8_t* instruction);
 
@@ -64,7 +66,7 @@ class OffsetListener: public Promise::Listener {
   uint8_t* instruction;
 };
 
-class OffsetTask: public Task {
+class OffsetTask : public Task {
  public:
   OffsetTask(Task* next, Promise* promise, Promise* instructionOffset);
 
@@ -74,13 +76,17 @@ class OffsetTask: public Task {
   Promise* instructionOffset;
 };
 
-void appendOffsetTask(Context* con, Promise* promise, Promise* instructionOffset);
+void appendOffsetTask(Context* con,
+                      Promise* promise,
+                      Promise* instructionOffset);
 
 void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value);
 
-class ConstantPoolEntry: public Promise {
+class ConstantPoolEntry : public Promise {
  public:
-  ConstantPoolEntry(Context* con, Promise* constant, ConstantPoolEntry* next,
+  ConstantPoolEntry(Context* con,
+                    Promise* constant,
+                    ConstantPoolEntry* next,
                     Promise* callOffset);
 
   virtual int64_t value();
@@ -95,9 +101,10 @@ class ConstantPoolEntry: public Promise {
   unsigned constantPoolCount;
 };
 
-class ConstantPoolListener: public Promise::Listener {
+class ConstantPoolListener : public Promise::Listener {
  public:
-  ConstantPoolListener(vm::System* s, vm::target_uintptr_t* address,
+  ConstantPoolListener(vm::System* s,
+                       vm::target_uintptr_t* address,
                        uint8_t* returnAddress);
 
   virtual bool resolve(int64_t value, void** location);
@@ -119,7 +126,8 @@ class PoolOffset {
 
 class PoolEvent {
  public:
-  PoolEvent(PoolOffset* poolOffsetHead, PoolOffset* poolOffsetTail,
+  PoolEvent(PoolOffset* poolOffsetHead,
+            PoolOffset* poolOffsetTail,
             unsigned offset);
 
   PoolOffset* poolOffsetHead;
@@ -128,13 +136,18 @@ class PoolEvent {
   unsigned offset;
 };
 
-void appendConstantPoolEntry(Context* con, Promise* constant, Promise* callOffset);
+void appendConstantPoolEntry(Context* con,
+                             Promise* constant,
+                             Promise* callOffset);
 
-void appendPoolEvent(Context* con, MyBlock* b, unsigned offset, PoolOffset* head,
-                PoolOffset* tail);
+void appendPoolEvent(Context* con,
+                     MyBlock* b,
+                     unsigned offset,
+                     PoolOffset* head,
+                     PoolOffset* tail);
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_ARM_PROMISE_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_ARM_PROMISE_H

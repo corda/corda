@@ -22,16 +22,19 @@ class Event;
 
 class Read {
  public:
-  Read():
-    value(0), event(0), eventNext(0)
-  { }
+  Read() : value(0), event(0), eventNext(0)
+  {
+  }
 
   virtual bool intersect(SiteMask* mask, unsigned depth = 0) = 0;
 
-  virtual Value* high(Context* c) { abort(c); }
+  virtual Value* high(Context* c)
+  {
+    abort(c);
+  }
 
   virtual Value* successor() = 0;
-  
+
   virtual bool valid() = 0;
 
   virtual void append(Context* c, Read* r) = 0;
@@ -43,11 +46,12 @@ class Read {
   Read* eventNext;
 };
 
-inline bool valid(Read* r) {
+inline bool valid(Read* r)
+{
   return r and r->valid();
 }
 
-class SingleRead: public Read {
+class SingleRead : public Read {
  public:
   SingleRead(const SiteMask& mask, Value* successor);
 
@@ -56,7 +60,7 @@ class SingleRead: public Read {
   virtual Value* high(Context*);
 
   virtual Value* successor();
-  
+
   virtual bool valid();
 
   virtual void append(Context* c UNUSED, Read* r);
@@ -69,8 +73,7 @@ class SingleRead: public Read {
   Value* successor_;
 };
 
-
-class MultiRead: public Read {
+class MultiRead : public Read {
  public:
   MultiRead();
 
@@ -95,7 +98,7 @@ class MultiRead: public Read {
   bool visited;
 };
 
-class StubRead: public Read {
+class StubRead : public Read {
  public:
   StubRead();
 
@@ -117,9 +120,8 @@ class StubRead: public Read {
 
 SingleRead* read(Context* c, const SiteMask& mask, Value* successor = 0);
 
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
-
-#endif // AVIAN_CODEGEN_COMPILER_READ_H
+#endif  // AVIAN_CODEGEN_COMPILER_READ_H

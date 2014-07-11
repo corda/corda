@@ -56,6 +56,6 @@ void resolveNative(Thread* t, GcMethod* method);
 
 int findLineNumber(Thread* t, GcMethod* method, unsigned ip);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//PROCESS_H
+#endif  // PROCESS_H

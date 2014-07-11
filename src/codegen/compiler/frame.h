@@ -37,7 +37,9 @@ class FrameIterator {
     const unsigned localIndex;
   };
 
-  FrameIterator(Context* c, Stack* stack, Local* locals,
+  FrameIterator(Context* c,
+                Stack* stack,
+                Local* locals,
                 bool includeEmpty = false);
 
   bool hasMore();
@@ -57,9 +59,10 @@ class Local {
 
 class Stack {
  public:
-  Stack(unsigned index, Value* value, Stack* next):
-    index(index), value(value), next(next)
-  { }
+  Stack(unsigned index, Value* value, Stack* next)
+      : index(index), value(value), next(next)
+  {
+  }
 
   unsigned index;
   Value* value;
@@ -68,8 +71,8 @@ class Stack {
 
 Stack* stack(Context* c, Value* value, Stack* next);
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_FRAME_H
+#endif  // AVIAN_CODEGEN_COMPILER_FRAME_H

@@ -36,8 +36,9 @@ namespace arm {
 
 namespace isa {
 // HARDWARE FLAGS
-bool vfpSupported() {
-  // TODO: Use at runtime detection
+bool vfpSupported()
+{
+// TODO: Use at runtime detection
 #if defined(__ARM_PCS_VFP)
   // armhf
   return true;
@@ -49,9 +50,12 @@ bool vfpSupported() {
   return false;
 #endif
 }
-} // namespace isa
+}  // namespace isa
 
-inline unsigned lo8(int64_t i) { return (unsigned)(i&MASK_LO8); }
+inline unsigned lo8(int64_t i)
+{
+  return (unsigned)(i & MASK_LO8);
+}
 
 const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
 const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
@@ -59,8 +63,8 @@ const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
 const unsigned FrameHeaderSize = 1;
 
 const unsigned StackAlignmentInBytes = 8;
-const unsigned StackAlignmentInWords
-= StackAlignmentInBytes / TargetBytesPerWord;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes
+                                       / TargetBytesPerWord;
 
 void resolve(MyBlock*);
 
@@ -74,16 +78,20 @@ using namespace isa;
 
 // END OPERATION COMPILERS
 
-unsigned
-argumentFootprint(unsigned footprint)
+unsigned argumentFootprint(unsigned footprint)
 {
   return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
 }
 
-void
-nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
-          unsigned footprint, void* link, bool,
-          int targetParameterFootprint UNUSED, void** ip, void** stack)
+void nextFrame(ArchitectureContext* con,
+               uint32_t* start,
+               unsigned size UNUSED,
+               unsigned footprint,
+               void* link,
+               bool,
+               int targetParameterFootprint UNUSED,
+               void** ip,
+               void** stack)
 {
   assertT(con, *ip >= start);
   assertT(con, *ip <= start + (size / TargetBytesPerWord));
@@ -108,7 +116,7 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
     return;
   }
 
-  if (*instruction == 0xe12fff1e) { // return
+  if (*instruction == 0xe12fff1e) {  // return
     *ip = link;
     return;
   }
@@ -116,7 +124,7 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
   if (TailCalls and targetParameterFootprint >= 0) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
       offset += argumentFootprint(targetParameterFootprint)
-        - StackAlignmentInWords;
+                - StackAlignmentInWords;
     }
 
     // check for post-non-tail-call stack adjustment of the form "sub
@@ -125,9 +133,14 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
       unsigned value = *instruction & 0xff;
       unsigned rotation = (*instruction >> 8) & 0xf;
       switch (rotation) {
-      case  0: offset -= value / TargetBytesPerWord; break;
-      case 15: offset -= value; break;
-      default: abort(con);
+      case 0:
+        offset -= value / TargetBytesPerWord;
+        break;
+      case 15:
+        offset -= value;
+        break;
+      default:
+        abort(con);
       }
     }
 
@@ -138,45 +151,56 @@ nextFrame(ArchitectureContext* con, uint32_t* start, unsigned size UNUSED,
   *stack = static_cast<void**>(*stack) + offset;
 }
 
-class MyArchitecture: public Architecture {
+class MyArchitecture : public Architecture {
  public:
-  MyArchitecture(System* system): con(system), referenceCount(0) {
+  MyArchitecture(System* system) : con(system), referenceCount(0)
+  {
     populateTables(&con);
   }
 
-  virtual unsigned floatRegisterSize() {
+  virtual unsigned floatRegisterSize()
+  {
     return vfpSupported() ? 8 : 0;
   }
 
-  virtual const RegisterFile* registerFile() {
-    return vfpSupported() ? &MyRegisterFileWithFloats : &MyRegisterFileWithoutFloats;
+  virtual const RegisterFile* registerFile()
+  {
+    return vfpSupported() ? &MyRegisterFileWithFloats
+                          : &MyRegisterFileWithoutFloats;
   }
 
-  virtual int scratch() {
+  virtual int scratch()
+  {
     return 5;
   }
 
-  virtual int stack() {
+  virtual int stack()
+  {
     return StackRegister;
   }
 
-  virtual int thread() {
+  virtual int thread()
+  {
     return ThreadRegister;
   }
 
-  virtual int returnLow() {
+  virtual int returnLow()
+  {
     return 0;
   }
 
-  virtual int returnHigh() {
+  virtual int returnHigh()
+  {
     return 1;
   }
 
-  virtual int virtualCallTarget() {
+  virtual int virtualCallTarget()
+  {
     return 4;
   }
 
-  virtual int virtualCallIndex() {
+  virtual int virtualCallIndex()
+  {
     return 3;
   }
 
@@ -185,15 +209,18 @@ class MyArchitecture: public Architecture {
     return ir::TargetInfo(TargetBytesPerWord);
   }
 
-  virtual bool bigEndian() {
+  virtual bool bigEndian()
+  {
     return false;
   }
 
-  virtual uintptr_t maximumImmediateJump() {
+  virtual uintptr_t maximumImmediateJump()
+  {
     return 0x1FFFFFF;
   }
 
-  virtual bool reserved(int register_) {
+  virtual bool reserved(int register_)
+  {
     switch (register_) {
     case LinkRegister:
     case StackRegister:
@@ -206,15 +233,18 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual unsigned frameFootprint(unsigned footprint) {
+  virtual unsigned frameFootprint(unsigned footprint)
+  {
     return max(footprint, StackAlignmentInWords);
   }
 
-  virtual unsigned argumentFootprint(unsigned footprint) {
+  virtual unsigned argumentFootprint(unsigned footprint)
+  {
     return arm::argumentFootprint(footprint);
   }
 
-  virtual bool argumentAlignment() {
+  virtual bool argumentAlignment()
+  {
 #ifdef __APPLE__
     return false;
 #else
@@ -222,7 +252,8 @@ class MyArchitecture: public Architecture {
 #endif
   }
 
-  virtual bool argumentRegisterAlignment() {
+  virtual bool argumentRegisterAlignment()
+  {
 #ifdef __APPLE__
     return false;
 #else
@@ -230,30 +261,35 @@ class MyArchitecture: public Architecture {
 #endif
   }
 
-  virtual unsigned argumentRegisterCount() {
+  virtual unsigned argumentRegisterCount()
+  {
     return 4;
   }
 
-  virtual int argumentRegister(unsigned index) {
+  virtual int argumentRegister(unsigned index)
+  {
     assertT(&con, index < argumentRegisterCount());
 
     return index;
   }
 
-  virtual bool hasLinkRegister() {
+  virtual bool hasLinkRegister()
+  {
     return true;
   }
 
-  virtual unsigned stackAlignmentInWords() {
+  virtual unsigned stackAlignmentInWords()
+  {
     return StackAlignmentInWords;
   }
 
-  virtual bool matchCall(void* returnAddress, void* target) {
+  virtual bool matchCall(void* returnAddress, void* target)
+  {
     uint32_t* instruction = static_cast<uint32_t*>(returnAddress) - 1;
 
-    return *instruction == static_cast<uint32_t>
-      (bl(static_cast<uint8_t*>(target)
-          - reinterpret_cast<uint8_t*>(instruction)));
+    return *instruction == static_cast<uint32_t>(
+                               bl(static_cast<uint8_t*>(target)
+                                  - reinterpret_cast<uint8_t*>(instruction)));
   }
 
   virtual void updateCall(lir::UnaryOperation op UNUSED,
@@ -265,7 +301,8 @@ class MyArchitecture: public Architecture {
     case lir::Jump:
     case lir::AlignedCall:
     case lir::AlignedJump: {
-      updateOffset(con.s, static_cast<uint8_t*>(returnAddress) - 4,
+      updateOffset(con.s,
+                   static_cast<uint8_t*>(returnAddress) - 4,
                    reinterpret_cast<intptr_t>(newTarget));
     } break;
 
@@ -275,81 +312,105 @@ class MyArchitecture: public Architecture {
     case lir::AlignedLongJump: {
       uint32_t* p = static_cast<uint32_t*>(returnAddress) - 2;
       *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
-        = newTarget;
+          = newTarget;
     } break;
 
-    default: abort(&con);
+    default:
+      abort(&con);
     }
   }
 
-  virtual unsigned constantCallSize() {
+  virtual unsigned constantCallSize()
+  {
     return 4;
   }
 
-  virtual void setConstant(void* dst, uint64_t constant) {
+  virtual void setConstant(void* dst, uint64_t constant)
+  {
     *static_cast<target_uintptr_t*>(dst) = constant;
   }
 
-  virtual unsigned alignFrameSize(unsigned sizeInWords) {
+  virtual unsigned alignFrameSize(unsigned sizeInWords)
+  {
     return pad(sizeInWords + FrameHeaderSize, StackAlignmentInWords)
-      - FrameHeaderSize;
+           - FrameHeaderSize;
   }
 
-  virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, bool mostRecent,
-                         int targetParameterFootprint, void** ip,
+  virtual void nextFrame(void* start,
+                         unsigned size,
+                         unsigned footprint,
+                         void* link,
+                         bool mostRecent,
+                         int targetParameterFootprint,
+                         void** ip,
                          void** stack)
   {
-    arm::nextFrame(&con, static_cast<uint32_t*>(start), size, footprint, link,
-                mostRecent, targetParameterFootprint, ip, stack);
+    arm::nextFrame(&con,
+                   static_cast<uint32_t*>(start),
+                   size,
+                   footprint,
+                   link,
+                   mostRecent,
+                   targetParameterFootprint,
+                   ip,
+                   stack);
   }
 
-  virtual void* frameIp(void* stack) {
+  virtual void* frameIp(void* stack)
+  {
     return stack ? static_cast<void**>(stack)[returnAddressOffset()] : 0;
   }
 
-  virtual unsigned frameHeaderSize() {
+  virtual unsigned frameHeaderSize()
+  {
     return FrameHeaderSize;
   }
 
-  virtual unsigned frameReturnAddressSize() {
+  virtual unsigned frameReturnAddressSize()
+  {
     return 0;
   }
 
-  virtual unsigned frameFooterSize() {
+  virtual unsigned frameFooterSize()
+  {
     return 0;
   }
 
-  virtual int returnAddressOffset() {
+  virtual int returnAddressOffset()
+  {
     return -1;
   }
 
-  virtual int framePointerOffset() {
+  virtual int framePointerOffset()
+  {
     return 0;
   }
-  
-  virtual bool alwaysCondensed(lir::BinaryOperation) {
+
+  virtual bool alwaysCondensed(lir::BinaryOperation)
+  {
     return false;
   }
-  
-  virtual bool alwaysCondensed(lir::TernaryOperation) {
+
+  virtual bool alwaysCondensed(lir::TernaryOperation)
+  {
     return false;
   }
-  
-  virtual void plan
-  (lir::UnaryOperation,
-   unsigned, OperandMask& aMask,
-   bool* thunk)
+
+  virtual void plan(lir::UnaryOperation,
+                    unsigned,
+                    OperandMask& aMask,
+                    bool* thunk)
   {
     aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
     aMask.registerMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }
 
-  virtual void planSource
-  (lir::BinaryOperation op,
-   unsigned aSize, OperandMask& aMask,
-   unsigned bSize, bool* thunk)
+  virtual void planSource(lir::BinaryOperation op,
+                          unsigned aSize,
+                          OperandMask& aMask,
+                          unsigned bSize,
+                          bool* thunk)
   {
     *thunk = false;
     aMask.typeMask = ~0;
@@ -403,11 +464,12 @@ class MyArchitecture: public Architecture {
       break;
     }
   }
-  
-  virtual void planDestination
-  (lir::BinaryOperation op,
-   unsigned, const OperandMask& aMask,
-   unsigned, OperandMask& bMask)
+
+  virtual void planDestination(lir::BinaryOperation op,
+                               unsigned,
+                               const OperandMask& aMask,
+                               unsigned,
+                               OperandMask& bMask)
   {
     bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
     bMask.registerMask = GPR_MASK64;
@@ -443,10 +505,10 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void planMove
-  (unsigned, OperandMask& srcMask,
-   OperandMask& tmpMask,
-   const OperandMask& dstMask)
+  virtual void planMove(unsigned,
+                        OperandMask& srcMask,
+                        OperandMask& tmpMask,
+                        const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
     srcMask.registerMask = ~static_cast<uint64_t>(0);
@@ -459,20 +521,21 @@ class MyArchitecture: public Architecture {
       srcMask.typeMask = 1 << lir::RegisterOperand;
       tmpMask.typeMask = 1 << lir::RegisterOperand;
       tmpMask.registerMask = GPR_MASK64;
-    } else if (vfpSupported() &&
-               dstMask.typeMask & 1 << lir::RegisterOperand &&
-               dstMask.registerMask & FPR_MASK) {
-      srcMask.typeMask = tmpMask.typeMask = 1 << lir::RegisterOperand |
-                                    1 << lir::MemoryOperand;
+    } else if (vfpSupported() && dstMask.typeMask & 1 << lir::RegisterOperand
+               && dstMask.registerMask & FPR_MASK) {
+      srcMask.typeMask = tmpMask.typeMask = 1 << lir::RegisterOperand
+                                            | 1 << lir::MemoryOperand;
       tmpMask.registerMask = ~static_cast<uint64_t>(0);
     }
   }
 
-  virtual void planSource
-  (lir::TernaryOperation op,
-   unsigned, OperandMask& aMask,
-   unsigned bSize, OperandMask& bMask,
-   unsigned, bool* thunk)
+  virtual void planSource(lir::TernaryOperation op,
+                          unsigned,
+                          OperandMask& aMask,
+                          unsigned bSize,
+                          OperandMask& bMask,
+                          unsigned,
+                          bool* thunk)
   {
     aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
     aMask.registerMask = GPR_MASK64;
@@ -486,7 +549,8 @@ class MyArchitecture: public Architecture {
     case lir::ShiftLeft:
     case lir::ShiftRight:
     case lir::UnsignedShiftRight:
-      if (bSize == 8) aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
+      if (bSize == 8)
+        aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
       break;
 
     case lir::Add:
@@ -512,7 +576,7 @@ class MyArchitecture: public Architecture {
         aMask.registerMask = bMask.registerMask = FPR_MASK64;
       } else {
         *thunk = true;
-      }    
+      }
       break;
 
     case lir::JumpIfFloatEqual:
@@ -538,11 +602,13 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void planDestination
-  (lir::TernaryOperation op,
-   unsigned, const OperandMask& aMask UNUSED,
-   unsigned, const OperandMask& bMask,
-   unsigned, OperandMask& cMask)
+  virtual void planDestination(lir::TernaryOperation op,
+                               unsigned,
+                               const OperandMask& aMask UNUSED,
+                               unsigned,
+                               const OperandMask& bMask,
+                               unsigned,
+                               OperandMask& cMask)
   {
     if (isBranch(op)) {
       cMask.typeMask = (1 << lir::ConstantOperand);
@@ -555,12 +621,14 @@ class MyArchitecture: public Architecture {
 
   virtual Assembler* makeAssembler(Allocator* allocator, Zone* zone);
 
-  virtual void acquire() {
-    ++ referenceCount;
+  virtual void acquire()
+  {
+    ++referenceCount;
   }
 
-  virtual void release() {
-    if (-- referenceCount == 0) {
+  virtual void release()
+  {
+    if (--referenceCount == 0) {
       con.s->free(this);
     }
   }
@@ -569,18 +637,21 @@ class MyArchitecture: public Architecture {
   unsigned referenceCount;
 };
 
-class MyAssembler: public Assembler {
+class MyAssembler : public Assembler {
  public:
-  MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch):
-    con(s, a, zone), arch_(arch)
-  { }
+  MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch)
+      : con(s, a, zone), arch_(arch)
+  {
+  }
 
-  virtual void setClient(Client* client) {
+  virtual void setClient(Client* client)
+  {
     assertT(&con, con.client == 0);
     con.client = client;
   }
 
-  virtual Architecture* arch() {
+  virtual Architecture* arch()
+  {
     return arch_;
   }
 
@@ -589,12 +660,17 @@ class MyAssembler: public Assembler {
   {
     lir::Register stack(StackRegister);
     lir::Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
-    lir::Constant handlerConstant(new(con.zone) ResolvedPromise(handler));
-    branchRM(&con, lir::JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
+    lir::Constant handlerConstant(new (con.zone) ResolvedPromise(handler));
+    branchRM(&con,
+             lir::JumpIfGreaterOrEqual,
+             TargetBytesPerWord,
+             &stack,
+             &stackLimit,
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset) {
+  virtual void saveFrame(unsigned stackOffset, unsigned ipOffset)
+  {
     lir::Register link(LinkRegister);
     lir::Memory linkDst(ThreadRegister, ipOffset);
     moveRM(&con, TargetBytesPerWord, &link, TargetBytesPerWord, &linkDst);
@@ -604,7 +680,8 @@ class MyAssembler: public Assembler {
     moveRM(&con, TargetBytesPerWord, &stack, TargetBytesPerWord, &stackDst);
   }
 
-  virtual void pushFrame(unsigned argumentCount, ...) {
+  virtual void pushFrame(unsigned argumentCount, ...)
+  {
     struct Argument {
       unsigned size;
       lir::OperandType type;
@@ -612,49 +689,57 @@ class MyAssembler: public Assembler {
     };
     RUNTIME_ARRAY(Argument, arguments, argumentCount);
 
-    va_list a; va_start(a, argumentCount);
+    va_list a;
+    va_start(a, argumentCount);
     unsigned footprint = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
-      RUNTIME_ARRAY_BODY(arguments)[i].type = static_cast<lir::OperandType>(va_arg(a, int));
+      RUNTIME_ARRAY_BODY(arguments)[i].type
+          = static_cast<lir::OperandType>(va_arg(a, int));
       RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, lir::Operand*);
-      footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
+      footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                                 TargetBytesPerWord);
     }
     va_end(a);
 
     allocateFrame(arch_->alignFrameSize(footprint));
-    
+
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
         lir::Register dst(arch_->argumentRegister(i));
 
         apply(lir::Move,
-              OperandInfo(
-                RUNTIME_ARRAY_BODY(arguments)[i].size,
-                RUNTIME_ARRAY_BODY(arguments)[i].type,
-                RUNTIME_ARRAY_BODY(arguments)[i].operand),
-              OperandInfo(
-                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), lir::RegisterOperand, &dst));
+              OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                          RUNTIME_ARRAY_BODY(arguments)[i].type,
+                          RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                              TargetBytesPerWord),
+                          lir::RegisterOperand,
+                          &dst));
 
-        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                                TargetBytesPerWord);
       } else {
         lir::Memory dst(StackRegister, offset * TargetBytesPerWord);
 
         apply(lir::Move,
-              OperandInfo(
-                RUNTIME_ARRAY_BODY(arguments)[i].size,
-                RUNTIME_ARRAY_BODY(arguments)[i].type,
-                RUNTIME_ARRAY_BODY(arguments)[i].operand),
-              OperandInfo(
-                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord), lir::MemoryOperand, &dst));
+              OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                          RUNTIME_ARRAY_BODY(arguments)[i].type,
+                          RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                              TargetBytesPerWord),
+                          lir::MemoryOperand,
+                          &dst));
 
-        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
+        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                                TargetBytesPerWord);
       }
     }
   }
 
-  virtual void allocateFrame(unsigned footprint) {
+  virtual void allocateFrame(unsigned footprint)
+  {
     footprint += FrameHeaderSize;
 
     // larger frames may require multiple subtract/add instructions
@@ -668,28 +753,36 @@ class MyAssembler: public Assembler {
     subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
     lir::Register returnAddress(LinkRegister);
-    lir::Memory returnAddressDst
-      (StackRegister, (footprint - 1) * TargetBytesPerWord);
-    moveRM(&con, TargetBytesPerWord, &returnAddress, TargetBytesPerWord,
+    lir::Memory returnAddressDst(StackRegister,
+                                 (footprint - 1) * TargetBytesPerWord);
+    moveRM(&con,
+           TargetBytesPerWord,
+           &returnAddress,
+           TargetBytesPerWord,
            &returnAddressDst);
   }
 
-  virtual void adjustFrame(unsigned difference) {
+  virtual void adjustFrame(unsigned difference)
+  {
     lir::Register stack(StackRegister);
     ResolvedPromise differencePromise(difference * TargetBytesPerWord);
     lir::Constant differenceConstant(&differencePromise);
     subC(&con, TargetBytesPerWord, &differenceConstant, &stack, &stack);
   }
 
-  virtual void popFrame(unsigned footprint) {
+  virtual void popFrame(unsigned footprint)
+  {
     footprint += FrameHeaderSize;
 
     lir::Register returnAddress(LinkRegister);
-    lir::Memory returnAddressSrc
-      (StackRegister, (footprint - 1) * TargetBytesPerWord);
-    moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+    lir::Memory returnAddressSrc(StackRegister,
+                                 (footprint - 1) * TargetBytesPerWord);
+    moveMR(&con,
+           TargetBytesPerWord,
+           &returnAddressSrc,
+           TargetBytesPerWord,
            &returnAddress);
-    
+
     lir::Register stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     lir::Constant footprintConstant(&footprintPromise);
@@ -708,14 +801,17 @@ class MyAssembler: public Assembler {
         footprint += FrameHeaderSize;
 
         lir::Register link(LinkRegister);
-        lir::Memory returnAddressSrc
-          (StackRegister, (footprint - 1) * TargetBytesPerWord);
-        moveMR(&con, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+        lir::Memory returnAddressSrc(StackRegister,
+                                     (footprint - 1) * TargetBytesPerWord);
+        moveMR(&con,
+               TargetBytesPerWord,
+               &returnAddressSrc,
+               TargetBytesPerWord,
                &link);
-    
+
         lir::Register stack(StackRegister);
-        ResolvedPromise footprintPromise
-          ((footprint - offset) * TargetBytesPerWord);
+        ResolvedPromise footprintPromise((footprint - offset)
+                                         * TargetBytesPerWord);
         lir::Constant footprintConstant(&footprintPromise);
         addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
@@ -769,46 +865,52 @@ class MyAssembler: public Assembler {
     return_(&con);
   }
 
-  virtual void apply(lir::Operation op) {
+  virtual void apply(lir::Operation op)
+  {
     arch_->con.operations[op](&con);
   }
 
   virtual void apply(lir::UnaryOperation op, OperandInfo a)
   {
-    arch_->con.unaryOperations[Multimethod::index(op, a.type)]
-      (&con, a.size, a.operand);
+    arch_->con.unaryOperations[Multimethod::index(op, a.type)](
+        &con, a.size, a.operand);
   }
 
   virtual void apply(lir::BinaryOperation op, OperandInfo a, OperandInfo b)
   {
-    arch_->con.binaryOperations[index(&(arch_->con), op, a.type, b.type)]
-      (&con, a.size, a.operand, b.size, b.operand);
+    arch_->con.binaryOperations[index(&(arch_->con), op, a.type, b.type)](
+        &con, a.size, a.operand, b.size, b.operand);
   }
 
-  virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c)
+  virtual void apply(lir::TernaryOperation op,
+                     OperandInfo a,
+                     OperandInfo b,
+                     OperandInfo c)
   {
     if (isBranch(op)) {
       assertT(&con, a.size == b.size);
       assertT(&con, c.size == TargetBytesPerWord);
       assertT(&con, c.type == lir::ConstantOperand);
 
-      arch_->con.branchOperations[branchIndex(&(arch_->con), a.type, b.type)]
-        (&con, op, a.size, a.operand, b.operand, c.operand);
+      arch_->con.branchOperations[branchIndex(&(arch_->con), a.type, b.type)](
+          &con, op, a.size, a.operand, b.operand, c.operand);
     } else {
       assertT(&con, b.size == c.size);
       assertT(&con, b.type == lir::RegisterOperand);
       assertT(&con, c.type == lir::RegisterOperand);
 
-      arch_->con.ternaryOperations[index(&(arch_->con), op, a.type)]
-        (&con, b.size, a.operand, b.operand, c.operand);
+      arch_->con.ternaryOperations[index(&(arch_->con), op, a.type)](
+          &con, b.size, a.operand, b.operand, c.operand);
     }
   }
 
-  virtual void setDestination(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst)
+  {
     con.result = dst;
   }
 
-  virtual void write() {
+  virtual void write()
+  {
     uint8_t* dst = con.result;
     unsigned dstOffset = 0;
     for (MyBlock* b = con.firstBlock; b; b = b->next) {
@@ -828,8 +930,11 @@ class MyAssembler: public Assembler {
         unsigned poolSize = 0;
         for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
           if (DebugPool) {
-            fprintf(stderr, "visit pool offset %p %d in block %p\n",
-                    o, o->offset, b);
+            fprintf(stderr,
+                    "visit pool offset %p %d in block %p\n",
+                    o,
+                    o->offset,
+                    b);
           }
 
           unsigned entry = dstOffset + poolSize;
@@ -840,8 +945,8 @@ class MyAssembler: public Assembler {
 
           o->entry->address = dst + entry;
 
-          unsigned instruction = o->block->start
-            + padding(o->block, o->offset) + o->offset;
+          unsigned instruction = o->block->start + padding(o->block, o->offset)
+                                 + o->offset;
 
           int32_t v = (entry - 8) - instruction;
           expect(&con, v == (v & PoolOffsetMask));
@@ -854,8 +959,8 @@ class MyAssembler: public Assembler {
 
         bool jump = needJump(b);
         if (jump) {
-          write4
-            (dst + dstOffset, isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
+          write4(dst + dstOffset,
+                 isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }
 
         dstOffset += poolSize + (jump ? TargetBytesPerWord : 0);
@@ -879,20 +984,23 @@ class MyAssembler: public Assembler {
         *static_cast<target_uintptr_t*>(e->address) = e->constant->value();
       } else {
         new (e->constant->listen(sizeof(ConstantPoolListener)))
-          ConstantPoolListener(con.s, static_cast<target_uintptr_t*>(e->address),
-                               e->callOffset
-                               ? dst + e->callOffset->value() + 8
-                               : 0);
+            ConstantPoolListener(
+                con.s,
+                static_cast<target_uintptr_t*>(e->address),
+                e->callOffset ? dst + e->callOffset->value() + 8 : 0);
       }
-//       fprintf(stderr, "constant %p at %p\n", reinterpret_cast<void*>(e->constant->value()), e->address);
+      //       fprintf(stderr, "constant %p at %p\n",
+      //       reinterpret_cast<void*>(e->constant->value()), e->address);
     }
   }
 
-  virtual Promise* offset(bool forTrace) {
+  virtual Promise* offset(bool forTrace)
+  {
     return arm::offsetPromise(&con, forTrace);
   }
 
-  virtual Block* endBlock(bool startNew) {
+  virtual Block* endBlock(bool startNew)
+  {
     MyBlock* b = con.lastBlock;
     b->size = con.code.length() - b->offset;
     if (startNew) {
@@ -903,26 +1011,33 @@ class MyAssembler: public Assembler {
     return b;
   }
 
-  virtual void endEvent() {
+  virtual void endEvent()
+  {
     MyBlock* b = con.lastBlock;
     unsigned thisEventOffset = con.code.length() - b->offset;
     if (b->poolOffsetHead) {
       int32_t v = (thisEventOffset + TargetBytesPerWord - 8)
-        - b->poolOffsetHead->offset;
+                  - b->poolOffsetHead->offset;
 
       if (v > 0 and v != (v & PoolOffsetMask)) {
-        appendPoolEvent
-          (&con, b, b->lastEventOffset, b->poolOffsetHead,
-           b->lastPoolOffsetTail);
+        appendPoolEvent(&con,
+                        b,
+                        b->lastEventOffset,
+                        b->poolOffsetHead,
+                        b->lastPoolOffsetTail);
 
         if (DebugPool) {
           for (PoolOffset* o = b->poolOffsetHead;
-               o != b->lastPoolOffsetTail->next; o = o->next)
-          {
+               o != b->lastPoolOffsetTail->next;
+               o = o->next) {
             fprintf(stderr,
                     "in endEvent, include %p %d in pool event %p at offset %d "
                     "in block %p\n",
-                    o, o->offset, b->poolEventTail, b->lastEventOffset, b);
+                    o,
+                    o->offset,
+                    b->poolEventTail,
+                    b->lastEventOffset,
+                    b);
           }
         }
 
@@ -937,15 +1052,18 @@ class MyAssembler: public Assembler {
     b->lastPoolOffsetTail = b->poolOffsetTail;
   }
 
-  virtual unsigned length() {
+  virtual unsigned length()
+  {
     return con.code.length();
   }
 
-  virtual unsigned footerSize() {
+  virtual unsigned footerSize()
+  {
     return 0;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     con.code.dispose();
   }
 
@@ -953,17 +1071,18 @@ class MyAssembler: public Assembler {
   MyArchitecture* arch_;
 };
 
-Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone) {
-  return new(zone) MyAssembler(this->con.s, allocator, zone, this);
-}
-
-} // namespace arm
-
-Architecture*
-makeArchitectureArm(System* system, bool)
+Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone)
 {
-  return new (allocate(system, sizeof(arm::MyArchitecture))) arm::MyArchitecture(system);
+  return new (zone) MyAssembler(this->con.s, allocator, zone, this);
 }
 
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+
+Architecture* makeArchitectureArm(System* system, bool)
+{
+  return new (allocate(system, sizeof(arm::MyArchitecture)))
+      arm::MyArchitecture(system);
+}
+
+}  // namespace codegen
+}  // namespace avian

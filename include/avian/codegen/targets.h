@@ -20,12 +20,13 @@ namespace codegen {
 
 class Architecture;
 
-Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures);
+Architecture* makeArchitectureNative(vm::System* system,
+                                     bool useNativeFeatures);
 
 Architecture* makeArchitectureX86(vm::System* system, bool useNativeFeatures);
 Architecture* makeArchitectureArm(vm::System* system, bool useNativeFeatures);
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_TARGETS_H
+#endif  // AVIAN_CODEGEN_TARGETS_H

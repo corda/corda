@@ -54,25 +54,30 @@ namespace x86 {
 const unsigned FrameHeaderSize = (UseFramePointer ? 2 : 1);
 
 const unsigned StackAlignmentInBytes = 16;
-const unsigned StackAlignmentInWords = StackAlignmentInBytes / TargetBytesPerWord;
+const unsigned StackAlignmentInWords = StackAlignmentInBytes
+                                       / TargetBytesPerWord;
 
-unsigned
-argumentFootprint(unsigned footprint)
+unsigned argumentFootprint(unsigned footprint)
 {
   return max(pad(footprint, StackAlignmentInWords), StackAlignmentInWords);
 }
 
-uint32_t
-read4(uint8_t* p)
+uint32_t read4(uint8_t* p)
 {
-  uint32_t v; memcpy(&v, p, 4);
+  uint32_t v;
+  memcpy(&v, p, 4);
   return v;
 }
 
-void
-nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
-          unsigned footprint, void*, bool mostRecent,
-          int targetParameterFootprint, void** ip, void** stack)
+void nextFrame(ArchitectureContext* c UNUSED,
+               uint8_t* start,
+               unsigned size UNUSED,
+               unsigned footprint,
+               void*,
+               bool mostRecent,
+               int targetParameterFootprint,
+               void** ip,
+               void** stack)
 {
   assertT(c, *ip >= start);
   assertT(c, *ip <= start + size);
@@ -107,7 +112,7 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
     }
   }
 
-  if (*instruction == 0xc3) { // return
+  if (*instruction == 0xc3) {  // return
     *ip = static_cast<void**>(*stack)[0];
     return;
   }
@@ -117,31 +122,29 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   if (TailCalls and targetParameterFootprint >= 0) {
     if (argumentFootprint(targetParameterFootprint) > StackAlignmentInWords) {
       offset += argumentFootprint(targetParameterFootprint)
-        - StackAlignmentInWords;
+                - StackAlignmentInWords;
     }
 
     // check for post-non-tail-call stack adjustment of the form "sub
     // $offset,%rsp":
     if (TargetBytesPerWord == 4) {
       if ((*instruction == 0x83 or *instruction == 0x81)
-          and instruction[1] == 0xec)
-      {
+          and instruction[1] == 0xec) {
         offset
-          -= (*instruction == 0x83 ? instruction[2] : read4(instruction + 2))
-          / TargetBytesPerWord;
+            -= (*instruction == 0x83 ? instruction[2] : read4(instruction + 2))
+               / TargetBytesPerWord;
       }
     } else if (*instruction == 0x48
                and (instruction[1] == 0x83 or instruction[1] == 0x81)
-               and instruction[2] == 0xec)
-    {
+               and instruction[2] == 0xec) {
       offset
-        -= (instruction[1] == 0x83 ? instruction[3] : read4(instruction + 3))
-        / TargetBytesPerWord;
+          -= (instruction[1] == 0x83 ? instruction[3] : read4(instruction + 3))
+             / TargetBytesPerWord;
     }
 
     // todo: check for and handle tail calls
   }
-  
+
   if (UseFramePointer and not mostRecent) {
     assertT(c,
             static_cast<void***>(*stack)[-1] + 1
@@ -156,17 +159,18 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   *stack = static_cast<void**>(*stack) + offset;
 }
 
-class MyArchitecture: public Architecture {
+class MyArchitecture : public Architecture {
  public:
-  MyArchitecture(System* system, bool useNativeFeatures):
-    c(system, useNativeFeatures),
-    referenceCount(0),
-    myRegisterFile(GeneralRegisterMask, useSSE(&c) ? FloatRegisterMask : 0)
+  MyArchitecture(System* system, bool useNativeFeatures)
+      : c(system, useNativeFeatures),
+        referenceCount(0),
+        myRegisterFile(GeneralRegisterMask, useSSE(&c) ? FloatRegisterMask : 0)
   {
     populateTables(&c);
   }
 
-  virtual unsigned floatRegisterSize() {
+  virtual unsigned floatRegisterSize()
+  {
     if (useSSE(&c)) {
       return 8;
     } else {
@@ -174,35 +178,43 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual const RegisterFile* registerFile() {
+  virtual const RegisterFile* registerFile()
+  {
     return &myRegisterFile;
   }
 
-  virtual int scratch() {
+  virtual int scratch()
+  {
     return rax;
   }
 
-  virtual int stack() {
+  virtual int stack()
+  {
     return rsp;
   }
 
-  virtual int thread() {
+  virtual int thread()
+  {
     return rbx;
   }
 
-  virtual int returnLow() {
+  virtual int returnLow()
+  {
     return rax;
   }
 
-  virtual int returnHigh() {
+  virtual int returnHigh()
+  {
     return (TargetBytesPerWord == 4 ? rdx : lir::NoRegister);
   }
 
-  virtual int virtualCallTarget() {
+  virtual int virtualCallTarget()
+  {
     return rax;
   }
 
-  virtual int virtualCallIndex() {
+  virtual int virtualCallIndex()
+  {
     return rdx;
   }
 
@@ -211,15 +223,18 @@ class MyArchitecture: public Architecture {
     return ir::TargetInfo(TargetBytesPerWord);
   }
 
-  virtual bool bigEndian() {
+  virtual bool bigEndian()
+  {
     return false;
   }
 
-  virtual uintptr_t maximumImmediateJump() {
+  virtual uintptr_t maximumImmediateJump()
+  {
     return 0x7FFFFFFF;
   }
 
-  virtual bool reserved(int register_) {
+  virtual bool reserved(int register_)
+  {
     switch (register_) {
     case rbp:
       return UseFramePointer;
@@ -227,44 +242,55 @@ class MyArchitecture: public Architecture {
     case rsp:
     case rbx:
       return true;
-   	  
+
     default:
       return false;
     }
   }
 
-  virtual unsigned frameFootprint(unsigned footprint) {
+  virtual unsigned frameFootprint(unsigned footprint)
+  {
 #if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
     return max(footprint, StackAlignmentInWords);
 #else
-    return max(footprint > argumentRegisterCount() ?
-               footprint - argumentRegisterCount() : 0,
+    return max(footprint > argumentRegisterCount()
+                   ? footprint - argumentRegisterCount()
+                   : 0,
                StackAlignmentInWords);
 #endif
   }
 
-  virtual unsigned argumentFootprint(unsigned footprint) {
+  virtual unsigned argumentFootprint(unsigned footprint)
+  {
     return x86::argumentFootprint(footprint);
   }
 
-  virtual bool argumentAlignment() {
+  virtual bool argumentAlignment()
+  {
     return false;
   }
 
-  virtual bool argumentRegisterAlignment() {
+  virtual bool argumentRegisterAlignment()
+  {
     return false;
   }
 
-  virtual unsigned argumentRegisterCount() {
+  virtual unsigned argumentRegisterCount()
+  {
 #if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
-    if (TargetBytesPerWord == 8) return 4; else
+    if (TargetBytesPerWord == 8)
+      return 4;
+    else
 #else
-    if (TargetBytesPerWord == 8) return 6; else
+    if (TargetBytesPerWord == 8)
+      return 6;
+    else
 #endif
-    return 0;
+      return 0;
   }
 
-  virtual int argumentRegister(unsigned index) {
+  virtual int argumentRegister(unsigned index)
+  {
     assertT(&c, TargetBytesPerWord == 8);
     switch (index) {
 #if AVIAN_TARGET_FORMAT == AVIAN_FORMAT_PE
@@ -295,23 +321,28 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual bool hasLinkRegister() {
+  virtual bool hasLinkRegister()
+  {
     return false;
   }
 
-  virtual unsigned stackAlignmentInWords() {
+  virtual unsigned stackAlignmentInWords()
+  {
     return StackAlignmentInWords;
   }
 
-  virtual bool matchCall(void* returnAddress, void* target) {
+  virtual bool matchCall(void* returnAddress, void* target)
+  {
     uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-    int32_t actualOffset; memcpy(&actualOffset, instruction + 1, 4);
+    int32_t actualOffset;
+    memcpy(&actualOffset, instruction + 1, 4);
     void* actualTarget = static_cast<uint8_t*>(returnAddress) + actualOffset;
 
     return *instruction == 0xE8 and actualTarget == target;
   }
 
-  virtual void updateCall(lir::UnaryOperation op, void* returnAddress,
+  virtual void updateCall(lir::UnaryOperation op,
+                          void* returnAddress,
                           void* newTarget)
   {
     bool assertTAlignment UNUSED;
@@ -354,7 +385,7 @@ class MyArchitecture: public Architecture {
               or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
 
       intptr_t v = static_cast<uint8_t*>(newTarget)
-        - static_cast<uint8_t*>(returnAddress);
+                   - static_cast<uint8_t*>(returnAddress);
 
       assertT(&c, vm::fitsInInt32(v));
 
@@ -378,43 +409,61 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void setConstant(void* dst, uint64_t constant) {
+  virtual void setConstant(void* dst, uint64_t constant)
+  {
     target_uintptr_t v = targetVW(constant);
     memcpy(dst, &v, TargetBytesPerWord);
   }
 
-  virtual unsigned alignFrameSize(unsigned sizeInWords) {
+  virtual unsigned alignFrameSize(unsigned sizeInWords)
+  {
     return pad(sizeInWords + FrameHeaderSize, StackAlignmentInWords)
-      - FrameHeaderSize;
+           - FrameHeaderSize;
   }
 
-  virtual void nextFrame(void* start, unsigned size, unsigned footprint,
-                         void* link, bool mostRecent,
-                         int targetParameterFootprint, void** ip,
+  virtual void nextFrame(void* start,
+                         unsigned size,
+                         unsigned footprint,
+                         void* link,
+                         bool mostRecent,
+                         int targetParameterFootprint,
+                         void** ip,
                          void** stack)
   {
-    x86::nextFrame(&c, static_cast<uint8_t*>(start), size, footprint,
-                     link, mostRecent, targetParameterFootprint, ip, stack);
+    x86::nextFrame(&c,
+                   static_cast<uint8_t*>(start),
+                   size,
+                   footprint,
+                   link,
+                   mostRecent,
+                   targetParameterFootprint,
+                   ip,
+                   stack);
   }
 
-  virtual void* frameIp(void* stack) {
+  virtual void* frameIp(void* stack)
+  {
     return stack ? *static_cast<void**>(stack) : 0;
   }
 
-  virtual unsigned frameHeaderSize() {
+  virtual unsigned frameHeaderSize()
+  {
     return FrameHeaderSize;
   }
 
-  virtual unsigned frameReturnAddressSize() {
+  virtual unsigned frameReturnAddressSize()
+  {
     return 1;
   }
 
-  virtual unsigned frameFooterSize() {
+  virtual unsigned frameFooterSize()
+  {
     return 0;
   }
 
-  virtual bool alwaysCondensed(lir::BinaryOperation op) {
-    switch(op) {
+  virtual bool alwaysCondensed(lir::BinaryOperation op)
+  {
+    switch (op) {
     case lir::Float2Float:
     case lir::Float2Int:
     case lir::Int2Float:
@@ -431,35 +480,40 @@ class MyArchitecture: public Architecture {
       abort(&c);
     }
   }
-  
-  virtual bool alwaysCondensed(lir::TernaryOperation) {
+
+  virtual bool alwaysCondensed(lir::TernaryOperation)
+  {
     return true;
   }
 
-  virtual int returnAddressOffset() {
+  virtual int returnAddressOffset()
+  {
     return 0;
   }
 
-  virtual int framePointerOffset() {
+  virtual int framePointerOffset()
+  {
     return UseFramePointer ? -1 : 0;
   }
 
-  virtual void plan
-  (lir::UnaryOperation,
-   unsigned, OperandMask& aMask,
-   bool* thunk)
+  virtual void plan(lir::UnaryOperation,
+                    unsigned,
+                    OperandMask& aMask,
+                    bool* thunk)
   {
-    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand) | (1 << lir::ConstantOperand);
+    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand)
+                     | (1 << lir::ConstantOperand);
     *thunk = false;
   }
 
-  virtual void planSource
-  (lir::BinaryOperation op,
-   unsigned aSize, OperandMask& aMask,
-   unsigned bSize, bool* thunk)
+  virtual void planSource(lir::BinaryOperation op,
+                          unsigned aSize,
+                          OperandMask& aMask,
+                          unsigned bSize,
+                          bool* thunk)
   {
-    aMask.registerMask = GeneralRegisterMask |
-      (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+    aMask.registerMask = GeneralRegisterMask
+                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
 
@@ -467,7 +521,7 @@ class MyArchitecture: public Architecture {
     case lir::Negate:
       aMask.typeMask = (1 << lir::RegisterOperand);
       aMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
-        | (static_cast<uint64_t>(1) << rax);
+                           | (static_cast<uint64_t>(1) << rax);
       break;
 
     case lir::Absolute:
@@ -483,12 +537,12 @@ class MyArchitecture: public Architecture {
       if (useSSE(&c)) {
         aMask.typeMask = (1 << lir::RegisterOperand);
         aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | FloatRegisterMask;
       } else {
         *thunk = true;
       }
-      break;  
-  
+      break;
+
     case lir::FloatNegate:
       // floatNegateRR does not support doubles
       if (useSSE(&c) and aSize == 4 and bSize == 4) {
@@ -501,9 +555,10 @@ class MyArchitecture: public Architecture {
 
     case lir::FloatSquareRoot:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
         aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | FloatRegisterMask;
       } else {
         *thunk = true;
       }
@@ -511,9 +566,10 @@ class MyArchitecture: public Architecture {
 
     case lir::Float2Float:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
         aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | FloatRegisterMask;
       } else {
         *thunk = true;
       }
@@ -525,9 +581,10 @@ class MyArchitecture: public Architecture {
       // thunks or produce inline machine code which handles edge
       // cases properly.
       if (false and useSSE(&c) and bSize <= TargetBytesPerWord) {
-        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
         aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | FloatRegisterMask;
       } else {
         *thunk = true;
       }
@@ -535,9 +592,11 @@ class MyArchitecture: public Architecture {
 
     case lir::Int2Float:
       if (useSSE(&c) and aSize <= TargetBytesPerWord) {
-        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-        aMask.registerMask = GeneralRegisterMask
-          | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+        aMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
+        aMask.registerMask
+            = GeneralRegisterMask
+              | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
       } else {
         *thunk = true;
       }
@@ -549,15 +608,17 @@ class MyArchitecture: public Architecture {
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-          const uint32_t mask
-            = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;    
+          aMask.typeMask = (1 << lir::RegisterOperand)
+                           | (1 << lir::MemoryOperand);
+          const uint32_t mask = GeneralRegisterMask
+                                & ~((1 << rax) | (1 << rdx));
+          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
         } else if (aSize == 1 or bSize == 1) {
-          aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-          const uint32_t mask
-            = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
-          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;     
+          aMask.typeMask = (1 << lir::RegisterOperand)
+                           | (1 << lir::MemoryOperand);
+          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
+                                | (1 << rbx);
+          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
         }
       }
       break;
@@ -567,14 +628,15 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void planDestination
-  (lir::BinaryOperation op,
-   unsigned aSize, const OperandMask& aMask,
-   unsigned bSize, OperandMask& bMask)
+  virtual void planDestination(lir::BinaryOperation op,
+                               unsigned aSize,
+                               const OperandMask& aMask,
+                               unsigned bSize,
+                               OperandMask& bMask)
   {
     bMask.typeMask = ~0;
     bMask.registerMask = GeneralRegisterMask
-      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     switch (op) {
     case lir::Absolute:
@@ -598,7 +660,7 @@ class MyArchitecture: public Architecture {
     case lir::Int2Float:
       bMask.typeMask = (1 << lir::RegisterOperand);
       bMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-        | FloatRegisterMask;
+                           | FloatRegisterMask;
       break;
 
     case lir::Float2Int:
@@ -606,30 +668,34 @@ class MyArchitecture: public Architecture {
       break;
 
     case lir::Move:
-      if (aMask.typeMask & ((1 << lir::MemoryOperand) | 1 << lir::AddressOperand)) {
+      if (aMask.typeMask
+          & ((1 << lir::MemoryOperand) | 1 << lir::AddressOperand)) {
         bMask.typeMask = (1 << lir::RegisterOperand);
         bMask.registerMask = GeneralRegisterMask
-          | (static_cast<uint64_t>(GeneralRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | (static_cast<uint64_t>(GeneralRegisterMask)
+                                << 32) | FloatRegisterMask;
       } else if (aMask.typeMask & (1 << lir::RegisterOperand)) {
-        bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        bMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
         if (aMask.registerMask & FloatRegisterMask) {
-          bMask.registerMask = FloatRegisterMask;          
+          bMask.registerMask = FloatRegisterMask;
         } else {
-          bMask.registerMask = GeneralRegisterMask
-            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          bMask.registerMask
+              = GeneralRegisterMask
+                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
         }
       } else {
-        bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        bMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
       }
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
           bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
-            | (static_cast<uint64_t>(1) << rax);
+                               | (static_cast<uint64_t>(1) << rax);
         } else if (aSize == 1 or bSize == 1) {
-          const uint32_t mask
-            = (1 << rax) | (1 << rcx) | (1 << rdx) | (1 << rbx);
+          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
+                                | (1 << rbx);
           bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
         }
       }
@@ -640,10 +706,10 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void planMove
-  (unsigned size, OperandMask& srcMask,
-   OperandMask& tmpMask,
-   const OperandMask& dstMask)
+  virtual void planMove(unsigned size,
+                        OperandMask& srcMask,
+                        OperandMask& tmpMask,
+                        const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
     srcMask.registerMask = ~static_cast<uint64_t>(0);
@@ -653,21 +719,25 @@ class MyArchitecture: public Architecture {
 
     if (dstMask.typeMask & (1 << lir::MemoryOperand)) {
       // can't move directly from memory to memory
-      srcMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
+      srcMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::ConstantOperand);
       tmpMask.typeMask = 1 << lir::RegisterOperand;
-      tmpMask.registerMask = GeneralRegisterMask
-        | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+      tmpMask.registerMask
+          = GeneralRegisterMask
+            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
     } else if (dstMask.typeMask & (1 << lir::RegisterOperand)) {
       if (size > TargetBytesPerWord) {
         // can't move directly from FPR to GPR or vice-versa for
         // values larger than the GPR size
         if (dstMask.registerMask & FloatRegisterMask) {
-          srcMask.registerMask = FloatRegisterMask
-            | (static_cast<uint64_t>(FloatRegisterMask) << 32);
-          tmpMask.typeMask = 1 << lir::MemoryOperand;          
+          srcMask.registerMask
+              = FloatRegisterMask
+                | (static_cast<uint64_t>(FloatRegisterMask) << 32);
+          tmpMask.typeMask = 1 << lir::MemoryOperand;
         } else if (dstMask.registerMask & GeneralRegisterMask) {
-          srcMask.registerMask = GeneralRegisterMask
-            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          srcMask.registerMask
+              = GeneralRegisterMask
+                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
           tmpMask.typeMask = 1 << lir::MemoryOperand;
         }
       }
@@ -677,27 +747,31 @@ class MyArchitecture: public Architecture {
         if (size > TargetBytesPerWord) {
           tmpMask.typeMask = 1 << lir::MemoryOperand;
         } else {
-          tmpMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-          tmpMask.registerMask = GeneralRegisterMask
-            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          tmpMask.typeMask = (1 << lir::RegisterOperand)
+                             | (1 << lir::MemoryOperand);
+          tmpMask.registerMask
+              = GeneralRegisterMask
+                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
         }
       }
     }
   }
 
-  virtual void planSource
-  (lir::TernaryOperation op,
-   unsigned aSize, OperandMask& aMask,
-   unsigned bSize, OperandMask& bMask,
-   unsigned, bool* thunk)
+  virtual void planSource(lir::TernaryOperation op,
+                          unsigned aSize,
+                          OperandMask& aMask,
+                          unsigned bSize,
+                          OperandMask& bMask,
+                          unsigned,
+                          bool* thunk)
   {
     aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
     aMask.registerMask = GeneralRegisterMask
-      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     bMask.typeMask = (1 << lir::RegisterOperand);
     bMask.registerMask = GeneralRegisterMask
-      | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
 
     *thunk = false;
 
@@ -707,12 +781,12 @@ class MyArchitecture: public Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
+        aMask.typeMask = (1 << lir::RegisterOperand)
+                         | (1 << lir::MemoryOperand);
         bMask.typeMask = (1 << lir::RegisterOperand);
 
-        const uint64_t mask
-          = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+        const uint64_t mask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
+                              | FloatRegisterMask;
         aMask.registerMask = mask;
         bMask.registerMask = mask;
       } else {
@@ -723,9 +797,9 @@ class MyArchitecture: public Architecture {
     case lir::FloatRemainder:
       *thunk = true;
       break;
-   	  
+
     case lir::Multiply:
-      if (TargetBytesPerWord == 4 and aSize == 8) { 
+      if (TargetBytesPerWord == 4 and aSize == 8) {
         const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
         aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
         bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
@@ -737,11 +811,11 @@ class MyArchitecture: public Architecture {
 
     case lir::Divide:
       if (TargetBytesPerWord == 4 and aSize == 8) {
-        *thunk = true;        			
+        *thunk = true;
       } else {
         aMask.typeMask = (1 << lir::RegisterOperand);
         aMask.registerMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        bMask.registerMask = 1 << rax;      
+        bMask.registerMask = 1 << rax;
       }
       break;
 
@@ -764,7 +838,7 @@ class MyArchitecture: public Architecture {
         bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
       } else {
         aMask.registerMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
-          | (static_cast<uint64_t>(1) << rcx);
+                             | (static_cast<uint64_t>(1) << rcx);
         const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
         bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
       }
@@ -783,7 +857,7 @@ class MyArchitecture: public Architecture {
       if (useSSE(&c)) {
         aMask.typeMask = (1 << lir::RegisterOperand);
         aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-          | FloatRegisterMask;
+                             | FloatRegisterMask;
         bMask.typeMask = aMask.typeMask;
         bMask.registerMask = aMask.registerMask;
       } else {
@@ -796,11 +870,13 @@ class MyArchitecture: public Architecture {
     }
   }
 
-  virtual void planDestination
-  (lir::TernaryOperation op,
-    unsigned, const OperandMask&,
-    unsigned, const OperandMask& bMask,
-    unsigned, OperandMask& cMask)
+  virtual void planDestination(lir::TernaryOperation op,
+                               unsigned,
+                               const OperandMask&,
+                               unsigned,
+                               const OperandMask& bMask,
+                               unsigned,
+                               OperandMask& cMask)
   {
     if (isBranch(op)) {
       cMask.typeMask = (1 << lir::ConstantOperand);
@@ -813,12 +889,14 @@ class MyArchitecture: public Architecture {
 
   virtual Assembler* makeAssembler(util::Allocator* allocator, Zone* zone);
 
-  virtual void acquire() {
-    ++ referenceCount;
+  virtual void acquire()
+  {
+    ++referenceCount;
   }
 
-  virtual void release() {
-    if (-- referenceCount == 0) {
+  virtual void release()
+  {
+    if (--referenceCount == 0) {
       c.s->free(this);
     }
   }
@@ -828,18 +906,21 @@ class MyArchitecture: public Architecture {
   const RegisterFile myRegisterFile;
 };
 
-class MyAssembler: public Assembler {
+class MyAssembler : public Assembler {
  public:
   MyAssembler(System* s, util::Allocator* a, Zone* zone, MyArchitecture* arch)
       : c(s, a, zone, &(arch->c)), arch_(arch)
-  { }
+  {
+  }
 
-  virtual void setClient(Client* client) {
+  virtual void setClient(Client* client)
+  {
     assertT(&c, c.client == 0);
     c.client = client;
   }
 
-  virtual Architecture* arch() {
+  virtual Architecture* arch()
+  {
     return arch_;
   }
 
@@ -849,19 +930,25 @@ class MyAssembler: public Assembler {
     lir::Register stack(rsp);
     lir::Memory stackLimit(rbx, stackLimitOffsetFromThread);
     lir::Constant handlerConstant(resolvedPromise(&c, handler));
-    branchRM(&c, lir::JumpIfGreaterOrEqual, TargetBytesPerWord, &stack, &stackLimit,
+    branchRM(&c,
+             lir::JumpIfGreaterOrEqual,
+             TargetBytesPerWord,
+             &stack,
+             &stackLimit,
              &handlerConstant);
   }
 
-  virtual void saveFrame(unsigned stackOffset, unsigned) {
+  virtual void saveFrame(unsigned stackOffset, unsigned)
+  {
     lir::Register stack(rsp);
     lir::Memory stackDst(rbx, stackOffset);
     apply(lir::Move,
-      OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-      OperandInfo(TargetBytesPerWord, lir::MemoryOperand, &stackDst));
+          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
+          OperandInfo(TargetBytesPerWord, lir::MemoryOperand, &stackDst));
   }
 
-  virtual void pushFrame(unsigned argumentCount, ...) {
+  virtual void pushFrame(unsigned argumentCount, ...)
+  {
     // TODO: Argument should be replaced by OperandInfo...
     struct Argument {
       unsigned size;
@@ -869,51 +956,51 @@ class MyAssembler: public Assembler {
       lir::Operand* operand;
     };
     RUNTIME_ARRAY(Argument, arguments, argumentCount);
-    va_list a; va_start(a, argumentCount);
+    va_list a;
+    va_start(a, argumentCount);
     unsigned footprint = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
       RUNTIME_ARRAY_BODY(arguments)[i].type
-        = static_cast<lir::OperandType>(va_arg(a, int));
+          = static_cast<lir::OperandType>(va_arg(a, int));
       RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, lir::Operand*);
-      footprint += ceilingDivide
-        (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
+      footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                                 TargetBytesPerWord);
     }
     va_end(a);
 
     allocateFrame(arch_->alignFrameSize(footprint));
-    
+
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
         lir::Register dst(arch_->argumentRegister(i));
         apply(lir::Move,
-              OperandInfo(
-                RUNTIME_ARRAY_BODY(arguments)[i].size,
-                RUNTIME_ARRAY_BODY(arguments)[i].type,
-                RUNTIME_ARRAY_BODY(arguments)[i].operand),
-              OperandInfo(
-                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord),
-                lir::RegisterOperand,
-                &dst));
+              OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                          RUNTIME_ARRAY_BODY(arguments)[i].type,
+                          RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                              TargetBytesPerWord),
+                          lir::RegisterOperand,
+                          &dst));
       } else {
         lir::Memory dst(rsp, offset * TargetBytesPerWord);
         apply(lir::Move,
-              OperandInfo(
-                RUNTIME_ARRAY_BODY(arguments)[i].size,
-                RUNTIME_ARRAY_BODY(arguments)[i].type,
-                RUNTIME_ARRAY_BODY(arguments)[i].operand),
-              OperandInfo(
-                pad(RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord),
-                lir::MemoryOperand,
-                &dst));
-        offset += ceilingDivide
-          (RUNTIME_ARRAY_BODY(arguments)[i].size, TargetBytesPerWord);
+              OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                          RUNTIME_ARRAY_BODY(arguments)[i].type,
+                          RUNTIME_ARRAY_BODY(arguments)[i].operand),
+              OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                              TargetBytesPerWord),
+                          lir::MemoryOperand,
+                          &dst));
+        offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
+                                TargetBytesPerWord);
       }
     }
   }
 
-  virtual void allocateFrame(unsigned footprint) {
+  virtual void allocateFrame(unsigned footprint)
+  {
     lir::Register stack(rsp);
 
     if (UseFramePointer) {
@@ -921,42 +1008,49 @@ class MyAssembler: public Assembler {
       pushR(&c, TargetBytesPerWord, &base);
 
       apply(lir::Move,
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base));
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base));
     }
 
-    lir::Constant footprintConstant(resolvedPromise(&c, footprint * TargetBytesPerWord));
+    lir::Constant footprintConstant(
+        resolvedPromise(&c, footprint * TargetBytesPerWord));
     apply(lir::Subtract,
-      OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprintConstant),
-      OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-      OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+          OperandInfo(
+              TargetBytesPerWord, lir::ConstantOperand, &footprintConstant),
+          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
+          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
   }
 
-  virtual void adjustFrame(unsigned difference) {
+  virtual void adjustFrame(unsigned difference)
+  {
     lir::Register stack(rsp);
-    lir::Constant differenceConstant(resolvedPromise(&c, difference * TargetBytesPerWord));
-    apply(lir::Subtract, 
-      OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &differenceConstant),
-      OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-      OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+    lir::Constant differenceConstant(
+        resolvedPromise(&c, difference * TargetBytesPerWord));
+    apply(lir::Subtract,
+          OperandInfo(
+              TargetBytesPerWord, lir::ConstantOperand, &differenceConstant),
+          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
+          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
   }
 
-  virtual void popFrame(unsigned frameFootprint) {
+  virtual void popFrame(unsigned frameFootprint)
+  {
     if (UseFramePointer) {
       lir::Register base(rbp);
       lir::Register stack(rsp);
       apply(lir::Move,
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base),
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base),
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
 
       popR(&c, TargetBytesPerWord, &base);
     } else {
       lir::Register stack(rsp);
-      lir::Constant footprint(resolvedPromise(&c, frameFootprint * TargetBytesPerWord));
+      lir::Constant footprint(
+          resolvedPromise(&c, frameFootprint * TargetBytesPerWord));
       apply(lir::Add,
-        OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprint),
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-        OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+            OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprint),
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
+            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
     }
   }
 
@@ -968,17 +1062,23 @@ class MyAssembler: public Assembler {
     if (TailCalls) {
       if (offset) {
         lir::Register tmp(c.client->acquireTemporary());
-      
+
         unsigned baseSize = UseFramePointer ? 1 : 0;
 
-        lir::Memory returnAddressSrc
-          (rsp, (frameFootprint + baseSize) * TargetBytesPerWord);
-        moveMR(&c, TargetBytesPerWord, &returnAddressSrc, TargetBytesPerWord,
+        lir::Memory returnAddressSrc(
+            rsp, (frameFootprint + baseSize) * TargetBytesPerWord);
+        moveMR(&c,
+               TargetBytesPerWord,
+               &returnAddressSrc,
+               TargetBytesPerWord,
                &tmp);
-    
-        lir::Memory returnAddressDst
-          (rsp, (frameFootprint - offset + baseSize) * TargetBytesPerWord);
-        moveRM(&c, TargetBytesPerWord, &tmp, TargetBytesPerWord,
+
+        lir::Memory returnAddressDst(
+            rsp, (frameFootprint - offset + baseSize) * TargetBytesPerWord);
+        moveRM(&c,
+               TargetBytesPerWord,
+               &tmp,
+               TargetBytesPerWord,
                &returnAddressDst);
 
         c.client->releaseTemporary(tmp.low);
@@ -990,9 +1090,8 @@ class MyAssembler: public Assembler {
         }
 
         lir::Register stack(rsp);
-        lir::Constant footprint
-          (resolvedPromise
-           (&c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
+        lir::Constant footprint(resolvedPromise(
+            &c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
 
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
@@ -1032,9 +1131,9 @@ class MyAssembler: public Assembler {
       popR(&c, TargetBytesPerWord, &returnAddress);
 
       lir::Register stack(rsp);
-      lir::Constant adjustment
-        (resolvedPromise(&c, (argumentFootprint - StackAlignmentInWords)
-                  * TargetBytesPerWord));
+      lir::Constant adjustment(resolvedPromise(
+          &c,
+          (argumentFootprint - StackAlignmentInWords) * TargetBytesPerWord));
       addCR(&c, TargetBytesPerWord, &adjustment, TargetBytesPerWord, &stack);
 
       jumpR(&c, TargetBytesPerWord, &returnAddress);
@@ -1058,45 +1157,51 @@ class MyAssembler: public Assembler {
     jumpR(&c, TargetBytesPerWord, &returnAddress);
   }
 
-  virtual void apply(lir::Operation op) {
+  virtual void apply(lir::Operation op)
+  {
     arch_->c.operations[op](&c);
   }
 
   virtual void apply(lir::UnaryOperation op, OperandInfo a)
   {
-    arch_->c.unaryOperations[Multimethod::index(op, a.type)]
-      (&c, a.size, a.operand);
+    arch_->c.unaryOperations[Multimethod::index(op, a.type)](
+        &c, a.size, a.operand);
   }
 
   virtual void apply(lir::BinaryOperation op, OperandInfo a, OperandInfo b)
   {
-    arch_->c.binaryOperations[index(&(arch_->c), op, a.type, b.type)]
-      (&c, a.size, a.operand, b.size, b.operand);
+    arch_->c.binaryOperations[index(&(arch_->c), op, a.type, b.type)](
+        &c, a.size, a.operand, b.size, b.operand);
   }
 
-  virtual void apply(lir::TernaryOperation op, OperandInfo a, OperandInfo b, OperandInfo c)
+  virtual void apply(lir::TernaryOperation op,
+                     OperandInfo a,
+                     OperandInfo b,
+                     OperandInfo c)
   {
     if (isBranch(op)) {
       assertT(&this->c, a.size == b.size);
       assertT(&this->c, c.size == TargetBytesPerWord);
       assertT(&this->c, c.type == lir::ConstantOperand);
 
-      arch_->c.branchOperations[branchIndex(&(arch_->c), a.type, b.type)]
-        (&this->c, op, a.size, a.operand, b.operand, c.operand);
+      arch_->c.branchOperations[branchIndex(&(arch_->c), a.type, b.type)](
+          &this->c, op, a.size, a.operand, b.operand, c.operand);
     } else {
       assertT(&this->c, b.size == c.size);
       assertT(&this->c, b.type == c.type);
 
-      arch_->c.binaryOperations[index(&(arch_->c), op, a.type, b.type)]
-        (&this->c, a.size, a.operand, b.size, b.operand);
+      arch_->c.binaryOperations[index(&(arch_->c), op, a.type, b.type)](
+          &this->c, a.size, a.operand, b.size, b.operand);
     }
   }
 
-  virtual void setDestination(uint8_t* dst) {
+  virtual void setDestination(uint8_t* dst)
+  {
     c.result = dst;
   }
 
-  virtual void write() {
+  virtual void write()
+  {
     uint8_t* dst = c.result;
     for (MyBlock* b = c.firstBlock; b; b = b->next) {
       unsigned index = 0;
@@ -1111,10 +1216,9 @@ class MyAssembler: public Assembler {
         index += size;
 
         while ((b->start + index + padding + p->instructionOffset)
-               % p->alignment)
-        {
+               % p->alignment) {
           *(dst + b->start + index + padding) = 0x90;
-          ++ padding;
+          ++padding;
         }
       }
 
@@ -1122,40 +1226,46 @@ class MyAssembler: public Assembler {
              c.code.data.begin() + b->offset + index,
              b->size - index);
     }
-    
+
     for (Task* t = c.tasks; t; t = t->next) {
       t->run(&c);
     }
   }
 
-  virtual Promise* offset(bool) {
+  virtual Promise* offset(bool)
+  {
     return x86::offsetPromise(&c);
   }
 
-  virtual Block* endBlock(bool startNew) {
+  virtual Block* endBlock(bool startNew)
+  {
     MyBlock* b = c.lastBlock;
     b->size = c.code.length() - b->offset;
     if (startNew) {
-      c.lastBlock = new(c.zone) MyBlock(c.code.length());
+      c.lastBlock = new (c.zone) MyBlock(c.code.length());
     } else {
       c.lastBlock = 0;
     }
     return b;
   }
 
-  virtual void endEvent() {
+  virtual void endEvent()
+  {
     // ignore
   }
 
-  virtual unsigned length() {
+  virtual unsigned length()
+  {
     return c.code.length();
   }
 
-  virtual unsigned footerSize() {
+  virtual unsigned footerSize()
+  {
     return 0;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     c.code.dispose();
   }
 
@@ -1165,17 +1275,16 @@ class MyAssembler: public Assembler {
 
 Assembler* MyArchitecture::makeAssembler(util::Allocator* allocator, Zone* zone)
 {
-  return
-    new(zone) MyAssembler(c.s, allocator, zone, this);
+  return new (zone) MyAssembler(c.s, allocator, zone, this);
 }
 
-} // namespace x86
+}  // namespace x86
 
 Architecture* makeArchitectureX86(System* system, bool useNativeFeatures)
 {
   return new (allocate(system, sizeof(x86::MyArchitecture)))
-    x86::MyArchitecture(system, useNativeFeatures);
+      x86::MyArchitecture(system, useNativeFeatures);
 }
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian

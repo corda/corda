@@ -21,8 +21,8 @@
 #include <avian/util/math.h>
 
 #if defined(PLATFORM_WINDOWS)
-#  define WIN32_LEAN_AND_MEAN
-#  include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #endif
 
 using namespace vm;
@@ -35,18 +35,15 @@ const bool DebugClassReader = false;
 const unsigned NoByte = 0xFFFF;
 
 #ifdef USE_ATOMIC_OPERATIONS
-void
-atomicIncrement(uint32_t* p, int v)
+void atomicIncrement(uint32_t* p, int v)
 {
-  for (uint32_t old = *p;
-       not atomicCompareAndSwap32(p, old, old + v);
-       old = *p)
-  { }
+  for (uint32_t old = *p; not atomicCompareAndSwap32(p, old, old + v);
+       old = *p) {
+  }
 }
 #endif
 
-void
-join(Thread* t, Thread* o)
+void join(Thread* t, Thread* o)
 {
   if (t != o) {
     assertT(t, o->state != Thread::JoinedState);
@@ -60,40 +57,41 @@ join(Thread* t, Thread* o)
 
 #ifndef NDEBUG
 
-bool
-find(Thread* t, Thread* o)
+bool find(Thread* t, Thread* o)
 {
-  return (t == o)
-    or (t->peer and find(t->peer, o))
-    or (t->child and find(t->child, o));
+  return (t == o) or (t->peer and find(t->peer, o))
+         or (t->child and find(t->child, o));
 }
 
-unsigned
-count(Thread* t, Thread* o)
+unsigned count(Thread* t, Thread* o)
 {
   unsigned c = 0;
 
-  if (t != o) ++ c;
-  if (t->peer) c += count(t->peer, o);
-  if (t->child) c += count(t->child, o);
+  if (t != o)
+    ++c;
+  if (t->peer)
+    c += count(t->peer, o);
+  if (t->child)
+    c += count(t->child, o);
 
   return c;
 }
 
-Thread**
-fill(Thread* t, Thread* o, Thread** array)
+Thread** fill(Thread* t, Thread* o, Thread** array)
 {
-  if (t != o) *(array++) = t;
-  if (t->peer) array = fill(t->peer, o, array);
-  if (t->child) array = fill(t->child, o, array);
+  if (t != o)
+    *(array++) = t;
+  if (t->peer)
+    array = fill(t->peer, o, array);
+  if (t->child)
+    array = fill(t->child, o, array);
 
   return array;
 }
 
-#endif // not NDEBUG
+#endif  // not NDEBUG
 
-void
-dispose(Thread* t, Thread* o, bool remove)
+void dispose(Thread* t, Thread* o, bool remove)
 {
   if (remove) {
 #ifndef NDEBUG
@@ -118,7 +116,7 @@ dispose(Thread* t, Thread* o, bool remove)
           previous = p;
           p = p->peer;
         }
-      }      
+      }
 
       for (Thread* p = o->child; p;) {
         Thread* next = p->peer;
@@ -154,8 +152,7 @@ dispose(Thread* t, Thread* o, bool remove)
   o->dispose();
 }
 
-void
-visitAll(Thread* m, Thread* o, void (*visit)(Thread*, Thread*))
+void visitAll(Thread* m, Thread* o, void (*visit)(Thread*, Thread*))
 {
   for (Thread* p = o->child; p;) {
     Thread* child = p;
@@ -166,22 +163,19 @@ visitAll(Thread* m, Thread* o, void (*visit)(Thread*, Thread*))
   visit(m, o);
 }
 
-void
-disposeNoRemove(Thread* m, Thread* o)
+void disposeNoRemove(Thread* m, Thread* o)
 {
   dispose(m, o, false);
 }
 
-void
-interruptDaemon(Thread* m, Thread* o)
+void interruptDaemon(Thread* m, Thread* o)
 {
   if (o->flags & Thread::DaemonFlag) {
     interrupt(m, o);
   }
 }
 
-void
-turnOffTheLights(Thread* t)
+void turnOffTheLights(Thread* t)
 {
   expect(t, t->m->liveCount == 1);
 
@@ -255,8 +249,7 @@ turnOffTheLights(Thread* t)
   s->dispose();
 }
 
-void
-killZombies(Thread* t, Thread* o)
+void killZombies(Thread* t, Thread* o)
 {
   for (Thread* p = o->child; p;) {
     Thread* child = p;
@@ -268,18 +261,18 @@ killZombies(Thread* t, Thread* o)
     switch (o->state) {
     case Thread::ZombieState:
       join(t, o);
-      // fall through
-      
+    // fall through
+
     case Thread::JoinedState:
       dispose(t, o, true);
-      
-    default: break;
+
+    default:
+      break;
     }
   }
 }
 
-unsigned
-footprint(Thread* t)
+unsigned footprint(Thread* t)
 {
   expect(t, t->criticalLevel == 0);
 
@@ -292,8 +285,7 @@ footprint(Thread* t)
   return n;
 }
 
-void
-visitRoots(Thread* t, Heap::Visitor* v)
+void visitRoots(Thread* t, Heap::Visitor* v)
 {
   if (t->state != Thread::ZombieState) {
     v->visit(&(t->javaThread));
@@ -311,13 +303,17 @@ visitRoots(Thread* t, Heap::Visitor* v)
   }
 }
 
-bool
-walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
-     unsigned arrayElementSize, unsigned arrayLength, unsigned start)
+bool walk(Thread*,
+          Heap::Walker* w,
+          uint32_t* mask,
+          unsigned fixedSize,
+          unsigned arrayElementSize,
+          unsigned arrayLength,
+          unsigned start)
 {
   unsigned fixedSizeInWords = ceilingDivide(fixedSize, BytesPerWord);
   unsigned arrayElementSizeInWords
-    = ceilingDivide(arrayElementSize, BytesPerWord);
+      = ceilingDivide(arrayElementSize, BytesPerWord);
 
   for (unsigned i = start; i < fixedSizeInWords; ++i) {
     if (mask[i / 32] & (static_cast<uint32_t>(1) << (i % 32))) {
@@ -352,9 +348,8 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
       for (unsigned j = elementStart; j < arrayElementSizeInWords; ++j) {
         unsigned k = fixedSizeInWords + j;
         if (mask[k / 32] & (static_cast<uint32_t>(1) << (k % 32))) {
-          if (not w->visit
-              (fixedSizeInWords + (i * arrayElementSizeInWords) + j))
-          {
+          if (not w->visit(fixedSizeInWords + (i * arrayElementSizeInWords)
+                           + j)) {
             return false;
           }
         }
@@ -477,8 +472,7 @@ void referenceTargetReachable(Thread* t, Heap::Visitor* v, GcJreference** p)
   }
 }
 
-bool
-isFinalizable(Thread* t, object o)
+bool isFinalizable(Thread* t, object o)
 {
   return t->m->heap->status(o) == Heap::Unreachable
          and (t->m->heap->follow(objectClass(t, o))->vmFlags()
@@ -492,8 +486,7 @@ void clearTargetIfFinalizable(Thread* t, GcJreference* r)
   }
 }
 
-void
-postVisit(Thread* t, Heap::Visitor* v)
+void postVisit(Thread* t, Heap::Visitor* v)
 {
   Machine* m = t->m;
   bool major = m->heap->collectionType() == Heap::MajorCollection;
@@ -517,9 +510,9 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   for (Reference* r = m->jniReferences; r; r = r->next) {
-    if (r->weak and isFinalizable
-        (t, static_cast<object>(t->m->heap->follow(r->target))))
-    {
+    if (r->weak
+        and isFinalizable(t,
+                          static_cast<object>(t->m->heap->follow(r->target)))) {
       r->target = 0;
     }
   }
@@ -527,7 +520,8 @@ postVisit(Thread* t, Heap::Visitor* v)
   GcFinalizer* firstNewTenuredFinalizer = 0;
   GcFinalizer* lastNewTenuredFinalizer = 0;
 
-  { object unreachable = 0;
+  {
+    object unreachable = 0;
     for (GcFinalizer** p = &(m->finalizers); *p;) {
       v->visit(p);
 
@@ -604,7 +598,8 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (major) {
-    { object unreachable = 0;
+    {
+      object unreachable = 0;
       for (GcFinalizer** p = &(m->tenuredFinalizers); *p;) {
         v->visit(p);
 
@@ -668,13 +663,12 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 }
 
-void
-postCollect(Thread* t)
+void postCollect(Thread* t)
 {
 #ifdef VM_STRESS
   t->m->heap->free(t->defaultHeap, ThreadHeapSizeInBytes);
-  t->defaultHeap = static_cast<uintptr_t*>
-    (t->m->heap->allocate(ThreadHeapSizeInBytes));
+  t->defaultHeap
+      = static_cast<uintptr_t*>(t->m->heap->allocate(ThreadHeapSizeInBytes));
   memset(t->defaultHeap, 0, ThreadHeapSizeInBytes);
 #endif
 
@@ -707,8 +701,7 @@ postCollect(Thread* t)
   }
 }
 
-uint64_t
-invoke(Thread* t, uintptr_t* arguments)
+uint64_t invoke(Thread* t, uintptr_t* arguments)
 {
   GcMethod* m = cast<GcMethod>(t, *reinterpret_cast<object*>(arguments[0]));
   object o = *reinterpret_cast<object*>(arguments[1]);
@@ -718,8 +711,7 @@ invoke(Thread* t, uintptr_t* arguments)
   return 1;
 }
 
-void
-finalizeObject(Thread* t, object o, const char* name)
+void finalizeObject(Thread* t, object o, const char* name)
 {
   for (GcClass* c = objectClass(t, o); c; c = c->super()) {
     GcArray* mtable = cast<GcArray>(t, c->methodTable());
@@ -733,8 +725,8 @@ finalizeObject(Thread* t, object o, const char* name)
         PROTECT(t, m);
         PROTECT(t, o);
 
-        uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(&m),
-                                  reinterpret_cast<uintptr_t>(&o) };
+        uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(&m),
+                                 reinterpret_cast<uintptr_t>(&o)};
 
         run(t, invoke, arguments);
 
@@ -746,8 +738,7 @@ finalizeObject(Thread* t, object o, const char* name)
   abort(t);
 }
 
-unsigned
-readByte(AbstractStream& s, unsigned* value)
+unsigned readByte(AbstractStream& s, unsigned* value)
 {
   if (*value == NoByte) {
     return s.read1();
@@ -860,8 +851,7 @@ GcByteArray* makeByteArray(Thread* t, Stream& s, unsigned length)
   return value;
 }
 
-void
-removeByteArray(Thread* t, object o)
+void removeByteArray(Thread* t, object o)
 {
   hashMapRemove(t, roots(t)->byteArrayMap(), o, byteArrayHash, objectEqual);
 }
@@ -899,31 +889,34 @@ unsigned parsePoolEntry(Thread* t,
     uint32_t v = s.read4();
     singletonValue(t, pool, i) = v;
 
-    if(DebugClassReader) {
+    if (DebugClassReader) {
       fprintf(stderr, "    consts[%d] = int/float 0x%x\n", i, v);
     }
-  } return 1;
-    
+  }
+    return 1;
+
   case CONSTANT_Long:
   case CONSTANT_Double: {
     uint64_t v = s.read8();
     memcpy(&singletonValue(t, pool, i), &v, 8);
 
-    if(DebugClassReader) {
+    if (DebugClassReader) {
       fprintf(stderr, "    consts[%d] = long/double <todo>\n", i);
     }
-  } return 2;
+  }
+    return 2;
 
   case CONSTANT_Utf8: {
     if (singletonObject(t, pool, i) == 0) {
       GcByteArray* value = internByteArray(t, makeByteArray(t, s, s.read2()));
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr, "    consts[%d] = utf8 %s\n", i, value->body().begin());
       }
     }
-  } return 1;
+  }
+    return 1;
 
   case CONSTANT_Class: {
     if (singletonObject(t, pool, i) == 0) {
@@ -934,11 +927,12 @@ unsigned parsePoolEntry(Thread* t,
           t, 0, 0, cast<GcByteArray>(t, singletonObject(t, pool, si)), 0);
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr, "    consts[%d] = class <todo>\n", i);
       }
     }
-  } return 1;
+  }
+    return 1;
 
   case CONSTANT_String: {
     if (singletonObject(t, pool, i) == 0) {
@@ -947,16 +941,17 @@ unsigned parsePoolEntry(Thread* t,
 
       object value
           = parseUtf8(t, cast<GcByteArray>(t, singletonObject(t, pool, si)));
-      value = t->m->classpath->makeString
-        (t, value, 0, fieldAtOffset<uintptr_t>(value, BytesPerWord) - 1);
+      value = t->m->classpath->makeString(
+          t, value, 0, fieldAtOffset<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr, "    consts[%d] = string <todo>\n", i);
       }
     }
-  } return 1;
+  }
+    return 1;
 
   case CONSTANT_NameAndType: {
     if (singletonObject(t, pool, i) == 0) {
@@ -971,7 +966,7 @@ unsigned parsePoolEntry(Thread* t,
       GcPair* value = makePair(t, name, type);
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr,
                 "    consts[%d] = nameAndType %s%s\n",
                 i,
@@ -979,7 +974,8 @@ unsigned parsePoolEntry(Thread* t,
                 type->body().begin());
       }
     }
-  } return 1;
+  }
+    return 1;
 
   case CONSTANT_Fieldref:
   case CONSTANT_Methodref:
@@ -1002,7 +998,7 @@ unsigned parsePoolEntry(Thread* t,
                                    cast<GcByteArray>(t, nameAndType->second()));
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr,
                 "    consts[%d] = method %s.%s%s\n",
                 i,
@@ -1011,7 +1007,8 @@ unsigned parsePoolEntry(Thread* t,
                 cast<GcByteArray>(t, nameAndType->second())->body().begin());
       }
     }
-  } return 1;
+  }
+    return 1;
 
   case CONSTANT_MethodHandle:
     if (singletonObject(t, pool, i) == 0) {
@@ -1036,7 +1033,8 @@ unsigned parsePoolEntry(Thread* t,
           t, kind, value->class_(), value->name(), value->spec());
 
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
-    } return 1;
+    }
+    return 1;
 
   case CONSTANT_MethodType:
     if (singletonObject(t, pool, i) == 0) {
@@ -1046,7 +1044,8 @@ unsigned parsePoolEntry(Thread* t,
 
       pool->setBodyElement(
           t, i, reinterpret_cast<uintptr_t>(singletonObject(t, pool, ni)));
-    } return 1;
+    }
+    return 1;
 
   case CONSTANT_InvokeDynamic:
     if (singletonObject(t, pool, i) == 0) {
@@ -1063,9 +1062,12 @@ unsigned parsePoolEntry(Thread* t,
       unsigned parameterCount;
       unsigned parameterFootprint;
       unsigned returnCode;
-      scanMethodSpec
-        (t, specString, true, &parameterCount, &parameterFootprint,
-         &returnCode);
+      scanMethodSpec(t,
+                     specString,
+                     true,
+                     &parameterCount,
+                     &parameterFootprint,
+                     &returnCode);
 
       GcMethod* template_
           = makeMethod(t,
@@ -1087,9 +1089,11 @@ unsigned parsePoolEntry(Thread* t,
           makeInvocation(t, bootstrap, -1, 0, pool, template_, 0));
 
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
-    } return 1;
+    }
+    return 1;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
@@ -1099,14 +1103,18 @@ GcSingleton* parsePool(Thread* t, Stream& s)
   GcSingleton* pool = makeSingletonOfSize(t, count + poolMaskSize(count));
   PROTECT(t, pool);
 
-  if(DebugClassReader) {
+  if (DebugClassReader) {
     fprintf(stderr, "  const pool entries %d\n", count);
   }
 
   if (count) {
     uint32_t* index = static_cast<uint32_t*>(t->m->heap->allocate(count * 4));
 
-    THREAD_RESOURCE2(t, uint32_t*, index, unsigned, count,
+    THREAD_RESOURCE2(t,
+                     uint32_t*,
+                     index,
+                     unsigned,
+                     count,
                      t->m->heap->free(index, count * 4));
 
     for (unsigned i = 0; i < count; ++i) {
@@ -1138,14 +1146,14 @@ GcSingleton* parsePool(Thread* t, Stream& s)
 
       case CONSTANT_Long:
         s.skip(8);
-        ++ i;
+        ++i;
         break;
 
       case CONSTANT_Double:
         singletonSetBit(t, pool, count, i);
         singletonSetBit(t, pool, count, i + 1);
         s.skip(8);
-        ++ i;
+        ++i;
         break;
 
       case CONSTANT_Utf8:
@@ -1168,7 +1176,8 @@ GcSingleton* parsePool(Thread* t, Stream& s)
         s.skip(4);
         break;
 
-      default: abort(t);
+      default:
+        abort(t);
       }
     }
 
@@ -1275,7 +1284,7 @@ void parseInterfaceTable(Thread* t,
       GcClass* interface = cast<GcClass>(t, it.next()->second());
 
       interfaceTable->setBodyElement(t, i, interface);
-      ++ i;
+      ++i;
 
       if ((class_->flags() & ACC_INTERFACE) == 0) {
         if (GcArray* vt = cast<GcArray>(t, interface->virtualTable())) {
@@ -1406,8 +1415,8 @@ void parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
     class_->setFieldTable(t, fieldTable);
 
     if (staticCount) {
-      unsigned footprint = ceilingDivide(staticOffset - (BytesPerWord * 2),
-                                   BytesPerWord);
+      unsigned footprint
+          = ceilingDivide(staticOffset - (BytesPerWord * 2), BytesPerWord);
       GcSingleton* staticTable = makeSingletonOfSize(t, footprint);
 
       uint8_t* body = reinterpret_cast<uint8_t*>(staticTable->body().begin());
@@ -1430,13 +1439,13 @@ void parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
           case CharField:
           case ShortField:
             *reinterpret_cast<uint16_t*>(body + offset)
-              = singletonValue(t, pool, value - 1);
+                = singletonValue(t, pool, value - 1);
             break;
 
           case IntField:
           case FloatField:
             *reinterpret_cast<uint32_t*>(body + offset)
-              = singletonValue(t, pool, value - 1);
+                = singletonValue(t, pool, value - 1);
             break;
 
           case LongField:
@@ -1450,7 +1459,8 @@ void parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                    BytesPerWord);
             break;
 
-          default: abort(t);
+          default:
+            abort(t);
           }
         }
 
@@ -1505,13 +1515,15 @@ void parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
   }
 }
 
-uint16_t read16(uint8_t* code, unsigned& ip) {
+uint16_t read16(uint8_t* code, unsigned& ip)
+{
   uint16_t a = code[ip++];
   uint16_t b = code[ip++];
   return (a << 8) | b;
 }
 
-uint32_t read32(uint8_t* code, unsigned& ip) {
+uint32_t read32(uint8_t* code, unsigned& ip)
+{
   uint32_t b = code[ip++];
   uint32_t a = code[ip++];
   uint32_t c = code[ip++];
@@ -1519,370 +1531,749 @@ uint32_t read32(uint8_t* code, unsigned& ip) {
   return (a << 24) | (b << 16) | (c << 8) | d;
 }
 
-void
-disassembleCode(const char* prefix, uint8_t* code, unsigned length)
+void disassembleCode(const char* prefix, uint8_t* code, unsigned length)
 {
   unsigned ip = 0;
 
-  while(ip < length) {
+  while (ip < length) {
     unsigned instr;
     fprintf(stderr, "%s%x:\t", prefix, ip);
     switch (instr = code[ip++]) {
-      case aaload: fprintf(stderr, "aaload\n"); break;
-      case aastore: fprintf(stderr, "aastore\n"); break;
+    case aaload:
+      fprintf(stderr, "aaload\n");
+      break;
+    case aastore:
+      fprintf(stderr, "aastore\n");
+      break;
 
-      case aconst_null: fprintf(stderr, "aconst_null\n"); break;
+    case aconst_null:
+      fprintf(stderr, "aconst_null\n");
+      break;
 
-      case aload: fprintf(stderr, "aload %02x\n", code[ip++]); break;
-      case aload_0: fprintf(stderr, "aload_0\n"); break;
-      case aload_1: fprintf(stderr, "aload_1\n"); break;
-      case aload_2: fprintf(stderr, "aload_2\n"); break;
-      case aload_3: fprintf(stderr, "aload_3\n"); break;
+    case aload:
+      fprintf(stderr, "aload %02x\n", code[ip++]);
+      break;
+    case aload_0:
+      fprintf(stderr, "aload_0\n");
+      break;
+    case aload_1:
+      fprintf(stderr, "aload_1\n");
+      break;
+    case aload_2:
+      fprintf(stderr, "aload_2\n");
+      break;
+    case aload_3:
+      fprintf(stderr, "aload_3\n");
+      break;
 
-      case anewarray: fprintf(stderr, "anewarray %04x\n", read16(code, ip)); break;
-      case areturn: fprintf(stderr, "areturn\n"); break;
-      case arraylength: fprintf(stderr, "arraylength\n"); break;
+    case anewarray:
+      fprintf(stderr, "anewarray %04x\n", read16(code, ip));
+      break;
+    case areturn:
+      fprintf(stderr, "areturn\n");
+      break;
+    case arraylength:
+      fprintf(stderr, "arraylength\n");
+      break;
 
-      case astore: fprintf(stderr, "astore %02x\n", code[ip++]); break;
-      case astore_0: fprintf(stderr, "astore_0\n"); break;
-      case astore_1: fprintf(stderr, "astore_1\n"); break;
-      case astore_2: fprintf(stderr, "astore_2\n"); break;
-      case astore_3: fprintf(stderr, "astore_3\n"); break;
+    case astore:
+      fprintf(stderr, "astore %02x\n", code[ip++]);
+      break;
+    case astore_0:
+      fprintf(stderr, "astore_0\n");
+      break;
+    case astore_1:
+      fprintf(stderr, "astore_1\n");
+      break;
+    case astore_2:
+      fprintf(stderr, "astore_2\n");
+      break;
+    case astore_3:
+      fprintf(stderr, "astore_3\n");
+      break;
 
+    case athrow:
+      fprintf(stderr, "athrow\n");
+      break;
+    case baload:
+      fprintf(stderr, "baload\n");
+      break;
+    case bastore:
+      fprintf(stderr, "bastore\n");
+      break;
 
-      case athrow: fprintf(stderr, "athrow\n"); break;
-      case baload: fprintf(stderr, "baload\n"); break;
-      case bastore: fprintf(stderr, "bastore\n"); break;
+    case bipush:
+      fprintf(stderr, "bipush %02x\n", code[ip++]);
+      break;
+    case caload:
+      fprintf(stderr, "caload\n");
+      break;
+    case castore:
+      fprintf(stderr, "castore\n");
+      break;
+    case checkcast:
+      fprintf(stderr, "checkcast %04x\n", read16(code, ip));
+      break;
+    case d2f:
+      fprintf(stderr, "d2f\n");
+      break;
+    case d2i:
+      fprintf(stderr, "d2i\n");
+      break;
+    case d2l:
+      fprintf(stderr, "d2l\n");
+      break;
+    case dadd:
+      fprintf(stderr, "dadd\n");
+      break;
+    case daload:
+      fprintf(stderr, "daload\n");
+      break;
+    case dastore:
+      fprintf(stderr, "dastore\n");
+      break;
+    case dcmpg:
+      fprintf(stderr, "dcmpg\n");
+      break;
+    case dcmpl:
+      fprintf(stderr, "dcmpl\n");
+      break;
+    case dconst_0:
+      fprintf(stderr, "dconst_0\n");
+      break;
+    case dconst_1:
+      fprintf(stderr, "dconst_1\n");
+      break;
+    case ddiv:
+      fprintf(stderr, "ddiv\n");
+      break;
+    case dmul:
+      fprintf(stderr, "dmul\n");
+      break;
+    case dneg:
+      fprintf(stderr, "dneg\n");
+      break;
+    case vm::drem:
+      fprintf(stderr, "drem\n");
+      break;
+    case dsub:
+      fprintf(stderr, "dsub\n");
+      break;
+    case vm::dup:
+      fprintf(stderr, "dup\n");
+      break;
+    case dup_x1:
+      fprintf(stderr, "dup_x1\n");
+      break;
+    case dup_x2:
+      fprintf(stderr, "dup_x2\n");
+      break;
+    case vm::dup2:
+      fprintf(stderr, "dup2\n");
+      break;
+    case dup2_x1:
+      fprintf(stderr, "dup2_x1\n");
+      break;
+    case dup2_x2:
+      fprintf(stderr, "dup2_x2\n");
+      break;
+    case f2d:
+      fprintf(stderr, "f2d\n");
+      break;
+    case f2i:
+      fprintf(stderr, "f2i\n");
+      break;
+    case f2l:
+      fprintf(stderr, "f2l\n");
+      break;
+    case fadd:
+      fprintf(stderr, "fadd\n");
+      break;
+    case faload:
+      fprintf(stderr, "faload\n");
+      break;
+    case fastore:
+      fprintf(stderr, "fastore\n");
+      break;
+    case fcmpg:
+      fprintf(stderr, "fcmpg\n");
+      break;
+    case fcmpl:
+      fprintf(stderr, "fcmpl\n");
+      break;
+    case fconst_0:
+      fprintf(stderr, "fconst_0\n");
+      break;
+    case fconst_1:
+      fprintf(stderr, "fconst_1\n");
+      break;
+    case fconst_2:
+      fprintf(stderr, "fconst_2\n");
+      break;
+    case fdiv:
+      fprintf(stderr, "fdiv\n");
+      break;
+    case fmul:
+      fprintf(stderr, "fmul\n");
+      break;
+    case fneg:
+      fprintf(stderr, "fneg\n");
+      break;
+    case frem:
+      fprintf(stderr, "frem\n");
+      break;
+    case fsub:
+      fprintf(stderr, "fsub\n");
+      break;
 
-      case bipush: fprintf(stderr, "bipush %02x\n", code[ip++]); break;
-      case caload: fprintf(stderr, "caload\n"); break;
-      case castore: fprintf(stderr, "castore\n"); break;
-      case checkcast: fprintf(stderr, "checkcast %04x\n", read16(code, ip)); break;
-      case d2f: fprintf(stderr, "d2f\n"); break;
-      case d2i: fprintf(stderr, "d2i\n"); break;
-      case d2l: fprintf(stderr, "d2l\n"); break;
-      case dadd: fprintf(stderr, "dadd\n"); break;
-      case daload: fprintf(stderr, "daload\n"); break;
-      case dastore: fprintf(stderr, "dastore\n"); break;
-      case dcmpg: fprintf(stderr, "dcmpg\n"); break;
-      case dcmpl: fprintf(stderr, "dcmpl\n"); break;
-      case dconst_0: fprintf(stderr, "dconst_0\n"); break;
-      case dconst_1: fprintf(stderr, "dconst_1\n"); break;
-      case ddiv: fprintf(stderr, "ddiv\n"); break;
-      case dmul: fprintf(stderr, "dmul\n"); break;
-      case dneg: fprintf(stderr, "dneg\n"); break;
-      case vm::drem: fprintf(stderr, "drem\n"); break;
-      case dsub: fprintf(stderr, "dsub\n"); break;
-      case vm::dup:
-        fprintf(stderr, "dup\n");
+    case getfield:
+      fprintf(stderr, "getfield %04x\n", read16(code, ip));
+      break;
+    case getstatic:
+      fprintf(stderr, "getstatic %04x\n", read16(code, ip));
+      break;
+    case goto_: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "goto %04x\n", offset + ip - 3);
+    } break;
+    case goto_w: {
+      int32_t offset = read32(code, ip);
+      fprintf(stderr, "goto_w %08x\n", offset + ip - 5);
+    } break;
+
+    case i2b:
+      fprintf(stderr, "i2b\n");
+      break;
+    case i2c:
+      fprintf(stderr, "i2c\n");
+      break;
+    case i2d:
+      fprintf(stderr, "i2d\n");
+      break;
+    case i2f:
+      fprintf(stderr, "i2f\n");
+      break;
+    case i2l:
+      fprintf(stderr, "i2l\n");
+      break;
+    case i2s:
+      fprintf(stderr, "i2s\n");
+      break;
+    case iadd:
+      fprintf(stderr, "iadd\n");
+      break;
+    case iaload:
+      fprintf(stderr, "iaload\n");
+      break;
+    case iand:
+      fprintf(stderr, "iand\n");
+      break;
+    case iastore:
+      fprintf(stderr, "iastore\n");
+      break;
+    case iconst_m1:
+      fprintf(stderr, "iconst_m1\n");
+      break;
+    case iconst_0:
+      fprintf(stderr, "iconst_0\n");
+      break;
+    case iconst_1:
+      fprintf(stderr, "iconst_1\n");
+      break;
+    case iconst_2:
+      fprintf(stderr, "iconst_2\n");
+      break;
+    case iconst_3:
+      fprintf(stderr, "iconst_3\n");
+      break;
+    case iconst_4:
+      fprintf(stderr, "iconst_4\n");
+      break;
+    case iconst_5:
+      fprintf(stderr, "iconst_5\n");
+      break;
+    case idiv:
+      fprintf(stderr, "idiv\n");
+      break;
+
+    case if_acmpeq: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_acmpeq %04x\n", offset + ip - 3);
+    } break;
+    case if_acmpne: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_acmpne %04x\n", offset + ip - 3);
+    } break;
+    case if_icmpeq: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmpeq %04x\n", offset + ip - 3);
+    } break;
+    case if_icmpne: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmpne %04x\n", offset + ip - 3);
+    } break;
+
+    case if_icmpgt: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmpgt %04x\n", offset + ip - 3);
+    } break;
+    case if_icmpge: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmpge %04x\n", offset + ip - 3);
+    } break;
+    case if_icmplt: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmplt %04x\n", offset + ip - 3);
+    } break;
+    case if_icmple: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "if_icmple %04x\n", offset + ip - 3);
+    } break;
+
+    case ifeq: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifeq %04x\n", offset + ip - 3);
+    } break;
+    case ifne: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifne %04x\n", offset + ip - 3);
+    } break;
+    case ifgt: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifgt %04x\n", offset + ip - 3);
+    } break;
+    case ifge: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifge %04x\n", offset + ip - 3);
+    } break;
+    case iflt: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "iflt %04x\n", offset + ip - 3);
+    } break;
+    case ifle: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifle %04x\n", offset + ip - 3);
+    } break;
+
+    case ifnonnull: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifnonnull %04x\n", offset + ip - 3);
+    } break;
+    case ifnull: {
+      int16_t offset = read16(code, ip);
+      fprintf(stderr, "ifnull %04x\n", offset + ip - 3);
+    } break;
+
+    case iinc: {
+      uint8_t a = code[ip++];
+      uint8_t b = code[ip++];
+      fprintf(stderr, "iinc %02x %02x\n", a, b);
+    } break;
+
+    case iload:
+      fprintf(stderr, "iload %02x\n", code[ip++]);
+      break;
+    case fload:
+      fprintf(stderr, "fload %02x\n", code[ip++]);
+      break;
+
+    case iload_0:
+      fprintf(stderr, "iload_0\n");
+      break;
+    case fload_0:
+      fprintf(stderr, "fload_0\n");
+      break;
+    case iload_1:
+      fprintf(stderr, "iload_1\n");
+      break;
+    case fload_1:
+      fprintf(stderr, "fload_1\n");
+      break;
+
+    case iload_2:
+      fprintf(stderr, "iload_2\n");
+      break;
+    case fload_2:
+      fprintf(stderr, "fload_2\n");
+      break;
+    case iload_3:
+      fprintf(stderr, "iload_3\n");
+      break;
+    case fload_3:
+      fprintf(stderr, "fload_3\n");
+      break;
+
+    case imul:
+      fprintf(stderr, "imul\n");
+      break;
+    case ineg:
+      fprintf(stderr, "ineg\n");
+      break;
+
+    case instanceof:
+      fprintf(stderr, "instanceof %04x\n", read16(code, ip));
+      break;
+    case invokeinterface:
+      fprintf(stderr, "invokeinterface %04x\n", read16(code, ip));
+      break;
+    case invokespecial:
+      fprintf(stderr, "invokespecial %04x\n", read16(code, ip));
+      break;
+    case invokestatic:
+      fprintf(stderr, "invokestatic %04x\n", read16(code, ip));
+      break;
+    case invokevirtual:
+      fprintf(stderr, "invokevirtual %04x\n", read16(code, ip));
+      break;
+
+    case ior:
+      fprintf(stderr, "ior\n");
+      break;
+    case irem:
+      fprintf(stderr, "irem\n");
+      break;
+    case ireturn:
+      fprintf(stderr, "ireturn\n");
+      break;
+    case freturn:
+      fprintf(stderr, "freturn\n");
+      break;
+    case ishl:
+      fprintf(stderr, "ishl\n");
+      break;
+    case ishr:
+      fprintf(stderr, "ishr\n");
+      break;
+
+    case istore:
+      fprintf(stderr, "istore %02x\n", code[ip++]);
+      break;
+    case fstore:
+      fprintf(stderr, "fstore %02x\n", code[ip++]);
+      break;
+
+    case istore_0:
+      fprintf(stderr, "istore_0\n");
+      break;
+    case fstore_0:
+      fprintf(stderr, "fstore_0\n");
+      break;
+    case istore_1:
+      fprintf(stderr, "istore_1\n");
+      break;
+    case fstore_1:
+      fprintf(stderr, "fstore_1\n");
+      break;
+    case istore_2:
+      fprintf(stderr, "istore_2\n");
+      break;
+    case fstore_2:
+      fprintf(stderr, "fstore_2\n");
+      break;
+    case istore_3:
+      fprintf(stderr, "istore_3\n");
+      break;
+    case fstore_3:
+      fprintf(stderr, "fstore_3\n");
+      break;
+
+    case isub:
+      fprintf(stderr, "isub\n");
+      break;
+    case iushr:
+      fprintf(stderr, "iushr\n");
+      break;
+    case ixor:
+      fprintf(stderr, "ixor\n");
+      break;
+
+    case jsr:
+      fprintf(stderr, "jsr %04x\n", read16(code, ip));
+      break;
+    case jsr_w:
+      fprintf(stderr, "jsr_w %08x\n", read32(code, ip));
+      break;
+
+    case l2d:
+      fprintf(stderr, "l2d\n");
+      break;
+    case l2f:
+      fprintf(stderr, "l2f\n");
+      break;
+    case l2i:
+      fprintf(stderr, "l2i\n");
+      break;
+    case ladd:
+      fprintf(stderr, "ladd\n");
+      break;
+    case laload:
+      fprintf(stderr, "laload\n");
+      break;
+
+    case land:
+      fprintf(stderr, "land\n");
+      break;
+    case lastore:
+      fprintf(stderr, "lastore\n");
+      break;
+
+    case lcmp:
+      fprintf(stderr, "lcmp\n");
+      break;
+    case lconst_0:
+      fprintf(stderr, "lconst_0\n");
+      break;
+    case lconst_1:
+      fprintf(stderr, "lconst_1\n");
+      break;
+
+    case ldc:
+      fprintf(stderr, "ldc %04x\n", read16(code, ip));
+      break;
+    case ldc_w:
+      fprintf(stderr, "ldc_w %08x\n", read32(code, ip));
+      break;
+    case ldc2_w:
+      fprintf(stderr, "ldc2_w %04x\n", read16(code, ip));
+      break;
+
+    case ldiv_:
+      fprintf(stderr, "ldiv_\n");
+      break;
+
+    case lload:
+      fprintf(stderr, "lload %02x\n", code[ip++]);
+      break;
+    case dload:
+      fprintf(stderr, "dload %02x\n", code[ip++]);
+      break;
+
+    case lload_0:
+      fprintf(stderr, "lload_0\n");
+      break;
+    case dload_0:
+      fprintf(stderr, "dload_0\n");
+      break;
+    case lload_1:
+      fprintf(stderr, "lload_1\n");
+      break;
+    case dload_1:
+      fprintf(stderr, "dload_1\n");
+      break;
+    case lload_2:
+      fprintf(stderr, "lload_2\n");
+      break;
+    case dload_2:
+      fprintf(stderr, "dload_2\n");
+      break;
+    case lload_3:
+      fprintf(stderr, "lload_3\n");
+      break;
+    case dload_3:
+      fprintf(stderr, "dload_3\n");
+      break;
+
+    case lmul:
+      fprintf(stderr, "lmul\n");
+      break;
+    case lneg:
+      fprintf(stderr, "lneg\n");
+      break;
+
+    case lookupswitch: {
+      int32_t default_ = read32(code, ip);
+      int32_t pairCount = read32(code, ip);
+      fprintf(stderr,
+              "lookupswitch default: %d pairCount: %d\n",
+              default_,
+              pairCount);
+
+      for (int i = 0; i < pairCount; i++) {
+        int32_t k = read32(code, ip);
+        int32_t d = read32(code, ip);
+        fprintf(stderr, "%s  key: %02x dest: %2x\n", prefix, k, d);
+      }
+    } break;
+
+    case lor:
+      fprintf(stderr, "lor\n");
+      break;
+    case lrem:
+      fprintf(stderr, "lrem\n");
+      break;
+    case lreturn:
+      fprintf(stderr, "lreturn\n");
+      break;
+    case dreturn:
+      fprintf(stderr, "dreturn\n");
+      break;
+    case lshl:
+      fprintf(stderr, "lshl\n");
+      break;
+    case lshr:
+      fprintf(stderr, "lshr\n");
+      break;
+
+    case lstore:
+      fprintf(stderr, "lstore %02x\n", code[ip++]);
+      break;
+    case dstore:
+      fprintf(stderr, "dstore %02x\n", code[ip++]);
+      break;
+
+    case lstore_0:
+      fprintf(stderr, "lstore_0\n");
+      break;
+    case dstore_0:
+      fprintf(stderr, "dstore_0\n");
+      break;
+    case lstore_1:
+      fprintf(stderr, "lstore_1\n");
+      break;
+    case dstore_1:
+      fprintf(stderr, "dstore_1\n");
+      break;
+    case lstore_2:
+      fprintf(stderr, "lstore_2\n");
+      break;
+    case dstore_2:
+      fprintf(stderr, "dstore_2\n");
+      break;
+    case lstore_3:
+      fprintf(stderr, "lstore_3\n");
+      break;
+    case dstore_3:
+      fprintf(stderr, "dstore_3\n");
+      break;
+
+    case lsub:
+      fprintf(stderr, "lsub\n");
+      break;
+    case lushr:
+      fprintf(stderr, "lushr\n");
+      break;
+    case lxor:
+      fprintf(stderr, "lxor\n");
+      break;
+
+    case monitorenter:
+      fprintf(stderr, "monitorenter\n");
+      break;
+    case monitorexit:
+      fprintf(stderr, "monitorexit\n");
+      break;
+
+    case multianewarray: {
+      unsigned type = read16(code, ip);
+      fprintf(stderr, "multianewarray %04x %02x\n", type, code[ip++]);
+    } break;
+
+    case new_:
+      fprintf(stderr, "new %04x\n", read16(code, ip));
+      break;
+
+    case newarray:
+      fprintf(stderr, "newarray %02x\n", code[ip++]);
+      break;
+
+    case nop:
+      fprintf(stderr, "nop\n");
+      break;
+    case pop_:
+      fprintf(stderr, "pop\n");
+      break;
+    case pop2:
+      fprintf(stderr, "pop2\n");
+      break;
+
+    case putfield:
+      fprintf(stderr, "putfield %04x\n", read16(code, ip));
+      break;
+    case putstatic:
+      fprintf(stderr, "putstatic %04x\n", read16(code, ip));
+      break;
+
+    case ret:
+      fprintf(stderr, "ret %02x\n", code[ip++]);
+      break;
+
+    case return_:
+      fprintf(stderr, "return_\n");
+      break;
+    case saload:
+      fprintf(stderr, "saload\n");
+      break;
+    case sastore:
+      fprintf(stderr, "sastore\n");
+      break;
+
+    case sipush:
+      fprintf(stderr, "sipush %04x\n", read16(code, ip));
+      break;
+
+    case swap:
+      fprintf(stderr, "swap\n");
+      break;
+
+    case tableswitch: {
+      int32_t default_ = read32(code, ip);
+      int32_t bottom = read32(code, ip);
+      int32_t top = read32(code, ip);
+      fprintf(stderr,
+              "tableswitch default: %d bottom: %d top: %d\n",
+              default_,
+              bottom,
+              top);
+
+      for (int i = 0; i < top - bottom + 1; i++) {
+        int32_t d = read32(code, ip);
+        fprintf(stderr, "%s  key: %d dest: %2x\n", prefix, i + bottom, d);
+      }
+    } break;
+
+    case wide: {
+      switch (code[ip++]) {
+      case aload:
+        fprintf(stderr, "wide aload %04x\n", read16(code, ip));
         break;
-      case dup_x1: fprintf(stderr, "dup_x1\n"); break;
-      case dup_x2: fprintf(stderr, "dup_x2\n"); break;
-      case vm::dup2:
-        fprintf(stderr, "dup2\n");
+
+      case astore:
+        fprintf(stderr, "wide astore %04x\n", read16(code, ip));
         break;
-      case dup2_x1: fprintf(stderr, "dup2_x1\n"); break;
-      case dup2_x2: fprintf(stderr, "dup2_x2\n"); break;
-      case f2d: fprintf(stderr, "f2d\n"); break;
-      case f2i: fprintf(stderr, "f2i\n"); break;
-      case f2l: fprintf(stderr, "f2l\n"); break;
-      case fadd: fprintf(stderr, "fadd\n"); break;
-      case faload: fprintf(stderr, "faload\n"); break;
-      case fastore: fprintf(stderr, "fastore\n"); break;
-      case fcmpg: fprintf(stderr, "fcmpg\n"); break;
-      case fcmpl: fprintf(stderr, "fcmpl\n"); break;
-      case fconst_0: fprintf(stderr, "fconst_0\n"); break;
-      case fconst_1: fprintf(stderr, "fconst_1\n"); break;
-      case fconst_2: fprintf(stderr, "fconst_2\n"); break;
-      case fdiv: fprintf(stderr, "fdiv\n"); break;
-      case fmul: fprintf(stderr, "fmul\n"); break;
-      case fneg: fprintf(stderr, "fneg\n"); break;
-      case frem: fprintf(stderr, "frem\n"); break;
-      case fsub: fprintf(stderr, "fsub\n"); break;
-
-      case getfield: fprintf(stderr, "getfield %04x\n", read16(code, ip)); break;
-      case getstatic: fprintf(stderr, "getstatic %04x\n", read16(code, ip)); break;
-      case goto_: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "goto %04x\n", offset + ip - 3);
-      } break;
-      case goto_w: {
-        int32_t offset = read32(code, ip);
-        fprintf(stderr, "goto_w %08x\n", offset + ip - 5);
-      } break;
-
-      case i2b: fprintf(stderr, "i2b\n"); break;
-      case i2c: fprintf(stderr, "i2c\n"); break;
-      case i2d: fprintf(stderr, "i2d\n"); break;
-      case i2f: fprintf(stderr, "i2f\n"); break;
-      case i2l: fprintf(stderr, "i2l\n"); break;
-      case i2s: fprintf(stderr, "i2s\n"); break;
-      case iadd: fprintf(stderr, "iadd\n"); break;
-      case iaload: fprintf(stderr, "iaload\n"); break;
-      case iand: fprintf(stderr, "iand\n"); break;
-      case iastore: fprintf(stderr, "iastore\n"); break;
-      case iconst_m1: fprintf(stderr, "iconst_m1\n"); break;
-      case iconst_0: fprintf(stderr, "iconst_0\n"); break;
-      case iconst_1: fprintf(stderr, "iconst_1\n"); break;
-      case iconst_2: fprintf(stderr, "iconst_2\n"); break;
-      case iconst_3: fprintf(stderr, "iconst_3\n"); break;
-      case iconst_4: fprintf(stderr, "iconst_4\n"); break;
-      case iconst_5: fprintf(stderr, "iconst_5\n"); break;
-      case idiv: fprintf(stderr, "idiv\n"); break;
-
-      case if_acmpeq: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_acmpeq %04x\n", offset + ip - 3);
-      } break;
-      case if_acmpne: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_acmpne %04x\n", offset + ip - 3);
-      } break;
-      case if_icmpeq: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmpeq %04x\n", offset + ip - 3);
-      } break;
-      case if_icmpne: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmpne %04x\n", offset + ip - 3);
-      } break;
-
-      case if_icmpgt: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmpgt %04x\n", offset + ip - 3);
-      } break;
-      case if_icmpge: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmpge %04x\n", offset + ip - 3);
-      } break;
-      case if_icmplt: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmplt %04x\n", offset + ip - 3);
-      } break;
-      case if_icmple: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "if_icmple %04x\n", offset + ip - 3);
-      } break;
-
-      case ifeq: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifeq %04x\n", offset + ip - 3);
-      } break;
-      case ifne: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifne %04x\n", offset + ip - 3);
-      } break;
-      case ifgt: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifgt %04x\n", offset + ip - 3);
-      } break;
-      case ifge: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifge %04x\n", offset + ip - 3);
-      } break;
-      case iflt: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "iflt %04x\n", offset + ip - 3);
-      } break;
-      case ifle: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifle %04x\n", offset + ip - 3);
-      } break;
-
-      case ifnonnull: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifnonnull %04x\n", offset + ip - 3);
-      } break;
-      case ifnull: {
-        int16_t offset = read16(code, ip);
-        fprintf(stderr, "ifnull %04x\n", offset + ip - 3);
-      } break;
-
-      case iinc: {
-        uint8_t a = code[ip++];
-        uint8_t b = code[ip++];
-        fprintf(stderr, "iinc %02x %02x\n", a, b);
-      } break;
-
-      case iload: fprintf(stderr, "iload %02x\n", code[ip++]); break;
-      case fload: fprintf(stderr, "fload %02x\n", code[ip++]); break;
-
-      case iload_0: fprintf(stderr, "iload_0\n"); break;
-      case fload_0: fprintf(stderr, "fload_0\n"); break;
-      case iload_1: fprintf(stderr, "iload_1\n"); break;
-      case fload_1: fprintf(stderr, "fload_1\n"); break;
-
-      case iload_2: fprintf(stderr, "iload_2\n"); break;
-      case fload_2: fprintf(stderr, "fload_2\n"); break;
-      case iload_3: fprintf(stderr, "iload_3\n"); break;
-      case fload_3: fprintf(stderr, "fload_3\n"); break;
-
-      case imul: fprintf(stderr, "imul\n"); break;
-      case ineg: fprintf(stderr, "ineg\n"); break;
-
-      case instanceof: fprintf(stderr, "instanceof %04x\n", read16(code, ip)); break;
-      case invokeinterface: fprintf(stderr, "invokeinterface %04x\n", read16(code, ip)); break;
-      case invokespecial: fprintf(stderr, "invokespecial %04x\n", read16(code, ip)); break;
-      case invokestatic: fprintf(stderr, "invokestatic %04x\n", read16(code, ip)); break;
-      case invokevirtual: fprintf(stderr, "invokevirtual %04x\n", read16(code, ip)); break;
-
-      case ior: fprintf(stderr, "ior\n"); break;
-      case irem: fprintf(stderr, "irem\n"); break;
-      case ireturn: fprintf(stderr, "ireturn\n"); break;
-      case freturn: fprintf(stderr, "freturn\n"); break;
-      case ishl: fprintf(stderr, "ishl\n"); break;
-      case ishr: fprintf(stderr, "ishr\n"); break;
-
-      case istore: fprintf(stderr, "istore %02x\n", code[ip++]); break;
-      case fstore: fprintf(stderr, "fstore %02x\n", code[ip++]); break;
-
-      case istore_0: fprintf(stderr, "istore_0\n"); break;
-      case fstore_0: fprintf(stderr, "fstore_0\n"); break;
-      case istore_1: fprintf(stderr, "istore_1\n"); break;
-      case fstore_1: fprintf(stderr, "fstore_1\n"); break;
-      case istore_2: fprintf(stderr, "istore_2\n"); break;
-      case fstore_2: fprintf(stderr, "fstore_2\n"); break;
-      case istore_3: fprintf(stderr, "istore_3\n"); break;
-      case fstore_3: fprintf(stderr, "fstore_3\n"); break;
-
-      case isub: fprintf(stderr, "isub\n"); break;
-      case iushr: fprintf(stderr, "iushr\n"); break;
-      case ixor: fprintf(stderr, "ixor\n"); break;
-
-      case jsr: fprintf(stderr, "jsr %04x\n", read16(code, ip)); break;
-      case jsr_w: fprintf(stderr, "jsr_w %08x\n", read32(code, ip)); break;
-
-      case l2d: fprintf(stderr, "l2d\n"); break;
-      case l2f: fprintf(stderr, "l2f\n"); break;
-      case l2i: fprintf(stderr, "l2i\n"); break;
-      case ladd: fprintf(stderr, "ladd\n"); break;
-      case laload: fprintf(stderr, "laload\n"); break;
-
-      case land: fprintf(stderr, "land\n"); break;
-      case lastore: fprintf(stderr, "lastore\n"); break;
-
-      case lcmp: fprintf(stderr, "lcmp\n"); break;
-      case lconst_0: fprintf(stderr, "lconst_0\n"); break;
-      case lconst_1: fprintf(stderr, "lconst_1\n"); break;
-
-      case ldc: fprintf(stderr, "ldc %04x\n", read16(code, ip)); break;
-      case ldc_w: fprintf(stderr, "ldc_w %08x\n", read32(code, ip)); break;
-      case ldc2_w: fprintf(stderr, "ldc2_w %04x\n", read16(code, ip)); break;
-
-      case ldiv_: fprintf(stderr, "ldiv_\n"); break;
-
-      case lload: fprintf(stderr, "lload %02x\n", code[ip++]); break;
-      case dload: fprintf(stderr, "dload %02x\n", code[ip++]); break;
-
-      case lload_0: fprintf(stderr, "lload_0\n"); break;
-      case dload_0: fprintf(stderr, "dload_0\n"); break;
-      case lload_1: fprintf(stderr, "lload_1\n"); break;
-      case dload_1: fprintf(stderr, "dload_1\n"); break;
-      case lload_2: fprintf(stderr, "lload_2\n"); break;
-      case dload_2: fprintf(stderr, "dload_2\n"); break;
-      case lload_3: fprintf(stderr, "lload_3\n"); break;
-      case dload_3: fprintf(stderr, "dload_3\n"); break;
-
-      case lmul: fprintf(stderr, "lmul\n"); break;
-      case lneg: fprintf(stderr, "lneg\n"); break;
-
-      case lookupswitch: {
-        int32_t default_ = read32(code, ip);
-        int32_t pairCount = read32(code, ip);
-        fprintf(stderr, "lookupswitch default: %d pairCount: %d\n", default_, pairCount);
-
-        for (int i = 0; i < pairCount; i++) {
-          int32_t k = read32(code, ip);
-          int32_t d = read32(code, ip);
-          fprintf(stderr, "%s  key: %02x dest: %2x\n", prefix, k, d);
-        }
-      } break;
-
-      case lor: fprintf(stderr, "lor\n"); break;
-      case lrem: fprintf(stderr, "lrem\n"); break;
-      case lreturn: fprintf(stderr, "lreturn\n"); break;
-      case dreturn: fprintf(stderr, "dreturn\n"); break;
-      case lshl: fprintf(stderr, "lshl\n"); break;
-      case lshr: fprintf(stderr, "lshr\n"); break;
-
-      case lstore: fprintf(stderr, "lstore %02x\n", code[ip++]); break;
-      case dstore: fprintf(stderr, "dstore %02x\n", code[ip++]); break;
-
-      case lstore_0: fprintf(stderr, "lstore_0\n"); break;
-      case dstore_0: fprintf(stderr, "dstore_0\n"); break;
-      case lstore_1: fprintf(stderr, "lstore_1\n"); break;
-      case dstore_1: fprintf(stderr, "dstore_1\n"); break;
-      case lstore_2: fprintf(stderr, "lstore_2\n"); break;
-      case dstore_2: fprintf(stderr, "dstore_2\n"); break;
-      case lstore_3: fprintf(stderr, "lstore_3\n"); break;
-      case dstore_3: fprintf(stderr, "dstore_3\n"); break;
-
-      case lsub: fprintf(stderr, "lsub\n"); break;
-      case lushr: fprintf(stderr, "lushr\n"); break;
-      case lxor: fprintf(stderr, "lxor\n"); break;
-
-      case monitorenter: fprintf(stderr, "monitorenter\n"); break;
-      case monitorexit: fprintf(stderr, "monitorexit\n"); break;
-
-      case multianewarray: {
-        unsigned type = read16(code, ip);
-        fprintf(stderr, "multianewarray %04x %02x\n", type, code[ip++]);
-      } break;
-
-      case new_: fprintf(stderr, "new %04x\n", read16(code, ip)); break;
-
-      case newarray: fprintf(stderr, "newarray %02x\n", code[ip++]); break;
-
-      case nop: fprintf(stderr, "nop\n"); break;
-      case pop_: fprintf(stderr, "pop\n"); break;
-      case pop2: fprintf(stderr, "pop2\n"); break;
-
-      case putfield: fprintf(stderr, "putfield %04x\n", read16(code, ip)); break;
-      case putstatic: fprintf(stderr, "putstatic %04x\n", read16(code, ip)); break;
-
-      case ret: fprintf(stderr, "ret %02x\n", code[ip++]); break;
-
-      case return_: fprintf(stderr, "return_\n"); break;
-      case saload: fprintf(stderr, "saload\n"); break;
-      case sastore: fprintf(stderr, "sastore\n"); break;
-
-      case sipush: fprintf(stderr, "sipush %04x\n", read16(code, ip)); break;
-
-      case swap: fprintf(stderr, "swap\n"); break;
-
-      case tableswitch: {
-        int32_t default_ = read32(code, ip);
-        int32_t bottom = read32(code, ip);
-        int32_t top = read32(code, ip);
-        fprintf(stderr, "tableswitch default: %d bottom: %d top: %d\n", default_, bottom, top);
-
-        for (int i = 0; i < top - bottom + 1; i++) {
-          int32_t d = read32(code, ip);
-          fprintf(stderr, "%s  key: %d dest: %2x\n", prefix, i + bottom, d);
-        }
-      } break;
-
-      case wide: {
-        switch (code[ip++]) {
-          case aload: fprintf(stderr, "wide aload %04x\n", read16(code, ip)); break;
-
-          case astore: fprintf(stderr, "wide astore %04x\n", read16(code, ip)); break;
-          case iinc: fprintf(stderr, "wide iinc %04x %04x\n", read16(code, ip), read16(code, ip)); break;
-          case iload: fprintf(stderr, "wide iload %04x\n", read16(code, ip)); break;
-          case istore: fprintf(stderr, "wide istore %04x\n", read16(code, ip)); break;
-          case lload: fprintf(stderr, "wide lload %04x\n", read16(code, ip)); break;
-          case lstore: fprintf(stderr, "wide lstore %04x\n", read16(code, ip)); break;
-          case ret: fprintf(stderr, "wide ret %04x\n", read16(code, ip)); break;
-
-          default: {
-            fprintf(stderr, "unknown wide instruction %02x %04x\n", instr, read16(code, ip));
-          }
-        }
-      } break;
+      case iinc:
+        fprintf(stderr,
+                "wide iinc %04x %04x\n",
+                read16(code, ip),
+                read16(code, ip));
+        break;
+      case iload:
+        fprintf(stderr, "wide iload %04x\n", read16(code, ip));
+        break;
+      case istore:
+        fprintf(stderr, "wide istore %04x\n", read16(code, ip));
+        break;
+      case lload:
+        fprintf(stderr, "wide lload %04x\n", read16(code, ip));
+        break;
+      case lstore:
+        fprintf(stderr, "wide lstore %04x\n", read16(code, ip));
+        break;
+      case ret:
+        fprintf(stderr, "wide ret %04x\n", read16(code, ip));
+        break;
 
       default: {
-        fprintf(stderr, "unknown instruction %02x\n", instr);
+        fprintf(stderr,
+                "unknown wide instruction %02x %04x\n",
+                instr,
+                read16(code, ip));
       }
+      }
+    } break;
+
+    default: {
+      fprintf(stderr, "unknown instruction %02x\n", instr);
+    }
     }
   }
 }
@@ -1895,15 +2286,19 @@ GcCode* parseCode(Thread* t, Stream& s, GcSingleton* pool)
   unsigned maxLocals = s.read2();
   unsigned length = s.read4();
 
-  if(DebugClassReader) {
-    fprintf(stderr, "    code: maxStack %d maxLocals %d length %d\n", maxStack, maxLocals, length);
+  if (DebugClassReader) {
+    fprintf(stderr,
+            "    code: maxStack %d maxLocals %d length %d\n",
+            maxStack,
+            maxLocals,
+            length);
   }
 
   GcCode* code = makeCode(t, pool, 0, 0, 0, 0, 0, maxStack, maxLocals, length);
   s.read(code->body().begin(), length);
   PROTECT(t, code);
 
-  if(DebugClassReader) {
+  if (DebugClassReader) {
     disassembleCode("      ", code->body().begin(), length);
   }
 
@@ -2041,10 +2436,10 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
   GcList* newVirtuals = makeList(t, 0, 0, 0);
   PROTECT(t, newVirtuals);
-  
+
   unsigned count = s.read2();
 
-  if(DebugClassReader) {
+  if (DebugClassReader) {
     fprintf(stderr, "  method count %d\n", count);
   }
 
@@ -2063,7 +2458,7 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       unsigned name = s.read2();
       unsigned spec = s.read2();
 
-      if(DebugClassReader) {
+      if (DebugClassReader) {
         fprintf(stderr,
                 "    method flags %d name %d spec %d '%s%s'\n",
                 flags,
@@ -2153,8 +2548,12 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       unsigned parameterCount;
       unsigned parameterFootprint;
       unsigned returnCode;
-      scanMethodSpec(t, specString, flags & ACC_STATIC, &parameterCount,
-                     &parameterFootprint, &returnCode);
+      scanMethodSpec(t,
+                     specString,
+                     flags & ACC_STATIC,
+                     &parameterCount,
+                     &parameterFootprint,
+                     &returnCode);
 
       GcMethod* method = t->m->processor->makeMethod(
           t,
@@ -2173,7 +2572,7 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       PROTECT(t, method);
 
       if (methodVirtual(t, method)) {
-        ++ declaredVirtualCount;
+        ++declaredVirtualCount;
 
         GcTriple* p
             = hashMapFindNode(t, virtualMap, method, methodHash, methodEqual);
@@ -2258,7 +2657,7 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         GcMethod* method = cast<GcMethod>(t, it.next()->first());
         assertT(t, vtable->body()[method->offset()] == 0);
         vtable->setBodyElement(t, method->offset(), method);
-        ++ i;
+        ++i;
       }
     } else {
       populateInterfaceVtables = true;
@@ -2275,7 +2674,7 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       for (GcPair* p = cast<GcPair>(t, newVirtuals->front()); p;
            p = cast<GcPair>(t, p->second())) {
         vtable->setBodyElement(t, i, p->first());
-        ++ i;
+        ++i;
       }
     }
 
@@ -2339,8 +2738,8 @@ void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
           for (unsigned j = 0; j < ivtable->length(); ++j) {
             object method = ivtable->body()[j];
-            method = hashMapFind
-              (t, virtualMap, method, methodHash, methodEqual);
+            method
+                = hashMapFind(t, virtualMap, method, methodHash, methodEqual);
             assertT(t, method);
 
             vtable->setBodyElement(t, j, method);
@@ -2576,17 +2975,19 @@ GcClass* makeArrayClass(Thread* t,
   const char* s = reinterpret_cast<const char*>(spec->body().begin());
   const char* start = s;
   unsigned dimensions = 0;
-  for (; *s == '['; ++s) ++ dimensions;
+  for (; *s == '['; ++s)
+    ++dimensions;
 
   GcByteArray* elementSpec;
   switch (*s) {
   case 'L': {
-    ++ s;
+    ++s;
     const char* elementSpecStart = s;
-    while (*s and *s != ';') ++ s;
+    while (*s and *s != ';')
+      ++s;
     if (dimensions > 1) {
       elementSpecStart -= dimensions;
-      ++ s;
+      ++s;
     }
 
     elementSpec = makeByteArray(t, s - elementSpecStart + 1);
@@ -2606,7 +3007,7 @@ GcClass* makeArrayClass(Thread* t,
       }
       elementSpec->body()[i++] = c;
       elementSpec->body()[i] = 0;
-      -- dimensions;
+      --dimensions;
     } else {
       abort(t);
     }
@@ -2622,7 +3023,8 @@ GcClass* makeArrayClass(Thread* t,
 
   if (elementClass == 0) {
     elementClass = resolveClass(t, loader, elementSpec, throw_, throwType);
-    if (elementClass == 0) return 0;
+    if (elementClass == 0)
+      return 0;
   }
 
   PROTECT(t, elementClass);
@@ -2675,8 +3077,7 @@ GcClass* resolveArrayClass(Thread* t,
   }
 }
 
-void
-removeMonitor(Thread* t, object o)
+void removeMonitor(Thread* t, object o)
 {
   unsigned hash;
   if (DebugMonitors) {
@@ -2691,8 +3092,7 @@ removeMonitor(Thread* t, object o)
   }
 }
 
-void
-removeString(Thread* t, object o)
+void removeString(Thread* t, object o)
 {
   hashMapRemove(t, roots(t)->stringMap(), o, stringHash, objectEqual);
 }
@@ -2767,7 +3167,7 @@ void bootJavaClass(Thread* t,
   GcArray* vtable;
   if (vtableLength >= 0) {
     vtable = makeArray(t, vtableLength);
-    for (int i = 0; i < vtableLength; ++ i) {
+    for (int i = 0; i < vtableLength; ++i) {
       vtable->setBodyElement(t, i, bootMethod);
     }
   } else {
@@ -2788,8 +3188,7 @@ void nameClass(Thread* t, Gc::Type type, const char* name)
   cast<GcClass>(t, t->m->types->body()[type])->setName(t, n);
 }
 
-void
-makeArrayInterfaceTable(Thread* t)
+void makeArrayInterfaceTable(Thread* t)
 {
   GcArray* interfaceTable = makeArray(t, 4);
 
@@ -2800,8 +3199,7 @@ makeArrayInterfaceTable(Thread* t)
   roots(t)->setArrayInterfaceTable(t, interfaceTable);
 }
 
-void
-boot(Thread* t)
+void boot(Thread* t)
 {
   Machine* m = t->m;
 
@@ -2930,37 +3328,43 @@ boot(Thread* t)
   {
     GcCode* bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 0, 1);
     bootCode->body()[0] = impdep1;
-    object bootMethod = makeMethod
-      (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
+    object bootMethod
+        = makeMethod(t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
     PROTECT(t, bootMethod);
 
 #include "type-java-initializations.cpp"
 
-    //#ifdef AVIAN_HEAPDUMP
-#  include "type-name-initializations.cpp"
-      //#endif
+//#ifdef AVIAN_HEAPDUMP
+#include "type-name-initializations.cpp"
+    //#endif
   }
 }
 
-class HeapClient: public Heap::Client {
+class HeapClient : public Heap::Client {
  public:
-  HeapClient(Machine* m): m(m) { }
+  HeapClient(Machine* m) : m(m)
+  {
+  }
 
-  virtual void visitRoots(Heap::Visitor* v) {
+  virtual void visitRoots(Heap::Visitor* v)
+  {
     ::visitRoots(m, v);
 
     postVisit(m->rootThread, v);
   }
 
-  virtual void collect(void* context, Heap::CollectionType type) {
+  virtual void collect(void* context, Heap::CollectionType type)
+  {
     collect(static_cast<Thread*>(context), type);
   }
 
-  virtual bool isFixed(void* p) {
+  virtual bool isFixed(void* p)
+  {
     return objectFixed(m->rootThread, static_cast<object>(p));
   }
 
-  virtual unsigned sizeInWords(void* p) {
+  virtual unsigned sizeInWords(void* p)
+  {
     Thread* t = m->rootThread;
 
     object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
@@ -2968,13 +3372,14 @@ class HeapClient: public Heap::Client {
     unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
 
     if (objectExtended(t, o)) {
-      ++ n;
+      ++n;
     }
 
     return n;
   }
 
-  virtual unsigned copiedSizeInWords(void* p) {
+  virtual unsigned copiedSizeInWords(void* p)
+  {
     Thread* t = m->rootThread;
 
     object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
@@ -2983,13 +3388,14 @@ class HeapClient: public Heap::Client {
     unsigned n = baseSize(t, o, m->heap->follow(objectClass(t, o)));
 
     if (objectExtended(t, o) or hashTaken(t, o)) {
-      ++ n;
+      ++n;
     }
 
     return n;
   }
 
-  virtual void copy(void* srcp, void* dstp) {
+  virtual void copy(void* srcp, void* dstp)
+  {
     Thread* t = m->rootThread;
 
     object src = static_cast<object>(m->heap->follow(maskAlignedPointer(srcp)));
@@ -3011,21 +3417,22 @@ class HeapClient: public Heap::Client {
     }
   }
 
-  virtual void walk(void* p, Heap::Walker* w) {
+  virtual void walk(void* p, Heap::Walker* w)
+  {
     object o = static_cast<object>(m->heap->follow(maskAlignedPointer(p)));
     ::walk(m->rootThread, w, o, 0);
   }
 
-  void dispose() {
+  void dispose()
+  {
     m->heap->free(this, sizeof(*this));
   }
-    
+
  private:
   Machine* m;
 };
 
-void
-doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
+void doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 {
   expect(t, not t->m->collecting);
 
@@ -3034,14 +3441,17 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 
 #ifdef VM_STRESS
   bool stress = (t->flags & Thread::StressFlag) != 0;
-  if (not stress) atomicOr(&(t->flags), Thread::StressFlag);
+  if (not stress)
+    atomicOr(&(t->flags), Thread::StressFlag);
 #endif
 
   Machine* m = t->m;
 
   m->unsafe = true;
-  m->heap->collect(type, footprint(m->rootThread), pendingAllocation
-                   - (t->m->heapPoolIndex * ThreadHeapSizeInWords));
+  m->heap->collect(
+      type,
+      footprint(m->rootThread),
+      pendingAllocation - (t->m->heapPoolIndex * ThreadHeapSizeInWords));
   m->unsafe = false;
 
   postCollect(m->rootThread);
@@ -3062,7 +3472,8 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
   }
 
 #ifdef VM_STRESS
-  if (not stress) atomicAnd(&(t->flags), ~Thread::StressFlag);
+  if (not stress)
+    atomicAnd(&(t->flags), ~Thread::StressFlag);
 #endif
 
   GcFinalizer* finalizeQueue = t->m->finalizeQueue;
@@ -3088,15 +3499,14 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
   }
 }
 
-uint64_t
-invokeLoadClass(Thread* t, uintptr_t* arguments)
+uint64_t invokeLoadClass(Thread* t, uintptr_t* arguments)
 {
   GcMethod* method = cast<GcMethod>(t, reinterpret_cast<object>(arguments[0]));
   object loader = reinterpret_cast<object>(arguments[1]);
   object specString = reinterpret_cast<object>(arguments[2]);
 
-  return reinterpret_cast<uintptr_t>
-    (t->m->processor->invoke(t, method, loader, specString));
+  return reinterpret_cast<uintptr_t>(
+      t->m->processor->invoke(t, method, loader, specString));
 }
 
 bool isInitializing(Thread* t, GcClass* c)
@@ -3126,16 +3536,16 @@ object findInTable(Thread* t,
       }
     }
 
-//     fprintf(stderr, "%s %s not in\n",
+    //     fprintf(stderr, "%s %s not in\n",
     //             name->body().begin(),
     //             spec->body().begin();
 
-//     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-//       object o = arrayBody(t, table, i); 
-//       fprintf(stderr, "\t%s %s\n",
-//               &byteArrayBody(t, getName(t, o), 0),
-//               &byteArrayBody(t, getSpec(t, o), 0)); 
-//     }
+    //     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
+    //       object o = arrayBody(t, table, i);
+    //       fprintf(stderr, "\t%s %s\n",
+    //               &byteArrayBody(t, getName(t, o), 0),
+    //               &byteArrayBody(t, getSpec(t, o), 0));
+    //     }
   }
 
   return 0;
@@ -3192,59 +3602,64 @@ void updatePackageMap(Thread* t, GcClass* class_)
   }
 }
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
-                 Finder* appFinder, Processor* processor, Classpath* classpath,
-                 const char** properties, unsigned propertyCount,
-                 const char** arguments, unsigned argumentCount,
-                 unsigned stackSizeInBytes):
-  vtable(&javaVMVTable),
-  system(system),
-  heapClient(new (heap->allocate(sizeof(HeapClient)))
-             HeapClient(this)),
-  heap(heap),
-  bootFinder(bootFinder),
-  appFinder(appFinder),
-  processor(processor),
-  classpath(classpath),
-  rootThread(0),
-  exclusive(0),
-  finalizeThread(0),
-  jniReferences(0),
-  propertyCount(propertyCount),
-  arguments(arguments),
-  argumentCount(argumentCount),
-  threadCount(0),
-  activeCount(0),
-  liveCount(0),
-  daemonCount(0),
-  fixedFootprint(0),
-  stackSizeInBytes(stackSizeInBytes),
-  localThread(0),
-  stateLock(0),
-  heapLock(0),
-  classLock(0),
-  referenceLock(0),
-  shutdownLock(0),
-  libraries(0),
-  errorLog(0),
-  bootimage(0),
-  types(0),
-  roots(0),
-  finalizers(0),
-  tenuredFinalizers(0),
-  finalizeQueue(0),
-  weakReferences(0),
-  tenuredWeakReferences(0),
-  unsafe(false),
-  collecting(false),
-  triedBuiltinOnLoad(false),
-  dumpedHeapOnOOM(false),
-  alive(true),
-  heapPoolIndex(0)
+Machine::Machine(System* system,
+                 Heap* heap,
+                 Finder* bootFinder,
+                 Finder* appFinder,
+                 Processor* processor,
+                 Classpath* classpath,
+                 const char** properties,
+                 unsigned propertyCount,
+                 const char** arguments,
+                 unsigned argumentCount,
+                 unsigned stackSizeInBytes)
+    : vtable(&javaVMVTable),
+      system(system),
+      heapClient(new (heap->allocate(sizeof(HeapClient))) HeapClient(this)),
+      heap(heap),
+      bootFinder(bootFinder),
+      appFinder(appFinder),
+      processor(processor),
+      classpath(classpath),
+      rootThread(0),
+      exclusive(0),
+      finalizeThread(0),
+      jniReferences(0),
+      propertyCount(propertyCount),
+      arguments(arguments),
+      argumentCount(argumentCount),
+      threadCount(0),
+      activeCount(0),
+      liveCount(0),
+      daemonCount(0),
+      fixedFootprint(0),
+      stackSizeInBytes(stackSizeInBytes),
+      localThread(0),
+      stateLock(0),
+      heapLock(0),
+      classLock(0),
+      referenceLock(0),
+      shutdownLock(0),
+      libraries(0),
+      errorLog(0),
+      bootimage(0),
+      types(0),
+      roots(0),
+      finalizers(0),
+      tenuredFinalizers(0),
+      finalizeQueue(0),
+      weakReferences(0),
+      tenuredWeakReferences(0),
+      unsafe(false),
+      collecting(false),
+      triedBuiltinOnLoad(false),
+      dumpedHeapOnOOM(false),
+      alive(true),
+      heapPoolIndex(0)
 {
   heap->setClient(heapClient);
 
@@ -3252,30 +3667,31 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
 
   // Copying the properties memory (to avoid memory crashes)
   this->properties = (char**)heap->allocate(sizeof(char*) * propertyCount);
-  for (unsigned int i = 0; i < propertyCount; i++)
-  {
-    size_t length = strlen(properties[i]) + 1; // +1 for null-terminating char
+  for (unsigned int i = 0; i < propertyCount; i++) {
+    size_t length = strlen(properties[i]) + 1;  // +1 for null-terminating char
     this->properties[i] = (char*)heap->allocate(sizeof(char) * length);
     memcpy(this->properties[i], properties[i], length);
   }
 
   const char* bootstrapProperty = findProperty(this, BOOTSTRAP_PROPERTY);
-  const char* bootstrapPropertyDup = bootstrapProperty ? strdup(bootstrapProperty) : 0;
-  const char* bootstrapPropertyEnd = bootstrapPropertyDup + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
+  const char* bootstrapPropertyDup
+      = bootstrapProperty ? strdup(bootstrapProperty) : 0;
+  const char* bootstrapPropertyEnd
+      = bootstrapPropertyDup
+        + (bootstrapPropertyDup ? strlen(bootstrapPropertyDup) : 0);
   char* codeLibraryName = (char*)bootstrapPropertyDup;
   char* codeLibraryNameEnd = 0;
-  if (codeLibraryName && (codeLibraryNameEnd = strchr(codeLibraryName, system->pathSeparator())))
+  if (codeLibraryName && (codeLibraryNameEnd
+                          = strchr(codeLibraryName, system->pathSeparator())))
     *codeLibraryNameEnd = 0;
 
-  if (not system->success(system->make(&localThread)) or
-      not system->success(system->make(&stateLock)) or
-      not system->success(system->make(&heapLock)) or
-      not system->success(system->make(&classLock)) or
-      not system->success(system->make(&referenceLock)) or
-      not system->success(system->make(&shutdownLock)) or
-      not system->success
-      (system->load(&libraries, bootstrapPropertyDup)))
-  {
+  if (not system->success(system->make(&localThread))
+      or not system->success(system->make(&stateLock))
+      or not system->success(system->make(&heapLock))
+      or not system->success(system->make(&classLock))
+      or not system->success(system->make(&referenceLock))
+      or not system->success(system->make(&shutdownLock))
+      or not system->success(system->load(&libraries, bootstrapPropertyDup))) {
     system->abort();
   }
 
@@ -3291,12 +3707,11 @@ Machine::Machine(System* system, Heap* heap, Finder* bootFinder,
     libraries->setNext(additionalLibrary);
   }
 
-  if(bootstrapPropertyDup)
+  if (bootstrapPropertyDup)
     free((void*)bootstrapPropertyDup);
 }
 
-void
-Machine::dispose()
+void Machine::dispose()
 {
   localThread->dispose();
   stateLock->dispose();
@@ -3325,8 +3740,7 @@ Machine::dispose()
 
   heap->free(arguments, sizeof(const char*) * argumentCount);
 
-  for (unsigned int i = 0; i < propertyCount; i++)
-  {
+  for (unsigned int i = 0; i < propertyCount; i++) {
     heap->free(properties[i], sizeof(char) * (strlen(properties[i]) + 1));
   }
   heap->free(properties, sizeof(const char*) * propertyCount);
@@ -3360,10 +3774,10 @@ Thread::Thread(Machine* m, GcThread* javaThread, Thread* parent)
       heap(defaultHeap),
       backupHeapIndex(0),
       flags(ActiveFlag)
-{ }
+{
+}
 
-void
-Thread::init()
+void Thread::init()
 {
   memset(defaultHeap, 0, ThreadHeapSizeInBytes);
   memset(backupHeap, 0, ThreadBackupHeapSizeInBytes);
@@ -3384,8 +3798,7 @@ Thread::init()
     const char* imageFunctionName = findProperty(m, "avian.bootimage");
     if (imageFunctionName) {
       bool lzma = strncmp("lzma:", imageFunctionName, 5) == 0;
-      const char* symbolName
-        = lzma ? imageFunctionName + 5 : imageFunctionName;
+      const char* symbolName = lzma ? imageFunctionName + 5 : imageFunctionName;
 
       void* imagep = m->libraries->resolve(symbolName);
       if (imagep) {
@@ -3396,9 +3809,8 @@ Thread::init()
         uint8_t* imageBytes = imageFunction(&size);
         if (lzma) {
 #ifdef AVIAN_USE_LZMA
-          m->bootimage = image = reinterpret_cast<BootImage*>
-            (decodeLZMA
-             (m->system, m->heap, imageBytes, size, &(m->bootimageSize)));
+          m->bootimage = image = reinterpret_cast<BootImage*>(decodeLZMA(
+              m->system, m->heap, imageBytes, size, &(m->bootimageSize)));
 #else
           abort(this);
 #endif
@@ -3460,12 +3872,9 @@ Thread::init()
   expect(this, m->system->success(m->system->make(&lock)));
 }
 
-void
-Thread::exit()
+void Thread::exit()
 {
-  if (state != Thread::ExitState and
-      state != Thread::ZombieState)
-  {
+  if (state != Thread::ExitState and state != Thread::ZombieState) {
     enter(this, Thread::ExclusiveState);
 
     if (m->liveCount == 1) {
@@ -3478,26 +3887,24 @@ Thread::exit()
   }
 }
 
-void
-Thread::dispose()
+void Thread::dispose()
 {
   if (lock) {
     lock->dispose();
   }
-  
+
   if (systemThread) {
     systemThread->dispose();
   }
 
-  -- m->threadCount;
+  --m->threadCount;
 
   m->heap->free(defaultHeap, ThreadHeapSizeInBytes);
 
   m->processor->dispose(this);
 }
 
-void
-shutDown(Thread* t)
+void shutDown(Thread* t)
 {
   ACQUIRE(t, t->m->shutdownLock);
 
@@ -3519,12 +3926,11 @@ shutDown(Thread* t)
       Thread* ht
           = reinterpret_cast<Thread*>(cast<GcThread>(t, h->first())->peer());
 
-      { ACQUIRE(t, t->m->stateLock);
+      {
+        ACQUIRE(t, t->m->stateLock);
 
-        if (ht == 0
-            or ht->state == Thread::ZombieState
-            or ht->state == Thread::JoinedState)
-        {
+        if (ht == 0 or ht->state == Thread::ZombieState
+            or ht->state == Thread::JoinedState) {
           break;
         } else {
           ENTER(t, Thread::IdleState);
@@ -3535,17 +3941,17 @@ shutDown(Thread* t)
   }
 
   // tell finalize thread to exit and wait for it to do so
-  { ACQUIRE(t, t->m->stateLock);
+  {
+    ACQUIRE(t, t->m->stateLock);
     Thread* finalizeThread = t->m->finalizeThread;
     if (finalizeThread) {
       t->m->finalizeThread = 0;
       t->m->stateLock->notifyAll(t->systemThread);
 
       while (finalizeThread->state != Thread::ZombieState
-             and finalizeThread->state != Thread::JoinedState)
-      {
+             and finalizeThread->state != Thread::JoinedState) {
         ENTER(t, Thread::IdleState);
-        t->m->stateLock->wait(t->systemThread, 0);      
+        t->m->stateLock->wait(t->systemThread, 0);
       }
     }
   }
@@ -3554,7 +3960,8 @@ shutDown(Thread* t)
 
   // todo: be more aggressive about killing daemon threads, e.g. at
   // any GC point, not just at waits/sleeps
-  { ACQUIRE(t, t->m->stateLock);
+  {
+    ACQUIRE(t, t->m->stateLock);
 
     t->m->alive = false;
 
@@ -3562,12 +3969,12 @@ shutDown(Thread* t)
   }
 }
 
-void
-enter(Thread* t, Thread::State s)
+void enter(Thread* t, Thread::State s)
 {
   stress(t);
 
-  if (s == t->state) return;
+  if (s == t->state)
+    return;
 
   if (t->state == Thread::ExitState) {
     // once in exit state, we stay that way
@@ -3575,16 +3982,16 @@ enter(Thread* t, Thread::State s)
   }
 
 #ifdef USE_ATOMIC_OPERATIONS
-#  define INCREMENT atomicIncrement
-#  define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
-#  define STORE_LOAD_MEMORY_BARRIER storeLoadMemoryBarrier()
+#define INCREMENT atomicIncrement
+#define ACQUIRE_LOCK ACQUIRE_RAW(t, t->m->stateLock)
+#define STORE_LOAD_MEMORY_BARRIER storeLoadMemoryBarrier()
 #else
-#  define INCREMENT(pointer, value) *(pointer) += value;
-#  define ACQUIRE_LOCK
-#  define STORE_LOAD_MEMORY_BARRIER
+#define INCREMENT(pointer, value) *(pointer) += value;
+#define ACQUIRE_LOCK
+#define STORE_LOAD_MEMORY_BARRIER
 
   ACQUIRE_RAW(t, t->m->stateLock);
-#endif // not USE_ATOMIC_OPERATIONS
+#endif  // not USE_ATOMIC_OPERATIONS
 
   switch (s) {
   case Thread::ExclusiveState: {
@@ -3597,18 +4004,20 @@ enter(Thread* t, Thread::State s)
     }
 
     switch (t->state) {
-    case Thread::ActiveState: break;
+    case Thread::ActiveState:
+      break;
 
     case Thread::IdleState: {
       INCREMENT(&(t->m->activeCount), 1);
     } break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
 
     t->state = Thread::ExclusiveState;
     t->m->exclusive = t;
-    
+
     STORE_LOAD_MEMORY_BARRIER;
 
     while (t->m->activeCount > 1) {
@@ -3644,9 +4053,11 @@ enter(Thread* t, Thread::State s)
       t->m->exclusive = 0;
     } break;
 
-    case Thread::ActiveState: break;
+    case Thread::ActiveState:
+      break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
 
     assertT(t, t->m->activeCount > 0);
@@ -3654,10 +4065,10 @@ enter(Thread* t, Thread::State s)
 
     if (s == Thread::ZombieState) {
       assertT(t, t->m->liveCount > 0);
-      -- t->m->liveCount;
+      --t->m->liveCount;
 
       if (t->flags & Thread::DaemonFlag) {
-        -- t->m->daemonCount;
+        --t->m->daemonCount;
       }
     }
 
@@ -3682,7 +4093,8 @@ enter(Thread* t, Thread::State s)
       }
     }
 
-    { ACQUIRE_LOCK;
+    {
+      ACQUIRE_LOCK;
 
       switch (t->state) {
       case Thread::ExclusiveState: {
@@ -3702,15 +4114,17 @@ enter(Thread* t, Thread::State s)
 
         INCREMENT(&(t->m->activeCount), 1);
         if (t->state == Thread::NoState) {
-          ++ t->m->liveCount;
-          ++ t->m->threadCount;
+          ++t->m->liveCount;
+          ++t->m->threadCount;
         }
         t->state = s;
       } break;
 
-      default: abort(t);
+      default:
+        abort(t);
       }
-    } break;
+    }
+    break;
 
   case Thread::ExitState: {
     ACQUIRE_LOCK;
@@ -3723,9 +4137,11 @@ enter(Thread* t, Thread::State s)
       t->m->stateLock->notifyAll(t->systemThread);
     } break;
 
-    case Thread::ActiveState: break;
+    case Thread::ActiveState:
+      break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
 
     assertT(t, t->m->activeCount > 0);
@@ -3738,36 +4154,43 @@ enter(Thread* t, Thread::State s)
     }
   } break;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
-object
-allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
+object allocate2(Thread* t, unsigned sizeInBytes, bool objectMask)
 {
-  return allocate3
-    (t, t->m->heap,
-     ceilingDivide(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords ?
-     Machine::FixedAllocation : Machine::MovableAllocation,
-     sizeInBytes, objectMask);
+  return allocate3(
+      t,
+      t->m->heap,
+      ceilingDivide(sizeInBytes, BytesPerWord) > ThreadHeapSizeInWords
+          ? Machine::FixedAllocation
+          : Machine::MovableAllocation,
+      sizeInBytes,
+      objectMask);
 }
 
-object
-allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
-          unsigned sizeInBytes, bool objectMask)
+object allocate3(Thread* t,
+                 Allocator* allocator,
+                 Machine::AllocationType type,
+                 unsigned sizeInBytes,
+                 bool objectMask)
 {
   expect(t, t->criticalLevel == 0);
 
   if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
-    expect(t,  t->backupHeapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
+    expect(t,
+           t->backupHeapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadBackupHeapSizeInWords);
-    
+
     object o = reinterpret_cast<object>(t->backupHeap + t->backupHeapIndex);
     t->backupHeapIndex += ceilingDivide(sizeInBytes, BytesPerWord);
     fieldAtOffset<object>(o, 0) = 0;
     return o;
   } else if (UNLIKELY(t->flags & Thread::TracingFlag)) {
-    expect(t, t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
+    expect(t,
+           t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
            <= ThreadHeapSizeInWords);
     return allocateSmall(t, sizeInBytes);
   }
@@ -3783,19 +4206,17 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       t->m->stateLock->wait(t->systemThread, 0);
     }
   }
-  
+
   do {
     switch (type) {
     case Machine::MovableAllocation:
       if (t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
-          > ThreadHeapSizeInWords)
-      {
+          > ThreadHeapSizeInWords) {
         t->heap = 0;
         if ((not t->m->heap->limitExceeded())
-            and t->m->heapPoolIndex < ThreadHeapPoolSize)
-        {
-          t->heap = static_cast<uintptr_t*>
-            (t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
+            and t->m->heapPoolIndex < ThreadHeapPoolSize) {
+          t->heap = static_cast<uintptr_t*>(
+              t->m->heap->tryAllocate(ThreadHeapSizeInBytes));
 
           if (t->heap) {
             memset(t->heap, 0, ThreadHeapSizeInBytes);
@@ -3809,8 +4230,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       break;
 
     case Machine::FixedAllocation:
-      if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes)
-      {
+      if (t->m->fixedFootprint + sizeInBytes > FixedFootprintThresholdInBytes) {
         t->heap = 0;
       }
       break;
@@ -3819,8 +4239,8 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
       break;
     }
 
-    int pendingAllocation = t->m->heap->fixedFootprint
-      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
+    int pendingAllocation = t->m->heap->fixedFootprint(
+        ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
 
     if (t->heap == 0 or t->m->heap->limitExceeded(pendingAllocation)) {
       //     fprintf(stderr, "gc");
@@ -3833,7 +4253,7 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     }
   } while (type == Machine::MovableAllocation
            and t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
-           > ThreadHeapSizeInWords);
+               > ThreadHeapSizeInWords);
 
   switch (type) {
   case Machine::MovableAllocation: {
@@ -3841,24 +4261,22 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
   }
 
   case Machine::FixedAllocation: {
-    object o = static_cast<object>
-      (t->m->heap->allocateFixed
-       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
+    object o = static_cast<object>(t->m->heap->allocateFixed(
+        allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
     memset(o, 0, sizeInBytes);
 
     alias(o, 0) = FixedMark;
-    
-    t->m->fixedFootprint += t->m->heap->fixedFootprint
-      (ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
-      
+
+    t->m->fixedFootprint += t->m->heap->fixedFootprint(
+        ceilingDivide(sizeInBytes, BytesPerWord), objectMask);
+
     return o;
   }
 
   case Machine::ImmortalAllocation: {
-    object o = static_cast<object>
-      (t->m->heap->allocateImmortalFixed
-       (allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
+    object o = static_cast<object>(t->m->heap->allocateImmortalFixed(
+        allocator, ceilingDivide(sizeInBytes, BytesPerWord), objectMask));
 
     memset(o, 0, sizeInBytes);
 
@@ -3867,17 +4285,17 @@ allocate3(Thread* t, Allocator* allocator, Machine::AllocationType type,
     return o;
   }
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
-void
-collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
+void collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 {
   ENTER(t, Thread::ExclusiveState);
 
   unsigned pending = pendingAllocation
-    - (t->m->heapPoolIndex * ThreadHeapSizeInWords);
+                     - (t->m->heapPoolIndex * ThreadHeapSizeInWords);
 
   if (t->m->heap->limitExceeded(pending)) {
     type = Heap::MajorCollection;
@@ -3915,8 +4333,7 @@ object makeNewGeneral(Thread* t, GcClass* class_)
   return instance;
 }
 
-void
-popResources(Thread* t)
+void popResources(Thread* t)
 {
   while (t->resource != t->checkpoint->resource) {
     Thread::Resource* r = t->resource;
@@ -3930,7 +4347,7 @@ popResources(Thread* t)
 GcByteArray* makeByteArrayV(Thread* t, const char* format, va_list a, int size)
 {
   THREAD_RUNTIME_ARRAY(t, char, buffer, size);
-  
+
   int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
   if (r >= 0 and r < size - 1) {
     GcByteArray* s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
@@ -3990,10 +4407,14 @@ int stringUTFLength(Thread* t,
       GcCharArray* a = cast<GcCharArray>(t, data);
       for (unsigned i = 0; i < length; ++i) {
         uint16_t c = a->body()[string->offset(t) + start + i];
-        if (c == 0)         result += 1; // null char (was 2 bytes in Java)
-        else if (c < 0x80)  result += 1; // ASCII char
-        else if (c < 0x800) result += 2; // two-byte char
-        else                result += 3; // three-byte char
+        if (c == 0)
+          result += 1;  // null char (was 2 bytes in Java)
+        else if (c < 0x80)
+          result += 1;  // ASCII char
+        else if (c < 0x800)
+          result += 2;  // two-byte char
+        else
+          result += 3;  // three-byte char
       }
     }
   }
@@ -4066,14 +4487,14 @@ void stringUTFChars(Thread* t,
     int j = 0;
     for (unsigned i = 0; i < length; ++i) {
       uint16_t c = cs->body()[string->offset(t) + start + i];
-      if(!c) {                // null char
+      if (!c) {  // null char
         chars[j++] = 0;
       } else if (c < 0x80) {  // ASCII char
         chars[j++] = static_cast<char>(c);
-      } else if (c < 0x800) { // two-byte char
+      } else if (c < 0x800) {  // two-byte char
         chars[j++] = static_cast<char>(0x0c0 | (c >> 6));
         chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
-      } else {                // three-byte char
+      } else {  // three-byte char
         chars[j++] = static_cast<char>(0x0e0 | ((c >> 12) & 0x0f));
         chars[j++] = static_cast<char>(0x080 | ((c >> 6) & 0x03f));
         chars[j++] = static_cast<char>(0x080 | (c & 0x03f));
@@ -4083,8 +4504,7 @@ void stringUTFChars(Thread* t,
   }
 }
 
-uint64_t
-resolveBootstrap(Thread* t, uintptr_t* arguments)
+uint64_t resolveBootstrap(Thread* t, uintptr_t* arguments)
 {
   GcByteArray* name
       = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[0]));
@@ -4099,7 +4519,8 @@ bool isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
   assertT(t, a);
   assertT(t, b);
 
-  if (a == b) return true;
+  if (a == b)
+    return true;
 
   if (a->flags() & ACC_INTERFACE) {
     if (b->vmFlags() & BootstrapFlag) {
@@ -4160,8 +4581,7 @@ GcMethod* classInitializer(Thread* t, GcClass* class_)
   return 0;
 }
 
-unsigned
-fieldCode(Thread* t, unsigned javaCode)
+unsigned fieldCode(Thread* t, unsigned javaCode)
 {
   switch (javaCode) {
   case 'B':
@@ -4186,12 +4606,12 @@ fieldCode(Thread* t, unsigned javaCode)
   case '[':
     return ObjectField;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
-unsigned
-fieldType(Thread* t, unsigned code)
+unsigned fieldType(Thread* t, unsigned code)
 {
   switch (code) {
   case VoidField:
@@ -4213,12 +4633,12 @@ fieldType(Thread* t, unsigned code)
   case ObjectField:
     return POINTER_TYPE;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
-unsigned
-primitiveSize(Thread* t, unsigned code)
+unsigned primitiveSize(Thread* t, unsigned code)
 {
   switch (code) {
   case VoidField:
@@ -4236,7 +4656,8 @@ primitiveSize(Thread* t, unsigned code)
   case LongField:
     return 8;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
@@ -4248,11 +4669,14 @@ GcClass* parseClass(Thread* t,
 {
   PROTECT(t, loader);
 
-  class Client: public Stream::Client {
+  class Client : public Stream::Client {
    public:
-    Client(Thread* t): t(t) { }
+    Client(Thread* t) : t(t)
+    {
+    }
 
-    virtual void NO_RETURN handleError() {
+    virtual void NO_RETURN handleError()
+    {
       abort(t);
     }
 
@@ -4264,9 +4688,9 @@ GcClass* parseClass(Thread* t,
 
   uint32_t magic = s.read4();
   expect(t, magic == 0xCAFEBABE);
-  unsigned minorVer = s.read2(); // minor version
-  unsigned majorVer = s.read2(); // major version
-  if(DebugClassReader) {
+  unsigned minorVer = s.read2();  // minor version
+  unsigned majorVer = s.read2();  // major version
+  if (DebugClassReader) {
     fprintf(stderr, "read class (minor %d major %d)\n", minorVer, majorVer);
   }
 
@@ -4299,7 +4723,7 @@ GcClass* parseClass(Thread* t,
       0,   // source
       0);  // vtable length
   PROTECT(t, class_);
-  
+
   unsigned super = s.read2();
   if (super) {
     GcClass* sc = resolveClass(
@@ -4315,10 +4739,10 @@ GcClass* parseClass(Thread* t,
                                            | HasFinalizerFlag | NeedInitFlag));
   }
 
-  if(DebugClassReader) {
+  if (DebugClassReader) {
     fprintf(stderr, "  flags %d name %d super %d\n", flags, name, super);
   }
-  
+
   parseInterfaceTable(t, s, class_, pool, throwType);
 
   parseFieldTable(t, s, class_, pool);
@@ -4373,16 +4797,15 @@ GcClass* parseClass(Thread* t,
   return real;
 }
 
-uint64_t
-runParseClass(Thread* t, uintptr_t* arguments)
+uint64_t runParseClass(Thread* t, uintptr_t* arguments)
 {
   GcClassLoader* loader
       = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
   Gc::Type throwType = static_cast<Gc::Type>(arguments[2]);
 
-  return reinterpret_cast<uintptr_t>
-    (parseClass(t, loader, region->start(), region->length(), throwType));
+  return reinterpret_cast<uintptr_t>(
+      parseClass(t, loader, region->start(), region->length(), throwType));
 }
 
 GcClass* resolveSystemClass(Thread* t,
@@ -4432,11 +4855,12 @@ GcClass* resolveSystemClass(Thread* t,
           fprintf(stderr, "parsing %s\n", spec->body().begin());
         }
 
-        { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
+        {
+          THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
-          uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(loader),
-                                    reinterpret_cast<uintptr_t>(region),
-                                    static_cast<uintptr_t>(throwType) };
+          uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(loader),
+                                   reinterpret_cast<uintptr_t>(region),
+                                   static_cast<uintptr_t>(throwType)};
 
           // parse class file
           class_ = cast<GcClass>(
@@ -4483,7 +4907,7 @@ GcClass* resolveSystemClass(Thread* t,
 
         if (bootstrapClass) {
           PROTECT(t, bootstrapClass);
-          
+
           updateBootstrapClass(t, bootstrapClass, class_);
           class_ = bootstrapClass;
         }
@@ -4556,7 +4980,7 @@ GcClass* resolveClass(Thread* t,
             resolveSystemClass(
                 t, roots(t)->bootLoader(), classLoaderClass->name());
           }
-        }      
+        }
       }
 
       GcMethod* method = findVirtualMethod(
@@ -4573,9 +4997,9 @@ GcClass* resolveClass(Thread* t,
       GcString* specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
       PROTECT(t, specString);
 
-      uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(method),
-                                reinterpret_cast<uintptr_t>(loader),
-                                reinterpret_cast<uintptr_t>(specString) };
+      uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(method),
+                               reinterpret_cast<uintptr_t>(loader),
+                               reinterpret_cast<uintptr_t>(specString)};
 
       GcJclass* jc = cast<GcJclass>(
           t, reinterpret_cast<object>(runRaw(t, invokeLoadClass, arguments)));
@@ -4907,8 +5331,7 @@ object findInHierarchyOrNull(
   return o;
 }
 
-unsigned
-parameterFootprint(Thread* t, const char* s, bool static_)
+unsigned parameterFootprint(Thread* t, const char* s, bool static_)
 {
   unsigned footprint = 0;
   for (MethodSpecIterator it(t, s); it.hasNext();) {
@@ -4919,19 +5342,18 @@ parameterFootprint(Thread* t, const char* s, bool static_)
       break;
 
     default:
-      ++ footprint;
-      break;        
+      ++footprint;
+      break;
     }
   }
 
   if (not static_) {
-    ++ footprint;
+    ++footprint;
   }
   return footprint;
 }
 
-void
-addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
+void addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
 {
   PROTECT(t, target);
 
@@ -4962,14 +5384,15 @@ GcMonitor* objectMonitor(Thread* t, object o, bool createNew)
     PROTECT(t, o);
     PROTECT(t, m);
 
-    { ENTER(t, Thread::ExclusiveState);
+    {
+      ENTER(t, Thread::ExclusiveState);
 
       m = hashMapFind(t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
       if (m) {
         if (DebugMonitors) {
-          fprintf(stderr, "found monitor %p for object %x\n",
-                  m, objectHash(t, o));
+          fprintf(
+              stderr, "found monitor %p for object %x\n", m, objectHash(t, o));
         }
 
         return cast<GcMonitor>(t, m);
@@ -4979,8 +5402,7 @@ GcMonitor* objectMonitor(Thread* t, object o, bool createNew)
       m = makeMonitor(t, 0, 0, 0, head, head, 0);
 
       if (DebugMonitors) {
-        fprintf(stderr, "made monitor %p for object %x\n", m,
-                objectHash(t, o));
+        fprintf(stderr, "made monitor %p for object %x\n", m, objectHash(t, o));
       }
 
       hashMapInsert(t, roots(t)->monitorMap(), o, m, objectHash);
@@ -4994,8 +5416,7 @@ GcMonitor* objectMonitor(Thread* t, object o, bool createNew)
   }
 }
 
-object
-intern(Thread* t, object s)
+object intern(Thread* t, object s)
 {
   PROTECT(t, s);
 
@@ -5013,8 +5434,7 @@ intern(Thread* t, object s)
   }
 }
 
-void
-walk(Thread* t, Heap::Walker* w, object o, unsigned start)
+void walk(Thread* t, Heap::Walker* w, object o, unsigned start)
 {
   GcClass* class_ = t->m->heap->follow(objectClass(t, o));
   GcIntArray* objectMask = t->m->heap->follow(class_->objectMask());
@@ -5024,17 +5444,22 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
   if (objectMask) {
     unsigned fixedSize = class_->fixedSize();
     unsigned arrayElementSize = class_->arrayElementSize();
-    unsigned arrayLength
-      = (arrayElementSize ?
-         fieldAtOffset<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
+    unsigned arrayLength = (arrayElementSize ? fieldAtOffset<uintptr_t>(
+                                                   o, fixedSize - BytesPerWord)
+                                             : 0);
 
     THREAD_RUNTIME_ARRAY(t, uint32_t, mask, objectMask->length());
     memcpy(RUNTIME_ARRAY_BODY(mask),
            objectMask->body().begin(),
            objectMask->length() * 4);
 
-    more = ::walk(t, w, RUNTIME_ARRAY_BODY(mask), fixedSize, arrayElementSize,
-                  arrayLength, start);
+    more = ::walk(t,
+                  w,
+                  RUNTIME_ARRAY_BODY(mask),
+                  fixedSize,
+                  arrayElementSize,
+                  arrayLength,
+                  start);
   } else if (class_->vmFlags() & SingletonFlag) {
     GcSingleton* s = cast<GcSingleton>(t, o);
     unsigned length = s->length();
@@ -5058,14 +5483,16 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
   }
 }
 
-int
-walkNext(Thread* t, object o, int previous)
+int walkNext(Thread* t, object o, int previous)
 {
-  class Walker: public Heap::Walker {
+  class Walker : public Heap::Walker {
    public:
-    Walker(): value(-1) { }
+    Walker() : value(-1)
+    {
+    }
 
-    bool visit(unsigned offset) {
+    bool visit(unsigned offset)
+    {
       value = offset;
       return false;
     }
@@ -5077,8 +5504,7 @@ walkNext(Thread* t, object o, int previous)
   return walker.value;
 }
 
-void
-visitRoots(Machine* m, Heap::Visitor* v)
+void visitRoots(Machine* m, Heap::Visitor* v)
 {
   v->visit(&(m->types));
   v->visit(&(m->roots));
@@ -5094,27 +5520,26 @@ visitRoots(Machine* m, Heap::Visitor* v)
   }
 }
 
-void
-logTrace(FILE* f, const char* fmt, ...)
+void logTrace(FILE* f, const char* fmt, ...)
 {
-    va_list a;
-    va_start(a, fmt);
+  va_list a;
+  va_start(a, fmt);
 #ifdef PLATFORM_WINDOWS
-    const unsigned length = _vscprintf(fmt, a);
+  const unsigned length = _vscprintf(fmt, a);
 #else
-    const unsigned length = vsnprintf(0, 0, fmt, a);
+  const unsigned length = vsnprintf(0, 0, fmt, a);
 #endif
-    va_end(a);
+  va_end(a);
 
-    RUNTIME_ARRAY(char, buffer, length + 1);
-    va_start(a, fmt);
-    vsnprintf(RUNTIME_ARRAY_BODY(buffer), length + 1, fmt, a);
-    va_end(a);
-    RUNTIME_ARRAY_BODY(buffer)[length] = 0;
+  RUNTIME_ARRAY(char, buffer, length + 1);
+  va_start(a, fmt);
+  vsnprintf(RUNTIME_ARRAY_BODY(buffer), length + 1, fmt, a);
+  va_end(a);
+  RUNTIME_ARRAY_BODY(buffer)[length] = 0;
 
-    ::fprintf(f, "%s", RUNTIME_ARRAY_BODY(buffer));
+  ::fprintf(f, "%s", RUNTIME_ARRAY_BODY(buffer));
 #ifdef PLATFORM_WINDOWS
-    ::OutputDebugStringA(RUNTIME_ARRAY_BODY(buffer));
+  ::OutputDebugStringA(RUNTIME_ARRAY_BODY(buffer));
 #endif
 }
 
@@ -5173,14 +5598,16 @@ void printTrace(Thread* t, GcThrowable* exception)
   ::fflush(errorLog(t));
 }
 
-object
-makeTrace(Thread* t, Processor::StackWalker* walker)
+object makeTrace(Thread* t, Processor::StackWalker* walker)
 {
-  class Visitor: public Processor::StackVisitor {
+  class Visitor : public Processor::StackVisitor {
    public:
-    Visitor(Thread* t): t(t), trace(0), index(0), protector(t, &trace) { }
+    Visitor(Thread* t) : t(t), trace(0), index(0), protector(t, &trace)
+    {
+    }
 
-    virtual bool visit(Processor::StackWalker* walker) {
+    virtual bool visit(Processor::StackWalker* walker)
+    {
       if (trace == 0) {
         trace = makeObjectArray(t, walker->count());
         assertT(t, trace);
@@ -5189,7 +5616,7 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
       GcTraceElement* e = makeTraceElement(t, walker->method(), walker->ip());
       assertT(t, index < objectArrayLength(t, trace));
       reinterpret_cast<GcArray*>(trace)->setBodyElement(t, index, e);
-      ++ index;
+      ++index;
       return true;
     }
 
@@ -5204,14 +5631,16 @@ makeTrace(Thread* t, Processor::StackWalker* walker)
   return v.trace ? v.trace : makeObjectArray(t, 0);
 }
 
-object
-makeTrace(Thread* t, Thread* target)
+object makeTrace(Thread* t, Thread* target)
 {
-  class Visitor: public Processor::StackVisitor {
+  class Visitor : public Processor::StackVisitor {
    public:
-    Visitor(Thread* t): t(t), trace(0) { }
+    Visitor(Thread* t) : t(t), trace(0)
+    {
+    }
 
-    virtual bool visit(Processor::StackWalker* walker) {
+    virtual bool visit(Processor::StackWalker* walker)
+    {
       trace = vm::makeTrace(t, walker);
       return false;
     }
@@ -5225,8 +5654,7 @@ makeTrace(Thread* t, Thread* target)
   return v.trace ? v.trace : makeObjectArray(t, 0);
 }
 
-void
-runFinalizeThread(Thread* t)
+void runFinalizeThread(Thread* t)
 {
   GcFinalizer* finalizeList = 0;
   PROTECT(t, finalizeList);
@@ -5235,7 +5663,8 @@ runFinalizeThread(Thread* t)
   PROTECT(t, cleanList);
 
   while (true) {
-    { ACQUIRE(t, t->m->stateLock);
+    {
+      ACQUIRE(t, t->m->stateLock);
 
       while (t->m->finalizeThread and roots(t)->objectsToFinalize() == 0
              and roots(t)->objectsToClean() == 0) {
@@ -5264,15 +5693,18 @@ runFinalizeThread(Thread* t)
   }
 }
 
-object
-parseUtf8(Thread* t, const char* data, unsigned length)
+object parseUtf8(Thread* t, const char* data, unsigned length)
 {
-  class Client: public Stream::Client {
+  class Client : public Stream::Client {
    public:
-    Client(Thread* t): t(t) { }
+    Client(Thread* t) : t(t)
+    {
+    }
 
-    virtual void handleError() {
-      if (false) abort(t);
+    virtual void handleError()
+    {
+      if (false)
+        abort(t);
     }
 
    private:
@@ -5294,28 +5726,33 @@ object parseUtf8(Thread* t, GcByteArray* array)
 
   return array;
 
- slow_path:
-  class Client: public Stream::Client {
+slow_path:
+  class Client : public Stream::Client {
    public:
-    Client(Thread* t): t(t) { }
+    Client(Thread* t) : t(t)
+    {
+    }
 
-    virtual void handleError() {
-      if (false) abort(t);
+    virtual void handleError()
+    {
+      if (false)
+        abort(t);
     }
 
    private:
     Thread* t;
   } client(t);
 
-  class MyStream: public AbstractStream {
+  class MyStream : public AbstractStream {
    public:
-    class MyProtector: public Thread::Protector {
+    class MyProtector : public Thread::Protector {
      public:
-      MyProtector(Thread* t, MyStream* s):
-        Protector(t), s(s)
-      { }
+      MyProtector(Thread* t, MyStream* s) : Protector(t), s(s)
+      {
+      }
 
-      virtual void visit(Heap::Visitor* v) {
+      virtual void visit(Heap::Visitor* v)
+      {
         v->visit(&(s->array));
       }
 
@@ -5326,9 +5763,11 @@ object parseUtf8(Thread* t, GcByteArray* array)
         : AbstractStream(client, array->length() - 1),
           array(array),
           protector(t, this)
-    { }
+    {
+    }
 
-    virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
+    virtual void copy(uint8_t* dst, unsigned offset, unsigned size)
+    {
       memcpy(dst, &array->body()[offset], size);
     }
 
@@ -5345,14 +5784,19 @@ GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
     target = 2;
   }
 
-  class Visitor: public Processor::StackVisitor {
+  class Visitor : public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, unsigned target, bool skipMethodInvoke):
-      t(t), method(0), count(0), target(target),
-      skipMethodInvoke(skipMethodInvoke)
-    { }
+    Visitor(Thread* t, unsigned target, bool skipMethodInvoke)
+        : t(t),
+          method(0),
+          count(0),
+          target(target),
+          skipMethodInvoke(skipMethodInvoke)
+    {
+    }
 
-    virtual bool visit(Processor::StackWalker* walker) {
+    virtual bool visit(Processor::StackWalker* walker)
+    {
       if (skipMethodInvoke
           and walker->method()->class_() == type(t, GcJmethod::Type)
           and strcmp(walker->method()->name()->body().begin(),
@@ -5364,7 +5808,7 @@ GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
         method = walker->method();
         return false;
       } else {
-        ++ count;
+        ++count;
         return true;
       }
     }
@@ -5374,7 +5818,7 @@ GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
     unsigned count;
     unsigned target;
     bool skipMethodInvoke;
-    } v(t, target, skipMethodInvoke);
+  } v(t, target, skipMethodInvoke);
 
   t->m->processor->walkStack(t, &v);
 
@@ -5389,7 +5833,7 @@ object defineClass(Thread* t,
   PROTECT(t, loader);
 
   object c = parseClass(t, loader, buffer, length);
-  
+
   // char name[byteArrayLength(t, className(t, c))];
   // memcpy(name, &byteArrayBody(t, className(t, c), 0),
   //        byteArrayLength(t, className(t, c)));
@@ -5412,9 +5856,11 @@ object defineClass(Thread* t,
   return c;
 }
 
-void
-populateMultiArray(Thread* t, object array, int32_t* counts,
-                   unsigned index, unsigned dimensions)
+void populateMultiArray(Thread* t,
+                        object array,
+                        int32_t* counts,
+                        unsigned index,
+                        unsigned dimensions)
 {
   if (index + 1 == dimensions or counts[index] == 0) {
     return;
@@ -5468,8 +5914,7 @@ object interruptLock(Thread* t, GcThread* thread)
   return thread->interruptLock();
 }
 
-void
-clearInterrupted(Thread* t)
+void clearInterrupted(Thread* t)
 {
   monitorAcquire(t, cast<GcMonitor>(t, interruptLock(t, t->javaThread)));
   t->javaThread->interrupted() = false;
@@ -5502,27 +5947,28 @@ bool threadIsInterrupted(Thread* t, GcThread* thread, bool clear)
   return v;
 }
 
-void
-noop()
-{ }
+void noop()
+{
+}
 
 #include "type-constructors.cpp"
 
-} // namespace vm
+}  // namespace vm
 
 // for debugging
-AVIAN_EXPORT void
-vmfPrintTrace(Thread* t, FILE* out)
+AVIAN_EXPORT void vmfPrintTrace(Thread* t, FILE* out)
 {
-  class Visitor: public Processor::StackVisitor {
+  class Visitor : public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, FILE* out): t(t), out(out) { }
+    Visitor(Thread* t, FILE* out) : t(t), out(out)
+    {
+    }
 
-    virtual bool visit(Processor::StackWalker* walker) {
+    virtual bool visit(Processor::StackWalker* walker)
+    {
       const int8_t* class_ = walker->method()->class_()->name()->body().begin();
       const int8_t* method = walker->method()->name()->body().begin();
-      int line = t->m->processor->lineNumber
-        (t, walker->method(), walker->ip());
+      int line = t->m->processor->lineNumber(t, walker->method(), walker->ip());
 
       fprintf(out, "  at %s.%s ", class_, method);
 
@@ -5551,8 +5997,7 @@ vmfPrintTrace(Thread* t, FILE* out)
   fflush(out);
 }
 
-AVIAN_EXPORT void
-vmPrintTrace(Thread* t)
+AVIAN_EXPORT void vmPrintTrace(Thread* t)
 {
   vmfPrintTrace(t, stderr);
 }
@@ -5569,12 +6014,11 @@ AVIAN_EXPORT void* vmAddressFromLine(GcMethod* m, unsigned line)
     unsigned last = 0;
     unsigned bottom = 0;
     unsigned top = lnt->length();
-    for(unsigned i = bottom; i < top; i++)
-    {
+    for (unsigned i = bottom; i < top; i++) {
       uint64_t ln = lnt->body()[i];
-      if(lineNumberLine(ln) == line)
+      if (lineNumberLine(ln) == line)
         return reinterpret_cast<void*>(lineNumberIp(ln));
-      else if(lineNumberLine(ln) > line)
+      else if (lineNumberLine(ln) > line)
         return reinterpret_cast<void*>(last);
       last = lineNumberIp(ln);
     }

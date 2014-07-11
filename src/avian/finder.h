@@ -30,96 +30,113 @@ const unsigned EntrySignature = 0x02014b50;
 
 const unsigned CentralDirectorySearchStart = 22;
 
-inline uint16_t get2(const uint8_t* p) {
-  return
-    (static_cast<uint16_t>(p[1]) <<  8) |
-    (static_cast<uint16_t>(p[0])      );
+inline uint16_t get2(const uint8_t* p)
+{
+  return (static_cast<uint16_t>(p[1]) << 8) | (static_cast<uint16_t>(p[0]));
 }
 
-inline uint32_t get4(const uint8_t* p) {
-  return
-    (static_cast<uint32_t>(p[3]) << 24) |
-    (static_cast<uint32_t>(p[2]) << 16) |
-    (static_cast<uint32_t>(p[1]) <<  8) |
-    (static_cast<uint32_t>(p[0])      );
+inline uint32_t get4(const uint8_t* p)
+{
+  return (static_cast<uint32_t>(p[3]) << 24)
+         | (static_cast<uint32_t>(p[2]) << 16)
+         | (static_cast<uint32_t>(p[1]) << 8) | (static_cast<uint32_t>(p[0]));
 }
 
-inline uint32_t signature(const uint8_t* p) {
+inline uint32_t signature(const uint8_t* p)
+{
   return get4(p);
 }
 
-inline uint16_t compressionMethod(const uint8_t* centralHeader) {
+inline uint16_t compressionMethod(const uint8_t* centralHeader)
+{
   return get2(centralHeader + 10);
 }
 
-inline uint32_t fileTime(const uint8_t* centralHeader) {
+inline uint32_t fileTime(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 12);
 }
 
-inline uint32_t fileCRC(const uint8_t* centralHeader) {
+inline uint32_t fileCRC(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 16);
 }
 
-inline uint32_t compressedSize(const uint8_t* centralHeader) {
+inline uint32_t compressedSize(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 20);
 }
 
-inline uint32_t uncompressedSize(const uint8_t* centralHeader) {
+inline uint32_t uncompressedSize(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 24);
 }
 
-inline uint16_t fileNameLength(const uint8_t* centralHeader) {
+inline uint16_t fileNameLength(const uint8_t* centralHeader)
+{
   return get2(centralHeader + 28);
 }
 
-inline uint16_t extraFieldLength(const uint8_t* centralHeader) {
+inline uint16_t extraFieldLength(const uint8_t* centralHeader)
+{
   return get2(centralHeader + 30);
 }
 
-inline uint16_t commentFieldLength(const uint8_t* centralHeader) {
+inline uint16_t commentFieldLength(const uint8_t* centralHeader)
+{
   return get2(centralHeader + 32);
 }
 
-inline uint32_t localHeaderOffset(const uint8_t* centralHeader) {
+inline uint32_t localHeaderOffset(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 42);
 }
 
-inline uint16_t localFileNameLength(const uint8_t* localHeader) {
+inline uint16_t localFileNameLength(const uint8_t* localHeader)
+{
   return get2(localHeader + 26);
 }
 
-inline uint16_t localExtraFieldLength(const uint8_t* localHeader) {
+inline uint16_t localExtraFieldLength(const uint8_t* localHeader)
+{
   return get2(localHeader + 28);
 }
 
-inline uint32_t centralDirectoryOffset(const uint8_t* centralHeader) {
+inline uint32_t centralDirectoryOffset(const uint8_t* centralHeader)
+{
   return get4(centralHeader + 16);
 }
 
-inline const uint8_t* fileName(const uint8_t* centralHeader) {
+inline const uint8_t* fileName(const uint8_t* centralHeader)
+{
   return centralHeader + 46;
 }
 
-inline const uint8_t* fileData(const uint8_t* localHeader) {
-  return localHeader + LocalHeaderSize + localFileNameLength(localHeader) +
-    localExtraFieldLength(localHeader);
+inline const uint8_t* fileData(const uint8_t* localHeader)
+{
+  return localHeader + LocalHeaderSize + localFileNameLength(localHeader)
+         + localExtraFieldLength(localHeader);
 }
 
-inline const uint8_t* endOfEntry(const uint8_t* p) {
-  return p + HeaderSize + fileNameLength(p) + extraFieldLength(p) +
-    commentFieldLength(p);
+inline const uint8_t* endOfEntry(const uint8_t* p)
+{
+  return p + HeaderSize + fileNameLength(p) + extraFieldLength(p)
+         + commentFieldLength(p);
 }
 
-inline bool
-readLine(const uint8_t* base, unsigned total, unsigned* start,
-         unsigned* length)
+inline bool readLine(const uint8_t* base,
+                     unsigned total,
+                     unsigned* start,
+                     unsigned* length)
 {
   const uint8_t* p = base + *start;
   const uint8_t* end = base + total;
-  while (p != end and (*p == '\n' or *p == '\r')) ++ p;
+  while (p != end and (*p == '\n' or *p == '\r'))
+    ++p;
 
   *start = p - base;
-  while (p != end and not (*p == '\n' or *p == '\r')) ++ p;
+  while (p != end and not(*p == '\n' or *p == '\r'))
+    ++p;
 
   *length = (p - base) - *start;
 
@@ -136,22 +153,26 @@ class Finder {
 
   class Iterator {
    public:
-    Iterator(Finder* finder):
-      it(finder->iterator()),
-      current(it->next(&currentSize))
-    { }
+    Iterator(Finder* finder)
+        : it(finder->iterator()), current(it->next(&currentSize))
+    {
+    }
 
-    ~Iterator() {
+    ~Iterator()
+    {
       it->dispose();
     }
 
-    bool hasMore() {
-      if (current) return true;
+    bool hasMore()
+    {
+      if (current)
+        return true;
       current = it->next(&currentSize);
       return current != 0;
     }
 
-    const char* next(unsigned* size) {
+    const char* next(unsigned* size)
+    {
       if (hasMore()) {
         *size = currentSize;
         const char* v = current;
@@ -173,7 +194,8 @@ class Finder {
                                 unsigned* length,
                                 bool tryDirectory = false) = 0;
   virtual const char* urlPrefix(const char* name) = 0;
-  virtual const char* nextUrlPrefix(const char* name, void *&finderElementPtr) = 0;
+  virtual const char* nextUrlPrefix(const char* name, void*& finderElementPtr)
+      = 0;
   virtual const char* sourceUrl(const char* name) = 0;
   virtual const char* path() = 0;
   virtual void dispose() = 0;
@@ -189,6 +211,6 @@ Finder* makeFinder(System* s,
                    const uint8_t* jarData,
                    unsigned jarLength);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//FINDER_H
+#endif  // FINDER_H

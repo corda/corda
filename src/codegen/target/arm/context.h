@@ -18,14 +18,14 @@
 namespace vm {
 class System;
 class Zone;
-} // namespace vm
+}  // namespace vm
 
 namespace avian {
 
 namespace util {
 class Aborter;
 class Allocator;
-} // namespace util
+}  // namespace util
 
 namespace codegen {
 namespace arm {
@@ -57,43 +57,57 @@ typedef void (*OperationType)(Context*);
 
 typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
 
-typedef void (*BinaryOperationType)
-(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
+typedef void (*BinaryOperationType)(Context*,
+                                    unsigned,
+                                    lir::Operand*,
+                                    unsigned,
+                                    lir::Operand*);
 
-typedef void (*TernaryOperationType)
-(Context*, unsigned, lir::Operand*, lir::Operand*,
- lir::Operand*);
+typedef void (*TernaryOperationType)(Context*,
+                                     unsigned,
+                                     lir::Operand*,
+                                     lir::Operand*,
+                                     lir::Operand*);
 
-typedef void (*BranchOperationType)
-(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
- lir::Operand*, lir::Operand*);
+typedef void (*BranchOperationType)(Context*,
+                                    lir::TernaryOperation,
+                                    unsigned,
+                                    lir::Operand*,
+                                    lir::Operand*,
+                                    lir::Operand*);
 
 class ArchitectureContext {
  public:
-  ArchitectureContext(vm::System* s): s(s) { }
+  ArchitectureContext(vm::System* s) : s(s)
+  {
+  }
 
   vm::System* s;
   OperationType operations[lir::OperationCount];
-  UnaryOperationType unaryOperations[lir::UnaryOperationCount
-                                     * lir::OperandTypeCount];
-  BinaryOperationType binaryOperations
-  [lir::BinaryOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
-  TernaryOperationType ternaryOperations
-  [lir::NonBranchTernaryOperationCount * lir::OperandTypeCount];
-  BranchOperationType branchOperations
-  [lir::BranchOperationCount * lir::OperandTypeCount * lir::OperandTypeCount];
+  UnaryOperationType
+      unaryOperations[lir::UnaryOperationCount * lir::OperandTypeCount];
+  BinaryOperationType binaryOperations[lir::BinaryOperationCount
+                                       * lir::OperandTypeCount
+                                       * lir::OperandTypeCount];
+  TernaryOperationType ternaryOperations[lir::NonBranchTernaryOperationCount
+                                         * lir::OperandTypeCount];
+  BranchOperationType branchOperations[lir::BranchOperationCount
+                                       * lir::OperandTypeCount
+                                       * lir::OperandTypeCount];
 };
 
-inline avian::util::Aborter* getAborter(Context* c) {
+inline avian::util::Aborter* getAborter(Context* c)
+{
   return c->s;
 }
 
-inline avian::util::Aborter* getAborter(ArchitectureContext* c) {
+inline avian::util::Aborter* getAborter(ArchitectureContext* c)
+{
   return c->s;
 }
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_ARM_CONTEXT_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_ARM_CONTEXT_H

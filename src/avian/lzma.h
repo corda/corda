@@ -33,6 +33,6 @@ uint8_t* encodeLZMA(System* s,
                     unsigned inSize,
                     unsigned* outSize);
 
-} // namespace vm
+}  // namespace vm
 
-#endif // LZMA_H
+#endif  // LZMA_H

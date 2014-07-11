@@ -17,18 +17,18 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-extern "C" bool
-detectFeature(unsigned ecx, unsigned edx);
+extern "C" bool detectFeature(unsigned ecx, unsigned edx);
 
-bool useSSE(ArchitectureContext* c) {
+bool useSSE(ArchitectureContext* c)
+{
   if (vm::TargetBytesPerWord == 8) {
     // amd64 implies SSE2 support
     return true;
   } else if (c->useNativeFeatures) {
     static int supported = -1;
     if (supported == -1) {
-      supported = detectFeature(0, 0x2000000) // SSE 1
-        and detectFeature(0, 0x4000000); // SSE 2
+      supported = detectFeature(0, 0x2000000)       // SSE 1
+                  and detectFeature(0, 0x4000000);  // SSE 2
     }
     return supported;
   } else {
@@ -36,6 +36,6 @@ bool useSSE(ArchitectureContext* c) {
   }
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

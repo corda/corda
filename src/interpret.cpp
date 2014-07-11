@@ -32,7 +32,7 @@ const unsigned FrameMethodOffset = 2;
 const unsigned FrameIpOffset = 3;
 const unsigned FrameFootprint = 4;
 
-class Thread: public vm::Thread {
+class Thread : public vm::Thread {
  public:
   Thread(Machine* m, GcThread* javaThread, vm::Thread* parent)
       : vm::Thread(m, javaThread, parent),
@@ -41,7 +41,8 @@ class Thread: public vm::Thread {
         frame(-1),
         code(0),
         stackPointers(0)
-  { }
+  {
+  }
 
   unsigned ip;
   unsigned sp;
@@ -51,40 +52,36 @@ class Thread: public vm::Thread {
   uintptr_t stack[0];
 };
 
-inline void
-pushObject(Thread* t, object o)
+inline void pushObject(Thread* t, object o)
 {
   if (DebugStack) {
     fprintf(stderr, "push object %p at %d\n", o, t->sp);
   }
 
   assertT(t, t->sp + 1 < stackSizeInWords(t) / 2);
-  t->stack[(t->sp * 2)    ] = ObjectTag;
+  t->stack[(t->sp * 2)] = ObjectTag;
   t->stack[(t->sp * 2) + 1] = reinterpret_cast<uintptr_t>(o);
-  ++ t->sp;
+  ++t->sp;
 }
 
-inline void
-pushInt(Thread* t, uint32_t v)
+inline void pushInt(Thread* t, uint32_t v)
 {
   if (DebugStack) {
     fprintf(stderr, "push int %d at %d\n", v, t->sp);
   }
 
   assertT(t, t->sp + 1 < stackSizeInWords(t) / 2);
-  t->stack[(t->sp * 2)    ] = IntTag;
+  t->stack[(t->sp * 2)] = IntTag;
   t->stack[(t->sp * 2) + 1] = v;
-  ++ t->sp;
+  ++t->sp;
 }
 
-inline void
-pushFloat(Thread* t, float v)
+inline void pushFloat(Thread* t, float v)
 {
   pushInt(t, floatToBits(v));
 }
 
-inline void
-pushLong(Thread* t, uint64_t v)
+inline void pushLong(Thread* t, uint64_t v)
 {
   if (DebugStack) {
     fprintf(stderr, "push long %" LLD " at %d\n", v, t->sp);
@@ -94,50 +91,48 @@ pushLong(Thread* t, uint64_t v)
   pushInt(t, v & 0xFFFFFFFF);
 }
 
-inline void
-pushDouble(Thread* t, double v)
+inline void pushDouble(Thread* t, double v)
 {
   uint64_t w = doubleToBits(v);
   pushLong(t, w);
 }
 
-inline object
-popObject(Thread* t)
+inline object popObject(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop object %p at %d\n",
+    fprintf(stderr,
+            "pop object %p at %d\n",
             reinterpret_cast<object>(t->stack[((t->sp - 1) * 2) + 1]),
             t->sp - 1);
   }
 
   assertT(t, t->stack[(t->sp - 1) * 2] == ObjectTag);
-  return reinterpret_cast<object>(t->stack[((-- t->sp) * 2) + 1]);
+  return reinterpret_cast<object>(t->stack[((--t->sp) * 2) + 1]);
 }
 
-inline uint32_t
-popInt(Thread* t)
+inline uint32_t popInt(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop int %" ULD " at %d\n",
+    fprintf(stderr,
+            "pop int %" ULD " at %d\n",
             t->stack[((t->sp - 1) * 2) + 1],
             t->sp - 1);
   }
 
   assertT(t, t->stack[(t->sp - 1) * 2] == IntTag);
-  return t->stack[((-- t->sp) * 2) + 1];
+  return t->stack[((--t->sp) * 2) + 1];
 }
 
-inline float
-popFloat(Thread* t)
+inline float popFloat(Thread* t)
 {
   return bitsToFloat(popInt(t));
 }
 
-inline uint64_t
-popLong(Thread* t)
+inline uint64_t popLong(Thread* t)
 {
   if (DebugStack) {
-    fprintf(stderr, "pop long %" LLD " at %d\n",
+    fprintf(stderr,
+            "pop long %" LLD " at %d\n",
             (static_cast<uint64_t>(t->stack[((t->sp - 2) * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((t->sp - 1) * 2) + 1]),
             t->sp - 2);
@@ -148,18 +143,17 @@ popLong(Thread* t)
   return (b << 32) | a;
 }
 
-inline double
-popDouble(Thread* t)
+inline double popDouble(Thread* t)
 {
   uint64_t v = popLong(t);
   return bitsToDouble(v);
 }
 
-inline object
-peekObject(Thread* t, unsigned index)
+inline object peekObject(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek object %p at %d\n",
+    fprintf(stderr,
+            "peek object %p at %d\n",
             reinterpret_cast<object>(t->stack[(index * 2) + 1]),
             index);
   }
@@ -169,13 +163,11 @@ peekObject(Thread* t, unsigned index)
   return reinterpret_cast<object>(t->stack[(index * 2) + 1]);
 }
 
-inline uint32_t
-peekInt(Thread* t, unsigned index)
+inline uint32_t peekInt(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek int %" ULD " at %d\n",
-            t->stack[(index * 2) + 1],
-            index);
+    fprintf(
+        stderr, "peek int %" ULD " at %d\n", t->stack[(index * 2) + 1], index);
   }
 
   assertT(t, index < stackSizeInWords(t) / 2);
@@ -183,22 +175,21 @@ peekInt(Thread* t, unsigned index)
   return t->stack[(index * 2) + 1];
 }
 
-inline uint64_t
-peekLong(Thread* t, unsigned index)
+inline uint64_t peekLong(Thread* t, unsigned index)
 {
   if (DebugStack) {
-    fprintf(stderr, "peek long %" LLD " at %d\n",
+    fprintf(stderr,
+            "peek long %" LLD " at %d\n",
             (static_cast<uint64_t>(t->stack[(index * 2) + 1]) << 32)
             | static_cast<uint64_t>(t->stack[((index + 1) * 2) + 1]),
             index);
   }
 
   return (static_cast<uint64_t>(peekInt(t, index)) << 32)
-    | static_cast<uint64_t>(peekInt(t, index + 1));
+         | static_cast<uint64_t>(peekInt(t, index + 1));
 }
 
-inline void
-pokeObject(Thread* t, unsigned index, object value)
+inline void pokeObject(Thread* t, unsigned index, object value)
 {
   if (DebugStack) {
     fprintf(stderr, "poke object %p at %d\n", value, index);
@@ -208,8 +199,7 @@ pokeObject(Thread* t, unsigned index, object value)
   t->stack[(index * 2) + 1] = reinterpret_cast<uintptr_t>(value);
 }
 
-inline void
-pokeInt(Thread* t, unsigned index, uint32_t value)
+inline void pokeInt(Thread* t, unsigned index, uint32_t value)
 {
   if (DebugStack) {
     fprintf(stderr, "poke int %d at %d\n", value, index);
@@ -219,8 +209,7 @@ pokeInt(Thread* t, unsigned index, uint32_t value)
   t->stack[(index * 2) + 1] = value;
 }
 
-inline void
-pokeLong(Thread* t, unsigned index, uint64_t value)
+inline void pokeLong(Thread* t, unsigned index, uint64_t value)
 {
   if (DebugStack) {
     fprintf(stderr, "poke long %" LLD " at %d\n", value, index);
@@ -230,8 +219,7 @@ pokeLong(Thread* t, unsigned index, uint64_t value)
   pokeInt(t, index + 1, value & 0xFFFFFFFF);
 }
 
-inline object*
-pushReference(Thread* t, object o)
+inline object* pushReference(Thread* t, object o)
 {
   if (o) {
     expect(t, t->sp + 1 < stackSizeInWords(t) / 2);
@@ -242,8 +230,7 @@ pushReference(Thread* t, object o)
   }
 }
 
-inline int
-frameNext(Thread* t, int frame)
+inline int frameNext(Thread* t, int frame)
 {
   return peekInt(t, frame + FrameNextOffset);
 }
@@ -253,50 +240,42 @@ inline GcMethod* frameMethod(Thread* t, int frame)
   return cast<GcMethod>(t, peekObject(t, frame + FrameMethodOffset));
 }
 
-inline unsigned
-frameIp(Thread* t, int frame)
+inline unsigned frameIp(Thread* t, int frame)
 {
   return peekInt(t, frame + FrameIpOffset);
 }
 
-inline unsigned
-frameBase(Thread* t, int frame)
+inline unsigned frameBase(Thread* t, int frame)
 {
   return peekInt(t, frame + FrameBaseOffset);
 }
 
-inline object
-localObject(Thread* t, unsigned index)
+inline object localObject(Thread* t, unsigned index)
 {
   return peekObject(t, frameBase(t, t->frame) + index);
 }
 
-inline uint32_t
-localInt(Thread* t, unsigned index)
+inline uint32_t localInt(Thread* t, unsigned index)
 {
   return peekInt(t, frameBase(t, t->frame) + index);
 }
 
-inline uint64_t
-localLong(Thread* t, unsigned index)
+inline uint64_t localLong(Thread* t, unsigned index)
 {
   return peekLong(t, frameBase(t, t->frame) + index);
 }
 
-inline void
-setLocalObject(Thread* t, unsigned index, object value)
+inline void setLocalObject(Thread* t, unsigned index, object value)
 {
   pokeObject(t, frameBase(t, t->frame) + index, value);
 }
 
-inline void
-setLocalInt(Thread* t, unsigned index, uint32_t value)
+inline void setLocalInt(Thread* t, unsigned index, uint32_t value)
 {
   pokeInt(t, frameBase(t, t->frame) + index, value);
 }
 
-inline void
-setLocalLong(Thread* t, unsigned index, uint64_t value)
+inline void setLocalLong(Thread* t, unsigned index, uint64_t value)
 {
   pokeLong(t, frameBase(t, t->frame) + index, value);
 }
@@ -331,7 +310,8 @@ void pushFrame(Thread* t, GcMethod* method)
 
     locals = t->code->maxLocals();
 
-    memset(t->stack + ((base + parameterFootprint) * 2), 0,
+    memset(t->stack + ((base + parameterFootprint) * 2),
+           0,
            (locals - parameterFootprint) * BytesPerWord * 2);
   }
 
@@ -346,8 +326,7 @@ void pushFrame(Thread* t, GcMethod* method)
   pokeInt(t, t->frame + FrameIpOffset, 0);
 }
 
-void
-popFrame(Thread* t)
+void popFrame(Thread* t)
 {
   GcMethod* method = frameMethod(t, t->frame);
 
@@ -370,11 +349,14 @@ popFrame(Thread* t)
   }
 }
 
-class MyStackWalker: public Processor::StackWalker {
+class MyStackWalker : public Processor::StackWalker {
  public:
-  MyStackWalker(Thread* t, int frame): t(t), frame(frame) { }
+  MyStackWalker(Thread* t, int frame) : t(t), frame(frame)
+  {
+  }
 
-  virtual void walk(Processor::StackVisitor* v) {
+  virtual void walk(Processor::StackVisitor* v)
+  {
     for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
       MyStackWalker walker(t, frame);
       if (not v->visit(&walker)) {
@@ -388,14 +370,16 @@ class MyStackWalker: public Processor::StackWalker {
     return frameMethod(t, frame);
   }
 
-  virtual int ip() {
+  virtual int ip()
+  {
     return frameIp(t, frame);
   }
 
-  virtual unsigned count() {
+  virtual unsigned count()
+  {
     unsigned count = 0;
     for (int frame = this->frame; frame >= 0; frame = frameNext(t, frame)) {
-      ++ count;
+      ++count;
     }
     return count;
   }
@@ -413,8 +397,7 @@ inline void checkStack(Thread* t, GcMethod* method)
   }
 }
 
-void
-pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
+void pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
 {
   switch (returnCode) {
   case ByteField:
@@ -458,13 +441,19 @@ pushResult(Thread* t, unsigned returnCode, uint64_t result, bool indirect)
   case ObjectField:
     if (indirect) {
       if (DebugRun) {
-        fprintf(stderr, "result: %p at %p\n",
-                static_cast<uintptr_t>(result) == 0 ? 0 :
-                *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
-                reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+        fprintf(
+            stderr,
+            "result: %p at %p\n",
+            static_cast<uintptr_t>(result) == 0
+                ? 0
+                : *reinterpret_cast<object*>(static_cast<uintptr_t>(result)),
+            reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
       }
-      pushObject(t, static_cast<uintptr_t>(result) == 0 ? 0 :
-                 *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
+      pushObject(
+          t,
+          static_cast<uintptr_t>(result) == 0
+              ? 0
+              : *reinterpret_cast<object*>(static_cast<uintptr_t>(result)));
     } else {
       if (DebugRun) {
         fprintf(stderr, "result: %p\n", reinterpret_cast<object>(result));
@@ -528,7 +517,8 @@ void marshalArguments(Thread* t,
       }
     } break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
   }
 }
@@ -541,7 +531,7 @@ unsigned invokeNativeSlow(Thread* t, GcMethod* method, void* function)
 
   unsigned footprint = method->parameterFootprint() + 1;
   if (method->flags() & ACC_STATIC) {
-    ++ footprint;
+    ++footprint;
   }
   unsigned count = method->parameterCount() + 2;
 
@@ -561,7 +551,7 @@ unsigned invokeNativeSlow(Thread* t, GcMethod* method, void* function)
     sp = frameBase(t, t->frame);
     jclass = getJClass(t, method->class_());
     RUNTIME_ARRAY_BODY(args)[argOffset++]
-      = reinterpret_cast<uintptr_t>(&jclass);
+        = reinterpret_cast<uintptr_t>(&jclass);
   } else {
     sp = frameBase(t, t->frame);
     object* v = reinterpret_cast<object*>(t->stack + ((sp++) * 2) + 1);
@@ -572,9 +562,12 @@ unsigned invokeNativeSlow(Thread* t, GcMethod* method, void* function)
   }
   RUNTIME_ARRAY_BODY(types)[typeOffset++] = POINTER_TYPE;
 
-  marshalArguments
-    (t, RUNTIME_ARRAY_BODY(args) + argOffset,
-     RUNTIME_ARRAY_BODY(types) + typeOffset, sp, method, false);
+  marshalArguments(t,
+                   RUNTIME_ARRAY_BODY(args) + argOffset,
+                   RUNTIME_ARRAY_BODY(types) + typeOffset,
+                   sp,
+                   method,
+                   false);
 
   unsigned returnCode = method->returnCode();
   unsigned returnType = fieldType(t, returnCode);
@@ -587,7 +580,8 @@ unsigned invokeNativeSlow(Thread* t, GcMethod* method, void* function)
             method->name()->body().begin());
   }
 
-  { ENTER(t, Thread::IdleState);
+  {
+    ENTER(t, Thread::IdleState);
 
     bool noThrow = t->checkpoint->noThrow;
     t->checkpoint->noThrow = true;
@@ -632,7 +626,8 @@ unsigned invokeNative(Thread* t, GcMethod* method)
     pushFrame(t, method);
 
     uint64_t result;
-    { THREAD_RESOURCE0(t, popFrame(static_cast<Thread*>(t)));
+    {
+      THREAD_RESOURCE0(t, popFrame(static_cast<Thread*>(t)));
 
       unsigned footprint = method->parameterFootprint();
       THREAD_RUNTIME_ARRAY(t, uintptr_t, args, footprint);
@@ -640,11 +635,11 @@ unsigned invokeNative(Thread* t, GcMethod* method)
       unsigned argOffset = 0;
       if ((method->flags() & ACC_STATIC) == 0) {
         RUNTIME_ARRAY_BODY(args)[argOffset++]
-          = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
+            = reinterpret_cast<uintptr_t>(peekObject(t, sp++));
       }
 
-      marshalArguments
-        (t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
+      marshalArguments(
+          t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
 
       result = reinterpret_cast<FastNativeFunction>(native->function())(
           t, method, RUNTIME_ARRAY_BODY(args));
@@ -658,22 +653,19 @@ unsigned invokeNative(Thread* t, GcMethod* method)
   }
 }
 
-inline void
-store(Thread* t, unsigned index)
+inline void store(Thread* t, unsigned index)
 {
   memcpy(t->stack + ((frameBase(t, t->frame) + index) * 2),
-         t->stack + ((-- t->sp) * 2),
+         t->stack + ((--t->sp) * 2),
          BytesPerWord * 2);
 }
 
-bool
-isNaN(double v)
+bool isNaN(double v)
 {
   return fpclassify(v) == FP_NAN;
 }
 
-bool
-isNaN(float v)
+bool isNaN(float v)
 {
   return fpclassify(v) == FP_NAN;
 }
@@ -690,8 +682,7 @@ uint64_t findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
       uint64_t eh = eht->body()[i];
 
       if (ip - 1 >= exceptionHandlerStart(eh)
-          and ip - 1 < exceptionHandlerEnd(eh))
-      {
+          and ip - 1 < exceptionHandlerEnd(eh)) {
         GcClass* catchType = 0;
         if (exceptionHandlerCatchType(eh)) {
           GcThrowable* e = t->exception;
@@ -699,8 +690,8 @@ uint64_t findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
           PROTECT(t, e);
 
           PROTECT(t, eht);
-          catchType = resolveClassInPool
-            (t, method, exceptionHandlerCatchType(eh) - 1);
+          catchType = resolveClassInPool(
+              t, method, exceptionHandlerCatchType(eh) - 1);
 
           if (catchType) {
             eh = eht->body()[i];
@@ -721,8 +712,7 @@ uint64_t findExceptionHandler(Thread* t, GcMethod* method, unsigned ip)
   return 0;
 }
 
-uint64_t
-findExceptionHandler(Thread* t, int frame)
+uint64_t findExceptionHandler(Thread* t, int frame)
 {
   return findExceptionHandler(t, frameMethod(t, frame), frameIp(t, frame));
 }
@@ -759,14 +749,14 @@ void pushField(Thread* t, object target, GcField* field)
   }
 }
 
-void safePoint(Thread* t) {
+void safePoint(Thread* t)
+{
   if (UNLIKELY(t->m->exclusive)) {
     ENTER(t, Thread::IdleState);
   }
 }
 
-object
-interpret3(Thread* t, const int base)
+object interpret3(Thread* t, const int base)
 {
   unsigned instruction = nop;
   unsigned& ip = t->ip;
@@ -784,8 +774,8 @@ interpret3(Thread* t, const int base)
     goto throw_;
   }
 
- loop:
-   instruction = code->body()[ip++];
+loop:
+  instruction = code->body()[ip++];
 
   if (DebugRun) {
     fprintf(stderr,
@@ -814,9 +804,9 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
-      {
+      if (LIKELY(index >= 0
+                 and static_cast<uintptr_t>(index)
+                     < objectArrayLength(t, array))) {
         pushObject(t, objectArrayBody(t, array, index));
       } else {
         exception = makeThrowable(t,
@@ -830,7 +820,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case aastore: {
     object value = popObject(t);
@@ -838,9 +829,9 @@ interpret3(Thread* t, const int base)
     object array = popObject(t);
 
     if (LIKELY(array)) {
-      if (LIKELY(index >= 0 and
-                 static_cast<uintptr_t>(index) < objectArrayLength(t, array)))
-      {
+      if (LIKELY(index >= 0
+                 and static_cast<uintptr_t>(index)
+                     < objectArrayLength(t, array))) {
         setField(t, array, ArrayBody + (index * BytesPerWord), value);
       } else {
         exception = makeThrowable(t,
@@ -854,31 +845,38 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case aconst_null: {
     pushObject(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case aload: {
     pushObject(t, localObject(t, code->body()[ip++]));
-  } goto loop;
+  }
+    goto loop;
 
   case aload_0: {
     pushObject(t, localObject(t, 0));
-  } goto loop;
+  }
+    goto loop;
 
   case aload_1: {
     pushObject(t, localObject(t, 1));
-  } goto loop;
+  }
+    goto loop;
 
   case aload_2: {
     pushObject(t, localObject(t, 2));
-  } goto loop;
+  }
+    goto loop;
 
   case aload_3: {
     pushObject(t, localObject(t, 3));
-  } goto loop;
+  }
+    goto loop;
 
   case anewarray: {
     int32_t count = popInt(t);
@@ -894,7 +892,8 @@ interpret3(Thread* t, const int base)
           = makeThrowable(t, GcNegativeArraySizeException::Type, "%d", count);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case areturn: {
     object result = popObject(t);
@@ -905,7 +904,8 @@ interpret3(Thread* t, const int base)
     } else {
       return result;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case arraylength: {
     object array = popObject(t);
@@ -915,34 +915,41 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case astore: {
     store(t, code->body()[ip++]);
-  } goto loop;
+  }
+    goto loop;
 
   case astore_0: {
     store(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case astore_1: {
     store(t, 1);
-  } goto loop;
+  }
+    goto loop;
 
   case astore_2: {
     store(t, 2);
-  } goto loop;
+  }
+    goto loop;
 
   case astore_3: {
     store(t, 3);
-  } goto loop;
+  }
+    goto loop;
 
   case athrow: {
     exception = cast<GcThrowable>(t, popObject(t));
     if (UNLIKELY(exception == 0)) {
       exception = makeThrowable(t, GcNullPointerException::Type);
     }
-  } goto throw_;
+  }
+    goto throw_;
 
   case baload: {
     int32_t index = popInt(t);
@@ -980,7 +987,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case bastore: {
     int8_t value = popInt(t);
@@ -1019,11 +1027,13 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case bipush: {
     pushInt(t, static_cast<int8_t>(code->body()[ip++]));
-  } goto loop;
+  }
+    goto loop;
 
   case caload: {
     int32_t index = popInt(t);
@@ -1045,7 +1055,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case castore: {
     uint16_t value = popInt(t);
@@ -1068,14 +1079,16 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case checkcast: {
     uint16_t index = codeReadInt16(t, code, ip);
 
     if (peekObject(t, sp - 1)) {
       GcClass* class_ = resolveClassInPool(t, frameMethod(t, frame), index - 1);
-      if (UNLIKELY(exception)) goto throw_;
+      if (UNLIKELY(exception))
+        goto throw_;
 
       if (not instanceOf(t, class_, peekObject(t, sp - 1))) {
         exception = makeThrowable(
@@ -1087,42 +1100,59 @@ interpret3(Thread* t, const int base)
         goto throw_;
       }
     }
-  } goto loop;
+  }
+    goto loop;
 
   case d2f: {
     pushFloat(t, static_cast<float>(popDouble(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case d2i: {
     double f = popDouble(t);
     switch (fpclassify(f)) {
-    case FP_NAN: pushInt(t, 0); break;
-    case FP_INFINITE: pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX); break;
-    default: pushInt
-        (t,  f >= INT32_MAX ? INT32_MAX
-         : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+    case FP_NAN:
+      pushInt(t, 0);
+      break;
+    case FP_INFINITE:
+      pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX);
+      break;
+    default:
+      pushInt(t,
+              f >= INT32_MAX
+                  ? INT32_MAX
+                  : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
       break;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case d2l: {
     double f = popDouble(t);
     switch (fpclassify(f)) {
-    case FP_NAN: pushLong(t, 0); break;
-    case FP_INFINITE: pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX); break;
-    default: pushLong
-        (t,  f >= INT64_MAX ? INT64_MAX
-         : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f)));
+    case FP_NAN:
+      pushLong(t, 0);
+      break;
+    case FP_INFINITE:
+      pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX);
+      break;
+    default:
+      pushLong(t,
+               f >= INT64_MAX
+                   ? INT64_MAX
+                   : (f <= INT64_MIN ? INT64_MIN : static_cast<int64_t>(f)));
       break;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case dadd: {
     double b = popDouble(t);
     double a = popDouble(t);
 
     pushDouble(t, a + b);
-  } goto loop;
+  }
+    goto loop;
 
   case daload: {
     int32_t index = popInt(t);
@@ -1144,7 +1174,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case dastore: {
     double value = popDouble(t);
@@ -1167,7 +1198,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case dcmpg: {
     double b = popDouble(t);
@@ -1175,7 +1207,8 @@ interpret3(Thread* t, const int base)
 
     if (isNaN(a) or isNaN(b)) {
       pushInt(t, 1);
-    } if (a < b) {
+    }
+    if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1184,7 +1217,8 @@ interpret3(Thread* t, const int base)
     } else {
       pushInt(t, 1);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case dcmpl: {
     double b = popDouble(t);
@@ -1192,7 +1226,8 @@ interpret3(Thread* t, const int base)
 
     if (isNaN(a) or isNaN(b)) {
       pushInt(t, static_cast<unsigned>(-1));
-    } if (a < b) {
+    }
+    if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1201,90 +1236,102 @@ interpret3(Thread* t, const int base)
     } else {
       pushInt(t, static_cast<unsigned>(-1));
     }
-  } goto loop;
+  }
+    goto loop;
 
   case dconst_0: {
     pushDouble(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case dconst_1: {
     pushDouble(t, 1);
-  } goto loop;
+  }
+    goto loop;
 
   case ddiv: {
     double b = popDouble(t);
     double a = popDouble(t);
 
     pushDouble(t, a / b);
-  } goto loop;
+  }
+    goto loop;
 
   case dmul: {
     double b = popDouble(t);
     double a = popDouble(t);
 
     pushDouble(t, a * b);
-  } goto loop;
+  }
+    goto loop;
 
   case dneg: {
     double a = popDouble(t);
 
-    pushDouble(t, - a);
-  } goto loop;
+    pushDouble(t, -a);
+  }
+    goto loop;
 
   case vm::drem: {
     double b = popDouble(t);
     double a = popDouble(t);
 
     pushDouble(t, fmod(a, b));
-  } goto loop;
+  }
+    goto loop;
 
   case dsub: {
     double b = popDouble(t);
     double a = popDouble(t);
 
     pushDouble(t, a - b);
-  } goto loop;
+  }
+    goto loop;
 
   case dup: {
     if (DebugStack) {
       fprintf(stderr, "dup\n");
     }
 
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
-    ++ sp;
-  } goto loop;
+    memcpy(stack + ((sp)*2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    ++sp;
+  }
+    goto loop;
 
   case dup_x1: {
     if (DebugStack) {
       fprintf(stderr, "dup_x1\n");
     }
 
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp)*2), stack + ((sp - 1) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp - 2) * 2), stack + ((sp    ) * 2), BytesPerWord * 2);
-    ++ sp;
-  } goto loop;
+    memcpy(stack + ((sp - 2) * 2), stack + ((sp)*2), BytesPerWord * 2);
+    ++sp;
+  }
+    goto loop;
 
   case dup_x2: {
     if (DebugStack) {
       fprintf(stderr, "dup_x2\n");
     }
 
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp)*2), stack + ((sp - 1) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 2) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp - 3) * 2), stack + ((sp    ) * 2), BytesPerWord * 2);
-    ++ sp;
-  } goto loop;
+    memcpy(stack + ((sp - 3) * 2), stack + ((sp)*2), BytesPerWord * 2);
+    ++sp;
+  }
+    goto loop;
 
   case dup2: {
     if (DebugStack) {
       fprintf(stderr, "dup2\n");
     }
 
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 4);
+    memcpy(stack + ((sp)*2), stack + ((sp - 2) * 2), BytesPerWord * 4);
     sp += 2;
-  } goto loop;
+  }
+    goto loop;
 
   case dup2_x1: {
     if (DebugStack) {
@@ -1292,11 +1339,12 @@ interpret3(Thread* t, const int base)
     }
 
     memcpy(stack + ((sp + 1) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp)*2), stack + ((sp - 2) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp - 3) * 2), stack + ((sp    ) * 2), BytesPerWord * 4);
+    memcpy(stack + ((sp - 3) * 2), stack + ((sp)*2), BytesPerWord * 4);
     sp += 2;
-  } goto loop;
+  }
+    goto loop;
 
   case dup2_x2: {
     if (DebugStack) {
@@ -1304,44 +1352,61 @@ interpret3(Thread* t, const int base)
     }
 
     memcpy(stack + ((sp + 1) * 2), stack + ((sp - 1) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp    ) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
+    memcpy(stack + ((sp)*2), stack + ((sp - 2) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 3) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 2) * 2), stack + ((sp - 4) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp - 4) * 2), stack + ((sp    ) * 2), BytesPerWord * 4);
+    memcpy(stack + ((sp - 4) * 2), stack + ((sp)*2), BytesPerWord * 4);
     sp += 2;
-  } goto loop;
+  }
+    goto loop;
 
   case f2d: {
     pushDouble(t, popFloat(t));
-  } goto loop;
+  }
+    goto loop;
 
   case f2i: {
     float f = popFloat(t);
     switch (fpclassify(f)) {
-    case FP_NAN: pushInt(t, 0); break;
-    case FP_INFINITE: pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX); break;
-    default: pushInt(t, f >= INT32_MAX ? INT32_MAX
-                     : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
+    case FP_NAN:
+      pushInt(t, 0);
+      break;
+    case FP_INFINITE:
+      pushInt(t, signbit(f) ? INT32_MIN : INT32_MAX);
+      break;
+    default:
+      pushInt(t,
+              f >= INT32_MAX
+                  ? INT32_MAX
+                  : (f <= INT32_MIN ? INT32_MIN : static_cast<int32_t>(f)));
       break;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case f2l: {
     float f = popFloat(t);
     switch (fpclassify(f)) {
-    case FP_NAN: pushLong(t, 0); break;
-    case FP_INFINITE: pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX);
+    case FP_NAN:
+      pushLong(t, 0);
       break;
-    default: pushLong(t, static_cast<int64_t>(f)); break;
+    case FP_INFINITE:
+      pushLong(t, signbit(f) ? INT64_MIN : INT64_MAX);
+      break;
+    default:
+      pushLong(t, static_cast<int64_t>(f));
+      break;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case fadd: {
     float b = popFloat(t);
     float a = popFloat(t);
 
     pushFloat(t, a + b);
-  } goto loop;
+  }
+    goto loop;
 
   case faload: {
     int32_t index = popInt(t);
@@ -1363,7 +1428,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case fastore: {
     float value = popFloat(t);
@@ -1386,7 +1452,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case fcmpg: {
     float b = popFloat(t);
@@ -1394,7 +1461,8 @@ interpret3(Thread* t, const int base)
 
     if (isNaN(a) or isNaN(b)) {
       pushInt(t, 1);
-    } if (a < b) {
+    }
+    if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1403,7 +1471,8 @@ interpret3(Thread* t, const int base)
     } else {
       pushInt(t, 1);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case fcmpl: {
     float b = popFloat(t);
@@ -1411,7 +1480,8 @@ interpret3(Thread* t, const int base)
 
     if (isNaN(a) or isNaN(b)) {
       pushInt(t, static_cast<unsigned>(-1));
-    } if (a < b) {
+    }
+    if (a < b) {
       pushInt(t, static_cast<unsigned>(-1));
     } else if (a > b) {
       pushInt(t, 1);
@@ -1420,53 +1490,62 @@ interpret3(Thread* t, const int base)
     } else {
       pushInt(t, static_cast<unsigned>(-1));
     }
-  } goto loop;
+  }
+    goto loop;
 
   case fconst_0: {
     pushFloat(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case fconst_1: {
     pushFloat(t, 1);
-  } goto loop;
+  }
+    goto loop;
 
   case fconst_2: {
     pushFloat(t, 2);
-  } goto loop;
+  }
+    goto loop;
 
   case fdiv: {
     float b = popFloat(t);
     float a = popFloat(t);
 
     pushFloat(t, a / b);
-  } goto loop;
+  }
+    goto loop;
 
   case fmul: {
     float b = popFloat(t);
     float a = popFloat(t);
 
     pushFloat(t, a * b);
-  } goto loop;
+  }
+    goto loop;
 
   case fneg: {
     float a = popFloat(t);
 
-    pushFloat(t, - a);
-  } goto loop;
+    pushFloat(t, -a);
+  }
+    goto loop;
 
   case frem: {
     float b = popFloat(t);
     float a = popFloat(t);
 
     pushFloat(t, fmodf(a, b));
-  } goto loop;
+  }
+    goto loop;
 
   case fsub: {
     float b = popFloat(t);
     float a = popFloat(t);
 
     pushFloat(t, a - b);
-  } goto loop;
+  }
+    goto loop;
 
   case getfield: {
     if (LIKELY(peekObject(t, sp - 1))) {
@@ -1485,7 +1564,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case getstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1501,48 +1581,58 @@ interpret3(Thread* t, const int base)
     ACQUIRE_FIELD_FOR_READ(t, field);
 
     pushField(t, field->class_()->staticTable(), field);
-  } goto loop;
+  }
+    goto loop;
 
   case goto_: {
     int16_t offset = codeReadInt16(t, code, ip);
     ip = (ip - 3) + offset;
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case goto_w: {
     int32_t offset = codeReadInt32(t, code, ip);
     ip = (ip - 5) + offset;
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case i2b: {
     pushInt(t, static_cast<int8_t>(popInt(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case i2c: {
     pushInt(t, static_cast<uint16_t>(popInt(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case i2d: {
     pushDouble(t, static_cast<double>(static_cast<int32_t>(popInt(t))));
-  } goto loop;
+  }
+    goto loop;
 
   case i2f: {
     pushFloat(t, static_cast<float>(static_cast<int32_t>(popInt(t))));
-  } goto loop;
+  }
+    goto loop;
 
   case i2l: {
     pushLong(t, static_cast<int32_t>(popInt(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case i2s: {
     pushInt(t, static_cast<int16_t>(popInt(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case iadd: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a + b);
-  } goto loop;
+  }
+    goto loop;
 
   case iaload: {
     int32_t index = popInt(t);
@@ -1564,14 +1654,16 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case iand: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a & b);
-  } goto loop;
+  }
+    goto loop;
 
   case iastore: {
     int32_t value = popInt(t);
@@ -1594,35 +1686,43 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_m1: {
     pushInt(t, static_cast<unsigned>(-1));
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_0: {
     pushInt(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_1: {
     pushInt(t, 1);
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_2: {
     pushInt(t, 2);
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_3: {
     pushInt(t, 3);
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_4: {
     pushInt(t, 4);
-  } goto loop;
+  }
+    goto loop;
 
   case iconst_5: {
     pushInt(t, 5);
-  } goto loop;
+  }
+    goto loop;
 
   case idiv: {
     int32_t b = popInt(t);
@@ -1634,7 +1734,8 @@ interpret3(Thread* t, const int base)
     }
 
     pushInt(t, a / b);
-  } goto loop;
+  }
+    goto loop;
 
   case if_acmpeq: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1645,7 +1746,8 @@ interpret3(Thread* t, const int base)
     if (a == b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_acmpne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1656,7 +1758,8 @@ interpret3(Thread* t, const int base)
     if (a != b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmpeq: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1667,7 +1770,8 @@ interpret3(Thread* t, const int base)
     if (a == b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmpne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1678,7 +1782,8 @@ interpret3(Thread* t, const int base)
     if (a != b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmpgt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1689,7 +1794,8 @@ interpret3(Thread* t, const int base)
     if (a > b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmpge: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1700,7 +1806,8 @@ interpret3(Thread* t, const int base)
     if (a >= b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmplt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1711,7 +1818,8 @@ interpret3(Thread* t, const int base)
     if (a < b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case if_icmple: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1722,7 +1830,8 @@ interpret3(Thread* t, const int base)
     if (a <= b) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifeq: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1730,7 +1839,8 @@ interpret3(Thread* t, const int base)
     if (popInt(t) == 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifne: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1738,7 +1848,8 @@ interpret3(Thread* t, const int base)
     if (popInt(t)) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifgt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1746,7 +1857,8 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) > 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifge: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1754,7 +1866,8 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) >= 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case iflt: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1762,7 +1875,8 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) < 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifle: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1770,7 +1884,8 @@ interpret3(Thread* t, const int base)
     if (static_cast<int32_t>(popInt(t)) <= 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifnonnull: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1778,7 +1893,8 @@ interpret3(Thread* t, const int base)
     if (popObject(t)) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case ifnull: {
     int16_t offset = codeReadInt16(t, code, ip);
@@ -1786,50 +1902,59 @@ interpret3(Thread* t, const int base)
     if (popObject(t) == 0) {
       ip = (ip - 3) + offset;
     }
-  } goto back_branch;
+  }
+    goto back_branch;
 
   case iinc: {
     uint8_t index = code->body()[ip++];
     int8_t c = code->body()[ip++];
 
     setLocalInt(t, index, localInt(t, index) + c);
-  } goto loop;
+  }
+    goto loop;
 
   case iload:
   case fload: {
     pushInt(t, localInt(t, code->body()[ip++]));
-  } goto loop;
+  }
+    goto loop;
 
   case iload_0:
   case fload_0: {
     pushInt(t, localInt(t, 0));
-  } goto loop;
+  }
+    goto loop;
 
   case iload_1:
   case fload_1: {
     pushInt(t, localInt(t, 1));
-  } goto loop;
+  }
+    goto loop;
 
   case iload_2:
   case fload_2: {
     pushInt(t, localInt(t, 2));
-  } goto loop;
+  }
+    goto loop;
 
   case iload_3:
   case fload_3: {
     pushInt(t, localInt(t, 3));
-  } goto loop;
+  }
+    goto loop;
 
   case imul: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a * b);
-  } goto loop;
+  }
+    goto loop;
 
   case ineg: {
-    pushInt(t, - popInt(t));
-  } goto loop;
+    pushInt(t, -popInt(t));
+  }
+    goto loop;
 
   case instanceof: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1846,7 +1971,8 @@ interpret3(Thread* t, const int base)
       popObject(t);
       pushInt(t, 0);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case invokeinterface: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1864,7 +1990,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case invokespecial: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1891,7 +2018,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case invokestatic: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1902,7 +2030,8 @@ interpret3(Thread* t, const int base)
     initClass(t, m->class_());
 
     method = m;
-  } goto invoke;
+  }
+    goto invoke;
 
   case invokevirtual: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -1921,14 +2050,16 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case ior: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a | b);
-  } goto loop;
+  }
+    goto loop;
 
   case irem: {
     int32_t b = popInt(t);
@@ -1940,7 +2071,8 @@ interpret3(Thread* t, const int base)
     }
 
     pushInt(t, a % b);
-  } goto loop;
+  }
+    goto loop;
 
   case ireturn:
   case freturn: {
@@ -1952,100 +2084,117 @@ interpret3(Thread* t, const int base)
     } else {
       return makeInt(t, result);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case ishl: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a << (b & 0x1F));
-  } goto loop;
+  }
+    goto loop;
 
   case ishr: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a >> (b & 0x1F));
-  } goto loop;
+  }
+    goto loop;
 
   case istore:
   case fstore: {
     setLocalInt(t, code->body()[ip++], popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case istore_0:
   case fstore_0: {
     setLocalInt(t, 0, popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case istore_1:
   case fstore_1: {
     setLocalInt(t, 1, popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case istore_2:
   case fstore_2: {
     setLocalInt(t, 2, popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case istore_3:
   case fstore_3: {
     setLocalInt(t, 3, popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case isub: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a - b);
-  } goto loop;
+  }
+    goto loop;
 
   case iushr: {
     int32_t b = popInt(t);
     uint32_t a = popInt(t);
 
     pushInt(t, a >> (b & 0x1F));
-  } goto loop;
+  }
+    goto loop;
 
   case ixor: {
     int32_t b = popInt(t);
     int32_t a = popInt(t);
 
     pushInt(t, a ^ b);
-  } goto loop;
+  }
+    goto loop;
 
   case jsr: {
     uint16_t offset = codeReadInt16(t, code, ip);
 
     pushInt(t, ip);
     ip = (ip - 3) + static_cast<int16_t>(offset);
-  } goto loop;
+  }
+    goto loop;
 
   case jsr_w: {
     uint32_t offset = codeReadInt32(t, code, ip);
 
     pushInt(t, ip);
     ip = (ip - 5) + static_cast<int32_t>(offset);
-  } goto loop;
+  }
+    goto loop;
 
   case l2d: {
     pushDouble(t, static_cast<double>(static_cast<int64_t>(popLong(t))));
-  } goto loop;
+  }
+    goto loop;
 
   case l2f: {
     pushFloat(t, static_cast<float>(static_cast<int64_t>(popLong(t))));
-  } goto loop;
+  }
+    goto loop;
 
   case l2i: {
     pushInt(t, static_cast<int32_t>(popLong(t)));
-  } goto loop;
+  }
+    goto loop;
 
   case ladd: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a + b);
-  } goto loop;
+  }
+    goto loop;
 
   case laload: {
     int32_t index = popInt(t);
@@ -2067,14 +2216,16 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case land: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a & b);
-  } goto loop;
+  }
+    goto loop;
 
   case lastore: {
     int64_t value = popLong(t);
@@ -2097,22 +2248,26 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case lcmp: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushInt(t, a > b ? 1 : a == b ? 0 : -1);
-  } goto loop;
+  }
+    goto loop;
 
   case lconst_0: {
     pushLong(t, 0);
-  } goto loop;
+  }
+    goto loop;
 
   case lconst_1: {
     pushLong(t, 1);
-  } goto loop;
+  }
+    goto loop;
 
   case ldc:
   case ldc_w: {
@@ -2142,7 +2297,8 @@ interpret3(Thread* t, const int base)
     } else {
       pushInt(t, singletonValue(t, pool, index - 1));
     }
-  } goto loop;
+  }
+    goto loop;
 
   case ldc2_w: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2152,7 +2308,8 @@ interpret3(Thread* t, const int base)
     uint64_t v;
     memcpy(&v, &singletonValue(t, pool, index - 1), 8);
     pushLong(t, v);
-  } goto loop;
+  }
+    goto loop;
 
   case ldiv_: {
     int64_t b = popLong(t);
@@ -2164,43 +2321,51 @@ interpret3(Thread* t, const int base)
     }
 
     pushLong(t, a / b);
-  } goto loop;
+  }
+    goto loop;
 
   case lload:
   case dload: {
     pushLong(t, localLong(t, code->body()[ip++]));
-  } goto loop;
+  }
+    goto loop;
 
   case lload_0:
   case dload_0: {
     pushLong(t, localLong(t, 0));
-  } goto loop;
+  }
+    goto loop;
 
   case lload_1:
   case dload_1: {
     pushLong(t, localLong(t, 1));
-  } goto loop;
+  }
+    goto loop;
 
   case lload_2:
   case dload_2: {
     pushLong(t, localLong(t, 2));
-  } goto loop;
+  }
+    goto loop;
 
   case lload_3:
   case dload_3: {
     pushLong(t, localLong(t, 3));
-  } goto loop;
+  }
+    goto loop;
 
   case lmul: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a * b);
-  } goto loop;
+  }
+    goto loop;
 
   case lneg: {
-    pushLong(t, - popLong(t));
-  } goto loop;
+    pushLong(t, -popLong(t));
+  }
+    goto loop;
 
   case lookupswitch: {
     int32_t base = ip - 1;
@@ -2232,14 +2397,16 @@ interpret3(Thread* t, const int base)
     }
 
     ip = base + default_;
-  } goto loop;
+  }
+    goto loop;
 
   case lor: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a | b);
-  } goto loop;
+  }
+    goto loop;
 
   case lrem: {
     int64_t b = popLong(t);
@@ -2251,7 +2418,8 @@ interpret3(Thread* t, const int base)
     }
 
     pushLong(t, a % b);
-  } goto loop;
+  }
+    goto loop;
 
   case lreturn:
   case dreturn: {
@@ -2263,67 +2431,78 @@ interpret3(Thread* t, const int base)
     } else {
       return makeLong(t, result);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case lshl: {
     int32_t b = popInt(t);
     int64_t a = popLong(t);
 
     pushLong(t, a << (b & 0x3F));
-  } goto loop;
+  }
+    goto loop;
 
   case lshr: {
     int32_t b = popInt(t);
     int64_t a = popLong(t);
 
     pushLong(t, a >> (b & 0x3F));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore:
   case dstore: {
     setLocalLong(t, code->body()[ip++], popLong(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore_0:
-  case dstore_0:{
+  case dstore_0: {
     setLocalLong(t, 0, popLong(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore_1:
   case dstore_1: {
     setLocalLong(t, 1, popLong(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore_2:
   case dstore_2: {
     setLocalLong(t, 2, popLong(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore_3:
   case dstore_3: {
     setLocalLong(t, 3, popLong(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lsub: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a - b);
-  } goto loop;
+  }
+    goto loop;
 
   case lushr: {
     int64_t b = popInt(t);
     uint64_t a = popLong(t);
 
     pushLong(t, a >> (b & 0x3F));
-  } goto loop;
+  }
+    goto loop;
 
   case lxor: {
     int64_t b = popLong(t);
     int64_t a = popLong(t);
 
     pushLong(t, a ^ b);
-  } goto loop;
+  }
+    goto loop;
 
   case monitorenter: {
     object o = popObject(t);
@@ -2333,7 +2512,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case monitorexit: {
     object o = popObject(t);
@@ -2343,7 +2523,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case multianewarray: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2371,7 +2552,8 @@ interpret3(Thread* t, const int base)
     populateMultiArray(t, array, RUNTIME_ARRAY_BODY(counts), 0, dimensions);
 
     pushObject(t, array);
-  } goto loop;
+  }
+    goto loop;
 
   case new_: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2382,7 +2564,8 @@ interpret3(Thread* t, const int base)
     initClass(t, class_);
 
     pushObject(t, make(t, class_));
-  } goto loop;
+  }
+    goto loop;
 
   case newarray: {
     int32_t count = popInt(t);
@@ -2425,7 +2608,8 @@ interpret3(Thread* t, const int base)
         array = makeLongArray(t, count);
         break;
 
-      default: abort(t);
+      default:
+        abort(t);
       }
 
       pushObject(t, array);
@@ -2434,17 +2618,21 @@ interpret3(Thread* t, const int base)
           = makeThrowable(t, GcNegativeArraySizeException::Type, "%d", count);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
-  case nop: goto loop;
+  case nop:
+    goto loop;
 
   case pop_: {
-    -- sp;
-  } goto loop;
+    --sp;
+  }
+    goto loop;
 
   case pop2: {
     sp -= 2;
-  } goto loop;
+  }
+    goto loop;
 
   case putfield: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2454,7 +2642,8 @@ interpret3(Thread* t, const int base)
     assertT(t, (field->flags() & ACC_STATIC) == 0);
     PROTECT(t, field);
 
-    { ACQUIRE_FIELD_FOR_WRITE(t, field);
+    {
+      ACQUIRE_FIELD_FOR_WRITE(t, field);
 
       switch (field->code()) {
       case ByteField:
@@ -2508,14 +2697,16 @@ interpret3(Thread* t, const int base)
         }
       } break;
 
-      default: abort(t);
+      default:
+        abort(t);
       }
     }
 
     if (UNLIKELY(exception)) {
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case putstatic: {
     uint16_t index = codeReadInt16(t, code, ip);
@@ -2567,13 +2758,16 @@ interpret3(Thread* t, const int base)
       setField(t, table, field->offset(), popObject(t));
     } break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
-  } goto loop;
+  }
+    goto loop;
 
   case ret: {
     ip = localInt(t, code->body()[ip]);
-  } goto loop;
+  }
+    goto loop;
 
   case return_: {
     GcMethod* method = frameMethod(t, frame);
@@ -2588,7 +2782,8 @@ interpret3(Thread* t, const int base)
     } else {
       return 0;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case saload: {
     int32_t index = popInt(t);
@@ -2610,7 +2805,8 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case sastore: {
     int16_t value = popInt(t);
@@ -2633,18 +2829,21 @@ interpret3(Thread* t, const int base)
       exception = makeThrowable(t, GcNullPointerException::Type);
       goto throw_;
     }
-  } goto loop;
+  }
+    goto loop;
 
   case sipush: {
     pushInt(t, static_cast<int16_t>(codeReadInt16(t, code, ip)));
-  } goto loop;
+  }
+    goto loop;
 
   case swap: {
     uintptr_t tmp[2];
-    memcpy(tmp                   , stack + ((sp - 1) * 2), BytesPerWord * 2);
+    memcpy(tmp, stack + ((sp - 1) * 2), BytesPerWord * 2);
     memcpy(stack + ((sp - 1) * 2), stack + ((sp - 2) * 2), BytesPerWord * 2);
-    memcpy(stack + ((sp - 2) * 2), tmp                   , BytesPerWord * 2);
-  } goto loop;
+    memcpy(stack + ((sp - 2) * 2), tmp, BytesPerWord * 2);
+  }
+    goto loop;
 
   case tableswitch: {
     int32_t base = ip - 1;
@@ -2664,9 +2863,11 @@ interpret3(Thread* t, const int base)
     } else {
       ip = base + default_;
     }
-  } goto loop;
+  }
+    goto loop;
 
-  case wide: goto wide;
+  case wide:
+    goto wide;
 
   case impdep1: {
     // this means we're invoking a virtual method on an instance of a
@@ -2689,65 +2890,77 @@ interpret3(Thread* t, const int base)
     resolveClass(t, frameMethod(t, frame)->class_()->loader(), class_->name());
 
     ip -= 3;
-  } goto loop;
+  }
+    goto loop;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 
- wide:
-   switch (code->body()[ip++]) {
+wide:
+  switch (code->body()[ip++]) {
   case aload: {
     pushObject(t, localObject(t, codeReadInt16(t, code, ip)));
-  } goto loop;
+  }
+    goto loop;
 
   case astore: {
     setLocalObject(t, codeReadInt16(t, code, ip), popObject(t));
-  } goto loop;
+  }
+    goto loop;
 
   case iinc: {
     uint16_t index = codeReadInt16(t, code, ip);
     int16_t count = codeReadInt16(t, code, ip);
 
     setLocalInt(t, index, localInt(t, index) + count);
-  } goto loop;
+  }
+    goto loop;
 
   case iload: {
     pushInt(t, localInt(t, codeReadInt16(t, code, ip)));
-  } goto loop;
+  }
+    goto loop;
 
   case istore: {
     setLocalInt(t, codeReadInt16(t, code, ip), popInt(t));
-  } goto loop;
+  }
+    goto loop;
 
   case lload: {
     pushLong(t, localLong(t, codeReadInt16(t, code, ip)));
-  } goto loop;
+  }
+    goto loop;
 
   case lstore: {
-    setLocalLong(t, codeReadInt16(t, code, ip),  popLong(t));
-  } goto loop;
+    setLocalLong(t, codeReadInt16(t, code, ip), popLong(t));
+  }
+    goto loop;
 
   case ret: {
     ip = localInt(t, codeReadInt16(t, code, ip));
-  } goto loop;
+  }
+    goto loop;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 
- back_branch:
+back_branch:
   safePoint(t);
   goto loop;
 
- invoke: {
-   if (method->flags() & ACC_NATIVE) {
-     invokeNative(t, method);
-    } else {
-      checkStack(t, method);
-      pushFrame(t, method);
-    }
-  } goto loop;
+invoke : {
+  if (method->flags() & ACC_NATIVE) {
+    invokeNative(t, method);
+  } else {
+    checkStack(t, method);
+    pushFrame(t, method);
+  }
+}
+  goto loop;
 
- throw_:
+throw_:
   if (DebugRun) {
     fprintf(stderr, "throw\n");
   }
@@ -2767,8 +2980,7 @@ interpret3(Thread* t, const int base)
   return 0;
 }
 
-uint64_t
-interpret2(vm::Thread* t, uintptr_t* arguments)
+uint64_t interpret2(vm::Thread* t, uintptr_t* arguments)
 {
   int base = arguments[0];
   bool* success = reinterpret_cast<bool*>(arguments[1]);
@@ -2778,15 +2990,14 @@ interpret2(vm::Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uint64_t>(r);
 }
 
-object
-interpret(Thread* t)
+object interpret(Thread* t)
 {
   const int base = t->frame;
 
   while (true) {
     bool success = false;
-    uintptr_t arguments[] = { static_cast<uintptr_t>(base),
-                              reinterpret_cast<uintptr_t>(&success) };
+    uintptr_t arguments[]
+        = {static_cast<uintptr_t>(base), reinterpret_cast<uintptr_t>(&success)};
 
     uint64_t r = run(t, interpret2, arguments);
     if (success) {
@@ -2801,9 +3012,11 @@ interpret(Thread* t)
   }
 }
 
-void
-pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
-              va_list a)
+void pushArguments(Thread* t,
+                   object this_,
+                   const char* spec,
+                   bool indirectObjects,
+                   va_list a)
 {
   if (this_) {
     pushObject(t, this_);
@@ -2837,9 +3050,10 @@ pushArguments(Thread* t, object this_, const char* spec, bool indirectObjects,
   }
 }
 
-void
-pushArguments(Thread* t, object this_, const char* spec,
-              const jvalue* arguments)
+void pushArguments(Thread* t,
+                   object this_,
+                   const char* spec,
+                   const jvalue* arguments)
 {
   if (this_) {
     pushObject(t, this_);
@@ -2870,8 +3084,7 @@ pushArguments(Thread* t, object this_, const char* spec,
   }
 }
 
-void
-pushArguments(Thread* t, object this_, const char* spec, object a)
+void pushArguments(Thread* t, object this_, const char* spec, object a)
 {
   if (this_) {
     pushObject(t, this_);
@@ -2891,8 +3104,9 @@ pushArguments(Thread* t, object this_, const char* spec, object a)
       break;
 
     default:
-      pushInt(t, fieldAtOffset<int32_t>(objectArrayBody(t, a, index++),
-                               BytesPerWord));
+      pushInt(
+          t,
+          fieldAtOffset<int32_t>(objectArrayBody(t, a, index++), BytesPerWord));
       break;
     }
   }
@@ -2975,7 +3189,7 @@ object invoke(Thread* t, GcMethod* method)
   return result;
 }
 
-class MyProcessor: public Processor {
+class MyProcessor : public Processor {
  public:
   MyProcessor(System* s, Allocator* allocator, const char* crashDumpDirectory)
       : s(s), allocator(allocator)
@@ -2988,7 +3202,7 @@ class MyProcessor: public Processor {
                                  vm::Thread* parent)
   {
     Thread* t = new (m->heap->allocate(sizeof(Thread) + m->stackSizeInBytes))
-      Thread(m, javaThread, parent);
+        Thread(m, javaThread, parent);
     t->init();
     return t;
   }
@@ -3070,8 +3284,7 @@ class MyProcessor: public Processor {
     // ignore
   }
 
-  virtual void
-  visitObjects(vm::Thread* vmt, Heap::Visitor* v)
+  virtual void visitObjects(vm::Thread* vmt, Heap::Visitor* v)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
@@ -3084,8 +3297,7 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual void
-  walkStack(vm::Thread* vmt, StackVisitor* v)
+  virtual void walkStack(vm::Thread* vmt, StackVisitor* v)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
@@ -3102,30 +3314,27 @@ class MyProcessor: public Processor {
     return findLineNumber(static_cast<Thread*>(t), method, ip);
   }
 
-  virtual object*
-  makeLocalReference(vm::Thread* vmt, object o)
+  virtual object* makeLocalReference(vm::Thread* vmt, object o)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
     return pushReference(t, o);
   }
 
-  virtual void
-  disposeLocalReference(vm::Thread*, object* r)
+  virtual void disposeLocalReference(vm::Thread*, object* r)
   {
     if (r) {
       *r = 0;
     }
   }
 
-  virtual bool
-  pushLocalFrame(vm::Thread* vmt, unsigned capacity)
+  virtual bool pushLocalFrame(vm::Thread* vmt, unsigned capacity)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
     if (t->sp + capacity < stackSizeInWords(t) / 2) {
-      t->stackPointers = new(t->m->heap)
-        List<unsigned>(t->sp, t->stackPointers);
+      t->stackPointers = new (t->m->heap)
+          List<unsigned>(t->sp, t->stackPointers);
 
       return true;
     } else {
@@ -3133,8 +3342,7 @@ class MyProcessor: public Processor {
     }
   }
 
-  virtual void
-  popLocalFrame(vm::Thread* vmt)
+  virtual void popLocalFrame(vm::Thread* vmt)
   {
     Thread* t = static_cast<Thread*>(vmt);
 
@@ -3233,8 +3441,7 @@ class MyProcessor: public Processor {
         t->state == Thread::ActiveState or t->state == Thread::ExclusiveState);
 
     if (UNLIKELY(t->sp + parameterFootprint(vmt, methodSpec, false)
-                 > stackSizeInWords(t) / 2))
-    {
+                 > stackSizeInWords(t) / 2)) {
       throwNew(t, GcStackOverflowError::Type);
     }
 
@@ -3248,7 +3455,8 @@ class MyProcessor: public Processor {
     return local::invoke(t, method);
   }
 
-  virtual object getStackTrace(vm::Thread* t, vm::Thread*) {
+  virtual object getStackTrace(vm::Thread* t, vm::Thread*)
+  {
     // not implemented
     return makeObjectArray(t, 0);
   }
@@ -3258,7 +3466,8 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void addCompilationHandler(CompilationHandler*) {
+  virtual void addCompilationHandler(CompilationHandler*)
+  {
     abort(s);
   }
 
@@ -3273,27 +3482,33 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void visitRoots(vm::Thread*, HeapWalker*) {
+  virtual void visitRoots(vm::Thread*, HeapWalker*)
+  {
     abort(s);
   }
 
-  virtual void normalizeVirtualThunks(vm::Thread*) {
+  virtual void normalizeVirtualThunks(vm::Thread*)
+  {
     abort(s);
   }
 
-  virtual unsigned* makeCallTable(vm::Thread*, HeapWalker*) {
+  virtual unsigned* makeCallTable(vm::Thread*, HeapWalker*)
+  {
     abort(s);
   }
 
-  virtual void boot(vm::Thread*, BootImage* image, uint8_t* code) {
+  virtual void boot(vm::Thread*, BootImage* image, uint8_t* code)
+  {
     expect(s, image == 0 and code == 0);
   }
 
-  virtual void callWithCurrentContinuation(vm::Thread*, object) {
+  virtual void callWithCurrentContinuation(vm::Thread*, object)
+  {
     abort(s);
   }
 
-  virtual void dynamicWind(vm::Thread*, object, object, object) {
+  virtual void dynamicWind(vm::Thread*, object, object, object)
+  {
     abort(s);
   }
 
@@ -3309,17 +3524,21 @@ class MyProcessor: public Processor {
     abort(s);
   }
 
-  virtual void walkContinuationBody(vm::Thread*, Heap::Walker*, object,
+  virtual void walkContinuationBody(vm::Thread*,
+                                    Heap::Walker*,
+                                    object,
                                     unsigned)
   {
     abort(s);
   }
 
-  virtual void dispose(vm::Thread* t) {
+  virtual void dispose(vm::Thread* t)
+  {
     t->m->heap->free(t, sizeof(Thread) + t->m->stackSizeInBytes);
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     signals.setCrashDumpDirectory(0);
     this->~MyProcessor();
     allocator->free(this, sizeof(*this));
@@ -3330,7 +3549,7 @@ class MyProcessor: public Processor {
   SignalRegistrar signals;
 };
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
@@ -3340,7 +3559,7 @@ Processor* makeProcessor(System* system,
                          bool)
 {
   return new (allocator->allocate(sizeof(local::MyProcessor)))
-    local::MyProcessor(system, allocator, crashDumpDirectory);
+      local::MyProcessor(system, allocator, crashDumpDirectory);
 }
 
-} // namespace vm
+}  // namespace vm

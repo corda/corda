@@ -35,11 +35,14 @@ class Element {
     virtual void dispose() = 0;
   };
 
-  Element(): next(0) { }
+  Element() : next(0)
+  {
+  }
 
   virtual Iterator* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
-  virtual System::FileType stat(const char* name, unsigned* length,
+  virtual System::FileType stat(const char* name,
+                                unsigned* length,
                                 bool tryDirectory) = 0;
   virtual const char* urlPrefix() = 0;
   virtual const char* sourceUrl() = 0;
@@ -48,20 +51,26 @@ class Element {
   Element* next;
 };
 
-class DirectoryElement: public Element {
+class DirectoryElement : public Element {
  public:
-  class Iterator: public Element::Iterator {
+  class Iterator : public Element::Iterator {
    public:
-    Iterator(System* s, Allocator* allocator, const char* name, unsigned skip):
-      s(s), allocator(allocator), name(name), skip(skip), directory(0),
-      last(0), it(0)
+    Iterator(System* s, Allocator* allocator, const char* name, unsigned skip)
+        : s(s),
+          allocator(allocator),
+          name(name),
+          skip(skip),
+          directory(0),
+          last(0),
+          it(0)
     {
       if (not s->success(s->open(&directory, name))) {
         directory = 0;
       }
     }
 
-    virtual const char* next(unsigned* size) {
+    virtual const char* next(unsigned* size)
+    {
       if (it) {
         const char* v = it->next(size);
         if (v) {
@@ -83,7 +92,7 @@ class DirectoryElement: public Element {
             unsigned length;
             if (s->stat(last, &length) == System::TypeDirectory) {
               it = new (allocator->allocate(sizeof(Iterator)))
-                Iterator(s, allocator, last, skip);
+                  Iterator(s, allocator, last, skip);
               it->name = last;
             }
             const char* result = last + skip;
@@ -96,7 +105,8 @@ class DirectoryElement: public Element {
       return 0;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       directory->dispose();
       allocator->free(this, sizeof(*this));
     }
@@ -110,21 +120,24 @@ class DirectoryElement: public Element {
     Iterator* it;
   };
 
-  DirectoryElement(System* s, Allocator* allocator, const char* name):
-    s(s),
-    allocator(allocator),
-    originalName(name),
-    name(s->toAbsolutePath(allocator, name)),
-    urlPrefix_(append(allocator, "file:", this->name, "/")),
-    sourceUrl_(append(allocator, "file:", this->name))
-  { }
-
-  virtual Element::Iterator* iterator() {
-    return new (allocator->allocate(sizeof(Iterator)))
-      Iterator(s, allocator, name, strlen(name) + 1);
+  DirectoryElement(System* s, Allocator* allocator, const char* name)
+      : s(s),
+        allocator(allocator),
+        originalName(name),
+        name(s->toAbsolutePath(allocator, name)),
+        urlPrefix_(append(allocator, "file:", this->name, "/")),
+        sourceUrl_(append(allocator, "file:", this->name))
+  {
   }
 
-  virtual System::Region* find(const char* name) {
+  virtual Element::Iterator* iterator()
+  {
+    return new (allocator->allocate(sizeof(Iterator)))
+        Iterator(s, allocator, name, strlen(name) + 1);
+  }
+
+  virtual System::Region* find(const char* name)
+  {
     const char* file = append(allocator, this->name, "/", name);
     System::Region* region;
     System::Status status = s->map(&region, file);
@@ -143,7 +156,8 @@ class DirectoryElement: public Element {
     }
   }
 
-  virtual System::FileType stat(const char* name, unsigned* length, bool)  {
+  virtual System::FileType stat(const char* name, unsigned* length, bool)
+  {
     const char* file = append(allocator, this->name, "/", name);
     System::FileType type = s->stat(file, length);
     if (DebugStat) {
@@ -153,15 +167,18 @@ class DirectoryElement: public Element {
     return type;
   }
 
-  virtual const char* urlPrefix() {
+  virtual const char* urlPrefix()
+  {
     return urlPrefix_;
   }
 
-  virtual const char* sourceUrl() {
+  virtual const char* sourceUrl()
+  {
     return sourceUrl_;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     allocator->free(originalName, strlen(originalName) + 1);
     allocator->free(name, strlen(name) + 1);
     allocator->free(urlPrefix_, strlen(urlPrefix_) + 1);
@@ -177,26 +194,33 @@ class DirectoryElement: public Element {
   const char* sourceUrl_;
 };
 
-class PointerRegion: public System::Region {
+class PointerRegion : public System::Region {
  public:
-  PointerRegion(System* s, Allocator* allocator, const uint8_t* start,
-                size_t length, bool freePointer = false):
-    s(s),
-    allocator(allocator),
-    start_(start),
-    length_(length),
-    freePointer(freePointer)
-  { }
+  PointerRegion(System* s,
+                Allocator* allocator,
+                const uint8_t* start,
+                size_t length,
+                bool freePointer = false)
+      : s(s),
+        allocator(allocator),
+        start_(start),
+        length_(length),
+        freePointer(freePointer)
+  {
+  }
 
-  virtual const uint8_t* start() {
+  virtual const uint8_t* start()
+  {
     return start_;
   }
 
-  virtual size_t length() {
+  virtual size_t length()
+  {
     return length_;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     if (freePointer) {
       allocator->free(start_, length_);
     }
@@ -210,23 +234,25 @@ class PointerRegion: public System::Region {
   bool freePointer;
 };
 
-class DataRegion: public System::Region {
+class DataRegion : public System::Region {
  public:
-  DataRegion(System* s, Allocator* allocator, size_t length):
-    s(s),
-    allocator(allocator),
-    length_(length)
-  { }
+  DataRegion(System* s, Allocator* allocator, size_t length)
+      : s(s), allocator(allocator), length_(length)
+  {
+  }
 
-  virtual const uint8_t* start() {
+  virtual const uint8_t* start()
+  {
     return data;
   }
 
-  virtual size_t length() {
+  virtual size_t length()
+  {
     return length_;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     allocator->free(this, sizeof(*this) + length_);
   }
 
@@ -238,39 +264,37 @@ class DataRegion: public System::Region {
 
 class JarIndex {
  public:
-  enum CompressionMethod {
-    Stored = 0,
-    Deflated = 8
-  };
+  enum CompressionMethod { Stored = 0, Deflated = 8 };
 
   class Entry {
-  public:
-    Entry(uint32_t hash, const uint8_t* entry):
-      hash(hash),
-      entry(entry) {}
+   public:
+    Entry(uint32_t hash, const uint8_t* entry) : hash(hash), entry(entry)
+    {
+    }
 
     uint32_t hash;
     const uint8_t* entry;
   };
 
-  JarIndex(System* s, Allocator* allocator, unsigned capacity):
-    s(s),
-    allocator(allocator),
-    capacity(capacity),
-    position(0),
-    nodes(static_cast<List<Entry>*>(allocator->allocate(sizeof(List<Entry>) * capacity)))
+  JarIndex(System* s, Allocator* allocator, unsigned capacity)
+      : s(s),
+        allocator(allocator),
+        capacity(capacity),
+        position(0),
+        nodes(static_cast<List<Entry>*>(
+            allocator->allocate(sizeof(List<Entry>) * capacity)))
   {
     memset(table, 0, sizeof(List<Entry>*) * capacity);
   }
 
-  static JarIndex* make(System* s, Allocator* allocator, unsigned capacity) {
-    return new
-      (allocator->allocate(sizeof(JarIndex) + (sizeof(List<Entry>*) * capacity)))
-      JarIndex(s, allocator, capacity);
+  static JarIndex* make(System* s, Allocator* allocator, unsigned capacity)
+  {
+    return new (allocator->allocate(sizeof(JarIndex)
+                                    + (sizeof(List<Entry>*) * capacity)))
+        JarIndex(s, allocator, capacity);
   }
-  
-  static JarIndex* open(System* s, Allocator* allocator,
-                        System::Region* region)
+
+  static JarIndex* open(System* s, Allocator* allocator, System::Region* region)
   {
     JarIndex* index = make(s, allocator, 32);
 
@@ -300,7 +324,8 @@ class JarIndex {
     return index;
   }
 
-  JarIndex* add(const Entry& entry) {
+  JarIndex* add(const Entry& entry)
+  {
     if (position < capacity) {
       unsigned i = entry.hash & (capacity - 1);
       table[i] = new (nodes + (position++)) List<Entry>(entry, table[i]);
@@ -316,7 +341,8 @@ class JarIndex {
     }
   }
 
-  List<Entry>* findNode(const char* name) {
+  List<Entry>* findNode(const char* name)
+  {
     unsigned length = strlen(name);
     unsigned i = hash(name) & (capacity - 1);
     for (List<Entry>* n = table[i]; n; n = n->next) {
@@ -328,26 +354,30 @@ class JarIndex {
     return 0;
   }
 
-  System::Region* find(const char* name, const uint8_t* start) {
+  System::Region* find(const char* name, const uint8_t* start)
+  {
     List<Entry>* n = findNode(name);
     if (n) {
       const uint8_t* p = n->item.entry;
       switch (compressionMethod(p)) {
       case Stored: {
         return new (allocator->allocate(sizeof(PointerRegion)))
-          PointerRegion(s, allocator, fileData(start + localHeaderOffset(p)),
-          compressedSize(p));
+            PointerRegion(s,
+                          allocator,
+                          fileData(start + localHeaderOffset(p)),
+                          compressedSize(p));
       } break;
 
       case Deflated: {
-        DataRegion* region = new
-          (allocator->allocate(sizeof(DataRegion) + uncompressedSize(p)))
-          DataRegion(s, allocator, uncompressedSize(p));
-          
-        z_stream zStream; memset(&zStream, 0, sizeof(z_stream));
+        DataRegion* region = new (
+            allocator->allocate(sizeof(DataRegion) + uncompressedSize(p)))
+            DataRegion(s, allocator, uncompressedSize(p));
 
-        zStream.next_in = const_cast<uint8_t*>(fileData(start +
-              localHeaderOffset(p)));
+        z_stream zStream;
+        memset(&zStream, 0, sizeof(z_stream));
+
+        zStream.next_in
+            = const_cast<uint8_t*>(fileData(start + localHeaderOffset(p)));
         zStream.avail_in = compressedSize(p);
         zStream.next_out = region->data;
         zStream.avail_out = region->length();
@@ -400,7 +430,8 @@ class JarIndex {
     }
   }
 
-  void dispose() {
+  void dispose()
+  {
     allocator->free(nodes, sizeof(List<Entry>) * capacity);
     allocator->free(this, sizeof(*this) + (sizeof(List<Entry>*) * capacity));
   }
@@ -409,20 +440,22 @@ class JarIndex {
   Allocator* allocator;
   unsigned capacity;
   unsigned position;
-  
+
   List<Entry>* nodes;
   List<Entry>* table[0];
 };
 
-class JarElement: public Element {
+class JarElement : public Element {
  public:
-  class Iterator: public Element::Iterator {
+  class Iterator : public Element::Iterator {
    public:
-    Iterator(System* s, Allocator* allocator, JarIndex* index):
-      s(s), allocator(allocator), index(index), position(0)
-    { }
+    Iterator(System* s, Allocator* allocator, JarIndex* index)
+        : s(s), allocator(allocator), index(index), position(0)
+    {
+    }
 
-    virtual const char* next(unsigned* size) {
+    virtual const char* next(unsigned* size)
+    {
       if (position < index->position) {
         List<JarIndex::Entry>* n = index->nodes + (position++);
         *size = fileNameLength(n->item.entry);
@@ -432,7 +465,8 @@ class JarElement: public Element {
       }
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       allocator->free(this, sizeof(*this));
     }
 
@@ -442,41 +476,49 @@ class JarElement: public Element {
     unsigned position;
   };
 
-  JarElement(System* s, Allocator* allocator, const char* name,
-             bool canonicalizePath = true):
-    s(s),
-    allocator(allocator),
-    originalName(name),
-    name(name and canonicalizePath
-         ? s->toAbsolutePath(allocator, name) : name),
-    urlPrefix_(this->name
-               ? append(allocator, "jar:file:", this->name, "!/") : 0),
-    sourceUrl_(this->name
-               ? append(allocator, "file:", this->name) : 0),
-    region(0), index(0)
-  { }
+  JarElement(System* s,
+             Allocator* allocator,
+             const char* name,
+             bool canonicalizePath = true)
+      : s(s),
+        allocator(allocator),
+        originalName(name),
+        name(name and canonicalizePath ? s->toAbsolutePath(allocator, name)
+                                       : name),
+        urlPrefix_(this->name ? append(allocator, "jar:file:", this->name, "!/")
+                              : 0),
+        sourceUrl_(this->name ? append(allocator, "file:", this->name) : 0),
+        region(0),
+        index(0)
+  {
+  }
 
-  JarElement(System* s, Allocator* allocator, const uint8_t* jarData,
-             unsigned jarLength):
-    s(s),
-    allocator(allocator),
-    originalName(0),
-    name(0),
-    urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
-    sourceUrl_(name ? append(allocator, "file:", name) : 0),
-    region(new (allocator->allocate(sizeof(PointerRegion)))
-           PointerRegion(s, allocator, jarData, jarLength)),
-    index(JarIndex::open(s, allocator, region))
-  { }
+  JarElement(System* s,
+             Allocator* allocator,
+             const uint8_t* jarData,
+             unsigned jarLength)
+      : s(s),
+        allocator(allocator),
+        originalName(0),
+        name(0),
+        urlPrefix_(name ? append(allocator, "jar:file:", name, "!/") : 0),
+        sourceUrl_(name ? append(allocator, "file:", name) : 0),
+        region(new (allocator->allocate(sizeof(PointerRegion)))
+               PointerRegion(s, allocator, jarData, jarLength)),
+        index(JarIndex::open(s, allocator, region))
+  {
+  }
 
-  virtual Element::Iterator* iterator() {
+  virtual Element::Iterator* iterator()
+  {
     init();
 
     return new (allocator->allocate(sizeof(Iterator)))
-      Iterator(s, allocator, index);
+        Iterator(s, allocator, index);
   }
 
-  virtual void init() {
+  virtual void init()
+  {
     if (index == 0) {
       System::Region* r;
       if (s->success(s->map(&r, name))) {
@@ -486,10 +528,12 @@ class JarElement: public Element {
     }
   }
 
-  virtual System::Region* find(const char* name) {
+  virtual System::Region* find(const char* name)
+  {
     init();
 
-    while (*name == '/') name++;
+    while (*name == '/')
+      name++;
 
     System::Region* r = (index ? index->find(name, region->start()) : 0);
     if (DebugFind) {
@@ -502,34 +546,40 @@ class JarElement: public Element {
     return r;
   }
 
-  virtual System::FileType stat(const char* name, unsigned* length,
+  virtual System::FileType stat(const char* name,
+                                unsigned* length,
                                 bool tryDirectory)
   {
     init();
 
-    while (*name == '/') name++;
+    while (*name == '/')
+      name++;
 
     System::FileType type = (index ? index->stat(name, length, tryDirectory)
-                             : System::TypeDoesNotExist);
+                                   : System::TypeDoesNotExist);
     if (DebugStat) {
       fprintf(stderr, "stat %s in %s: %d\n", name, this->name, type);
     }
     return type;
   }
 
-  virtual const char* urlPrefix() {
+  virtual const char* urlPrefix()
+  {
     return urlPrefix_;
   }
 
-  virtual const char* sourceUrl() {
+  virtual const char* sourceUrl()
+  {
     return sourceUrl_;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     dispose(sizeof(*this));
   }
 
-  virtual void dispose(unsigned size) {
+  virtual void dispose(unsigned size)
+  {
     if (name) {
       if (originalName != name) {
         allocator->free(originalName, strlen(originalName) + 1);
@@ -557,15 +607,19 @@ class JarElement: public Element {
   JarIndex* index;
 };
 
-class BuiltinElement: public JarElement {
+class BuiltinElement : public JarElement {
  public:
-  BuiltinElement(System* s, Allocator* allocator, const char* name,
-                 const char* libraryName):
-    JarElement(s, allocator, name, false),
-    libraryName(libraryName ? copy(allocator, libraryName) : 0)
-  { }
+  BuiltinElement(System* s,
+                 Allocator* allocator,
+                 const char* name,
+                 const char* libraryName)
+      : JarElement(s, allocator, name, false),
+        libraryName(libraryName ? copy(allocator, libraryName) : 0)
+  {
+  }
 
-  virtual void init() {
+  virtual void init()
+  {
     if (index == 0) {
       if (s->success(s->load(&library, libraryName))) {
         bool lzma = strncmp("lzma.", name, 5) == 0;
@@ -593,29 +647,31 @@ class BuiltinElement: public JarElement {
               freePointer = false;
             }
             region = new (allocator->allocate(sizeof(PointerRegion)))
-              PointerRegion(s, allocator, data, size, freePointer);
+                PointerRegion(s, allocator, data, size, freePointer);
             index = JarIndex::open(s, allocator, region);
           } else if (DebugFind) {
-            fprintf(stderr, "%s in %s returned null\n", symbolName,
-                    libraryName);
+            fprintf(
+                stderr, "%s in %s returned null\n", symbolName, libraryName);
           }
         } else if (DebugFind) {
-          fprintf(stderr, "unable to find %s in %s\n", symbolName,
-                  libraryName);
+          fprintf(stderr, "unable to find %s in %s\n", symbolName, libraryName);
         }
       }
     }
   }
 
-  virtual const char* urlPrefix() {
+  virtual const char* urlPrefix()
+  {
     return "avianvmresource:";
   }
 
-  virtual const char* sourceUrl() {
+  virtual const char* sourceUrl()
+  {
     return 0;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     library->disposeAll();
     if (libraryName) {
       allocator->free(libraryName, strlen(libraryName) + 1);
@@ -627,8 +683,7 @@ class BuiltinElement: public JarElement {
   const char* libraryName;
 };
 
-void
-add(Element** first, Element** last, Element* e)
+void add(Element** first, Element** last, Element* e)
 {
   if (*last) {
     (*last)->next = e;
@@ -638,8 +693,7 @@ add(Element** first, Element** last, Element* e)
   *last = e;
 }
 
-unsigned
-baseName(const char* name, char fileSeparator)
+unsigned baseName(const char* name, char fileSeparator)
 {
   const char* p = name;
   const char* last = 0;
@@ -653,14 +707,23 @@ baseName(const char* name, char fileSeparator)
   return last ? (last + 1) - name : 0;
 }
 
-void
-add(System* s, Element** first, Element** last, Allocator* allocator,
-    const char* name, unsigned nameLength, const char* bootLibrary);
+void add(System* s,
+         Element** first,
+         Element** last,
+         Allocator* allocator,
+         const char* name,
+         unsigned nameLength,
+         const char* bootLibrary);
 
-void
-addTokens(System* s, Element** first, Element** last, Allocator* allocator,
-          const char* jarName, unsigned jarNameBase, const char* tokens,
-          unsigned tokensLength, const char* bootLibrary)
+void addTokens(System* s,
+               Element** first,
+               Element** last,
+               Allocator* allocator,
+               const char* jarName,
+               unsigned jarNameBase,
+               const char* tokens,
+               unsigned tokensLength,
+               const char* bootLibrary)
 {
   for (Tokenizer t(String(tokens, tokensLength), ' '); t.hasMore();) {
     String token(t.next());
@@ -669,31 +732,39 @@ addTokens(System* s, Element** first, Element** last, Allocator* allocator,
     memcpy(RUNTIME_ARRAY_BODY(n), jarName, jarNameBase);
     memcpy(RUNTIME_ARRAY_BODY(n) + jarNameBase, token.text, token.length);
     RUNTIME_ARRAY_BODY(n)[jarNameBase + token.length] = 0;
-          
-    add(s, first, last, allocator, RUNTIME_ARRAY_BODY(n),
-        jarNameBase + token.length, bootLibrary);
+
+    add(s,
+        first,
+        last,
+        allocator,
+        RUNTIME_ARRAY_BODY(n),
+        jarNameBase + token.length,
+        bootLibrary);
   }
 }
 
-bool
-continuationLine(const uint8_t* base, unsigned total, unsigned* start,
-                 unsigned* length)
+bool continuationLine(const uint8_t* base,
+                      unsigned total,
+                      unsigned* start,
+                      unsigned* length)
 {
-  return readLine(base, total, start, length)
-    and *length > 0
-    and base[*start] == ' ';
+  return readLine(base, total, start, length) and *length > 0
+         and base[*start] == ' ';
 }
 
-void
-addJar(System* s, Element** first, Element** last, Allocator* allocator,
-       const char* name, const char* bootLibrary)
+void addJar(System* s,
+            Element** first,
+            Element** last,
+            Allocator* allocator,
+            const char* name,
+            const char* bootLibrary)
 {
   if (DebugFind) {
     fprintf(stderr, "add jar %s\n", name);
   }
 
   JarElement* e = new (allocator->allocate(sizeof(JarElement)))
-    JarElement(s, allocator, name);
+      JarElement(s, allocator, name);
 
   unsigned nameBase = baseName(name, s->fileSeparator());
 
@@ -708,52 +779,65 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
 
       const unsigned PrefixLength = 12;
       if (length > PrefixLength
-          and strncmp("Class-Path: ", reinterpret_cast<const char*>
-                      (region->start() + start), PrefixLength) == 0)
-      {
-        { unsigned nextStart = start + length;
+          and strncmp("Class-Path: ",
+                      reinterpret_cast<const char*>(region->start() + start),
+                      PrefixLength) == 0) {
+        {
+          unsigned nextStart = start + length;
           unsigned nextLength;
-          while (continuationLine
-                 (region->start(), region->length(), &nextStart, &nextLength))
-          {
+          while (continuationLine(
+              region->start(), region->length(), &nextStart, &nextLength)) {
             multilineTotal += nextLength;
             nextStart += nextLength;
           }
         }
 
-        const char* line = reinterpret_cast<const char*>
-          (region->start() + start + PrefixLength);
+        const char* line = reinterpret_cast<const char*>(region->start() + start
+                                                         + PrefixLength);
 
         unsigned lineLength = length - PrefixLength;
 
         if (multilineTotal) {
-          RUNTIME_ARRAY
-            (char, n, (length - PrefixLength) + multilineTotal + 1);
+          RUNTIME_ARRAY(char, n, (length - PrefixLength) + multilineTotal + 1);
 
           memcpy(RUNTIME_ARRAY_BODY(n), line, lineLength);
 
           unsigned offset = lineLength;
-          { unsigned nextStart = start + length;
+          {
+            unsigned nextStart = start + length;
             unsigned nextLength;
-            while (continuationLine
-                   (region->start(), region->length(), &nextStart,
-                    &nextLength))
-            {
+            while (continuationLine(
+                region->start(), region->length(), &nextStart, &nextLength)) {
               unsigned continuationLength = nextLength - 1;
 
               memcpy(RUNTIME_ARRAY_BODY(n) + offset,
-                     region->start() + nextStart + 1, continuationLength);
-            
+                     region->start() + nextStart + 1,
+                     continuationLength);
+
               offset += continuationLength;
               nextStart += nextLength;
             }
           }
 
-          addTokens(s, first, last, allocator, name, nameBase,
-                    RUNTIME_ARRAY_BODY(n), offset, bootLibrary);
+          addTokens(s,
+                    first,
+                    last,
+                    allocator,
+                    name,
+                    nameBase,
+                    RUNTIME_ARRAY_BODY(n),
+                    offset,
+                    bootLibrary);
         } else {
-          addTokens(s, first, last, allocator, name, nameBase, line,
-                    lineLength, bootLibrary);
+          addTokens(s,
+                    first,
+                    last,
+                    allocator,
+                    name,
+                    nameBase,
+                    line,
+                    lineLength,
+                    bootLibrary);
         }
       }
 
@@ -764,20 +848,26 @@ addJar(System* s, Element** first, Element** last, Allocator* allocator,
   }
 }
 
-void
-add(System* s, Element** first, Element** last, Allocator* allocator,
-    const char* token, unsigned tokenLength, const char* bootLibrary)
+void add(System* s,
+         Element** first,
+         Element** last,
+         Allocator* allocator,
+         const char* token,
+         unsigned tokenLength,
+         const char* bootLibrary)
 {
   if (*token == '[' and token[tokenLength - 1] == ']') {
     char* name = static_cast<char*>(allocator->allocate(tokenLength - 1));
     memcpy(name, token + 1, tokenLength - 1);
-    name[tokenLength - 2] = 0; 
+    name[tokenLength - 2] = 0;
 
     if (DebugFind) {
       fprintf(stderr, "add builtin %s\n", name);
     }
-  
-    add(first, last, new (allocator->allocate(sizeof(BuiltinElement)))
+
+    add(first,
+        last,
+        new (allocator->allocate(sizeof(BuiltinElement)))
         BuiltinElement(s, allocator, name, bootLibrary));
   } else {
     char* name = static_cast<char*>(allocator->allocate(tokenLength + 1));
@@ -795,7 +885,9 @@ add(System* s, Element** first, Element** last, Allocator* allocator,
         fprintf(stderr, "add directory %s\n", name);
       }
 
-      add(first, last, new (allocator->allocate(sizeof(DirectoryElement)))
+      add(first,
+          last,
+          new (allocator->allocate(sizeof(DirectoryElement)))
           DirectoryElement(s, allocator, name));
     } break;
 
@@ -810,9 +902,10 @@ add(System* s, Element** first, Element** last, Allocator* allocator,
   }
 }
 
-Element*
-parsePath(System* s, Allocator* allocator, const char* path,
-          const char* bootLibrary)
+Element* parsePath(System* s,
+                   Allocator* allocator,
+                   const char* path,
+                   const char* bootLibrary)
 {
   Element* first = 0;
   Element* last = 0;
@@ -825,14 +918,18 @@ parsePath(System* s, Allocator* allocator, const char* path,
   return first;
 }
 
-class MyIterator: public Finder::IteratorImp {
+class MyIterator : public Finder::IteratorImp {
  public:
-  MyIterator(System* s, Allocator* allocator, Element* path):
-    s(s), allocator(allocator), e(path ? path->next : 0),
-    it(path ? path->iterator() : 0)
-  { }
+  MyIterator(System* s, Allocator* allocator, Element* path)
+      : s(s),
+        allocator(allocator),
+        e(path ? path->next : 0),
+        it(path ? path->iterator() : 0)
+  {
+  }
 
-  virtual const char* next(unsigned* size) {
+  virtual const char* next(unsigned* size)
+  {
     while (it) {
       const char* v = it->next(size);
       if (v) {
@@ -850,8 +947,10 @@ class MyIterator: public Finder::IteratorImp {
     return 0;
   }
 
-  virtual void dispose() {
-    if (it) it->dispose();
+  virtual void dispose()
+  {
+    if (it)
+      it->dispose();
     allocator->free(this, sizeof(*this));
   }
 
@@ -861,42 +960,51 @@ class MyIterator: public Finder::IteratorImp {
   Element::Iterator* it;
 };
 
-class MyFinder: public Finder {
+class MyFinder : public Finder {
  public:
-  MyFinder(System* system, Allocator* allocator, const char* path,
-           const char* bootLibrary):
-    system(system),
-    allocator(allocator),
-    path_(parsePath(system, allocator, path, bootLibrary)),
-    pathString(copy(allocator, path))
-  { }
-
-  MyFinder(System* system, Allocator* allocator, const uint8_t* jarData,
-           unsigned jarLength):
-    system(system),
-    allocator(allocator),
-    path_(new (allocator->allocate(sizeof(JarElement)))
-          JarElement(system, allocator, jarData, jarLength)),
-    pathString(0)
-  { }
-
-  virtual IteratorImp* iterator() {
-    return new (allocator->allocate(sizeof(MyIterator)))
-      MyIterator(system, allocator, path_);
+  MyFinder(System* system,
+           Allocator* allocator,
+           const char* path,
+           const char* bootLibrary)
+      : system(system),
+        allocator(allocator),
+        path_(parsePath(system, allocator, path, bootLibrary)),
+        pathString(copy(allocator, path))
+  {
   }
 
-  virtual System::Region* find(const char* name) {
+  MyFinder(System* system,
+           Allocator* allocator,
+           const uint8_t* jarData,
+           unsigned jarLength)
+      : system(system),
+        allocator(allocator),
+        path_(new (allocator->allocate(sizeof(JarElement)))
+              JarElement(system, allocator, jarData, jarLength)),
+        pathString(0)
+  {
+  }
+
+  virtual IteratorImp* iterator()
+  {
+    return new (allocator->allocate(sizeof(MyIterator)))
+        MyIterator(system, allocator, path_);
+  }
+
+  virtual System::Region* find(const char* name)
+  {
     for (Element* e = path_; e; e = e->next) {
       System::Region* r = e->find(name);
       if (r) {
         return r;
       }
     }
-    
+
     return 0;
   }
 
-  virtual System::FileType stat(const char* name, unsigned* length,
+  virtual System::FileType stat(const char* name,
+                                unsigned* length,
                                 bool tryDirectory)
   {
     for (Element* e = path_; e; e = e->next) {
@@ -905,19 +1013,19 @@ class MyFinder: public Finder {
         return type;
       }
     }
-    
+
     return System::TypeDoesNotExist;
   }
 
-  virtual const char* urlPrefix(const char* name) {
-    void *finderElementPtr = NULL;
+  virtual const char* urlPrefix(const char* name)
+  {
+    void* finderElementPtr = NULL;
     return nextUrlPrefix(name, finderElementPtr);
   }
 
-  virtual const char* nextUrlPrefix(const char* name,
-      void *&finderElementPtr)
+  virtual const char* nextUrlPrefix(const char* name, void*& finderElementPtr)
   {
-    Element *&e = reinterpret_cast<Element*&>(finderElementPtr);
+    Element*& e = reinterpret_cast<Element*&>(finderElementPtr);
     e = e ? e->next : path_;
     for (; e; e = e->next) {
       unsigned length;
@@ -930,7 +1038,8 @@ class MyFinder: public Finder {
     return 0;
   }
 
-  virtual const char* sourceUrl(const char* name) {
+  virtual const char* sourceUrl(const char* name)
+  {
     for (Element* e = path_; e; e = e->next) {
       unsigned length;
       System::FileType type = e->stat(name, &length, true);
@@ -942,11 +1051,13 @@ class MyFinder: public Finder {
     return 0;
   }
 
-  virtual const char* path() {
+  virtual const char* path()
+  {
     return pathString;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     for (Element* e = path_; e;) {
       Element* t = e;
       e = e->next;
@@ -964,21 +1075,24 @@ class MyFinder: public Finder {
   const char* pathString;
 };
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-AVIAN_EXPORT Finder*
-makeFinder(System* s, Allocator* a, const char* path, const char* bootLibrary)
+AVIAN_EXPORT Finder* makeFinder(System* s,
+                                Allocator* a,
+                                const char* path,
+                                const char* bootLibrary)
 {
   return new (a->allocate(sizeof(MyFinder))) MyFinder(s, a, path, bootLibrary);
 }
 
-Finder*
-makeFinder(System* s, Allocator* a, const uint8_t* jarData, unsigned jarLength)
+Finder* makeFinder(System* s,
+                   Allocator* a,
+                   const uint8_t* jarData,
+                   unsigned jarLength)
 {
-  return new (a->allocate(sizeof(MyFinder)))
-    MyFinder(s, a, jarData, jarLength);
+  return new (a->allocate(sizeof(MyFinder))) MyFinder(s, a, jarData, jarLength);
 }
 
-} // namespace vm
+}  // namespace vm

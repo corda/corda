@@ -17,96 +17,82 @@
 namespace vm {
 
 template <class T>
-inline T
-targetV1(T v)
+inline T targetV1(T v)
 {
   return v;
 }
 
 template <class T>
-inline T
-swapV2(T v)
+inline T swapV2(T v)
 {
-  return (((v >> 8) & 0xFF) |
-          ((v << 8)));
+  return (((v >> 8) & 0xFF) | ((v << 8)));
 }
 
 template <class T>
-inline T
-swapV4(T v)
+inline T swapV4(T v)
 {
-  return (((v >> 24) & 0x000000FF) |
-          ((v >>  8) & 0x0000FF00) |
-          ((v <<  8) & 0x00FF0000) |
-          ((v << 24)));
+  return (((v >> 24) & 0x000000FF) | ((v >> 8) & 0x0000FF00)
+          | ((v << 8) & 0x00FF0000) | ((v << 24)));
 }
 
 template <class T>
-inline T
-swapV8(T v)
+inline T swapV8(T v)
 {
-  return (((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF)) |
-          ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00)) |
-          ((static_cast<uint64_t>(v) >> 24) & UINT64_C(0x0000000000FF0000)) |
-          ((static_cast<uint64_t>(v) >>  8) & UINT64_C(0x00000000FF000000)) |
-          ((static_cast<uint64_t>(v) <<  8) & UINT64_C(0x000000FF00000000)) |
-          ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000)) |
-          ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000)) |
-          ((static_cast<uint64_t>(v) << 56)));
+  return (((static_cast<uint64_t>(v) >> 56) & UINT64_C(0x00000000000000FF))
+          | ((static_cast<uint64_t>(v) >> 40) & UINT64_C(0x000000000000FF00))
+          | ((static_cast<uint64_t>(v) >> 24) & UINT64_C(0x0000000000FF0000))
+          | ((static_cast<uint64_t>(v) >> 8) & UINT64_C(0x00000000FF000000))
+          | ((static_cast<uint64_t>(v) << 8) & UINT64_C(0x000000FF00000000))
+          | ((static_cast<uint64_t>(v) << 24) & UINT64_C(0x0000FF0000000000))
+          | ((static_cast<uint64_t>(v) << 40) & UINT64_C(0x00FF000000000000))
+          | ((static_cast<uint64_t>(v) << 56)));
 }
 
 #ifdef TARGET_OPPOSITE_ENDIAN
 
 template <class T>
-inline T
-targetV2(T v)
+inline T targetV2(T v)
 {
   return swapV2(v);
 }
 
 template <class T>
-inline T
-targetV4(T v)
+inline T targetV4(T v)
 {
   return swapV4(v);
 }
 
 template <class T>
-inline T
-targetV8(T v)
+inline T targetV8(T v)
 {
   return swapV8(v);
 }
 
 #else
 template <class T>
-inline T
-targetV2(T v)
+inline T targetV2(T v)
 {
   return v;
 }
 
 template <class T>
-inline T
-targetV4(T v)
+inline T targetV4(T v)
 {
   return v;
 }
 
 template <class T>
-inline T
-targetV8(T v)
+inline T targetV8(T v)
 {
   return v;
 }
 #endif
 
 #ifdef TARGET_BYTES_PER_WORD
-#  if (TARGET_BYTES_PER_WORD == 8)
+#if (TARGET_BYTES_PER_WORD == 8)
 
 template <class T>
-inline T
-targetVW(T v)
+inline T targetVW(T v)
 {
   return targetV8(v);
 }
@@ -120,11 +106,10 @@ const unsigned TargetClassVtable = 136;
 
 const unsigned TargetFieldOffset = 12;
 
-#  elif (TARGET_BYTES_PER_WORD == 4)
+#elif(TARGET_BYTES_PER_WORD == 4)
 
 template <class T>
-inline T
-targetVW(T v)
+inline T targetVW(T v)
 {
   return targetV4(v);
 }
@@ -138,11 +123,11 @@ const unsigned TargetClassVtable = 72;
 
 const unsigned TargetFieldOffset = 8;
 
-#  else
-#    error
-#  endif
 #else
-#  error
+#error
+#endif
+#else
+#error
 #endif
 
 const unsigned TargetBytesPerWord = TARGET_BYTES_PER_WORD;
@@ -150,19 +135,18 @@ const unsigned TargetBytesPerWord = TARGET_BYTES_PER_WORD;
 const unsigned TargetBitsPerWord = TargetBytesPerWord * 8;
 
 const target_uintptr_t TargetPointerMask
-= ((~static_cast<target_uintptr_t>(0)) / TargetBytesPerWord)
-  * TargetBytesPerWord;
+    = ((~static_cast<target_uintptr_t>(0)) / TargetBytesPerWord)
+      * TargetBytesPerWord;
 
 const unsigned TargetArrayLength = TargetBytesPerWord;
 const unsigned TargetArrayBody = TargetBytesPerWord * 2;
 
-inline void
-targetMarkBit(target_uintptr_t* map, unsigned i)
+inline void targetMarkBit(target_uintptr_t* map, unsigned i)
 {
-  map[wordOf<target_uintptr_t>(i)] |=
-    targetVW(static_cast<target_uintptr_t>(1) << bitOf<target_uintptr_t>(i));
+  map[wordOf<target_uintptr_t>(i)] |= targetVW(static_cast<target_uintptr_t>(1)
+                                               << bitOf<target_uintptr_t>(i));
 }
 
-} // namespace vm
+}  // namespace vm
 
-#endif//TARGET_H
+#endif  // TARGET_H

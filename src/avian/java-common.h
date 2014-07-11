@@ -68,16 +68,16 @@ typedef uintptr_t jmethodID;
 
 union jvalue {
   jboolean z;
-  jbyte    b;
-  jchar    c;
-  jshort   s;
-  jint     i;
-  jlong    j;
-  jfloat   f;
-  jdouble  d;
-  jobject  l;
+  jbyte b;
+  jchar c;
+  jshort s;
+  jint i;
+  jlong j;
+  jfloat f;
+  jdouble d;
+  jobject l;
 };
 
-} // namespace vm
+}  // namespace vm
 
-#endif // JAVA_COMMON_H
+#endif  // JAVA_COMMON_H

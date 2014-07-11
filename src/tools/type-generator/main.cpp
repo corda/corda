@@ -199,7 +199,6 @@ class Module {
     }
   }
 };
-
 }
 }
 }
@@ -251,7 +250,8 @@ class Character : public Object {
  public:
   char value;
 
-  static Character* make(char value) {
+  static Character* make(char value)
+  {
     Character* o = allocate<Character>();
     o->type = Object::Character;
     o->value = value;
@@ -259,8 +259,7 @@ class Character : public Object {
   }
 };
 
-char
-character(Object* o)
+char character(Object* o)
 {
   assert(o->type == Object::Character);
   return static_cast<Character*>(o)->value;
@@ -270,19 +269,22 @@ class String : public Object {
  public:
   const char* value;
 
-  static String* make(Object* s) {
+  static String* make(Object* s)
+  {
     assert(s);
 
     String* o = allocate<String>();
     o->type = Object::String;
 
     unsigned length = 0;
-    for (Object* p = s; p; p = cdr(p)) ++ length;
+    for (Object* p = s; p; p = cdr(p))
+      ++length;
 
     char* value = static_cast<char*>(malloc(length + 1));
     assert(value);
     unsigned i = 0;
-    for (Object* p = s; p; p = cdr(p)) value[i++] = character(car(p));
+    for (Object* p = s; p; p = cdr(p))
+      value[i++] = character(car(p));
     value[i] = 0;
 
     o->value = value;
@@ -290,8 +292,7 @@ class String : public Object {
   }
 };
 
-const char*
-string(Object* o)
+const char* string(Object* o)
 {
   assert(o->type == Object::String);
   return static_cast<String*>(o)->value;
@@ -299,7 +300,8 @@ string(Object* o)
 
 class Singleton : public Object {
  public:
-  static Singleton* make(Object::ObjectType type) {
+  static Singleton* make(Object::ObjectType type)
+  {
     Singleton* o = allocate<Singleton>();
     o->type = type;
     return o;
@@ -314,8 +316,7 @@ std::string capitalize(const std::string& s)
   return s;
 }
 
-Object*
-read(Input* in, Object* eos, int level)
+Object* read(Input* in, Object* eos, int level)
 {
   List s;
 
@@ -349,7 +350,10 @@ read(Input* in, Object* eos, int level)
       }
     } break;
 
-    case ' ': case '\t': case '\n': case '\r': {
+    case ' ':
+    case '\t':
+    case '\n':
+    case '\r': {
       if (s.first) {
         return String::make(s.first);
       }
@@ -573,8 +577,7 @@ void parseSubdeclaration(Module& module, ClassParser& clparser, Object* p)
   }
 }
 
-const char*
-append(const char* a, const char* b, const char* c, const char* d)
+const char* append(const char* a, const char* b, const char* c, const char* d)
 {
   unsigned al = strlen(a);
   unsigned bl = strlen(b);
@@ -588,14 +591,12 @@ append(const char* a, const char* b, const char* c, const char* d)
   return p;
 }
 
-const char*
-append(const char* a, const char* b)
+const char* append(const char* a, const char* b)
 {
   return append(a, b, "", "");
 }
 
-const char*
-fieldType(const char* spec)
+const char* fieldType(const char* spec)
 {
   switch (*spec) {
   case 'B':
@@ -614,7 +615,8 @@ fieldType(const char* spec)
   case '[':
     return "object";
 
-  default: abort();
+  default:
+    abort();
   }
 }
 
@@ -622,8 +624,8 @@ void parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
 {
   uint32_t magic = s->read4();
   assert(magic == 0xCAFEBABE);
-  s->read2(); // minor version
-  s->read2(); // major version
+  s->read2();  // minor version
+  s->read2();  // major version
 
   unsigned poolCount = s->read2() - 1;
   uintptr_t pool[poolCount];
@@ -665,25 +667,26 @@ void parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
       pool[i] = s->read4();
       break;
 
-    default: abort();
+    default:
+      abort();
     }
   }
 
-  s->read2(); // flags
-  s->read2(); // name
+  s->read2();  // flags
+  s->read2();  // name
 
   unsigned superIndex = s->read2();
   if (superIndex) {
-    const char* name = reinterpret_cast<const char*>
-      (pool[pool[superIndex - 1] - 1]);
+    const char* name
+        = reinterpret_cast<const char*>(pool[pool[superIndex - 1] - 1]);
     Class* super = module.javaClasses[name];
     clparser.setSuper(super);
   }
 
   unsigned interfaceCount = s->read2();
   s->skip(interfaceCount * 2);
-//   for (unsigned i = 0; i < interfaceCount; ++i) {
-//     const char* name = reinterpret_cast<const char*>
+  //   for (unsigned i = 0; i < interfaceCount; ++i) {
+  //     const char* name = reinterpret_cast<const char*>
   //       (pool[pool[s->read2() - 1] - 1]);
   //   }
 
@@ -759,9 +762,10 @@ void parseType(Finder* finder, Module& module, Object* p)
   bool isJavaType = javaName and *javaName != '[';
 
   if (isJavaType) {
-    class Client: public Stream::Client {
+    class Client : public Stream::Client {
      public:
-      virtual void NO_RETURN handleError() {
+      virtual void NO_RETURN handleError()
+      {
         abort();
       }
     } client;
@@ -1339,8 +1343,7 @@ void writeEnums(Output* out, Module& module)
   }
 }
 
-void
-set(uint32_t* mask, unsigned index)
+void set(uint32_t* mask, unsigned index)
 {
   if (index < 32) {
     *mask |= 1 << index;
@@ -1566,18 +1569,16 @@ void writeMaps(Output* out, Module& module)
   out->write("\n};");
 }
 
-} // namespace local
+}  // namespace local
 
-} // namespace
+}  // namespace
 
-extern "C" uint64_t
-vmNativeCall(void*, void*, unsigned, unsigned)
+extern "C" uint64_t vmNativeCall(void*, void*, unsigned, unsigned)
 {
   abort();
 }
 
-extern "C" void
-vmJump(void*, void*, void*, void*, uintptr_t, uintptr_t)
+extern "C" void vmJump(void*, void*, void*, void*, uintptr_t, uintptr_t)
 {
   abort();
 }

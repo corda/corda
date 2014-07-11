@@ -29,35 +29,45 @@ class Promise {
 
   virtual int64_t value() = 0;
   virtual bool resolved() = 0;
-  virtual Listener* listen(unsigned) { return 0; }
+  virtual Listener* listen(unsigned)
+  {
+    return 0;
+  }
 };
 
-class ResolvedPromise: public Promise {
+class ResolvedPromise : public Promise {
  public:
-  ResolvedPromise(int64_t value): value_(value) { }
+  ResolvedPromise(int64_t value) : value_(value)
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     return value_;
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return true;
   }
 
   int64_t value_;
 };
 
-class ShiftMaskPromise: public Promise {
+class ShiftMaskPromise : public Promise {
  public:
-  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask):
-    base(base), shift(shift), mask(mask)
-  { }
+  ShiftMaskPromise(Promise* base, unsigned shift, int64_t mask)
+      : base(base), shift(shift), mask(mask)
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     return (base->value() >> shift) & mask;
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return base->resolved();
   }
 
@@ -66,17 +76,19 @@ class ShiftMaskPromise: public Promise {
   int64_t mask;
 };
 
-class CombinedPromise: public Promise {
+class CombinedPromise : public Promise {
  public:
-  CombinedPromise(Promise* low, Promise* high):
-    low(low), high(high)
-  { }
+  CombinedPromise(Promise* low, Promise* high) : low(low), high(high)
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     return low->value() | (high->value() << 32);
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return low->resolved() and high->resolved();
   }
 
@@ -84,17 +96,19 @@ class CombinedPromise: public Promise {
   Promise* high;
 };
 
-class OffsetPromise: public Promise {
+class OffsetPromise : public Promise {
  public:
-  OffsetPromise(Promise* base, int64_t offset):
-    base(base), offset(offset)
-  { }
+  OffsetPromise(Promise* base, int64_t offset) : base(base), offset(offset)
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     return base->value() + offset;
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return base->resolved();
   }
 
@@ -102,21 +116,25 @@ class OffsetPromise: public Promise {
   int64_t offset;
 };
 
-class ListenPromise: public Promise {
+class ListenPromise : public Promise {
  public:
   ListenPromise(vm::System* s, util::Allocator* allocator)
       : s(s), allocator(allocator), listener(0)
-  { }
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     abort(s);
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return false;
   }
 
-  virtual Listener* listen(unsigned sizeInBytes) {
+  virtual Listener* listen(unsigned sizeInBytes)
+  {
     Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
     l->next = listener;
     listener = l;
@@ -129,24 +147,28 @@ class ListenPromise: public Promise {
   Promise* promise;
 };
 
-class DelayedPromise: public ListenPromise {
+class DelayedPromise : public ListenPromise {
  public:
   DelayedPromise(vm::System* s,
                  util::Allocator* allocator,
                  Promise* basis,
                  DelayedPromise* next)
       : ListenPromise(s, allocator), basis(basis), next(next)
-  { }
+  {
+  }
 
-  virtual int64_t value() {
+  virtual int64_t value()
+  {
     abort(s);
   }
 
-  virtual bool resolved() {
+  virtual bool resolved()
+  {
     return false;
   }
 
-  virtual Listener* listen(unsigned sizeInBytes) {
+  virtual Listener* listen(unsigned sizeInBytes)
+  {
     Listener* l = static_cast<Listener*>(allocator->allocate(sizeInBytes));
     l->next = listener;
     listener = l;
@@ -157,7 +179,7 @@ class DelayedPromise: public ListenPromise {
   DelayedPromise* next;
 };
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
 #endif  // AVIAN_CODEGEN_PROMISE_H

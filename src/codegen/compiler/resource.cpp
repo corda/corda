@@ -18,154 +18,173 @@ namespace compiler {
 
 const bool DebugResources = false;
 
-
 void steal(Context* c, Resource* r, Value* thief);
 
-void decrementAvailableGeneralRegisterCount(Context* c) {
+void decrementAvailableGeneralRegisterCount(Context* c)
+{
   assertT(c, c->availableGeneralRegisterCount);
-  -- c->availableGeneralRegisterCount;
-  
+  --c->availableGeneralRegisterCount;
+
   if (DebugResources) {
-    fprintf(stderr, "%d registers available\n",
-            c->availableGeneralRegisterCount);
+    fprintf(
+        stderr, "%d registers available\n", c->availableGeneralRegisterCount);
   }
 }
 
-void incrementAvailableGeneralRegisterCount(Context* c) {
-  ++ c->availableGeneralRegisterCount;
+void incrementAvailableGeneralRegisterCount(Context* c)
+{
+  ++c->availableGeneralRegisterCount;
 
   if (DebugResources) {
-    fprintf(stderr, "%d registers available\n",
-            c->availableGeneralRegisterCount);
+    fprintf(
+        stderr, "%d registers available\n", c->availableGeneralRegisterCount);
   }
 }
 
-void freezeResource(Context* c, Resource* r, Value* v) {
+void freezeResource(Context* c, Resource* r, Value* v)
+{
   if (DebugResources) {
-    char buffer[256]; r->toString(c, buffer, 256);
+    char buffer[256];
+    r->toString(c, buffer, 256);
     fprintf(stderr, "%p freeze %s to %d\n", v, buffer, r->freezeCount + 1);
   }
-    
-  ++ r->freezeCount;
+
+  ++r->freezeCount;
 }
 
-void thawResource(Context* c, Resource* r, Value* v) {
+void thawResource(Context* c, Resource* r, Value* v)
+{
   if (not r->reserved) {
     if (DebugResources) {
-      char buffer[256]; r->toString(c, buffer, 256);
+      char buffer[256];
+      r->toString(c, buffer, 256);
       fprintf(stderr, "%p thaw %s to %d\n", v, buffer, r->freezeCount - 1);
     }
 
     assertT(c, r->freezeCount);
 
-    -- r->freezeCount;
+    --r->freezeCount;
   }
 }
 
+Resource::Resource(bool reserved)
+    : value(0),
+      site(0),
+      previousAcquired(0),
+      nextAcquired(0),
+      freezeCount(0),
+      referenceCount(0),
+      reserved(reserved)
+{
+}
 
-Resource::Resource(bool reserved):
-  value(0), site(0), previousAcquired(0), nextAcquired(0), freezeCount(0),
-  referenceCount(0), reserved(reserved)
-{ }
+RegisterResource::RegisterResource(bool reserved) : Resource(reserved)
+{
+}
 
-RegisterResource::RegisterResource(bool reserved):
-  Resource(reserved)
-{ }
-
-void RegisterResource::freeze(Context* c, Value* v) {
+void RegisterResource::freeze(Context* c, Value* v)
+{
   if (not reserved) {
     freezeResource(c, this, v);
 
     if (freezeCount == 1
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
-    {
+        and ((1 << index(c)) & c->regFile->generalRegisters.mask)) {
       decrementAvailableGeneralRegisterCount(c);
     }
   }
 }
 
-void RegisterResource::thaw(Context* c, Value* v) {
+void RegisterResource::thaw(Context* c, Value* v)
+{
   if (not reserved) {
     thawResource(c, this, v);
 
     if (freezeCount == 0
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask))
-    {
+        and ((1 << index(c)) & c->regFile->generalRegisters.mask)) {
       incrementAvailableGeneralRegisterCount(c);
     }
   }
 }
 
-unsigned RegisterResource::toString(Context* c, char* buffer, unsigned bufferSize) {
+unsigned RegisterResource::toString(Context* c,
+                                    char* buffer,
+                                    unsigned bufferSize)
+{
   return vm::snprintf(buffer, bufferSize, "register %d", index(c));
 }
 
-unsigned RegisterResource::index(Context* c) {
+unsigned RegisterResource::index(Context* c)
+{
   return this - c->registerResources;
 }
 
-void RegisterResource::increment(Context* c) {
+void RegisterResource::increment(Context* c)
+{
   if (not this->reserved) {
     if (DebugResources) {
-      char buffer[256]; this->toString(c, buffer, 256);
+      char buffer[256];
+      this->toString(c, buffer, 256);
       fprintf(stderr, "increment %s to %d\n", buffer, this->referenceCount + 1);
     }
 
-    ++ this->referenceCount;
+    ++this->referenceCount;
 
     if (this->referenceCount == 1
-        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask))
-    {
+        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask)) {
       decrementAvailableGeneralRegisterCount(c);
     }
   }
 }
 
-void RegisterResource::decrement(Context* c) {
+void RegisterResource::decrement(Context* c)
+{
   if (not this->reserved) {
     if (DebugResources) {
-      char buffer[256]; this->toString(c, buffer, 256);
+      char buffer[256];
+      this->toString(c, buffer, 256);
       fprintf(stderr, "decrement %s to %d\n", buffer, this->referenceCount - 1);
     }
 
     assertT(c, this->referenceCount > 0);
 
-    -- this->referenceCount;
+    --this->referenceCount;
 
     if (this->referenceCount == 0
-        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask))
-    {
+        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask)) {
       incrementAvailableGeneralRegisterCount(c);
     }
   }
 }
 
-
-
-void FrameResource::freeze(Context* c, Value* v) {
+void FrameResource::freeze(Context* c, Value* v)
+{
   freezeResource(c, this, v);
 }
 
-void FrameResource::thaw(Context* c, Value* v) {
+void FrameResource::thaw(Context* c, Value* v)
+{
   thawResource(c, this, v);
 }
 
-unsigned FrameResource::toString(Context* c, char* buffer, unsigned bufferSize) {
+unsigned FrameResource::toString(Context* c, char* buffer, unsigned bufferSize)
+{
   return vm::snprintf(buffer, bufferSize, "frame %d", index(c));
 }
 
-unsigned FrameResource::index(Context* c) {
+unsigned FrameResource::index(Context* c)
+{
   return this - c->frameResources;
 }
 
-
-void acquire(Context* c, Resource* resource, Value* value, Site* site) {
+void acquire(Context* c, Resource* resource, Value* value, Site* site)
+{
   assertT(c, value);
   assertT(c, site);
 
   if (not resource->reserved) {
     if (DebugResources) {
-      char buffer[256]; resource->toString(c, buffer, 256);
+      char buffer[256];
+      resource->toString(c, buffer, 256);
       fprintf(stderr, "%p acquire %s\n", value, buffer);
     }
 
@@ -178,7 +197,7 @@ void acquire(Context* c, Resource* resource, Value* value, Site* site) {
 
     if (c->acquiredResources) {
       c->acquiredResources->previousAcquired = resource;
-      resource->nextAcquired = c->acquiredResources;        
+      resource->nextAcquired = c->acquiredResources;
     }
     c->acquiredResources = resource;
 
@@ -187,10 +206,15 @@ void acquire(Context* c, Resource* resource, Value* value, Site* site) {
   }
 }
 
-void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNUSED) {
+void release(Context* c,
+             Resource* resource,
+             Value* value UNUSED,
+             Site* site UNUSED)
+{
   if (not resource->reserved) {
     if (DebugResources) {
-      char buffer[256]; resource->toString(c, buffer, 256);
+      char buffer[256];
+      resource->toString(c, buffer, 256);
       fprintf(stderr, "%p release %s\n", resource->value, buffer);
     }
 
@@ -214,13 +238,12 @@ void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNU
       assertT(c, c->acquiredResources == resource);
       c->acquiredResources = next;
     }
-    
+
     resource->value = 0;
     resource->site = 0;
   }
 }
 
-
-} // namespace compiler
-} // namespace codegen
+}  // namespace compiler
+}  // namespace codegen
 }  // namespace avian

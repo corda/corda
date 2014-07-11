@@ -18,16 +18,16 @@ using namespace avian::util;
 
 namespace vm {
 
-object
-getTrace(Thread* t, unsigned skipCount)
+object getTrace(Thread* t, unsigned skipCount)
 {
-  class Visitor: public Processor::StackVisitor {
+  class Visitor : public Processor::StackVisitor {
    public:
-    Visitor(Thread* t, int skipCount):
-      t(t), trace(0), skipCount(skipCount)
-    { }
+    Visitor(Thread* t, int skipCount) : t(t), trace(0), skipCount(skipCount)
+    {
+    }
 
-    virtual bool visit(Processor::StackWalker* walker) {
+    virtual bool visit(Processor::StackWalker* walker)
+    {
       if (skipCount == 0) {
         GcMethod* method = walker->method();
         if (isAssignableFrom(t, type(t, GcThrowable::Type), method->class_())
@@ -39,7 +39,7 @@ getTrace(Thread* t, unsigned skipCount)
           return false;
         }
       } else {
-        -- skipCount;
+        --skipCount;
         return true;
       }
     }
@@ -51,7 +51,8 @@ getTrace(Thread* t, unsigned skipCount)
 
   t->m->processor->walkStack(t, &v);
 
-  if (v.trace == 0) v.trace = makeObjectArray(t, 0);
+  if (v.trace == 0)
+    v.trace = makeObjectArray(t, 0);
 
   return v.trace;
 }
@@ -63,23 +64,24 @@ bool compatibleArrayTypes(Thread* t UNUSED, GcClass* a, GcClass* b)
                              or (b->vmFlags() & PrimitiveFlag))));
 }
 
-void
-arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
-          int32_t dstOffset, int32_t length)
+void arrayCopy(Thread* t,
+               object src,
+               int32_t srcOffset,
+               object dst,
+               int32_t dstOffset,
+               int32_t length)
 {
   if (LIKELY(src and dst)) {
-    if (LIKELY(compatibleArrayTypes
-               (t, objectClass(t, src), objectClass(t, dst))))
-    {
+    if (LIKELY(compatibleArrayTypes(
+            t, objectClass(t, src), objectClass(t, dst)))) {
       unsigned elementSize = objectClass(t, src)->arrayElementSize();
 
       if (LIKELY(elementSize)) {
         intptr_t sl = fieldAtOffset<uintptr_t>(src, BytesPerWord);
         intptr_t dl = fieldAtOffset<uintptr_t>(dst, BytesPerWord);
         if (LIKELY(length > 0)) {
-          if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl and
-                     dstOffset >= 0 and dstOffset + length <= dl))
-          {
+          if (LIKELY(srcOffset >= 0 and srcOffset + length <= sl
+                     and dstOffset >= 0 and dstOffset + length <= dl)) {
             uint8_t* sbody = &fieldAtOffset<uint8_t>(src, ArrayBody);
             uint8_t* dbody = &fieldAtOffset<uint8_t>(dst, ArrayBody);
             if (src == dst) {
@@ -113,8 +115,7 @@ arrayCopy(Thread* t, object src, int32_t srcOffset, object dst,
   throwNew(t, GcArrayStoreException::Type);
 }
 
-void
-runOnLoadIfFound(Thread* t, System::Library* library)
+void runOnLoadIfFound(Thread* t, System::Library* library)
 {
   void* p = library->resolve("JNI_OnLoad");
 
@@ -128,14 +129,13 @@ runOnLoadIfFound(Thread* t, System::Library* library)
 #endif
 
   if (p) {
-    jint (JNICALL * JNI_OnLoad)(Machine*, void*);
+    jint(JNICALL * JNI_OnLoad)(Machine*, void*);
     memcpy(&JNI_OnLoad, &p, sizeof(void*));
     JNI_OnLoad(t->m, 0);
   }
 }
 
-System::Library*
-loadLibrary(Thread* t, const char* name)
+System::Library* loadLibrary(Thread* t, const char* name)
 {
   ACQUIRE(t, t->m->classLock);
 
@@ -157,9 +157,12 @@ loadLibrary(Thread* t, const char* name)
   }
 }
 
-System::Library*
-loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
-            bool runOnLoad, bool throw_ = true)
+System::Library* loadLibrary(Thread* t,
+                             const char* path,
+                             const char* name,
+                             bool mapName,
+                             bool runOnLoad,
+                             bool throw_ = true)
 {
   ACQUIRE(t, t->m->classLock);
 
@@ -171,8 +174,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
       const char* s = builtins;
       while (*s) {
         if (::strncmp(s, name, nameLength) == 0
-            and (s[nameLength] == ',' or s[nameLength] == 0))
-        {
+            and (s[nameLength] == ',' or s[nameLength] == 0)) {
           // library is built in to this executable
           if (runOnLoad and not t->m->triedBuiltinOnLoad) {
             t->m->triedBuiltinOnLoad = true;
@@ -182,8 +184,10 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
           }
           return t->m->libraries;
         } else {
-          while (*s and *s != ',') ++ s;
-          if (*s) ++ s;
+          while (*s and *s != ',')
+            ++s;
+          if (*s)
+            ++s;
         }
       }
     }
@@ -192,8 +196,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     const char* suffix = t->m->system->librarySuffix();
     unsigned mappedNameLength = nameLength + strlen(prefix) + strlen(suffix);
 
-    mappedName = static_cast<char*>
-      (t->m->heap->allocate(mappedNameLength + 1));
+    mappedName = static_cast<char*>(t->m->heap->allocate(mappedNameLength + 1));
 
     snprintf(mappedName, mappedNameLength + 1, "%s%s%s", prefix, name, suffix);
 
@@ -203,25 +206,28 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
     mappedName = 0;
   }
 
-  THREAD_RESOURCE2
-    (t, char*, mappedName, unsigned, nameLength, if (mappedName) {
-      t->m->heap->free(mappedName, nameLength + 1);
-    });
+  THREAD_RESOURCE2(t, char*, mappedName, unsigned, nameLength, if (mappedName) {
+    t->m->heap->free(mappedName, nameLength + 1);
+  });
 
   System::Library* lib = 0;
   for (Tokenizer tokenizer(path, t->m->system->pathSeparator());
-       tokenizer.hasMore();)
-  {
+       tokenizer.hasMore();) {
     String token(tokenizer.next());
 
     unsigned fullNameLength = token.length + 1 + nameLength;
     THREAD_RUNTIME_ARRAY(t, char, fullName, fullNameLength + 1);
 
-    snprintf(RUNTIME_ARRAY_BODY(fullName), fullNameLength + 1,
-             "%.*s/%s", token.length, token.text, name);
+    snprintf(RUNTIME_ARRAY_BODY(fullName),
+             fullNameLength + 1,
+             "%.*s/%s",
+             token.length,
+             token.text,
+             name);
 
     lib = loadLibrary(t, RUNTIME_ARRAY_BODY(fullName));
-    if (lib) break;
+    if (lib)
+      break;
   }
 
   if (lib == 0) {
@@ -243,8 +249,7 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
   return lib;
 }
 
-object
-clone(Thread* t, object o)
+object clone(Thread* t, object o)
 {
   PROTECT(t, o);
 
@@ -396,10 +401,10 @@ GcPair* resolveParameterTypes(Thread* t,
     switch (spec->body()[offset]) {
     case 'L': {
       unsigned start = offset;
-      ++ offset;
+      ++offset;
       while (spec->body()[offset] != ';')
         ++offset;
-      ++ offset;
+      ++offset;
 
       GcClass* type
           = resolveClassBySpec(t,
@@ -409,7 +414,7 @@ GcPair* resolveParameterTypes(Thread* t,
 
       list = makePair(t, type, list);
 
-      ++ count;
+      ++count;
     } break;
 
     case '[': {
@@ -418,14 +423,14 @@ GcPair* resolveParameterTypes(Thread* t,
         ++offset;
       switch (spec->body()[offset]) {
       case 'L':
-        ++ offset;
+        ++offset;
         while (spec->body()[offset] != ';')
           ++offset;
-        ++ offset;
+        ++offset;
         break;
 
       default:
-        ++ offset;
+        ++offset;
         break;
       }
 
@@ -436,13 +441,13 @@ GcPair* resolveParameterTypes(Thread* t,
                                offset - start);
 
       list = makePair(t, type, list);
-      ++ count;
+      ++count;
     } break;
 
     default:
       list = makePair(t, primitiveClass(t, spec->body()[offset]), list);
-      ++ offset;
-      ++ count;
+      ++offset;
+      ++count;
       break;
     }
   }
@@ -570,7 +575,7 @@ object invoke(Thread* t, GcMethod* method, object instance, object args)
         objectType = true;
         unsigned nameLength;
         if (*p == 'L') {
-          ++ p;
+          ++p;
           nameLength = it.s - p;
         } else {
           nameLength = (it.s - p) + 1;
@@ -588,9 +593,10 @@ object invoke(Thread* t, GcMethod* method, object instance, object args)
 
       object arg = objectArrayBody(t, args, i++);
       if ((arg == 0 and (not objectType))
-          or (arg and (not instanceOf(t, type, arg))))
-      {
-        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t, className(t, objectClass(t, arg)), 0) : reinterpret_cast<const int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+          or (arg and (not instanceOf(t, type, arg)))) {
+        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t,
+        // className(t, objectClass(t, arg)), 0) : reinterpret_cast<const
+        // int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
 
         throwNew(t, GcIllegalArgumentException::Type);
       }
@@ -602,14 +608,14 @@ object invoke(Thread* t, GcMethod* method, object instance, object args)
   unsigned returnCode = method->returnCode();
 
   THREAD_RESOURCE0(t, {
-      if (t->exception) {
-        t->exception = makeThrowable(
-            t, GcInvocationTargetException::Type, 0, 0, t->exception);
+    if (t->exception) {
+      t->exception = makeThrowable(
+          t, GcInvocationTargetException::Type, 0, 0, t->exception);
 
-        t->exception->as<GcInvocationTargetException>(t)
-            ->setTarget(t, t->exception->cause());
-      }
-    });
+      t->exception->as<GcInvocationTargetException>(t)
+          ->setTarget(t, t->exception->cause());
+    }
+  });
 
   object result;
   if (args) {
@@ -664,8 +670,7 @@ void intercept(Thread* t,
   }
 }
 
-Finder*
-getFinder(Thread* t, const char* name, unsigned nameLength)
+Finder* getFinder(Thread* t, const char* name, unsigned nameLength)
 {
   ACQUIRE(t, t->m->referenceLock);
 
@@ -718,7 +723,7 @@ object getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
         GcByteArray* outer = reference->outer();
         if (outer and byteArrayEqual(t, outer, c->name())
             and ((not publicOnly) or (reference->flags() & ACC_PUBLIC))) {
-          ++ count;
+          ++count;
         }
       }
 
@@ -734,7 +739,7 @@ object getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
           object inner
               = getJClass(t, resolveClass(t, c->loader(), reference->inner()));
 
-          -- count;
+          --count;
           reinterpret_cast<GcArray*>(result)->setBodyElement(t, count, inner);
         }
       }
@@ -787,6 +792,6 @@ unsigned classModifiers(Thread* t, GcClass* c)
   return c->flags();
 }
 
-} // namespace vm
+}  // namespace vm
 
-#endif//CLASSPATH_COMMON_H
+#endif  // CLASSPATH_COMMON_H

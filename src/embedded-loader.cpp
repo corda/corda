@@ -17,40 +17,39 @@
 #include "jni.h"
 
 extern "C" {
-  // since we aren't linking against libstdc++, we must implement this   
-  // ourselves:
-  void __cxa_pure_virtual(void) { abort(); }
+// since we aren't linking against libstdc++, we must implement this
+// ourselves:
+void __cxa_pure_virtual(void)
+{
+  abort();
+}
 
-  AVIAN_EXPORT const uint8_t*
-  bootJar(unsigned* size)
-  {
-    if(HRSRC hResInfo = FindResourceW(NULL, RESID_BOOT_JAR, reinterpret_cast<LPCWSTR>(RT_RCDATA)))
-    {
-      if(HGLOBAL hRes = LoadResource(NULL, hResInfo))
-      {
-        *size = SizeofResource(NULL, hResInfo);
-        return (const uint8_t*)LockResource(hRes);
-      }
+AVIAN_EXPORT const uint8_t* bootJar(unsigned* size)
+{
+  if (HRSRC hResInfo = FindResourceW(
+          NULL, RESID_BOOT_JAR, reinterpret_cast<LPCWSTR>(RT_RCDATA))) {
+    if (HGLOBAL hRes = LoadResource(NULL, hResInfo)) {
+      *size = SizeofResource(NULL, hResInfo);
+      return (const uint8_t*)LockResource(hRes);
     }
-
-	fprintf(stderr, "boot.jar resource not found\n");
-
-    *size = 0;
-    return NULL;
   }
-} // extern "C"
+
+  fprintf(stderr, "boot.jar resource not found\n");
+
+  *size = 0;
+  return NULL;
+}
+}  // extern "C"
 
 static void getMainClass(char* pName, int maxLen)
 {
-  if(0 == LoadString(NULL, RESID_MAIN_CLASS, pName, maxLen))
-  {
+  if (0 == LoadString(NULL, RESID_MAIN_CLASS, pName, maxLen)) {
     fprintf(stderr, "Main class not specified\n");
     strcpy(pName, "Main");
   }
 }
 
-int
-main(int ac, const char** av)
+int main(int ac, const char** av)
 {
   JavaVMInitArgs vmArgs;
   vmArgs.version = JNI_VERSION_1_2;
@@ -72,24 +71,28 @@ main(int ac, const char** av)
 
   jclass c = e->FindClass(mainClass);
   if (not e->ExceptionCheck()) {
-	jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
-	if (not e->ExceptionCheck()) {
-	  jclass stringClass = e->FindClass("java/lang/String");
-	  if (not e->ExceptionCheck()) {
-		jobjectArray a = e->NewObjectArray(ac-1, stringClass, 0);
-		if (not e->ExceptionCheck()) {
-		  for (int i = 1; i < ac; ++i) {
-			e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
-		  }
-		  
-		  e->CallStaticVoidMethod(c, m, a);
-		} else fprintf(stderr, "Couldn't create array\n");
-	  } else fprintf(stderr, "java.lang.String not found\n");
-	} else fprintf(stderr, "main method not found\n");
-  } else fprintf(stderr, "Main class not found\n");
+    jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
+    if (not e->ExceptionCheck()) {
+      jclass stringClass = e->FindClass("java/lang/String");
+      if (not e->ExceptionCheck()) {
+        jobjectArray a = e->NewObjectArray(ac - 1, stringClass, 0);
+        if (not e->ExceptionCheck()) {
+          for (int i = 1; i < ac; ++i) {
+            e->SetObjectArrayElement(a, i - 1, e->NewStringUTF(av[i]));
+          }
+
+          e->CallStaticVoidMethod(c, m, a);
+        } else
+          fprintf(stderr, "Couldn't create array\n");
+      } else
+        fprintf(stderr, "java.lang.String not found\n");
+    } else
+      fprintf(stderr, "main method not found\n");
+  } else
+    fprintf(stderr, "Main class not found\n");
 
   int exitCode = 0;
-  if(e->ExceptionCheck()) {
+  if (e->ExceptionCheck()) {
     exitCode = -1;
     e->ExceptionDescribe();
     e->ExceptionClear();

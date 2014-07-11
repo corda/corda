@@ -18,16 +18,18 @@
 namespace {
 
 // --- winnt.h ----
-#define IMAGE_SIZEOF_SHORT_NAME              8
+#define IMAGE_SIZEOF_SHORT_NAME 8
 
-#define IMAGE_FILE_RELOCS_STRIPPED           0x0001  // Relocation info stripped from file.
-#define IMAGE_FILE_LINE_NUMS_STRIPPED        0x0004  // Line nunbers stripped from file.
-#define IMAGE_FILE_MACHINE_AMD64             0x8664  // AMD64 (K8)
-#define IMAGE_FILE_MACHINE_I386              0x014c  // Intel 386.
-#define IMAGE_FILE_MACHINE_ARM               0x01c0  // ARM Little-Endian
-#define IMAGE_FILE_MACHINE_THUMB             0x01c2  // ARM Thumb/Thumb-2 Little-Endian
-#define IMAGE_FILE_MACHINE_ARMNT             0x01c4  // ARM Thumb-2 Little-Endian
-#define IMAGE_FILE_32BIT_MACHINE             0x0100  // 32 bit word machine.
+#define IMAGE_FILE_RELOCS_STRIPPED \
+  0x0001  // Relocation info stripped from file.
+#define IMAGE_FILE_LINE_NUMS_STRIPPED \
+  0x0004                                 // Line nunbers stripped from file.
+#define IMAGE_FILE_MACHINE_AMD64 0x8664  // AMD64 (K8)
+#define IMAGE_FILE_MACHINE_I386 0x014c   // Intel 386.
+#define IMAGE_FILE_MACHINE_ARM 0x01c0    // ARM Little-Endian
+#define IMAGE_FILE_MACHINE_THUMB 0x01c2  // ARM Thumb/Thumb-2 Little-Endian
+#define IMAGE_FILE_MACHINE_ARMNT 0x01c4  // ARM Thumb-2 Little-Endian
+#define IMAGE_FILE_32BIT_MACHINE 0x0100  // 32 bit word machine.
 
 #define IMAGE_SCN_ALIGN_1BYTES 0x100000
 #define IMAGE_SCN_ALIGN_2BYTES 0x200000
@@ -79,8 +81,7 @@ struct IMAGE_SYMBOL {
 } __attribute__((packed));
 // --- winnt.h ----
 
-inline unsigned
-pad(unsigned n)
+inline unsigned pad(unsigned n)
 {
   return (n + (4 - 1)) & ~(4 - 1);
 }
@@ -88,13 +89,11 @@ pad(unsigned n)
 using namespace avian::tools;
 using namespace avian::util;
 
-template<unsigned BytesPerWord, PlatformInfo::Architecture Architecture>
+template <unsigned BytesPerWord, PlatformInfo::Architecture Architecture>
 class WindowsPlatform : public Platform {
-public:
-
-
+ public:
   class FileWriter {
-  public:
+   public:
     unsigned sectionCount;
     unsigned symbolCount;
     unsigned dataStart;
@@ -105,11 +104,11 @@ public:
     StringTable strings;
     Buffer symbols;
 
-    FileWriter(unsigned machine, unsigned machineMask, unsigned symbolCount):
-      sectionCount(0),
-      symbolCount(symbolCount),
-      dataStart(sizeof(IMAGE_FILE_HEADER)),
-      dataOffset(0)
+    FileWriter(unsigned machine, unsigned machineMask, unsigned symbolCount)
+        : sectionCount(0),
+          symbolCount(symbolCount),
+          dataStart(sizeof(IMAGE_FILE_HEADER)),
+          dataOffset(0)
     {
       header.Machine = machine;
       // header.NumberOfSections = sectionCount;
@@ -120,11 +119,11 @@ public:
       // header.NumberOfSymbols = symbolCount;
       header.SizeOfOptionalHeader = 0;
       header.Characteristics = IMAGE_FILE_RELOCS_STRIPPED
-        | IMAGE_FILE_LINE_NUMS_STRIPPED
-        | machineMask;
+                               | IMAGE_FILE_LINE_NUMS_STRIPPED | machineMask;
     }
 
-    void writeHeader(OutputStream* out) {
+    void writeHeader(OutputStream* out)
+    {
       header.NumberOfSections = sectionCount;
       header.PointerToSymbolTable = dataStart + dataOffset;
       dataOffset = pad(dataOffset + symbolCount * sizeof(IMAGE_SYMBOL));
@@ -132,21 +131,27 @@ public:
       out->writeChunk(&header, sizeof(IMAGE_FILE_HEADER));
     }
 
-    void addSymbol(String name, unsigned addr, unsigned sectionNumber, unsigned type, unsigned storageClass) {
+    void addSymbol(String name,
+                   unsigned addr,
+                   unsigned sectionNumber,
+                   unsigned type,
+                   unsigned storageClass)
+    {
       unsigned nameOffset = strings.add(name);
       IMAGE_SYMBOL symbol = {
-        { { 0, 0 } }, // Name
-        addr, // Value
-        static_cast<int16_t>(sectionNumber), // SectionNumber
-        static_cast<uint16_t>(type), // Type
-        static_cast<uint8_t>(storageClass), // StorageClass
-        0, // NumberOfAuxSymbols
+          {{0, 0}},                             // Name
+          addr,                                 // Value
+          static_cast<int16_t>(sectionNumber),  // SectionNumber
+          static_cast<uint16_t>(type),          // Type
+          static_cast<uint8_t>(storageClass),   // StorageClass
+          0,                                    // NumberOfAuxSymbols
       };
-      symbol.N.Name.Long = nameOffset+4;
+      symbol.N.Name.Long = nameOffset + 4;
       symbols.write(&symbol, sizeof(IMAGE_SYMBOL));
     }
 
-    void writeData(OutputStream* out) {
+    void writeData(OutputStream* out)
+    {
       out->writeChunk(symbols.data, symbols.length);
       uint32_t size = strings.length + 4;
       out->writeChunk(&size, 4);
@@ -155,7 +160,7 @@ public:
   };
 
   class SectionWriter {
-  public:
+   public:
     FileWriter& file;
     IMAGE_SECTION_HEADER header;
     size_t dataSize;
@@ -163,17 +168,12 @@ public:
     const uint8_t* data;
     unsigned dataOffset;
 
-    SectionWriter(
-        FileWriter& file,
-        const char* name,
-        unsigned sectionMask,
-        const uint8_t* data,
-        size_t dataSize):
-
-      file(file),
-      dataSize(dataSize),
-      finalSize(pad(dataSize)),
-      data(data)
+    SectionWriter(FileWriter& file,
+                  const char* name,
+                  unsigned sectionMask,
+                  const uint8_t* data,
+                  size_t dataSize)
+        : file(file), dataSize(dataSize), finalSize(pad(dataSize)), data(data)
     {
       file.sectionCount++;
       file.dataStart += sizeof(IMAGE_SECTION_HEADER);
@@ -190,21 +190,25 @@ public:
       header.Characteristics = sectionMask;
     }
 
-    void writeHeader(OutputStream* out) {
+    void writeHeader(OutputStream* out)
+    {
       header.PointerToRawData = dataOffset + file.dataStart;
       out->writeChunk(&header, sizeof(IMAGE_SECTION_HEADER));
     }
 
-    void writeData(OutputStream* out) {
+    void writeData(OutputStream* out)
+    {
       out->writeChunk(data, dataSize);
       out->writeRepeat(0, finalSize - dataSize);
     }
-
-
   };
 
-  virtual bool writeObject(OutputStream* out, Slice<SymbolInfo> symbols, Slice<const uint8_t> data, unsigned accessFlags, unsigned alignment) {
-
+  virtual bool writeObject(OutputStream* out,
+                           Slice<SymbolInfo> symbols,
+                           Slice<const uint8_t> data,
+                           unsigned accessFlags,
+                           unsigned alignment)
+  {
     int machine;
     int machineMask;
 
@@ -245,9 +249,8 @@ public:
     if (accessFlags & Platform::Writable) {
       if (accessFlags & Platform::Executable) {
         sectionName = ".rwx";
-        sectionMask |= IMAGE_SCN_MEM_WRITE
-          | IMAGE_SCN_MEM_EXECUTE
-          | IMAGE_SCN_CNT_CODE;
+        sectionMask |= IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_EXECUTE
+                       | IMAGE_SCN_CNT_CODE;
       } else {
         sectionName = ".data";
         sectionMask |= IMAGE_SCN_MEM_WRITE;
@@ -259,11 +262,12 @@ public:
 
     FileWriter file(machine, machineMask, symbols.count);
 
-    SectionWriter section(file, sectionName, sectionMask, data.items, data.count);
+    SectionWriter section(
+        file, sectionName, sectionMask, data.items, data.count);
 
     file.writeHeader(out);
 
-    for(SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
+    for (SymbolInfo* sym = symbols.begin(); sym != symbols.end(); sym++) {
       file.addSymbol(sym->name, sym->addr, 1, 0, 2);
     }
 
@@ -271,18 +275,19 @@ public:
 
     section.writeData(out);
 
-    file.writeData(out);  
+    file.writeData(out);
 
     return true;
-
   }
 
-  WindowsPlatform():
-    Platform(PlatformInfo(PlatformInfo::Pe, Architecture)) {}
+  WindowsPlatform() : Platform(PlatformInfo(PlatformInfo::Pe, Architecture))
+  {
+  }
 };
 
 WindowsPlatform<4, PlatformInfo::x86> windows32Platform;
 WindowsPlatform<8, PlatformInfo::x86_64> windows64Platform;
-WindowsPlatform<4, PlatformInfo::Arm> windowsRtPlatform; // Windows Phone 8 and Windows RT
+WindowsPlatform<4, PlatformInfo::Arm>
+    windowsRtPlatform;  // Windows Phone 8 and Windows RT
 
-} // namespace
+}  // namespace

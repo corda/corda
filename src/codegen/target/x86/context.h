@@ -28,13 +28,13 @@ namespace vm {
 class System;
 class Allocator;
 class Zone;
-} // namespace vm
+}  // namespace vm
 
 namespace avian {
 
 namespace util {
 class Aborter;
-} // namespace util
+}  // namespace util
 
 namespace codegen {
 namespace x86 {
@@ -47,12 +47,18 @@ typedef void (*OperationType)(Context*);
 
 typedef void (*UnaryOperationType)(Context*, unsigned, lir::Operand*);
 
-typedef void (*BinaryOperationType)
-(Context*, unsigned, lir::Operand*, unsigned, lir::Operand*);
+typedef void (*BinaryOperationType)(Context*,
+                                    unsigned,
+                                    lir::Operand*,
+                                    unsigned,
+                                    lir::Operand*);
 
-typedef void (*BranchOperationType)
-(Context*, lir::TernaryOperation, unsigned, lir::Operand*,
- lir::Operand*, lir::Operand*);
+typedef void (*BranchOperationType)(Context*,
+                                    lir::TernaryOperation,
+                                    unsigned,
+                                    lir::Operand*,
+                                    lir::Operand*,
+                                    lir::Operand*);
 
 class ArchitectureContext {
  public:
@@ -61,16 +67,14 @@ class ArchitectureContext {
   vm::System* s;
   bool useNativeFeatures;
   OperationType operations[lir::OperationCount];
-  UnaryOperationType unaryOperations[lir::UnaryOperationCount
-                                     * lir::OperandTypeCount];
+  UnaryOperationType
+      unaryOperations[lir::UnaryOperationCount * lir::OperandTypeCount];
   BinaryOperationType binaryOperations
-  [(lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-   * lir::OperandTypeCount
-   * lir::OperandTypeCount];
-  BranchOperationType branchOperations
-  [lir::BranchOperationCount
-   * lir::OperandTypeCount
-   * lir::OperandTypeCount];
+      [(lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
+       * lir::OperandTypeCount * lir::OperandTypeCount];
+  BranchOperationType branchOperations[lir::BranchOperationCount
+                                       * lir::OperandTypeCount
+                                       * lir::OperandTypeCount];
 };
 
 class Context {
@@ -91,16 +95,18 @@ class Context {
   ArchitectureContext* ac;
 };
 
-inline avian::util::Aborter* getAborter(Context* c) {
+inline avian::util::Aborter* getAborter(Context* c)
+{
   return c->s;
 }
 
-inline avian::util::Aborter* getAborter(ArchitectureContext* c) {
+inline avian::util::Aborter* getAborter(ArchitectureContext* c)
+{
   return c->s;
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_CONTEXT_H

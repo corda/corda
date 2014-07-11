@@ -14,12 +14,11 @@
 
 #include "test-harness.h"
 
-
 using namespace avian::codegen;
 using namespace vm;
 
-
-TEST(RegisterIterator) {
+TEST(RegisterIterator)
+{
   RegisterMask regs(0x55);
   assertEqual<unsigned>(0, regs.start);
   assertEqual<unsigned>(7, regs.limit);

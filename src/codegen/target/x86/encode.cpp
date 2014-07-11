@@ -26,9 +26,8 @@ using namespace avian::util;
 
 namespace {
 
-int64_t
-signExtend(unsigned size, int64_t v)
-{      
+int64_t signExtend(unsigned size, int64_t v)
+{
   if (size == 4) {
     return static_cast<int32_t>(v);
   } else if (size == 2) {
@@ -40,12 +39,11 @@ signExtend(unsigned size, int64_t v)
   }
 }
 
-} // namespace
+}  // namespace
 
 namespace avian {
 namespace codegen {
 namespace x86 {
-
 
 #define REX_W 0x48
 #define REX_R 0x44
@@ -53,7 +51,13 @@ namespace x86 {
 #define REX_B 0x41
 #define REX_NONE 0x40
 
-void maybeRex(Context* c, unsigned size, int a, int index, int base, bool always) {
+void maybeRex(Context* c,
+              unsigned size,
+              int a,
+              int index,
+              int base,
+              bool always)
+{
   if (vm::TargetBytesPerWord == 8) {
     uint8_t byte;
     if (size == 8) {
@@ -61,46 +65,60 @@ void maybeRex(Context* c, unsigned size, int a, int index, int base, bool always
     } else {
       byte = REX_NONE;
     }
-    if (a != lir::NoRegister and (a & 8)) byte |= REX_R;
-    if (index != lir::NoRegister and (index & 8)) byte |= REX_X;
-    if (base != lir::NoRegister and (base & 8)) byte |= REX_B;
-    if (always or byte != REX_NONE) c->code.append(byte);
+    if (a != lir::NoRegister and (a & 8))
+      byte |= REX_R;
+    if (index != lir::NoRegister and (index & 8))
+      byte |= REX_X;
+    if (base != lir::NoRegister and (base & 8))
+      byte |= REX_B;
+    if (always or byte != REX_NONE)
+      c->code.append(byte);
   }
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Register* b) {
+void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Register* b)
+{
   maybeRex(c, size, a->low, lir::NoRegister, b->low, false);
 }
 
-void alwaysRex(Context* c, unsigned size, lir::Register* a, lir::Register* b) {
+void alwaysRex(Context* c, unsigned size, lir::Register* a, lir::Register* b)
+{
   maybeRex(c, size, a->low, lir::NoRegister, b->low, true);
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a) {
+void maybeRex(Context* c, unsigned size, lir::Register* a)
+{
   maybeRex(c, size, lir::NoRegister, lir::NoRegister, a->low, false);
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Memory* b) {
+void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Memory* b)
+{
   maybeRex(c, size, a->low, b->index, b->base, size == 1 and (a->low & 4));
 }
 
-void maybeRex(Context* c, unsigned size, lir::Memory* a) {
+void maybeRex(Context* c, unsigned size, lir::Memory* a)
+{
   maybeRex(c, size, lir::NoRegister, a->index, a->base, false);
 }
 
-void modrm(Context* c, uint8_t mod, int a, int b) {
+void modrm(Context* c, uint8_t mod, int a, int b)
+{
   c->code.append(mod | (regCode(b) << 3) | regCode(a));
 }
 
-void modrm(Context* c, uint8_t mod, lir::Register* a, lir::Register* b) {
+void modrm(Context* c, uint8_t mod, lir::Register* a, lir::Register* b)
+{
   modrm(c, mod, a->low, b->low);
 }
 
-void sib(Context* c, unsigned scale, int index, int base) {
-  c->code.append((util::log(scale) << 6) | (regCode(index) << 3) | regCode(base));
+void sib(Context* c, unsigned scale, int index, int base)
+{
+  c->code.append((util::log(scale) << 6) | (regCode(index) << 3)
+                 | regCode(base));
 }
 
-void modrmSib(Context* c, int width, int a, int scale, int index, int base) {
+void modrmSib(Context* c, int width, int a, int scale, int index, int base)
+{
   if (index == lir::NoRegister) {
     modrm(c, width, base, a);
     if (regCode(base) == rsp) {
@@ -112,7 +130,8 @@ void modrmSib(Context* c, int width, int a, int scale, int index, int base) {
   }
 }
 
-void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset) {
+void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset)
+{
   if (offset == 0 and regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);
   } else if (vm::fitsInInt8(offset)) {
@@ -124,35 +143,43 @@ void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset) 
   }
 }
 
-void modrmSibImm(Context* c, lir::Register* a, lir::Memory* b) {
+void modrmSibImm(Context* c, lir::Register* a, lir::Memory* b)
+{
   modrmSibImm(c, a->low, b->scale, b->index, b->base, b->offset);
 }
 
-void opcode(Context* c, uint8_t op) {
+void opcode(Context* c, uint8_t op)
+{
   c->code.append(op);
 }
 
-void opcode(Context* c, uint8_t op1, uint8_t op2) {
+void opcode(Context* c, uint8_t op1, uint8_t op2)
+{
   c->code.append(op1);
   c->code.append(op2);
 }
 
-void unconditional(Context* c, unsigned jump, lir::Constant* a) {
+void unconditional(Context* c, unsigned jump, lir::Constant* a)
+{
   appendOffsetTask(c, a->value, offsetPromise(c), 5);
 
   opcode(c, jump);
   c->code.append4(0);
 }
 
-void conditional(Context* c, unsigned condition, lir::Constant* a) {
+void conditional(Context* c, unsigned condition, lir::Constant* a)
+{
   appendOffsetTask(c, a->value, offsetPromise(c), 6);
-  
+
   opcode(c, 0x0f, condition);
   c->code.append4(0);
 }
 
-void sseMoveRR(Context* c, unsigned aSize, lir::Register* a,
-          unsigned bSize UNUSED, lir::Register* b)
+void sseMoveRR(Context* c,
+               unsigned aSize,
+               lir::Register* a,
+               unsigned bSize UNUSED,
+               lir::Register* b)
 {
   assertT(c, aSize >= 4);
   assertT(c, aSize == bSize);
@@ -168,22 +195,25 @@ void sseMoveRR(Context* c, unsigned aSize, lir::Register* a,
       maybeRex(c, 4, b, a);
       opcode(c, 0x0f, 0x10);
       modrm(c, 0xc0, a, b);
-    } 
+    }
   } else if (isFloatReg(a)) {
     opcode(c, 0x66);
     maybeRex(c, aSize, a, b);
     opcode(c, 0x0f, 0x7e);
-    modrm(c, 0xc0, b, a);   
+    modrm(c, 0xc0, b, a);
   } else {
     opcode(c, 0x66);
     maybeRex(c, aSize, b, a);
     opcode(c, 0x0f, 0x6e);
-    modrm(c, 0xc0, a, b);   
+    modrm(c, 0xc0, a, b);
   }
 }
 
-void sseMoveCR(Context* c, unsigned aSize, lir::Constant* a,
-          unsigned bSize, lir::Register* b)
+void sseMoveCR(Context* c,
+               unsigned aSize,
+               lir::Constant* a,
+               unsigned bSize,
+               lir::Register* b)
 {
   assertT(c, aSize <= vm::TargetBytesPerWord);
   lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
@@ -192,8 +222,11 @@ void sseMoveCR(Context* c, unsigned aSize, lir::Constant* a,
   c->client->releaseTemporary(tmp.low);
 }
 
-void sseMoveMR(Context* c, unsigned aSize, lir::Memory* a,
-          unsigned bSize UNUSED, lir::Register* b)
+void sseMoveMR(Context* c,
+               unsigned aSize,
+               lir::Memory* a,
+               unsigned bSize UNUSED,
+               lir::Register* b)
 {
   assertT(c, aSize >= 4);
 
@@ -209,8 +242,11 @@ void sseMoveMR(Context* c, unsigned aSize, lir::Memory* a,
   }
 }
 
-void sseMoveRM(Context* c, unsigned aSize, lir::Register* a,
-       UNUSED unsigned bSize, lir::Memory* b)
+void sseMoveRM(Context* c,
+               unsigned aSize,
+               lir::Register* a,
+               UNUSED unsigned bSize,
+               lir::Memory* b)
 {
   assertT(c, aSize >= 4);
   assertT(c, aSize == bSize);
@@ -227,7 +263,8 @@ void sseMoveRM(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void branch(Context* c, lir::TernaryOperation op, lir::Constant* target) {
+void branch(Context* c, lir::TernaryOperation op, lir::Constant* target)
+{
   switch (op) {
   case lir::JumpIfEqual:
     conditional(c, 0x84, target);
@@ -258,7 +295,8 @@ void branch(Context* c, lir::TernaryOperation op, lir::Constant* target) {
   }
 }
 
-void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target) {
+void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target)
+{
   switch (op) {
   case lir::JumpIfFloatEqual:
     // jp past the je so we don't jump to the target if unordered:
@@ -313,8 +351,13 @@ void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target) {
   }
 }
 
-void floatRegOp(Context* c, unsigned aSize, lir::Register* a, unsigned bSize,
-           lir::Register* b, uint8_t op, uint8_t mod)
+void floatRegOp(Context* c,
+                unsigned aSize,
+                lir::Register* a,
+                unsigned bSize,
+                lir::Register* b,
+                uint8_t op,
+                uint8_t mod)
 {
   if (aSize == 4) {
     opcode(c, 0xf3);
@@ -326,8 +369,12 @@ void floatRegOp(Context* c, unsigned aSize, lir::Register* a, unsigned bSize,
   modrm(c, mod, a, b);
 }
 
-void floatMemOp(Context* c, unsigned aSize, lir::Memory* a, unsigned bSize,
-           lir::Register* b, uint8_t op)
+void floatMemOp(Context* c,
+                unsigned aSize,
+                lir::Memory* a,
+                unsigned bSize,
+                lir::Register* b,
+                uint8_t op)
 {
   if (aSize == 4) {
     opcode(c, 0xf3);
@@ -339,11 +386,18 @@ void floatMemOp(Context* c, unsigned aSize, lir::Memory* a, unsigned bSize,
   modrmSibImm(c, b, a);
 }
 
-void moveCR(Context* c, unsigned aSize, lir::Constant* a,
-       unsigned bSize, lir::Register* b);
+void moveCR(Context* c,
+            unsigned aSize,
+            lir::Constant* a,
+            unsigned bSize,
+            lir::Register* b);
 
-void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
-        UNUSED unsigned bSize, lir::Register* b, unsigned promiseOffset)
+void moveCR2(Context* c,
+             UNUSED unsigned aSize,
+             lir::Constant* a,
+             UNUSED unsigned bSize,
+             lir::Register* b,
+             unsigned promiseOffset)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
     int64_t v = signExtend(aSize, a->value->value());
@@ -366,13 +420,13 @@ void moveCR2(Context* c, UNUSED unsigned aSize, lir::Constant* a,
     } else {
       expect(c, aSize == vm::TargetBytesPerWord);
 
-      appendImmediateTask
-        (c, a->value, offsetPromise(c), vm::TargetBytesPerWord, promiseOffset);
+      appendImmediateTask(
+          c, a->value, offsetPromise(c), vm::TargetBytesPerWord, promiseOffset);
       c->code.appendTargetAddress(static_cast<vm::target_uintptr_t>(0));
     }
   }
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

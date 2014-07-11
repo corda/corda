@@ -15,150 +15,164 @@
 #include "avian/common.h"
 
 #ifdef _MSC_VER
-#  include "windows.h"
-#  pragma push_macro("assert")
-#  include "intrin.h"
-#  pragma pop_macro("assert")
-#  undef interface
+#include "windows.h"
+#pragma push_macro("assert")
+#include "intrin.h"
+#pragma pop_macro("assert")
+#undef interface
 #endif
 
 #if (defined ARCH_x86_32) || (defined PLATFORM_WINDOWS)
-#  define VA_LIST(x) (&(x))
+#define VA_LIST(x) (&(x))
 #else
-#  define VA_LIST(x) (x)
+#define VA_LIST(x) (x)
 #endif
 
 #ifdef __APPLE__
-#  include "mach/mach_types.h"
-#  include "mach/thread_act.h"
-#  include "mach/thread_status.h"
+#include "mach/mach_types.h"
+#include "mach/thread_act.h"
+#include "mach/thread_status.h"
 
-#  if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
-#    define FIELD(x) __##x
-#  else
-#    define FIELD(x) x
-#  endif
+#if __DARWIN_UNIX03 && defined(_STRUCT_X86_EXCEPTION_STATE32)
+#define FIELD(x) __##x
+#else
+#define FIELD(x) x
+#endif
 #endif
 
 #ifdef ARCH_x86_32
 
-#  ifdef __APPLE__
-#    define THREAD_STATE x86_THREAD_STATE32
-#    define THREAD_STATE_TYPE x86_thread_state32_t
-#    define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
+#ifdef __APPLE__
+#define THREAD_STATE x86_THREAD_STATE32
+#define THREAD_STATE_TYPE x86_thread_state32_t
+#define THREAD_STATE_COUNT x86_THREAD_STATE32_COUNT
 
-#    define THREAD_STATE_IP(state) ((state).FIELD(eip))
-#    define THREAD_STATE_STACK(state) ((state).FIELD(esp))
-#    define THREAD_STATE_THREAD(state) ((state).FIELD(ebx))
-#    define THREAD_STATE_LINK(state) ((state).FIELD(ecx))
-#    define THREAD_STATE_FRAME(state) ((state).FIELD(ebp))
+#define THREAD_STATE_IP(state) ((state).FIELD(eip))
+#define THREAD_STATE_STACK(state) ((state).FIELD(esp))
+#define THREAD_STATE_THREAD(state) ((state).FIELD(ebx))
+#define THREAD_STATE_LINK(state) ((state).FIELD(ecx))
+#define THREAD_STATE_FRAME(state) ((state).FIELD(ebp))
 
-#    define IP_REGISTER(context) \
-  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
-#    define STACK_REGISTER(context) \
+#define IP_REGISTER(context) THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#define STACK_REGISTER(context) \
   THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
-#    define THREAD_REGISTER(context) \
+#define THREAD_REGISTER(context) \
   THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
-#    define LINK_REGISTER(context) \
+#define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
-#    define FRAME_REGISTER(context) \
+#define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
-#  elif (defined __QNX__)
-#    define IP_REGISTER(context) (context->uc_mcontext.cpu.eip)
-#    define STACK_REGISTER(context) (context->uc_mcontext.cpu.esp)
-#    define THREAD_REGISTER(context) (context->uc_mcontext.cpu.ebx)
-#    define LINK_REGISTER(context) (context->uc_mcontext.cpu.ecx)
-#    define FRAME_REGISTER(context) (context->uc_mcontext.cpu.ebp)
-#  elif (defined __FreeBSD__)
-#    define IP_REGISTER(context) (context->uc_mcontext.mc_eip)
-#    define STACK_REGISTER(context) (context->uc_mcontext.mc_esp)
-#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_ebx)
-#    define LINK_REGISTER(context) (context->uc_mcontext.mc_ecx)
-#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_ebp)
-#  else
-#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
-#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
-#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
-#    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_ECX])
-#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
-#  endif
+#elif(defined __QNX__)
+#define IP_REGISTER(context) (context->uc_mcontext.cpu.eip)
+#define STACK_REGISTER(context) (context->uc_mcontext.cpu.esp)
+#define THREAD_REGISTER(context) (context->uc_mcontext.cpu.ebx)
+#define LINK_REGISTER(context) (context->uc_mcontext.cpu.ecx)
+#define FRAME_REGISTER(context) (context->uc_mcontext.cpu.ebp)
+#elif(defined __FreeBSD__)
+#define IP_REGISTER(context) (context->uc_mcontext.mc_eip)
+#define STACK_REGISTER(context) (context->uc_mcontext.mc_esp)
+#define THREAD_REGISTER(context) (context->uc_mcontext.mc_ebx)
+#define LINK_REGISTER(context) (context->uc_mcontext.mc_ecx)
+#define FRAME_REGISTER(context) (context->uc_mcontext.mc_ebp)
+#else
+#define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_EIP])
+#define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_ESP])
+#define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_EBX])
+#define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_ECX])
+#define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_EBP])
+#endif
 
-extern "C" uint64_t
-vmNativeCall(void* function, void* stack, unsigned stackSize,
-             unsigned returnType);
+extern "C" uint64_t vmNativeCall(void* function,
+                                 void* stack,
+                                 unsigned stackSize,
+                                 unsigned returnType);
 
 namespace vm {
 
-inline uint64_t
-dynamicCall(void* function, uintptr_t* arguments, uint8_t*,
-            unsigned, unsigned argumentsSize, unsigned returnType)
+inline uint64_t dynamicCall(void* function,
+                            uintptr_t* arguments,
+                            uint8_t*,
+                            unsigned,
+                            unsigned argumentsSize,
+                            unsigned returnType)
 {
   return vmNativeCall(function, arguments, argumentsSize, returnType);
 }
 
-} // namespace vm
+}  // namespace vm
 
 #elif defined ARCH_x86_64
 
-#  ifdef __APPLE__
-#    define THREAD_STATE x86_THREAD_STATE64
-#    define THREAD_STATE_TYPE x86_thread_state64_t
-#    define THREAD_STATE_COUNT x86_THREAD_STATE64_COUNT
+#ifdef __APPLE__
+#define THREAD_STATE x86_THREAD_STATE64
+#define THREAD_STATE_TYPE x86_thread_state64_t
+#define THREAD_STATE_COUNT x86_THREAD_STATE64_COUNT
 
-#    define THREAD_STATE_IP(state) ((state).FIELD(rip))
-#    define THREAD_STATE_STACK(state) ((state).FIELD(rsp))
-#    define THREAD_STATE_THREAD(state) ((state).FIELD(rbx))
-#    define THREAD_STATE_LINK(state) ((state).FIELD(rcx))
-#    define THREAD_STATE_FRAME(state) ((state).FIELD(rbp))
+#define THREAD_STATE_IP(state) ((state).FIELD(rip))
+#define THREAD_STATE_STACK(state) ((state).FIELD(rsp))
+#define THREAD_STATE_THREAD(state) ((state).FIELD(rbx))
+#define THREAD_STATE_LINK(state) ((state).FIELD(rcx))
+#define THREAD_STATE_FRAME(state) ((state).FIELD(rbp))
 
-#    define IP_REGISTER(context) \
-  THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
-#    define STACK_REGISTER(context) \
+#define IP_REGISTER(context) THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
+#define STACK_REGISTER(context) \
   THREAD_STATE_STACK(context->uc_mcontext->FIELD(ss))
-#    define THREAD_REGISTER(context) \
+#define THREAD_REGISTER(context) \
   THREAD_STATE_THREAD(context->uc_mcontext->FIELD(ss))
-#    define LINK_REGISTER(context) \
+#define LINK_REGISTER(context) \
   THREAD_STATE_LINK(context->uc_mcontext->FIELD(ss))
-#    define FRAME_REGISTER(context) \
+#define FRAME_REGISTER(context) \
   THREAD_STATE_FRAME(context->uc_mcontext->FIELD(ss))
 
-#  elif (defined __FreeBSD__)
-#    define IP_REGISTER(context) (context->uc_mcontext.mc_rip)
-#    define STACK_REGISTER(context) (context->uc_mcontext.mc_rsp)
-#    define THREAD_REGISTER(context) (context->uc_mcontext.mc_rbx)
-#    define LINK_REGISTER(context) (context->uc_mcontext.mc_rcx)
-#    define FRAME_REGISTER(context) (context->uc_mcontext.mc_rbp)
-#  else
-#    define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
-#    define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
-#    define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
-#    define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_RCX])
-#    define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
-#  endif
+#elif(defined __FreeBSD__)
+#define IP_REGISTER(context) (context->uc_mcontext.mc_rip)
+#define STACK_REGISTER(context) (context->uc_mcontext.mc_rsp)
+#define THREAD_REGISTER(context) (context->uc_mcontext.mc_rbx)
+#define LINK_REGISTER(context) (context->uc_mcontext.mc_rcx)
+#define FRAME_REGISTER(context) (context->uc_mcontext.mc_rbp)
+#else
+#define IP_REGISTER(context) (context->uc_mcontext.gregs[REG_RIP])
+#define STACK_REGISTER(context) (context->uc_mcontext.gregs[REG_RSP])
+#define THREAD_REGISTER(context) (context->uc_mcontext.gregs[REG_RBX])
+#define LINK_REGISTER(context) (context->uc_mcontext.gregs[REG_RCX])
+#define FRAME_REGISTER(context) (context->uc_mcontext.gregs[REG_RBP])
+#endif
 
 extern "C" uint64_t
-#  ifdef PLATFORM_WINDOWS
-vmNativeCall(void* function, void* stack, unsigned stackSize,
-             unsigned returnType);
-#  else
-vmNativeCall(void* function, void* stack, unsigned stackSize,
-             void* gprTable, void* sseTable, unsigned returnType);
-#  endif
+#ifdef PLATFORM_WINDOWS
+    vmNativeCall(void* function,
+                 void* stack,
+                 unsigned stackSize,
+                 unsigned returnType);
+#else
+    vmNativeCall(void* function,
+                 void* stack,
+                 unsigned stackSize,
+                 void* gprTable,
+                 void* sseTable,
+                 unsigned returnType);
+#endif
 
 namespace vm {
 
-#  ifdef PLATFORM_WINDOWS
-inline uint64_t
-dynamicCall(void* function, uint64_t* arguments, UNUSED uint8_t* argumentTypes,
-            unsigned argumentCount, unsigned, unsigned returnType)
+#ifdef PLATFORM_WINDOWS
+inline uint64_t dynamicCall(void* function,
+                            uint64_t* arguments,
+                            UNUSED uint8_t* argumentTypes,
+                            unsigned argumentCount,
+                            unsigned,
+                            unsigned returnType)
 {
   return vmNativeCall(function, arguments, argumentCount, returnType);
 }
-#  else
-inline uint64_t
-dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
-            unsigned argumentCount, unsigned, unsigned returnType)
+#else
+inline uint64_t dynamicCall(void* function,
+                            uintptr_t* arguments,
+                            uint8_t* argumentTypes,
+                            unsigned argumentCount,
+                            unsigned,
+                            unsigned returnType)
 {
   const unsigned GprCount = 6;
   uint64_t gprTable[GprCount];
@@ -192,22 +206,24 @@ dynamicCall(void* function, uintptr_t* arguments, uint8_t* argumentTypes,
     }
   }
 
-  return vmNativeCall(function, stack, stackIndex * BytesPerWord,
+  return vmNativeCall(function,
+                      stack,
+                      stackIndex * BytesPerWord,
                       (gprIndex ? gprTable : 0),
-                      (sseIndex ? sseTable : 0), returnType);
+                      (sseIndex ? sseTable : 0),
+                      returnType);
 }
 #endif
 
-} // namespace vm
+}  // namespace vm
 
 #else
-#  error unsupported architecture
+#error unsupported architecture
 #endif
 
 namespace vm {
 
-inline void
-trap()
+inline void trap()
 {
 #ifdef _MSC_VER
   __asm int 3
@@ -216,50 +232,44 @@ trap()
 #endif
 }
 
-inline void
-programOrderMemoryBarrier()
+inline void programOrderMemoryBarrier()
 {
   compileTimeMemoryBarrier();
 }
 
-inline void
-storeStoreMemoryBarrier()
+inline void storeStoreMemoryBarrier()
 {
   programOrderMemoryBarrier();
 }
 
-inline void
-storeLoadMemoryBarrier()
+inline void storeLoadMemoryBarrier()
 {
 #ifdef _MSC_VER
   MemoryBarrier();
 #elif defined ARCH_x86_32
-  __asm__ __volatile__("lock; addl $0,0(%%esp)": : :"memory");
+  __asm__ __volatile__("lock; addl $0,0(%%esp)" : : : "memory");
 #elif defined ARCH_x86_64
-  __asm__ __volatile__("mfence": : :"memory");
-#endif // ARCH_x86_64
+  __asm__ __volatile__("mfence" : : : "memory");
+#endif  // ARCH_x86_64
 }
 
-inline void
-loadMemoryBarrier()
+inline void loadMemoryBarrier()
 {
   programOrderMemoryBarrier();
 }
 
-inline void
-syncInstructionCache(const void*, unsigned)
+inline void syncInstructionCache(const void*, unsigned)
 {
   programOrderMemoryBarrier();
 }
 
 #ifdef USE_ATOMIC_OPERATIONS
-inline bool
-atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
+inline bool atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 {
 #ifdef _MSC_VER
-  return old == InterlockedCompareExchange
-    (reinterpret_cast<LONG*>(p), new_, old);
-#elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return old
+         == InterlockedCompareExchange(reinterpret_cast<LONG*>(p), new_, old);
+#elif(__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
 #else
   uint8_t result;
@@ -275,13 +285,12 @@ atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 
 #define AVIAN_HAS_CAS64
 
-inline bool
-atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
+inline bool atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
 {
 #ifdef _MSC_VER
-  return old == InterlockedCompareExchange64
-    (reinterpret_cast<LONGLONG*>(p), new_, old);
-#elif (__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
+  return old == InterlockedCompareExchange64(
+                    reinterpret_cast<LONGLONG*>(p), new_, old);
+#elif(__GNUC__ >= 4) && (__GNUC_MINOR__ >= 1)
   return __sync_bool_compare_and_swap(p, old, new_);
 #elif defined ARCH_x86_32
   uint8_t result;
@@ -308,17 +317,16 @@ atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
 #endif
 }
 
-inline bool
-atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+inline bool atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 {
 #ifdef ARCH_x86_32
   return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
 #elif defined ARCH_x86_64
   return atomicCompareAndSwap64(reinterpret_cast<uint64_t*>(p), old, new_);
-#endif // ARCH_x86_64
+#endif  // ARCH_x86_64
 }
-#endif // USE_ATOMIC_OPERATIONS
+#endif  // USE_ATOMIC_OPERATIONS
 
-} // namespace vm
+}  // namespace vm
 
-#endif//X86_H
+#endif  // X86_H
