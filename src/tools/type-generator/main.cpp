@@ -1192,6 +1192,12 @@ void writeClasses(Output* out, Module& module)
     out->write(capitalize(cl->name));
     out->write(";\n\n");
 
+    out->write("  static Gc" + capitalize(cl->name) + "* makeZeroed(Thread* t");
+    if (cl->arrayField) {
+      out->write(", uintptr_t length");
+    }
+    out->write(");\n");
+
     writeClassAccessors(out, module, cl);
 
     out->write("};\n\n");
@@ -1269,17 +1275,40 @@ void writeConstructors(Output* out, Module& module)
        it != module.classes.end();
        ++it) {
     Class* cl = it->second;
-    out->write("Gc");
+
+    bool hasObjectMask = cl->name == "singleton";
+
+    std::string name = "Gc" + capitalize(cl->name);
+
+    out->write(name + "* " + name + "::makeZeroed(Thread* t");
+    if (cl->arrayField) {
+      out->write(", uintptr_t length");
+    }
+    out->write(")\n{\n");
+    out->write("  " + name + "* o = reinterpret_cast<" + name
+               + "*>(allocate(t, ");
+    writeOffset(out, cl);
+    if (hasObjectMask) {
+      out->write(", true");
+    } else {
+      out->write(", false");
+    }
+    out->write("));\n");
+    out->write("  setObjectClass(t, reinterpret_cast<object>(o), ");
+    out->write(
+        "reinterpret_cast<GcClass*>(reinterpret_cast<GcArray*>(t->m->types)->"
+        "body()[Gc::");
     out->write(capitalize(cl->name));
-    out->write("* make");
-    out->write(capitalize(cl->name));
+    out->write("Type]));\n");
+    out->write("  return o;\n");
+    out->write("}\n\n");
+
+    out->write(name + "* make" + capitalize(cl->name));
     out->write("(Thread* t");
 
     writeConstructorParameters(out, module, cl);
 
     out->write(")\n{\n");
-
-    bool hasObjectMask = cl->name == "singleton";
     for (std::vector<Field*>::iterator it = cl->fields.begin();
          it != cl->fields.end();
          it++) {
@@ -1299,11 +1328,8 @@ void writeConstructors(Output* out, Module& module)
       }
     }
 
-    out->write("  Gc");
-    out->write(capitalize(cl->name));
-    out->write("* o = reinterpret_cast<Gc");
-    out->write(capitalize(cl->name));
-    out->write("*>(allocate(t, ");
+    out->write("  " + name + "* o = reinterpret_cast<" + name
+               + "*>(allocate(t, ");
     writeOffset(out, cl);
     if (hasObjectMask) {
       out->write(", true");

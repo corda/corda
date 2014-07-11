@@ -9692,42 +9692,14 @@ void boot(MyThread* t, BootImage* image, uint8_t* code)
 
   t->m->types = reinterpret_cast<GcArray*>(bootObject(heap, image->types));
 
-  t->m->roots = makeRoots(t,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0,
-                          0);
-  ;
+  t->m->roots = GcRoots::makeZeroed(t);
 
   roots(t)->setBootLoader(
       t, cast<GcClassLoader>(t, bootObject(heap, image->bootLoader)));
   roots(t)->setAppLoader(
       t, cast<GcClassLoader>(t, bootObject(heap, image->appLoader)));
 
-  p->roots = makeCompileRoots(t, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+  p->roots = GcCompileRoots::makeZeroed(t);
 
   compileRoots(t)->setMethodTree(
       t, cast<GcTreeNode>(t, bootObject(heap, image->methodTree)));
