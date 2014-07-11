@@ -21,7 +21,6 @@ namespace util {
 template <class T>
 struct NonConst;
 
-
 template <class T>
 struct NonConst<const T> {
   typedef T Type;
@@ -42,7 +41,8 @@ class Slice {
   {
   }
 
-  inline Slice(const Slice<typename NonConst<T>::Type>& copy) : items(copy.items), count(copy.count)
+  inline Slice(const Slice<typename NonConst<T>::Type>& copy)
+      : items(copy.items), count(copy.count)
   {
   }
 

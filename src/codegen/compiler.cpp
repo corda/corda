@@ -586,7 +586,8 @@ acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
     if (s->type(c) == lir::RegisterOperand) {
       return c->availableGeneralRegisterCount > ResolveRegisterReserveCount;
     } else {
-      assertT(c, s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
+      assertT(c,
+              s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
 
       return isHome(read->value, offsetToFrameIndex
                     (c, static_cast<MemorySite*>(s)->offset));
@@ -1138,9 +1139,11 @@ pop(Context* c, unsigned footprint)
       high = low->next;
     }
 
-    assertT(c, (TargetBytesPerWord == 8
-               and low->value->nextWord == low->value and high->value == 0)
-           or (TargetBytesPerWord == 4 and low->value->nextWord == high->value));
+    assertT(
+        c,
+        (TargetBytesPerWord == 8 and low->value->nextWord == low->value
+         and high->value == 0)
+        or (TargetBytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
 
     popWord(c);
@@ -2379,10 +2382,11 @@ class MyCompiler: public Compiler {
         high = s->next;
       }
 
-      assertT(&c, (TargetBytesPerWord == 8
-                  and low->value->nextWord == low->value and high->value == 0)
-             or (TargetBytesPerWord == 4
-                 and low->value->nextWord == high->value));
+      assertT(
+          &c,
+          (TargetBytesPerWord == 8 and low->value->nextWord == low->value
+           and high->value == 0)
+          or (TargetBytesPerWord == 4 and low->value->nextWord == high->value));
 #endif // not NDEBUG
 
       if (bigEndian) {
@@ -2649,8 +2653,8 @@ class MyCompiler: public Compiler {
                         ir::Value* addr)
   {
     assertT(&c,
-           (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))or(
-               isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
+            (isGeneralBranch(op) and isGeneralValue(a) and isGeneralValue(b))
+            or (isFloatBranch(op) and isFloatValue(a) and isFloatValue(b)));
 
     assertT(&c, a->type == b->type);
     assertT(&c, addr->type == ir::Type::iptr());
@@ -2678,8 +2682,8 @@ class MyCompiler: public Compiler {
                               ir::Value* b)
   {
     assertT(&c,
-           (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
-           or(isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
+            (isGeneralBinaryOp(op) and isGeneralValue(a) and isGeneralValue(b))
+            or (isFloatBinaryOp(op) and isFloatValue(a) and isFloatValue(b)));
 
     Value* result = value(&c, type);
 
@@ -2695,8 +2699,8 @@ class MyCompiler: public Compiler {
                              ir::Value* a)
   {
     assertT(&c,
-           (isGeneralUnaryOp(op) and isGeneralValue(a))or(isFloatUnaryOp(op)
-                                                          and isFloatValue(a)));
+            (isGeneralUnaryOp(op) and isGeneralValue(a))
+            or (isFloatUnaryOp(op) and isFloatValue(a)));
     Value* result = value(&c, a->type);
     appendTranslate(
         &c, op, static_cast<Value*>(a), result);

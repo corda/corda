@@ -30,12 +30,9 @@ getTrace(Thread* t, unsigned skipCount)
     virtual bool visit(Processor::StackWalker* walker) {
       if (skipCount == 0) {
         GcMethod* method = walker->method();
-        if (isAssignableFrom
-            (t, type(t, GcThrowable::Type), method->class_())
+        if (isAssignableFrom(t, type(t, GcThrowable::Type), method->class_())
             and vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
-                           method->name()->body().begin())
-            == 0)
-        {
+                           method->name()->body().begin()) == 0) {
           return true;
         } else {
           trace = makeTrace(t, walker);
@@ -59,14 +56,11 @@ getTrace(Thread* t, unsigned skipCount)
   return v.trace;
 }
 
-bool
-compatibleArrayTypes(Thread* t UNUSED, GcClass* a, GcClass* b)
+bool compatibleArrayTypes(Thread* t UNUSED, GcClass* a, GcClass* b)
 {
-  return a->arrayElementSize()
-    and b->arrayElementSize()
-    and (a == b
-         or (not ((a->vmFlags() & PrimitiveFlag)
-                  or (b->vmFlags() & PrimitiveFlag))));
+  return a->arrayElementSize() and b->arrayElementSize()
+         and (a == b or (not((a->vmFlags() & PrimitiveFlag)
+                             or (b->vmFlags() & PrimitiveFlag))));
 }
 
 void
@@ -239,8 +233,11 @@ loadLibrary(Thread* t, const char* path, const char* name, bool mapName,
       runOnLoadIfFound(t, lib);
     }
   } else if (throw_) {
-    throwNew(t, GcUnsatisfiedLinkError::Type,
-             "library not found in %s: %s", path, name);
+    throwNew(t,
+             GcUnsatisfiedLinkError::Type,
+             "library not found in %s: %s",
+             path,
+             name);
   }
 
   return lib;
@@ -268,17 +265,20 @@ clone(Thread* t, object o)
   } else {
     GcByteArray* classNameSlash = objectClass(t, o)->name();
     THREAD_RUNTIME_ARRAY(t, char, classNameDot, classNameSlash->length());
-    replace('/', '.', RUNTIME_ARRAY_BODY(classNameDot),
+    replace('/',
+            '.',
+            RUNTIME_ARRAY_BODY(classNameDot),
             reinterpret_cast<char*>(classNameSlash->body().begin()));
-    throwNew(t, GcCloneNotSupportedException::Type, "%s",
+    throwNew(t,
+             GcCloneNotSupportedException::Type,
+             "%s",
              RUNTIME_ARRAY_BODY(classNameDot));
   }
 
   return clone;
 }
 
-GcStackTraceElement*
-makeStackTraceElement(Thread* t, GcTraceElement* e)
+GcStackTraceElement* makeStackTraceElement(Thread* t, GcTraceElement* e)
 {
   PROTECT(t, e);
 
@@ -289,7 +289,9 @@ makeStackTraceElement(Thread* t, GcTraceElement* e)
   PROTECT(t, class_name);
 
   THREAD_RUNTIME_ARRAY(t, char, s, class_name->length());
-  replace('/', '.', RUNTIME_ARRAY_BODY(s),
+  replace('/',
+          '.',
+          RUNTIME_ARRAY_BODY(s),
           reinterpret_cast<char*>(class_name->body().begin()));
   GcString* class_name_string = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
   PROTECT(t, class_name_string);
@@ -297,22 +299,21 @@ makeStackTraceElement(Thread* t, GcTraceElement* e)
   GcByteArray* method_name = method->name();
   PROTECT(t, method_name);
 
-  GcString* method_name_string = t->m->classpath->makeString
-    (t, method_name, 0, method_name->length() - 1);
+  GcString* method_name_string = t->m->classpath->makeString(
+      t, method_name, 0, method_name->length() - 1);
   PROTECT(t, method_name_string);
 
-  unsigned line = t->m->processor->lineNumber
-    (t, method, e->ip());
+  unsigned line = t->m->processor->lineNumber(t, method, e->ip());
 
   GcByteArray* file = method->class_()->sourceFile();
-  GcString* file_string = file ? t->m->classpath->makeString
-    (t, file, 0, file->length() - 1) : 0;
+  GcString* file_string
+      = file ? t->m->classpath->makeString(t, file, 0, file->length() - 1) : 0;
 
-  return makeStackTraceElement(t, class_name_string, method_name_string, file_string, line);
+  return makeStackTraceElement(
+      t, class_name_string, method_name_string, file_string, line);
 }
 
-GcObject*
-translateInvokeResult(Thread* t, unsigned returnCode, object o)
+GcObject* translateInvokeResult(Thread* t, unsigned returnCode, object o)
 {
   switch (returnCode) {
   case ByteField:
@@ -344,9 +345,10 @@ translateInvokeResult(Thread* t, unsigned returnCode, object o)
   }
 }
 
-GcClass*
-resolveClassBySpec(Thread* t, GcClassLoader* loader, const char* spec,
-                   unsigned specLength)
+GcClass* resolveClassBySpec(Thread* t,
+                            GcClassLoader* loader,
+                            const char* spec,
+                            unsigned specLength)
 {
   switch (*spec) {
   case 'L': {
@@ -368,15 +370,19 @@ resolveClassBySpec(Thread* t, GcClassLoader* loader, const char* spec,
   }
 }
 
-GcJclass*
-resolveJType(Thread* t, GcClassLoader* loader, const char* spec, unsigned specLength)
+GcJclass* resolveJType(Thread* t,
+                       GcClassLoader* loader,
+                       const char* spec,
+                       unsigned specLength)
 {
   return getJClass(t, resolveClassBySpec(t, loader, spec, specLength));
 }
 
-GcPair*
-resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
-                      unsigned* parameterCount, unsigned* returnTypeSpec)
+GcPair* resolveParameterTypes(Thread* t,
+                              GcClassLoader* loader,
+                              GcByteArray* spec,
+                              unsigned* parameterCount,
+                              unsigned* returnTypeSpec)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
@@ -391,12 +397,15 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
     case 'L': {
       unsigned start = offset;
       ++ offset;
-      while (spec->body()[offset] != ';') ++ offset;
+      while (spec->body()[offset] != ';')
+        ++offset;
       ++ offset;
 
-      GcClass* type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
-         offset - start);
+      GcClass* type
+          = resolveClassBySpec(t,
+                               loader,
+                               reinterpret_cast<char*>(&spec->body()[start]),
+                               offset - start);
 
       list = makePair(t, type, list);
 
@@ -405,11 +414,13 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
 
     case '[': {
       unsigned start = offset;
-      while (spec->body()[offset] == '[') ++ offset;
+      while (spec->body()[offset] == '[')
+        ++offset;
       switch (spec->body()[offset]) {
       case 'L':
         ++ offset;
-        while (spec->body()[offset] != ';') ++ offset;
+        while (spec->body()[offset] != ';')
+          ++offset;
         ++ offset;
         break;
 
@@ -418,17 +429,18 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
         break;
       }
 
-      GcClass* type = resolveClassBySpec
-        (t, loader, reinterpret_cast<char*>(&spec->body()[start]),
-         offset - start);
+      GcClass* type
+          = resolveClassBySpec(t,
+                               loader,
+                               reinterpret_cast<char*>(&spec->body()[start]),
+                               offset - start);
 
       list = makePair(t, type, list);
       ++ count;
     } break;
 
     default:
-      list = makePair
-        (t, primitiveClass(t, spec->body()[offset]), list);
+      list = makePair(t, primitiveClass(t, spec->body()[offset]), list);
       ++ offset;
       ++ count;
       break;
@@ -440,17 +452,18 @@ resolveParameterTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
   return list;
 }
 
-object
-resolveParameterJTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
-                       unsigned* parameterCount, unsigned* returnTypeSpec)
+object resolveParameterJTypes(Thread* t,
+                              GcClassLoader* loader,
+                              GcByteArray* spec,
+                              unsigned* parameterCount,
+                              unsigned* returnTypeSpec)
 {
-  GcPair* list = resolveParameterTypes
-    (t, loader, spec, parameterCount, returnTypeSpec);
+  GcPair* list
+      = resolveParameterTypes(t, loader, spec, parameterCount, returnTypeSpec);
 
   PROTECT(t, list);
 
-  object array = makeObjectArray
-    (t, type(t, GcJclass::Type), *parameterCount);
+  object array = makeObjectArray(t, type(t, GcJclass::Type), *parameterCount);
   PROTECT(t, array);
 
   for (int i = *parameterCount - 1; i >= 0; --i) {
@@ -462,8 +475,9 @@ resolveParameterJTypes(Thread* t, GcClassLoader* loader, GcByteArray* spec,
   return array;
 }
 
-object
-resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* addendum)
+object resolveExceptionJTypes(Thread* t,
+                              GcClassLoader* loader,
+                              GcMethodAddendum* addendum)
 {
   if (addendum == 0 or addendum->exceptionTable() == 0) {
     return makeObjectArray(t, type(t, GcJclass::Type), 0);
@@ -472,16 +486,15 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
   PROTECT(t, loader);
   PROTECT(t, addendum);
 
-  GcShortArray* exceptionTable = cast<GcShortArray>(t, addendum->exceptionTable());
+  GcShortArray* exceptionTable
+      = cast<GcShortArray>(t, addendum->exceptionTable());
   PROTECT(t, exceptionTable);
 
-  object array = makeObjectArray
-    (t, type(t, GcJclass::Type),
-     exceptionTable->length());
+  object array
+      = makeObjectArray(t, type(t, GcJclass::Type), exceptionTable->length());
   PROTECT(t, array);
 
-  for (unsigned i = 0; i < exceptionTable->length(); ++i)
-  {
+  for (unsigned i = 0; i < exceptionTable->length(); ++i) {
     uint16_t index = exceptionTable->body()[i] - 1;
 
     object o = singletonObject(t, addendum->pool()->as<GcSingleton>(t), index);
@@ -489,7 +502,8 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
     if (objectClass(t, o) == type(t, GcReference::Type)) {
       o = resolveClass(t, loader, cast<GcReference>(t, o)->name());
 
-      addendum->pool()->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
+      addendum->pool()->setBodyElement(
+          t, index, reinterpret_cast<uintptr_t>(o));
     }
 
     o = getJClass(t, cast<GcClass>(t, o));
@@ -500,8 +514,7 @@ resolveExceptionJTypes(Thread* t, GcClassLoader* loader, GcMethodAddendum* adden
   return array;
 }
 
-object
-invoke(Thread* t, GcMethod* method, object instance, object args)
+object invoke(Thread* t, GcMethod* method, object instance, object args)
 {
   PROTECT(t, method);
   PROTECT(t, instance);
@@ -512,30 +525,45 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
   }
 
   if ((args == 0 ? 0 : objectArrayLength(t, args))
-      != method->parameterCount())
-  {
+      != method->parameterCount()) {
     throwNew(t, GcIllegalArgumentException::Type);
   }
 
   if (method->parameterCount()) {
     unsigned specLength = method->spec()->length();
     THREAD_RUNTIME_ARRAY(t, char, spec, specLength);
-    memcpy(RUNTIME_ARRAY_BODY(spec),
-           method->spec()->body().begin(), specLength);
+    memcpy(
+        RUNTIME_ARRAY_BODY(spec), method->spec()->body().begin(), specLength);
     unsigned i = 0;
     for (MethodSpecIterator it(t, RUNTIME_ARRAY_BODY(spec)); it.hasNext();) {
       GcClass* type;
       bool objectType = false;
       const char* p = it.next();
       switch (*p) {
-      case 'Z': type = vm::type(t, GcBoolean::Type); break;
-      case 'B': type = vm::type(t, GcByte::Type); break;
-      case 'S': type = vm::type(t, GcShort::Type); break;
-      case 'C': type = vm::type(t, GcChar::Type); break;
-      case 'I': type = vm::type(t, GcInt::Type); break;
-      case 'F': type = vm::type(t, GcFloat::Type); break;
-      case 'J': type = vm::type(t, GcLong::Type); break;
-      case 'D': type = vm::type(t, GcDouble::Type); break;
+      case 'Z':
+        type = vm::type(t, GcBoolean::Type);
+        break;
+      case 'B':
+        type = vm::type(t, GcByte::Type);
+        break;
+      case 'S':
+        type = vm::type(t, GcShort::Type);
+        break;
+      case 'C':
+        type = vm::type(t, GcChar::Type);
+        break;
+      case 'I':
+        type = vm::type(t, GcInt::Type);
+        break;
+      case 'F':
+        type = vm::type(t, GcFloat::Type);
+        break;
+      case 'J':
+        type = vm::type(t, GcLong::Type);
+        break;
+      case 'D':
+        type = vm::type(t, GcDouble::Type);
+        break;
 
       case 'L':
       case '[': {
@@ -550,9 +578,8 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
         THREAD_RUNTIME_ARRAY(t, char, name, nameLength);
         memcpy(RUNTIME_ARRAY_BODY(name), p, nameLength - 1);
         RUNTIME_ARRAY_BODY(name)[nameLength - 1] = 0;
-        type = resolveClass
-          (t, method->class_()->loader(),
-           RUNTIME_ARRAY_BODY(name));
+        type = resolveClass(
+            t, method->class_()->loader(), RUNTIME_ARRAY_BODY(name));
       } break;
 
       default:
@@ -576,10 +603,11 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
 
   THREAD_RESOURCE0(t, {
       if (t->exception) {
-        t->exception = makeThrowable
-          (t, GcInvocationTargetException::Type, 0, 0, t->exception);
+        t->exception = makeThrowable(
+            t, GcInvocationTargetException::Type, 0, 0, t->exception);
 
-        t->exception->as<GcInvocationTargetException>(t)->setTarget(t, t->exception->cause());
+        t->exception->as<GcInvocationTargetException>(t)
+            ->setTarget(t, t->exception->cause());
       }
     });
 
@@ -595,9 +623,12 @@ invoke(Thread* t, GcMethod* method, object instance, object args)
 
 // only safe to call during bootstrap when there's only one thread
 // running:
-void
-intercept(Thread* t, GcClass* c, const char* name, const char* spec,
-          void* function, bool updateRuntimeData)
+void intercept(Thread* t,
+               GcClass* c,
+               const char* name,
+               const char* spec,
+               void* function,
+               bool updateRuntimeData)
 {
   GcMethod* m = findMethodOrNull(t, c, name, spec);
   if (m) {
@@ -638,14 +669,11 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
 {
   ACQUIRE(t, t->m->referenceLock);
 
-  for (GcFinder* p = roots(t)->virtualFileFinders();
-       p; p = p->next())
-  {
+  for (GcFinder* p = roots(t)->virtualFileFinders(); p; p = p->next()) {
     if (p->name()->length() == nameLength
-        and strncmp(reinterpret_cast<const char*>
-                    (p->name()->body().begin()),
-                    name, nameLength))
-    {
+        and strncmp(reinterpret_cast<const char*>(p->name()->body().begin()),
+                    name,
+                    nameLength)) {
       return static_cast<Finder*>(p->finder());
     }
   }
@@ -653,8 +681,8 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
   GcByteArray* n = makeByteArray(t, nameLength + 1);
   memcpy(n->body().begin(), name, nameLength);
 
-  void* p = t->m->libraries->resolve
-    (reinterpret_cast<const char*>(n->body().begin()));
+  void* p = t->m->libraries->resolve(
+      reinterpret_cast<const char*>(n->body().begin()));
 
   if (p) {
     uint8_t* (*function)(unsigned*);
@@ -664,8 +692,7 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
     uint8_t* data = function(&size);
     if (data) {
       Finder* f = makeFinder(t->m->system, t->m->heap, data, size);
-      GcFinder* finder = makeFinder
-        (t, f, n, roots(t)->virtualFileFinders());
+      GcFinder* finder = makeFinder(t, f, n, roots(t)->virtualFileFinders());
 
       roots(t)->setVirtualFileFinders(t, finder);
 
@@ -676,8 +703,7 @@ getFinder(Thread* t, const char* name, unsigned nameLength)
   return 0;
 }
 
-object
-getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
+object getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
 {
   GcClassAddendum* addendum = c->addendum();
   if (addendum) {
@@ -687,12 +713,11 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
 
       unsigned count = 0;
       for (unsigned i = 0; i < table->length(); ++i) {
-        GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
+        GcInnerClassReference* reference
+            = cast<GcInnerClassReference>(t, table->body()[i]);
         GcByteArray* outer = reference->outer();
         if (outer and byteArrayEqual(t, outer, c->name())
-            and ((not publicOnly)
-                 or (reference->flags() & ACC_PUBLIC)))
-        {
+            and ((not publicOnly) or (reference->flags() & ACC_PUBLIC))) {
           ++ count;
         }
       }
@@ -701,18 +726,13 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
       PROTECT(t, result);
 
       for (unsigned i = 0; i < table->length(); ++i) {
-        GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
+        GcInnerClassReference* reference
+            = cast<GcInnerClassReference>(t, table->body()[i]);
         GcByteArray* outer = reference->outer();
         if (outer and byteArrayEqual(t, outer, c->name())
-            and ((not publicOnly)
-                 or (reference->flags() & ACC_PUBLIC)))
-        {
-          object inner = getJClass(
-              t,
-              resolveClass(
-                  t,
-                  c->loader(),
-                  reference->inner()));
+            and ((not publicOnly) or (reference->flags() & ACC_PUBLIC))) {
+          object inner
+              = getJClass(t, resolveClass(t, c->loader(), reference->inner()));
 
           -- count;
           reinterpret_cast<GcArray*>(result)->setBodyElement(t, count, inner);
@@ -726,24 +746,19 @@ getDeclaredClasses(Thread* t, GcClass* c, bool publicOnly)
   return makeObjectArray(t, type(t, GcJclass::Type), 0);
 }
 
-GcJclass*
-getDeclaringClass(Thread* t, GcClass* c)
+GcJclass* getDeclaringClass(Thread* t, GcClass* c)
 {
   GcClassAddendum* addendum = c->addendum();
   if (addendum) {
     GcArray* table = cast<GcArray>(t, addendum->innerClassTable());
     if (table) {
       for (unsigned i = 0; i < table->length(); ++i) {
-        GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
-        if (reference->outer() and strcmp
-            (reference->inner()->body().begin(),
-             c->name()->body().begin()) == 0)
-        {
-          return getJClass(
-              t,
-              resolveClass(t,
-                           c->loader(),
-                           reference->outer()));
+        GcInnerClassReference* reference
+            = cast<GcInnerClassReference>(t, table->body()[i]);
+        if (reference->outer()
+            and strcmp(reference->inner()->body().begin(),
+                       c->name()->body().begin()) == 0) {
+          return getJClass(t, resolveClass(t, c->loader(), reference->outer()));
         }
       }
     }
@@ -752,19 +767,17 @@ getDeclaringClass(Thread* t, GcClass* c)
   return 0;
 }
 
-unsigned
-classModifiers(Thread* t, GcClass* c)
+unsigned classModifiers(Thread* t, GcClass* c)
 {
   GcClassAddendum* addendum = c->addendum();
   if (addendum) {
     GcArray* table = cast<GcArray>(t, addendum->innerClassTable());
     if (table) {
       for (unsigned i = 0; i < table->length(); ++i) {
-        GcInnerClassReference* reference = cast<GcInnerClassReference>(t, table->body()[i]);
-        if (0 == strcmp
-            (c->name()->body().begin(),
-             reference->inner()->body().begin()))
-        {
+        GcInnerClassReference* reference
+            = cast<GcInnerClassReference>(t, table->body()[i]);
+        if (0 == strcmp(c->name()->body().begin(),
+                        reference->inner()->body().begin())) {
           return reference->flags();
         }
       }

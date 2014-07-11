@@ -400,8 +400,8 @@ class CallEvent: public Event {
              && (v == 0 || (i >= 1 && arguments[i - 1] == 0)))
             || (c->targetInfo.pointerSize == 4 && v->nextWord != v)) {
           assertT(c,
-                 c->targetInfo.pointerSize == 8
-                 or v->nextWord == arguments[i - 1]);
+                  c->targetInfo.pointerSize == 8
+                  or v->nextWord == arguments[i - 1]);
 
           arguments[i] = arguments[i - 1];
           --i;
@@ -512,10 +512,14 @@ class CallEvent: public Event {
         op = lir::Jump;
       }
 
-      assertT(c, returnAddressSurrogate == 0
-             or returnAddressSurrogate->source->type(c) == lir::RegisterOperand);
-      assertT(c, framePointerSurrogate == 0
-             or framePointerSurrogate->source->type(c) == lir::RegisterOperand);
+      assertT(
+          c,
+          returnAddressSurrogate == 0
+          or returnAddressSurrogate->source->type(c) == lir::RegisterOperand);
+      assertT(
+          c,
+          framePointerSurrogate == 0
+          or framePointerSurrogate->source->type(c) == lir::RegisterOperand);
 
       int ras;
       if (returnAddressSurrogate) {
@@ -1004,7 +1008,9 @@ class CombineEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assertT(c, firstValue->source->type(c) == firstValue->nextWord->source->type(c));
+    assertT(
+        c,
+        firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
     // if (secondValue->source->type(c) != secondValue->nextWord->source->type(c)) {
     //   fprintf(stderr, "%p %p %d : %p %p %d\n",
@@ -1013,7 +1019,9 @@ class CombineEvent: public Event {
     //           secondValue->nextWord->source->type(c));
     // }
 
-    assertT(c, secondValue->source->type(c) == secondValue->nextWord->source->type(c));
+    assertT(
+        c,
+        secondValue->source->type(c) == secondValue->nextWord->source->type(c));
 
     freezeSource(c, firstValue->type.size(c->targetInfo), firstValue);
 
@@ -1197,7 +1205,9 @@ class TranslateEvent: public Event {
   }
 
   virtual void compile(Context* c) {
-    assertT(c, firstValue->source->type(c) == firstValue->nextWord->source->type(c));
+    assertT(
+        c,
+        firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
     OperandMask bMask;
 
@@ -1266,11 +1276,11 @@ void appendTranslate(Context* c,
                      Value* resultValue)
 {
   assertT(c,
-         firstValue->type.size(c->targetInfo)
-         == firstValue->type.size(c->targetInfo));
+          firstValue->type.size(c->targetInfo)
+          == firstValue->type.size(c->targetInfo));
   assertT(c,
-         resultValue->type.size(c->targetInfo)
-         == resultValue->type.size(c->targetInfo));
+          resultValue->type.size(c->targetInfo)
+          == resultValue->type.size(c->targetInfo));
 
   bool thunk;
   OperandMask first;

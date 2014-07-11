@@ -189,7 +189,8 @@ turnOffTheLights(Thread* t)
 
   enter(t, Thread::ExitState);
 
-  { GcFinalizer* p = 0;
+  {
+    GcFinalizer* p = 0;
     PROTECT(t, p);
 
     for (p = t->m->finalizers; p;) {
@@ -217,19 +218,16 @@ turnOffTheLights(Thread* t)
 
   if (GcArray* files = roots(t)->virtualFiles()) {
     PROTECT(t, files);
-    for (unsigned i = 0; i < files->length();
-         ++i)
-    {
+    for (unsigned i = 0; i < files->length(); ++i) {
       object region = files->body()[i];
       if (region) {
-        static_cast<System::Region*>(cast<GcRegion>(t, region)->region())->dispose();
+        static_cast<System::Region*>(cast<GcRegion>(t, region)->region())
+            ->dispose();
       }
     }
   }
 
-  for (GcFinder* p = roots(t)->virtualFileFinders();
-       p; p = p->next())
-  {
+  for (GcFinder* p = roots(t)->virtualFileFinders(); p; p = p->next()) {
     static_cast<Finder*>(p->finder())->dispose();
   }
 
@@ -367,26 +365,24 @@ walk(Thread*, Heap::Walker* w, uint32_t* mask, unsigned fixedSize,
   return true;
 }
 
-object
-findInInterfaces(Thread* t, GcClass* class_, GcByteArray* name, GcByteArray* spec,
-                 object (*find)(Thread*, GcClass*, GcByteArray*, GcByteArray*))
+object findInInterfaces(
+    Thread* t,
+    GcClass* class_,
+    GcByteArray* name,
+    GcByteArray* spec,
+    object (*find)(Thread*, GcClass*, GcByteArray*, GcByteArray*))
 {
   object result = 0;
   if (GcArray* itable = cast<GcArray>(t, class_->interfaceTable())) {
     PROTECT(t, itable);
-    for (unsigned i = 0;
-         i < itable->length() and result == 0;
-         i += 2)
-    {
-      result = find
-        (t, cast<GcClass>(t, itable->body()[i]), name, spec);
+    for (unsigned i = 0; i < itable->length() and result == 0; i += 2) {
+      result = find(t, cast<GcClass>(t, itable->body()[i]), name, spec);
     }
   }
   return result;
 }
 
-void
-finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, GcFinalizer** p)
+void finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, GcFinalizer** p)
 {
   v->visit(&(*p)->target());
 
@@ -407,12 +403,11 @@ finalizerTargetUnreachable(Thread* t, Heap::Visitor* v, GcFinalizer** p)
   }
 }
 
-void
-referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
+void referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
 {
   if (DebugReferences) {
-    fprintf(stderr, "target %p unreachable for reference %p\n",
-            (*p)->target(), *p);
+    fprintf(
+        stderr, "target %p unreachable for reference %p\n", (*p)->target(), *p);
   }
 
   v->visit(p);
@@ -428,8 +423,7 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
     roots(t)->setObjectsToClean(t, cleaner);
   } else {
     if ((*p)->queue()
-        and t->m->heap->status((*p)->queue()) != Heap::Unreachable)
-    {
+        and t->m->heap->status((*p)->queue()) != Heap::Unreachable) {
       // queue is reachable - add the reference
 
       v->visit(&(*p)->queue());
@@ -450,19 +444,15 @@ referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
   }
 }
 
-void
-referenceUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
+void referenceUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
 {
   GcJreference* r = t->m->heap->follow(*p);
 
   if (DebugReferences) {
-    fprintf(stderr, "reference %p unreachable (target %p)\n",
-            *p, r->target());
+    fprintf(stderr, "reference %p unreachable (target %p)\n", *p, r->target());
   }
 
-  if (r->queue()
-      and t->m->heap->status(r->queue()) != Heap::Unreachable)
-  {
+  if (r->queue() and t->m->heap->status(r->queue()) != Heap::Unreachable) {
     // queue is reachable - add the reference
     referenceTargetUnreachable(t, v, p);
   } else {
@@ -470,12 +460,11 @@ referenceUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
   }
 }
 
-void
-referenceTargetReachable(Thread* t, Heap::Visitor* v, GcJreference** p)
+void referenceTargetReachable(Thread* t, Heap::Visitor* v, GcJreference** p)
 {
   if (DebugReferences) {
-    fprintf(stderr, "target %p reachable for reference %p\n",
-            (*p)->target(), *p);
+    fprintf(
+        stderr, "target %p reachable for reference %p\n", (*p)->target(), *p);
   }
 
   v->visit(p);
@@ -492,16 +481,13 @@ bool
 isFinalizable(Thread* t, object o)
 {
   return t->m->heap->status(o) == Heap::Unreachable
-    and (t->m->heap->follow(objectClass(t, o))->vmFlags()
-         & HasFinalizerFlag);
+         and (t->m->heap->follow(objectClass(t, o))->vmFlags()
+              & HasFinalizerFlag);
 }
 
-void
-clearTargetIfFinalizable(Thread* t, GcJreference* r)
+void clearTargetIfFinalizable(Thread* t, GcJreference* r)
 {
-  if (isFinalizable
-      (t, t->m->heap->follow(r->target())))
-  {
+  if (isFinalizable(t, t->m->heap->follow(r->target()))) {
     r->target() = 0;
   }
 }
@@ -590,10 +576,8 @@ postVisit(Thread* t, Heap::Visitor* v)
     if (m->heap->status(*p) == Heap::Unreachable) {
       // reference is unreachable
       referenceUnreachable(t, v, p);
-    } else if (m->heap->status
-               (m->heap->follow(*p)->target())
-               == Heap::Unreachable)
-    {
+    } else if (m->heap->status(m->heap->follow(*p)->target())
+               == Heap::Unreachable) {
       // target is unreachable
       referenceTargetUnreachable(t, v, p);
     } else {
@@ -651,10 +635,8 @@ postVisit(Thread* t, Heap::Visitor* v)
       if (m->heap->status(*p) == Heap::Unreachable) {
         // reference is unreachable
         referenceUnreachable(t, v, reinterpret_cast<GcJreference**>(p));
-      } else if (m->heap->status
-                 (m->heap->follow(*p)->target())
-                 == Heap::Unreachable)
-      {
+      } else if (m->heap->status(m->heap->follow(*p)->target())
+                 == Heap::Unreachable) {
         // target is unreachable
         referenceTargetUnreachable(t, v, reinterpret_cast<GcJreference**>(p));
       } else {
@@ -671,8 +653,7 @@ postVisit(Thread* t, Heap::Visitor* v)
   }
 
   if (lastNewTenuredWeakReference) {
-    lastNewTenuredWeakReference->vmNext()
-      = m->tenuredWeakReferences;
+    lastNewTenuredWeakReference->vmNext() = m->tenuredWeakReferences;
     m->tenuredWeakReferences = firstNewTenuredWeakReference;
   }
 
@@ -748,8 +729,7 @@ finalizeObject(Thread* t, object o, const char* name)
       if (vm::strcmp(reinterpret_cast<const int8_t*>(name),
                      m->name()->body().begin()) == 0
           and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
-                         m->spec()->body().begin()) == 0)
-      {
+                         m->spec()->body().begin()) == 0) {
         PROTECT(t, m);
         PROTECT(t, o);
 
@@ -778,10 +758,13 @@ readByte(AbstractStream& s, unsigned* value)
   }
 }
 
-GcCharArray*
-parseUtf8NonAscii(Thread* t, AbstractStream& s, GcByteArray* bytesSoFar,
-                  unsigned byteCount, unsigned sourceIndex, unsigned byteA,
-                  unsigned byteB)
+GcCharArray* parseUtf8NonAscii(Thread* t,
+                               AbstractStream& s,
+                               GcByteArray* bytesSoFar,
+                               unsigned byteCount,
+                               unsigned sourceIndex,
+                               unsigned byteA,
+                               unsigned byteB)
 {
   PROTECT(t, bytesSoFar);
 
@@ -803,7 +786,7 @@ parseUtf8NonAscii(Thread* t, AbstractStream& s, GcByteArray* bytesSoFar,
         unsigned b = readByte(s, &byteB);
         unsigned c = s.read1();
         value->body()[vi++] = ((a & 0xf) << 12) | ((b & 0x3f) << 6)
-                                        | (c & 0x3f);
+                              | (c & 0x3f);
       } else {
         // 2 bytes
         ++si;
@@ -870,8 +853,7 @@ object parseUtf8(Thread* t, AbstractStream& s, unsigned length)
   return value;
 }
 
-GcByteArray*
-makeByteArray(Thread* t, Stream& s, unsigned length)
+GcByteArray* makeByteArray(Thread* t, Stream& s, unsigned length)
 {
   GcByteArray* value = makeByteArray(t, length + 1);
   s.read(reinterpret_cast<uint8_t*>(value->body().begin()), length);
@@ -881,22 +863,17 @@ makeByteArray(Thread* t, Stream& s, unsigned length)
 void
 removeByteArray(Thread* t, object o)
 {
-  hashMapRemove(t,
-                roots(t)->byteArrayMap(),
-                o,
-                byteArrayHash,
-                objectEqual);
+  hashMapRemove(t, roots(t)->byteArrayMap(), o, byteArrayHash, objectEqual);
 }
 
-GcByteArray*
-internByteArray(Thread* t, GcByteArray* array)
+GcByteArray* internByteArray(Thread* t, GcByteArray* array)
 {
   PROTECT(t, array);
 
   ACQUIRE(t, t->m->referenceLock);
 
-  GcTriple* n = hashMapFindNode
-    (t, roots(t)->byteArrayMap(), array, byteArrayHash, byteArrayEqual);
+  GcTriple* n = hashMapFindNode(
+      t, roots(t)->byteArrayMap(), array, byteArrayHash, byteArrayEqual);
   if (n) {
     return cast<GcByteArray>(t, cast<GcJreference>(t, n->first())->target());
   } else {
@@ -906,8 +883,11 @@ internByteArray(Thread* t, GcByteArray* array)
   }
 }
 
-unsigned
-parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigned i)
+unsigned parsePoolEntry(Thread* t,
+                        Stream& s,
+                        uint32_t* index,
+                        GcSingleton* pool,
+                        unsigned i)
 {
   PROTECT(t, pool);
 
@@ -949,8 +929,9 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
     if (singletonObject(t, pool, i) == 0) {
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
-        
-      GcReference* value = makeReference(t, 0, 0, cast<GcByteArray>(t, singletonObject(t, pool, si)), 0);
+
+      GcReference* value = makeReference(
+          t, 0, 0, cast<GcByteArray>(t, singletonObject(t, pool, si)), 0);
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
       if(DebugClassReader) {
@@ -963,8 +944,9 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
     if (singletonObject(t, pool, i) == 0) {
       unsigned si = s.read2() - 1;
       parsePoolEntry(t, s, index, pool, si);
-        
-      object value = parseUtf8(t, cast<GcByteArray>(t, singletonObject(t, pool, si)));
+
+      object value
+          = parseUtf8(t, cast<GcByteArray>(t, singletonObject(t, pool, si)));
       value = t->m->classpath->makeString
         (t, value, 0, fieldAtOffset<uintptr_t>(value, BytesPerWord) - 1);
       value = intern(t, value);
@@ -983,14 +965,18 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
 
       parsePoolEntry(t, s, index, pool, ni);
       parsePoolEntry(t, s, index, pool, ti);
-        
+
       GcByteArray* name = cast<GcByteArray>(t, singletonObject(t, pool, ni));
       GcByteArray* type = cast<GcByteArray>(t, singletonObject(t, pool, ti));
       GcPair* value = makePair(t, name, type);
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
       if(DebugClassReader) {
-        fprintf(stderr, "    consts[%d] = nameAndType %s%s\n", i, name->body().begin(), type->body().begin());
+        fprintf(stderr,
+                "    consts[%d] = nameAndType %s%s\n",
+                i,
+                name->body().begin(),
+                type->body().begin());
       }
     }
   } return 1;
@@ -1005,15 +991,15 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
       parsePoolEntry(t, s, index, pool, ci);
       parsePoolEntry(t, s, index, pool, nti);
 
-      GcByteArray* className = cast<GcReference>(t, singletonObject(t, pool, ci))->name();
+      GcByteArray* className
+          = cast<GcReference>(t, singletonObject(t, pool, ci))->name();
       GcPair* nameAndType = cast<GcPair>(t, singletonObject(t, pool, nti));
 
-      object value =
-          makeReference(t,
-                        0,
-                        className,
-                        cast<GcByteArray>(t, nameAndType->first()),
-                        cast<GcByteArray>(t, nameAndType->second()));
+      object value = makeReference(t,
+                                   0,
+                                   className,
+                                   cast<GcByteArray>(t, nameAndType->first()),
+                                   cast<GcByteArray>(t, nameAndType->second()));
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
 
       if(DebugClassReader) {
@@ -1037,7 +1023,10 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
       GcReference* value = cast<GcReference>(t, singletonObject(t, pool, ri));
 
       if (DebugClassReader) {
-        fprintf(stderr, "   consts[%d] = method handle %d %s.%s%s\n", i, kind,
+        fprintf(stderr,
+                "   consts[%d] = method handle %d %s.%s%s\n",
+                i,
+                kind,
                 value->class_()->body().begin(),
                 value->name()->body().begin(),
                 value->spec()->body().begin());
@@ -1055,7 +1044,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
 
       parsePoolEntry(t, s, index, pool, ni);
 
-      pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(singletonObject(t, pool, ni)));
+      pool->setBodyElement(
+          t, i, reinterpret_cast<uintptr_t>(singletonObject(t, pool, ni)));
     } return 1;
 
   case CONSTANT_InvokeDynamic:
@@ -1067,8 +1057,8 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
 
       GcPair* nameAndType = cast<GcPair>(t, singletonObject(t, pool, nti));
 
-      const char* specString = reinterpret_cast<const char*>
-        (cast<GcByteArray>(t, nameAndType->second())->body().begin());
+      const char* specString = reinterpret_cast<const char*>(
+          cast<GcByteArray>(t, nameAndType->second())->body().begin());
 
       unsigned parameterCount;
       unsigned parameterFootprint;
@@ -1077,18 +1067,24 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
         (t, specString, true, &parameterCount, &parameterFootprint,
          &returnCode);
 
-      GcMethod* template_ = makeMethod
-        (t, 0, returnCode, parameterCount, parameterFootprint, 0, 0, 0, 0,
-         cast<GcByteArray>(t, nameAndType->first()), cast<GcByteArray>(t, nameAndType->second()), 0, 0, 0);
+      GcMethod* template_
+          = makeMethod(t,
+                       0,
+                       returnCode,
+                       parameterCount,
+                       parameterFootprint,
+                       0,
+                       0,
+                       0,
+                       0,
+                       cast<GcByteArray>(t, nameAndType->first()),
+                       cast<GcByteArray>(t, nameAndType->second()),
+                       0,
+                       0,
+                       0);
 
-      object value = reinterpret_cast
-          <object>(makeInvocation(t,
-                                  bootstrap,
-                                  -1,
-                                  0,
-                                  pool,
-                                  template_,
-                                  0));
+      object value = reinterpret_cast<object>(
+          makeInvocation(t, bootstrap, -1, 0, pool, template_, 0));
 
       pool->setBodyElement(t, i, reinterpret_cast<uintptr_t>(value));
     } return 1;
@@ -1097,8 +1093,7 @@ parsePoolEntry(Thread* t, Stream& s, uint32_t* index, GcSingleton* pool, unsigne
   }
 }
 
-GcSingleton*
-parsePool(Thread* t, Stream& s)
+GcSingleton* parsePool(Thread* t, Stream& s)
 {
   unsigned count = s.read2() - 1;
   GcSingleton* pool = makeSingletonOfSize(t, count + poolMaskSize(count));
@@ -1189,8 +1184,7 @@ parsePool(Thread* t, Stream& s)
   return pool;
 }
 
-void
-addInterfaces(Thread* t, GcClass* class_, GcHashMap* map)
+void addInterfaces(Thread* t, GcClass* class_, GcHashMap* map)
 {
   GcArray* table = cast<GcArray>(t, class_->interfaceTable());
   if (table) {
@@ -1205,39 +1199,33 @@ addInterfaces(Thread* t, GcClass* class_, GcHashMap* map)
     for (unsigned i = 0; i < table->length(); i += increment) {
       GcClass* interface = cast<GcClass>(t, table->body()[i]);
       GcByteArray* name = interface->name();
-      hashMapInsertMaybe(t,
-                         map,
-                         name,
-                         interface,
-                         byteArrayHash,
-                         byteArrayEqual);
+      hashMapInsertMaybe(
+          t, map, name, interface, byteArrayHash, byteArrayEqual);
     }
   }
 }
 
-GcClassAddendum*
-getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
+GcClassAddendum* getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
 {
   GcClassAddendum* addendum = class_->addendum();
   if (addendum == 0) {
     PROTECT(t, class_);
 
     addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0);
-    setField(t,
-             class_,
-             ClassAddendum,
-             addendum);
+    setField(t, class_, ClassAddendum, addendum);
   }
   return addendum;
 }
 
-void
-parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
-                    Gc::Type throwType)
+void parseInterfaceTable(Thread* t,
+                         Stream& s,
+                         GcClass* class_,
+                         GcSingleton* pool,
+                         Gc::Type throwType)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
-  
+
   GcHashMap* map = makeHashMap(t, 0, 0);
   PROTECT(t, map);
 
@@ -1257,11 +1245,12 @@ parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
   }
 
   for (unsigned i = 0; i < count; ++i) {
-    GcByteArray* name = cast<GcReference>(t, singletonObject(t, pool, s.read2() - 1))->name();
+    GcByteArray* name
+        = cast<GcReference>(t, singletonObject(t, pool, s.read2() - 1))->name();
     PROTECT(t, name);
 
-    GcClass* interface = resolveClass
-      (t, class_->loader(), name, true, throwType);
+    GcClass* interface = resolveClass(
+        t, class_->loader(), name, true, throwType);
 
     PROTECT(t, interface);
 
@@ -1305,8 +1294,7 @@ parseInterfaceTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool,
   class_->setInterfaceTable(t, interfaceTable);
 }
 
-void
-parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
+void parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
@@ -1320,7 +1308,7 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
   if (count) {
     unsigned staticOffset = BytesPerWord * 3;
     unsigned staticCount = 0;
-  
+
     GcArray* fieldTable = makeArray(t, count);
     PROTECT(t, fieldTable);
 
@@ -1341,37 +1329,35 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
       addendum = 0;
 
-      unsigned code = fieldCode
-        (t, cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))->body()[0]);
+      unsigned code = fieldCode(
+          t,
+          cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))->body()[0]);
 
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
-        GcByteArray* name = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
+        GcByteArray* name
+            = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
         unsigned length = s.read4();
 
         if (vm::strcmp(reinterpret_cast<const int8_t*>("ConstantValue"),
-                       name->body().begin()) == 0)
-        {
+                       name->body().begin()) == 0) {
           value = s.read2();
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
-                              name->body().begin()) == 0)
-        {
+                              name->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeFieldAddendum(t, pool, 0, 0);
           }
 
           addendum->setSignature(t, singletonObject(t, pool, s.read2() - 1));
-        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                              ("RuntimeVisibleAnnotations"),
-                              name->body().begin()) == 0)
-        {
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>(
+                                  "RuntimeVisibleAnnotations"),
+                              name->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeFieldAddendum(t, pool, 0, 0);
           }
 
           GcByteArray* body = makeByteArray(t, length);
-          s.read(reinterpret_cast<uint8_t*>(body->body().begin()),
-                 length);
+          s.read(reinterpret_cast<uint8_t*>(body->body().begin()), length);
 
           addendum->setAnnotationTable(t, body);
         } else {
@@ -1379,17 +1365,17 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         }
       }
 
-      GcField* field = makeField
-        (t,
-         0, // vm flags
-         code,
-         flags,
-         0, // offset
-         0, // native ID
-         cast<GcByteArray>(t, singletonObject(t, pool, name - 1)),
-         cast<GcByteArray>(t, singletonObject(t, pool, spec - 1)),
-         addendum,
-         class_);
+      GcField* field
+          = makeField(t,
+                      0,  // vm flags
+                      code,
+                      flags,
+                      0,  // offset
+                      0,  // native ID
+                      cast<GcByteArray>(t, singletonObject(t, pool, name - 1)),
+                      cast<GcByteArray>(t, singletonObject(t, pool, spec - 1)),
+                      addendum,
+                      class_);
 
       unsigned size = fieldSize(t, code);
       if (flags & ACC_STATIC) {
@@ -1424,8 +1410,7 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
                                    BytesPerWord);
       GcSingleton* staticTable = makeSingletonOfSize(t, footprint);
 
-      uint8_t* body = reinterpret_cast<uint8_t*>
-        (staticTable->body().begin());
+      uint8_t* body = reinterpret_cast<uint8_t*>(staticTable->body().begin());
 
       memcpy(body, &class_, BytesPerWord);
       singletonMarkObject(t, staticTable, 0);
@@ -1481,26 +1466,22 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
   }
 
   class_->fixedSize() = memberOffset;
-  
-  if (class_->super()
-      and memberOffset == class_->super()->fixedSize())
-  {
-    class_->setObjectMask(t,
-        class_->super()->objectMask());
+
+  if (class_->super() and memberOffset == class_->super()->fixedSize()) {
+    class_->setObjectMask(t, class_->super()->objectMask());
   } else {
-    GcIntArray* mask = makeIntArray
-      (t, ceilingDivide(class_->fixedSize(), 32 * BytesPerWord));
+    GcIntArray* mask = makeIntArray(
+        t, ceilingDivide(class_->fixedSize(), 32 * BytesPerWord));
     mask->body()[0] = 1;
 
     GcIntArray* superMask = 0;
     if (class_->super()) {
       superMask = class_->super()->objectMask();
       if (superMask) {
-        memcpy(mask->body().begin(),
-               superMask->body().begin(),
-               ceilingDivide(class_->super()->fixedSize(),
-                       32 * BytesPerWord)
-               * 4);
+        memcpy(
+            mask->body().begin(),
+            superMask->body().begin(),
+            ceilingDivide(class_->super()->fixedSize(), 32 * BytesPerWord) * 4);
       }
     }
 
@@ -1510,8 +1491,7 @@ parseFieldTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       for (int i = fieldTable->length() - 1; i >= 0; --i) {
         GcField* field = cast<GcField>(t, fieldTable->body()[i]);
         if ((field->flags() & ACC_STATIC) == 0
-            and field->code() == ObjectField)
-        {
+            and field->code() == ObjectField) {
           unsigned index = field->offset() / BytesPerWord;
           mask->body()[index / 32] |= 1 << (index % 32);
           sawReferenceField = true;
@@ -1593,10 +1573,14 @@ disassembleCode(const char* prefix, uint8_t* code, unsigned length)
       case dneg: fprintf(stderr, "dneg\n"); break;
       case vm::drem: fprintf(stderr, "drem\n"); break;
       case dsub: fprintf(stderr, "dsub\n"); break;
-      case vm::dup: fprintf(stderr, "dup\n"); break;
+      case vm::dup:
+        fprintf(stderr, "dup\n");
+        break;
       case dup_x1: fprintf(stderr, "dup_x1\n"); break;
       case dup_x2: fprintf(stderr, "dup_x2\n"); break;
-      case vm::dup2: fprintf(stderr, "dup2\n"); break;
+      case vm::dup2:
+        fprintf(stderr, "dup2\n");
+        break;
       case dup2_x1: fprintf(stderr, "dup2_x1\n"); break;
       case dup2_x2: fprintf(stderr, "dup2_x2\n"); break;
       case f2d: fprintf(stderr, "f2d\n"); break;
@@ -1903,8 +1887,7 @@ disassembleCode(const char* prefix, uint8_t* code, unsigned length)
   }
 }
 
-GcCode*
-parseCode(Thread* t, Stream& s, GcSingleton* pool)
+GcCode* parseCode(Thread* t, Stream& s, GcSingleton* pool)
 {
   PROTECT(t, pool);
 
@@ -1932,8 +1915,7 @@ parseCode(Thread* t, Stream& s, GcSingleton* pool)
       unsigned end = s.read2();
       unsigned ip = s.read2();
       unsigned catchType = s.read2();
-      eht->body()[i] = exceptionHandler
-        (start, end, ip, catchType);
+      eht->body()[i] = exceptionHandler(start, end, ip, catchType);
     }
 
     code->setExceptionHandlerTable(t, eht);
@@ -1941,12 +1923,12 @@ parseCode(Thread* t, Stream& s, GcSingleton* pool)
 
   unsigned attributeCount = s.read2();
   for (unsigned j = 0; j < attributeCount; ++j) {
-    GcByteArray* name = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
+    GcByteArray* name
+        = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
     unsigned length = s.read4();
 
     if (vm::strcmp(reinterpret_cast<const int8_t*>("LineNumberTable"),
-                   name->body().begin()) == 0)
-    {
+                   name->body().begin()) == 0) {
       unsigned lntLength = s.read2();
       GcLineNumberTable* lnt = makeLineNumberTable(t, lntLength);
       for (unsigned i = 0; i < lntLength; ++i) {
@@ -1964,9 +1946,11 @@ parseCode(Thread* t, Stream& s, GcSingleton* pool)
   return code;
 }
 
-GcList*
-addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
-                    unsigned* virtualCount, bool makeList)
+GcList* addInterfaceMethods(Thread* t,
+                            GcClass* class_,
+                            GcHashMap* virtualMap,
+                            unsigned* virtualCount,
+                            bool makeList)
 {
   GcArray* itable = cast<GcArray>(t, class_->interfaceTable());
   if (itable) {
@@ -1985,15 +1969,13 @@ addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
 
     unsigned stride = (class_->flags() & ACC_INTERFACE) ? 1 : 2;
     for (unsigned i = 0; i < itable->length(); i += stride) {
-      vtable = cast<GcArray>(t, cast<GcClass>(t, itable->body()[i])->virtualTable());
+      vtable = cast<GcArray>(
+          t, cast<GcClass>(t, itable->body()[i])->virtualTable());
       if (vtable) {
         for (unsigned j = 0; j < vtable->length(); ++j) {
           method = cast<GcMethod>(t, vtable->body()[j]);
-          GcTriple* n = hashMapFindNode(t,
-                                     virtualMap,
-                                     method,
-                                     methodHash,
-                                     methodEqual);
+          GcTriple* n
+              = hashMapFindNode(t, virtualMap, method, methodHash, methodEqual);
           if (n == 0) {
             method = makeMethod(t,
                                 method->vmFlags(),
@@ -2010,11 +1992,7 @@ addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
                                 class_,
                                 0);
 
-            hashMapInsert(t,
-                          virtualMap,
-                          method,
-                          method,
-                          methodHash);
+            hashMapInsert(t, virtualMap, method, method, methodHash);
 
             if (makeList) {
               if (list == 0) {
@@ -2033,8 +2011,7 @@ addInterfaceMethods(Thread* t, GcClass* class_, GcHashMap* virtualMap,
   return 0;
 }
 
-void
-parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
+void parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
@@ -2087,9 +2064,17 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       unsigned spec = s.read2();
 
       if(DebugClassReader) {
-        fprintf(stderr, "    method flags %d name %d spec %d '%s%s'\n", flags, name, spec, 
-          cast<GcByteArray>(t, singletonObject(t, pool, name - 1))->body().begin(),
-          cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))->body().begin());
+        fprintf(stderr,
+                "    method flags %d name %d spec %d '%s%s'\n",
+                flags,
+                name,
+                spec,
+                cast<GcByteArray>(t, singletonObject(t, pool, name - 1))
+                    ->body()
+                    .begin(),
+                cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))
+                    ->body()
+                    .begin());
       }
 
       addendum = 0;
@@ -2097,16 +2082,15 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
 
       unsigned attributeCount = s.read2();
       for (unsigned j = 0; j < attributeCount; ++j) {
-        GcByteArray* attributeName = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
+        GcByteArray* attributeName
+            = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
         unsigned length = s.read4();
 
         if (vm::strcmp(reinterpret_cast<const int8_t*>("Code"),
-                       attributeName->body().begin()) == 0)
-        {
+                       attributeName->body().begin()) == 0) {
           code = parseCode(t, s, pool);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Exceptions"),
-                              attributeName->body().begin()) == 0)
-        {
+                              attributeName->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
@@ -2116,51 +2100,44 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
             body->body()[i] = s.read2();
           }
           addendum->setExceptionTable(t, body);
-        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                              ("AnnotationDefault"),
-                              attributeName->body().begin()) == 0)
-        {
+        } else if (vm::strcmp(
+                       reinterpret_cast<const int8_t*>("AnnotationDefault"),
+                       attributeName->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           GcByteArray* body = makeByteArray(t, length);
-          s.read(reinterpret_cast<uint8_t*>(body->body().begin()),
-                 length);
+          s.read(reinterpret_cast<uint8_t*>(body->body().begin()), length);
 
           addendum->setAnnotationDefault(t, body);
         } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
-                              attributeName->body().begin()) == 0)
-        {
+                              attributeName->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           addendum->setSignature(t, singletonObject(t, pool, s.read2() - 1));
-        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                              ("RuntimeVisibleAnnotations"),
-                              attributeName->body().begin()) == 0)
-        {
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>(
+                                  "RuntimeVisibleAnnotations"),
+                              attributeName->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           GcByteArray* body = makeByteArray(t, length);
-          s.read(reinterpret_cast<uint8_t*>(body->body().begin()),
-                 length);
+          s.read(reinterpret_cast<uint8_t*>(body->body().begin()), length);
 
           addendum->setAnnotationTable(t, body);
-        } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                              ("RuntimeVisibleParameterAnnotations"),
-                              attributeName->body().begin()) == 0)
-        {
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>(
+                                  "RuntimeVisibleParameterAnnotations"),
+                              attributeName->body().begin()) == 0) {
           if (addendum == 0) {
             addendum = makeMethodAddendum(t, pool, 0, 0, 0, 0, 0);
           }
 
           GcByteArray* body = makeByteArray(t, length);
-          s.read(reinterpret_cast<uint8_t*>(body->body().begin()),
-                 length);
+          s.read(reinterpret_cast<uint8_t*>(body->body().begin()), length);
 
           addendum->setParameterAnnotationTable(t, body);
         } else {
@@ -2168,8 +2145,10 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         }
       }
 
-      const char* specString = reinterpret_cast<const char*>
-        (cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))->body().begin());
+      const char* specString = reinterpret_cast<const char*>(
+          cast<GcByteArray>(t, singletonObject(t, pool, spec - 1))
+              ->body()
+              .begin());
 
       unsigned parameterCount;
       unsigned parameterFootprint;
@@ -2177,27 +2156,27 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       scanMethodSpec(t, specString, flags & ACC_STATIC, &parameterCount,
                      &parameterFootprint, &returnCode);
 
-      GcMethod* method =  t->m->processor->makeMethod
-        (t,
-         0, // vm flags
-         returnCode,
-         parameterCount,
-         parameterFootprint,
-         flags,
-         0, // offset
-         cast<GcByteArray>(t, singletonObject(t, pool, name - 1)),
-         cast<GcByteArray>(t, singletonObject(t, pool, spec - 1)),
-         addendum,
-         class_,
-         code);
+      GcMethod* method = t->m->processor->makeMethod(
+          t,
+          0,  // vm flags
+          returnCode,
+          parameterCount,
+          parameterFootprint,
+          flags,
+          0,  // offset
+          cast<GcByteArray>(t, singletonObject(t, pool, name - 1)),
+          cast<GcByteArray>(t, singletonObject(t, pool, spec - 1)),
+          addendum,
+          class_,
+          code);
 
       PROTECT(t, method);
 
       if (methodVirtual(t, method)) {
         ++ declaredVirtualCount;
 
-        GcTriple* p = hashMapFindNode
-          (t, virtualMap, method, methodHash, methodEqual);
+        GcTriple* p
+            = hashMapFindNode(t, virtualMap, method, methodHash, methodEqual);
 
         if (p) {
           method->offset() = cast<GcMethod>(t, p->first())->offset();
@@ -2212,28 +2191,22 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         }
 
         if (UNLIKELY((class_->flags() & ACC_INTERFACE) == 0
-                     and vm::strcmp
-                     (reinterpret_cast<const int8_t*>("finalize"), 
-                      method->name()->body().begin()) == 0
-                     and vm::strcmp
-                     (reinterpret_cast<const int8_t*>("()V"),
-                      method->spec()->body().begin()) == 0
-                     and (not emptyMethod(t, method))))
-        {
+                     and vm::strcmp(reinterpret_cast<const int8_t*>("finalize"),
+                                    method->name()->body().begin()) == 0
+                     and vm::strcmp(reinterpret_cast<const int8_t*>("()V"),
+                                    method->spec()->body().begin()) == 0
+                     and (not emptyMethod(t, method)))) {
           class_->vmFlags() |= HasFinalizerFlag;
         }
       } else {
         method->offset() = i;
 
-        if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"), 
-                       method->name()->body().begin()) == 0)
-        {
+        if (vm::strcmp(reinterpret_cast<const int8_t*>("<clinit>"),
+                       method->name()->body().begin()) == 0) {
           method->vmFlags() |= ClassInitFlag;
           class_->vmFlags() |= NeedInitFlag;
-        } else if (vm::strcmp
-                   (reinterpret_cast<const int8_t*>("<init>"), 
-                    method->name()->body().begin()) == 0)
-        {
+        } else if (vm::strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                              method->name()->body().begin()) == 0) {
           method->vmFlags() |= ConstructorFlag;
         }
       }
@@ -2244,27 +2217,23 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
     class_->setMethodTable(t, methodTable);
   }
 
-
-  GcList* abstractVirtuals = addInterfaceMethods
-    (t, class_, virtualMap, &virtualCount, true);
+  GcList* abstractVirtuals
+      = addInterfaceMethods(t, class_, virtualMap, &virtualCount, true);
 
   PROTECT(t, abstractVirtuals);
 
   bool populateInterfaceVtables = false;
 
-  if (declaredVirtualCount == 0
-      and abstractVirtuals == 0
-      and (class_->flags() & ACC_INTERFACE) == 0)
-  {
+  if (declaredVirtualCount == 0 and abstractVirtuals == 0
+      and (class_->flags() & ACC_INTERFACE) == 0) {
     if (class_->super()) {
       // inherit virtual table from superclass
       class_->setVirtualTable(t, superVirtualTable);
-      
+
       if (class_->super()->interfaceTable()
           and cast<GcArray>(t, class_->interfaceTable())->length()
-          == cast<GcArray>
-          (t, class_->super()->interfaceTable())->length())
-      {
+              == cast<GcArray>(t, class_->super()->interfaceTable())
+                     ->length()) {
         // inherit interface table from superclass
         class_->setInterfaceTable(t, class_->super()->interfaceTable());
       } else {
@@ -2303,7 +2272,8 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         }
       }
 
-      for (GcPair* p = cast<GcPair>(t, newVirtuals->front()); p; p = cast<GcPair>(t, p->second())) {
+      for (GcPair* p = cast<GcPair>(t, newVirtuals->front()); p;
+           p = cast<GcPair>(t, p->second())) {
         vtable->setBodyElement(t, i, p->first());
         ++ i;
       }
@@ -2315,18 +2285,20 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       object originalMethodTable = class_->methodTable();
       PROTECT(t, originalMethodTable);
 
-      unsigned oldLength = class_->methodTable() ?
-        cast<GcArray>(t, class_->methodTable())->length() : 0;
+      unsigned oldLength
+          = class_->methodTable()
+                ? cast<GcArray>(t, class_->methodTable())->length()
+                : 0;
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
       addendum->declaredMethodCount() = oldLength;
 
-      GcArray* newMethodTable = makeArray
-        (t, oldLength + abstractVirtuals->size());
+      GcArray* newMethodTable
+          = makeArray(t, oldLength + abstractVirtuals->size());
 
       if (oldLength) {
         GcArray* mtable = cast<GcArray>(t, class_->methodTable());
-        for(size_t i = 0; i < oldLength; i++) {
+        for (size_t i = 0; i < oldLength; i++) {
           newMethodTable->setBodyElement(t, i, mtable->body()[i]);
         }
       }
@@ -2334,9 +2306,8 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       mark(t, newMethodTable, ArrayBody, oldLength);
 
       unsigned mti = oldLength;
-      for (GcPair* p = cast<GcPair>(t, abstractVirtuals->front());
-           p; p = cast<GcPair>(t, p->second()))
-      {
+      for (GcPair* p = cast<GcPair>(t, abstractVirtuals->front()); p;
+           p = cast<GcPair>(t, p->second())) {
         newMethodTable->setBodyElement(t, mti++, p->first());
 
         if ((class_->flags() & ACC_INTERFACE) == 0) {
@@ -2361,16 +2332,17 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
       PROTECT(t, itable);
 
       for (unsigned i = 0; i < itable->length(); i += 2) {
-        GcArray* ivtable = cast<GcArray>(t, cast<GcClass>(t, itable->body()[i])->virtualTable());
+        GcArray* ivtable = cast<GcArray>(
+            t, cast<GcClass>(t, itable->body()[i])->virtualTable());
         if (ivtable) {
           GcArray* vtable = cast<GcArray>(t, itable->body()[i + 1]);
-        
+
           for (unsigned j = 0; j < ivtable->length(); ++j) {
             object method = ivtable->body()[j];
             method = hashMapFind
               (t, virtualMap, method, methodHash, methodEqual);
             assertT(t, method);
-              
+
             vtable->setBodyElement(t, j, method);
           }
         }
@@ -2379,30 +2351,30 @@ parseMethodTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
   }
 }
 
-void
-parseAttributeTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
+void parseAttributeTable(Thread* t,
+                         Stream& s,
+                         GcClass* class_,
+                         GcSingleton* pool)
 {
   PROTECT(t, class_);
   PROTECT(t, pool);
 
   unsigned attributeCount = s.read2();
   for (unsigned j = 0; j < attributeCount; ++j) {
-    GcByteArray* name = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
+    GcByteArray* name
+        = cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1));
     unsigned length = s.read4();
 
     if (vm::strcmp(reinterpret_cast<const int8_t*>("SourceFile"),
-                   name->body().begin()) == 0)
-    {
-      class_->setSourceFile(t, cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1)));
+                   name->body().begin()) == 0) {
+      class_->setSourceFile(
+          t, cast<GcByteArray>(t, singletonObject(t, pool, s.read2() - 1)));
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>("Signature"),
-                          name->body().begin()) == 0)
-    {
+                          name->body().begin()) == 0) {
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
-      addendum->setSignature(t,
-          singletonObject(t, pool, s.read2() - 1));
+      addendum->setSignature(t, singletonObject(t, pool, s.read2() - 1));
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>("InnerClasses"),
-                          name->body().begin()) == 0)
-    {
+                          name->body().begin()) == 0) {
       unsigned innerClassCount = s.read2();
       GcArray* table = makeArray(t, innerClassCount);
       PROTECT(t, table);
@@ -2413,50 +2385,56 @@ parseAttributeTable(Thread* t, Stream& s, GcClass* class_, GcSingleton* pool)
         int16_t name = s.read2();
         int16_t flags = s.read2();
 
-        GcInnerClassReference* reference = makeInnerClassReference
-          (t,
-           inner ? cast<GcReference>(t, singletonObject(t, pool, inner - 1))->name() : 0,
-           outer ? cast<GcReference>(t, singletonObject(t, pool, outer - 1))->name() : 0,
-           name ? cast<GcByteArray>(t, singletonObject(t, pool, name - 1)) : 0,
-           flags);
+        GcInnerClassReference* reference = makeInnerClassReference(
+            t,
+            inner
+                ? cast<GcReference>(t, singletonObject(t, pool, inner - 1))
+                      ->name()
+                : 0,
+            outer
+                ? cast<GcReference>(t, singletonObject(t, pool, outer - 1))
+                      ->name()
+                : 0,
+            name ? cast<GcByteArray>(t, singletonObject(t, pool, name - 1)) : 0,
+            flags);
 
         table->setBodyElement(t, i, reference);
       }
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
       addendum->setInnerClassTable(t, table);
-    } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                          ("RuntimeVisibleAnnotations"),
-                          name->body().begin()) == 0)
-    {
+    } else if (vm::strcmp(
+                   reinterpret_cast<const int8_t*>("RuntimeVisibleAnnotations"),
+                   name->body().begin()) == 0) {
       GcByteArray* body = makeByteArray(t, length);
       PROTECT(t, body);
       s.read(reinterpret_cast<uint8_t*>(body->body().begin()), length);
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
       addendum->setAnnotationTable(t, body);
-    } else if (vm::strcmp(reinterpret_cast<const int8_t*>
-                          ("EnclosingMethod"),
-                          name->body().begin()) == 0)
-    {
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>("EnclosingMethod"),
+                          name->body().begin()) == 0) {
       int16_t enclosingClass = s.read2();
       int16_t enclosingMethod = s.read2();
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
 
-      addendum->setEnclosingClass(t,
-          reinterpret_cast<object>(cast<GcReference>(t, singletonObject(t, pool, enclosingClass - 1))->name()));
+      addendum->setEnclosingClass(
+          t,
+          reinterpret_cast<object>(
+              cast<GcReference>(t, singletonObject(t, pool, enclosingClass - 1))
+                  ->name()));
 
-      addendum->setEnclosingMethod(t, enclosingMethod
-          ? singletonObject(t, pool, enclosingMethod - 1) : 0);
+      addendum->setEnclosingMethod(
+          t,
+          enclosingMethod ? singletonObject(t, pool, enclosingMethod - 1) : 0);
     } else {
       s.skip(length);
     }
   }
 }
 
-void
-updateClassTables(Thread* t, GcClass* newClass, GcClass* oldClass)
+void updateClassTables(Thread* t, GcClass* newClass, GcClass* oldClass)
 {
   GcArray* fieldTable = cast<GcArray>(t, newClass->fieldTable());
   if (fieldTable) {
@@ -2490,8 +2468,7 @@ updateClassTables(Thread* t, GcClass* newClass, GcClass* oldClass)
   }
 }
 
-void
-updateBootstrapClass(Thread* t, GcClass* bootstrapClass, GcClass* class_)
+void updateBootstrapClass(Thread* t, GcClass* bootstrapClass, GcClass* class_)
 {
   expect(t, bootstrapClass != class_);
 
@@ -2523,9 +2500,11 @@ updateBootstrapClass(Thread* t, GcClass* bootstrapClass, GcClass* class_)
   updateClassTables(t, bootstrapClass, class_);
 }
 
-GcClass*
-makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, GcByteArray* spec,
-               GcClass* elementClass)
+GcClass* makeArrayClass(Thread* t,
+                        GcClassLoader* loader,
+                        unsigned dimensions,
+                        GcByteArray* spec,
+                        GcClass* elementClass)
 {
   if (type(t, GcJobject::Type)->vmFlags() & BootstrapFlag) {
     PROTECT(t, loader);
@@ -2536,33 +2515,31 @@ makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, GcByteArra
     // don't throw an exception if we can't find it.  This way, we
     // avoid infinite recursion due to trying to create an array to
     // make a stack trace for a ClassNotFoundException.
-    resolveSystemClass
-      (t, roots(t)->bootLoader(),
-       type(t, GcJobject::Type)->name(), false);
+    resolveSystemClass(
+        t, roots(t)->bootLoader(), type(t, GcJobject::Type)->name(), false);
   }
 
   GcArray* vtable = cast<GcArray>(t, type(t, GcJobject::Type)->virtualTable());
 
-  GcClass* c = t->m->processor->makeClass
-    (t,
-     0,
-     0,
-     2 * BytesPerWord,
-     BytesPerWord,
-     dimensions,
-     elementClass,
-     type(t, GcArray::Type)->objectMask(),
-     spec,
-     0,
-     type(t, GcJobject::Type),
-     roots(t)->arrayInterfaceTable(),
-     vtable,
-     0,
-     0,
-     0,
-     0,
-     loader,
-     vtable->length());
+  GcClass* c = t->m->processor->makeClass(t,
+                                          0,
+                                          0,
+                                          2 * BytesPerWord,
+                                          BytesPerWord,
+                                          dimensions,
+                                          elementClass,
+                                          type(t, GcArray::Type)->objectMask(),
+                                          spec,
+                                          0,
+                                          type(t, GcJobject::Type),
+                                          roots(t)->arrayInterfaceTable(),
+                                          vtable,
+                                          0,
+                                          0,
+                                          0,
+                                          0,
+                                          loader,
+                                          vtable->length());
 
   PROTECT(t, c);
 
@@ -2571,8 +2548,7 @@ makeArrayClass(Thread* t, GcClassLoader* loader, unsigned dimensions, GcByteArra
   return c;
 }
 
-void
-saveLoadedClass(Thread* t, GcClassLoader* loader, GcClass* c)
+void saveLoadedClass(Thread* t, GcClassLoader* loader, GcClass* c)
 {
   PROTECT(t, loader);
   PROTECT(t, c);
@@ -2584,16 +2560,15 @@ saveLoadedClass(Thread* t, GcClassLoader* loader, GcClass* c)
     loader->setMap(t, map);
   }
 
-  hashMapInsert(t,
-                cast<GcHashMap>(t, loader->map()),
-                c->name(),
-                c,
-                byteArrayHash);
+  hashMapInsert(
+      t, cast<GcHashMap>(t, loader->map()), c->name(), c, byteArrayHash);
 }
 
-GcClass*
-makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
-               Gc::Type throwType)
+GcClass* makeArrayClass(Thread* t,
+                        GcClassLoader* loader,
+                        GcByteArray* spec,
+                        bool throw_,
+                        Gc::Type throwType)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
@@ -2627,7 +2602,7 @@ makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
       elementSpec = makeByteArray(t, dimensions + 1);
       unsigned i;
       for (i = 0; i < dimensions - 1; ++i) {
-        elementSpec->body()[i] ='[';
+        elementSpec->body()[i] = '[';
       }
       elementSpec->body()[i++] = c;
       elementSpec->body()[i] = 0;
@@ -2637,10 +2612,14 @@ makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
     }
   }
 
-  GcClass* elementClass = cast<GcClass>(t, hashMapFind
-    (t, roots(t)->bootstrapClassMap(), elementSpec, byteArrayHash,
-     byteArrayEqual));
-  
+  GcClass* elementClass
+      = cast<GcClass>(t,
+                      hashMapFind(t,
+                                  roots(t)->bootstrapClassMap(),
+                                  elementSpec,
+                                  byteArrayHash,
+                                  byteArrayEqual));
+
   if (elementClass == 0) {
     elementClass = resolveClass(t, loader, elementSpec, throw_, throwType);
     if (elementClass == 0) return 0;
@@ -2655,8 +2634,8 @@ makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
     return class_;
   }
 
-  class_ = makeArrayClass
-    (t, elementClass->loader(), dimensions, spec, elementClass);
+  class_ = makeArrayClass(
+      t, elementClass->loader(), dimensions, spec, elementClass);
 
   PROTECT(t, class_);
 
@@ -2665,9 +2644,11 @@ makeArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
   return class_;
 }
 
-GcClass*
-resolveArrayClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
-                  Gc::Type throwType)
+GcClass* resolveArrayClass(Thread* t,
+                           GcClassLoader* loader,
+                           GcByteArray* spec,
+                           bool throw_,
+                           Gc::Type throwType)
 {
   GcClass* c = cast<GcClass>(t,
                              hashMapFind(t,
@@ -2702,8 +2683,8 @@ removeMonitor(Thread* t, object o)
     hash = objectHash(t, o);
   }
 
-  object m = hashMapRemove
-    (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
+  object m
+      = hashMapRemove(t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
   if (DebugMonitors) {
     fprintf(stderr, "dispose monitor %p for object %x\n", m, hash);
@@ -2716,20 +2697,22 @@ removeString(Thread* t, object o)
   hashMapRemove(t, roots(t)->stringMap(), o, stringHash, objectEqual);
 }
 
-void
-bootClass(Thread* t, Gc::Type type, int superType, uint32_t objectMask,
-          unsigned fixedSize, unsigned arrayElementSize, unsigned vtableLength)
+void bootClass(Thread* t,
+               Gc::Type type,
+               int superType,
+               uint32_t objectMask,
+               unsigned fixedSize,
+               unsigned arrayElementSize,
+               unsigned vtableLength)
 {
-  GcClass* super = (superType >= 0
-                  ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
+  GcClass* super
+      = (superType >= 0 ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
 
   GcIntArray* mask;
   if (objectMask) {
-    if (super
-        and super->objectMask()
+    if (super and super->objectMask()
         and super->objectMask()->body()[0]
-        == static_cast<int32_t>(objectMask))
-    {
+            == static_cast<int32_t>(objectMask)) {
       mask = vm::type(t, static_cast<Gc::Type>(superType))->objectMask();
     } else {
       mask = makeIntArray(t, 1);
@@ -2739,20 +2722,37 @@ bootClass(Thread* t, Gc::Type type, int superType, uint32_t objectMask,
     mask = 0;
   }
 
-  super = (superType >= 0
-           ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
+  super = (superType >= 0 ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
 
-  GcClass* class_ = t->m->processor->makeClass
-    (t, 0, BootstrapFlag, fixedSize, arrayElementSize,
-     arrayElementSize ? 1 : 0, 0, mask, 0, 0, super, 0, 0, 0, 0, 0, 0,
-     roots(t)->bootLoader(), vtableLength);
+  GcClass* class_ = t->m->processor->makeClass(t,
+                                               0,
+                                               BootstrapFlag,
+                                               fixedSize,
+                                               arrayElementSize,
+                                               arrayElementSize ? 1 : 0,
+                                               0,
+                                               mask,
+                                               0,
+                                               0,
+                                               super,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               roots(t)->bootLoader(),
+                                               vtableLength);
 
   setType(t, type, class_);
 }
 
-void
-bootJavaClass(Thread* t, Gc::Type type, int superType, const char* name,
-              int vtableLength, object bootMethod)
+void bootJavaClass(Thread* t,
+                   Gc::Type type,
+                   int superType,
+                   const char* name,
+                   int vtableLength,
+                   object bootMethod)
 {
   PROTECT(t, bootMethod);
 
@@ -2771,19 +2771,18 @@ bootJavaClass(Thread* t, Gc::Type type, int superType, const char* name,
       vtable->setBodyElement(t, i, bootMethod);
     }
   } else {
-    vtable = cast<GcArray>(t, vm::type(t, static_cast<Gc::Type>(superType))->virtualTable());
+    vtable = cast<GcArray>(
+        t, vm::type(t, static_cast<Gc::Type>(superType))->virtualTable());
   }
 
   class_->setVirtualTable(t, vtable);
 
   t->m->processor->initVtable(t, class_);
 
-  hashMapInsert
-    (t, roots(t)->bootstrapClassMap(), n, class_, byteArrayHash);
+  hashMapInsert(t, roots(t)->bootstrapClassMap(), n, class_, byteArrayHash);
 }
 
-void
-nameClass(Thread* t, Gc::Type type, const char* name)
+void nameClass(Thread* t, Gc::Type type, const char* name)
 {
   GcByteArray* n = makeByteArray(t, name);
   cast<GcClass>(t, t->m->types->body()[type])->setName(t, n);
@@ -2818,7 +2817,8 @@ boot(Thread* t)
   // sequence point, for gc (don't recombine statements)
   roots(t)->setAppLoader(t, reinterpret_cast<GcClassLoader*>(classLoader));
 
-  m->types = reinterpret_cast<GcArray*>(allocate(t, pad((TypeCount + 2) * BytesPerWord), true));
+  m->types = reinterpret_cast<GcArray*>(
+      allocate(t, pad((TypeCount + 2) * BytesPerWord), true));
   m->types->length() = TypeCount;
 
 #include "type-initializations.cpp"
@@ -2845,56 +2845,48 @@ boot(Thread* t)
 
   m->unsafe = false;
 
-  type(t, GcSingleton::Type)->vmFlags()
-    |= SingletonFlag;
+  type(t, GcSingleton::Type)->vmFlags() |= SingletonFlag;
 
-  type(t, GcContinuation::Type)->vmFlags()
-    |= ContinuationFlag;
+  type(t, GcContinuation::Type)->vmFlags() |= ContinuationFlag;
 
-  type(t, GcJreference::Type)->vmFlags()
-    |= ReferenceFlag;
-  type(t, GcWeakReference::Type)->vmFlags()
-    |= ReferenceFlag | WeakReferenceFlag;
-  type(t, GcSoftReference::Type)->vmFlags()
-    |= ReferenceFlag | WeakReferenceFlag;
-  type(t, GcPhantomReference::Type)->vmFlags()
-    |= ReferenceFlag | WeakReferenceFlag;
+  type(t, GcJreference::Type)->vmFlags() |= ReferenceFlag;
+  type(t, GcWeakReference::Type)->vmFlags() |= ReferenceFlag
+                                               | WeakReferenceFlag;
+  type(t, GcSoftReference::Type)->vmFlags() |= ReferenceFlag
+                                               | WeakReferenceFlag;
+  type(t, GcPhantomReference::Type)->vmFlags() |= ReferenceFlag
+                                                  | WeakReferenceFlag;
 
-  type(t, GcJboolean::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJbyte::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJchar::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJshort::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJint::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJlong::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJfloat::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJdouble::Type)->vmFlags()
-    |= PrimitiveFlag;
-  type(t, GcJvoid::Type)->vmFlags()
-    |= PrimitiveFlag;
+  type(t, GcJboolean::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJbyte::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJchar::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJshort::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJint::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJlong::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJfloat::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJdouble::Type)->vmFlags() |= PrimitiveFlag;
+  type(t, GcJvoid::Type)->vmFlags() |= PrimitiveFlag;
 
-  type(t, GcBooleanArray::Type)->setArrayElementClass(t, type(t, GcJboolean::Type));
+  type(t, GcBooleanArray::Type)
+      ->setArrayElementClass(t, type(t, GcJboolean::Type));
   type(t, GcByteArray::Type)->setArrayElementClass(t, type(t, GcJbyte::Type));
   type(t, GcCharArray::Type)->setArrayElementClass(t, type(t, GcJchar::Type));
   type(t, GcShortArray::Type)->setArrayElementClass(t, type(t, GcJshort::Type));
   type(t, GcIntArray::Type)->setArrayElementClass(t, type(t, GcJint::Type));
   type(t, GcLongArray::Type)->setArrayElementClass(t, type(t, GcJlong::Type));
   type(t, GcFloatArray::Type)->setArrayElementClass(t, type(t, GcJfloat::Type));
-  type(t, GcDoubleArray::Type)->setArrayElementClass(t, type(t, GcJdouble::Type));
+  type(t, GcDoubleArray::Type)
+      ->setArrayElementClass(t, type(t, GcJdouble::Type));
 
-  { GcHashMap* map = makeHashMap(t, 0, 0);
+  {
+    GcHashMap* map = makeHashMap(t, 0, 0);
     roots(t)->bootLoader()->setMap(t, map);
   }
 
   roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder() = m->bootFinder;
 
-  { GcHashMap* map = makeHashMap(t, 0, 0);
+  {
+    GcHashMap* map = makeHashMap(t, 0, 0);
     roots(t)->appLoader()->setMap(t, map);
   }
 
@@ -2916,18 +2908,27 @@ boot(Thread* t)
 
   makeArrayInterfaceTable(t);
 
-  type(t, GcBooleanArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcByteArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcCharArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcShortArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcIntArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcLongArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcFloatArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
-  type(t, GcDoubleArray::Type)->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcBooleanArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcByteArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcCharArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcShortArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcIntArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcLongArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcFloatArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
+  type(t, GcDoubleArray::Type)
+      ->setInterfaceTable(t, roots(t)->arrayInterfaceTable());
 
   m->processor->boot(t, 0, 0);
 
-  { GcCode* bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 0, 1);
+  {
+    GcCode* bootCode = makeCode(t, 0, 0, 0, 0, 0, 0, 0, 0, 1);
     bootCode->body()[0] = impdep1;
     object bootMethod = makeMethod
       (t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
@@ -3066,19 +3067,18 @@ doCollect(Thread* t, Heap::CollectionType type, int pendingAllocation)
 
   GcFinalizer* finalizeQueue = t->m->finalizeQueue;
   t->m->finalizeQueue = 0;
-  for (; finalizeQueue; finalizeQueue = cast<GcFinalizer>(t, finalizeQueue->next())) {
+  for (; finalizeQueue;
+       finalizeQueue = cast<GcFinalizer>(t, finalizeQueue->next())) {
     void (*function)(Thread*, object);
     memcpy(&function, &finalizeQueue->finalize(), BytesPerWord);
     function(t, finalizeQueue->target());
   }
 
   if ((roots(t)->objectsToFinalize() or roots(t)->objectsToClean())
-      and m->finalizeThread == 0
-      and t->state != Thread::ExitState)
-  {
-    m->finalizeThread = m->processor->makeThread
-      (m, roots(t)->finalizerThread(), m->rootThread);
-    
+      and m->finalizeThread == 0 and t->state != Thread::ExitState) {
+    m->finalizeThread = m->processor->makeThread(
+        m, roots(t)->finalizerThread(), m->rootThread);
+
     addThread(t, m->finalizeThread);
 
     if (not startThread(t, m->finalizeThread)) {
@@ -3099,8 +3099,7 @@ invokeLoadClass(Thread* t, uintptr_t* arguments)
     (t->m->processor->invoke(t, method, loader, specString));
 }
 
-bool
-isInitializing(Thread* t, GcClass* c)
+bool isInitializing(Thread* t, GcClass* c)
 {
   for (Thread::ClassInitStack* s = t->classInitStack; s; s = s->next) {
     if (s->class_ == c) {
@@ -3110,26 +3109,26 @@ isInitializing(Thread* t, GcClass* c)
   return false;
 }
 
-object
-findInTable(Thread* t, GcArray* table, GcByteArray* name, GcByteArray* spec,
-            GcByteArray* (*getName)(Thread*, object),
-            GcByteArray* (*getSpec)(Thread*, object))
+object findInTable(Thread* t,
+                   GcArray* table,
+                   GcByteArray* name,
+                   GcByteArray* spec,
+                   GcByteArray* (*getName)(Thread*, object),
+                   GcByteArray* (*getSpec)(Thread*, object))
 {
   if (table) {
     for (unsigned i = 0; i < table->length(); ++i) {
       object o = table->body()[i];
-      if (vm::strcmp(getName(t, o)->body().begin(),
-                     name->body().begin()) == 0 and
-          vm::strcmp(getSpec(t, o)->body().begin(),
-                     spec->body().begin()) == 0)
-      {
+      if (vm::strcmp(getName(t, o)->body().begin(), name->body().begin()) == 0
+          and vm::strcmp(getSpec(t, o)->body().begin(), spec->body().begin())
+              == 0) {
         return o;
       }
     }
 
 //     fprintf(stderr, "%s %s not in\n",
-//             name->body().begin(),
-//             spec->body().begin();
+    //             name->body().begin(),
+    //             spec->body().begin();
 
 //     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
 //       object o = arrayBody(t, table, i); 
@@ -3142,8 +3141,7 @@ findInTable(Thread* t, GcArray* table, GcByteArray* name, GcByteArray* spec,
   return 0;
 }
 
-void
-updatePackageMap(Thread* t, GcClass* class_)
+void updatePackageMap(Thread* t, GcClass* class_)
 {
   PROTECT(t, class_);
 
@@ -3155,34 +3153,30 @@ updatePackageMap(Thread* t, GcClass* class_)
 
   GcByteArray* className = class_->name();
   if ('[' != className->body()[0]) {
-    THREAD_RUNTIME_ARRAY
-      (t, char, packageName, className->length());
+    THREAD_RUNTIME_ARRAY(t, char, packageName, className->length());
 
     char* s = reinterpret_cast<char*>(className->body().begin());
     char* p = strrchr(s, '/');
 
     if (p) {
       int length = (p - s) + 1;
-      memcpy(RUNTIME_ARRAY_BODY(packageName),
-             className->body().begin(),
-             length);
+      memcpy(
+          RUNTIME_ARRAY_BODY(packageName), className->body().begin(), length);
       RUNTIME_ARRAY_BODY(packageName)[length] = 0;
 
-      GcByteArray* key = vm::makeByteArray
-        (t, "%s", RUNTIME_ARRAY_BODY(packageName));
+      GcByteArray* key
+          = vm::makeByteArray(t, "%s", RUNTIME_ARRAY_BODY(packageName));
       PROTECT(t, key);
 
-      hashMapRemove
-        (t, roots(t)->packageMap(), key, byteArrayHash,
-         byteArrayEqual);
+      hashMapRemove(
+          t, roots(t)->packageMap(), key, byteArrayHash, byteArrayEqual);
 
       GcByteArray* source = class_->source();
       if (source) {
         // note that we strip the "file:" prefix, since OpenJDK's
         // Package.defineSystemPackage expects an unadorned filename:
         const unsigned PrefixLength = 5;
-        unsigned sourceNameLength = source->length()
-          - PrefixLength;
+        unsigned sourceNameLength = source->length() - PrefixLength;
         THREAD_RUNTIME_ARRAY(t, char, sourceName, sourceNameLength);
         memcpy(RUNTIME_ARRAY_BODY(sourceName),
                &source->body()[PrefixLength],
@@ -3193,8 +3187,7 @@ updatePackageMap(Thread* t, GcClass* class_)
         source = vm::makeByteArray(t, "avian-dummy-package-source");
       }
 
-      hashMapInsert
-        (t, roots(t)->packageMap(), key, source, byteArrayHash);
+      hashMapInsert(t, roots(t)->packageMap(), key, source, byteArrayHash);
     }
   }
 }
@@ -3343,30 +3336,30 @@ Machine::dispose()
   heap->free(this, sizeof(*this));
 }
 
-Thread::Thread(Machine* m, GcThread* javaThread, Thread* parent):
-  vtable(&(m->jniEnvVTable)),
-  m(m),
-  parent(parent),
-  peer(0),
-  child(0),
-  waitNext(0),
-  state(NoState),
-  criticalLevel(0),
-  systemThread(0),
-  lock(0),
-  javaThread(javaThread),
-  exception(0),
-  heapIndex(0),
-  heapOffset(0),
-  protector(0),
-  classInitStack(0),
-  libraryLoadStack(0),
-  runnable(this),
-  defaultHeap(static_cast<uintptr_t*>
-              (m->heap->allocate(ThreadHeapSizeInBytes))),
-  heap(defaultHeap),
-  backupHeapIndex(0),
-  flags(ActiveFlag)
+Thread::Thread(Machine* m, GcThread* javaThread, Thread* parent)
+    : vtable(&(m->jniEnvVTable)),
+      m(m),
+      parent(parent),
+      peer(0),
+      child(0),
+      waitNext(0),
+      state(NoState),
+      criticalLevel(0),
+      systemThread(0),
+      lock(0),
+      javaThread(javaThread),
+      exception(0),
+      heapIndex(0),
+      heapOffset(0),
+      protector(0),
+      classInitStack(0),
+      libraryLoadStack(0),
+      runnable(this),
+      defaultHeap(
+          static_cast<uintptr_t*>(m->heap->allocate(ThreadHeapSizeInBytes))),
+      heap(defaultHeap),
+      backupHeapIndex(0),
+      flags(ActiveFlag)
 { }
 
 void
@@ -3523,7 +3516,8 @@ shutDown(Thread* t)
   h = hooks;
   for (; h; h = cast<GcPair>(t, h->second())) {
     while (true) {
-      Thread* ht = reinterpret_cast<Thread*>(cast<GcThread>(t, h->first())->peer());
+      Thread* ht
+          = reinterpret_cast<Thread*>(cast<GcThread>(t, h->first())->peer());
 
       { ACQUIRE(t, t->m->stateLock);
 
@@ -3898,8 +3892,7 @@ collect(Thread* t, Heap::CollectionType type, int pendingAllocation)
   }
 }
 
-object
-makeNewGeneral(Thread* t, GcClass* class_)
+object makeNewGeneral(Thread* t, GcClass* class_)
 {
   assertT(t, t->state == Thread::ActiveState);
 
@@ -3934,24 +3927,21 @@ popResources(Thread* t)
   t->protector = t->checkpoint->protector;
 }
 
-GcByteArray*
-makeByteArrayV(Thread* t, const char* format, va_list a, int size)
+GcByteArray* makeByteArrayV(Thread* t, const char* format, va_list a, int size)
 {
   THREAD_RUNTIME_ARRAY(t, char, buffer, size);
   
   int r = vm::vsnprintf(RUNTIME_ARRAY_BODY(buffer), size - 1, format, a);
   if (r >= 0 and r < size - 1) {
     GcByteArray* s = makeByteArray(t, strlen(RUNTIME_ARRAY_BODY(buffer)) + 1);
-    memcpy(s->body().begin(), RUNTIME_ARRAY_BODY(buffer),
-           s->length());
+    memcpy(s->body().begin(), RUNTIME_ARRAY_BODY(buffer), s->length());
     return s;
   } else {
     return 0;
   }
 }
 
-GcByteArray*
-makeByteArray(Thread* t, const char* format, ...)
+GcByteArray* makeByteArray(Thread* t, const char* format, ...)
 {
   int size = 256;
   while (true) {
@@ -3968,8 +3958,7 @@ makeByteArray(Thread* t, const char* format, ...)
   }
 }
 
-GcString*
-makeString(Thread* t, const char* format, ...)
+GcString* makeString(Thread* t, const char* format, ...)
 {
   int size = 256;
   while (true) {
@@ -3986,8 +3975,10 @@ makeString(Thread* t, const char* format, ...)
   }
 }
 
-int
-stringUTFLength(Thread* t, GcString* string, unsigned start, unsigned length)
+int stringUTFLength(Thread* t,
+                    GcString* string,
+                    unsigned start,
+                    unsigned length)
 {
   unsigned result = 0;
 
@@ -4010,17 +4001,17 @@ stringUTFLength(Thread* t, GcString* string, unsigned start, unsigned length)
   return result;
 }
 
-void
-stringChars(Thread* t, GcString* string, unsigned start, unsigned length,
-            char* chars)
+void stringChars(Thread* t,
+                 GcString* string,
+                 unsigned start,
+                 unsigned length,
+                 char* chars)
 {
   if (length) {
     object data = string->data();
     if (objectClass(t, data) == type(t, GcByteArray::Type)) {
       GcByteArray* b = cast<GcByteArray>(t, data);
-      memcpy(chars,
-             &b->body()[string->offset(t) + start],
-             length);
+      memcpy(chars, &b->body()[string->offset(t) + start], length);
     } else {
       GcCharArray* c = cast<GcCharArray>(t, data);
       for (unsigned i = 0; i < length; ++i) {
@@ -4031,9 +4022,11 @@ stringChars(Thread* t, GcString* string, unsigned start, unsigned length,
   chars[length] = 0;
 }
 
-void
-stringChars(Thread* t, GcString* string, unsigned start, unsigned length,
-            uint16_t* chars)
+void stringChars(Thread* t,
+                 GcString* string,
+                 unsigned start,
+                 unsigned length,
+                 uint16_t* chars)
 {
   if (length) {
     object data = string->data();
@@ -4052,19 +4045,21 @@ stringChars(Thread* t, GcString* string, unsigned start, unsigned length,
   chars[length] = 0;
 }
 
-void
-stringUTFChars(Thread* t, GcString* string, unsigned start, unsigned length,
-               char* chars, unsigned charsLength UNUSED)
+void stringUTFChars(Thread* t,
+                    GcString* string,
+                    unsigned start,
+                    unsigned length,
+                    char* chars,
+                    unsigned charsLength UNUSED)
 {
-  assertT(t, static_cast<unsigned>
-         (stringUTFLength(t, string, start, length)) == charsLength);
+  assertT(t,
+          static_cast<unsigned>(stringUTFLength(t, string, start, length))
+          == charsLength);
 
   object data = string->data();
   if (objectClass(t, data) == type(t, GcByteArray::Type)) {
     GcByteArray* b = cast<GcByteArray>(t, data);
-    memcpy(chars,
-           &b->body()[string->offset(t) + start],
-           length);
+    memcpy(chars, &b->body()[string->offset(t) + start], length);
     chars[length] = 0;
   } else {
     GcCharArray* cs = cast<GcCharArray>(t, data);
@@ -4091,15 +4086,15 @@ stringUTFChars(Thread* t, GcString* string, unsigned start, unsigned length,
 uint64_t
 resolveBootstrap(Thread* t, uintptr_t* arguments)
 {
-  GcByteArray* name = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[0]));
+  GcByteArray* name
+      = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[0]));
 
   resolveSystemClass(t, roots(t)->bootLoader(), name);
 
   return 1;
 }
 
-bool
-isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
+bool isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
 {
   assertT(t, a);
   assertT(t, b);
@@ -4108,7 +4103,7 @@ isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
 
   if (a->flags() & ACC_INTERFACE) {
     if (b->vmFlags() & BootstrapFlag) {
-      uintptr_t arguments[] = { reinterpret_cast<uintptr_t>(b->name()) };
+      uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(b->name())};
 
       if (run(t, resolveBootstrap, arguments) == 0) {
         t->exception = 0;
@@ -4127,12 +4122,10 @@ isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
     }
   } else if (a->arrayDimensions()) {
     if (b->arrayDimensions()) {
-      return isAssignableFrom
-        (t, a->arrayElementClass(), b->arrayElementClass());
+      return isAssignableFrom(
+          t, a->arrayElementClass(), b->arrayElementClass());
     }
-  } else if ((a->vmFlags() & PrimitiveFlag)
-             == (b->vmFlags() & PrimitiveFlag))
-  {
+  } else if ((a->vmFlags() & PrimitiveFlag) == (b->vmFlags() & PrimitiveFlag)) {
     for (; b; b = b->super()) {
       if (b == a) {
         return true;
@@ -4143,8 +4136,7 @@ isAssignableFrom(Thread* t, GcClass* a, GcClass* b)
   return false;
 }
 
-bool
-instanceOf(Thread* t, GcClass* class_, object o)
+bool instanceOf(Thread* t, GcClass* class_, object o)
 {
   if (o == 0) {
     return false;
@@ -4153,13 +4145,11 @@ instanceOf(Thread* t, GcClass* class_, object o)
   }
 }
 
-GcMethod*
-classInitializer(Thread* t, GcClass* class_)
+GcMethod* classInitializer(Thread* t, GcClass* class_)
 {
   if (GcArray* mtable = cast<GcArray>(t, class_->methodTable())) {
     PROTECT(t, mtable);
-    for (unsigned i = 0; i < mtable->length(); ++i)
-    {
+    for (unsigned i = 0; i < mtable->length(); ++i) {
       GcMethod* o = cast<GcMethod>(t, mtable->body()[i]);
 
       if (o->vmFlags() & ClassInitFlag) {
@@ -4250,9 +4240,11 @@ primitiveSize(Thread* t, unsigned code)
   }
 }
 
-GcClass*
-parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
-           Gc::Type throwType)
+GcClass* parseClass(Thread* t,
+                    GcClassLoader* loader,
+                    const uint8_t* data,
+                    unsigned size,
+                    Gc::Type throwType)
 {
   PROTECT(t, loader);
 
@@ -4284,41 +4276,43 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
   unsigned flags = s.read2();
   unsigned name = s.read2();
 
-  GcClass* class_ = (GcClass*)makeClass(t,
-                            flags,
-                            0, // VM flags
-                            0, // fixed size
-                            0, // array size
-                            0, // array dimensions
-                            0, // array element class
-                            0, // runtime data index
-                            0, // object mask
-                            cast<GcReference>(t, singletonObject(t, pool, name - 1))->name(),
-                            0, // source file
-                            0, // super
-                            0, // interfaces
-                            0, // vtable
-                            0, // fields
-                            0, // methods
-                            0, // addendum
-                            0, // static table
-                            loader,
-                            0, // source
-                            0);// vtable length
+  GcClass* class_ = (GcClass*)makeClass(
+      t,
+      flags,
+      0,  // VM flags
+      0,  // fixed size
+      0,  // array size
+      0,  // array dimensions
+      0,  // array element class
+      0,  // runtime data index
+      0,  // object mask
+      cast<GcReference>(t, singletonObject(t, pool, name - 1))->name(),
+      0,  // source file
+      0,  // super
+      0,  // interfaces
+      0,  // vtable
+      0,  // fields
+      0,  // methods
+      0,  // addendum
+      0,  // static table
+      loader,
+      0,   // source
+      0);  // vtable length
   PROTECT(t, class_);
   
   unsigned super = s.read2();
   if (super) {
-    GcClass* sc = resolveClass
-      (t, loader, cast<GcReference>(t, singletonObject(t, pool, super - 1))->name(),
-       true, throwType);
+    GcClass* sc = resolveClass(
+        t,
+        loader,
+        cast<GcReference>(t, singletonObject(t, pool, super - 1))->name(),
+        true,
+        throwType);
 
     class_->setSuper(t, sc);
 
-    class_->vmFlags()
-      |= (sc->vmFlags()
-          & (ReferenceFlag | WeakReferenceFlag | HasFinalizerFlag
-             | NeedInitFlag));
+    class_->vmFlags() |= (sc->vmFlags() & (ReferenceFlag | WeakReferenceFlag
+                                           | HasFinalizerFlag | NeedInitFlag));
   }
 
   if(DebugClassReader) {
@@ -4336,26 +4330,25 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
   GcArray* vtable = cast<GcArray>(t, class_->virtualTable());
   unsigned vtableLength = (vtable ? vtable->length() : 0);
 
-  GcClass* real = t->m->processor->makeClass
-    (t,
-     class_->flags(),
-     class_->vmFlags(),
-     class_->fixedSize(),
-     class_->arrayElementSize(),
-     class_->arrayDimensions(),
-     class_->arrayElementClass(),
-     class_->objectMask(),
-     class_->name(),
-     class_->sourceFile(),
-     class_->super(),
-     class_->interfaceTable(),
-     class_->virtualTable(),
-     class_->fieldTable(),
-     class_->methodTable(),
-     class_->addendum(),
-     class_->staticTable(),
-     class_->loader(),
-     vtableLength);
+  GcClass* real = t->m->processor->makeClass(t,
+                                             class_->flags(),
+                                             class_->vmFlags(),
+                                             class_->fixedSize(),
+                                             class_->arrayElementSize(),
+                                             class_->arrayDimensions(),
+                                             class_->arrayElementClass(),
+                                             class_->objectMask(),
+                                             class_->name(),
+                                             class_->sourceFile(),
+                                             class_->super(),
+                                             class_->interfaceTable(),
+                                             class_->virtualTable(),
+                                             class_->fieldTable(),
+                                             class_->methodTable(),
+                                             class_->addendum(),
+                                             class_->staticTable(),
+                                             class_->loader(),
+                                             vtableLength);
 
   PROTECT(t, real);
 
@@ -4364,16 +4357,17 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
   updateClassTables(t, real, class_);
 
   if (roots(t)->poolMap()) {
-    object bootstrapClass = hashMapFind
-      (t, roots(t)->bootstrapClassMap(), class_->name(),
-       byteArrayHash, byteArrayEqual);
+    object bootstrapClass = hashMapFind(t,
+                                        roots(t)->bootstrapClassMap(),
+                                        class_->name(),
+                                        byteArrayHash,
+                                        byteArrayEqual);
 
-    hashMapInsert(
-        t,
-        roots(t)->poolMap(),
-        bootstrapClass ? bootstrapClass : real,
-        pool,
-        objectHash);
+    hashMapInsert(t,
+                  roots(t)->poolMap(),
+                  bootstrapClass ? bootstrapClass : real,
+                  pool,
+                  objectHash);
   }
 
   return real;
@@ -4382,7 +4376,8 @@ parseClass(Thread* t, GcClassLoader* loader, const uint8_t* data, unsigned size,
 uint64_t
 runParseClass(Thread* t, uintptr_t* arguments)
 {
-  GcClassLoader* loader = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
+  GcClassLoader* loader
+      = cast<GcClassLoader>(t, reinterpret_cast<object>(arguments[0]));
   System::Region* region = reinterpret_cast<System::Region*>(arguments[1]);
   Gc::Type throwType = static_cast<Gc::Type>(arguments[2]);
 
@@ -4390,24 +4385,29 @@ runParseClass(Thread* t, uintptr_t* arguments)
     (parseClass(t, loader, region->start(), region->length(), throwType));
 }
 
-GcClass*
-resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
-                   Gc::Type throwType)
+GcClass* resolveSystemClass(Thread* t,
+                            GcClassLoader* loader,
+                            GcByteArray* spec,
+                            bool throw_,
+                            Gc::Type throwType)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
 
   ACQUIRE(t, t->m->classLock);
 
-  GcClass* class_ = cast<GcClass>(t, hashMapFind
-    (t, cast<GcHashMap>(t, loader->map()), spec, byteArrayHash, byteArrayEqual));
+  GcClass* class_ = cast<GcClass>(t,
+                                  hashMapFind(t,
+                                              cast<GcHashMap>(t, loader->map()),
+                                              spec,
+                                              byteArrayHash,
+                                              byteArrayEqual));
 
   if (class_ == 0) {
     PROTECT(t, class_);
 
     if (loader->parent()) {
-      class_ = resolveSystemClass
-        (t, loader->parent(), spec, false);
+      class_ = resolveSystemClass(t, loader->parent(), spec, false);
       if (class_) {
         return class_;
       }
@@ -4420,16 +4420,12 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
       PROTECT(t, sysLoader);
 
       THREAD_RUNTIME_ARRAY(t, char, file, spec->length() + 6);
-      memcpy(RUNTIME_ARRAY_BODY(file),
-             spec->body().begin(),
-             spec->length() - 1);
-      memcpy(RUNTIME_ARRAY_BODY(file) + spec->length() - 1,
-             ".class",
-             7);
+      memcpy(
+          RUNTIME_ARRAY_BODY(file), spec->body().begin(), spec->length() - 1);
+      memcpy(RUNTIME_ARRAY_BODY(file) + spec->length() - 1, ".class", 7);
 
-      System::Region* region = static_cast<Finder*>
-        (sysLoader->finder())->find
-        (RUNTIME_ARRAY_BODY(file));
+      System::Region* region = static_cast<Finder*>(sysLoader->finder())
+                                   ->find(RUNTIME_ARRAY_BODY(file));
 
       if (region) {
         if (Verbose) {
@@ -4443,8 +4439,8 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
                                     static_cast<uintptr_t>(throwType) };
 
           // parse class file
-          class_ = cast<GcClass>
-            (t, reinterpret_cast<object>(runRaw(t, runParseClass, arguments)));
+          class_ = cast<GcClass>(
+              t, reinterpret_cast<object>(runRaw(t, runParseClass, arguments)));
 
           if (UNLIKELY(t->exception)) {
             if (throw_) {
@@ -4459,28 +4455,31 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
         }
 
         if (Verbose) {
-          fprintf(stderr, "done parsing %s: %p\n",
-                  spec->body().begin(),
-                  class_);
+          fprintf(
+              stderr, "done parsing %s: %p\n", spec->body().begin(), class_);
         }
 
-        { const char* source = static_cast<Finder*>
-            (sysLoader->finder())->sourceUrl
-            (RUNTIME_ARRAY_BODY(file));
-          
+        {
+          const char* source = static_cast<Finder*>(sysLoader->finder())
+                                   ->sourceUrl(RUNTIME_ARRAY_BODY(file));
+
           if (source) {
             unsigned length = strlen(source);
             GcByteArray* array = makeByteArray(t, length + 1);
             memcpy(array->body().begin(), source, length);
             array = internByteArray(t, array);
-            
+
             class_->setSource(t, array);
           }
         }
 
-        GcClass* bootstrapClass = cast<GcClass>(t, hashMapFind
-          (t, roots(t)->bootstrapClassMap(), spec, byteArrayHash,
-           byteArrayEqual));
+        GcClass* bootstrapClass
+            = cast<GcClass>(t,
+                            hashMapFind(t,
+                                        roots(t)->bootstrapClassMap(),
+                                        spec,
+                                        byteArrayHash,
+                                        byteArrayEqual));
 
         if (bootstrapClass) {
           PROTECT(t, bootstrapClass);
@@ -4492,7 +4491,8 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
     }
 
     if (class_) {
-      hashMapInsert(t, cast<GcHashMap>(t, loader->map()), spec, class_, byteArrayHash);
+      hashMapInsert(
+          t, cast<GcHashMap>(t, loader->map()), spec, class_, byteArrayHash);
 
       updatePackageMap(t, class_);
     } else if (throw_) {
@@ -4503,21 +4503,28 @@ resolveSystemClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool thr
   return class_;
 }
 
-GcClass*
-findLoadedClass(Thread* t, GcClassLoader* loader, GcByteArray* spec)
+GcClass* findLoadedClass(Thread* t, GcClassLoader* loader, GcByteArray* spec)
 {
   PROTECT(t, loader);
   PROTECT(t, spec);
 
   ACQUIRE(t, t->m->classLock);
 
-  return loader->map() ? cast<GcClass>(t, hashMapFind
-    (t, cast<GcHashMap>(t, loader->map()), spec, byteArrayHash, byteArrayEqual)) : 0;
+  return loader->map()
+             ? cast<GcClass>(t,
+                             hashMapFind(t,
+                                         cast<GcHashMap>(t, loader->map()),
+                                         spec,
+                                         byteArrayHash,
+                                         byteArrayEqual))
+             : 0;
 }
 
-GcClass*
-resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
-             Gc::Type throwType)
+GcClass* resolveClass(Thread* t,
+                      GcClassLoader* loader,
+                      GcByteArray* spec,
+                      bool throw_,
+                      Gc::Type throwType)
 {
   if (objectClass(t, loader) == type(t, GcSystemClassLoader::Type)) {
     return resolveSystemClass(t, loader, spec, throw_, throwType);
@@ -4534,31 +4541,34 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
       c = resolveArrayClass(t, loader, spec, throw_, throwType);
     } else {
       if (roots(t)->loadClassMethod() == 0) {
-        GcMethod* m = resolveMethod
-          (t, roots(t)->bootLoader(), "java/lang/ClassLoader",
-           "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;");
+        GcMethod* m = resolveMethod(t,
+                                    roots(t)->bootLoader(),
+                                    "java/lang/ClassLoader",
+                                    "loadClass",
+                                    "(Ljava/lang/String;)Ljava/lang/Class;");
 
         if (m) {
           roots(t)->setLoadClassMethod(t, m);
 
           GcClass* classLoaderClass = type(t, GcClassLoader::Type);
-        
+
           if (classLoaderClass->vmFlags() & BootstrapFlag) {
-            resolveSystemClass
-              (t, roots(t)->bootLoader(),
-               classLoaderClass->name());
+            resolveSystemClass(
+                t, roots(t)->bootLoader(), classLoaderClass->name());
           }
         }      
       }
 
-      GcMethod* method = findVirtualMethod
-        (t, roots(t)->loadClassMethod(), objectClass(t, loader));
+      GcMethod* method = findVirtualMethod(
+          t, roots(t)->loadClassMethod(), objectClass(t, loader));
 
       PROTECT(t, method);
-        
+
       THREAD_RUNTIME_ARRAY(t, char, s, spec->length());
-      replace('/', '.', RUNTIME_ARRAY_BODY(s), reinterpret_cast<char*>
-              (spec->body().begin()));
+      replace('/',
+              '.',
+              RUNTIME_ARRAY_BODY(s),
+              reinterpret_cast<char*>(spec->body().begin()));
 
       GcString* specString = makeString(t, "%s", RUNTIME_ARRAY_BODY(s));
       PROTECT(t, specString);
@@ -4567,16 +4577,17 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
                                 reinterpret_cast<uintptr_t>(loader),
                                 reinterpret_cast<uintptr_t>(specString) };
 
-      GcJclass* jc = cast<GcJclass>(t, reinterpret_cast<object>
-        (runRaw(t, invokeLoadClass, arguments)));
+      GcJclass* jc = cast<GcJclass>(
+          t, reinterpret_cast<object>(runRaw(t, invokeLoadClass, arguments)));
 
       if (LIKELY(jc)) {
         c = jc->vmClass();
       } else if (t->exception) {
         if (throw_) {
-          GcThrowable* e = type(t, throwType) == objectClass(t, t->exception)
-            ? t->exception
-            : makeThrowable(t, throwType, specString, 0, t->exception);
+          GcThrowable* e
+              = type(t, throwType) == objectClass(t, t->exception)
+                    ? t->exception
+                    : makeThrowable(t, throwType, specString, 0, t->exception);
           t->exception = 0;
           vm::throw_(t, e);
         } else {
@@ -4597,9 +4608,10 @@ resolveClass(Thread* t, GcClassLoader* loader, GcByteArray* spec, bool throw_,
   }
 }
 
-GcMethod*
-resolveMethod(Thread* t, GcClass* class_, const char* methodName,
-              const char* methodSpec)
+GcMethod* resolveMethod(Thread* t,
+                        GcClass* class_,
+                        const char* methodName,
+                        const char* methodSpec)
 {
   PROTECT(t, class_);
 
@@ -4607,20 +4619,26 @@ resolveMethod(Thread* t, GcClass* class_, const char* methodName,
   PROTECT(t, name);
 
   GcByteArray* spec = makeByteArray(t, methodSpec);
-    
-  GcMethod* method = cast<GcMethod>(t, findMethodInClass(t, class_, name, spec));
+
+  GcMethod* method
+      = cast<GcMethod>(t, findMethodInClass(t, class_, name, spec));
 
   if (method == 0) {
-    throwNew(t, GcNoSuchMethodError::Type, "%s %s not found in %s",
-             methodName, methodSpec, class_->name()->body().begin());
+    throwNew(t,
+             GcNoSuchMethodError::Type,
+             "%s %s not found in %s",
+             methodName,
+             methodSpec,
+             class_->name()->body().begin());
   } else {
     return method;
   }
 }
 
-GcField*
-resolveField(Thread* t, GcClass* class_, const char* fieldName,
-              const char* fieldSpec)
+GcField* resolveField(Thread* t,
+                      GcClass* class_,
+                      const char* fieldName,
+                      const char* fieldSpec)
 {
   PROTECT(t, class_);
 
@@ -4629,8 +4647,9 @@ resolveField(Thread* t, GcClass* class_, const char* fieldName,
 
   GcByteArray* spec = makeByteArray(t, fieldSpec);
   PROTECT(t, spec);
- 
-  GcField* field = cast<GcField>(t, findInInterfaces(t, class_, name, spec, findFieldInClass));
+
+  GcField* field = cast<GcField>(
+      t, findInInterfaces(t, class_, name, spec, findFieldInClass));
 
   GcClass* c = class_;
   PROTECT(t, c);
@@ -4640,15 +4659,18 @@ resolveField(Thread* t, GcClass* class_, const char* fieldName,
   }
 
   if (field == 0) {
-    throwNew(t, GcNoSuchFieldError::Type, "%s %s not found in %s",
-             fieldName, fieldSpec, class_->name()->body().begin());
+    throwNew(t,
+             GcNoSuchFieldError::Type,
+             "%s %s not found in %s",
+             fieldName,
+             fieldSpec,
+             class_->name()->body().begin());
   } else {
     return field;
   }
 }
 
-bool
-classNeedsInit(Thread* t, GcClass* c)
+bool classNeedsInit(Thread* t, GcClass* c)
 {
   if (c->vmFlags() & NeedInitFlag) {
     if (c->vmFlags() & InitFlag) {
@@ -4668,8 +4690,7 @@ classNeedsInit(Thread* t, GcClass* c)
   }
 }
 
-bool
-preInitClass(Thread* t, GcClass* c)
+bool preInitClass(Thread* t, GcClass* c)
 {
   int flags = c->vmFlags();
 
@@ -4694,8 +4715,8 @@ preInitClass(Thread* t, GcClass* c)
           t->m->classLock->wait(t->systemThread, 0);
         }
       } else if (c->vmFlags() & InitErrorFlag) {
-        throwNew(t, GcNoClassDefFoundError::Type, "%s",
-                 c->name()->body().begin());
+        throwNew(
+            t, GcNoClassDefFoundError::Type, "%s", c->name()->body().begin());
       } else {
         c->vmFlags() |= InitFlag;
         return true;
@@ -4705,8 +4726,7 @@ preInitClass(Thread* t, GcClass* c)
   return false;
 }
 
-void
-postInitClass(Thread* t, GcClass* c)
+void postInitClass(Thread* t, GcClass* c)
 {
   PROTECT(t, c);
   ACQUIRE(t, t->m->classLock);
@@ -4732,8 +4752,7 @@ postInitClass(Thread* t, GcClass* c)
   t->m->classLock->notifyAll(t->systemThread);
 }
 
-void
-initClass(Thread* t, GcClass* c)
+void initClass(Thread* t, GcClass* c)
 {
   PROTECT(t, c);
 
@@ -4755,13 +4774,16 @@ initClass(Thread* t, GcClass* c)
   }
 }
 
-GcClass*
-resolveObjectArrayClass(Thread* t, GcClassLoader* loader, GcClass* elementClass)
+GcClass* resolveObjectArrayClass(Thread* t,
+                                 GcClassLoader* loader,
+                                 GcClass* elementClass)
 {
   PROTECT(t, loader);
   PROTECT(t, elementClass);
 
-  { GcClass* arrayClass = cast<GcClass>(t, getClassRuntimeData(t, elementClass)->arrayClass());
+  {
+    GcClass* arrayClass
+        = cast<GcClass>(t, getClassRuntimeData(t, elementClass)->arrayClass());
     if (arrayClass) {
       return arrayClass;
     }
@@ -4774,9 +4796,8 @@ resolveObjectArrayClass(Thread* t, GcClassLoader* loader, GcClass* elementClass)
   if (elementSpec->body()[0] == '[') {
     spec = makeByteArray(t, elementSpec->length() + 1);
     spec->body()[0] = '[';
-    memcpy(&spec->body()[1],
-           elementSpec->body().begin(),
-           elementSpec->length());
+    memcpy(
+        &spec->body()[1], elementSpec->body().begin(), elementSpec->length());
   } else {
     spec = makeByteArray(t, elementSpec->length() + 3);
     spec->body()[0] = '[';
@@ -4795,11 +4816,10 @@ resolveObjectArrayClass(Thread* t, GcClassLoader* loader, GcClass* elementClass)
   return arrayClass;
 }
 
-object
-makeObjectArray(Thread* t, GcClass* elementClass, unsigned count)
+object makeObjectArray(Thread* t, GcClass* elementClass, unsigned count)
 {
-  GcClass* arrayClass = resolveObjectArrayClass
-    (t, elementClass->loader(), elementClass);
+  GcClass* arrayClass
+      = resolveObjectArrayClass(t, elementClass->loader(), elementClass);
 
   PROTECT(t, arrayClass);
 
@@ -4809,48 +4829,69 @@ makeObjectArray(Thread* t, GcClass* elementClass, unsigned count)
   return array;
 }
 
-static GcByteArray* getFieldName(Thread* t, object obj) {
+static GcByteArray* getFieldName(Thread* t, object obj)
+{
   return reinterpret_cast<GcByteArray*>(cast<GcField>(t, obj)->name());
 }
 
-static GcByteArray* getFieldSpec(Thread* t, object obj) {
+static GcByteArray* getFieldSpec(Thread* t, object obj)
+{
   return reinterpret_cast<GcByteArray*>(cast<GcField>(t, obj)->spec());
 }
 
-static GcByteArray* getMethodName(Thread* t, object obj) {
+static GcByteArray* getMethodName(Thread* t, object obj)
+{
   return reinterpret_cast<GcByteArray*>(cast<GcMethod>(t, obj)->name());
 }
 
-static GcByteArray* getMethodSpec(Thread* t, object obj) {
+static GcByteArray* getMethodSpec(Thread* t, object obj)
+{
   return reinterpret_cast<GcByteArray*>(cast<GcMethod>(t, obj)->spec());
 }
 
-object
-findFieldInClass(Thread* t, GcClass* class_, GcByteArray* name, GcByteArray* spec)
+object findFieldInClass(Thread* t,
+                        GcClass* class_,
+                        GcByteArray* name,
+                        GcByteArray* spec)
 {
-  return findInTable
-    (t, cast<GcArray>(t, class_->fieldTable()), name, spec, getFieldName, getFieldSpec);
+  return findInTable(t,
+                     cast<GcArray>(t, class_->fieldTable()),
+                     name,
+                     spec,
+                     getFieldName,
+                     getFieldSpec);
 }
 
-object
-findMethodInClass(Thread* t, GcClass* class_, GcByteArray* name, GcByteArray* spec)
+object findMethodInClass(Thread* t,
+                         GcClass* class_,
+                         GcByteArray* name,
+                         GcByteArray* spec)
 {
-  return findInTable
-    (t, cast<GcArray>(t, class_->methodTable()), name, spec, getMethodName, getMethodSpec);
+  return findInTable(t,
+                     cast<GcArray>(t, class_->methodTable()),
+                     name,
+                     spec,
+                     getMethodName,
+                     getMethodSpec);
 }
 
-object
-findInHierarchyOrNull(Thread* t, GcClass* class_, GcByteArray* name, GcByteArray* spec,
-                      object (*find)(Thread*, GcClass*, GcByteArray*, GcByteArray*))
+object findInHierarchyOrNull(
+    Thread* t,
+    GcClass* class_,
+    GcByteArray* name,
+    GcByteArray* spec,
+    object (*find)(Thread*, GcClass*, GcByteArray*, GcByteArray*))
 {
   GcClass* originalClass = class_;
 
   object o = 0;
-  if ((class_->flags() & ACC_INTERFACE)
-      and class_->virtualTable())
-  {
-    o = findInTable
-      (t, cast<GcArray>(t, class_->virtualTable()), name, spec, getMethodName, getMethodSpec);
+  if ((class_->flags() & ACC_INTERFACE) and class_->virtualTable()) {
+    o = findInTable(t,
+                    cast<GcArray>(t, class_->virtualTable()),
+                    name,
+                    spec,
+                    getMethodName,
+                    getMethodSpec);
   }
 
   if (o == 0) {
@@ -4905,13 +4946,11 @@ addFinalizer(Thread* t, object target, void (*finalize)(Thread*, object))
   t->m->finalizers = f;
 }
 
-GcMonitor*
-objectMonitor(Thread* t, object o, bool createNew)
+GcMonitor* objectMonitor(Thread* t, object o, bool createNew)
 {
   assertT(t, t->state == Thread::ActiveState);
 
-  object m = hashMapFind
-    (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
+  object m = hashMapFind(t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
   if (m) {
     if (DebugMonitors) {
@@ -4925,8 +4964,7 @@ objectMonitor(Thread* t, object o, bool createNew)
 
     { ENTER(t, Thread::ExclusiveState);
 
-      m = hashMapFind
-        (t, roots(t)->monitorMap(), o, objectHash, objectEqual);
+      m = hashMapFind(t, roots(t)->monitorMap(), o, objectHash, objectEqual);
 
       if (m) {
         if (DebugMonitors) {
@@ -4963,8 +5001,8 @@ intern(Thread* t, object s)
 
   ACQUIRE(t, t->m->referenceLock);
 
-  GcTriple* n = hashMapFindNode
-    (t, roots(t)->stringMap(), s, stringHash, stringEqual);
+  GcTriple* n
+      = hashMapFindNode(t, roots(t)->stringMap(), s, stringHash, stringEqual);
 
   if (n) {
     return cast<GcJreference>(t, n->first())->target();
@@ -4991,7 +5029,8 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
          fieldAtOffset<uintptr_t>(o, fixedSize - BytesPerWord) : 0);
 
     THREAD_RUNTIME_ARRAY(t, uint32_t, mask, objectMask->length());
-    memcpy(RUNTIME_ARRAY_BODY(mask), objectMask->body().begin(),
+    memcpy(RUNTIME_ARRAY_BODY(mask),
+           objectMask->body().begin(),
            objectMask->length() * 4);
 
     more = ::walk(t, w, RUNTIME_ARRAY_BODY(mask), fixedSize, arrayElementSize,
@@ -5000,8 +5039,13 @@ walk(Thread* t, Heap::Walker* w, object o, unsigned start)
     GcSingleton* s = cast<GcSingleton>(t, o);
     unsigned length = s->length();
     if (length) {
-      more = ::walk(t, w, singletonMask(t, s),
-                    (singletonCount(t, s) + 2) * BytesPerWord, 0, 0, start);
+      more = ::walk(t,
+                    w,
+                    singletonMask(t, s),
+                    (singletonCount(t, s) + 2) * BytesPerWord,
+                    0,
+                    0,
+                    start);
     } else if (start == 0) {
       more = w->visit(0);
     }
@@ -5074,8 +5118,7 @@ logTrace(FILE* f, const char* fmt, ...)
 #endif
 }
 
-void
-printTrace(Thread* t, GcThrowable* exception)
+void printTrace(Thread* t, GcThrowable* exception)
 {
   if (exception == 0) {
     exception = makeThrowable(t, GcNullPointerException::Type);
@@ -5100,12 +5143,12 @@ printTrace(Thread* t, GcThrowable* exception)
     object trace = e->trace();
     if (trace) {
       for (unsigned i = 0; i < objectArrayLength(t, trace); ++i) {
-        GcTraceElement* e = cast<GcTraceElement>(t, objectArrayBody(t, trace, i));
+        GcTraceElement* e
+            = cast<GcTraceElement>(t, objectArrayBody(t, trace, i));
         GcMethod* m = cast<GcMethod>(t, e->method());
         const int8_t* class_ = m->class_()->name()->body().begin();
         const int8_t* method = m->name()->body().begin();
-        int line = t->m->processor->lineNumber
-          (t, m, e->ip());
+        int line = t->m->processor->lineNumber(t, m, e->ip());
 
         logTrace(errorLog(t), "  at %s.%s ", class_, method);
 
@@ -5194,10 +5237,8 @@ runFinalizeThread(Thread* t)
   while (true) {
     { ACQUIRE(t, t->m->stateLock);
 
-      while (t->m->finalizeThread
-             and roots(t)->objectsToFinalize() == 0
-             and roots(t)->objectsToClean() == 0)
-      {
+      while (t->m->finalizeThread and roots(t)->objectsToFinalize() == 0
+             and roots(t)->objectsToClean() == 0) {
         ENTER(t, Thread::IdleState);
         t->m->stateLock->wait(t->systemThread, 0);
       }
@@ -5243,8 +5284,7 @@ parseUtf8(Thread* t, const char* data, unsigned length)
   return ::parseUtf8(t, s, length);
 }
 
-object
-parseUtf8(Thread* t, GcByteArray* array)
+object parseUtf8(Thread* t, GcByteArray* array)
 {
   for (unsigned i = 0; i < array->length() - 1; ++i) {
     if (array->body()[i] & 0x80) {
@@ -5282,10 +5322,10 @@ parseUtf8(Thread* t, GcByteArray* array)
       MyStream* s;
     };
 
-    MyStream(Thread* t, Client* client, GcByteArray* array):
-      AbstractStream(client, array->length() - 1),
-      array(array),
-      protector(t, this)
+    MyStream(Thread* t, Client* client, GcByteArray* array)
+        : AbstractStream(client, array->length() - 1),
+          array(array),
+          protector(t, this)
     { }
 
     virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
@@ -5299,8 +5339,7 @@ parseUtf8(Thread* t, GcByteArray* array)
   return ::parseUtf8(t, s, array->length() - 1);
 }
 
-GcMethod*
-getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
+GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 {
   if (static_cast<int>(target) == -1) {
     target = 2;
@@ -5315,8 +5354,7 @@ getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
 
     virtual bool visit(Processor::StackWalker* walker) {
       if (skipMethodInvoke
-          and walker->method()->class_()
-              == type(t, GcJmethod::Type)
+          and walker->method()->class_() == type(t, GcJmethod::Type)
           and strcmp(walker->method()->name()->body().begin(),
                      reinterpret_cast<const int8_t*>("invoke")) == 0) {
         return true;
@@ -5343,8 +5381,10 @@ getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
   return v.method;
 }
 
-object
-defineClass(Thread* t, GcClassLoader* loader, const uint8_t* buffer, unsigned length)
+object defineClass(Thread* t,
+                   GcClassLoader* loader,
+                   const uint8_t* buffer,
+                   unsigned length)
 {
   PROTECT(t, loader);
 
@@ -5386,18 +5426,17 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   PROTECT(t, spec);
 
   GcByteArray* elementSpec = makeByteArray(t, spec->length() - 1);
-  memcpy(elementSpec->body().begin(),
-         &spec->body()[1],
-         spec->length() - 1);
+  memcpy(elementSpec->body().begin(), &spec->body()[1], spec->length() - 1);
 
-  GcClass* class_ = resolveClass
-    (t, objectClass(t, array)->loader(), elementSpec);
+  GcClass* class_
+      = resolveClass(t, objectClass(t, array)->loader(), elementSpec);
   PROTECT(t, class_);
 
   for (int32_t i = 0; i < counts[index]; ++i) {
-    GcArray* a = makeArray
-      (t, ceilingDivide
-       (counts[index + 1] * class_->arrayElementSize(), BytesPerWord));
+    GcArray* a = makeArray(
+        t,
+        ceilingDivide(counts[index + 1] * class_->arrayElementSize(),
+                      BytesPerWord));
     a->length() = counts[index + 1];
     setObjectClass(t, a, class_);
     setField(t, array, ArrayBody + (i * BytesPerWord), a);
@@ -5406,8 +5445,7 @@ populateMultiArray(Thread* t, object array, int32_t* counts,
   }
 }
 
-object
-interruptLock(Thread* t, GcThread* thread)
+object interruptLock(Thread* t, GcThread* thread)
 {
   object lock = thread->interruptLock();
 
@@ -5426,7 +5464,7 @@ interruptLock(Thread* t, GcThread* thread)
       thread->setInterruptLock(t, lock);
     }
   }
-  
+
   return thread->interruptLock();
 }
 
@@ -5438,11 +5476,10 @@ clearInterrupted(Thread* t)
   monitorRelease(t, cast<GcMonitor>(t, interruptLock(t, t->javaThread)));
 }
 
-void
-threadInterrupt(Thread* t, GcThread* thread)
+void threadInterrupt(Thread* t, GcThread* thread)
 {
   PROTECT(t, thread);
-  
+
   monitorAcquire(t, cast<GcMonitor>(t, interruptLock(t, thread)));
   Thread* p = reinterpret_cast<Thread*>(thread->peer());
   if (p) {
@@ -5452,11 +5489,10 @@ threadInterrupt(Thread* t, GcThread* thread)
   monitorRelease(t, cast<GcMonitor>(t, interruptLock(t, thread)));
 }
 
-bool
-threadIsInterrupted(Thread* t, GcThread* thread, bool clear)
+bool threadIsInterrupted(Thread* t, GcThread* thread, bool clear)
 {
   PROTECT(t, thread);
-  
+
   monitorAcquire(t, cast<GcMonitor>(t, interruptLock(t, thread)));
   bool v = thread->interrupted();
   if (clear) {
@@ -5522,14 +5558,13 @@ vmPrintTrace(Thread* t)
 }
 
 // also for debugging
-AVIAN_EXPORT void*
-vmAddressFromLine(GcMethod* m, unsigned line)
+AVIAN_EXPORT void* vmAddressFromLine(GcMethod* m, unsigned line)
 {
   GcCode* code = m->code();
   printf("code: %p\n", code);
   GcLineNumberTable* lnt = code->lineNumberTable();
   printf("lnt: %p\n", lnt);
-  
+
   if (lnt) {
     unsigned last = 0;
     unsigned bottom = 0;

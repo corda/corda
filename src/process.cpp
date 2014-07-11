@@ -66,8 +66,7 @@ mangle(int8_t c, char* dst)
   }
 }
 
-unsigned
-jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
+unsigned jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
 {
   unsigned size = 0;
 
@@ -87,9 +86,9 @@ jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
     size += 2;
 
     GcByteArray* methodSpec = method->spec();
-    for (unsigned i = 1; i < methodSpec->length() - 1
-           and methodSpec->body()[i] != ')'; ++i)
-    {
+    for (unsigned i = 1;
+         i < methodSpec->length() - 1 and methodSpec->body()[i] != ')';
+         ++i) {
       size += mangledSize(methodSpec->body()[i]);
     }
   }
@@ -97,9 +96,12 @@ jniNameLength(Thread* t UNUSED, GcMethod* method, bool decorate)
   return size;
 }
 
-void
-makeJNIName(Thread* t UNUSED, const char* prefix, unsigned prefixLength, char* name,
-            GcMethod* method, bool decorate)
+void makeJNIName(Thread* t UNUSED,
+                 const char* prefix,
+                 unsigned prefixLength,
+                 char* name,
+                 GcMethod* method,
+                 bool decorate)
 {
   memcpy(name, prefix, prefixLength);
   name += prefixLength;
@@ -121,9 +123,9 @@ makeJNIName(Thread* t UNUSED, const char* prefix, unsigned prefixLength, char* n
     *(name++) = '_';
 
     GcByteArray* methodSpec = method->spec();
-    for (unsigned i = 1; i < methodSpec->length() - 1
-           and methodSpec->body()[i] != ')'; ++i)
-    {
+    for (unsigned i = 1;
+         i < methodSpec->length() - 1 and methodSpec->body()[i] != ')';
+         ++i) {
       name += mangle(methodSpec->body()[i], name);
     }
   }
@@ -149,9 +151,11 @@ resolveNativeMethod(Thread* t, const char* undecorated, const char* decorated)
   return 0;
 }
 
-void*
-resolveNativeMethod(Thread* t, GcMethod* method, const char* prefix,
-                    unsigned prefixLength, int footprint UNUSED)
+void* resolveNativeMethod(Thread* t,
+                          GcMethod* method,
+                          const char* prefix,
+                          unsigned prefixLength,
+                          int footprint UNUSED)
 {
   unsigned undecoratedSize = prefixLength + jniNameLength(t, method, false);
   // extra 6 is for code below:
@@ -205,8 +209,7 @@ resolveNativeMethod(Thread* t, GcMethod* method, const char* prefix,
   return 0;
 }
 
-GcNative*
-resolveNativeMethod(Thread* t, GcMethod* method)
+GcNative* resolveNativeMethod(Thread* t, GcMethod* method)
 {
   void* p = resolveNativeMethod(t, method, "Avian_", 6, 3);
   if (p) {
@@ -225,8 +228,7 @@ resolveNativeMethod(Thread* t, GcMethod* method)
 
 namespace vm {
 
-void
-resolveNative(Thread* t, GcMethod* method)
+void resolveNative(Thread* t, GcMethod* method)
 {
   PROTECT(t, method);
 
@@ -237,7 +239,9 @@ resolveNative(Thread* t, GcMethod* method)
   if (getMethodRuntimeData(t, method)->native() == 0) {
     GcNative* native = resolveNativeMethod(t, method);
     if (UNLIKELY(native == 0)) {
-      throwNew(t, GcUnsatisfiedLinkError::Type, "%s.%s%s",
+      throwNew(t,
+               GcUnsatisfiedLinkError::Type,
+               "%s.%s%s",
                method->class_()->name()->body().begin(),
                method->name()->body().begin(),
                method->spec()->body().begin());
@@ -255,8 +259,7 @@ resolveNative(Thread* t, GcMethod* method)
   }
 }
 
-int
-findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
+int findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
 {
   if (method->flags() & ACC_NATIVE) {
     return NativeLine;
@@ -276,8 +279,7 @@ findLineNumber(Thread* t UNUSED, GcMethod* method, unsigned ip)
 
       if (ip >= lineNumberIp(ln)
           and (middle + 1 == lnt->length()
-               or ip < lineNumberIp(lnt->body()[middle + 1])))
-      {
+               or ip < lineNumberIp(lnt->body()[middle + 1]))) {
         return lineNumberLine(ln);
       } else if (ip < lineNumberIp(ln)) {
         top = middle;

@@ -342,7 +342,7 @@ class Segment {
       if (minimum == 0) {
         minimum = 1;
       }
-      
+
       assertT(context, desired >= minimum);
 
       capacity_ = desired;

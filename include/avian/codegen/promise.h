@@ -160,4 +160,4 @@ class DelayedPromise: public ListenPromise {
 } // namespace codegen
 } // namespace avian
 
-#endif // AVIAN_CODEGEN_PROMISE_H
+#endif  // AVIAN_CODEGEN_PROMISE_H

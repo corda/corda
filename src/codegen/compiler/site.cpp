@@ -378,8 +378,9 @@ unsigned RegisterSite::registerMask(Context* c UNUSED) {
 
 Site* registerSite(Context* c, int number) {
   assertT(c, number >= 0);
-  assertT(c, (1 << number) & (c->regFile->generalRegisters.mask
-                             | c->regFile->floatRegisters.mask));
+  assertT(c,
+          (1 << number) & (c->regFile->generalRegisters.mask
+                           | c->regFile->floatRegisters.mask));
 
   return new(c->zone) RegisterSite(1 << number, number);
 }
@@ -402,7 +403,7 @@ unsigned MemorySite::toString(Context*, char* buffer, unsigned bufferSize) {
 }
 
 unsigned MemorySite::copyCost(Context* c, Site* s) {
-  assertT(c, acquired);    
+  assertT(c, acquired);
 
   if (s and
       (this == s or
@@ -488,8 +489,7 @@ void MemorySite::acquire(Context* c, Value* v) {
 
   if (base == c->arch->stack()) {
     assertT(c, index == lir::NoRegister);
-    assertT
-      (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
+    assertT(c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
     compiler::acquire
       (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
@@ -501,8 +501,7 @@ void MemorySite::acquire(Context* c, Value* v) {
 void MemorySite::release(Context* c, Value* v) {
   if (base == c->arch->stack()) {
     assertT(c, index == lir::NoRegister);
-    assertT
-      (c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
+    assertT(c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
     compiler::release
       (c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
@@ -552,12 +551,12 @@ void MemorySite::asAssemblerOperand(Context* c UNUSED, Site* high UNUSED,
 {
   // todo: endianness?
   assertT(c,
-         high == this
-         or (static_cast<MemorySite*>(high)->base == base
-             and static_cast<MemorySite*>(high)->offset
-                 == static_cast<int>(offset + c->targetInfo.pointerSize)
-             and static_cast<MemorySite*>(high)->index == index
-             and static_cast<MemorySite*>(high)->scale == scale));
+          high == this
+          or (static_cast<MemorySite*>(high)->base == base
+              and static_cast<MemorySite*>(high)->offset
+                  == static_cast<int>(offset + c->targetInfo.pointerSize)
+              and static_cast<MemorySite*>(high)->index == index
+              and static_cast<MemorySite*>(high)->scale == scale));
 
   assertT(c, acquired);
 

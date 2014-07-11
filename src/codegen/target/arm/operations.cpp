@@ -884,11 +884,11 @@ void moveAR(Context* con, unsigned srcSize, lir::Address* src,
 void compareRR(Context* con, unsigned aSize, lir::Register* a,
           unsigned bSize UNUSED, lir::Register* b)
 {
-  assertT(con, !(isFpr(a) ^ isFpr(b))); // regs must be of the same type
+  assertT(con, !(isFpr(a) ^ isFpr(b)));  // regs must be of the same type
 
   if (!isFpr(a)) { // GPR compare
     assertT(con, aSize == 4 && bSize == 4);
-    /**///assertT(con, b->low != a->low);
+    /**/  // assertT(con, b->low != a->low);
     emit(con, cmp(b->low, a->low));
   } else {         // FPR compare
     assertT(con, aSize == bSize);

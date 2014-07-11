@@ -74,46 +74,43 @@ class Processor {
     virtual void dispose() = 0;
   };
 
-  virtual Thread*
-  makeThread(Machine* m, GcThread* javaThread, Thread* parent) = 0;
+  virtual Thread* makeThread(Machine* m, GcThread* javaThread, Thread* parent)
+      = 0;
 
-  virtual GcMethod*
-  makeMethod(Thread* t,
-             uint8_t vmFlags,
-             uint8_t returnCode,
-             uint8_t parameterCount,
-             uint8_t parameterFootprint,
-             uint16_t flags,
-             uint16_t offset,
-             GcByteArray* name,
-             GcByteArray* spec,
-             GcMethodAddendum* addendum,
-             GcClass* class_,
-             GcCode* code) = 0;
+  virtual GcMethod* makeMethod(Thread* t,
+                               uint8_t vmFlags,
+                               uint8_t returnCode,
+                               uint8_t parameterCount,
+                               uint8_t parameterFootprint,
+                               uint16_t flags,
+                               uint16_t offset,
+                               GcByteArray* name,
+                               GcByteArray* spec,
+                               GcMethodAddendum* addendum,
+                               GcClass* class_,
+                               GcCode* code) = 0;
 
-  virtual GcClass*
-  makeClass(Thread* t,
-            uint16_t flags,
-            uint16_t vmFlags,
-            uint16_t fixedSize,
-            uint8_t arrayElementSize,
-            uint8_t arrayDimensions,
-            GcClass* arrayElementClass,
-            GcIntArray* objectMask,
-            GcByteArray* name,
-            GcByteArray* sourceFile,
-            GcClass* super,
-            object interfaceTable,
-            object virtualTable,
-            object fieldTable,
-            object methodTable,
-            GcClassAddendum* addendum,
-            GcSingleton* staticTable,
-            GcClassLoader* loader,
-            unsigned vtableLength) = 0;
+  virtual GcClass* makeClass(Thread* t,
+                             uint16_t flags,
+                             uint16_t vmFlags,
+                             uint16_t fixedSize,
+                             uint8_t arrayElementSize,
+                             uint8_t arrayDimensions,
+                             GcClass* arrayElementClass,
+                             GcIntArray* objectMask,
+                             GcByteArray* name,
+                             GcByteArray* sourceFile,
+                             GcClass* super,
+                             object interfaceTable,
+                             object virtualTable,
+                             object fieldTable,
+                             object methodTable,
+                             GcClassAddendum* addendum,
+                             GcSingleton* staticTable,
+                             GcClassLoader* loader,
+                             unsigned vtableLength) = 0;
 
-  virtual void
-  initVtable(Thread* t, GcClass* c) = 0;
+  virtual void initVtable(Thread* t, GcClass* c) = 0;
 
   virtual void
   visitObjects(Thread* t, Heap::Visitor* v) = 0;
@@ -121,8 +118,7 @@ class Processor {
   virtual void
   walkStack(Thread* t, StackVisitor* v) = 0;
 
-  virtual int
-  lineNumber(Thread* t, GcMethod* method, int ip) = 0;
+  virtual int lineNumber(Thread* t, GcMethod* method, int ip) = 0;
 
   virtual object*
   makeLocalReference(Thread* t, object o) = 0;
@@ -136,21 +132,29 @@ class Processor {
   virtual void
   popLocalFrame(Thread* t) = 0;
 
-  virtual object
-  invokeArray(Thread* t, GcMethod* method, object this_, object arguments) = 0;
+  virtual object invokeArray(Thread* t,
+                             GcMethod* method,
+                             object this_,
+                             object arguments) = 0;
 
-  virtual object
-  invokeArray(Thread* t, GcMethod* method, object this_, const jvalue* arguments)
-  = 0;
+  virtual object invokeArray(Thread* t,
+                             GcMethod* method,
+                             object this_,
+                             const jvalue* arguments) = 0;
 
-  virtual object
-  invokeList(Thread* t, GcMethod* method, object this_, bool indirectObjects,
-             va_list arguments) = 0;
+  virtual object invokeList(Thread* t,
+                            GcMethod* method,
+                            object this_,
+                            bool indirectObjects,
+                            va_list arguments) = 0;
 
-  virtual object
-  invokeList(Thread* t, GcClassLoader* loader, const char* className,
-             const char* methodName, const char* methodSpec,
-             object this_, va_list arguments) = 0;
+  virtual object invokeList(Thread* t,
+                            GcClassLoader* loader,
+                            const char* className,
+                            const char* methodName,
+                            const char* methodSpec,
+                            object this_,
+                            va_list arguments) = 0;
 
   virtual void
   dispose(Thread* t) = 0;
@@ -167,10 +171,13 @@ class Processor {
   virtual void
   addCompilationHandler(CompilationHandler* handler) = 0;
 
-  virtual void
-  compileMethod(Thread* t, Zone* zone, GcTriple** constants, GcTriple** calls,
-                avian::codegen::DelayedPromise** addresses, GcMethod* method,
-                OffsetResolver* resolver) = 0;
+  virtual void compileMethod(Thread* t,
+                             Zone* zone,
+                             GcTriple** constants,
+                             GcTriple** calls,
+                             avian::codegen::DelayedPromise** addresses,
+                             GcMethod* method,
+                             OffsetResolver* resolver) = 0;
 
   virtual void
   visitRoots(Thread* t, HeapWalker* w) = 0;
@@ -190,19 +197,19 @@ class Processor {
   virtual void
   dynamicWind(Thread* t, object before, object thunk, object after) = 0;
 
-  virtual void
-  feedResultToContinuation(Thread* t, GcContinuation* continuation, object result) = 0;
+  virtual void feedResultToContinuation(Thread* t,
+                                        GcContinuation* continuation,
+                                        object result) = 0;
 
-  virtual void
-  feedExceptionToContinuation(Thread* t, GcContinuation* continuation,
-                              GcThrowable* exception) = 0;
+  virtual void feedExceptionToContinuation(Thread* t,
+                                           GcContinuation* continuation,
+                                           GcThrowable* exception) = 0;
 
   virtual void
   walkContinuationBody(Thread* t, Heap::Walker* w, object o, unsigned start)
   = 0;
 
-  object
-  invoke(Thread* t, GcMethod* method, object this_, ...)
+  object invoke(Thread* t, GcMethod* method, object this_, ...)
   {
     va_list a;
     va_start(a, this_);
@@ -214,9 +221,13 @@ class Processor {
     return r;
   }
 
-  object
-  invoke(Thread* t, GcClassLoader* loader, const char* className,
-         const char* methodName, const char* methodSpec, object this_, ...)
+  object invoke(Thread* t,
+                GcClassLoader* loader,
+                const char* className,
+                const char* methodName,
+                const char* methodSpec,
+                object this_,
+                ...)
   {
     va_list a;
     va_start(a, this_);

@@ -94,7 +94,7 @@ void jumpC(Context* c, unsigned size UNUSED, lir::Constant* a) {
 
 void jumpM(Context* c, unsigned size UNUSED, lir::Memory* a) {
   assertT(c, size == vm::TargetBytesPerWord);
-  
+
   maybeRex(c, 4, a);
   opcode(c, 0xff);
   modrmSibImm(c, rsp, a->scale, a->index, a->base, a->offset);
@@ -122,7 +122,7 @@ void callR(Context* c, unsigned size UNUSED, lir::Register* a) {
 
 void callM(Context* c, unsigned size UNUSED, lir::Memory* a) {
   assertT(c, size == vm::TargetBytesPerWord);
-  
+
   maybeRex(c, 4, a);
   opcode(c, 0xff);
   modrmSibImm(c, rdx, a->scale, a->index, a->base, a->offset);
@@ -244,7 +244,7 @@ void swapRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
 {
   assertT(c, aSize == bSize);
   assertT(c, aSize == vm::TargetBytesPerWord);
-  
+
   alwaysRex(c, aSize, a, b);
   opcode(c, 0x87);
   modrm(c, 0xc0, b, a);
@@ -359,7 +359,7 @@ void moveMR(Context* c, unsigned aSize, lir::Memory* a,
     } else {
       if (bSize == 8) {
         assertT(c, b->low == rax and b->high == rdx);
-        
+
         moveMR(c, 4, a, 4, b);
         moveRR(c, 4, b, 8, b);
       } else {
@@ -392,7 +392,7 @@ void moveRM(Context* c, unsigned aSize, lir::Register* a,
        unsigned bSize UNUSED, lir::Memory* b)
 {
   assertT(c, aSize == bSize);
-  
+
   if (isFloatReg(a)) {
     sseMoveRM(c, aSize, a, bSize, b);
     return;
@@ -533,7 +533,7 @@ void moveZMR(Context* c, unsigned aSize UNUSED, lir::Memory* a,
 {
   assertT(c, bSize == vm::TargetBytesPerWord);
   assertT(c, aSize == 2);
-  
+
   maybeRex(c, bSize, b, a);
   opcode(c, 0x0f, 0xb7);
   modrmSibImm(c, b->low, a->scale, a->index, a->base, a->offset);
@@ -543,7 +543,7 @@ void addCarryRR(Context* c, unsigned size, lir::Register* a,
            lir::Register* b)
 {
   assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+
   maybeRex(c, size, a, b);
   opcode(c, 0x11);
   modrm(c, 0xc0, b, a);
@@ -625,7 +625,7 @@ void subtractBorrowCR(Context* c, unsigned size UNUSED, lir::Constant* a,
                  lir::Register* b)
 {
   assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+
   int64_t v = a->value->value();
   if (vm::fitsInInt8(v)) {
     opcode(c, 0x83, 0xd8 + regCode(b));
@@ -679,7 +679,7 @@ void subtractBorrowRR(Context* c, unsigned size, lir::Register* a,
                  lir::Register* b)
 {
   assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+
   maybeRex(c, size, a, b);
   opcode(c, 0x19);
   modrm(c, 0xc0, b, a);
@@ -689,7 +689,7 @@ void subtractRR(Context* c, unsigned aSize, lir::Register* a,
            unsigned bSize UNUSED, lir::Register* b)
 {
   assertT(c, aSize == bSize);
-  
+
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
     lir::Register bh(b->high);
@@ -707,7 +707,6 @@ void andRR(Context* c, unsigned aSize, lir::Register* a,
       unsigned bSize UNUSED, lir::Register* b)
 {
   assertT(c, aSize == bSize);
-
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
@@ -877,7 +876,6 @@ void multiplyRR(Context* c, unsigned aSize, lir::Register* a,
 {
   assertT(c, aSize == bSize);
 
-
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     assertT(c, b->high == rdx);
     assertT(c, b->low != rax);
@@ -938,7 +936,7 @@ void compareCR(Context* c, unsigned aSize, lir::Constant* a,
 {
   assertT(c, aSize == bSize);
   assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
+
   if (a->value->resolved() and vm::fitsInInt32(a->value->value())) {
     int64_t v = a->value->value();
     maybeRex(c, aSize, b);
@@ -962,7 +960,7 @@ void compareRM(Context* c, unsigned aSize, lir::Register* a,
 {
   assertT(c, aSize == bSize);
   assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
+
   if (vm::TargetBytesPerWord == 8 and aSize == 4) {
     moveRR(c, 4, a, 8, a);
   }
@@ -976,7 +974,7 @@ void compareCM(Context* c, unsigned aSize, lir::Constant* a,
 {
   assertT(c, aSize == bSize);
   assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
+
   if (a->value->resolved()) { 
     int64_t v = a->value->value();   
     maybeRex(c, aSize, b);
@@ -1290,7 +1288,7 @@ void shiftLeftRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
     moveRR(c, 4, b, 4, &bh); // 2 bytes
     xorRR(c, 4, b, 4, b); // 2 bytes
   } else {
-    assertT(c, a->low == rcx);  
+    assertT(c, a->low == rcx);
 
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xe0 + regCode(b));

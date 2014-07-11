@@ -135,7 +135,8 @@ class FileOutput : public Output {
     }
   }
 
-  virtual void write(const std::string& s) {
+  virtual void write(const std::string& s)
+  {
     fputs(s.c_str(), stream);
   }
 

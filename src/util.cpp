@@ -49,21 +49,20 @@ class TreeContext {
   bool fresh;
 };
 
-List<GcTreeNode*>*
-path(TreeContext* c, GcTreeNode* node, List<GcTreeNode*>* next)
+List<GcTreeNode*>* path(TreeContext* c,
+                        GcTreeNode* node,
+                        List<GcTreeNode*>* next)
 {
-  return new(c->zone) List<GcTreeNode*>(node, next);
+  return new (c->zone) List<GcTreeNode*>(node, next);
 }
 
-inline object
-getTreeNodeValue(Thread*, GcTreeNode* n)
+inline object getTreeNodeValue(Thread*, GcTreeNode* n)
 {
   return reinterpret_cast<object>
     (alias(n, TreeNodeValue) & PointerMask);
 }
 
-inline void
-setTreeNodeValue(Thread* t, GcTreeNode* n, object value)
+inline void setTreeNodeValue(Thread* t, GcTreeNode* n, object value)
 {
   intptr_t red = alias(n, TreeNodeValue) & (~PointerMask);
 
@@ -72,14 +71,12 @@ setTreeNodeValue(Thread* t, GcTreeNode* n, object value)
   alias(n, TreeNodeValue) |= red;
 }
 
-inline bool
-treeNodeRed(Thread*, GcTreeNode* n)
+inline bool treeNodeRed(Thread*, GcTreeNode* n)
 {
   return (alias(n, TreeNodeValue) & (~PointerMask)) == 1;
 }
 
-inline void
-setTreeNodeRed(Thread*, GcTreeNode* n, bool red)
+inline void setTreeNodeRed(Thread*, GcTreeNode* n, bool red)
 {
   if (red) {
     alias(n, TreeNodeValue) |= 1;
@@ -88,20 +85,21 @@ setTreeNodeRed(Thread*, GcTreeNode* n, bool red)
   }
 }
 
-inline GcTreeNode*
-cloneTreeNode(Thread* t, GcTreeNode* n)
+inline GcTreeNode* cloneTreeNode(Thread* t, GcTreeNode* n)
 {
   PROTECT(t, n);
 
-  GcTreeNode* newNode = makeTreeNode
-    (t, getTreeNodeValue(t, n), n->left(), n->right());
+  GcTreeNode* newNode
+      = makeTreeNode(t, getTreeNodeValue(t, n), n->left(), n->right());
   setTreeNodeRed(t, newNode, treeNodeRed(t, n));
   return newNode;
 }
 
-GcTreeNode*
-treeFind(Thread* t, GcTreeNode* tree, intptr_t key, GcTreeNode* sentinal,
-         intptr_t (*compare)(Thread* t, intptr_t key, object b))
+GcTreeNode* treeFind(Thread* t,
+                     GcTreeNode* tree,
+                     intptr_t key,
+                     GcTreeNode* sentinal,
+                     intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   GcTreeNode* node = tree;
   while (node != sentinal) {
@@ -118,10 +116,13 @@ treeFind(Thread* t, GcTreeNode* tree, intptr_t key, GcTreeNode* sentinal,
   return 0;
 }
 
-void
-treeFind(Thread* t, TreeContext* c, GcTreeNode* old, intptr_t key, GcTreeNode* node,
-         GcTreeNode* sentinal,
-         intptr_t (*compare)(Thread* t, intptr_t key, object b))
+void treeFind(Thread* t,
+              TreeContext* c,
+              GcTreeNode* old,
+              intptr_t key,
+              GcTreeNode* node,
+              GcTreeNode* sentinal,
+              intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, old);
   PROTECT(t, node);
@@ -173,8 +174,7 @@ treeFind(Thread* t, TreeContext* c, GcTreeNode* old, intptr_t key, GcTreeNode* n
   c->ancestors = c->ancestors;
 }
 
-GcTreeNode*
-leftRotate(Thread* t, GcTreeNode* n)
+GcTreeNode* leftRotate(Thread* t, GcTreeNode* n)
 {
   PROTECT(t, n);
 
@@ -184,8 +184,7 @@ leftRotate(Thread* t, GcTreeNode* n)
   return child;
 }
 
-GcTreeNode*
-rightRotate(Thread* t, GcTreeNode* n)
+GcTreeNode* rightRotate(Thread* t, GcTreeNode* n)
 {
   PROTECT(t, n);
 
@@ -195,8 +194,7 @@ rightRotate(Thread* t, GcTreeNode* n)
   return child;
 }
 
-GcTreeNode*
-treeAdd(Thread* t, TreeContext* c)
+GcTreeNode* treeAdd(Thread* t, TreeContext* c)
 {
   GcTreeNode* new_ = c->node;
   PROTECT(t, new_);
@@ -207,16 +205,11 @@ treeAdd(Thread* t, TreeContext* c)
   // rebalance
   setTreeNodeRed(t, new_, true);
   while (c->ancestors != 0 and treeNodeRed(t, c->ancestors->item)) {
-    if (c->ancestors->item
-        == c->ancestors->next->item->left())
-    {
-      if (treeNodeRed
-          (t, c->ancestors->next->item->right()))
-      {
+    if (c->ancestors->item == c->ancestors->next->item->left()) {
+      if (treeNodeRed(t, c->ancestors->next->item->right())) {
         setTreeNodeRed(t, c->ancestors->item, false);
 
-        GcTreeNode* n = cloneTreeNode
-          (t, c->ancestors->next->item->right());
+        GcTreeNode* n = cloneTreeNode(t, c->ancestors->next->item->right());
 
         c->ancestors->next->item->setRight(t, n);
 
@@ -247,8 +240,7 @@ treeAdd(Thread* t, TreeContext* c)
         if (c->ancestors->next->next == 0) {
           newRoot = n;
         } else if (c->ancestors->next->next->item->right()
-                   == c->ancestors->next->item)
-        {
+                   == c->ancestors->next->item) {
           c->ancestors->next->next->item->setRight(t, n);
         } else {
           c->ancestors->next->next->item->setLeft(t, n);
@@ -257,13 +249,10 @@ treeAdd(Thread* t, TreeContext* c)
       }
     } else { // this is just the reverse of the code above (right and
              // left swapped):
-      if (treeNodeRed
-          (t, c->ancestors->next->item->left()))
-      {
+      if (treeNodeRed(t, c->ancestors->next->item->left())) {
         setTreeNodeRed(t, c->ancestors->item, false);
 
-        GcTreeNode* n = cloneTreeNode
-          (t, c->ancestors->next->item->left());
+        GcTreeNode* n = cloneTreeNode(t, c->ancestors->next->item->left());
 
         c->ancestors->next->item->setLeft(t, n);
 
@@ -294,8 +283,7 @@ treeAdd(Thread* t, TreeContext* c)
         if (c->ancestors->next->next == 0) {
           newRoot = n;
         } else if (c->ancestors->next->next->item->left()
-                   == c->ancestors->next->item)
-        {
+                   == c->ancestors->next->item) {
           c->ancestors->next->next->item->setLeft(t, n);
         } else {
           c->ancestors->next->next->item->setRight(t, n);
@@ -314,17 +302,19 @@ treeAdd(Thread* t, TreeContext* c)
 
 namespace vm {
 
-GcTriple*
-hashMapFindNode(Thread* t, GcHashMap* map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object))
+GcTriple* hashMapFindNode(Thread* t,
+                          GcHashMap* map,
+                          object key,
+                          uint32_t (*hash)(Thread*, object),
+                          bool (*equal)(Thread*, object, object))
 {
   bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
 
   GcArray* array = map->array();
   if (array) {
     unsigned index = hash(t, key) & (array->length() - 1);
-    for (GcTriple* n = cast<GcTriple>(t, array->body()[index]); n; n = cast<GcTriple>(t, n->third())) {
+    for (GcTriple* n = cast<GcTriple>(t, array->body()[index]); n;
+         n = cast<GcTriple>(t, n->third())) {
       object k = n->first();
       if (weak) {
         k = cast<GcJreference>(t, k)->target();
@@ -341,9 +331,10 @@ hashMapFindNode(Thread* t, GcHashMap* map, object key,
   return 0;
 }
 
-void
-hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
-              unsigned size)
+void hashMapResize(Thread* t,
+                   GcHashMap* map,
+                   uint32_t (*hash)(Thread*, object),
+                   unsigned size)
 {
   PROTECT(t, map);
 
@@ -370,7 +361,8 @@ hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
       bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
       for (unsigned i = 0; i < oldArray->length(); ++i) {
         GcTriple* next;
-        for (GcTriple* p = cast<GcTriple>(t, oldArray->body()[i]); p; p = next) {
+        for (GcTriple* p = cast<GcTriple>(t, oldArray->body()[i]); p;
+             p = next) {
           next = cast<GcTriple>(t, p->third());
 
           object k = p->first();
@@ -389,13 +381,15 @@ hashMapResize(Thread* t, GcHashMap* map, uint32_t (*hash)(Thread*, object),
       }
     }
   }
-  
+
   map->setArray(t, newArray);
 }
 
-void
-hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
-              uint32_t (*hash)(Thread*, object))
+void hashMapInsert(Thread* t,
+                   GcHashMap* map,
+                   object key,
+                   object value,
+                   uint32_t (*hash)(Thread*, object))
 {
   // note that we reinitialize the array variable whenever an
   // allocation (and thus possibly a collection) occurs, in case the
@@ -409,9 +403,9 @@ hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
 
   GcArray* array = map->array();
 
-  ++ map->size();
+  ++map->size();
 
-  if (array == 0 or map->size() >= array->length() * 2) { 
+  if (array == 0 or map->size() >= array->length() * 2) {
     PROTECT(t, key);
     PROTECT(t, value);
 
@@ -452,22 +446,26 @@ hashMapInsert(Thread* t, GcHashMap* map, object key, object value,
   }
 }
 
-GcTriple*
-hashMapRemoveNode(Thread* t, GcHashMap* map, unsigned index, GcTriple* p, GcTriple* n)
+GcTriple* hashMapRemoveNode(Thread* t,
+                            GcHashMap* map,
+                            unsigned index,
+                            GcTriple* p,
+                            GcTriple* n)
 {
   if (p) {
     p->setThird(t, n->third());
   } else {
     map->array()->setBodyElement(t, index, n->third());
   }
-  -- map->size();
+  --map->size();
   return n;
 }
 
-object
-hashMapRemove(Thread* t, GcHashMap* map, object key,
-              uint32_t (*hash)(Thread*, object),
-              bool (*equal)(Thread*, object, object))
+object hashMapRemove(Thread* t,
+                     GcHashMap* map,
+                     object key,
+                     uint32_t (*hash)(Thread*, object),
+                     bool (*equal)(Thread*, object, object))
 {
   bool weak = objectClass(t, map) == type(t, GcWeakHashMap::Type);
 
@@ -481,7 +479,8 @@ hashMapRemove(Thread* t, GcHashMap* map, object key,
       if (weak) {
         k = cast<GcJreference>(t, k)->target();
         if (k == 0) {
-          n = cast<GcTriple>(t, hashMapRemoveNode(t, map, index, p, n)->third());
+          n = cast<GcTriple>(t,
+                             hashMapRemoveNode(t, map, index, p, n)->third());
           continue;
         }
       }
@@ -495,9 +494,7 @@ hashMapRemove(Thread* t, GcHashMap* map, object key,
       }
     }
 
-    if ((not t->m->collecting)
-        and map->size() <= array->length() / 3)
-    {
+    if ((not t->m->collecting) and map->size() <= array->length() / 3) {
       PROTECT(t, o);
       hashMapResize(t, map, hash, array->length() / 2);
     }
@@ -506,13 +503,12 @@ hashMapRemove(Thread* t, GcHashMap* map, object key,
   return o;
 }
 
-void
-listAppend(Thread* t, GcList* list, object value)
+void listAppend(Thread* t, GcList* list, object value)
 {
   PROTECT(t, list);
 
-  ++ list->size();
-  
+  ++list->size();
+
   object p = makePair(t, value, 0);
   if (list->front()) {
     cast<GcPair>(t, list->rear())->setSecond(t, p);
@@ -522,18 +518,17 @@ listAppend(Thread* t, GcList* list, object value)
   list->setRear(t, p);
 }
 
-GcVector*
-vectorAppend(Thread* t, GcVector* vector, object value)
+GcVector* vectorAppend(Thread* t, GcVector* vector, object value)
 {
   if (vector->length() == vector->size()) {
     PROTECT(t, vector);
     PROTECT(t, value);
 
-    GcVector* newVector = makeVector
-      (t, vector->size(), max(16, vector->size() * 2));
+    GcVector* newVector
+        = makeVector(t, vector->size(), max(16, vector->size() * 2));
 
     if (vector->size()) {
-      for(size_t i = 0; i < vector->size(); i++) {
+      for (size_t i = 0; i < vector->size(); i++) {
         newVector->setBodyElement(t, i, vector->body()[i]);
       }
     }
@@ -542,20 +537,18 @@ vectorAppend(Thread* t, GcVector* vector, object value)
   }
 
   vector->setBodyElement(t, vector->size(), value);
-  ++ vector->size();
+  ++vector->size();
   return vector;
 }
 
-GcArray*
-growArray(Thread* t, GcArray* array)
+GcArray* growArray(Thread* t, GcArray* array)
 {
   PROTECT(t, array);
 
-  GcArray* newArray = makeArray
-    (t, array == 0 ? 16 : (array->length() * 2));
+  GcArray* newArray = makeArray(t, array == 0 ? 16 : (array->length() * 2));
 
   if (array) {
-    for(size_t i = 0; i < array->length(); i++) {
+    for (size_t i = 0; i < array->length(); i++) {
       newArray->setBodyElement(t, i, array->body()[i]);
     }
   }
@@ -563,18 +556,23 @@ growArray(Thread* t, GcArray* array)
   return newArray;
 }
 
-object
-treeQuery(Thread* t, GcTreeNode* tree, intptr_t key, GcTreeNode* sentinal,
-          intptr_t (*compare)(Thread* t, intptr_t key, object b))
+object treeQuery(Thread* t,
+                 GcTreeNode* tree,
+                 intptr_t key,
+                 GcTreeNode* sentinal,
+                 intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   GcTreeNode* node = treeFind(t, tree, key, sentinal, compare);
   return (node ? getTreeNodeValue(t, node) : 0);
 }
 
-GcTreeNode*
-treeInsert(Thread* t, Zone* zone, GcTreeNode* tree, intptr_t key, object value,
-           GcTreeNode* sentinal,
-           intptr_t (*compare)(Thread* t, intptr_t key, object b))
+GcTreeNode* treeInsert(Thread* t,
+                       Zone* zone,
+                       GcTreeNode* tree,
+                       intptr_t key,
+                       object value,
+                       GcTreeNode* sentinal,
+                       intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   PROTECT(t, tree);
   PROTECT(t, sentinal);
@@ -588,9 +586,12 @@ treeInsert(Thread* t, Zone* zone, GcTreeNode* tree, intptr_t key, object value,
   return treeAdd(t, &c);
 }
 
-void
-treeUpdate(Thread* t, GcTreeNode* tree, intptr_t key, object value, GcTreeNode* sentinal,
-           intptr_t (*compare)(Thread* t, intptr_t key, object b))
+void treeUpdate(Thread* t,
+                GcTreeNode* tree,
+                intptr_t key,
+                object value,
+                GcTreeNode* sentinal,
+                intptr_t (*compare)(Thread* t, intptr_t key, object b))
 {
   setTreeNodeValue(t, treeFind(t, tree, key, sentinal, compare), value);
 }

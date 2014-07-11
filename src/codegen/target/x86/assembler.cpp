@@ -143,11 +143,13 @@ nextFrame(ArchitectureContext* c UNUSED, uint8_t* start, unsigned size UNUSED,
   }
   
   if (UseFramePointer and not mostRecent) {
-    assertT(c, static_cast<void***>(*stack)[-1] + 1
-           == static_cast<void**>(*stack) + offset);
+    assertT(c,
+            static_cast<void***>(*stack)[-1] + 1
+            == static_cast<void**>(*stack) + offset);
 
-    assertT(c, static_cast<void***>(*stack)[-1][1]
-           == static_cast<void**>(*stack)[offset]);
+    assertT(c,
+            static_cast<void***>(*stack)[-1][1]
+            == static_cast<void**>(*stack)[offset]);
   }
 
   *ip = static_cast<void**>(*stack)[offset];
@@ -340,13 +342,17 @@ class MyArchitecture: public Architecture {
 
     if (TargetBytesPerWord == 4 or op == lir::Call or op == lir::Jump) {
       uint8_t* instruction = static_cast<uint8_t*>(returnAddress) - 5;
-      
-      assertT(&c, ((op == lir::Call or op == lir::LongCall) and *instruction == 0xE8)
-             or ((op == lir::Jump or op == lir::LongJump) and *instruction == 0xE9));
 
-      assertT(&c, (not assertTAlignment)
-             or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
-      
+      assertT(
+          &c,
+          ((op == lir::Call or op == lir::LongCall) and *instruction == 0xE8)
+          or ((op == lir::Jump or op == lir::LongJump)
+              and *instruction == 0xE9));
+
+      assertT(&c,
+              (not assertTAlignment)
+              or reinterpret_cast<uintptr_t>(instruction + 1) % 4 == 0);
+
       intptr_t v = static_cast<uint8_t*>(newTarget)
         - static_cast<uint8_t*>(returnAddress);
 
@@ -360,12 +366,14 @@ class MyArchitecture: public Architecture {
 
       assertT(&c, instruction[0] == 0x49 and instruction[1] == 0xBA);
       assertT(&c, instruction[10] == 0x41 and instruction[11] == 0xFF);
-      assertT(&c, (op == lir::LongCall and instruction[12] == 0xD2)
-             or (op == lir::LongJump and instruction[12] == 0xE2));
+      assertT(&c,
+              (op == lir::LongCall and instruction[12] == 0xD2)
+              or (op == lir::LongJump and instruction[12] == 0xE2));
 
-      assertT(&c, (not assertTAlignment)
-             or reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
-      
+      assertT(&c,
+              (not assertTAlignment)
+              or reinterpret_cast<uintptr_t>(instruction + 2) % 8 == 0);
+
       memcpy(instruction + 2, &newTarget, 8);
     }
   }

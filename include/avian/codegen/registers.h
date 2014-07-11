@@ -70,4 +70,4 @@ public:
 } // namespace codegen
 } // namespace avian
 
-#endif // AVIAN_CODEGEN_REGISTERS_H
+#endif  // AVIAN_CODEGEN_REGISTERS_H

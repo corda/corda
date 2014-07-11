@@ -44,8 +44,9 @@ inline void expect(T t, bool v) {
 #ifdef NDEBUG
 #define assertT(t, v)
 #else
-template<class T>
-inline void assertT(T t, bool v) {
+template <class T>
+inline void assertT(T t, bool v)
+{
   expect(t, v);
 }
 #endif

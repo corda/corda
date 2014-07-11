@@ -46,4 +46,4 @@ public:
 } // namespace avian
 } // namespace util
 
-#endif // AVIAN_UTIL_ARG_PARSER_H
+#endif  // AVIAN_UTIL_ARG_PARSER_H

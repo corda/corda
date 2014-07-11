@@ -37,8 +37,8 @@ inline uint32_t hash(Slice<const uint8_t> data)
 
 inline uint32_t hash(Slice<const int8_t> data)
 {
-  return hash(
-      Slice<const uint8_t>(reinterpret_cast<const uint8_t*>(data.begin()), data.count));
+  return hash(Slice<const uint8_t>(
+      reinterpret_cast<const uint8_t*>(data.begin()), data.count));
 }
 
 inline uint32_t hash(Slice<const uint16_t> data)

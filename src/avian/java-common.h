@@ -16,7 +16,8 @@ namespace vm {
 class Machine;
 class Thread;
 
-class GcObject;;
+class GcObject;
+;
 
 typedef GcObject* object;
 

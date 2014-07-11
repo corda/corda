@@ -284,7 +284,8 @@ class JarIndex {
 
         while (p < end) {
           if (signature(p) == EntrySignature) {
-            index = index->add(Entry(hash(Slice<const uint8_t>(fileName(p), fileNameLength(p))), p));
+            index = index->add(Entry(
+                hash(Slice<const uint8_t>(fileName(p), fileNameLength(p))), p));
 
             p = endOfEntry(p);
           } else {

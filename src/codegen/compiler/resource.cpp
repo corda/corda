@@ -223,4 +223,4 @@ void release(Context* c, Resource* resource, Value* value UNUSED, Site* site UNU
 
 } // namespace compiler
 } // namespace codegen
-} // namespace avian
+}  // namespace avian

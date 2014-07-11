@@ -41,7 +41,7 @@ resourceCost(Context* c, Value* v, Resource* r, SiteMask mask,
 
     if (r->value) {
       assertT(c, r->value->findSite(r->site));
-      
+
       if (v and r->value->isBuddyOf(v)) {
         return baseCost;
       } else if (r->value->uniqueSite(c, r->site)) {

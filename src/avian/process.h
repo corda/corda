@@ -18,16 +18,14 @@
 
 namespace vm {
 
-inline int16_t
-codeReadInt16(Thread* t UNUSED, GcCode* code, unsigned& ip)
+inline int16_t codeReadInt16(Thread* t UNUSED, GcCode* code, unsigned& ip)
 {
   uint8_t v1 = code->body()[ip++];
   uint8_t v2 = code->body()[ip++];
   return ((v1 << 8) | v2);
 }
 
-inline int32_t
-codeReadInt32(Thread* t UNUSED, GcCode* code, unsigned& ip)
+inline int32_t codeReadInt32(Thread* t UNUSED, GcCode* code, unsigned& ip)
 {
   uint8_t v1 = code->body()[ip++];
   uint8_t v2 = code->body()[ip++];
@@ -36,8 +34,7 @@ codeReadInt32(Thread* t UNUSED, GcCode* code, unsigned& ip)
   return ((v1 << 24) | (v2 << 16) | (v3 << 8) | v4);
 }
 
-inline bool
-isSuperclass(Thread* t UNUSED, GcClass* class_, GcClass* base)
+inline bool isSuperclass(Thread* t UNUSED, GcClass* class_, GcClass* base)
 {
   for (GcClass* oc = base->super(); oc; oc = oc->super()) {
     if (oc == class_) {
@@ -47,20 +44,17 @@ isSuperclass(Thread* t UNUSED, GcClass* class_, GcClass* base)
   return false;
 }
 
-inline bool
-isSpecialMethod(Thread* t, GcMethod* method, GcClass* class_)
+inline bool isSpecialMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
   return (class_->flags() & ACC_SUPER)
-    and strcmp(reinterpret_cast<const int8_t*>("<init>"),
-               method->name()->body().begin()) != 0
-    and isSuperclass(t, method->class_(), class_);
+         and strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                    method->name()->body().begin()) != 0
+         and isSuperclass(t, method->class_(), class_);
 }
 
-void
-resolveNative(Thread* t, GcMethod* method);
+void resolveNative(Thread* t, GcMethod* method);
 
-int
-findLineNumber(Thread* t, GcMethod* method, unsigned ip);
+int findLineNumber(Thread* t, GcMethod* method, unsigned ip);
 
 } // namespace vm
 

@@ -50,11 +50,11 @@ unsigned frameIndexToOffset(Context* c, unsigned frameIndex) {
 
 unsigned offsetToFrameIndex(Context* c, unsigned offset) {
   assertT(c,
-         static_cast<int>((offset / c->targetInfo.pointerSize)
-                          - c->arch->frameFooterSize()) >= 0);
+          static_cast<int>((offset / c->targetInfo.pointerSize)
+                           - c->arch->frameFooterSize()) >= 0);
   assertT(c,
-         ((offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize())
-         < totalFrameSize(c));
+          ((offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize())
+          < totalFrameSize(c));
 
   return (offset / c->targetInfo.pointerSize) - c->arch->frameFooterSize();
 }

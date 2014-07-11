@@ -181,7 +181,8 @@ Read* StubRead::next(Context*) {
 
 
 SingleRead* read(Context* c, const SiteMask& mask, Value* successor) {
-  assertT(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
+  assertT(c,
+          (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
 
   return new(c->zone) SingleRead(mask, successor);
 }
