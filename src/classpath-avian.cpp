@@ -642,8 +642,8 @@ Avian_java_lang_Throwable_resolveTrace
   PROTECT(t, array);
 
   for (unsigned i = 0; i < length; ++i) {
-    object ste = makeStackTraceElement(t, objectArrayBody(t, trace, i));
-    set(t, array, ArrayBody + (i * BytesPerWord), ste);
+    GcStackTraceElement* ste = makeStackTraceElement(t, cast<GcTraceElement>(t, objectArrayBody(t, trace, i)));
+    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(ste));
   }
 
   return reinterpret_cast<int64_t>(array);

@@ -227,7 +227,7 @@ turnOffTheLights(Thread* t)
   }
 
   for (object p = root(t, Machine::VirtualFileFinders);
-       p; p = finderNext(t, p))
+       p; p = reinterpret_cast<object>(cast<GcFinder>(t, p)->next()))
   {
     static_cast<Finder*>(finderFinder(t, p))->dispose();
   }

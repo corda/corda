@@ -219,9 +219,9 @@ translateStackTrace(Thread* t, object raw)
   PROTECT(t, array);
 
   for (unsigned i = 0; i < objectArrayLength(t, array); ++i) {
-    object e = makeStackTraceElement(t, objectArrayBody(t, raw, i));
+    GcStackTraceElement* e = makeStackTraceElement(t, cast<GcTraceElement>(t, objectArrayBody(t, raw, i)));
 
-    set(t, array, ArrayBody + (i * BytesPerWord), e);
+    set(t, array, ArrayBody + (i * BytesPerWord), reinterpret_cast<object>(e));
   }
 
   return array;
@@ -1116,7 +1116,7 @@ Avian_java_lang_Class_getDeclaredClasses
 {
   return reinterpret_cast<intptr_t>
     (getDeclaredClasses
-     (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])),
+     (t, cast<GcClass>(t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))),
       arguments[1]));
 }
 
@@ -1126,7 +1126,7 @@ Avian_java_lang_Class_getDeclaringClass
 {
   return reinterpret_cast<intptr_t>
     (getDeclaringClass
-     (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))));
+     (t, cast<GcClass>(t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])))));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -1711,7 +1711,7 @@ Avian_java_lang_Class_getModifiers
 (Thread* t, object, uintptr_t* arguments)
 {
   return classModifiers
-    (t, jclassVmClass(t, reinterpret_cast<object>(arguments[0])));
+    (t, cast<GcClass>(t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL

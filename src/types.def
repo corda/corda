@@ -63,11 +63,6 @@
   (extends native)
   (object original))
 
-(type finder
-  (void* finder)
-  (object name)
-  (object next))
-
 (type region
   (void* region)
   (uint32_t position))
@@ -311,6 +306,11 @@
 (type byteArray [B
   (extends jobject)
   (array int8_t body))
+
+(type finder
+  (void* finder)
+  (byteArray name)
+  (finder next))
 
 (type booleanArray [Z
   (extends jobject)

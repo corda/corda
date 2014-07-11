@@ -3232,8 +3232,8 @@ jvmGetStackTraceElement(Thread* t, uintptr_t* arguments)
 
   return reinterpret_cast<uint64_t>
     (makeLocalReference
-     (t, makeStackTraceElement
-      (t, objectArrayBody(t, throwableTrace(t, *throwable), index))));
+     (t, reinterpret_cast<object>(makeStackTraceElement
+      (t, cast<GcTraceElement>(t, objectArrayBody(t, throwableTrace(t, *throwable), index))))));
 }
 
 extern "C" AVIAN_EXPORT jobject JNICALL
@@ -3448,8 +3448,8 @@ jvmDumpThreads(Thread* t, uintptr_t* arguments)
       PROTECT(t, array);
 
       for (unsigned traceIndex = 0; traceIndex < traceLength; ++ traceIndex) {
-        object ste = makeStackTraceElement
-          (t, objectArrayBody(t, trace, traceIndex));
+        object ste = reinterpret_cast<object>(makeStackTraceElement
+          (t, cast<GcTraceElement>(t, objectArrayBody(t, trace, traceIndex))));
         set(t, array, ArrayBody + (traceIndex * BytesPerWord), ste);
       }
 
@@ -4188,7 +4188,7 @@ uint64_t
 jvmGetClassModifiers(Thread* t, uintptr_t* arguments)
 {
   return classModifiers
-    (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])));
+    (t, cast<GcClass>(t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0]))));
 }
 
 extern "C" AVIAN_EXPORT jint JNICALL
@@ -4205,7 +4205,7 @@ jvmGetDeclaredClasses(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
      (t, getDeclaredClasses
-      (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])), false)));
+      (t, cast<GcClass>(t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0]))), false)));
 }
 
 extern "C" AVIAN_EXPORT jobjectArray JNICALL
@@ -4222,7 +4222,7 @@ jvmGetDeclaringClass(Thread* t, uintptr_t* arguments)
   return reinterpret_cast<uintptr_t>
     (makeLocalReference
      (t, reinterpret_cast<object>(getDeclaringClass
-      (t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0]))))));
+      (t, cast<GcClass>(t, jclassVmClass(t, *reinterpret_cast<jobject>(arguments[0])))))));
 }
 
 extern "C" AVIAN_EXPORT jclass JNICALL
