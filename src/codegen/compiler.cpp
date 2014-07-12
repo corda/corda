@@ -2534,31 +2534,27 @@ class MyCompiler : public Compiler {
     return s->value;
   }
 
-  virtual ir::Value* call(ir::Value* address,
+  virtual ir::Value* nativeCall(ir::Value* address,
                           unsigned flags,
                           TraceHandler* traceHandler,
                           ir::Type resultType,
-                          unsigned argumentCount,
-                          ...)
+                          util::Slice<ir::Value*> arguments)
   {
-    va_list a;
-    va_start(a, argumentCount);
-
     bool bigEndian = c.arch->bigEndian();
 
     unsigned footprint = 0;
     unsigned size = TargetBytesPerWord;
-    RUNTIME_ARRAY(ir::Value*, arguments, argumentCount);
+    RUNTIME_ARRAY(ir::Value*, args, arguments.count);
     int index = 0;
-    for (unsigned i = 0; i < argumentCount; ++i) {
-      Value* o = va_arg(a, Value*);
+    for (unsigned i = 0; i < arguments.count; ++i) {
+      Value* o = static_cast<Value*>(arguments[i]);
       if (o) {
         if (bigEndian and size > TargetBytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[index++] = o->nextWord;
+          RUNTIME_ARRAY_BODY(args)[index++] = o->nextWord;
         }
-        RUNTIME_ARRAY_BODY(arguments)[index] = o;
+        RUNTIME_ARRAY_BODY(args)[index] = o;
         if ((not bigEndian) and size > TargetBytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[++index] = o->nextWord;
+          RUNTIME_ARRAY_BODY(args)[++index] = o->nextWord;
         }
         size = TargetBytesPerWord;
         ++index;
@@ -2568,8 +2564,6 @@ class MyCompiler : public Compiler {
       ++footprint;
     }
 
-    va_end(a);
-
     Value* result = value(&c, resultType);
     appendCall(&c,
                static_cast<Value*>(address),
@@ -2577,7 +2571,7 @@ class MyCompiler : public Compiler {
                flags,
                traceHandler,
                result,
-               util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(arguments), index));
+               util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(args), index));
 
     return result;
   }

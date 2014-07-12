@@ -14,22 +14,10 @@
 #include "allocator.h"
 #include "math.h"
 #include "assert.h"
+#include "cpp.h"
 
 namespace avian {
 namespace util {
-
-template <class T>
-struct NonConst;
-
-template <class T>
-struct NonConst<const T> {
-  typedef T Type;
-};
-
-template <class T>
-struct NonConst {
-  typedef T Type;
-};
 
 template <class T>
 class Slice {
