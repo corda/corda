@@ -1309,7 +1309,6 @@ unsigned typeFootprint(Context* c, ir::Type type)
     return type.rawSize() / 4;
   case ir::Type::Object:
   case ir::Type::Address:
-  case ir::Type::Half:
     return 1;
   case ir::Type::Void:
     return 0;
