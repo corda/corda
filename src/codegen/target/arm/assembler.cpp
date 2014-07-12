@@ -989,8 +989,12 @@ class MyAssembler : public Assembler {
                 static_cast<target_uintptr_t*>(e->address),
                 e->callOffset ? dst + e->callOffset->value() + 8 : 0);
       }
-      //       fprintf(stderr, "constant %p at %p\n",
-      //       reinterpret_cast<void*>(e->constant->value()), e->address);
+      if (false) {
+        fprintf(stderr,
+                "constant %p at %p\n",
+                reinterpret_cast<void*>(e->constant->value()),
+                e->address);
+      }
     }
   }
 

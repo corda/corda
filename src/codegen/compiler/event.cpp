@@ -148,9 +148,9 @@ void Event::addRead(Context* c, Value* v, Read* r)
   }
 
   if (v->lastRead) {
-    //     if (DebugReads) {
-    //       fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
-    //     }
+    if (DebugReads) {
+      fprintf(stderr, "append %p to %p for %p\n", r, v->lastRead, v);
+    }
 
     v->lastRead->append(c, r);
   } else {
@@ -298,9 +298,9 @@ Value* slicePushWord(Context* c,
   assertT(c, slice.count < slice.capacity);
   slice.push(v);
 
-  // if (DebugFrame) {
-  //   fprintf(stderr, "push %p\n", v);
-  // }
+  if (false) {
+    fprintf(stderr, "push %p\n", v);
+  }
 
   if (v) {
     v->home = frameIndex(c, index + stackBase + c->localFootprint);
@@ -1102,13 +1102,19 @@ class CombineEvent : public Event {
         c,
         firstValue->source->type(c) == firstValue->nextWord->source->type(c));
 
-    // if (secondValue->source->type(c) !=
-    // secondValue->nextWord->source->type(c)) {
-    //   fprintf(stderr, "%p %p %d : %p %p %d\n",
-    //           secondValue, secondValue->source, secondValue->source->type(c),
-    //           secondValue->nextWord, secondValue->nextWord->source,
-    //           secondValue->nextWord->source->type(c));
-    // }
+    if (false) {
+      if (secondValue->source->type(c)
+          != secondValue->nextWord->source->type(c)) {
+        fprintf(stderr,
+                "%p %p %d : %p %p %d\n",
+                secondValue,
+                secondValue->source,
+                secondValue->source->type(c),
+                secondValue->nextWord,
+                secondValue->nextWord->source,
+                secondValue->nextWord->source->type(c));
+      }
+    }
 
     assertT(
         c,
@@ -1149,10 +1155,16 @@ class CombineEvent : public Event {
                                   resultHighMask)
                       : low);
 
-    //     fprintf(stderr, "combine %p:%p and %p:%p into %p:%p\n",
-    //             firstValue, firstValue->nextWord,
-    //             secondValue, secondValue->nextWord,
-    //             resultValue, resultValue->nextWord);
+    if (false) {
+      fprintf(stderr,
+              "combine %p:%p and %p:%p into %p:%p\n",
+              firstValue,
+              firstValue->nextWord,
+              secondValue,
+              secondValue->nextWord,
+              resultValue,
+              resultValue->nextWord);
+    }
 
     apply(c,
           op,

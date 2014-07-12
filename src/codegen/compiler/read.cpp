@@ -123,7 +123,9 @@ void MultiRead::append(Context* c, Read* r)
   }
   lastRead = cell;
 
-  //     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+  if (false) {
+    fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+  }
 
   lastTarget->item = r;
 }
@@ -137,7 +139,9 @@ void MultiRead::allocateTarget(Context* c)
 {
   List<Read*>* cell = cons<Read*>(c, 0, 0);
 
-  //     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+  if (false) {
+    fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+  }
 
   if (lastTarget) {
     lastTarget->next = cell;
@@ -149,7 +153,9 @@ void MultiRead::allocateTarget(Context* c)
 
 Read* MultiRead::nextTarget()
 {
-  //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+  if (false) {
+    fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+  }
 
   Read* r = firstTarget->item;
   firstTarget = firstTarget->next;

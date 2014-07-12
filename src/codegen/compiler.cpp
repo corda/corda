@@ -1354,11 +1354,14 @@ unsigned frameFootprint(Context* c, Stack* s)
 
 void visit(Context* c, Link* link)
 {
-  //   fprintf(stderr, "visit link from %d to %d fork %p junction %p\n",
-  //           link->predecessor->logicalInstruction->index,
-  //           link->successor->logicalInstruction->index,
-  //           link->forkState,
-  //           link->junctionState);
+  if (false) {
+    fprintf(stderr,
+            "visit link from %d to %d fork %p junction %p\n",
+            link->predecessor->logicalInstruction->index,
+            link->successor->logicalInstruction->index,
+            link->forkState,
+            link->junctionState);
+  }
 
   ForkState* forkState = link->forkState;
   if (forkState) {
@@ -1366,8 +1369,9 @@ void visit(Context* c, Link* link)
       ForkElement* p = forkState->elements + i;
       Value* v = p->value;
       v->reads = p->read->nextTarget();
-      //       fprintf(stderr, "next read %p for %p from %p\n", v->reads, v,
-      //       p->read);
+      if (false) {
+        fprintf(stderr, "next read %p for %p from %p\n", v->reads, v, p->read);
+      }
       if (not live(c, v)) {
         v->clearSites(c);
       }
@@ -1865,9 +1869,16 @@ void restore(Context* c, Event* e, Snapshot* snapshots)
       }
     }
 
-    // char buffer[256]; sitesToString(c, s->sites, buffer, 256);
-    // fprintf(stderr, "restore %p buddy %p sites %s live %p\n",
-    //         s->value, s->value->buddy, buffer, live(c, s->value));
+    if (false) {
+      char buffer[256];
+      sitesToString(c, s->sites, buffer, 256);
+      fprintf(stderr,
+              "restore %p buddy %p sites %s live %p\n",
+              s->value,
+              s->value->buddy,
+              buffer,
+              live(c, s->value));
+    }
   }
 }
 

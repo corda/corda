@@ -450,20 +450,18 @@ void nextFrame(MyThread* t,
     methodIsMostRecent = false;
   }
 
-  // fprintf(stderr, "nextFrame %s.%s%s target %s.%s%s ip %p sp %p\n",
-  //         method->class_()->name()->body().begin(),
-  //         method->name()->body().begin(),
-  //         method->spec()->body().begin(),
-  //         target
-  //         ? &byteArrayBody(t, target->class_()->name(), 0)
-  //         : 0,
-  //         target
-  //         ? &byteArrayBody(t, target->name(), 0)
-  //         : 0,
-  //         target
-  //         ? &byteArrayBody(t, target->spec(), 0)
-  //         : 0,
-  //         *ip, *sp);
+  if (false) {
+    fprintf(stderr,
+            "nextFrame %s.%s%s target %s.%s%s ip %p sp %p\n",
+            method->class_()->name()->body().begin(),
+            method->name()->body().begin(),
+            method->spec()->body().begin(),
+            target ? target->class_()->name()->body().begin() : 0,
+            target ? target->name()->body().begin() : 0,
+            target ? target->spec()->body().begin() : 0,
+            *ip,
+            *sp);
+  }
 
   t->arch->nextFrame(reinterpret_cast<void*>(start),
                      code->compiledSize(),
@@ -474,7 +472,9 @@ void nextFrame(MyThread* t,
                      ip,
                      sp);
 
-  // fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
+  if (false) {
+    fprintf(stderr, "next frame ip %p sp %p\n", *ip, *sp);
+  }
 }
 
 void* getIp(MyThread* t, void* ip, void* stack)
@@ -556,7 +556,9 @@ class MyStackWalker : public Processor::StackWalker {
   bool valid()
   {
     while (true) {
-      //       fprintf(stderr, "state: %d\n", state);
+      if (false) {
+        fprintf(stderr, "state: %d\n", state);
+      }
       switch (state) {
       case Start:
         if (trace and trace->nativeMethod) {
@@ -638,9 +640,12 @@ class MyStackWalker : public Processor::StackWalker {
 
   virtual GcMethod* method()
   {
-    //     fprintf(stderr, "method %s.%s\n", &byteArrayBody
-    //             (t, className(t, methodClass(t, method_)), 0),
-    //             &byteArrayBody(t, methodName(t, method_), 0));
+    if (false) {
+      fprintf(stderr,
+              "method %s.%s\n",
+              method_->class_()->name()->body().begin(),
+              method_->name()->body().begin());
+    }
     return method_;
   }
 
@@ -3924,8 +3929,6 @@ loop:
               c->threadRegister());
     }
 
-    //     fprintf(stderr, "ip: %d map: %ld\n", ip, *(frame->map));
-
     if (DebugInstructions) {
       unsigned startingIp = ip;
       fprintf(stderr, " stack: [");
@@ -6991,10 +6994,13 @@ void compile(MyThread* t, Context* context)
 {
   avian::codegen::Compiler* c = context->compiler;
 
-  //   fprintf(stderr, "compiling %s.%s%s\n",
-  //           context->method->class_()->name()->body().begin(),
-  //           context->method->name()->body().begin(),
-  //           context->method->spec()->body().begin());
+  if (false) {
+    fprintf(stderr,
+            "compiling %s.%s%s\n",
+            context->method->class_()->name()->body().begin(),
+            context->method->name()->body().begin(),
+            context->method->spec()->body().begin());
+  }
 
   unsigned footprint = context->method->parameterFootprint();
   unsigned locals = localSize(t, context->method);
@@ -9527,8 +9533,13 @@ void fixupHeap(MyThread* t UNUSED,
 
           if (number) {
             *p = reinterpret_cast<uintptr_t>(heap + (number - 1)) | mark;
-            // fprintf(stderr, "fixup %d: %d 0x%x\n", index,
-            // static_cast<unsigned>(number), static_cast<unsigned>(*p));
+            if (false) {
+              fprintf(stderr,
+                      "fixup %d: %d 0x%x\n",
+                      index,
+                      static_cast<unsigned>(number),
+                      static_cast<unsigned>(*p));
+            }
           } else {
             *p = mark;
           }
@@ -9675,14 +9686,19 @@ void boot(MyThread* t, BootImage* image, uint8_t* code)
 
   t->heapImage = p->heapImage = heap;
 
-  // fprintf(stderr, "heap from %p to %p\n",
-  //         heap, heap + ceilingDivide(image->heapSize, BytesPerWord));
+  if (false) {
+    fprintf(stderr,
+            "heap from %p to %p\n",
+            heap,
+            heap + ceilingDivide(image->heapSize, BytesPerWord));
+  }
 
   t->codeImage = p->codeImage = code;
   p->codeImageSize = image->codeSize;
 
-  // fprintf(stderr, "code from %p to %p\n",
-  //         code, code + image->codeSize);
+  if (false) {
+    fprintf(stderr, "code from %p to %p\n", code, code + image->codeSize);
+  }
 
   if (not image->initialized) {
     fixupHeap(t, heapMap, heapMapSizeInWords, heap);

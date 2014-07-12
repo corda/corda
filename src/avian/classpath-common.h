@@ -594,9 +594,13 @@ object invoke(Thread* t, GcMethod* method, object instance, object args)
       object arg = objectArrayBody(t, args, i++);
       if ((arg == 0 and (not objectType))
           or (arg and (not instanceOf(t, type, arg)))) {
-        // fprintf(stderr, "%s is not a %s\n", arg ? &byteArrayBody(t,
-        // className(t, objectClass(t, arg)), 0) : reinterpret_cast<const
-        // int8_t*>("<null>"), &byteArrayBody(t, className(t, type), 0));
+        if (false) {
+          fprintf(stderr,
+                  "%s is not a %s\n",
+                  arg ? objectClass(t, arg)->name()->body().begin()
+                      : reinterpret_cast<const int8_t*>("<null>"),
+                  type->name()->body().begin());
+        }
 
         throwNew(t, GcIllegalArgumentException::Type);
       }
@@ -661,12 +665,17 @@ void intercept(Thread* t,
   } else {
     // If we can't find the method, just ignore it, since ProGuard may
     // have stripped it out as unused.  Otherwise, the code below can
-    // be uncommented for debugging purposes.
+    // be enabled for debugging purposes.
 
-    // fprintf(stderr, "unable to find %s%s in %s\n",
-    //         name, spec, &byteArrayBody(t, c->name(), 0));
+    if (false) {
+      fprintf(stderr,
+              "unable to find %s%s in %s\n",
+              name,
+              spec,
+              c->name()->body().begin());
 
-    // abort(t);
+      abort(t);
+    }
   }
 }
 

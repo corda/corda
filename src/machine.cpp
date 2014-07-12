@@ -3536,16 +3536,18 @@ object findInTable(Thread* t,
       }
     }
 
-    //     fprintf(stderr, "%s %s not in\n",
-    //             name->body().begin(),
-    //             spec->body().begin();
+    if (false) {
+      fprintf(
+          stderr, "%s %s not in\n", name->body().begin(), spec->body().begin());
 
-    //     for (unsigned i = 0; i < arrayLength(t, table); ++i) {
-    //       object o = arrayBody(t, table, i);
-    //       fprintf(stderr, "\t%s %s\n",
-    //               &byteArrayBody(t, getName(t, o), 0),
-    //               &byteArrayBody(t, getSpec(t, o), 0));
-    //     }
+      for (unsigned i = 0; i < table->length(); ++i) {
+        object o = table->body()[i];
+        fprintf(stderr,
+                "\t%s %s\n",
+                getName(t, o)->body().begin(),
+                getSpec(t, o)->body().begin());
+      }
+    }
   }
 
   return 0;

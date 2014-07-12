@@ -354,7 +354,9 @@ GcTriple* makeCodeImage(Thread* t,
 
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
-      // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
+      if (false) {
+        fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
+      }
       GcClass* c
           = resolveSystemClass(t,
                                roots(t)->bootLoader(),
@@ -690,7 +692,9 @@ GcTriple* makeCodeImage(Thread* t,
 
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
-      // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
+      if (false) {
+        fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
+      }
       GcClass* c = 0;
       PROTECT(t, c);
 

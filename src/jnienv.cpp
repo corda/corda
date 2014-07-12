@@ -3088,9 +3088,14 @@ uint64_t registerNatives(Thread* t, uintptr_t* arguments)
         // case, but that would prevent using a code shrinker like
         // ProGuard effectively.  Instead, we just ignore it.
 
-        // fprintf(stderr, "not found: %s.%s%s\n", &byteArrayBody(t,
-        // className(t, (*c)->vmClass()), 0), methods[i].name, sig);
-        // abort(t);
+        if (false) {
+          fprintf(stderr,
+                  "not found: %s.%s%s\n",
+                  (*c)->vmClass()->name()->body().begin(),
+                  methods[i].name,
+                  sig);
+          abort(t);
+        }
       } else {
         registerNative(t, method, methods[i].function);
       }
