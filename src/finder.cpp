@@ -13,6 +13,7 @@
 #include <avian/util/runtime-array.h>
 #include <avian/util/list.h>
 #include <avian/util/hash.h>
+#include <avian/util/tokenizer.h>
 
 #include "avian/zlib-custom.h"
 #include "avian/finder.h"

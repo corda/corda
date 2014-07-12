@@ -30,38 +30,6 @@ class String {
   }
 };
 
-class Tokenizer {
- public:
-  Tokenizer(const char* s, char delimiter)
-      : s(s), limit(0), delimiter(delimiter)
-  {
-  }
-
-  Tokenizer(String str, char delimiter)
-      : s(str.text), limit(str.text + str.length), delimiter(delimiter)
-  {
-  }
-
-  bool hasMore()
-  {
-    while (s != limit and *s == delimiter)
-      ++s;
-    return s != limit and *s != 0;
-  }
-
-  String next()
-  {
-    const char* p = s;
-    while (s != limit and *s and *s != delimiter)
-      ++s;
-    return String(p, s - p);
-  }
-
-  const char* s;
-  const char* limit;
-  char delimiter;
-};
-
 }  // namespace util
 }  // namespace avain
 

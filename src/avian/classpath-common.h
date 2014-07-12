@@ -13,6 +13,7 @@
 
 #include <avian/util/string.h>
 #include <avian/util/runtime-array.h>
+#include <avian/util/tokenizer.h>
 
 using namespace avian::util;
 
