@@ -71,7 +71,7 @@ class Heap : public avian::util::Allocator {
   template <class T>
   T* follow(T* p)
   {
-    return static_cast<T*>(follow((void*)p));
+    return static_cast<T*>(follow(static_cast<void*>(p)));
   }
 
   virtual void postVisit() = 0;
