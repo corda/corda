@@ -2567,7 +2567,7 @@ class MyCompiler : public Compiler {
     Value* result = value(&c, resultType);
     appendCall(&c,
                static_cast<Value*>(address),
-               ir::NativeCallingConvention,
+               ir::CallingConvention::Native,
                flags,
                traceHandler,
                result,
@@ -2586,7 +2586,7 @@ class MyCompiler : public Compiler {
     Stack* b UNUSED = c.stack;
     appendCall(&c,
                static_cast<Value*>(address),
-               ir::AvianCallingConvention,
+               ir::CallingConvention::Avian,
                flags,
                traceHandler,
                result,
@@ -2741,14 +2741,14 @@ class MyCompiler : public Compiler {
     return dst;
   }
 
-  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+  virtual ir::Value* truncateThenExtend(ir::ExtendMode extendMode,
                                         ir::Type extendType,
                                         ir::Type truncateType,
                                         ir::Value* src)
   {
     Value* dst = value(&c, extendType);
     appendMove(&c,
-               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               extendMode == ir::ExtendMode::Signed ? lir::Move : lir::MoveZ,
                TargetBytesPerWord,
                truncateType.size(c.targetInfo),
                static_cast<Value*>(src),
@@ -2772,7 +2772,7 @@ class MyCompiler : public Compiler {
                static_cast<Value*>(dst));
   }
 
-  virtual ir::Value* load(ir::SignExtendMode signExtend,
+  virtual ir::Value* load(ir::ExtendMode extendMode,
                           ir::Value* src,
                           ir::Type dstType)
   {
@@ -2780,7 +2780,7 @@ class MyCompiler : public Compiler {
 
     Value* dst = value(&c, dstType);
     appendMove(&c,
-               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               extendMode == ir::ExtendMode::Signed ? lir::Move : lir::MoveZ,
                src->type.size(c.targetInfo),
                src->type.size(c.targetInfo),
                static_cast<Value*>(src),

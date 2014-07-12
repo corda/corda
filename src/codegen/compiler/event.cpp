@@ -368,13 +368,13 @@ class CallEvent : public Event {
         popIndex(0),
         stackArgumentIndex(0),
         flags(flags),
-        stackArgumentFootprint(callingConvention == ir::AvianCallingConvention
+        stackArgumentFootprint(callingConvention == ir::CallingConvention::Avian
                                    ? arguments.count
                                    : 0)
   {
     uint32_t registerMask = c->regFile->generalRegisters.mask;
 
-    if (callingConvention == ir::NativeCallingConvention) {
+    if (callingConvention == ir::CallingConvention::Native) {
       assertT(c, (flags & Compiler::TailJump) == 0);
       assertT(c, stackArgumentFootprint == 0);
 
@@ -450,7 +450,7 @@ class CallEvent : public Event {
 
     Stack* stack = stackBefore;
 
-    if (callingConvention == ir::AvianCallingConvention) {
+    if (callingConvention == ir::CallingConvention::Avian) {
       for (size_t i = 0; i < arguments.count; i++) {
         stack = stack->next;
       }
@@ -1257,7 +1257,7 @@ void appendCombine(Context* c,
 
     appendCall(c,
                value(c, ir::Type::addr(), constantSite(c, handler)),
-               ir::NativeCallingConvention,
+               ir::CallingConvention::Native,
                0,
                0,
                resultValue,
@@ -1413,7 +1413,7 @@ void appendTranslate(Context* c,
                                       op,
                                       firstValue->type.size(c->targetInfo),
                                       resultValue->type.size(c->targetInfo)))),
-               ir::NativeCallingConvention,
+               ir::CallingConvention::Native,
                0,
                0,
                resultValue,
@@ -1849,7 +1849,7 @@ void appendBranch(Context* c,
     Value* result = value(c, ir::Type::addr());
     appendCall(c,
                value(c, ir::Type::addr(), constantSite(c, handler)),
-               ir::NativeCallingConvention,
+               ir::CallingConvention::Native,
                0,
                0,
                result,

@@ -140,7 +140,7 @@ class Compiler {
                            ir::Value* index,
                            intptr_t handler) = 0;
 
-  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+  virtual ir::Value* truncateThenExtend(ir::ExtendMode extendMode,
                                         ir::Type extendType,
                                         ir::Type truncateType,
                                         ir::Value* src) = 0;
@@ -148,7 +148,7 @@ class Compiler {
   virtual ir::Value* truncate(ir::Type type, ir::Value* src) = 0;
 
   virtual void store(ir::Value* src, ir::Value* dst) = 0;
-  virtual ir::Value* load(ir::SignExtendMode signExtend,
+  virtual ir::Value* load(ir::ExtendMode extendMode,
                           ir::Value* src,
                           ir::Type dstType) = 0;
 
