@@ -18,9 +18,10 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures):
-  s(s), useNativeFeatures(useNativeFeatures)
-{ }
+ArchitectureContext::ArchitectureContext(vm::System* s, bool useNativeFeatures)
+    : s(s), useNativeFeatures(useNativeFeatures)
+{
+}
 
 Context::Context(vm::System* s,
                  util::Allocator* a,
@@ -38,6 +39,6 @@ Context::Context(vm::System* s,
 {
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

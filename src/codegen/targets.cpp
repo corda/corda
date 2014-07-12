@@ -17,22 +17,25 @@
 namespace avian {
 namespace codegen {
 
-Architecture* makeArchitectureNative(vm::System* system, bool useNativeFeatures UNUSED) {
+Architecture* makeArchitectureNative(vm::System* system,
+                                     bool useNativeFeatures UNUSED)
+{
 #ifndef AVIAN_TARGET_ARCH
-  #error "Must specify native target!"
+#error "Must specify native target!"
 #endif
 
 #if AVIAN_TARGET_ARCH == AVIAN_ARCH_UNKNOWN
   system->abort();
   return 0;
-#elif (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86) || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64)
+#elif(AVIAN_TARGET_ARCH == AVIAN_ARCH_X86) \
+    || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64)
   return makeArchitectureX86(system, useNativeFeatures);
 #elif AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
   return makeArchitectureArm(system, useNativeFeatures);
 #else
-  #error "Unsupported codegen target"
+#error "Unsupported codegen target"
 #endif
 }
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian

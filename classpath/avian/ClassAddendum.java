@@ -21,6 +21,10 @@ public class ClassAddendum extends Addendum {
    * extended by that class.
    */
   public int declaredMethodCount;
+
+  // Either a byte[] or a Pair, apparently...
+  // TODO: make it monomorphic
   public Object enclosingClass;
+
   public Object enclosingMethod;
 }

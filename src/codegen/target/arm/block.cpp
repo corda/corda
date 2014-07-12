@@ -19,13 +19,23 @@ void resolve(MyBlock*);
 
 unsigned padding(MyBlock*, unsigned);
 
-MyBlock::MyBlock(Context* context, unsigned offset):
-  context(context), next(0), poolOffsetHead(0), poolOffsetTail(0),
-  lastPoolOffsetTail(0), poolEventHead(0), poolEventTail(0),
-  lastEventOffset(0), offset(offset), start(~0), size(0)
-{ }
+MyBlock::MyBlock(Context* context, unsigned offset)
+    : context(context),
+      next(0),
+      poolOffsetHead(0),
+      poolOffsetTail(0),
+      lastPoolOffsetTail(0),
+      poolEventHead(0),
+      poolEventTail(0),
+      lastEventOffset(0),
+      offset(offset),
+      start(~0),
+      size(0)
+{
+}
 
-unsigned MyBlock::resolve(unsigned start, Assembler::Block* next) {
+unsigned MyBlock::resolve(unsigned start, Assembler::Block* next)
+{
   this->start = start;
   this->next = static_cast<MyBlock*>(next);
 
@@ -34,6 +44,6 @@ unsigned MyBlock::resolve(unsigned start, Assembler::Block* next) {
   return start + size + padding(this, size);
 }
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian

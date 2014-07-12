@@ -23,16 +23,17 @@ namespace avian {
 namespace tools {
 
 class OutputStream {
-public:
+ public:
   virtual void writeChunk(const void* data, size_t size) = 0;
   virtual void write(uint8_t byte);
   virtual void writeRepeat(uint8_t byte, size_t size);
 };
 
 class FileOutputStream : public OutputStream {
-private:
+ private:
   FILE* file;
-public:
+
+ public:
   FileOutputStream(const char* name);
   ~FileOutputStream();
 
@@ -43,20 +44,22 @@ public:
 };
 
 class SymbolInfo {
-public:
+ public:
   unsigned addr;
   util::String name;
 
-  inline SymbolInfo(uint64_t addr, const util::String& name):
-    addr(addr),
-    name(name) {}
+  inline SymbolInfo(uint64_t addr, const util::String& name)
+      : addr(addr), name(name)
+  {
+  }
 
-  inline SymbolInfo():
-    name("") {}
+  inline SymbolInfo() : name("")
+  {
+  }
 };
 
 class Buffer {
-public:
+ public:
   size_t capacity;
   size_t length;
   uint8_t* data;
@@ -69,7 +72,7 @@ public:
 };
 
 class StringTable : public Buffer {
-public:
+ public:
   unsigned add(util::String str);
 };
 
@@ -103,7 +106,7 @@ class DynamicArray : public util::Slice<T> {
 };
 
 class PlatformInfo {
-public:
+ public:
   enum Format {
     Elf = AVIAN_FORMAT_ELF,
     Pe = AVIAN_FORMAT_PE,
@@ -124,33 +127,31 @@ public:
   static Format formatFromString(const char* format);
   static Architecture archFromString(const char* arch);
 
-  inline PlatformInfo(Format format, Architecture arch):
-    format(format),
-    arch(arch) {}
+  inline PlatformInfo(Format format, Architecture arch)
+      : format(format), arch(arch)
+  {
+  }
 
-  inline bool operator == (const PlatformInfo& other) {
+  inline bool operator==(const PlatformInfo& other)
+  {
     return format == other.format && arch == other.arch;
   }
 };
 
 class Platform {
-private:
+ private:
   Platform* next;
   static Platform* first;
-public:
+
+ public:
   PlatformInfo info;
 
-  inline Platform(PlatformInfo info):
-    next(first),
-    info(info)
+  inline Platform(PlatformInfo info) : next(first), info(info)
   {
     first = this;
   }
 
-  enum AccessFlags {
-    Writable = 1 << 0,
-    Executable = 1 << 1
-  };
+  enum AccessFlags { Writable = 1 << 0, Executable = 1 << 1 };
 
   virtual bool writeObject(OutputStream* out,
                            util::Slice<SymbolInfo> symbols,
@@ -161,9 +162,8 @@ public:
   static Platform* getPlatform(PlatformInfo info);
 };
 
-} // namespace tools
+}  // namespace tools
 
-} // namespace avian
+}  // namespace avian
 
 #endif
-

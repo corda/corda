@@ -9,69 +9,62 @@
 #include "C/LzmaDec.h"
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
-#  define EXPORT __declspec(dllexport)
-#  include <io.h>
-#  define open _open
-#  define write _write
-#  define close _close
-#  ifdef _MSC_VER
-#    define S_IRWXU (_S_IREAD | _S_IWRITE)
-#    define and &&
-#  endif
+#define EXPORT __declspec(dllexport)
+#include <io.h>
+#define open _open
+#define write _write
+#define close _close
+#ifdef _MSC_VER
+#define S_IRWXU (_S_IREAD | _S_IWRITE)
+#define and &&
+#endif
 #else
-#  define EXPORT __attribute__ ((visibility("default")))
-#  include <dlfcn.h>
-#  include <unistd.h>
-#  include <errno.h>
-#  define O_BINARY 0
+#define EXPORT __attribute__((visibility("default")))
+#include <dlfcn.h>
+#include <unistd.h>
+#include <errno.h>
+#define O_BINARY 0
 #endif
 
-#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
-#  define SYMBOL(x) binary_exe_##x
+#if (!defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#define SYMBOL(x) binary_exe_##x
 #else
-#  define SYMBOL(x) _binary_exe_##x
+#define SYMBOL(x) _binary_exe_##x
 #endif
 
 extern "C" {
+extern const uint8_t SYMBOL(start)[];
+extern const uint8_t SYMBOL(end)[];
 
-  extern const uint8_t SYMBOL(start)[];
-  extern const uint8_t SYMBOL(end)[];
-
-} // extern "C"
+}  // extern "C"
 
 namespace {
 
-int32_t
-read4(const uint8_t* in)
+int32_t read4(const uint8_t* in)
 {
   return (static_cast<int32_t>(in[3]) << 24)
-    |    (static_cast<int32_t>(in[2]) << 16)
-    |    (static_cast<int32_t>(in[1]) <<  8)
-    |    (static_cast<int32_t>(in[0])      );
+         | (static_cast<int32_t>(in[2]) << 16)
+         | (static_cast<int32_t>(in[1]) << 8) | (static_cast<int32_t>(in[0]));
 }
 
-void*
-myAllocate(void*, size_t size)
+void* myAllocate(void*, size_t size)
 {
   return malloc(size);
 }
 
-void
-myFree(void*, void* address)
+void myFree(void*, void* address)
 {
   free(address);
 }
 
 #if (defined __MINGW32__) || (defined _MSC_VER)
 
-void*
-openLibrary(const char* name)
+void* openLibrary(const char* name)
 {
   return LoadLibrary(name);
 }
 
-void*
-librarySymbol(void* library, const char* name)
+void* librarySymbol(void* library, const char* name)
 {
   void* address;
   FARPROC p = GetProcAddress(static_cast<HMODULE>(library), name);
@@ -79,14 +72,12 @@ librarySymbol(void* library, const char* name)
   return address;
 }
 
-const char*
-libraryError(void*)
+const char* libraryError(void*)
 {
   return "unknown error";
 }
 
-const char*
-temporaryFileName(char* buffer, unsigned size)
+const char* temporaryFileName(char* buffer, unsigned size)
 {
   unsigned c = GetTempPathA(size, buffer);
   if (c) {
@@ -100,36 +91,31 @@ temporaryFileName(char* buffer, unsigned size)
 
 #else
 
-void*
-openLibrary(const char* name)
+void* openLibrary(const char* name)
 {
   return dlopen(name, RTLD_LAZY | RTLD_LOCAL);
 }
 
-void*
-librarySymbol(void* library, const char* name)
+void* librarySymbol(void* library, const char* name)
 {
   return dlsym(library, name);
 }
 
-const char*
-libraryError(void*)
+const char* libraryError(void*)
 {
   return dlerror();
 }
 
-const char*
-temporaryFileName(char* buffer, unsigned)
+const char* temporaryFileName(char* buffer, unsigned)
 {
   return tmpnam(buffer);
 }
 
 #endif
 
-} // namespace
+}  // namespace
 
-int
-main(int ac, const char** av)
+int main(int ac, const char** av)
 {
   const unsigned PropHeaderSize = 5;
   const unsigned HeaderSize = 13;
@@ -141,13 +127,18 @@ main(int ac, const char** av)
 
   uint8_t* out = static_cast<uint8_t*>(malloc(outSize));
   if (out) {
-    ISzAlloc allocator = { myAllocate, myFree };
+    ISzAlloc allocator = {myAllocate, myFree};
     ELzmaStatus status = LZMA_STATUS_NOT_SPECIFIED;
 
-    if (SZ_OK == LzmaDecode
-        (out, &outSize, SYMBOL(start) + HeaderSize, &inSize, SYMBOL(start),
-         PropHeaderSize, LZMA_FINISH_END, &status, &allocator))
-    {
+    if (SZ_OK == LzmaDecode(out,
+                            &outSize,
+                            SYMBOL(start) + HeaderSize,
+                            &inSize,
+                            SYMBOL(start),
+                            PropHeaderSize,
+                            LZMA_FINISH_END,
+                            &status,
+                            &allocator)) {
       const unsigned BufferSize = 1024;
       char buffer[BufferSize];
       const char* name = temporaryFileName(buffer, BufferSize);
@@ -171,14 +162,18 @@ main(int ac, const char** av)
                 fprintf(stderr, "unable to find main in %s", name);
               }
             } else {
-              fprintf(stderr, "unable to load %s: %s\n", name,
+              fprintf(stderr,
+                      "unable to load %s: %s\n",
+                      name,
                       libraryError(library));
             }
           } else {
             unlink(name);
 
-            fprintf(stderr, "close or write failed; tried %d, got %d; %s\n",
-                    static_cast<int>(outSize), static_cast<int>(result),
+            fprintf(stderr,
+                    "close or write failed; tried %d, got %d; %s\n",
+                    static_cast<int>(outSize),
+                    static_cast<int>(result),
                     strerror(errno));
           }
         } else {
@@ -191,7 +186,8 @@ main(int ac, const char** av)
       fprintf(stderr, "unable to decode LZMA data\n");
     }
   } else {
-    fprintf(stderr, "unable to allocate buffer of size %d\n",
+    fprintf(stderr,
+            "unable to allocate buffer of size %d\n",
             static_cast<int>(outSize));
   }
 

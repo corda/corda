@@ -13,23 +13,23 @@
 namespace avian {
 namespace codegen {
 
-unsigned
-RegisterMask::maskStart(uint32_t mask)
+unsigned RegisterMask::maskStart(uint32_t mask)
 {
   for (int i = 0; i <= 31; ++i) {
-    if (mask & (1 << i)) return i;
+    if (mask & (1 << i))
+      return i;
   }
   return 32;
 }
 
-unsigned
-RegisterMask::maskLimit(uint32_t mask)
+unsigned RegisterMask::maskLimit(uint32_t mask)
 {
   for (int i = 31; i >= 0; --i) {
-    if (mask & (1 << i)) return i + 1;
+    if (mask & (1 << i))
+      return i + 1;
   }
   return 0;
 }
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian

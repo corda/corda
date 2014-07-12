@@ -4,7 +4,7 @@
   (array void* vtable))
 
 (type jclass java/lang/Class
-  (require object vmClass))
+  (require class vmClass))
 
 (type jaccessibleObject java/lang/reflect/AccessibleObject)
 
@@ -22,8 +22,8 @@
 
 (type cloneable java/lang/Cloneable)
 
-(type singleton
-  (array uintptr_t body))
+(type singleton avian/Singleton
+  (array maybe_object body))
 
 (type classLoader java/lang/ClassLoader
   (object map))
@@ -49,24 +49,19 @@
   (object pool)
   (object signers))
 
-(type methodRuntimeData
-  (object native))
-
-(type pointer
-  (void* value))
-
 (type native
   (void* function)
   (uint8_t fast))
 
+(type methodRuntimeData
+  (native native))
+
+(type pointer
+  (void* value))
+
 (type nativeIntercept
   (extends native)
   (object original))
-
-(type finder
-  (void* finder)
-  (object name)
-  (object next))
 
 (type region
   (void* region)
@@ -77,22 +72,6 @@
 
 (type lineNumberTable
   (array uint64_t body))
-
-(type code
-  (object pool)
-  (object exceptionHandlerTable)
-  (object lineNumberTable)
-  (intptr_t compiled)
-  (uint32_t compiledSize)
-  (uint16_t maxStack)
-  (uint16_t maxLocals)
-  (array uint8_t body))
-
-(type reference
-  (uint8_t kind)
-  (object class)
-  (object name)
-  (object spec))
 
 (type invocation
   (uint16_t bootstrap)
@@ -112,14 +91,7 @@
   (void* finalize)
   (nogc object next)
   (object queueTarget)
-  (object queueNext))
-
-(type hashMap
-  (uint32_t size)
-  (object array))
-
-(type weakHashMap
-  (extends hashMap))
+  (finalizer queueNext))
 
 (type list
   (uint32_t size)
@@ -136,20 +108,27 @@
 
 (type treeNode
   (object value)
-  (object left)
-  (object right))
+  (treeNode left)
+  (treeNode right))
 
 (type callNode
   (intptr_t address)
-  (object target)
+  (method target)
   (uintptr_t flags)
-  (object next))
+  (callNode next))
 
 (type wordArray
   (array uintptr_t body))
 
 (type array
   (noassert array object body))
+
+(type hashMap
+  (uint32_t size)
+  (field array array))
+
+(type weakHashMap
+  (extends hashMap))
 
 (type pair
   (object first)
@@ -170,16 +149,16 @@
 (type innerClassReference avian/InnerClassReference)
 
 (type continuationContext
-  (object next)
+  (continuationContext next)
   (object before)
   (object after)
   (object continuation)
-  (object method))
+  (method method))
 
 (type continuation avian/Continuations$Continuation
-  (object next)
-  (object context)
-  (object method)
+  (continuation next)
+  (continuationContext context)
+  (method method)
   (void* address)
   (uintptr_t returnAddressOffset)
   (uintptr_t framePointerOffset)
@@ -190,7 +169,9 @@
 (type string java/lang/String
   (alias data object value)
   (alias length uint32_t count)
-  (alias hashCode uint32_t hash))
+  (alias hashCode uint32_t hash)
+  (polyfill uint32_t offset)
+  (polyfill uint32_t length))
 
 (type thread java/lang/Thread
   (require object sleepLock)
@@ -205,7 +186,7 @@
 (type stackTraceElement java/lang/StackTraceElement)
 
 (type throwable java/lang/Throwable
-  (alias message object detailMessage)
+  (alias message string detailMessage)
   (alias trace object backtrace)
   (alias trace object stackState))
 
@@ -293,13 +274,14 @@
 (type double java/lang/Double)
 
 (type referenceQueue java/lang/ref/ReferenceQueue
-  (alias front object head))
+  (alias front jreference head)
+  (require object jnext))
 
 (type jreference java/lang/ref/Reference
   (alias target object referent)
-  (alias queue object queue)
-  (alias jNext object next)
-  (alias jNext object queueNext)
+  (alias queue referenceQueue queue)
+  (alias jNext jreference next)
+  (alias jNext jreference queueNext)
   (alias vmNext object discovered)
   (alias vmNext object pendingNext)
   (nogc object target)
@@ -313,11 +295,22 @@
 (type phantomReference java/lang/ref/PhantomReference)
 
 (type cleaner sun/misc/Cleaner
-  (object queueNext))
+  (cleaner queueNext))
 
 (type byteArray [B
   (extends jobject)
   (array int8_t body))
+
+(type reference
+  (uint8_t kind)
+  (byteArray class)
+  (byteArray name)
+  (byteArray spec))
+
+(type finder
+  (void* finder)
+  (byteArray name)
+  (finder next))
 
 (type booleanArray [Z
   (extends jobject)
@@ -334,6 +327,17 @@
 (type intArray [I
   (extends jobject)
   (array int32_t body))
+
+(type code avian/Code
+  (singleton pool)
+  (intArray stackMap)
+  (object exceptionHandlerTable)
+  (lineNumberTable lineNumberTable)
+  (intptr_t compiled)
+  (uint32_t compiledSize)
+  (uint16_t maxStack)
+  (uint16_t maxLocals)
+  (array uint8_t body))
 
 (type longArray [J
   (extends jobject)
@@ -373,3 +377,43 @@
 
 (type jvoid
   (extends jobject))
+
+(type roots
+  (classLoader bootLoader)
+  (classLoader appLoader)
+  (hashMap bootstrapClassMap)
+  (hashMap packageMap)
+  (method findLoadedClassMethod)
+  (method loadClassMethod)
+  (hashMap monitorMap)
+  (hashMap stringMap)
+  (hashMap byteArrayMap)
+  (hashMap poolMap)
+  (vector classRuntimeDataTable)
+  (vector methodRuntimeDataTable)
+  (vector jNIMethodTable)
+  (vector jNIFieldTable)
+  (pair shutdownHooks)
+  (thread finalizerThread)
+  (finalizer objectsToFinalize)
+  (cleaner objectsToClean)
+  (throwable nullPointerException)
+  (throwable arithmeticException)
+  (throwable arrayIndexOutOfBoundsException)
+  (throwable outOfMemoryError)
+  (throwable shutdownInProgress)
+  (finder virtualFileFinders)
+  (field array virtualFiles)
+  (field array arrayInterfaceTable)
+  (object threadTerminated))
+
+(type compileRoots
+  (field array callTable)
+  (treeNode methodTree)
+  (treeNode methodTreeSentinal)
+  (object objectPools)
+  (object staticTableArray)
+  (wordArray virtualThunks)
+  (method receiveMethod)
+  (method windMethod)
+  (method rewindMethod))

@@ -18,12 +18,14 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-AlignmentPadding::AlignmentPadding(Context* c, unsigned instructionOffset, unsigned alignment):
-  offset(c->code.length()),
-  instructionOffset(instructionOffset),
-  alignment(alignment),
-  next(0),
-  padding(-1)
+AlignmentPadding::AlignmentPadding(Context* c,
+                                   unsigned instructionOffset,
+                                   unsigned alignment)
+    : offset(c->code.length()),
+      instructionOffset(instructionOffset),
+      alignment(alignment),
+      next(0),
+      padding(-1)
 {
   if (c->lastBlock->firstPadding) {
     c->lastBlock->lastPadding->next = this;
@@ -33,9 +35,10 @@ AlignmentPadding::AlignmentPadding(Context* c, unsigned instructionOffset, unsig
   c->lastBlock->lastPadding = this;
 }
 
-unsigned
-padding(AlignmentPadding* p, unsigned start, unsigned offset,
-        AlignmentPadding* limit)
+unsigned padding(AlignmentPadding* p,
+                 unsigned start,
+                 unsigned offset,
+                 AlignmentPadding* limit)
 {
   unsigned padding = 0;
   if (limit) {
@@ -44,14 +47,14 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
         if (p->padding == -1) {
           unsigned index = p->offset - offset;
           while ((start + index + padding + p->instructionOffset)
-                 % p->alignment)
-          {
-            ++ padding;
+                 % p->alignment) {
+            ++padding;
           }
-      
+
           p->padding = padding;
 
-          if (p == limit) break;
+          if (p == limit)
+            break;
         } else {
           padding = p->padding;
         }
@@ -63,6 +66,6 @@ padding(AlignmentPadding* p, unsigned start, unsigned offset,
   return padding;
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

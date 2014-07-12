@@ -33,13 +33,16 @@ class Vector {
         data(0, 0),
         position(0),
         minimumCapacity(minimumCapacity)
-  { }
+  {
+  }
 
-  ~Vector() {
+  ~Vector()
+  {
     dispose();
   }
 
-  void dispose() {
+  void dispose()
+  {
     if (data.items and minimumCapacity > 0) {
       allocator->free(data.items, data.count);
       data.items = 0;
@@ -50,7 +53,7 @@ class Vector {
   void ensure(size_t space)
   {
     if (position + space > data.count) {
-      assert(a, minimumCapacity > 0);
+      assertT(a, minimumCapacity > 0);
 
       size_t newCapacity = avian::util::max(
           position + space, avian::util::max(minimumCapacity, data.count * 2));
@@ -64,13 +67,13 @@ class Vector {
 
   void get(size_t offset, void* dst, size_t size)
   {
-    assert(a, offset + size <= position);
+    assertT(a, offset + size <= position);
     memcpy(dst, data.begin() + offset, size);
   }
 
   void set(size_t offset, const void* src, size_t size)
   {
-    assert(a, offset + size <= position);
+    assertT(a, offset + size <= position);
     memcpy(data.begin() + offset, src, size);
   }
 
@@ -95,57 +98,67 @@ class Vector {
     return r;
   }
 
-  void append(uint8_t v) {
+  void append(uint8_t v)
+  {
     append(&v, 1);
   }
 
-  void append2(uint16_t v) {
+  void append2(uint16_t v)
+  {
     append(&v, 2);
   }
 
-  void append4(uint32_t v) {
+  void append4(uint32_t v)
+  {
     append(&v, 4);
   }
 
-  void appendTargetAddress(target_uintptr_t v) {
+  void appendTargetAddress(target_uintptr_t v)
+  {
     append(&v, TargetBytesPerWord);
   }
 
-  void appendAddress(uintptr_t v) {
+  void appendAddress(uintptr_t v)
+  {
     append(&v, BytesPerWord);
   }
 
-  void appendAddress(void* v) {
+  void appendAddress(void* v)
+  {
     append(&v, BytesPerWord);
   }
 
   void set2(size_t offset, uint16_t v)
   {
-    assert(a, offset <= position - 2);
+    assertT(a, offset <= position - 2);
     memcpy(data.begin() + offset, &v, 2);
   }
 
   size_t get(size_t offset)
   {
-    uint8_t v; get(offset, &v, 1);
+    uint8_t v;
+    get(offset, &v, 1);
     return v;
   }
 
   size_t get2(size_t offset)
   {
-    uint16_t v; get(offset, &v, 2);
+    uint16_t v;
+    get(offset, &v, 2);
     return v;
   }
 
   size_t get4(size_t offset)
   {
-    uint32_t v; get(offset, &v, 4);
+    uint32_t v;
+    get(offset, &v, 4);
     return v;
   }
 
   uintptr_t getAddress(size_t offset)
   {
-    uintptr_t v; get(offset, &v, BytesPerWord);
+    uintptr_t v;
+    get(offset, &v, BytesPerWord);
     return v;
   }
 
@@ -157,7 +170,7 @@ class Vector {
   template <class T>
   T* peek(size_t offset)
   {
-    assert(a, offset + sizeof(T) <= position);
+    assertT(a, offset + sizeof(T) <= position);
     return reinterpret_cast<T*>(data.begin() + offset);
   }
 
@@ -168,6 +181,6 @@ class Vector {
   size_t minimumCapacity;
 };
 
-} // namespace vm
+}  // namespace vm
 
-#endif//VECTOR_H
+#endif  // VECTOR_H

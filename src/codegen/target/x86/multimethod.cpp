@@ -26,35 +26,40 @@ namespace x86 {
 
 using namespace util;
 
-unsigned index(ArchitectureContext*, lir::BinaryOperation operation,
-      lir::OperandType operand1,
-      lir::OperandType operand2)
+unsigned index(ArchitectureContext*,
+               lir::BinaryOperation operation,
+               lir::OperandType operand1,
+               lir::OperandType operand2)
 {
-  return operation
-    + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount) * operand1)
-    + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-       * lir::OperandTypeCount * operand2);
+  return operation + ((lir::BinaryOperationCount
+                       + lir::NonBranchTernaryOperationCount) * operand1)
+         + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
+            * lir::OperandTypeCount * operand2);
 }
 
-unsigned index(ArchitectureContext* c UNUSED, lir::TernaryOperation operation,
-      lir::OperandType operand1, lir::OperandType operand2)
+unsigned index(ArchitectureContext* c UNUSED,
+               lir::TernaryOperation operation,
+               lir::OperandType operand1,
+               lir::OperandType operand2)
 {
-  assert(c, not isBranch(operation));
+  assertT(c, not isBranch(operation));
 
   return lir::BinaryOperationCount + operation
-    + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount) * operand1)
-    + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-       * lir::OperandTypeCount * operand2);
+         + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
+            * operand1)
+         + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
+            * lir::OperandTypeCount * operand2);
 }
 
-unsigned branchIndex(ArchitectureContext* c UNUSED, lir::OperandType operand1,
-            lir::OperandType operand2)
+unsigned branchIndex(ArchitectureContext* c UNUSED,
+                     lir::OperandType operand1,
+                     lir::OperandType operand2)
 {
   return operand1 + (lir::OperandTypeCount * operand2);
 }
 
-
-void populateTables(ArchitectureContext* c) {
+void populateTables(ArchitectureContext* c)
+{
   const lir::OperandType C = lir::ConstantOperand;
   const lir::OperandType A = lir::AddressOperand;
   const lir::OperandType R = lir::RegisterOperand;
@@ -170,6 +175,6 @@ void populateTables(ArchitectureContext* c) {
   bro[branchIndex(c, R, M)] = CAST_BRANCH(branchRM);
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

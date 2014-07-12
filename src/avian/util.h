@@ -16,49 +16,58 @@
 
 namespace vm {
 
-object
-hashMapFindNode(Thread* t, object map, object key,
-                uint32_t (*hash)(Thread*, object),
-                bool (*equal)(Thread*, object, object));
+GcTriple* hashMapFindNode(Thread* t,
+                          GcHashMap* map,
+                          object key,
+                          uint32_t (*hash)(Thread*, object),
+                          bool (*equal)(Thread*, object, object));
 
-inline object
-hashMapFind(Thread* t, object map, object key,
-            uint32_t (*hash)(Thread*, object),
-            bool (*equal)(Thread*, object, object))
+inline object hashMapFind(Thread* t,
+                          GcHashMap* map,
+                          object key,
+                          uint32_t (*hash)(Thread*, object),
+                          bool (*equal)(Thread*, object, object))
 {
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  return (n ? tripleSecond(t, n) : 0);
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
+  return (n ? n->second() : 0);
 }
 
-void
-hashMapResize(Thread* t, object map, uint32_t (*hash)(Thread*, object),
-              unsigned size);
-
-void
-hashMapInsert(Thread* t, object map, object key, object value,
-              uint32_t (*hash)(Thread*, object));
-
-inline bool
-hashMapInsertOrReplace(Thread* t, object map, object key, object value,
-                       uint32_t (*hash)(Thread*, object),
-                       bool (*equal)(Thread*, object, object))
-{
-  object n = hashMapFindNode(t, map, key, hash, equal);
-  if (n == 0) {
-    hashMapInsert(t, map, key, value, hash);
-    return true;
-  } else {
-    set(t, n, TripleSecond, value);
-    return false;
-  }
-}
-
-inline bool
-hashMapInsertMaybe(Thread* t, object map, object key, object value,
+void hashMapResize(Thread* t,
+                   GcHashMap* map,
                    uint32_t (*hash)(Thread*, object),
-                   bool (*equal)(Thread*, object, object))
+                   unsigned size);
+
+void hashMapInsert(Thread* t,
+                   GcHashMap* map,
+                   object key,
+                   object value,
+                   uint32_t (*hash)(Thread*, object));
+
+inline bool hashMapInsertOrReplace(Thread* t,
+                                   GcHashMap* map,
+                                   object key,
+                                   object value,
+                                   uint32_t (*hash)(Thread*, object),
+                                   bool (*equal)(Thread*, object, object))
 {
-  object n = hashMapFindNode(t, map, key, hash, equal);
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
+  if (n == 0) {
+    hashMapInsert(t, map, key, value, hash);
+    return true;
+  } else {
+    n->setSecond(t, value);
+    return false;
+  }
+}
+
+inline bool hashMapInsertMaybe(Thread* t,
+                               GcHashMap* map,
+                               object key,
+                               object value,
+                               uint32_t (*hash)(Thread*, object),
+                               bool (*equal)(Thread*, object, object))
+{
+  GcTriple* n = hashMapFindNode(t, map, key, hash, equal);
   if (n == 0) {
     hashMapInsert(t, map, key, value, hash);
     return true;
@@ -67,53 +76,58 @@ hashMapInsertMaybe(Thread* t, object map, object key, object value,
   }
 }
 
-object
-hashMapRemove(Thread* t, object map, object key,
-              uint32_t (*hash)(Thread*, object),
-              bool (*equal)(Thread*, object, object));
+object hashMapRemove(Thread* t,
+                     GcHashMap* map,
+                     object key,
+                     uint32_t (*hash)(Thread*, object),
+                     bool (*equal)(Thread*, object, object));
 
-object
-hashMapIterator(Thread* t, object map);
+object hashMapIterator(Thread* t, GcHashMap* map);
 
-object
-hashMapIteratorNext(Thread* t, object it);
+object hashMapIteratorNext(Thread* t, object it);
 
-void
-listAppend(Thread* t, object list, object value);
+void listAppend(Thread* t, GcList* list, object value);
 
-object
-vectorAppend(Thread* t, object vector, object value);
+GcVector* vectorAppend(Thread* t, GcVector* vector, object value);
 
-object
-growArray(Thread* t, object array);
+object growArray(Thread* t, object array);
 
-object
-treeQuery(Thread* t, object tree, intptr_t key, object sentinal,
-          intptr_t (*compare)(Thread* t, intptr_t key, object b));
+object treeQuery(Thread* t,
+                 GcTreeNode* tree,
+                 intptr_t key,
+                 GcTreeNode* sentinal,
+                 intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
-object
-treeInsert(Thread* t, Zone* zone, object tree, intptr_t key, object value,
-           object sentinal,
-           intptr_t (*compare)(Thread* t, intptr_t key, object b));
+GcTreeNode* treeInsert(Thread* t,
+                       Zone* zone,
+                       GcTreeNode* tree,
+                       intptr_t key,
+                       object value,
+                       GcTreeNode* sentinal,
+                       intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
-void
-treeUpdate(Thread* t, object tree, intptr_t key, object value, object sentinal,
-           intptr_t (*compare)(Thread* t, intptr_t key, object b));
+void treeUpdate(Thread* t,
+                GcTreeNode* tree,
+                intptr_t key,
+                object value,
+                GcTreeNode* sentinal,
+                intptr_t (*compare)(Thread* t, intptr_t key, object b));
 
-class HashMapIterator: public Thread::Protector {
+class HashMapIterator : public Thread::Protector {
  public:
-  HashMapIterator(Thread* t, object map):
-    Protector(t), map(map), node(0), index(0)
+  HashMapIterator(Thread* t, GcHashMap* map)
+      : Protector(t), map(map), node(0), index(0)
   {
     find();
   }
 
-  void find() {
-    object array = hashMapArray(t, map);
+  void find()
+  {
+    GcArray* array = map->array();
     if (array) {
-      for (unsigned i = index; i < arrayLength(t, array); ++i) {
-        if (arrayBody(t, array, i)) {
-          node = arrayBody(t, array, i);
+      for (unsigned i = index; i < array->length(); ++i) {
+        if (array->body()[i]) {
+          node = cast<GcTriple>(t, array->body()[i]);
           index = i + 1;
           return;
         }
@@ -122,15 +136,17 @@ class HashMapIterator: public Thread::Protector {
     node = 0;
   }
 
-  bool hasMore() {
+  bool hasMore()
+  {
     return node != 0;
   }
 
-  object next() {
+  GcTriple* next()
+  {
     if (node) {
-      object n = node;
-      if (tripleThird(t, node)) {
-        node = tripleThird(t, node);
+      GcTriple* n = node;
+      if (node->third()) {
+        node = cast<GcTriple>(t, node->third());
       } else {
         find();
       }
@@ -140,16 +156,17 @@ class HashMapIterator: public Thread::Protector {
     }
   }
 
-  virtual void visit(Heap::Visitor* v) {
+  virtual void visit(Heap::Visitor* v)
+  {
     v->visit(&map);
     v->visit(&node);
   }
 
-  object map;
-  object node;
+  GcHashMap* map;
+  GcTriple* node;
   unsigned index;
 };
 
-} // vm
+}  // vm
 
-#endif//UTIL_H
+#endif  // UTIL_H

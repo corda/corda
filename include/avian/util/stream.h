@@ -22,19 +22,23 @@ class AbstractStream {
     virtual void handleError() = 0;
   };
 
-  AbstractStream(Client* client, unsigned size):
-    client(client), size(size), position_(0)
-  { }
+  AbstractStream(Client* client, unsigned size)
+      : client(client), size(size), position_(0)
+  {
+  }
 
-  unsigned position() {
+  unsigned position()
+  {
     return position_;
   }
 
-  void setPosition(unsigned p) {
+  void setPosition(unsigned p)
+  {
     position_ = p;
   }
 
-  void skip(unsigned size) {
+  void skip(unsigned size)
+  {
     if (size > this->size - position_) {
       client->handleError();
     } else {
@@ -42,7 +46,8 @@ class AbstractStream {
     }
   }
 
-  void read(uint8_t* dst, unsigned size) {
+  void read(uint8_t* dst, unsigned size)
+  {
     if (size > this->size - position_) {
       memset(dst, 0, size);
 
@@ -53,35 +58,41 @@ class AbstractStream {
     }
   }
 
-  uint8_t read1() {
+  uint8_t read1()
+  {
     uint8_t v;
     read(&v, 1);
     return v;
   }
 
-  uint16_t read2() {
+  uint16_t read2()
+  {
     uint16_t a = read1();
     uint16_t b = read1();
     return (a << 8) | b;
   }
 
-  uint32_t read4() {
+  uint32_t read4()
+  {
     uint32_t a = read2();
     uint32_t b = read2();
     return (a << 16) | b;
   }
 
-  uint64_t read8() {
+  uint64_t read8()
+  {
     uint64_t a = read4();
     uint64_t b = read4();
     return (a << 32) | b;
   }
 
-  uint32_t readFloat() {
+  uint32_t readFloat()
+  {
     return read4();
   }
 
-  uint64_t readDouble() {
+  uint64_t readDouble()
+  {
     return read8();
   }
 
@@ -94,20 +105,22 @@ class AbstractStream {
   unsigned position_;
 };
 
-class Stream: public AbstractStream {
+class Stream : public AbstractStream {
  public:
-  Stream(Client* client, const uint8_t* data, unsigned size):
-    AbstractStream(client, size), data(data)
-  { }
+  Stream(Client* client, const uint8_t* data, unsigned size)
+      : AbstractStream(client, size), data(data)
+  {
+  }
 
  private:
-  virtual void copy(uint8_t* dst, unsigned offset, unsigned size) {
+  virtual void copy(uint8_t* dst, unsigned offset, unsigned size)
+  {
     memcpy(dst, data + offset, size);
   }
 
   const uint8_t* data;
 };
 
-} // namespace vm
+}  // namespace vm
 
-#endif//STREAM_H
+#endif  // STREAM_H

@@ -7,7 +7,7 @@
 
    There is NO WARRANTY for this software.  See license.txt for
    details. */
-   
+
 #ifndef AVIAN_TOOLS_TYPE_GENERATOR_SEXPR_H
 #define AVIAN_TOOLS_TYPE_GENERATOR_SEXPR_H
 
@@ -16,7 +16,8 @@ namespace tools {
 namespace typegenerator {
 
 template <class T>
-inline T* allocate() {
+inline T* allocate()
+{
   T* t = static_cast<T*>(malloc(sizeof(T)));
   assert(t);
   return t;
@@ -30,7 +31,6 @@ class Object {
     Method,
     Type,
     Pair,
-    Number,
     Character,
     String,
     Eos
@@ -44,7 +44,8 @@ class Pair : public Object {
   Object* car;
   Object* cdr;
 
-  static Pair* make(Object* car, Object* cdr) {
+  static Pair* make(Object* car, Object* cdr)
+  {
     Pair* o = allocate<Pair>();
     o->type = Object::Pair;
     o->car = car;
@@ -53,26 +54,31 @@ class Pair : public Object {
   }
 };
 
-inline Object* cons(Object* car, Object* cdr) {
+inline Object* cons(Object* car, Object* cdr)
+{
   return Pair::make(car, cdr);
 }
 
-inline Object*& car(Object* o) {
+inline Object*& car(Object* o)
+{
   assert(o->type == Object::Pair);
   return static_cast<Pair*>(o)->car;
 }
 
-inline void setCar(Object* o, Object* v) {
+inline void setCar(Object* o, Object* v)
+{
   assert(o->type == Object::Pair);
   static_cast<Pair*>(o)->car = v;
 }
 
-inline Object*& cdr(Object* o) {
+inline Object*& cdr(Object* o)
+{
   assert(o->type == Object::Pair);
   return static_cast<Pair*>(o)->cdr;
 }
 
-inline void setCdr(Object* o, Object* v) {
+inline void setCdr(Object* o, Object* v)
+{
   assert(o->type == Object::Pair);
   static_cast<Pair*>(o)->cdr = v;
 }
@@ -82,9 +88,12 @@ class List {
   Object* first;
   Object* last;
 
-  List(): first(0), last(0) { }
+  List() : first(0), last(0)
+  {
+  }
 
-  void append(Object* o) {
+  void append(Object* o)
+  {
     Object* p = cons(o, 0);
     if (last) {
       setCdr(last, p);
@@ -95,8 +104,8 @@ class List {
   }
 };
 
-} // namespace typegenerator
-} // namespace tools
-} // namespace avian
+}  // namespace typegenerator
+}  // namespace tools
+}  // namespace avian
 
-#endif // AVIAN_TOOLS_TYPE_GENERATOR_SEXPR_H
+#endif  // AVIAN_TOOLS_TYPE_GENERATOR_SEXPR_H

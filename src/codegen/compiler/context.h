@@ -37,8 +37,9 @@ class ConstantPoolNode;
 class ForkState;
 class Block;
 
-template<class T>
-List<T>* reverseDestroy(List<T>* cell) {
+template <class T>
+List<T>* reverseDestroy(List<T>* cell)
+{
   List<T>* previous = 0;
   while (cell) {
     List<T>* next = cell->next;
@@ -73,7 +74,7 @@ class LogicalCode {
         = logicalCode.cloneAndSet(zone, logicalCode.count + more, 0);
 
     for (size_t i = 0; i < logicalCode.count; i++) {
-      assert((vm::System*)0, logicalCode[i] == newCode[i]);
+      assertT((vm::System*)0, logicalCode[i] == newCode[i]);
     }
 
     logicalCode = newCode;
@@ -93,7 +94,9 @@ class LogicalCode {
 
 class Context {
  public:
-  Context(vm::System* system, Assembler* assembler, vm::Zone* zone,
+  Context(vm::System* system,
+          Assembler* assembler,
+          vm::Zone* zone,
           Compiler::Client* client);
 
   vm::System* system;
@@ -128,17 +131,19 @@ class Context {
   ir::TargetInfo targetInfo;
 };
 
-inline Aborter* getAborter(Context* c) {
+inline Aborter* getAborter(Context* c)
+{
   return c->system;
 }
 
-template<class T>
-List<T>* cons(Context* c, const T& value, List<T>* next) {
+template <class T>
+List<T>* cons(Context* c, const T& value, List<T>* next)
+{
   return new (c->zone) List<T>(value, next);
 }
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_CONTEXT_H
+#endif  // AVIAN_CODEGEN_COMPILER_CONTEXT_H

@@ -30,4 +30,3 @@
 #define AVIAN_ARCH_ARM (3 << 8)
 
 #endif
-

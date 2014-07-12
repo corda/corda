@@ -31,26 +31,33 @@ Value::Value(Site* site, Site* target, ir::Type type)
 {
 }
 
-bool Value::findSite(Site* site) {
+bool Value::findSite(Site* site)
+{
   for (Site* s = this->sites; s; s = s->next) {
-    if (s == site) return true;
+    if (s == site)
+      return true;
   }
   return false;
 }
 
-bool Value::isBuddyOf(Value* b) {
+bool Value::isBuddyOf(Value* b)
+{
   Value* a = this;
-  if (a == b) return true;
+  if (a == b)
+    return true;
   for (Value* p = a->buddy; p != a; p = p->buddy) {
-    if (p == b) return true;
+    if (p == b)
+      return true;
   }
   return false;
 }
 
-void Value::addSite(Context* c, Site* s) {
+void Value::addSite(Context* c, Site* s)
+{
   if (not this->findSite(s)) {
     if (DebugSites) {
-      char buffer[256]; s->toString(c, buffer, 256);
+      char buffer[256];
+      s->toString(c, buffer, 256);
       fprintf(stderr, "add site %s to %p\n", buffer, this);
     }
     s->acquire(c, this);
@@ -59,9 +66,9 @@ void Value::addSite(Context* c, Site* s) {
   }
 }
 
-
-void Value::grow(Context* c) {
-  assert(c, this->nextWord == this);
+void Value::grow(Context* c)
+{
+  assertT(c, this->nextWord == this);
 
   Value* next = value(c, this->type);
   this->nextWord = next;
@@ -69,29 +76,32 @@ void Value::grow(Context* c) {
   next->wordIndex = 1;
 }
 
-
-void Value::maybeSplit(Context* c) {
+void Value::maybeSplit(Context* c)
+{
   if (this->nextWord == this) {
     this->split(c);
   }
 }
 
-void Value::split(Context* c) {
+void Value::split(Context* c)
+{
   this->grow(c);
   for (SiteIterator it(c, this); it.hasMore();) {
     Site* s = it.next();
     this->removeSite(c, s);
-    
+
     this->addSite(c, s->copyLow(c));
     this->nextWord->addSite(c, s->copyHigh(c));
   }
 }
 
-void Value::removeSite(Context* c, Site* s) {
+void Value::removeSite(Context* c, Site* s)
+{
   for (SiteIterator it(c, this); it.hasMore();) {
     if (s == it.next()) {
       if (DebugSites) {
-        char buffer[256]; s->toString(c, buffer, 256);
+        char buffer[256];
+        s->toString(c, buffer, 256);
         fprintf(stderr, "remove site %s from %p\n", buffer, this);
       }
       it.remove(c);
@@ -101,15 +111,17 @@ void Value::removeSite(Context* c, Site* s) {
   if (DebugSites) {
     fprintf(stderr, "%p has more: %d\n", this, this->hasSite(c));
   }
-  assert(c, not this->findSite(s));
+  assertT(c, not this->findSite(s));
 }
 
-bool Value::hasSite(Context* c) {
+bool Value::hasSite(Context* c)
+{
   SiteIterator it(c, this);
   return it.hasMore();
 }
 
-bool Value::uniqueSite(Context* c, Site* s) {
+bool Value::uniqueSite(Context* c, Site* s)
+{
   SiteIterator it(c, this);
   Site* p UNUSED = it.next();
   if (it.hasMore()) {
@@ -126,14 +138,15 @@ bool Value::uniqueSite(Context* c, Site* s) {
       }
     } else {
       return false;
-    }    
+    }
   } else {
-    assert(c, p == s);
+    assertT(c, p == s);
     return true;
   }
 }
 
-void Value::clearSites(Context* c) {
+void Value::clearSites(Context* c)
+{
   if (DebugSites) {
     fprintf(stderr, "clear sites for %p\n", this);
   }
@@ -143,9 +156,9 @@ void Value::clearSites(Context* c) {
   }
 }
 
-
 #ifndef NDEBUG
-bool Value::hasBuddy(Context* c, Value* b) {
+bool Value::hasBuddy(Context* c, Value* b)
+{
   Value* a = this;
   if (a == b) {
     return true;
@@ -162,13 +175,13 @@ bool Value::hasBuddy(Context* c, Value* b) {
   }
   return false;
 }
-#endif // not NDEBUG
+#endif  // not NDEBUG
 
 Value* value(Context* c, ir::Type type, Site* site, Site* target)
 {
-  return new(c->zone) Value(site, target, type);
+  return new (c->zone) Value(site, target, type);
 }
 
-} // namespace regalloc
-} // namespace codegen
-} // namespace avian
+}  // namespace regalloc
+}  // namespace codegen
+}  // namespace avian

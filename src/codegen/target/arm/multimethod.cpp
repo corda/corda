@@ -21,31 +21,32 @@ namespace arm {
 using namespace util;
 
 unsigned index(ArchitectureContext*,
-      lir::BinaryOperation operation,
-      lir::OperandType operand1,
-      lir::OperandType operand2)
+               lir::BinaryOperation operation,
+               lir::OperandType operand1,
+               lir::OperandType operand2)
 {
-  return operation
-    + (lir::BinaryOperationCount * operand1)
-    + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
+  return operation + (lir::BinaryOperationCount * operand1)
+         + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
 }
 
 unsigned index(ArchitectureContext* con UNUSED,
-      lir::TernaryOperation operation,
-      lir::OperandType operand1)
+               lir::TernaryOperation operation,
+               lir::OperandType operand1)
 {
-  assert(con, not isBranch(operation));
+  assertT(con, not isBranch(operation));
 
   return operation + (lir::NonBranchTernaryOperationCount * operand1);
 }
 
-unsigned branchIndex(ArchitectureContext* con UNUSED, lir::OperandType operand1,
-            lir::OperandType operand2)
+unsigned branchIndex(ArchitectureContext* con UNUSED,
+                     lir::OperandType operand1,
+                     lir::OperandType operand2)
 {
   return operand1 + (lir::OperandTypeCount * operand2);
 }
 
-void populateTables(ArchitectureContext* con) {
+void populateTables(ArchitectureContext* con)
+{
   const lir::OperandType C = lir::ConstantOperand;
   const lir::OperandType A = lir::AddressOperand;
   const lir::OperandType R = lir::RegisterOperand;
@@ -136,6 +137,6 @@ void populateTables(ArchitectureContext* con) {
   bro[branchIndex(con, R, M)] = CAST_BRANCH(branchRM);
 }
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian

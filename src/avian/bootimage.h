@@ -24,13 +24,14 @@ class BootImage {
  public:
   class Thunk {
    public:
-    Thunk():
-      start(0), frameSavedOffset(0), length(0)
-    { }
+    Thunk() : start(0), frameSavedOffset(0), length(0)
+    {
+    }
 
-    Thunk(uint32_t start, uint32_t frameSavedOffset, uint32_t length):
-      start(start), frameSavedOffset(frameSavedOffset), length(length)
-    { }
+    Thunk(uint32_t start, uint32_t frameSavedOffset, uint32_t length)
+        : start(start), frameSavedOffset(frameSavedOffset), length(length)
+    {
+    }
 
     uint32_t start;
     uint32_t frameSavedOffset;
@@ -53,9 +54,11 @@ class BootImage {
   ThunkCollection thunks;
 } PACKED;
 
+class GcField;
+
 class OffsetResolver {
  public:
-  virtual unsigned fieldOffset(Thread*, object) = 0;
+  virtual unsigned fieldOffset(Thread*, GcField*) = 0;
 };
 
 #define NAME(x) Target##x
@@ -70,6 +73,6 @@ class OffsetResolver {
 #undef LABEL
 #undef NAME
 
-} // namespace vm
+}  // namespace vm
 
-#endif//BOOTIMAGE_H
+#endif  // BOOTIMAGE_H

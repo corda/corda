@@ -42,8 +42,8 @@ void* FixedAllocator::allocate(unsigned size)
 
 void FixedAllocator::free(const void* p, unsigned size)
 {
-  if (p >= memory.begin() and static_cast<const uint8_t*>(p) + size
-      == memory.begin() + offset) {
+  if (p >= memory.begin()
+      and static_cast<const uint8_t*>(p) + size == memory.begin() + offset) {
     offset -= size;
   } else {
     abort(a);

@@ -20,43 +20,51 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
+SingleRead::SingleRead(const SiteMask& mask, Value* successor)
+    : next_(0), mask(mask), high_(0), successor_(successor)
+{
+}
 
-SingleRead::SingleRead(const SiteMask& mask, Value* successor):
-  next_(0), mask(mask), high_(0), successor_(successor)
-{ }
-
-bool SingleRead::intersect(SiteMask* mask, unsigned) {
+bool SingleRead::intersect(SiteMask* mask, unsigned)
+{
   *mask = mask->intersectionWith(this->mask);
 
   return true;
 }
 
-Value* SingleRead::high(Context*) {
+Value* SingleRead::high(Context*)
+{
   return high_;
 }
 
-Value* SingleRead::successor() {
+Value* SingleRead::successor()
+{
   return successor_;
 }
 
-bool SingleRead::valid() {
+bool SingleRead::valid()
+{
   return true;
 }
 
-void SingleRead::append(Context* c UNUSED, Read* r) {
-  assert(c, next_ == 0);
+void SingleRead::append(Context* c UNUSED, Read* r)
+{
+  assertT(c, next_ == 0);
   next_ = r;
 }
 
-Read* SingleRead::next(Context*) {
+Read* SingleRead::next(Context*)
+{
   return next_;
 }
 
-MultiRead::MultiRead():
-  reads(0), lastRead(0), firstTarget(0), lastTarget(0), visited(false)
-{ }
+MultiRead::MultiRead()
+    : reads(0), lastRead(0), firstTarget(0), lastTarget(0), visited(false)
+{
+}
 
-bool MultiRead::intersect(SiteMask* mask, unsigned depth) {
+bool MultiRead::intersect(SiteMask* mask, unsigned depth)
+{
   if (depth > 0) {
     // short-circuit recursion to avoid poor performance in
     // deeply-nested branches
@@ -81,11 +89,13 @@ bool MultiRead::intersect(SiteMask* mask, unsigned depth) {
   return result;
 }
 
-Value* MultiRead::successor() {
+Value* MultiRead::successor()
+{
   return 0;
 }
 
-bool MultiRead::valid() {
+bool MultiRead::valid()
+{
   bool result = false;
   if (not visited) {
     visited = true;
@@ -103,7 +113,8 @@ bool MultiRead::valid() {
   return result;
 }
 
-void MultiRead::append(Context* c, Read* r) {
+void MultiRead::append(Context* c, Read* r)
+{
   List<Read*>* cell = cons<Read*>(c, r, 0);
   if (lastRead == 0) {
     reads = cell;
@@ -112,19 +123,25 @@ void MultiRead::append(Context* c, Read* r) {
   }
   lastRead = cell;
 
-//     fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+  if (false) {
+    fprintf(stderr, "append %p to %p for %p\n", r, lastTarget, this);
+  }
 
   lastTarget->item = r;
 }
 
-Read* MultiRead::next(Context* c) {
+Read* MultiRead::next(Context* c)
+{
   abort(c);
 }
 
-void MultiRead::allocateTarget(Context* c) {
+void MultiRead::allocateTarget(Context* c)
+{
   List<Read*>* cell = cons<Read*>(c, 0, 0);
 
-//     fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+  if (false) {
+    fprintf(stderr, "allocate target for %p: %p\n", this, cell);
+  }
 
   if (lastTarget) {
     lastTarget->next = cell;
@@ -134,20 +151,23 @@ void MultiRead::allocateTarget(Context* c) {
   lastTarget = cell;
 }
 
-Read* MultiRead::nextTarget() {
-  //     fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+Read* MultiRead::nextTarget()
+{
+  if (false) {
+    fprintf(stderr, "next target for %p: %p\n", this, firstTarget);
+  }
 
   Read* r = firstTarget->item;
   firstTarget = firstTarget->next;
   return r;
 }
 
+StubRead::StubRead() : next_(0), read(0), visited(false), valid_(true)
+{
+}
 
-StubRead::StubRead():
-  next_(0), read(0), visited(false), valid_(true)
-{ }
-
-bool StubRead::intersect(SiteMask* mask, unsigned depth) {
+bool StubRead::intersect(SiteMask* mask, unsigned depth)
+{
   if (not visited) {
     visited = true;
     if (read) {
@@ -161,31 +181,35 @@ bool StubRead::intersect(SiteMask* mask, unsigned depth) {
   return valid_;
 }
 
-Value* StubRead::successor() {
+Value* StubRead::successor()
+{
   return 0;
 }
 
-bool StubRead::valid() {
+bool StubRead::valid()
+{
   return valid_;
 }
 
-void StubRead::append(Context* c UNUSED, Read* r) {
-  assert(c, next_ == 0);
+void StubRead::append(Context* c UNUSED, Read* r)
+{
+  assertT(c, next_ == 0);
   next_ = r;
 }
 
-Read* StubRead::next(Context*) {
+Read* StubRead::next(Context*)
+{
   return next_;
 }
 
+SingleRead* read(Context* c, const SiteMask& mask, Value* successor)
+{
+  assertT(c,
+          (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
 
-
-SingleRead* read(Context* c, const SiteMask& mask, Value* successor) {
-  assert(c, (mask.typeMask != 1 << lir::MemoryOperand) or mask.frameIndex >= 0);
-
-  return new(c->zone) SingleRead(mask, successor);
+  return new (c->zone) SingleRead(mask, successor);
 }
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian

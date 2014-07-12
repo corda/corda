@@ -21,7 +21,7 @@ const uintptr_t PointerShift = log(BytesPerWord);
 
 class Context;
 
-class Set: public HeapMap {
+class Set : public HeapMap {
  public:
   class Entry {
    public:
@@ -30,23 +30,22 @@ class Set: public HeapMap {
     int next;
   };
 
-  static unsigned footprint(unsigned capacity) {
-    return sizeof(Set)
-      + pad(sizeof(int) * capacity)
-      + pad(sizeof(Set::Entry) * capacity);
+  static unsigned footprint(unsigned capacity)
+  {
+    return sizeof(Set) + pad(sizeof(int) * capacity)
+           + pad(sizeof(Set::Entry) * capacity);
   }
 
-  Set(Context* context, unsigned capacity):
-    context(context),
-    index(reinterpret_cast<int*>
-          (reinterpret_cast<uint8_t*>(this)
-           + sizeof(Set))),
-    entries(reinterpret_cast<Entry*>
-            (reinterpret_cast<uint8_t*>(index) 
-             + pad(sizeof(int) * capacity))),
-    size(0),
-    capacity(capacity)
-  { }
+  Set(Context* context, unsigned capacity)
+      : context(context),
+        index(reinterpret_cast<int*>(reinterpret_cast<uint8_t*>(this)
+                                     + sizeof(Set))),
+        entries(reinterpret_cast<Entry*>(reinterpret_cast<uint8_t*>(index)
+                                         + pad(sizeof(int) * capacity))),
+        size(0),
+        capacity(capacity)
+  {
+  }
 
   virtual int find(object value);
 
@@ -69,7 +68,9 @@ class Stack {
 
   static const unsigned Capacity = 4096;
 
-  Stack(Stack* next): next(next), entryCount(0) { }
+  Stack(Stack* next) : next(next), entryCount(0)
+  {
+  }
 
   Stack* next;
   unsigned entryCount;
@@ -78,11 +79,12 @@ class Stack {
 
 class Context {
  public:
-  Context(Thread* thread):
-    thread(thread), objects(0), stack(0)
-  { }
+  Context(Thread* thread) : thread(thread), objects(0), stack(0)
+  {
+  }
 
-  void dispose() {
+  void dispose()
+  {
     if (objects) {
       objects->dispose();
     }
@@ -99,20 +101,18 @@ class Context {
   Stack* stack;
 };
 
-void
-push(Context* c, object p, int offset)
+void push(Context* c, object p, int offset)
 {
   if (c->stack == 0 or c->stack->entryCount == Stack::Capacity) {
     c->stack = new (c->thread->m->heap->allocate(sizeof(Stack)))
-      Stack(c->stack);
+        Stack(c->stack);
   }
   Stack::Entry* e = c->stack->entries + (c->stack->entryCount++);
   e->value = p;
   e->offset = offset;
 }
 
-bool
-pop(Context* c, object* p, int* offset)
+bool pop(Context* c, object* p, int* offset)
 {
   if (c->stack) {
     if (c->stack->entryCount == 0) {
@@ -133,17 +133,15 @@ pop(Context* c, object* p, int* offset)
   }
 }
 
-unsigned
-hash(object p, unsigned capacity)
+unsigned hash(object p, unsigned capacity)
 {
-  return (reinterpret_cast<uintptr_t>(p) >> PointerShift)
-    & (capacity - 1);
+  return (reinterpret_cast<uintptr_t>(p) >> PointerShift) & (capacity - 1);
 }
 
-Set::Entry*
-find(Context* c, object p)
+Set::Entry* find(Context* c, object p)
 {
-  if (c->objects == 0) return 0;
+  if (c->objects == 0)
+    return 0;
 
   for (int i = c->objects->index[hash(p, c->objects->capacity)]; i >= 0;) {
     Set::Entry* e = c->objects->entries + i;
@@ -156,8 +154,7 @@ find(Context* c, object p)
   return 0;
 }
 
-int
-Set::find(object value)
+int Set::find(object value)
 {
   Set::Entry* e = local::find(context, value);
   if (e) {
@@ -167,16 +164,14 @@ Set::find(object value)
   }
 }
 
-void
-Set::dispose()
+void Set::dispose()
 {
   context->thread->m->heap->free(this, footprint(capacity));
 }
 
-Set::Entry*
-add(Context* c UNUSED, Set* set, object p, uint32_t number)
+Set::Entry* add(Context* c UNUSED, Set* set, object p, uint32_t number)
 {
-  assert(c->thread, set->size < set->capacity);
+  assertT(c->thread, set->size < set->capacity);
 
   unsigned index = hash(p, set->capacity);
 
@@ -189,19 +184,18 @@ add(Context* c UNUSED, Set* set, object p, uint32_t number)
   return e;
 }
 
-Set::Entry*
-add(Context* c, object p)
+Set::Entry* add(Context* c, object p)
 {
   if (c->objects == 0 or c->objects->size == c->objects->capacity) {
     unsigned capacity;
     if (c->objects) {
       capacity = c->objects->capacity * 2;
     } else {
-      capacity = 4096; // must be power of two
+      capacity = 4096;  // must be power of two
     }
 
     Set* set = new (c->thread->m->heap->allocate(Set::footprint(capacity)))
-      Set(c, capacity);
+        Set(c, capacity);
 
     memset(set->index, 0xFF, sizeof(int) * capacity);
 
@@ -214,8 +208,8 @@ add(Context* c, object p)
         }
       }
 
-      c->thread->m->heap->free
-        (c->objects, Set::footprint(c->objects->capacity));
+      c->thread->m->heap->free(c->objects,
+                               Set::footprint(c->objects->capacity));
     }
 
     c->objects = set;
@@ -224,16 +218,13 @@ add(Context* c, object p)
   return add(c, c->objects, p, 0);
 }
 
-inline object
-get(object o, unsigned offsetInWords)
+inline object get(object o, unsigned offsetInWords)
 {
-  return static_cast<object>
-    (maskAlignedPointer
-     (fieldAtOffset<void*>(o, offsetInWords * BytesPerWord)));
+  return static_cast<object>(maskAlignedPointer(
+      fieldAtOffset<void*>(o, offsetInWords * BytesPerWord)));
 }
 
-unsigned
-walk(Context* c, HeapVisitor* v, object p)
+unsigned walk(Context* c, HeapVisitor* v, object p)
 {
   Thread* t = c->thread;
   object root = p;
@@ -241,65 +232,70 @@ walk(Context* c, HeapVisitor* v, object p)
 
   v->root();
 
- visit: {
-    Set::Entry* e = find(c, p);
-    if (e) {
-      v->visitOld(p, e->number);
-    } else {
-      e = add(c, p);
-      e->number = v->visitNew(p);
+visit : {
+  Set::Entry* e = find(c, p);
+  if (e) {
+    v->visitOld(p, e->number);
+  } else {
+    e = add(c, p);
+    e->number = v->visitNew(p);
 
-      nextChildOffset = walkNext(t, p, -1);
-      if (nextChildOffset != -1) {
-        goto children;
-      }
+    nextChildOffset = walkNext(t, p, -1);
+    if (nextChildOffset != -1) {
+      goto children;
     }
   }
+}
 
   goto pop;
 
- children: {
-    v->push(p, find(c, p)->number, nextChildOffset);
-    push(c, p, nextChildOffset);
-    p = get(p, nextChildOffset);
-    goto visit;
-  }
+children : {
+  v->push(p, find(c, p)->number, nextChildOffset);
+  push(c, p, nextChildOffset);
+  p = get(p, nextChildOffset);
+  goto visit;
+}
 
- pop: {
-    if (pop(c, &p, &nextChildOffset)) {
-      v->pop();
-      nextChildOffset = walkNext(t, p, nextChildOffset);
-      if (nextChildOffset >= 0) {
-        goto children;
-      } else {
-        goto pop;
-      }
+pop : {
+  if (pop(c, &p, &nextChildOffset)) {
+    v->pop();
+    nextChildOffset = walkNext(t, p, nextChildOffset);
+    if (nextChildOffset >= 0) {
+      goto children;
+    } else {
+      goto pop;
     }
   }
+}
 
   return find(c, root)->number;
 }
 
-class MyHeapWalker: public HeapWalker {
+class MyHeapWalker : public HeapWalker {
  public:
-  MyHeapWalker(Thread* t, HeapVisitor* v):
-    context(t), visitor(v)
+  MyHeapWalker(Thread* t, HeapVisitor* v) : context(t), visitor(v)
   {
     add(&context, 0)->number = v->visitNew(0);
   }
 
-  virtual unsigned visitRoot(object root) {
+  virtual unsigned visitRoot(object root)
+  {
     return walk(&context, visitor, root);
   }
 
-  virtual void visitAllRoots() {
-    class Visitor: public Heap::Visitor {
+  virtual void visitAllRoots()
+  {
+    class Visitor : public Heap::Visitor {
      public:
-      Visitor(Context* c, HeapVisitor* v): c(c), v(v) { }
+      Visitor(Context* c, HeapVisitor* v) : c(c), v(v)
+      {
+      }
 
-      virtual void visit(void* p) {
-        walk(c, v, static_cast<object>
-             (maskAlignedPointer(*static_cast<void**>(p))));
+      virtual void visit(void* p)
+      {
+        walk(c,
+             v,
+             static_cast<object>(maskAlignedPointer(*static_cast<void**>(p))));
       }
 
       Context* c;
@@ -309,11 +305,13 @@ class MyHeapWalker: public HeapWalker {
     visitRoots(context.thread->m, &v);
   }
 
-  virtual HeapMap* map() {
+  virtual HeapMap* map()
+  {
     return context.objects;
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     context.dispose();
     context.thread->m->heap->free(this, sizeof(MyHeapWalker));
   }
@@ -322,17 +320,16 @@ class MyHeapWalker: public HeapWalker {
   HeapVisitor* visitor;
 };
 
-} // namespace local
+}  // namespace local
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-HeapWalker*
-makeHeapWalker(Thread* t, HeapVisitor* v)
+HeapWalker* makeHeapWalker(Thread* t, HeapVisitor* v)
 {
   return new (t->m->heap->allocate(sizeof(local::MyHeapWalker)))
-    local::MyHeapWalker(t, v);
+      local::MyHeapWalker(t, v);
 }
 
-} // namespace vm
+}  // namespace vm

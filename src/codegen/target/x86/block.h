@@ -19,7 +19,7 @@ namespace x86 {
 
 class AlignmentPadding;
 
-class MyBlock: public Assembler::Block {
+class MyBlock : public Assembler::Block {
  public:
   MyBlock(unsigned offset);
 
@@ -33,8 +33,8 @@ class MyBlock: public Assembler::Block {
   unsigned size;
 };
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_BLOCK_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_BLOCK_H

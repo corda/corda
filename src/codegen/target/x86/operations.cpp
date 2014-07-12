@@ -32,17 +32,22 @@ namespace avian {
 namespace codegen {
 namespace x86 {
 
-void return_(Context* c) {
+void return_(Context* c)
+{
   opcode(c, 0xc3);
 }
 
-void trap(Context* c) {
+void trap(Context* c)
+{
   opcode(c, 0xcc);
 }
 
-void ignore(Context*) { }
+void ignore(Context*)
+{
+}
 
-void storeLoadBarrier(Context* c) {
+void storeLoadBarrier(Context* c)
+{
   if (useSSE(c->ac)) {
     // mfence:
     c->code.append(0x0f);
@@ -57,18 +62,20 @@ void storeLoadBarrier(Context* c) {
     c->code.append(0x83);
     c->code.append(0x04);
     c->code.append(0x24);
-    c->code.append(0x00);    
+    c->code.append(0x00);
   }
 }
 
-void callC(Context* c, unsigned size UNUSED, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void callC(Context* c, unsigned size UNUSED, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   unconditional(c, 0xe8, a);
 }
 
-void longCallC(Context* c, unsigned size, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void longCallC(Context* c, unsigned size, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   if (vm::TargetBytesPerWord == 8) {
     lir::Register r(LongJumpRegister);
@@ -79,29 +86,33 @@ void longCallC(Context* c, unsigned size, lir::Constant* a) {
   }
 }
 
-void jumpR(Context* c, unsigned size UNUSED, lir::Register* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void jumpR(Context* c, unsigned size UNUSED, lir::Register* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   maybeRex(c, 4, a);
   opcode(c, 0xff, 0xe0 + regCode(a));
 }
 
-void jumpC(Context* c, unsigned size UNUSED, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void jumpC(Context* c, unsigned size UNUSED, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   unconditional(c, 0xe9, a);
 }
 
-void jumpM(Context* c, unsigned size UNUSED, lir::Memory* a) {
-  assert(c, size == vm::TargetBytesPerWord);
-  
+void jumpM(Context* c, unsigned size UNUSED, lir::Memory* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
+
   maybeRex(c, 4, a);
   opcode(c, 0xff);
   modrmSibImm(c, rsp, a->scale, a->index, a->base, a->offset);
 }
 
-void longJumpC(Context* c, unsigned size, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void longJumpC(Context* c, unsigned size, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   if (vm::TargetBytesPerWord == 8) {
     lir::Register r(LongJumpRegister);
@@ -112,29 +123,33 @@ void longJumpC(Context* c, unsigned size, lir::Constant* a) {
   }
 }
 
-void callR(Context* c, unsigned size UNUSED, lir::Register* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void callR(Context* c, unsigned size UNUSED, lir::Register* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   // maybeRex.W has no meaning here so we disable it
   maybeRex(c, 4, a);
   opcode(c, 0xff, 0xd0 + regCode(a));
 }
 
-void callM(Context* c, unsigned size UNUSED, lir::Memory* a) {
-  assert(c, size == vm::TargetBytesPerWord);
-  
+void callM(Context* c, unsigned size UNUSED, lir::Memory* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
+
   maybeRex(c, 4, a);
   opcode(c, 0xff);
   modrmSibImm(c, rdx, a->scale, a->index, a->base, a->offset);
 }
 
-void alignedCallC(Context* c, unsigned size, lir::Constant* a) {
-  new(c->zone) AlignmentPadding(c, 1, 4);
+void alignedCallC(Context* c, unsigned size, lir::Constant* a)
+{
+  new (c->zone) AlignmentPadding(c, 1, 4);
   callC(c, size, a);
 }
 
-void alignedLongCallC(Context* c, unsigned size, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void alignedLongCallC(Context* c, unsigned size, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   if (vm::TargetBytesPerWord == 8) {
     new (c->zone) AlignmentPadding(c, 2, 8);
@@ -144,13 +159,15 @@ void alignedLongCallC(Context* c, unsigned size, lir::Constant* a) {
   }
 }
 
-void alignedJumpC(Context* c, unsigned size, lir::Constant* a) {
+void alignedJumpC(Context* c, unsigned size, lir::Constant* a)
+{
   new (c->zone) AlignmentPadding(c, 1, 4);
   jumpC(c, size, a);
 }
 
-void alignedLongJumpC(Context* c, unsigned size, lir::Constant* a) {
-  assert(c, size == vm::TargetBytesPerWord);
+void alignedLongJumpC(Context* c, unsigned size, lir::Constant* a)
+{
+  assertT(c, size == vm::TargetBytesPerWord);
 
   if (vm::TargetBytesPerWord == 8) {
     new (c->zone) AlignmentPadding(c, 2, 8);
@@ -192,7 +209,7 @@ void popR(Context* c, unsigned size, lir::Register* a)
 void negateR(Context* c, unsigned size, lir::Register* a)
 {
   if (vm::TargetBytesPerWord == 4 and size == 8) {
-    assert(c, a->low == rax and a->high == rdx);
+    assertT(c, a->low == rax and a->high == rdx);
 
     ResolvedPromise zeroPromise(0);
     lir::Constant zero(&zeroPromise);
@@ -208,16 +225,22 @@ void negateR(Context* c, unsigned size, lir::Register* a)
   }
 }
 
-void negateRR(Context* c, unsigned aSize, lir::Register* a,
-         unsigned bSize UNUSED, lir::Register* b UNUSED)
+void negateRR(Context* c,
+              unsigned aSize,
+              lir::Register* a,
+              unsigned bSize UNUSED,
+              lir::Register* b UNUSED)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   negateR(c, aSize, a);
 }
 
-void moveCR(Context* c, unsigned aSize, lir::Constant* a,
-       unsigned bSize, lir::Register* b)
+void moveCR(Context* c,
+            unsigned aSize,
+            lir::Constant* a,
+            unsigned bSize,
+            lir::Register* b)
 {
   if (isFloatReg(b)) {
     sseMoveCR(c, aSize, a, bSize, b);
@@ -226,38 +249,47 @@ void moveCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void moveZCR(Context* c, unsigned aSize UNUSED, lir::Constant* a,
-             unsigned bSize UNUSED, lir::Register* b)
+void moveZCR(Context* c,
+             unsigned aSize UNUSED,
+             lir::Constant* a,
+             unsigned bSize UNUSED,
+             lir::Register* b)
 {
-  assert(c, not isFloatReg(b));
-  assert(c, aSize == 2);
-  assert(c, bSize == vm::TargetBytesPerWord);
-  assert(c, a->value->resolved());
+  assertT(c, not isFloatReg(b));
+  assertT(c, aSize == 2);
+  assertT(c, bSize == vm::TargetBytesPerWord);
+  assertT(c, a->value->resolved());
 
   maybeRex(c, vm::TargetBytesPerWord, b);
   opcode(c, 0xb8 + regCode(b));
   c->code.appendTargetAddress(static_cast<uint16_t>(a->value->value()));
 }
 
-void swapRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
-       unsigned bSize UNUSED, lir::Register* b)
+void swapRR(Context* c,
+            unsigned aSize UNUSED,
+            lir::Register* a,
+            unsigned bSize UNUSED,
+            lir::Register* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, aSize == vm::TargetBytesPerWord);
-  
+  assertT(c, aSize == bSize);
+  assertT(c, aSize == vm::TargetBytesPerWord);
+
   alwaysRex(c, aSize, a, b);
   opcode(c, 0x87);
   modrm(c, 0xc0, b, a);
 }
 
-void moveRR(Context* c, unsigned aSize, lir::Register* a,
-       UNUSED unsigned bSize, lir::Register* b)
+void moveRR(Context* c,
+            unsigned aSize,
+            lir::Register* a,
+            UNUSED unsigned bSize,
+            lir::Register* b)
 {
   if (isFloatReg(a) or isFloatReg(b)) {
     sseMoveRR(c, aSize, a, bSize, b);
     return;
   }
-  
+
   if (vm::TargetBytesPerWord == 4 and aSize == 8 and bSize == 8) {
     lir::Register ah(a->high);
     lir::Register bh(b->high);
@@ -277,7 +309,7 @@ void moveRR(Context* c, unsigned aSize, lir::Register* a,
     switch (aSize) {
     case 1:
       if (vm::TargetBytesPerWord == 4 and a->low > rbx) {
-        assert(c, b->low <= rbx);
+        assertT(c, b->low <= rbx);
 
         moveRR(c, vm::TargetBytesPerWord, a, vm::TargetBytesPerWord, b);
         moveRR(c, 1, b, vm::TargetBytesPerWord, b);
@@ -302,9 +334,9 @@ void moveRR(Context* c, unsigned aSize, lir::Register* a,
           modrm(c, 0xc0, a, b);
         } else {
           if (a->low == rax and b->low == rax and b->high == rdx) {
-            opcode(c, 0x99); //cdq
+            opcode(c, 0x99);  // cdq
           } else {
-            assert(c, b->low == rax and b->high == rdx);
+            assertT(c, b->low == rax and b->high == rdx);
 
             moveRR(c, 4, a, 4, b);
             moveRR(c, 4, b, 8, b);
@@ -317,10 +349,10 @@ void moveRR(Context* c, unsigned aSize, lir::Register* a,
           modrm(c, 0xc0, b, a);
         }
       }
-      break; 
-      
+      break;
+
     case 8:
-      if (a->low != b->low){
+      if (a->low != b->low) {
         maybeRex(c, aSize, a, b);
         opcode(c, 0x89);
         modrm(c, 0xc0, b, a);
@@ -330,14 +362,17 @@ void moveRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void moveMR(Context* c, unsigned aSize, lir::Memory* a,
-       unsigned bSize, lir::Register* b)
+void moveMR(Context* c,
+            unsigned aSize,
+            lir::Memory* a,
+            unsigned bSize,
+            lir::Register* b)
 {
   if (isFloatReg(b)) {
     sseMoveMR(c, aSize, a, bSize, b);
     return;
   }
-  
+
   switch (aSize) {
   case 1:
     maybeRex(c, bSize, b, a);
@@ -358,8 +393,8 @@ void moveMR(Context* c, unsigned aSize, lir::Memory* a,
       modrmSibImm(c, b, a);
     } else {
       if (bSize == 8) {
-        assert(c, b->low == rax and b->high == rdx);
-        
+        assertT(c, b->low == rax and b->high == rdx);
+
         moveMR(c, 4, a, 4, b);
         moveRR(c, 4, b, 8, b);
       } else {
@@ -369,13 +404,13 @@ void moveMR(Context* c, unsigned aSize, lir::Memory* a,
       }
     }
     break;
-    
+
   case 8:
     if (vm::TargetBytesPerWord == 4 and bSize == 8) {
       lir::Memory ah(a->base, a->offset + 4, a->index, a->scale);
       lir::Register bh(b->high);
 
-      moveMR(c, 4, a, 4, b);    
+      moveMR(c, 4, a, 4, b);
       moveMR(c, 4, &ah, 4, &bh);
     } else {
       maybeRex(c, bSize, b, a);
@@ -384,20 +419,24 @@ void moveMR(Context* c, unsigned aSize, lir::Memory* a,
     }
     break;
 
-  default: abort(c);
+  default:
+    abort(c);
   }
 }
 
-void moveRM(Context* c, unsigned aSize, lir::Register* a,
-       unsigned bSize UNUSED, lir::Memory* b)
+void moveRM(Context* c,
+            unsigned aSize,
+            lir::Register* a,
+            unsigned bSize UNUSED,
+            lir::Memory* b)
 {
-  assert(c, aSize == bSize);
-  
+  assertT(c, aSize == bSize);
+
   if (isFloatReg(a)) {
     sseMoveRM(c, aSize, a, bSize, b);
     return;
   }
-  
+
   switch (aSize) {
   case 1:
     maybeRex(c, bSize, a, b);
@@ -423,7 +462,7 @@ void moveRM(Context* c, unsigned aSize, lir::Register* a,
       modrmSibImm(c, a, b);
     }
     break;
-    
+
   case 8:
     if (vm::TargetBytesPerWord == 8) {
       maybeRex(c, bSize, a, b);
@@ -433,19 +472,23 @@ void moveRM(Context* c, unsigned aSize, lir::Register* a,
       lir::Register ah(a->high);
       lir::Memory bh(b->base, b->offset + 4, b->index, b->scale);
 
-      moveRM(c, 4, a, 4, b);    
+      moveRM(c, 4, a, 4, b);
       moveRM(c, 4, &ah, 4, &bh);
     }
     break;
 
-  default: abort(c);
+  default:
+    abort(c);
   }
 }
 
-void moveAR(Context* c, unsigned aSize, lir::Address* a,
-       unsigned bSize, lir::Register* b)
+void moveAR(Context* c,
+            unsigned aSize,
+            lir::Address* a,
+            unsigned bSize,
+            lir::Register* b)
 {
-  assert(c, vm::TargetBytesPerWord == 8 or (aSize == 4 and bSize == 4));
+  assertT(c, vm::TargetBytesPerWord == 8 or (aSize == 4 and bSize == 4));
 
   lir::Constant constant(a->address);
   lir::Memory memory(b->low, 0, -1, 0);
@@ -454,8 +497,11 @@ void moveAR(Context* c, unsigned aSize, lir::Address* a,
   moveMR(c, bSize, &memory, bSize, b);
 }
 
-void moveCM(Context* c, unsigned aSize UNUSED, lir::Constant* a,
-       unsigned bSize, lir::Memory* b)
+void moveCM(Context* c,
+            unsigned aSize UNUSED,
+            lir::Constant* a,
+            unsigned bSize,
+            lir::Memory* b)
 {
   switch (bSize) {
   case 1:
@@ -493,8 +539,7 @@ void moveCM(Context* c, unsigned aSize UNUSED, lir::Constant* a,
         modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
         c->code.append4(a->value->value());
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, 8, a, 8, &tmp);
         moveRM(c, 8, &tmp, 8, b);
         c->client->releaseTemporary(tmp.low);
@@ -510,12 +555,16 @@ void moveCM(Context* c, unsigned aSize UNUSED, lir::Constant* a,
     }
   } break;
 
-  default: abort(c);
+  default:
+    abort(c);
   }
 }
 
-void moveZRR(Context* c, unsigned aSize, lir::Register* a,
-        unsigned bSize UNUSED, lir::Register* b)
+void moveZRR(Context* c,
+             unsigned aSize,
+             lir::Register* a,
+             unsigned bSize UNUSED,
+             lir::Register* b)
 {
   switch (aSize) {
   case 2:
@@ -524,35 +573,41 @@ void moveZRR(Context* c, unsigned aSize, lir::Register* a,
     modrm(c, 0xc0, a, b);
     break;
 
-  default: abort(c);
+  default:
+    abort(c);
   }
 }
 
-void moveZMR(Context* c, unsigned aSize UNUSED, lir::Memory* a,
-        unsigned bSize UNUSED, lir::Register* b)
+void moveZMR(Context* c,
+             unsigned aSize UNUSED,
+             lir::Memory* a,
+             unsigned bSize UNUSED,
+             lir::Register* b)
 {
-  assert(c, bSize == vm::TargetBytesPerWord);
-  assert(c, aSize == 2);
-  
+  assertT(c, bSize == vm::TargetBytesPerWord);
+  assertT(c, aSize == 2);
+
   maybeRex(c, bSize, b, a);
   opcode(c, 0x0f, 0xb7);
   modrmSibImm(c, b->low, a->scale, a->index, a->base, a->offset);
 }
 
-void addCarryRR(Context* c, unsigned size, lir::Register* a,
-           lir::Register* b)
+void addCarryRR(Context* c, unsigned size, lir::Register* a, lir::Register* b)
 {
-  assert(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+  assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
+
   maybeRex(c, size, a, b);
   opcode(c, 0x11);
   modrm(c, 0xc0, b, a);
 }
 
-void addRR(Context* c, unsigned aSize, lir::Register* a,
-      unsigned bSize UNUSED, lir::Register* b)
+void addRR(Context* c,
+           unsigned aSize,
+           lir::Register* a,
+           unsigned bSize UNUSED,
+           lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
@@ -567,10 +622,8 @@ void addRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void addCarryCR(Context* c, unsigned size, lir::Constant* a,
-           lir::Register* b)
+void addCarryCR(Context* c, unsigned size, lir::Constant* a, lir::Register* b)
 {
-  
   int64_t v = a->value->value();
   maybeRex(c, size, b);
   if (vm::fitsInInt8(v)) {
@@ -582,10 +635,13 @@ void addCarryCR(Context* c, unsigned size, lir::Constant* a,
   }
 }
 
-void addCR(Context* c, unsigned aSize, lir::Constant* a,
-      unsigned bSize, lir::Register* b)
+void addCR(Context* c,
+           unsigned aSize,
+           lir::Constant* a,
+           unsigned bSize,
+           lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   int64_t v = a->value->value();
   if (v) {
@@ -611,8 +667,7 @@ void addCR(Context* c, unsigned aSize, lir::Constant* a,
           c->code.append4(v);
         }
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         addRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -621,11 +676,13 @@ void addCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void subtractBorrowCR(Context* c, unsigned size UNUSED, lir::Constant* a,
-                 lir::Register* b)
+void subtractBorrowCR(Context* c,
+                      unsigned size UNUSED,
+                      lir::Constant* a,
+                      lir::Register* b)
 {
-  assert(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+  assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
+
   int64_t v = a->value->value();
   if (vm::fitsInInt8(v)) {
     opcode(c, 0x83, 0xd8 + regCode(b));
@@ -636,10 +693,13 @@ void subtractBorrowCR(Context* c, unsigned size UNUSED, lir::Constant* a,
   }
 }
 
-void subtractCR(Context* c, unsigned aSize, lir::Constant* a,
-           unsigned bSize, lir::Register* b)
+void subtractCR(Context* c,
+                unsigned aSize,
+                lir::Constant* a,
+                unsigned bSize,
+                lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   int64_t v = a->value->value();
   if (v) {
@@ -665,8 +725,7 @@ void subtractCR(Context* c, unsigned aSize, lir::Constant* a,
           c->code.append4(v);
         }
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         subtractRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -675,21 +734,26 @@ void subtractCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void subtractBorrowRR(Context* c, unsigned size, lir::Register* a,
-                 lir::Register* b)
+void subtractBorrowRR(Context* c,
+                      unsigned size,
+                      lir::Register* a,
+                      lir::Register* b)
 {
-  assert(c, vm::TargetBytesPerWord == 8 or size == 4);
-  
+  assertT(c, vm::TargetBytesPerWord == 8 or size == 4);
+
   maybeRex(c, size, a, b);
   opcode(c, 0x19);
   modrm(c, 0xc0, b, a);
 }
 
-void subtractRR(Context* c, unsigned aSize, lir::Register* a,
-           unsigned bSize UNUSED, lir::Register* b)
+void subtractRR(Context* c,
+                unsigned aSize,
+                lir::Register* a,
+                unsigned bSize UNUSED,
+                lir::Register* b)
 {
-  assert(c, aSize == bSize);
-  
+  assertT(c, aSize == bSize);
+
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
     lir::Register bh(b->high);
@@ -703,11 +767,13 @@ void subtractRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void andRR(Context* c, unsigned aSize, lir::Register* a,
-      unsigned bSize UNUSED, lir::Register* b)
+void andRR(Context* c,
+           unsigned aSize,
+           lir::Register* a,
+           unsigned bSize UNUSED,
+           lir::Register* b)
 {
-  assert(c, aSize == bSize);
-
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
@@ -722,10 +788,13 @@ void andRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void andCR(Context* c, unsigned aSize, lir::Constant* a,
-      unsigned bSize, lir::Register* b)
+void andCR(Context* c,
+           unsigned aSize,
+           lir::Constant* a,
+           unsigned bSize,
+           lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   int64_t v = a->value->value();
 
@@ -751,8 +820,7 @@ void andCR(Context* c, unsigned aSize, lir::Constant* a,
         c->code.append4(v);
       }
     } else {
-      lir::Register tmp
-        (c->client->acquireTemporary(GeneralRegisterMask));
+      lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
       moveCR(c, aSize, a, aSize, &tmp);
       andRR(c, aSize, &tmp, bSize, b);
       c->client->releaseTemporary(tmp.low);
@@ -760,10 +828,13 @@ void andCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void orRR(Context* c, unsigned aSize, lir::Register* a,
-     unsigned bSize UNUSED, lir::Register* b)
+void orRR(Context* c,
+          unsigned aSize,
+          lir::Register* a,
+          unsigned bSize UNUSED,
+          lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
@@ -778,10 +849,13 @@ void orRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void orCR(Context* c, unsigned aSize, lir::Constant* a,
-     unsigned bSize, lir::Register* b)
+void orCR(Context* c,
+          unsigned aSize,
+          lir::Constant* a,
+          unsigned bSize,
+          lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   int64_t v = a->value->value();
   if (v) {
@@ -804,11 +878,10 @@ void orCR(Context* c, unsigned aSize, lir::Constant* a,
           c->code.append(v);
         } else {
           opcode(c, 0x81, 0xc8 + regCode(b));
-          c->code.append4(v);        
+          c->code.append4(v);
         }
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         orRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -817,8 +890,11 @@ void orCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void xorRR(Context* c, unsigned aSize, lir::Register* a,
-      unsigned bSize UNUSED, lir::Register* b)
+void xorRR(Context* c,
+           unsigned aSize,
+           lir::Register* a,
+           unsigned bSize UNUSED,
+           lir::Register* b)
 {
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     lir::Register ah(a->high);
@@ -833,10 +909,13 @@ void xorRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void xorCR(Context* c, unsigned aSize, lir::Constant* a,
-      unsigned bSize, lir::Register* b)
+void xorCR(Context* c,
+           unsigned aSize,
+           lir::Constant* a,
+           unsigned bSize,
+           lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   int64_t v = a->value->value();
   if (v) {
@@ -859,11 +938,10 @@ void xorCR(Context* c, unsigned aSize, lir::Constant* a,
           c->code.append(v);
         } else {
           opcode(c, 0x81, 0xf0 + regCode(b));
-          c->code.append4(v);        
+          c->code.append4(v);
         }
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         xorRR(c, aSize, &tmp, bSize, b);
         c->client->releaseTemporary(tmp.low);
@@ -872,17 +950,19 @@ void xorCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void multiplyRR(Context* c, unsigned aSize, lir::Register* a,
-           unsigned bSize UNUSED, lir::Register* b)
+void multiplyRR(Context* c,
+                unsigned aSize,
+                lir::Register* a,
+                unsigned bSize UNUSED,
+                lir::Register* b)
 {
-  assert(c, aSize == bSize);
-
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
-    assert(c, b->high == rdx);
-    assert(c, b->low != rax);
-    assert(c, a->low != rax);
-    assert(c, a->high != rax);
+    assertT(c, b->high == rdx);
+    assertT(c, b->low != rax);
+    assertT(c, a->low != rax);
+    assertT(c, a->high != rax);
 
     c->client->save(rax);
 
@@ -893,8 +973,7 @@ void multiplyRR(Context* c, unsigned aSize, lir::Register* a,
     lir::Register tmp(-1);
     lir::Register* scratch;
     if (a->low == b->low) {
-      tmp.low = c->client->acquireTemporary
-        (GeneralRegisterMask & ~(1 << rax));
+      tmp.low = c->client->acquireTemporary(GeneralRegisterMask & ~(1 << rax));
       scratch = &tmp;
       moveRR(c, 4, b, 4, scratch);
     } else {
@@ -905,10 +984,10 @@ void multiplyRR(Context* c, unsigned aSize, lir::Register* a,
     multiplyRR(c, 4, &ah, 4, scratch);
     multiplyRR(c, 4, a, 4, &bh);
     addRR(c, 4, &bh, 4, scratch);
-    
+
     // mul a->low,%eax%edx
     opcode(c, 0xf7, 0xe0 + a->low);
-    
+
     addRR(c, 4, scratch, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
 
@@ -922,23 +1001,29 @@ void multiplyRR(Context* c, unsigned aSize, lir::Register* a,
   }
 }
 
-void compareRR(Context* c, unsigned aSize, lir::Register* a,
-          unsigned bSize UNUSED, lir::Register* b)
+void compareRR(Context* c,
+               unsigned aSize,
+               lir::Register* a,
+               unsigned bSize UNUSED,
+               lir::Register* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, aSize <= vm::TargetBytesPerWord);
+  assertT(c, aSize == bSize);
+  assertT(c, aSize <= vm::TargetBytesPerWord);
 
   maybeRex(c, aSize, a, b);
   opcode(c, 0x39);
-  modrm(c, 0xc0, b, a);  
+  modrm(c, 0xc0, b, a);
 }
 
-void compareCR(Context* c, unsigned aSize, lir::Constant* a,
-          unsigned bSize, lir::Register* b)
+void compareCR(Context* c,
+               unsigned aSize,
+               lir::Constant* a,
+               unsigned bSize,
+               lir::Register* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
+  assertT(c, aSize == bSize);
+  assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
+
   if (a->value->resolved() and vm::fitsInInt32(a->value->value())) {
     int64_t v = a->value->value();
     maybeRex(c, aSize, b);
@@ -957,12 +1042,15 @@ void compareCR(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void compareRM(Context* c, unsigned aSize, lir::Register* a,
-          unsigned bSize UNUSED, lir::Memory* b)
+void compareRM(Context* c,
+               unsigned aSize,
+               lir::Register* a,
+               unsigned bSize UNUSED,
+               lir::Memory* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
+  assertT(c, aSize == bSize);
+  assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
+
   if (vm::TargetBytesPerWord == 8 and aSize == 4) {
     moveRR(c, 4, a, 8, a);
   }
@@ -971,18 +1059,21 @@ void compareRM(Context* c, unsigned aSize, lir::Register* a,
   modrmSibImm(c, a, b);
 }
 
-void compareCM(Context* c, unsigned aSize, lir::Constant* a,
-          unsigned bSize, lir::Memory* b)
+void compareCM(Context* c,
+               unsigned aSize,
+               lir::Constant* a,
+               unsigned bSize,
+               lir::Memory* b)
 {
-  assert(c, aSize == bSize);
-  assert(c, vm::TargetBytesPerWord == 8 or aSize == 4);
-  
-  if (a->value->resolved()) { 
-    int64_t v = a->value->value();   
+  assertT(c, aSize == bSize);
+  assertT(c, vm::TargetBytesPerWord == 8 or aSize == 4);
+
+  if (a->value->resolved()) {
+    int64_t v = a->value->value();
     maybeRex(c, aSize, b);
     opcode(c, vm::fitsInInt8(v) ? 0x83 : 0x81);
     modrmSibImm(c, rdi, b->scale, b->index, b->base, b->offset);
-    
+
     if (vm::fitsInInt8(v)) {
       c->code.append(v);
     } else if (vm::fitsInInt32(v)) {
@@ -998,10 +1089,13 @@ void compareCM(Context* c, unsigned aSize, lir::Constant* a,
   }
 }
 
-void compareFloatRR(Context* c, unsigned aSize, lir::Register* a,
-               unsigned bSize UNUSED, lir::Register* b)
+void compareFloatRR(Context* c,
+                    unsigned aSize,
+                    lir::Register* a,
+                    unsigned bSize UNUSED,
+                    lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   if (aSize == 8) {
     opcode(c, 0x66);
@@ -1011,79 +1105,83 @@ void compareFloatRR(Context* c, unsigned aSize, lir::Register* a,
   modrm(c, 0xc0, a, b);
 }
 
-void branchLong(Context* c, lir::TernaryOperation op, lir::Operand* al,
-           lir::Operand* ah, lir::Operand* bl,
-           lir::Operand* bh, lir::Constant* target,
-           BinaryOperationType compare)
+void branchLong(Context* c,
+                lir::TernaryOperation op,
+                lir::Operand* al,
+                lir::Operand* ah,
+                lir::Operand* bl,
+                lir::Operand* bh,
+                lir::Constant* target,
+                BinaryOperationType compare)
 {
   compare(c, 4, ah, 4, bh);
-  
+
   unsigned next = 0;
 
   switch (op) {
   case lir::JumpIfEqual:
-    opcode(c, 0x75); // jne
+    opcode(c, 0x75);  // jne
     next = c->code.length();
     c->code.append(0);
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x84, target); // je
+    conditional(c, 0x84, target);  // je
     break;
 
   case lir::JumpIfNotEqual:
-    conditional(c, 0x85, target); // jne
+    conditional(c, 0x85, target);  // jne
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x85, target); // jne
+    conditional(c, 0x85, target);  // jne
     break;
 
   case lir::JumpIfLess:
-    conditional(c, 0x8c, target); // jl
+    conditional(c, 0x8c, target);  // jl
 
-    opcode(c, 0x7f); // jg
+    opcode(c, 0x7f);  // jg
     next = c->code.length();
     c->code.append(0);
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x82, target); // jb
+    conditional(c, 0x82, target);  // jb
     break;
 
   case lir::JumpIfGreater:
-    conditional(c, 0x8f, target); // jg
+    conditional(c, 0x8f, target);  // jg
 
-    opcode(c, 0x7c); // jl
+    opcode(c, 0x7c);  // jl
     next = c->code.length();
     c->code.append(0);
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x87, target); // ja
+    conditional(c, 0x87, target);  // ja
     break;
 
   case lir::JumpIfLessOrEqual:
-    conditional(c, 0x8c, target); // jl
+    conditional(c, 0x8c, target);  // jl
 
-    opcode(c, 0x7f); // jg
+    opcode(c, 0x7f);  // jg
     next = c->code.length();
     c->code.append(0);
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x86, target); // jbe
+    conditional(c, 0x86, target);  // jbe
     break;
 
   case lir::JumpIfGreaterOrEqual:
-    conditional(c, 0x8f, target); // jg
+    conditional(c, 0x8f, target);  // jg
 
-    opcode(c, 0x7c); // jl
+    opcode(c, 0x7c);  // jl
     next = c->code.length();
     c->code.append(0);
 
     compare(c, 4, al, 4, bl);
-    conditional(c, 0x83, target); // jae
+    conditional(c, 0x83, target);  // jae
     break;
 
   default:
     abort(c);
-  }  
+  }
 
   if (next) {
     int8_t nextOffset = c->code.length() - next - 1;
@@ -1091,9 +1189,12 @@ void branchLong(Context* c, lir::TernaryOperation op, lir::Operand* al,
   }
 }
 
-void branchRR(Context* c, lir::TernaryOperation op, unsigned size,
-         lir::Register* a, lir::Register* b,
-         lir::Constant* target)
+void branchRR(Context* c,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Register* a,
+              lir::Register* b,
+              lir::Constant* target)
 {
   if (isFloatBranch(op)) {
     compareFloatRR(c, size, a, size, b);
@@ -1109,21 +1210,24 @@ void branchRR(Context* c, lir::TernaryOperation op, unsigned size,
   }
 }
 
-void branchCR(Context* c, lir::TernaryOperation op, unsigned size,
-         lir::Constant* a, lir::Register* b,
-         lir::Constant* target)
+void branchCR(Context* c,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Constant* a,
+              lir::Register* b,
+              lir::Constant* target)
 {
-  assert(c, not isFloatBranch(op));
+  assertT(c, not isFloatBranch(op));
 
   if (size > vm::TargetBytesPerWord) {
     int64_t v = a->value->value();
 
     ResolvedPromise low(v & ~static_cast<uintptr_t>(0));
     lir::Constant al(&low);
-  
+
     ResolvedPromise high((v >> 32) & ~static_cast<uintptr_t>(0));
     lir::Constant ah(&high);
-  
+
     lir::Register bh(b->high);
 
     branchLong(c, op, &al, &ah, b, &bh, target, CAST2(compareCR));
@@ -1133,37 +1237,46 @@ void branchCR(Context* c, lir::TernaryOperation op, unsigned size,
   }
 }
 
-void branchRM(Context* c, lir::TernaryOperation op, unsigned size,
-         lir::Register* a, lir::Memory* b,
-         lir::Constant* target)
+void branchRM(Context* c,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Register* a,
+              lir::Memory* b,
+              lir::Constant* target)
 {
-  assert(c, not isFloatBranch(op));
-  assert(c, size <= vm::TargetBytesPerWord);
+  assertT(c, not isFloatBranch(op));
+  assertT(c, size <= vm::TargetBytesPerWord);
 
   compareRM(c, size, a, size, b);
   branch(c, op, target);
 }
 
-void branchCM(Context* c, lir::TernaryOperation op, unsigned size,
-         lir::Constant* a, lir::Memory* b,
-         lir::Constant* target)
+void branchCM(Context* c,
+              lir::TernaryOperation op,
+              unsigned size,
+              lir::Constant* a,
+              lir::Memory* b,
+              lir::Constant* target)
 {
-  assert(c, not isFloatBranch(op));
-  assert(c, size <= vm::TargetBytesPerWord);
+  assertT(c, not isFloatBranch(op));
+  assertT(c, size <= vm::TargetBytesPerWord);
 
   compareCM(c, size, a, size, b);
   branch(c, op, target);
 }
 
-void multiplyCR(Context* c, unsigned aSize, lir::Constant* a,
-           unsigned bSize, lir::Register* b)
+void multiplyCR(Context* c,
+                unsigned aSize,
+                lir::Constant* a,
+                unsigned bSize,
+                lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
     const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
     lir::Register tmp(c->client->acquireTemporary(mask),
-                            c->client->acquireTemporary(mask));
+                      c->client->acquireTemporary(mask));
 
     moveCR(c, aSize, a, aSize, &tmp);
     multiplyRR(c, aSize, &tmp, bSize, b);
@@ -1181,47 +1294,52 @@ void multiplyCR(Context* c, unsigned aSize, lir::Constant* a,
         } else {
           opcode(c, 0x69);
           modrm(c, 0xc0, b, b);
-          c->code.append4(v);        
+          c->code.append4(v);
         }
       } else {
-        lir::Register tmp
-          (c->client->acquireTemporary(GeneralRegisterMask));
+        lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
         moveCR(c, aSize, a, aSize, &tmp);
         multiplyRR(c, aSize, &tmp, bSize, b);
-        c->client->releaseTemporary(tmp.low);      
+        c->client->releaseTemporary(tmp.low);
       }
     }
   }
 }
 
-void divideRR(Context* c, unsigned aSize, lir::Register* a,
-         unsigned bSize UNUSED, lir::Register* b UNUSED)
+void divideRR(Context* c,
+              unsigned aSize,
+              lir::Register* a,
+              unsigned bSize UNUSED,
+              lir::Register* b UNUSED)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
-  assert(c, b->low == rax);
-  assert(c, a->low != rdx);
+  assertT(c, b->low == rax);
+  assertT(c, a->low != rdx);
 
   c->client->save(rdx);
 
-  maybeRex(c, aSize, a, b);    
-  opcode(c, 0x99); // cdq
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x99);  // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
 }
 
-void remainderRR(Context* c, unsigned aSize, lir::Register* a,
-            unsigned bSize UNUSED, lir::Register* b)
+void remainderRR(Context* c,
+                 unsigned aSize,
+                 lir::Register* a,
+                 unsigned bSize UNUSED,
+                 lir::Register* b)
 {
-  assert(c, aSize == bSize);
+  assertT(c, aSize == bSize);
 
-  assert(c, b->low == rax);
-  assert(c, a->low != rdx);
+  assertT(c, b->low == rax);
+  assertT(c, a->low != rdx);
 
   c->client->save(rdx);
 
-  maybeRex(c, aSize, a, b);    
-  opcode(c, 0x99); // cdq
+  maybeRex(c, aSize, a, b);
+  opcode(c, 0x99);  // cdq
   maybeRex(c, aSize, b, a);
   opcode(c, 0xf7, 0xf8 + regCode(a));
 
@@ -1229,11 +1347,17 @@ void remainderRR(Context* c, unsigned aSize, lir::Register* a,
   moveRR(c, vm::TargetBytesPerWord, &dx, vm::TargetBytesPerWord, b);
 }
 
-void doShift(Context* c, UNUSED void (*shift)
-        (Context*, unsigned, lir::Register*, unsigned,
-         lir::Register*),
-        int type, UNUSED unsigned aSize, lir::Constant* a,
-        unsigned bSize, lir::Register* b)
+void doShift(Context* c,
+             UNUSED void (*shift)(Context*,
+                                  unsigned,
+                                  lir::Register*,
+                                  unsigned,
+                                  lir::Register*),
+             int type,
+             UNUSED unsigned aSize,
+             lir::Constant* a,
+             unsigned bSize,
+             lir::Register* b)
 {
   int64_t v = a->value->value();
 
@@ -1258,8 +1382,11 @@ void doShift(Context* c, UNUSED void (*shift)
   }
 }
 
-void shiftLeftRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
-            unsigned bSize, lir::Register* b)
+void shiftLeftRR(Context* c,
+                 UNUSED unsigned aSize,
+                 lir::Register* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
     lir::Register cx(rcx);
@@ -1280,31 +1407,37 @@ void shiftLeftRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
-              &cx);
+    compareCR(
+        c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord, &cx);
 
-    opcode(c, 0x7c); //jl
+    opcode(c, 0x7c);  // jl
     c->code.append(2 + 2);
 
     lir::Register bh(b->high);
-    moveRR(c, 4, b, 4, &bh); // 2 bytes
-    xorRR(c, 4, b, 4, b); // 2 bytes
+    moveRR(c, 4, b, 4, &bh);  // 2 bytes
+    xorRR(c, 4, b, 4, b);     // 2 bytes
   } else {
-    assert(c, a->low == rcx);  
+    assertT(c, a->low == rcx);
 
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xe0 + regCode(b));
   }
 }
 
-void shiftLeftCR(Context* c, unsigned aSize, lir::Constant* a,
-            unsigned bSize, lir::Register* b)
+void shiftLeftCR(Context* c,
+                 unsigned aSize,
+                 lir::Constant* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
   doShift(c, shiftLeftRR, 0xe0, aSize, a, bSize, b);
 }
 
-void shiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
-             unsigned bSize, lir::Register* b)
+void shiftRightRR(Context* c,
+                  UNUSED unsigned aSize,
+                  lir::Register* a,
+                  unsigned bSize,
+                  lir::Register* b)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
     lir::Register cx(rcx);
@@ -1325,34 +1458,40 @@ void shiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
-              &cx);
+    compareCR(
+        c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord, &cx);
 
-    opcode(c, 0x7c); //jl
+    opcode(c, 0x7c);  // jl
     c->code.append(2 + 3);
 
     lir::Register bh(b->high);
-    moveRR(c, 4, &bh, 4, b); // 2 bytes
+    moveRR(c, 4, &bh, 4, b);  // 2 bytes
 
     // sar 31,high
     opcode(c, 0xc1, 0xf8 + b->high);
     c->code.append(31);
   } else {
-    assert(c, a->low == rcx);
+    assertT(c, a->low == rcx);
 
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xf8 + regCode(b));
   }
 }
 
-void shiftRightCR(Context* c, unsigned aSize, lir::Constant* a,
-             unsigned bSize, lir::Register* b)
+void shiftRightCR(Context* c,
+                  unsigned aSize,
+                  lir::Constant* a,
+                  unsigned bSize,
+                  lir::Register* b)
 {
   doShift(c, shiftRightRR, 0xf8, aSize, a, bSize, b);
 }
 
-void unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
-                     unsigned bSize, lir::Register* b)
+void unsignedShiftRightRR(Context* c,
+                          UNUSED unsigned aSize,
+                          lir::Register* a,
+                          unsigned bSize,
+                          lir::Register* b)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
     lir::Register cx(rcx);
@@ -1373,133 +1512,187 @@ void unsignedShiftRightRR(Context* c, UNUSED unsigned aSize, lir::Register* a,
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
-    compareCR(c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord,
-              &cx);
+    compareCR(
+        c, vm::TargetBytesPerWord, &constant, vm::TargetBytesPerWord, &cx);
 
-    opcode(c, 0x7c); //jl
+    opcode(c, 0x7c);  // jl
     c->code.append(2 + 2);
 
     lir::Register bh(b->high);
-    moveRR(c, 4, &bh, 4, b); // 2 bytes
-    xorRR(c, 4, &bh, 4, &bh); // 2 bytes
+    moveRR(c, 4, &bh, 4, b);   // 2 bytes
+    xorRR(c, 4, &bh, 4, &bh);  // 2 bytes
   } else {
-    assert(c, a->low == rcx);
+    assertT(c, a->low == rcx);
 
     maybeRex(c, bSize, a, b);
     opcode(c, 0xd3, 0xe8 + regCode(b));
   }
 }
 
-void unsignedShiftRightCR(Context* c, unsigned aSize UNUSED, lir::Constant* a,
-                     unsigned bSize, lir::Register* b)
+void unsignedShiftRightCR(Context* c,
+                          unsigned aSize UNUSED,
+                          lir::Constant* a,
+                          unsigned bSize,
+                          lir::Register* b)
 {
   doShift(c, unsignedShiftRightRR, 0xe8, aSize, a, bSize, b);
 }
 
-void floatSqrtRR(Context* c, unsigned aSize, lir::Register* a,
-            unsigned bSize UNUSED, lir::Register* b)
+void floatSqrtRR(Context* c,
+                 unsigned aSize,
+                 lir::Register* a,
+                 unsigned bSize UNUSED,
+                 lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x51);
 }
 
-void floatSqrtMR(Context* c, unsigned aSize, lir::Memory* a,
-            unsigned bSize UNUSED, lir::Register* b)
+void floatSqrtMR(Context* c,
+                 unsigned aSize,
+                 lir::Memory* a,
+                 unsigned bSize UNUSED,
+                 lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x51);
 }
 
-void floatAddRR(Context* c, unsigned aSize, lir::Register* a,
-           unsigned bSize UNUSED, lir::Register* b)
+void floatAddRR(Context* c,
+                unsigned aSize,
+                lir::Register* a,
+                unsigned bSize UNUSED,
+                lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x58);
 }
 
-void floatAddMR(Context* c, unsigned aSize, lir::Memory* a,
-           unsigned bSize UNUSED, lir::Register* b)
+void floatAddMR(Context* c,
+                unsigned aSize,
+                lir::Memory* a,
+                unsigned bSize UNUSED,
+                lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x58);
 }
 
-void floatSubtractRR(Context* c, unsigned aSize, lir::Register* a,
-                unsigned bSize UNUSED, lir::Register* b)
+void floatSubtractRR(Context* c,
+                     unsigned aSize,
+                     lir::Register* a,
+                     unsigned bSize UNUSED,
+                     lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x5c);
 }
 
-void floatSubtractMR(Context* c, unsigned aSize, lir::Memory* a,
-                unsigned bSize UNUSED, lir::Register* b)
+void floatSubtractMR(Context* c,
+                     unsigned aSize,
+                     lir::Memory* a,
+                     unsigned bSize UNUSED,
+                     lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x5c);
 }
 
-void floatMultiplyRR(Context* c, unsigned aSize, lir::Register* a,
-                unsigned bSize UNUSED, lir::Register* b)
+void floatMultiplyRR(Context* c,
+                     unsigned aSize,
+                     lir::Register* a,
+                     unsigned bSize UNUSED,
+                     lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x59);
 }
 
-void floatMultiplyMR(Context* c, unsigned aSize, lir::Memory* a,
-                unsigned bSize UNUSED, lir::Register* b)
+void floatMultiplyMR(Context* c,
+                     unsigned aSize,
+                     lir::Memory* a,
+                     unsigned bSize UNUSED,
+                     lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x59);
 }
 
-void floatDivideRR(Context* c, unsigned aSize, lir::Register* a,
-              unsigned bSize UNUSED, lir::Register* b)
+void floatDivideRR(Context* c,
+                   unsigned aSize,
+                   lir::Register* a,
+                   unsigned bSize UNUSED,
+                   lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x5e);
 }
 
-void floatDivideMR(Context* c, unsigned aSize, lir::Memory* a,
-              unsigned bSize UNUSED, lir::Register* b)
+void floatDivideMR(Context* c,
+                   unsigned aSize,
+                   lir::Memory* a,
+                   unsigned bSize UNUSED,
+                   lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x5e);
 }
 
-void float2FloatRR(Context* c, unsigned aSize, lir::Register* a,
-              unsigned bSize UNUSED, lir::Register* b)
+void float2FloatRR(Context* c,
+                   unsigned aSize,
+                   lir::Register* a,
+                   unsigned bSize UNUSED,
+                   lir::Register* b)
 {
   floatRegOp(c, aSize, a, 4, b, 0x5a);
 }
 
-void float2FloatMR(Context* c, unsigned aSize, lir::Memory* a,
-              unsigned bSize UNUSED, lir::Register* b)
+void float2FloatMR(Context* c,
+                   unsigned aSize,
+                   lir::Memory* a,
+                   unsigned bSize UNUSED,
+                   lir::Register* b)
 {
   floatMemOp(c, aSize, a, 4, b, 0x5a);
 }
 
-void float2IntRR(Context* c, unsigned aSize, lir::Register* a,
-            unsigned bSize, lir::Register* b)
+void float2IntRR(Context* c,
+                 unsigned aSize,
+                 lir::Register* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
-  assert(c, not isFloatReg(b));
+  assertT(c, not isFloatReg(b));
   floatRegOp(c, aSize, a, bSize, b, 0x2c);
 }
 
-void float2IntMR(Context* c, unsigned aSize, lir::Memory* a,
-            unsigned bSize, lir::Register* b)
+void float2IntMR(Context* c,
+                 unsigned aSize,
+                 lir::Memory* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
   floatMemOp(c, aSize, a, bSize, b, 0x2c);
 }
 
-void int2FloatRR(Context* c, unsigned aSize, lir::Register* a,
-            unsigned bSize, lir::Register* b)
+void int2FloatRR(Context* c,
+                 unsigned aSize,
+                 lir::Register* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
   floatRegOp(c, bSize, a, aSize, b, 0x2a);
 }
 
-void int2FloatMR(Context* c, unsigned aSize, lir::Memory* a,
-            unsigned bSize, lir::Register* b)
+void int2FloatMR(Context* c,
+                 unsigned aSize,
+                 lir::Memory* a,
+                 unsigned bSize,
+                 lir::Register* b)
 {
   floatMemOp(c, bSize, a, aSize, b, 0x2a);
 }
 
-void floatNegateRR(Context* c, unsigned aSize, lir::Register* a,
-              unsigned bSize UNUSED, lir::Register* b)
+void floatNegateRR(Context* c,
+                   unsigned aSize,
+                   lir::Register* a,
+                   unsigned bSize UNUSED,
+                   lir::Register* b)
 {
-  assert(c, isFloatReg(a) and isFloatReg(b));
+  assertT(c, isFloatReg(a) and isFloatReg(b));
   // unlike most of the other floating point code, this does NOT
   // support doubles:
-  assert(c, aSize == 4);
+  assertT(c, aSize == 4);
   ResolvedPromise pcon(0x80000000);
   lir::Constant con(&pcon);
   if (a->low == b->low) {
@@ -1511,20 +1704,24 @@ void floatNegateRR(Context* c, unsigned aSize, lir::Register* a,
     c->client->releaseTemporary(tmp.low);
   } else {
     moveCR(c, 4, &con, 4, b);
-    if (aSize == 8) opcode(c, 0x66);
+    if (aSize == 8)
+      opcode(c, 0x66);
     maybeRex(c, 4, a, b);
     opcode(c, 0x0f, 0x57);
     modrm(c, 0xc0, a, b);
   }
 }
 
-void floatAbsoluteRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
-           unsigned bSize UNUSED, lir::Register* b)
+void floatAbsoluteRR(Context* c,
+                     unsigned aSize UNUSED,
+                     lir::Register* a,
+                     unsigned bSize UNUSED,
+                     lir::Register* b)
 {
-  assert(c, isFloatReg(a) and isFloatReg(b));
+  assertT(c, isFloatReg(a) and isFloatReg(b));
   // unlike most of the other floating point code, this does NOT
   // support doubles:
-  assert(c, aSize == 4);
+  assertT(c, aSize == 4);
   ResolvedPromise pcon(0x7fffffff);
   lir::Constant con(&pcon);
   if (a->low == b->low) {
@@ -1542,12 +1739,14 @@ void floatAbsoluteRR(Context* c, unsigned aSize UNUSED, lir::Register* a,
   }
 }
 
-void absoluteRR(Context* c, unsigned aSize, lir::Register* a,
-      unsigned bSize UNUSED, lir::Register* b UNUSED)
+void absoluteRR(Context* c,
+                unsigned aSize,
+                lir::Register* a,
+                unsigned bSize UNUSED,
+                lir::Register* b UNUSED)
 {
-  assert(c, aSize == bSize and a->low == rax and b->low == rax);
-  lir::Register d
-    (c->client->acquireTemporary(static_cast<uint64_t>(1) << rdx));
+  assertT(c, aSize == bSize and a->low == rax and b->low == rax);
+  lir::Register d(c->client->acquireTemporary(static_cast<uint64_t>(1) << rdx));
   maybeRex(c, aSize, a, b);
   opcode(c, 0x99);
   xorRR(c, aSize, &d, aSize, a);
@@ -1555,6 +1754,6 @@ void absoluteRR(Context* c, unsigned aSize, lir::Register* a,
   c->client->releaseTemporary(rdx);
 }
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian

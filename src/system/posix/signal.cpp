@@ -40,7 +40,6 @@ namespace system {
 
 namespace posix {
 
-
 const int InvalidSignal = -1;
 const int SegFaultSignal = SIGSEGV;
 const unsigned SegFaultSignalIndex = 0;
@@ -53,11 +52,9 @@ const unsigned AltSegFaultSignalIndex = 1;
 const int DivideByZeroSignal = SIGFPE;
 const unsigned DivideByZeroSignalIndex = 2;
 
-const int signals[]
-    = {SegFaultSignal, AltSegFaultSignal, DivideByZeroSignal};
+const int signals[] = {SegFaultSignal, AltSegFaultSignal, DivideByZeroSignal};
 
 const unsigned SignalCount = 3;
-
 }
 
 struct SignalRegistrar::Data {
@@ -68,7 +65,7 @@ struct SignalRegistrar::Data {
 
   Data()
   {
-    if(instance) {
+    if (instance) {
       crash();
     }
 
@@ -125,8 +122,8 @@ void handleSignal(int signal, siginfo_t*, void* context)
       crash();
     }
 
-    bool jump
-        = SignalRegistrar::Data::instance->handlers[index]->handleSignal(&ip, &frame, &stack, &thread);
+    bool jump = SignalRegistrar::Data::instance->handlers[index]->handleSignal(
+        &ip, &frame, &stack, &thread);
 
     if (jump) {
       // I'd like to use setcontext here (and get rid of the
@@ -150,7 +147,7 @@ void handleSignal(int signal, siginfo_t*, void* context)
   }
 }
 
-} // namespace posix
+}  // namespace posix
 
 NO_RETURN void crash()
 {
@@ -190,9 +187,9 @@ bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
 
 bool SignalRegistrar::registerHandler(Signal signal, Handler* handler)
 {
-  switch(signal) {
+  switch (signal) {
   case SegFault:
-    if(!data->registerHandler(handler, posix::SegFaultSignalIndex)) {
+    if (!data->registerHandler(handler, posix::SegFaultSignalIndex)) {
       return false;
     }
     if (posix::AltSegFaultSignal != posix::InvalidSignal) {
@@ -209,9 +206,9 @@ bool SignalRegistrar::registerHandler(Signal signal, Handler* handler)
 
 bool SignalRegistrar::unregisterHandler(Signal signal)
 {
-  switch(signal) {
+  switch (signal) {
   case SegFault:
-    if(!data->registerHandler(0, posix::SegFaultSignalIndex)) {
+    if (!data->registerHandler(0, posix::SegFaultSignalIndex)) {
       return false;
     }
     if (posix::AltSegFaultSignal != posix::InvalidSignal) {

@@ -17,18 +17,21 @@ namespace util {
 class Arg;
 
 class ArgParser {
-public:
-  Arg* first;
-  Arg** last;
-
+ public:
   ArgParser();
 
   bool parse(int ac, const char* const* av);
   void printUsage(const char* exe);
+
+ private:
+  friend class Arg;
+
+  Arg* first;
+  Arg** last;
 };
 
 class Arg {
-public:
+ public:
   Arg* next;
   bool required;
   const char* name;
@@ -39,8 +42,7 @@ public:
   Arg(ArgParser& parser, bool required, const char* name, const char* desc);
 };
 
+}  // namespace avian
+}  // namespace util
 
-} // namespace avian
-} // namespace util
-
-#endif // AVIAN_UTIL_ARG_PARSER_H
+#endif  // AVIAN_UTIL_ARG_PARSER_H

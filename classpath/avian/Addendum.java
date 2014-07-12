@@ -11,7 +11,7 @@
 package avian;
 
 public class Addendum {
-  public Object pool;
+  public Singleton pool;
   public Object annotationTable;
   public Object signature;
 }

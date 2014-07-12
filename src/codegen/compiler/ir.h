@@ -24,17 +24,21 @@ class ForkElement {
   bool local;
 };
 
-class ForkState: public Compiler::State {
+class ForkState : public Compiler::State {
  public:
-  ForkState(Stack* stack, Local* locals, List<Value*>* saved, Event* predecessor,
-            unsigned logicalIp):
-    stack(stack),
-    locals(locals),
-    saved(saved),
-    predecessor(predecessor),
-    logicalIp(logicalIp),
-    readCount(0)
-  { }
+  ForkState(Stack* stack,
+            Local* locals,
+            List<Value*>* saved,
+            Event* predecessor,
+            unsigned logicalIp)
+      : stack(stack),
+        locals(locals),
+        saved(saved),
+        predecessor(predecessor),
+        logicalIp(logicalIp),
+        readCount(0)
+  {
+  }
 
   Stack* stack;
   Local* locals;
@@ -75,8 +79,8 @@ Block* block(Context* c, Event* head);
 
 unsigned machineOffset(Context* c, int logicalIp);
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_IR_H
+#endif  // AVIAN_CODEGEN_COMPILER_IR_H

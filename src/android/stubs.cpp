@@ -11,8 +11,7 @@ struct JniConstants {
   static void init(_JNIEnv* env);
 };
 
-void
-JniConstants::init(_JNIEnv*)
+void JniConstants::init(_JNIEnv*)
 {
   // ignore
 }

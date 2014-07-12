@@ -15,19 +15,20 @@ using namespace vm;
 
 namespace {
 
-SRes
-myProgress(void*, UInt64, UInt64)
+SRes myProgress(void*, UInt64, UInt64)
 {
   return SZ_OK;
 }
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-uint8_t*
-encodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
-           unsigned* outSize)
+uint8_t* encodeLZMA(System* s,
+                    Allocator* a,
+                    uint8_t* in,
+                    unsigned inSize,
+                    unsigned* outSize)
 {
   const unsigned PropHeaderSize = 5;
   const unsigned HeaderSize = 13;
@@ -43,17 +44,25 @@ encodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
   props.level = 9;
   props.writeEndMark = 1;
 
-  ICompressProgress progress = { myProgress };
+  ICompressProgress progress = {myProgress};
 
   SizeT propsSize = PropHeaderSize;
 
   int32_t inSize32 = inSize;
   memcpy(buffer + PropHeaderSize, &inSize32, 4);
-          
+
   SizeT outSizeT = bufferSize;
-  int result = LzmaEncode
-    (buffer + HeaderSize, &outSizeT, in, inSize, &props, buffer,
-     &propsSize, 1, &progress, &(allocator.allocator), &(allocator.allocator));
+  int result = LzmaEncode(buffer + HeaderSize,
+                          &outSizeT,
+                          in,
+                          inSize,
+                          &props,
+                          buffer,
+                          &propsSize,
+                          1,
+                          &progress,
+                          &(allocator.allocator),
+                          &(allocator.allocator));
 
   expect(s, result == SZ_OK);
 
@@ -67,5 +76,4 @@ encodeLZMA(System* s, Allocator* a, uint8_t* in, unsigned inSize,
   return out;
 }
 
-} // namespace vm
-
+}  // namespace vm

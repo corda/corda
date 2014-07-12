@@ -15,8 +15,7 @@ namespace avian {
 namespace codegen {
 namespace compiler {
 
-
-class CodePromise: public Promise {
+class CodePromise : public Promise {
  public:
   CodePromise(Context* c, CodePromise* next);
 
@@ -33,7 +32,10 @@ class CodePromise: public Promise {
 
 CodePromise* codePromise(Context* c, Promise* offset);
 
-Promise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask);
+Promise* shiftMaskPromise(Context* c,
+                          Promise* base,
+                          unsigned shift,
+                          int64_t mask);
 
 Promise* combinedPromise(Context* c, Promise* low, Promise* high);
 
@@ -43,8 +45,8 @@ Promise* ipPromise(Context* c, int logicalIp);
 
 Promise* poolPromise(Context* c, int key);
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_PROMISE_H
+#endif  // AVIAN_CODEGEN_COMPILER_PROMISE_H

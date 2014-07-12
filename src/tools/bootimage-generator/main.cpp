@@ -26,7 +26,10 @@
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
-extern "C" void __cxa_pure_virtual(void) { abort(); }
+extern "C" void __cxa_pure_virtual(void)
+{
+  abort();
+}
 
 using namespace vm;
 using namespace avian::tools;
@@ -38,8 +41,8 @@ namespace {
 const unsigned HeapCapacity = 512 * 1024 * 1024;
 
 const unsigned TargetFixieSizeInBytes = 8 + (TargetBytesPerWord * 2);
-const unsigned TargetFixieSizeInWords = ceilingDivide
-  (TargetFixieSizeInBytes, TargetBytesPerWord);
+const unsigned TargetFixieSizeInWords
+    = ceilingDivide(TargetFixieSizeInBytes, TargetBytesPerWord);
 const unsigned TargetFixieAge = 0;
 const unsigned TargetFixieFlags = 2;
 const unsigned TargetFixieSize = 4;
@@ -78,9 +81,12 @@ class Field {
   unsigned targetSize;
 };
 
-void
-init(Field* f, Type type, unsigned buildOffset, unsigned buildSize,
-     unsigned targetOffset, unsigned targetSize)
+void init(Field* f,
+          Type type,
+          unsigned buildOffset,
+          unsigned buildSize,
+          unsigned targetOffset,
+          unsigned targetSize)
 {
   f->type = type;
   f->buildOffset = buildOffset;
@@ -91,41 +97,42 @@ init(Field* f, Type type, unsigned buildOffset, unsigned buildSize,
 
 class TypeMap {
  public:
-  enum Kind {
-    NormalKind,
-    SingletonKind,
-    PoolKind
-  };
+  enum Kind { NormalKind, SingletonKind, PoolKind };
 
-  TypeMap(unsigned buildFixedSizeInWords, unsigned targetFixedSizeInWords,
-          unsigned fixedFieldCount, Kind kind = NormalKind,
+  TypeMap(unsigned buildFixedSizeInWords,
+          unsigned targetFixedSizeInWords,
+          unsigned fixedFieldCount,
+          Kind kind = NormalKind,
           unsigned buildArrayElementSizeInBytes = 0,
           unsigned targetArrayElementSizeInBytes = 0,
-          Type arrayElementType = Type_none):
-    buildFixedSizeInWords(buildFixedSizeInWords),
-    targetFixedSizeInWords(targetFixedSizeInWords),
-    fixedFieldCount(fixedFieldCount),
-    buildArrayElementSizeInBytes(buildArrayElementSizeInBytes),
-    targetArrayElementSizeInBytes(targetArrayElementSizeInBytes),
-    arrayElementType(arrayElementType),
-    kind(kind)
-  { }
+          Type arrayElementType = Type_none)
+      : buildFixedSizeInWords(buildFixedSizeInWords),
+        targetFixedSizeInWords(targetFixedSizeInWords),
+        fixedFieldCount(fixedFieldCount),
+        buildArrayElementSizeInBytes(buildArrayElementSizeInBytes),
+        targetArrayElementSizeInBytes(targetArrayElementSizeInBytes),
+        arrayElementType(arrayElementType),
+        kind(kind)
+  {
+  }
 
-  uintptr_t* targetFixedOffsets() {
+  uintptr_t* targetFixedOffsets()
+  {
     return reinterpret_cast<uintptr_t*>(this + 1);
   }
 
-  Field* fixedFields() {
-    return reinterpret_cast<Field*>
-      (targetFixedOffsets() + (buildFixedSizeInWords * BytesPerWord));
+  Field* fixedFields()
+  {
+    return reinterpret_cast<Field*>(targetFixedOffsets()
+                                    + (buildFixedSizeInWords * BytesPerWord));
   }
 
   static unsigned sizeInBytes(unsigned buildFixedSizeInWords,
                               unsigned fixedFieldCount)
   {
     return sizeof(TypeMap)
-      + (buildFixedSizeInWords * BytesPerWord * BytesPerWord)
-      + (sizeof(Field) * fixedFieldCount);
+           + (buildFixedSizeInWords * BytesPerWord * BytesPerWord)
+           + (sizeof(Field) * fixedFieldCount);
   }
 
   unsigned buildFixedSizeInWords;
@@ -167,40 +174,46 @@ class TypeMap {
 //    of primitive classes before generating the heap image so that we
 //    need not populate them lazily at runtime.
 
-bool
-endsWith(const char* suffix, const char* s, unsigned length)
+bool endsWith(const char* suffix, const char* s, unsigned length)
 {
   unsigned suffixLength = strlen(suffix);
   return length >= suffixLength
-    and memcmp(suffix, s + (length - suffixLength), suffixLength) == 0;
+         and memcmp(suffix, s + (length - suffixLength), suffixLength) == 0;
 }
 
-object
-getNonStaticFields(Thread* t, object typeMaps, object c, object fields,
-                   unsigned* count, object* array)
+GcVector* getNonStaticFields(Thread* t,
+                             GcHashMap* typeMaps,
+                             GcClass* c,
+                             GcVector* fields,
+                             unsigned* count,
+                             GcByteArray** array)
 {
   PROTECT(t, typeMaps);
   PROTECT(t, c);
   PROTECT(t, fields);
 
-  *array = hashMapFind(t, typeMaps, c, objectHash, objectEqual);
+  *array = cast<GcByteArray>(
+      t,
+      hashMapFind(
+          t, typeMaps, reinterpret_cast<object>(c), objectHash, objectEqual));
 
   if (*array) {
-    *count += reinterpret_cast<TypeMap*>(&byteArrayBody(t, *array, 0))
-      ->fixedFieldCount;
+    *count += reinterpret_cast<TypeMap*>((*array)->body().begin())
+                  ->fixedFieldCount;
   } else {
-    if (classSuper(t, c)) {
-      fields = getNonStaticFields
-        (t, typeMaps, classSuper(t, c), fields, count, array);
+    if (c->super()) {
+      fields
+          = getNonStaticFields(t, typeMaps, c->super(), fields, count, array);
     }
 
-    if (classFieldTable(t, c)) {
-      for (unsigned i = 0; i < arrayLength(t, classFieldTable(t, c)); ++i) {
-        object field = arrayBody(t, classFieldTable(t, c), i);
+    if (GcArray* ftable = cast<GcArray>(t, c->fieldTable())) {
+      PROTECT(t, ftable);
+      for (unsigned i = 0; i < ftable->length(); ++i) {
+        GcField* field = cast<GcField>(t, ftable->body()[i]);
 
-        if ((fieldFlags(t, field) & ACC_STATIC) == 0) {
-          ++ (*count);
-          fields = vectorAppend(t, fields, field);
+        if ((field->flags() & ACC_STATIC) == 0) {
+          ++(*count);
+          fields = vectorAppend(t, fields, reinterpret_cast<object>(field));
         }
       }
     }
@@ -209,37 +222,44 @@ getNonStaticFields(Thread* t, object typeMaps, object c, object fields,
   return vectorAppend(t, fields, 0);
 }
 
-object
-allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
+GcVector* allFields(Thread* t,
+                    GcHashMap* typeMaps,
+                    GcClass* c,
+                    unsigned* count,
+                    GcByteArray** array)
 {
   PROTECT(t, typeMaps);
   PROTECT(t, c);
 
-  object fields = makeVector(t, 0, 0);
+  GcVector* fields = makeVector(t, 0, 0);
   PROTECT(t, fields);
 
-  *array = hashMapFind(t, typeMaps, c, objectHash, objectEqual);
+  *array = cast<GcByteArray>(
+      t,
+      hashMapFind(
+          t, typeMaps, reinterpret_cast<object>(c), objectHash, objectEqual));
 
   bool includeMembers;
   if (*array) {
     includeMembers = false;
-    *count += reinterpret_cast<TypeMap*>(&byteArrayBody(t, *array, 0))
-      ->fixedFieldCount;
+    *count += reinterpret_cast<TypeMap*>((*array)->body().begin())
+                  ->fixedFieldCount;
   } else {
     includeMembers = true;
-    if (classSuper(t, c)) {
-      fields = getNonStaticFields
-        (t, typeMaps, classSuper(t, c), fields, count, array);
+    if (c->super()) {
+      fields
+          = getNonStaticFields(t, typeMaps, c->super(), fields, count, array);
     }
   }
 
-  if (classFieldTable(t, c)) {
-    for (unsigned i = 0; i < arrayLength(t, classFieldTable(t, c)); ++i) {
-      object field = arrayBody(t, classFieldTable(t, c), i);
+  if (GcArray* ftable = cast<GcArray>(t, c->fieldTable())) {
+    PROTECT(t, ftable);
+    for (unsigned i = 0; i < ftable->length(); ++i) {
+      GcField* field = cast<GcField>(t, ftable->body()[i]);
 
-      if (includeMembers or (fieldFlags(t, field) & ACC_STATIC)) {
-        ++ (*count);
-        fields = vectorAppend(t, fields, field);
+      if (includeMembers or (field->flags() & ACC_STATIC)) {
+        ++(*count);
+        fields = vectorAppend(t, fields, reinterpret_cast<object>(field));
       }
     }
   }
@@ -247,95 +267,117 @@ allFields(Thread* t, object typeMaps, object c, unsigned* count, object* array)
   return fields;
 }
 
-TypeMap*
-classTypeMap(Thread* t, object typeMaps, object p)
+TypeMap* classTypeMap(Thread* t, GcHashMap* typeMaps, object p)
 {
-  return reinterpret_cast<TypeMap*>
-    (&byteArrayBody
-     (t, hashMapFind(t, typeMaps, p, objectHash, objectEqual), 0));
+  return reinterpret_cast<TypeMap*>(
+      cast<GcByteArray>(t, hashMapFind(t, typeMaps, p, objectHash, objectEqual))
+          ->body()
+          .begin());
 }
 
-TypeMap*
-typeMap(Thread* t, object typeMaps, object p)
+TypeMap* typeMap(Thread* t, GcHashMap* typeMaps, object p)
 {
-  return reinterpret_cast<TypeMap*>
-    (&byteArrayBody
-     (t, objectClass(t, p) == type(t, Machine::SingletonType)
-      ? hashMapFind(t, typeMaps, p, objectHash, objectEqual)
-      : hashMapFind(t, typeMaps, objectClass(t, p), objectHash, objectEqual),
-      0));
+  return reinterpret_cast<TypeMap*>(
+      cast<GcByteArray>(
+          t,
+          objectClass(t, p) == type(t, GcSingleton::Type)
+              ? hashMapFind(t, typeMaps, p, objectHash, objectEqual)
+              : hashMapFind(t,
+                            typeMaps,
+                            reinterpret_cast<object>(objectClass(t, p)),
+                            objectHash,
+                            objectEqual))
+          ->body()
+          .begin());
 }
 
-unsigned
-targetFieldOffset(Thread* t, object typeMaps, object field)
+unsigned targetFieldOffset(Thread* t, GcHashMap* typeMaps, GcField* field)
 {
   // if (strcmp(reinterpret_cast<const char*>
-  //            (&byteArrayBody(t, className(t, fieldClass(t, field)), 0)),
+  //            (&byteArrayBody(t, className(t, field->class_()), 0)),
   //            "java/lang/Throwable") == 0) trap();
 
-  return ((fieldFlags(t, field) & ACC_STATIC)
-          ? typeMap(t, typeMaps, classStaticTable(t, fieldClass(t, field)))
-          : classTypeMap(t, typeMaps, fieldClass(t, field)))
-    ->targetFixedOffsets()[fieldOffset(t, field)];
+  return ((field->flags() & ACC_STATIC)
+              ? typeMap(
+                    t,
+                    typeMaps,
+                    reinterpret_cast<object>(field->class_()->staticTable()))
+              : classTypeMap(
+                    t, typeMaps, reinterpret_cast<object>(field->class_())))
+      ->targetFixedOffsets()[field->offset()];
 }
 
-object
-makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
-              const char* className, const char* methodName,
-              const char* methodSpec, object typeMaps)
+GcTriple* makeCodeImage(Thread* t,
+                        Zone* zone,
+                        BootImage* image,
+                        uint8_t* code,
+                        const char* className,
+                        const char* methodName,
+                        const char* methodSpec,
+                        GcHashMap* typeMaps)
 {
   PROTECT(t, typeMaps);
 
   t->m->classpath->interceptMethods(t);
 
-  object constants = 0;
+  GcTriple* constants = 0;
   PROTECT(t, constants);
-  
-  object calls = 0;
+
+  GcTriple* calls = 0;
   PROTECT(t, calls);
 
-  object methods = 0;
+  GcPair* methods = 0;
   PROTECT(t, methods);
 
   DelayedPromise* addresses = 0;
 
-  class MyOffsetResolver: public OffsetResolver {
+  class MyOffsetResolver : public OffsetResolver {
    public:
-    MyOffsetResolver(object* typeMaps): typeMaps(typeMaps) { }
+    MyOffsetResolver(GcHashMap** typeMaps) : typeMaps(typeMaps)
+    {
+    }
 
-    virtual unsigned fieldOffset(Thread* t, object field) {
+    virtual unsigned fieldOffset(Thread* t, GcField* field)
+    {
       return targetFieldOffset(t, *typeMaps, field);
     }
 
-    object* typeMaps;
+    GcHashMap** typeMaps;
   } resolver(&typeMaps);
 
-  Finder* finder = static_cast<Finder*>
-    (systemClassLoaderFinder(t, root(t, Machine::BootLoader)));
+  Finder* finder = static_cast<Finder*>(
+      roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder());
 
   for (Finder::Iterator it(finder); it.hasMore();) {
     unsigned nameSize = 0;
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)
-        and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
-    {
-      // fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
-      object c = resolveSystemClass
-        (t, root(t, Machine::BootLoader),
-         makeByteArray(t, "%.*s", nameSize - 6, name), true);
+        and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
+      if (false) {
+        fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
+      }
+      GcClass* c
+          = resolveSystemClass(t,
+                               roots(t)->bootLoader(),
+                               makeByteArray(t, "%.*s", nameSize - 6, name),
+                               true);
 
       PROTECT(t, c);
 
       System::Region* region = finder->find(name);
-      
-      { THREAD_RESOURCE(t, System::Region*, region, region->dispose());
 
-        class Client: public Stream::Client {
+      {
+        THREAD_RESOURCE(t, System::Region*, region, region->dispose());
+
+        class Client : public Stream::Client {
          public:
-          Client(Thread* t): t(t) { }
+          Client(Thread* t) : t(t)
+          {
+          }
 
-          virtual void NO_RETURN handleError() {
+          virtual void NO_RETURN handleError()
+          {
             abort(t);
           }
 
@@ -347,8 +389,8 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
         uint32_t magic = s.read4();
         expect(t, magic == 0xCAFEBABE);
-        s.read2(); // minor version
-        s.read2(); // major version
+        s.read2();  // minor version
+        s.read2();  // major version
 
         unsigned count = s.read2() - 1;
         if (count) {
@@ -395,39 +437,50 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               s.skip(s.read2());
               break;
 
-            default: abort(t);
+            default:
+              abort(t);
             }
           }
 
-          object array = makeByteArray
-            (t, TypeMap::sizeInBytes(count + 2, count + 2));
+          GcByteArray* array
+              = makeByteArray(t, TypeMap::sizeInBytes(count + 2, count + 2));
 
-          TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-            (count + 2, count + 2, count + 2, TypeMap::PoolKind);
+          TypeMap* map = new (array->body().begin())
+              TypeMap(count + 2, count + 2, count + 2, TypeMap::PoolKind);
 
           for (unsigned i = 0; i < count + 2; ++i) {
             expect(t, i < map->buildFixedSizeInWords);
 
-            map->targetFixedOffsets()[i * BytesPerWord]
-              = i * TargetBytesPerWord;
+            map->targetFixedOffsets()[i * BytesPerWord] = i
+                                                          * TargetBytesPerWord;
 
-            init(new (map->fixedFields() + i) Field, RUNTIME_ARRAY_BODY(types)[i],
-                 i * BytesPerWord, BytesPerWord, i * TargetBytesPerWord,
+            init(new (map->fixedFields() + i) Field,
+                 RUNTIME_ARRAY_BODY(types)[i],
+                 i* BytesPerWord,
+                 BytesPerWord,
+                 i* TargetBytesPerWord,
                  TargetBytesPerWord);
           }
 
-          hashMapInsert
-            (t, typeMaps, hashMapFind
-             (t, root(t, Machine::PoolMap), c, objectHash, objectEqual), array,
-             objectHash);
+          hashMapInsert(
+              t,
+              typeMaps,
+              reinterpret_cast<object>(hashMapFind(t,
+                                                   roots(t)->poolMap(),
+                                                   reinterpret_cast<object>(c),
+                                                   objectHash,
+                                                   objectEqual)),
+              reinterpret_cast<object>(array),
+              objectHash);
         }
       }
 
-      { object array = 0;
+      {
+        GcByteArray* array = 0;
         PROTECT(t, array);
 
         unsigned count = 0;
-        object fields = allFields(t, typeMaps, c, &count, &array);
+        GcVector* fields = allFields(t, typeMaps, c, &count, &array);
         PROTECT(t, fields);
 
         THREAD_RUNTIME_ARRAY(t, Field, memberFields, count + 1);
@@ -441,8 +494,7 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
           buildMemberOffset = 0;
           targetMemberOffset = 0;
 
-          TypeMap* map = reinterpret_cast<TypeMap*>
-            (&byteArrayBody(t, array, 0));
+          TypeMap* map = reinterpret_cast<TypeMap*>(array->body().begin());
 
           for (unsigned j = 0; j < map->fixedFieldCount; ++j) {
             Field* f = map->fixedFields() + j;
@@ -451,11 +503,15 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
 
             targetMemberOffset = f->targetOffset + f->targetSize;
 
-            ++ memberIndex;
+            ++memberIndex;
           }
         } else {
-          init(new (RUNTIME_ARRAY_BODY(memberFields)) Field, Type_object, 0,
-               BytesPerWord, 0, TargetBytesPerWord);
+          init(new (RUNTIME_ARRAY_BODY(memberFields)) Field,
+               Type_object,
+               0,
+               BytesPerWord,
+               0,
+               TargetBytesPerWord);
 
           memberIndex = 1;
           buildMemberOffset = BytesPerWord;
@@ -465,30 +521,40 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
         const unsigned StaticHeader = 3;
 
         THREAD_RUNTIME_ARRAY(t, Field, staticFields, count + StaticHeader);
-        
-        init(new (RUNTIME_ARRAY_BODY(staticFields)) Field, Type_object, 0,
-             BytesPerWord, 0, TargetBytesPerWord);
 
-        init(new (RUNTIME_ARRAY_BODY(staticFields) + 1) Field, Type_intptr_t,
-             BytesPerWord, BytesPerWord, TargetBytesPerWord,
+        init(new (RUNTIME_ARRAY_BODY(staticFields)) Field,
+             Type_object,
+             0,
+             BytesPerWord,
+             0,
              TargetBytesPerWord);
 
-        init(new (RUNTIME_ARRAY_BODY(staticFields) + 2) Field, Type_object,
-             BytesPerWord * 2, BytesPerWord, TargetBytesPerWord * 2,
+        init(new (RUNTIME_ARRAY_BODY(staticFields) + 1) Field,
+             Type_intptr_t,
+             BytesPerWord,
+             BytesPerWord,
+             TargetBytesPerWord,
+             TargetBytesPerWord);
+
+        init(new (RUNTIME_ARRAY_BODY(staticFields) + 2) Field,
+             Type_object,
+             BytesPerWord * 2,
+             BytesPerWord,
+             TargetBytesPerWord * 2,
              TargetBytesPerWord);
 
         unsigned staticIndex = StaticHeader;
         unsigned buildStaticOffset = BytesPerWord * StaticHeader;
         unsigned targetStaticOffset = TargetBytesPerWord * StaticHeader;
 
-        for (unsigned i = 0; i < vectorSize(t, fields); ++i) {
-          object field = vectorBody(t, fields, i);
+        for (unsigned i = 0; i < fields->size(); ++i) {
+          GcField* field = cast<GcField>(t, fields->body()[i]);
           if (field) {
-            unsigned buildSize = fieldSize(t, fieldCode(t, field));
+            unsigned buildSize = fieldSize(t, field->code());
             unsigned targetSize = buildSize;
 
             Type type;
-            switch (fieldCode(t, field)) {
+            switch (field->code()) {
             case ObjectField:
               type = Type_object;
               targetSize = TargetBytesPerWord;
@@ -514,85 +580,107 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
               type = Type_int64_t;
               break;
 
-            default: abort(t);
+            default:
+              abort(t);
             }
 
-            if (fieldFlags(t, field) & ACC_STATIC) {
+            if (field->flags() & ACC_STATIC) {
               targetStaticOffset = pad(targetStaticOffset, targetSize);
 
-              buildStaticOffset = fieldOffset(t, field);
+              buildStaticOffset = field->offset();
 
               init(new (RUNTIME_ARRAY_BODY(staticFields) + staticIndex) Field,
-                   type, buildStaticOffset, buildSize, targetStaticOffset,
+                   type,
+                   buildStaticOffset,
+                   buildSize,
+                   targetStaticOffset,
                    targetSize);
 
               targetStaticOffset += targetSize;
 
-              ++ staticIndex;
+              ++staticIndex;
             } else {
               targetMemberOffset = pad(targetMemberOffset, targetSize);
 
-              buildMemberOffset = fieldOffset(t, field);
+              buildMemberOffset = field->offset();
 
               init(new (RUNTIME_ARRAY_BODY(memberFields) + memberIndex) Field,
-                   type, buildMemberOffset, buildSize, targetMemberOffset,
+                   type,
+                   buildMemberOffset,
+                   buildSize,
+                   targetMemberOffset,
                    targetSize);
 
               targetMemberOffset += targetSize;
 
-              ++ memberIndex;
+              ++memberIndex;
             }
           } else {
             targetMemberOffset = pad(targetMemberOffset, TargetBytesPerWord);
           }
         }
-     
-        if (hashMapFind(t, typeMaps, c, objectHash, objectEqual) == 0) {
-          object array = makeByteArray
-            (t, TypeMap::sizeInBytes
-             (ceilingDivide(classFixedSize(t, c), BytesPerWord), memberIndex));
 
-          TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-            (ceilingDivide(classFixedSize(t, c), BytesPerWord),
-             ceilingDivide(targetMemberOffset, TargetBytesPerWord), memberIndex);
+        if (hashMapFind(t,
+                        typeMaps,
+                        reinterpret_cast<object>(c),
+                        objectHash,
+                        objectEqual) == 0) {
+          GcByteArray* array = makeByteArray(
+              t,
+              TypeMap::sizeInBytes(ceilingDivide(c->fixedSize(), BytesPerWord),
+                                   memberIndex));
+
+          TypeMap* map = new (array->body().begin())
+              TypeMap(ceilingDivide(c->fixedSize(), BytesPerWord),
+                      ceilingDivide(targetMemberOffset, TargetBytesPerWord),
+                      memberIndex);
 
           for (unsigned i = 0; i < memberIndex; ++i) {
             Field* f = RUNTIME_ARRAY_BODY(memberFields) + i;
 
-            expect(t, f->buildOffset
-                   < map->buildFixedSizeInWords * BytesPerWord);
+            expect(t,
+                   f->buildOffset < map->buildFixedSizeInWords * BytesPerWord);
 
             map->targetFixedOffsets()[f->buildOffset] = f->targetOffset;
 
             map->fixedFields()[i] = *f;
           }
 
-          hashMapInsert(t, typeMaps, c, array, objectHash);
+          hashMapInsert(t,
+                        typeMaps,
+                        reinterpret_cast<object>(c),
+                        reinterpret_cast<object>(array),
+                        objectHash);
         }
 
-        if (classStaticTable(t, c)) {
-          object array = makeByteArray
-            (t, TypeMap::sizeInBytes
-             (singletonCount(t, classStaticTable(t, c)) + 2, staticIndex));
+        if (c->staticTable()) {
+          GcByteArray* array = makeByteArray(
+              t,
+              TypeMap::sizeInBytes(singletonCount(t, c->staticTable()) + 2,
+                                   staticIndex));
 
-          TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-            (singletonCount(t, classStaticTable(t, c)) + 2,
-             ceilingDivide(targetStaticOffset, TargetBytesPerWord), staticIndex,
-             TypeMap::SingletonKind);
+          TypeMap* map = new (array->body().begin())
+              TypeMap(singletonCount(t, c->staticTable()) + 2,
+                      ceilingDivide(targetStaticOffset, TargetBytesPerWord),
+                      staticIndex,
+                      TypeMap::SingletonKind);
 
           for (unsigned i = 0; i < staticIndex; ++i) {
             Field* f = RUNTIME_ARRAY_BODY(staticFields) + i;
 
-            expect(t, f->buildOffset
-                   < map->buildFixedSizeInWords * BytesPerWord);
+            expect(t,
+                   f->buildOffset < map->buildFixedSizeInWords * BytesPerWord);
 
             map->targetFixedOffsets()[f->buildOffset] = f->targetOffset;
 
             map->fixedFields()[i] = *f;
           }
 
-          hashMapInsert
-            (t, typeMaps, classStaticTable(t, c), array, objectHash);
+          hashMapInsert(t,
+                        typeMaps,
+                        reinterpret_cast<object>(c->staticTable()),
+                        reinterpret_cast<object>(array),
+                        objectHash);
         }
       }
     }
@@ -603,64 +691,71 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)
-        and (className == 0 or strncmp(name, className, nameSize - 6) == 0))
-    {
-      // fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
-      object c = resolveSystemClass
-        (t, root(t, Machine::BootLoader),
-         makeByteArray(t, "%.*s", nameSize - 6, name), true);
-
+        and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
+      if (false) {
+        fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
+      }
+      GcClass* c = 0;
       PROTECT(t, c);
 
-      if (classMethodTable(t, c)) {
-        for (unsigned i = 0; i < arrayLength(t, classMethodTable(t, c)); ++i) {
-          object method = arrayBody(t, classMethodTable(t, c), i);
+      c = resolveSystemClass(t,
+                             roots(t)->bootLoader(),
+                             makeByteArray(t, "%.*s", nameSize - 6, name),
+                             true);
+
+      if (GcArray* mtable = cast<GcArray>(t, c->methodTable())) {
+        PROTECT(t, mtable);
+        for (unsigned i = 0; i < mtable->length(); ++i) {
+          GcMethod* method = cast<GcMethod>(t, mtable->body()[i]);
           if (((methodName == 0
-                or ::strcmp
-                (reinterpret_cast<char*>
-                 (&byteArrayBody
-                  (t, vm::methodName(t, method), 0)), methodName) == 0)
+                or ::strcmp(
+                       reinterpret_cast<char*>(method->name()->body().begin()),
+                       methodName) == 0)
                and (methodSpec == 0
-                    or ::strcmp
-                    (reinterpret_cast<char*>
-                     (&byteArrayBody
-                      (t, vm::methodSpec(t, method), 0)), methodSpec)
-                    == 0)))
-          {
-            if (methodCode(t, method)
-                or (methodFlags(t, method) & ACC_NATIVE))
-            {
+                    or ::strcmp(reinterpret_cast<char*>(
+                                    method->spec()->body().begin()),
+                                methodSpec) == 0))) {
+            if (method->code() or (method->flags() & ACC_NATIVE)) {
               PROTECT(t, method);
 
-              t->m->processor->compileMethod
-                (t, zone, &constants, &calls, &addresses, method, &resolver);
+              t->m->processor->compileMethod(
+                  t,
+                  zone,
+                  reinterpret_cast<GcTriple**>(&constants),
+                  reinterpret_cast<GcTriple**>(&calls),
+                  &addresses,
+                  method,
+                  &resolver);
 
-              if (methodCode(t, method)) {
-                methods = makePair(t, method, methods);
+              if (method->code()) {
+                methods = makePair(t,
+                                   reinterpret_cast<object>(method),
+                                   reinterpret_cast<object>(methods));
               }
             }
 
-            object addendum = methodAddendum(t, method);
-            if (addendum and methodAddendumExceptionTable(t, addendum)) {
+            GcMethodAddendum* addendum = method->addendum();
+            if (addendum and addendum->exceptionTable()) {
               PROTECT(t, addendum);
+              GcShortArray* exceptionTable
+                  = cast<GcShortArray>(t, addendum->exceptionTable());
+              PROTECT(t, exceptionTable);
 
               // resolve exception types now to avoid trying to update
               // immutable references at runtime
-              for (unsigned i = 0; i < shortArrayLength
-                     (t, methodAddendumExceptionTable(t, addendum)); ++i)
-              {
-                uint16_t index = shortArrayBody
-                  (t, methodAddendumExceptionTable(t, addendum), i) - 1;
+              for (unsigned i = 0; i < exceptionTable->length(); ++i) {
+                uint16_t index = exceptionTable->body()[i] - 1;
 
-                object o = singletonObject
-                  (t, addendumPool(t, addendum), index);
+                object o = singletonObject(t, addendum->pool(), index);
 
-                if (objectClass(t, o) == type(t, Machine::ReferenceType)) {
-                  o = resolveClass
-                    (t, root(t, Machine::BootLoader), referenceName(t, o));
-    
-                  set(t, addendumPool(t, addendum),
-                      SingletonBody + (index * BytesPerWord), o);
+                if (objectClass(t, o) == type(t, GcReference::Type)) {
+                  o = reinterpret_cast<object>(
+                      resolveClass(t,
+                                   roots(t)->bootLoader(),
+                                   cast<GcReference>(t, o)->name()));
+
+                  addendum->pool()->setBodyElement(
+                      t, index, reinterpret_cast<uintptr_t>(o));
                 }
               }
             }
@@ -670,30 +765,29 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
     }
   }
 
-  for (; calls; calls = tripleThird(t, calls)) {
-    object method = tripleFirst(t, calls);
+  for (; calls; calls = cast<GcTriple>(t, calls->third())) {
+    GcMethod* method = cast<GcMethod>(t, calls->first());
     uintptr_t address;
-    if (methodFlags(t, method) & ACC_NATIVE) {
+    if (method->flags() & ACC_NATIVE) {
       address = reinterpret_cast<uintptr_t>(code + image->thunks.native.start);
     } else {
-      address = codeCompiled(t, methodCode(t, method));
+      address = method->code()->compiled();
     }
 
-    static_cast<ListenPromise*>(pointerValue(t, tripleSecond(t, calls)))
-      ->listener->resolve(address, 0);
+    static_cast<ListenPromise*>(cast<GcPointer>(t, calls->second())->value())
+        ->listener->resolve(address, 0);
   }
 
   for (; addresses; addresses = addresses->next) {
     uint8_t* value = reinterpret_cast<uint8_t*>(addresses->basis->value());
     expect(t, value >= code);
 
-    addresses->listener->resolve
-      (static_cast<target_intptr_t>(value - code), 0);
+    addresses->listener->resolve(static_cast<target_intptr_t>(value - code), 0);
   }
 
-  for (; methods; methods = pairSecond(t, methods)) {
-    codeCompiled(t, methodCode(t, pairFirst(t, methods)))
-      -= reinterpret_cast<uintptr_t>(code);
+  for (; methods; methods = cast<GcPair>(t, methods->second())) {
+    cast<GcMethod>(t, methods->first())->code()->compiled()
+        -= reinterpret_cast<uintptr_t>(code);
   }
 
   t->m->processor->normalizeVirtualThunks(t);
@@ -701,110 +795,109 @@ makeCodeImage(Thread* t, Zone* zone, BootImage* image, uint8_t* code,
   return constants;
 }
 
-void
-visitRoots(Thread* t, BootImage* image, HeapWalker* w, object constants)
+void visitRoots(Thread* t, BootImage* image, HeapWalker* w, GcTriple* constants)
 {
   Machine* m = t->m;
 
-  for (HashMapIterator it(t, classLoaderMap(t, root(t, Machine::BootLoader)));
-       it.hasMore();)
-  {
-    w->visitRoot(tripleSecond(t, it.next()));
+  for (HashMapIterator it(t, cast<GcHashMap>(t, roots(t)->bootLoader()->map()));
+       it.hasMore();) {
+    w->visitRoot(it.next()->second());
   }
 
-  image->bootLoader = w->visitRoot(root(t, Machine::BootLoader));
-  image->appLoader = w->visitRoot(root(t, Machine::AppLoader));
-  image->types = w->visitRoot(m->types);
+  image->bootLoader
+      = w->visitRoot(reinterpret_cast<object>(roots(t)->bootLoader()));
+  image->appLoader
+      = w->visitRoot(reinterpret_cast<object>(roots(t)->appLoader()));
+  image->types = w->visitRoot(reinterpret_cast<object>(m->types));
 
   m->processor->visitRoots(t, w);
 
-  for (; constants; constants = tripleThird(t, constants)) {
-    w->visitRoot(tripleFirst(t, constants));
+  for (; constants; constants = cast<GcTriple>(t, constants->third())) {
+    w->visitRoot(constants->first());
   }
 }
 
-unsigned
-targetOffset(Thread* t, object typeMaps, object p, unsigned offset)
+unsigned targetOffset(Thread* t, GcHashMap* typeMaps, object p, unsigned offset)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
 
   if (map->targetArrayElementSizeInBytes
-      and offset >= map->buildFixedSizeInWords * BytesPerWord)
-  {
+      and offset >= map->buildFixedSizeInWords * BytesPerWord) {
     return (map->targetFixedSizeInWords * TargetBytesPerWord)
-      + (((offset - (map->buildFixedSizeInWords * BytesPerWord))
-          / map->buildArrayElementSizeInBytes)
-         * map->targetArrayElementSizeInBytes);
+           + (((offset - (map->buildFixedSizeInWords * BytesPerWord))
+               / map->buildArrayElementSizeInBytes)
+              * map->targetArrayElementSizeInBytes);
   } else {
     return map->targetFixedOffsets()[offset];
   }
 }
 
-unsigned
-targetSize(Thread* t, object typeMaps, object p)
+unsigned targetSize(Thread* t, GcHashMap* typeMaps, object p)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
 
   if (map->targetArrayElementSizeInBytes) {
     return map->targetFixedSizeInWords
-      + ceilingDivide(map->targetArrayElementSizeInBytes
-                * fieldAtOffset<uintptr_t>
-                (p, (map->buildFixedSizeInWords - 1) * BytesPerWord),
-                TargetBytesPerWord);
+           + ceilingDivide(
+                 map->targetArrayElementSizeInBytes
+                 * fieldAtOffset<uintptr_t>(
+                       p, (map->buildFixedSizeInWords - 1) * BytesPerWord),
+                 TargetBytesPerWord);
   } else {
     switch (map->kind) {
     case TypeMap::NormalKind:
       return map->targetFixedSizeInWords;
 
     case TypeMap::SingletonKind:
-      return map->targetFixedSizeInWords + singletonMaskSize
-        (map->targetFixedSizeInWords - 2, TargetBitsPerWord);
+      return map->targetFixedSizeInWords
+             + singletonMaskSize(map->targetFixedSizeInWords - 2,
+                                 TargetBitsPerWord);
 
     case TypeMap::PoolKind: {
-      unsigned maskSize = poolMaskSize
-        (map->targetFixedSizeInWords - 2, TargetBitsPerWord);
+      unsigned maskSize
+          = poolMaskSize(map->targetFixedSizeInWords - 2, TargetBitsPerWord);
 
-      return map->targetFixedSizeInWords + maskSize + singletonMaskSize
-        (map->targetFixedSizeInWords - 2 + maskSize, TargetBitsPerWord);
+      return map->targetFixedSizeInWords + maskSize
+             + singletonMaskSize(map->targetFixedSizeInWords - 2 + maskSize,
+                                 TargetBitsPerWord);
     }
 
-    default: abort(t);
+    default:
+      abort(t);
     }
   }
 }
 
-unsigned
-objectMaskCount(TypeMap* map)
+unsigned objectMaskCount(TypeMap* map)
 {
   unsigned count = map->targetFixedSizeInWords;
 
   if (map->targetArrayElementSizeInBytes) {
-    ++ count;
+    ++count;
   }
 
   return count;
 }
 
-unsigned
-targetSize(Thread* t, object typeMaps, object referer, unsigned refererOffset,
-           object p)
+unsigned targetSize(Thread* t,
+                    GcHashMap* typeMaps,
+                    object referer,
+                    unsigned refererOffset,
+                    object p)
 {
-  if (referer
-      and objectClass(t, referer) == type(t, Machine::ClassType)
-      and (refererOffset * BytesPerWord) == ClassObjectMask)
-  {
+  if (referer and objectClass(t, referer) == type(t, GcClass::Type)
+      and (refererOffset * BytesPerWord) == ClassObjectMask) {
     return (TargetBytesPerWord * 2)
-      + pad
-      (ceilingDivide
-       (objectMaskCount
-        (classTypeMap(t, typeMaps, referer)), 32) * 4, TargetBytesPerWord);
+           + pad(ceilingDivide(
+                     objectMaskCount(classTypeMap(t, typeMaps, referer)), 32)
+                 * 4,
+                 TargetBytesPerWord);
   } else {
     return targetSize(t, typeMaps, p);
   }
 }
 
-void
-copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
+void copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
 {
   switch (type) {
   case Type_int8_t:
@@ -812,21 +905,24 @@ copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
     break;
 
   case Type_int16_t: {
-    int16_t s; memcpy(&s, src, 2);
+    int16_t s;
+    memcpy(&s, src, 2);
     int16_t d = targetV2(s);
     memcpy(dst, &d, 2);
   } break;
 
   case Type_int32_t:
   case Type_float: {
-    int32_t s; memcpy(&s, src, 4);
+    int32_t s;
+    memcpy(&s, src, 4);
     int32_t d = targetV4(s);
     memcpy(dst, &d, 4);
   } break;
 
   case Type_int64_t:
   case Type_double: {
-    int64_t s; memcpy(&s, src, 8);
+    int64_t s;
+    memcpy(&s, src, 8);
     int64_t d = targetV8(s);
     memcpy(dst, &d, 8);
   } break;
@@ -836,7 +932,8 @@ copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
     break;
 
   case Type_intptr_t: {
-    intptr_t s; memcpy(&s, src, BytesPerWord);
+    intptr_t s;
+    memcpy(&s, src, BytesPerWord);
     target_intptr_t d = targetVW(s);
     memcpy(dst, &d, TargetBytesPerWord);
   } break;
@@ -845,12 +942,12 @@ copy(Thread* t, uint8_t* src, uint8_t* dst, Type type)
     memset(dst, 0, TargetBytesPerWord);
   } break;
 
-  default: abort(t);
+  default:
+    abort(t);
   }
 }
 
-bool
-nonObjectsEqual(uint8_t* src, uint8_t* dst, Type type)
+bool nonObjectsEqual(uint8_t* src, uint8_t* dst, Type type)
 {
   switch (type) {
   case Type_int8_t:
@@ -878,18 +975,17 @@ nonObjectsEqual(uint8_t* src, uint8_t* dst, Type type)
   case Type_object_nogc:
     return true;
 
-  default: abort();
-  }  
+  default:
+    abort();
+  }
 }
 
-bool
-nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
+bool nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
 {
   for (unsigned i = 0; i < map->fixedFieldCount; ++i) {
     Field* field = map->fixedFields() + i;
-    if (not nonObjectsEqual
-        (src + field->buildOffset, dst + field->targetOffset, field->type))
-    {
+    if (not nonObjectsEqual(
+            src + field->buildOffset, dst + field->targetOffset, field->type)) {
       return false;
     }
   }
@@ -899,11 +995,11 @@ nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
     unsigned count = fieldAtOffset<uintptr_t>(src, fixedSize - BytesPerWord);
 
     for (unsigned i = 0; i < count; ++i) {
-      if (not nonObjectsEqual
-          (src + fixedSize + (i * map->buildArrayElementSizeInBytes),
-           dst + (map->targetFixedSizeInWords * TargetBytesPerWord)
-           + (i * map->targetArrayElementSizeInBytes), map->arrayElementType))
-      {
+      if (not nonObjectsEqual(
+              src + fixedSize + (i * map->buildArrayElementSizeInBytes),
+              dst + (map->targetFixedSizeInWords * TargetBytesPerWord)
+              + (i * map->targetArrayElementSizeInBytes),
+              map->arrayElementType)) {
         return false;
       }
     }
@@ -912,16 +1008,16 @@ nonObjectsEqual(TypeMap* map, uint8_t* src, uint8_t* dst)
   return true;
 }
 
-void
-copy(Thread* t, object typeMaps, object p, uint8_t* dst)
+void copy(Thread* t, GcHashMap* typeMaps, object p, uint8_t* dst)
 {
   TypeMap* map = typeMap(t, typeMaps, p);
-  
+
   uint8_t* src = reinterpret_cast<uint8_t*>(p);
 
   for (unsigned i = 0; i < map->fixedFieldCount; ++i) {
     Field* field = map->fixedFields() + i;
-    if (field->type > Type_array) abort(t);
+    if (field->type > Type_array)
+      abort(t);
     copy(t, src + field->buildOffset, dst + field->targetOffset, field->type);
   }
 
@@ -930,27 +1026,32 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
     unsigned count = fieldAtOffset<uintptr_t>(p, fixedSize - BytesPerWord);
 
     for (unsigned i = 0; i < count; ++i) {
-      copy(t, src + fixedSize + (i * map->buildArrayElementSizeInBytes),
+      copy(t,
+           src + fixedSize + (i * map->buildArrayElementSizeInBytes),
            dst + (map->targetFixedSizeInWords * TargetBytesPerWord)
-           + (i * map->targetArrayElementSizeInBytes), map->arrayElementType);
+           + (i * map->targetArrayElementSizeInBytes),
+           map->arrayElementType);
     }
 
-    if (objectClass(t, p) == type(t, Machine::ClassType)) {
+    if (objectClass(t, p) == type(t, GcClass::Type)) {
       uint16_t fixedSize;
       uint8_t arrayElementSize;
-      object array = hashMapFind(t, typeMaps, p, objectHash, objectEqual);
+      GcByteArray* array = cast<GcByteArray>(
+          t, hashMapFind(t, typeMaps, p, objectHash, objectEqual));
+      PROTECT(t, array);
+
+      GcClass* c = cast<GcClass>(t, p);
+      PROTECT(t, c);
 
       if (array) {
-        TypeMap* classMap = reinterpret_cast<TypeMap*>
-          (&byteArrayBody(t, array, 0));
+        TypeMap* classMap = reinterpret_cast<TypeMap*>(array->body().begin());
 
-        fixedSize = targetV2
-          (classMap->targetFixedSizeInWords * TargetBytesPerWord);
+        fixedSize
+            = targetV2(classMap->targetFixedSizeInWords * TargetBytesPerWord);
 
         arrayElementSize = classMap->targetArrayElementSizeInBytes;
-      } else if (classFixedSize(t, p) == BytesPerWord * 2
-                 and classArrayElementSize(t, p) == BytesPerWord)
-      {
+      } else if (c->fixedSize() == BytesPerWord * 2
+                 and c->arrayElementSize() == BytesPerWord) {
         fixedSize = targetV2(TargetBytesPerWord * 2);
 
         arrayElementSize = TargetBytesPerWord;
@@ -958,31 +1059,33 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         fixedSize = 0;
         arrayElementSize = 0;
       }
-  
+
       if (fixedSize) {
         memcpy(dst + TargetClassFixedSize, &fixedSize, 2);
 
         memcpy(dst + TargetClassArrayElementSize, &arrayElementSize, 1);
       }
-      
+
       // if (strcmp("vm::lineNumberTable",
-      //            reinterpret_cast<const char*>(&byteArrayBody(t, className(t, p), 0))) == 0) trap();
+      //            reinterpret_cast<const char*>(&byteArrayBody(t, className(t,
+      //            p), 0))) == 0) trap();
     }
   } else {
     switch (map->kind) {
     case TypeMap::NormalKind:
-      if (objectClass(t, p) == type(t, Machine::FieldType)) {
-        uint16_t offset = targetV2(targetFieldOffset(t, typeMaps, p));
+      if (objectClass(t, p) == type(t, GcField::Type)) {
+        uint16_t offset
+            = targetV2(targetFieldOffset(t, typeMaps, cast<GcField>(t, p)));
         memcpy(dst + TargetFieldOffset, &offset, 2);
       }
       break;
 
     case TypeMap::SingletonKind: {
-      unsigned maskSize = singletonMaskSize
-        (map->targetFixedSizeInWords - 2, TargetBitsPerWord);
+      unsigned maskSize = singletonMaskSize(map->targetFixedSizeInWords - 2,
+                                            TargetBitsPerWord);
 
-      target_uintptr_t targetLength = targetVW
-        (map->targetFixedSizeInWords - 2 + maskSize);
+      target_uintptr_t targetLength
+          = targetVW(map->targetFixedSizeInWords - 2 + maskSize);
       memcpy(dst + TargetBytesPerWord, &targetLength, TargetBytesPerWord);
 
       uint8_t* mask = dst + (map->targetFixedSizeInWords * TargetBytesPerWord);
@@ -993,38 +1096,38 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         if (field->type == Type_object) {
           unsigned offset = field->targetOffset / TargetBytesPerWord;
           reinterpret_cast<uint32_t*>(mask)[offset / 32]
-            |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
+              |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
         }
       }
 
       if (DebugNativeTarget) {
-        expect
-          (t, memcmp
-           (src + (map->targetFixedSizeInWords * TargetBytesPerWord), mask,
-            singletonMaskSize
-            (map->targetFixedSizeInWords - 2, TargetBitsPerWord)
-            * TargetBytesPerWord) == 0);
+        expect(t,
+               memcmp(src + (map->targetFixedSizeInWords * TargetBytesPerWord),
+                      mask,
+                      singletonMaskSize(map->targetFixedSizeInWords - 2,
+                                        TargetBitsPerWord) * TargetBytesPerWord)
+               == 0);
       }
     } break;
 
     case TypeMap::PoolKind: {
-      unsigned poolMaskSize = vm::poolMaskSize
-        (map->targetFixedSizeInWords - 2, TargetBitsPerWord);
+      unsigned poolMaskSize = vm::poolMaskSize(map->targetFixedSizeInWords - 2,
+                                               TargetBitsPerWord);
 
-      unsigned objectMaskSize = singletonMaskSize
-        (map->targetFixedSizeInWords - 2 + poolMaskSize, TargetBitsPerWord);
+      unsigned objectMaskSize = singletonMaskSize(
+          map->targetFixedSizeInWords - 2 + poolMaskSize, TargetBitsPerWord);
 
-      target_uintptr_t targetLength = targetVW
-        (map->targetFixedSizeInWords - 2 + poolMaskSize + objectMaskSize);
+      target_uintptr_t targetLength = targetVW(map->targetFixedSizeInWords - 2
+                                               + poolMaskSize + objectMaskSize);
       memcpy(dst + TargetBytesPerWord, &targetLength, TargetBytesPerWord);
 
       uint8_t* poolMask = dst
-        + (map->targetFixedSizeInWords * TargetBytesPerWord);
+                          + (map->targetFixedSizeInWords * TargetBytesPerWord);
 
       memset(poolMask, 0, poolMaskSize * TargetBytesPerWord);
 
-      uint8_t* objectMask = dst
-        + ((map->targetFixedSizeInWords + poolMaskSize) * TargetBytesPerWord);
+      uint8_t* objectMask = dst + ((map->targetFixedSizeInWords + poolMaskSize)
+                                   * TargetBytesPerWord);
 
       memset(objectMask, 0, objectMaskSize * TargetBytesPerWord);
 
@@ -1033,15 +1136,14 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
         switch (field->type) {
         case Type_object:
           reinterpret_cast<uint32_t*>(objectMask)[i / 32]
-            |= targetV4(static_cast<uint32_t>(1) << (i % 32));
+              |= targetV4(static_cast<uint32_t>(1) << (i % 32));
           break;
 
         case Type_float:
         case Type_double:
-          reinterpret_cast<target_uintptr_t*>(poolMask)
-            [i / TargetBitsPerWord]
-            |= targetVW
-            (static_cast<target_uintptr_t>(1) << (i % TargetBitsPerWord));
+          reinterpret_cast<target_uintptr_t*>(poolMask)[i / TargetBitsPerWord]
+              |= targetVW(static_cast<target_uintptr_t>(1)
+                          << (i % TargetBitsPerWord));
           break;
 
         default:
@@ -1050,29 +1152,31 @@ copy(Thread* t, object typeMaps, object p, uint8_t* dst)
       }
 
       if (DebugNativeTarget) {
-        expect
-          (t, memcmp
-           (src + (map->targetFixedSizeInWords * TargetBytesPerWord), poolMask,
-            (poolMaskSize + singletonMaskSize
-             (map->targetFixedSizeInWords - 2 + poolMaskSize,
-              TargetBitsPerWord))
-            * TargetBytesPerWord) == 0);
+        expect(t,
+               memcmp(src + (map->targetFixedSizeInWords * TargetBytesPerWord),
+                      poolMask,
+                      (poolMaskSize
+                       + singletonMaskSize(
+                             map->targetFixedSizeInWords - 2 + poolMaskSize,
+                             TargetBitsPerWord)) * TargetBytesPerWord) == 0);
       }
     } break;
 
-    default: abort(t);
+    default:
+      abort(t);
     }
   }
 }
 
-void
-copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
-     object p, uint8_t* dst)
+void copy(Thread* t,
+          GcHashMap* typeMaps,
+          object referer,
+          unsigned refererOffset,
+          object p,
+          uint8_t* dst)
 {
-  if (referer
-      and objectClass(t, referer) == type(t, Machine::ClassType)
-      and (refererOffset * BytesPerWord) == ClassObjectMask)
-  {
+  if (referer and objectClass(t, referer) == type(t, GcClass::Type)
+      and (refererOffset * BytesPerWord) == ClassObjectMask) {
     TypeMap* map = classTypeMap(t, typeMaps, referer);
 
     memset(dst, 0, TargetBytesPerWord);
@@ -1089,17 +1193,16 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
       Field* field = map->fixedFields() + i;
       if (field->type == Type_object) {
         unsigned offset = field->targetOffset / TargetBytesPerWord;
-        reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))
-          [offset / 32] |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
+        reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))[offset / 32]
+            |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
       }
     }
 
     if (map->targetArrayElementSizeInBytes
-        and map->arrayElementType == Type_object)
-    {
+        and map->arrayElementType == Type_object) {
       unsigned offset = map->targetFixedSizeInWords;
-      reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))
-        [offset / 32] |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
+      reinterpret_cast<uint32_t*>(dst + (TargetBytesPerWord * 2))[offset / 32]
+          |= targetV4(static_cast<uint32_t>(1) << (offset % 32));
     }
   } else {
     copy(t, typeMaps, p, dst);
@@ -1107,62 +1210,81 @@ copy(Thread* t, object typeMaps, object referer, unsigned refererOffset,
 
   if (DebugNativeTarget) {
     expect(t, targetSize(t, typeMaps, p) == baseSize(t, p, objectClass(t, p)));
-    expect(t, nonObjectsEqual
-           (typeMap(t, typeMaps, p), reinterpret_cast<uint8_t*>(p), dst));
+    expect(t,
+           nonObjectsEqual(
+               typeMap(t, typeMaps, p), reinterpret_cast<uint8_t*>(p), dst));
   }
 }
 
-HeapWalker*
-makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
-              target_uintptr_t* map, unsigned capacity, object constants,
-              object typeMaps)
+HeapWalker* makeHeapImage(Thread* t,
+                          BootImage* image,
+                          target_uintptr_t* heap,
+                          target_uintptr_t* map,
+                          unsigned capacity,
+                          GcTriple* constants,
+                          GcHashMap* typeMaps)
 {
-  class Visitor: public HeapVisitor {
+  class Visitor : public HeapVisitor {
    public:
-    Visitor(Thread* t, object typeMaps, target_uintptr_t* heap,
-            target_uintptr_t* map, unsigned capacity):
-      t(t), typeMaps(typeMaps), currentObject(0), currentNumber(0),
-      currentOffset(0), heap(heap), map(map), position(0), capacity(capacity)
-    { }
+    Visitor(Thread* t,
+            GcHashMap* typeMaps,
+            target_uintptr_t* heap,
+            target_uintptr_t* map,
+            unsigned capacity)
+        : t(t),
+          typeMaps(typeMaps),
+          currentObject(0),
+          currentNumber(0),
+          currentOffset(0),
+          heap(heap),
+          map(map),
+          position(0),
+          capacity(capacity)
+    {
+    }
 
-    void visit(unsigned number) {
+    void visit(unsigned number)
+    {
       if (currentObject) {
         if (DebugNativeTarget) {
-          expect
-            (t, targetOffset
-             (t, typeMaps, currentObject, currentOffset * BytesPerWord)
-             == currentOffset * BytesPerWord);
+          expect(t,
+                 targetOffset(
+                     t, typeMaps, currentObject, currentOffset * BytesPerWord)
+                 == currentOffset * BytesPerWord);
         }
 
-        unsigned offset = currentNumber - 1
-          + (targetOffset
-             (t, typeMaps, currentObject, currentOffset * BytesPerWord)
-             / TargetBytesPerWord);
+        unsigned offset
+            = currentNumber - 1
+              + (targetOffset(
+                     t, typeMaps, currentObject, currentOffset * BytesPerWord)
+                 / TargetBytesPerWord);
 
         unsigned mark = heap[offset] & (~TargetPointerMask);
         unsigned value = number | (mark << TargetBootShift);
 
-        if (value) targetMarkBit(map, offset);
+        if (value)
+          targetMarkBit(map, offset);
 
         heap[offset] = targetVW(value);
       }
     }
 
-    virtual void root() {
+    virtual void root()
+    {
       currentObject = 0;
     }
 
-    virtual unsigned visitNew(object p) {
+    virtual unsigned visitNew(object p)
+    {
       if (p) {
-        unsigned size = targetSize
-          (t, typeMaps, currentObject, currentOffset, p);
+        unsigned size
+            = targetSize(t, typeMaps, currentObject, currentOffset, p);
 
         unsigned number;
         if ((currentObject
-             and objectClass(t, currentObject) == type(t, Machine::ClassType)
+             and objectClass(t, currentObject) == type(t, GcClass::Type)
              and (currentOffset * BytesPerWord) == ClassStaticTable)
-            or instanceOf(t, type(t, Machine::SystemClassLoaderType), p))
-        {
+            or instanceOf(t, type(t, GcSystemClassLoader::Type), p)) {
           // Static tables and system classloaders must be allocated
           // as fixed objects in the heap image so that they can be
           // marked as dirty and visited during GC.  Otherwise,
@@ -1181,23 +1303,31 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
           memset(heap + position, 0, TargetFixieSizeInBytes);
 
           uint16_t age = targetV2(FixieTenureThreshold + 1);
-          memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieAge, &age, 2);
+          memcpy(reinterpret_cast<uint8_t*>(heap + position) + TargetFixieAge,
+                 &age,
+                 2);
 
           uint16_t flags = targetV2(1);
-          memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieFlags, &flags, 2);
+          memcpy(reinterpret_cast<uint8_t*>(heap + position) + TargetFixieFlags,
+                 &flags,
+                 2);
 
           uint32_t targetSize = targetV4(size);
-          memcpy(reinterpret_cast<uint8_t*>(heap + position)
-                 + TargetFixieSize, &targetSize, 4);
+          memcpy(reinterpret_cast<uint8_t*>(heap + position) + TargetFixieSize,
+                 &targetSize,
+                 4);
 
-          copy(t, typeMaps, currentObject, currentOffset, p,
+          copy(t,
+               typeMaps,
+               currentObject,
+               currentOffset,
+               p,
                reinterpret_cast<uint8_t*>(dst));
 
           dst[0] |= FixedMark;
 
-          memset(heap + position + TargetFixieSizeInWords + size, 0,
+          memset(heap + position + TargetFixieSizeInWords + size,
+                 0,
                  maskSize * TargetBytesPerWord);
 
           number = (dst - heap) + 1;
@@ -1205,7 +1335,11 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
         } else {
           expect(t, position + size < capacity);
 
-          copy(t, typeMaps, currentObject, currentOffset, p,
+          copy(t,
+               typeMaps,
+               currentObject,
+               currentOffset,
+               p,
                reinterpret_cast<uint8_t*>(heap + position));
 
           number = position + 1;
@@ -1220,22 +1354,25 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
       }
     }
 
-    virtual void visitOld(object, unsigned number) {
+    virtual void visitOld(object, unsigned number)
+    {
       visit(number);
     }
 
-    virtual void push(object object, unsigned number, unsigned offset) {
+    virtual void push(object object, unsigned number, unsigned offset)
+    {
       currentObject = object;
       currentNumber = number;
       currentOffset = offset;
     }
 
-    virtual void pop() {
+    virtual void pop()
+    {
       currentObject = 0;
     }
 
     Thread* t;
-    object typeMaps;
+    GcHashMap* typeMaps;
     object currentObject;
     unsigned currentNumber;
     unsigned currentOffset;
@@ -1247,52 +1384,59 @@ makeHeapImage(Thread* t, BootImage* image, target_uintptr_t* heap,
 
   HeapWalker* w = makeHeapWalker(t, &visitor);
   visitRoots(t, image, w, constants);
-  
+
   image->heapSize = visitor.position * TargetBytesPerWord;
 
   return w;
 }
 
-void
-updateConstants(Thread* t, object constants, HeapMap* heapTable)
+void updateConstants(Thread* t, GcTriple* constants, HeapMap* heapTable)
 {
-  for (; constants; constants = tripleThird(t, constants)) {
-    unsigned target = heapTable->find(tripleFirst(t, constants));
+  for (; constants; constants = cast<GcTriple>(t, constants->third())) {
+    unsigned target = heapTable->find(constants->first());
     expect(t, target > 0);
 
-    for (Promise::Listener* pl = static_cast<ListenPromise*>
-           (pointerValue(t, tripleSecond(t, constants)))->listener;
-         pl; pl = pl->next)
-    {
+    for (Promise::Listener* pl
+         = static_cast<ListenPromise*>(
+               cast<GcPointer>(t, constants->second())->value())->listener;
+         pl;
+         pl = pl->next) {
       pl->resolve((target - 1) * TargetBytesPerWord, 0);
     }
   }
 }
 
-BootImage::Thunk
-targetThunk(BootImage::Thunk t)
+BootImage::Thunk targetThunk(BootImage::Thunk t)
 {
-  return BootImage::Thunk
-    (targetV4(t.start), targetV4(t.frameSavedOffset), targetV4(t.length));
+  return BootImage::Thunk(
+      targetV4(t.start), targetV4(t.frameSavedOffset), targetV4(t.length));
 }
 
-void
-writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutput,
-                BootImage* image, uint8_t* code, const char* className,
-                const char* methodName, const char* methodSpec,
-                const char* bootimageStart, const char* bootimageEnd,
-                const char* codeimageStart, const char* codeimageEnd,
-                bool useLZMA)
+void writeBootImage2(Thread* t,
+                     OutputStream* bootimageOutput,
+                     OutputStream* codeOutput,
+                     BootImage* image,
+                     uint8_t* code,
+                     const char* className,
+                     const char* methodName,
+                     const char* methodSpec,
+                     const char* bootimageStart,
+                     const char* bootimageEnd,
+                     const char* codeimageStart,
+                     const char* codeimageEnd,
+                     bool useLZMA)
 {
-  setRoot(t, Machine::OutOfMemoryError,
-          make(t, type(t, Machine::OutOfMemoryErrorType)));
+  GcThrowable* throwable
+      = cast<GcThrowable>(t, make(t, type(t, GcOutOfMemoryError::Type)));
+  // sequence point, for gc (don't recombine statements)
+  roots(t)->setOutOfMemoryError(t, throwable);
 
   Zone zone(t->m->system, t->m->heap, 64 * 1024);
 
   class MyCompilationHandler : public Processor::CompilationHandler {
    public:
-
-    String heapDup(const char* name) {
+    String heapDup(const char* name)
+    {
       String ret(name);
       char* n = (char*)heap->allocate(ret.length + 1);
       memcpy(n, ret.text, ret.length + 1);
@@ -1300,55 +1444,67 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       return ret;
     }
 
-    virtual void compiled(const void* code, unsigned size UNUSED, unsigned frameSize UNUSED, const char* name) {
+    virtual void compiled(const void* code,
+                          unsigned size UNUSED,
+                          unsigned frameSize UNUSED,
+                          const char* name)
+    {
       uint64_t offset = reinterpret_cast<uint64_t>(code) - codeOffset;
       symbols.add(SymbolInfo(offset, heapDup(name)));
       // printf("%ld %ld %s.%s%s\n", offset, offset + size, class_, name, spec);
     }
 
-    virtual void dispose() {}
+    virtual void dispose()
+    {
+    }
 
     DynamicArray<SymbolInfo> symbols;
     uint64_t codeOffset;
     Heap* heap;
 
-    MyCompilationHandler(uint64_t codeOffset, Heap* heap):
-      codeOffset(codeOffset),
-      heap(heap) {}
+    MyCompilationHandler(uint64_t codeOffset, Heap* heap)
+        : codeOffset(codeOffset), heap(heap)
+    {
+    }
 
   } compilationHandler(reinterpret_cast<uint64_t>(code), t->m->heap);
 
   t->m->processor->addCompilationHandler(&compilationHandler);
 
-  object classPoolMap;
-  object typeMaps;
-  object constants;
+  GcHashMap* classPoolMap;
+  GcHashMap* typeMaps;
+  GcTriple* constants;
 
-  { classPoolMap = makeHashMap(t, 0, 0);
+  {
+    classPoolMap = makeHashMap(t, 0, 0);
     PROTECT(t, classPoolMap);
 
-    setRoot(t, Machine::PoolMap, classPoolMap);
+    roots(t)->setPoolMap(t, classPoolMap);
 
     typeMaps = makeHashMap(t, 0, 0);
     PROTECT(t, typeMaps);
 
 #include "type-maps.cpp"
 
-    for (unsigned i = 0; i < arrayLength(t, t->m->types); ++i) {
+    for (unsigned i = 0; i < t->m->types->length(); ++i) {
       Type* source = types[i];
       unsigned typeCount = 0;
       unsigned fieldCount = 1;
       while (source[typeCount] != Type_none) {
-        ++ typeCount;
+        ++typeCount;
         if (source[typeCount] != Type_pad) {
-          ++ fieldCount;
+          ++fieldCount;
         }
       }
 
       THREAD_RUNTIME_ARRAY(t, Field, fields, fieldCount);
 
-      init(new (RUNTIME_ARRAY_BODY(fields)) Field, Type_object, 0,
-           BytesPerWord, 0, TargetBytesPerWord);
+      init(new (RUNTIME_ARRAY_BODY(fields)) Field,
+           Type_object,
+           0,
+           BytesPerWord,
+           0,
+           TargetBytesPerWord);
 
       unsigned buildOffset = BytesPerWord;
       unsigned targetOffset = TargetBytesPerWord;
@@ -1416,7 +1572,8 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
           buildSize = targetSize = 0;
           break;
 
-        default: abort(t);
+        default:
+          abort(t);
         }
 
         if (source[j] == Type_array) {
@@ -1432,8 +1589,12 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 
           targetOffset = pad(targetOffset, targetSize);
 
-          init(new (RUNTIME_ARRAY_BODY(fields) + (fieldOffset++)) Field, type,
-               buildOffset, buildSize, targetOffset, targetSize);
+          init(new (RUNTIME_ARRAY_BODY(fields) + (fieldOffset++)) Field,
+               type,
+               buildOffset,
+               buildSize,
+               targetOffset,
+               targetSize);
 
           buildOffset += buildSize;
           targetOffset += targetSize;
@@ -1447,7 +1608,7 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       if (sawArray) {
         fixedFieldCount = fieldCount - 2;
         arrayElementType = type;
-        buildArrayElementSize = buildSize; 
+        buildArrayElementSize = buildSize;
         targetArrayElementSize = targetSize;
       } else {
         fixedFieldCount = fieldCount;
@@ -1456,153 +1617,174 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
         targetArrayElementSize = 0;
       }
 
-      object array = makeByteArray
-        (t, TypeMap::sizeInBytes
-         (ceilingDivide(buildOffset, BytesPerWord), fixedFieldCount));
+      GcByteArray* array = makeByteArray(
+          t,
+          TypeMap::sizeInBytes(ceilingDivide(buildOffset, BytesPerWord),
+                               fixedFieldCount));
 
-      TypeMap* map = new (&byteArrayBody(t, array, 0)) TypeMap
-        (ceilingDivide(buildOffset, BytesPerWord),
-         ceilingDivide(targetOffset, TargetBytesPerWord),
-         fixedFieldCount, TypeMap::NormalKind, buildArrayElementSize,
-         targetArrayElementSize, arrayElementType);
+      TypeMap* map = new (array->body().begin())
+          TypeMap(ceilingDivide(buildOffset, BytesPerWord),
+                  ceilingDivide(targetOffset, TargetBytesPerWord),
+                  fixedFieldCount,
+                  TypeMap::NormalKind,
+                  buildArrayElementSize,
+                  targetArrayElementSize,
+                  arrayElementType);
 
       for (unsigned j = 0; j < fixedFieldCount; ++j) {
         Field* f = RUNTIME_ARRAY_BODY(fields) + j;
 
-        expect(t, f->buildOffset
-               < map->buildFixedSizeInWords * BytesPerWord);
+        expect(t, f->buildOffset < map->buildFixedSizeInWords * BytesPerWord);
 
         map->targetFixedOffsets()[f->buildOffset] = f->targetOffset;
 
         map->fixedFields()[j] = *f;
       }
 
-      hashMapInsert
-        (t, typeMaps, vm::type(t, static_cast<Machine::Type>(i)), array,
-         objectHash);
+      hashMapInsert(
+          t,
+          typeMaps,
+          reinterpret_cast<object>(vm::type(t, static_cast<Gc::Type>(i))),
+          reinterpret_cast<object>(array),
+          objectHash);
     }
 
-    constants = makeCodeImage
-      (t, &zone, image, code, className, methodName, methodSpec, typeMaps);
+    constants = makeCodeImage(
+        t, &zone, image, code, className, methodName, methodSpec, typeMaps);
 
     PROTECT(t, constants);
 
     // these roots will not be used when the bootimage is loaded, so
     // there's no need to preserve them:
-    setRoot(t, Machine::PoolMap, 0);
-    setRoot(t, Machine::ByteArrayMap, makeWeakHashMap(t, 0, 0));
+    roots(t)->setPoolMap(t, 0);
+
+    GcWeakHashMap* map = makeWeakHashMap(t, 0, 0);
+    // sequence point, for gc (don't recombine statements)
+    roots(t)->setByteArrayMap(t, map->as<GcHashMap>(t));
 
     // name all primitive classes so we don't try to update immutable
     // references at runtime:
-    { object name = makeByteArray(t, "void");
-      set(t, type(t, Machine::JvoidType), ClassName, name);
-    
+    {
+      GcByteArray* name = makeByteArray(t, "void");
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJvoid::Type)->setName(t, name);
+
       name = makeByteArray(t, "boolean");
-      set(t, type(t, Machine::JbooleanType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJboolean::Type)->setName(t, name);
 
       name = makeByteArray(t, "byte");
-      set(t, type(t, Machine::JbyteType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJbyte::Type)->setName(t, name);
 
       name = makeByteArray(t, "short");
-      set(t, type(t, Machine::JshortType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJshort::Type)->setName(t, name);
 
       name = makeByteArray(t, "char");
-      set(t, type(t, Machine::JcharType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJchar::Type)->setName(t, name);
 
       name = makeByteArray(t, "int");
-      set(t, type(t, Machine::JintType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJint::Type)->setName(t, name);
 
       name = makeByteArray(t, "float");
-      set(t, type(t, Machine::JfloatType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJfloat::Type)->setName(t, name);
 
       name = makeByteArray(t, "long");
-      set(t, type(t, Machine::JlongType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJlong::Type)->setName(t, name);
 
       name = makeByteArray(t, "double");
-      set(t, type(t, Machine::JdoubleType), ClassName, name);
+      // sequence point, for gc (don't recombine statements)
+      type(t, GcJdouble::Type)->setName(t, name);
     }
 
     // resolve primitive array classes in case they are needed at
     // runtime:
-    { object name = makeByteArray(t, "[B");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+    {
+      GcByteArray* name = makeByteArray(t, "[B");
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[Z");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[S");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[C");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[I");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[J");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[F");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
 
       name = makeByteArray(t, "[D");
-      resolveSystemClass(t, root(t, Machine::BootLoader), name, true);
+      resolveSystemClass(t, roots(t)->bootLoader(), name, true);
     }
   }
 
-  target_uintptr_t* heap = static_cast<target_uintptr_t*>
-    (t->m->heap->allocate(HeapCapacity));
+  target_uintptr_t* heap
+      = static_cast<target_uintptr_t*>(t->m->heap->allocate(HeapCapacity));
 
-  target_uintptr_t* heapMap = static_cast<target_uintptr_t*>
-    (t->m->heap->allocate(heapMapSize(HeapCapacity)));
+  target_uintptr_t* heapMap = static_cast<target_uintptr_t*>(
+      t->m->heap->allocate(heapMapSize(HeapCapacity)));
   memset(heapMap, 0, heapMapSize(HeapCapacity));
 
-  HeapWalker* heapWalker = makeHeapImage
-    (t, image, heap, heapMap, HeapCapacity, constants, typeMaps);
+  HeapWalker* heapWalker = makeHeapImage(
+      t, image, heap, heapMap, HeapCapacity, constants, typeMaps);
 
   updateConstants(t, constants, heapWalker->map());
 
-  image->bootClassCount = hashMapSize
-    (t, classLoaderMap(t, root(t, Machine::BootLoader)));
+  image->bootClassCount
+      = cast<GcHashMap>(t, roots(t)->bootLoader()->map())->size();
 
-  unsigned* bootClassTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image->bootClassCount * sizeof(unsigned)));
+  unsigned* bootClassTable = static_cast<unsigned*>(
+      t->m->heap->allocate(image->bootClassCount * sizeof(unsigned)));
 
-  { unsigned i = 0;
-    for (HashMapIterator it
-           (t, classLoaderMap(t, root(t, Machine::BootLoader)));
-         it.hasMore();)
-    {
-      bootClassTable[i++] = targetVW
-        (heapWalker->map()->find(tripleSecond(t, it.next())));
+  {
+    unsigned i = 0;
+    for (HashMapIterator it(t,
+                            cast<GcHashMap>(t, roots(t)->bootLoader()->map()));
+         it.hasMore();) {
+      bootClassTable[i++]
+          = targetVW(heapWalker->map()->find(it.next()->second()));
     }
   }
 
-  image->appClassCount = hashMapSize
-    (t, classLoaderMap(t, root(t, Machine::AppLoader)));
+  image->appClassCount
+      = cast<GcHashMap>(t, roots(t)->appLoader()->map())->size();
 
-  unsigned* appClassTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image->appClassCount * sizeof(unsigned)));
+  unsigned* appClassTable = static_cast<unsigned*>(
+      t->m->heap->allocate(image->appClassCount * sizeof(unsigned)));
 
-  { unsigned i = 0;
-    for (HashMapIterator it
-           (t, classLoaderMap(t, root(t, Machine::AppLoader)));
-         it.hasMore();)
-    {
-      appClassTable[i++] = targetVW
-        (heapWalker->map()->find(tripleSecond(t, it.next())));
+  {
+    unsigned i = 0;
+    for (
+        HashMapIterator it(t, cast<GcHashMap>(t, roots(t)->appLoader()->map()));
+        it.hasMore();) {
+      appClassTable[i++]
+          = targetVW(heapWalker->map()->find(it.next()->second()));
     }
   }
 
-  image->stringCount = hashMapSize(t, root(t, Machine::StringMap));
-  unsigned* stringTable = static_cast<unsigned*>
-    (t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
+  image->stringCount = roots(t)->stringMap()->size();
+  unsigned* stringTable = static_cast<unsigned*>(
+      t->m->heap->allocate(image->stringCount * sizeof(unsigned)));
 
-  { unsigned i = 0;
-    for (HashMapIterator it(t, root(t, Machine::StringMap)); it.hasMore();) {
-      stringTable[i++] = targetVW
-        (heapWalker->map()->find
-         (jreferenceTarget(t, tripleFirst(t, it.next()))));
+  {
+    unsigned i = 0;
+    for (HashMapIterator it(t, roots(t)->stringMap()); it.hasMore();) {
+      stringTable[i++]
+          = targetVW(heapWalker->map()->find(reinterpret_cast<object>(
+              cast<GcJreference>(t, it.next()->first())->target())));
     }
   }
 
@@ -1613,18 +1795,23 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
   image->magic = BootImage::Magic;
   image->initialized = 0;
 
-  fprintf(stderr, "class count %d string count %d call count %d\n"
+  fprintf(stderr,
+          "class count %d string count %d call count %d\n"
           "heap size %d code size %d\n",
-          image->bootClassCount, image->stringCount, image->callCount,
-          image->heapSize, image->codeSize);
+          image->bootClassCount,
+          image->stringCount,
+          image->callCount,
+          image->heapSize,
+          image->codeSize);
 
   Buffer bootimageData;
 
   if (true) {
-    { BootImage targetImage;
+    {
+      BootImage targetImage;
 
 #ifdef FIELD
-#  undef FIELD
+#undef FIELD
 #endif
 
 #define FIELD(name) targetImage.name = targetV4(image->name);
@@ -1632,54 +1819,63 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
 #undef FIELD
 
 #define THUNK_FIELD(name) \
-      targetImage.thunks.name = targetThunk(image->thunks.name);
+  targetImage.thunks.name = targetThunk(image->thunks.name);
 #include "bootimage-fields.cpp"
 #undef THUNK_FIELD
 
       bootimageData.write(&targetImage, sizeof(BootImage));
     }
 
-    bootimageData.write(bootClassTable, image->bootClassCount * sizeof(unsigned));
+    bootimageData.write(bootClassTable,
+                        image->bootClassCount * sizeof(unsigned));
     bootimageData.write(appClassTable, image->appClassCount * sizeof(unsigned));
     bootimageData.write(stringTable, image->stringCount * sizeof(unsigned));
     bootimageData.write(callTable, image->callCount * sizeof(unsigned) * 2);
 
     unsigned offset = sizeof(BootImage)
-      + (image->bootClassCount * sizeof(unsigned))
-      + (image->appClassCount * sizeof(unsigned))
-      + (image->stringCount * sizeof(unsigned))
-      + (image->callCount * sizeof(unsigned) * 2);
+                      + (image->bootClassCount * sizeof(unsigned))
+                      + (image->appClassCount * sizeof(unsigned))
+                      + (image->stringCount * sizeof(unsigned))
+                      + (image->callCount * sizeof(unsigned) * 2);
 
     while (offset % TargetBytesPerWord) {
       uint8_t c = 0;
       bootimageData.write(&c, 1);
-      ++ offset;
+      ++offset;
     }
 
-    bootimageData.write(heapMap, pad(heapMapSize(image->heapSize), TargetBytesPerWord));
+    bootimageData.write(heapMap,
+                        pad(heapMapSize(image->heapSize), TargetBytesPerWord));
 
     bootimageData.write(heap, pad(image->heapSize, TargetBytesPerWord));
 
     // fwrite(code, pad(image->codeSize, TargetBytesPerWord), 1, codeOutput);
-    
-    Platform* platform = Platform::getPlatform(PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT, (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
 
-    if(!platform) {
-      fprintf(stderr, "unsupported platform: target-format = %d / target-arch = %d\n", AVIAN_TARGET_FORMAT, AVIAN_TARGET_ARCH);
+    Platform* platform = Platform::getPlatform(
+        PlatformInfo((PlatformInfo::Format)AVIAN_TARGET_FORMAT,
+                     (PlatformInfo::Architecture)AVIAN_TARGET_ARCH));
+
+    if (!platform) {
+      fprintf(stderr,
+              "unsupported platform: target-format = %d / target-arch = %d\n",
+              AVIAN_TARGET_FORMAT,
+              AVIAN_TARGET_ARCH);
       abort();
     }
 
-    SymbolInfo bootimageSymbols[] = {
-      SymbolInfo(0, bootimageStart),
-      SymbolInfo(bootimageData.length, bootimageEnd)
-    };
+    SymbolInfo bootimageSymbols[]
+        = {SymbolInfo(0, bootimageStart),
+           SymbolInfo(bootimageData.length, bootimageEnd)};
 
     uint8_t* bootimage;
     unsigned bootimageLength;
     if (useLZMA) {
 #ifdef AVIAN_USE_LZMA
-      bootimage = encodeLZMA(t->m->system, t->m->heap, bootimageData.data,
-                             bootimageData.length, &bootimageLength);
+      bootimage = encodeLZMA(t->m->system,
+                             t->m->heap,
+                             bootimageData.data,
+                             bootimageData.length,
+                             &bootimageLength);
 
       fprintf(stderr, "compressed heap size %d\n", bootimageLength);
 #else
@@ -1690,7 +1886,11 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
       bootimageLength = bootimageData.length;
     }
 
-    platform->writeObject(bootimageOutput, Slice<SymbolInfo>(bootimageSymbols, 2), Slice<const uint8_t>(bootimage, bootimageLength), Platform::Writable, TargetBytesPerWord);
+    platform->writeObject(bootimageOutput,
+                          Slice<SymbolInfo>(bootimageSymbols, 2),
+                          Slice<const uint8_t>(bootimage, bootimageLength),
+                          Platform::Writable,
+                          TargetBytesPerWord);
 
     if (useLZMA) {
       t->m->heap->free(bootimage, bootimageLength);
@@ -1699,16 +1899,22 @@ writeBootImage2(Thread* t, OutputStream* bootimageOutput, OutputStream* codeOutp
     compilationHandler.symbols.add(SymbolInfo(0, codeimageStart));
     compilationHandler.symbols.add(SymbolInfo(image->codeSize, codeimageEnd));
 
-    platform->writeObject(codeOutput, Slice<SymbolInfo>(compilationHandler.symbols), Slice<const uint8_t>(code, image->codeSize), Platform::Executable, TargetBytesPerWord);
+    platform->writeObject(codeOutput,
+                          Slice<SymbolInfo>(compilationHandler.symbols),
+                          Slice<const uint8_t>(code, image->codeSize),
+                          Platform::Executable,
+                          TargetBytesPerWord);
 
-    for(SymbolInfo* sym = compilationHandler.symbols.begin(); sym != compilationHandler.symbols.end() - 2; sym++) {
-      t->m->heap->free(const_cast<void*>((const void*)sym->name.text), sym->name.length + 1);
+    for (SymbolInfo* sym = compilationHandler.symbols.begin();
+         sym != compilationHandler.symbols.end() - 2;
+         sym++) {
+      t->m->heap->free(const_cast<void*>((const void*)sym->name.text),
+                       sym->name.length + 1);
     }
   }
 }
 
-uint64_t
-writeBootImage(Thread* t, uintptr_t* arguments)
+uint64_t writeBootImage(Thread* t, uintptr_t* arguments)
 {
   OutputStream* bootimageOutput = reinterpret_cast<OutputStream*>(arguments[0]);
   OutputStream* codeOutput = reinterpret_cast<OutputStream*>(arguments[1]);
@@ -1724,16 +1930,24 @@ writeBootImage(Thread* t, uintptr_t* arguments)
   const char* codeimageEnd = reinterpret_cast<const char*>(arguments[10]);
   bool useLZMA = arguments[11];
 
-  writeBootImage2
-    (t, bootimageOutput, codeOutput, image, code, className, methodName,
-     methodSpec, bootimageStart, bootimageEnd, codeimageStart, codeimageEnd,
-     useLZMA);
+  writeBootImage2(t,
+                  bootimageOutput,
+                  codeOutput,
+                  image,
+                  code,
+                  className,
+                  methodName,
+                  methodSpec,
+                  bootimageStart,
+                  bootimageEnd,
+                  codeimageStart,
+                  codeimageEnd,
+                  useLZMA);
 
   return 1;
 }
 
-char*
-myStrndup(const char* src, unsigned length)
+char* myStrndup(const char* src, unsigned length)
 {
   char* s = static_cast<char*>(malloc(length + 1));
   memcpy(s, src, length);
@@ -1742,8 +1956,7 @@ myStrndup(const char* src, unsigned length)
 }
 
 class Arguments {
-public:
-
+ public:
   const char* classpath;
 
   const char* bootimage;
@@ -1761,10 +1974,11 @@ public:
 
   bool useLZMA;
 
-  bool maybeSplit(const char* src, char*& destA, char*& destB) {
-    if(src) {
+  bool maybeSplit(const char* src, char*& destA, char*& destB)
+  {
+    if (src) {
       const char* split = strchr(src, ':');
-      if(!split) {
+      if (!split) {
         return false;
       }
 
@@ -1774,25 +1988,32 @@ public:
     return true;
   }
 
-  Arguments(int ac, const char** av):
-    entryClass(0),
-    entryMethod(0),
-    entrySpec(0),
-    bootimageStart(0),
-    bootimageEnd(0),
-    codeimageStart(0),
-    codeimageEnd(0)
+  Arguments(int ac, const char** av)
+      : entryClass(0),
+        entryMethod(0),
+        entrySpec(0),
+        bootimageStart(0),
+        bootimageEnd(0),
+        codeimageStart(0),
+        codeimageEnd(0)
   {
     ArgParser parser;
     Arg classpath(parser, true, "cp", "<classpath>");
     Arg bootimage(parser, true, "bootimage", "<bootimage file>");
     Arg codeimage(parser, true, "codeimage", "<codeimage file>");
-    Arg entry(parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
-    Arg bootimageSymbols(parser, false, "bootimage-symbols", "<start symbol name>:<end symbol name>");
-    Arg codeimageSymbols(parser, false, "codeimage-symbols", "<start symbol name>:<end symbol name>");
+    Arg entry(
+        parser, false, "entry", "<class name>[.<method name>[<method spec>]]");
+    Arg bootimageSymbols(parser,
+                         false,
+                         "bootimage-symbols",
+                         "<start symbol name>:<end symbol name>");
+    Arg codeimageSymbols(parser,
+                         false,
+                         "codeimage-symbols",
+                         "<start symbol name>:<end symbol name>");
     Arg useLZMA(parser, false, "use-lzma", 0);
 
-    if(!parser.parse(ac, av)) {
+    if (!parser.parse(ac, av)) {
       parser.printUsage(av[0]);
       exit(1);
     }
@@ -1802,11 +2023,12 @@ public:
     this->codeimage = codeimage.value;
     this->useLZMA = useLZMA.value != 0;
 
-    if(entry.value) {
-      if(const char* entryClassEnd = strchr(entry.value, '.')) {
+    if (entry.value) {
+      if (const char* entryClassEnd = strchr(entry.value, '.')) {
         entryClass = myStrndup(entry.value, entryClassEnd - entry.value);
-        if(const char* entryMethodEnd = strchr(entryClassEnd, '(')) {
-          entryMethod = myStrndup(entryClassEnd + 1, entryMethodEnd - entryClassEnd - 1);
+        if (const char* entryMethodEnd = strchr(entryClassEnd, '(')) {
+          entryMethod = myStrndup(entryClassEnd + 1,
+                                  entryMethodEnd - entryClassEnd - 1);
           entrySpec = strdup(entryMethodEnd);
         } else {
           entryMethod = strdup(entryClassEnd + 1);
@@ -1816,85 +2038,84 @@ public:
       }
     }
 
-    if(!maybeSplit(bootimageSymbols.value, bootimageStart, bootimageEnd) ||
-       !maybeSplit(codeimageSymbols.value, codeimageStart, codeimageEnd))
-    {
+    if (!maybeSplit(bootimageSymbols.value, bootimageStart, bootimageEnd)
+        || !maybeSplit(codeimageSymbols.value, codeimageStart, codeimageEnd)) {
       fprintf(stderr, "wrong format for symbols\n");
       parser.printUsage(av[0]);
       exit(1);
     }
 
-    if(!bootimageStart) {
+    if (!bootimageStart) {
       bootimageStart = strdup("_binary_bootimage_bin_start");
     }
 
-    if(!bootimageEnd) {
+    if (!bootimageEnd) {
       bootimageEnd = strdup("_binary_bootimage_bin_end");
     }
 
-    if(!codeimageStart) {
+    if (!codeimageStart) {
       codeimageStart = strdup("_binary_codeimage_bin_start");
     }
 
-    if(!codeimageEnd) {
+    if (!codeimageEnd) {
       codeimageEnd = strdup("_binary_codeimage_bin_end");
     }
-
   }
 
-  ~Arguments() {
-    if(entryClass) {
+  ~Arguments()
+  {
+    if (entryClass) {
       free(entryClass);
     }
-    if(entryMethod) {
+    if (entryMethod) {
       free(entryMethod);
     }
-    if(entrySpec) {
+    if (entrySpec) {
       free(entrySpec);
     }
-    if(bootimageStart) {
+    if (bootimageStart) {
       free(bootimageStart);
     }
-    if(bootimageEnd) {
+    if (bootimageEnd) {
       free(bootimageEnd);
     }
-    if(codeimageStart) {
+    if (codeimageStart) {
       free(codeimageStart);
     }
-    if(codeimageEnd) {
+    if (codeimageEnd) {
       free(codeimageEnd);
     }
   }
 
-  void dump() {
+  void dump()
+  {
     printf(
-      "classpath = %s\n"
-      "bootimage = %s\n"
-      "codeimage = %s\n"
-      "entryClass = %s\n"
-      "entryMethod = %s\n"
-      "entrySpec = %s\n"
-      "bootimageStart = %s\n"
-      "bootimageEnd = %s\n"
-      "codeimageStart = %s\n"
-      "codeimageEnd = %s\n",
-      classpath,
-      bootimage,
-      codeimage,
-      entryClass,
-      entryMethod,
-      entrySpec,
-      bootimageStart,
-      bootimageEnd,
-      codeimageStart,
-      codeimageEnd);
+        "classpath = %s\n"
+        "bootimage = %s\n"
+        "codeimage = %s\n"
+        "entryClass = %s\n"
+        "entryMethod = %s\n"
+        "entrySpec = %s\n"
+        "bootimageStart = %s\n"
+        "bootimageEnd = %s\n"
+        "codeimageStart = %s\n"
+        "codeimageEnd = %s\n",
+        classpath,
+        bootimage,
+        codeimage,
+        entryClass,
+        entryMethod,
+        entrySpec,
+        bootimageStart,
+        bootimageEnd,
+        codeimageStart,
+        codeimageEnd);
   }
 };
 
-} // namespace
+}  // namespace
 
-int
-main(int ac, const char** av)
+int main(int ac, const char** av)
 {
   Arguments args(ac, av);
   // args.dump();
@@ -1905,13 +2126,13 @@ main(int ac, const char** av)
   Finder* f = makeFinder(s, h, args.classpath, 0);
   Processor* p = makeProcessor(s, h, 0, false);
 
-  // todo: currently, the compiler cannot compile code with jumps or
-  // calls spanning more than the maximum size of an immediate value
-  // in a branch instruction for the target architecture (~32MB on ARM).
-  // When that limitation is removed, we'll be able to specify a
-  // capacity as large as we like here:
+// todo: currently, the compiler cannot compile code with jumps or
+// calls spanning more than the maximum size of an immediate value
+// in a branch instruction for the target architecture (~32MB on ARM).
+// When that limitation is removed, we'll be able to specify a
+// capacity as large as we like here:
 #if (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86_64) \
-  || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
+    || (AVIAN_TARGET_ARCH == AVIAN_ARCH_X86)
   const unsigned CodeCapacity = 128 * 1024 * 1024;
 #else
   const unsigned CodeCapacity = 30 * 1024 * 1024;
@@ -1921,8 +2142,8 @@ main(int ac, const char** av)
   BootImage image;
   p->initialize(&image, code);
 
-  Machine* m = new (h->allocate(sizeof(Machine))) Machine
-    (s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
+  Machine* m = new (h->allocate(sizeof(Machine)))
+      Machine(s, h, f, 0, p, c, 0, 0, 0, 0, 128 * 1024);
   Thread* t = p->makeThread(m, 0, 0);
 
   enter(t, Thread::ActiveState);

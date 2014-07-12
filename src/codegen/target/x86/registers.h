@@ -55,13 +55,14 @@ enum {
 
 const int LongJumpRegister = r10;
 
-const unsigned GeneralRegisterMask = vm::TargetBytesPerWord == 4 ? 0x000000ff : 0x0000ffff;
+const unsigned GeneralRegisterMask = vm::TargetBytesPerWord == 4 ? 0x000000ff
+                                                                 : 0x0000ffff;
 
-const unsigned FloatRegisterMask = vm::TargetBytesPerWord == 4 ? 0x00ff0000 : 0xffff0000;
+const unsigned FloatRegisterMask = vm::TargetBytesPerWord == 4 ? 0x00ff0000
+                                                               : 0xffff0000;
 
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
-
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_REGISTERS_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_REGISTERS_H

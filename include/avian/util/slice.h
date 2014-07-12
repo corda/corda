@@ -19,6 +19,19 @@ namespace avian {
 namespace util {
 
 template <class T>
+struct NonConst;
+
+template <class T>
+struct NonConst<const T> {
+  typedef T Type;
+};
+
+template <class T>
+struct NonConst {
+  typedef T Type;
+};
+
+template <class T>
 class Slice {
  public:
   T* items;
@@ -28,7 +41,8 @@ class Slice {
   {
   }
 
-  inline Slice(const Slice<T>& copy) : items(copy.items), count(copy.count)
+  inline Slice(const Slice<typename NonConst<T>::Type>& copy)
+      : items(copy.items), count(copy.count)
   {
   }
 
@@ -46,6 +60,13 @@ class Slice {
   inline T* end()
   {
     return items + count;
+  }
+
+  inline Slice<T> subslice(size_t begin, size_t count)
+  {
+    ASSERT(begin <= this->count);
+    ASSERT(begin + count <= this->count);
+    return Slice<T>(this->begin() + begin, count);
   }
 
   static Slice<T> alloc(Allocator* a, size_t count)

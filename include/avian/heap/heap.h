@@ -24,17 +24,9 @@ const unsigned FixieTenureThreshold = TenureThreshold + 2;
 
 class Heap : public avian::util::Allocator {
  public:
-  enum CollectionType {
-    MinorCollection,
-    MajorCollection
-  };
+  enum CollectionType { MinorCollection, MajorCollection };
 
-  enum Status {
-    Null,
-    Reachable,
-    Unreachable,
-    Tenured
-  };
+  enum Status { Null, Reachable, Unreachable, Tenured };
 
   class Visitor {
    public:
@@ -62,7 +54,8 @@ class Heap : public avian::util::Allocator {
   virtual unsigned remaining() = 0;
   virtual unsigned limit() = 0;
   virtual bool limitExceeded(int pendingAllocation = 0) = 0;
-  virtual void collect(CollectionType type, unsigned footprint,
+  virtual void collect(CollectionType type,
+                       unsigned footprint,
                        int pendingAllocation) = 0;
   virtual unsigned fixedFootprint(unsigned sizeInWords, bool objectMask) = 0;
   virtual void* allocateFixed(avian::util::Allocator* allocator,
@@ -74,6 +67,13 @@ class Heap : public avian::util::Allocator {
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;
   virtual void pad(void* p) = 0;
   virtual void* follow(void* p) = 0;
+
+  template <class T>
+  T* follow(T* p)
+  {
+    return static_cast<T*>(follow(static_cast<void*>(p)));
+  }
+
   virtual void postVisit() = 0;
   virtual Status status(void* p) = 0;
   virtual CollectionType collectionType() = 0;
@@ -83,6 +83,6 @@ class Heap : public avian::util::Allocator {
 
 Heap* makeHeap(System* system, unsigned limit);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//HEAP_H
+#endif  // HEAP_H

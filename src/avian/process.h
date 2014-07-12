@@ -18,28 +18,25 @@
 
 namespace vm {
 
-inline int16_t
-codeReadInt16(Thread* t, object code, unsigned& ip)
+inline int16_t codeReadInt16(Thread* t UNUSED, GcCode* code, unsigned& ip)
 {
-  uint8_t v1 = codeBody(t, code, ip++);
-  uint8_t v2 = codeBody(t, code, ip++);
+  uint8_t v1 = code->body()[ip++];
+  uint8_t v2 = code->body()[ip++];
   return ((v1 << 8) | v2);
 }
 
-inline int32_t
-codeReadInt32(Thread* t, object code, unsigned& ip)
+inline int32_t codeReadInt32(Thread* t UNUSED, GcCode* code, unsigned& ip)
 {
-  uint8_t v1 = codeBody(t, code, ip++);
-  uint8_t v2 = codeBody(t, code, ip++);
-  uint8_t v3 = codeBody(t, code, ip++);
-  uint8_t v4 = codeBody(t, code, ip++);
+  uint8_t v1 = code->body()[ip++];
+  uint8_t v2 = code->body()[ip++];
+  uint8_t v3 = code->body()[ip++];
+  uint8_t v4 = code->body()[ip++];
   return ((v1 << 24) | (v2 << 16) | (v3 << 8) | v4);
 }
 
-inline bool
-isSuperclass(Thread* t, object class_, object base)
+inline bool isSuperclass(Thread* t UNUSED, GcClass* class_, GcClass* base)
 {
-  for (object oc = classSuper(t, base); oc; oc = classSuper(t, oc)) {
+  for (GcClass* oc = base->super(); oc; oc = oc->super()) {
     if (oc == class_) {
       return true;
     }
@@ -47,21 +44,18 @@ isSuperclass(Thread* t, object class_, object base)
   return false;
 }
 
-inline bool
-isSpecialMethod(Thread* t, object method, object class_)
+inline bool isSpecialMethod(Thread* t, GcMethod* method, GcClass* class_)
 {
-  return (classFlags(t, class_) & ACC_SUPER)
-    and strcmp(reinterpret_cast<const int8_t*>("<init>"), 
-               &byteArrayBody(t, methodName(t, method), 0)) != 0
-    and isSuperclass(t, methodClass(t, method), class_);
+  return (class_->flags() & ACC_SUPER)
+         and strcmp(reinterpret_cast<const int8_t*>("<init>"),
+                    method->name()->body().begin()) != 0
+         and isSuperclass(t, method->class_(), class_);
 }
 
-void
-resolveNative(Thread* t, object method);
+void resolveNative(Thread* t, GcMethod* method);
 
-int
-findLineNumber(Thread* t, object method, unsigned ip);
+int findLineNumber(Thread* t, GcMethod* method, unsigned ip);
 
-} // namespace vm
+}  // namespace vm
 
-#endif//PROCESS_H
+#endif  // PROCESS_H

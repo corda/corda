@@ -20,7 +20,7 @@ namespace arm {
 
 class PoolEvent;
 
-class MyBlock: public Assembler::Block {
+class MyBlock : public Assembler::Block {
  public:
   MyBlock(Context* context, unsigned offset);
 
@@ -39,8 +39,8 @@ class MyBlock: public Assembler::Block {
   unsigned size;
 };
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_ARM_BLOCK_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_ARM_BLOCK_H

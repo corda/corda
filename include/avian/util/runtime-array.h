@@ -16,25 +16,26 @@
 template <class T>
 class RuntimeArray {
  public:
-  RuntimeArray(unsigned size):
-    body(static_cast<T*>(malloc(size * sizeof(T))))
-  { }
+  RuntimeArray(unsigned size) : body(static_cast<T*>(malloc(size * sizeof(T))))
+  {
+  }
 
-  ~RuntimeArray() {
+  ~RuntimeArray()
+  {
     free(body);
   }
 
   T* body;
 };
 
-#  define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
-#  define RUNTIME_ARRAY_BODY(name) name.body
+#define RUNTIME_ARRAY(type, name, size) RuntimeArray<type> name(size);
+#define RUNTIME_ARRAY_BODY(name) name.body
 
-#else // not _MSC_VER
+#else  // not _MSC_VER
 
-#  define RUNTIME_ARRAY(type, name, size) type name##_body[size];
-#  define RUNTIME_ARRAY_BODY(name) name##_body
+#define RUNTIME_ARRAY(type, name, size) type name##_body[size];
+#define RUNTIME_ARRAY_BODY(name) name##_body
 
 #endif
 
-#endif // AVIAN_UTIL_RUNTIME_ARRAY_H
+#endif  // AVIAN_UTIL_RUNTIME_ARRAY_H

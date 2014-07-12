@@ -21,112 +21,115 @@ namespace avian {
 
 namespace tools {
 
-Buffer::Buffer():
-  capacity(100),
-  length(0),
-  data((uint8_t*)malloc(capacity)) {}
+Buffer::Buffer() : capacity(100), length(0), data((uint8_t*)malloc(capacity))
+{
+}
 
-Buffer::~Buffer() {
+Buffer::~Buffer()
+{
   free(data);
 }
 
-void Buffer::ensure(size_t more) {
-  if(length + more > capacity) {
+void Buffer::ensure(size_t more)
+{
+  if (length + more > capacity) {
     capacity = capacity * 2 + more;
     data = (uint8_t*)realloc(data, capacity);
   }
 }
 
-void Buffer::write(const void* d, size_t size) {
+void Buffer::write(const void* d, size_t size)
+{
   ensure(size);
   memcpy(data + length, d, size);
   length += size;
 }
 
-unsigned StringTable::add(String str) {
+unsigned StringTable::add(String str)
+{
   unsigned offset = Buffer::length;
   Buffer::write(str.text, str.length + 1);
   return offset;
 }
 
-void OutputStream::write(uint8_t byte) {
+void OutputStream::write(uint8_t byte)
+{
   writeChunk(&byte, 1);
 }
 
-void OutputStream::writeRepeat(uint8_t byte, size_t size) {
-  for(size_t i = 0; i < size; i++) {
+void OutputStream::writeRepeat(uint8_t byte, size_t size)
+{
+  for (size_t i = 0; i < size; i++) {
     write(byte);
   }
 }
 
-FileOutputStream::FileOutputStream(const char* name):
-  file(fopen(name, "wb")) {}
+FileOutputStream::FileOutputStream(const char* name) : file(fopen(name, "wb"))
+{
+}
 
-FileOutputStream::~FileOutputStream() {
-  if(file) {
+FileOutputStream::~FileOutputStream()
+{
+  if (file) {
     fclose(file);
   }
 }
 
-bool FileOutputStream::isValid() {
+bool FileOutputStream::isValid()
+{
   return file;
 }
 
-void FileOutputStream::writeChunk(const void* data, size_t size) {
+void FileOutputStream::writeChunk(const void* data, size_t size)
+{
   fwrite(data, size, 1, file);
 }
 
-void FileOutputStream::write(uint8_t byte) {
+void FileOutputStream::write(uint8_t byte)
+{
   fputc(byte, file);
 }
 
-
 Platform* Platform::first = 0;
 
-PlatformInfo::Format PlatformInfo::formatFromString(const char* format) {
-  if (strcmp(format, "elf") == 0
-      or strcmp(format, "linux") == 0
-      or strcmp(format, "freebsd") == 0
-      or strcmp(format, "qnx") == 0)
-  {
+PlatformInfo::Format PlatformInfo::formatFromString(const char* format)
+{
+  if (strcmp(format, "elf") == 0 or strcmp(format, "linux") == 0
+      or strcmp(format, "freebsd") == 0 or strcmp(format, "qnx") == 0) {
     return Elf;
-  } else if (strcmp(format, "pe") == 0
-             or strcmp(format, "windows") == 0)
-  {
+  } else if (strcmp(format, "pe") == 0 or strcmp(format, "windows") == 0) {
     return Pe;
-  } else if (strcmp(format, "macho") == 0
-             or strcmp(format, "darwin") == 0
-             or strcmp(format, "ios") == 0
-             or strcmp(format, "macosx") == 0)
-  {
+  } else if (strcmp(format, "macho") == 0 or strcmp(format, "darwin") == 0
+             or strcmp(format, "ios") == 0 or strcmp(format, "macosx") == 0) {
     return MachO;
   } else {
     return UnknownFormat;
   }
 }
 
-PlatformInfo::Architecture PlatformInfo::archFromString(const char* arch) {
-  if(strcmp(arch, "i386") == 0) {
+PlatformInfo::Architecture PlatformInfo::archFromString(const char* arch)
+{
+  if (strcmp(arch, "i386") == 0) {
     return x86;
-  } else if(strcmp(arch, "x86_64") == 0) {
+  } else if (strcmp(arch, "x86_64") == 0) {
     return x86_64;
-  } else if(strcmp(arch, "arm") == 0) {
+  } else if (strcmp(arch, "arm") == 0) {
     return Arm;
   } else {
     return UnknownArch;
   }
 }
 
-Platform* Platform::getPlatform(PlatformInfo info) {
-  for(Platform* p = first; p; p = p->next) {
-    if(p->info == info) {
+Platform* Platform::getPlatform(PlatformInfo info)
+{
+  for (Platform* p = first; p; p = p->next) {
+    if (p->info == info) {
       return p;
     }
   }
   return 0;
 }
 
-} // namespace tools
+}  // namespace tools
 
-} // namespace avian
-
+}  // namespace avian

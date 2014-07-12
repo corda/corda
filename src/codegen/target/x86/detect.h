@@ -21,8 +21,8 @@ class ArchitectureContext;
 
 bool useSSE(ArchitectureContext* c);
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_DETECT_H

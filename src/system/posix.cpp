@@ -9,29 +9,29 @@
    details. */
 
 #ifndef __STDC_CONSTANT_MACROS
-#  define __STDC_CONSTANT_MACROS
+#define __STDC_CONSTANT_MACROS
 #endif
 
 #include "sys/types.h"
 #ifdef __APPLE__
-#  include "CoreFoundation/CoreFoundation.h"
-#  include "sys/ucontext.h"
-#  undef assert
+#include "CoreFoundation/CoreFoundation.h"
+#include "sys/ucontext.h"
+#undef assert
 #elif defined(__ANDROID__)
-#  include <asm/sigcontext.h>       /* for sigcontext */
-#  include <asm/signal.h>           /* for stack_t */
-   typedef struct ucontext {
-     unsigned long uc_flags;
-     struct ucontext *uc_link;
-     stack_t uc_stack;
-     struct sigcontext uc_mcontext;
-     unsigned long uc_sigmask;
-   } ucontext_t;
+#include <asm/sigcontext.h> /* for sigcontext */
+#include <asm/signal.h>     /* for stack_t */
+typedef struct ucontext {
+  unsigned long uc_flags;
+  struct ucontext* uc_link;
+  stack_t uc_stack;
+  struct sigcontext uc_mcontext;
+  unsigned long uc_sigmask;
+} ucontext_t;
 #else
-#  if defined __FreeBSD__
-#    include "limits.h"
-#  endif
-#  include "ucontext.h"
+#if defined __FreeBSD__
+#include "limits.h"
+#endif
+#include "ucontext.h"
 #endif
 
 #include "sys/mman.h"
@@ -56,8 +56,7 @@
 #include <avian/system/signal.h>
 #include <avian/util/math.h>
 
-
-#define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_) (x)
+#define ACQUIRE(x) MutexResource MAKE_NAME(mutexResource_)(x)
 
 using namespace vm;
 using namespace avian::util;
@@ -66,11 +65,13 @@ namespace {
 
 class MutexResource {
  public:
-  MutexResource(pthread_mutex_t& m): m(&m) {
+  MutexResource(pthread_mutex_t& m) : m(&m)
+  {
     pthread_mutex_lock(&m);
   }
 
-  ~MutexResource() {
+  ~MutexResource()
+  {
     pthread_mutex_unlock(m);
   }
 
@@ -92,25 +93,22 @@ const unsigned SignalCount = 3;
 class MySystem;
 MySystem* system;
 
-void
-handleSignal(int signal, siginfo_t* info, void* context);
+void handleSignal(int signal, siginfo_t* info, void* context);
 
-void*
-run(void* r)
+void* run(void* r)
 {
   static_cast<System::Runnable*>(r)->run();
   return 0;
 }
 
-void
-pathOfExecutable(System* s, const char** retBuf, unsigned* size)
+void pathOfExecutable(System* s, const char** retBuf, unsigned* size)
 {
 #ifdef __APPLE__
   CFBundleRef bundle = CFBundleGetMainBundle();
   CFURLRef url = CFBundleCopyExecutableURL(bundle);
   CFStringRef path = CFURLCopyPath(url);
-  path = CFURLCreateStringByReplacingPercentEscapes(kCFAllocatorDefault,
-                path, CFSTR(""));
+  path = CFURLCreateStringByReplacingPercentEscapes(
+      kCFAllocatorDefault, path, CFSTR(""));
   CFIndex pathSize = CFStringGetMaximumSizeOfFileSystemRepresentation(path);
   char* buffer = reinterpret_cast<char*>(allocate(s, pathSize));
   if (CFStringGetFileSystemRepresentation(path, buffer, pathSize)) {
@@ -130,21 +128,18 @@ const bool Verbose = false;
 
 const unsigned Notified = 1 << 0;
 
-class MySystem: public System {
+class MySystem : public System {
  public:
-  class Thread: public System::Thread {
+  class Thread : public System::Thread {
    public:
-    Thread(System* s, System::Runnable* r):
-      s(s),
-      r(r),
-      next(0),
-      flags(0)
+    Thread(System* s, System::Runnable* r) : s(s), r(r), next(0), flags(0)
     {
       pthread_mutex_init(&mutex, 0);
       pthread_cond_init(&condition, 0);
     }
 
-    virtual void interrupt() {
+    virtual void interrupt()
+    {
       ACQUIRE(mutex);
 
       r->setInterrupted(true);
@@ -158,7 +153,8 @@ class MySystem: public System {
       expect(s, rv == 0);
     }
 
-    virtual bool getAndClearInterrupted() {
+    virtual bool getAndClearInterrupted()
+    {
       ACQUIRE(mutex);
 
       bool interrupted = r->interrupted();
@@ -168,12 +164,14 @@ class MySystem: public System {
       return interrupted;
     }
 
-    virtual void join() {
+    virtual void join()
+    {
       int rv UNUSED = pthread_join(thread, 0);
       expect(s, rv == 0);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       pthread_mutex_destroy(&mutex);
       pthread_cond_destroy(&condition);
       ::free(this);
@@ -188,21 +186,25 @@ class MySystem: public System {
     unsigned flags;
   };
 
-  class Mutex: public System::Mutex {
+  class Mutex : public System::Mutex {
    public:
-    Mutex(System* s): s(s) {
-      pthread_mutex_init(&mutex, 0);    
+    Mutex(System* s) : s(s)
+    {
+      pthread_mutex_init(&mutex, 0);
     }
 
-    virtual void acquire() {
+    virtual void acquire()
+    {
       pthread_mutex_lock(&mutex);
     }
 
-    virtual void release() {
+    virtual void release()
+    {
       pthread_mutex_unlock(&mutex);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       pthread_mutex_destroy(&mutex);
       ::free(this);
     }
@@ -211,17 +213,19 @@ class MySystem: public System {
     pthread_mutex_t mutex;
   };
 
-  class Monitor: public System::Monitor {
+  class Monitor : public System::Monitor {
    public:
-    Monitor(System* s): s(s), owner_(0), first(0), last(0), depth(0) {
-      pthread_mutex_init(&mutex, 0);    
+    Monitor(System* s) : s(s), owner_(0), first(0), last(0), depth(0)
+    {
+      pthread_mutex_init(&mutex, 0);
     }
 
-    virtual bool tryAcquire(System::Thread* context) {
+    virtual bool tryAcquire(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
-        ++ depth;
+        ++depth;
         return true;
       } else {
         switch (pthread_mutex_trylock(&mutex)) {
@@ -230,7 +234,7 @@ class MySystem: public System {
 
         case 0:
           owner_ = t;
-          ++ depth;
+          ++depth;
           return true;
 
         default:
@@ -239,21 +243,23 @@ class MySystem: public System {
       }
     }
 
-    virtual void acquire(System::Thread* context) {
+    virtual void acquire(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ != t) {
         pthread_mutex_lock(&mutex);
         owner_ = t;
       }
-      ++ depth;
+      ++depth;
     }
 
-    virtual void release(System::Thread* context) {
+    virtual void release(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
-        if (-- depth == 0) {
+        if (--depth == 0) {
           owner_ = 0;
           pthread_mutex_unlock(&mutex);
         }
@@ -262,7 +268,8 @@ class MySystem: public System {
       }
     }
 
-    void append(Thread* t) {
+    void append(Thread* t)
+    {
 #ifndef NDEBUG
       for (Thread* x = first; x; x = x->next) {
         expect(s, t != x);
@@ -278,7 +285,8 @@ class MySystem: public System {
       }
     }
 
-    void remove(Thread* t) {
+    void remove(Thread* t)
+    {
       Thread* previous = 0;
       for (Thread* current = first; current;) {
         if (t == current) {
@@ -309,7 +317,8 @@ class MySystem: public System {
 #endif
     }
 
-    virtual void wait(System::Thread* context, int64_t time) {
+    virtual void wait(System::Thread* context, int64_t time)
+    {
       wait(context, time, false);
     }
 
@@ -318,7 +327,8 @@ class MySystem: public System {
       return wait(context, time, true);
     }
 
-    bool wait(System::Thread* context, int64_t time, bool clearInterrupted) {
+    bool wait(System::Thread* context, int64_t time, bool clearInterrupted)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
@@ -327,8 +337,9 @@ class MySystem: public System {
         bool notified = false;
         unsigned depth = 0;
 
-        { ACQUIRE(t->mutex);
-      
+        {
+          ACQUIRE(t->mutex);
+
           expect(s, (t->flags & Notified) == 0);
 
           interrupted = t->r->interrupted();
@@ -348,10 +359,10 @@ class MySystem: public System {
             // milliseconds) is infinity so as to avoid overflow:
             if (time and time < INT64_C(31536000000000000)) {
               int64_t then = s->now() + time;
-              timespec ts = { static_cast<long>(then / 1000),
-                              static_cast<long>((then % 1000) * 1000 * 1000) };
-              int rv UNUSED = pthread_cond_timedwait
-                (&(t->condition), &(t->mutex), &ts);
+              timespec ts = {static_cast<long>(then / 1000),
+                             static_cast<long>((then % 1000) * 1000 * 1000)};
+              int rv UNUSED
+                  = pthread_cond_timedwait(&(t->condition), &(t->mutex), &ts);
               expect(s, rv == 0 or rv == ETIMEDOUT or rv == EINTR);
             } else {
               int rv UNUSED = pthread_cond_wait(&(t->condition), &(t->mutex));
@@ -369,7 +380,8 @@ class MySystem: public System {
 
         pthread_mutex_lock(&mutex);
 
-        { ACQUIRE(t->mutex);
+        {
+          ACQUIRE(t->mutex);
           t->flags = 0;
         }
 
@@ -394,7 +406,8 @@ class MySystem: public System {
       }
     }
 
-    void doNotify(Thread* t) {
+    void doNotify(Thread* t)
+    {
       ACQUIRE(t->mutex);
 
       t->flags |= Notified;
@@ -402,7 +415,8 @@ class MySystem: public System {
       expect(s, rv == 0);
     }
 
-    virtual void notify(System::Thread* context) {
+    virtual void notify(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
@@ -421,7 +435,8 @@ class MySystem: public System {
       }
     }
 
-    virtual void notifyAll(System::Thread* context) {
+    virtual void notifyAll(System::Thread* context)
+    {
       Thread* t = static_cast<Thread*>(context);
 
       if (owner_ == t) {
@@ -433,12 +448,14 @@ class MySystem: public System {
         sysAbort(s);
       }
     }
-    
-    virtual System::Thread* owner() {
+
+    virtual System::Thread* owner()
+    {
       return owner_;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       expect(s, owner_ == 0);
       pthread_mutex_destroy(&mutex);
       ::free(this);
@@ -452,23 +469,27 @@ class MySystem: public System {
     unsigned depth;
   };
 
-  class Local: public System::Local {
+  class Local : public System::Local {
    public:
-    Local(System* s): s(s) {
+    Local(System* s) : s(s)
+    {
       int r UNUSED = pthread_key_create(&key, 0);
       expect(s, r == 0);
     }
 
-    virtual void* get() {
+    virtual void* get()
+    {
       return pthread_getspecific(key);
     }
 
-    virtual void set(void* p) {
+    virtual void set(void* p)
+    {
       int r UNUSED = pthread_setspecific(key, p);
       expect(s, r == 0);
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       int r UNUSED = pthread_key_delete(key);
       expect(s, r == 0);
 
@@ -479,23 +500,25 @@ class MySystem: public System {
     pthread_key_t key;
   };
 
-  class Region: public System::Region {
+  class Region : public System::Region {
    public:
-    Region(System* s, uint8_t* start, size_t length):
-      s(s),
-      start_(start),
-      length_(length)
-    { }
+    Region(System* s, uint8_t* start, size_t length)
+        : s(s), start_(start), length_(length)
+    {
+    }
 
-    virtual const uint8_t* start() {
+    virtual const uint8_t* start()
+    {
       return start_;
     }
 
-    virtual size_t length() {
+    virtual size_t length()
+    {
       return length_;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       if (start_) {
         munmap(start_, length_);
       }
@@ -507,11 +530,14 @@ class MySystem: public System {
     size_t length_;
   };
 
-  class Directory: public System::Directory {
+  class Directory : public System::Directory {
    public:
-    Directory(System* s, DIR* directory): s(s), directory(directory) { }
+    Directory(System* s, DIR* directory) : s(s), directory(directory)
+    {
+    }
 
-    virtual const char* next() {
+    virtual const char* next()
+    {
       if (directory) {
         dirent* e = readdir(directory);
         if (e) {
@@ -521,7 +547,8 @@ class MySystem: public System {
       return 0;
     }
 
-    virtual void dispose() {
+    virtual void dispose()
+    {
       if (directory) {
         closedir(directory);
       }
@@ -532,40 +559,50 @@ class MySystem: public System {
     DIR* directory;
   };
 
-  class Library: public System::Library {
+  class Library : public System::Library {
    public:
-    Library(System* s, void* p, const char* name, unsigned nameLength,
-            bool isMain):
-      s(s),
-      p(p),
-      mainExecutable(isMain),
-      name_(name),
-      nameLength(nameLength),
-      next_(0)
-    { }
+    Library(System* s,
+            void* p,
+            const char* name,
+            unsigned nameLength,
+            bool isMain)
+        : s(s),
+          p(p),
+          mainExecutable(isMain),
+          name_(name),
+          nameLength(nameLength),
+          next_(0)
+    {
+    }
 
-    virtual void* resolve(const char* function) {
+    virtual void* resolve(const char* function)
+    {
       return dlsym(p, function);
     }
 
-    virtual const char* name() {
+    virtual const char* name()
+    {
       return name_;
     }
 
-    virtual System::Library* next() {
+    virtual System::Library* next()
+    {
       return next_;
     }
 
-    virtual void setNext(System::Library* lib) {
+    virtual void setNext(System::Library* lib)
+    {
       next_ = lib;
     }
 
-    virtual void disposeAll() {
+    virtual void disposeAll()
+    {
       if (Verbose) {
         fprintf(stderr, "close %p\n", p);
       }
 
-      if (not mainExecutable) dlclose(p);
+      if (not mainExecutable)
+        dlclose(p);
 
       if (next_) {
         next_->disposeAll();
@@ -586,9 +623,7 @@ class MySystem: public System {
     System::Library* next_;
   };
 
-  MySystem():
-    threadVisitor(0),
-    visitTarget(0)
+  MySystem() : threadVisitor(0), visitTarget(0)
   {
     expect(this, system == 0);
     system = this;
@@ -601,30 +636,36 @@ class MySystem: public System {
   }
 
   // Returns true on success, false on failure
-  bool unregisterHandler(int index) {
+  bool unregisterHandler(int index)
+  {
     return sigaction(signals[index], oldHandlers + index, 0) == 0;
   }
 
   // Returns true on success, false on failure
-  bool registerHandler(int index) {
+  bool registerHandler(int index)
+  {
     struct sigaction sa;
     memset(&sa, 0, sizeof(struct sigaction));
     sigemptyset(&(sa.sa_mask));
     sa.sa_flags = SA_SIGINFO;
     sa.sa_sigaction = handleSignal;
-  
+
     return sigaction(signals[index], &sa, oldHandlers + index) == 0;
   }
 
-  virtual void* tryAllocate(unsigned sizeInBytes) {
+  virtual void* tryAllocate(unsigned sizeInBytes)
+  {
     return malloc(sizeInBytes);
   }
 
-  virtual void free(const void* p) {
-    if (p) ::free(const_cast<void*>(p));
+  virtual void free(const void* p)
+  {
+    if (p)
+      ::free(const_cast<void*>(p));
   }
 
-  virtual void* tryAllocateExecutable(unsigned sizeInBytes) {
+  virtual void* tryAllocateExecutable(unsigned sizeInBytes)
+  {
 #ifdef MAP_32BIT
     // map to the lower 32 bits of memory when possible so as to avoid
     // expensive relative jumps
@@ -633,34 +674,42 @@ class MySystem: public System {
     const unsigned Extra = 0;
 #endif
 
-    void* p = mmap(0, sizeInBytes, PROT_EXEC | PROT_READ | PROT_WRITE,
-                   MAP_PRIVATE | MAP_ANON | Extra, -1, 0);
+    void* p = mmap(0,
+                   sizeInBytes,
+                   PROT_EXEC | PROT_READ | PROT_WRITE,
+                   MAP_PRIVATE | MAP_ANON | Extra,
+                   -1,
+                   0);
 
     if (p == MAP_FAILED) {
       return 0;
     } else {
-//       fprintf(stderr, "executable from %p to %p\n", p,
-//               static_cast<uint8_t*>(p) + sizeInBytes);
+      //       fprintf(stderr, "executable from %p to %p\n", p,
+      //               static_cast<uint8_t*>(p) + sizeInBytes);
       return static_cast<uint8_t*>(p);
     }
   }
 
-  virtual void freeExecutable(const void* p, unsigned sizeInBytes) {
+  virtual void freeExecutable(const void* p, unsigned sizeInBytes)
+  {
     munmap(const_cast<void*>(p), sizeInBytes);
   }
 
-  virtual bool success(Status s) {
+  virtual bool success(Status s)
+  {
     return s == 0;
   }
 
-  virtual Status attach(Runnable* r) {
+  virtual Status attach(Runnable* r)
+  {
     Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     t->thread = pthread_self();
     r->attach(t);
     return 0;
   }
 
-  virtual Status start(Runnable* r) {
+  virtual Status start(Runnable* r)
+  {
     Thread* t = new (allocate(this, sizeof(Thread))) Thread(this, r);
     r->attach(t);
     int rv UNUSED = pthread_create(&(t->thread), 0, run, r);
@@ -668,25 +717,29 @@ class MySystem: public System {
     return 0;
   }
 
-  virtual Status make(System::Mutex** m) {
+  virtual Status make(System::Mutex** m)
+  {
     *m = new (allocate(this, sizeof(Mutex))) Mutex(this);
     return 0;
   }
 
-  virtual Status make(System::Monitor** m) {
+  virtual Status make(System::Monitor** m)
+  {
     *m = new (allocate(this, sizeof(Monitor))) Monitor(this);
     return 0;
   }
 
-  virtual Status make(System::Local** l) {
+  virtual Status make(System::Local** l)
+  {
     *l = new (allocate(this, sizeof(Local))) Local(this);
     return 0;
   }
 
-  virtual Status visit(System::Thread* st UNUSED, System::Thread* sTarget,
+  virtual Status visit(System::Thread* st UNUSED,
+                       System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
-    assert(this, st != sTarget);
+    assertT(this, st != sTarget);
 
     Thread* target = static_cast<Thread*>(sTarget);
 
@@ -698,14 +751,17 @@ class MySystem: public System {
 
     mach_port_t port = pthread_mach_thread_np(target->thread);
 
-    if (thread_suspend(port)) return -1;
+    if (thread_suspend(port))
+      return -1;
 
     THREAD_STATE_TYPE state;
     mach_msg_type_number_t stateCount = THREAD_STATE_COUNT;
-    kern_return_t rv = thread_get_state
-      (port, THREAD_STATE, reinterpret_cast<thread_state_t>(&state),
-       &stateCount);
-    
+    kern_return_t rv
+        = thread_get_state(port,
+                           THREAD_STATE,
+                           reinterpret_cast<thread_state_t>(&state),
+                           &stateCount);
+
     if (rv == 0) {
       visitor->visit(reinterpret_cast<void*>(THREAD_STATE_IP(state)),
                      reinterpret_cast<void*>(THREAD_STATE_STACK(state)),
@@ -715,12 +771,13 @@ class MySystem: public System {
     thread_resume(port);
 
     return rv ? -1 : 0;
-#else // not __APPLE__
+#else   // not __APPLE__
     Thread* t = static_cast<Thread*>(st);
 
     ACQUIRE_MONITOR(t, visitLock);
 
-    while (threadVisitor) visitLock->wait(t, 0);
+    while (threadVisitor)
+      visitLock->wait(t, 0);
 
     threadVisitor = visitor;
     visitTarget = target;
@@ -729,7 +786,8 @@ class MySystem: public System {
 
     int result;
     if (rv == 0) {
-      while (visitTarget) visitLock->wait(t, 0);
+      while (visitTarget)
+        visitLock->wait(t, 0);
 
       result = 0;
     } else {
@@ -743,10 +801,11 @@ class MySystem: public System {
     system->visitLock->notifyAll(t);
 
     return result;
-#endif // not  __APPLE__
+#endif  // not  __APPLE__
   }
 
-  virtual Status map(System::Region** region, const char* name) {
+  virtual Status map(System::Region** region, const char* name)
+  {
     Status status = 1;
 
     int fd = ::open(name, O_RDONLY);
@@ -757,29 +816,31 @@ class MySystem: public System {
         void* data = mmap(0, s.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (data) {
           *region = new (allocate(this, sizeof(Region)))
-            Region(this, static_cast<uint8_t*>(data), s.st_size);
+              Region(this, static_cast<uint8_t*>(data), s.st_size);
           status = 0;
         }
       }
       close(fd);
     }
-    
+
     return status;
   }
 
-  virtual Status open(System::Directory** directory, const char* name) {
+  virtual Status open(System::Directory** directory, const char* name)
+  {
     Status status = 1;
-    
+
     DIR* d = opendir(name);
     if (d) {
       *directory = new (allocate(this, sizeof(Directory))) Directory(this, d);
       status = 0;
     }
-    
+
     return status;
   }
 
-  virtual FileType stat(const char* name, unsigned* length) {
+  virtual FileType stat(const char* name, unsigned* length)
+  {
 #ifdef __FreeBSD__
     // Now the hack below causes the error "Dereferencing type-punned
     // pointer will break strict aliasing rules", so another workaround
@@ -816,15 +877,18 @@ class MySystem: public System {
     }
   }
 
-  virtual const char* libraryPrefix() {
+  virtual const char* libraryPrefix()
+  {
     return SO_PREFIX;
   }
 
-  virtual const char* librarySuffix() {
+  virtual const char* librarySuffix()
+  {
     return SO_SUFFIX;
   }
 
-  virtual const char* toAbsolutePath(Allocator* allocator, const char* name) {
+  virtual const char* toAbsolutePath(Allocator* allocator, const char* name)
+  {
     if (name[0] == '/') {
       return copy(allocator, name);
     } else {
@@ -833,8 +897,7 @@ class MySystem: public System {
     }
   }
 
-  virtual Status load(System::Library** lib,
-                      const char* name)
+  virtual Status load(System::Library** lib, const char* name)
   {
     unsigned nameLength = (name ? strlen(name) : 0);
     bool isMain = name == 0;
@@ -842,7 +905,7 @@ class MySystem: public System {
       pathOfExecutable(this, &name, &nameLength);
     }
     void* p = dlopen(name, RTLD_LAZY | RTLD_LOCAL);
- 
+
     if (p) {
       if (Verbose) {
         fprintf(stderr, "open %s as %p\n", name, p);
@@ -860,7 +923,7 @@ class MySystem: public System {
       }
 
       *lib = new (allocate(this, sizeof(Library)))
-        Library(this, p, n, nameLength, isMain);
+          Library(this, p, n, nameLength, isMain);
 
       return 0;
     } else {
@@ -871,34 +934,41 @@ class MySystem: public System {
     }
   }
 
-  virtual char pathSeparator() {
+  virtual char pathSeparator()
+  {
     return ':';
   }
 
-  virtual char fileSeparator() {
+  virtual char fileSeparator()
+  {
     return '/';
   }
 
-  virtual int64_t now() {
-    timeval tv = { 0, 0 };
+  virtual int64_t now()
+  {
+    timeval tv = {0, 0};
     gettimeofday(&tv, 0);
-    return (static_cast<int64_t>(tv.tv_sec) * 1000) +
-      (static_cast<int64_t>(tv.tv_usec) / 1000);
+    return (static_cast<int64_t>(tv.tv_sec) * 1000)
+           + (static_cast<int64_t>(tv.tv_usec) / 1000);
   }
 
-  virtual void yield() {
+  virtual void yield()
+  {
     sched_yield();
   }
 
-  virtual void exit(int code) {
+  virtual void exit(int code)
+  {
     ::exit(code);
   }
 
-  virtual void abort() {
+  virtual void abort()
+  {
     avian::system::crash();
   }
 
-  virtual void dispose() {
+  virtual void dispose()
+  {
     visitLock->dispose();
 
     expect(this, unregisterHandler(InterruptSignalIndex));
@@ -944,14 +1014,13 @@ void handleSignal(int signal, siginfo_t*, void* context)
   }
 }
 
-} // namespace
+}  // namespace
 
 namespace vm {
 
-AVIAN_EXPORT System*
-makeSystem()
+AVIAN_EXPORT System* makeSystem()
 {
   return new (malloc(sizeof(MySystem))) MySystem();
 }
 
-} // namespace vm
+}  // namespace vm

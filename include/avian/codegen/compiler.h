@@ -30,24 +30,30 @@ class Compiler {
   class Client {
    public:
     virtual intptr_t getThunk(lir::UnaryOperation op, unsigned size) = 0;
-    virtual intptr_t getThunk(lir::BinaryOperation op, unsigned size,
+    virtual intptr_t getThunk(lir::BinaryOperation op,
+                              unsigned size,
                               unsigned resultSize) = 0;
-    virtual intptr_t getThunk(lir::TernaryOperation op, unsigned size,
-                              unsigned resultSize, bool* threadParameter) = 0;
+    virtual intptr_t getThunk(lir::TernaryOperation op,
+                              unsigned size,
+                              unsigned resultSize,
+                              bool* threadParameter) = 0;
   };
 
-  static const unsigned Aligned  = 1 << 0;
+  static const unsigned Aligned = 1 << 0;
   static const unsigned NoReturn = 1 << 1;
   static const unsigned TailJump = 1 << 2;
   static const unsigned LongJumpOrCall = 1 << 3;
 
-  class State { };
+  class State {
+  };
 
   virtual State* saveState() = 0;
   virtual void restoreState(State* state) = 0;
 
-  virtual void init(unsigned logicalCodeSize, unsigned parameterFootprint,
-                    unsigned localFootprint, unsigned alignedFrameSize) = 0;
+  virtual void init(unsigned logicalCodeSize,
+                    unsigned parameterFootprint,
+                    unsigned localFootprint,
+                    unsigned alignedFrameSize) = 0;
 
   virtual void extendLogicalCode(unsigned more) = 0;
 
@@ -128,8 +134,7 @@ class Compiler {
                               ir::Type type,
                               ir::Value* a,
                               ir::Value* b) = 0;
-  virtual ir::Value* unaryOp(lir::BinaryOperation op,
-                             ir::Value* a) = 0;
+  virtual ir::Value* unaryOp(lir::BinaryOperation op, ir::Value* a) = 0;
   virtual void nullaryOp(lir::Operation op) = 0;
 
   virtual ir::Value* f2f(ir::Type resType, ir::Value* a) = 0;
@@ -145,11 +150,12 @@ class Compiler {
   virtual void dispose() = 0;
 };
 
-Compiler*
-makeCompiler(vm::System* system, Assembler* assembler, vm::Zone* zone,
-             Compiler::Client* client);
+Compiler* makeCompiler(vm::System* system,
+                       Assembler* assembler,
+                       vm::Zone* zone,
+                       Compiler::Client* client);
 
-} // namespace codegen
-} // namespace avian
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_COMPILER_H
+#endif  // AVIAN_CODEGEN_COMPILER_H

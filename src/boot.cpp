@@ -14,68 +14,64 @@
 
 // since we aren't linking against libstdc++, we must implement this
 // ourselves:
-extern "C" void __cxa_pure_virtual(void) { abort(); }
+extern "C" void __cxa_pure_virtual(void)
+{
+  abort();
+}
 
 #ifdef BOOT_IMAGE
 
-#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
-#  define BOOTIMAGE_SYMBOL(x) binary_bootimage_bin_##x
-#  define CODEIMAGE_SYMBOL(x) binary_codeimage_bin_##x
+#if (!defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#define BOOTIMAGE_SYMBOL(x) binary_bootimage_bin_##x
+#define CODEIMAGE_SYMBOL(x) binary_codeimage_bin_##x
 #else
-#  define BOOTIMAGE_SYMBOL(x) _binary_bootimage_bin_##x
-#  define CODEIMAGE_SYMBOL(x) _binary_codeimage_bin_##x
+#define BOOTIMAGE_SYMBOL(x) _binary_bootimage_bin_##x
+#define CODEIMAGE_SYMBOL(x) _binary_codeimage_bin_##x
 #endif
 
 extern "C" {
+extern const uint8_t BOOTIMAGE_SYMBOL(start)[];
+extern const uint8_t BOOTIMAGE_SYMBOL(end)[];
 
-  extern const uint8_t BOOTIMAGE_SYMBOL(start)[];
-  extern const uint8_t BOOTIMAGE_SYMBOL(end)[];
+AVIAN_EXPORT const uint8_t* bootimageBin(unsigned* size)
+{
+  *size = BOOTIMAGE_SYMBOL(end) - BOOTIMAGE_SYMBOL(start);
+  return BOOTIMAGE_SYMBOL(start);
+}
 
-  AVIAN_EXPORT const uint8_t*
-  bootimageBin(unsigned* size)
-  {
-    *size = BOOTIMAGE_SYMBOL(end) - BOOTIMAGE_SYMBOL(start);
-    return BOOTIMAGE_SYMBOL(start);
-  }
+extern const uint8_t CODEIMAGE_SYMBOL(start)[];
+extern const uint8_t CODEIMAGE_SYMBOL(end)[];
 
-  extern const uint8_t CODEIMAGE_SYMBOL(start)[];
-  extern const uint8_t CODEIMAGE_SYMBOL(end)[];
-
-  AVIAN_EXPORT const uint8_t*
-  codeimageBin(unsigned* size)
-  {
-    *size = CODEIMAGE_SYMBOL(end) - CODEIMAGE_SYMBOL(start);
-    return CODEIMAGE_SYMBOL(start);
-  }
-
+AVIAN_EXPORT const uint8_t* codeimageBin(unsigned* size)
+{
+  *size = CODEIMAGE_SYMBOL(end) - CODEIMAGE_SYMBOL(start);
+  return CODEIMAGE_SYMBOL(start);
+}
 }
 
 #undef SYMBOL
 
-#endif//BOOT_IMAGE
+#endif  // BOOT_IMAGE
 
 #ifdef BOOT_CLASSPATH
 
-#if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
-#  define SYMBOL(x) binary_classpath_jar_##x
+#if (!defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
+#define SYMBOL(x) binary_classpath_jar_##x
 #else
-#  define SYMBOL(x) _binary_classpath_jar_##x
+#define SYMBOL(x) _binary_classpath_jar_##x
 #endif
 
 extern "C" {
+extern const uint8_t SYMBOL(start)[];
+extern const uint8_t SYMBOL(end)[];
 
-  extern const uint8_t SYMBOL(start)[];
-  extern const uint8_t SYMBOL(end)[];
-
-  AVIAN_EXPORT const uint8_t*
-  classpathJar(unsigned* size)
-  {
-    *size = SYMBOL(end) - SYMBOL(start);
-    return SYMBOL(start);
-  }
-
+AVIAN_EXPORT const uint8_t* classpathJar(unsigned* size)
+{
+  *size = SYMBOL(end) - SYMBOL(start);
+  return SYMBOL(start);
+}
 }
 
 #undef SYMBOL
 
-#endif//BOOT_CLASSPATH
+#endif  // BOOT_CLASSPATH

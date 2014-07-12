@@ -19,7 +19,7 @@ namespace avian {
 namespace util {
 
 class Aborter {
-public:
+ public:
   virtual void NO_RETURN abort() = 0;
 };
 
@@ -28,29 +28,32 @@ inline Aborter* getAborter(Aborter* a)
   return a;
 }
 
-template<class T>
-inline void NO_RETURN abort(T t) {
+template <class T>
+inline void NO_RETURN abort(T t)
+{
   getAborter(t)->abort();
   ::abort();
 }
 
-template<class T>
-inline void expect(T t, bool v) {
-  if(UNLIKELY(!v)) {
+template <class T>
+inline void expect(T t, bool v)
+{
+  if (UNLIKELY(!v)) {
     abort(t);
   }
 }
 
 #ifdef NDEBUG
-#define assert(t, v)
+#define assertT(t, v)
 #else
-template<class T>
-inline void assert(T t, bool v) {
+template <class T>
+inline void assertT(T t, bool v)
+{
   expect(t, v);
 }
 #endif
 
-} // namespace util
-} // namespace avian
+}  // namespace util
+}  // namespace avian
 
-#endif // AVIAN_UTIL_ABORT_H
+#endif  // AVIAN_UTIL_ABORT_H

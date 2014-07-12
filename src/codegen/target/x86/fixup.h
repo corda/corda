@@ -31,19 +31,24 @@ ResolvedPromise* resolvedPromise(Context* c, int64_t value);
 
 class Task {
  public:
-  Task(Task* next): next(next) { }
+  Task(Task* next) : next(next)
+  {
+  }
 
   virtual void run(Context* c) = 0;
 
   Task* next;
 };
 
-class OffsetPromise: public Promise {
+class OffsetPromise : public Promise {
  public:
-  OffsetPromise(Context* c, MyBlock* block, unsigned offset, AlignmentPadding* limit);
+  OffsetPromise(Context* c,
+                MyBlock* block,
+                unsigned offset,
+                AlignmentPadding* limit);
 
   virtual bool resolved();
-  
+
   virtual int64_t value();
 
   Context* c;
@@ -55,9 +60,12 @@ class OffsetPromise: public Promise {
 
 Promise* offsetPromise(Context* c);
 
-void* resolveOffset(vm::System* s, uint8_t* instruction, unsigned instructionSize, int64_t value);
+void* resolveOffset(vm::System* s,
+                    uint8_t* instruction,
+                    unsigned instructionSize,
+                    int64_t value);
 
-class OffsetListener: public Promise::Listener {
+class OffsetListener : public Promise::Listener {
  public:
   OffsetListener(vm::System* s, uint8_t* instruction, unsigned instructionSize);
 
@@ -68,9 +76,12 @@ class OffsetListener: public Promise::Listener {
   unsigned instructionSize;
 };
 
-class OffsetTask: public Task {
+class OffsetTask : public Task {
  public:
-  OffsetTask(Task* next, Promise* promise, Promise* instructionOffset, unsigned instructionSize);
+  OffsetTask(Task* next,
+             Promise* promise,
+             Promise* instructionOffset,
+             unsigned instructionSize);
 
   virtual void run(Context* c);
 
@@ -79,9 +90,12 @@ class OffsetTask: public Task {
   unsigned instructionSize;
 };
 
-void appendOffsetTask(Context* c, Promise* promise, Promise* instructionOffset, unsigned instructionSize);
+void appendOffsetTask(Context* c,
+                      Promise* promise,
+                      Promise* instructionOffset,
+                      unsigned instructionSize);
 
-class ImmediateListener: public Promise::Listener {
+class ImmediateListener : public Promise::Listener {
  public:
   ImmediateListener(vm::System* s, void* dst, unsigned size, unsigned offset);
 
@@ -93,9 +107,12 @@ class ImmediateListener: public Promise::Listener {
   unsigned offset;
 };
 
-class ImmediateTask: public Task {
+class ImmediateTask : public Task {
  public:
-  ImmediateTask(Task* next, Promise* promise, Promise* offset, unsigned size,
+  ImmediateTask(Task* next,
+                Promise* promise,
+                Promise* offset,
+                unsigned size,
                 unsigned promiseOffset);
 
   virtual void run(Context* c);
@@ -106,14 +123,19 @@ class ImmediateTask: public Task {
   unsigned promiseOffset;
 };
 
-void
-appendImmediateTask(Context* c, Promise* promise, Promise* offset,
-                    unsigned size, unsigned promiseOffset = 0);
+void appendImmediateTask(Context* c,
+                         Promise* promise,
+                         Promise* offset,
+                         unsigned size,
+                         unsigned promiseOffset = 0);
 
-ShiftMaskPromise* shiftMaskPromise(Context* c, Promise* base, unsigned shift, int64_t mask);
+ShiftMaskPromise* shiftMaskPromise(Context* c,
+                                   Promise* base,
+                                   unsigned shift,
+                                   int64_t mask);
 
-} // namespace x86
-} // namespace codegen
-} // namespace avian
+}  // namespace x86
+}  // namespace codegen
+}  // namespace avian
 
-#endif // AVIAN_CODEGEN_ASSEMBLER_X86_FIXUP_H
+#endif  // AVIAN_CODEGEN_ASSEMBLER_X86_FIXUP_H

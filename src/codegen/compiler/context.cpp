@@ -53,18 +53,22 @@ Context::Context(vm::System* system,
                                     - regFile->generalRegisters.start),
       targetInfo(arch->targetInfo())
 {
-  for (unsigned i = regFile->generalRegisters.start; i < regFile->generalRegisters.limit; ++i) {
+  for (unsigned i = regFile->generalRegisters.start;
+       i < regFile->generalRegisters.limit;
+       ++i) {
     new (registerResources + i) RegisterResource(arch->reserved(i));
 
     if (registerResources[i].reserved) {
-      -- availableGeneralRegisterCount;
+      --availableGeneralRegisterCount;
     }
   }
-  for (unsigned i = regFile->floatRegisters.start; i < regFile->floatRegisters.limit; ++i) {
+  for (unsigned i = regFile->floatRegisters.start;
+       i < regFile->floatRegisters.limit;
+       ++i) {
     new (registerResources + i) RegisterResource(arch->reserved(i));
   }
 }
 
-} // namespace compiler
-} // namespace codegen
-} // namespace avian
+}  // namespace compiler
+}  // namespace codegen
+}  // namespace avian

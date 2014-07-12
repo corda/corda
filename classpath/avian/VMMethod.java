@@ -23,7 +23,7 @@ public class VMMethod {
   public byte[] spec;
   public MethodAddendum addendum;
   public VMClass class_;
-  public Object code;
+  public Code code;
   
   public boolean hasAnnotations() {
     return addendum != null && addendum.annotationTable != null;

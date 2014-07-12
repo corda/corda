@@ -443,6 +443,7 @@ asm-format = S
 as = $(cc)
 ld = $(cc)
 build-ld = $(build-cc)
+build-ld-cpp = $(build-cxx)
 
 default-remote-test-host = localhost
 default-remote-test-port = 22
@@ -1268,7 +1269,8 @@ generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
 	$(src)/system/$(build-system).cpp \
 	$(src)/system/$(build-system)/signal.cpp \
-	$(src)/finder.cpp
+	$(src)/finder.cpp \
+	$(src)/util/arg-parser.cpp
 
 ifneq ($(lzma),)
 	common-cflags += -I$(lzma) -DAVIAN_USE_LZMA -D_7ZIP_ST
@@ -1353,6 +1355,7 @@ ifneq ($(classpath),avian)
 # them to synthesize a class:
 	classpath-sources := \
 		$(classpath-src)/avian/Addendum.java \
+		$(classpath-src)/avian/Code.java \
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
@@ -1573,7 +1576,7 @@ gen-arg = $(shell echo $(1) | sed -e 's:$(build)/type-\(.*\)\.cpp:\1:')
 $(generated-code): %.cpp: $(src)/types.def $(generator) $(classpath-dep)
 	@echo "generating $(@)"
 	@mkdir -p $(dir $(@))
-	$(generator) $(boot-classpath) $(<) $(@) $(call gen-arg,$(@))
+	$(generator) -cp $(boot-classpath) -i $(<) -o $(@) -t $(call gen-arg,$(@))
 
 $(classpath-build)/%.class: $(classpath-src)/%.java
 	@echo $(<)
@@ -1982,7 +1985,7 @@ endif
 
 $(generator): $(generator-objects) $(generator-lzma-objects)
 	@echo "linking $(@)"
-	$(build-ld) $(^) $(build-lflags) -o $(@)
+	$(build-ld-cpp) $(^) $(build-lflags) -o $(@)
 
 $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)

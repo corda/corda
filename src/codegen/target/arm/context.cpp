@@ -31,6 +31,6 @@ Context::Context(vm::System* s, util::Allocator* a, vm::Zone* zone)
 {
 }
 
-} // namespace arm
-} // namespace codegen
-} // namespace avian
+}  // namespace arm
+}  // namespace codegen
+}  // namespace avian
