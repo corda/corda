@@ -25,8 +25,10 @@ run make ${flags} process=interpret ${test_target}
 if [ -z "${openjdk}" ]; then
   run make ${flags} bootimage=true ${test_target}
   run make ${flags} mode=debug bootimage=true ${test_target}
-  # might as well do an openjdk test while we're here:
-  run make openjdk=$JAVA_HOME ${flags} ${test_target}
+  if [ -z "${android}" ]; then
+    # might as well do an openjdk test while we're here:
+    run make openjdk=$JAVA_HOME ${flags} ${test_target}
+  fi
 fi
 run make ${flags} tails=true continuations=true ${test_target}
 run make ${flags} codegen-targets=all

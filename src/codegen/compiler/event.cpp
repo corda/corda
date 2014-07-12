@@ -475,8 +475,6 @@ class CallEvent : public Event {
       int frameOffset;
 
       if (TailCalls and (flags & Compiler::TailJump)) {
-        assertT(c, arguments.count == 0);
-
         int base = frameBase(c);
         returnAddressIndex = base + c->arch->returnAddressOffset();
         if (UseFramePointer) {

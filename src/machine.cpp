@@ -2820,13 +2820,14 @@ void parseAttributeTable(Thread* t,
 
       addendum->setEnclosingClass(
           t,
-          reinterpret_cast<object>(
-              cast<GcReference>(t, singletonObject(t, pool, enclosingClass - 1))
-                  ->name()));
+          cast<GcReference>(t, singletonObject(t, pool, enclosingClass - 1))
+              ->name());
 
       addendum->setEnclosingMethod(
           t,
-          enclosingMethod ? singletonObject(t, pool, enclosingMethod - 1) : 0);
+          enclosingMethod
+              ? cast<GcPair>(t, singletonObject(t, pool, enclosingMethod - 1))
+              : 0);
     } else {
       s.skip(length);
     }
@@ -5947,6 +5948,27 @@ bool threadIsInterrupted(Thread* t, GcThread* thread, bool clear)
   }
   monitorRelease(t, cast<GcMonitor>(t, interruptLock(t, thread)));
   return v;
+}
+
+GcJclass* getDeclaringClass(Thread* t, GcClass* c)
+{
+  GcClassAddendum* addendum = c->addendum();
+  if (addendum) {
+    GcArray* table = cast<GcArray>(t, addendum->innerClassTable());
+    if (table) {
+      for (unsigned i = 0; i < table->length(); ++i) {
+        GcInnerClassReference* reference
+            = cast<GcInnerClassReference>(t, table->body()[i]);
+        if (reference->outer()
+            and strcmp(reference->inner()->body().begin(),
+                       c->name()->body().begin()) == 0) {
+          return getJClass(t, resolveClass(t, c->loader(), reference->outer()));
+        }
+      }
+    }
+  }
+
+  return 0;
 }
 
 void noop()

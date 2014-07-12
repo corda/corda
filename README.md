@@ -432,7 +432,7 @@ Also note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build
 the Android fork of OpenSSL directly without checking out and building
 the entire platform.  As of this writing, the patches apply cleanly
-against OpenSSL 1.0.1e, so that's the tag we check out, but this may
+against OpenSSL 1.0.1h, so that's the tag we check out, but this may
 change in the future when the Android fork rebases against a new
 OpenSSL version.
 

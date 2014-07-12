@@ -1215,3 +1215,57 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 {
   return reinterpret_cast<int64_t>(primitiveClass(t, arguments[0]));
 }
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_Class_getDeclaringClass(Thread* t,
+                                            object,
+                                            uintptr_t* arguments)
+{
+  return reinterpret_cast<intptr_t>(getDeclaringClass(
+      t, cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass()));
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_Class_getEnclosingMethod(Thread* t,
+                                             object,
+                                             uintptr_t* arguments)
+{
+  GcClass* c
+      = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass();
+  PROTECT(t, c);
+
+  GcClassAddendum* addendum = c->addendum();
+  if (addendum) {
+    PROTECT(t, addendum);
+
+    GcByteArray* enclosingClass
+        = cast<GcByteArray>(t, addendum->enclosingClass());
+
+    if (enclosingClass) {
+      GcClass* enclosing = resolveClass(t, c->loader(), enclosingClass);
+
+      GcPair* enclosingMethod = cast<GcPair>(t, addendum->enclosingMethod());
+
+      if (enclosingMethod) {
+        return reinterpret_cast<uintptr_t>(t->m->classpath->makeJMethod(
+            t,
+            cast<GcMethod>(
+                t,
+                findMethodInClass(
+                    t,
+                    enclosing,
+                    cast<GcByteArray>(t, enclosingMethod->first()),
+                    cast<GcByteArray>(t, enclosingMethod->second())))));
+      }
+    }
+  }
+  return 0;
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_Class_getEnclosingConstructor(Thread* t,
+                                                  object method,
+                                                  uintptr_t* arguments)
+{
+  return Avian_java_lang_Class_getEnclosingMethod(t, method, arguments);
+}

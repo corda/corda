@@ -730,6 +730,15 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   return count;
 }
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_Thread_holdsLock(Thread* t, object, uintptr_t* arguments)
+{
+  GcMonitor* m
+      = objectMonitor(t, reinterpret_cast<object>(arguments[0]), false);
+
+  return m and m->owner() == t;
+}
+
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_java_lang_Thread_yield(Thread* t, object, uintptr_t*)
 {

@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 1.0.1
+version = 1.0.2
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
@@ -1355,21 +1355,22 @@ ifneq ($(classpath),avian)
 # them to synthesize a class:
 	classpath-sources := \
 		$(classpath-src)/avian/Addendum.java \
-		$(classpath-src)/avian/Code.java \
 		$(classpath-src)/avian/AnnotationInvocationHandler.java \
 		$(classpath-src)/avian/Assembler.java \
 		$(classpath-src)/avian/Callback.java \
 		$(classpath-src)/avian/Cell.java \
 		$(classpath-src)/avian/ClassAddendum.java \
-		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Classes.java \
+		$(classpath-src)/avian/Code.java \
 		$(classpath-src)/avian/ConstantPool.java \
 		$(classpath-src)/avian/Continuations.java \
 		$(classpath-src)/avian/FieldAddendum.java \
 		$(classpath-src)/avian/Function.java \
 		$(classpath-src)/avian/IncompatibleContinuationException.java \
+		$(classpath-src)/avian/InnerClassReference.java \
 		$(classpath-src)/avian/Machine.java \
 		$(classpath-src)/avian/MethodAddendum.java \
+		$(classpath-src)/avian/Pair.java \
 		$(classpath-src)/avian/Singleton.java \
 		$(classpath-src)/avian/Stream.java \
 		$(classpath-src)/avian/SystemClassLoader.java \
@@ -1919,6 +1920,7 @@ $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 		armv6=$(armv6) \
 		platform=$(bootimage-platform) \
 		target-format=$(target-format) \
+		android=$(android) \
 		openjdk=$(openjdk) \
 		openjdk-src=$(openjdk-src) \
 		bootimage-generator= \

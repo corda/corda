@@ -130,7 +130,7 @@
 (type weakHashMap
   (extends hashMap))
 
-(type pair
+(type pair avian/Pair
   (object first)
   (object second))
 

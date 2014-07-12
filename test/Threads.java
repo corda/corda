@@ -1,4 +1,10 @@
-public class Threads implements Runnable {
+public class Threads implements Runnable {  
+  private static boolean success = false;
+
+  private static void expect(boolean v) {
+    if (! v) throw new RuntimeException();
+  }
+
   public static void main(String[] args) throws Exception {
     { Threads test = new Threads();
       Thread thread = new Thread(test);
@@ -40,14 +46,23 @@ public class Threads implements Runnable {
       thread.join();
     }
 
-    System.out.println("finished");
+    System.out.println("finished; success? " + success);
+
+    if (! success) {
+      System.exit(-1);
+    }
   }
 
   public void run() {
-    synchronized (this) {
-      int i = 0;
-      try {
+    int i = 0;
+    try {
+      expect(! Thread.holdsLock(this));
+      synchronized (this) {
+        expect(Thread.holdsLock(this));
+
         System.out.println("I'm running in a separate thread!");
+
+        Thread.yield(); // just to prove Thread.yield exists and is callable
 
         final int arrayCount = 16;
         final int arraySize = 4;
@@ -57,14 +72,18 @@ public class Threads implements Runnable {
           byte[] array = new byte[arraySize * 1024 * 1024];
         }
 
-        long nap = 5;
-        System.out.println("sleeping for " + nap + " seconds");
-        Thread.sleep(nap * 1000);
-      } catch (Throwable e) {
-        System.err.println("caught something in second thread after " + i +
-                           " iterations");
-        e.printStackTrace();
-      } finally {
+        long nap = 500;
+        System.out.println("sleeping for " + nap + " milliseconds");
+        Thread.sleep(nap);
+        notifyAll();
+      }
+      success = true;
+    } catch (Throwable e) {
+      System.err.println("caught something in second thread after " + i +
+                         " iterations");
+      e.printStackTrace();
+    } finally {
+      synchronized (this) {
         notifyAll();
       }
     }

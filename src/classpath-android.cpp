@@ -583,13 +583,27 @@ class MyClasspath : public Classpath {
     return fieldAtOffset<int32_t>(b, field->offset());
   }
 
-  virtual bool canTailCall(Thread*,
+  virtual bool canTailCall(Thread* t UNUSED,
                            GcMethod*,
-                           GcByteArray*,
-                           GcByteArray*,
+                           GcByteArray* calleeClassName,
+                           GcByteArray* calleeMethodName,
                            GcByteArray*)
   {
-    return true;
+    // we can't tail call System.load[Library] or
+    // Runtime.load[Library] due to their use of
+    // ClassLoader.getCaller, which gets confused if we elide stack
+    // frames.
+
+    return (
+        (strcmp("loadLibrary",
+                reinterpret_cast<char*>(calleeMethodName->body().begin()))
+         and strcmp("load",
+                    reinterpret_cast<char*>(calleeMethodName->body().begin())))
+        or (strcmp("java/lang/System",
+                   reinterpret_cast<char*>(calleeClassName->body().begin()))
+            and strcmp(
+                    "java/lang/Runtime",
+                    reinterpret_cast<char*>(calleeClassName->body().begin()))));
   }
 
   virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller)
@@ -1151,63 +1165,6 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Class_getDeclaringClass(Thread* t,
-                                            object,
-                                            uintptr_t* arguments)
-{
-  return reinterpret_cast<intptr_t>(getDeclaringClass(
-      t, cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass()));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Class_getEnclosingMethod(Thread* t,
-                                             object,
-                                             uintptr_t* arguments)
-{
-  GcClass* c
-      = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass();
-  PROTECT(t, c);
-
-  GcClassAddendum* addendum = c->addendum();
-  if (addendum) {
-    object enclosingClass = addendum->enclosingClass();
-    if (enclosingClass) {
-      PROTECT(t, enclosingClass);
-
-      // enclosingClass = getJClass
-      //   (t, resolveClass(t, classLoader(t, c), enclosingClass));
-
-      object enclosingMethod = addendum->enclosingMethod();
-      if (enclosingMethod) {
-        PROTECT(t, enclosingMethod);
-
-        abort(t);
-        // TODO: the following violates type safety; enclosingClass at this
-        // point is a GcJclass (having come from "getJClass()") - but the method
-        // expects a GcClass.
-        // Figure it out.
-
-        // return reinterpret_cast<uintptr_t>
-        //   (t->m->classpath->makeJMethod
-        //    (t, findMethodInClass
-        //     (t, cast<GcClass>(t, enclosingClass), pairFirst(t,
-        //     enclosingMethod),
-        //      pairSecond(t, enclosingMethod))));
-      }
-    }
-  }
-  return 0;
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Class_getEnclosingConstructor(Thread* t,
-                                                  object method,
-                                                  uintptr_t* arguments)
-{
-  return Avian_java_lang_Class_getEnclosingMethod(t, method, arguments);
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Class_newInstanceImpl(Thread* t,
                                           object,
                                           uintptr_t* arguments)
@@ -1417,6 +1374,14 @@ extern "C" AVIAN_EXPORT void JNICALL
   collect(t, Heap::MajorCollection);
 }
 
+extern "C" AVIAN_EXPORT void JNICALL
+    Avian_java_lang_Runtime_nativeExit(Thread* t, object, uintptr_t* arguments)
+{
+  shutDown(t);
+
+  t->m->system->exit(arguments[0]);
+}
+
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Runtime_nativeLoad(Thread* t, object, uintptr_t* arguments)
 {
@@ -1535,6 +1500,34 @@ extern "C" AVIAN_EXPORT void JNICALL
   acquire(t, t->javaThread->sleepLock());
   vm::wait(t, t->javaThread->sleepLock(), milliseconds);
   release(t, t->javaThread->sleepLock());
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_VMThread_holdsLock(Thread* t, object, uintptr_t* arguments)
+{
+  object vmThread = reinterpret_cast<object>(arguments[0]);
+  PROTECT(t, vmThread);
+
+  GcField* field = resolveField(
+      t, objectClass(t, vmThread), "thread", "Ljava/lang/Thread;");
+
+  if (cast<GcThread>(t, fieldAtOffset<object>(vmThread, field->offset()))
+      != t->javaThread) {
+    throwNew(t,
+             GcIllegalStateException::Type,
+             "VMThread.holdsLock may only be called on current thread");
+  }
+
+  GcMonitor* m
+      = objectMonitor(t, reinterpret_cast<object>(arguments[1]), false);
+
+  return m and m->owner() == t;
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
+    Avian_java_lang_VMThread_yield(Thread* t, object, uintptr_t*)
+{
+  t->m->system->yield();
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL

@@ -51,7 +51,6 @@ const bool DebugNativeTarget = false;
 
 enum Type {
   Type_none,
-  Type_pad,
   Type_object,
   Type_object_nogc,
   Type_int8_t,
@@ -293,18 +292,18 @@ TypeMap* typeMap(Thread* t, GcHashMap* typeMaps, object p)
 
 unsigned targetFieldOffset(Thread* t, GcHashMap* typeMaps, GcField* field)
 {
-  // if (strcmp(reinterpret_cast<const char*>
-  //            (&byteArrayBody(t, className(t, field->class_()), 0)),
-  //            "java/lang/Throwable") == 0) trap();
+  unsigned offset
+      = ((field->flags() & ACC_STATIC)
+             ? typeMap(t,
+                       typeMaps,
+                       reinterpret_cast<object>(field->class_()->staticTable()))
+             : classTypeMap(
+                   t, typeMaps, reinterpret_cast<object>(field->class_())))
+            ->targetFixedOffsets()[field->offset()];
 
-  return ((field->flags() & ACC_STATIC)
-              ? typeMap(
-                    t,
-                    typeMaps,
-                    reinterpret_cast<object>(field->class_()->staticTable()))
-              : classTypeMap(
-                    t, typeMaps, reinterpret_cast<object>(field->class_())))
-      ->targetFixedOffsets()[field->offset()];
+  assertT(t, not((field->offset() == 0) xor (offset == 0)));
+
+  return offset;
 }
 
 GcTriple* makeCodeImage(Thread* t,
@@ -1284,10 +1283,11 @@ HeapWalker* makeHeapImage(Thread* t,
         if ((currentObject
              and objectClass(t, currentObject) == type(t, GcClass::Type)
              and (currentOffset * BytesPerWord) == ClassStaticTable)
-            or instanceOf(t, type(t, GcSystemClassLoader::Type), p)) {
-          // Static tables and system classloaders must be allocated
-          // as fixed objects in the heap image so that they can be
-          // marked as dirty and visited during GC.  Otherwise,
+            or instanceOf(t, type(t, GcSystemClassLoader::Type), p)
+            or instanceOf(t, type(t, GcAddendum::Type), p)) {
+          // Static tables, system classloaders, and addendums must be
+          // allocated as fixed objects in the heap image so that they
+          // can be marked as dirty and visited during GC.  Otherwise,
           // attempts to update references in these objects to point
           // to runtime-allocated memory would fail because we don't
           // scan non-fixed objects in the heap image during GC.
@@ -1492,9 +1492,7 @@ void writeBootImage2(Thread* t,
       unsigned fieldCount = 1;
       while (source[typeCount] != Type_none) {
         ++typeCount;
-        if (source[typeCount] != Type_pad) {
-          ++fieldCount;
-        }
+        ++fieldCount;
       }
 
       THREAD_RUNTIME_ARRAY(t, Field, fields, fieldCount);
@@ -1515,12 +1513,6 @@ void writeBootImage2(Thread* t,
       unsigned fieldOffset = 1;
       for (unsigned j = 0; j < typeCount; ++j) {
         switch (source[j]) {
-        case Type_pad:
-          type = Type_pad;
-          buildSize = 0;
-          targetSize = 0;
-          break;
-
         case Type_object:
           type = Type_object;
           buildSize = BytesPerWord;
@@ -1580,11 +1572,7 @@ void writeBootImage2(Thread* t,
           sawArray = true;
         }
 
-        if (type == Type_pad) {
-          buildOffset = pad(buildOffset, BytesPerWord);
-
-          targetOffset = pad(targetOffset, TargetBytesPerWord);
-        } else if (not sawArray) {
+        if (not sawArray) {
           buildOffset = pad(buildOffset, buildSize);
 
           targetOffset = pad(targetOffset, targetSize);

@@ -25,6 +25,10 @@ public class Method<T> extends AccessibleObject implements Member {
     this.vmMethod = vmMethod;
   }
 
+  public boolean equals(Object o) {
+    return o instanceof Method && ((Method) o).vmMethod == vmMethod;
+  }
+
   public boolean isAccessible() {
     return accessible;
   }

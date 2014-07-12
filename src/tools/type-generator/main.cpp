@@ -1534,16 +1534,10 @@ void writeNameInitializations(Output* out, Module& module)
 void writeMap(Output* out, Module& module, Class* cl)
 {
   std::ostringstream ss;
-  uintptr_t ownerId = 0;
   for (std::vector<Field*>::iterator it = cl->fields.begin();
        it != cl->fields.end();
        it++) {
     Field& f = **it;
-
-    if (ownerId && ownerId != f.ownerId) {
-      ss << "Type_pad, ";
-    }
-    ownerId = f.ownerId;
 
     ss << "Type_";
     ss << enumName(module, f);
@@ -1556,9 +1550,6 @@ void writeMap(Output* out, Module& module, Class* cl)
 
   if (cl->arrayField) {
     Field& f = *cl->arrayField;
-    if (ownerId && ownerId != f.ownerId) {
-      ss << "Type_pad, ";
-    }
     ss << "Type_array, ";
     ss << "Type_";
     ss << enumName(module, f);

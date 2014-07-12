@@ -392,6 +392,12 @@ public final class Class <T> implements Type, AnnotatedElement {
     }
   }
 
+  public native Class getEnclosingClass();
+
+  public native Method getEnclosingMethod();
+
+  public native Constructor getEnclosingConstructor();
+
   public T[] getEnumConstants() {
     if (Enum.class.isAssignableFrom(this)) {
       try {

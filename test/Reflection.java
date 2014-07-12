@@ -255,6 +255,11 @@ public class Reflection {
 
     expect(Baz.class.getField("foo").getAnnotation(Ann.class) == null);
     expect(Baz.class.getField("foo").getAnnotations().length == 0);
+
+    expect(new Runnable() { public void run() { } }.getClass()
+           .getEnclosingMethod().equals
+           (Reflection.class.getMethod
+            ("main", new Class[] { String[].class })));
   }
 
   protected static class Baz {
