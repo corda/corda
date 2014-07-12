@@ -2332,6 +2332,8 @@ inline void scanMethodSpec(Thread* t,
 
 GcClass* findLoadedClass(Thread* t, GcClassLoader* loader, GcByteArray* spec);
 
+GcJclass* getDeclaringClass(Thread* t, GcClass* c);
+
 inline bool emptyMethod(Thread* t UNUSED, GcMethod* method)
 {
   return ((method->flags() & ACC_NATIVE) == 0)
