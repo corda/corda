@@ -149,11 +149,6 @@ void handleSignal(int signal, siginfo_t*, void* context)
 
 }  // namespace posix
 
-NO_RETURN void crash()
-{
-  abort();
-}
-
 SignalRegistrar::SignalRegistrar()
 {
   data = new (malloc(sizeof(Data))) Data();

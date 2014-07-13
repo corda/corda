@@ -1134,8 +1134,7 @@ vm-depends := $(generated-code) \
 
 vm-sources = \
 	$(src)/system/$(system).cpp \
-	$(src)/system/$(system)/signal.cpp \
-	$(src)/system/$(system)/memory.cpp \
+	$(wildcard $(src)/system/$(system)/*.cpp) \
 	$(src)/finder.cpp \
 	$(src)/machine.cpp \
 	$(src)/util.cpp \
@@ -1270,8 +1269,7 @@ generator-depends := $(wildcard $(src)/*.h)
 generator-sources = \
 	$(src)/tools/type-generator/main.cpp \
 	$(src)/system/$(build-system).cpp \
-	$(src)/system/$(build-system)/signal.cpp \
-	$(src)/system/$(build-system)/memory.cpp \
+	$(wildcard $(src)/system/$(build-system)/*.cpp) \
 	$(src)/finder.cpp \
 	$(src)/util/arg-parser.cpp
 
