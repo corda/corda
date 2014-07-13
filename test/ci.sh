@@ -2,16 +2,32 @@
 
 set -e
 
+root_dir=$(pwd)
+
 run() {
   echo '==============================================='
+  if [ ! $(pwd) = ${root_dir} ]; then
+    printf "cd $(pwd); "
+  fi
   echo "${@}"
   echo '==============================================='
   "${@}"
 }
 
+run_cmake() {
+  mkdir -p cmake-build
+  rm -rf cmake-build/*
+  cd  cmake-build
+  run cmake ${@} ..
+  run make -j4 check
+  cd ..
+}
+
 if [ ${#} -gt 0 ]; then
   run make ${@}
 else
+  run_cmake -DCMAKE_BUILD_TYPE=Debug
+
   run make jdk-test
   run make test
   run make mode=debug test
