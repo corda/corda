@@ -182,7 +182,7 @@ void* resolveNativeMethod(Thread* t,
 #ifdef PLATFORM_WINDOWS
   // on windows, we also try the _%s@%d and %s@%d variants
   if (footprint == -1) {
-    footprint = methodParameterFootprint(t, method) + 1;
+    footprint = method->parameterFootprint() + 1;
     if (method->flags() & ACC_STATIC) {
       ++footprint;
     }
