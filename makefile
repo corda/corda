@@ -754,6 +754,10 @@ openjdk-extra-cflags += $(classpath-extra-cflags)
 
 find-tool = $(shell if ( command -v "$(1)$(2)" >/dev/null ); then (echo "$(1)$(2)") else (echo "$(2)"); fi)
 
+ifeq ($(build-platform),windows)
+	static-on-windows = -static
+endif
+
 ifeq ($(platform),windows)
 	target-format = pe
 
@@ -1987,7 +1991,7 @@ endif
 
 $(generator): $(generator-objects) $(generator-lzma-objects)
 	@echo "linking $(@)"
-	$(build-ld-cpp) $(^) $(build-lflags) -o $(@)
+	$(build-ld-cpp) $(^) $(build-lflags) $(static-on-windows) -o $(@)
 
 $(openjdk-objects): $(build)/openjdk/%-openjdk.o: $(openjdk-src)/%.c \
 		$(openjdk-headers-dep)
