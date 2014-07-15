@@ -90,7 +90,7 @@ void listAppend(Thread* t, GcList* list, object value);
 
 GcVector* vectorAppend(Thread* t, GcVector* vector, object value);
 
-object growArray(Thread* t, object array);
+GcArray* growArray(Thread* t, GcArray* array);
 
 object treeQuery(Thread* t,
                  GcTreeNode* tree,

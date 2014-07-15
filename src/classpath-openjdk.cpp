@@ -821,7 +821,7 @@ class MyClasspath : public Classpath {
   virtual GcClassLoader* libraryClassLoader(Thread* t, GcMethod* caller)
   {
 #ifdef AVIAN_OPENJDK_SRC
-    return (caller->class_() == type(t, Machine::ClassLoaderType)
+    return (caller->class_() == type(t, GcClassLoader::Type)
             and t->libraryLoadStack)
                ? t->libraryLoadStack->classLoader
 #else
@@ -960,7 +960,7 @@ class EmbeddedFile {
 
 #ifdef AVIAN_OPENJDK_SRC
 int64_t JNICALL
-    getFileAttributes(Thread* t, object method, uintptr_t* arguments)
+    getFileAttributes(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   const unsigned Exists = 1;
   const unsigned Regular = 2;
@@ -969,13 +969,14 @@ int64_t JNICALL
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = fieldAtOffset<object>(file, cp->filePathField);
+  GcString* path
+      = cast<GcString>(t, fieldAtOffset<object>(file, cp->filePathField));
 
-  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), path->length(t));
   if (ef.jar) {
     if (ef.jarLength == 0) {
       return Exists | Directory;
@@ -1005,18 +1006,21 @@ int64_t JNICALL
       return 0;
     }
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            reinterpret_cast<object>(arguments[0]),
-            file));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           reinterpret_cast<object>(arguments[0]),
+                           file))->value();
   }
 }
 
-int64_t JNICALL checkFileAccess(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL
+    checkFileAccess(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   const unsigned Read = 4;
 
@@ -1024,13 +1028,14 @@ int64_t JNICALL checkFileAccess(Thread* t, object method, uintptr_t* arguments)
 
   object file = reinterpret_cast<object>(arguments[1]);
   unsigned mask = arguments[2];
-  object path = fieldAtOffset<object>(file, cp->filePathField);
+  GcString* path
+      = cast<GcString>(t, fieldAtOffset<object>(file, cp->filePathField));
 
-  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), path->length(t));
   if (ef.jar) {
     if (ef.jarLength == 0) {
       return mask == Read;
@@ -1058,31 +1063,33 @@ int64_t JNICALL checkFileAccess(Thread* t, object method, uintptr_t* arguments)
       return 0;
     }
   } else {
-    return intValue(t,
-                    t->m->processor->invoke(
-                        t,
-                        nativeInterceptOriginal(
-                            t,
-                            methodRuntimeDataNative(
-                                t, getMethodRuntimeData(t, method))),
-                        reinterpret_cast<object>(arguments[0]),
-                        file,
-                        mask)) != 0;
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           reinterpret_cast<object>(arguments[0]),
+                           file,
+                           mask))->value() != 0;
   }
 }
 
-int64_t JNICALL getFileLength(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL getFileLength(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   object file = reinterpret_cast<object>(arguments[1]);
-  object path = fieldAtOffset<object>(file, cp->filePathField);
+  GcString* path
+      = cast<GcString>(t, fieldAtOffset<object>(file, cp->filePathField));
 
-  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), path->length(t));
   if (ef.jar) {
     if (ef.jarLength == 0) {
       return 0;
@@ -1101,29 +1108,31 @@ int64_t JNICALL getFileLength(Thread* t, object method, uintptr_t* arguments)
 
     return 0;
   } else {
-    return longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            reinterpret_cast<object>(arguments[0]),
-            file));
+    return cast<GcLong>(t,
+                        t->m->processor->invoke(
+                            t,
+                            cast<GcMethod>(t,
+                                           cast<GcNativeIntercept>(
+                                               t,
+                                               getMethodRuntimeData(t, method)
+                                                   ->native())->original()),
+                            reinterpret_cast<object>(arguments[0]),
+                            file))->value();
   }
 }
 
-void JNICALL openFile(Thread* t, object method, uintptr_t* arguments)
+void JNICALL openFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
-  object path = reinterpret_cast<object>(arguments[1]);
+  GcString* path = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), path->length(t));
   if (ef.jar) {
     if (ef.jarLength == 0 or ef.pathLength == 0) {
       throwNew(t, GcFileNotFoundException::Type);
@@ -1144,28 +1153,24 @@ void JNICALL openFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
 
     int index = -1;
-    unsigned oldLength = roots(t)->virtualFiles()
-                             ? arrayLength(t, roots(t)->virtualFiles())
-                             : 0;
+    unsigned oldLength
+        = roots(t)->virtualFiles() ? roots(t)->virtualFiles()->length() : 0;
 
     for (unsigned i = 0; i < oldLength; ++i) {
-      if (arrayBody(t, roots(t)->virtualFiles(), i) == 0) {
+      if (roots(t)->virtualFiles()->body()[i] == 0) {
         index = i;
         break;
       }
     }
 
     if (index == -1) {
-      object newArray = growArray(t, roots(t)->virtualFiles());
-      setRoot(t, Machine::VirtualFiles, newArray);
+      GcArray* newArray = growArray(t, roots(t)->virtualFiles());
+      roots(t)->setVirtualFiles(t, newArray);
       index = oldLength;
     }
 
     object region = makeRegion(t, r, 0);
-    set(t,
-        roots(t)->virtualFiles(),
-        ArrayBody + (index * BytesPerWord),
-        region);
+    roots(t)->virtualFiles()->setBodyElement(t, index, region);
 
     fieldAtOffset<int32_t>(
         fieldAtOffset<object>(this_, cp->fileInputStreamFdField),
@@ -1173,14 +1178,17 @@ void JNICALL openFile(Thread* t, object method, uintptr_t* arguments)
   } else {
     t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         this_,
         path);
   }
 }
 
-int64_t JNICALL readByteFromFile(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL
+    readByteFromFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
 
@@ -1193,14 +1201,14 @@ int64_t JNICALL readByteFromFile(Thread* t, object method, uintptr_t* arguments)
   if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
 
-    object region
-        = arrayBody(t, roots(t)->virtualFiles(), fd - VirtualFileBase);
+    GcRegion* region = cast<GcRegion>(
+        t, roots(t)->virtualFiles()->body()[fd - VirtualFileBase]);
 
     if (region) {
-      System::Region* r = static_cast<System::Region*>(regionRegion(t, region));
+      System::Region* r = static_cast<System::Region*>(region->region());
 
-      if (r->length() > regionPosition(t, region)) {
-        return r->start()[regionPosition(t, region)++];
+      if (r->length() > region->position()) {
+        return r->start()[region->position()++];
       } else {
         return -1;
       }
@@ -1208,21 +1216,24 @@ int64_t JNICALL readByteFromFile(Thread* t, object method, uintptr_t* arguments)
       throwNew(t, GcIoException::Type);
     }
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            this_));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           this_))->value();
   }
 }
 
 int64_t JNICALL
-    readBytesFromFile(Thread* t, object method, uintptr_t* arguments)
+    readBytesFromFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
-  object dst = reinterpret_cast<object>(arguments[1]);
+  GcByteArray* dst
+      = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[1]));
   int32_t offset = arguments[2];
   int32_t length = arguments[3];
 
@@ -1237,13 +1248,13 @@ int64_t JNICALL
 
     ACQUIRE(t, t->m->referenceLock);
 
-    object region
-        = arrayBody(t, roots(t)->virtualFiles(), fd - VirtualFileBase);
+    GcRegion* region = cast<GcRegion>(
+        t, roots(t)->virtualFiles()->body()[fd - VirtualFileBase]);
 
     if (region) {
-      System::Region* r = static_cast<System::Region*>(regionRegion(t, region));
+      System::Region* r = static_cast<System::Region*>(region->region());
 
-      int available = r->length() - regionPosition(t, region);
+      int available = r->length() - region->position();
       if (available == 0) {
         return -1;
       }
@@ -1252,31 +1263,32 @@ int64_t JNICALL
         length = available;
       }
 
-      memcpy(&byteArrayBody(t, dst, offset),
-             r->start() + regionPosition(t, region),
-             length);
+      memcpy(&dst->body()[offset], r->start() + region->position(), length);
 
-      regionPosition(t, region) += length;
+      region->position() += length;
 
       return length;
     } else {
       throwNew(t, GcIoException::Type);
     }
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            this_,
-            dst,
-            offset,
-            length));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           this_,
+                           dst,
+                           offset,
+                           length))->value();
   }
 }
 
-int64_t JNICALL skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL
+    skipBytesInFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
   int64_t count;
@@ -1291,37 +1303,39 @@ int64_t JNICALL skipBytesInFile(Thread* t, object method, uintptr_t* arguments)
   if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
 
-    object region
-        = arrayBody(t, roots(t)->virtualFiles(), fd - VirtualFileBase);
+    GcRegion* region = cast<GcRegion>(
+        t, roots(t)->virtualFiles()->body()[fd - VirtualFileBase]);
 
     if (region) {
-      System::Region* r = static_cast<System::Region*>(regionRegion(t, region));
+      System::Region* r = static_cast<System::Region*>(region->region());
 
-      int available = r->length() - regionPosition(t, region);
+      int available = r->length() - region->position();
       if (count > available) {
         count = available;
       }
 
-      regionPosition(t, region) += count;
+      region->position() += count;
 
       return count;
     } else {
       throwNew(t, GcIoException::Type);
     }
   } else {
-    return longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            this_,
-            count));
+    return cast<GcLong>(t,
+                        t->m->processor->invoke(
+                            t,
+                            cast<GcMethod>(t,
+                                           cast<GcNativeIntercept>(
+                                               t,
+                                               getMethodRuntimeData(t, method)
+                                                   ->native())->original()),
+                            this_,
+                            count))->value();
   }
 }
 
 int64_t JNICALL
-    availableBytesInFile(Thread* t, object method, uintptr_t* arguments)
+    availableBytesInFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
 
@@ -1334,27 +1348,29 @@ int64_t JNICALL
   if (fd >= VirtualFileBase) {
     ACQUIRE(t, t->m->referenceLock);
 
-    object region
-        = arrayBody(t, roots(t)->virtualFiles(), fd - VirtualFileBase);
+    GcRegion* region = cast<GcRegion>(
+        t, roots(t)->virtualFiles()->body()[fd - VirtualFileBase]);
 
     if (region) {
-      return static_cast<System::Region*>(regionRegion(t, region))->length()
-             - regionPosition(t, region);
+      return static_cast<System::Region*>(region->region())->length()
+             - region->position();
     } else {
       throwNew(t, GcIoException::Type);
     }
   } else {
     object r = t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         this_);
 
-    return r ? intValue(t, r) : 0;
+    return r ? cast<GcInt>(t, r)->value() : 0;
   }
 }
 
-void JNICALL closeFile(Thread* t, object method, uintptr_t* arguments)
+void JNICALL closeFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
 
@@ -1368,18 +1384,21 @@ void JNICALL closeFile(Thread* t, object method, uintptr_t* arguments)
     ACQUIRE(t, t->m->referenceLock);
 
     int index = fd - VirtualFileBase;
-    object region = arrayBody(t, roots(t)->virtualFiles(), index);
+    GcRegion* region
+        = cast<GcRegion>(t, roots(t)->virtualFiles()->body()[index]);
 
     if (region) {
-      static_cast<System::Region*>(regionRegion(t, region))->dispose();
+      static_cast<System::Region*>(region->region())->dispose();
     }
 
-    set(t, roots(t)->virtualFiles(), ArrayBody + (index * BytesPerWord), 0);
+    roots(t)->virtualFiles()->setBodyElement(t, index, 0);
   } else {
     t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         this_);
   }
 }
@@ -1431,20 +1450,20 @@ class ZipFile {
   Entry entries[0];
 };
 
-int64_t JNICALL openZipFile(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL openZipFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
-  object path = reinterpret_cast<object>(arguments[0]);
+  GcString* path = cast<GcString>(t, reinterpret_cast<object>(arguments[0]));
   int mode = arguments[1];
   int64_t lastModified;
   memcpy(&lastModified, arguments + 2, 8);
 
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
-  THREAD_RUNTIME_ARRAY(t, char, p, stringLength(t, path) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, p, path->length(t) + 1);
   stringChars(t, path, RUNTIME_ARRAY_BODY(p));
   replace('\\', '/', RUNTIME_ARRAY_BODY(p));
 
-  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), stringLength(t, path));
+  EmbeddedFile ef(cp, RUNTIME_ARRAY_BODY(p), path->length(t));
   if (ef.jar) {
     if (ef.jarLength == 0 or ef.pathLength == 0) {
       throwNew(t, GcFileNotFoundException::Type);
@@ -1494,7 +1513,8 @@ int64_t JNICALL openZipFile(Thread* t, object method, uintptr_t* arguments)
 
           while (p < end) {
             if (get4(p) == EntrySignature) {
-              unsigned h = hash(fileName(p), fileNameLength(p));
+              unsigned h
+                  = hash(Slice<const uint8_t>(fileName(p), fileNameLength(p)));
               unsigned i = h & (file->indexSize - 1);
 
               file->index[i] = new (file->entries + (position++))
@@ -1515,23 +1535,24 @@ int64_t JNICALL openZipFile(Thread* t, object method, uintptr_t* arguments)
     return reinterpret_cast<int64_t>(file);
   } else {
     return reinterpret_cast<int64_t>(
-        new (t->m->heap->allocate(sizeof(ZipFile)))
-        ZipFile(longValue(t,
-                          t->m->processor->invoke(
-                              t,
-                              nativeInterceptOriginal(
-                                  t,
-                                  methodRuntimeDataNative(
-                                      t, getMethodRuntimeData(t, method))),
-                              0,
-                              path,
-                              mode,
-                              lastModified))));
+        new (t->m->heap->allocate(sizeof(ZipFile))) ZipFile(
+            cast<GcLong>(t,
+                         t->m->processor->invoke(
+                             t,
+                             cast<GcMethod>(t,
+                                            cast<GcNativeIntercept>(
+                                                t,
+                                                getMethodRuntimeData(t, method)
+                                                    ->native())->original()),
+                             0,
+                             path,
+                             mode,
+                             lastModified))->value()));
   }
 }
 
 int64_t JNICALL
-    getZipFileEntryCount(Thread* t, object method, uintptr_t* arguments)
+    getZipFileEntryCount(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1540,14 +1561,16 @@ int64_t JNICALL
   if (file->region) {
     return file->entryCount;
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            file->file));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           0,
+                           file->file))->value();
   }
 }
 
@@ -1563,39 +1586,42 @@ ZipFile::Entry* find(ZipFile* file, const char* path, unsigned pathLength)
   return 0;
 }
 
-int64_t JNICALL getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL
+    getZipFileEntry(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
-  object path = reinterpret_cast<object>(arguments[2]);
+  GcByteArray* path
+      = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[2]));
   bool addSlash = arguments[3];
 
   ZipFile* file = reinterpret_cast<ZipFile*>(peer);
   if (file->region) {
-    THREAD_RUNTIME_ARRAY(t, char, p, byteArrayLength(t, path) + 2);
-    memcpy(RUNTIME_ARRAY_BODY(p),
-           &byteArrayBody(t, path, 0),
-           byteArrayLength(t, path));
-    RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path)] = 0;
+    THREAD_RUNTIME_ARRAY(t, char, p, path->length() + 2);
+    memcpy(RUNTIME_ARRAY_BODY(p), path->body().begin(), path->length());
+    RUNTIME_ARRAY_BODY(p)[path->length()] = 0;
     replace('\\', '/', RUNTIME_ARRAY_BODY(p));
     if (addSlash) {
-      RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path)] = '/';
-      RUNTIME_ARRAY_BODY(p)[byteArrayLength(t, path) + 1] = 0;
+      RUNTIME_ARRAY_BODY(p)[path->length()] = '/';
+      RUNTIME_ARRAY_BODY(p)[path->length() + 1] = 0;
     }
 
     return reinterpret_cast<int64_t>(
-        find(file, RUNTIME_ARRAY_BODY(p), byteArrayLength(t, path)));
+        find(file, RUNTIME_ARRAY_BODY(p), path->length()));
   } else {
-    int64_t entry = longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            file->file,
-            path,
-            addSlash));
+    int64_t entry
+        = cast<GcLong>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           0,
+                           file->file,
+                           path,
+                           addSlash))->value();
 
     return entry ? reinterpret_cast<int64_t>(new (t->m->heap->allocate(
                        sizeof(ZipFile::Entry))) ZipFile::Entry(entry))
@@ -1604,7 +1630,7 @@ int64_t JNICALL getZipFileEntry(Thread* t, object method, uintptr_t* arguments)
 }
 
 int64_t JNICALL
-    getZipFileEntryBytes(Thread* t, object method, uintptr_t* arguments)
+    getZipFileEntryBytes(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1615,9 +1641,9 @@ int64_t JNICALL
     switch (type) {
     case 0: {  // name
       unsigned nameLength = fileNameLength(entry->start);
-      object array = makeByteArray(t, nameLength + 1);
-      memcpy(&byteArrayBody(t, array, 0), fileName(entry->start), nameLength);
-      byteArrayBody(t, array, nameLength) = 0;
+      GcByteArray* array = makeByteArray(t, nameLength + 1);
+      memcpy(array->body().begin(), fileName(entry->start), nameLength);
+      array->body()[nameLength] = 0;
       return reinterpret_cast<int64_t>(array);
     } break;
 
@@ -1636,8 +1662,10 @@ int64_t JNICALL
   } else {
     return reinterpret_cast<int64_t>(t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         0,
         entry->entry,
         type));
@@ -1645,7 +1673,7 @@ int64_t JNICALL
 }
 
 int64_t JNICALL
-    getNextZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+    getNextZipFileEntry(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1655,15 +1683,18 @@ int64_t JNICALL
   if (file->region) {
     return reinterpret_cast<int64_t>(file->entries + index);
   } else {
-    int64_t entry = longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            file->file,
-            index));
+    int64_t entry
+        = cast<GcLong>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           0,
+                           file->file,
+                           index))->value();
 
     return entry ? reinterpret_cast<int64_t>(new (t->m->heap->allocate(
                        sizeof(ZipFile::Entry))) ZipFile::Entry(entry))
@@ -1672,7 +1703,7 @@ int64_t JNICALL
 }
 
 int64_t JNICALL
-    getZipFileEntryMethod(Thread* t, object method, uintptr_t* arguments)
+    getZipFileEntryMethod(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1681,19 +1712,21 @@ int64_t JNICALL
   if (entry->start) {
     return compressionMethod(entry->start);
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            entry->entry));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           0,
+                           entry->entry))->value();
   }
 }
 
 int64_t JNICALL getZipFileEntryCompressedSize(Thread* t,
-                                              object method,
+                                              GcMethod* method,
                                               uintptr_t* arguments)
 {
   int64_t peer;
@@ -1703,19 +1736,21 @@ int64_t JNICALL getZipFileEntryCompressedSize(Thread* t,
   if (entry->start) {
     return compressedSize(entry->start);
   } else {
-    return longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            entry->entry));
+    return cast<GcLong>(t,
+                        t->m->processor->invoke(
+                            t,
+                            cast<GcMethod>(t,
+                                           cast<GcNativeIntercept>(
+                                               t,
+                                               getMethodRuntimeData(t, method)
+                                                   ->native())->original()),
+                            0,
+                            entry->entry))->value();
   }
 }
 
 int64_t JNICALL getZipFileEntryUncompressedSize(Thread* t,
-                                                object method,
+                                                GcMethod* method,
                                                 uintptr_t* arguments)
 {
   int64_t peer;
@@ -1725,18 +1760,20 @@ int64_t JNICALL getZipFileEntryUncompressedSize(Thread* t,
   if (entry->start) {
     return uncompressedSize(entry->start);
   } else {
-    return longValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            entry->entry));
+    return cast<GcLong>(t,
+                        t->m->processor->invoke(
+                            t,
+                            cast<GcMethod>(t,
+                                           cast<GcNativeIntercept>(
+                                               t,
+                                               getMethodRuntimeData(t, method)
+                                                   ->native())->original()),
+                            0,
+                            entry->entry))->value();
   }
 }
 
-void JNICALL freeZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+void JNICALL freeZipFileEntry(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t filePeer;
   memcpy(&filePeer, arguments, 8);
@@ -1748,8 +1785,10 @@ void JNICALL freeZipFileEntry(Thread* t, object method, uintptr_t* arguments)
   if (file->region == 0) {
     t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         0,
         file->file,
         entry->entry);
@@ -1758,7 +1797,8 @@ void JNICALL freeZipFileEntry(Thread* t, object method, uintptr_t* arguments)
   t->m->heap->free(entry, sizeof(ZipFile::Entry));
 }
 
-int64_t JNICALL readZipFileEntry(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL
+    readZipFileEntry(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t filePeer;
   memcpy(&filePeer, arguments, 8);
@@ -1766,7 +1806,8 @@ int64_t JNICALL readZipFileEntry(Thread* t, object method, uintptr_t* arguments)
   memcpy(&entryPeer, arguments + 2, 8);
   int64_t position;
   memcpy(&position, arguments + 4, 8);
-  object buffer = reinterpret_cast<object>(arguments[6]);
+  GcByteArray* buffer
+      = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[6]));
   int offset = arguments[7];
   int length = arguments[8];
 
@@ -1782,30 +1823,32 @@ int64_t JNICALL readZipFileEntry(Thread* t, object method, uintptr_t* arguments)
       length = size - position;
     }
 
-    memcpy(&byteArrayBody(t, buffer, offset),
+    memcpy(&buffer->body()[offset],
            fileData(file->region->start() + localHeaderOffset(entry->start))
            + position,
            length);
 
     return length;
   } else {
-    return intValue(
-        t,
-        t->m->processor->invoke(
-            t,
-            nativeInterceptOriginal(
-                t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
-            0,
-            file->file,
-            entry->entry,
-            position,
-            buffer,
-            offset,
-            length));
+    return cast<GcInt>(t,
+                       t->m->processor->invoke(
+                           t,
+                           cast<GcMethod>(
+                               t,
+                               cast<GcNativeIntercept>(
+                                   t, getMethodRuntimeData(t, method)->native())
+                                   ->original()),
+                           0,
+                           file->file,
+                           entry->entry,
+                           position,
+                           buffer,
+                           offset,
+                           length))->value();
   }
 }
 
-int64_t JNICALL getZipMessage(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL getZipMessage(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1816,15 +1859,18 @@ int64_t JNICALL getZipMessage(Thread* t, object method, uintptr_t* arguments)
   } else {
     return reinterpret_cast<int64_t>(t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         0,
         file->file));
   }
 }
 
-int64_t JNICALL
-    getJarFileMetaInfEntryNames(Thread* t, object method, uintptr_t* arguments)
+int64_t JNICALL getJarFileMetaInfEntryNames(Thread* t,
+                                            GcMethod* method,
+                                            uintptr_t* arguments)
 {
   object this_ = reinterpret_cast<object>(arguments[0]);
 
@@ -1851,13 +1897,15 @@ int64_t JNICALL
 
     return reinterpret_cast<int64_t>(t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         pseudoThis));
   }
 }
 
-void JNICALL closeZipFile(Thread* t, object method, uintptr_t* arguments)
+void JNICALL closeZipFile(Thread* t, GcMethod* method, uintptr_t* arguments)
 {
   int64_t peer;
   memcpy(&peer, arguments, 8);
@@ -1870,8 +1918,10 @@ void JNICALL closeZipFile(Thread* t, object method, uintptr_t* arguments)
   } else {
     t->m->processor->invoke(
         t,
-        nativeInterceptOriginal(
-            t, methodRuntimeDataNative(t, getMethodRuntimeData(t, method))),
+        cast<GcMethod>(
+            t,
+            cast<GcNativeIntercept>(
+                t, getMethodRuntimeData(t, method)->native())->original()),
         0,
         file->file);
 
@@ -1923,10 +1973,12 @@ void JNICALL loadLibrary(Thread* t, object, uintptr_t* arguments)
 {
   Thread::LibraryLoadStack stack(
       t,
-      classLoader(t, jclassVmClass(t, reinterpret_cast<object>(arguments[0]))));
+      cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))
+          ->vmClass()
+          ->loader());
 
-  object name = reinterpret_cast<object>(arguments[1]);
-  THREAD_RUNTIME_ARRAY(t, char, n, stringLength(t, name) + 1);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
+  THREAD_RUNTIME_ARRAY(t, char, n, name->length(t) + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(n));
 
   bool absolute = arguments[2];
@@ -1986,45 +2038,45 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
   MyClasspath* cp = static_cast<MyClasspath*>(t->m->classpath);
 
   {
-    object fileClass
+    GcClass* fileClass
         = resolveClass(t, roots(t)->bootLoader(), "java/io/File", false);
 
     if (fileClass) {
-      object filePathField
+      GcField* filePathField
           = findFieldInClass2(t, fileClass, "path", "Ljava/lang/String;");
 
       if (filePathField) {
-        cp->filePathField = fieldOffset(t, filePathField);
+        cp->filePathField = filePathField->offset();
       }
     }
   }
 
   {
-    object fileDescriptorClass = resolveClass(
+    GcClass* fileDescriptorClass = resolveClass(
         t, roots(t)->bootLoader(), "java/io/FileDescriptor", false);
 
     if (fileDescriptorClass) {
-      object fileDescriptorFdField
+      GcField* fileDescriptorFdField
           = findFieldInClass2(t, fileDescriptorClass, "fd", "I");
 
       if (fileDescriptorFdField) {
-        cp->fileDescriptorFdField = fieldOffset(t, fileDescriptorFdField);
+        cp->fileDescriptorFdField = fileDescriptorFdField->offset();
       }
     }
   }
 
   {
-    object fileInputStreamClass = resolveClass(
+    GcClass* fileInputStreamClass = resolveClass(
         t, roots(t)->bootLoader(), "java/io/FileInputStream", false);
 
     if (fileInputStreamClass) {
       PROTECT(t, fileInputStreamClass);
 
-      object fileInputStreamFdField = findFieldInClass2(
+      GcField* fileInputStreamFdField = findFieldInClass2(
           t, fileInputStreamClass, "fd", "Ljava/io/FileDescriptor;");
 
       if (fileInputStreamFdField) {
-        cp->fileInputStreamFdField = fieldOffset(t, fileInputStreamFdField);
+        cp->fileInputStreamFdField = fileInputStreamFdField->offset();
 
         intercept(t,
                   fileInputStreamClass,
@@ -2081,17 +2133,17 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   {
-    object zipFileClass = resolveClass(
+    GcClass* zipFileClass = resolveClass(
         t, roots(t)->bootLoader(), "java/util/zip/ZipFile", false);
 
     if (zipFileClass) {
       PROTECT(t, zipFileClass);
 
-      object zipFileJzfileField
+      GcField* zipFileJzfileField
           = findFieldInClass2(t, zipFileClass, "jzfile", "J");
 
       if (zipFileJzfileField) {
-        cp->zipFileJzfileField = fieldOffset(t, zipFileJzfileField);
+        cp->zipFileJzfileField = zipFileJzfileField->offset();
 
         intercept(t,
                   zipFileClass,
@@ -2181,7 +2233,7 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
   }
 
   {
-    object jarFileClass = resolveClass(
+    GcClass* jarFileClass = resolveClass(
         t, roots(t)->bootLoader(), "java/util/jar/JarFile", false);
 
     if (jarFileClass) {
@@ -2203,7 +2255,7 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
     const char* const gbaMethodName = "getBooleanAttributes0";
 #endif
 
-    object fsClass
+    GcClass* fsClass
         = resolveClass(t, roots(t)->bootLoader(), fsClassName, false);
 
     if (fsClass) {
@@ -2895,7 +2947,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_sun_misc_Unsafe_getDouble__Ljava_lang_Object_2J(Thread* t,
-                                                          object method,
+                                                          GcMethod* method,
                                                           uintptr_t* arguments)
 {
   return Avian_sun_misc_Unsafe_getLong__Ljava_lang_Object_2J(
