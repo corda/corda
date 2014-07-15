@@ -2437,16 +2437,16 @@ object findFieldInClass(Thread* t,
                         GcByteArray* name,
                         GcByteArray* spec);
 
-inline object findFieldInClass2(Thread* t,
-                                GcClass* class_,
-                                const char* name,
-                                const char* spec)
+inline GcField* findFieldInClass2(Thread* t,
+                                  GcClass* class_,
+                                  const char* name,
+                                  const char* spec)
 {
   PROTECT(t, class_);
   GcByteArray* n = makeByteArray(t, "%s", name);
   PROTECT(t, n);
   GcByteArray* s = makeByteArray(t, "%s", spec);
-  return findFieldInClass(t, class_, n, s);
+  return cast<GcField>(t, findFieldInClass(t, class_, n, s));
 }
 
 object findMethodInClass(Thread* t,
