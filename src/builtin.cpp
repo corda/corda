@@ -286,9 +286,10 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_avian_Machine_dumpHeap(Thread* t, object, uintptr_t* arguments)
 {
-  object outputFile = reinterpret_cast<object>(*arguments);
+  GcString* outputFile
+      = static_cast<GcString*>(reinterpret_cast<object>(*arguments));
 
-  unsigned length = stringLength(t, outputFile);
+  unsigned length = outputFile->length(t);
   THREAD_RUNTIME_ARRAY(t, char, n, length + 1);
   stringChars(t, outputFile, RUNTIME_ARRAY_BODY(n));
   FILE* out = vm::fopen(RUNTIME_ARRAY_BODY(n), "wb");
