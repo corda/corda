@@ -30,5 +30,5 @@ if [ -z "${openjdk}" ]; then
     run make openjdk=$JAVA_HOME ${flags} ${test_target}
   fi
 fi
-run make ${flags} tails=true continuations=true ${test_target}
+run make ${flags} tails=true continuations=true heapdump=true ${test_target}
 run make ${flags} codegen-targets=all

@@ -74,11 +74,10 @@ void dumpHeap(Thread* t, FILE* out)
         local::write4(out, local::objectSize(t, p));
 
         if (objectClass(t, p) == type(t, GcClass::Type)) {
-          object name = className(t, p);
+          GcByteArray* name = static_cast<GcClass*>(p)->name();
           if (name) {
             local::write1(out, local::ClassName);
-            local::writeString(
-                out, &byteArrayBody(t, name, 0), byteArrayLength(t, name) - 1);
+            local::writeString(out, name->body().begin(), name->length() - 1);
           }
         }
 
