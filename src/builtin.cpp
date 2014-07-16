@@ -74,11 +74,16 @@ GcField* fieldForOffsetInClass(Thread* t, GcClass* c, unsigned offset)
   return 0;
 }
 
-GcField* fieldForOffset(Thread* t, GcSingleton* o, unsigned offset)
+GcField* fieldForOffset(Thread* t, object o, unsigned offset)
 {
   GcClass* c = objectClass(t, o);
   if (c->vmFlags() & SingletonFlag) {
-    c = cast<GcClass>(t, singletonObject(t, o, 0));
+    GcSingleton* s = cast<GcSingleton>(t, o);
+
+    // If the object is a Singleton, we assume it's the static table of a class -
+    // which will always have the parent class as the first (0th) element.
+    c = cast<GcClass>(t, singletonObject(t, s, 0));
+
     object table = c->fieldTable();
     if (table) {
       for (unsigned i = 0; i < objectArrayLength(t, table); ++i) {
