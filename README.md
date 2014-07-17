@@ -72,9 +72,9 @@ Building
 Build requirements include:
 
   * GNU make 3.80 or later
-  * GCC 3.4 or later (4.5.1 or later for Windows/x86_64)
+  * GCC 4.6 or later
       or LLVM Clang 3.1 or later (see use-clang option below)
-  * JDK 1.5 or later
+  * JDK 1.6 or later
   * MinGW 3.4 or later (only if compiling for Windows)
   * zlib 1.2.3 or later
 
@@ -226,24 +226,25 @@ still need to have GCC installed - MSVC is only used to compile the
 C++ portions of the VM, while the assembly code and helper tools are
 built using GCC.
 
-The MSVC build has been tested with Visual Studio Express Edition
-versions 8, 9, and 10.  Other versions may also work.
+*Note that the MSVC build isn't tested regularly, so is fairly likely to be broken.*
+
+Avian targets MSVC 11 and above (it uses c++ features not available in older versions).
 
 To build with MSVC, install Cygwin as described above and set the
 following environment variables:
 
-    $ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/X11R6/bin:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/BIN:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/Tools:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v3.5:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v2.0.50727:/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/VCPackages:/cygdrive/c/Program Files/Microsoft SDKs/Windows/v6.0A/bin:/cygdrive/c/WINDOWS/system32:/cygdrive/c/WINDOWS:/cygdrive/c/WINDOWS/System32/Wbem"
-    $ export LIBPATH="C:\WINDOWS\Microsoft.NET\Framework\v3.5;C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;"
-    $ export VCINSTALLDIR="C:\Program Files\Microsoft Visual Studio 9.0\VC"
-    $ export LIB="C:\Program Files\Microsoft Visual Studio 9.0\VC\LIB;C:\Program Files\Microsoft SDKs\Windows\v6.0A\lib;"
-    $ export INCLUDE="C:\Program Files\Microsoft Visual Studio 9.0\VC\INCLUDE;C:\Program Files\Microsoft SDKs\Windows\v6.0A\include;"
+    $ export PATH="/usr/local/bin:/usr/bin:/bin:/usr/X11R6/bin:/cygdrive/c/Program Files/Microsoft Visual Studio 11.0/Common7/IDE:/cygdrive/c/Program Files/Microsoft Visual Studio 11.0/VC/BIN:/cygdrive/c/Program Files/Microsoft Visual Studio 11.0/Common7/Tools:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v3.5:/cygdrive/c/WINDOWS/Microsoft.NET/Framework/v2.0.50727:/cygdrive/c/Program Files/Microsoft Visual Studio 11.0/VC/VCPackages:/cygdrive/c/Program Files/Microsoft SDKs/Windows/v6.0A/bin:/cygdrive/c/WINDOWS/system32:/cygdrive/c/WINDOWS:/cygdrive/c/WINDOWS/System32/Wbem"
+    $ export LIBPATH="C:\WINDOWS\Microsoft.NET\Framework\v3.5;C:\WINDOWS\Microsoft.NET\Framework\v2.0.50727;C:\Program Files\Microsoft Visual Studio 11.0\VC\LIB;"
+    $ export VCINSTALLDIR="C:\Program Files\Microsoft Visual Studio 11.0\VC"
+    $ export LIB="C:\Program Files\Microsoft Visual Studio 11.0\VC\LIB;C:\Program Files\Microsoft SDKs\Windows\v6.0A\lib;"
+    $ export INCLUDE="C:\Program Files\Microsoft Visual Studio 11.0\VC\INCLUDE;C:\Program Files\Microsoft SDKs\Windows\v6.0A\include;"
 
 Adjust these definitions as necessary according to your MSVC
 installation.
 
 Finally, build with the msvc flag set to the MSVC tool directory:
 
-    $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC"
+    $ make msvc="/cygdrive/c/Program Files/Microsoft Visual Studio 11.0/VC"
 
 
 Building with the OpenJDK Class Library
