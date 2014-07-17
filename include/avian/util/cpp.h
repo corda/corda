@@ -31,21 +31,17 @@ struct NonConst {
   typedef T Type;
 };
 
-template<class... Ts>
+template <class... Ts>
 struct ArgumentCount;
 
-template<class T, class... Ts>
+template <class T, class... Ts>
 struct ArgumentCount<T, Ts...> {
-  enum {
-    Result = 1 + ArgumentCount<Ts...>::Result
-  };
+  enum { Result = 1 + ArgumentCount<Ts...>::Result };
 };
 
-template<>
+template <>
 struct ArgumentCount<> {
-  enum {
-    Result = 0
-  };
+  enum { Result = 0 };
 };
 
 }  // namespace util

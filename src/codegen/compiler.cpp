@@ -2535,10 +2535,10 @@ class MyCompiler : public Compiler {
   }
 
   virtual ir::Value* nativeCall(ir::Value* address,
-                          unsigned flags,
-                          TraceHandler* traceHandler,
-                          ir::Type resultType,
-                          util::Slice<ir::Value*> arguments)
+                                unsigned flags,
+                                TraceHandler* traceHandler,
+                                ir::Type resultType,
+                                util::Slice<ir::Value*> arguments)
   {
     bool bigEndian = c.arch->bigEndian();
 

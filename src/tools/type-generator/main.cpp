@@ -1473,7 +1473,6 @@ void writeMap(Output* out, Module& module, Class* cl)
 {
   std::ostringstream ss;
   for (const auto f : cl->fields) {
-
     ss << "Type_";
     ss << enumName(module, f);
     if (f->nogc) {

@@ -25,17 +25,19 @@ class TraceHandler {
   virtual void handleTrace(Promise* address, unsigned argumentIndex) = 0;
 };
 
-template<size_t N>
+template <size_t N>
 class Args {
  public:
   ir::Value* values[N];
 
-  template<class... Ts>
-  Args(Ts... ts) : values{ts...}
+  template <class... Ts>
+  Args(Ts... ts)
+      : values{ts...}
   {
   }
 
-  operator util::Slice<ir::Value*> () {
+  operator util::Slice<ir::Value*>()
+  {
     return util::Slice<ir::Value*>(&values[0], N);
   }
 };
@@ -47,13 +49,14 @@ inline Args<0> args()
 
 inline Args<1> args(ir::Value* first)
 {
-  return Args<1> { first};
+  return Args<1>{first};
 }
 
-template<class... Ts>
-inline Args<1 + util::ArgumentCount<Ts...>::Result> args(ir::Value* first, Ts... rest)
+template <class... Ts>
+inline Args<1 + util::ArgumentCount<Ts...>::Result> args(ir::Value* first,
+                                                         Ts... rest)
 {
-  return Args<1 + util::ArgumentCount<Ts...>::Result> { first, rest... };
+  return Args<1 + util::ArgumentCount<Ts...>::Result>{first, rest...};
 }
 
 class Compiler {
@@ -115,10 +118,10 @@ class Compiler {
   virtual ir::Value* peek(unsigned footprint, unsigned index) = 0;
 
   virtual ir::Value* nativeCall(ir::Value* address,
-                          unsigned flags,
-                          TraceHandler* traceHandler,
-                          ir::Type resultType,
-                          util::Slice<ir::Value*> arguments) = 0;
+                                unsigned flags,
+                                TraceHandler* traceHandler,
+                                ir::Type resultType,
+                                util::Slice<ir::Value*> arguments) = 0;
 
   virtual ir::Value* stackCall(ir::Value* address,
                                unsigned flags,
