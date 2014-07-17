@@ -58,10 +58,10 @@ class Heap : public avian::util::Allocator {
                        unsigned footprint,
                        int pendingAllocation) = 0;
   virtual unsigned fixedFootprint(unsigned sizeInWords, bool objectMask) = 0;
-  virtual void* allocateFixed(avian::util::Allocator* allocator,
+  virtual void* allocateFixed(avian::util::Alloc* allocator,
                               unsigned sizeInWords,
                               bool objectMask) = 0;
-  virtual void* allocateImmortalFixed(avian::util::Allocator* allocator,
+  virtual void* allocateImmortalFixed(avian::util::Alloc* allocator,
                                       unsigned sizeInWords,
                                       bool objectMask) = 0;
   virtual void mark(void* p, unsigned offset, unsigned count) = 0;

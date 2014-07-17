@@ -20,17 +20,17 @@ namespace util {
 
 // An Allocator that allocates, bump-pointer style, out of a pre-defined chunk
 // of memory.
-class FixedAllocator : public Allocator {
+class FixedAllocator : public Alloc {
  public:
   FixedAllocator(Aborter* a, Slice<uint8_t> memory);
 
-  virtual void* tryAllocate(unsigned size);
+  virtual void* tryAllocate(size_t size);
 
-  void* allocate(unsigned size, unsigned padAlignment);
+  void* allocate(size_t size, unsigned padAlignment);
 
-  virtual void* allocate(unsigned size);
+  virtual void* allocate(size_t size);
 
-  virtual void free(const void* p, unsigned size);
+  virtual void free(const void* p, size_t size);
 
   Aborter* a;
   Slice<uint8_t> memory;

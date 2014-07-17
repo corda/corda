@@ -619,7 +619,7 @@ class MyArchitecture : public Architecture {
     }
   }
 
-  virtual Assembler* makeAssembler(Allocator* allocator, Zone* zone);
+  virtual Assembler* makeAssembler(Alloc* allocator, Zone* zone);
 
   virtual void acquire()
   {
@@ -639,7 +639,7 @@ class MyArchitecture : public Architecture {
 
 class MyAssembler : public Assembler {
  public:
-  MyAssembler(System* s, Allocator* a, Zone* zone, MyArchitecture* arch)
+  MyAssembler(System* s, Alloc* a, Zone* zone, MyArchitecture* arch)
       : con(s, a, zone), arch_(arch)
   {
   }
@@ -1075,7 +1075,7 @@ class MyAssembler : public Assembler {
   MyArchitecture* arch_;
 };
 
-Assembler* MyArchitecture::makeAssembler(Allocator* allocator, Zone* zone)
+Assembler* MyArchitecture::makeAssembler(Alloc* allocator, Zone* zone)
 {
   return new (zone) MyAssembler(this->con.s, allocator, zone, this);
 }

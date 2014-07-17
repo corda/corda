@@ -675,22 +675,7 @@ class MySystem : public System {
       ::free(const_cast<void*>(p));
   }
 
-#if !defined(AVIAN_AOT_ONLY)
-  virtual void* tryAllocateExecutable(unsigned sizeInBytes)
-  {
-    return VirtualAlloc(
-        0, sizeInBytes, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-  }
-
-  virtual void freeExecutable(const void* p, unsigned)
-  {
-    int r UNUSED = VirtualFree(const_cast<void*>(p), 0, MEM_RELEASE);
-    assertT(this, r);
-  }
-#endif
-
-  virtual bool success(Status s)
-  {
+  virtual bool success(Status s) {
     return s == 0;
   }
 
@@ -908,7 +893,7 @@ class MySystem : public System {
     return SO_SUFFIX;
   }
 
-  virtual const char* toAbsolutePath(avian::util::Allocator* allocator,
+  virtual const char* toAbsolutePath(avian::util::AllocOnly* allocator,
                                      const char* name)
   {
 #if !defined(WINAPI_FAMILY) || WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)

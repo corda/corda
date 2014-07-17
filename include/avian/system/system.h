@@ -113,10 +113,6 @@ class System : public avian::util::Aborter {
   virtual bool success(Status) = 0;
   virtual void* tryAllocate(unsigned sizeInBytes) = 0;
   virtual void free(const void* p) = 0;
-#if !defined(AVIAN_AOT_ONLY)
-  virtual void* tryAllocateExecutable(unsigned sizeInBytes) = 0;
-  virtual void freeExecutable(const void* p, unsigned sizeInBytes) = 0;
-#endif
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
   virtual Status make(Mutex**) = 0;
@@ -134,7 +130,7 @@ class System : public avian::util::Aborter {
   virtual Status load(Library**, const char* name) = 0;
   virtual char pathSeparator() = 0;
   virtual char fileSeparator() = 0;
-  virtual const char* toAbsolutePath(avian::util::Allocator* allocator,
+  virtual const char* toAbsolutePath(avian::util::AllocOnly* allocator,
                                      const char* name) = 0;
   virtual int64_t now() = 0;
   virtual void yield() = 0;

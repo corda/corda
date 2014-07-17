@@ -15,20 +15,20 @@
 
 namespace avian {
 namespace util {
-class Allocator;
+class AllocOnly;
 }
 }
 
 namespace vm {
 
 uint8_t* decodeLZMA(System* s,
-                    avian::util::Allocator* a,
+                    avian::util::AllocOnly* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize);
 
 uint8_t* encodeLZMA(System* s,
-                    avian::util::Allocator* a,
+                    avian::util::AllocOnly* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize);

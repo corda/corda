@@ -35,11 +35,6 @@ class Type {
     Float,
     Address,
 
-    // Represents individual halves of two-word types
-    // (double/long on 32-bit systems)
-    // TODO: remove when possible
-    Half,
-
     // Represents the lack of a return value
     // TODO: remove when possible
     Void,

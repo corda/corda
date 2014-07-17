@@ -52,7 +52,7 @@ class Asm {
   Assembler* a;
 
   Asm(BasicEnv& env)
-      : zone(env.s, env.heap, 8192), a(env.arch->makeAssembler(env.heap, &zone))
+      : zone(env.heap, 8192), a(env.arch->makeAssembler(env.heap, &zone))
   {
   }
 

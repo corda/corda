@@ -1431,7 +1431,7 @@ void writeBootImage2(Thread* t,
   // sequence point, for gc (don't recombine statements)
   roots(t)->setOutOfMemoryError(t, throwable);
 
-  Zone zone(t->m->system, t->m->heap, 64 * 1024);
+  Zone zone(t->m->heap, 64 * 1024);
 
   class MyCompilationHandler : public Processor::CompilationHandler {
    public:

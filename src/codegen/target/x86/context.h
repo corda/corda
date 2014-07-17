@@ -26,7 +26,7 @@
 
 namespace vm {
 class System;
-class Allocator;
+class Alloc;
 class Zone;
 }  // namespace vm
 
@@ -80,7 +80,7 @@ class ArchitectureContext {
 class Context {
  public:
   Context(vm::System* s,
-          util::Allocator* a,
+          util::Alloc* a,
           vm::Zone* zone,
           ArchitectureContext* ac);
 

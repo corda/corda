@@ -15,6 +15,8 @@
 #include "avian/target.h"
 #include "avian/arch.h"
 
+#include <avian/system/memory.h>
+
 #include <avian/codegen/assembler.h>
 #include <avian/codegen/architecture.h>
 #include <avian/codegen/compiler.h>
@@ -1156,7 +1158,7 @@ class Context {
 
   Context(MyThread* t, BootContext* bootContext, GcMethod* method)
       : thread(t),
-        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        zone(t->m->heap, InitialZoneCapacityInBytes),
         assembler(t->arch->makeAssembler(t->m->heap, &zone)),
         client(t),
         compiler(makeCompiler(t->m->system, assembler, &zone, &client)),
@@ -1189,7 +1191,7 @@ class Context {
 
   Context(MyThread* t)
       : thread(t),
-        zone(t->m->system, t->m->heap, InitialZoneCapacityInBytes),
+        zone(t->m->heap, InitialZoneCapacityInBytes),
         assembler(t->arch->makeAssembler(t->m->heap, &zone)),
         client(t),
         compiler(0),
@@ -1262,7 +1264,7 @@ class Context {
   TraceElement* traceLog;
   Slice<uint16_t> visitTable;
   Slice<uintptr_t> rootTable;
-  Allocator* executableAllocator;
+  Alloc* executableAllocator;
   void* executableStart;
   unsigned executableSize;
   unsigned objectPoolCount;
@@ -3741,8 +3743,7 @@ class Stack {
     Stack* s;
   };
 
-  Stack(MyThread* t)
-      : thread(t), zone(t->m->system, t->m->heap, 0), resource(this)
+  Stack(MyThread* t) : thread(t), zone(t->m->heap, 0), resource(this)
   {
   }
 
@@ -8842,8 +8843,7 @@ class MyProcessor : public Processor {
   {
     if (codeAllocator.memory.begin()) {
 #if !defined(AVIAN_AOT_ONLY)
-      s->freeExecutable(codeAllocator.memory.begin(),
-                        codeAllocator.memory.count);
+      Memory::free(codeAllocator.memory);
 #endif
     }
 
@@ -9023,12 +9023,10 @@ class MyProcessor : public Processor {
   {
 #if !defined(AVIAN_AOT_ONLY)
     if (codeAllocator.memory.begin() == 0) {
-      codeAllocator.memory.items = static_cast<uint8_t*>(
-          s->tryAllocateExecutable(ExecutableAreaSizeInBytes));
+      codeAllocator.memory = Memory::allocate(ExecutableAreaSizeInBytes,
+                                              Memory::ReadWriteExecute);
 
-      expect(t, codeAllocator.memory.items);
-
-      codeAllocator.memory.count = ExecutableAreaSizeInBytes;
+      expect(t, codeAllocator.memory.begin());
     }
 #endif
 

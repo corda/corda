@@ -16,7 +16,7 @@
 
 namespace vm {
 
-inline const char* append(avian::util::Allocator* allocator,
+inline const char* append(avian::util::AllocOnly* allocator,
                           const char* a,
                           const char* b,
                           const char* c)
@@ -31,7 +31,7 @@ inline const char* append(avian::util::Allocator* allocator,
   return p;
 }
 
-inline const char* append(avian::util::Allocator* allocator,
+inline const char* append(avian::util::AllocOnly* allocator,
                           const char* a,
                           const char* b)
 {
@@ -43,7 +43,7 @@ inline const char* append(avian::util::Allocator* allocator,
   return p;
 }
 
-inline const char* copy(avian::util::Allocator* allocator, const char* a)
+inline const char* copy(avian::util::AllocOnly* allocator, const char* a)
 {
   unsigned al = strlen(a);
   char* p = static_cast<char*>(allocator->allocate(al + 1));
