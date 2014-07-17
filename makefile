@@ -754,10 +754,6 @@ openjdk-extra-cflags += $(classpath-extra-cflags)
 
 find-tool = $(shell if ( command -v "$(1)$(2)" >/dev/null ); then (echo "$(1)$(2)") else (echo "$(2)"); fi)
 
-ifeq ($(build-platform),windows)
-	static-on-windows = -static
-endif
-
 ifeq ($(platform),windows)
 	target-format = pe
 
@@ -787,6 +783,7 @@ ifeq ($(platform),windows)
 		strip = $(prefix)strip --strip-all
 	else
 		build-system = windows
+		static-on-windows = -static
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
 		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
 		openjdk-extra-cflags =
