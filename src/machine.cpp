@@ -409,10 +409,10 @@ void referenceTargetUnreachable(Thread* t, Heap::Visitor* v, GcJreference** p)
   (*p)->target() = 0;
 
   if (objectClass(t, *p) == type(t, GcCleaner::Type)) {
-    *p = cast<GcJreference>(t, (*p)->vmNext());
-
     // In openjdk, sun/misc/Cleaner extends PhantomReference
     GcCleaner* cleaner = (*p)->as<GcCleaner>(t);
+
+    *p = cast<GcJreference>(t, (*p)->vmNext());
 
     cleaner->setQueueNext(t, roots(t)->objectsToClean());
     roots(t)->setObjectsToClean(t, cleaner);
