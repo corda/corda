@@ -3286,19 +3286,30 @@ int parseSize(const char* s)
 {
   unsigned length = strlen(s);
   RUNTIME_ARRAY(char, buffer, length + 1);
-  if (length == 0) {
+
+  if (length == 0)
     return 0;
-  } else if (s[length - 1] == 'k' or s[length - 1] == 'K') {
+
+  char suffix = s[length - 1];
+  if (suffix== 'k' or suffix == 'K') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
     RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024;
-  } else if (s[length - 1] == 'm' or s[length - 1] == 'M') {
+  }
+
+  if (suffix == 'm' or suffix == 'M') {
     memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
     RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
     return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024;
-  } else {
-    return atoi(s);
   }
+
+  if (suffix == 'g' or suffix == 'G') {
+    memcpy(RUNTIME_ARRAY_BODY(buffer), s, length - 1);
+    RUNTIME_ARRAY_BODY(buffer)[length - 1] = 0;
+    return atoi(RUNTIME_ARRAY_BODY(buffer)) * 1024 * 1024 * 1024;
+  }
+
+  return atoi(s);
 }
 
 void append(char** p, const char* value, unsigned length, char tail)
