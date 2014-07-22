@@ -165,7 +165,7 @@ openjdk-cflags = \
 	-DJDK_BUILD_NUMBER=\"0\" \
 	-D_GNU_SOURCE
 
-ifeq ($(platform),darwin)
+ifeq ($(kernel),darwin)
 	openjdk-cflags += \
 		-D_LFS_LARGEFILE=1 \
 		-D_ALLBSD_SOURCE
@@ -329,7 +329,7 @@ else
 			$(shell pkg-config --cflags gconf-2.0)
 	endif
 
-	ifeq ($(platform),darwin)
+	ifeq ($(kernel),darwin)
 		openjdk-sources += \
 			$(openjdk-src)/solaris/native/java/net/bsd_close.c
 
