@@ -1648,6 +1648,7 @@ class Frame {
 
   void storeLarge(ir::Type type, unsigned index)
   {
+    assertT(t, type.rawSize() == 8);
     storeLocal(context, 2, type, popLarge(type), index);
     unsigned ti = translateLocalIndex(context, 2, index);
     assertT(t, ti + 1 < localSize());
@@ -1691,7 +1692,7 @@ class Frame {
   {
     ir::Value* s0 = c->pop(ir::Type::i4());
 
-    if (get(sp - 2) == ir::Type::i8()) {
+    if (get(sp - 2).rawSize() == 8) {
       ir::Value* s1 = c->pop(ir::Type::i8());
 
       c->push(ir::Type::i4(), s0);
@@ -1724,7 +1725,7 @@ class Frame {
 
   void dup2()
   {
-    if (get(sp - 1) == ir::Type::i8()) {
+    if (get(sp - 1).rawSize() == 8) {
       c->push(ir::Type::i8(), c->peek(2, 0));
     } else {
       ir::Value* s0 = c->pop(ir::Type::i4());
@@ -1750,7 +1751,7 @@ class Frame {
 
   void dup2X1()
   {
-    if (get(sp - 1) == ir::Type::i8()) {
+    if (get(sp - 1).rawSize() == 8) {
       ir::Value* s0 = c->pop(ir::Type::i8());
       ir::Value* s1 = c->pop(ir::Type::i4());
 
@@ -1787,10 +1788,10 @@ class Frame {
 
   void dup2X2()
   {
-    if (get(sp - 1) == ir::Type::i8()) {
+    if (get(sp - 1).rawSize() == 8) {
       ir::Value* s0 = c->pop(ir::Type::i8());
 
-      if (get(sp - 3) == ir::Type::i8()) {
+      if (get(sp - 3).rawSize() == 8) {
         ir::Value* s1 = c->pop(ir::Type::i8());
 
         c->push(ir::Type::i8(), s0);
