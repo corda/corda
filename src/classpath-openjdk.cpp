@@ -3329,6 +3329,9 @@ uint64_t jvmInitProperties(Thread* t, uintptr_t* arguments)
           ->path());
 
   local::setProperty(t, method, *properties, "file.encoding", "UTF-8");
+
+  local::setProperty(t, method, *properties, "jdk.lang.Process.launchMechanism", "fork");
+
 #ifdef ARCH_x86_32
   local::setProperty(t, method, *properties, "os.arch", "x86");
 #elif defined ARCH_x86_64
