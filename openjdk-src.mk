@@ -333,7 +333,7 @@ else
 		openjdk-sources += \
 			$(openjdk-src)/solaris/native/java/net/bsd_close.c
 
-		ifeq ($(ios),true)
+		ifeq ($(platform),ios)
 			openjdk-local-sources += \
 				$(src)/openjdk/my_java_props_macosx.c
 		else
