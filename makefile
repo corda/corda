@@ -1,7 +1,7 @@
 MAKEFLAGS = -s
 
 name = avian
-version = 1.0.2
+version := $(shell grep version gradle.properties | cut -d'=' -f2)
 
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
@@ -1587,6 +1587,7 @@ $(classpath-build)/%.class: $(classpath-src)/%.java
 
 $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
+	@echo $(boot-classpath)
 	@mkdir -p $(classpath-build)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
 		$(classpath-classes))"; if [ -n "$${classes}" ]; then \

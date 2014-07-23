@@ -11,6 +11,7 @@ buildscript {
 apply plugin: 'native-component'
 apply plugin: 'ivy-publish'
 apply plugin: 'com.jfrog.artifactory'
+apply plugin: 'java'
 
 artifactory {
   contextUrl = "http://oss.jfrog.org"
@@ -35,6 +36,24 @@ model {
     create("linux-x86_64") {
       operatingSystem "linux"
       architecture "x86_64"
+    }
+  }
+}
+
+tasks.withType(JavaCompile) {
+  sourceCompatibility = "1.6"
+  targetCompatibility = "1.6"
+
+  options.encoding = "UTF-8"
+}
+
+sourceSets {
+  main {
+    java {
+      srcDir 'classpath'
+    }
+    resources {
+      srcDir 'classpath'
     }
   }
 }
