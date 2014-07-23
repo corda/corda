@@ -9,6 +9,7 @@ bin
 /distrib
 *.pdb
 *.swp
+/.gradle
 /*.sublime-*
 workspace/
 src/.cproject
