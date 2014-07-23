@@ -28,6 +28,10 @@ artifactory {
       username = System.env.BINTRAY_USER
       password = System.env.BINTRAY_API_KEY
     }
+
+    defaults {
+      //publications('linux-x86_64')
+    }
   }
 }
 
@@ -44,7 +48,10 @@ tasks.withType(JavaCompile) {
   sourceCompatibility = "1.6"
   targetCompatibility = "1.6"
 
-  options.encoding = "UTF-8"
+  options.with {
+    encoding = "UTF-8"
+    bootClasspath = sourceSets.main.output.classesDir
+  }
 }
 
 sourceSets {

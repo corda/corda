@@ -1587,7 +1587,6 @@ $(classpath-build)/%.class: $(classpath-src)/%.java
 
 $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
-	@echo $(boot-classpath)
 	@mkdir -p $(classpath-build)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
 		$(classpath-classes))"; if [ -n "$${classes}" ]; then \
