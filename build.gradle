@@ -4,13 +4,13 @@ buildscript {
   }
 
   dependencies {
-    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.4'
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.0.0'
   }
 }
 
-apply plugin: 'native-binaries'
+apply plugin: 'native-component'
 apply plugin: 'ivy-publish'
-apply plugin: 'artifactory-publish'
+apply plugin: 'com.jfrog.artifactory'
 
 artifactory {
   contextUrl = "http://oss.jfrog.org"
@@ -26,10 +26,6 @@ artifactory {
       repoKey = 'oss-snapshot-local'
       username = System.env.BINTRAY_USER
       password = System.env.BINTRAY_API_KEY
-    }
-
-    defaults {
-      publications 'linux-x86_64'
     }
   }
 }
@@ -93,5 +89,5 @@ publishing {
 }
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '1.12'
+  gradleVersion = '2.0'
 }
