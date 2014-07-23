@@ -77,12 +77,6 @@ publishing {
           type "a"
           extension "a"
         }
-
-        artifact("${nativeBuildDir}/generator") {
-          name "generator"
-          type "bin"
-          extension "bin"
-        }
       }
     }
   }
