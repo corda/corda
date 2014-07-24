@@ -19,6 +19,35 @@ model {
       operatingSystem "linux"
       architecture "x86_64"
     }
+
+    create("linux-i386") {
+      operatingSystem "linux"
+      architecture "i386"
+    }
+
+    create("windows-x86_64") {
+      operatingSystem "windows"
+      architecture "x86_64"
+    }
+
+    create("windows-i386") {
+      operatingSystem "windows"
+      architecture "i386"
+    }
+  }
+
+  tasks {
+    platforms.each { platform ->
+      task "build${platform.name}"(type: Exec) {
+        executable "make"
+        args "platform=${platform.operatingSystem.name}",
+             "arch=${platform.architecture.name}"
+      }
+
+      assemble {
+        dependsOn "build${platform.name}"
+      }
+    }
   }
 }
 
@@ -43,6 +72,10 @@ sourceSets {
   }
 }
 
+task install {
+  dependsOn assemble, publish
+}
+
 publishing {
   repositories {
     ivy {
@@ -52,34 +85,45 @@ publishing {
   }
 
   publications {
+    def binSuffix=""
+    def publishBinSuffix="bin"
 
     platforms.each { platform ->
       create(platform.name, IvyPublication) {
         def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
 
+        if(platform.operatingSystem.name == "windows") {
+          publishBinSuffix = "exe"
+          binSuffix = ".${publishBinSuffix}"
+        }
+
         module "${project.name}-${platform.name}"
 
-        artifact("${nativeBuildDir}/avian") {
+        artifact("${nativeBuildDir}/avian${binSuffix}") {
           name "avian"
-          type "bin"
-          extension "bin"
+          type publishBinSuffix
+          extension publishBinSuffix
+          //builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/classpath.jar") {
           name "classpath"
           type "jar"
+          // builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
           name "binaryToObject"
-          type "bin"
-          extension "bin"
+          type publishBinSuffix
+          extension publishBinSuffix
+          // builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
           name "libavian"
           type "a"
           extension "a"
+          // builtBy "build${platform.name}"
         }
       }
     }
