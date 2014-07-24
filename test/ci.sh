@@ -9,26 +9,16 @@ run() {
   "${@}"
 }
 
-if [ -z "${test_target}" ]; then
-  test_target=test
+if [ ${#} -gt 0 ]; then
+  run make ${@}
+else
+  run make jdk-test
+  run make test
+  run make mode=debug test
+  run make process=interpret test
+  run make bootimage=true test
+  run make mode=debug bootimage=true test
+  run make openjdk=$JAVA_HOME test
+  run make tails=true continuations=true heapdump=true test
+  run make codegen-targets=all
 fi
-
-# we shouldn't run jdk-test builds if we're not running the test target
-if [ ${test_target} = test ]; then
- run make ${flags} jdk-test
-fi
-
-run make ${flags} ${test_target}
-run make ${flags} mode=debug ${test_target}
-run make ${flags} process=interpret ${test_target}
-# bootimage and openjdk builds without openjdk-src don't work:
-if [ -z "${openjdk}" ]; then
-  run make ${flags} bootimage=true ${test_target}
-  run make ${flags} mode=debug bootimage=true ${test_target}
-  if [ -z "${android}" ]; then
-    # might as well do an openjdk test while we're here:
-    run make openjdk=$JAVA_HOME ${flags} ${test_target}
-  fi
-fi
-run make ${flags} tails=true continuations=true heapdump=true ${test_target}
-run make ${flags} codegen-targets=all
