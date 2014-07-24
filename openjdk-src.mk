@@ -331,15 +331,15 @@ else
 
 	ifeq ($(kernel),darwin)
 		openjdk-sources += \
-			$(openjdk-src)/solaris/native/java/net/bsd_close.c
+			$(openjdk-src)/solaris/native/java/net/bsd_close.c \
+			$(openjdk-src)/macosx/native/sun/nio/ch/KQueueArrayWrapper.c
 
 		ifeq ($(platform),ios)
 			openjdk-local-sources += \
 				$(src)/openjdk/my_java_props_macosx.c
 		else
 			openjdk-sources += \
-				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c \
-				$(openjdk-src)/macosx/native/sun/nio/ch/KQueueArrayWrapper.c
+				$(openjdk-src)/solaris/native/java/lang/java_props_macosx.c
 		endif
 
 		openjdk-cflags += \
