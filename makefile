@@ -2007,6 +2007,13 @@ ifeq ($(platform),ios)
 		-e 's/^#ifdef __APPLE__/#if 0/' \
 		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
 		> $(build)/openjdk/UNIXProcess_md.c
+	if [ -e "$(openjdk-src)/solaris/native/java/lang/childproc.h" ]; then \
+		sed \
+			-e 's/^#ifndef __APPLE__/#if 1/' \
+			-e 's/^#ifdef __APPLE__/#if 0/' \
+			< "$(openjdk-src)/solaris/native/java/lang/childproc.h" \
+			> $(build)/openjdk/childproc.h; \
+	fi
 endif
 	if [ -f openjdk-patches/$(notdir $(<)).patch ]; then \
 		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).patch; \

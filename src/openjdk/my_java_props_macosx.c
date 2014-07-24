@@ -19,6 +19,12 @@ setProxyProperties(java_props_t* props)
   // ignore
 }
 
+void
+setUserHome(java_props_t* props)
+{
+  // ignore
+}
+
 char*
 setupMacOSXLocale(int cat)
 {
