@@ -161,16 +161,12 @@ class Class {
     }
     ss << " {\n";
 
-    for (std::vector<Field*>::const_iterator it = fields.begin();
-         it != fields.end();
-         it++) {
-      ss << "  " << (*it)->dump() << "\n";
+    for (const auto f : fields) {
+      ss << "  " << f->dump() << "\n";
     }
 
-    for (std::set<Method>::const_iterator it = methods.begin();
-         it != methods.end();
-         ++it) {
-      ss << "  " << it->dump() << "\n";
+    for (const auto m : methods) {
+      ss << "  " << m.dump() << "\n";
     }
     ss << "}";
     return ss.str();
@@ -226,23 +222,23 @@ inline bool endsWith(const std::string& b, const std::string& a)
   return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 }
 
-std::string enumName(Module& module, Field& f)
+std::string enumName(Module& module, Field* f)
 {
-  std::string& type = f.typeName;
+  std::string& type = f->typeName;
   if (type == "void*") {
     return "word";
   } else if (type == "maybe_object") {
     return "uintptr_t";
-  } else if (f.javaSpec.size() != 0
-             && (f.javaSpec[0] == 'L' || f.javaSpec[0] == '[')) {
+  } else if (f->javaSpec.size() != 0
+             && (f->javaSpec[0] == 'L' || f->javaSpec[0] == '[')) {
     return "object";
   }
-  std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
-  assert(f.typeName.size() > 0);
+  const auto it = module.classes.find(f->typeName);
+  assert(f->typeName.size() > 0);
   if (it != module.classes.end()) {
     return "object";
   } else {
-    return f.typeName;
+    return f->typeName;
   }
 }
 
@@ -408,7 +404,7 @@ unsigned sizeOf(Module& module, const std::string& type)
   } else if (namesPointer(type)) {
     return BytesPerWord;
   } else {
-    std::map<std::string, Class*>::iterator it = module.classes.find(type);
+    const auto it = module.classes.find(type);
     if (it != module.classes.end()) {
       return BytesPerWord;
     } else {
@@ -459,8 +455,7 @@ class ClassParser {
         if (fields.find(f.field->name) != fields.end()) {
           // printf("alias %s.%s -> %s.%s\n", cl->name.c_str(),
           // f.field->name.c_str(), cl->name.c_str(), f.aliasName.c_str());
-          std::map<std::string, Field*>::iterator it
-              = fields.find(f.field->name);
+          const auto it = fields.find(f.field->name);
           assert(it != fields.end());
           Field* renamed = it->second;
           fields.erase(it);
@@ -474,11 +469,11 @@ class ClassParser {
           renamed->javaSpec = f.field->javaSpec;
         } else {
           // printf("ignoring absent alias %s.%s -> %s.%s\n", cl->name.c_str(),
-          // f.field->name.c_str(), cl->name.c_str(), f.  aliasName.c_str());
+          // f.field->name.c_str(), cl->name.c_str(), f->  aliasName.c_str());
         }
       } else {
         // printf("ignoring already defined alias %s.%s -> %s.%s\n",
-        // cl->name.c_str(), f.field->name.c_str(), cl->name.c_str(), f.
+        // cl->name.c_str(), f.field->name.c_str(), cl->name.c_str(), f->
         // aliasName.c_str());
       }
     } else {
@@ -508,10 +503,8 @@ class ClassParser {
     cl->super = super;
     assert(!super->arrayField);
     assert(fields.size() == 0);
-    for (std::vector<Field*>::iterator it = super->fields.begin();
-         it != super->fields.end();
-         it++) {
-      add(FieldSpec(false, *it));
+    for (const auto f : super->fields) {
+      add(FieldSpec(false, f));
     }
   }
 };
@@ -826,31 +819,27 @@ void layoutClass(Module& module, Class* cl)
 
   alignment = BytesPerWord;
 
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       it++) {
-    Field& f = **it;
+  for (const auto f : cl->fields) {
+    f->elementSize = sizeOf(module, f->typeName);
 
-    f.elementSize = sizeOf(module, f.typeName);
-
-    if (!f.polyfill) {  // polyfills contribute no size
-      alignment = f.elementSize;
+    if (!f->polyfill) {  // polyfills contribute no size
+      alignment = f->elementSize;
       offset = (offset + alignment - 1) & ~(alignment - 1);
-      f.offset = offset;
+      f->offset = offset;
 
-      size = f.elementSize;
+      size = f->elementSize;
 
       offset += size;
     }
   }
   if (cl->arrayField) {
-    Field& f = *cl->arrayField;
+    Field* f = cl->arrayField;
 
-    f.elementSize = sizeOf(module, f.typeName);
+    f->elementSize = sizeOf(module, f->typeName);
 
-    alignment = f.elementSize;
+    alignment = f->elementSize;
     offset = (offset + alignment - 1) & ~(alignment - 1);
-    f.offset = offset;
+    f->offset = offset;
   }
   // offset = (offset + BytesPerWord - 1) & ~(BytesPerWord - 1);
   cl->fixedSize = offset;
@@ -858,10 +847,8 @@ void layoutClass(Module& module, Class* cl)
 
 void layoutClasses(Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     layoutClass(module, cl);
   }
 }
@@ -890,79 +877,69 @@ std::string cppClassName(Class* cl)
   }
 }
 
-std::string cppFieldType(Module& module, Field& f)
+std::string cppFieldType(Module& module, Field* f)
 {
-  if (f.javaSpec.size() != 0) {
-    if (f.javaSpec[0] == 'L') {
-      std::string className = f.javaSpec.substr(1, f.javaSpec.size() - 2);
-      std::map<std::string, Class*>::iterator it
-          = module.javaClasses.find(className);
+  if (f->javaSpec.size() != 0) {
+    if (f->javaSpec[0] == 'L') {
+      std::string className = f->javaSpec.substr(1, f->javaSpec.size() - 2);
+      const auto it = module.javaClasses.find(className);
       if (it != module.javaClasses.end()) {
         return cppClassName(it->second);
       }
-    } else if (f.javaSpec[0] == '[') {
-      std::map<std::string, Class*>::iterator it
-          = module.javaClasses.find(f.javaSpec);
+    } else if (f->javaSpec[0] == '[') {
+      const auto it = module.javaClasses.find(f->javaSpec);
       if (it != module.javaClasses.end()) {
         return cppClassName(it->second);
       }
     }
   }
-  std::map<std::string, Class*>::iterator it = module.classes.find(f.typeName);
-  assert(f.typeName.size() > 0);
+  const auto it = module.classes.find(f->typeName);
+  assert(f->typeName.size() > 0);
   if (it != module.classes.end()) {
     return cppClassName(it->second);
-  } else if (f.typeName == "maybe_object") {
+  } else if (f->typeName == "maybe_object") {
     return "uintptr_t";
   } else {
-    return f.typeName;
+    return f->typeName;
   }
 }
 
-void writeAccessor(Output* out, Class* cl, Field& field)
+void writeAccessor(Output* out, Class* cl, Field* f)
 {
-  std::string typeName = field.typeName;
+  std::string typeName = f->typeName;
 
   out->write("const unsigned ");
   out->write(capitalize(cl->name));
-  out->write(capitalize(field.name));
+  out->write(capitalize(f->name));
   out->write(" = ");
-  writeOffset(out, field.offset);
+  writeOffset(out, f->offset);
   out->write(";\n\n");
 
   out->write("#define HAVE_");
   out->write(capitalize(cl->name));
-  out->write(capitalize(field.name));
+  out->write(capitalize(f->name));
   out->write(" 1\n\n");
 }
 
 void writeAccessors(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
-    for (std::vector<Field*>::iterator it = cl->fields.begin();
-         it != cl->fields.end();
-         ++it) {
-      Field& f = **it;
-
-      if (!f.polyfill) {
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
+    for (const auto f : cl->fields) {
+      if (!f->polyfill) {
         writeAccessor(out, cl, f);
       }
     }
     if (cl->arrayField) {
-      writeAccessor(out, cl, *cl->arrayField);
+      writeAccessor(out, cl, cl->arrayField);
     }
   }
 }
 
 void writeSizes(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
 
     out->write("const unsigned FixedSizeOf");
     out->write(capitalize(cl->name));
@@ -992,43 +969,34 @@ std::string obfuscate(const std::string& s)
 
 void writeConstructorParameters(Output* out, Module& module, Class* cl)
 {
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       ++it) {
-    Field& f = **it;
-    if (!f.polyfill) {
+  for (const auto f : cl->fields) {
+    if (!f->polyfill) {
       out->write(", ");
       out->write(cppFieldType(module, f));
       out->write(" ");
-      out->write(obfuscate(f.name));
+      out->write(obfuscate(f->name));
     }
   }
 }
 
 void writeConstructorArguments(Output* out, Class* cl)
 {
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       ++it) {
-    Field& f = **it;
-    if (!f.polyfill) {
+  for (const auto f : cl->fields) {
+    if (!f->polyfill) {
       out->write(", ");
-      out->write(obfuscate(f.name));
+      out->write(obfuscate(f->name));
     }
   }
 }
 
 void writeConstructorInitializations(Output* out, Class* cl)
 {
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       ++it) {
-    Field& f = **it;
-    if (!f.polyfill) {
+  for (const auto f : cl->fields) {
+    if (!f->polyfill) {
       out->write("  o->set");
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write("(t, ");
-      out->write(obfuscate(f.name));
+      out->write(obfuscate(f->name));
       out->write(");\n");
     }
   }
@@ -1036,10 +1004,8 @@ void writeConstructorInitializations(Output* out, Class* cl)
 
 void writeClassDeclarations(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       it++) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
 
     out->write("class Gc");
     out->write(capitalize(cl->name));
@@ -1048,41 +1014,37 @@ void writeClassDeclarations(Output* out, Module& module)
   out->write("\n");
 }
 
-bool isFieldGcVisible(Module& module, Field& f)
+bool isFieldGcVisible(Module& module, Field* f)
 {
-  return enumName(module, f) == "object" && !f.nogc;
+  return enumName(module, f) == "object" && !f->nogc;
 }
 
-bool isFieldGcMarkable(Module& module, Field& f)
+bool isFieldGcMarkable(Module& module, Field* f)
 {
-  return (f.typeName == "maybe_object" || enumName(module, f) == "object")
-         && !f.nogc;
+  return (f->typeName == "maybe_object" || enumName(module, f) == "object")
+         && !f->nogc;
 }
 
 void writeClassAccessors(Output* out, Module& module, Class* cl)
 {
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       ++it) {
-    Field& f = **it;
-
-    if (!f.polyfill) {
+  for (const auto f : cl->fields) {
+    if (!f->polyfill) {
       out->write("  void set");
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write("(Thread* t UNUSED, ");
       out->write(cppFieldType(module, f));
       out->write(" value) { ");
       if (isFieldGcMarkable(module, f)) {
         out->write("setField(t, this , ");
         out->write(capitalize(cl->name));
-        out->write(capitalize(f.name));
+        out->write(capitalize(f->name));
         out->write(", reinterpret_cast<object>(value));");
       } else {
         out->write("field_at<");
         out->write(cppFieldType(module, f));
         out->write(">(");
         out->write(capitalize(cl->name));
-        out->write(capitalize(f.name));
+        out->write(capitalize(f->name));
         out->write(") = value;");
       }
       out->write(" }\n");
@@ -1090,47 +1052,47 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
       out->write("  ");
       out->write(cppFieldType(module, f));
       out->write("* ");
-      out->write(obfuscate(f.name));
+      out->write(obfuscate(f->name));
       out->write("Ptr() { return &field_at<");
       out->write(cppFieldType(module, f));
       out->write(">(");
       out->write(capitalize(cl->name));
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write("); }\n");
     }
 
     out->write("  ");
     out->write(cppFieldType(module, f));
-    if (!f.polyfill && !isFieldGcMarkable(module, f)) {
+    if (!f->polyfill && !isFieldGcMarkable(module, f)) {
       out->write("&");
     }
     out->write(" ");
-    out->write(obfuscate(f.name));
-    if (f.threadParam || f.polyfill) {
+    out->write(obfuscate(f->name));
+    if (f->threadParam || f->polyfill) {
       out->write("(Thread*");
     } else {
       out->write("(");
     }
-    if (f.polyfill) {
+    if (f->polyfill) {
       out->write("); // polyfill, assumed to be implemented elsewhere\n");
     } else {
       out->write(") { return field_at<");
       out->write(cppFieldType(module, f));
       out->write(">(");
       out->write(capitalize(cl->name));
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write("); }\n");
     }
   }
   if (cl->arrayField) {
-    Field& f = *cl->arrayField;
+    Field* f = cl->arrayField;
     out->write("  avian::util::Slice<");
     if (isFieldGcVisible(module, f)) {
       out->write("const ");
     }
     out->write(cppFieldType(module, f));
     out->write("> ");
-    out->write(obfuscate(f.name));
+    out->write(obfuscate(f->name));
     out->write("() { return avian::util::Slice<");
     if (isFieldGcVisible(module, f)) {
       out->write("const ");
@@ -1143,31 +1105,31 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
     out->write(cppFieldType(module, f));
     out->write(">(");
     out->write(capitalize(cl->name));
-    out->write(capitalize(f.name));
+    out->write(capitalize(f->name));
     out->write("), field_at<uintptr_t>(");
     out->write(capitalize(cl->name));
     out->write("Length)); }\n");
 
     out->write("  void set");
-    out->write(capitalize(f.name));
+    out->write(capitalize(f->name));
     out->write("Element(Thread* t UNUSED, size_t index, ");
     out->write(cppFieldType(module, f));
     out->write(" value) { ");
     if (isFieldGcMarkable(module, f)) {
       out->write("setField(t, this , ");
       out->write(capitalize(cl->name));
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write(" + index * (");
-      out->write(sizeOf(module, f.typeName));
+      out->write(sizeOf(module, f->typeName));
       out->write("), reinterpret_cast<object>(value));");
     } else {
       out->write("field_at<");
       out->write(cppFieldType(module, f));
       out->write(">(");
       out->write(capitalize(cl->name));
-      out->write(capitalize(f.name));
+      out->write(capitalize(f->name));
       out->write(" + index * (");
-      out->write(sizeOf(module, f.typeName));
+      out->write(sizeOf(module, f->typeName));
       out->write(")) = value;");
     }
     out->write(" }\n");
@@ -1176,10 +1138,8 @@ void writeClassAccessors(Output* out, Module& module, Class* cl)
 
 void writeClasses(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       it++) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
 
     out->write("class Gc");
     out->write(capitalize(cl->name));
@@ -1206,10 +1166,8 @@ void writeClasses(Output* out, Module& module)
 
 void writeInitializerDeclarations(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     out->write("void init");
     out->write(capitalize(cl->name));
     out->write("(Thread* t, Gc");
@@ -1224,10 +1182,8 @@ void writeInitializerDeclarations(Output* out, Module& module)
 
 void writeConstructorDeclarations(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     out->write("Gc");
     out->write(capitalize(cl->name));
     out->write("* make");
@@ -1242,10 +1198,8 @@ void writeConstructorDeclarations(Output* out, Module& module)
 
 void writeInitializers(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     out->write("void init");
     out->write(capitalize(cl->name));
     out->write("(Thread* t, Gc");
@@ -1271,10 +1225,8 @@ void writeInitializers(Output* out, Module& module)
 
 void writeConstructors(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
 
     bool hasObjectMask = cl->name == "singleton";
 
@@ -1309,21 +1261,18 @@ void writeConstructors(Output* out, Module& module)
     writeConstructorParameters(out, module, cl);
 
     out->write(")\n{\n");
-    for (std::vector<Field*>::iterator it = cl->fields.begin();
-         it != cl->fields.end();
-         it++) {
-      Field& f = **it;
-      if (enumName(module, f) == "object" and not f.nogc) {
+    for (const auto f : cl->fields) {
+      if (enumName(module, f) == "object" and not f->nogc) {
         out->write("  PROTECT(t, ");
-        out->write(obfuscate(f.name));
+        out->write(obfuscate(f->name));
         out->write(");\n");
 
         hasObjectMask = true;
       }
     }
     if (cl->arrayField) {
-      Field& f = *cl->arrayField;
-      if (f.typeName == "object" and not f.nogc) {
+      Field* f = cl->arrayField;
+      if (f->typeName == "object" and not f->nogc) {
         hasObjectMask = true;
       }
     }
@@ -1351,10 +1300,8 @@ void writeConstructors(Output* out, Module& module)
 void writeEnums(Output* out, Module& module)
 {
   bool wrote = false;
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     if (wrote) {
       out->write(",\n");
     } else {
@@ -1385,19 +1332,16 @@ uint32_t typeObjectMask(Module& module, Class* cl)
 
   uint32_t mask = 1;
 
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       it++) {
-    Field& f = **it;
-    unsigned offset = f.offset / BytesPerWord;
+  for (const auto f : cl->fields) {
+    unsigned offset = f->offset / BytesPerWord;
     if (isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
   }
 
   if (cl->arrayField) {
-    Field& f = *cl->arrayField;
-    unsigned offset = f.offset / BytesPerWord;
+    Field* f = cl->arrayField;
+    unsigned offset = f->offset / BytesPerWord;
     if (isFieldGcVisible(module, f)) {
       set(&mask, offset);
     }
@@ -1455,10 +1399,8 @@ void writeInitializations(Output* out, Module& module)
   writeInitialization(out, module, alreadyInited, module.classes["intArray"]);
   writeInitialization(out, module, alreadyInited, module.classes["class"]);
 
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     if (cl->name != "intArray" && cl->name != "class") {
       writeInitialization(out, module, alreadyInited, cl);
     }
@@ -1493,10 +1435,8 @@ void writeJavaInitialization(Output* out, Class* cl)
 
 void writeJavaInitializations(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     if (cl->javaName.size()) {
       writeJavaInitialization(out, cl);
     }
@@ -1521,10 +1461,8 @@ void writeNameInitialization(Output* out, Class* cl)
 
 void writeNameInitializations(Output* out, Module& module)
 {
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     if (!cl->javaName.size()) {
       writeNameInitialization(out, cl);
     }
@@ -1534,14 +1472,10 @@ void writeNameInitializations(Output* out, Module& module)
 void writeMap(Output* out, Module& module, Class* cl)
 {
   std::ostringstream ss;
-  for (std::vector<Field*>::iterator it = cl->fields.begin();
-       it != cl->fields.end();
-       it++) {
-    Field& f = **it;
-
+  for (const auto f : cl->fields) {
     ss << "Type_";
     ss << enumName(module, f);
-    if (f.nogc) {
+    if (f->nogc) {
       ss << "_nogc";
     }
 
@@ -1549,7 +1483,7 @@ void writeMap(Output* out, Module& module, Class* cl)
   }
 
   if (cl->arrayField) {
-    Field& f = *cl->arrayField;
+    Field* f = cl->arrayField;
     ss << "Type_array, ";
     ss << "Type_";
     ss << enumName(module, f);
@@ -1567,10 +1501,8 @@ void writeMaps(Output* out, Module& module)
   out->write(module.classes.size());
   out->write("] = {\n");
   bool wrote = false;
-  for (std::map<std::string, Class*>::iterator it = module.classes.begin();
-       it != module.classes.end();
-       ++it) {
-    Class* cl = it->second;
+  for (const auto p : module.classes) {
+    Class* cl = p.second;
     if (wrote) {
       out->write(",\n");
     } else {

@@ -3084,12 +3084,12 @@ bool useLongJump(MyThread* t, uintptr_t target)
 
 void compileSafePoint(MyThread* t, Compiler* c, Frame* frame)
 {
-  c->call(c->constant(getThunk(t, idleIfNecessaryThunk), ir::Type::iptr()),
-          0,
-          frame->trace(0, 0),
-          ir::Type::void_(),
-          1,
-          c->threadRegister());
+  c->nativeCall(
+      c->constant(getThunk(t, idleIfNecessaryThunk), ir::Type::iptr()),
+      0,
+      frame->trace(0, 0),
+      ir::Type::void_(),
+      args(c->threadRegister()));
 }
 
 void compileDirectInvoke(MyThread* t,
@@ -3229,13 +3229,11 @@ void compileDirectReferenceInvoke(MyThread* t,
 
   compileReferenceInvoke(
       frame,
-      c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::iptr(),
-              2,
-              c->threadRegister(),
-              frame->append(pair)),
+      c->nativeCall(c->constant(getThunk(t, thunk), ir::Type::iptr()),
+                    0,
+                    frame->trace(0, 0),
+                    ir::Type::iptr(),
+                    args(c->threadRegister(), frame->append(pair))),
       reference,
       isStatic,
       tailCall);
@@ -3260,13 +3258,11 @@ void compileDirectAbstractInvoke(MyThread* t,
 
   compileAbstractInvoke(
       frame,
-      c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::iptr(),
-              2,
-              c->threadRegister(),
-              frame->append(target)),
+      c->nativeCall(c->constant(getThunk(t, thunk), ir::Type::iptr()),
+                    0,
+                    frame->trace(0, 0),
+                    ir::Type::iptr(),
+                    args(c->threadRegister(), frame->append(target))),
       target,
       tailCall);
 }
@@ -3287,13 +3283,11 @@ void handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
           frame->context, 1, ir::Type::object(), savedTargetIndex(t, method));
     }
 
-    c->call(c->constant(function, ir::Type::iptr()),
-            0,
-            frame->trace(0, 0),
-            ir::Type::void_(),
-            2,
-            c->threadRegister(),
-            lock);
+    c->nativeCall(c->constant(function, ir::Type::iptr()),
+                  0,
+                  frame->trace(0, 0),
+                  ir::Type::void_(),
+                  args(c->threadRegister(), lock));
   }
 }
 
@@ -3582,7 +3576,7 @@ ir::Value* popLongAddress(Frame* frame)
 {
   return TargetBytesPerWord == 8
              ? frame->popLarge(ir::Type::i8())
-             : frame->c->load(ir::SignExtend,
+             : frame->c->load(ir::ExtendMode::Signed,
                               frame->popLarge(ir::Type::i8()),
                               ir::Type::iptr());
 }
@@ -3623,7 +3617,7 @@ bool intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
       ir::Value* address = popLongAddress(frame);
       frame->pop(ir::Type::object());
       frame->push(ir::Type::i4(),
-                  c->load(ir::SignExtend,
+                  c->load(ir::ExtendMode::Signed,
                           c->memory(address, ir::Type::i1()),
                           ir::Type::i4()));
       return true;
@@ -3641,7 +3635,7 @@ bool intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
       ir::Value* address = popLongAddress(frame);
       frame->pop(ir::Type::object());
       frame->push(ir::Type::i4(),
-                  c->load(ir::SignExtend,
+                  c->load(ir::ExtendMode::Signed,
                           c->memory(address, ir::Type::i2()),
                           ir::Type::i4()));
       return true;
@@ -3662,8 +3656,9 @@ bool intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
       frame->pop(ir::Type::object());
       ir::Type type = MATCH(target->name(), "getInt") ? ir::Type::i4()
                                                       : ir::Type::f4();
-      frame->push(type,
-                  c->load(ir::SignExtend, c->memory(address, type), type));
+      frame->push(
+          type,
+          c->load(ir::ExtendMode::Signed, c->memory(address, type), type));
       return true;
     } else if ((MATCH(target->name(), "putInt")
                 and MATCH(target->spec(), "(JI)V"))
@@ -3684,8 +3679,9 @@ bool intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
       frame->pop(ir::Type::object());
       ir::Type type = MATCH(target->name(), "getLong") ? ir::Type::i8()
                                                        : ir::Type::f8();
-      frame->pushLarge(type,
-                       c->load(ir::SignExtend, c->memory(address, type), type));
+      frame->pushLarge(
+          type,
+          c->load(ir::ExtendMode::Signed, c->memory(address, type), type));
       return true;
     } else if ((MATCH(target->name(), "putLong")
                 and MATCH(target->spec(), "(JJ)V"))
@@ -3703,7 +3699,7 @@ bool intrinsic(MyThread* t UNUSED, Frame* frame, GcMethod* target)
       ir::Value* address = popLongAddress(frame);
       frame->pop(ir::Type::object());
       frame->pushLarge(ir::Type::i8(),
-                       c->load(ir::SignExtend,
+                       c->load(ir::ExtendMode::Signed,
                                c->memory(address, ir::Type::iptr()),
                                ir::Type::i8()));
       return true;
@@ -3923,12 +3919,12 @@ loop:
 
       frame->pushObject();
 
-      c->call(c->constant(getThunk(t, gcIfNecessaryThunk), ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::void_(),
-              1,
-              c->threadRegister());
+      c->nativeCall(
+          c->constant(getThunk(t, gcIfNecessaryThunk), ir::Type::iptr()),
+          0,
+          frame->trace(0, 0),
+          ir::Type::void_(),
+          args(c->threadRegister()));
     }
 
     if (DebugInstructions) {
@@ -3984,7 +3980,7 @@ loop:
         frame->push(
             ir::Type::object(),
             c->load(
-                ir::SignExtend,
+                ir::ExtendMode::Signed,
                 c->memory(array, ir::Type::object(), TargetArrayBody, index),
                 ir::Type::object()));
         break;
@@ -3992,7 +3988,7 @@ loop:
       case faload:
         frame->push(
             ir::Type::f4(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::f4(), TargetArrayBody, index),
                     ir::Type::f4()));
         break;
@@ -4000,7 +3996,7 @@ loop:
       case iaload:
         frame->push(
             ir::Type::i4(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::i4(), TargetArrayBody, index),
                     ir::Type::i4()));
         break;
@@ -4008,7 +4004,7 @@ loop:
       case baload:
         frame->push(
             ir::Type::i4(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::i1(), TargetArrayBody, index),
                     ir::Type::i4()));
         break;
@@ -4016,7 +4012,7 @@ loop:
       case caload:
         frame->push(
             ir::Type::i4(),
-            c->load(ir::ZeroExtend,
+            c->load(ir::ExtendMode::Unsigned,
                     c->memory(array, ir::Type::i2(), TargetArrayBody, index),
                     ir::Type::i4()));
         break;
@@ -4024,7 +4020,7 @@ loop:
       case daload:
         frame->pushLarge(
             ir::Type::f8(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::f8(), TargetArrayBody, index),
                     ir::Type::f8()));
         break;
@@ -4032,7 +4028,7 @@ loop:
       case laload:
         frame->pushLarge(
             ir::Type::i8(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::i8(), TargetArrayBody, index),
                     ir::Type::i8()));
         break;
@@ -4040,7 +4036,7 @@ loop:
       case saload:
         frame->push(
             ir::Type::i4(),
-            c->load(ir::SignExtend,
+            c->load(ir::ExtendMode::Signed,
                     c->memory(array, ir::Type::i2(), TargetArrayBody, index),
                     ir::Type::i4()));
         break;
@@ -4082,22 +4078,22 @@ loop:
 
       switch (instruction) {
       case aastore: {
-        c->call(c->constant(getThunk(t, setMaybeNullThunk), ir::Type::iptr()),
-                0,
-                frame->trace(0, 0),
-                ir::Type::void_(),
-                4,
-                c->threadRegister(),
-                array,
-                c->binaryOp(lir::Add,
-                            ir::Type::i4(),
-                            c->constant(TargetArrayBody, ir::Type::i4()),
-                            c->binaryOp(lir::ShiftLeft,
-                                        ir::Type::i4(),
-                                        c->constant(log(TargetBytesPerWord),
-                                                    ir::Type::i4()),
-                                        index)),
-                value);
+        c->nativeCall(
+            c->constant(getThunk(t, setMaybeNullThunk), ir::Type::iptr()),
+            0,
+            frame->trace(0, 0),
+            ir::Type::void_(),
+            args(c->threadRegister(),
+                 array,
+                 c->binaryOp(lir::Add,
+                             ir::Type::i4(),
+                             c->constant(TargetArrayBody, ir::Type::i4()),
+                             c->binaryOp(lir::ShiftLeft,
+                                         ir::Type::i4(),
+                                         c->constant(log(TargetBytesPerWord),
+                                                     ir::Type::i4()),
+                                         index)),
+                 value));
       } break;
 
       case fastore:
@@ -4180,15 +4176,14 @@ loop:
         thunk = makeBlankObjectArrayFromReferenceThunk;
       }
 
-      frame->push(ir::Type::object(),
-                  c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-                          0,
-                          frame->trace(0, 0),
-                          ir::Type::object(),
-                          3,
-                          c->threadRegister(),
-                          frame->append(argument),
-                          length));
+      frame->push(
+          ir::Type::object(),
+          c->nativeCall(
+              c->constant(getThunk(t, thunk), ir::Type::iptr()),
+              0,
+              frame->trace(0, 0),
+              ir::Type::object(),
+              args(c->threadRegister(), frame->append(argument), length)));
     } break;
 
     case areturn: {
@@ -4199,7 +4194,7 @@ loop:
 
     case arraylength: {
       frame->push(ir::Type::i4(),
-                  c->load(ir::SignExtend,
+                  c->load(ir::ExtendMode::Signed,
                           c->memory(frame->pop(ir::Type::object()),
                                     ir::Type::iptr(),
                                     TargetArrayLength),
@@ -4228,13 +4223,11 @@ loop:
 
     case athrow: {
       ir::Value* target = frame->pop(ir::Type::object());
-      c->call(c->constant(getThunk(t, throw_Thunk), ir::Type::iptr()),
-              Compiler::NoReturn,
-              frame->trace(0, 0),
-              ir::Type::void_(),
-              2,
-              c->threadRegister(),
-              target);
+      c->nativeCall(c->constant(getThunk(t, throw_Thunk), ir::Type::iptr()),
+                    Compiler::NoReturn,
+                    frame->trace(0, 0),
+                    ir::Type::void_(),
+                    args(c->threadRegister(), target));
 
       c->nullaryOp(lir::Trap);
     }
@@ -4269,14 +4262,12 @@ loop:
 
       ir::Value* instance = c->peek(1, 0);
 
-      c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::void_(),
-              3,
-              c->threadRegister(),
-              frame->append(argument),
-              instance);
+      c->nativeCall(
+          c->constant(getThunk(t, thunk), ir::Type::iptr()),
+          0,
+          frame->trace(0, 0),
+          ir::Type::void_(),
+          args(c->threadRegister(), frame->append(argument), instance));
     } break;
 
     case d2f: {
@@ -4316,16 +4307,12 @@ loop:
         goto branch;
       } else {
         frame->push(ir::Type::i4(),
-                    c->call(c->constant(getThunk(t, compareDoublesGThunk),
-                                        ir::Type::iptr()),
-                            0,
-                            0,
-                            ir::Type::i4(),
-                            4,
-                            static_cast<ir::Value*>(0),
-                            a,
-                            static_cast<ir::Value*>(0),
-                            b));
+                    c->nativeCall(c->constant(getThunk(t, compareDoublesGThunk),
+                                              ir::Type::iptr()),
+                                  0,
+                                  0,
+                                  ir::Type::i4(),
+                                  args(nullptr, a, nullptr, b)));
       }
     } break;
 
@@ -4337,16 +4324,12 @@ loop:
         goto branch;
       } else {
         frame->push(ir::Type::i4(),
-                    c->call(c->constant(getThunk(t, compareDoublesLThunk),
-                                        ir::Type::iptr()),
-                            0,
-                            0,
-                            ir::Type::i4(),
-                            4,
-                            static_cast<ir::Value*>(0),
-                            a,
-                            static_cast<ir::Value*>(0),
-                            b));
+                    c->nativeCall(c->constant(getThunk(t, compareDoublesLThunk),
+                                              ir::Type::iptr()),
+                                  0,
+                                  0,
+                                  ir::Type::i4(),
+                                  args(nullptr, a, nullptr, b)));
       }
     } break;
 
@@ -4427,14 +4410,12 @@ loop:
         goto branch;
       } else {
         frame->push(ir::Type::i4(),
-                    c->call(c->constant(getThunk(t, compareFloatsGThunk),
-                                        ir::Type::iptr()),
-                            0,
-                            0,
-                            ir::Type::i4(),
-                            2,
-                            a,
-                            b));
+                    c->nativeCall(c->constant(getThunk(t, compareFloatsGThunk),
+                                              ir::Type::iptr()),
+                                  0,
+                                  0,
+                                  ir::Type::i4(),
+                                  args(a, b)));
       }
     } break;
 
@@ -4446,14 +4427,12 @@ loop:
         goto branch;
       } else {
         frame->push(ir::Type::i4(),
-                    c->call(c->constant(getThunk(t, compareFloatsLThunk),
-                                        ir::Type::iptr()),
-                            0,
-                            0,
-                            ir::Type::i4(),
-                            2,
-                            a,
-                            b));
+                    c->nativeCall(c->constant(getThunk(t, compareFloatsLThunk),
+                                              ir::Type::iptr()),
+                                  0,
+                                  0,
+                                  ir::Type::i4(),
+                                  args(a, b)));
       }
     } break;
 
@@ -4493,14 +4472,12 @@ loop:
             and (field->code() == DoubleField or field->code() == LongField)) {
           PROTECT(t, field);
 
-          c->call(c->constant(getThunk(t, acquireMonitorForObjectThunk),
-                              ir::Type::iptr()),
-                  0,
-                  frame->trace(0, 0),
-                  ir::Type::void_(),
-                  2,
-                  c->threadRegister(),
-                  frame->append(field));
+          c->nativeCall(c->constant(getThunk(t, acquireMonitorForObjectThunk),
+                                    ir::Type::iptr()),
+                        0,
+                        frame->trace(0, 0),
+                        ir::Type::void_(),
+                        args(c->threadRegister(), frame->append(field)));
         }
 
         ir::Value* table;
@@ -4511,14 +4488,12 @@ loop:
           PROTECT(t, field);
 
           if (classNeedsInit(t, field->class_())) {
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, tryInitClassThunk), ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 ir::Type::void_(),
-                2,
-                c->threadRegister(),
-                frame->append(field->class_()));
+                args(c->threadRegister(), frame->append(field->class_())));
           }
 
           table = frame->append(field->class_()->staticTable());
@@ -4537,7 +4512,7 @@ loop:
         case ByteField:
         case BooleanField:
           frame->push(ir::Type::i4(),
-                      c->load(ir::SignExtend,
+                      c->load(ir::ExtendMode::Signed,
                               c->memory(table,
                                         ir::Type::i1(),
                                         targetFieldOffset(context, field)),
@@ -4546,7 +4521,7 @@ loop:
 
         case CharField:
           frame->push(ir::Type::i4(),
-                      c->load(ir::ZeroExtend,
+                      c->load(ir::ExtendMode::Unsigned,
                               c->memory(table,
                                         ir::Type::i2(),
                                         targetFieldOffset(context, field)),
@@ -4555,7 +4530,7 @@ loop:
 
         case ShortField:
           frame->push(ir::Type::i4(),
-                      c->load(ir::SignExtend,
+                      c->load(ir::ExtendMode::Signed,
                               c->memory(table,
                                         ir::Type::i2(),
                                         targetFieldOffset(context, field)),
@@ -4564,7 +4539,7 @@ loop:
 
         case FloatField:
           frame->push(ir::Type::f4(),
-                      c->load(ir::SignExtend,
+                      c->load(ir::ExtendMode::Signed,
                               c->memory(table,
                                         ir::Type::f4(),
                                         targetFieldOffset(context, field)),
@@ -4573,7 +4548,7 @@ loop:
 
         case IntField:
           frame->push(ir::Type::i4(),
-                      c->load(ir::SignExtend,
+                      c->load(ir::ExtendMode::Signed,
                               c->memory(table,
                                         ir::Type::i4(),
                                         targetFieldOffset(context, field)),
@@ -4582,7 +4557,7 @@ loop:
 
         case DoubleField:
           frame->pushLarge(ir::Type::f8(),
-                           c->load(ir::SignExtend,
+                           c->load(ir::ExtendMode::Signed,
                                    c->memory(table,
                                              ir::Type::f8(),
                                              targetFieldOffset(context, field)),
@@ -4591,7 +4566,7 @@ loop:
 
         case LongField:
           frame->pushLarge(ir::Type::i8(),
-                           c->load(ir::SignExtend,
+                           c->load(ir::ExtendMode::Signed,
                                    c->memory(table,
                                              ir::Type::i8(),
                                              targetFieldOffset(context, field)),
@@ -4600,7 +4575,7 @@ loop:
 
         case ObjectField:
           frame->push(ir::Type::object(),
-                      c->load(ir::SignExtend,
+                      c->load(ir::ExtendMode::Signed,
                               c->memory(table,
                                         ir::Type::object(),
                                         targetFieldOffset(context, field)),
@@ -4614,14 +4589,12 @@ loop:
         if (field->flags() & ACC_VOLATILE) {
           if (TargetBytesPerWord == 4 and (field->code() == DoubleField
                                            or field->code() == LongField)) {
-            c->call(c->constant(getThunk(t, releaseMonitorForObjectThunk),
-                                ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    ir::Type::void_(),
-                    2,
-                    c->threadRegister(),
-                    frame->append(field));
+            c->nativeCall(c->constant(getThunk(t, releaseMonitorForObjectThunk),
+                                      ir::Type::iptr()),
+                          0,
+                          frame->trace(0, 0),
+                          ir::Type::void_(),
+                          args(c->threadRegister(), frame->append(field)));
           } else {
             c->nullaryOp(lir::LoadBarrier);
           }
@@ -4637,28 +4610,23 @@ loop:
 
         ir::Value* result;
         if (instruction == getstatic) {
-          result = c->call(
+          result = c->nativeCall(
               c->constant(getThunk(t, getStaticFieldValueFromReferenceThunk),
                           ir::Type::iptr()),
               0,
               frame->trace(0, 0),
               rType,
-              2,
-              c->threadRegister(),
-              frame->append(pair));
+              args(c->threadRegister(), frame->append(pair)));
         } else {
           ir::Value* instance = frame->pop(ir::Type::object());
 
-          result = c->call(
+          result = c->nativeCall(
               c->constant(getThunk(t, getFieldValueFromReferenceThunk),
                           ir::Type::iptr()),
               0,
               frame->trace(0, 0),
               rType,
-              3,
-              c->threadRegister(),
-              frame->append(pair),
-              instance);
+              args(c->threadRegister(), frame->append(pair), instance));
         }
 
         frame->pushReturnValue(fieldCode, result);
@@ -4693,7 +4661,7 @@ loop:
 
     case i2b: {
       frame->push(ir::Type::i4(),
-                  c->truncateThenExtend(ir::SignExtend,
+                  c->truncateThenExtend(ir::ExtendMode::Signed,
                                         ir::Type::i4(),
                                         ir::Type::i1(),
                                         frame->pop(ir::Type::i4())));
@@ -4701,7 +4669,7 @@ loop:
 
     case i2c: {
       frame->push(ir::Type::i4(),
-                  c->truncateThenExtend(ir::ZeroExtend,
+                  c->truncateThenExtend(ir::ExtendMode::Unsigned,
                                         ir::Type::i4(),
                                         ir::Type::i2(),
                                         frame->pop(ir::Type::i4())));
@@ -4719,7 +4687,7 @@ loop:
 
     case i2l:
       frame->pushLarge(ir::Type::i8(),
-                       c->truncateThenExtend(ir::SignExtend,
+                       c->truncateThenExtend(ir::ExtendMode::Signed,
                                              ir::Type::i8(),
                                              ir::Type::i4(),
                                              frame->pop(ir::Type::i4())));
@@ -4727,7 +4695,7 @@ loop:
 
     case i2s: {
       frame->push(ir::Type::i4(),
-                  c->truncateThenExtend(ir::SignExtend,
+                  c->truncateThenExtend(ir::ExtendMode::Signed,
                                         ir::Type::i4(),
                                         ir::Type::i2(),
                                         frame->pop(ir::Type::i4())));
@@ -4949,15 +4917,14 @@ loop:
         thunk = instanceOfFromReferenceThunk;
       }
 
-      frame->push(ir::Type::i4(),
-                  c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-                          0,
-                          frame->trace(0, 0),
-                          ir::Type::i4(),
-                          3,
-                          c->threadRegister(),
-                          frame->append(argument),
-                          instance));
+      frame->push(
+          ir::Type::i4(),
+          c->nativeCall(
+              c->constant(getThunk(t, thunk), ir::Type::iptr()),
+              0,
+              frame->trace(0, 0),
+              ir::Type::i4(),
+              args(c->threadRegister(), frame->append(argument), instance)));
     } break;
 
     case invokeinterface: {
@@ -4999,14 +4966,13 @@ loop:
       unsigned rSize = resultSize(t, returnCode);
 
       ir::Value* result = c->stackCall(
-          c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-                  0,
-                  frame->trace(0, 0),
-                  ir::Type::iptr(),
-                  3,
-                  c->threadRegister(),
-                  frame->append(argument),
-                  c->peek(1, parameterFootprint - 1)),
+          c->nativeCall(c->constant(getThunk(t, thunk), ir::Type::iptr()),
+                        0,
+                        frame->trace(0, 0),
+                        ir::Type::iptr(),
+                        args(c->threadRegister(),
+                             frame->append(argument),
+                             c->peek(1, parameterFootprint - 1))),
           tailCall ? Compiler::TailJump : 0,
           frame->trace(0, 0),
           operandTypeForFieldCode(t, returnCode),
@@ -5146,17 +5112,17 @@ loop:
 
         compileReferenceInvoke(
             frame,
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, findVirtualMethodFromReferenceThunk),
                             ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 ir::Type::iptr(),
-                3,
-                c->threadRegister(),
-                frame->append(pair),
-                c->peek(1,
-                        methodReferenceParameterFootprint(t, ref, false) - 1)),
+                args(c->threadRegister(),
+                     frame->append(pair),
+                     c->peek(1,
+                             methodReferenceParameterFootprint(t, ref, false)
+                             - 1))),
             ref,
             false,
             isReferenceTailCall(t, code, ip, context->method, ref));
@@ -5283,16 +5249,12 @@ loop:
         goto branch;
       } else {
         frame->push(ir::Type::i4(),
-                    c->call(c->constant(getThunk(t, compareLongsThunk),
-                                        ir::Type::iptr()),
-                            0,
-                            0,
-                            ir::Type::i4(),
-                            4,
-                            static_cast<ir::Value*>(0),
-                            a,
-                            static_cast<ir::Value*>(0),
-                            b));
+                    c->nativeCall(c->constant(getThunk(t, compareLongsThunk),
+                                              ir::Type::iptr()),
+                                  0,
+                                  0,
+                                  ir::Type::i4(),
+                                  args(nullptr, a, nullptr, b)));
       }
     } break;
 
@@ -5330,29 +5292,28 @@ loop:
           if (UNLIKELY(v == 0)) {
             frame->push(
                 ir::Type::object(),
-                c->call(
+                c->nativeCall(
                     c->constant(getThunk(t, getJClassFromReferenceThunk),
                                 ir::Type::iptr()),
                     0,
                     frame->trace(0, 0),
                     ir::Type::object(),
-                    2,
-                    c->threadRegister(),
-                    frame->append(makePair(t, context->method, reference))));
+                    args(c->threadRegister(),
+                         frame->append(
+                             makePair(t, context->method, reference)))));
           }
         }
 
         if (v) {
           if (objectClass(t, v) == type(t, GcClass::Type)) {
-            frame->push(ir::Type::object(),
-                        c->call(c->constant(getThunk(t, getJClass64Thunk),
-                                            ir::Type::iptr()),
-                                0,
-                                frame->trace(0, 0),
-                                ir::Type::object(),
-                                2,
-                                c->threadRegister(),
-                                frame->append(v)));
+            frame->push(
+                ir::Type::object(),
+                c->nativeCall(c->constant(getThunk(t, getJClass64Thunk),
+                                          ir::Type::iptr()),
+                              0,
+                              frame->trace(0, 0),
+                              ir::Type::object(),
+                              args(c->threadRegister(), frame->append(v))));
           } else {
             frame->push(ir::Type::object(), frame->append(v));
           }
@@ -5468,16 +5429,15 @@ loop:
         }
         assertT(t, start);
 
-        ir::Value* address = c->call(
+        ir::Value* address = c->nativeCall(
             c->constant(getThunk(t, lookUpAddressThunk), ir::Type::iptr()),
             0,
             0,
             ir::Type::iptr(),
-            4,
-            key,
-            frame->absoluteAddressOperand(start),
-            c->constant(pairCount, ir::Type::i4()),
-            default_);
+            args(key,
+                 frame->absoluteAddressOperand(start),
+                 c->constant(pairCount, ir::Type::i4()),
+                 default_));
 
         c->jmp(context->bootContext
                    ? c->binaryOp(lir::Add,
@@ -5572,26 +5532,22 @@ loop:
 
     case monitorenter: {
       ir::Value* target = frame->pop(ir::Type::object());
-      c->call(c->constant(getThunk(t, acquireMonitorForObjectThunk),
-                          ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::void_(),
-              2,
-              c->threadRegister(),
-              target);
+      c->nativeCall(c->constant(getThunk(t, acquireMonitorForObjectThunk),
+                                ir::Type::iptr()),
+                    0,
+                    frame->trace(0, 0),
+                    ir::Type::void_(),
+                    args(c->threadRegister(), target));
     } break;
 
     case monitorexit: {
       ir::Value* target = frame->pop(ir::Type::object());
-      c->call(c->constant(getThunk(t, releaseMonitorForObjectThunk),
-                          ir::Type::iptr()),
-              0,
-              frame->trace(0, 0),
-              ir::Type::void_(),
-              2,
-              c->threadRegister(),
-              target);
+      c->nativeCall(c->constant(getThunk(t, releaseMonitorForObjectThunk),
+                                ir::Type::iptr()),
+                    0,
+                    frame->trace(0, 0),
+                    ir::Type::void_(),
+                    args(c->threadRegister(), target));
     } break;
 
     case multianewarray: {
@@ -5622,15 +5578,14 @@ loop:
                         context->method) + t->arch->frameReturnAddressSize();
 
       ir::Value* result
-          = c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    ir::Type::object(),
-                    4,
-                    c->threadRegister(),
-                    frame->append(argument),
-                    c->constant(dimensions, ir::Type::i4()),
-                    c->constant(offset, ir::Type::i4()));
+          = c->nativeCall(c->constant(getThunk(t, thunk), ir::Type::iptr()),
+                          0,
+                          frame->trace(0, 0),
+                          ir::Type::object(),
+                          args(c->threadRegister(),
+                               frame->append(argument),
+                               c->constant(dimensions, ir::Type::i4()),
+                               c->constant(offset, ir::Type::i4())));
 
       frame->popFootprint(dimensions);
       frame->push(ir::Type::object(), result);
@@ -5661,14 +5616,13 @@ loop:
         thunk = makeNewFromReferenceThunk;
       }
 
-      frame->push(ir::Type::object(),
-                  c->call(c->constant(getThunk(t, thunk), ir::Type::iptr()),
-                          0,
-                          frame->trace(0, 0),
-                          ir::Type::object(),
-                          2,
-                          c->threadRegister(),
-                          frame->append(argument)));
+      frame->push(
+          ir::Type::object(),
+          c->nativeCall(c->constant(getThunk(t, thunk), ir::Type::iptr()),
+                        0,
+                        frame->trace(0, 0),
+                        ir::Type::object(),
+                        args(c->threadRegister(), frame->append(argument))));
     } break;
 
     case newarray: {
@@ -5677,15 +5631,14 @@ loop:
       ir::Value* length = frame->pop(ir::Type::i4());
 
       frame->push(ir::Type::object(),
-                  c->call(c->constant(getThunk(t, makeBlankArrayThunk),
-                                      ir::Type::iptr()),
-                          0,
-                          frame->trace(0, 0),
-                          ir::Type::object(),
-                          3,
-                          c->threadRegister(),
-                          c->constant(type, ir::Type::i4()),
-                          length));
+                  c->nativeCall(c->constant(getThunk(t, makeBlankArrayThunk),
+                                            ir::Type::iptr()),
+                                0,
+                                frame->trace(0, 0),
+                                ir::Type::object(),
+                                args(c->threadRegister(),
+                                     c->constant(type, ir::Type::i4()),
+                                     length)));
     } break;
 
     case nop:
@@ -5721,14 +5674,12 @@ loop:
           if (classNeedsInit(t, field->class_())) {
             PROTECT(t, field);
 
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, tryInitClassThunk), ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 ir::Type::void_(),
-                2,
-                c->threadRegister(),
-                frame->append(field->class_()));
+                args(c->threadRegister(), frame->append(field->class_())));
           }
 
           staticTable = field->class_()->staticTable();
@@ -5746,14 +5697,12 @@ loop:
               and (fieldCode == DoubleField or fieldCode == LongField)) {
             PROTECT(t, field);
 
-            c->call(c->constant(getThunk(t, acquireMonitorForObjectThunk),
-                                ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    ir::Type::void_(),
-                    2,
-                    c->threadRegister(),
-                    frame->append(field));
+            c->nativeCall(c->constant(getThunk(t, acquireMonitorForObjectThunk),
+                                      ir::Type::iptr()),
+                          0,
+                          frame->trace(0, 0),
+                          ir::Type::void_(),
+                          args(c->threadRegister(), frame->append(field)));
           } else {
             c->nullaryOp(lir::StoreStoreBarrier);
           }
@@ -5818,27 +5767,27 @@ loop:
 
         case ObjectField:
           if (instruction == putfield) {
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, setMaybeNullThunk), ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 ir::Type::void_(),
-                4,
-                c->threadRegister(),
-                table,
-                c->constant(targetFieldOffset(context, field), ir::Type::i4()),
-                value);
+                args(c->threadRegister(),
+                     table,
+                     c->constant(targetFieldOffset(context, field),
+                                 ir::Type::i4()),
+                     value));
           } else {
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, setObjectThunk), ir::Type::iptr()),
                 0,
                 0,
                 ir::Type::void_(),
-                4,
-                c->threadRegister(),
-                table,
-                c->constant(targetFieldOffset(context, field), ir::Type::i4()),
-                value);
+                args(c->threadRegister(),
+                     table,
+                     c->constant(targetFieldOffset(context, field),
+                                 ir::Type::i4()),
+                     value));
           }
           break;
 
@@ -5849,14 +5798,12 @@ loop:
         if (field->flags() & ACC_VOLATILE) {
           if (TargetBytesPerWord == 4
               and (fieldCode == DoubleField or fieldCode == LongField)) {
-            c->call(c->constant(getThunk(t, releaseMonitorForObjectThunk),
-                                ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    ir::Type::void_(),
-                    2,
-                    c->threadRegister(),
-                    frame->append(field));
+            c->nativeCall(c->constant(getThunk(t, releaseMonitorForObjectThunk),
+                                      ir::Type::iptr()),
+                          0,
+                          frame->trace(0, 0),
+                          ir::Type::void_(),
+                          args(c->threadRegister(), frame->append(field)));
           } else {
             c->nullaryOp(lir::StoreLoadBarrier);
           }
@@ -5879,91 +5826,76 @@ loop:
         case FloatField:
         case IntField: {
           if (instruction == putstatic) {
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, setStaticFieldValueFromReferenceThunk),
                             ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 rType,
-                3,
-                c->threadRegister(),
-                frame->append(pair),
-                value);
+                args(c->threadRegister(), frame->append(pair), value));
           } else {
             ir::Value* instance = frame->pop(ir::Type::object());
 
-            c->call(c->constant(getThunk(t, setFieldValueFromReferenceThunk),
-                                ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    rType,
-                    4,
-                    c->threadRegister(),
-                    frame->append(pair),
-                    instance,
-                    value);
+            c->nativeCall(
+                c->constant(getThunk(t, setFieldValueFromReferenceThunk),
+                            ir::Type::iptr()),
+                0,
+                frame->trace(0, 0),
+                rType,
+                args(
+                    c->threadRegister(), frame->append(pair), instance, value));
           }
         } break;
 
         case DoubleField:
         case LongField: {
           if (instruction == putstatic) {
-            c->call(c->constant(
-                        getThunk(t, setStaticLongFieldValueFromReferenceThunk),
-                        ir::Type::iptr()),
-                    0,
-                    frame->trace(0, 0),
-                    rType,
-                    4,
-                    c->threadRegister(),
-                    frame->append(pair),
-                    static_cast<ir::Value*>(0),
-                    value);
+            c->nativeCall(
+                c->constant(
+                    getThunk(t, setStaticLongFieldValueFromReferenceThunk),
+                    ir::Type::iptr()),
+                0,
+                frame->trace(0, 0),
+                rType,
+                args(c->threadRegister(), frame->append(pair), nullptr, value));
           } else {
             ir::Value* instance = frame->pop(ir::Type::object());
 
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, setLongFieldValueFromReferenceThunk),
                             ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 rType,
-                5,
-                c->threadRegister(),
-                frame->append(pair),
-                instance,
-                static_cast<ir::Value*>(0),
-                value);
+                args(c->threadRegister(),
+                     frame->append(pair),
+                     instance,
+                     nullptr,
+                     value));
           }
         } break;
 
         case ObjectField: {
           if (instruction == putstatic) {
-            c->call(
+            c->nativeCall(
                 c->constant(
                     getThunk(t, setStaticObjectFieldValueFromReferenceThunk),
                     ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 rType,
-                3,
-                c->threadRegister(),
-                frame->append(pair),
-                value);
+                args(c->threadRegister(), frame->append(pair), value));
           } else {
             ir::Value* instance = frame->pop(ir::Type::object());
 
-            c->call(
+            c->nativeCall(
                 c->constant(getThunk(t, setObjectFieldValueFromReferenceThunk),
                             ir::Type::iptr()),
                 0,
                 frame->trace(0, 0),
                 rType,
-                4,
-                c->threadRegister(),
-                frame->append(pair),
-                instance,
-                value);
+                args(
+                    c->threadRegister(), frame->append(pair), instance, value));
           }
         } break;
 
@@ -6167,7 +6099,7 @@ next:
                                  0,
                                  normalizedKey);
 
-    c->jmp(c->load(ir::SignExtend,
+    c->jmp(c->load(ir::ExtendMode::Signed,
                    context->bootContext
                        ? c->binaryOp(lir::Add,
                                      ir::Type::iptr(),

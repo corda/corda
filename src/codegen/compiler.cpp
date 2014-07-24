@@ -2534,31 +2534,27 @@ class MyCompiler : public Compiler {
     return s->value;
   }
 
-  virtual ir::Value* call(ir::Value* address,
-                          unsigned flags,
-                          TraceHandler* traceHandler,
-                          ir::Type resultType,
-                          unsigned argumentCount,
-                          ...)
+  virtual ir::Value* nativeCall(ir::Value* address,
+                                unsigned flags,
+                                TraceHandler* traceHandler,
+                                ir::Type resultType,
+                                util::Slice<ir::Value*> arguments)
   {
-    va_list a;
-    va_start(a, argumentCount);
-
     bool bigEndian = c.arch->bigEndian();
 
     unsigned footprint = 0;
     unsigned size = TargetBytesPerWord;
-    RUNTIME_ARRAY(ir::Value*, arguments, argumentCount);
+    RUNTIME_ARRAY(ir::Value*, args, arguments.count);
     int index = 0;
-    for (unsigned i = 0; i < argumentCount; ++i) {
-      Value* o = va_arg(a, Value*);
+    for (unsigned i = 0; i < arguments.count; ++i) {
+      Value* o = static_cast<Value*>(arguments[i]);
       if (o) {
         if (bigEndian and size > TargetBytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[index++] = o->nextWord;
+          RUNTIME_ARRAY_BODY(args)[index++] = o->nextWord;
         }
-        RUNTIME_ARRAY_BODY(arguments)[index] = o;
+        RUNTIME_ARRAY_BODY(args)[index] = o;
         if ((not bigEndian) and size > TargetBytesPerWord) {
-          RUNTIME_ARRAY_BODY(arguments)[++index] = o->nextWord;
+          RUNTIME_ARRAY_BODY(args)[++index] = o->nextWord;
         }
         size = TargetBytesPerWord;
         ++index;
@@ -2568,16 +2564,14 @@ class MyCompiler : public Compiler {
       ++footprint;
     }
 
-    va_end(a);
-
     Value* result = value(&c, resultType);
     appendCall(&c,
                static_cast<Value*>(address),
-               ir::NativeCallingConvention,
+               ir::CallingConvention::Native,
                flags,
                traceHandler,
                result,
-               util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(arguments), index));
+               util::Slice<ir::Value*>(RUNTIME_ARRAY_BODY(args), index));
 
     return result;
   }
@@ -2592,7 +2586,7 @@ class MyCompiler : public Compiler {
     Stack* b UNUSED = c.stack;
     appendCall(&c,
                static_cast<Value*>(address),
-               ir::AvianCallingConvention,
+               ir::CallingConvention::Avian,
                flags,
                traceHandler,
                result,
@@ -2747,14 +2741,14 @@ class MyCompiler : public Compiler {
     return dst;
   }
 
-  virtual ir::Value* truncateThenExtend(ir::SignExtendMode signExtend,
+  virtual ir::Value* truncateThenExtend(ir::ExtendMode extendMode,
                                         ir::Type extendType,
                                         ir::Type truncateType,
                                         ir::Value* src)
   {
     Value* dst = value(&c, extendType);
     appendMove(&c,
-               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               extendMode == ir::ExtendMode::Signed ? lir::Move : lir::MoveZ,
                TargetBytesPerWord,
                truncateType.size(c.targetInfo),
                static_cast<Value*>(src),
@@ -2778,7 +2772,7 @@ class MyCompiler : public Compiler {
                static_cast<Value*>(dst));
   }
 
-  virtual ir::Value* load(ir::SignExtendMode signExtend,
+  virtual ir::Value* load(ir::ExtendMode extendMode,
                           ir::Value* src,
                           ir::Type dstType)
   {
@@ -2786,7 +2780,7 @@ class MyCompiler : public Compiler {
 
     Value* dst = value(&c, dstType);
     appendMove(&c,
-               signExtend == ir::SignExtend ? lir::Move : lir::MoveZ,
+               extendMode == ir::ExtendMode::Signed ? lir::Move : lir::MoveZ,
                src->type.size(c.targetInfo),
                src->type.size(c.targetInfo),
                static_cast<Value*>(src),
