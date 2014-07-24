@@ -4,36 +4,14 @@ buildscript {
   }
 
   dependencies {
-    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.0.0'
+    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:2.2.4'
   }
 }
 
 apply plugin: 'native-component'
 apply plugin: 'ivy-publish'
-apply plugin: 'com.jfrog.artifactory'
 apply plugin: 'java'
-
-artifactory {
-  contextUrl = "http://oss.jfrog.org"
-
-  resolve {
-    repository {
-      repoKey = 'libs-releases'
-    }
-  }
-
-  publish {
-    repository {
-      repoKey = 'oss-snapshot-local'
-      username = System.env.BINTRAY_USER
-      password = System.env.BINTRAY_API_KEY
-    }
-
-    defaults {
-      //publications('linux-x86_64')
-    }
-  }
-}
+apply plugin: 'artifactory-publish'
 
 model {
   platforms {
@@ -104,6 +82,31 @@ publishing {
           extension "a"
         }
       }
+    }
+  }
+}
+
+artifactory {
+  contextUrl = "http://oss.jfrog.org"
+
+  resolve {
+    repository {
+      repoKey = 'libs-releases'
+    }
+  }
+
+  publish {
+    repository {
+      repoKey = 'oss-snapshot-local'
+      username = System.env.BINTRAY_USER
+      password = System.env.BINTRAY_API_KEY
+      ivy {
+        ivyLayout = "[organisation]/[module]/[revision]/ivy-[revision].xml"
+      }
+    }
+
+    defaults {
+      publications 'linux-x86_64'
     }
   }
 }
