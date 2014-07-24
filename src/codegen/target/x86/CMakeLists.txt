@@ -1,0 +1,11 @@
+add_library(avian_codegen_x86
+  assembler.cpp
+  block.cpp
+  context.cpp
+  detect.cpp
+  encode.cpp
+  fixup.cpp
+  multimethod.cpp
+  operations.cpp
+  padding.cpp
+)

@@ -622,7 +622,7 @@ const char* fieldType(const char* spec)
 
 void parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
 {
-  uint32_t magic = s->read4();
+  uint32_t magic UNUSED = s->read4();
   assert(magic == 0xCAFEBABE);
   s->read2();  // minor version
   s->read2();  // major version

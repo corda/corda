@@ -324,17 +324,6 @@ bool SignalRegistrar::Data::registerHandler(Handler* handler, int index)
   }
 }
 
-NO_RETURN void crash()
-{
-  // trigger an EXCEPTION_ACCESS_VIOLATION, which we will catch and
-  // generate a debug dump for
-  *static_cast<volatile int*>(0) = 0;
-
-  // Some (all?) compilers don't realize that we can't possibly continue past
-  // the above statement.
-  abort();
-}
-
 bool SignalRegistrar::registerHandler(Signal signal, Handler* handler)
 {
   return data->registerHandler(handler, signal);
