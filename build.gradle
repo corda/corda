@@ -45,7 +45,9 @@ model {
       }
 
       assemble {
-        dependsOn "build${platform.name}"
+        platforms.each {
+          dependsOn it
+        }
       }
     }
   }
@@ -150,7 +152,9 @@ artifactory {
     }
 
     defaults {
-      publications 'linux-x86_64'
+      platforms.each {
+        publications it.name
+      }
     }
   }
 }
