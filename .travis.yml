@@ -1,10 +1,11 @@
 language: cpp
 env:
   global:
-  - secure: Pe7OLUvdk3DeTAShyaYsdAXBcnjdNOrtfTPt1mCP5+JKBUw3z0n7BpTgATVRBmkn866pDqxL0N3+jBgjKUpEpqOj23bTB2AeDdIzlYkFGvTd3GQQV1lMFn16I9LOgWJhkfICTJ1rIYiNf8xSkJoeKGB7eGUM0KGsTvelFfsaGVc=
-  - secure: OWgsHP9ijb7oLpZVJqlovccT+OO3uAWEZxVdT/rNFS1riGoTSwi1ptlHUw/lEZY1Lw1dEaSW6kfc2rqpTgsHOFQpcdJeK8E29TLn1x25kYaGzo6JY2wWi5q4I3IMRRcFEharXlucJUO6yZWqhDXZTD4J8yf+wXt4blSRrAXil50=
-  - secure: T19BYOl5UB5vTDD3Q2np0iHroPm1elHhCW7AOkUPnjXE+mwMTWQlRm1LxbZ+tv1dykUSlhBwdLP7dNWRzWa1JbAY6Y2SbMmwfdryZTBaELcXWsTcGOP80pKx1ruY30mQfyguVukfIZj8qvRSIMwXCYm+Do+XffC8fmqXSTBRulA=
-  - TERM=dumb
+    - secure: Pe7OLUvdk3DeTAShyaYsdAXBcnjdNOrtfTPt1mCP5+JKBUw3z0n7BpTgATVRBmkn866pDqxL0N3+jBgjKUpEpqOj23bTB2AeDdIzlYkFGvTd3GQQV1lMFn16I9LOgWJhkfICTJ1rIYiNf8xSkJoeKGB7eGUM0KGsTvelFfsaGVc=
+    - secure: OWgsHP9ijb7oLpZVJqlovccT+OO3uAWEZxVdT/rNFS1riGoTSwi1ptlHUw/lEZY1Lw1dEaSW6kfc2rqpTgsHOFQpcdJeK8E29TLn1x25kYaGzo6JY2wWi5q4I3IMRRcFEharXlucJUO6yZWqhDXZTD4J8yf+wXt4blSRrAXil50=
+    - secure: T19BYOl5UB5vTDD3Q2np0iHroPm1elHhCW7AOkUPnjXE+mwMTWQlRm1LxbZ+tv1dykUSlhBwdLP7dNWRzWa1JbAY6Y2SbMmwfdryZTBaELcXWsTcGOP80pKx1ruY30mQfyguVukfIZj8qvRSIMwXCYm+Do+XffC8fmqXSTBRulA=
+    - TERM=dumb
+  matrix:
   - MAKE_ARGS="jdk-test"
   - MAKE_ARGS="test"
   - MAKE_ARGS="mode=debug test"
