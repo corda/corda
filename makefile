@@ -378,7 +378,7 @@ warnings = -Wall -Wextra -Werror -Wunused-parameter -Winit-self \
 
 target-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
 
-common-cflags = $(warnings) -fno-rtti -fno-exceptions -I$(classpath-src) \
+common-cflags = $(warnings) -std=c++0x -fno-rtti -fno-exceptions -I$(classpath-src) \
 	"-I$(JAVA_HOME)/include" -I$(src) -I$(build) -Iinclude $(classpath-cflags) \
 	-D__STDC_LIMIT_MACROS -D_JNI_IMPLEMENTATION_ -DAVIAN_VERSION=\"$(version)\" \
 	-DAVIAN_INFO="\"$(info)\"" \
@@ -397,7 +397,7 @@ endif
 build-cflags = $(common-cflags) -fPIC -fvisibility=hidden \
 	"-I$(JAVA_HOME)/include/linux" -I$(src) -pthread
 
-converter-cflags = -D__STDC_CONSTANT_MACROS -Iinclude/ -Isrc/ \
+converter-cflags = -D__STDC_CONSTANT_MACROS -std=c++0x -Iinclude/ -Isrc/ \
 	-fno-rtti -fno-exceptions \
 	-DAVIAN_TARGET_ARCH=AVIAN_ARCH_UNKNOWN \
 	-DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_UNKNOWN \
@@ -2007,6 +2007,13 @@ ifeq ($(platform),ios)
 		-e 's/^#ifdef __APPLE__/#if 0/' \
 		< "$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c" \
 		> $(build)/openjdk/UNIXProcess_md.c
+	if [ -e "$(openjdk-src)/solaris/native/java/lang/childproc.h" ]; then \
+		sed \
+			-e 's/^#ifndef __APPLE__/#if 1/' \
+			-e 's/^#ifdef __APPLE__/#if 0/' \
+			< "$(openjdk-src)/solaris/native/java/lang/childproc.h" \
+			> $(build)/openjdk/childproc.h; \
+	fi
 endif
 	if [ -f openjdk-patches/$(notdir $(<)).patch ]; then \
 		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).patch; \
