@@ -22,13 +22,13 @@ class AllocOnly;
 namespace vm {
 
 uint8_t* decodeLZMA(System* s,
-                    avian::util::AllocOnly* a,
+                    avian::util::Alloc* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize);
 
 uint8_t* encodeLZMA(System* s,
-                    avian::util::AllocOnly* a,
+                    avian::util::Alloc* a,
                     uint8_t* in,
                     unsigned inSize,
                     unsigned* outSize);

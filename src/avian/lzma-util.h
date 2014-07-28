@@ -22,14 +22,14 @@ const unsigned Padding = 16;
 
 class LzmaAllocator {
  public:
-  LzmaAllocator(avian::util::Allocator* a) : a(a)
+  LzmaAllocator(avian::util::Alloc* a) : a(a)
   {
     allocator.Alloc = allocate;
     allocator.Free = free;
   }
 
   ISzAlloc allocator;
-  avian::util::Allocator* a;
+  avian::util::Alloc* a;
 
   static void* allocate(void* allocator, size_t size)
   {
