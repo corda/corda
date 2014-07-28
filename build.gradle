@@ -73,6 +73,10 @@ sourceSets {
   }
 }
 
+javadoc {
+  title = "Avian v${version} Class Library API"
+}
+
 task javadocJar(type: Jar) {
   dependsOn javadoc
   classifier = 'javadoc'
