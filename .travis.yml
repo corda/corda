@@ -11,5 +11,3 @@ script: "./test/ci.sh"
 after_success:
 - make clean build
 - ./gradlew artifactoryPublish
-- make javadoc
-- ".utility/push-javadoc-to-gh-pages.sh"
