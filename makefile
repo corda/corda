@@ -1477,11 +1477,11 @@ test-args = $(test-flags) $(input)
 ifneq ($(supports_avian_executable),false)
 build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
 	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
-	$(test-extra-dep) $(embed)
+	$(test-extra-dep) $(embed) $(build)/classpath.jar
 else
 build: $(static-library) $(dynamic-library) $(lzma-loader) \
 	$(lzma-encoder) $(classpath-dep) $(test-dep) \
-	$(test-extra-dep) $(embed)
+	$(test-extra-dep) $(embed) $(build)/classpath.jar
 endif
 
 $(test-dep): $(classpath-dep)

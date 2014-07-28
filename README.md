@@ -711,7 +711,7 @@ using the OpenJDK library.)
 
 __6.__ Build the boot and code images.
 
-     $ ../build/linux-i386-bootimage/bootimage-generator
+     $ ../build/linux-i386-bootimage/bootimage-generator \
         -cp stage2 \
         -bootimage bootimage-bin.o \
         -codeimage codeimage-bin.o
