@@ -465,8 +465,6 @@ shared = -shared
 
 rpath = -Wl,-rpath=\$$ORIGIN -Wl,-z,origin
 
-no-error = -Wno-error
-
 openjdk-extra-cflags = -fvisibility=hidden
 
 bootimage-cflags = -DTARGET_BYTES_PER_WORD=$(pointer-size)
@@ -1016,7 +1014,6 @@ ifeq ($(platform),wp8)
 endif
 
 ifdef msvc
-	no-error =
 	target-format = pe
 	windows-path = $(native-path)
 	windows-java-home := $(shell $(windows-path) "$(JAVA_HOME)")
@@ -1274,7 +1271,7 @@ generator-sources = \
 	$(src)/util/arg-parser.cpp
 
 ifneq ($(lzma),)
-	common-cflags += -I$(lzma) -DAVIAN_USE_LZMA -D_7ZIP_ST
+	common-cflags += -I$(lzma) -DAVIAN_USE_LZMA
 
 	vm-sources += \
 		$(src)/lzma-decode.cpp
@@ -1297,8 +1294,10 @@ ifneq ($(lzma),)
 
 	lzma-encoder = $(build)/lzma/lzma
 
-	lzma-encoder-cflags = -D__STDC_CONSTANT_MACROS -fno-rtti -fno-exceptions \
-		-I$(lzma)/C
+	lzma-build-cflags = -D_7ZIP_ST -D__STDC_CONSTANT_MACROS -fno-rtti \
+		-fno-exceptions -I$(lzma)/C
+
+	lzma-cflags = $(lzma-build-cflags) $(classpath-extra-cflags)
 
 	lzma-encoder-sources = \
 		$(src)/lzma/main.cpp
@@ -1752,7 +1751,7 @@ endif
 $(build)/%.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(cc) $(cflags) $(no-error) -c $$($(windows-path) $(<)) $(call output,$(@))
+	$(cc) $(lzma-cflags) -c $$($(windows-path) $(<)) $(call output,$(@))
 
 $(vm-asm-objects): $(build)/%-asm.o: $(src)/%.$(asm-format)
 	$(compile-asm-object)
@@ -1788,7 +1787,7 @@ $(converter): $(converter-objects) $(converter-tool-objects)
 
 $(lzma-encoder-objects): $(build)/lzma/%.o: $(src)/lzma/%.cpp
 	@mkdir -p $(dir $(@))
-	$(build-cxx) $(lzma-encoder-cflags) -c $(<) -o $(@)
+	$(build-cxx) $(lzma-build-cflags) -c $(<) -o $(@)
 
 $(lzma-encoder): $(lzma-encoder-objects) $(lzma-encoder-lzma-objects)
 	$(build-cc) $(^) -g -o $(@)
@@ -1832,8 +1831,8 @@ $(generator-objects): $(build)/%-build.o: $(src)/%.cpp
 $(build)/%-build.o: $(lzma)/C/%.c
 	@echo "compiling $(@)"
 	@mkdir -p $(dir $(@))
-	$(build-cxx) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(build-cflags) \
-		$(no-error) -c $(<) -o $(@)
+	$(build-cc) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(lzma-build-cflags) \
+		-c $(<) -o $(@)
 
 $(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
 	$(compile-object)
