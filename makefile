@@ -1527,14 +1527,6 @@ tarball:
 	(cd .. && tar --exclude=build --exclude='.*' --exclude='*~' -cjf \
 		avian/build/avian-$(version).tar.bz2 avian)
 
-.PHONY: javadoc
-javadoc:
-	$(JAVA_HOME)/bin/javadoc -sourcepath classpath -d build/javadoc -subpackages avian:java \
-		-windowtitle "Avian v$(version) Class Library API" \
-		-doctitle "Avian v$(version) Class Library API" \
-		-header "Avian v$(version)" \
-		-bottom "<a href=\"http://oss.readytalk.com/avian/\">http://oss.readytalk.com/avian</a>"
-
 .PHONY: clean-current
 clean-current:
 	@echo "removing $(build)"

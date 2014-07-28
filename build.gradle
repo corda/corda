@@ -19,6 +19,36 @@ model {
       operatingSystem "linux"
       architecture "x86_64"
     }
+
+    create("linux-i386") {
+      operatingSystem "linux"
+      architecture "i386"
+    }
+
+    create("windows-x86_64") {
+      operatingSystem "windows"
+      architecture "x86_64"
+    }
+
+    create("windows-i386") {
+      operatingSystem "windows"
+      architecture "i386"
+    }
+  }
+
+  tasks {
+    platforms.each { platform ->
+      task "build${platform.name}"(type: Exec) {
+        executable "make"
+        args "platform=${platform.operatingSystem.name}",
+             "arch=${platform.architecture.name}"
+        environment JAVA_HOME: "/usr/local/java"
+      }
+
+      assemble {
+        dependsOn "build${platform.name}"
+      }
+    }
   }
 }
 
@@ -43,6 +73,22 @@ sourceSets {
   }
 }
 
+javadoc {
+  title = "Avian v${version} Class Library API"
+}
+
+task javadocJar(type: Jar) {
+  dependsOn javadoc
+  classifier = 'javadoc'
+  from {
+    javadoc.destinationDir
+  }
+}
+
+task install {
+  dependsOn assemble, publish
+}
+
 publishing {
   repositories {
     ivy {
@@ -52,28 +98,36 @@ publishing {
   }
 
   publications {
+    def binSuffix=""
+    def publishBinSuffix="bin"
+
+    ivy(IvyPublication) {
+      from components.java
+
+      artifact(javadocJar)
+    }
 
     platforms.each { platform ->
       create(platform.name, IvyPublication) {
         def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
 
-        module "${project.name}-${platform.name}"
-
-        artifact("${nativeBuildDir}/avian") {
-          name "avian"
-          type "bin"
-          extension "bin"
+        if(platform.operatingSystem.name == "windows") {
+          publishBinSuffix = "exe"
+          binSuffix = ".${publishBinSuffix}"
         }
 
-        artifact("${nativeBuildDir}/classpath.jar") {
-          name "classpath"
-          type "jar"
+        module "${project.name}-${platform.name}"
+
+        artifact("${nativeBuildDir}/avian${binSuffix}") {
+          name "avian"
+          type publishBinSuffix
+          extension publishBinSuffix
         }
 
         artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
           name "binaryToObject"
-          type "bin"
-          extension "bin"
+          type publishBinSuffix
+          extension publishBinSuffix
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
@@ -84,6 +138,10 @@ publishing {
       }
     }
   }
+}
+
+artifactoryPublish {
+  dependsOn assemble
 }
 
 artifactory {
@@ -106,7 +164,9 @@ artifactory {
     }
 
     defaults {
-      publications 'linux-x86_64'
+      platforms.each {
+        publications it.name
+      }
     }
   }
 }
