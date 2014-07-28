@@ -122,21 +122,18 @@ publishing {
           name "avian"
           type publishBinSuffix
           extension publishBinSuffix
-          //builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
           name "binaryToObject"
           type publishBinSuffix
           extension publishBinSuffix
-          // builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
           name "libavian"
           type "a"
           extension "a"
-          // builtBy "build${platform.name}"
         }
       }
     }
