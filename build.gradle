@@ -42,12 +42,11 @@ model {
         executable "make"
         args "platform=${platform.operatingSystem.name}",
              "arch=${platform.architecture.name}"
+        environment JAVA_HOME: "/usr/local/java"
       }
 
       assemble {
-        platforms.each {
-          dependsOn it
-        }
+        dependsOn "build${platform.name}"
       }
     }
   }
@@ -74,6 +73,14 @@ sourceSets {
   }
 }
 
+task javadocJar(type: Jar) {
+  dependsOn javadoc
+  classifier = 'javadoc'
+  from {
+    javadoc.destinationDir
+  }
+}
+
 task install {
   dependsOn assemble, publish
 }
@@ -89,6 +96,12 @@ publishing {
   publications {
     def binSuffix=""
     def publishBinSuffix="bin"
+
+    ivy(IvyPublication) {
+      from components.java
+
+      artifact(javadocJar)
+    }
 
     platforms.each { platform ->
       create(platform.name, IvyPublication) {
@@ -106,12 +119,6 @@ publishing {
           type publishBinSuffix
           extension publishBinSuffix
           //builtBy "build${platform.name}"
-        }
-
-        artifact("${nativeBuildDir}/classpath.jar") {
-          name "classpath"
-          type "jar"
-          // builtBy "build${platform.name}"
         }
 
         artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
