@@ -4,8 +4,6 @@ target_link_libraries(type_generator
   avian_jvm_finder
   avian_system
   avian_util
-  z
-  pthread
-  dl
+  ${ZLIB_LIBRARIES}
   ${PLATFORM_LIBS}
 )

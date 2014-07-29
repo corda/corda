@@ -13,3 +13,6 @@ ELSE()
 	SET(PLATFORM_CXX_FLAGS "-Wall -Werror -fno-exceptions -std=c++0x")
   SET(PLATFORM_LIBS ${PLATFORM_LIBS} pthread dl)
 ENDIF()
+
+find_package(ZLIB REQUIRED)
+include_directories(${ZLIB_INCLUDE_DIRS})
