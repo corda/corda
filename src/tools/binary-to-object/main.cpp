@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #ifdef WIN32
 #include <windows.h>
+#include <io.h>
 #else
 #include <sys/mman.h>
 #include <unistd.h>
@@ -90,7 +91,7 @@ void usageAndExit(const char* name)
 
 int main(int argc, const char** argv)
 {
-  if (argc < 7 or argc > 10) {
+  if (argc < 7 || argc > 10) {
     usageAndExit(argv[0]);
   }
 

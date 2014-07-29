@@ -124,7 +124,7 @@ class Output {
   {
     static const int Size = 32;
     char s[Size];
-    int c UNUSED = ::snprintf(s, Size, "%d", i);
+    int c UNUSED = vm::snprintf(s, Size, "%d", i);
     assert(c > 0 and c < Size);
     write(s);
   }

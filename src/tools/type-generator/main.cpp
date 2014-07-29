@@ -172,7 +172,7 @@ class Class {
     return ss.str();
   }
 
-  void dumpToStdout() const AVIAN_EXPORT
+  void dumpToStdout() const
   {
     printf("%s\n", dump().c_str());
   }
@@ -615,13 +615,14 @@ const char* fieldType(const char* spec)
 
 void parseJavaClass(Module& module, ClassParser& clparser, Stream* s)
 {
-  uint32_t magic UNUSED = s->read4();
+  uint32_t magic = s->read4();
   assert(magic == 0xCAFEBABE);
+  (void)magic;
   s->read2();  // minor version
   s->read2();  // major version
 
   unsigned poolCount = s->read2() - 1;
-  uintptr_t pool[poolCount];
+  std::vector<uintptr_t> pool(poolCount, -1);
   for (unsigned i = 0; i < poolCount; ++i) {
     unsigned c = s->read1();
 
