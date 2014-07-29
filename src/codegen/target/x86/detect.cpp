@@ -13,11 +13,39 @@
 
 #include "context.h"
 
+#ifndef _MSC_VER
+#include <cpuid.h>
+#else
+// MSVC implementation:
+static int __get_cpuid(unsigned int __level,
+                       unsigned int* __eax,
+                       unsigned int* __ebx,
+                       unsigned int* __ecx,
+                       unsigned int* __edx)
+{
+  _asm
+  {
+    mov eax, __level;
+    cpuid;
+    mov[__eax], eax;
+    mov[__ebx], ebx;
+    mov[__ecx], ecx;
+    mov[__edx], edx;
+  }
+  return 1;
+}
+#define bit_SSE (1 << 25)
+#define bit_SSE2 (1 << 26)
+
+#endif
+
 namespace avian {
 namespace codegen {
 namespace x86 {
 
-extern "C" bool detectFeature(unsigned ecx, unsigned edx);
+// TODO: this should be moved such that it's called by the client (e.g. whatever
+// allocates the Archivecture).  That way, we can link the x86 code generator on
+// another architecture (e.g. arm).
 
 bool useSSE(ArchitectureContext* c)
 {
@@ -27,8 +55,11 @@ bool useSSE(ArchitectureContext* c)
   } else if (c->useNativeFeatures) {
     static int supported = -1;
     if (supported == -1) {
-      supported = detectFeature(0, 0x2000000)       // SSE 1
-                  and detectFeature(0, 0x4000000);  // SSE 2
+      unsigned eax;
+      unsigned ebx;
+      unsigned ecx;
+      unsigned edx;
+      supported = __get_cpuid(1, &eax, &ebx, &ecx, &edx) && (edx & bit_SSE) && (edx & bit_SSE2);
     }
     return supported;
   } else {
