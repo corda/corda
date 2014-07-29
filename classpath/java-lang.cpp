@@ -79,6 +79,11 @@
 #endif
 #endif  // WINAPI_FAMILY
 
+#ifndef M_E
+// in new C++-11 standard math.h doesn't have M_E, at least on MinGW, so define it manually
+#define M_E		2.7182818284590452354
+#endif  // M_E
+
 namespace {
 
 void add(JNIEnv* e, jobjectArray array, unsigned index, const char* format, ...)
