@@ -2565,13 +2565,14 @@ void register_libcore_net_RawSocket(_JNIEnv*)
 
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_libcore_io_OsConstants_initConstants(Thread* t,
-                                               object method,
+                                               object m,
                                                uintptr_t*)
 {
-  object c = method->class_();
+  GcMethod* method = cast<GcMethod>(t, m);
+  GcClass* c = method->class_();
   PROTECT(t, c);
 
-  object table = classStaticTable(t, c);
+  object table = c->staticTable();
   PROTECT(t, table);
 
   GcField* field = resolveField(t, c, "STDIN_FILENO", "I");
@@ -2587,7 +2588,7 @@ extern "C" AVIAN_EXPORT void JNICALL
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_libcore_io_Posix_getenv(Thread* t, object, uintptr_t* arguments)
 {
-  object name = reinterpret_cast<object>(arguments[1]);
+  GcString* name = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
   THREAD_RUNTIME_ARRAY(t, uint16_t, chars, name->length(t) + 1);
   stringChars(t, name, RUNTIME_ARRAY_BODY(chars));
@@ -2598,9 +2599,9 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   if (value) {
     unsigned size = wcslen(value);
 
-    object a = makeCharArray(t, size);
+    GcCharArray* a = makeCharArray(t, size);
     if (size) {
-      memcpy(&charArrayBody(t, a, 0), value, size * sizeof(jchar));
+      memcpy(a->body().begin(), value, size * sizeof(jchar));
     }
 
     return reinterpret_cast<uintptr_t>(
@@ -2630,23 +2631,23 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   object arch = makeString(t, "unknown");
 #endif
 
-  set(t,
+  setField(t,
       instance,
-      fieldOffset(t, resolveField(t, c, "machine", "Ljava/lang/String;")),
+      resolveField(t, c, "machine", "Ljava/lang/String;")->offset(),
       arch);
 
   object platform = makeString(t, "Windows");
 
-  set(t,
+  setField(t,
       instance,
-      fieldOffset(t, resolveField(t, c, "sysname", "Ljava/lang/String;")),
+      resolveField(t, c, "sysname", "Ljava/lang/String;")->offset(),
       platform);
 
   object version = makeString(t, "unknown");
 
-  set(t,
+  setField(t,
       instance,
-      fieldOffset(t, resolveField(t, c, "release", "Ljava/lang/String;")),
+      resolveField(t, c, "release", "Ljava/lang/String;")->offset(),
       version);
 
   return reinterpret_cast<uintptr_t>(instance);
@@ -2658,7 +2659,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   object fd = reinterpret_cast<object>(arguments[1]);
   PROTECT(t, fd);
 
-  object buffer = reinterpret_cast<object>(arguments[2]);
+  GcByteArray* buffer = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[2]));
   PROTECT(t, buffer);
 
   int offset = arguments[3];
@@ -2669,7 +2670,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   int r;
   if (objectClass(t, buffer) == type(t, GcByteArray::Type)) {
     void* tmp = t->m->heap->allocate(count);
-    memcpy(tmp, &byteArrayBody(t, buffer, offset), count);
+    memcpy(tmp, &buffer->body()[offset], count);
     {
       ENTER(t, Thread::IdleState);
       r = _write(d, tmp, count);

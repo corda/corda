@@ -251,9 +251,9 @@ ifneq ($(android),)
 		android-cflags += -D__STDC_CONSTANT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp \
+			$(luni-native)/java_math_NativeBN.cpp \
 			$(luni-native)/libcore_net_RawSocket.cpp
 
-		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
@@ -262,11 +262,11 @@ ifneq ($(android),)
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H
 		blacklist = $(luni-native)/java_math_NativeBN.cpp
 
-		luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
 			$(android)/external/icu4c/lib/libicudata.a
 	endif
+	luni-cpps := $(filter-out $(blacklist),$(luni-cpps))
 
 	classpath-lflags := \
 		$(icu-libs) \
