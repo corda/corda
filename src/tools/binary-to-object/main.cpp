@@ -14,7 +14,7 @@
 #include <string.h>
 
 #include <sys/stat.h>
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #include <io.h>
 #else
@@ -120,7 +120,7 @@ int main(int argc, const char** argv)
     struct stat s;
     int r = fstat(fd, &s);
     if (r != -1) {
-#ifdef WIN32
+#ifdef _WIN32
       HANDLE fm;
       HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -157,7 +157,7 @@ int main(int argc, const char** argv)
       fprintf(stderr, "unable to open %s\n", argv[2]);
     }
 
-#ifdef WIN32
+#ifdef _WIN32
     UnmapViewOfFile(data);
 #else
     munmap(data, size);
