@@ -1288,7 +1288,7 @@ loop:
   }
     goto loop;
 
-  case dup: {
+  case vm::dup: {
     if (DebugStack) {
       fprintf(stderr, "dup\n");
     }
@@ -1323,7 +1323,7 @@ loop:
   }
     goto loop;
 
-  case dup2: {
+  case vm::dup2: {
     if (DebugStack) {
       fprintf(stderr, "dup2\n");
     }
