@@ -8,7 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-#include "math.h"
 #include "stdlib.h"
 #include "time.h"
 #include "string.h"
@@ -18,6 +17,11 @@
 #include "errno.h"
 #include "fcntl.h"
 #include "ctype.h"
+
+// Make sure M_* constants (in particular M_E) are exposed in math.h.
+// This was a problem on the default mingw install on ubuntu precise
+#undef __STRICT_ANSI__
+#include "math.h"
 
 #ifdef PLATFORM_WINDOWS
 
