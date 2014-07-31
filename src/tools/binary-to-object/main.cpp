@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #ifdef _WIN32
 #include <windows.h>
+#include <io.h>
 #else
 #include <sys/mman.h>
 #include <unistd.h>
@@ -90,7 +91,7 @@ void usageAndExit(const char* name)
 
 int main(int argc, const char** argv)
 {
-  if (argc < 7 or argc > 10) {
+  if (argc < 7 || argc > 10) {
     usageAndExit(argv[0]);
   }
 
@@ -119,7 +120,7 @@ int main(int argc, const char** argv)
     struct stat s;
     int r = fstat(fd, &s);
     if (r != -1) {
-#ifdef WIN32
+#ifdef _WIN32
       HANDLE fm;
       HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -156,7 +157,7 @@ int main(int argc, const char** argv)
       fprintf(stderr, "unable to open %s\n", argv[2]);
     }
 
-#ifdef WIN32
+#ifdef _WIN32
     UnmapViewOfFile(data);
 #else
     munmap(data, size);

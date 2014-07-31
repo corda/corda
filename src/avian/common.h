@@ -39,29 +39,9 @@
 
 #define strncasecmp _strnicmp
 
-#define FP_NAN 0
-#define FP_INFINITE 1
 #define FP_UNDEF 2
 
-inline int fpclassify(double d)
-{
-  switch (_fpclass(d)) {
-  case _FPCLASS_SNAN:
-  case _FPCLASS_QNAN:
-    return FP_NAN;
-  case _FPCLASS_PINF:
-  case _FPCLASS_NINF:
-    return FP_INFINITE;
-  }
-  return FP_UNDEF;
-}
-
-inline int signbit(double d)
-{
-  return _copysign(1.0, d) < 0;
-}
-
-#define not!
+#define not !
 #define or ||
 #define and &&
 #define xor ^

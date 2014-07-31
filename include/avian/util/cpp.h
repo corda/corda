@@ -44,6 +44,16 @@ struct ArgumentCount<> {
   enum { Result = 0 };
 };
 
+template<class T>
+void setArrayElements(T*) {
+}
+
+template<class T, class... Ts>
+void setArrayElements(T* arr, T elem, Ts... ts) {
+  *arr = elem;
+  setArrayElements(arr, ts...);
+}
+
 }  // namespace util
 }  // namespace avian
 

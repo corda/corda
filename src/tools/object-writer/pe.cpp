@@ -40,6 +40,12 @@ namespace {
 #define IMAGE_SCN_MEM_WRITE 0x80000000
 #define IMAGE_SCN_CNT_CODE 32
 
+#ifdef _MSC_VER
+#define PACKED_STRUCT _declspec(align(1))
+#else
+#define PACKED_STRUCT __attribute__((packed))
+#endif
+
 struct IMAGE_FILE_HEADER {
   uint16_t Machine;
   uint16_t NumberOfSections;
@@ -48,7 +54,7 @@ struct IMAGE_FILE_HEADER {
   uint32_t NumberOfSymbols;
   uint16_t SizeOfOptionalHeader;
   uint16_t Characteristics;
-} __attribute__((packed));
+} PACKED_STRUCT;
 
 struct IMAGE_SECTION_HEADER {
   uint8_t Name[IMAGE_SIZEOF_SHORT_NAME];
@@ -64,7 +70,7 @@ struct IMAGE_SECTION_HEADER {
   uint16_t NumberOfRelocations;
   uint16_t NumberOfLinenumbers;
   uint32_t Characteristics;
-} __attribute__((packed));
+} PACKED_STRUCT;
 
 struct IMAGE_SYMBOL {
   union {
@@ -78,7 +84,7 @@ struct IMAGE_SYMBOL {
   uint16_t Type;
   uint8_t StorageClass;
   uint8_t NumberOfAuxSymbols;
-} __attribute__((packed));
+} PACKED_STRUCT;
 // --- winnt.h ----
 
 inline unsigned pad(unsigned n)

@@ -16,8 +16,6 @@ target_link_libraries (avian_unittest
   avian_system
   avian_heap
   avian_util
-  pthread
-  dl
   ${PLATFORM_LIBS}
 )
 

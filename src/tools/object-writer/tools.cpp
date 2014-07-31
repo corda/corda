@@ -94,13 +94,13 @@ Platform* Platform::first = 0;
 
 PlatformInfo::Format PlatformInfo::formatFromString(const char* format)
 {
-  if (strcmp(format, "elf") == 0 or strcmp(format, "linux") == 0
-      or strcmp(format, "freebsd") == 0 or strcmp(format, "qnx") == 0) {
+  if (strcmp(format, "elf") == 0 || strcmp(format, "linux") == 0
+      || strcmp(format, "freebsd") == 0 || strcmp(format, "qnx") == 0) {
     return Elf;
-  } else if (strcmp(format, "pe") == 0 or strcmp(format, "windows") == 0) {
+  } else if (strcmp(format, "pe") == 0 || strcmp(format, "windows") == 0) {
     return Pe;
-  } else if (strcmp(format, "macho") == 0 or strcmp(format, "darwin") == 0
-             or strcmp(format, "ios") == 0 or strcmp(format, "macosx") == 0) {
+  } else if (strcmp(format, "macho") == 0 || strcmp(format, "darwin") == 0
+             || strcmp(format, "ios") == 0 || strcmp(format, "macosx") == 0) {
     return MachO;
   } else {
     return UnknownFormat;
@@ -110,13 +110,13 @@ PlatformInfo::Format PlatformInfo::formatFromString(const char* format)
 PlatformInfo::Architecture PlatformInfo::archFromString(const char* arch)
 {
   if (strcmp(arch, "i386") == 0) {
-    return x86;
+    return Architecture::x86;
   } else if (strcmp(arch, "x86_64") == 0) {
-    return x86_64;
+    return Architecture::x86_64;
   } else if (strcmp(arch, "arm") == 0) {
-    return Arm;
+    return Architecture::Arm;
   } else {
-    return UnknownArch;
+    return Architecture::UnknownArch;
   }
 }
 

@@ -16,9 +16,10 @@ add_definitions (
   -D__STDC_CONSTANT_MACROS
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror -fno-exceptions -std=c++0x")
-
 include ("cmake/Platform.cmake")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PLATFORM_CXX_FLAGS}")
+
 include (CTest)
 
 # Sadly, we can't use the 'test' target, as that's coopted by ctest

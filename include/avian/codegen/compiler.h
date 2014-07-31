@@ -32,8 +32,13 @@ class Args {
 
   template <class... Ts>
   Args(Ts... ts)
+#ifndef _MSC_VER
       : values{ts...}
+#endif
   {
+#ifdef _MSC_VER
+    setArrayElements(values, ts...);
+#endif
   }
 
   operator util::Slice<ir::Value*>()
