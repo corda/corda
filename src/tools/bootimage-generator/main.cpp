@@ -1851,10 +1851,6 @@ void writeBootImage2(Thread* t,
       abort();
     }
 
-    SymbolInfo bootimageSymbols[]
-        = {SymbolInfo(0, bootimageStart),
-           SymbolInfo(bootimageData.length, bootimageEnd)};
-
     uint8_t* bootimage;
     unsigned bootimageLength;
     if (useLZMA) {
@@ -1873,6 +1869,10 @@ void writeBootImage2(Thread* t,
       bootimage = bootimageData.data;
       bootimageLength = bootimageData.length;
     }
+
+    SymbolInfo bootimageSymbols[]
+        = {SymbolInfo(0, bootimageStart),
+           SymbolInfo(bootimageLength, bootimageEnd)};
 
     platform->writeObject(bootimageOutput,
                           Slice<SymbolInfo>(bootimageSymbols, 2),
