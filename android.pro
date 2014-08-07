@@ -34,7 +34,9 @@
 -keep class java.net.Socket
 -keep class java.net.SocketImpl
 -keep class java.lang.String
--keep class libcore.io.StructAddrinfo
+-keep class libcore.io.StructAddrinfo {
+   <fields>;
+ }
 -keep class libcore.io.StructFlock
 -keep class libcore.io.StructGroupReq
 -keep class libcore.io.StructLinger

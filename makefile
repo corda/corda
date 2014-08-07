@@ -1294,8 +1294,8 @@ ifneq ($(lzma),)
 
 	lzma-encoder = $(build)/lzma/lzma
 
-	lzma-build-cflags = -D_7ZIP_ST -D__STDC_CONSTANT_MACROS -fno-rtti \
-		-fno-exceptions -I$(lzma)/C
+	lzma-build-cflags = -D_7ZIP_ST -D__STDC_CONSTANT_MACROS \
+		-fno-exceptions -fPIC -I$(lzma)/C
 
 	lzma-cflags = $(lzma-build-cflags) $(classpath-extra-cflags)
 

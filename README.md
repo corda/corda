@@ -507,7 +507,7 @@ setting the boot classpath to "[bootJar]".
     $ cat >embedded-jar-main.cpp <<EOF
     #include "stdint.h"
     #include "jni.h"
-	#include "stdlib.h" 
+    #include "stdlib.h" 
     
     #if (defined __MINGW32__) || (defined _MSC_VER)
     #  define EXPORT __declspec(dllexport)
