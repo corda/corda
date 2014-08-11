@@ -90,20 +90,21 @@ int main(int argc, const char** argv)
     const unsigned HeaderSize = 13;
 
     SizeT outSize;
+    bool outSizeIsValid;
     if (encode) {
       outSize = size * 2;
+      outSizeIsValid = true;
     } else {
       int32_t outSize32 = read4(data + PropHeaderSize);
-      if (outSize32 >= 0) {
-        outSize = outSize32;
-      } else if (argc == 5) {
-        outSize = atoi(argv[4]);
-      } else {
-        outSize = -1;
+      if (outSize32 < 0 and argc == 5) {
+        outSize32 = atoi(argv[4]);
       }
+
+      outSize = outSize32;
+      outSizeIsValid = outSize32 >= 0;
     }
 
-    if (outSize >= 0) {
+    if (outSizeIsValid) {
       uint8_t* out = static_cast<uint8_t*>(malloc(outSize));
       if (out) {
         SizeT inSize = size;
