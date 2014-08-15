@@ -35,6 +35,10 @@ public interface Map<K, V> {
 
   public Collection<V> values();
 
+  public boolean equals(Object other);
+
+  public int hashCode();
+
   public interface Entry<K, V> {
     public K getKey();
 
