@@ -19,6 +19,10 @@
 
 #undef JNIEXPORT
 
+#ifdef UNUSED
+#undef UNUSED
+#endif
+
 #if (defined __MINGW32__) || (defined _MSC_VER)
 #define PLATFORM_WINDOWS
 #define PATH_SEPARATOR ';'

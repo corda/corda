@@ -25,6 +25,10 @@
 #include "avian/types.h"
 #include "math.h"
 
+#ifdef UNUSED
+#undef UNUSED
+#endif
+
 #ifdef _MSC_VER
 
 #include "float.h"
