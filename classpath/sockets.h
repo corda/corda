@@ -16,9 +16,9 @@
 #ifndef SOCKETS_H_
 #define SOCKETS_H_
 
-#include "avian/common.h"
 #include "jni.h"
 #include "jni-util.h"
+#include "avian/common.h"
 
 #ifdef PLATFORM_WINDOWS
 #include <winsock2.h>
