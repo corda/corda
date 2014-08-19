@@ -38,7 +38,7 @@ has_flag() {
 
 make_target=test
 
-run_cmake -DCMAKE_BUILD_TYPE=Debug
+test `uname -o` = "Cygwin" || run_cmake -DCMAKE_BUILD_TYPE=Debug
 
 run make jdk-test
 run make ${flags} ${make_target}

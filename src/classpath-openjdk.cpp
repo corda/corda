@@ -5917,9 +5917,9 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   // implementing findJavaTZ_md ourselves from scratch, but that would
   // be a lot of code to implement and maintain.
 
-  object country = arguments[1];
+  GcString* country = cast<GcString>(t, reinterpret_cast<object>(arguments[1]));
 
-  THREAD_RUNTIME_ARRAY(t, char, countryChars, stringLength(t, country) + 1);
+  THREAD_RUNTIME_ARRAY(t, char, countryChars, country->length(t) + 1);
   stringChars(t, country, RUNTIME_ARRAY_BODY(countryChars));
 
   local::MyClasspath* cp = static_cast<local::MyClasspath*>(t->m->classpath);
