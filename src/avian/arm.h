@@ -130,7 +130,7 @@ inline void loadMemoryBarrier()
 
 #if !defined(AVIAN_AOT_ONLY)
 
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(__linux__)
 // http://code.google.com/p/android/issues/detail?id=1803
 extern "C" void __clear_cache(void* beg __attribute__((__unused__)),
                               void* end __attribute__((__unused__)));
