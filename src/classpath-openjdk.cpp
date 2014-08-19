@@ -3502,6 +3502,7 @@ uint64_t jvmFillInStackTrace(Thread* t, uintptr_t* arguments)
 {
   GcThrowable* throwable
       = cast<GcThrowable>(t, *reinterpret_cast<jobject>(arguments[0]));
+  PROTECT(t, throwable);
 
   object trace = getTrace(t, 2);
   throwable->setTrace(t, trace);
