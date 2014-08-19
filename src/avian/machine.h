@@ -1119,6 +1119,7 @@ class Thread {
   static const unsigned ActiveFlag = 1 << 5;
   static const unsigned SystemFlag = 1 << 6;
   static const unsigned JoinFlag = 1 << 7;
+  static const unsigned TryNativeFlag = 1 << 8;
 
   class Protector {
    public:

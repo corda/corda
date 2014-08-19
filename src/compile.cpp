@@ -8164,6 +8164,18 @@ class SignalHandler : public SignalRegistrar::Handler {
   {
   }
 
+  void setException(MyThread* t) {
+    if (ensure(t, pad(fixedSize) + traceSize(t))) {
+      atomicOr(&(t->flags), Thread::TracingFlag);
+      t->exception = makeThrowable(t, type);
+      atomicAnd(&(t->flags), ~Thread::TracingFlag);
+    } else {
+      // not enough memory available for a new exception and stack
+      // trace -- use a preallocated instance instead
+      t->exception = (vm::roots(t)->*exc)();
+    }
+  }
+
   virtual bool handleSignal(void** ip,
                             void** frame,
                             void** stack,
@@ -8171,8 +8183,23 @@ class SignalHandler : public SignalRegistrar::Handler {
   {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t and t->state == Thread::ActiveState) {
-      GcMethod* node = methodForIp(t, *ip);
-      if (node) {
+      if (t->flags & Thread::TryNativeFlag) {
+        setException(t);
+
+        popResources(t);
+
+        GcContinuation* continuation;
+        findUnwindTarget(t, ip, frame, stack, &continuation);
+
+        t->trace->targetMethod = 0;
+        t->trace->nativeMethod = 0;
+
+        transition(t, *ip, *stack, continuation, t->trace);
+
+        *thread = t;
+
+        return true;
+      } else if (methodForIp(t, *ip)) {
         // add one to the IP since findLineNumber will subtract one
         // when we make the trace:
         MyThread::TraceContext context(
@@ -8182,22 +8209,14 @@ class SignalHandler : public SignalRegistrar::Handler {
             t->continuation,
             t->trace);
 
-        if (ensure(t, pad(fixedSize) + traceSize(t))) {
-          atomicOr(&(t->flags), Thread::TracingFlag);
-          t->exception = makeThrowable(t, type);
-          atomicAnd(&(t->flags), ~Thread::TracingFlag);
-        } else {
-          // not enough memory available for a new exception and stack
-          // trace -- use a preallocated instance instead
-          t->exception = (vm::roots(t)->*exc)();
-        }
+        setException(t);
 
         // printTrace(t, t->exception);
 
         GcContinuation* continuation;
         findUnwindTarget(t, ip, frame, stack, &continuation);
 
-        transition(t, ip, stack, continuation, t->trace);
+        transition(t, *ip, *stack, continuation, t->trace);
 
         *thread = t;
 
