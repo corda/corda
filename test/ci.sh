@@ -25,30 +25,32 @@ run_cmake() {
 
 flags="${@}"
 
-run_if_not_covered() {
+has_flag() {
   local arg=$1
-  shift
-
   for f in ${flags}; do
     local key=$(echo $f | awk -F '=' '{print $1}')
     if [ ${key} = ${arg} ]; then
-      return
+      return 0
     fi
   done
-
-  run "${@}"
+  return 1
 }
+
+make_target=test
 
 run_cmake -DCMAKE_BUILD_TYPE=Debug
 
 run make jdk-test
-run make ${flags} test
-run make ${flags} mode=debug test
-run make ${flags} process=interpret test
-run make ${flags} bootimage=true test
-run make ${flags} mode=debug bootimage=true test
+run make ${flags} ${make_target}
+run make ${flags} mode=debug ${make_target}
+run make ${flags} process=interpret ${make_target}
 
-run_if_not_covered openjdk make ${flags} openjdk=$JAVA_HOME test
+(has_flag openjdk-src || ! has_flag openjdk) && \
+  run make ${flags} mode=debug bootimage=true ${make_target} && \
+  run make ${flags} bootimage=true ${make_target}
 
-run make ${flags} tails=true continuations=true heapdump=true test
+! has_flag openjdk && \
+  run make ${flags} openjdk=$JAVA_HOME ${make_target}
+
+run make ${flags} tails=true continuations=true heapdump=true ${make_target}
 run make ${flags} codegen-targets=all
