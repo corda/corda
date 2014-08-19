@@ -309,6 +309,20 @@ extern "C" AVIAN_EXPORT void JNICALL
 
 #endif  // AVIAN_HEAPDUMP
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_avian_Machine_tryNative(Thread* t, object, uintptr_t* arguments)
+{
+  int64_t function;
+  memcpy(&function, arguments, 8);
+  int64_t argument;
+  memcpy(&argument, arguments + 2, 8);
+
+  t->flags |= Thread::TryNativeFlag;
+  THREAD_RESOURCE0(t, t->flags &= ~Thread::TryNativeFlag);
+
+  return reinterpret_cast<int64_t (*)(int64_t)>(function)(argument);
+}
+
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_java_lang_Runtime_exit(Thread* t, object, uintptr_t* arguments)
 {
