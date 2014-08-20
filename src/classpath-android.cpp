@@ -391,7 +391,7 @@ class MyClasspath : public Classpath {
       }
 
       vm::acquire(t, t->javaThread);
-      t->flags &= ~Thread::ActiveFlag;
+      t->clearFlag(Thread::ActiveFlag);
       vm::notifyAll(t, t->javaThread);
       vm::release(t, t->javaThread);
     });

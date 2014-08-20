@@ -1111,15 +1111,17 @@ class Thread {
     ExitState
   };
 
-  static const unsigned UseBackupHeapFlag = 1 << 0;
-  static const unsigned WaitingFlag = 1 << 1;
-  static const unsigned TracingFlag = 1 << 2;
-  static const unsigned DaemonFlag = 1 << 3;
-  static const unsigned StressFlag = 1 << 4;
-  static const unsigned ActiveFlag = 1 << 5;
-  static const unsigned SystemFlag = 1 << 6;
-  static const unsigned JoinFlag = 1 << 7;
-  static const unsigned TryNativeFlag = 1 << 8;
+  enum Flag {
+    UseBackupHeapFlag = 1 << 0,
+    WaitingFlag = 1 << 1,
+    TracingFlag = 1 << 2,
+    DaemonFlag = 1 << 3,
+    StressFlag = 1 << 4,
+    ActiveFlag = 1 << 5,
+    SystemFlag = 1 << 6,
+    JoinFlag = 1 << 7,
+    TryNativeFlag = 1 << 8
+  };
 
   class Protector {
    public:
@@ -1301,6 +1303,18 @@ class Thread {
   void exit();
   void dispose();
 
+  void setFlag(Flag flag) {
+    atomicOr(&flags, flag);
+  }
+
+  void clearFlag(Flag flag) {
+    atomicAnd(&flags, ~flag);
+  }
+
+  unsigned getFlags() {
+    return flags;
+  }
+
   JNIEnvVTable* vtable;
   Machine* m;
   Thread* parent;
@@ -1325,6 +1339,8 @@ class Thread {
   uintptr_t* heap;
   uintptr_t backupHeap[ThreadBackupHeapSizeInWords];
   unsigned backupHeapIndex;
+
+ private:
   unsigned flags;
 };
 
@@ -1496,9 +1512,9 @@ void shutDown(Thread* t);
 inline void stress(Thread* t)
 {
   if ((not t->m->unsafe)
-      and (t->flags & (Thread::StressFlag | Thread::TracingFlag)) == 0
+      and (t->getFlags() & (Thread::StressFlag | Thread::TracingFlag)) == 0
       and t->state != Thread::NoState and t->state != Thread::IdleState) {
-    atomicOr(&(t->flags), Thread::StressFlag);
+    t->setFlag(Thread::StressFlag);
 
 #ifdef VM_STRESS_MAJOR
     collect(t, Heap::MajorCollection);
@@ -1506,7 +1522,7 @@ inline void stress(Thread* t)
     collect(t, Heap::MinorCollection);
 #endif  // not VM_STRESS_MAJOR
 
-    atomicAnd(&(t->flags), ~Thread::StressFlag);
+    t->clearFlag(Thread::StressFlag);
   }
 }
 
@@ -1581,9 +1597,9 @@ inline bool ensure(Thread* t, unsigned sizeInBytes)
   if (t->heapIndex + ceilingDivide(sizeInBytes, BytesPerWord)
       > ThreadHeapSizeInWords) {
     if (sizeInBytes <= ThreadBackupHeapSizeInBytes) {
-      expect(t, (t->flags & Thread::UseBackupHeapFlag) == 0);
+      expect(t, (t->getFlags() & Thread::UseBackupHeapFlag) == 0);
 
-      atomicOr(&(t->flags), Thread::UseBackupHeapFlag);
+      t->setFlag(Thread::UseBackupHeapFlag);
 
       return true;
     } else {
@@ -1790,7 +1806,7 @@ inline uint64_t runThread(Thread* t, uintptr_t*)
 
 inline bool startThread(Thread* t, Thread* p)
 {
-  p->flags |= Thread::JoinFlag;
+  p->setFlag(Thread::JoinFlag);
   return t->m->system->success(t->m->system->start(&(p->runnable)));
 }
 
@@ -1865,7 +1881,7 @@ inline void registerDaemon(Thread* t)
 {
   ACQUIRE_RAW(t, t->m->stateLock);
 
-  atomicOr(&(t->flags), Thread::DaemonFlag);
+  t->setFlag(Thread::DaemonFlag);
 
   ++t->m->daemonCount;
 
@@ -2698,7 +2714,7 @@ inline bool acquireSystem(Thread* t, Thread* target)
   ACQUIRE_RAW(t, t->m->stateLock);
 
   if (t->state != Thread::JoinedState) {
-    atomicOr(&(target->flags), Thread::SystemFlag);
+    target->setFlag(Thread::SystemFlag);
     return true;
   } else {
     return false;
@@ -2711,7 +2727,7 @@ inline void releaseSystem(Thread* t, Thread* target)
 
   assertT(t, t->state != Thread::JoinedState);
 
-  atomicAnd(&(target->flags), ~Thread::SystemFlag);
+  target->clearFlag(Thread::SystemFlag);
 }
 
 inline bool atomicCompareAndSwapObject(Thread* t,
@@ -2875,10 +2891,10 @@ inline void monitorAppendWait(Thread* t, GcMonitor* monitor)
 {
   assertT(t, monitor->owner() == t);
 
-  expect(t, (t->flags & Thread::WaitingFlag) == 0);
+  expect(t, (t->getFlags() & Thread::WaitingFlag) == 0);
   expect(t, t->waitNext == 0);
 
-  atomicOr(&(t->flags), Thread::WaitingFlag);
+  t->setFlag(Thread::WaitingFlag);
 
   if (monitor->waitTail()) {
     static_cast<Thread*>(monitor->waitTail())->waitNext = t;
@@ -2909,7 +2925,7 @@ inline void monitorRemoveWait(Thread* t, GcMonitor* monitor)
       }
 
       t->waitNext = 0;
-      atomicAnd(&(t->flags), ~Thread::WaitingFlag);
+      t->clearFlag(Thread::WaitingFlag);
 
       return;
     } else {
@@ -2967,7 +2983,7 @@ inline bool monitorWait(Thread* t, GcMonitor* monitor, int64_t time)
 
   monitor->depth() = depth;
 
-  if (t->flags & Thread::WaitingFlag) {
+  if (t->getFlags() & Thread::WaitingFlag) {
     monitorRemoveWait(t, monitor);
   } else {
     expect(t, not monitorFindWait(t, monitor));
@@ -2986,7 +3002,7 @@ inline Thread* monitorPollWait(Thread* t UNUSED, GcMonitor* monitor)
 
   if (next) {
     monitor->waitHead() = next->waitNext;
-    atomicAnd(&(next->flags), ~Thread::WaitingFlag);
+    next->clearFlag(Thread::WaitingFlag);
     next->waitNext = 0;
     if (next == monitor->waitTail()) {
       monitor->waitTail() = 0;
@@ -3099,7 +3115,7 @@ inline void wait(Thread* t, object o, int64_t milliseconds)
     bool interrupted = monitorWait(t, m, milliseconds);
 
     if (interrupted) {
-      if (t->m->alive or (t->flags & Thread::DaemonFlag) == 0) {
+      if (t->m->alive or (t->getFlags() & Thread::DaemonFlag) == 0) {
         t->m->classpath->clearInterrupted(t);
         throwNew(t, GcInterruptedException::Type);
       } else {
