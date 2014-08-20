@@ -317,8 +317,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   int64_t argument;
   memcpy(&argument, arguments + 2, 8);
 
-  t->flags |= Thread::TryNativeFlag;
-  THREAD_RESOURCE0(t, t->flags &= ~Thread::TryNativeFlag);
+  t->setFlag(Thread::TryNativeFlag);
+  THREAD_RESOURCE0(t, t->clearFlag(Thread::TryNativeFlag));
 
   return reinterpret_cast<int64_t (*)(int64_t)>(function)(argument);
 }

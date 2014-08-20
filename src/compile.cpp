@@ -2494,8 +2494,8 @@ unsigned traceSize(Thread* t)
 void NO_RETURN throwArithmetic(MyThread* t)
 {
   if (ensure(t, GcArithmeticException::FixedSize + traceSize(t))) {
-    atomicOr(&(t->flags), Thread::TracingFlag);
-    THREAD_RESOURCE0(t, atomicAnd(&(t->flags), ~Thread::TracingFlag));
+    t->setFlag(Thread::TracingFlag);
+    THREAD_RESOURCE0(t, t->clearFlag(Thread::TracingFlag));
 
     throwNew(t, GcArithmeticException::Type);
   } else {
@@ -2706,8 +2706,8 @@ uint64_t makeMultidimensionalArrayFromReference(MyThread* t,
 void NO_RETURN throwArrayIndexOutOfBounds(MyThread* t)
 {
   if (ensure(t, GcArrayIndexOutOfBoundsException::FixedSize + traceSize(t))) {
-    atomicOr(&(t->flags), Thread::TracingFlag);
-    THREAD_RESOURCE0(t, atomicAnd(&(t->flags), ~Thread::TracingFlag));
+    t->setFlag(Thread::TracingFlag);
+    THREAD_RESOURCE0(t, t->clearFlag(Thread::TracingFlag));
 
     throwNew(t, GcArrayIndexOutOfBoundsException::Type);
   } else {
@@ -3006,7 +3006,7 @@ void gcIfNecessary(MyThread* t)
 {
   stress(t);
 
-  if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
+  if (UNLIKELY(t->getFlags() & Thread::UseBackupHeapFlag)) {
     collect(t, Heap::MinorCollection);
   }
 }
@@ -8116,7 +8116,7 @@ object invoke(Thread* thread, GcMethod* method, ArgumentList* arguments)
   }
 
   if (t->exception) {
-    if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
+    if (UNLIKELY(t->getFlags() & Thread::UseBackupHeapFlag)) {
       collect(t, Heap::MinorCollection);
     }
 
@@ -8166,9 +8166,9 @@ class SignalHandler : public SignalRegistrar::Handler {
 
   void setException(MyThread* t) {
     if (ensure(t, pad(fixedSize) + traceSize(t))) {
-      atomicOr(&(t->flags), Thread::TracingFlag);
+      t->setFlag(Thread::TracingFlag);
       t->exception = makeThrowable(t, type);
-      atomicAnd(&(t->flags), ~Thread::TracingFlag);
+      t->clearFlag(Thread::TracingFlag);
     } else {
       // not enough memory available for a new exception and stack
       // trace -- use a preallocated instance instead
@@ -8183,7 +8183,7 @@ class SignalHandler : public SignalRegistrar::Handler {
   {
     MyThread* t = static_cast<MyThread*>(m->localThread->get());
     if (t and t->state == Thread::ActiveState) {
-      if (t->flags & Thread::TryNativeFlag) {
+      if (t->getFlags() & Thread::TryNativeFlag) {
         setException(t);
 
         popResources(t);
@@ -8873,9 +8873,9 @@ class MyProcessor : public Processor {
         }
 
         if (ensure(t, traceSize(target))) {
-          atomicOr(&(t->flags), Thread::TracingFlag);
+          t->setFlag(Thread::TracingFlag);
           trace = makeTrace(t, target);
-          atomicAnd(&(t->flags), ~Thread::TracingFlag);
+          t->clearFlag(Thread::TracingFlag);
         }
       }
 
@@ -8887,7 +8887,7 @@ class MyProcessor : public Processor {
 
     t->m->system->visit(t->systemThread, target->systemThread, &visitor);
 
-    if (UNLIKELY(t->flags & Thread::UseBackupHeapFlag)) {
+    if (UNLIKELY(t->getFlags() & Thread::UseBackupHeapFlag)) {
       PROTECT(t, visitor.trace);
 
       collect(t, Heap::MinorCollection);
