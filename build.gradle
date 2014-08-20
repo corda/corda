@@ -15,24 +15,31 @@ apply plugin: 'artifactory-publish'
 
 model {
   platforms {
-    create("linux-x86_64") {
-      operatingSystem "linux"
-      architecture "x86_64"
-    }
+    if(project.hasProperty("platform") && project.hasProperty("arch")) {
+      create("${platform}-${arch}") {
+        operatingSystem "${platform}"
+        architecture "${arch}"
+      }
+    } else {
+      create("linux-x86_64") {
+        operatingSystem "linux"
+        architecture "x86_64"
+      }
 
-    create("linux-i386") {
-      operatingSystem "linux"
-      architecture "i386"
-    }
+      create("linux-i386") {
+        operatingSystem "linux"
+        architecture "i386"
+      }
 
-    create("windows-x86_64") {
-      operatingSystem "windows"
-      architecture "x86_64"
-    }
+      create("windows-x86_64") {
+        operatingSystem "windows"
+        architecture "x86_64"
+      }
 
-    create("windows-i386") {
-      operatingSystem "windows"
-      architecture "i386"
+      create("windows-i386") {
+        operatingSystem "windows"
+        architecture "i386"
+      }
     }
   }
 
