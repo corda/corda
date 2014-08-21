@@ -18,10 +18,12 @@ import avian.Classes;
 import avian.InnerClassReference;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.GenericDeclaration;
 import java.lang.reflect.Method;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -38,7 +40,9 @@ import java.security.ProtectionDomain;
 import java.security.Permissions;
 import java.security.AllPermission;
 
-public final class Class <T> implements Type, AnnotatedElement {
+public final class Class <T>
+  implements Type, AnnotatedElement, GenericDeclaration
+{
   private static final int PrimitiveFlag = 1 <<  5;
   private static final int EnumFlag      = 1 << 14;
 
@@ -96,9 +100,8 @@ public final class Class <T> implements Type, AnnotatedElement {
       }
     }
 
-    return new String
-      (replace('/', '.', c.name, 0, c.name.length - 1), 0, c.name.length - 1,
-       false);
+    return Classes.makeString
+      (replace('/', '.', c.name, 0, c.name.length - 1), 0, c.name.length - 1);
   }
 
   public String getCanonicalName() {
@@ -496,6 +499,10 @@ public final class Class <T> implements Type, AnnotatedElement {
     return (vmClass.flags & Modifier.INTERFACE) != 0;
   }
 
+  public boolean isAnnotation() {
+    return (vmClass.flags & 0x2000) != 0;
+  }
+
   public Class getSuperclass() {
     return (vmClass.super_ == null ? null : SystemClassLoader.getClass(vmClass.super_));
   }
@@ -523,8 +530,8 @@ public final class Class <T> implements Type, AnnotatedElement {
 
   public URL getResource(String path) {
     if (! path.startsWith("/")) {
-      String name = new String
-        (vmClass.name, 0, vmClass.name.length - 1, false);
+      String name = Classes.makeString
+        (vmClass.name, 0, vmClass.name.length - 1);
       int index = name.lastIndexOf('/');
       if (index >= 0) {
         path = name.substring(0, index) + "/" + path;
@@ -646,5 +653,13 @@ public final class Class <T> implements Type, AnnotatedElement {
 
   public ProtectionDomain getProtectionDomain() {
     return Classes.getProtectionDomain(vmClass);
+  }
+
+  public TypeVariable<?>[] getTypeParameters() {
+    throw new UnsupportedOperationException("not yet implemented");
+  }
+
+  public Type[] getGenericInterfaces() {
+    throw new UnsupportedOperationException("not yet implemented");
   }
 }

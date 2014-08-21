@@ -158,6 +158,18 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_avian_Classes_makeString(Thread* t, object, uintptr_t* arguments)
+{
+  GcByteArray* array
+      = cast<GcByteArray>(t, reinterpret_cast<object>(arguments[0]));
+  int offset = arguments[1];
+  int length = arguments[2];
+
+  return reinterpret_cast<int64_t>(
+      t->m->classpath->makeString(t, array, offset, length));
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_avian_SystemClassLoader_findLoadedVMClass(Thread* t,
                                                     object,
                                                     uintptr_t* arguments)

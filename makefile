@@ -219,6 +219,7 @@ ifneq ($(android),)
 	classpath-cflags = -DBOOT_JAVAHOME
 	android-cflags = -I$(luni-native) \
 		-I$(android)/libnativehelper/include/nativehelper \
+		-I$(android)/libnativehelper \
 		-I$(android)/system/core/include \
 		-I$(android)/external/zlib \
 		-I$(android)/external/icu4c/i18n \
@@ -234,33 +235,34 @@ ifneq ($(android),)
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
 		-D__PROVIDE_FIXMES \
+		-DHAVE_OFF64_T \
 		-g3 \
 		-Werror
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
 
+	libziparchive-native := $(android)/system/core/libziparchive
+	libziparchive-ccs := $(libziparchive-native)/zip_archive.cc
+
+	libutils-native := $(android)/system/core/libutils
+	libutils-cpps := $(libutils-native)/FileMap.cpp
+
 	libnativehelper-native := $(android)/libnativehelper
 	libnativehelper-cpps := $(libnativehelper-native)/JniConstants.cpp \
 		$(libnativehelper-native)/toStringArray.cpp
 
-	crypto-native := $(android)/libcore/crypto/src/main/native
-
-	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
-
 	ifeq ($(platform),windows)
-		android-cflags += -D__STDC_CONSTANT_MACROS
+		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP
 		blacklist = $(luni-native)/java_io_Console.cpp \
-			$(luni-native)/java_lang_ProcessManager.cpp \
-			$(luni-native)/java_math_NativeBN.cpp \
-			$(luni-native)/libcore_net_RawSocket.cpp
+			$(luni-native)/java_lang_ProcessManager.cpp
 
 		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
 			$(android)/external/icu4c/lib/sicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32 -lshlwapi -lwsock32
 	else
-		android-cflags += -fPIC -DHAVE_SYS_UIO_H
-		blacklist = $(luni-native)/java_math_NativeBN.cpp
+		android-cflags += -fPIC -DHAVE_SYS_UIO_H -DHAVE_POSIX_FILEMAP
+		blacklist =
 
 		icu-libs := $(android)/external/icu4c/lib/libicui18n.a \
 			$(android)/external/icu4c/lib/libicuuc.a \
@@ -272,8 +274,8 @@ ifneq ($(android),)
 		$(icu-libs) \
 		$(android)/external/fdlibm/libfdm.a \
 		$(android)/external/expat/.libs/libexpat.a \
-		$(android)/openssl-upstream/libssl.a \
 		$(android)/openssl-upstream/libcrypto.a \
+		$(android)/openssl-upstream/libssl.a \
 		$(platform-lflags) \
 		-lstdc++
 
@@ -283,25 +285,46 @@ ifneq ($(android),)
 
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
-		$(call cpp-objects,$(crypto-cpps),$(crypto-native),$(build)) \
-		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build))
+		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build)) \
+		$(call cc-objects,$(libziparchive-ccs),$(libziparchive-native),$(build)) \
+		$(call cpp-objects,$(libutils-cpps),$(libutils-native),$(build))
 	luni-java = $(android)/libcore/luni/src/main/java
-	luni-javas := $(shell find $(luni-java) -name '*.java')
+
+	luni-blacklist = \
+		$(luni-java)/libcore/reflect/AnnotationAccess.java
+
+	luni-javas := \
+		$(filter-out $(luni-blacklist),$(shell find $(luni-java) -name '*.java'))
+
 	luni-nonjavas := $(shell find $(luni-java) -not -type d -not -name '*.java')
 	luni-copied-nonjavas = $(call noop-files,$(luni-nonjavas),$(luni-java),)
-	libdvm-java = $(android)/libcore/libdvm/src/main/java
-	libdvm-javas := $(shell find $(libdvm-java) -name '*.java')
-	crypto-java = $(android)/libcore/crypto/src/main/java
-	crypto-javas := $(shell find $(crypto-java) -name '*.java')
+
 	dalvik-java = $(android)/libcore/dalvik/src/main/java
-	dalvik-javas := $(shell find $(dalvik-java) -name '*.java')
+	dalvik-javas := \
+		$(dalvik-java)/dalvik/system/DalvikLogHandler.java \
+		$(dalvik-java)/dalvik/system/CloseGuard.java \
+		$(dalvik-java)/dalvik/system/VMDebug.java \
+		$(dalvik-java)/dalvik/system/BlockGuard.java \
+		$(dalvik-java)/dalvik/system/SocketTagger.java \
+		$(dalvik-java)/dalvik/system/DalvikLogging.java \
+
+	libart-java = $(android)/libcore/libart/src/main/java
+	libart-javas := \
+		$(libart-java)/dalvik/system/VMRuntime.java \
+		$(libart-java)/dalvik/system/VMStack.java \
+		$(libart-java)/java/lang/Thread.java \
+		$(libart-java)/java/lang/ThreadGroup.java \
+		$(libart-java)/java/lang/Enum.java \
+		$(libart-java)/java/lang/String.java \
+		$(libart-java)/java/lang/ref/Reference.java \
+		$(libart-java)/java/lang/reflect/AccessibleObject.java \
+
 	xml-java = $(android)/libcore/xml/src/main/java
 	xml-javas := $(shell find $(xml-java) -name '*.java')
 	android-classes = \
 		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
-		$(call java-classes,$(libdvm-javas),$(libdvm-java),$(build)/android) \
-		$(call java-classes,$(crypto-javas),$(crypto-java),$(build)/android) \
 		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
+		$(call java-classes,$(libart-javas),$(libart-java),$(build)/android) \
 		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
 	classpath = android
 
@@ -1113,6 +1136,7 @@ endif
 
 c-objects = $(foreach x,$(1),$(patsubst $(2)/%.c,$(3)/%.o,$(x)))
 cpp-objects = $(foreach x,$(1),$(patsubst $(2)/%.cpp,$(3)/%.o,$(x)))
+cc-objects = $(foreach x,$(1),$(patsubst $(2)/%.cc,$(3)/%.o,$(x)))
 asm-objects = $(foreach x,$(1),$(patsubst $(2)/%.$(asm-format),$(3)/%-asm.o,$(x)))
 java-classes = $(foreach x,$(1),$(patsubst $(2)/%.java,$(3)/%.class,$(x)))
 noop-files = $(foreach x,$(1),$(patsubst $(2)/%,$(3)/%,$(x)))
@@ -1383,13 +1407,23 @@ ifneq ($(classpath),avian)
 
 	ifeq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
+			$(classpath-src)/dalvik/system/BaseDexClassLoader.java \
+			$(classpath-src)/libcore/reflect/AnnotationAccess.java \
 			$(classpath-src)/sun/reflect/ConstantPool.java \
-			$(classpath-src)/java/lang/ReflectiveOperationException.java \
 			$(classpath-src)/java/net/ProtocolFamily.java \
 			$(classpath-src)/java/net/StandardProtocolFamily.java \
 			$(classpath-src)/sun/misc/Cleaner.java \
 			$(classpath-src)/sun/misc/Unsafe.java \
-			$(classpath-src)/java/lang/reflect/Proxy.java
+			$(classpath-src)/java/lang/Object.java \
+			$(classpath-src)/java/lang/Class.java \
+			$(classpath-src)/java/lang/ClassLoader.java \
+			$(classpath-src)/java/lang/Package.java \
+			$(classpath-src)/java/lang/reflect/Proxy.java \
+			$(classpath-src)/java/lang/reflect/Field.java \
+			$(classpath-src)/java/lang/reflect/SignatureParser.java \
+			$(classpath-src)/java/lang/reflect/Constructor.java \
+			$(classpath-src)/java/lang/reflect/AccessibleObject.java \
+			$(classpath-src)/java/lang/reflect/Method.java
 	endif
 else
 	classpath-sources := $(shell find $(classpath-src) -name '*.java')
@@ -1590,7 +1624,10 @@ $(build)/android-src/%.cpp: $(luni-native)/%.cpp
 $(build)/android-src/%.cpp: $(libnativehelper-native)/%.cpp
 	cp $(<) $(@)
 
-$(build)/android-src/%.cpp: $(crypto-native)/%.cpp
+$(build)/android-src/%.cpp: $(libziparchive-native)/%.cc
+	cp $(<) $(@)
+
+$(build)/android-src/%.cpp: $(libutils-native)/%.cpp
 	cp $(<) $(@)
 
 $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
@@ -1599,8 +1636,8 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 	$(cxx) $(android-cflags) $(classpath-extra-cflags) -c \
 		$$($(windows-path) $(<)) $(call output,$(@))
 
-$(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
-		$(dalvik-javas) $(xml-javas) $(luni-nonjavas)
+$(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
+		$(xml-javas) $(luni-nonjavas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1608,11 +1645,20 @@ $(build)/android.dep: $(luni-javas) $(libdvm-javas) $(crypto-javas) \
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
-	cp -a $(luni-java)/* $(libdvm-java)/* $(crypto-java)/* $(dalvik-java)/* \
-		$(xml-java)/* $(build)/android-src/
+	cp -a $(luni-java)/* $(xml-java)/* $(build)/android-src/
+	rm $(call noop-files,$(luni-blacklist),$(luni-java),$(build)/android-src)
+	(cd $(dalvik-java) && \
+			jar c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
+		| (cd $(build)/android-src && jar x)
+	(cd $(libart-java) && \
+			jar c $(call noop-files,$(libart-javas),$(libart-java),.)) \
+		| (cd $(build)/android-src && jar x)
+	(cd $(classpath-src) && \
+			jar c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \
+		| (cd $(build)/android-src && jar x)
+#	(cd android && jar c *)	| (cd $(build)/android-src && jar x)
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
-	$(javac) -Xmaxerrs 1000 -d $(build)/android -sourcepath $(luni-java) \
-		@$(build)/android.txt
+	$(javac) -Xmaxerrs 1000 -d $(build)/android @$(build)/android.txt
 	rm $(build)/android/sun/misc/Unsafe* \
 		$(build)/android/java/lang/reflect/Proxy*
 	for x in $(luni-copied-nonjavas); \

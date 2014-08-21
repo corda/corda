@@ -5665,6 +5665,8 @@ void runFinalizeThread(Thread* t)
   GcCleaner* cleanList = 0;
   PROTECT(t, cleanList);
 
+  fprintf(stderr, "run finalize thread!\n");
+
   while (true) {
     {
       ACQUIRE(t, t->m->stateLock);

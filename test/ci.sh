@@ -49,7 +49,7 @@ run make ${flags} process=interpret ${make_target}
   run make ${flags} mode=debug bootimage=true ${make_target} && \
   run make ${flags} bootimage=true ${make_target}
 
-! has_flag openjdk && \
+(! has_flag openjdk && ! has_flag android) && \
   run make ${flags} openjdk=$JAVA_HOME ${make_target}
 
 run make ${flags} tails=true continuations=true heapdump=true ${make_target}

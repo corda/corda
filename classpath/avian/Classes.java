@@ -559,4 +559,6 @@ public class Classes {
   private static native void acquireClassLock();
 
   private static native void releaseClassLock();
+
+  public static native String makeString(byte[] array, int offset, int length);
 }

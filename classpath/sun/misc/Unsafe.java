@@ -88,6 +88,14 @@ public final class Unsafe {
 
   public native void putLongVolatile(Object o, long offset, long x);
 
+  public long getLong(Object o, long offset) {
+    return getLongVolatile(o, offset);
+  }
+
+  public void putLong(Object o, long offset, long x) {
+    putLongVolatile(o, offset, x);
+  }
+
   public native void putOrderedLong(Object o, long offset, long x);
 
   public native void putOrderedInt(Object o, long offset, int x);

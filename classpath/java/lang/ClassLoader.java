@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.HashMap;
+import java.security.ProtectionDomain;
 
 public abstract class ClassLoader {
   private final ClassLoader parent;
@@ -90,6 +91,12 @@ public abstract class ClassLoader {
 
     return avian.SystemClassLoader.getClass
       (avian.Classes.defineVMClass(this, b, offset, length));
+  }
+
+  protected Class defineClass(String name, byte[] b, int offset, int length,
+                              ProtectionDomain domain)
+  {
+    return defineClass(name, b, offset, length);
   }
 
   protected Class findClass(String name) throws ClassNotFoundException {
@@ -194,6 +201,10 @@ public abstract class ClassLoader {
       urls.add(url);
     }
     return urls;
+  }
+
+  protected String findLibrary(String name) {
+    return null;
   }
 
   static native Class getCaller();

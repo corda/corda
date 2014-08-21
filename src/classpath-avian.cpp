@@ -343,30 +343,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
                                                object,
                                                uintptr_t* arguments)
 {
-  object instance = reinterpret_cast<object>(arguments[0]);
-  int code = arguments[1];
-  int offset = arguments[2];
-
-  switch (code) {
-  case ByteField:
-    return fieldAtOffset<int8_t>(instance, offset);
-  case BooleanField:
-    return fieldAtOffset<uint8_t>(instance, offset);
-  case CharField:
-    return fieldAtOffset<uint16_t>(instance, offset);
-  case ShortField:
-    return fieldAtOffset<int16_t>(instance, offset);
-  case IntField:
-    return fieldAtOffset<int32_t>(instance, offset);
-  case LongField:
-    return fieldAtOffset<int64_t>(instance, offset);
-  case FloatField:
-    return fieldAtOffset<uint32_t>(instance, offset);
-  case DoubleField:
-    return fieldAtOffset<uint64_t>(instance, offset);
-  default:
-    abort(t);
-  }
+  return getPrimitive(
+      t, reinterpret_cast<object>(arguments[0]), arguments[1], arguments[2]);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -374,10 +352,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
                                             object,
                                             uintptr_t* arguments)
 {
-  object instance = reinterpret_cast<object>(arguments[0]);
-  int offset = arguments[1];
-
-  return reinterpret_cast<int64_t>(fieldAtOffset<object>(instance, offset));
+  return reinterpret_cast<int64_t>(fieldAtOffset<object>(
+      reinterpret_cast<object>(arguments[0]), arguments[1]));
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -385,40 +361,14 @@ extern "C" AVIAN_EXPORT void JNICALL
                                                object,
                                                uintptr_t* arguments)
 {
-  object instance = reinterpret_cast<object>(arguments[0]);
-  int code = arguments[1];
-  int offset = arguments[2];
   int64_t value;
   memcpy(&value, arguments + 3, 8);
 
-  switch (code) {
-  case ByteField:
-    fieldAtOffset<int8_t>(instance, offset) = static_cast<int8_t>(value);
-    break;
-  case BooleanField:
-    fieldAtOffset<uint8_t>(instance, offset) = static_cast<uint8_t>(value);
-    break;
-  case CharField:
-    fieldAtOffset<uint16_t>(instance, offset) = static_cast<uint16_t>(value);
-    break;
-  case ShortField:
-    fieldAtOffset<int16_t>(instance, offset) = static_cast<int16_t>(value);
-    break;
-  case IntField:
-    fieldAtOffset<int32_t>(instance, offset) = static_cast<int32_t>(value);
-    break;
-  case LongField:
-    fieldAtOffset<int64_t>(instance, offset) = static_cast<int64_t>(value);
-    break;
-  case FloatField:
-    fieldAtOffset<uint32_t>(instance, offset) = static_cast<uint32_t>(value);
-    break;
-  case DoubleField:
-    fieldAtOffset<uint64_t>(instance, offset) = static_cast<uint64_t>(value);
-    break;
-  default:
-    abort(t);
-  }
+  setPrimitive(t,
+               reinterpret_cast<object>(arguments[0]),
+               arguments[1],
+               arguments[2],
+               value);
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
@@ -426,11 +376,10 @@ extern "C" AVIAN_EXPORT void JNICALL
                                             object,
                                             uintptr_t* arguments)
 {
-  object instance = reinterpret_cast<object>(arguments[0]);
-  int offset = arguments[1];
-  object value = reinterpret_cast<object>(arguments[2]);
-
-  setField(t, instance, offset, value);
+  setField(t,
+           reinterpret_cast<object>(arguments[0]),
+           arguments[1],
+           reinterpret_cast<object>(arguments[2]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -438,9 +387,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
                                              object,
                                              uintptr_t* arguments)
 {
-  GcClass* c = cast<GcClass>(t, reinterpret_cast<object>(arguments[0]));
-
-  return reinterpret_cast<int64_t>(make(t, c));
+  return reinterpret_cast<int64_t>(
+      make(t, cast<GcClass>(t, reinterpret_cast<object>(arguments[0]))));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -454,22 +402,10 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
                                           object,
                                           uintptr_t* arguments)
 {
-  GcMethod* method = cast<GcMethod>(t, reinterpret_cast<object>(arguments[0]));
-  object instance = reinterpret_cast<object>(arguments[1]);
-  object args = reinterpret_cast<object>(arguments[2]);
-
-  THREAD_RESOURCE0(t, {
-    if (t->exception) {
-      GcThrowable* exception = t->exception;
-      t->exception = makeThrowable(
-          t, GcInvocationTargetException::Type, 0, 0, exception);
-    }
-  });
-
-  unsigned returnCode = method->returnCode();
-
-  return reinterpret_cast<int64_t>(translateInvokeResult(
-      t, returnCode, t->m->processor->invokeArray(t, method, instance, args)));
+  return invokeMethod(t,
+                      cast<GcMethod>(t, reinterpret_cast<object>(arguments[0])),
+                      reinterpret_cast<object>(arguments[1]),
+                      reinterpret_cast<object>(arguments[2]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
@@ -809,38 +745,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_avian_Classes_makeMethod(Thread* t, object, uintptr_t* arguments)
 {
-  GcMethod* method = cast<GcMethod>(
-      t,
-      cast<GcArray>(t,
-                    cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))
-                        ->vmClass()
-                        ->methodTable())->body()[arguments[1]]);
-  PROTECT(t, method);
-
-  GcClass* c
-      = resolveClass(t, roots(t)->bootLoader(), "java/lang/reflect/Method");
-  PROTECT(t, c);
-
-  object instance = makeNew(t, c);
-  PROTECT(t, instance);
-
-  GcMethod* constructor = resolveMethod(t, c, "<init>", "(Lavian/VMMethod;)V");
-
-  t->m->processor->invoke(t, constructor, instance, method);
-
-  if (method->name()->body()[0] == '<') {
-    object oldInstance = instance;
-
-    c = resolveClass(
-        t, roots(t)->bootLoader(), "java/lang/reflect/Constructor");
-
-    object instance = makeNew(t, c);
-
-    GcMethod* constructor
-        = resolveMethod(t, c, "<init>", "(Ljava/lang/Method;)V");
-
-    t->m->processor->invoke(t, constructor, instance, oldInstance);
-  }
-
-  return reinterpret_cast<uintptr_t>(instance);
+  return reinterpret_cast<uintptr_t>(
+      makeMethod(t,
+                 cast<GcJclass>(t, reinterpret_cast<object>(arguments[0])),
+                 arguments[1]));
 }
