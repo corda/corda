@@ -129,10 +129,12 @@ publishing {
       from components.java
 
       artifact(javadocJar)
+
+      module "classpath-avian"
     }
 
-    create("tools-${currentPlatformArch}", IvyPublication) {
-      module "avian-tools-${currentPlatformArch}"
+    create("tools-avian-${currentPlatformArch}", IvyPublication) {
+      module "tools-avian-${currentPlatformArch}"
 
       def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
       def binSuffix = currentPlatform == "windows" ? ".exe" : ""
@@ -155,12 +157,12 @@ publishing {
           binSuffix = ".${publishBinSuffix}"
         }
 
-        module "${project.name}-${platform.name}"
+        module "runtime-avian-${platform.name}"
 
         artifact("${nativeBuildDir}/avian${binSuffix}") {
           name "avian"
           type publishBinSuffix
-          extension publishBinSuffix
+          extension binSuffix
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
