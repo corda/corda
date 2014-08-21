@@ -13,32 +13,43 @@ apply plugin: 'ivy-publish'
 apply plugin: 'java'
 apply plugin: 'artifactory-publish'
 
+public String adjustArch(String arch) {
+  switch(arch) {
+    case ~/.*64.*/: return 'x86_64'
+    default:        return 'i386'
+  }
+}
+
+public String adjustPlatform(String platform) {
+  switch(platform.replaceAll(' ', '').toLowerCase()) {
+    case ~/.*linux.*/:  return 'linux'
+    case ~/.*darwin.*/: return 'macosx'
+    case ~/.*osx.*/:    return 'macosx'
+    case ~/.*win.*/:    return 'windows'
+    default:            return platform
+  }
+}
+
+ext {
+  currentPlatform = adjustPlatform(System.properties['os.name'])
+  currentArch = adjustArch(System.properties['os.arch'])
+  currentPlatformArch = "${currentPlatform}-${currentArch}"
+
+  platform = project.hasProperty('platform') ? platform : currentPlatform
+  arch = project.hasProperty('arch') ? arch : currentArch
+  platformArch = "${platform}-${arch}"
+}
+
 model {
   platforms {
-    if(project.hasProperty("platform") && project.hasProperty("arch")) {
-      create("${platform}-${arch}") {
-        operatingSystem "${platform}"
-        architecture "${arch}"
-      }
-    } else {
-      create("linux-x86_64") {
-        operatingSystem "linux"
-        architecture "x86_64"
-      }
-
-      create("linux-i386") {
-        operatingSystem "linux"
-        architecture "i386"
-      }
-
-      create("windows-x86_64") {
-        operatingSystem "windows"
-        architecture "x86_64"
-      }
-
-      create("windows-i386") {
-        operatingSystem "windows"
-        architecture "i386"
+    create(platformArch) {
+      operatingSystem "${platform}"
+      architecture "${arch}"
+    }
+    if(platformArch != currentPlatformArch) {
+      create(currentPlatformArch) {
+        operatingSystem "${currentPlatform}"
+        architecture "${currentArch}"
       }
     }
   }
@@ -106,8 +117,6 @@ publishing {
   }
 
   publications {
-    def binSuffix=""
-    def publishBinSuffix="bin"
 
     ivy(IvyPublication) {
       from components.java
@@ -115,7 +124,22 @@ publishing {
       artifact(javadocJar)
     }
 
+    create("tools-${currentPlatformArch}", IvyPublication) {
+      module "avian-tools-${currentPlatformArch}"
+
+      def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
+      def binSuffix = currentPlatform == "windows" ? ".exe" : ""
+      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject") {
+        name "binaryToObject"
+        type publishBinSuffix
+        extension binSuffix
+      }
+    }
+
     platforms.each { platform ->
+      def binSuffix=""
+      def publishBinSuffix="bin"
+
       create(platform.name, IvyPublication) {
         def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
 
@@ -128,12 +152,6 @@ publishing {
 
         artifact("${nativeBuildDir}/avian${binSuffix}") {
           name "avian"
-          type publishBinSuffix
-          extension publishBinSuffix
-        }
-
-        artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
-          name "binaryToObject"
           type publishBinSuffix
           extension publishBinSuffix
         }
