@@ -38,6 +38,13 @@ ext {
   platform = project.hasProperty('platform') ? platform : currentPlatform
   arch = project.hasProperty('arch') ? arch : currentArch
   platformArch = "${platform}-${arch}"
+
+  java_home = System.properties.'java.home'
+  if(java_home.endsWith("/jre")) {
+    java_home = java_home.substring(0, java_home.length() - "/jre".length())
+  }
+  java_home = java_home
+
 }
 
 model {
@@ -60,7 +67,7 @@ model {
         executable "make"
         args "platform=${platform.operatingSystem.name}",
              "arch=${platform.architecture.name}"
-        environment JAVA_HOME: "/usr/local/java"
+        environment JAVA_HOME: java_home
       }
 
       assemble {
