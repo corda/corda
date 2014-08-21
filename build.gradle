@@ -74,9 +74,6 @@ sourceSets {
     java {
       srcDir 'classpath'
     }
-    resources {
-      srcDir 'classpath'
-    }
   }
 }
 
@@ -90,6 +87,10 @@ task javadocJar(type: Jar) {
   from {
     javadoc.destinationDir
   }
+}
+
+jar {
+  baseName "classpath-avian"
 }
 
 task install {
