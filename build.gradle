@@ -155,6 +155,12 @@ publishing {
 
       artifact(javadocJar)
 
+      artifact("vm.pro") {
+        name "vm"
+        type "proguard"
+        extension "pro"
+      }
+
       module "classpath-avian"
     }
 
