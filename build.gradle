@@ -13,6 +13,41 @@ apply plugin: 'ivy-publish'
 apply plugin: 'java'
 apply plugin: 'artifactory-publish'
 
+enum SupportedOS implements OperatingSystem {
+  LINUX, WINDOWS, MACOSX;
+
+  public static final SupportedOS CURRENT;
+
+  static {
+    String p = System.properties['os.name']
+    switch(p.replaceAll(' ', '').toLowerCase()) {
+      case ~/.*linux.*/:  CURRENT = LINUX; break;
+      case ~/.*darwin.*/: CURRENT = MACOSX; break;
+      case ~/.*osx.*/:    CURRENT = MACOSX; break;
+      case ~/.*win.*/:    CURRENT = WINDOWS; break;
+      default:
+        String m = "SupportedOS: unrecognized platform: ${p}"
+        println(m)
+        throw new IllegalArgumentException(m)
+    }
+  }
+
+  public String getName() {
+    return toString().toLowerCase()
+  }
+
+  public String  getDisplayName() {
+    return getName()
+  }
+  public boolean isCurrent() { return this == CURRENT }
+  public boolean isFreeBSD() { return false }
+  public boolean isLinux() { return this == LINUX }
+  public boolean isMacOsX() { return this == MACOSX }
+  public boolean isSolaris() { return false }
+  public boolean isWindows() { return this == WINDOWS }
+
+}
+
 public String adjustArch(String arch) {
   switch(arch) {
     case ~/.*64.*/: return 'x86_64'
@@ -20,18 +55,8 @@ public String adjustArch(String arch) {
   }
 }
 
-public String adjustPlatform(String platform) {
-  switch(platform.replaceAll(' ', '').toLowerCase()) {
-    case ~/.*linux.*/:  return 'linux'
-    case ~/.*darwin.*/: return 'macosx'
-    case ~/.*osx.*/:    return 'macosx'
-    case ~/.*win.*/:    return 'windows'
-    default:            return platform
-  }
-}
-
 ext {
-  currentPlatform = adjustPlatform(System.properties['os.name'])
+  currentPlatform = SupportedOS.CURRENT.getName()
   currentArch = adjustArch(System.properties['os.arch'])
   currentPlatformArch = "${currentPlatform}-${currentArch}"
 
@@ -50,12 +75,12 @@ ext {
 model {
   platforms {
     create(platformArch) {
-      operatingSystem "${platform}"
+      operatingSystem SupportedOS.valueOf(platform.toUpperCase())
       architecture "${arch}"
     }
     if(platformArch != currentPlatformArch) {
       create(currentPlatformArch) {
-        operatingSystem "${currentPlatform}"
+        operatingSystem SupportedOS.CURRENT
         architecture "${currentArch}"
       }
     }
