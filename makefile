@@ -226,6 +226,7 @@ ifneq ($(android),)
 		-I$(android)/external/icu4c/common \
 		-I$(android)/external/expat \
 		-I$(android)/external/openssl/include \
+		-I$(android)/external/openssl \
 		-I$(android)/libcore/include \
 		-I$(build)/android-src/external/fdlibm \
 		-I$(build)/android-src \
@@ -236,6 +237,7 @@ ifneq ($(android),)
 		-D__DARWIN_UNIX03=1 \
 		-D__PROVIDE_FIXMES \
 		-DHAVE_OFF64_T \
+		-DSTATIC_LIB \
 		-g3 \
 		-Werror
 
@@ -250,6 +252,9 @@ ifneq ($(android),)
 	libnativehelper-native := $(android)/libnativehelper
 	libnativehelper-cpps := $(libnativehelper-native)/JniConstants.cpp \
 		$(libnativehelper-native)/toStringArray.cpp
+
+	crypto-native := $(android)/external/conscrypt/src/main/native
+	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
 		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP
@@ -274,8 +279,8 @@ ifneq ($(android),)
 		$(icu-libs) \
 		$(android)/external/fdlibm/libfdm.a \
 		$(android)/external/expat/.libs/libexpat.a \
-		$(android)/openssl-upstream/libcrypto.a \
 		$(android)/openssl-upstream/libssl.a \
+		$(android)/openssl-upstream/libcrypto.a \
 		$(platform-lflags) \
 		-lstdc++
 
@@ -285,6 +290,7 @@ ifneq ($(android),)
 
 	classpath-objects = \
 		$(call cpp-objects,$(luni-cpps),$(luni-native),$(build)) \
+		$(call cpp-objects,$(crypto-cpps),$(crypto-native),$(build)) \
 		$(call cpp-objects,$(libnativehelper-cpps),$(libnativehelper-native),$(build)) \
 		$(call cc-objects,$(libziparchive-ccs),$(libziparchive-native),$(build)) \
 		$(call cpp-objects,$(libutils-cpps),$(libutils-native),$(build))
@@ -298,6 +304,12 @@ ifneq ($(android),)
 
 	luni-nonjavas := $(shell find $(luni-java) -not -type d -not -name '*.java')
 	luni-copied-nonjavas = $(call noop-files,$(luni-nonjavas),$(luni-java),)
+
+	crypto-java = $(android)/external/conscrypt/src/main/java
+	crypto-javas := $(shell find $(crypto-java) -name '*.java')
+
+	crypto-platform-java = $(android)/external/conscrypt/src/platform/java
+	crypto-platform-javas := $(shell find $(crypto-platform-java) -name '*.java')
 
 	dalvik-java = $(android)/libcore/dalvik/src/main/java
 	dalvik-javas := \
@@ -323,6 +335,8 @@ ifneq ($(android),)
 	xml-javas := $(shell find $(xml-java) -name '*.java')
 	android-classes = \
 		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
+		$(call java-classes,$(crypto-javas),$(crypto-java),$(build)/android) \
+		$(call java-classes,$(crypto-platform-javas),$(crypto-platform-java),$(build)/android) \
 		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
 		$(call java-classes,$(libart-javas),$(libart-java),$(build)/android) \
 		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
@@ -1624,6 +1638,9 @@ $(build)/android-src/%.cpp: $(luni-native)/%.cpp
 $(build)/android-src/%.cpp: $(libnativehelper-native)/%.cpp
 	cp $(<) $(@)
 
+$(build)/android-src/%.cpp: $(crypto-native)/%.cpp
+	cp $(<) $(@)
+
 $(build)/android-src/%.cpp: $(libziparchive-native)/%.cc
 	cp $(<) $(@)
 
@@ -1637,7 +1654,7 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
-		$(xml-javas) $(luni-nonjavas)
+		$(xml-javas) $(luni-nonjavas) $(crypto-javas) $(crypto-platform-javas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1652,6 +1669,12 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
 		| (cd $(build)/android-src && jar x)
 	(cd $(libart-java) && \
 			jar c $(call noop-files,$(libart-javas),$(libart-java),.)) \
+		| (cd $(build)/android-src && jar x)
+	(cd $(crypto-java) && \
+			jar c $(call noop-files,$(crypto-javas),$(crypto-java),.)) \
+		| (cd $(build)/android-src && jar x)
+	(cd $(crypto-platform-java) && \
+			jar c $(call noop-files,$(crypto-platform-javas),$(crypto-platform-java),.)) \
 		| (cd $(build)/android-src && jar x)
 	(cd $(classpath-src) && \
 			jar c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \

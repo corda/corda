@@ -9,6 +9,7 @@
    details. */
 
 struct JavaVM;
+struct _JavaVM;
 struct _JNIEnv;
 
 struct JniConstants {
@@ -16,6 +17,8 @@ struct JniConstants {
 };
 
 extern "C" int JNI_OnLoad(JavaVM*, void*);
+
+int libconscrypt_JNI_OnLoad(_JavaVM*, void*);
 
 #define _POSIX_C_SOURCE 200112L
 #undef _GNU_SOURCE
@@ -392,6 +395,8 @@ class MyClasspath : public Classpath {
     JniConstants::init(reinterpret_cast<_JNIEnv*>(t));
 
     JNI_OnLoad(reinterpret_cast< ::JavaVM*>(t->m), 0);
+
+    libconscrypt_JNI_OnLoad(reinterpret_cast< ::_JavaVM*>(t->m), 0);
 
     mayInitClasses_ = true;
   }

@@ -529,7 +529,9 @@ public final class Class <T>
   }
 
   public URL getResource(String path) {
-    if (! path.startsWith("/")) {
+    if (path.startsWith("/")) {
+      path = path.substring(1);
+    } else {
       String name = Classes.makeString
         (vmClass.name, 0, vmClass.name.length - 1);
       int index = name.lastIndexOf('/');

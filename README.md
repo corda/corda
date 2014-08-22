@@ -396,6 +396,11 @@ the following, starting from the Avian directory:
     (cd external/zlib && \
        git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
 
+    git clone https://android.googlesource.com/platform/external/conscrypt \
+      external/conscrypt
+    (cd external/conscrypt && \
+       git checkout 076138ff29d805ec5a32d6ad96a18ef08c7f1b11)
+
     git clone git://git.openssl.org/openssl.git openssl-upstream
     (cd openssl-upstream && git checkout OpenSSL_1_0_1h)
 
