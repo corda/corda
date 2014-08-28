@@ -13,7 +13,63 @@ apply plugin: 'ivy-publish'
 apply plugin: 'java'
 apply plugin: 'artifactory-publish'
 
+enum SupportedOS implements OperatingSystem {
+  LINUX, WINDOWS, MACOSX;
+
+  public static final SupportedOS CURRENT;
+
+  static {
+    String p = System.properties['os.name']
+    switch(p.replaceAll(' ', '').toLowerCase()) {
+      case ~/.*linux.*/:  CURRENT = LINUX; break;
+      case ~/.*darwin.*/: CURRENT = MACOSX; break;
+      case ~/.*osx.*/:    CURRENT = MACOSX; break;
+      case ~/.*win.*/:    CURRENT = WINDOWS; break;
+      default:
+        String m = "SupportedOS: unrecognized platform: ${p}"
+        println(m)
+        throw new IllegalArgumentException(m)
+    }
+  }
+
+  public String getName() {
+    return toString().toLowerCase()
+  }
+
+  public String  getDisplayName() {
+    return getName()
+  }
+  public boolean isCurrent() { return this == CURRENT }
+  public boolean isFreeBSD() { return false }
+  public boolean isLinux() { return this == LINUX }
+  public boolean isMacOsX() { return this == MACOSX }
+  public boolean isSolaris() { return false }
+  public boolean isWindows() { return this == WINDOWS }
+
+}
+
+public String adjustArch(String arch) {
+  switch(arch) {
+    case ~/.*64.*/: return 'x86_64'
+    default:        return 'i386'
+  }
+}
+
 ext {
+  currentPlatform = SupportedOS.CURRENT.getName()
+  currentArch = adjustArch(System.properties['os.arch'])
+  currentPlatformArch = "${currentPlatform}-${currentArch}"
+
+  platform = project.hasProperty('platform') ? platform : currentPlatform
+  arch = project.hasProperty('arch') ? arch : currentArch
+  platformArch = "${platform}-${arch}"
+
+  java_home = System.properties.'java.home'
+  if(java_home.endsWith("/jre")) {
+    java_home = java_home.substring(0, java_home.length() - "/jre".length())
+  }
+  java_home = java_home
+
   libDir = "${buildDir}/lib"
 }
 
@@ -47,30 +103,14 @@ dependencies {
 
 model {
   platforms {
-    if(project.hasProperty("platform") && project.hasProperty("arch")) {
-      create("${platform}-${arch}") {
-        operatingSystem "${platform}"
-        architecture "${arch}"
-      }
-    } else {
-      create("linux-x86_64") {
-        operatingSystem "linux"
-        architecture "x86_64"
-      }
-
-      create("linux-i386") {
-        operatingSystem "linux"
-        architecture "i386"
-      }
-
-      create("windows-x86_64") {
-        operatingSystem "windows"
-        architecture "x86_64"
-      }
-
-      create("windows-i386") {
-        operatingSystem "windows"
-        architecture "i386"
+    create(platformArch) {
+      operatingSystem SupportedOS.valueOf(platform.toUpperCase())
+      architecture "${arch}"
+    }
+    if(platformArch != currentPlatformArch) {
+      create(currentPlatformArch) {
+        operatingSystem SupportedOS.CURRENT
+        architecture "${currentArch}"
       }
     }
   }
@@ -90,8 +130,7 @@ model {
             dependsOn extractWin64
             args "win32=${libDir}/tools/win64"
             break
-        }
-        environment JAVA_HOME: "/usr/local/java"
+        environment JAVA_HOME: java_home
       }
 
       assemble {
@@ -130,9 +169,6 @@ sourceSets {
     java {
       srcDir 'classpath'
     }
-    resources {
-      srcDir 'classpath'
-    }
   }
 }
 
@@ -148,6 +184,10 @@ task javadocJar(type: Jar) {
   }
 }
 
+jar {
+  baseName "classpath-avian"
+}
+
 task install {
   dependsOn assemble, publish
 }
@@ -158,16 +198,37 @@ publishing {
   }
 
   publications {
-    def binSuffix=""
-    def publishBinSuffix="bin"
 
     ivy(IvyPublication) {
       from components.java
 
       artifact(javadocJar)
+
+      artifact("vm.pro") {
+        name "vm"
+        type "proguard"
+        extension "pro"
+      }
+
+      module "classpath-avian"
+    }
+
+    create("tools-avian-${currentPlatformArch}", IvyPublication) {
+      module "tools-avian-${currentPlatformArch}"
+
+      def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
+      def binSuffix = currentPlatform == "windows" ? ".exe" : ""
+      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject") {
+        name "binaryToObject"
+        type publishBinSuffix
+        extension binSuffix
+      }
     }
 
     platforms.each { platform ->
+      def binSuffix=""
+      def publishBinSuffix="bin"
+
       create(platform.name, IvyPublication) {
         def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
 
@@ -176,18 +237,12 @@ publishing {
           binSuffix = ".${publishBinSuffix}"
         }
 
-        module "${project.name}-${platform.name}"
+        module "runtime-avian-${platform.name}"
 
         artifact("${nativeBuildDir}/avian${binSuffix}") {
           name "avian"
           type publishBinSuffix
-          extension publishBinSuffix
-        }
-
-        artifact("${nativeBuildDir}/binaryToObject/binaryToObject") {
-          name "binaryToObject"
-          type publishBinSuffix
-          extension publishBinSuffix
+          extension binSuffix
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
