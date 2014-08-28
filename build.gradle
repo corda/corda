@@ -23,6 +23,16 @@ repositories {
     url "${System.env.HOME}/.ivy2/local"
     layout 'maven'
   }
+
+  ivy {
+    name "jcenter"
+    if(version.contains("SNAPSHOT")) {
+      url "http://oss.jfrog.org/artifactory/oss-snapshot-local"
+    } else {
+      url "http://oss.jfrog.org/artifactory/oss-release-local"
+    }
+    layout 'maven'
+  }
 }
 
 configurations {
