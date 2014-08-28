@@ -222,5 +222,5 @@ artifactory {
 }
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '2.0'
+  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.0-bin.zip'
 }
