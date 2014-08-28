@@ -117,19 +117,26 @@ model {
 
   tasks {
     platforms.each { platform ->
+      if(platform.operatingSystem.name == "windows") {
+        def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
+
+        task "extract${platform.name}"(type: Copy) {
+          from {
+            tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
+          }
+          into "${libDir}/tools"
+        }
+      }
+
       task "build${platform.name}"(type: Exec) {
         executable "make"
         args "platform=${platform.operatingSystem.name}",
              "arch=${platform.architecture.name}"
-        switch ( platform.name ) {
-          case "windows-i386":
-            dependsOn extractWin32
-            args "win32=${libDir}/tools/win32"
-            break
-          case "windows-x86_64":
-            dependsOn extractWin64
-            args "win32=${libDir}/tools/win64"
-            break
+        if(platform.operatingSystem.name == "windows") {
+            dependsOn "extract${platform.name}"
+            args "win32=${libDir}/tools/win32",
+                 "win64=${libDir}/tools/win64"
+        }
         environment JAVA_HOME: java_home
       }
 
@@ -138,20 +145,6 @@ model {
       }
     }
   }
-}
-
-task extractWin32(type: Copy) {
-  from {
-    tarTree(configurations."windows-i386".find { it.name =~ 'win32' })
-  }
-  into "${libDir}/tools"
-}
-
-task extractWin64(type: Copy) {
-  from {
-    tarTree(configurations."windows-x86_64".find { it.name =~ 'win64' })
-  }
-  into "${libDir}/tools"
 }
 
 tasks.withType(JavaCompile) {
