@@ -70,6 +70,35 @@ ext {
   }
   java_home = java_home
 
+  libDir = "${buildDir}/lib"
+}
+
+repositories {
+  ivy {
+    name "ivyLocal"
+    url "${System.env.HOME}/.ivy2/local"
+    layout 'maven'
+  }
+
+  ivy {
+    name "jcenter"
+    if(version.contains("SNAPSHOT")) {
+      url "http://oss.jfrog.org/artifactory/oss-snapshot-local"
+    } else {
+      url "http://oss.jfrog.org/artifactory/oss-release-local"
+    }
+    layout 'maven'
+  }
+}
+
+configurations {
+  create('windows-i386')
+  create('windows-x86_64')
+}
+
+dependencies {
+  'windows-i386' "com.readytalk:win32:1.0.0-SNAPSHOT"
+  'windows-x86_64' "com.readytalk:win64:1.0.0-SNAPSHOT"
 }
 
 model {
@@ -88,10 +117,26 @@ model {
 
   tasks {
     platforms.each { platform ->
+      if(platform.operatingSystem.name == "windows") {
+        def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
+
+        task "extract${platform.name}"(type: Copy) {
+          from {
+            tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
+          }
+          into "${libDir}/tools"
+        }
+      }
+
       task "build${platform.name}"(type: Exec) {
         executable "make"
         args "platform=${platform.operatingSystem.name}",
              "arch=${platform.architecture.name}"
+        if(platform.operatingSystem.name == "windows") {
+            dependsOn "extract${platform.name}"
+            args "win32=${libDir}/tools/win32",
+                 "win64=${libDir}/tools/win64"
+        }
         environment JAVA_HOME: java_home
       }
 
@@ -142,10 +187,7 @@ task install {
 
 publishing {
   repositories {
-    ivy {
-      url "${System.env.HOME}/.ivy2/local"
-      layout 'maven'
-    }
+    add(project.repositories."ivyLocal")
   }
 
   publications {
@@ -238,5 +280,5 @@ artifactory {
 }
 
 task wrapper(type: Wrapper) {
-  gradleVersion = '2.0'
+  distributionUrl = 'http://services.gradle.org/distributions/gradle-2.0-bin.zip'
 }
