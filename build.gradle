@@ -13,6 +13,28 @@ apply plugin: 'ivy-publish'
 apply plugin: 'java'
 apply plugin: 'artifactory-publish'
 
+ext {
+  libDir = "${buildDir}/lib"
+}
+
+repositories {
+  ivy {
+    name "ivyLocal"
+    url "${System.env.HOME}/.ivy2/local"
+    layout 'maven'
+  }
+}
+
+configurations {
+  create('windows-i386')
+  create('windows-x86_64')
+}
+
+dependencies {
+  'windows-i386' "com.readytalk:win32:1.0.0-SNAPSHOT"
+  'windows-x86_64' "com.readytalk:win64:1.0.0-SNAPSHOT"
+}
+
 model {
   platforms {
     if(project.hasProperty("platform") && project.hasProperty("arch")) {
@@ -49,6 +71,16 @@ model {
         executable "make"
         args "platform=${platform.operatingSystem.name}",
              "arch=${platform.architecture.name}"
+        switch ( platform.name ) {
+          case "windows-i386":
+            dependsOn extractWin32
+            args "win32=${libDir}/tools/win32"
+            break
+          case "windows-x86_64":
+            dependsOn extractWin64
+            args "win32=${libDir}/tools/win64"
+            break
+        }
         environment JAVA_HOME: "/usr/local/java"
       }
 
@@ -57,6 +89,20 @@ model {
       }
     }
   }
+}
+
+task extractWin32(type: Copy) {
+  from {
+    tarTree(configurations."windows-i386".find { it.name =~ 'win32' })
+  }
+  into "${libDir}/tools"
+}
+
+task extractWin64(type: Copy) {
+  from {
+    tarTree(configurations."windows-x86_64".find { it.name =~ 'win64' })
+  }
+  into "${libDir}/tools"
 }
 
 tasks.withType(JavaCompile) {
@@ -98,10 +144,7 @@ task install {
 
 publishing {
   repositories {
-    ivy {
-      url "${System.env.HOME}/.ivy2/local"
-      layout 'maven'
-    }
+    add(project.repositories."ivyLocal")
   }
 
   publications {
@@ -147,6 +190,7 @@ publishing {
   }
 }
 
+/**
 artifactoryPublish {
   dependsOn assemble
 }
@@ -177,6 +221,7 @@ artifactory {
     }
   }
 }
+**/
 
 task wrapper(type: Wrapper) {
   gradleVersion = '2.0'
