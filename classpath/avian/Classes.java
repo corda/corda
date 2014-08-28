@@ -43,6 +43,8 @@ public class Classes {
 
   public static native VMClass getVMClass(Object o);
 
+  public static native VMClass toVMClass(Class c);
+
   private static native VMClass resolveVMClass(ClassLoader loader, byte[] spec)
     throws ClassNotFoundException;
 
@@ -391,10 +393,18 @@ public class Classes {
     return new String(array, 0, array.length - 1);
   }
 
+  private static boolean match(VMClass a, VMClass b) {
+    if (a.arrayDimensions > 0) {
+      return match(a.arrayElementClass, b.arrayElementClass);
+    } else {
+      return a == b;
+    }
+  }
+
   public static boolean match(Class[] a, Class[] b) {
     if (a.length == b.length) {
       for (int i = 0; i < a.length; ++i) {
-        if (! a[i].isAssignableFrom(b[i])) {
+        if (! match(toVMClass(a[i]), toVMClass(b[i]))) {
           return false;
         }
       }
