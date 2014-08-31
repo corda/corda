@@ -1668,21 +1668,21 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
 	cp -a $(luni-java)/* $(xml-java)/* $(build)/android-src/
 	rm $(call noop-files,$(luni-blacklist),$(luni-java),$(build)/android-src)
 	(cd $(dalvik-java) && \
-			jar c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(libart-java) && \
-			jar c $(call noop-files,$(libart-javas),$(libart-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(libart-javas),$(libart-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(crypto-java) && \
-			jar c $(call noop-files,$(crypto-javas),$(crypto-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(crypto-javas),$(crypto-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(crypto-platform-java) && \
-			jar c $(call noop-files,$(crypto-platform-javas),$(crypto-platform-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(crypto-platform-javas),$(crypto-platform-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(classpath-src) && \
-			jar c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \
-		| (cd $(build)/android-src && jar x)
-#	(cd android && jar c *)	| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \
+		| (cd $(build)/android-src && $(jar) x)
+#	(cd android && $(jar) c *)	| (cd $(build)/android-src && $(jar) x)
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android @$(build)/android.txt
 	rm $(build)/android/sun/misc/Unsafe* \
