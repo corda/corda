@@ -240,6 +240,9 @@ ifneq ($(android),)
 		-DSTATIC_LIB \
 		-g3 \
 		-Werror
+	ifeq ($(platform),macosx)
+	    android-cflags += -Doff64_t=off_t -Dlseek64=lseek
+	endif
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
 
