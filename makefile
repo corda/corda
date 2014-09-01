@@ -270,8 +270,8 @@ ifneq ($(android),)
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp
 
-		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
-			$(android)/external/icu4c/lib/sicuuc.a \
+		icu-libs := $(android)/external/icu4c/lib/libsicuin.a \
+			$(android)/external/icu4c/lib/libsicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32 -lshlwapi -lwsock32
 	else
