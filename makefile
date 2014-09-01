@@ -266,7 +266,7 @@ ifneq ($(android),)
 	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
-		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP
+		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP -D__STDC_FORMAT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp
 
