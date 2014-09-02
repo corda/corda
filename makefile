@@ -236,10 +236,10 @@ ifneq ($(android),)
 		-DJNI_JARJAR_PREFIX= \
 		-D__DARWIN_UNIX03=1 \
 		-D__PROVIDE_FIXMES \
-		-DHAVE_OFF64_T \
 		-DSTATIC_LIB \
 		-g3 \
-		-Werror
+		-Werror \
+		-Wno-shift-count-overflow
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
 
@@ -285,6 +285,7 @@ ifneq ($(android),)
 		-lstdc++
 
 	ifeq ($(platform),linux)
+		android-cflags += -DHAVE_OFF64_T
 		classpath-lflags += -lrt
 	endif
 

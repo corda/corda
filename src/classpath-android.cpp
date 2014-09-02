@@ -254,13 +254,14 @@ class MyClasspath : public Classpath {
   {
     // force monitor creation so we don't get an OutOfMemory error
     // later when we try to acquire it:
-    objectMonitor(t, t->javaThread, true);
+    objectMonitor(t, t->javaThread->lock(), true);
 
     THREAD_RESOURCE0(t, {
-      vm::acquire(t, t->javaThread);
+      vm::acquire(t, t->javaThread->lock());
       t->clearFlag(Thread::ActiveFlag);
-      vm::notifyAll(t, t->javaThread);
-      vm::release(t, t->javaThread);
+      t->javaThread->peer() = 0;
+      vm::notifyAll(t, t->javaThread->lock());
+      vm::release(t, t->javaThread->lock());
     });
 
     GcMethod* method = resolveMethod(
