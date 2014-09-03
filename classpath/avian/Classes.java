@@ -394,6 +394,13 @@ public class Classes {
   }
 
   private static boolean match(VMClass a, VMClass b) {
+    // TODO: in theory we should be able to just do an == comparison
+    // here instead of recursively comparing array element types.
+    // However, the VM currently can create multiple array classes for
+    // the same element type.  We should fix that so that there's only
+    // ever one of each per classloader, eliminating the need for a
+    // recursive comparison.  See also the native implementation of
+    // isAssignableFrom.
     if (a.arrayDimensions > 0) {
       return match(a.arrayElementClass, b.arrayElementClass);
     } else {
