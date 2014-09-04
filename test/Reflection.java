@@ -260,10 +260,29 @@ public class Reflection {
            .getEnclosingMethod().equals
            (Reflection.class.getMethod
             ("main", new Class[] { String[].class })));
+
+    Slithy.class.getMethod("tove", Gybe.class);
+
+    try {
+      Slithy.class.getMethod("tove", Bandersnatch.class);
+      expect(false);
+    } catch (NoSuchMethodException e) {
+      // cool
+    }
   }
 
   protected static class Baz {
     public int foo = 42;
+  }
+}
+
+class Bandersnatch { }
+
+class Gybe extends Bandersnatch { }
+
+class Slithy {
+  public static void tove(Gybe gybe) {
+    // ignore
   }
 }
 
