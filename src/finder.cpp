@@ -615,6 +615,7 @@ class BuiltinElement : public JarElement {
                  const char* name,
                  const char* libraryName)
       : JarElement(s, allocator, name, false),
+        library(0),
         libraryName(libraryName ? copy(allocator, libraryName) : 0)
   {
   }
@@ -657,6 +658,8 @@ class BuiltinElement : public JarElement {
         } else if (DebugFind) {
           fprintf(stderr, "unable to find %s in %s\n", symbolName, libraryName);
         }
+      } else if (DebugFind) {
+        fprintf(stderr, "unable to load %s\n", libraryName);
       }
     }
   }
@@ -673,7 +676,9 @@ class BuiltinElement : public JarElement {
 
   virtual void dispose()
   {
-    library->disposeAll();
+    if (library) {
+      library->disposeAll();
+    }
     if (libraryName) {
       allocator->free(libraryName, strlen(libraryName) + 1);
     }
