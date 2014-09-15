@@ -984,6 +984,12 @@ extern "C" AVIAN_EXPORT void JNICALL
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
+    Avian_java_lang_Thread_nativeSetName(Thread*, object, uintptr_t*)
+{
+  // ignore
+}
+
+extern "C" AVIAN_EXPORT void JNICALL
     Avian_java_lang_Thread_sleep(Thread* t, object, uintptr_t* arguments)
 {
   object lock = reinterpret_cast<object>(arguments[0]);
