@@ -3493,9 +3493,9 @@ extern "C" AVIAN_EXPORT jboolean JNICALL
   return version <= JNI_VERSION_1_6;
 }
 
-extern "C" AVIAN_EXPORT jboolean JNICALL EXPORT(JVM_IsNaN)(jdouble)
+extern "C" AVIAN_EXPORT jboolean JNICALL EXPORT(JVM_IsNaN)(jdouble v)
 {
-  abort();
+  return isnan(v);
 }
 
 uint64_t jvmFillInStackTrace(Thread* t, uintptr_t* arguments)
