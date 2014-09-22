@@ -62,10 +62,13 @@ const bool DebugCompile = false;
 const bool DebugNatives = false;
 const bool DebugCallTable = false;
 const bool DebugMethodTree = false;
-const bool DebugFrameMaps = false;
 const bool DebugInstructions = false;
 
+#ifndef AVIAN_AOT_ONLY
+const bool DebugFrameMaps = false;
 const bool CheckArrayBounds = true;
+const unsigned ExecutableAreaSizeInBytes = 30 * 1024 * 1024;
+#endif
 
 #ifdef AVIAN_CONTINUATIONS
 const bool Continuations = true;
@@ -76,8 +79,6 @@ const bool Continuations = false;
 const unsigned MaxNativeCallFootprint = TargetBytesPerWord == 8 ? 4 : 5;
 
 const unsigned InitialZoneCapacityInBytes = 64 * 1024;
-
-const unsigned ExecutableAreaSizeInBytes = 30 * 1024 * 1024;
 
 enum ThunkIndex {
   compileMethodIndex,
@@ -2012,8 +2013,6 @@ unsigned savedTargetIndex(MyThread* t UNUSED, GcMethod* method)
 
 GcCallNode* findCallNode(MyThread* t, void* address);
 
-void insertCallNode(MyThread* t, GcCallNode* node);
-
 void* findExceptionHandler(Thread* t, GcMethod* method, void* ip)
 {
   if (t->exception) {
@@ -2289,10 +2288,6 @@ uintptr_t nativeThunk(MyThread* t);
 
 uintptr_t bootNativeThunk(MyThread* t);
 
-uintptr_t aioobThunk(MyThread* t);
-
-uintptr_t stackOverflowThunk(MyThread* t);
-
 uintptr_t virtualThunk(MyThread* t, unsigned index);
 
 bool unresolved(MyThread* t, uintptr_t methodAddress);
@@ -2397,18 +2392,6 @@ void checkMethod(Thread* t, GcMethod* method, bool shouldBeStatic)
              method->class_()->name()->body().begin(),
              method->name()->body().begin(),
              method->spec()->body().begin(),
-             shouldBeStatic ? "static" : "non-static");
-  }
-}
-
-void checkField(Thread* t, GcField* field, bool shouldBeStatic)
-{
-  if (((field->flags() & ACC_STATIC) == 0) == shouldBeStatic) {
-    throwNew(t,
-             GcIncompatibleClassChangeError::Type,
-             "expected %s.%s to be %s",
-             field->class_()->name()->body().begin(),
-             field->name()->body().begin(),
              shouldBeStatic ? "static" : "non-static");
   }
 }
@@ -3018,6 +3001,35 @@ void idleIfNecessary(MyThread* t)
   }
 }
 
+bool useLongJump(MyThread* t, uintptr_t target)
+{
+  uintptr_t reach = t->arch->maximumImmediateJump();
+  FixedAllocator* a = codeAllocator(t);
+  uintptr_t start = reinterpret_cast<uintptr_t>(a->memory.begin());
+  uintptr_t end = reinterpret_cast<uintptr_t>(a->memory.begin())
+                  + a->memory.count;
+  assertT(t, end - start < reach);
+
+  return (target > end && (target - start) > reach)
+         or (target < start && (end - target) > reach);
+}
+
+FILE* compileLog = 0;
+
+void logCompile(MyThread* t,
+                const void* code,
+                unsigned size,
+                const char* class_,
+                const char* name,
+                const char* spec);
+
+unsigned simpleFrameMapTableSize(MyThread* t, GcMethod* method, GcIntArray* map)
+{
+  int size = frameMapSizeInBits(t, method);
+  return ceilingDivide(map->length() * size, 32 + size);
+}
+
+#ifndef AVIAN_AOT_ONLY
 unsigned resultSize(MyThread* t, unsigned code)
 {
   switch (code) {
@@ -3067,19 +3079,6 @@ ir::Value* popField(MyThread* t, Frame* frame, int code)
   default:
     abort(t);
   }
-}
-
-bool useLongJump(MyThread* t, uintptr_t target)
-{
-  uintptr_t reach = t->arch->maximumImmediateJump();
-  FixedAllocator* a = codeAllocator(t);
-  uintptr_t start = reinterpret_cast<uintptr_t>(a->memory.begin());
-  uintptr_t end = reinterpret_cast<uintptr_t>(a->memory.begin())
-                  + a->memory.count;
-  assertT(t, end - start < reach);
-
-  return (target > end && (target - start) > reach)
-         or (target < start && (end - target) > reach);
 }
 
 void compileSafePoint(MyThread* t, Compiler* c, Frame* frame)
@@ -3875,6 +3874,22 @@ lir::TernaryOperation toCompilerBinaryOp(MyThread* t, unsigned instruction)
     return lir::Multiply;
   default:
     abort(t);
+  }
+}
+
+uintptr_t aioobThunk(MyThread* t);
+
+uintptr_t stackOverflowThunk(MyThread* t);
+
+void checkField(Thread* t, GcField* field, bool shouldBeStatic)
+{
+  if (((field->flags() & ACC_STATIC) == 0) == shouldBeStatic) {
+    throwNew(t,
+             GcIncompatibleClassChangeError::Type,
+             "expected %s.%s to be %s",
+             field->class_()->name()->body().begin(),
+             field->name()->body().begin(),
+             shouldBeStatic ? "static" : "non-static");
   }
 }
 
@@ -6167,15 +6182,6 @@ branch:
   goto start;
 }
 
-FILE* compileLog = 0;
-
-void logCompile(MyThread* t,
-                const void* code,
-                unsigned size,
-                const char* class_,
-                const char* name,
-                const char* spec);
-
 int resolveIpForwards(Context* context, int start, int end)
 {
   if (start < 0) {
@@ -6621,12 +6627,6 @@ int compareTraceElementPointers(const void* va, const void* vb)
   }
 }
 
-unsigned simpleFrameMapTableSize(MyThread* t, GcMethod* method, GcIntArray* map)
-{
-  int size = frameMapSizeInBits(t, method);
-  return ceilingDivide(map->length() * size, 32 + size);
-}
-
 uint8_t* finish(MyThread* t,
                 FixedAllocator* allocator,
                 avian::codegen::Assembler* a,
@@ -6753,6 +6753,8 @@ GcIntArray* makeSimpleFrameMapTable(MyThread* t,
 
   return table;
 }
+
+void insertCallNode(MyThread* t, GcCallNode* node);
 
 void finish(MyThread* t, FixedAllocator* allocator, Context* context)
 {
@@ -6919,9 +6921,7 @@ void finish(MyThread* t, FixedAllocator* allocator, Context* context)
                    "<clinit>") == 0) {
     trap();
   }
-#if !defined(AVIAN_AOT_ONLY)
   syncInstructionCache(start, codeSize);
-#endif
 }
 
 void compile(MyThread* t, Context* context)
@@ -7063,6 +7063,7 @@ void compile(MyThread* t, Context* context)
   }
   free(stackMap);
 }
+#endif // not AVIAN_AOT_ONLY
 
 void updateCall(MyThread* t,
                 avian::codegen::lir::UnaryOperation op,
@@ -8249,7 +8250,9 @@ class MyProcessor;
 
 MyProcessor* processor(MyThread* t);
 
+#ifndef AVIAN_AOT_ONLY
 void compileThunks(MyThread* t, FixedAllocator* allocator);
+#endif
 
 class CompilationHandlerList {
  public:
@@ -8794,7 +8797,7 @@ class MyProcessor : public Processor {
   virtual void dispose()
   {
     if (codeAllocator.memory.begin()) {
-#if !defined(AVIAN_AOT_ONLY)
+#ifndef AVIAN_AOT_ONLY
       Memory::free(codeAllocator.memory);
 #endif
     }
@@ -8973,7 +8976,7 @@ class MyProcessor : public Processor {
 
   virtual void boot(Thread* t, BootImage* image, uint8_t* code)
   {
-#if !defined(AVIAN_AOT_ONLY)
+#ifndef AVIAN_AOT_ONLY
     if (codeAllocator.memory.begin() == 0) {
       codeAllocator.memory = Memory::allocate(ExecutableAreaSizeInBytes,
                                               Memory::ReadWriteExecute);
@@ -9370,14 +9373,6 @@ GcArray* insertCallNode(MyThread* t,
   return table;
 }
 
-void insertCallNode(MyThread* t, GcCallNode* node)
-{
-  GcArray* newArray = insertCallNode(
-      t, compileRoots(t)->callTable(), &(processor(t)->callTableSize), node);
-  // sequence point, for gc (don't recombine statements)
-  compileRoots(t)->setCallTable(t, newArray);
-}
-
 GcHashMap* makeClassMap(Thread* t,
                         unsigned* table,
                         unsigned count,
@@ -9764,6 +9759,15 @@ intptr_t getThunk(MyThread* t, Thunk thunk)
                                     + (thunk * p->thunks.table.length));
 }
 
+#ifndef AVIAN_AOT_ONLY
+void insertCallNode(MyThread* t, GcCallNode* node)
+{
+  GcArray* newArray = insertCallNode(
+      t, compileRoots(t)->callTable(), &(processor(t)->callTableSize), node);
+  // sequence point, for gc (don't recombine statements)
+  compileRoots(t)->setCallTable(t, newArray);
+}
+
 BootImage::Thunk thunkToThunk(const MyProcessor::Thunk& thunk, uint8_t* base)
 {
   return BootImage::Thunk(
@@ -10000,6 +10004,17 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
   }
 }
 
+uintptr_t aioobThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->thunks.aioob.start);
+}
+
+uintptr_t stackOverflowThunk(MyThread* t)
+{
+  return reinterpret_cast<uintptr_t>(processor(t)->thunks.stackOverflow.start);
+}
+#endif // not AVIAN_AOT_ONLY
+
 MyProcessor* processor(MyThread* t)
 {
   return static_cast<MyProcessor*>(t->m->processor);
@@ -10028,16 +10043,6 @@ uintptr_t nativeThunk(MyThread* t)
 uintptr_t bootNativeThunk(MyThread* t)
 {
   return reinterpret_cast<uintptr_t>(processor(t)->bootThunks.native.start);
-}
-
-uintptr_t aioobThunk(MyThread* t)
-{
-  return reinterpret_cast<uintptr_t>(processor(t)->thunks.aioob.start);
-}
-
-uintptr_t stackOverflowThunk(MyThread* t)
-{
-  return reinterpret_cast<uintptr_t>(processor(t)->thunks.stackOverflow.start);
 }
 
 bool unresolved(MyThread* t, uintptr_t methodAddress)
@@ -10119,7 +10124,7 @@ uintptr_t virtualThunk(MyThread* t, unsigned index)
 }
 
 void compile(MyThread* t,
-             FixedAllocator* allocator,
+             FixedAllocator* allocator UNUSED,
              BootContext* bootContext,
              GcMethod* method)
 {
@@ -10134,6 +10139,10 @@ void compile(MyThread* t,
   }
 
   assertT(t, (method->flags() & ACC_NATIVE) == 0);
+
+#ifdef AVIAN_AOT_ONLY
+  abort(t);
+#else
 
   // We must avoid acquiring any locks until after the first pass of
   // compilation, since this pass may trigger classloading operations
@@ -10227,6 +10236,7 @@ void compile(MyThread* t,
              method,
              compileRoots(t)->methodTreeSentinal(),
              compareIpToMethodBounds);
+#endif // not AVIAN_AOT_ONLY
 }
 
 GcCompileRoots* compileRoots(Thread* t)
