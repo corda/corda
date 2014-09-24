@@ -1826,7 +1826,7 @@ $(build)/%-build.o: $(lzma)/C/%.c
 	$(build-cc) -DPOINTER_SIZE=$(pointer-size) -O0 -g3 $(lzma-build-cflags) \
 		-c $(<) -o $(@)
 
-$(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp
+$(jni-objects): $(build)/%.o: $(classpath-src)/%.cpp $(vm-depends)
 	$(compile-object)
 
 $(static-library): $(vm-objects) $(classpath-objects) $(vm-heapwalk-objects) \
