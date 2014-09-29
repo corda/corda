@@ -965,10 +965,14 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Thread_nativeGetStatus(Thread*, object, uintptr_t*)
+    Avian_java_lang_Thread_nativeGetStatus(Thread*,
+                                           object,
+                                           uintptr_t* arguments)
 {
-  // todo
-  return 1;
+  enum { New, Runnable, Blocked, Waiting, TimedWaiting, Terminated };
+
+  // todo: more detail? (e.g. waiting, terminated, etc.)
+  return arguments[1] ? Runnable : New;
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
