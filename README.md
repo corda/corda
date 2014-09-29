@@ -396,10 +396,9 @@ the following, starting from the Avian directory:
     (cd external/zlib && \
        git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
 
-    git clone https://android.googlesource.com/platform/external/conscrypt \
-      external/conscrypt
+    git clone https://github.com/dicej/android-conscrypt external/conscrypt
     (cd external/conscrypt && \
-       git checkout 076138ff29d805ec5a32d6ad96a18ef08c7f1b11)
+       git checkout a96719f834232634e9160873bd4c44834b84eb15)
 
     git clone git://git.openssl.org/openssl.git openssl-upstream
     (cd openssl-upstream && git checkout OpenSSL_1_0_1h)
@@ -434,7 +433,11 @@ for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
 Note that we use https://github.com/dicej/android-libcore64 above
 instead of the upstream
 https://android.googlesource.com/platform/libcore repository, since
-the former has patches to provide better support for non-Linux platforms.
+the former has patches to provide better support for non-Linux
+platforms.  We have also forked
+https://android.googlesource.com/platform/external/conscrypt as
+https://github.com/dicej/android-conscrypt to patch that project as
+well.
 
 Also note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build
