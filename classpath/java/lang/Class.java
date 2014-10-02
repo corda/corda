@@ -506,6 +506,51 @@ public final class Class <T>
   public Class getSuperclass() {
     return (vmClass.super_ == null ? null : SystemClassLoader.getClass(vmClass.super_));
   }
+  
+  private enum ClassType { GLOBAL, MEMBER, LOCAL, ANONYMOUS }
+  
+  /**
+    * Determines the class type.
+    * 
+    * There are four class types: global (no dollar sign), anonymous (only digits after the dollar sign),
+    * local (starts with digits after the dollar, ends in class name) and member (does not start with digits
+    * after the dollar sign).
+    * 
+    * @return the class type
+    */
+  private ClassType getClassType() {
+    final String name = getName();
+    // Find the last dollar, as classes can be nested
+    int dollar = name.lastIndexOf('$');
+    if (dollar < 0) return ClassType.GLOBAL;
+
+    // Find the first non-digit after the dollar, if any
+    final char[] chars = name.toCharArray();
+    int skipDigits;
+    for (skipDigits = dollar + 1; skipDigits < chars.length; skipDigits++) {
+       if (chars[skipDigits] < '0' || chars[skipDigits] > '9') break;
+    }
+
+    if (skipDigits == chars.length) {
+      return ClassType.ANONYMOUS;
+    } else if (skipDigits > dollar + 1) {
+      return ClassType.MEMBER;
+    } else {
+      return ClassType.LOCAL;
+    }
+  }
+    
+  public boolean isAnonymousClass () {
+    return getClassType() == ClassType.ANONYMOUS;
+  }
+  
+  public boolean isLocalClass () {
+    return getClassType() == ClassType.LOCAL;
+  }
+
+  public boolean isMemberClass () {
+    return getClassType() == ClassType.MEMBER;
+  }
 
   public boolean isArray() {
     return vmClass.arrayDimensions != 0;
@@ -662,6 +707,12 @@ public final class Class <T>
   }
 
   public Type[] getGenericInterfaces() {
-    throw new UnsupportedOperationException("not yet implemented");
+    byte[] signArray = (byte[])vmClass.addendum.signature;
+    String sign = new String(signArray, 0, signArray.length - 1);
+    
+  	System.out.println("signature: " + sign);
+    //throw new UnsupportedOperationException("not yet implemented");
+    return new Type[] {};
+    //TODO implement
   }
 }
