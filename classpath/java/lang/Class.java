@@ -28,12 +28,14 @@ import java.lang.reflect.Proxy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.SignatureParser;
 import java.lang.annotation.Annotation;
 import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.HashMap;
 import java.security.ProtectionDomain;
@@ -707,12 +709,57 @@ public final class Class <T>
   }
 
   public Type[] getGenericInterfaces() {
-    byte[] signArray = (byte[])vmClass.addendum.signature;
-    String sign = new String(signArray, 0, signArray.length - 1);
+    if (vmClass.addendum == null || vmClass.addendum.signature == null) {
+      return new Type[] {};
+    }
+    String signature = Classes.toString((byte[]) vmClass.addendum.signature);
+    final char[] signChars = signature.toCharArray();
+
+    // Addendum format:
+    // <generic args if present>LBaseClass;LIface1;LIface2;...
+    // We should split it
     
-  	System.out.println("signature: " + sign);
-    //throw new UnsupportedOperationException("not yet implemented");
-    return new Type[] {};
-    //TODO implement
+    int i = -1;
+    
+    // Passing the generic args
+    int angles = 0;
+    do {
+      i++;
+      if (signChars[i] == '<') angles ++;
+      else if (signChars[i] == '>') angles --;
+    } while (angles > 0);
+    if (signChars[i] == '>') i++;
+    
+    // Splitting types list
+    LinkedList<String> typeSigns = new LinkedList<String>();
+    StringBuilder curTypeSign = new StringBuilder();
+    for (; i < signChars.length; i++) {
+      // Counting braces
+      if (signChars[i] == '<') angles ++;
+      else if (signChars[i] == '>') angles --;
+      
+      // Appending character
+      curTypeSign.append(signChars[i]);
+
+      // Splitting
+      if (angles == 0 && signChars[i] == ';') {
+        typeSigns.add(curTypeSign.toString());
+        curTypeSign.setLength(0);
+      }
+    }
+    if (curTypeSign.length() > 0) typeSigns.add(curTypeSign.toString());
+
+    // Parsing types, ignoring the first item in the array 
+    // cause it's the base type
+    Type[] res = new Type[typeSigns.size() - 1];
+    for (i = 0; i < typeSigns.size() - 1; i++) {
+      res[i] = SignatureParser.parse(vmClass.loader, typeSigns.get(i + 1));
+    }
+    
+    return res;
+
+/*    String signature = Classes.toString((byte[]) vmField.addendum.signature);
+    return SignatureParser.parse(vmClass.loader, signature);*/
+
   }
 }

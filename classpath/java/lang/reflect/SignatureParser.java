@@ -13,13 +13,13 @@ package java.lang.reflect;
 import java.util.ArrayList;
 import java.util.List;
 
-class SignatureParser {
+public class SignatureParser {
   private final ClassLoader loader;
   private final char[] array;
   private int offset;
   private final Type type;
 
-  static Type parse(ClassLoader loader, String signature) {
+  public static Type parse(ClassLoader loader, String signature) {
     return new SignatureParser(loader, signature).type;
   }
 
@@ -71,6 +71,17 @@ class SignatureParser {
       } catch (ClassNotFoundException e) {
         throw new RuntimeException("Could not find class " + rawTypeName);
       }
+
+      int lastDollar = rawTypeName.lastIndexOf('$');
+      if (lastDollar != -1) {
+        String ownerName = rawTypeName.substring(0, lastDollar);
+        try {
+          ownerType = loader.loadClass(ownerName);
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException("Could not find class " + ownerName);
+        }
+      }
+
       if (c == ';') {
         return rawType;
       }
