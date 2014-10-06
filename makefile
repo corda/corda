@@ -683,7 +683,8 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-			  if test -d $(sdk-dir)/$(target)7.1.sdk; then echo 7.1; \
+			  if test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
+			elif test -d $(sdk-dir)/$(target)7.1.sdk; then echo 7.1; \
 			elif test -d $(sdk-dir)/$(target)7.0.sdk; then echo 7.0; \
 			elif test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
 			elif test -d $(sdk-dir)/$(target)6.0.sdk; then echo 6.0; \
