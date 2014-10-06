@@ -269,6 +269,9 @@ public class Reflection {
     } catch (NoSuchMethodException e) {
       // cool
     }
+
+    expect(C.class.getInterfaces().length == 1);
+    expect(C.class.getInterfaces()[0].equals(B.class));
   }
 
   protected static class Baz {
@@ -307,5 +310,9 @@ interface A {
 }
 
 interface B extends A { }
+
+class C implements B {
+  public void foo() { }
+}
 
 @interface Ann { }
