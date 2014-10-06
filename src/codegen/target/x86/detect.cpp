@@ -13,6 +13,10 @@
 
 #include "context.h"
 
+// Note: this is so that we can build the x86 backend(s) on an arm machine.
+// This way, we could (in theory) do a bootimage cross-compile from arm to x86
+#ifndef __arm__
+
 #ifndef _MSC_VER
 #include <cpuid.h>
 #else
@@ -37,7 +41,9 @@ static int __get_cpuid(unsigned int __level,
 #define bit_SSE (1 << 25)
 #define bit_SSE2 (1 << 26)
 
-#endif
+#endif  // ndef _MSC_VER
+
+#endif  // ndef __arm__
 
 namespace avian {
 namespace codegen {
@@ -49,6 +55,10 @@ namespace x86 {
 
 bool useSSE(ArchitectureContext* c)
 {
+#ifdef __arm__
+  // We can't link in the detection code on arm (DUH!)
+  return vm::TargetBytesPerWord == 8;
+#else
   if (vm::TargetBytesPerWord == 8) {
     // amd64 implies SSE2 support
     return true;
@@ -65,6 +75,7 @@ bool useSSE(ArchitectureContext* c)
   } else {
     return false;
   }
+#endif
 }
 
 }  // namespace x86
