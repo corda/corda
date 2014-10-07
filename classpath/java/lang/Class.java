@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Map;
@@ -55,7 +56,11 @@ public final class Class <T>
   }
 
   public String toString() {
-    return getName();
+    String res;
+    if (isInterface()) res = "interface ";
+    else if (isAnnotation()) res = "annotation ";
+    else res = "class ";
+    return res + getName();
   }
 
   private static byte[] replace(int a, int b, byte[] s, int offset,
@@ -710,7 +715,7 @@ public final class Class <T>
 
   public Type[] getGenericInterfaces() {
     if (vmClass.addendum == null || vmClass.addendum.signature == null) {
-      return new Type[] {};
+      return getInterfaces();
     }
     String signature = Classes.toString((byte[]) vmClass.addendum.signature);
     final char[] signChars = signature.toCharArray();
@@ -753,13 +758,9 @@ public final class Class <T>
     // cause it's the base type
     Type[] res = new Type[typeSigns.size() - 1];
     for (i = 0; i < typeSigns.size() - 1; i++) {
-      res[i] = SignatureParser.parse(vmClass.loader, typeSigns.get(i + 1));
+      res[i] = SignatureParser.parse(vmClass.loader, typeSigns.get(i + 1), this);
     }
     
     return res;
-
-/*    String signature = Classes.toString((byte[]) vmField.addendum.signature);
-    return SignatureParser.parse(vmClass.loader, signature);*/
-
   }
 }

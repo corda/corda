@@ -10,22 +10,33 @@
 
 package java.lang.reflect;
 
+import avian.Classes;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.HashMap;
 
 public class SignatureParser {
   private final ClassLoader loader;
   private final char[] array;
   private int offset;
   private final Type type;
+  private final Map<String, TypeVariable> typeVariables;
 
-  public static Type parse(ClassLoader loader, String signature) {
-    return new SignatureParser(loader, signature).type;
+  public static Type parse(ClassLoader loader, String signature, Class declaringClass) {
+    return new SignatureParser(loader, signature, collectTypeVariables(declaringClass)).type;
   }
 
-  private SignatureParser(ClassLoader loader, String signature) {
+  private static Type parse(ClassLoader loader, String signature, Map<String, TypeVariable> typeVariables) {
+    return new SignatureParser(loader, signature, typeVariables).type;
+  }
+
+  private SignatureParser(ClassLoader loader, String signature, Map<String, TypeVariable> typeVariables) {
     this.loader = loader;
     array = signature.toCharArray();
+    this.typeVariables = typeVariables;
     type = parseType();
     if (offset != array.length) {
       throw new IllegalArgumentException("Extra characters after " + offset
@@ -51,6 +62,12 @@ public class SignatureParser {
       return Short.TYPE;
     } else if (c == 'Z') {
       return Boolean.TYPE;
+    } else if (c == 'T') {
+      StringBuilder tnsb = new StringBuilder();
+      while ((c = array[offset++]) != ';') {
+        tnsb.append(c);
+      }
+      return typeVariables.get(tnsb.toString());
     } else if (c != 'L') {
       throw new IllegalArgumentException("Unexpected character: " + c);
     }
@@ -73,7 +90,7 @@ public class SignatureParser {
       }
 
       int lastDollar = rawTypeName.lastIndexOf('$');
-      if (lastDollar != -1) {
+      if (lastDollar != -1 && ownerType == null) {
         String ownerName = rawTypeName.substring(0, lastDollar);
         try {
           ownerType = loader.loadClass(ownerName);
@@ -142,5 +159,96 @@ public class SignatureParser {
           return builder.toString();
         }
     };
+  }
+  
+  private static Map<String, TypeVariable> collectTypeVariables(Class clz) {
+    Map<String, TypeVariable> varsMap = new HashMap<String, TypeVariable>();
+    LinkedList<Class> classList = new LinkedList<Class>();
+    for (Class c = clz; c != null; c = c.getDeclaringClass()) {
+      classList.addFirst(c);
+    }
+    
+    for (Class cur : classList) {
+      final List<TypeVariable> varsList = new LinkedList<TypeVariable>();
+      if (cur.vmClass.addendum != null && cur.vmClass.addendum.signature != null) {
+        String signature = Classes.toString((byte[]) cur.vmClass.addendum.signature);
+        final char[] signChars = signature.toCharArray();
+        int i = 0;
+        if (signChars[i] == '<') {
+          i++;
+          do {
+            StringBuilder typeVarSB = new StringBuilder();
+            while (signChars[i] != ':') {
+              typeVarSB.append(signChars[i]);
+              i++;
+            }
+            String typeVarName = typeVarSB.toString();
+            i++;
+            
+            StringBuilder typeSB = new StringBuilder();
+          
+            int angles = 0;
+            while (angles > 0 || signChars[i] != ';') {
+              if (signChars[i] == '<') angles ++;
+              else if (signChars[i] == '>') angles --;
+              typeSB.append(signChars[i]);
+              i++;
+            }
+            typeSB.append(signChars[i]);
+            String typeName = typeSB.toString();
+            final Type baseType = SignatureParser.parse(cur.vmClass.loader, typeName, varsMap);
+
+            TypeVariable tv = new TypeVariableImpl(typeVarName, baseType);
+            varsList.add(tv);
+
+            i++;
+          } while (signChars[i] != '>');
+          
+        }
+      }
+      for (TypeVariable tv : varsList) {
+        ((TypeVariableImpl)tv).setVars(varsList);
+        varsMap.put(tv.getName(), tv);
+      }
+      cur = cur.getDeclaringClass();
+    };
+    return varsMap;
+  } 
+
+  private static class TypeVariableImpl implements TypeVariable {
+    private String name;
+    private Type baseType;
+    private TypeVariable[] vars;
+
+    public Type[] getBounds() {
+      return new Type[] { baseType };
+    }
+    
+    public GenericDeclaration getGenericDeclaration() {
+      return new GenericDeclaration() {
+        public TypeVariable<?>[] getTypeParameters() {
+          return vars;
+        }
+      };
+    }
+    
+    public String getName() {
+      return name;
+    }
+    
+    TypeVariableImpl(String name, Type baseType) {
+      this.name = name;
+      this.baseType = baseType;
+    }
+    
+    void setVars(List<TypeVariable> vars) {
+      this.vars = new TypeVariable[vars.size()];
+      vars.toArray(this.vars);
+    }
+    
+    @Override
+    public String toString() {
+      return name;
+    }
   }
 }
