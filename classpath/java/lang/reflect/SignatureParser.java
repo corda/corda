@@ -21,6 +21,7 @@ import java.util.HashMap;
 public class SignatureParser {
   private final ClassLoader loader;
   private final char[] array;
+  private final String signature;
   private int offset;
   private final Type type;
   private final Map<String, TypeVariable> typeVariables;
@@ -35,6 +36,7 @@ public class SignatureParser {
 
   private SignatureParser(ClassLoader loader, String signature, Map<String, TypeVariable> typeVariables) {
     this.loader = loader;
+    this.signature = signature;
     array = signature.toCharArray();
     this.typeVariables = typeVariables;
     type = parseType();
@@ -63,13 +65,15 @@ public class SignatureParser {
     } else if (c == 'Z') {
       return Boolean.TYPE;
     } else if (c == 'T') {
-      StringBuilder tnsb = new StringBuilder();
-      while ((c = array[offset++]) != ';') {
-        tnsb.append(c);
+      int end = signature.indexOf(';', offset);
+      if (end < 0) {
+        throw new RuntimeException("No semicolon found while parsing signature");
       }
-      return typeVariables.get(tnsb.toString());
+      Type res = typeVariables.get(new String(array, offset, end - offset));
+      offset = end + 1;
+      return res;
     } else if (c != 'L') {
-      throw new IllegalArgumentException("Unexpected character: " + c);
+      throw new IllegalArgumentException("Unexpected character: " + c + ", signature: " + new String(array, 0, array.length) + ", i = " + offset);
     }
     StringBuilder builder = new StringBuilder();
     Type ownerType = null;
@@ -169,45 +173,45 @@ public class SignatureParser {
     }
     
     for (Class cur : classList) {
-      final List<TypeVariable> varsList = new LinkedList<TypeVariable>();
+      final LinkedList<TypeVariableImpl> varsList = new LinkedList<TypeVariableImpl>();
       if (cur.vmClass.addendum != null && cur.vmClass.addendum.signature != null) {
         String signature = Classes.toString((byte[]) cur.vmClass.addendum.signature);
         final char[] signChars = signature.toCharArray();
-        int i = 0;
-        if (signChars[i] == '<') {
-          i++;
-          do {
-            StringBuilder typeVarSB = new StringBuilder();
-            while (signChars[i] != ':') {
-              typeVarSB.append(signChars[i]);
-              i++;
-            }
-            String typeVarName = typeVarSB.toString();
+        try {
+          int i = 0;
+          if (signChars[i] == '<') {
             i++;
-            
-            StringBuilder typeSB = new StringBuilder();
-          
-            int angles = 0;
-            while (angles > 0 || signChars[i] != ';') {
-              if (signChars[i] == '<') angles ++;
-              else if (signChars[i] == '>') angles --;
-              typeSB.append(signChars[i]);
+            do {
+              final int colon = signature.indexOf(':', i);
+              if (colon < 0 || colon + 1 == signChars.length) {
+                throw new RuntimeException("Can't find ':' in the signature " + signature + " starting from " + i);
+              }
+              String typeVarName = new String(signChars, i, colon - i);
+              i = colon + 1;
+              
+              int start = i;
+              int angles = 0;
+              while (angles > 0 || signChars[i] != ';') {
+                if (signChars[i] == '<') angles ++;
+                else if (signChars[i] == '>') angles --;
+                i++;
+              }
+              String typeName = new String(signChars, start, i - start + 1);
+              final Type baseType = SignatureParser.parse(cur.vmClass.loader, typeName, varsMap);
+  
+              TypeVariableImpl tv = new TypeVariableImpl(typeVarName, baseType);
+              varsList.add(tv);
+
               i++;
-            }
-            typeSB.append(signChars[i]);
-            String typeName = typeSB.toString();
-            final Type baseType = SignatureParser.parse(cur.vmClass.loader, typeName, varsMap);
-
-            TypeVariable tv = new TypeVariableImpl(typeVarName, baseType);
-            varsList.add(tv);
-
-            i++;
-          } while (signChars[i] != '>');
+            } while (signChars[i] != '>');
           
+          }
+        } catch (IndexOutOfBoundsException e) {
+          throw new RuntimeException("Signature of " + cur + " is broken (" + signature + ") and can't be parsed", e);
         }
       }
-      for (TypeVariable tv : varsList) {
-        ((TypeVariableImpl)tv).setVars(varsList);
+      for (TypeVariableImpl tv : varsList) {
+        tv.setVars(varsList);
         varsMap.put(tv.getName(), tv);
       }
       cur = cur.getDeclaringClass();
@@ -218,7 +222,7 @@ public class SignatureParser {
   private static class TypeVariableImpl implements TypeVariable {
     private String name;
     private Type baseType;
-    private TypeVariable[] vars;
+    private TypeVariableImpl[] vars;
 
     public Type[] getBounds() {
       return new Type[] { baseType };
@@ -241,8 +245,8 @@ public class SignatureParser {
       this.baseType = baseType;
     }
     
-    void setVars(List<TypeVariable> vars) {
-      this.vars = new TypeVariable[vars.size()];
+    void setVars(List<TypeVariableImpl> vars) {
+      this.vars = new TypeVariableImpl[vars.size()];
       vars.toArray(this.vars);
     }
     
