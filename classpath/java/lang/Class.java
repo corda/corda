@@ -712,10 +712,10 @@ public final class Class <T>
     throw new UnsupportedOperationException("not yet implemented");
   }
 
-  public Type[] getGenericInterfaces() {
-    if (vmClass.addendum == null || vmClass.addendum.signature == null) {
-      return getInterfaces();
-    }
+  /** 
+   * The first one is the superclass, the others are interfaces
+   **/
+  private String[] getGenericTypeSignatures() {
     String signature = Classes.toString((byte[]) vmClass.addendum.signature);
     final char[] signChars = signature.toCharArray();
 
@@ -753,13 +753,39 @@ public final class Class <T>
     }
     if (curTypeSign.length() > 0) typeSigns.add(curTypeSign.toString());
 
-    // Parsing types, ignoring the first item in the array 
-    // cause it's the base type
-    Type[] res = new Type[typeSigns.size() - 1];
-    for (i = 0; i < typeSigns.size() - 1; i++) {
-      res[i] = SignatureParser.parse(vmClass.loader, typeSigns.get(i + 1), this);
+    String[] res = new String[typeSigns.size()];
+    return typeSigns.toArray(res);
+  }
+
+  public Type[] getGenericInterfaces() {
+    if (vmClass.addendum == null || vmClass.addendum.signature == null) {
+      return getInterfaces();
+    }
+    
+    String[] typeSigns = getGenericTypeSignatures();
+    if (typeSigns.length < 1) {
+      throw new RuntimeException("Class signature doesn't contain any type");
+    }
+    
+    // Parsing types
+    Type[] res = new Type[typeSigns.length - 1];
+    for (int i = 0; i < typeSigns.length - 1; i++) {
+      res[i] = SignatureParser.parse(vmClass.loader, typeSigns[i + 1], this);
     }
     
     return res;
   }
+
+  public Type getGenericSuperclass() {
+    if (vmClass.addendum == null || vmClass.addendum.signature == null) {
+      return getSuperclass();
+    }
+    String[] typeSigns = getGenericTypeSignatures();
+    if (typeSigns.length < 1) {
+      throw new RuntimeException("Class signature doesn't contain any type");
+    }
+
+    return SignatureParser.parse(vmClass.loader, typeSigns[0], this);
+  }
+
 }

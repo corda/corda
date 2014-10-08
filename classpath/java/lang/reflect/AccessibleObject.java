@@ -15,6 +15,10 @@ import java.lang.annotation.Annotation;
 public abstract class AccessibleObject implements AnnotatedElement {
   protected static final int Accessible = 1 << 0;
 
+  // Access and property flags for Member descendants
+  protected static final int ACC_VARARGS = 0x0080;
+  protected static final int ACC_SYNTHETIC = 0x1000;
+  
   public boolean isAnnotationPresent
     (Class<? extends Annotation> class_)
   {

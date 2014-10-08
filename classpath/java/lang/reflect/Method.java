@@ -146,11 +146,11 @@ public class Method<T> extends AccessibleObject implements Member {
   }
 
   public boolean isVarArgs() {
-    return (getModifiers() & 0x80) != 0;
+    return (getModifiers() & ACC_VARARGS) != 0;
   }
 
   public boolean isSynthetic() {
-    return (getModifiers() & 0x1000) != 0;
+    return (getModifiers() & ACC_SYNTHETIC) != 0;
   }
 
   public Object getDefaultValue() {

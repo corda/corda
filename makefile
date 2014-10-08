@@ -240,9 +240,7 @@ ifneq ($(android),)
 		-g3 \
 		-Werror \
 		-Wno-shift-count-overflow
-	ifeq ($(platform),macosx)
-	    android-cflags += -Doff64_t=off_t -Dlseek64=lseek
-	endif
+
 	# on Windows (in MinGW-based build) there are neither __BEGIN_DECLS nor __END_DECLS
 	# defines; we don't want to patch every file that uses them, so we stub them in
 	# using CFLAGS mechanism

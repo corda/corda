@@ -17,7 +17,7 @@ import avian.Classes;
 
 import java.lang.annotation.Annotation;
 
-public class Field<T> extends AccessibleObject {
+public class Field<T> extends AccessibleObject implements Member {
   private static final int VoidField = 0;
   private static final int ByteField = 1;
   private static final int CharField = 2;
@@ -50,6 +50,10 @@ public class Field<T> extends AccessibleObject {
 
   public int getModifiers() {
     return vmField.flags;
+  }
+  
+  public boolean isSynthetic() {
+    return (vmField.flags & ACC_SYNTHETIC) != 0;
   }
 
   public String getName() {
