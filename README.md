@@ -370,7 +370,7 @@ the following, starting from the Avian directory:
     git clone https://android.googlesource.com/platform/system/core \
       system/core
     (cd system/core && \
-       git checkout fafcabd0dd4432de3c7f5956edec23f6ed241b56)
+       git checkout 373c77583f9d8eab88e4321d1a2e2af8f5ae8ea7)
 
     git clone https://android.googlesource.com/platform/external/fdlibm \
       external/fdlibm
@@ -380,11 +380,11 @@ the following, starting from the Avian directory:
     git clone https://android.googlesource.com/platform/external/icu4c \
       external/icu4c
     (cd external/icu4c && \
-       git checkout 8fd45e08f1054d80a356ef8aa05659a2ba84707c)
+       git checkout e5311394ca22b280da41cd17059288dab3fb1ea6)
 
     git clone https://android.googlesource.com/platform/libnativehelper
     (cd libnativehelper && \
-       git checkout cf5ac0ec696fce7fac6b324ec7d4d6da217e501c)
+       git checkout b14825c7c75420049e03849994265be651cc4a4e)
 
     git clone https://android.googlesource.com/platform/external/openssl \
       external/openssl
@@ -396,10 +396,16 @@ the following, starting from the Avian directory:
     (cd external/zlib && \
        git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
 
+    git clone https://github.com/dicej/android-conscrypt external/conscrypt
+    (cd external/conscrypt && \
+       git checkout a96719f834232634e9160873bd4c44834b84eb15)
+
     git clone git://git.openssl.org/openssl.git openssl-upstream
     (cd openssl-upstream && git checkout OpenSSL_1_0_1h)
 
     git clone https://github.com/dicej/android-libcore64 libcore
+    (cd libcore && \
+      git checkout 69a1fd8623b85f978ead36dcf1c6c78c5ff79932)
 
     curl -Of http://oss.readytalk.com/avian-web/expat-2.1.0.tar.gz
     (cd external && tar xzf ../expat-2.1.0.tar.gz && mv expat-2.1.0 expat)
@@ -427,7 +433,11 @@ for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
 Note that we use https://github.com/dicej/android-libcore64 above
 instead of the upstream
 https://android.googlesource.com/platform/libcore repository, since
-the former has patches to provide better support for non-Linux platforms.
+the former has patches to provide better support for non-Linux
+platforms.  We have also forked
+https://android.googlesource.com/platform/external/conscrypt as
+https://github.com/dicej/android-conscrypt to patch that project as
+well.
 
 Also note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build

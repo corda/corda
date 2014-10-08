@@ -15,3 +15,10 @@ void JniConstants::init(_JNIEnv*)
 {
   // ignore
 }
+
+struct _JavaVM;
+
+int libconscrypt_JNI_OnLoad(_JavaVM*, void*)
+{
+  return 0;
+}

@@ -44,6 +44,10 @@ public class Constructor<T> extends AccessibleObject implements Member {
     return method.getModifiers();
   }
 
+  public boolean isSynthetic() {
+    return method.isSynthetic();
+  }
+
   public String getName() {
     return method.getName();
   }
@@ -69,5 +73,9 @@ public class Constructor<T> extends AccessibleObject implements Member {
     T v = (T) make(method.getDeclaringClass().vmClass);
     method.invoke(v, arguments);
     return v;
+  }
+
+  public Class<?>[] getExceptionTypes() {
+    throw new UnsupportedOperationException("not yet implemented");
   }
 }

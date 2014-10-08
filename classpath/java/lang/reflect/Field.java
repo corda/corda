@@ -57,13 +57,13 @@ public class Field<T> extends AccessibleObject {
   }
 
   public static String getName(VMField vmField) {
-    return new String(vmField.name, 0, vmField.name.length - 1, false);
+    return Classes.makeString(vmField.name, 0, vmField.name.length - 1);
   }
 
   public Class getType() {
     return Classes.forCanonicalName
       (vmField.class_.loader,
-       new String(vmField.spec, 0, vmField.spec.length - 1, false));
+       Classes.makeString(vmField.spec, 0, vmField.spec.length - 1));
   }
 
   public Type getGenericType() {
