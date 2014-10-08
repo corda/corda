@@ -1302,6 +1302,28 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_java_lang_Class_getEnclosingClass(Thread* t,
+                                            object,
+                                            uintptr_t* arguments)
+{
+  GcClass* c
+      = cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass();
+  PROTECT(t, c);
+
+  GcClassAddendum* addendum = c->addendum();
+  if (addendum) {
+    GcByteArray* enclosingClass
+        = cast<GcByteArray>(t, addendum->enclosingClass());
+
+    if (enclosingClass) {
+      return reinterpret_cast<uintptr_t>(
+          getJClass(t, resolveClass(t, c->loader(), enclosingClass)));
+    }
+  }
+  return 0;
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Class_getEnclosingConstructor(Thread* t,
                                                   object method,
                                                   uintptr_t* arguments)
