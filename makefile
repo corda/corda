@@ -240,6 +240,15 @@ ifneq ($(android),)
 		-g3 \
 		-Werror \
 		-Wno-shift-count-overflow
+	ifeq ($(platform),macosx)
+	    android-cflags += -Doff64_t=off_t -Dlseek64=lseek
+	endif
+	# on Windows (in MinGW-based build) there are neither __BEGIN_DECLS nor __END_DECLS
+	# defines; we don't want to patch every file that uses them, so we stub them in
+	# using CFLAGS mechanism
+	ifeq ($(platform),windows)
+		android-cflags += "-D__BEGIN_DECLS=extern \"C\" {" "-D__END_DECLS=}"
+	endif
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
 
@@ -257,12 +266,12 @@ ifneq ($(android),)
 	crypto-cpps := $(crypto-native)/org_conscrypt_NativeCrypto.cpp
 
 	ifeq ($(platform),windows)
-		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP
+		android-cflags += -D__STDC_CONSTANT_MACROS -DHAVE_WIN32_FILEMAP -D__STDC_FORMAT_MACROS
 		blacklist = $(luni-native)/java_io_Console.cpp \
 			$(luni-native)/java_lang_ProcessManager.cpp
 
-		icu-libs := $(android)/external/icu4c/lib/sicuin.a \
-			$(android)/external/icu4c/lib/sicuuc.a \
+		icu-libs := $(android)/external/icu4c/lib/libsicuin.a \
+			$(android)/external/icu4c/lib/libsicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
 		platform-lflags := -lgdi32 -lshlwapi -lwsock32
 	else
@@ -1667,21 +1676,21 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
 	cp -a $(luni-java)/* $(xml-java)/* $(build)/android-src/
 	rm $(call noop-files,$(luni-blacklist),$(luni-java),$(build)/android-src)
 	(cd $(dalvik-java) && \
-			jar c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(libart-java) && \
-			jar c $(call noop-files,$(libart-javas),$(libart-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(libart-javas),$(libart-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(crypto-java) && \
-			jar c $(call noop-files,$(crypto-javas),$(crypto-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(crypto-javas),$(crypto-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(crypto-platform-java) && \
-			jar c $(call noop-files,$(crypto-platform-javas),$(crypto-platform-java),.)) \
-		| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(crypto-platform-javas),$(crypto-platform-java),.)) \
+		| (cd $(build)/android-src && $(jar) x)
 	(cd $(classpath-src) && \
-			jar c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \
-		| (cd $(build)/android-src && jar x)
-#	(cd android && jar c *)	| (cd $(build)/android-src && jar x)
+			$(jar) c $(call noop-files,$(classpath-sources),$(classpath-src),.)) \
+		| (cd $(build)/android-src && $(jar) x)
+#	(cd android && $(jar) c *)	| (cd $(build)/android-src && $(jar) x)
 	find $(build)/android-src -name '*.java' > $(build)/android.txt
 	$(javac) -Xmaxerrs 1000 -d $(build)/android @$(build)/android.txt
 	rm $(build)/android/sun/misc/Unsafe* \

@@ -71,7 +71,7 @@ public class Field<T> extends AccessibleObject {
       return getType();
     }
     String signature = Classes.toString((byte[]) vmField.addendum.signature);
-    return SignatureParser.parse(vmField.class_.loader, signature);
+    return SignatureParser.parse(vmField.class_.loader, signature, getDeclaringClass());
   }
 
   public Object get(Object instance) throws IllegalAccessException {
