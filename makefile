@@ -240,12 +240,14 @@ ifneq ($(android),)
 		-g3 \
 		-Werror \
 		-Wno-shift-count-overflow
+	
 
 	# on Windows (in MinGW-based build) there are neither __BEGIN_DECLS nor __END_DECLS
 	# defines; we don't want to patch every file that uses them, so we stub them in
 	# using CFLAGS mechanism
+	# Also we have off64_t defined in mingw-w64 headers, so let's tell that
 	ifeq ($(platform),windows)
-		android-cflags += "-D__BEGIN_DECLS=extern \"C\" {" "-D__END_DECLS=}"
+		android-cflags += "-D__BEGIN_DECLS=extern \"C\" {" "-D__END_DECLS=}" "-DHAVE_OFF64_T"
 	endif
 
 	luni-cpps := $(shell find $(luni-native) -name '*.cpp')
