@@ -250,40 +250,6 @@ System::Library* loadLibrary(Thread* t,
   return lib;
 }
 
-object clone(Thread* t, object o)
-{
-  PROTECT(t, o);
-
-  GcClass* class_ = objectClass(t, o);
-  unsigned size = baseSize(t, o, class_) * BytesPerWord;
-  object clone;
-
-  if (class_->arrayElementSize()) {
-    clone = static_cast<object>(allocate(t, size, class_->objectMask()));
-    memcpy(clone, o, size);
-    // clear any object header flags:
-    setObjectClass(t, o, objectClass(t, o));
-  } else if (instanceOf(t, type(t, GcCloneable::Type), o)) {
-    clone = make(t, class_);
-    memcpy(reinterpret_cast<void**>(clone) + 1,
-           reinterpret_cast<void**>(o) + 1,
-           size - BytesPerWord);
-  } else {
-    GcByteArray* classNameSlash = objectClass(t, o)->name();
-    THREAD_RUNTIME_ARRAY(t, char, classNameDot, classNameSlash->length());
-    replace('/',
-            '.',
-            RUNTIME_ARRAY_BODY(classNameDot),
-            reinterpret_cast<char*>(classNameSlash->body().begin()));
-    throwNew(t,
-             GcCloneNotSupportedException::Type,
-             "%s",
-             RUNTIME_ARRAY_BODY(classNameDot));
-  }
-
-  return clone;
-}
-
 GcStackTraceElement* makeStackTraceElement(Thread* t, GcTraceElement* e)
 {
   PROTECT(t, e);
