@@ -1246,53 +1246,6 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Object_toString(Thread* t, object, uintptr_t* arguments)
-{
-  object this_ = reinterpret_cast<object>(arguments[0]);
-
-  unsigned hash = objectHash(t, this_);
-  GcString* s = makeString(
-      t, "%s@0x%x", objectClass(t, this_)->name()->body().begin(), hash);
-
-  return reinterpret_cast<int64_t>(s);
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Object_getVMClass(Thread* t, object, uintptr_t* arguments)
-{
-  return reinterpret_cast<int64_t>(
-      objectClass(t, reinterpret_cast<object>(arguments[0])));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Object_clone(Thread* t, object, uintptr_t* arguments)
-{
-  return reinterpret_cast<int64_t>(
-      clone(t, reinterpret_cast<object>(arguments[0])));
-}
-
-extern "C" AVIAN_EXPORT void JNICALL
-    Avian_java_lang_Object_wait(Thread* t, object, uintptr_t* arguments)
-{
-  jlong milliseconds;
-  memcpy(&milliseconds, arguments + 1, sizeof(jlong));
-
-  wait(t, reinterpret_cast<object>(arguments[0]), milliseconds);
-}
-
-extern "C" AVIAN_EXPORT void JNICALL
-    Avian_java_lang_Object_notifyAll(Thread* t, object, uintptr_t* arguments)
-{
-  notifyAll(t, reinterpret_cast<object>(arguments[0]));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Object_hashCode(Thread* t, object, uintptr_t* arguments)
-{
-  return objectHash(t, reinterpret_cast<object>(arguments[0]));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_reflect_Method_getCaller(Thread* t, object, uintptr_t*)
 {
   return reinterpret_cast<int64_t>(getCaller(t, 2));

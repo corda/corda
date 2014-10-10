@@ -3199,6 +3199,8 @@ inline bool exceptionMatch(Thread* t, GcClass* type, GcThrowable* exception)
 
 object intern(Thread* t, object s);
 
+object clone(Thread* t, object o);
+
 void walk(Thread* t, Heap::Walker* w, object o, unsigned start);
 
 int walkNext(Thread* t, object o, int previous);
