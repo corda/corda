@@ -97,6 +97,11 @@ extern "C" JNIEXPORT jint JNICALL
                                                  jclass,
                                                  jstring name)
 {
+  if(!name) {
+    throwNew(e, "java/lang/NullPointerException", 0);
+    return 0;
+  }
+
   const char* chars = e->GetStringUTFChars(name, 0);
   if (chars) {
 #ifdef PLATFORM_WINDOWS
