@@ -98,15 +98,31 @@ public class Reflection {
     expect(1 == args.length);
     expect(args[0] == String.class);
   }
-
+  
   public static void throwOOME() {
     throw new OutOfMemoryError();
+  }
+
+  public static void classType() throws Exception {
+    // Class types
+    expect(!Reflection.class.isAnonymousClass());
+    expect(!Reflection.class.isLocalClass());
+    expect(!Reflection.class.isMemberClass());
+
+    expect(Reflection.Hello.class.isMemberClass());
+    
+    Cloneable anonymousLocal = new Cloneable() {};
+    expect(anonymousLocal.getClass().isAnonymousClass());
+    
+    class NamedLocal {}
+    expect(NamedLocal.class.isLocalClass());
   }
 
   public static void main(String[] args) throws Exception {
     innerClasses();
     annotations();
     genericType();
+    classType();
 
     Class system = Class.forName("java.lang.System");
     Field out = system.getDeclaredField("out");

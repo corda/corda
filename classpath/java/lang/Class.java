@@ -539,7 +539,7 @@ public final class Class <T>
 
     if (skipDigits == chars.length) {
       return ClassType.ANONYMOUS;
-    } else if (skipDigits > dollar + 1) {
+    } else if (skipDigits == dollar + 1) {
       return ClassType.MEMBER;
     } else {
       return ClassType.LOCAL;
