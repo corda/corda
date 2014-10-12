@@ -113,6 +113,8 @@ public final class Math {
 
   public static native double atan(double v);
 
+  public static native double atan2(double y, double x);
+
   public static native double sqrt(double v);
 
   public static native double pow(double v, double e);
