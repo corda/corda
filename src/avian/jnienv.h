@@ -23,7 +23,6 @@
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
 #define BOOTCLASSPATH_OPTION "bootclasspath"
 #define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
-#define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"
 
 namespace vm {
 
