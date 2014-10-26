@@ -4237,6 +4237,49 @@ extern "C" AVIAN_EXPORT void JNICALL
   run(t, jvmResolveClass, arguments);
 }
 
+uint64_t jvmFindClassFromCaller(Thread* t, uintptr_t* arguments)
+{
+  const char* name = reinterpret_cast<const char*>(arguments[0]);
+  jboolean init = arguments[1];
+  jobject loader = reinterpret_cast<jobject>(arguments[2]);
+  // jclass caller = reinterpret_cast<jclass>(arguments[3]);
+
+  /* XXX The caller's protection domain should be used during
+     the resolveClass but there is no specification or
+     unit-test in OpenJDK documenting the desired effect */
+
+  GcClass* c = resolveClass(
+      t,
+      loader ? cast<GcClassLoader>(t, *loader) : roots(t)->bootLoader(),
+      name,
+      true,
+      static_cast<Gc::Type>(GcClassNotFoundException::Type));
+
+  if (init) {
+    PROTECT(t, c);
+
+    initClass(t, c);
+  }
+
+  return reinterpret_cast<uint64_t>(makeLocalReference(t, getJClass(t, c)));
+}
+
+extern "C" AVIAN_EXPORT jclass JNICALL
+    EXPORT(JVM_FindClassFromCaller)(Thread* t,
+                                    const char* name,
+                                    jboolean init,
+                                    jobject loader,
+                                    jclass caller)
+{
+  uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(name),
+                           init,
+                           reinterpret_cast<uintptr_t>(loader),
+                           reinterpret_cast<uintptr_t>(caller)};
+
+  return reinterpret_cast<jclass>(
+      run(t, jvmFindClassFromCaller, arguments));
+}
+
 uint64_t jvmFindClassFromClassLoader(Thread* t, uintptr_t* arguments)
 {
   const char* name = reinterpret_cast<const char*>(arguments[0]);
