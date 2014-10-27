@@ -135,7 +135,7 @@ typedef intptr_t __attribute__((__may_alias__)) intptr_alias_t;
 #if (defined ARCH_x86_32) || (defined ARCH_arm)
 #define LD "ld"
 #if (defined _MSC_VER) || ((defined __MINGW32__) && __GNUC__ >= 4)
-#if (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
+#if (__GNUC__ == 4 && __GNUC_MINOR__ <= 8)
 #define LLD "I64d"
 #else
 #define LLD "lld"
