@@ -240,7 +240,6 @@ ifneq ($(android),)
 		-g3 \
 		-Werror \
 		-Wno-shift-count-overflow
-	
 
 	# on Windows (in MinGW-based build) there are neither __BEGIN_DECLS nor __END_DECLS
 	# defines; we don't want to patch every file that uses them, so we stub them in
@@ -815,7 +814,7 @@ ifeq ($(platform),windows)
 	rpath =
 
 	lflags = -L$(lib) $(common-lflags) -lws2_32 -liphlpapi -mconsole
-	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500
+	cflags = -I$(inc) $(common-cflags) -DWINVER=0x0500 -U__STRICT_ANSI__
 
 	ifeq (,$(filter mingw32 cygwin,$(build-platform)))
 		openjdk-extra-cflags += -I$(src)/openjdk/caseSensitive
@@ -831,7 +830,8 @@ ifeq ($(platform),windows)
 		build-system = windows
 		static-on-windows = -static
 		common-cflags += "-I$(JAVA_HOME)/include/win32"
-		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads
+		build-cflags = $(common-cflags) -I$(src) -I$(inc) -mthreads \
+			-D_WIN32_WINNT=0x0500
 		openjdk-extra-cflags =
 		build-lflags = -L$(lib) $(common-lflags)
 		ifeq ($(build-platform),cygwin)
