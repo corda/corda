@@ -67,7 +67,7 @@ ifeq ($(filter x86_64 i386 arm,$(arch)),)
 endif
 
 ifeq ($(platform),darwin)
-	x := $(error "please use 'platform=macosx' or 'platform=ios' instead of 'platform=$platform'")
+	x := $(error "please use 'platform=macosx' or 'platform=ios' instead of 'platform=$(platform)'")
 endif
 
 ifneq ($(ios),)
