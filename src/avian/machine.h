@@ -1441,6 +1441,7 @@ Classpath* makeClasspath(System* system,
                          const char* embedPrefix);
 
 typedef uint64_t(JNICALL* FastNativeFunction)(Thread*, GcMethod*, uintptr_t*);
+typedef void(JNICALL* FastVoidNativeFunction)(Thread*, GcMethod*, uintptr_t*);
 
 inline GcClass* objectClass(Thread*, object o)
 {
