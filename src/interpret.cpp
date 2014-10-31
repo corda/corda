@@ -641,8 +641,15 @@ unsigned invokeNative(Thread* t, GcMethod* method)
       marshalArguments(
           t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
 
-      result = reinterpret_cast<FastNativeFunction>(native->function())(
+      if(method->returnCode() != VoidField) {
+        result = reinterpret_cast<FastNativeFunction>(native->function())(
           t, method, RUNTIME_ARRAY_BODY(args));
+      }
+      else {
+        result = 0;
+        reinterpret_cast<FastVoidNativeFunction>(native->function())(
+          t, method, RUNTIME_ARRAY_BODY(args));
+      }
     }
 
     pushResult(t, method->returnCode(), result, false);
