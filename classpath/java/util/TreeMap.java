@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class TreeMap<K,V> implements SortedMap<K,V> {
+public class TreeMap<K,V> implements NavigableMap<K,V> {
   private final Comparator<K> comparator;
   private transient TreeSet<MyEntry<K,V>> set;
 
@@ -48,6 +48,16 @@ public class TreeMap<K,V> implements SortedMap<K,V> {
   @Override
   public Comparator<? super K> comparator() {
     return comparator;
+  }
+
+  @Override
+  public Map.Entry<K,V> firstEntry() {
+    return set.first();
+  }
+
+  @Override
+  public Map.Entry<K,V> lastEntry() {
+    return set.last();
   }
 
   @Override
