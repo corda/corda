@@ -28,44 +28,44 @@ extern "C" JNIEXPORT SOCKET JNICALL
 
 extern "C" JNIEXPORT void JNICALL Java_java_net_Socket_connect(JNIEnv* e,
                                                                jclass,
-                                                               SOCKET sock,
-                                                               long addr,
-                                                               short port)
+                                                               jlong sock,
+                                                               jlong addr,
+                                                               jshort port)
 {
-  connect(e, sock, addr, port);
+  connect(e, static_cast<SOCKET>(sock), addr, port);
 }
 
 extern "C" JNIEXPORT void JNICALL Java_java_net_Socket_bind(JNIEnv* e,
                                                             jclass,
-                                                            SOCKET sock,
-                                                            long addr,
-                                                            short port)
+                                                            jlong sock,
+                                                            jlong addr,
+                                                            jshort port)
 {
-  bind(e, sock, addr, port);
+  bind(e, static_cast<SOCKET>(sock), addr, port);
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_java_net_Socket_abort(JNIEnv* e, jclass, SOCKET sock)
+    Java_java_net_Socket_abort(JNIEnv* e, jclass, jlong sock)
 {
-  abort(e, sock);
+  abort(e, static_cast<SOCKET>(sock));
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_java_net_Socket_close(JNIEnv* e, jclass, SOCKET sock)
+    Java_java_net_Socket_close(JNIEnv* e, jclass, jlong sock)
 {
-  close(e, sock);
+  close(e, static_cast<SOCKET>(sock));
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_java_net_Socket_closeOutput(JNIEnv* e, jclass, SOCKET sock)
+    Java_java_net_Socket_closeOutput(JNIEnv* e, jclass, jlong sock)
 {
-  close_output(e, sock);
+  close_output(e, static_cast<SOCKET>(sock));
 }
 
 extern "C" JNIEXPORT void JNICALL
-    Java_java_net_Socket_closeInput(JNIEnv* e, jclass, SOCKET sock)
+    Java_java_net_Socket_closeInput(JNIEnv* e, jclass, jlong sock)
 {
-  close_input(e, sock);
+  close_input(e, static_cast<SOCKET>(sock));
 }
 
 extern "C" JNIEXPORT void JNICALL
