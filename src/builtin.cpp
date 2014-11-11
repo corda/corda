@@ -1256,15 +1256,6 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
-    Avian_java_lang_Class_getDeclaringClass(Thread* t,
-                                            object,
-                                            uintptr_t* arguments)
-{
-  return reinterpret_cast<intptr_t>(getDeclaringClass(
-      t, cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass()));
-}
-
-extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Class_getEnclosingMethod(Thread* t,
                                              object,
                                              uintptr_t* arguments)
