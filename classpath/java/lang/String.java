@@ -186,7 +186,7 @@ public final class String
     if (this == s) {
       return true;
     } else {
-      return s.length == length && compareToIgnoreCase(s) == 0;
+      return s != null && s.length == length && compareToIgnoreCase(s) == 0;
     }
   }
 
