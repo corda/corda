@@ -114,7 +114,7 @@ inline uint32_t popInt(Thread* t)
 {
   if (DebugStack) {
     fprintf(stderr,
-            "pop int %" ULD " at %d\n",
+            "pop int %" LD " at %d\n",
             t->stack[((t->sp - 1) * 2) + 1],
             t->sp - 1);
   }
@@ -167,7 +167,7 @@ inline uint32_t peekInt(Thread* t, unsigned index)
 {
   if (DebugStack) {
     fprintf(
-        stderr, "peek int %" ULD " at %d\n", t->stack[(index * 2) + 1], index);
+        stderr, "peek int %" LD " at %d\n", t->stack[(index * 2) + 1], index);
   }
 
   assertT(t, index < stackSizeInWords(t) / 2);
@@ -641,8 +641,15 @@ unsigned invokeNative(Thread* t, GcMethod* method)
       marshalArguments(
           t, RUNTIME_ARRAY_BODY(args) + argOffset, 0, sp, method, true);
 
-      result = reinterpret_cast<FastNativeFunction>(native->function())(
+      if(method->returnCode() != VoidField) {
+        result = reinterpret_cast<FastNativeFunction>(native->function())(
           t, method, RUNTIME_ARRAY_BODY(args));
+      }
+      else {
+        result = 0;
+        reinterpret_cast<FastVoidNativeFunction>(native->function())(
+          t, method, RUNTIME_ARRAY_BODY(args));
+      }
     }
 
     pushResult(t, method->returnCode(), result, false);

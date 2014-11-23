@@ -46,7 +46,7 @@
 
 #define SO_PREFIX "lib"
 #ifdef __APPLE__
-#define SO_SUFFIX ".jnilib"
+#define SO_SUFFIX ".dylib"
 #include <TargetConditionals.h>
 #if !TARGET_IPHONE_SIMULATOR && !TARGET_OS_IPHONE
 #include <CoreServices/CoreServices.h>

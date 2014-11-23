@@ -25,6 +25,8 @@ public class ServerSocketChannel extends SelectableChannel {
   }
 
   public static ServerSocketChannel open() throws IOException {
+    Socket.init();
+    
     return new ServerSocketChannel();
   }
 

@@ -603,8 +603,8 @@ __on Linux:__
 
 __on Mac OS X:__
 
-     $ g++ -I$JAVA_HOME/include -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp \
-         -o main.o
+     $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/darwin \
+         -D_JNI_IMPLEMENTATION_ -c embedded-jar-main.cpp -o main.o
 
 __on Windows:__
 

@@ -307,7 +307,7 @@ public class File implements Serializable {
 
   private static native String readDir(long handle);
 
-  private static native long closeDir(long handle);
+  private static native void closeDir(long handle);
 
 
 
