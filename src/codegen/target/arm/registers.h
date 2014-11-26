@@ -52,10 +52,17 @@ inline int fpr32(lir::Register* reg)
   return fpr64(reg) << 1;
 }
 
+#ifdef ARCH_arm64
+const int ThreadRegister = 19;
+const int StackRegister = 31;
+const int LinkRegister = 30;
+const int ProgramCounter = 0xFF; // i.e. unaddressable
+#else
 const int ThreadRegister = 8;
 const int StackRegister = 13;
 const int LinkRegister = 14;
 const int ProgramCounter = 15;
+#endif
 
 }  // namespace arm
 }  // namespace codegen

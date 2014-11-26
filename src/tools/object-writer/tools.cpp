@@ -115,6 +115,8 @@ PlatformInfo::Architecture PlatformInfo::archFromString(const char* arch)
     return Architecture::x86_64;
   } else if (strcmp(arch, "arm") == 0) {
     return Architecture::Arm;
+  } else if (strcmp(arch, "arm64") == 0) {
+    return Architecture::Arm64;
   } else {
     return Architecture::UnknownArch;
   }

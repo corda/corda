@@ -49,6 +49,7 @@
 #define EM_386 3
 #define EM_X86_64 62
 #define EM_ARM 40
+#define EM_AARCH64 183
 
 #define SHT_PROGBITS 1
 #define SHT_SYMTAB 2
@@ -129,6 +130,8 @@ unsigned getElfPlatform(PlatformInfo::Architecture arch)
     return EM_386;
   case PlatformInfo::Arm:
     return EM_ARM;
+  case PlatformInfo::Arm64:
+    return EM_AARCH64;
   default:
     return ~0;
   }
@@ -398,6 +401,7 @@ class ElfPlatform : public Platform {
 
 ElfPlatform<uint32_t> elfX86Platform(PlatformInfo::x86);
 ElfPlatform<uint32_t> elfArmPlatform(PlatformInfo::Arm);
+ElfPlatform<uint64_t> elfArm64Platform(PlatformInfo::Arm64);
 ElfPlatform<uint64_t> elfX86_64Platform(PlatformInfo::x86_64);
 
 }  // namespace
