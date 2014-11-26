@@ -43,7 +43,7 @@ inline void compileTimeMemoryBarrier()
 
 #if (defined ARCH_x86_32) || (defined ARCH_x86_64)
 #include "x86.h"
-#elif defined ARCH_arm
+#elif (defined ARCH_arm) || (defined ARCH_arm64)
 #include "arm.h"
 #else
 #error unsupported architecture
