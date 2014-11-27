@@ -80,7 +80,7 @@ ifeq ($(filter linux windows macosx ios freebsd,$(platform)),)
 endif
 
 ifeq ($(platform),macosx)
-	ifneq ($(filter arm arm64,$(arch),)
+	ifneq ($(filter arm arm64,$(arch)),)
 		x := $(error "please use 'arch=arm' or 'arch=arm64' 'platform=ios' to build for ios-arm")
 	endif
 endif
