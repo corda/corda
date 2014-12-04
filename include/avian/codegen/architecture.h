@@ -56,6 +56,11 @@ class OperandMask {
   OperandMask() : typeMask(~0), lowRegisterMask(~static_cast<uint64_t>(0)), highRegisterMask(~static_cast<uint64_t>(0))
   {
   }
+
+  void setLowHighRegisterMasks(uint64_t lowRegisterMask, uint64_t highRegisterMask) {
+    this->lowRegisterMask = lowRegisterMask | (highRegisterMask << 32);
+    this->highRegisterMask = highRegisterMask;
+  }
 };
 
 class Architecture {

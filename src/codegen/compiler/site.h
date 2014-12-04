@@ -53,7 +53,7 @@ class SiteMask {
 
   static SiteMask highPart(const OperandMask& mask)
   {
-    return SiteMask(mask.typeMask, mask.lowRegisterMask >> 32, AnyFrameIndex);
+    return SiteMask(mask.typeMask, mask.highRegisterMask, AnyFrameIndex);
   }
 
   uint8_t typeMask;
