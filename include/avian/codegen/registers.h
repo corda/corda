@@ -16,7 +16,7 @@
 namespace avian {
 namespace codegen {
 
-class RegisterMask {
+class BoundedRegisterMask {
  public:
   uint32_t mask;
   uint8_t start;
@@ -25,7 +25,7 @@ class RegisterMask {
   static unsigned maskStart(uint32_t mask);
   static unsigned maskLimit(uint32_t mask);
 
-  inline RegisterMask(uint32_t mask)
+  inline BoundedRegisterMask(uint32_t mask)
       : mask(mask), start(maskStart(mask)), limit(maskLimit(mask))
   {
   }
@@ -33,9 +33,9 @@ class RegisterMask {
 
 class RegisterFile {
  public:
-  RegisterMask allRegisters;
-  RegisterMask generalRegisters;
-  RegisterMask floatRegisters;
+  BoundedRegisterMask allRegisters;
+  BoundedRegisterMask generalRegisters;
+  BoundedRegisterMask floatRegisters;
 
   inline RegisterFile(uint32_t generalRegisterMask, uint32_t floatRegisterMask)
       : allRegisters(generalRegisterMask | floatRegisterMask),
@@ -48,9 +48,9 @@ class RegisterFile {
 class RegisterIterator {
  public:
   int index;
-  const RegisterMask& mask;
+  const BoundedRegisterMask& mask;
 
-  inline RegisterIterator(const RegisterMask& mask)
+  inline RegisterIterator(const BoundedRegisterMask& mask)
       : index(mask.start), mask(mask)
   {
   }

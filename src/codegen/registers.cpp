@@ -13,7 +13,7 @@
 namespace avian {
 namespace codegen {
 
-unsigned RegisterMask::maskStart(uint32_t mask)
+unsigned BoundedRegisterMask::maskStart(uint32_t mask)
 {
   for (int i = 0; i <= 31; ++i) {
     if (mask & (1 << i))
@@ -22,7 +22,7 @@ unsigned RegisterMask::maskStart(uint32_t mask)
   return 32;
 }
 
-unsigned RegisterMask::maskLimit(uint32_t mask)
+unsigned BoundedRegisterMask::maskLimit(uint32_t mask)
 {
   for (int i = 31; i >= 0; --i) {
     if (mask & (1 << i))

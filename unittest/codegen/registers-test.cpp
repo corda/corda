@@ -19,7 +19,7 @@ using namespace vm;
 
 TEST(RegisterIterator)
 {
-  RegisterMask regs(0x55);
+  BoundedRegisterMask regs(0x55);
   assertEqual<unsigned>(0, regs.start);
   assertEqual<unsigned>(7, regs.limit);
 
