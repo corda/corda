@@ -402,7 +402,7 @@ class MyArchitecture : public Architecture {
                     bool* thunk)
   {
     aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    aMask.registerMask = ~static_cast<uint64_t>(0);
+    aMask.lowRegisterMask = ~static_cast<uint64_t>(0);
     *thunk = false;
   }
 
@@ -414,12 +414,12 @@ class MyArchitecture : public Architecture {
   {
     *thunk = false;
     aMask.typeMask = ~0;
-    aMask.registerMask = GPR_MASK64;
+    aMask.lowRegisterMask = GPR_MASK64;
 
     switch (op) {
     case lir::Negate:
       aMask.typeMask = (1 << lir::RegisterOperand);
-      aMask.registerMask = GPR_MASK64;
+      aMask.lowRegisterMask = GPR_MASK64;
       break;
 
     case lir::Absolute:
@@ -432,7 +432,7 @@ class MyArchitecture : public Architecture {
     case lir::Float2Float:
       if (vfpSupported()) {
         aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = FPR_MASK64;
+        aMask.lowRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -445,7 +445,7 @@ class MyArchitecture : public Architecture {
       // cases properly.
       if (false && vfpSupported() && bSize == 4) {
         aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = FPR_MASK64;
+        aMask.lowRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -454,7 +454,7 @@ class MyArchitecture : public Architecture {
     case lir::Int2Float:
       if (vfpSupported() && aSize == 4) {
         aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = GPR_MASK64;
+        aMask.lowRegisterMask = GPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -472,12 +472,12 @@ class MyArchitecture : public Architecture {
                                OperandMask& bMask)
   {
     bMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand);
-    bMask.registerMask = GPR_MASK64;
+    bMask.lowRegisterMask = GPR_MASK64;
 
     switch (op) {
     case lir::Negate:
       bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = GPR_MASK64;
+      bMask.lowRegisterMask = GPR_MASK64;
       break;
 
     case lir::FloatAbsolute:
@@ -486,12 +486,12 @@ class MyArchitecture : public Architecture {
     case lir::Float2Float:
     case lir::Int2Float:
       bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = FPR_MASK64;
+      bMask.lowRegisterMask = FPR_MASK64;
       break;
 
     case lir::Float2Int:
       bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = GPR_MASK64;
+      bMask.lowRegisterMask = GPR_MASK64;
       break;
 
     case lir::Move:
@@ -511,21 +511,21 @@ class MyArchitecture : public Architecture {
                         const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
-    srcMask.registerMask = ~static_cast<uint64_t>(0);
+    srcMask.lowRegisterMask = ~static_cast<uint64_t>(0);
 
     tmpMask.typeMask = 0;
-    tmpMask.registerMask = 0;
+    tmpMask.lowRegisterMask = 0;
 
     if (dstMask.typeMask & (1 << lir::MemoryOperand)) {
       // can't move directly from memory or constant to memory
       srcMask.typeMask = 1 << lir::RegisterOperand;
       tmpMask.typeMask = 1 << lir::RegisterOperand;
-      tmpMask.registerMask = GPR_MASK64;
+      tmpMask.lowRegisterMask = GPR_MASK64;
     } else if (vfpSupported() && dstMask.typeMask & 1 << lir::RegisterOperand
-               && dstMask.registerMask & FPR_MASK) {
+               && dstMask.lowRegisterMask & FPR_MASK) {
       srcMask.typeMask = tmpMask.typeMask = 1 << lir::RegisterOperand
                                             | 1 << lir::MemoryOperand;
-      tmpMask.registerMask = ~static_cast<uint64_t>(0);
+      tmpMask.lowRegisterMask = ~static_cast<uint64_t>(0);
     }
   }
 
@@ -538,10 +538,10 @@ class MyArchitecture : public Architecture {
                           bool* thunk)
   {
     aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    aMask.registerMask = GPR_MASK64;
+    aMask.lowRegisterMask = GPR_MASK64;
 
     bMask.typeMask = (1 << lir::RegisterOperand);
-    bMask.registerMask = GPR_MASK64;
+    bMask.lowRegisterMask = GPR_MASK64;
 
     *thunk = false;
 
@@ -573,7 +573,7 @@ class MyArchitecture : public Architecture {
     case lir::FloatDivide:
       if (vfpSupported()) {
         aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = bMask.registerMask = FPR_MASK64;
+        aMask.lowRegisterMask = bMask.lowRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -591,7 +591,7 @@ class MyArchitecture : public Architecture {
     case lir::JumpIfFloatGreaterOrEqualOrUnordered:
       if (vfpSupported()) {
         aMask.typeMask = bMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = bMask.registerMask = FPR_MASK64;
+        aMask.lowRegisterMask = bMask.lowRegisterMask = FPR_MASK64;
       } else {
         *thunk = true;
       }
@@ -612,10 +612,10 @@ class MyArchitecture : public Architecture {
   {
     if (isBranch(op)) {
       cMask.typeMask = (1 << lir::ConstantOperand);
-      cMask.registerMask = 0;
+      cMask.lowRegisterMask = 0;
     } else {
       cMask.typeMask = (1 << lir::RegisterOperand);
-      cMask.registerMask = bMask.registerMask;
+      cMask.lowRegisterMask = bMask.lowRegisterMask;
     }
   }
 

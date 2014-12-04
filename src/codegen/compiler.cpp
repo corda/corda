@@ -874,14 +874,14 @@ void maybeMove(Context* c,
       c->arch->planSource(op, dstSize, src, dstSize, &thunk);
 
       if (isGeneralValue(srcValue)) {
-        src.registerMask &= c->regFile->generalRegisters.mask;
+        src.lowRegisterMask &= c->regFile->generalRegisters.mask;
       }
 
       assertT(c, thunk == 0);
       assertT(c, dstMask.typeMask & src.typeMask & (1 << lir::RegisterOperand));
 
       Site* tmpTarget
-          = freeRegisterSite(c, dstMask.registerMask & src.registerMask);
+          = freeRegisterSite(c, dstMask.registerMask & src.lowRegisterMask);
 
       srcValue->source->freeze(c, srcValue);
 

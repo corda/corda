@@ -32,14 +32,28 @@ class RegisterFile;
 class OperandMask {
  public:
   uint8_t typeMask;
-  uint64_t registerMask;
+  uint64_t lowRegisterMask;
+  uint64_t highRegisterMask;
 
-  OperandMask(uint8_t typeMask, uint64_t registerMask)
-      : typeMask(typeMask), registerMask(registerMask)
+  OperandMask(uint8_t typeMask,
+              uint64_t lowRegisterMask,
+              uint64_t highRegisterMask)
+      : typeMask(typeMask),
+        lowRegisterMask(lowRegisterMask),
+        highRegisterMask(highRegisterMask)
   {
   }
 
-  OperandMask() : typeMask(~0), registerMask(~static_cast<uint64_t>(0))
+  // TEMPORARY!
+  OperandMask(uint8_t typeMask,
+              uint64_t registerMask)
+      : typeMask(typeMask),
+        lowRegisterMask(registerMask),
+        highRegisterMask(registerMask >> 32)
+  {
+  }
+
+  OperandMask() : typeMask(~0), lowRegisterMask(~static_cast<uint64_t>(0)), highRegisterMask(~static_cast<uint64_t>(0))
   {
   }
 };

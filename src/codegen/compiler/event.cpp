@@ -445,7 +445,7 @@ class CallEvent : public Event {
       this->addRead(
           c,
           address,
-          SiteMask(op.typeMask, registerMask & op.registerMask, AnyFrameIndex));
+          SiteMask(op.typeMask, registerMask & op.lowRegisterMask, AnyFrameIndex));
     }
 
     Stack* stack = stackBefore;

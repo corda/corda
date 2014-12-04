@@ -48,12 +48,12 @@ class SiteMask {
 
   static SiteMask lowPart(const OperandMask& mask)
   {
-    return SiteMask(mask.typeMask, mask.registerMask, AnyFrameIndex);
+    return SiteMask(mask.typeMask, mask.lowRegisterMask, AnyFrameIndex);
   }
 
   static SiteMask highPart(const OperandMask& mask)
   {
-    return SiteMask(mask.typeMask, mask.registerMask >> 32, AnyFrameIndex);
+    return SiteMask(mask.typeMask, mask.lowRegisterMask >> 32, AnyFrameIndex);
   }
 
   uint8_t typeMask;
