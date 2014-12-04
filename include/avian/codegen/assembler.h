@@ -15,6 +15,7 @@
 #include "avian/zone.h"
 
 #include <avian/codegen/lir.h>
+#include <avian/codegen/registers.h>
 #include <avian/codegen/promise.h>
 
 namespace avian {
@@ -52,7 +53,7 @@ class Assembler {
  public:
   class Client {
    public:
-    virtual int acquireTemporary(uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
+    virtual int acquireTemporary(RegisterMask mask = ~static_cast<RegisterMask>(0)) = 0;
     virtual void releaseTemporary(int r) = 0;
 
     virtual void save(int r) = 0;

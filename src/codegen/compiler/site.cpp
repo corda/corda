@@ -217,7 +217,7 @@ Site* addressSite(Context* c, Promise* address)
   return new (c->zone) AddressSite(address);
 }
 
-RegisterSite::RegisterSite(uint32_t mask, int number)
+RegisterSite::RegisterSite(RegisterMask mask, int number)
     : mask_(mask), number(number)
 {
 }
@@ -281,7 +281,7 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
     assertT(c, number != lir::NoRegister);
     return number == rs->number;
   } else {
-    uint32_t mask = c->regFile->generalRegisters.mask;
+    RegisterMask mask = c->regFile->generalRegisters.mask;
     return ((1 << number) & mask) and ((1 << rs->number) & mask);
   }
 }
@@ -354,7 +354,7 @@ void RegisterSite::asAssemblerOperand(Context* c UNUSED,
 
 Site* RegisterSite::copy(Context* c)
 {
-  uint32_t mask;
+  RegisterMask mask;
 
   if (number != lir::NoRegister) {
     mask = 1 << number;
@@ -429,7 +429,7 @@ Site* registerSite(Context* c, int number)
   return new (c->zone) RegisterSite(1 << number, number);
 }
 
-Site* freeRegisterSite(Context* c, uint32_t mask)
+Site* freeRegisterSite(Context* c, RegisterMask mask)
 {
   return new (c->zone) RegisterSite(mask, lir::NoRegister);
 }

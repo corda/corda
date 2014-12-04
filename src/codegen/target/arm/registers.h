@@ -23,8 +23,8 @@ const unsigned MASK_LO8 = 0xff;
 
 const int N_GPRS = 16;
 const int N_FPRS = 16;
-const uint32_t GPR_MASK = 0xffff;
-const uint32_t FPR_MASK = 0xffff0000;
+const RegisterMask GPR_MASK = 0xffff;
+const RegisterMask FPR_MASK = 0xffff0000;
 
 inline bool isFpr(lir::Register* reg)
 {

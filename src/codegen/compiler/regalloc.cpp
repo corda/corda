@@ -59,7 +59,7 @@ unsigned resourceCost(Context* c,
 bool pickRegisterTarget(Context* c,
                         int i,
                         Value* v,
-                        uint32_t mask,
+                        RegisterMask mask,
                         int* target,
                         unsigned* cost,
                         CostCalculator* costCalculator)
@@ -74,7 +74,7 @@ bool pickRegisterTarget(Context* c,
               SiteMask(1 << lir::RegisterOperand, 1 << i, NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
-    if ((static_cast<uint32_t>(1) << i) == mask) {
+    if ((static_cast<RegisterMask>(1) << i) == mask) {
       *cost = myCost;
       return true;
     } else if (myCost < *cost) {
@@ -87,7 +87,7 @@ bool pickRegisterTarget(Context* c,
 
 int pickRegisterTarget(Context* c,
                        Value* v,
-                       uint32_t mask,
+                       RegisterMask mask,
                        unsigned* cost,
                        CostCalculator* costCalculator)
 {
@@ -119,7 +119,7 @@ int pickRegisterTarget(Context* c,
 
 Target pickRegisterTarget(Context* c,
                           Value* v,
-                          uint32_t mask,
+                          RegisterMask mask,
                           CostCalculator* costCalculator)
 {
   unsigned cost;
@@ -234,14 +234,14 @@ Target pickTarget(Context* c,
 
   Value* value = read->value;
 
-  uint32_t registerMask
+  RegisterMask registerMask
       = (isFloatValue(value) ? ~0 : c->regFile->generalRegisters.mask);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
   if (isFloatValue(value)) {
-    uint32_t floatMask = mask.registerMask & c->regFile->floatRegisters.mask;
+    RegisterMask floatMask = mask.registerMask & c->regFile->floatRegisters.mask;
     if (floatMask) {
       mask.registerMask = floatMask;
     }
@@ -273,7 +273,7 @@ Target pickTarget(Context* c,
   if (intersectRead) {
     if (best.cost == Target::Impossible) {
       fprintf(stderr,
-              "mask type %d reg %d frame %d\n",
+              "mask type %d reg %" LLD " frame %d\n",
               mask.typeMask,
               mask.registerMask,
               mask.frameIndex);

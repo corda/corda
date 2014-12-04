@@ -16,16 +16,18 @@
 namespace avian {
 namespace codegen {
 
+typedef uint64_t RegisterMask;
+
 class BoundedRegisterMask {
  public:
-  uint32_t mask;
+  RegisterMask mask;
   uint8_t start;
   uint8_t limit;
 
-  static unsigned maskStart(uint32_t mask);
-  static unsigned maskLimit(uint32_t mask);
+  static unsigned maskStart(RegisterMask mask);
+  static unsigned maskLimit(RegisterMask mask);
 
-  inline BoundedRegisterMask(uint32_t mask)
+  inline BoundedRegisterMask(RegisterMask mask)
       : mask(mask), start(maskStart(mask)), limit(maskLimit(mask))
   {
   }
@@ -37,7 +39,7 @@ class RegisterFile {
   BoundedRegisterMask generalRegisters;
   BoundedRegisterMask floatRegisters;
 
-  inline RegisterFile(uint32_t generalRegisterMask, uint32_t floatRegisterMask)
+  inline RegisterFile(RegisterMask generalRegisterMask, RegisterMask floatRegisterMask)
       : allRegisters(generalRegisterMask | floatRegisterMask),
         generalRegisters(generalRegisterMask),
         floatRegisters(floatRegisterMask)

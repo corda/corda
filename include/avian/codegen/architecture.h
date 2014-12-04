@@ -12,6 +12,7 @@
 #define AVIAN_CODEGEN_ARCHITECTURE_H
 
 #include "ir.h"
+#include "registers.h"
 
 namespace vm {
 class Zone;
@@ -32,12 +33,12 @@ class RegisterFile;
 class OperandMask {
  public:
   uint8_t typeMask;
-  uint64_t lowRegisterMask;
-  uint64_t highRegisterMask;
+  RegisterMask lowRegisterMask;
+  RegisterMask highRegisterMask;
 
   OperandMask(uint8_t typeMask,
-              uint64_t lowRegisterMask,
-              uint64_t highRegisterMask)
+              RegisterMask lowRegisterMask,
+              RegisterMask highRegisterMask)
       : typeMask(typeMask),
         lowRegisterMask(lowRegisterMask),
         highRegisterMask(highRegisterMask)
@@ -46,18 +47,18 @@ class OperandMask {
 
   // TEMPORARY!
   OperandMask(uint8_t typeMask,
-              uint64_t registerMask)
+              RegisterMask registerMask)
       : typeMask(typeMask),
         lowRegisterMask(registerMask),
         highRegisterMask(registerMask >> 32)
   {
   }
 
-  OperandMask() : typeMask(~0), lowRegisterMask(~static_cast<uint64_t>(0)), highRegisterMask(~static_cast<uint64_t>(0))
+  OperandMask() : typeMask(~0), lowRegisterMask(~static_cast<RegisterMask>(0)), highRegisterMask(~static_cast<RegisterMask>(0))
   {
   }
 
-  void setLowHighRegisterMasks(uint64_t lowRegisterMask, uint64_t highRegisterMask) {
+  void setLowHighRegisterMasks(RegisterMask lowRegisterMask, RegisterMask highRegisterMask) {
     this->lowRegisterMask = lowRegisterMask | (highRegisterMask << 32);
     this->highRegisterMask = highRegisterMask;
   }

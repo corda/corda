@@ -34,8 +34,8 @@ class SiteMask {
   {
   }
 
-  SiteMask(uint8_t typeMask, uint32_t registerMask, int frameIndex)
-      : typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
+  SiteMask(uint8_t typeMask, RegisterMask registerMask, int frameIndex)
+      : typeMask(typeMask), registerMask(/*TODO: REMOVE CAST!!! */(uint32_t)registerMask), frameIndex(frameIndex)
   {
   }
 
@@ -57,7 +57,7 @@ class SiteMask {
   }
 
   uint8_t typeMask;
-  uint32_t registerMask;
+  RegisterMask registerMask;
   int frameIndex;
 };
 
@@ -251,7 +251,7 @@ Site* addressSite(Context* c, Promise* address);
 
 class RegisterSite : public Site {
  public:
-  RegisterSite(uint32_t mask, int number);
+  RegisterSite(RegisterMask mask, int number);
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
 
@@ -295,12 +295,12 @@ class RegisterSite : public Site {
 
   virtual unsigned registerMask(Context* c UNUSED);
 
-  uint32_t mask_;
+  RegisterMask mask_;
   int number;
 };
 
 Site* registerSite(Context* c, int number);
-Site* freeRegisterSite(Context* c, uint32_t mask);
+Site* freeRegisterSite(Context* c, RegisterMask mask);
 
 class MemorySite : public Site {
  public:

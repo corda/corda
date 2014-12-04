@@ -1274,7 +1274,7 @@ void multiplyCR(Context* c,
   assertT(c, aSize == bSize);
 
   if (vm::TargetBytesPerWord == 4 and aSize == 8) {
-    const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+    const RegisterMask mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
     lir::Register tmp(c->client->acquireTemporary(mask),
                       c->client->acquireTemporary(mask));
 

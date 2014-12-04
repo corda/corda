@@ -372,7 +372,7 @@ class CallEvent : public Event {
                                    ? arguments.count
                                    : 0)
   {
-    uint32_t registerMask = c->regFile->generalRegisters.mask;
+    RegisterMask registerMask = c->regFile->generalRegisters.mask;
 
     if (callingConvention == ir::CallingConvention::Native) {
       assertT(c, (flags & Compiler::TailJump) == 0);

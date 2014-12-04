@@ -2210,7 +2210,7 @@ class Client : public Assembler::Client {
   {
   }
 
-  virtual int acquireTemporary(uint32_t mask)
+  virtual int acquireTemporary(RegisterMask mask)
   {
     unsigned cost;
     int r = pickRegisterTarget(c, 0, mask, &cost);

@@ -79,20 +79,20 @@ unsigned resourceCost(Context* c,
 bool pickRegisterTarget(Context* c,
                         int i,
                         Value* v,
-                        uint32_t mask,
+                        RegisterMask mask,
                         int* target,
                         unsigned* cost,
                         CostCalculator* costCalculator = 0);
 
 int pickRegisterTarget(Context* c,
                        Value* v,
-                       uint32_t mask,
+                       RegisterMask mask,
                        unsigned* cost,
                        CostCalculator* costCalculator = 0);
 
 Target pickRegisterTarget(Context* c,
                           Value* v,
-                          uint32_t mask,
+                          RegisterMask mask,
                           CostCalculator* costCalculator = 0);
 
 unsigned frameCost(Context* c,
