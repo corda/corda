@@ -52,11 +52,6 @@ bool vfpSupported()
 }
 }  // namespace isa
 
-inline unsigned lo8(int64_t i)
-{
-  return (unsigned)(i & MASK_LO8);
-}
-
 const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
 const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
 
