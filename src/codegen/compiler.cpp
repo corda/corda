@@ -342,7 +342,7 @@ Site* maybeMove(Context* c,
       OperandMask src;
       OperandMask tmp;
       c->arch->planMove(
-          size, src, tmp, OperandMask(dstMask.typeMask, dstMask.registerMask));
+          size, src, tmp, OperandMask(dstMask.typeMask, dstMask.registerMask, 0));
 
       SiteMask srcMask = SiteMask::lowPart(src);
       for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
@@ -369,7 +369,7 @@ Site* maybeMove(Context* c,
       size,
       src,
       tmp,
-      OperandMask(1 << dstSite->type(c), dstSite->registerMask(c)));
+      OperandMask(1 << dstSite->type(c), dstSite->registerMask(c), 0));
 
   SiteMask srcMask = SiteMask::lowPart(src);
   unsigned cost = 0xFFFFFFFF;

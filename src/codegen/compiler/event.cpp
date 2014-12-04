@@ -784,8 +784,8 @@ class MoveEvent : public Event {
         srcSelectSize,
         OperandMask(
             1 << srcValue->source->type(c),
-            (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c))
-             << 32) | static_cast<uint64_t>(srcValue->source->registerMask(c))),
+            srcValue->source->registerMask(c),
+            srcValue->nextWord->source->registerMask(c)),
         dstSize,
         dst);
 
@@ -1127,17 +1127,13 @@ class CombineEvent : public Event {
         firstValue->type.size(c->targetInfo),
         OperandMask(
             1 << firstValue->source->type(c),
-            (static_cast<uint64_t>(
-                 firstValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+            firstValue->source->registerMask(c),
+            firstValue->nextWord->source->registerMask(c)),
         secondValue->type.size(c->targetInfo),
         OperandMask(
             1 << secondValue->source->type(c),
-            (static_cast<uint64_t>(
-                 secondValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(secondValue->source->registerMask(c))),
+            secondValue->source->registerMask(c),
+            secondValue->nextWord->source->registerMask(c)),
         resultValue->type.size(c->targetInfo),
         cMask);
 
@@ -1319,10 +1315,8 @@ class TranslateEvent : public Event {
         firstValue->type.size(c->targetInfo),
         OperandMask(
             1 << firstValue->source->type(c),
-            (static_cast<uint64_t>(
-                 firstValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+            firstValue->source->registerMask(c),
+            firstValue->nextWord->source->registerMask(c)),
         resultValue->type.size(c->targetInfo),
         bMask);
 
@@ -1718,9 +1712,9 @@ class BranchEvent : public Event {
     OperandMask dstMask;
     c->arch->planDestination(op,
                              firstValue->type.size(c->targetInfo),
-                             OperandMask(0, 0),
+                             OperandMask(0, 0, 0),
                              firstValue->type.size(c->targetInfo),
-                             OperandMask(0, 0),
+                             OperandMask(0, 0, 0),
                              c->targetInfo.pointerSize,
                              dstMask);
 

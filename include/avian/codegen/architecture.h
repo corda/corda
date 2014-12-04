@@ -45,21 +45,12 @@ class OperandMask {
   {
   }
 
-  // TEMPORARY!
-  OperandMask(uint8_t typeMask,
-              RegisterMask registerMask)
-      : typeMask(typeMask),
-        lowRegisterMask(registerMask),
-        highRegisterMask(registerMask >> 32)
-  {
-  }
-
   OperandMask() : typeMask(~0), lowRegisterMask(~static_cast<RegisterMask>(0)), highRegisterMask(~static_cast<RegisterMask>(0))
   {
   }
 
   void setLowHighRegisterMasks(RegisterMask lowRegisterMask, RegisterMask highRegisterMask) {
-    this->lowRegisterMask = lowRegisterMask | (highRegisterMask << 32);
+    this->lowRegisterMask = lowRegisterMask;
     this->highRegisterMask = highRegisterMask;
   }
 };

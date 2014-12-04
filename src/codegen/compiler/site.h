@@ -35,7 +35,7 @@ class SiteMask {
   }
 
   SiteMask(uint8_t typeMask, RegisterMask registerMask, int frameIndex)
-      : typeMask(typeMask), registerMask(/*TODO: REMOVE CAST!!! */(uint32_t)registerMask), frameIndex(frameIndex)
+      : typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
   {
   }
 
