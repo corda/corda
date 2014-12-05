@@ -21,10 +21,29 @@ namespace arm {
 const uint64_t MASK_LO32 = 0xffffffff;
 const unsigned MASK_LO8 = 0xff;
 
+#ifdef ARCH_arm64
+constexpr Register ThreadRegister(19);
+constexpr Register StackRegister(31);
+constexpr Register LinkRegister(30);
+constexpr Register LinkRegister(29);
+constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
+
+const int N_GPRS = 32;
+const int N_FPRS = 32;
+const uint64_t GPR_MASK = 0xffffffff;
+const uint64_t FPR_MASK = 0xffffffff00000000;
+#else
+constexpr Register ThreadRegister(8);
+constexpr Register StackRegister(13);
+constexpr Register LinkRegister(14);
+constexpr Register FrameRegister(0xFE); // i.e. there is none
+constexpr Register ProgramCounter(15);
+
 const int N_GPRS = 16;
 const int N_FPRS = 16;
 const RegisterMask GPR_MASK = 0xffff;
 const RegisterMask FPR_MASK = 0xffff0000;
+#endif
 
 inline bool isFpr(lir::RegisterPair* reg)
 {
@@ -47,18 +66,6 @@ inline int fpr32(lir::RegisterPair* reg)
 {
   return fpr64(reg) << 1;
 }
-
-#ifdef ARCH_arm64
-constexpr Register ThreadRegister(19);
-constexpr Register StackRegister(31);
-constexpr Register LinkRegister(30);
-constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
-#else
-constexpr Register ThreadRegister(8);
-constexpr Register StackRegister(13);
-constexpr Register LinkRegister(14);
-constexpr Register ProgramCounter(15);
-#endif
 
 }  // namespace arm
 }  // namespace codegen

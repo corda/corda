@@ -15,6 +15,8 @@
 #include "fixup.h"
 #include "multimethod.h"
 
+#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
+
 namespace avian {
 namespace codegen {
 namespace arm {
@@ -1554,3 +1556,5 @@ void storeLoadBarrier(Context* con)
 }  // namespace arm
 }  // namespace codegen
 }  // namespace avian
+
+#endif // AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM

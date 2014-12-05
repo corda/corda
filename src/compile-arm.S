@@ -16,12 +16,114 @@
 #define BYTES_PER_WORD 4
 
 #define LOCAL(x) .L##x
-   
+
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
 #endif
+
+#ifdef __aarch64__
+
+.globl GLOBAL(vmInvoke)
+.align 2
+GLOBAL(vmInvoke):
+  // arguments:
+  //   x0 : thread
+  //   x1 : function
+  //   x2 : arguments
+  //   w3 : argumentFootprint
+  //   w4 : frameSize (not used)
+  //   w5 : returnType
+
+  // allocate frame
+  stp   x29, x30, [sp,#-96]!
+
+  // save callee-saved register values
+  stp   x19, x20, [sp,#16]
+  stp   x21, x22, [sp,#32]
+  stp   x23, x24, [sp,#48]
+  stp   x25, x26, [sp,#64]
+  stp   x27, x28, [sp,#80]
+
+  // save return type
+  str   w5, [sp,#-16]!
+
+  mov   x5, sp
+  str   x5, [x0,#TARGET_THREAD_SCRATCH]
+
+  // copy arguments into place
+  sub   sp, sp, w3
+  mov   x5, #0
+  b     LOCAL(vmInvoke_argumentTest)
+
+LOCAL(vmInvoke_argumentLoop):
+  ldr   x5, [x2, x4]
+  str   x5, [sp, x4]
+  add   x4, x4, #BYTES_PER_WORD
+
+LOCAL(vmInvoke_argumentTest):
+  cmp   x4, x3
+  blt   LOCAL(vmInvoke_argumentLoop)
+
+  // we use x19 to hold the thread pointer, by convention
+  mov   x19, x0
+
+  // load and call function address
+  blr   x1
+
+.globl GLOBAL(vmInvoke_returnAddress)
+.align 2
+GLOBAL(vmInvoke_returnAddress):
+  // restore stack pointer
+  ldr   x5, [x19, #TARGET_THREAD_SCRATCH]
+  mov   sp, x5
+
+  // clear MyThread::stack to avoid confusing another thread calling
+  // java.lang.Thread.getStackTrace on this one.  See
+  // MyProcess::getStackTrace in compile.cpp for details on how we get
+  // a reliable stack trace from a thread that might be interrupted at
+  // any point in its execution.
+  mov  x5, #0
+  str  x5, [x19, #TARGET_THREAD_STACK]
+
+.globl GLOBAL(vmInvoke_safeStack)
+.align 2
+GLOBAL(vmInvoke_safeStack):
+
+#ifdef AVIAN_CONTINUATIONS
+#error todo
+#endif // AVIAN_CONTINUATIONS
+
+  mov   x5, #0
+  str   x5, [x19, #TARGET_THREAD_STACK]
+
+  // restore return type
+  ldr   w5, [sp], #4
+
+  // restore callee-saved register values
+  ldp   x19, x20, [sp,#16]
+  ldp   x21, x22, [sp,#32]
+  ldp   x23, x24, [sp,#48]
+  ldp   x25, x26, [sp,#64]
+  ldp   x27, x28, [sp,#80]
+  ldp   x29, x30, [sp],#96
+
+LOCAL(vmInvoke_return):
+  br    x30
+
+.globl GLOBAL(vmJumpAndInvoke)
+.align 2
+GLOBAL(vmJumpAndInvoke):
+#ifdef AVIAN_CONTINUATIONS
+#error todo
+#else // not AVIAN_CONTINUATIONS
+   // vmJumpAndInvoke should only be called when continuations are
+   // enabled, so we force a crash if we reach here:
+   brk 0
+#endif // not AVIAN_CONTINUATIONS
+
+#elif defined __arm__
 
 #define CONTINUATION_NEXT 4
 #define CONTINUATION_ADDRESS 16
@@ -29,7 +131,7 @@
 #define CONTINUATION_FRAME_POINTER_OFFSET 24
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
-   
+
 .globl GLOBAL(vmInvoke)
 .align 2
 GLOBAL(vmInvoke):
@@ -56,7 +158,7 @@ GLOBAL(vmInvoke):
   eor   r4, sp, r3
   tst   r4, #4
   subne sp, sp, #4
-   
+
   // copy arguments into place
   sub   sp, r3
   mov   r4, #0
@@ -87,7 +189,7 @@ LOCAL(vmInvoke_argumentTest):
 GLOBAL(vmInvoke_returnAddress):
   // restore stack pointer
   ldr   sp, [r8, #TARGET_THREAD_SCRATCH]
-   
+
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
@@ -201,7 +303,7 @@ GLOBAL(vmJumpAndInvoke):
    // which is not true in this case
    sub  r2,r2,r6
    sub  r2,r2,#84
-   
+
    mov  r8,r0
 
    // copy arguments into place
@@ -220,7 +322,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    // the arguments have been copied, so we can set the real stack
    // pointer now
    mov  sp,r2
-   
+
    // set return address to vmInvoke_returnAddress
 #ifdef __APPLE__
    movw r11, :lower16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmJumpAndInvoke_getAddress)+8))
@@ -246,10 +348,12 @@ LOCAL(vmInvoke_getAddress_word):
 LOCAL(vmJumpAndInvoke_getAddress_word):
    .word _GLOBAL_OFFSET_TABLE_-(LOCAL(vmJumpAndInvoke_getAddress)+8)
 #endif // not __APPLE__
-   
+
 #else // not AVIAN_CONTINUATIONS
    // vmJumpAndInvoke should only be called when continuations are
    // enabled, so we force a crash if we reach here:
    mov  r1,#0
    ldr  r1,[r1]
 #endif // not AVIAN_CONTINUATIONS
+
+#endif // __arm__

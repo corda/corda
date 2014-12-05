@@ -39,7 +39,7 @@ namespace isa {
 bool vfpSupported()
 {
 // TODO: Use at runtime detection
-#if defined(__ARM_PCS_VFP)
+#if (defined __ARM_PCS_VFP) || (defined ARCH_arm64)
   // armhf
   return true;
 #else
@@ -55,9 +55,9 @@ bool vfpSupported()
 const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
 const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
 
-const unsigned FrameHeaderSize = 1;
+const unsigned FrameHeaderSize = TargetBytesPerWord / 4;
 
-const unsigned StackAlignmentInBytes = 8;
+const unsigned StackAlignmentInBytes = TargetBytesPerWord * 2;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes
                                        / TargetBytesPerWord;
 
@@ -258,7 +258,7 @@ class MyArchitecture : public Architecture {
 
   virtual unsigned argumentRegisterCount()
   {
-    return 4;
+    return TargetBytesPerWord;
   }
 
   virtual Register argumentRegister(unsigned index)
@@ -434,11 +434,11 @@ class MyArchitecture : public Architecture {
       break;
 
     case lir::Float2Int:
-      // todo: Java requires different semantics than SSE for
+      // todo: Java requires different semantics than VFP for
       // converting floats to integers, we we need to either use
       // thunks or produce inline machine code which handles edge
       // cases properly.
-      if (false && vfpSupported() && bSize == 4) {
+      if (false && vfpSupported() && bSize <= TargetBytesPerWord) {
         aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
       } else {
@@ -447,7 +447,7 @@ class MyArchitecture : public Architecture {
       break;
 
     case lir::Int2Float:
-      if (vfpSupported() && aSize == 4) {
+      if (vfpSupported() && aSize <= TargetBytesPerWord) {
         aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       } else {
@@ -544,7 +544,7 @@ class MyArchitecture : public Architecture {
     case lir::ShiftLeft:
     case lir::ShiftRight:
     case lir::UnsignedShiftRight:
-      if (bSize == 8)
+      if (bSize > TargetBytesPerWord)
         aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 

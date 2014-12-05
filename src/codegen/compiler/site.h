@@ -123,7 +123,7 @@ class Site {
 
   virtual RegisterMask registerMask(Context*)
   {
-    return 0;
+    return RegisterMask(0);
   }
 
   virtual bool isVolatile(Context*)
