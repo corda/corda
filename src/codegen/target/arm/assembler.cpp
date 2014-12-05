@@ -792,7 +792,7 @@ class MyAssembler : public Assembler {
                                    Register returnAddressSurrogate,
                                    Register framePointerSurrogate UNUSED)
   {
-    assertT(&con, framePointerSurrogate == Register::None);
+    assertT(&con, framePointerSurrogate == NoRegister);
 
     if (TailCalls) {
       if (offset) {
@@ -813,7 +813,7 @@ class MyAssembler : public Assembler {
         lir::Constant footprintConstant(&footprintPromise);
         addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
-        if (returnAddressSurrogate != Register::None) {
+        if (returnAddressSurrogate != NoRegister) {
           assertT(&con, offset > 0);
 
           lir::RegisterPair ras(returnAddressSurrogate);

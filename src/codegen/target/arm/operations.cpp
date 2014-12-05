@@ -737,7 +737,7 @@ void store(Context* con,
            unsigned scale,
            bool preserveIndex)
 {
-  if (index != Register::None) {
+  if (index != NoRegister) {
     bool release;
     Register normalized
         = normalize(con, offset, index, scale, &preserveIndex, &release);
@@ -799,8 +799,8 @@ void store(Context* con,
 
       case 8: {  // split into 2 32-bit stores
         lir::RegisterPair srcHigh(src->high);
-        store(con, 4, &srcHigh, base, offset, Register::None, 1, false);
-        store(con, 4, src, base, offset + 4, Register::None, 1, false);
+        store(con, 4, &srcHigh, base, offset, NoRegister, 1, false);
+        store(con, 4, src, base, offset + 4, NoRegister, 1, false);
       } break;
 
       default:
@@ -853,7 +853,7 @@ void load(Context* con,
           bool preserveIndex,
           bool signExtend)
 {
-  if (index != Register::None) {
+  if (index != NoRegister) {
     bool release;
     Register normalized
         = normalize(con, offset, index, scale, &preserveIndex, &release);
@@ -951,7 +951,7 @@ void load(Context* con,
                4,
                base,
                offset,
-               Register::None,
+               NoRegister,
                1,
                4,
                &dstHigh,
@@ -961,7 +961,7 @@ void load(Context* con,
                4,
                base,
                offset + 4,
-               Register::None,
+               NoRegister,
                1,
                4,
                dst,

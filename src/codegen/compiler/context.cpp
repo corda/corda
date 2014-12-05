@@ -56,7 +56,7 @@ Context::Context(vm::System* system,
   for (unsigned i = regFile->generalRegisters.start;
        i < regFile->generalRegisters.limit;
        ++i) {
-    new (registerResources + i) RegisterResource(arch->reserved(i));
+    new (registerResources + i) RegisterResource(arch->reserved(Register(i)));
 
     if (registerResources[i].reserved) {
       --availableGeneralRegisterCount;
@@ -65,7 +65,7 @@ Context::Context(vm::System* system,
   for (unsigned i = regFile->floatRegisters.start;
        i < regFile->floatRegisters.limit;
        ++i) {
-    new (registerResources + i) RegisterResource(arch->reserved(i));
+    new (registerResources + i) RegisterResource(arch->reserved(Register(i)));
   }
 }
 

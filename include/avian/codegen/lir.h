@@ -83,8 +83,6 @@ const unsigned BranchOperationCount = JumpIfFloatGreaterOrEqualOrUnordered
 
 enum ValueType { ValueGeneral, ValueFloat };
 
-const int NoRegister = -1;
-
 inline bool isBranch(lir::TernaryOperation op)
 {
   return op > FloatMin;

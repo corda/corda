@@ -59,9 +59,9 @@ inline lir::RegisterPair makeTemp64(Context* con)
 
 inline void freeTemp(Context* con, const lir::RegisterPair& tmp)
 {
-  if (tmp.low != Register::None)
+  if (tmp.low != NoRegister)
     freeTemp(con, tmp.low);
-  if (tmp.high != Register::None)
+  if (tmp.high != NoRegister)
     freeTemp(con, tmp.high);
 }
 

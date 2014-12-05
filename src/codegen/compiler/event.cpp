@@ -594,7 +594,7 @@ class CallEvent : public Event {
         ras = static_cast<RegisterSite*>(returnAddressSurrogate->source)
                   ->number;
       } else {
-        ras = Register::None;
+        ras = NoRegister;
       }
 
       Register fps;
@@ -603,7 +603,7 @@ class CallEvent : public Event {
 
         fps = static_cast<RegisterSite*>(framePointerSurrogate->source)->number;
       } else {
-        fps = Register::None;
+        fps = NoRegister;
       }
 
       int offset = static_cast<int>(footprint)
@@ -1505,7 +1505,7 @@ class MemoryEvent : public Event {
       ConstantSite* constant = findConstantSite(c, index);
 
       if (constant) {
-        indexRegister = Register::None;
+        indexRegister = NoRegister;
         displacement += (constant->value->value() * scale);
         scale = 1;
       } else {
@@ -1513,14 +1513,14 @@ class MemoryEvent : public Event {
         indexRegister = static_cast<RegisterSite*>(index->source)->number;
       }
     } else {
-      indexRegister = Register::None;
+      indexRegister = NoRegister;
     }
     assertT(c, base->source->type(c) == lir::Operand::Type::RegisterPair);
     Register baseRegister = static_cast<RegisterSite*>(base->source)->number;
 
     popRead(c, this, base);
     if (index) {
-      if (c->targetInfo.pointerSize == 8 and indexRegister != Register::None) {
+      if (c->targetInfo.pointerSize == 8 and indexRegister != NoRegister) {
         apply(c,
               lir::Move,
               4,
@@ -2035,7 +2035,7 @@ class BoundsCheckEvent : public Event {
       assertT(c, object->source->type(c) == lir::Operand::Type::RegisterPair);
       MemorySite length(static_cast<RegisterSite*>(object->source)->number,
                         lengthOffset,
-                        Register::None,
+                        NoRegister,
                         1);
       length.acquired = true;
 

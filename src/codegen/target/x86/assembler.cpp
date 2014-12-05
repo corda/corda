@@ -205,7 +205,7 @@ class MyArchitecture : public Architecture {
 
   virtual Register returnHigh()
   {
-    return (TargetBytesPerWord == 4 ? rdx : Register::None);
+    return (TargetBytesPerWord == 4 ? rdx : NoRegister);
   }
 
   virtual Register virtualCallTarget()
@@ -1070,7 +1070,7 @@ class MyAssembler : public Assembler {
 
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
-        if (returnAddressSurrogate != Register::None) {
+        if (returnAddressSurrogate != NoRegister) {
           assertT(&c, offset > 0);
 
           lir::RegisterPair ras(returnAddressSurrogate);
@@ -1078,7 +1078,7 @@ class MyAssembler : public Assembler {
           moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
 
-        if (framePointerSurrogate != Register::None) {
+        if (framePointerSurrogate != NoRegister) {
           assertT(&c, offset > 0);
 
           lir::RegisterPair fps(framePointerSurrogate);

@@ -13,12 +13,10 @@
 namespace avian {
 namespace codegen {
 
-Register Register::None(-1);
-
 unsigned BoundedRegisterMask::maskStart(RegisterMask mask)
 {
   for (int i = 0; i <= 31; ++i) {
-    if (mask.contains(i))
+    if (mask.contains(Register(i)))
       return i;
   }
   return 32;
@@ -27,7 +25,7 @@ unsigned BoundedRegisterMask::maskStart(RegisterMask mask)
 unsigned BoundedRegisterMask::maskLimit(RegisterMask mask)
 {
   for (int i = 31; i >= 0; --i) {
-    if (mask.contains(i))
+    if (mask.contains(Register(i)))
       return i + 1;
   }
   return 0;

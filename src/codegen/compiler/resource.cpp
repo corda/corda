@@ -113,9 +113,9 @@ unsigned RegisterResource::toString(Context* c,
   return vm::snprintf(buffer, bufferSize, "register %d", index(c));
 }
 
-unsigned RegisterResource::index(Context* c)
+Register RegisterResource::index(Context* c)
 {
-  return this - c->registerResources;
+  return Register(this - c->registerResources);
 }
 
 void RegisterResource::increment(Context* c)

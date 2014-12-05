@@ -20,33 +20,33 @@ class Register {
 private:
   int8_t index;
 public:
-  Register(int8_t index) : index(index) {}
-  Register() : index(0xff) {}
+  constexpr Register(int8_t index) : index(index) {}
+  constexpr Register() : index(-1) {}
 
-  bool operator == (Register o) const {
+  constexpr bool operator == (Register o) const {
     return index == o.index;
   }
 
-  bool operator != (Register o) const {
+  constexpr bool operator != (Register o) const {
     return !(*this == o);
   }
 
-  explicit operator int8_t() const {
+  constexpr explicit operator int8_t() const {
     return index;
   }
-
-  static Register None;
 };
+
+constexpr Register NoRegister;
 
 class RegisterMask {
 private:
   uint64_t mask;
 public:
-  RegisterMask(uint64_t mask) : mask(mask) {}
-  RegisterMask() : mask(0) {}
-  RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << (int8_t)reg) {}
+  constexpr RegisterMask(uint64_t mask) : mask(mask) {}
+  constexpr RegisterMask() : mask(0) {}
+  constexpr RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << (int8_t)reg) {}
 
-  RegisterMask operator &(RegisterMask o) const {
+  constexpr RegisterMask operator &(RegisterMask o) const {
     return RegisterMask(mask & o.mask);
   }
 
@@ -55,27 +55,31 @@ public:
     return *this;
   }
 
-  RegisterMask operator |(RegisterMask o) const {
+  constexpr RegisterMask operator |(RegisterMask o) const {
     return RegisterMask(mask | o.mask);
   }
 
-  bool contains(Register reg) const {
+  constexpr bool contains(Register reg) const {
     return (mask & (static_cast<uint64_t>(1) << (int8_t)reg)) != 0;
   }
 
-  bool containsExactly(Register reg) const {
+  constexpr bool containsExactly(Register reg) const {
     return mask == (mask & (static_cast<uint64_t>(1) << (int8_t)reg));
   }
 
-  RegisterMask excluding(Register reg) const {
+  constexpr RegisterMask excluding(Register reg) const {
     return RegisterMask(mask & ~(static_cast<uint64_t>(1) << (int8_t)reg));
   }
 
-  explicit operator uint64_t() const {
+  constexpr RegisterMask including(Register reg) const {
+    return RegisterMask(mask | (static_cast<uint64_t>(1) << (int8_t)reg));
+  }
+
+  constexpr explicit operator uint64_t() const {
     return mask;
   }
 
-  explicit operator bool() const {
+  constexpr explicit operator bool() const {
     return mask != 0;
   }
 
@@ -132,8 +136,8 @@ class RegisterIterator {
     int r = index;
     do {
       index++;
-    } while (index < mask.limit && !(mask.mask.contains(index)));
-    return r;
+    } while (index < mask.limit && !(mask.mask.contains(Register(index))));
+    return Register(r);
   }
 };
 

@@ -360,7 +360,7 @@ class MemorySite : public Site {
 MemorySite* memorySite(Context* c,
                        Register base,
                        int offset = 0,
-                       Register index = Register::None,
+                       Register index = NoRegister,
                        unsigned scale = 1);
 MemorySite* frameSite(Context* c, int frameIndex);
 

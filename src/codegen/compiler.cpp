@@ -259,7 +259,7 @@ Site* pickTargetSite(Context* c,
   if (target.type == lir::Operand::Type::Memory) {
     return frameSite(c, target.index);
   } else {
-    return registerSite(c, target.index);
+    return registerSite(c, Register(target.index));
   }
 }
 

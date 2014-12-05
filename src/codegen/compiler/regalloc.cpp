@@ -91,13 +91,13 @@ Register pickRegisterTarget(Context* c,
                        unsigned* cost,
                        CostCalculator* costCalculator)
 {
-  Register target = Register::None;
+  Register target = NoRegister;
   *cost = Target::Impossible;
 
   if (mask & c->regFile->generalRegisters.mask) {
-    for (Register i = c->regFile->generalRegisters.limit - 1;
+    for (Register i = Register(c->regFile->generalRegisters.limit - 1);
          (int8_t)i >= c->regFile->generalRegisters.start;
-         i = (int8_t)i - 1) {
+         i = Register((int8_t)i - 1)) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -105,9 +105,9 @@ Register pickRegisterTarget(Context* c,
   }
 
   if (mask & c->regFile->floatRegisters.mask) {
-    for (Register i = c->regFile->floatRegisters.start;
+    for (Register i = Register(c->regFile->floatRegisters.start);
          (int8_t)i < c->regFile->floatRegisters.limit;
-         i = (int8_t)i + 1) {
+         i = Register((int8_t)i + 1)) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
