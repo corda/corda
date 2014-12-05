@@ -238,7 +238,7 @@ unsigned RegisterSite::copyCost(Context* c, Site* s)
 
   if (s and (this == s
              or (s->type(c) == lir::RegisterOperand
-                 and (static_cast<RegisterSite*>(s)->mask_ & (1 << number))))) {
+                 and (static_cast<RegisterSite*>(s)->mask_.contains(number))))) {
     return 0;
   } else {
     return RegisterCopyCost;
@@ -250,7 +250,7 @@ bool RegisterSite::match(Context* c UNUSED, const SiteMask& mask)
   assertT(c, number != lir::NoRegister);
 
   if ((mask.typeMask & (1 << lir::RegisterOperand))) {
-    return ((static_cast<uint64_t>(1) << number) & mask.registerMask);
+    return mask.registerMask.contains(number);
   } else {
     return false;
   }
@@ -261,7 +261,7 @@ bool RegisterSite::loneMatch(Context* c UNUSED, const SiteMask& mask)
   assertT(c, number != lir::NoRegister);
 
   if ((mask.typeMask & (1 << lir::RegisterOperand))) {
-    return ((static_cast<uint64_t>(1) << number) == mask.registerMask);
+    return mask.registerMask.containsExactly(number);
   } else {
     return false;
   }
@@ -282,7 +282,7 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
     return number == rs->number;
   } else {
     RegisterMask mask = c->regFile->generalRegisters.mask;
-    return ((1 << number) & mask) and ((1 << rs->number) & mask);
+    return mask.contains(number) and mask.contains(rs->number);
   }
 }
 
@@ -378,7 +378,7 @@ Site* RegisterSite::copyHigh(Context* c)
 Site* RegisterSite::makeNextWord(Context* c, unsigned)
 {
   assertT(c, number != lir::NoRegister);
-  assertT(c, ((1 << number) & c->regFile->generalRegisters.mask));
+  assertT(c, c->regFile->generalRegisters.mask.contains(number));
 
   return freeRegisterSite(c, c->regFile->generalRegisters.mask);
 }
@@ -405,7 +405,7 @@ unsigned RegisterSite::registerSize(Context* c)
 {
   assertT(c, number != lir::NoRegister);
 
-  if ((1 << number) & c->regFile->floatRegisters.mask) {
+  if (c->regFile->floatRegisters.mask.contains(number)) {
     return c->arch->floatRegisterSize();
   } else {
     return c->targetInfo.pointerSize;
@@ -423,8 +423,8 @@ Site* registerSite(Context* c, int number)
 {
   assertT(c, number >= 0);
   assertT(c,
-          (1 << number) & (c->regFile->generalRegisters.mask
-                           | c->regFile->floatRegisters.mask));
+          (c->regFile->generalRegisters.mask
+                           | c->regFile->floatRegisters.mask).contains(number));
 
   return new (c->zone) RegisterSite(1 << number, number);
 }
@@ -467,9 +467,9 @@ unsigned MemorySite::copyCost(Context* c, Site* s)
 bool MemorySite::conflicts(const SiteMask& mask)
 {
   return (mask.typeMask & (1 << lir::RegisterOperand)) != 0
-         and (((1 << base) & mask.registerMask) == 0
+         and (!mask.registerMask.contains(base)
               or (index != lir::NoRegister
-                  and ((1 << index) & mask.registerMask) == 0));
+                  and !mask.registerMask.contains(index)));
 }
 
 bool MemorySite::match(Context* c, const SiteMask& mask)

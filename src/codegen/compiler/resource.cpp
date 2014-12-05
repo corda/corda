@@ -88,7 +88,7 @@ void RegisterResource::freeze(Context* c, Value* v)
     freezeResource(c, this, v);
 
     if (freezeCount == 1
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask)) {
+        and c->regFile->generalRegisters.mask.contains(index(c))) {
       decrementAvailableGeneralRegisterCount(c);
     }
   }
@@ -100,7 +100,7 @@ void RegisterResource::thaw(Context* c, Value* v)
     thawResource(c, this, v);
 
     if (freezeCount == 0
-        and ((1 << index(c)) & c->regFile->generalRegisters.mask)) {
+        and c->regFile->generalRegisters.mask.contains(index(c))) {
       incrementAvailableGeneralRegisterCount(c);
     }
   }
@@ -130,7 +130,7 @@ void RegisterResource::increment(Context* c)
     ++this->referenceCount;
 
     if (this->referenceCount == 1
-        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask)) {
+        and c->regFile->generalRegisters.mask.contains(this->index(c))) {
       decrementAvailableGeneralRegisterCount(c);
     }
   }
@@ -150,7 +150,7 @@ void RegisterResource::decrement(Context* c)
     --this->referenceCount;
 
     if (this->referenceCount == 0
-        and ((1 << this->index(c)) & c->regFile->generalRegisters.mask)) {
+        and c->regFile->generalRegisters.mask.contains(this->index(c))) {
       incrementAvailableGeneralRegisterCount(c);
     }
   }

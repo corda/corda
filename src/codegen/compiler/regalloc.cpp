@@ -64,7 +64,7 @@ bool pickRegisterTarget(Context* c,
                         unsigned* cost,
                         CostCalculator* costCalculator)
 {
-  if ((1 << i) & mask) {
+  if (mask.contains(i)) {
     RegisterResource* r = c->registerResources + i;
     unsigned myCost
         = resourceCost(
@@ -74,7 +74,7 @@ bool pickRegisterTarget(Context* c,
               SiteMask(1 << lir::RegisterOperand, 1 << i, NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
-    if ((static_cast<RegisterMask>(1) << i) == mask) {
+    if (mask.containsExactly(i)) {
       *cost = myCost;
       return true;
     } else if (myCost < *cost) {
@@ -235,7 +235,7 @@ Target pickTarget(Context* c,
   Value* value = read->value;
 
   RegisterMask registerMask
-      = (isFloatValue(value) ? ~0 : c->regFile->generalRegisters.mask);
+      = (isFloatValue(value) ? RegisterMask::Any : c->regFile->generalRegisters.mask);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
@@ -275,7 +275,7 @@ Target pickTarget(Context* c,
       fprintf(stderr,
               "mask type %d reg %" LLD " frame %d\n",
               mask.typeMask,
-              mask.registerMask,
+              (uint64_t)mask.registerMask,
               mask.frameIndex);
       abort(c);
     }
