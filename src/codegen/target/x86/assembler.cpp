@@ -183,37 +183,37 @@ class MyArchitecture : public Architecture {
     return &myRegisterFile;
   }
 
-  virtual int scratch()
+  virtual Register scratch()
   {
     return rax;
   }
 
-  virtual int stack()
+  virtual Register stack()
   {
     return rsp;
   }
 
-  virtual int thread()
+  virtual Register thread()
   {
     return rbx;
   }
 
-  virtual int returnLow()
+  virtual Register returnLow()
   {
     return rax;
   }
 
-  virtual int returnHigh()
+  virtual Register returnHigh()
   {
-    return (TargetBytesPerWord == 4 ? rdx : lir::NoRegister);
+    return (TargetBytesPerWord == 4 ? rdx : Register::None);
   }
 
-  virtual int virtualCallTarget()
+  virtual Register virtualCallTarget()
   {
     return rax;
   }
 
-  virtual int virtualCallIndex()
+  virtual Register virtualCallIndex()
   {
     return rdx;
   }
@@ -233,9 +233,9 @@ class MyArchitecture : public Architecture {
     return 0x7FFFFFFF;
   }
 
-  virtual bool reserved(int register_)
+  virtual bool reserved(Register register_)
   {
-    switch (register_) {
+    switch ((int8_t)register_) {
     case rbp:
       return UseFramePointer;
 
@@ -289,7 +289,7 @@ class MyArchitecture : public Architecture {
       return 0;
   }
 
-  virtual int argumentRegister(unsigned index)
+  virtual Register argumentRegister(unsigned index)
   {
     assertT(&c, TargetBytesPerWord == 8);
     switch (index) {
@@ -1031,8 +1031,8 @@ class MyAssembler : public Assembler {
 
   virtual void popFrameForTailCall(unsigned frameFootprint,
                                    int offset,
-                                   int returnAddressSurrogate,
-                                   int framePointerSurrogate)
+                                   Register returnAddressSurrogate,
+                                   Register framePointerSurrogate)
   {
     if (TailCalls) {
       if (offset) {
@@ -1070,7 +1070,7 @@ class MyAssembler : public Assembler {
 
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
-        if (returnAddressSurrogate != lir::NoRegister) {
+        if (returnAddressSurrogate != Register::None) {
           assertT(&c, offset > 0);
 
           lir::RegisterPair ras(returnAddressSurrogate);
@@ -1078,7 +1078,7 @@ class MyAssembler : public Assembler {
           moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
 
-        if (framePointerSurrogate != lir::NoRegister) {
+        if (framePointerSurrogate != Register::None) {
           assertT(&c, offset > 0);
 
           lir::RegisterPair fps(framePointerSurrogate);

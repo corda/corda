@@ -45,7 +45,7 @@ void shiftLeftR(Context* con,
                 lir::RegisterPair* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    Register tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
     ResolvedPromise maskPromise(0x3F);
     lir::Constant mask(&maskPromise);
     lir::RegisterPair dst(tmp3);
@@ -61,7 +61,7 @@ void shiftLeftR(Context* con,
     freeTemp(con, tmp2);
     freeTemp(con, tmp3);
   } else {
-    int tmp = newTemp(con);
+    Register tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
     lir::Constant mask(&maskPromise);
     lir::RegisterPair dst(tmp);
@@ -98,7 +98,7 @@ void shiftRightR(Context* con,
                  lir::RegisterPair* t)
 {
   if (size == 8) {
-    int tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
+    Register tmp1 = newTemp(con), tmp2 = newTemp(con), tmp3 = newTemp(con);
     ResolvedPromise maskPromise(0x3F);
     lir::Constant mask(&maskPromise);
     lir::RegisterPair dst(tmp3);
@@ -114,7 +114,7 @@ void shiftRightR(Context* con,
     freeTemp(con, tmp2);
     freeTemp(con, tmp3);
   } else {
-    int tmp = newTemp(con);
+    Register tmp = newTemp(con);
     ResolvedPromise maskPromise(0x1F);
     lir::Constant mask(&maskPromise);
     lir::RegisterPair dst(tmp);
@@ -144,14 +144,14 @@ void unsignedShiftRightR(Context* con,
                          lir::RegisterPair* b,
                          lir::RegisterPair* t)
 {
-  int tmpShift = newTemp(con);
+  Register tmpShift = newTemp(con);
   ResolvedPromise maskPromise(size == 8 ? 0x3F : 0x1F);
   lir::Constant mask(&maskPromise);
   lir::RegisterPair dst(tmpShift);
   andC(con, 4, &mask, a, &dst);
   emit(con, lsr(t->low, b->low, tmpShift));
   if (size == 8) {
-    int tmpHi = newTemp(con), tmpLo = newTemp(con);
+    Register tmpHi = newTemp(con), tmpLo = newTemp(con);
     emit(con, SETS(rsbi(tmpHi, tmpShift, 32)));
     emit(con, lsl(tmpLo, b->high, tmpHi));
     emit(con, orr(t->low, t->low, tmpLo));
@@ -509,9 +509,9 @@ void multiplyR(Context* con,
 {
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
-    int tmpLow = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
+    Register tmpLow = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
                                 : t->low;
-    int tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
+    Register tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
                                  : t->high;
 
     emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
@@ -574,8 +574,8 @@ void float2IntRR(Context* con,
                  unsigned,
                  lir::RegisterPair* b)
 {
-  int tmp = newTemp(con, FPR_MASK);
-  int ftmp = fpr32(tmp);
+  Register tmp = newTemp(con, FPR_MASK);
+  Register ftmp = fpr32(tmp);
   if (size == 8) {  // double to int
     emit(con, ftosizd(ftmp, fpr64(a)));
   } else {  // float to int
@@ -664,9 +664,9 @@ void floatDivideR(Context* con,
   }
 }
 
-int normalize(Context* con,
+Register normalize(Context* con,
               int offset,
-              int index,
+              Register index,
               unsigned scale,
               bool* preserveIndex,
               bool* release)
@@ -682,7 +682,7 @@ int normalize(Context* con,
       *release = false;
     }
 
-    int scaled;
+    Register scaled;
 
     if (scale != 1) {
       lir::RegisterPair unscaledIndex(index);
@@ -731,15 +731,15 @@ int normalize(Context* con,
 void store(Context* con,
            unsigned size,
            lir::RegisterPair* src,
-           int base,
+           Register base,
            int offset,
-           int index,
+           Register index,
            unsigned scale,
            bool preserveIndex)
 {
-  if (index != lir::NoRegister) {
+  if (index != Register::None) {
     bool release;
-    int normalized
+    Register normalized
         = normalize(con, offset, index, scale, &preserveIndex, &release);
 
     if (!isFpr(src)) {  // GPR store
@@ -799,8 +799,8 @@ void store(Context* con,
 
       case 8: {  // split into 2 32-bit stores
         lir::RegisterPair srcHigh(src->high);
-        store(con, 4, &srcHigh, base, offset, lir::NoRegister, 1, false);
-        store(con, 4, src, base, offset + 4, lir::NoRegister, 1, false);
+        store(con, 4, &srcHigh, base, offset, Register::None, 1, false);
+        store(con, 4, src, base, offset + 4, Register::None, 1, false);
       } break;
 
       default:
@@ -844,18 +844,18 @@ void moveRM(Context* con,
 
 void load(Context* con,
           unsigned srcSize,
-          int base,
+          Register base,
           int offset,
-          int index,
+          Register index,
           unsigned scale,
           unsigned dstSize,
           lir::RegisterPair* dst,
           bool preserveIndex,
           bool signExtend)
 {
-  if (index != lir::NoRegister) {
+  if (index != Register::None) {
     bool release;
-    int normalized
+    Register normalized
         = normalize(con, offset, index, scale, &preserveIndex, &release);
 
     if (!isFpr(dst)) {  // GPR load
@@ -951,7 +951,7 @@ void load(Context* con,
                4,
                base,
                offset,
-               lir::NoRegister,
+               Register::None,
                1,
                4,
                &dstHigh,
@@ -961,7 +961,7 @@ void load(Context* con,
                4,
                base,
                offset + 4,
-               lir::NoRegister,
+               Register::None,
                1,
                4,
                dst,

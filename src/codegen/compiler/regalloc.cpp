@@ -65,13 +65,13 @@ bool pickRegisterTarget(Context* c,
                         CostCalculator* costCalculator)
 {
   if (mask.contains(i)) {
-    RegisterResource* r = c->registerResources + i;
+    RegisterResource* r = c->registerResources + (int8_t)i;
     unsigned myCost
         = resourceCost(
               c,
               v,
               r,
-              SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << i, NoFrameIndex),
+              SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, RegisterMask(i), NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
     if (mask.containsExactly(i)) {
@@ -91,13 +91,13 @@ Register pickRegisterTarget(Context* c,
                        unsigned* cost,
                        CostCalculator* costCalculator)
 {
-  Register target = lir::NoRegister;
+  Register target = Register::None;
   *cost = Target::Impossible;
 
   if (mask & c->regFile->generalRegisters.mask) {
     for (Register i = c->regFile->generalRegisters.limit - 1;
-         i >= c->regFile->generalRegisters.start;
-         --i) {
+         (int8_t)i >= c->regFile->generalRegisters.start;
+         i = (int8_t)i - 1) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -106,8 +106,8 @@ Register pickRegisterTarget(Context* c,
 
   if (mask & c->regFile->floatRegisters.mask) {
     for (Register i = c->regFile->floatRegisters.start;
-         i < static_cast<Register>(c->regFile->floatRegisters.limit);
-         ++i) {
+         (int8_t)i < c->regFile->floatRegisters.limit;
+         i = (int8_t)i + 1) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -124,7 +124,7 @@ Target pickRegisterTarget(Context* c,
 {
   unsigned cost;
   Register number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
-  return Target(number, lir::Operand::Type::RegisterPair, cost);
+  return Target(number, cost);
 }
 
 unsigned frameCost(Context* c,

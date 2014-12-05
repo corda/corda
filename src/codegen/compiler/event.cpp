@@ -399,11 +399,11 @@ class CallEvent : public Event {
           Register number = c->arch->argumentRegister(index);
 
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", number, v);
+            fprintf(stderr, "reg %d arg read %p\n", (int8_t)number, v);
           }
 
           targetMask = SiteMask::fixedRegisterMask(number);
-          registerMask &= ~(1 << number);
+          registerMask = registerMask.excluding(number);
         } else {
           if (index < c->arch->argumentRegisterCount()) {
             index = c->arch->argumentRegisterCount();
@@ -587,23 +587,23 @@ class CallEvent : public Event {
           framePointerSurrogate == 0
           or framePointerSurrogate->source->type(c) == lir::Operand::Type::RegisterPair);
 
-      int ras;
+      Register ras;
       if (returnAddressSurrogate) {
         returnAddressSurrogate->source->freeze(c, returnAddressSurrogate);
 
         ras = static_cast<RegisterSite*>(returnAddressSurrogate->source)
                   ->number;
       } else {
-        ras = lir::NoRegister;
+        ras = Register::None;
       }
 
-      int fps;
+      Register fps;
       if (framePointerSurrogate) {
         framePointerSurrogate->source->freeze(c, framePointerSurrogate);
 
         fps = static_cast<RegisterSite*>(framePointerSurrogate->source)->number;
       } else {
-        fps = lir::NoRegister;
+        fps = Register::None;
       }
 
       int offset = static_cast<int>(footprint)
@@ -1498,14 +1498,14 @@ class MemoryEvent : public Event {
 
   virtual void compile(Context* c)
   {
-    int indexRegister;
+    Register indexRegister;
     int displacement = this->displacement;
     unsigned scale = this->scale;
     if (index) {
       ConstantSite* constant = findConstantSite(c, index);
 
       if (constant) {
-        indexRegister = lir::NoRegister;
+        indexRegister = Register::None;
         displacement += (constant->value->value() * scale);
         scale = 1;
       } else {
@@ -1513,14 +1513,14 @@ class MemoryEvent : public Event {
         indexRegister = static_cast<RegisterSite*>(index->source)->number;
       }
     } else {
-      indexRegister = lir::NoRegister;
+      indexRegister = Register::None;
     }
     assertT(c, base->source->type(c) == lir::Operand::Type::RegisterPair);
-    int baseRegister = static_cast<RegisterSite*>(base->source)->number;
+    Register baseRegister = static_cast<RegisterSite*>(base->source)->number;
 
     popRead(c, this, base);
     if (index) {
-      if (c->targetInfo.pointerSize == 8 and indexRegister != lir::NoRegister) {
+      if (c->targetInfo.pointerSize == 8 and indexRegister != Register::None) {
         apply(c,
               lir::Move,
               4,
@@ -2035,7 +2035,7 @@ class BoundsCheckEvent : public Event {
       assertT(c, object->source->type(c) == lir::Operand::Type::RegisterPair);
       MemorySite length(static_cast<RegisterSite*>(object->source)->number,
                         lengthOffset,
-                        lir::NoRegister,
+                        Register::None,
                         1);
       length.acquired = true;
 

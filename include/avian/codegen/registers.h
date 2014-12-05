@@ -16,7 +16,27 @@
 namespace avian {
 namespace codegen {
 
-typedef int Register;
+class Register {
+private:
+  int8_t index;
+public:
+  Register(int8_t index) : index(index) {}
+  Register() : index(0xff) {}
+
+  bool operator == (Register o) const {
+    return index == o.index;
+  }
+
+  bool operator != (Register o) const {
+    return !(*this == o);
+  }
+
+  explicit operator int8_t() const {
+    return index;
+  }
+
+  static Register None;
+};
 
 class RegisterMask {
 private:
@@ -24,6 +44,7 @@ private:
 public:
   RegisterMask(uint64_t mask) : mask(mask) {}
   RegisterMask() : mask(0) {}
+  RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << (int8_t)reg) {}
 
   RegisterMask operator &(RegisterMask o) const {
     return RegisterMask(mask & o.mask);
@@ -39,11 +60,15 @@ public:
   }
 
   bool contains(Register reg) const {
-    return (mask & (static_cast<uint64_t>(1) << reg)) != 0;
+    return (mask & (static_cast<uint64_t>(1) << (int8_t)reg)) != 0;
   }
 
   bool containsExactly(Register reg) const {
-    return mask == (mask & (static_cast<uint64_t>(1) << reg));
+    return mask == (mask & (static_cast<uint64_t>(1) << (int8_t)reg));
+  }
+
+  RegisterMask excluding(Register reg) const {
+    return RegisterMask(mask & ~(static_cast<uint64_t>(1) << (int8_t)reg));
   }
 
   explicit operator uint64_t() const {
@@ -55,6 +80,7 @@ public:
   }
 
   static RegisterMask Any;
+  static RegisterMask None;
 };
 
 class BoundedRegisterMask {

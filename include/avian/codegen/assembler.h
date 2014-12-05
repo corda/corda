@@ -77,8 +77,8 @@ class Assembler {
   virtual void popFrame(unsigned footprint) = 0;
   virtual void popFrameForTailCall(unsigned footprint,
                                    int offset,
-                                   int returnAddressSurrogate,
-                                   int framePointerSurrogate) = 0;
+                                   Register returnAddressSurrogate,
+                                   Register framePointerSurrogate) = 0;
   virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
                                                 unsigned argumentFootprint) = 0;
   virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,

@@ -217,14 +217,14 @@ Site* addressSite(Context* c, Promise* address)
   return new (c->zone) AddressSite(address);
 }
 
-RegisterSite::RegisterSite(RegisterMask mask, int number)
+RegisterSite::RegisterSite(RegisterMask mask, Register number)
     : mask_(mask), number(number)
 {
 }
 
 unsigned RegisterSite::toString(Context*, char* buffer, unsigned bufferSize)
 {
-  if (number != lir::NoRegister) {
+  if (number != Register::None) {
     return vm::snprintf(buffer, bufferSize, "%p register %d", this, number);
   } else {
     return vm::snprintf(
@@ -234,7 +234,7 @@ unsigned RegisterSite::toString(Context*, char* buffer, unsigned bufferSize)
 
 unsigned RegisterSite::copyCost(Context* c, Site* s)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if (s and (this == s
              or (s->type(c) == lir::Operand::Type::RegisterPair
@@ -247,7 +247,7 @@ unsigned RegisterSite::copyCost(Context* c, Site* s)
 
 bool RegisterSite::match(Context* c UNUSED, const SiteMask& mask)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if ((mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair))) {
     return mask.registerMask.contains(number);
@@ -258,7 +258,7 @@ bool RegisterSite::match(Context* c UNUSED, const SiteMask& mask)
 
 bool RegisterSite::loneMatch(Context* c UNUSED, const SiteMask& mask)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if ((mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair))) {
     return mask.registerMask.containsExactly(number);
@@ -269,7 +269,7 @@ bool RegisterSite::loneMatch(Context* c UNUSED, const SiteMask& mask)
 
 bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if (s->type(c) != lir::Operand::Type::RegisterPair) {
     return false;
@@ -278,7 +278,7 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
   RegisterSite* rs = static_cast<RegisterSite*>(s);
   unsigned size = rs->registerSize(c);
   if (size > c->targetInfo.pointerSize) {
-    assertT(c, number != lir::NoRegister);
+    assertT(c, number != Register::None);
     return number == rs->number;
   } else {
     RegisterMask mask = c->regFile->generalRegisters.mask;
@@ -289,8 +289,8 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
 void RegisterSite::acquire(Context* c, Value* v)
 {
   Target target;
-  if (number != lir::NoRegister) {
-    target = Target(number, lir::Operand::Type::RegisterPair, 0);
+  if (number != Register::None) {
+    target = Target(number, 0);
   } else {
     target = pickRegisterTarget(c, v, mask_);
     expect(c, target.cost < Target::Impossible);
@@ -304,30 +304,30 @@ void RegisterSite::acquire(Context* c, Value* v)
 
 void RegisterSite::release(Context* c, Value* v)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  compiler::release(c, c->registerResources + number, v, this);
+  compiler::release(c, c->registerResources + (int8_t)number, v, this);
 }
 
 void RegisterSite::freeze(Context* c, Value* v)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  c->registerResources[number].freeze(c, v);
+  c->registerResources[(int8_t)number].freeze(c, v);
 }
 
 void RegisterSite::thaw(Context* c, Value* v)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  c->registerResources[number].thaw(c, v);
+  c->registerResources[(int8_t)number].thaw(c, v);
 }
 
 bool RegisterSite::frozen(Context* c UNUSED)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  return c->registerResources[number].freezeCount != 0;
+  return c->registerResources[(int8_t)number].freezeCount != 0;
 }
 
 lir::Operand::Type RegisterSite::type(Context*)
@@ -339,14 +339,14 @@ void RegisterSite::asAssemblerOperand(Context* c UNUSED,
                                       Site* high,
                                       lir::Operand* result)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  int highNumber;
+  Register highNumber;
   if (high != this) {
     highNumber = static_cast<RegisterSite*>(high)->number;
-    assertT(c, highNumber != lir::NoRegister);
+    assertT(c, highNumber != Register::None);
   } else {
-    highNumber = lir::NoRegister;
+    highNumber = Register::None;
   }
 
   new (result) lir::RegisterPair(number, highNumber);
@@ -356,8 +356,8 @@ Site* RegisterSite::copy(Context* c)
 {
   RegisterMask mask;
 
-  if (number != lir::NoRegister) {
-    mask = 1 << number;
+  if (number != Register::None) {
+    mask = RegisterMask(number);
   } else {
     mask = mask_;
   }
@@ -377,7 +377,7 @@ Site* RegisterSite::copyHigh(Context* c)
 
 Site* RegisterSite::makeNextWord(Context* c, unsigned)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
   assertT(c, c->regFile->generalRegisters.mask.contains(number));
 
   return freeRegisterSite(c, c->regFile->generalRegisters.mask);
@@ -390,7 +390,7 @@ SiteMask RegisterSite::mask(Context* c UNUSED)
 
 SiteMask RegisterSite::nextWordMask(Context* c, unsigned)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if (registerSize(c) > c->targetInfo.pointerSize) {
     return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, number, NoFrameIndex);
@@ -403,7 +403,7 @@ SiteMask RegisterSite::nextWordMask(Context* c, unsigned)
 
 unsigned RegisterSite::registerSize(Context* c)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
   if (c->regFile->floatRegisters.mask.contains(number)) {
     return c->arch->floatRegisterSize();
@@ -412,29 +412,29 @@ unsigned RegisterSite::registerSize(Context* c)
   }
 }
 
-unsigned RegisterSite::registerMask(Context* c UNUSED)
+RegisterMask RegisterSite::registerMask(Context* c UNUSED)
 {
-  assertT(c, number != lir::NoRegister);
+  assertT(c, number != Register::None);
 
-  return 1 << number;
+  return RegisterMask(number);
 }
 
-Site* registerSite(Context* c, int number)
+Site* registerSite(Context* c, Register number)
 {
-  assertT(c, number >= 0);
+  assertT(c, number != Register::None);
   assertT(c,
           (c->regFile->generalRegisters.mask
                            | c->regFile->floatRegisters.mask).contains(number));
 
-  return new (c->zone) RegisterSite(1 << number, number);
+  return new (c->zone) RegisterSite(RegisterMask(number), number);
 }
 
 Site* freeRegisterSite(Context* c, RegisterMask mask)
 {
-  return new (c->zone) RegisterSite(mask, lir::NoRegister);
+  return new (c->zone) RegisterSite(mask, Register::None);
 }
 
-MemorySite::MemorySite(int base, int offset, int index, unsigned scale)
+MemorySite::MemorySite(Register base, int offset, Register index, unsigned scale)
     : acquired(false), base(base), offset(offset), index(index), scale(scale)
 {
 }
@@ -468,7 +468,7 @@ bool MemorySite::conflicts(const SiteMask& mask)
 {
   return (mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair)) != 0
          and (!mask.registerMask.contains(base)
-              or (index != lir::NoRegister
+              or (index != Register::None
                   and !mask.registerMask.contains(index)));
 }
 
@@ -479,7 +479,7 @@ bool MemorySite::match(Context* c, const SiteMask& mask)
   if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
     if (mask.frameIndex >= 0) {
       if (base == c->arch->stack()) {
-        assertT(c, index == lir::NoRegister);
+        assertT(c, index == Register::None);
         return static_cast<int>(frameIndexToOffset(c, mask.frameIndex))
                == offset;
       } else {
@@ -499,7 +499,7 @@ bool MemorySite::loneMatch(Context* c, const SiteMask& mask)
 
   if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
     if (base == c->arch->stack()) {
-      assertT(c, index == lir::NoRegister);
+      assertT(c, index == Register::None);
 
       if (mask.frameIndex == AnyFrameIndex) {
         return false;
@@ -532,13 +532,13 @@ bool MemorySite::matchNextWord(Context* c, Site* s, unsigned index)
 
 void MemorySite::acquire(Context* c, Value* v)
 {
-  c->registerResources[base].increment(c);
-  if (index != lir::NoRegister) {
-    c->registerResources[index].increment(c);
+  c->registerResources[(int8_t)base].increment(c);
+  if (index != Register::None) {
+    c->registerResources[(int8_t)index].increment(c);
   }
 
   if (base == c->arch->stack()) {
-    assertT(c, index == lir::NoRegister);
+    assertT(c, index == Register::None);
     assertT(c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
     compiler::acquire(
@@ -551,16 +551,16 @@ void MemorySite::acquire(Context* c, Value* v)
 void MemorySite::release(Context* c, Value* v)
 {
   if (base == c->arch->stack()) {
-    assertT(c, index == lir::NoRegister);
+    assertT(c, index == Register::None);
     assertT(c, not c->frameResources[offsetToFrameIndex(c, offset)].reserved);
 
     compiler::release(
         c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
   }
 
-  c->registerResources[base].decrement(c);
-  if (index != lir::NoRegister) {
-    c->registerResources[index].decrement(c);
+  c->registerResources[(int8_t)base].decrement(c);
+  if (index != Register::None) {
+    c->registerResources[(int8_t)index].decrement(c);
   }
 
   acquired = false;
@@ -571,9 +571,9 @@ void MemorySite::freeze(Context* c, Value* v)
   if (base == c->arch->stack()) {
     c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
   } else {
-    c->registerResources[base].increment(c);
-    if (index != lir::NoRegister) {
-      c->registerResources[index].increment(c);
+    c->registerResources[(int8_t)base].increment(c);
+    if (index != Register::None) {
+      c->registerResources[(int8_t)index].increment(c);
     }
   }
 }
@@ -583,9 +583,9 @@ void MemorySite::thaw(Context* c, Value* v)
   if (base == c->arch->stack()) {
     c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
   } else {
-    c->registerResources[base].decrement(c);
-    if (index != lir::NoRegister) {
-      c->registerResources[index].decrement(c);
+    c->registerResources[(int8_t)base].decrement(c);
+    if (index != Register::None) {
+      c->registerResources[(int8_t)index].decrement(c);
     }
   }
 }
@@ -668,7 +668,7 @@ SiteMask MemorySite::nextWordMask(Context* c, unsigned index)
 {
   int frameIndex;
   if (base == c->arch->stack()) {
-    assertT(c, this->index == lir::NoRegister);
+    assertT(c, this->index == Register::None);
     frameIndex = static_cast<int>(offsetToFrameIndex(c, offset))
                  + ((index == 1) xor c->arch->bigEndian() ? 1 : -1);
   } else {
@@ -683,9 +683,9 @@ bool MemorySite::isVolatile(Context* c)
 }
 
 MemorySite* memorySite(Context* c,
-                       int base,
+                       Register base,
                        int offset,
-                       int index,
+                       Register index,
                        unsigned scale)
 {
   return new (c->zone) MemorySite(base, offset, index, scale);
@@ -697,7 +697,7 @@ MemorySite* frameSite(Context* c, int frameIndex)
   return memorySite(c,
                     c->arch->stack(),
                     frameIndexToOffset(c, frameIndex),
-                    lir::NoRegister,
+                    Register::None,
                     0);
 }
 

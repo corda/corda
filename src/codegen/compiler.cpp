@@ -2216,18 +2216,18 @@ class Client : public Assembler::Client {
     Register r = pickRegisterTarget(c, 0, mask, &cost);
     expect(c, cost < Target::Impossible);
     save(r);
-    c->registerResources[r].increment(c);
+    c->registerResources[(int8_t)r].increment(c);
     return r;
   }
 
   virtual void releaseTemporary(Register r)
   {
-    c->registerResources[r].decrement(c);
+    c->registerResources[(int8_t)r].decrement(c);
   }
 
   virtual void save(Register r)
   {
-    RegisterResource* reg = c->registerResources + r;
+    RegisterResource* reg = c->registerResources + (int8_t)r;
 
     assertT(c, reg->referenceCount == 0);
     assertT(c, reg->freezeCount == 0);

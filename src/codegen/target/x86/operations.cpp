@@ -308,8 +308,8 @@ void moveRR(Context* c,
   } else {
     switch (aSize) {
     case 1:
-      if (vm::TargetBytesPerWord == 4 and a->low > rbx) {
-        assertT(c, b->low <= rbx);
+      if (vm::TargetBytesPerWord == 4 and (int8_t)a->low > rbx) {
+        assertT(c, (int8_t)b->low <= rbx);
 
         moveRR(c, vm::TargetBytesPerWord, a, vm::TargetBytesPerWord, b);
         moveRR(c, 1, b, vm::TargetBytesPerWord, b);
@@ -986,7 +986,7 @@ void multiplyRR(Context* c,
     addRR(c, 4, &bh, 4, scratch);
 
     // mul a->low,%eax%edx
-    opcode(c, 0xf7, 0xe0 + a->low);
+    opcode(c, 0xf7, 0xe0 + (int8_t)a->low);
 
     addRR(c, 4, scratch, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
@@ -1403,7 +1403,7 @@ void shiftLeftRR(Context* c,
     modrm(c, 0xc0, b->high, b->low);
 
     // shl
-    opcode(c, 0xd3, 0xe0 + b->low);
+    opcode(c, 0xd3, 0xe0 + (int8_t)b->low);
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
@@ -1454,7 +1454,7 @@ void shiftRightRR(Context* c,
     modrm(c, 0xc0, b->low, b->high);
 
     // sar
-    opcode(c, 0xd3, 0xf8 + b->high);
+    opcode(c, 0xd3, 0xf8 + (int8_t)b->high);
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);
@@ -1468,7 +1468,7 @@ void shiftRightRR(Context* c,
     moveRR(c, 4, &bh, 4, b);  // 2 bytes
 
     // sar 31,high
-    opcode(c, 0xc1, 0xf8 + b->high);
+    opcode(c, 0xc1, 0xf8 + (int8_t)b->high);
     c->code.append(31);
   } else {
     assertT(c, a->low == rcx);
@@ -1508,7 +1508,7 @@ void unsignedShiftRightRR(Context* c,
     modrm(c, 0xc0, b->low, b->high);
 
     // shr
-    opcode(c, 0xd3, 0xe8 + b->high);
+    opcode(c, 0xd3, 0xe8 + (int8_t)b->high);
 
     ResolvedPromise promise(32);
     lir::Constant constant(&promise);

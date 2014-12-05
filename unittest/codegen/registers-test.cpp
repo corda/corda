@@ -25,12 +25,12 @@ TEST(RegisterIterator)
 
   RegisterIterator it(regs);
   assertTrue(it.hasNext());
-  assertEqual<unsigned>(0, it.next());
+  assertEqual<unsigned>(0, (int8_t)it.next());
   assertTrue(it.hasNext());
-  assertEqual<unsigned>(2, it.next());
+  assertEqual<unsigned>(2, (int8_t)it.next());
   assertTrue(it.hasNext());
-  assertEqual<unsigned>(4, it.next());
+  assertEqual<unsigned>(4, (int8_t)it.next());
   assertTrue(it.hasNext());
-  assertEqual<unsigned>(6, it.next());
+  assertEqual<unsigned>(6, (int8_t)it.next());
   assertFalse(it.hasNext());
 }

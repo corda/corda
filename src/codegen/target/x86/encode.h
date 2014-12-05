@@ -42,9 +42,9 @@ void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::Memory* b);
 
 void maybeRex(Context* c, unsigned size, lir::Memory* a);
 
-inline int regCode(int a)
+inline int regCode(Register a)
 {
-  return a & 7;
+  return (int8_t)a & 7;
 }
 
 inline int regCode(lir::RegisterPair* a)
@@ -54,18 +54,18 @@ inline int regCode(lir::RegisterPair* a)
 
 inline bool isFloatReg(lir::RegisterPair* a)
 {
-  return a->low >= xmm0;
+  return (int8_t)a->low >= xmm0;
 }
 
-void modrm(Context* c, uint8_t mod, int a, int b);
+void modrm(Context* c, uint8_t mod, Register a, Register b);
 
 void modrm(Context* c, uint8_t mod, lir::RegisterPair* a, lir::RegisterPair* b);
 
-void sib(Context* c, unsigned scale, int index, int base);
+void sib(Context* c, unsigned scale, Register index, Register base);
 
-void modrmSib(Context* c, int width, int a, int scale, int index, int base);
+void modrmSib(Context* c, int width, Register a, int scale, Register index, Register base);
 
-void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset);
+void modrmSibImm(Context* c, Register a, int scale, Register index, Register base, int offset);
 
 void modrmSibImm(Context* c, lir::RegisterPair* a, lir::Memory* b);
 

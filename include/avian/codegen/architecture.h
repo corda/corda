@@ -61,13 +61,13 @@ class Architecture {
 
   virtual const RegisterFile* registerFile() = 0;
 
-  virtual int scratch() = 0;
-  virtual int stack() = 0;
-  virtual int thread() = 0;
-  virtual int returnLow() = 0;
-  virtual int returnHigh() = 0;
-  virtual int virtualCallTarget() = 0;
-  virtual int virtualCallIndex() = 0;
+  virtual Register scratch() = 0;
+  virtual Register stack() = 0;
+  virtual Register thread() = 0;
+  virtual Register returnLow() = 0;
+  virtual Register returnHigh() = 0;
+  virtual Register virtualCallTarget() = 0;
+  virtual Register virtualCallIndex() = 0;
 
   virtual ir::TargetInfo targetInfo() = 0;
 
@@ -78,7 +78,7 @@ class Architecture {
   virtual bool alwaysCondensed(lir::BinaryOperation op) = 0;
   virtual bool alwaysCondensed(lir::TernaryOperation op) = 0;
 
-  virtual bool reserved(int register_) = 0;
+  virtual bool reserved(Register register_) = 0;
 
   virtual unsigned frameFootprint(unsigned footprint) = 0;
   virtual unsigned argumentFootprint(unsigned footprint) = 0;

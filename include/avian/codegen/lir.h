@@ -11,6 +11,8 @@
 #ifndef AVIAN_CODEGEN_LIR_H
 #define AVIAN_CODEGEN_LIR_H
 
+#include <avian/codegen/registers.h>
+
 namespace avian {
 namespace codegen {
 class Promise;
@@ -151,24 +153,24 @@ class Address : public Operand {
 
 class RegisterPair : public Operand {
  public:
-  RegisterPair(int low, int high = NoRegister) : low(low), high(high)
+  RegisterPair(Register low, Register high = NoRegister) : low(low), high(high)
   {
   }
 
-  int low;
-  int high;
+  Register low;
+  Register high;
 };
 
 class Memory : public Operand {
  public:
-  Memory(int base, int offset, int index = NoRegister, unsigned scale = 1)
+  Memory(Register base, int offset, Register index = NoRegister, unsigned scale = 1)
       : base(base), offset(offset), index(index), scale(scale)
   {
   }
 
-  int base;
+  Register base;
   int offset;
-  int index;
+  Register index;
   unsigned scale;
 };
 

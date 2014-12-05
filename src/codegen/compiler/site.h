@@ -41,9 +41,9 @@ class SiteMask {
 
   SiteMask intersectionWith(const SiteMask& b);
 
-  static SiteMask fixedRegisterMask(int number)
+  static SiteMask fixedRegisterMask(Register number)
   {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << number, NoFrameIndex);
+    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << (int8_t)number, NoFrameIndex);
   }
 
   static SiteMask lowPart(const OperandMask& mask)
@@ -121,7 +121,7 @@ class Site {
 
   virtual unsigned registerSize(Context*);
 
-  virtual unsigned registerMask(Context*)
+  virtual RegisterMask registerMask(Context*)
   {
     return 0;
   }
@@ -251,7 +251,7 @@ Site* addressSite(Context* c, Promise* address);
 
 class RegisterSite : public Site {
  public:
-  RegisterSite(RegisterMask mask, int number);
+  RegisterSite(RegisterMask mask, Register number);
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
 
@@ -293,18 +293,18 @@ class RegisterSite : public Site {
 
   virtual unsigned registerSize(Context* c);
 
-  virtual unsigned registerMask(Context* c UNUSED);
+  virtual RegisterMask registerMask(Context* c UNUSED);
 
   RegisterMask mask_;
-  int number;
+  Register number;
 };
 
-Site* registerSite(Context* c, int number);
+Site* registerSite(Context* c, Register number);
 Site* freeRegisterSite(Context* c, RegisterMask mask);
 
 class MemorySite : public Site {
  public:
-  MemorySite(int base, int offset, int index, unsigned scale);
+  MemorySite(Register base, int offset, Register index, unsigned scale);
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
 
@@ -351,16 +351,16 @@ class MemorySite : public Site {
   virtual bool isVolatile(Context* c);
 
   bool acquired;
-  int base;
+  Register base;
   int offset;
-  int index;
+  Register index;
   unsigned scale;
 };
 
 MemorySite* memorySite(Context* c,
-                       int base,
+                       Register base,
                        int offset = 0,
-                       int index = lir::NoRegister,
+                       Register index = Register::None,
                        unsigned scale = 1);
 MemorySite* frameSite(Context* c, int frameIndex);
 

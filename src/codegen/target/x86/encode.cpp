@@ -53,9 +53,9 @@ namespace x86 {
 
 void maybeRex(Context* c,
               unsigned size,
-              int a,
-              int index,
-              int base,
+              Register a,
+              Register index,
+              Register base,
               bool always)
 {
   if (vm::TargetBytesPerWord == 8) {
@@ -65,11 +65,11 @@ void maybeRex(Context* c,
     } else {
       byte = REX_NONE;
     }
-    if (a != lir::NoRegister and (a & 8))
+    if (a != Register::None and ((int8_t)a & 8))
       byte |= REX_R;
-    if (index != lir::NoRegister and (index & 8))
+    if (index != Register::None and ((int8_t)index & 8))
       byte |= REX_X;
-    if (base != lir::NoRegister and (base & 8))
+    if (base != Register::None and ((int8_t)base & 8))
       byte |= REX_B;
     if (always or byte != REX_NONE)
       c->code.append(byte);
@@ -78,30 +78,30 @@ void maybeRex(Context* c,
 
 void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b)
 {
-  maybeRex(c, size, a->low, lir::NoRegister, b->low, false);
+  maybeRex(c, size, a->low, Register::None, b->low, false);
 }
 
 void alwaysRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b)
 {
-  maybeRex(c, size, a->low, lir::NoRegister, b->low, true);
+  maybeRex(c, size, a->low, Register::None, b->low, true);
 }
 
 void maybeRex(Context* c, unsigned size, lir::RegisterPair* a)
 {
-  maybeRex(c, size, lir::NoRegister, lir::NoRegister, a->low, false);
+  maybeRex(c, size, Register::None, Register::None, a->low, false);
 }
 
 void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::Memory* b)
 {
-  maybeRex(c, size, a->low, b->index, b->base, size == 1 and (a->low & 4));
+  maybeRex(c, size, a->low, b->index, b->base, size == 1 and ((int8_t)a->low & 4));
 }
 
 void maybeRex(Context* c, unsigned size, lir::Memory* a)
 {
-  maybeRex(c, size, lir::NoRegister, a->index, a->base, false);
+  maybeRex(c, size, Register::None, a->index, a->base, false);
 }
 
-void modrm(Context* c, uint8_t mod, int a, int b)
+void modrm(Context* c, uint8_t mod, Register a, Register b)
 {
   c->code.append(mod | (regCode(b) << 3) | regCode(a));
 }
@@ -111,15 +111,15 @@ void modrm(Context* c, uint8_t mod, lir::RegisterPair* a, lir::RegisterPair* b)
   modrm(c, mod, a->low, b->low);
 }
 
-void sib(Context* c, unsigned scale, int index, int base)
+void sib(Context* c, unsigned scale, Register index, Register base)
 {
   c->code.append((util::log(scale) << 6) | (regCode(index) << 3)
                  | regCode(base));
 }
 
-void modrmSib(Context* c, int width, int a, int scale, int index, int base)
+void modrmSib(Context* c, int width, Register a, int scale, Register index, Register base)
 {
-  if (index == lir::NoRegister) {
+  if (index == Register::None) {
     modrm(c, width, base, a);
     if (regCode(base) == rsp) {
       sib(c, 0x00, rsp, rsp);
@@ -130,7 +130,7 @@ void modrmSib(Context* c, int width, int a, int scale, int index, int base)
   }
 }
 
-void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset)
+void modrmSibImm(Context* c, Register a, int scale, Register index, Register base, int offset)
 {
   if (offset == 0 and regCode(base) != rbp) {
     modrmSib(c, 0x00, a, scale, index, base);

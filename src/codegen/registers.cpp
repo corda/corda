@@ -13,6 +13,8 @@
 namespace avian {
 namespace codegen {
 
+Register Register::None(-1);
+
 unsigned BoundedRegisterMask::maskStart(RegisterMask mask)
 {
   for (int i = 0; i <= 31; ++i) {

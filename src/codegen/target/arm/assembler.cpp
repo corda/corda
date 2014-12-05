@@ -164,37 +164,37 @@ class MyArchitecture : public Architecture {
                           : &MyRegisterFileWithoutFloats;
   }
 
-  virtual int scratch()
+  virtual Register scratch()
   {
     return 5;
   }
 
-  virtual int stack()
+  virtual Register stack()
   {
     return StackRegister;
   }
 
-  virtual int thread()
+  virtual Register thread()
   {
     return ThreadRegister;
   }
 
-  virtual int returnLow()
+  virtual Register returnLow()
   {
     return 0;
   }
 
-  virtual int returnHigh()
+  virtual Register returnHigh()
   {
     return 1;
   }
 
-  virtual int virtualCallTarget()
+  virtual Register virtualCallTarget()
   {
     return 4;
   }
 
-  virtual int virtualCallIndex()
+  virtual Register virtualCallIndex()
   {
     return 3;
   }
@@ -214,9 +214,9 @@ class MyArchitecture : public Architecture {
     return 0x1FFFFFF;
   }
 
-  virtual bool reserved(int register_)
+  virtual bool reserved(Register register_)
   {
-    switch (register_) {
+    switch ((int8_t)register_) {
     case LinkRegister:
     case StackRegister:
     case ThreadRegister:
@@ -261,7 +261,7 @@ class MyArchitecture : public Architecture {
     return 4;
   }
 
-  virtual int argumentRegister(unsigned index)
+  virtual Register argumentRegister(unsigned index)
   {
     assertT(&con, index < argumentRegisterCount());
 
@@ -789,10 +789,10 @@ class MyAssembler : public Assembler {
 
   virtual void popFrameForTailCall(unsigned footprint,
                                    int offset,
-                                   int returnAddressSurrogate,
-                                   int framePointerSurrogate UNUSED)
+                                   Register returnAddressSurrogate,
+                                   Register framePointerSurrogate UNUSED)
   {
-    assertT(&con, framePointerSurrogate == lir::NoRegister);
+    assertT(&con, framePointerSurrogate == Register::None);
 
     if (TailCalls) {
       if (offset) {
@@ -813,7 +813,7 @@ class MyAssembler : public Assembler {
         lir::Constant footprintConstant(&footprintPromise);
         addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
-        if (returnAddressSurrogate != lir::NoRegister) {
+        if (returnAddressSurrogate != Register::None) {
           assertT(&con, offset > 0);
 
           lir::RegisterPair ras(returnAddressSurrogate);
