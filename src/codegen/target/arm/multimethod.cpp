@@ -25,8 +25,8 @@ unsigned index(ArchitectureContext*,
                lir::Operand::Type operand1,
                lir::Operand::Type operand2)
 {
-  return operation + (lir::BinaryOperationCount * operand1)
-         + (lir::BinaryOperationCount * lir::Operand::TypeCount * operand2);
+  return operation + (lir::BinaryOperationCount * (unsigned)operand1)
+         + (lir::BinaryOperationCount * lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 unsigned index(ArchitectureContext* con UNUSED,
@@ -35,14 +35,14 @@ unsigned index(ArchitectureContext* con UNUSED,
 {
   assertT(con, not isBranch(operation));
 
-  return operation + (lir::NonBranchTernaryOperationCount * operand1);
+  return operation + (lir::NonBranchTernaryOperationCount * (unsigned)operand1);
 }
 
 unsigned branchIndex(ArchitectureContext* con UNUSED,
                      lir::Operand::Type operand1,
                      lir::Operand::Type operand2)
 {
-  return operand1 + (lir::Operand::TypeCount * operand2);
+  return (unsigned)operand1 + (lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 void populateTables(ArchitectureContext* con)
