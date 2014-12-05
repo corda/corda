@@ -281,7 +281,7 @@ bool RegisterSite::matchNextWord(Context* c, Site* s, unsigned)
     assertT(c, number != NoRegister);
     return number == rs->number;
   } else {
-    RegisterMask mask = c->regFile->generalRegisters.mask;
+    RegisterMask mask = c->regFile->generalRegisters;
     return mask.contains(number) and mask.contains(rs->number);
   }
 }
@@ -378,9 +378,9 @@ Site* RegisterSite::copyHigh(Context* c)
 Site* RegisterSite::makeNextWord(Context* c, unsigned)
 {
   assertT(c, number != NoRegister);
-  assertT(c, c->regFile->generalRegisters.mask.contains(number));
+  assertT(c, c->regFile->generalRegisters.contains(number));
 
-  return freeRegisterSite(c, c->regFile->generalRegisters.mask);
+  return freeRegisterSite(c, c->regFile->generalRegisters);
 }
 
 SiteMask RegisterSite::mask(Context* c UNUSED)
@@ -396,7 +396,7 @@ SiteMask RegisterSite::nextWordMask(Context* c, unsigned)
     return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, number, NoFrameIndex);
   } else {
     return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair,
-                    c->regFile->generalRegisters.mask,
+                    c->regFile->generalRegisters,
                     NoFrameIndex);
   }
 }
@@ -405,7 +405,7 @@ unsigned RegisterSite::registerSize(Context* c)
 {
   assertT(c, number != NoRegister);
 
-  if (c->regFile->floatRegisters.mask.contains(number)) {
+  if (c->regFile->floatRegisters.contains(number)) {
     return c->arch->floatRegisterSize();
   } else {
     return c->targetInfo.pointerSize;
@@ -423,8 +423,8 @@ Site* registerSite(Context* c, Register number)
 {
   assertT(c, number != NoRegister);
   assertT(c,
-          (c->regFile->generalRegisters.mask
-                           | c->regFile->floatRegisters.mask).contains(number));
+          (c->regFile->generalRegisters
+                           | c->regFile->floatRegisters).contains(number));
 
   return new (c->zone) RegisterSite(RegisterMask(number), number);
 }

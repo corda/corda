@@ -95,9 +95,8 @@ constexpr RegisterMask Register::operator | (Register o) const {
   return RegisterMask(*this) | o;
 }
 
-class BoundedRegisterMask {
+class BoundedRegisterMask : public RegisterMask {
  public:
-  RegisterMask mask;
   uint8_t start;
   uint8_t limit;
 
@@ -105,7 +104,7 @@ class BoundedRegisterMask {
   static unsigned maskLimit(RegisterMask mask);
 
   inline BoundedRegisterMask(RegisterMask mask)
-      : mask(mask), start(maskStart(mask)), limit(maskLimit(mask))
+      : RegisterMask(mask), start(maskStart(mask)), limit(maskLimit(mask))
   {
   }
 };
@@ -144,7 +143,7 @@ class RegisterIterator {
     int r = index;
     do {
       index++;
-    } while (index < mask.limit && !(mask.mask.contains(Register(index))));
+    } while (index < mask.limit && !(mask.contains(Register(index))));
     return Register(r);
   }
 };

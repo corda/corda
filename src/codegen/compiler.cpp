@@ -515,14 +515,14 @@ void steal(Context* c, Resource* r, Value* thief)
 SiteMask generalRegisterMask(Context* c)
 {
   return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair,
-                  c->regFile->generalRegisters.mask,
+                  c->regFile->generalRegisters,
                   NoFrameIndex);
 }
 
 SiteMask generalRegisterOrConstantMask(Context* c)
 {
   return SiteMask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Constant),
-                  c->regFile->generalRegisters.mask,
+                  c->regFile->generalRegisters,
                   NoFrameIndex);
 }
 
@@ -874,7 +874,7 @@ void maybeMove(Context* c,
       c->arch->planSource(op, dstSize, src, dstSize, &thunk);
 
       if (isGeneralValue(srcValue)) {
-        src.lowRegisterMask &= c->regFile->generalRegisters.mask;
+        src.lowRegisterMask &= c->regFile->generalRegisters;
       }
 
       assertT(c, thunk == 0);
@@ -1636,7 +1636,7 @@ bool resolveSourceSites(Context* c,
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Memory),
-                    c->regFile->generalRegisters.mask,
+                    c->regFile->generalRegisters,
                     AnyFrameIndex);
 
       Site* s = pickSourceSite(
@@ -1678,7 +1678,7 @@ void resolveTargetSites(Context* c,
 
     if (r and sites[el.localIndex] == 0) {
       SiteMask mask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Memory),
-                    c->regFile->generalRegisters.mask,
+                    c->regFile->generalRegisters,
                     AnyFrameIndex);
 
       Site* s = pickSourceSite(
