@@ -16,11 +16,13 @@
 namespace avian {
 namespace codegen {
 
+class RegisterMask;
+
 class Register {
 private:
   int8_t index;
 public:
-  constexpr Register(int8_t index) : index(index) {}
+  explicit constexpr Register(int8_t index) : index(index) {}
   constexpr Register() : index(-1) {}
 
   constexpr bool operator == (Register o) const {
@@ -30,6 +32,8 @@ public:
   constexpr bool operator != (Register o) const {
     return !(*this == o);
   }
+
+  constexpr RegisterMask operator | (Register o) const;
 
   constexpr operator int8_t() const {
     return index;
@@ -86,6 +90,10 @@ public:
   static RegisterMask Any;
   static RegisterMask None;
 };
+
+constexpr RegisterMask Register::operator | (Register o) const {
+  return RegisterMask(*this) | o;
+}
 
 class BoundedRegisterMask {
  public:

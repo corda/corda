@@ -135,11 +135,11 @@ inline int XFER2I(int cond,
 }
 inline int COOP(int cond,
                 int opcode_1,
-                Register CRn,
-                Register CRd,
+                int CRn,
+                int CRd,
                 int cp_num,
                 int opcode_2,
-                Register CRm)
+                int CRm)
 {
   return cond << 28 | 0xe << 24 | opcode_1 << 20 | (int8_t)CRn << 16 | (int8_t)CRd << 12
          | cp_num << 8 | opcode_2 << 5 | (int8_t)CRm;
@@ -151,7 +151,7 @@ inline int COXFER(int cond,
                   int W,
                   int L,
                   Register Rn,
-                  Register CRd,
+                  int CRd,
                   int cp_num,
                   int offset)  // offset is in words, not bytes
 {
@@ -161,17 +161,17 @@ inline int COXFER(int cond,
 inline int COREG(int cond,
                  int opcode_1,
                  int L,
-                 Register CRn,
+                 int CRn,
                  Register Rd,
                  int cp_num,
                  int opcode_2,
-                 Register CRm)
+                 int CRm)
 {
   return cond << 28 | 0xe << 24 | opcode_1 << 21 | L << 20 | (int8_t)CRn << 16
          | (int8_t)Rd << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | (int8_t)CRm;
 }
 inline int
-    COREG2(int cond, int L, Register Rn, Register Rd, int cp_num, int opcode, Register CRm)
+    COREG2(int cond, int L, Register Rn, Register Rd, int cp_num, int opcode, int CRm)
 {
   return cond << 28 | 0xc4 << 20 | L << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12 | cp_num << 8
          | opcode << 4 | (int8_t)CRm;
@@ -225,7 +225,7 @@ inline int rsc(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 }
 inline int cmp(Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xa, 1, Rn, 0, shift, Sh, Rm);
+  return DATA(AL, 0xa, 1, Rn, Register(0), shift, Sh, Rm);
 }
 inline int orr(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
@@ -233,11 +233,11 @@ inline int orr(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 }
 inline int mov(Register Rd, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xd, 0, 0, Rd, shift, Sh, Rm);
+  return DATA(AL, 0xd, 0, Register(0), Rd, shift, Sh, Rm);
 }
 inline int mvn(Register Rd, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xf, 0, 0, Rd, shift, Sh, Rm);
+  return DATA(AL, 0xf, 0, Register(0), Rd, shift, Sh, Rm);
 }
 inline int andi(Register Rd, Register Rn, int imm, int rot = 0)
 {
@@ -265,11 +265,11 @@ inline int bici(Register Rd, Register Rn, int imm, int rot = 0)
 }
 inline int cmpi(Register Rn, int imm, int rot = 0)
 {
-  return DATAI(AL, 0xa, 1, Rn, 0, rot, imm);
+  return DATAI(AL, 0xa, 1, Rn, Register(0), rot, imm);
 }
 inline int movi(Register Rd, int imm, int rot = 0)
 {
-  return DATAI(AL, 0xd, 0, 0, Rd, rot, imm);
+  return DATAI(AL, 0xd, 0, Register(0), Rd, rot, imm);
 }
 inline int orrsh(Register Rd, Register Rn, Register Rm, Register Rs, int Sh)
 {
@@ -277,11 +277,11 @@ inline int orrsh(Register Rd, Register Rn, Register Rm, Register Rs, int Sh)
 }
 inline int movsh(Register Rd, Register Rm, Register Rs, int Sh)
 {
-  return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm);
+  return DATAS(AL, 0xd, 0, Register(0), Rd, Rs, Sh, Rm);
 }
 inline int mul(Register Rd, Register Rm, Register Rs)
 {
-  return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm);
+  return MULTIPLY(AL, 0, 0, Rd, Register(0), Rs, Rm);
 }
 inline int mla(Register Rd, Register Rm, Register Rs, Register Rn)
 {
@@ -404,31 +404,31 @@ inline int bkpt(int16_t immed)
 inline int mcr(int coproc,
                int opcode_1,
                Register Rd,
-               Register CRn,
-               Register CRm,
+               int CRn,
+               int CRm,
                int opcode_2 = 0)
 {
   return COREG(AL, opcode_1, 0, CRn, Rd, coproc, opcode_2, CRm);
 }
-inline int mcrr(int coproc, int opcode, Register Rd, Register Rn, Register CRm)
+inline int mcrr(int coproc, int opcode, Register Rd, Register Rn, int CRm)
 {
   return COREG2(AL, 0, Rn, Rd, coproc, opcode, CRm);
 }
 inline int mrc(int coproc,
                int opcode_1,
                Register Rd,
-               Register CRn,
-               Register CRm,
+               int CRn,
+               int CRm,
                int opcode_2 = 0)
 {
   return COREG(AL, opcode_1, 1, CRn, Rd, coproc, opcode_2, CRm);
 }
-inline int mrrc(int coproc, int opcode, Register Rd, Register Rn, Register CRm)
+inline int mrrc(int coproc, int opcode, Register Rd, Register Rn, int CRm)
 {
   return COREG2(AL, 1, Rn, Rd, coproc, opcode, CRm);
 }
 // VFP FLOATING-POINT INSTRUCTIONS
-inline int fmuls(Register Sd, Register Sn, Register Sm)
+inline int fmuls(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
               ((int8_t)Sd & 1) << 2 | 2,
@@ -438,7 +438,7 @@ inline int fmuls(Register Sd, Register Sn, Register Sm)
               ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1),
               (int8_t)Sm >> 1);
 }
-inline int fadds(Register Sd, Register Sn, Register Sm)
+inline int fadds(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
               ((int8_t)Sd & 1) << 2 | 3,
@@ -448,7 +448,7 @@ inline int fadds(Register Sd, Register Sn, Register Sm)
               ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1),
               (int8_t)Sm >> 1);
 }
-inline int fsubs(Register Sd, Register Sn, Register Sm)
+inline int fsubs(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
               ((int8_t)Sd & 1) << 2 | 3,
@@ -458,7 +458,7 @@ inline int fsubs(Register Sd, Register Sn, Register Sm)
               ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1) | 2,
               (int8_t)Sm >> 1);
 }
-inline int fdivs(Register Sd, Register Sn, Register Sm)
+inline int fdivs(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
               ((int8_t)Sd & 1) << 2 | 8,
@@ -484,37 +484,37 @@ inline int fdivd(int Dd, int Dn, int Dm)
 {
   return COOP(AL, 8, Dn, Dd, 11, 0, Dm);
 }
-inline int fcpys(Register Sd, Register Sm)
+inline int fcpys(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 0, (int8_t)Sd >> 1, 10, 2 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 0, Sd >> 1, 10, 2 | (Sm & 1), Sm >> 1);
 }
-inline int fabss(Register Sd, Register Sm)
+inline int fabss(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 0, (int8_t)Sd >> 1, 10, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 0, Sd >> 1, 10, 6 | (Sm & 1), Sm >> 1);
 }
-inline int fnegs(Register Sd, Register Sm)
+inline int fnegs(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 1, (int8_t)Sd >> 1, 10, 2 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 1, Sd >> 1, 10, 2 | (Sm & 1), Sm >> 1);
 }
-inline int fsqrts(Register Sd, Register Sm)
+inline int fsqrts(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 1, (int8_t)Sd >> 1, 10, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 1, Sd >> 1, 10, 6 | (Sm & 1), Sm >> 1);
 }
-inline int fcmps(Register Sd, Register Sm)
+inline int fcmps(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 4, (int8_t)Sd >> 1, 10, 2 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 4, Sd >> 1, 10, 2 | (Sm & 1), Sm >> 1);
 }
-inline int fcvtds(int Dd, Register Sm)
+inline int fcvtds(int Dd, int Sm)
 {
-  return COOP(AL, 0xb, 7, Dd, 10, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb, 7, Dd, 10, 6 | (Sm & 1), Sm >> 1);
 }
-inline int fsitos(Register Sd, Register Sm)
+inline int fsitos(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 8, (int8_t)Sd >> 1, 10, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 8, Sd >> 1, 10, 6 | (Sm & 1), Sm >> 1);
 }
-inline int ftosizs(Register Sd, Register Sm)
+inline int ftosizs(int Sd, int Sm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 0xd, (int8_t)Sd >> 1, 10, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 0xd, Sd >> 1, 10, 6 | (Sm & 1), Sm >> 1);
 }
 inline int fcpyd(int Dd, int Dm)
 {
@@ -538,43 +538,43 @@ inline int fcmpd(int Dd, int Dm)
   return COOP(AL, 0xb, 4, Dd, 11, 2, Dm);
 }
 // double-precision conversion instructions
-inline int fcvtsd(Register Sd, int Dm)
+inline int fcvtsd(int Sd, int Dm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 7, (int8_t)Sd >> 1, 11, 6, Dm);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 7, Sd >> 1, 11, 6, Dm);
 }
-inline int fsitod(Register Dd, Register Sm)
+inline int fsitod(int Dd, int Sm)
 {
-  return COOP(AL, 0xb, 8, Dd, 11, 6 | ((int8_t)Sm & 1), (int8_t)Sm >> 1);
+  return COOP(AL, 0xb, 8, Dd, 11, 6 | (Sm & 1), Sm >> 1);
 }
-inline int ftosizd(Register Sd, Register Dm)
+inline int ftosizd(int Sd, int Dm)
 {
-  return COOP(AL, 0xb | ((int8_t)Sd & 1) << 2, 0xd, (int8_t)Sd >> 1, 11, 6, Dm);
+  return COOP(AL, 0xb | (Sd & 1) << 2, 0xd, Sd >> 1, 11, 6, Dm);
 }
 // single load/store instructions for both precision types
-inline int flds(Register Sd, Register Rn, int offset = 0)
+inline int flds(int Sd, Register Rn, int offset = 0)
 {
-  return COXFER(AL, 1, 1, (int8_t)Sd & 1, 0, 1, Rn, (int8_t)Sd >> 1, 10, offset);
+  return COXFER(AL, 1, 1, Sd & 1, 0, 1, Rn, Sd >> 1, 10, offset);
 };
-inline int fldd(Register Dd, Register Rn, int offset = 0)
+inline int fldd(int Dd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset);
 };
-inline int fsts(Register Sd, Register Rn, int offset = 0)
+inline int fsts(int Sd, Register Rn, int offset = 0)
 {
-  return COXFER(AL, 1, 1, (int8_t)Sd & 1, 0, 0, Rn, (int8_t)Sd >> 1, 10, offset);
+  return COXFER(AL, 1, 1, Sd & 1, 0, 0, Rn, Sd >> 1, 10, offset);
 };
-inline int fstd(Register Dd, Register Rn, int offset = 0)
+inline int fstd(int Dd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, 0, 0, 0, Rn, Dd, 11, offset);
 };
 // move between GPRs and FPRs
-inline int fmsr(Register Sn, Register Rd)
+inline int fmsr(int Sn, Register Rd)
 {
-  return mcr(10, 0, Rd, (int8_t)Sn >> 1, 0, ((int8_t)Sn & 1) << 2);
+  return mcr(10, 0, Rd, Sn >> 1, 0, (Sn & 1) << 2);
 }
-inline int fmrs(Register Rd, Register Sn)
+inline int fmrs(Register Rd, int Sn)
 {
-  return mrc(10, 0, Rd, (int8_t)Sn >> 1, 0, ((int8_t)Sn & 1) << 2);
+  return mrc(10, 0, Rd, Sn >> 1, 0, (Sn & 1) << 2);
 }
 // move to/from VFP system registers
 inline int fmrx(Register Rd, int reg)
@@ -582,7 +582,7 @@ inline int fmrx(Register Rd, int reg)
   return mrc(10, 7, Rd, reg, 0);
 }
 // these move around pairs of single-precision registers
-inline int fmdrr(Register Dm, Register Rd, Register Rn)
+inline int fmdrr(int Dm, Register Rd, Register Rn)
 {
   return mcrr(11, 1, Rd, Rn, Dm);
 }
@@ -670,7 +670,7 @@ inline int bpl(int offset)
 }
 inline int fmstat()
 {
-  return fmrx(15, FPSCR);
+  return fmrx(Register(15), FPSCR);
 }
 // todo: make this pretty:
 inline int dmb()

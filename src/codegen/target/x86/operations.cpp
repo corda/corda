@@ -491,7 +491,7 @@ void moveAR(Context* c,
   assertT(c, vm::TargetBytesPerWord == 8 or (aSize == 4 and bSize == 4));
 
   lir::Constant constant(a->address);
-  lir::Memory memory(b->low, 0, -1, 0);
+  lir::Memory memory(b->low, 0, NoRegister, 0);
 
   moveCR(c, aSize, &constant, bSize, b);
   moveMR(c, bSize, &memory, bSize, b);
@@ -507,7 +507,7 @@ void moveCM(Context* c,
   case 1:
     maybeRex(c, bSize, b);
     opcode(c, 0xc6);
-    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
+    modrmSibImm(c, rax, b->scale, b->index, b->base, b->offset);
     c->code.append(a->value->value());
     break;
 
@@ -515,14 +515,14 @@ void moveCM(Context* c,
     opcode(c, 0x66);
     maybeRex(c, bSize, b);
     opcode(c, 0xc7);
-    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
+    modrmSibImm(c, rax, b->scale, b->index, b->base, b->offset);
     c->code.append2(a->value->value());
     break;
 
   case 4:
     maybeRex(c, bSize, b);
     opcode(c, 0xc7);
-    modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
+    modrmSibImm(c, rax, b->scale, b->index, b->base, b->offset);
     if (a->value->resolved()) {
       c->code.append4(a->value->value());
     } else {
@@ -536,7 +536,7 @@ void moveCM(Context* c,
       if (a->value->resolved() and vm::fitsInInt32(a->value->value())) {
         maybeRex(c, bSize, b);
         opcode(c, 0xc7);
-        modrmSibImm(c, 0, b->scale, b->index, b->base, b->offset);
+        modrmSibImm(c, rax, b->scale, b->index, b->base, b->offset);
         c->code.append4(a->value->value());
       } else {
         lir::RegisterPair tmp(c->client->acquireTemporary(GeneralRegisterMask));
@@ -970,10 +970,10 @@ void multiplyRR(Context* c,
     lir::RegisterPair ah(a->high);
     lir::RegisterPair bh(b->high);
 
-    lir::RegisterPair tmp(-1);
+    lir::RegisterPair tmp(NoRegister);
     lir::RegisterPair* scratch;
     if (a->low == b->low) {
-      tmp.low = c->client->acquireTemporary(GeneralRegisterMask & ~(1 << rax));
+      tmp.low = c->client->acquireTemporary(GeneralRegisterMask.excluding(rax));
       scratch = &tmp;
       moveRR(c, 4, b, 4, scratch);
     } else {

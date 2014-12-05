@@ -519,13 +519,13 @@ class MyArchitecture : public Architecture {
     switch (op) {
     case lir::Negate:
       aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
-      aMask.setLowHighRegisterMasks(1 << rax, 1 << rdx);
+      aMask.setLowHighRegisterMasks(rax, rdx);
       break;
 
     case lir::Absolute:
       if (aSize <= TargetBytesPerWord) {
         aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
-        aMask.setLowHighRegisterMasks(1 << rax, 0);
+        aMask.setLowHighRegisterMasks(rax, 0);
       } else {
         *thunk = true;
       }
@@ -603,13 +603,12 @@ class MyArchitecture : public Architecture {
           aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair)
                            | (1 << (unsigned)lir::Operand::Type::Memory);
           const RegisterMask mask = GeneralRegisterMask
-                                & ~((1 << rax) | (1 << rdx));
+                                .excluding(rax).excluding(rdx);
           aMask.setLowHighRegisterMasks(mask, mask);
         } else if (aSize == 1 or bSize == 1) {
           aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair)
                            | (1 << (unsigned)lir::Operand::Type::Memory);
-          const RegisterMask mask = (1 << rax) | (1 << rcx) | (1 << rdx)
-                                | (1 << rbx);
+          const RegisterMask mask = rax | rcx | rdx | rbx;
           aMask.setLowHighRegisterMasks(mask, mask);
         }
       }
@@ -632,7 +631,7 @@ class MyArchitecture : public Architecture {
     switch (op) {
     case lir::Absolute:
       bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
-      bMask.setLowHighRegisterMasks(1 << rax, 0);
+      bMask.setLowHighRegisterMasks(rax, 0);
       break;
 
     case lir::FloatAbsolute:
@@ -679,10 +678,9 @@ class MyArchitecture : public Architecture {
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          bMask.setLowHighRegisterMasks(1 << rax, 1 << rdx);
+          bMask.setLowHighRegisterMasks(rax, rdx);
         } else if (aSize == 1 or bSize == 1) {
-          const RegisterMask mask = (1 << rax) | (1 << rcx) | (1 << rdx)
-                                | (1 << rbx);
+          const RegisterMask mask = rax | rcx | rdx | rbx;
           bMask.setLowHighRegisterMasks(mask, mask);
         }
       }
@@ -775,9 +773,9 @@ class MyArchitecture : public Architecture {
 
     case lir::Multiply:
       if (TargetBytesPerWord == 4 and aSize == 8) {
-        const RegisterMask mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+        const RegisterMask mask = GeneralRegisterMask .excluding(rax).excluding(rdx);
         aMask.setLowHighRegisterMasks(mask, mask);
-        bMask.setLowHighRegisterMasks(mask, 1 << rdx);
+        bMask.setLowHighRegisterMasks(mask, rdx);
       } else {
         aMask.setLowHighRegisterMasks(GeneralRegisterMask, 0);
         bMask.setLowHighRegisterMasks(GeneralRegisterMask, 0);
@@ -789,8 +787,8 @@ class MyArchitecture : public Architecture {
         *thunk = true;
       } else {
         aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
-        aMask.setLowHighRegisterMasks(GeneralRegisterMask & ~((1 << rax) | (1 << rdx)), 0);
-        bMask.setLowHighRegisterMasks(1 << rax, 0);
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask .excluding(rax).excluding(rdx), 0);
+        bMask.setLowHighRegisterMasks(rax, 0);
       }
       break;
 
@@ -799,8 +797,8 @@ class MyArchitecture : public Architecture {
         *thunk = true;
       } else {
         aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
-        aMask.setLowHighRegisterMasks(GeneralRegisterMask & ~((1 << rax) | (1 << rdx)), 0);
-        bMask.setLowHighRegisterMasks(1 << rax, 0);
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask .excluding(rax).excluding(rdx), 0);
+        bMask.setLowHighRegisterMasks(rax, 0);
       }
       break;
 
@@ -808,12 +806,12 @@ class MyArchitecture : public Architecture {
     case lir::ShiftRight:
     case lir::UnsignedShiftRight: {
       if (TargetBytesPerWord == 4 and bSize == 8) {
-        const RegisterMask mask = GeneralRegisterMask & ~(1 << rcx);
+        const RegisterMask mask = GeneralRegisterMask.excluding(rcx);
         aMask.setLowHighRegisterMasks(mask, mask);
         bMask.setLowHighRegisterMasks(mask, mask);
       } else {
-        aMask.setLowHighRegisterMasks(static_cast<uint64_t>(1) << rcx, GeneralRegisterMask);
-        const RegisterMask mask = GeneralRegisterMask & ~(1 << rcx);
+        aMask.setLowHighRegisterMasks(rcx, GeneralRegisterMask);
+        const RegisterMask mask = GeneralRegisterMask.excluding(rcx);
         bMask.setLowHighRegisterMasks(mask, mask);
       }
     } break;

@@ -49,15 +49,15 @@ inline int fpr32(lir::RegisterPair* reg)
 }
 
 #ifdef ARCH_arm64
-const int ThreadRegister = 19;
-const int StackRegister = 31;
-const int LinkRegister = 30;
-const int ProgramCounter = 0xFF; // i.e. unaddressable
+constexpr Register ThreadRegister(19);
+constexpr Register StackRegister(31);
+constexpr Register LinkRegister(30);
+constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
 #else
-const int ThreadRegister = 8;
-const int StackRegister = 13;
-const int LinkRegister = 14;
-const int ProgramCounter = 15;
+constexpr Register ThreadRegister(8);
+constexpr Register StackRegister(13);
+constexpr Register LinkRegister(14);
+constexpr Register ProgramCounter(15);
 #endif
 
 }  // namespace arm

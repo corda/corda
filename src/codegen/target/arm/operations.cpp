@@ -575,7 +575,7 @@ void float2IntRR(Context* con,
                  lir::RegisterPair* b)
 {
   Register tmp = newTemp(con, FPR_MASK);
-  Register ftmp = fpr32(tmp);
+  int ftmp = fpr32(tmp);
   if (size == 8) {  // double to int
     emit(con, ftosizd(ftmp, fpr64(a)));
   } else {  // float to int
@@ -1129,7 +1129,7 @@ void moveAR2(Context* con,
   lir::Constant constant(src->address);
   moveCR(con, srcSize, &constant, dstSize, dst);
 
-  lir::Memory memory(dst->low, 0, -1, 0);
+  lir::Memory memory(dst->low, 0, NoRegister, 0);
   moveMR(con, dstSize, &memory, dstSize, dst);
 }
 
@@ -1491,7 +1491,7 @@ void longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
-  lir::RegisterPair tmp(4);
+  lir::RegisterPair tmp(Register(4));
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   callR(con, vm::TargetBytesPerWord, &tmp);
 }
@@ -1500,7 +1500,7 @@ void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
-  lir::RegisterPair tmp(4);  // a non-arg reg that we don't mind clobbering
+  lir::RegisterPair tmp(Register(4));  // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, vm::TargetBytesPerWord, &tmp);
 }

@@ -166,7 +166,7 @@ class MyArchitecture : public Architecture {
 
   virtual Register scratch()
   {
-    return 5;
+    return Register(5);
   }
 
   virtual Register stack()
@@ -181,22 +181,22 @@ class MyArchitecture : public Architecture {
 
   virtual Register returnLow()
   {
-    return 0;
+    return Register(0);
   }
 
   virtual Register returnHigh()
   {
-    return 1;
+    return Register(1);
   }
 
   virtual Register virtualCallTarget()
   {
-    return 4;
+    return Register(4);
   }
 
   virtual Register virtualCallIndex()
   {
-    return 3;
+    return Register(3);
   }
 
   virtual ir::TargetInfo targetInfo()
@@ -265,7 +265,7 @@ class MyArchitecture : public Architecture {
   {
     assertT(&con, index < argumentRegisterCount());
 
-    return index;
+    return Register(index);
   }
 
   virtual bool hasLinkRegister()
