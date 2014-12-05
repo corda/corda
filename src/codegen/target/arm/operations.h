@@ -25,17 +25,17 @@ class Context;
 
 // shortcut functions
 
-inline int newTemp(Context* con)
+inline Register newTemp(Context* con)
 {
   return con->client->acquireTemporary(GPR_MASK);
 }
 
-inline int newTemp(Context* con, unsigned mask)
+inline Register newTemp(Context* con, RegisterMask mask)
 {
   return con->client->acquireTemporary(mask);
 }
 
-inline void freeTemp(Context* con, int r)
+inline void freeTemp(Context* con, Register r)
 {
   con->client->releaseTemporary(r);
 }
