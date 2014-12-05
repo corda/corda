@@ -236,11 +236,11 @@ class MyArchitecture : public Architecture {
   virtual bool reserved(Register register_)
   {
     switch ((int8_t)register_) {
-    case rbp:
+    case (int8_t)rbp:
       return UseFramePointer;
 
-    case rsp:
-    case rbx:
+    case (int8_t)rsp:
+    case (int8_t)rbx:
       return true;
 
     default:
@@ -602,13 +602,13 @@ class MyArchitecture : public Architecture {
         if (aSize == 4 and bSize == 8) {
           aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair)
                            | (1 << (unsigned)lir::Operand::Type::Memory);
-          const uint32_t mask = GeneralRegisterMask
+          const RegisterMask mask = GeneralRegisterMask
                                 & ~((1 << rax) | (1 << rdx));
           aMask.setLowHighRegisterMasks(mask, mask);
         } else if (aSize == 1 or bSize == 1) {
           aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair)
                            | (1 << (unsigned)lir::Operand::Type::Memory);
-          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
+          const RegisterMask mask = (1 << rax) | (1 << rcx) | (1 << rdx)
                                 | (1 << rbx);
           aMask.setLowHighRegisterMasks(mask, mask);
         }
@@ -681,7 +681,7 @@ class MyArchitecture : public Architecture {
         if (aSize == 4 and bSize == 8) {
           bMask.setLowHighRegisterMasks(1 << rax, 1 << rdx);
         } else if (aSize == 1 or bSize == 1) {
-          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
+          const RegisterMask mask = (1 << rax) | (1 << rcx) | (1 << rdx)
                                 | (1 << rbx);
           bMask.setLowHighRegisterMasks(mask, mask);
         }
@@ -775,7 +775,7 @@ class MyArchitecture : public Architecture {
 
     case lir::Multiply:
       if (TargetBytesPerWord == 4 and aSize == 8) {
-        const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
+        const RegisterMask mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
         aMask.setLowHighRegisterMasks(mask, mask);
         bMask.setLowHighRegisterMasks(mask, 1 << rdx);
       } else {
@@ -808,12 +808,12 @@ class MyArchitecture : public Architecture {
     case lir::ShiftRight:
     case lir::UnsignedShiftRight: {
       if (TargetBytesPerWord == 4 and bSize == 8) {
-        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
+        const RegisterMask mask = GeneralRegisterMask & ~(1 << rcx);
         aMask.setLowHighRegisterMasks(mask, mask);
         bMask.setLowHighRegisterMasks(mask, mask);
       } else {
         aMask.setLowHighRegisterMasks(static_cast<uint64_t>(1) << rcx, GeneralRegisterMask);
-        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
+        const RegisterMask mask = GeneralRegisterMask & ~(1 << rcx);
         bMask.setLowHighRegisterMasks(mask, mask);
       }
     } break;

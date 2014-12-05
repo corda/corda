@@ -31,7 +31,7 @@ public:
     return !(*this == o);
   }
 
-  constexpr explicit operator int8_t() const {
+  constexpr operator int8_t() const {
     return index;
   }
 };

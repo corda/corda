@@ -991,7 +991,7 @@ void multiplyRR(Context* c,
     addRR(c, 4, scratch, 4, &bh);
     moveRR(c, 4, &axdx, 4, b);
 
-    if (tmp.low != -1) {
+    if (tmp.low != NoRegister) {
       c->client->releaseTemporary(tmp.low);
     }
   } else {
