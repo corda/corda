@@ -129,6 +129,11 @@ public:
   };
 
   const static unsigned TypeCount = (unsigned)Type::Memory + 1;
+
+  const static unsigned ConstantMask = 1 << (unsigned)Type::Constant;
+  const static unsigned AddressMask = 1 << (unsigned)Type::Address;
+  const static unsigned RegisterPairMask = 1 << (unsigned)Type::RegisterPair;
+  const static unsigned MemoryMask = 1 << (unsigned)Type::Memory;
 };
 
 class Constant : public Operand {

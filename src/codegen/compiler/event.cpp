@@ -415,7 +415,7 @@ class CallEvent : public Event {
             fprintf(stderr, "stack %d arg read %p\n", frameIndex, v);
           }
 
-          targetMask = SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, frameIndex);
+          targetMask = SiteMask(lir::Operand::MemoryMask, 0, frameIndex);
         }
 
         this->addRead(c, v, targetMask);
@@ -512,7 +512,7 @@ class CallEvent : public Event {
             this->addRead(c, v, generalRegisterMask(c));
           } else {
             this->addRead(
-                c, v, SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, frameIndex));
+                c, v, SiteMask(lir::Operand::MemoryMask, 0, frameIndex));
           }
         }
       }
@@ -544,7 +544,7 @@ class CallEvent : public Event {
 
           this->addRead(c,
                         stack->value,
-                        SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, logicalIndex));
+                        SiteMask(lir::Operand::MemoryMask, 0, logicalIndex));
         }
 
         stack = stack->next;
@@ -866,7 +866,7 @@ class MoveEvent : public Event {
       assertT(c, srcSelectSize == c->targetInfo.pointerSize);
 
       if (dstValue->nextWord->target or live(c, dstValue->nextWord)) {
-        assertT(c, dstLowMask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair));
+        assertT(c, dstLowMask.typeMask & lir::Operand::RegisterPairMask);
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
 
@@ -897,7 +897,7 @@ class MoveEvent : public Event {
 
         srcValue->source->thaw(c, srcValue);
 
-        assertT(c, dstHighMask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair));
+        assertT(c, dstHighMask.typeMask & lir::Operand::RegisterPairMask);
 
         Site* high = freeRegisterSite(c, dstHighMask.registerMask);
 
@@ -1461,7 +1461,7 @@ ConstantSite* findConstantSite(Context* c, Value* v)
 void moveIfConflict(Context* c, Value* v, MemorySite* s)
 {
   if (v->reads) {
-    SiteMask mask(1 << (unsigned)lir::Operand::Type::RegisterPair, ~0, AnyFrameIndex);
+    SiteMask mask(lir::Operand::RegisterPairMask, ~0, AnyFrameIndex);
     v->reads->intersect(&mask);
     if (s->conflicts(mask)) {
       maybeMove(c, v->reads, true, false);
@@ -1873,12 +1873,12 @@ void clean(Context* c, Value* v, unsigned popIndex)
 {
   for (SiteIterator it(c, v); it.hasMore();) {
     Site* s = it.next();
-    if (not(s->match(c, SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, AnyFrameIndex))
+    if (not(s->match(c, SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex))
             and offsetToFrameIndex(c, static_cast<MemorySite*>(s)->offset)
                 >= popIndex)) {
       if (false
           and s->match(c,
-                       SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, AnyFrameIndex))) {
+                       SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex))) {
         char buffer[256];
         s->toString(c, buffer, 256);
         fprintf(stderr,

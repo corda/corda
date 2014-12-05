@@ -71,7 +71,7 @@ bool pickRegisterTarget(Context* c,
               c,
               v,
               r,
-              SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, RegisterMask(i), NoFrameIndex),
+              SiteMask(lir::Operand::RegisterPairMask, RegisterMask(i), NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
     if (mask.containsExactly(i)) {
@@ -135,7 +135,7 @@ unsigned frameCost(Context* c,
   return resourceCost(c,
                       v,
                       c->frameResources + frameIndex,
-                      SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, frameIndex),
+                      SiteMask(lir::Operand::MemoryMask, 0, frameIndex),
                       costCalculator) + Target::MinimumFrameCost;
 }
 
@@ -186,7 +186,7 @@ Target pickTarget(Context* c,
                   Target best,
                   CostCalculator* costCalculator)
 {
-  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair)) {
+  if (mask.typeMask & lir::Operand::RegisterPairMask) {
     Target mine
         = pickRegisterTarget(c, value, mask.registerMask, costCalculator);
 
@@ -198,7 +198,7 @@ Target pickTarget(Context* c,
     }
   }
 
-  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
+  if (mask.typeMask & lir::Operand::MemoryMask) {
     if (mask.frameIndex >= 0) {
       Target mine(mask.frameIndex,
                   lir::Operand::Type::Memory,

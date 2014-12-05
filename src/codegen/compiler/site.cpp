@@ -152,7 +152,7 @@ class AddressSite : public Site {
 
   virtual bool match(Context*, const SiteMask& mask)
   {
-    return mask.typeMask & (1 << (unsigned)lir::Operand::Type::Address);
+    return mask.typeMask & lir::Operand::AddressMask;
   }
 
   virtual bool loneMatch(Context*, const SiteMask&)
@@ -201,7 +201,7 @@ class AddressSite : public Site {
 
   virtual SiteMask mask(Context*)
   {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::Address, 0, NoFrameIndex);
+    return SiteMask(lir::Operand::AddressMask, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context* c, unsigned)
@@ -249,7 +249,7 @@ bool RegisterSite::match(Context* c UNUSED, const SiteMask& mask)
 {
   assertT(c, number != NoRegister);
 
-  if ((mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair))) {
+  if ((mask.typeMask & lir::Operand::RegisterPairMask)) {
     return mask.registerMask.contains(number);
   } else {
     return false;
@@ -260,7 +260,7 @@ bool RegisterSite::loneMatch(Context* c UNUSED, const SiteMask& mask)
 {
   assertT(c, number != NoRegister);
 
-  if ((mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair))) {
+  if ((mask.typeMask & lir::Operand::RegisterPairMask)) {
     return mask.registerMask.containsExactly(number);
   } else {
     return false;
@@ -385,7 +385,7 @@ Site* RegisterSite::makeNextWord(Context* c, unsigned)
 
 SiteMask RegisterSite::mask(Context* c UNUSED)
 {
-  return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, mask_, NoFrameIndex);
+  return SiteMask(lir::Operand::RegisterPairMask, mask_, NoFrameIndex);
 }
 
 SiteMask RegisterSite::nextWordMask(Context* c, unsigned)
@@ -393,9 +393,9 @@ SiteMask RegisterSite::nextWordMask(Context* c, unsigned)
   assertT(c, number != NoRegister);
 
   if (registerSize(c) > c->targetInfo.pointerSize) {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, number, NoFrameIndex);
+    return SiteMask(lir::Operand::RegisterPairMask, number, NoFrameIndex);
   } else {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair,
+    return SiteMask(lir::Operand::RegisterPairMask,
                     c->regFile->generalRegisters,
                     NoFrameIndex);
   }
@@ -466,7 +466,7 @@ unsigned MemorySite::copyCost(Context* c, Site* s)
 
 bool MemorySite::conflicts(const SiteMask& mask)
 {
-  return (mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair)) != 0
+  return (mask.typeMask & lir::Operand::RegisterPairMask) != 0
          and (!mask.registerMask.contains(base)
               or (index != NoRegister
                   and !mask.registerMask.contains(index)));
@@ -476,7 +476,7 @@ bool MemorySite::match(Context* c, const SiteMask& mask)
 {
   assertT(c, acquired);
 
-  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
+  if (mask.typeMask & lir::Operand::MemoryMask) {
     if (mask.frameIndex >= 0) {
       if (base == c->arch->stack()) {
         assertT(c, index == NoRegister);
@@ -497,7 +497,7 @@ bool MemorySite::loneMatch(Context* c, const SiteMask& mask)
 {
   assertT(c, acquired);
 
-  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
+  if (mask.typeMask & lir::Operand::MemoryMask) {
     if (base == c->arch->stack()) {
       assertT(c, index == NoRegister);
 
@@ -657,7 +657,7 @@ Site* MemorySite::makeNextWord(Context* c, unsigned index)
 
 SiteMask MemorySite::mask(Context* c)
 {
-  return SiteMask(1 << (unsigned)lir::Operand::Type::Memory,
+  return SiteMask(lir::Operand::MemoryMask,
                   0,
                   (base == c->arch->stack())
                       ? static_cast<int>(offsetToFrameIndex(c, offset))
@@ -674,7 +674,7 @@ SiteMask MemorySite::nextWordMask(Context* c, unsigned index)
   } else {
     frameIndex = NoFrameIndex;
   }
-  return SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, frameIndex);
+  return SiteMask(lir::Operand::MemoryMask, 0, frameIndex);
 }
 
 bool MemorySite::isVolatile(Context* c)

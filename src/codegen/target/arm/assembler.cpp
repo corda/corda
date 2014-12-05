@@ -396,7 +396,7 @@ class MyArchitecture : public Architecture {
                     OperandMask& aMask,
                     bool* thunk)
   {
-    aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Constant);
+    aMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::ConstantMask;
     aMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
     *thunk = false;
   }
@@ -413,7 +413,7 @@ class MyArchitecture : public Architecture {
 
     switch (op) {
     case lir::Negate:
-      aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      aMask.typeMask = lir::Operand::RegisterPairMask;
       aMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       break;
 
@@ -426,7 +426,7 @@ class MyArchitecture : public Architecture {
     case lir::FloatNegate:
     case lir::Float2Float:
       if (vfpSupported()) {
-        aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
       } else {
         *thunk = true;
@@ -439,7 +439,7 @@ class MyArchitecture : public Architecture {
       // thunks or produce inline machine code which handles edge
       // cases properly.
       if (false && vfpSupported() && bSize == 4) {
-        aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
       } else {
         *thunk = true;
@@ -448,7 +448,7 @@ class MyArchitecture : public Architecture {
 
     case lir::Int2Float:
       if (vfpSupported() && aSize == 4) {
-        aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       } else {
         *thunk = true;
@@ -466,12 +466,12 @@ class MyArchitecture : public Architecture {
                                unsigned,
                                OperandMask& bMask)
   {
-    bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Memory);
+    bMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::MemoryMask;
     bMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
 
     switch (op) {
     case lir::Negate:
-      bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      bMask.typeMask = lir::Operand::RegisterPairMask;
       bMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       break;
 
@@ -480,18 +480,18 @@ class MyArchitecture : public Architecture {
     case lir::FloatNegate:
     case lir::Float2Float:
     case lir::Int2Float:
-      bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      bMask.typeMask = lir::Operand::RegisterPairMask;
       bMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
       break;
 
     case lir::Float2Int:
-      bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      bMask.typeMask = lir::Operand::RegisterPairMask;
       bMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       break;
 
     case lir::Move:
-      if (!(aMask.typeMask & 1 << (unsigned)lir::Operand::Type::RegisterPair)) {
-        bMask.typeMask = 1 << (unsigned)lir::Operand::Type::RegisterPair;
+      if (!(aMask.typeMask & lir::Operand::RegisterPairMask)) {
+        bMask.typeMask = lir::Operand::RegisterPairMask;
       }
       break;
 
@@ -511,15 +511,15 @@ class MyArchitecture : public Architecture {
     tmpMask.typeMask = 0;
     tmpMask.setLowHighRegisterMasks(0, 0);
 
-    if (dstMask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
+    if (dstMask.typeMask & lir::Operand::MemoryMask) {
       // can't move directly from memory or constant to memory
-      srcMask.typeMask = 1 << (unsigned)lir::Operand::Type::RegisterPair;
-      tmpMask.typeMask = 1 << (unsigned)lir::Operand::Type::RegisterPair;
+      srcMask.typeMask = lir::Operand::RegisterPairMask;
+      tmpMask.typeMask = lir::Operand::RegisterPairMask;
       tmpMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
-    } else if (vfpSupported() && dstMask.typeMask & 1 << (unsigned)lir::Operand::Type::RegisterPair
+    } else if (vfpSupported() && dstMask.typeMask & lir::Operand::RegisterPairMask
                && dstMask.lowRegisterMask & FPR_MASK) {
-      srcMask.typeMask = tmpMask.typeMask = 1 << (unsigned)lir::Operand::Type::RegisterPair
-                                            | 1 << (unsigned)lir::Operand::Type::Memory;
+      srcMask.typeMask = tmpMask.typeMask = lir::Operand::RegisterPairMask
+                                            | lir::Operand::MemoryMask;
       tmpMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
     }
   }
@@ -532,10 +532,10 @@ class MyArchitecture : public Architecture {
                           unsigned,
                           bool* thunk)
   {
-    aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Constant);
+    aMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::ConstantMask;
     aMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
 
-    bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+    bMask.typeMask = lir::Operand::RegisterPairMask;
     bMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
 
     *thunk = false;
@@ -545,7 +545,7 @@ class MyArchitecture : public Architecture {
     case lir::ShiftRight:
     case lir::UnsignedShiftRight:
       if (bSize == 8)
-        aMask.typeMask = bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
     case lir::Add:
@@ -553,7 +553,7 @@ class MyArchitecture : public Architecture {
     case lir::Or:
     case lir::Xor:
     case lir::Multiply:
-      aMask.typeMask = bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
     case lir::Divide:
@@ -567,7 +567,7 @@ class MyArchitecture : public Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (vfpSupported()) {
-        bMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        bMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
         bMask = aMask;
       } else {
@@ -586,7 +586,7 @@ class MyArchitecture : public Architecture {
     case lir::JumpIfFloatLessOrEqualOrUnordered:
     case lir::JumpIfFloatGreaterOrEqualOrUnordered:
       if (vfpSupported()) {
-        aMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
         bMask = aMask;
       } else {
@@ -608,10 +608,10 @@ class MyArchitecture : public Architecture {
                                OperandMask& cMask)
   {
     if (isBranch(op)) {
-      cMask.typeMask = (1 << (unsigned)lir::Operand::Type::Constant);
+      cMask.typeMask = lir::Operand::ConstantMask;
       cMask.setLowHighRegisterMasks(0, 0);
     } else {
-      cMask.typeMask = (1 << (unsigned)lir::Operand::Type::RegisterPair);
+      cMask.typeMask = lir::Operand::RegisterPairMask;
       cMask.lowRegisterMask = bMask.lowRegisterMask;
       cMask.highRegisterMask = bMask.highRegisterMask;
     }

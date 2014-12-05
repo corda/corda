@@ -514,14 +514,14 @@ void steal(Context* c, Resource* r, Value* thief)
 
 SiteMask generalRegisterMask(Context* c)
 {
-  return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair,
+  return SiteMask(lir::Operand::RegisterPairMask,
                   c->regFile->generalRegisters,
                   NoFrameIndex);
 }
 
 SiteMask generalRegisterOrConstantMask(Context* c)
 {
-  return SiteMask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Constant),
+  return SiteMask(lir::Operand::RegisterPairMask | lir::Operand::ConstantMask,
                   c->regFile->generalRegisters,
                   NoFrameIndex);
 }
@@ -620,7 +620,7 @@ bool acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
       return c->availableGeneralRegisterCount > ResolveRegisterReserveCount;
     } else {
       assertT(c,
-              s->match(c, SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, AnyFrameIndex)));
+              s->match(c, SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex)));
 
       return isHome(read->value,
                     offsetToFrameIndex(c, static_cast<MemorySite*>(s)->offset));
@@ -782,7 +782,7 @@ void saveLocals(Context* c, Event* e)
       e->addRead(
           c,
           local->value,
-          SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, compiler::frameIndex(c, li)));
+          SiteMask(lir::Operand::MemoryMask, 0, compiler::frameIndex(c, li)));
     }
   }
 }
@@ -878,7 +878,7 @@ void maybeMove(Context* c,
       }
 
       assertT(c, thunk == 0);
-      assertT(c, dstMask.typeMask & src.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair));
+      assertT(c, dstMask.typeMask & src.typeMask & lir::Operand::RegisterPairMask);
 
       Site* tmpTarget
           = freeRegisterSite(c, dstMask.registerMask & src.lowRegisterMask);
@@ -1635,7 +1635,7 @@ bool resolveSourceSites(Context* c,
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Memory),
+      SiteMask mask(lir::Operand::RegisterPairMask | lir::Operand::MemoryMask,
                     c->regFile->generalRegisters,
                     AnyFrameIndex);
 
@@ -1677,7 +1677,7 @@ void resolveTargetSites(Context* c,
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << (unsigned)lir::Operand::Type::RegisterPair) | (1 << (unsigned)lir::Operand::Type::Memory),
+      SiteMask mask(lir::Operand::RegisterPairMask | lir::Operand::MemoryMask,
                     c->regFile->generalRegisters,
                     AnyFrameIndex);
 

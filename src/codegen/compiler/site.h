@@ -43,7 +43,7 @@ class SiteMask {
 
   static SiteMask fixedRegisterMask(Register number)
   {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << (int8_t)number, NoFrameIndex);
+    return SiteMask(lir::Operand::RegisterPairMask, 1 << (int8_t)number, NoFrameIndex);
   }
 
   static SiteMask lowPart(const OperandMask& mask)
@@ -187,7 +187,7 @@ class ConstantSite : public Site {
 
   virtual bool match(Context*, const SiteMask& mask)
   {
-    return mask.typeMask & (1 << (unsigned)lir::Operand::Type::Constant);
+    return mask.typeMask & lir::Operand::ConstantMask;
   }
 
   virtual bool loneMatch(Context*, const SiteMask&)
@@ -236,12 +236,12 @@ class ConstantSite : public Site {
 
   virtual SiteMask mask(Context*)
   {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::Constant, 0, NoFrameIndex);
+    return SiteMask(lir::Operand::ConstantMask, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context*, unsigned)
   {
-    return SiteMask(1 << (unsigned)lir::Operand::Type::Constant, 0, NoFrameIndex);
+    return SiteMask(lir::Operand::ConstantMask, 0, NoFrameIndex);
   }
 
   Promise* value;
