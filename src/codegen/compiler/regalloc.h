@@ -55,13 +55,13 @@ class Target {
   {
   }
 
-  Target(Register index, lir::OperandType type, unsigned cost)
+  Target(Register index, lir::Operand::Type type, unsigned cost)
       : index(index), type(type), cost(cost)
   {
   }
 
   int16_t index;
-  lir::OperandType type;
+  lir::Operand::Type type;
   uint8_t cost;
 };
 

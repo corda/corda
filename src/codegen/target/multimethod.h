@@ -17,9 +17,9 @@ namespace codegen {
 class Multimethod {
  public:
   inline static unsigned index(lir::UnaryOperation operation,
-                               lir::OperandType operand)
+                               lir::Operand::Type operand)
   {
-    return operation + (lir::UnaryOperationCount * operand);
+    return operation + (lir::UnaryOperationCount * (unsigned)operand);
   }
 };
 

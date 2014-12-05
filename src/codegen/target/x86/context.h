@@ -68,13 +68,13 @@ class ArchitectureContext {
   bool useNativeFeatures;
   OperationType operations[lir::OperationCount];
   UnaryOperationType
-      unaryOperations[lir::UnaryOperationCount * lir::OperandTypeCount];
+      unaryOperations[lir::UnaryOperationCount * lir::Operand::TypeCount];
   BinaryOperationType binaryOperations
       [(lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-       * lir::OperandTypeCount * lir::OperandTypeCount];
+       * lir::Operand::TypeCount * lir::Operand::TypeCount];
   BranchOperationType branchOperations[lir::BranchOperationCount
-                                       * lir::OperandTypeCount
-                                       * lir::OperandTypeCount];
+                                       * lir::Operand::TypeCount
+                                       * lir::Operand::TypeCount];
 };
 
 class Context {

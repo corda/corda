@@ -43,7 +43,7 @@ class SiteMask {
 
   static SiteMask fixedRegisterMask(int number)
   {
-    return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
+    return SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << number, NoFrameIndex);
   }
 
   static SiteMask lowPart(const OperandMask& mask)
@@ -103,7 +103,7 @@ class Site {
     return false;
   }
 
-  virtual lir::OperandType type(Context*) = 0;
+  virtual lir::Operand::Type type(Context*) = 0;
 
   virtual void asAssemblerOperand(Context*, Site*, lir::Operand*) = 0;
 
@@ -187,7 +187,7 @@ class ConstantSite : public Site {
 
   virtual bool match(Context*, const SiteMask& mask)
   {
-    return mask.typeMask & (1 << lir::ConstantOperand);
+    return mask.typeMask & (1 << (unsigned)lir::Operand::Type::Constant);
   }
 
   virtual bool loneMatch(Context*, const SiteMask&)
@@ -197,12 +197,12 @@ class ConstantSite : public Site {
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned)
   {
-    return s->type(c) == lir::ConstantOperand;
+    return s->type(c) == lir::Operand::Type::Constant;
   }
 
-  virtual lir::OperandType type(Context*)
+  virtual lir::Operand::Type type(Context*)
   {
-    return lir::ConstantOperand;
+    return lir::Operand::Type::Constant;
   }
 
   virtual void asAssemblerOperand(Context* c, Site* high, lir::Operand* result)
@@ -236,12 +236,12 @@ class ConstantSite : public Site {
 
   virtual SiteMask mask(Context*)
   {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(1 << (unsigned)lir::Operand::Type::Constant, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context*, unsigned)
   {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(1 << (unsigned)lir::Operand::Type::Constant, 0, NoFrameIndex);
   }
 
   Promise* value;
@@ -273,7 +273,7 @@ class RegisterSite : public Site {
 
   virtual bool frozen(Context* c UNUSED);
 
-  virtual lir::OperandType type(Context*);
+  virtual lir::Operand::Type type(Context*);
 
   virtual void asAssemblerOperand(Context* c UNUSED,
                                   Site* high,
@@ -328,7 +328,7 @@ class MemorySite : public Site {
 
   virtual bool frozen(Context* c);
 
-  virtual lir::OperandType type(Context*);
+  virtual lir::Operand::Type type(Context*);
 
   virtual void asAssemblerOperand(Context* c UNUSED,
                                   Site* high UNUSED,

@@ -71,7 +71,7 @@ bool pickRegisterTarget(Context* c,
               c,
               v,
               r,
-              SiteMask(1 << lir::RegisterOperand, 1 << i, NoFrameIndex),
+              SiteMask(1 << (unsigned)lir::Operand::Type::RegisterPair, 1 << i, NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
     if (mask.containsExactly(i)) {
@@ -124,7 +124,7 @@ Target pickRegisterTarget(Context* c,
 {
   unsigned cost;
   Register number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
-  return Target(number, lir::RegisterOperand, cost);
+  return Target(number, lir::Operand::Type::RegisterPair, cost);
 }
 
 unsigned frameCost(Context* c,
@@ -135,7 +135,7 @@ unsigned frameCost(Context* c,
   return resourceCost(c,
                       v,
                       c->frameResources + frameIndex,
-                      SiteMask(1 << lir::MemoryOperand, 0, frameIndex),
+                      SiteMask(1 << (unsigned)lir::Operand::Type::Memory, 0, frameIndex),
                       costCalculator) + Target::MinimumFrameCost;
 }
 
@@ -147,7 +147,7 @@ Target pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
   do {
     if (p->home >= 0) {
       Target mine(p->home,
-                  lir::MemoryOperand,
+                  lir::Operand::Type::Memory,
                   frameCost(c, v, p->home, costCalculator));
 
       if (mine.cost == Target::MinimumFrameCost) {
@@ -168,7 +168,7 @@ Target pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
 
   unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
-    Target mine(i, lir::MemoryOperand, frameCost(c, v, i, costCalculator));
+    Target mine(i, lir::Operand::Type::Memory, frameCost(c, v, i, costCalculator));
     if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -186,7 +186,7 @@ Target pickTarget(Context* c,
                   Target best,
                   CostCalculator* costCalculator)
 {
-  if (mask.typeMask & (1 << lir::RegisterOperand)) {
+  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::RegisterPair)) {
     Target mine
         = pickRegisterTarget(c, value, mask.registerMask, costCalculator);
 
@@ -198,10 +198,10 @@ Target pickTarget(Context* c,
     }
   }
 
-  if (mask.typeMask & (1 << lir::MemoryOperand)) {
+  if (mask.typeMask & (1 << (unsigned)lir::Operand::Type::Memory)) {
     if (mask.frameIndex >= 0) {
       Target mine(mask.frameIndex,
-                  lir::MemoryOperand,
+                  lir::Operand::Type::Memory,
                   frameCost(c, value, mask.frameIndex, costCalculator));
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;

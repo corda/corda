@@ -26,11 +26,11 @@ class Architecture;
 class OperandInfo {
  public:
   const unsigned size;
-  const lir::OperandType type;
+  const lir::Operand::Type type;
   lir::Operand* const operand;
 
   inline OperandInfo(unsigned size,
-                     lir::OperandType type,
+                     lir::Operand::Type type,
                      lir::Operand* operand)
       : size(size), type(type), operand(operand)
   {

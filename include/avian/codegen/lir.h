@@ -79,16 +79,7 @@ const unsigned NonBranchTernaryOperationCount = FloatMin + 1;
 const unsigned BranchOperationCount = JumpIfFloatGreaterOrEqualOrUnordered
                                       - FloatMin;
 
-enum OperandType {
-  ConstantOperand,
-  AddressOperand,
-  RegisterOperand,
-  MemoryOperand
-};
-
 enum ValueType { ValueGeneral, ValueFloat };
-
-const unsigned OperandTypeCount = MemoryOperand + 1;
 
 const int NoRegister = -1;
 
@@ -128,6 +119,16 @@ inline bool isFloatUnaryOp(lir::BinaryOperation op)
 }
 
 class Operand {
+public:
+
+  enum class Type {
+    Constant,
+    Address,
+    RegisterPair,
+    Memory
+  };
+
+  const static unsigned TypeCount = (unsigned)Type::Memory + 1;
 };
 
 class Constant : public Operand {
