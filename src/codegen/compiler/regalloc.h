@@ -55,7 +55,7 @@ class Target {
   {
   }
 
-  Target(int index, lir::OperandType type, unsigned cost)
+  Target(Register index, lir::OperandType type, unsigned cost)
       : index(index), type(type), cost(cost)
   {
   }

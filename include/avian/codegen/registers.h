@@ -17,6 +17,7 @@ namespace avian {
 namespace codegen {
 
 typedef uint64_t RegisterMask;
+typedef int Register;
 
 class BoundedRegisterMask {
  public:
@@ -62,7 +63,7 @@ class RegisterIterator {
     return index < mask.limit;
   }
 
-  inline int next()
+  inline Register next()
   {
     int r = index;
     do {

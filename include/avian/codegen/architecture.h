@@ -85,7 +85,7 @@ class Architecture {
   virtual bool argumentAlignment() = 0;
   virtual bool argumentRegisterAlignment() = 0;
   virtual unsigned argumentRegisterCount() = 0;
-  virtual int argumentRegister(unsigned index) = 0;
+  virtual Register argumentRegister(unsigned index) = 0;
 
   virtual bool hasLinkRegister() = 0;
 

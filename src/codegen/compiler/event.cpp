@@ -396,7 +396,7 @@ class CallEvent : public Event {
         SiteMask targetMask;
         if (index + (c->arch->argumentRegisterAlignment() ? footprint : 1)
             <= c->arch->argumentRegisterCount()) {
-          int number = c->arch->argumentRegister(index);
+          Register number = c->arch->argumentRegister(index);
 
           if (DebugReads) {
             fprintf(stderr, "reg %d arg read %p\n", number, v);

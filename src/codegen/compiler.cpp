@@ -2210,22 +2210,22 @@ class Client : public Assembler::Client {
   {
   }
 
-  virtual int acquireTemporary(RegisterMask mask)
+  virtual Register acquireTemporary(RegisterMask mask)
   {
     unsigned cost;
-    int r = pickRegisterTarget(c, 0, mask, &cost);
+    Register r = pickRegisterTarget(c, 0, mask, &cost);
     expect(c, cost < Target::Impossible);
     save(r);
     c->registerResources[r].increment(c);
     return r;
   }
 
-  virtual void releaseTemporary(int r)
+  virtual void releaseTemporary(Register r)
   {
     c->registerResources[r].decrement(c);
   }
 
-  virtual void save(int r)
+  virtual void save(Register r)
   {
     RegisterResource* reg = c->registerResources + r;
 

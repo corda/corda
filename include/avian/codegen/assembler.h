@@ -53,10 +53,10 @@ class Assembler {
  public:
   class Client {
    public:
-    virtual int acquireTemporary(RegisterMask mask = ~static_cast<RegisterMask>(0)) = 0;
-    virtual void releaseTemporary(int r) = 0;
+    virtual Register acquireTemporary(RegisterMask mask = ~static_cast<RegisterMask>(0)) = 0;
+    virtual void releaseTemporary(Register r) = 0;
 
-    virtual void save(int r) = 0;
+    virtual void save(Register r) = 0;
   };
 
   class Block {

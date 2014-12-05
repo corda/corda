@@ -57,10 +57,10 @@ unsigned resourceCost(Context* c,
 }
 
 bool pickRegisterTarget(Context* c,
-                        int i,
+                        Register i,
                         Value* v,
                         RegisterMask mask,
-                        int* target,
+                        Register* target,
                         unsigned* cost,
                         CostCalculator* costCalculator)
 {
@@ -85,17 +85,17 @@ bool pickRegisterTarget(Context* c,
   return false;
 }
 
-int pickRegisterTarget(Context* c,
+Register pickRegisterTarget(Context* c,
                        Value* v,
                        RegisterMask mask,
                        unsigned* cost,
                        CostCalculator* costCalculator)
 {
-  int target = lir::NoRegister;
+  Register target = lir::NoRegister;
   *cost = Target::Impossible;
 
   if (mask & c->regFile->generalRegisters.mask) {
-    for (int i = c->regFile->generalRegisters.limit - 1;
+    for (Register i = c->regFile->generalRegisters.limit - 1;
          i >= c->regFile->generalRegisters.start;
          --i) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
@@ -105,8 +105,8 @@ int pickRegisterTarget(Context* c,
   }
 
   if (mask & c->regFile->floatRegisters.mask) {
-    for (int i = c->regFile->floatRegisters.start;
-         i < static_cast<int>(c->regFile->floatRegisters.limit);
+    for (Register i = c->regFile->floatRegisters.start;
+         i < static_cast<Register>(c->regFile->floatRegisters.limit);
          ++i) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
@@ -123,7 +123,7 @@ Target pickRegisterTarget(Context* c,
                           CostCalculator* costCalculator)
 {
   unsigned cost;
-  int number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
+  Register number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
   return Target(number, lir::RegisterOperand, cost);
 }
 
