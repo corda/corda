@@ -656,7 +656,7 @@ class MyAssembler : public Assembler {
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread)
   {
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     lir::Memory stackLimit(ThreadRegister, stackLimitOffsetFromThread);
     lir::Constant handlerConstant(new (con.zone) ResolvedPromise(handler));
     branchRM(&con,
@@ -669,11 +669,11 @@ class MyAssembler : public Assembler {
 
   virtual void saveFrame(unsigned stackOffset, unsigned ipOffset)
   {
-    lir::Register link(LinkRegister);
+    lir::RegisterPair link(LinkRegister);
     lir::Memory linkDst(ThreadRegister, ipOffset);
     moveRM(&con, TargetBytesPerWord, &link, TargetBytesPerWord, &linkDst);
 
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     lir::Memory stackDst(ThreadRegister, stackOffset);
     moveRM(&con, TargetBytesPerWord, &stack, TargetBytesPerWord, &stackDst);
   }
@@ -705,7 +705,7 @@ class MyAssembler : public Assembler {
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
-        lir::Register dst(arch_->argumentRegister(i));
+        lir::RegisterPair dst(arch_->argumentRegister(i));
 
         apply(lir::Move,
               OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
@@ -745,12 +745,12 @@ class MyAssembler : public Assembler {
     // how to handle them:
     assertT(&con, footprint < 256);
 
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     lir::Constant footprintConstant(&footprintPromise);
     subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
 
-    lir::Register returnAddress(LinkRegister);
+    lir::RegisterPair returnAddress(LinkRegister);
     lir::Memory returnAddressDst(StackRegister,
                                  (footprint - 1) * TargetBytesPerWord);
     moveRM(&con,
@@ -762,7 +762,7 @@ class MyAssembler : public Assembler {
 
   virtual void adjustFrame(unsigned difference)
   {
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     ResolvedPromise differencePromise(difference * TargetBytesPerWord);
     lir::Constant differenceConstant(&differencePromise);
     subC(&con, TargetBytesPerWord, &differenceConstant, &stack, &stack);
@@ -772,7 +772,7 @@ class MyAssembler : public Assembler {
   {
     footprint += FrameHeaderSize;
 
-    lir::Register returnAddress(LinkRegister);
+    lir::RegisterPair returnAddress(LinkRegister);
     lir::Memory returnAddressSrc(StackRegister,
                                  (footprint - 1) * TargetBytesPerWord);
     moveMR(&con,
@@ -781,7 +781,7 @@ class MyAssembler : public Assembler {
            TargetBytesPerWord,
            &returnAddress);
 
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     lir::Constant footprintConstant(&footprintPromise);
     addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
@@ -798,7 +798,7 @@ class MyAssembler : public Assembler {
       if (offset) {
         footprint += FrameHeaderSize;
 
-        lir::Register link(LinkRegister);
+        lir::RegisterPair link(LinkRegister);
         lir::Memory returnAddressSrc(StackRegister,
                                      (footprint - 1) * TargetBytesPerWord);
         moveMR(&con,
@@ -807,7 +807,7 @@ class MyAssembler : public Assembler {
                TargetBytesPerWord,
                &link);
 
-        lir::Register stack(StackRegister);
+        lir::RegisterPair stack(StackRegister);
         ResolvedPromise footprintPromise((footprint - offset)
                                          * TargetBytesPerWord);
         lir::Constant footprintConstant(&footprintPromise);
@@ -816,7 +816,7 @@ class MyAssembler : public Assembler {
         if (returnAddressSurrogate != lir::NoRegister) {
           assertT(&con, offset > 0);
 
-          lir::Register ras(returnAddressSurrogate);
+          lir::RegisterPair ras(returnAddressSurrogate);
           lir::Memory dst(StackRegister, (offset - 1) * TargetBytesPerWord);
           moveRM(&con, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
@@ -840,7 +840,7 @@ class MyAssembler : public Assembler {
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
       offset = argumentFootprint - StackAlignmentInWords;
 
-      lir::Register stack(StackRegister);
+      lir::RegisterPair stack(StackRegister);
       ResolvedPromise adjustmentPromise(offset * TargetBytesPerWord);
       lir::Constant adjustment(&adjustmentPromise);
       addC(&con, TargetBytesPerWord, &adjustment, &stack, &stack);
@@ -856,7 +856,7 @@ class MyAssembler : public Assembler {
   {
     popFrame(frameFootprint);
 
-    lir::Register stack(StackRegister);
+    lir::RegisterPair stack(StackRegister);
     lir::Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
     moveMR(&con, TargetBytesPerWord, &newStackSrc, TargetBytesPerWord, &stack);
 

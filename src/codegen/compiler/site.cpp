@@ -349,7 +349,7 @@ void RegisterSite::asAssemblerOperand(Context* c UNUSED,
     highNumber = lir::NoRegister;
   }
 
-  new (result) lir::Register(number, highNumber);
+  new (result) lir::RegisterPair(number, highNumber);
 }
 
 Site* RegisterSite::copy(Context* c)

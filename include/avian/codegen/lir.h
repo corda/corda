@@ -149,9 +149,9 @@ class Address : public Operand {
   Promise* address;
 };
 
-class Register : public Operand {
+class RegisterPair : public Operand {
  public:
-  Register(int low, int high = NoRegister) : low(low), high(high)
+  RegisterPair(int low, int high = NoRegister) : low(low), high(high)
   {
   }
 

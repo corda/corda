@@ -902,7 +902,7 @@ class MyAssembler : public Assembler {
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackLimit(rbx, stackLimitOffsetFromThread);
     lir::Constant handlerConstant(resolvedPromise(&c, handler));
     branchRM(&c,
@@ -915,7 +915,7 @@ class MyAssembler : public Assembler {
 
   virtual void saveFrame(unsigned stackOffset, unsigned)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackDst(rbx, stackOffset);
     apply(lir::Move,
           OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
@@ -949,7 +949,7 @@ class MyAssembler : public Assembler {
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
-        lir::Register dst(arch_->argumentRegister(i));
+        lir::RegisterPair dst(arch_->argumentRegister(i));
         apply(lir::Move,
               OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
                           RUNTIME_ARRAY_BODY(arguments)[i].type,
@@ -976,10 +976,10 @@ class MyAssembler : public Assembler {
 
   virtual void allocateFrame(unsigned footprint)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
 
     if (UseFramePointer) {
-      lir::Register base(rbp);
+      lir::RegisterPair base(rbp);
       pushR(&c, TargetBytesPerWord, &base);
 
       apply(lir::Move,
@@ -998,7 +998,7 @@ class MyAssembler : public Assembler {
 
   virtual void adjustFrame(unsigned difference)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Constant differenceConstant(
         resolvedPromise(&c, difference * TargetBytesPerWord));
     apply(lir::Subtract,
@@ -1011,15 +1011,15 @@ class MyAssembler : public Assembler {
   virtual void popFrame(unsigned frameFootprint)
   {
     if (UseFramePointer) {
-      lir::Register base(rbp);
-      lir::Register stack(rsp);
+      lir::RegisterPair base(rbp);
+      lir::RegisterPair stack(rsp);
       apply(lir::Move,
             OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &base),
             OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack));
 
       popR(&c, TargetBytesPerWord, &base);
     } else {
-      lir::Register stack(rsp);
+      lir::RegisterPair stack(rsp);
       lir::Constant footprint(
           resolvedPromise(&c, frameFootprint * TargetBytesPerWord));
       apply(lir::Add,
@@ -1036,7 +1036,7 @@ class MyAssembler : public Assembler {
   {
     if (TailCalls) {
       if (offset) {
-        lir::Register tmp(c.client->acquireTemporary());
+        lir::RegisterPair tmp(c.client->acquireTemporary());
 
         unsigned baseSize = UseFramePointer ? 1 : 0;
 
@@ -1060,11 +1060,11 @@ class MyAssembler : public Assembler {
 
         if (UseFramePointer) {
           lir::Memory baseSrc(rsp, frameFootprint * TargetBytesPerWord);
-          lir::Register base(rbp);
+          lir::RegisterPair base(rbp);
           moveMR(&c, TargetBytesPerWord, &baseSrc, TargetBytesPerWord, &base);
         }
 
-        lir::Register stack(rsp);
+        lir::RegisterPair stack(rsp);
         lir::Constant footprint(resolvedPromise(
             &c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
 
@@ -1073,7 +1073,7 @@ class MyAssembler : public Assembler {
         if (returnAddressSurrogate != lir::NoRegister) {
           assertT(&c, offset > 0);
 
-          lir::Register ras(returnAddressSurrogate);
+          lir::RegisterPair ras(returnAddressSurrogate);
           lir::Memory dst(rsp, offset * TargetBytesPerWord);
           moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
@@ -1081,7 +1081,7 @@ class MyAssembler : public Assembler {
         if (framePointerSurrogate != lir::NoRegister) {
           assertT(&c, offset > 0);
 
-          lir::Register fps(framePointerSurrogate);
+          lir::RegisterPair fps(framePointerSurrogate);
           lir::Memory dst(rsp, (offset - 1) * TargetBytesPerWord);
           moveRM(&c, TargetBytesPerWord, &fps, TargetBytesPerWord, &dst);
         }
@@ -1102,10 +1102,10 @@ class MyAssembler : public Assembler {
     assertT(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
-      lir::Register returnAddress(rcx);
+      lir::RegisterPair returnAddress(rcx);
       popR(&c, TargetBytesPerWord, &returnAddress);
 
-      lir::Register stack(rsp);
+      lir::RegisterPair stack(rsp);
       lir::Constant adjustment(resolvedPromise(
           &c,
           (argumentFootprint - StackAlignmentInWords) * TargetBytesPerWord));
@@ -1122,10 +1122,10 @@ class MyAssembler : public Assembler {
   {
     popFrame(frameFootprint);
 
-    lir::Register returnAddress(rcx);
+    lir::RegisterPair returnAddress(rcx);
     popR(&c, TargetBytesPerWord, &returnAddress);
 
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackSrc(rbx, stackOffsetFromThread);
     moveMR(&c, TargetBytesPerWord, &stackSrc, TargetBytesPerWord, &stack);
 

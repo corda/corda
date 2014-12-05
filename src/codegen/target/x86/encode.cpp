@@ -76,22 +76,22 @@ void maybeRex(Context* c,
   }
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Register* b)
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b)
 {
   maybeRex(c, size, a->low, lir::NoRegister, b->low, false);
 }
 
-void alwaysRex(Context* c, unsigned size, lir::Register* a, lir::Register* b)
+void alwaysRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b)
 {
   maybeRex(c, size, a->low, lir::NoRegister, b->low, true);
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a)
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a)
 {
   maybeRex(c, size, lir::NoRegister, lir::NoRegister, a->low, false);
 }
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Memory* b)
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::Memory* b)
 {
   maybeRex(c, size, a->low, b->index, b->base, size == 1 and (a->low & 4));
 }
@@ -106,7 +106,7 @@ void modrm(Context* c, uint8_t mod, int a, int b)
   c->code.append(mod | (regCode(b) << 3) | regCode(a));
 }
 
-void modrm(Context* c, uint8_t mod, lir::Register* a, lir::Register* b)
+void modrm(Context* c, uint8_t mod, lir::RegisterPair* a, lir::RegisterPair* b)
 {
   modrm(c, mod, a->low, b->low);
 }
@@ -143,7 +143,7 @@ void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset)
   }
 }
 
-void modrmSibImm(Context* c, lir::Register* a, lir::Memory* b)
+void modrmSibImm(Context* c, lir::RegisterPair* a, lir::Memory* b)
 {
   modrmSibImm(c, a->low, b->scale, b->index, b->base, b->offset);
 }
@@ -177,9 +177,9 @@ void conditional(Context* c, unsigned condition, lir::Constant* a)
 
 void sseMoveRR(Context* c,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                unsigned bSize UNUSED,
-               lir::Register* b)
+               lir::RegisterPair* b)
 {
   assertT(c, aSize >= 4);
   assertT(c, aSize == bSize);
@@ -213,10 +213,10 @@ void sseMoveCR(Context* c,
                unsigned aSize,
                lir::Constant* a,
                unsigned bSize,
-               lir::Register* b)
+               lir::RegisterPair* b)
 {
   assertT(c, aSize <= vm::TargetBytesPerWord);
-  lir::Register tmp(c->client->acquireTemporary(GeneralRegisterMask));
+  lir::RegisterPair tmp(c->client->acquireTemporary(GeneralRegisterMask));
   moveCR2(c, aSize, a, aSize, &tmp, 0);
   sseMoveRR(c, aSize, &tmp, bSize, b);
   c->client->releaseTemporary(tmp.low);
@@ -226,7 +226,7 @@ void sseMoveMR(Context* c,
                unsigned aSize,
                lir::Memory* a,
                unsigned bSize UNUSED,
-               lir::Register* b)
+               lir::RegisterPair* b)
 {
   assertT(c, aSize >= 4);
 
@@ -244,7 +244,7 @@ void sseMoveMR(Context* c,
 
 void sseMoveRM(Context* c,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                UNUSED unsigned bSize,
                lir::Memory* b)
 {
@@ -353,9 +353,9 @@ void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target)
 
 void floatRegOp(Context* c,
                 unsigned aSize,
-                lir::Register* a,
+                lir::RegisterPair* a,
                 unsigned bSize,
-                lir::Register* b,
+                lir::RegisterPair* b,
                 uint8_t op,
                 uint8_t mod)
 {
@@ -373,7 +373,7 @@ void floatMemOp(Context* c,
                 unsigned aSize,
                 lir::Memory* a,
                 unsigned bSize,
-                lir::Register* b,
+                lir::RegisterPair* b,
                 uint8_t op)
 {
   if (aSize == 4) {
@@ -390,13 +390,13 @@ void moveCR(Context* c,
             unsigned aSize,
             lir::Constant* a,
             unsigned bSize,
-            lir::Register* b);
+            lir::RegisterPair* b);
 
 void moveCR2(Context* c,
              UNUSED unsigned aSize,
              lir::Constant* a,
              UNUSED unsigned bSize,
-             lir::Register* b,
+             lir::RegisterPair* b,
              unsigned promiseOffset)
 {
   if (vm::TargetBytesPerWord == 4 and bSize == 8) {
@@ -408,7 +408,7 @@ void moveCR2(Context* c,
     ResolvedPromise low(v & 0xFFFFFFFF);
     lir::Constant al(&low);
 
-    lir::Register bh(b->high);
+    lir::RegisterPair bh(b->high);
 
     moveCR(c, 4, &al, 4, b);
     moveCR(c, 4, &ah, 4, &bh);

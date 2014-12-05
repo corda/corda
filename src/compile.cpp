@@ -9783,7 +9783,7 @@ void compileCall(MyThread* t, Context* c, ThunkIndex index, bool call = true)
 
   if (processor(t)->bootImage) {
     lir::Memory table(t->arch->thread(), TARGET_THREAD_THUNKTABLE);
-    lir::Register scratch(t->arch->scratch());
+    lir::RegisterPair scratch(t->arch->scratch());
     a->apply(lir::Move,
              OperandInfo(TargetBytesPerWord, lir::Operand::Type::Memory, &table),
              OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &scratch));
@@ -9814,14 +9814,14 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
 
     p->thunks.default_.frameSavedOffset = a->length();
 
-    lir::Register thread(t->arch->thread());
+    lir::RegisterPair thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, lir::Operand::Type::RegisterPair, &thread);
 
     compileCall(t, &context, compileMethodIndex);
 
     a->popFrame(t->arch->alignFrameSize(1));
 
-    lir::Register result(t->arch->returnLow());
+    lir::RegisterPair result(t->arch->returnLow());
     a->apply(lir::Jump,
              OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &result));
 
@@ -9835,7 +9835,7 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
     Context context(t);
     avian::codegen::Assembler* a = context.assembler;
 
-    lir::Register class_(t->arch->virtualCallTarget());
+    lir::RegisterPair class_(t->arch->virtualCallTarget());
     lir::Memory virtualCallTargetSrc(
         t->arch->stack(),
         (t->arch->frameFooterSize() + t->arch->frameReturnAddressSize())
@@ -9855,7 +9855,7 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
         OperandInfo(
             TargetBytesPerWord, lir::Operand::Type::Memory, &virtualCallTargetDst));
 
-    lir::Register index(t->arch->virtualCallIndex());
+    lir::RegisterPair index(t->arch->virtualCallIndex());
     lir::Memory virtualCallIndex(t->arch->thread(),
                                  TARGET_THREAD_VIRTUALCALLINDEX);
 
@@ -9868,14 +9868,14 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
 
     p->thunks.defaultVirtual.frameSavedOffset = a->length();
 
-    lir::Register thread(t->arch->thread());
+    lir::RegisterPair thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, lir::Operand::Type::RegisterPair, &thread);
 
     compileCall(t, &context, compileVirtualMethodIndex);
 
     a->popFrame(t->arch->alignFrameSize(1));
 
-    lir::Register result(t->arch->returnLow());
+    lir::RegisterPair result(t->arch->returnLow());
     a->apply(lir::Jump,
              OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &result));
 
@@ -9893,7 +9893,7 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
 
     p->thunks.native.frameSavedOffset = a->length();
 
-    lir::Register thread(t->arch->thread());
+    lir::RegisterPair thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, lir::Operand::Type::RegisterPair, &thread);
 
     compileCall(t, &context, invokeNativeIndex);
@@ -9915,7 +9915,7 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
 
     p->thunks.aioob.frameSavedOffset = a->length();
 
-    lir::Register thread(t->arch->thread());
+    lir::RegisterPair thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, lir::Operand::Type::RegisterPair, &thread);
 
     compileCall(t, &context, throwArrayIndexOutOfBoundsIndex);
@@ -9934,7 +9934,7 @@ void compileThunks(MyThread* t, FixedAllocator* allocator)
 
     p->thunks.stackOverflow.frameSavedOffset = a->length();
 
-    lir::Register thread(t->arch->thread());
+    lir::RegisterPair thread(t->arch->thread());
     a->pushFrame(1, TargetBytesPerWord, lir::Operand::Type::RegisterPair, &thread);
 
     compileCall(t, &context, throwStackOverflowIndex);
@@ -10058,7 +10058,7 @@ uintptr_t compileVirtualThunk(MyThread* t, unsigned index, unsigned* size)
 
   avian::codegen::ResolvedPromise indexPromise(index);
   lir::Constant indexConstant(&indexPromise);
-  lir::Register indexRegister(t->arch->virtualCallIndex());
+  lir::RegisterPair indexRegister(t->arch->virtualCallIndex());
   a->apply(
       lir::Move,
       OperandInfo(TargetBytesPerWord, lir::Operand::Type::Constant, &indexConstant),
