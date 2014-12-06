@@ -141,8 +141,8 @@ inline int COOP(int cond,
                 int opcode_2,
                 int CRm)
 {
-  return cond << 28 | 0xe << 24 | opcode_1 << 20 | (int8_t)CRn << 16 | (int8_t)CRd << 12
-         | cp_num << 8 | opcode_2 << 5 | (int8_t)CRm;
+  return cond << 28 | 0xe << 24 | opcode_1 << 20 | CRn << 16 | CRd << 12
+         | cp_num << 8 | opcode_2 << 5 | CRm;
 }
 inline int COXFER(int cond,
                   int P,
@@ -156,7 +156,7 @@ inline int COXFER(int cond,
                   int offset)  // offset is in words, not bytes
 {
   return cond << 28 | 0x6 << 25 | P << 24 | U << 23 | N << 22 | W << 21
-         | L << 20 | (int8_t)Rn << 16 | (int8_t)CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
+         | L << 20 | (int8_t)Rn << 16 | CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
 }
 inline int COREG(int cond,
                  int opcode_1,
@@ -167,14 +167,14 @@ inline int COREG(int cond,
                  int opcode_2,
                  int CRm)
 {
-  return cond << 28 | 0xe << 24 | opcode_1 << 21 | L << 20 | (int8_t)CRn << 16
-         | (int8_t)Rd << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | (int8_t)CRm;
+  return cond << 28 | 0xe << 24 | opcode_1 << 21 | L << 20 | CRn << 16
+         | (int8_t)Rd << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | CRm;
 }
 inline int
     COREG2(int cond, int L, Register Rn, Register Rd, int cp_num, int opcode, int CRm)
 {
   return cond << 28 | 0xc4 << 20 | L << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12 | cp_num << 8
-         | opcode << 4 | (int8_t)CRm;
+         | opcode << 4 | CRm;
 }
 // FIELD CALCULATORS
 inline int calcU(int imm)
@@ -431,42 +431,42 @@ inline int mrrc(int coproc, int opcode, Register Rd, Register Rn, int CRm)
 inline int fmuls(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
-              ((int8_t)Sd & 1) << 2 | 2,
-              (int8_t)Sn >> 1,
-              (int8_t)Sd >> 1,
+              (Sd & 1) << 2 | 2,
+              Sn >> 1,
+              Sd >> 1,
               10,
-              ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1),
-              (int8_t)Sm >> 1);
+              (Sn & 1) << 2 | (Sm & 1),
+              Sm >> 1);
 }
 inline int fadds(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
-              ((int8_t)Sd & 1) << 2 | 3,
-              (int8_t)Sn >> 1,
-              (int8_t)Sd >> 1,
+              (Sd & 1) << 2 | 3,
+              Sn >> 1,
+              Sd >> 1,
               10,
-              ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1),
-              (int8_t)Sm >> 1);
+              (Sn & 1) << 2 | (Sm & 1),
+              Sm >> 1);
 }
 inline int fsubs(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
-              ((int8_t)Sd & 1) << 2 | 3,
-              (int8_t)Sn >> 1,
-              (int8_t)Sd >> 1,
+              (Sd & 1) << 2 | 3,
+              Sn >> 1,
+              Sd >> 1,
               10,
-              ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1) | 2,
-              (int8_t)Sm >> 1);
+              (Sn & 1) << 2 | (Sm & 1) | 2,
+              Sm >> 1);
 }
 inline int fdivs(int Sd, int Sn, int Sm)
 {
   return COOP(AL,
-              ((int8_t)Sd & 1) << 2 | 8,
-              (int8_t)Sn >> 1,
-              (int8_t)Sd >> 1,
+              (Sd & 1) << 2 | 8,
+              Sn >> 1,
+              Sd >> 1,
               10,
-              ((int8_t)Sn & 1) << 2 | ((int8_t)Sm & 1),
-              (int8_t)Sm >> 1);
+              (Sn & 1) << 2 | (Sm & 1),
+              Sm >> 1);
 }
 inline int fmuld(int Dd, int Dn, int Dm)
 {
