@@ -61,7 +61,7 @@ class Target {
   }
 
   Target(Register reg, unsigned cost)
-      : index((int8_t)reg), type(lir::Operand::Type::RegisterPair), cost(cost)
+      : index(reg.index()), type(lir::Operand::Type::RegisterPair), cost(cost)
   {
   }
 

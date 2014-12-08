@@ -235,12 +235,12 @@ class MyArchitecture : public Architecture {
 
   virtual bool reserved(Register register_)
   {
-    switch ((int8_t)register_) {
-    case (int8_t)rbp:
+    switch (register_.index()) {
+    case rbp.index():
       return UseFramePointer;
 
-    case (int8_t)rsp:
-    case (int8_t)rbx:
+    case rsp.index():
+    case rbx.index():
       return true;
 
     default:

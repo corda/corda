@@ -48,18 +48,18 @@ enum SHIFTOP { LSL, LSR, ASR, ROR };
 inline int
     DATA(int cond, int opcode, int S, Register Rn, Register Rd, int shift, int Sh, Register Rm)
 {
-  return cond << 28 | opcode << 21 | S << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12 | shift << 7
-         | Sh << 5 | (int8_t)Rm;
+  return cond << 28 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12 | shift << 7
+         | Sh << 5 | Rm.index();
 }
 inline int
     DATAS(int cond, int opcode, int S, Register Rn, Register Rd, Register Rs, int Sh, Register Rm)
 {
-  return cond << 28 | opcode << 21 | S << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12 | (int8_t)Rs << 8
-         | Sh << 5 | 1 << 4 | (int8_t)Rm;
+  return cond << 28 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12 | Rs.index() << 8
+         | Sh << 5 | 1 << 4 | Rm.index();
 }
 inline int DATAI(int cond, int opcode, int S, Register Rn, Register Rd, int rot, int imm)
 {
-  return cond << 28 | 1 << 25 | opcode << 21 | S << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12
+  return cond << 28 | 1 << 25 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12
          | rot << 8 | (imm & 0xff);
 }
 inline int BRANCH(int cond, int L, int offset)
@@ -68,12 +68,12 @@ inline int BRANCH(int cond, int L, int offset)
 }
 inline int BRANCHX(int cond, int L, Register Rm)
 {
-  return cond << 28 | 0x4bffc << 6 | L << 5 | 1 << 4 | (int8_t)Rm;
+  return cond << 28 | 0x4bffc << 6 | L << 5 | 1 << 4 | Rm.index();
 }
 inline int MULTIPLY(int cond, int mul, int S, Register Rd, Register Rn, Register Rs, Register Rm)
 {
-  return cond << 28 | mul << 21 | S << 20 | (int8_t)Rd << 16 | (int8_t)Rn << 12 | (int8_t)Rs << 8
-         | 9 << 4 | (int8_t)Rm;
+  return cond << 28 | mul << 21 | S << 20 | Rd.index() << 16 | Rn.index() << 12 | Rs.index() << 8
+         | 9 << 4 | Rm.index();
 }
 inline int XFER(int cond,
                 int P,
@@ -88,7 +88,7 @@ inline int XFER(int cond,
                 Register Rm)
 {
   return cond << 28 | 3 << 25 | P << 24 | U << 23 | B << 22 | W << 21 | L << 20
-         | (int8_t)Rn << 16 | (int8_t)Rd << 12 | shift << 7 | Sh << 5 | (int8_t)Rm;
+         | Rn.index() << 16 | Rd.index() << 12 | shift << 7 | Sh << 5 | Rm.index();
 }
 inline int XFERI(int cond,
                  int P,
@@ -101,7 +101,7 @@ inline int XFERI(int cond,
                  int offset)
 {
   return cond << 28 | 2 << 25 | P << 24 | U << 23 | B << 22 | W << 21 | L << 20
-         | (int8_t)Rn << 16 | (int8_t)Rd << 12 | (offset & 0xfff);
+         | Rn.index() << 16 | Rd.index() << 12 | (offset & 0xfff);
 }
 inline int XFER2(int cond,
                  int P,
@@ -114,8 +114,8 @@ inline int XFER2(int cond,
                  int H,
                  Register Rm)
 {
-  return cond << 28 | P << 24 | U << 23 | W << 21 | L << 20 | (int8_t)Rn << 16
-         | (int8_t)Rd << 12 | 1 << 7 | S << 6 | H << 5 | 1 << 4 | (int8_t)Rm;
+  return cond << 28 | P << 24 | U << 23 | W << 21 | L << 20 | Rn.index() << 16
+         | Rd.index() << 12 | 1 << 7 | S << 6 | H << 5 | 1 << 4 | Rm.index();
 }
 inline int XFER2I(int cond,
                   int P,
@@ -129,8 +129,8 @@ inline int XFER2I(int cond,
                   int H,
                   int offsetL)
 {
-  return cond << 28 | P << 24 | U << 23 | 1 << 22 | W << 21 | L << 20 | (int8_t)Rn << 16
-         | (int8_t)Rd << 12 | offsetH << 8 | 1 << 7 | S << 6 | H << 5 | 1 << 4
+  return cond << 28 | P << 24 | U << 23 | 1 << 22 | W << 21 | L << 20 | Rn.index() << 16
+         | Rd.index() << 12 | offsetH << 8 | 1 << 7 | S << 6 | H << 5 | 1 << 4
          | (offsetL & 0xf);
 }
 inline int COOP(int cond,
@@ -156,7 +156,7 @@ inline int COXFER(int cond,
                   int offset)  // offset is in words, not bytes
 {
   return cond << 28 | 0x6 << 25 | P << 24 | U << 23 | N << 22 | W << 21
-         | L << 20 | (int8_t)Rn << 16 | CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
+         | L << 20 | Rn.index() << 16 | CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
 }
 inline int COREG(int cond,
                  int opcode_1,
@@ -168,12 +168,12 @@ inline int COREG(int cond,
                  int CRm)
 {
   return cond << 28 | 0xe << 24 | opcode_1 << 21 | L << 20 | CRn << 16
-         | (int8_t)Rd << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | CRm;
+         | Rd.index() << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | CRm;
 }
 inline int
     COREG2(int cond, int L, Register Rn, Register Rd, int cp_num, int opcode, int CRm)
 {
-  return cond << 28 | 0xc4 << 20 | L << 20 | (int8_t)Rn << 16 | (int8_t)Rd << 12 | cp_num << 8
+  return cond << 28 | 0xc4 << 20 | L << 20 | Rn.index() << 16 | Rd.index() << 12 | cp_num << 8
          | opcode << 4 | CRm;
 }
 // FIELD CALCULATORS

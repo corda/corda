@@ -28,12 +28,12 @@ const RegisterMask FPR_MASK = 0xffff0000;
 
 inline bool isFpr(lir::RegisterPair* reg)
 {
-  return (int8_t)reg->low >= N_GPRS;
+  return reg->low.index() >= N_GPRS;
 }
 
 inline int fpr64(Register reg)
 {
-  return (int8_t)reg - N_GPRS;
+  return reg.index() - N_GPRS;
 }
 inline int fpr64(lir::RegisterPair* reg)
 {

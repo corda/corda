@@ -306,28 +306,28 @@ void RegisterSite::release(Context* c, Value* v)
 {
   assertT(c, number != NoRegister);
 
-  compiler::release(c, c->registerResources + (int8_t)number, v, this);
+  compiler::release(c, c->registerResources + number.index(), v, this);
 }
 
 void RegisterSite::freeze(Context* c, Value* v)
 {
   assertT(c, number != NoRegister);
 
-  c->registerResources[(int8_t)number].freeze(c, v);
+  c->registerResources[number.index()].freeze(c, v);
 }
 
 void RegisterSite::thaw(Context* c, Value* v)
 {
   assertT(c, number != NoRegister);
 
-  c->registerResources[(int8_t)number].thaw(c, v);
+  c->registerResources[number.index()].thaw(c, v);
 }
 
 bool RegisterSite::frozen(Context* c UNUSED)
 {
   assertT(c, number != NoRegister);
 
-  return c->registerResources[(int8_t)number].freezeCount != 0;
+  return c->registerResources[number.index()].freezeCount != 0;
 }
 
 lir::Operand::Type RegisterSite::type(Context*)
@@ -532,9 +532,9 @@ bool MemorySite::matchNextWord(Context* c, Site* s, unsigned index)
 
 void MemorySite::acquire(Context* c, Value* v)
 {
-  c->registerResources[(int8_t)base].increment(c);
+  c->registerResources[base.index()].increment(c);
   if (index != NoRegister) {
-    c->registerResources[(int8_t)index].increment(c);
+    c->registerResources[index.index()].increment(c);
   }
 
   if (base == c->arch->stack()) {
@@ -558,9 +558,9 @@ void MemorySite::release(Context* c, Value* v)
         c, c->frameResources + offsetToFrameIndex(c, offset), v, this);
   }
 
-  c->registerResources[(int8_t)base].decrement(c);
+  c->registerResources[base.index()].decrement(c);
   if (index != NoRegister) {
-    c->registerResources[(int8_t)index].decrement(c);
+    c->registerResources[index.index()].decrement(c);
   }
 
   acquired = false;
@@ -571,9 +571,9 @@ void MemorySite::freeze(Context* c, Value* v)
   if (base == c->arch->stack()) {
     c->frameResources[offsetToFrameIndex(c, offset)].freeze(c, v);
   } else {
-    c->registerResources[(int8_t)base].increment(c);
+    c->registerResources[base.index()].increment(c);
     if (index != NoRegister) {
-      c->registerResources[(int8_t)index].increment(c);
+      c->registerResources[index.index()].increment(c);
     }
   }
 }
@@ -583,9 +583,9 @@ void MemorySite::thaw(Context* c, Value* v)
   if (base == c->arch->stack()) {
     c->frameResources[offsetToFrameIndex(c, offset)].thaw(c, v);
   } else {
-    c->registerResources[(int8_t)base].decrement(c);
+    c->registerResources[base.index()].decrement(c);
     if (index != NoRegister) {
-      c->registerResources[(int8_t)index].decrement(c);
+      c->registerResources[index.index()].decrement(c);
     }
   }
 }

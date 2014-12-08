@@ -44,7 +44,7 @@ void maybeRex(Context* c, unsigned size, lir::Memory* a);
 
 inline int regCode(Register a)
 {
-  return (int8_t)a & 7;
+  return a.index() & 7;
 }
 
 inline int regCode(lir::RegisterPair* a)
@@ -54,7 +54,7 @@ inline int regCode(lir::RegisterPair* a)
 
 inline bool isFloatReg(lir::RegisterPair* a)
 {
-  return (int8_t)a->low >= xmm0;
+  return a->low >= xmm0;
 }
 
 void modrm(Context* c, uint8_t mod, Register a, Register b);

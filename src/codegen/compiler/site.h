@@ -43,7 +43,7 @@ class SiteMask {
 
   static SiteMask fixedRegisterMask(Register number)
   {
-    return SiteMask(lir::Operand::RegisterPairMask, 1 << (int8_t)number, NoFrameIndex);
+    return SiteMask(lir::Operand::RegisterPairMask, 1 << number.index(), NoFrameIndex);
   }
 
   static SiteMask lowPart(const OperandMask& mask)

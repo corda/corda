@@ -20,13 +20,13 @@ class RegisterMask;
 
 class Register {
 private:
-  int8_t index;
+  int8_t _index;
 public:
-  explicit constexpr Register(int8_t index) : index(index) {}
-  constexpr Register() : index(-1) {}
+  explicit constexpr Register(int8_t _index) : _index(_index) {}
+  constexpr Register() : _index(-1) {}
 
   constexpr bool operator == (Register o) const {
-    return index == o.index;
+    return _index == o._index;
   }
 
   constexpr bool operator != (Register o) const {
@@ -35,8 +35,24 @@ public:
 
   constexpr RegisterMask operator | (Register o) const;
 
-  constexpr operator int8_t() const {
-    return index;
+  constexpr bool operator < (Register o) const {
+    return _index < o._index;
+  }
+
+  constexpr bool operator > (Register o) const {
+    return _index > o._index;
+  }
+
+  constexpr bool operator <= (Register o) const {
+    return _index <= o._index;
+  }
+
+  constexpr bool operator >= (Register o) const {
+    return _index >= o._index;
+  }
+
+  constexpr int index() const {
+    return _index;
   }
 };
 
@@ -48,7 +64,7 @@ private:
 public:
   constexpr RegisterMask(uint64_t mask) : mask(mask) {}
   constexpr RegisterMask() : mask(0) {}
-  constexpr RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << (int8_t)reg) {}
+  constexpr RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << reg.index()) {}
 
   constexpr RegisterMask operator &(RegisterMask o) const {
     return RegisterMask(mask & o.mask);
@@ -64,19 +80,19 @@ public:
   }
 
   constexpr bool contains(Register reg) const {
-    return (mask & (static_cast<uint64_t>(1) << (int8_t)reg)) != 0;
+    return (mask & (static_cast<uint64_t>(1) << reg.index())) != 0;
   }
 
   constexpr bool containsExactly(Register reg) const {
-    return mask == (mask & (static_cast<uint64_t>(1) << (int8_t)reg));
+    return mask == (mask & (static_cast<uint64_t>(1) << reg.index()));
   }
 
   constexpr RegisterMask excluding(Register reg) const {
-    return RegisterMask(mask & ~(static_cast<uint64_t>(1) << (int8_t)reg));
+    return RegisterMask(mask & ~(static_cast<uint64_t>(1) << reg.index()));
   }
 
   constexpr RegisterMask including(Register reg) const {
-    return RegisterMask(mask | (static_cast<uint64_t>(1) << (int8_t)reg));
+    return RegisterMask(mask | (static_cast<uint64_t>(1) << reg.index()));
   }
 
   constexpr explicit operator uint64_t() const {

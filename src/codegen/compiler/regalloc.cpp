@@ -65,7 +65,7 @@ bool pickRegisterTarget(Context* c,
                         CostCalculator* costCalculator)
 {
   if (mask.contains(i)) {
-    RegisterResource* r = c->registerResources + (int8_t)i;
+    RegisterResource* r = c->registerResources + i.index();
     unsigned myCost
         = resourceCost(
               c,
@@ -96,8 +96,8 @@ Register pickRegisterTarget(Context* c,
 
   if (mask & c->regFile->generalRegisters) {
     for (Register i = Register(c->regFile->generalRegisters.limit - 1);
-         (int8_t)i >= c->regFile->generalRegisters.start;
-         i = Register((int8_t)i - 1)) {
+         i.index() >= c->regFile->generalRegisters.start;
+         i = Register(i.index() - 1)) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -106,8 +106,8 @@ Register pickRegisterTarget(Context* c,
 
   if (mask & c->regFile->floatRegisters) {
     for (Register i = Register(c->regFile->floatRegisters.start);
-         (int8_t)i < c->regFile->floatRegisters.limit;
-         i = Register((int8_t)i + 1)) {
+         i.index() < c->regFile->floatRegisters.limit;
+         i = Register(i.index() + 1)) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }

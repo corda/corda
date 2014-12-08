@@ -65,11 +65,11 @@ void maybeRex(Context* c,
     } else {
       byte = REX_NONE;
     }
-    if (a != NoRegister and ((int8_t)a & 8))
+    if (a != NoRegister and (a.index() & 8))
       byte |= REX_R;
-    if (index != NoRegister and ((int8_t)index & 8))
+    if (index != NoRegister and (index.index() & 8))
       byte |= REX_X;
-    if (base != NoRegister and ((int8_t)base & 8))
+    if (base != NoRegister and (base.index() & 8))
       byte |= REX_B;
     if (always or byte != REX_NONE)
       c->code.append(byte);
@@ -93,7 +93,7 @@ void maybeRex(Context* c, unsigned size, lir::RegisterPair* a)
 
 void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::Memory* b)
 {
-  maybeRex(c, size, a->low, b->index, b->base, size == 1 and ((int8_t)a->low & 4));
+  maybeRex(c, size, a->low, b->index, b->base, size == 1 and (a->low.index() & 4));
 }
 
 void maybeRex(Context* c, unsigned size, lir::Memory* a)
@@ -121,7 +121,7 @@ void modrmSib(Context* c, int width, Register a, int scale, Register index, Regi
 {
   if (index == NoRegister) {
     modrm(c, width, base, a);
-    if (regCode(base) == rsp) {
+    if (regCode(base) == rsp.index()) {
       sib(c, 0x00, rsp, rsp);
     }
   } else {
@@ -132,7 +132,7 @@ void modrmSib(Context* c, int width, Register a, int scale, Register index, Regi
 
 void modrmSibImm(Context* c, Register a, int scale, Register index, Register base, int offset)
 {
-  if (offset == 0 and regCode(base) != rbp) {
+  if (offset == 0 and regCode(base) != rbp.index()) {
     modrmSib(c, 0x00, a, scale, index, base);
   } else if (vm::fitsInInt8(offset)) {
     modrmSib(c, 0x40, a, scale, index, base);

@@ -216,11 +216,11 @@ class MyArchitecture : public Architecture {
 
   virtual bool reserved(Register register_)
   {
-    switch ((int8_t)register_) {
-    case LinkRegister:
-    case StackRegister:
-    case ThreadRegister:
-    case ProgramCounter:
+    switch (register_.index()) {
+    case LinkRegister.index():
+    case StackRegister.index():
+    case ThreadRegister.index():
+    case ProgramCounter.index():
       return true;
 
     default:

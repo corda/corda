@@ -399,7 +399,7 @@ class CallEvent : public Event {
           Register number = c->arch->argumentRegister(index);
 
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", (int8_t)number, v);
+            fprintf(stderr, "reg %d arg read %p\n", number.index(), v);
           }
 
           targetMask = SiteMask::fixedRegisterMask(number);
