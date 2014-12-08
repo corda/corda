@@ -18,9 +18,11 @@
 
 namespace {
 
-void append(Context* c, uint32_t instruction, unsigned size)
+using namespace avian::codegen::arm;
+
+void append(Context* c, uint32_t instruction)
 {
-  c->code.append4(instruction | (size == 8 ? 0x80000000 : 0));
+  c->code.append4(instruction);
 }
 
 uint32_t lslv(int Rd, int Rn, int Rm, unsigned size)
@@ -117,6 +119,24 @@ uint32_t mov(int Rd, int Rn, unsigned size)
   return orr(Rd, 31, Rn, size);
 }
 
+uint32_t movz(int Rd, int value, unsigned shift, unsigned size)
+{
+  return (size == 8 ? 0xd2800000 : 0x52800000) | ((shift >> 4) << 21)
+    | (value << 5) | Rd;
+}
+
+uint32_t movn(int Rd, int value, unsigned shift, unsigned size)
+{
+  return (size == 8 ? 0x92800000 : 0x12800000) | ((shift >> 4) << 21)
+    | (value << 5) | Rd;
+}
+
+uint32_t movk(int Rd, int value, unsigned shift, unsigned size)
+{
+  return (size == 8 ? 0xf2800000 : 0x72800000) | ((shift >> 4) << 21)
+    | (value << 5) | Rd;
+}
+
 uint32_t ldrPCRel(int Rd, int offset, unsigned size)
 {
   return (size == 8 ? 0x58000000 : 0x18000000) | (offset << 5) | Rd;
@@ -155,13 +175,42 @@ uint32_t subi(int Rd, int Rn, int value, int shift, unsigned size)
     | (value << 10) | (Rn << 5) | Rd;
 }
 
+uint32_t fabs(int Fd, int Fn, unsigned size)
+{
+  return (size == 8 ? 0x1e60c000 : 0x1e20c000) | (Fn << 5) | Fd;
+}
+
+uint32_t fneg(int Fd, int Fn, unsigned size)
+{
+  return (size == 8 ? 0x1e614000 : 0x1e214000) | (Fn << 5) | Fd;
+}
+
+uint32_t fcvtSdDn(int Fd, int Fn)
+{
+  return 0x1e624000 | (Fn << 5) | Fd;
+}
+
+uint32_t fcvtDdSn(int Fd, int Fn)
+{
+  return 0x1e22c000 | (Fn << 5) | Fd;
+}
+
+uint32_t fcvtasXdDn(int Rd, int Fn)
+{
+  return 0x9e640000 | (Fn << 5) | Rd;
+}
+
+uint32_t fcvtasWdSn(int Rd, int Fn)
+{
+  return 0x1e240000 | (Fn << 5) | Rd;
+}
+
 } // namespace
 
 namespace avian {
 namespace codegen {
 namespace arm {
 
-using namespace isa;
 using namespace avian::util;
 
 void shiftLeftR(Context* c,
@@ -182,7 +231,7 @@ void shiftLeftC(Context* c,
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
     append(c, lsli(dst->low, b->low, value, 4));
-  } else (size == 8 and (value & 0x3F)) {
+  } else if (size == 8 and (value & 0x3F)) {
     append(c, lsli(dst->low, b->low, value, 8));
   } else {
     moveRR(c, size, b, size, dst);
@@ -206,9 +255,9 @@ void shiftRightC(Context* c,
 {
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
-    append(c, lsri(dst->low, b->low, value, 4), 4);
-  } else (size == 8 and (value & 0x3F)) {
-    append(c, lsri(dst->low, b->low, value, 8), 8);
+    append(c, lsri(dst->low, b->low, value, 4));
+  } else if (size == 8 and (value & 0x3F)) {
+    append(c, lsri(dst->low, b->low, value, 8));
   } else {
     moveRR(c, size, b, size, dst);
   }
@@ -231,9 +280,9 @@ void unsignedShiftRightC(Context* c,
 {
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
-    append(c, asri(dst->low, b->low, value, 4), 4);
-  } else (size == 8 and (value & 0x3F)) {
-    append(c, asri(dst->low, b->low, value, 8), 8);
+    append(c, asri(dst->low, b->low, value, 4));
+  } else if (size == 8 and (value & 0x3F)) {
+    append(c, asri(dst->low, b->low, value, 8));
   } else {
     moveRR(c, size, b, size, dst);
   }
@@ -299,7 +348,7 @@ void moveZRR(Context* c,
 {
   switch (srcSize) {
   case 2:
-    aapend(c, uxth(dst->low, src->low));
+    append(c, uxth(dst->low, src->low));
     break;
 
   default:
@@ -323,31 +372,31 @@ void moveCR2(Context* c,
   } else if (src->value->resolved()) {
     int64_t value = src->value->value();
     if (value > 0) {
-      append(c, mov(dst->low, value & 0xFFFF));
+      append(c, movz(dst->low, value & 0xFFFF, 0, size));
       if (value >> 16) {
-        append(c, movk(dst->low, (value >> 16) & 0xFFFF), 16);
+        append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
         if (value >> 32) {
-          append(c, movk(dst->low, (value >> 32) & 0xFFFF), 32);
+          append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
           if (value >> 48) {
-            append(c, movk(dst->low, (value >> 48) & 0xFFFF), 48);
+            append(c, movk(dst->low, (value >> 48) & 0xFFFF, 48, size));
           }
         }
       }
     } else if (value < 0) {
-      append(c, movn(dst->low, (~value) & 0xFFFF));
+      append(c, movn(dst->low, (~value) & 0xFFFF, 0, size));
       if (~(value >> 16)) {
-        append(c, movk(dst->low, (value >> 16) & 0xFFFF), 16);
+        append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
         if (~(value >> 32)) {
-          append(c, movk(dst->low, (value >> 32) & 0xFFFF), 32);
+          append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
           if (~(value >> 48)) {
-            append(c, movk(dst->low, (value >> 48) & 0xFFFF), 48);
+            append(c, movk(dst->low, (value >> 48) & 0xFFFF, 48, size));
           }
         }
       }
     }
   } else {
     appendConstantPoolEntry(c, src->value, callOffset);
-    append(c, ldrPCRel(dst->low, 0));
+    append(c, ldrPCRel(dst->low, 0, size));
   }
 }
 
@@ -366,7 +415,7 @@ void addR(Context* c,
           lir::RegisterPair* b,
           lir::RegisterPair* dst)
 {
-  append(c, add(dst, a, b, size));
+  append(c, add(dst->low, a->low, b->low, size));
 }
 
 void subR(Context* c,
@@ -375,7 +424,7 @@ void subR(Context* c,
           lir::RegisterPair* b,
           lir::RegisterPair* dst)
 {
-  append(c, sub(dst, a, b, size));
+  append(c, sub(dst->low, a->low, b->low, size));
 }
 
 void addC(Context* c,
@@ -426,7 +475,7 @@ void multiplyR(Context* c,
                lir::RegisterPair* b,
                lir::RegisterPair* dst)
 {
-  append(c, mul(dst->low, a->low, b->low));
+  append(c, mul(dst->low, a->low, b->low, size));
 }
 
 void floatAbsoluteRR(Context* c,
@@ -435,7 +484,7 @@ void floatAbsoluteRR(Context* c,
                      unsigned,
                      lir::RegisterPair* b)
 {
-  append(c, fabs(fpr(b), fpr(a), size));
+  append(c, fabs_(fpr(b), fpr(a), size));
 }
 
 void floatNegateRR(Context* c,
@@ -467,7 +516,7 @@ void float2IntRR(Context* c,
                  lir::RegisterPair* b)
 {
   if (size == 8) {
-    append(c, fcvtasWdDn(b->low, fpr(a)));
+    append(c, fcvtasXdDn(b->low, fpr(a)));
   } else {
     append(c, fcvtasWdSn(b->low, fpr(a)));
   }

@@ -30,8 +30,18 @@ constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
 
 const int N_GPRS = 32;
 const int N_FPRS = 32;
-const uint64_t GPR_MASK = 0xffffffff;
-const uint64_t FPR_MASK = 0xffffffff00000000;
+const RegisterMask GPR_MASK = 0xffffffff;
+const RegisterMask FPR_MASK = 0xffffffff00000000;
+
+inline int fpr(int reg)
+{
+  return reg - N_GPRS;
+}
+
+inline int fpr(lir::RegisterPair* reg)
+{
+  return fpr(reg->low);
+}
 #else
 constexpr Register ThreadRegister(8);
 constexpr Register StackRegister(13);
@@ -43,12 +53,6 @@ const int N_GPRS = 16;
 const int N_FPRS = 16;
 const RegisterMask GPR_MASK = 0xffff;
 const RegisterMask FPR_MASK = 0xffff0000;
-#endif
-
-inline bool isFpr(lir::RegisterPair* reg)
-{
-  return reg->low.index() >= N_GPRS;
-}
 
 inline int fpr64(Register reg)
 {
@@ -65,6 +69,12 @@ inline int fpr32(Register reg)
 inline int fpr32(lir::RegisterPair* reg)
 {
   return fpr64(reg) << 1;
+}
+#endif
+
+inline bool isFpr(lir::RegisterPair* reg)
+{
+  return reg->low.index() >= N_GPRS;
 }
 
 }  // namespace arm
