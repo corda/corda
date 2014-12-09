@@ -256,10 +256,10 @@ Site* pickTargetSite(Context* c,
 
   expect(c, target.cost < Target::Impossible);
 
-  if (target.type == lir::MemoryOperand) {
+  if (target.type == lir::Operand::Type::Memory) {
     return frameSite(c, target.index);
   } else {
-    return registerSite(c, target.index);
+    return registerSite(c, Register(target.index));
   }
 }
 
@@ -342,7 +342,7 @@ Site* maybeMove(Context* c,
       OperandMask src;
       OperandMask tmp;
       c->arch->planMove(
-          size, src, tmp, OperandMask(dstMask.typeMask, dstMask.registerMask));
+          size, src, tmp, OperandMask(dstMask.typeMask, dstMask.registerMask, 0));
 
       SiteMask srcMask = SiteMask::lowPart(src);
       for (SiteIterator it(c, value, true, includeNextWord); it.hasMore();) {
@@ -369,7 +369,7 @@ Site* maybeMove(Context* c,
       size,
       src,
       tmp,
-      OperandMask(1 << dstSite->type(c), dstSite->registerMask(c)));
+      OperandMask(1 << (unsigned)dstSite->type(c), dstSite->registerMask(c), 0));
 
   SiteMask srcMask = SiteMask::lowPart(src);
   unsigned cost = 0xFFFFFFFF;
@@ -514,15 +514,15 @@ void steal(Context* c, Resource* r, Value* thief)
 
 SiteMask generalRegisterMask(Context* c)
 {
-  return SiteMask(1 << lir::RegisterOperand,
-                  c->regFile->generalRegisters.mask,
+  return SiteMask(lir::Operand::RegisterPairMask,
+                  c->regFile->generalRegisters,
                   NoFrameIndex);
 }
 
 SiteMask generalRegisterOrConstantMask(Context* c)
 {
-  return SiteMask((1 << lir::RegisterOperand) | (1 << lir::ConstantOperand),
-                  c->regFile->generalRegisters.mask,
+  return SiteMask(lir::Operand::RegisterPairMask | lir::Operand::ConstantMask,
+                  c->regFile->generalRegisters,
                   NoFrameIndex);
 }
 
@@ -616,11 +616,11 @@ bool isHome(Value* v, int frameIndex)
 bool acceptForResolve(Context* c, Site* s, Read* read, const SiteMask& mask)
 {
   if (acceptMatch(c, s, read, mask) and (not s->frozen(c))) {
-    if (s->type(c) == lir::RegisterOperand) {
+    if (s->type(c) == lir::Operand::Type::RegisterPair) {
       return c->availableGeneralRegisterCount > ResolveRegisterReserveCount;
     } else {
       assertT(c,
-              s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex)));
+              s->match(c, SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex)));
 
       return isHome(read->value,
                     offsetToFrameIndex(c, static_cast<MemorySite*>(s)->offset));
@@ -698,7 +698,7 @@ void apply(Context* c,
 {
   assertT(c, s1Low->type(c) == s1High->type(c));
 
-  lir::OperandType s1Type = s1Low->type(c);
+  lir::Operand::Type s1Type = s1Low->type(c);
   OperandUnion s1Union;
   asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
@@ -717,11 +717,11 @@ void apply(Context* c,
   assertT(c, s1Low->type(c) == s1High->type(c));
   assertT(c, s2Low->type(c) == s2High->type(c));
 
-  lir::OperandType s1Type = s1Low->type(c);
+  lir::Operand::Type s1Type = s1Low->type(c);
   OperandUnion s1Union;
   asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  lir::OperandType s2Type = s2Low->type(c);
+  lir::Operand::Type s2Type = s2Low->type(c);
   OperandUnion s2Union;
   asAssemblerOperand(c, s2Low, s2High, &s2Union);
 
@@ -746,15 +746,15 @@ void apply(Context* c,
   assertT(c, s2Low->type(c) == s2High->type(c));
   assertT(c, s3Low->type(c) == s3High->type(c));
 
-  lir::OperandType s1Type = s1Low->type(c);
+  lir::Operand::Type s1Type = s1Low->type(c);
   OperandUnion s1Union;
   asAssemblerOperand(c, s1Low, s1High, &s1Union);
 
-  lir::OperandType s2Type = s2Low->type(c);
+  lir::Operand::Type s2Type = s2Low->type(c);
   OperandUnion s2Union;
   asAssemblerOperand(c, s2Low, s2High, &s2Union);
 
-  lir::OperandType s3Type = s3Low->type(c);
+  lir::Operand::Type s3Type = s3Low->type(c);
   OperandUnion s3Union;
   asAssemblerOperand(c, s3Low, s3High, &s3Union);
 
@@ -782,7 +782,7 @@ void saveLocals(Context* c, Event* e)
       e->addRead(
           c,
           local->value,
-          SiteMask(1 << lir::MemoryOperand, 0, compiler::frameIndex(c, li)));
+          SiteMask(lir::Operand::MemoryMask, 0, compiler::frameIndex(c, li)));
     }
   }
 }
@@ -815,10 +815,10 @@ void maybeMove(Context* c,
 
   if (cost) {
     // todo: let c->arch->planMove decide this:
-    bool useTemporary = ((target->type(c) == lir::MemoryOperand
-                          and srcValue->source->type(c) == lir::MemoryOperand)
+    bool useTemporary = ((target->type(c) == lir::Operand::Type::Memory
+                          and srcValue->source->type(c) == lir::Operand::Type::Memory)
                          or (srcSelectSize < dstSize
-                             and target->type(c) != lir::RegisterOperand));
+                             and target->type(c) != lir::Operand::Type::RegisterPair));
 
     srcValue->source->freeze(c, srcValue);
 
@@ -827,7 +827,7 @@ void maybeMove(Context* c,
     srcValue->source->thaw(c, srcValue);
 
     bool addOffset = srcSize != srcSelectSize and c->arch->bigEndian()
-                     and srcValue->source->type(c) == lir::MemoryOperand;
+                     and srcValue->source->type(c) == lir::Operand::Type::Memory;
 
     if (addOffset) {
       static_cast<MemorySite*>(srcValue->source)->offset
@@ -874,14 +874,14 @@ void maybeMove(Context* c,
       c->arch->planSource(op, dstSize, src, dstSize, &thunk);
 
       if (isGeneralValue(srcValue)) {
-        src.registerMask &= c->regFile->generalRegisters.mask;
+        src.lowRegisterMask &= c->regFile->generalRegisters;
       }
 
       assertT(c, thunk == 0);
-      assertT(c, dstMask.typeMask & src.typeMask & (1 << lir::RegisterOperand));
+      assertT(c, dstMask.typeMask & src.typeMask & lir::Operand::RegisterPairMask);
 
       Site* tmpTarget
-          = freeRegisterSite(c, dstMask.registerMask & src.registerMask);
+          = freeRegisterSite(c, dstMask.registerMask & src.lowRegisterMask);
 
       srcValue->source->freeze(c, srcValue);
 
@@ -1635,8 +1635,8 @@ bool resolveSourceSites(Context* c,
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
-                    c->regFile->generalRegisters.mask,
+      SiteMask mask(lir::Operand::RegisterPairMask | lir::Operand::MemoryMask,
+                    c->regFile->generalRegisters,
                     AnyFrameIndex);
 
       Site* s = pickSourceSite(
@@ -1677,8 +1677,8 @@ void resolveTargetSites(Context* c,
     Read* r = live(c, v);
 
     if (r and sites[el.localIndex] == 0) {
-      SiteMask mask((1 << lir::RegisterOperand) | (1 << lir::MemoryOperand),
-                    c->regFile->generalRegisters.mask,
+      SiteMask mask(lir::Operand::RegisterPairMask | lir::Operand::MemoryMask,
+                    c->regFile->generalRegisters,
                     AnyFrameIndex);
 
       Site* s = pickSourceSite(
@@ -2210,24 +2210,24 @@ class Client : public Assembler::Client {
   {
   }
 
-  virtual int acquireTemporary(uint32_t mask)
+  virtual Register acquireTemporary(RegisterMask mask)
   {
     unsigned cost;
-    int r = pickRegisterTarget(c, 0, mask, &cost);
+    Register r = pickRegisterTarget(c, 0, mask, &cost);
     expect(c, cost < Target::Impossible);
     save(r);
-    c->registerResources[r].increment(c);
+    c->registerResources[r.index()].increment(c);
     return r;
   }
 
-  virtual void releaseTemporary(int r)
+  virtual void releaseTemporary(Register r)
   {
-    c->registerResources[r].decrement(c);
+    c->registerResources[r.index()].decrement(c);
   }
 
-  virtual void save(int r)
+  virtual void save(Register r)
   {
-    RegisterResource* reg = c->registerResources + r;
+    RegisterResource* reg = c->registerResources + r.index();
 
     assertT(c, reg->referenceCount == 0);
     assertT(c, reg->freezeCount == 0);

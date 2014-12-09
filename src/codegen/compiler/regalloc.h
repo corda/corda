@@ -55,13 +55,18 @@ class Target {
   {
   }
 
-  Target(int index, lir::OperandType type, unsigned cost)
+  Target(int16_t index, lir::Operand::Type type, unsigned cost)
       : index(index), type(type), cost(cost)
   {
   }
 
+  Target(Register reg, unsigned cost)
+      : index(reg.index()), type(lir::Operand::Type::RegisterPair), cost(cost)
+  {
+  }
+
   int16_t index;
-  lir::OperandType type;
+  lir::Operand::Type type;
   uint8_t cost;
 };
 
@@ -77,22 +82,22 @@ unsigned resourceCost(Context* c,
                       CostCalculator* costCalculator);
 
 bool pickRegisterTarget(Context* c,
-                        int i,
+                        Register i,
                         Value* v,
-                        uint32_t mask,
-                        int* target,
+                        RegisterMask mask,
+                        Register* target,
                         unsigned* cost,
                         CostCalculator* costCalculator = 0);
 
-int pickRegisterTarget(Context* c,
+Register pickRegisterTarget(Context* c,
                        Value* v,
-                       uint32_t mask,
+                       RegisterMask mask,
                        unsigned* cost,
                        CostCalculator* costCalculator = 0);
 
 Target pickRegisterTarget(Context* c,
                           Value* v,
-                          uint32_t mask,
+                          RegisterMask mask,
                           CostCalculator* costCalculator = 0);
 
 unsigned frameCost(Context* c,

@@ -57,24 +57,24 @@ unsigned resourceCost(Context* c,
 }
 
 bool pickRegisterTarget(Context* c,
-                        int i,
+                        Register i,
                         Value* v,
-                        uint32_t mask,
-                        int* target,
+                        RegisterMask mask,
+                        Register* target,
                         unsigned* cost,
                         CostCalculator* costCalculator)
 {
-  if ((1 << i) & mask) {
-    RegisterResource* r = c->registerResources + i;
+  if (mask.contains(i)) {
+    RegisterResource* r = c->registerResources + i.index();
     unsigned myCost
         = resourceCost(
               c,
               v,
               r,
-              SiteMask(1 << lir::RegisterOperand, 1 << i, NoFrameIndex),
+              SiteMask(lir::Operand::RegisterPairMask, RegisterMask(i), NoFrameIndex),
               costCalculator) + Target::MinimumRegisterCost;
 
-    if ((static_cast<uint32_t>(1) << i) == mask) {
+    if (mask.containsExactly(i)) {
       *cost = myCost;
       return true;
     } else if (myCost < *cost) {
@@ -85,29 +85,25 @@ bool pickRegisterTarget(Context* c,
   return false;
 }
 
-int pickRegisterTarget(Context* c,
+Register pickRegisterTarget(Context* c,
                        Value* v,
-                       uint32_t mask,
+                       RegisterMask mask,
                        unsigned* cost,
                        CostCalculator* costCalculator)
 {
-  int target = lir::NoRegister;
+  Register target = NoRegister;
   *cost = Target::Impossible;
 
-  if (mask & c->regFile->generalRegisters.mask) {
-    for (int i = c->regFile->generalRegisters.limit - 1;
-         i >= c->regFile->generalRegisters.start;
-         --i) {
+  if (mask & c->regFile->generalRegisters) {
+    for (Register i : c->regFile->generalRegisters) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
     }
   }
 
-  if (mask & c->regFile->floatRegisters.mask) {
-    for (int i = c->regFile->floatRegisters.start;
-         i < static_cast<int>(c->regFile->floatRegisters.limit);
-         ++i) {
+  if (mask & c->regFile->floatRegisters) {
+    for (Register i : c->regFile->floatRegisters) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -119,12 +115,12 @@ int pickRegisterTarget(Context* c,
 
 Target pickRegisterTarget(Context* c,
                           Value* v,
-                          uint32_t mask,
+                          RegisterMask mask,
                           CostCalculator* costCalculator)
 {
   unsigned cost;
-  int number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
-  return Target(number, lir::RegisterOperand, cost);
+  Register number = pickRegisterTarget(c, v, mask, &cost, costCalculator);
+  return Target(number, cost);
 }
 
 unsigned frameCost(Context* c,
@@ -135,7 +131,7 @@ unsigned frameCost(Context* c,
   return resourceCost(c,
                       v,
                       c->frameResources + frameIndex,
-                      SiteMask(1 << lir::MemoryOperand, 0, frameIndex),
+                      SiteMask(lir::Operand::MemoryMask, 0, frameIndex),
                       costCalculator) + Target::MinimumFrameCost;
 }
 
@@ -147,7 +143,7 @@ Target pickFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
   do {
     if (p->home >= 0) {
       Target mine(p->home,
-                  lir::MemoryOperand,
+                  lir::Operand::Type::Memory,
                   frameCost(c, v, p->home, costCalculator));
 
       if (mine.cost == Target::MinimumFrameCost) {
@@ -168,7 +164,7 @@ Target pickAnyFrameTarget(Context* c, Value* v, CostCalculator* costCalculator)
 
   unsigned count = totalFrameSize(c);
   for (unsigned i = 0; i < count; ++i) {
-    Target mine(i, lir::MemoryOperand, frameCost(c, v, i, costCalculator));
+    Target mine(i, lir::Operand::Type::Memory, frameCost(c, v, i, costCalculator));
     if (mine.cost == Target::MinimumFrameCost) {
       return mine;
     } else if (mine.cost < best.cost) {
@@ -186,7 +182,7 @@ Target pickTarget(Context* c,
                   Target best,
                   CostCalculator* costCalculator)
 {
-  if (mask.typeMask & (1 << lir::RegisterOperand)) {
+  if (mask.typeMask & lir::Operand::RegisterPairMask) {
     Target mine
         = pickRegisterTarget(c, value, mask.registerMask, costCalculator);
 
@@ -198,10 +194,10 @@ Target pickTarget(Context* c,
     }
   }
 
-  if (mask.typeMask & (1 << lir::MemoryOperand)) {
+  if (mask.typeMask & lir::Operand::MemoryMask) {
     if (mask.frameIndex >= 0) {
       Target mine(mask.frameIndex,
-                  lir::MemoryOperand,
+                  lir::Operand::Type::Memory,
                   frameCost(c, value, mask.frameIndex, costCalculator));
       if (mine.cost == Target::MinimumFrameCost) {
         return mine;
@@ -234,14 +230,14 @@ Target pickTarget(Context* c,
 
   Value* value = read->value;
 
-  uint32_t registerMask
-      = (isFloatValue(value) ? ~0 : c->regFile->generalRegisters.mask);
+  RegisterMask registerMask
+      = (isFloatValue(value) ? AnyRegisterMask : (RegisterMask)c->regFile->generalRegisters);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
 
   if (isFloatValue(value)) {
-    uint32_t floatMask = mask.registerMask & c->regFile->floatRegisters.mask;
+    RegisterMask floatMask = mask.registerMask & c->regFile->floatRegisters;
     if (floatMask) {
       mask.registerMask = floatMask;
     }
@@ -273,9 +269,9 @@ Target pickTarget(Context* c,
   if (intersectRead) {
     if (best.cost == Target::Impossible) {
       fprintf(stderr,
-              "mask type %d reg %d frame %d\n",
+              "mask type %d reg %" LLD " frame %d\n",
               mask.typeMask,
-              mask.registerMask,
+              (uint64_t)mask.registerMask,
               mask.frameIndex);
       abort(c);
     }

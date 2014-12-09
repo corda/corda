@@ -23,17 +23,17 @@ class ArchitectureContext;
 
 unsigned index(ArchitectureContext*,
                lir::BinaryOperation operation,
-               lir::OperandType operand1,
-               lir::OperandType operand2);
+               lir::Operand::Type operand1,
+               lir::Operand::Type operand2);
 
 unsigned index(ArchitectureContext* c UNUSED,
                lir::TernaryOperation operation,
-               lir::OperandType operand1,
-               lir::OperandType operand2);
+               lir::Operand::Type operand1,
+               lir::Operand::Type operand2);
 
 unsigned branchIndex(ArchitectureContext* c UNUSED,
-                     lir::OperandType operand1,
-                     lir::OperandType operand2);
+                     lir::Operand::Type operand1,
+                     lir::Operand::Type operand2);
 
 void populateTables(ArchitectureContext* c);
 

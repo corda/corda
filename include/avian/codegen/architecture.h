@@ -12,6 +12,7 @@
 #define AVIAN_CODEGEN_ARCHITECTURE_H
 
 #include "ir.h"
+#include "registers.h"
 
 namespace vm {
 class Zone;
@@ -32,15 +33,25 @@ class RegisterFile;
 class OperandMask {
  public:
   uint8_t typeMask;
-  uint64_t registerMask;
+  RegisterMask lowRegisterMask;
+  RegisterMask highRegisterMask;
 
-  OperandMask(uint8_t typeMask, uint64_t registerMask)
-      : typeMask(typeMask), registerMask(registerMask)
+  OperandMask(uint8_t typeMask,
+              RegisterMask lowRegisterMask,
+              RegisterMask highRegisterMask)
+      : typeMask(typeMask),
+        lowRegisterMask(lowRegisterMask),
+        highRegisterMask(highRegisterMask)
   {
   }
 
-  OperandMask() : typeMask(~0), registerMask(~static_cast<uint64_t>(0))
+  OperandMask() : typeMask(~0), lowRegisterMask(AnyRegisterMask), highRegisterMask(AnyRegisterMask)
   {
+  }
+
+  void setLowHighRegisterMasks(RegisterMask lowRegisterMask, RegisterMask highRegisterMask) {
+    this->lowRegisterMask = lowRegisterMask;
+    this->highRegisterMask = highRegisterMask;
   }
 };
 
@@ -50,13 +61,13 @@ class Architecture {
 
   virtual const RegisterFile* registerFile() = 0;
 
-  virtual int scratch() = 0;
-  virtual int stack() = 0;
-  virtual int thread() = 0;
-  virtual int returnLow() = 0;
-  virtual int returnHigh() = 0;
-  virtual int virtualCallTarget() = 0;
-  virtual int virtualCallIndex() = 0;
+  virtual Register scratch() = 0;
+  virtual Register stack() = 0;
+  virtual Register thread() = 0;
+  virtual Register returnLow() = 0;
+  virtual Register returnHigh() = 0;
+  virtual Register virtualCallTarget() = 0;
+  virtual Register virtualCallIndex() = 0;
 
   virtual ir::TargetInfo targetInfo() = 0;
 
@@ -67,14 +78,14 @@ class Architecture {
   virtual bool alwaysCondensed(lir::BinaryOperation op) = 0;
   virtual bool alwaysCondensed(lir::TernaryOperation op) = 0;
 
-  virtual bool reserved(int register_) = 0;
+  virtual bool reserved(Register register_) = 0;
 
   virtual unsigned frameFootprint(unsigned footprint) = 0;
   virtual unsigned argumentFootprint(unsigned footprint) = 0;
   virtual bool argumentAlignment() = 0;
   virtual bool argumentRegisterAlignment() = 0;
   virtual unsigned argumentRegisterCount() = 0;
-  virtual int argumentRegister(unsigned index) = 0;
+  virtual Register argumentRegister(unsigned index) = 0;
 
   virtual bool hasLinkRegister() = 0;
 

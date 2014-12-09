@@ -11,6 +11,8 @@
 #ifndef AVIAN_CODEGEN_LIR_H
 #define AVIAN_CODEGEN_LIR_H
 
+#include <avian/codegen/registers.h>
+
 namespace avian {
 namespace codegen {
 class Promise;
@@ -79,18 +81,7 @@ const unsigned NonBranchTernaryOperationCount = FloatMin + 1;
 const unsigned BranchOperationCount = JumpIfFloatGreaterOrEqualOrUnordered
                                       - FloatMin;
 
-enum OperandType {
-  ConstantOperand,
-  AddressOperand,
-  RegisterOperand,
-  MemoryOperand
-};
-
 enum ValueType { ValueGeneral, ValueFloat };
-
-const unsigned OperandTypeCount = MemoryOperand + 1;
-
-const int NoRegister = -1;
 
 inline bool isBranch(lir::TernaryOperation op)
 {
@@ -128,6 +119,21 @@ inline bool isFloatUnaryOp(lir::BinaryOperation op)
 }
 
 class Operand {
+public:
+
+  enum class Type {
+    Constant,
+    Address,
+    RegisterPair,
+    Memory
+  };
+
+  const static unsigned TypeCount = (unsigned)Type::Memory + 1;
+
+  const static unsigned ConstantMask = 1 << (unsigned)Type::Constant;
+  const static unsigned AddressMask = 1 << (unsigned)Type::Address;
+  const static unsigned RegisterPairMask = 1 << (unsigned)Type::RegisterPair;
+  const static unsigned MemoryMask = 1 << (unsigned)Type::Memory;
 };
 
 class Constant : public Operand {
@@ -148,26 +154,26 @@ class Address : public Operand {
   Promise* address;
 };
 
-class Register : public Operand {
+class RegisterPair : public Operand {
  public:
-  Register(int low, int high = NoRegister) : low(low), high(high)
+  RegisterPair(Register low, Register high = NoRegister) : low(low), high(high)
   {
   }
 
-  int low;
-  int high;
+  Register low;
+  Register high;
 };
 
 class Memory : public Operand {
  public:
-  Memory(int base, int offset, int index = NoRegister, unsigned scale = 1)
+  Memory(Register base, int offset, Register index = NoRegister, unsigned scale = 1)
       : base(base), offset(offset), index(index), scale(scale)
   {
   }
 
-  int base;
+  Register base;
   int offset;
-  int index;
+  Register index;
   unsigned scale;
 };
 

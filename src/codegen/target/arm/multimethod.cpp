@@ -22,35 +22,35 @@ using namespace util;
 
 unsigned index(ArchitectureContext*,
                lir::BinaryOperation operation,
-               lir::OperandType operand1,
-               lir::OperandType operand2)
+               lir::Operand::Type operand1,
+               lir::Operand::Type operand2)
 {
-  return operation + (lir::BinaryOperationCount * operand1)
-         + (lir::BinaryOperationCount * lir::OperandTypeCount * operand2);
+  return operation + (lir::BinaryOperationCount * (unsigned)operand1)
+         + (lir::BinaryOperationCount * lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 unsigned index(ArchitectureContext* con UNUSED,
                lir::TernaryOperation operation,
-               lir::OperandType operand1)
+               lir::Operand::Type operand1)
 {
   assertT(con, not isBranch(operation));
 
-  return operation + (lir::NonBranchTernaryOperationCount * operand1);
+  return operation + (lir::NonBranchTernaryOperationCount * (unsigned)operand1);
 }
 
 unsigned branchIndex(ArchitectureContext* con UNUSED,
-                     lir::OperandType operand1,
-                     lir::OperandType operand2)
+                     lir::Operand::Type operand1,
+                     lir::Operand::Type operand2)
 {
-  return operand1 + (lir::OperandTypeCount * operand2);
+  return (unsigned)operand1 + (lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 void populateTables(ArchitectureContext* con)
 {
-  const lir::OperandType C = lir::ConstantOperand;
-  const lir::OperandType A = lir::AddressOperand;
-  const lir::OperandType R = lir::RegisterOperand;
-  const lir::OperandType M = lir::MemoryOperand;
+  const lir::Operand::Type C = lir::Operand::Type::Constant;
+  const lir::Operand::Type A = lir::Operand::Type::Address;
+  const lir::Operand::Type R = lir::Operand::Type::RegisterPair;
+  const lir::Operand::Type M = lir::Operand::Type::Memory;
 
   OperationType* zo = con->operations;
   UnaryOperationType* uo = con->unaryOperations;

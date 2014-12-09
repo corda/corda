@@ -85,15 +85,15 @@ class ArchitectureContext {
   vm::System* s;
   OperationType operations[lir::OperationCount];
   UnaryOperationType
-      unaryOperations[lir::UnaryOperationCount * lir::OperandTypeCount];
+      unaryOperations[lir::UnaryOperationCount * lir::Operand::TypeCount];
   BinaryOperationType binaryOperations[lir::BinaryOperationCount
-                                       * lir::OperandTypeCount
-                                       * lir::OperandTypeCount];
+                                       * lir::Operand::TypeCount
+                                       * lir::Operand::TypeCount];
   TernaryOperationType ternaryOperations[lir::NonBranchTernaryOperationCount
-                                         * lir::OperandTypeCount];
+                                         * lir::Operand::TypeCount];
   BranchOperationType branchOperations[lir::BranchOperationCount
-                                       * lir::OperandTypeCount
-                                       * lir::OperandTypeCount];
+                                       * lir::Operand::TypeCount
+                                       * lir::Operand::TypeCount];
 };
 
 inline avian::util::Aborter* getAborter(Context* c)

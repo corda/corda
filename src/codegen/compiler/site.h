@@ -34,30 +34,30 @@ class SiteMask {
   {
   }
 
-  SiteMask(uint8_t typeMask, uint32_t registerMask, int frameIndex)
+  SiteMask(uint8_t typeMask, RegisterMask registerMask, int frameIndex)
       : typeMask(typeMask), registerMask(registerMask), frameIndex(frameIndex)
   {
   }
 
   SiteMask intersectionWith(const SiteMask& b);
 
-  static SiteMask fixedRegisterMask(int number)
+  static SiteMask fixedRegisterMask(Register number)
   {
-    return SiteMask(1 << lir::RegisterOperand, 1 << number, NoFrameIndex);
+    return SiteMask(lir::Operand::RegisterPairMask, 1 << number.index(), NoFrameIndex);
   }
 
   static SiteMask lowPart(const OperandMask& mask)
   {
-    return SiteMask(mask.typeMask, mask.registerMask, AnyFrameIndex);
+    return SiteMask(mask.typeMask, mask.lowRegisterMask, AnyFrameIndex);
   }
 
   static SiteMask highPart(const OperandMask& mask)
   {
-    return SiteMask(mask.typeMask, mask.registerMask >> 32, AnyFrameIndex);
+    return SiteMask(mask.typeMask, mask.highRegisterMask, AnyFrameIndex);
   }
 
   uint8_t typeMask;
-  uint32_t registerMask;
+  RegisterMask registerMask;
   int frameIndex;
 };
 
@@ -103,7 +103,7 @@ class Site {
     return false;
   }
 
-  virtual lir::OperandType type(Context*) = 0;
+  virtual lir::Operand::Type type(Context*) = 0;
 
   virtual void asAssemblerOperand(Context*, Site*, lir::Operand*) = 0;
 
@@ -121,7 +121,7 @@ class Site {
 
   virtual unsigned registerSize(Context*);
 
-  virtual unsigned registerMask(Context*)
+  virtual RegisterMask registerMask(Context*)
   {
     return 0;
   }
@@ -187,7 +187,7 @@ class ConstantSite : public Site {
 
   virtual bool match(Context*, const SiteMask& mask)
   {
-    return mask.typeMask & (1 << lir::ConstantOperand);
+    return mask.typeMask & lir::Operand::ConstantMask;
   }
 
   virtual bool loneMatch(Context*, const SiteMask&)
@@ -197,12 +197,12 @@ class ConstantSite : public Site {
 
   virtual bool matchNextWord(Context* c, Site* s, unsigned)
   {
-    return s->type(c) == lir::ConstantOperand;
+    return s->type(c) == lir::Operand::Type::Constant;
   }
 
-  virtual lir::OperandType type(Context*)
+  virtual lir::Operand::Type type(Context*)
   {
-    return lir::ConstantOperand;
+    return lir::Operand::Type::Constant;
   }
 
   virtual void asAssemblerOperand(Context* c, Site* high, lir::Operand* result)
@@ -236,12 +236,12 @@ class ConstantSite : public Site {
 
   virtual SiteMask mask(Context*)
   {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(lir::Operand::ConstantMask, 0, NoFrameIndex);
   }
 
   virtual SiteMask nextWordMask(Context*, unsigned)
   {
-    return SiteMask(1 << lir::ConstantOperand, 0, NoFrameIndex);
+    return SiteMask(lir::Operand::ConstantMask, 0, NoFrameIndex);
   }
 
   Promise* value;
@@ -251,7 +251,7 @@ Site* addressSite(Context* c, Promise* address);
 
 class RegisterSite : public Site {
  public:
-  RegisterSite(uint32_t mask, int number);
+  RegisterSite(RegisterMask mask, Register number);
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
 
@@ -273,7 +273,7 @@ class RegisterSite : public Site {
 
   virtual bool frozen(Context* c UNUSED);
 
-  virtual lir::OperandType type(Context*);
+  virtual lir::Operand::Type type(Context*);
 
   virtual void asAssemblerOperand(Context* c UNUSED,
                                   Site* high,
@@ -293,18 +293,18 @@ class RegisterSite : public Site {
 
   virtual unsigned registerSize(Context* c);
 
-  virtual unsigned registerMask(Context* c UNUSED);
+  virtual RegisterMask registerMask(Context* c UNUSED);
 
-  uint32_t mask_;
-  int number;
+  RegisterMask mask_;
+  Register number;
 };
 
-Site* registerSite(Context* c, int number);
-Site* freeRegisterSite(Context* c, uint32_t mask);
+Site* registerSite(Context* c, Register number);
+Site* freeRegisterSite(Context* c, RegisterMask mask);
 
 class MemorySite : public Site {
  public:
-  MemorySite(int base, int offset, int index, unsigned scale);
+  MemorySite(Register base, int offset, Register index, unsigned scale);
 
   virtual unsigned toString(Context*, char* buffer, unsigned bufferSize);
 
@@ -328,7 +328,7 @@ class MemorySite : public Site {
 
   virtual bool frozen(Context* c);
 
-  virtual lir::OperandType type(Context*);
+  virtual lir::Operand::Type type(Context*);
 
   virtual void asAssemblerOperand(Context* c UNUSED,
                                   Site* high UNUSED,
@@ -351,16 +351,16 @@ class MemorySite : public Site {
   virtual bool isVolatile(Context* c);
 
   bool acquired;
-  int base;
+  Register base;
   int offset;
-  int index;
+  Register index;
   unsigned scale;
 };
 
 MemorySite* memorySite(Context* c,
-                       int base,
+                       Register base,
                        int offset = 0,
-                       int index = lir::NoRegister,
+                       Register index = NoRegister,
                        unsigned scale = 1);
 MemorySite* frameSite(Context* c, int frameIndex);
 

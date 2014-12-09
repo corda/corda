@@ -15,6 +15,7 @@
 #include "avian/zone.h"
 
 #include <avian/codegen/lir.h>
+#include <avian/codegen/registers.h>
 #include <avian/codegen/promise.h>
 
 namespace avian {
@@ -25,11 +26,11 @@ class Architecture;
 class OperandInfo {
  public:
   const unsigned size;
-  const lir::OperandType type;
+  const lir::Operand::Type type;
   lir::Operand* const operand;
 
   inline OperandInfo(unsigned size,
-                     lir::OperandType type,
+                     lir::Operand::Type type,
                      lir::Operand* operand)
       : size(size), type(type), operand(operand)
   {
@@ -52,10 +53,10 @@ class Assembler {
  public:
   class Client {
    public:
-    virtual int acquireTemporary(uint32_t mask = ~static_cast<uint32_t>(0)) = 0;
-    virtual void releaseTemporary(int r) = 0;
+    virtual Register acquireTemporary(RegisterMask mask = AnyRegisterMask) = 0;
+    virtual void releaseTemporary(Register r) = 0;
 
-    virtual void save(int r) = 0;
+    virtual void save(Register r) = 0;
   };
 
   class Block {
@@ -76,8 +77,8 @@ class Assembler {
   virtual void popFrame(unsigned footprint) = 0;
   virtual void popFrameForTailCall(unsigned footprint,
                                    int offset,
-                                   int returnAddressSurrogate,
-                                   int framePointerSurrogate) = 0;
+                                   Register returnAddressSurrogate,
+                                   Register framePointerSurrogate) = 0;
   virtual void popFrameAndPopArgumentsAndReturn(unsigned frameFootprint,
                                                 unsigned argumentFootprint) = 0;
   virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
