@@ -184,6 +184,14 @@ inline RegisterIterator BoundedRegisterMask::end() const {
   return RegisterIterator(start - 1, -1, start - 1, *this);
 }
 
+inline RegisterIterator begin(BoundedRegisterMask mask) {
+  return mask.begin();
+}
+
+inline RegisterIterator end(BoundedRegisterMask mask) {
+  return mask.end();
+}
+
 class RegisterFile {
  public:
   BoundedRegisterMask allRegisters;
