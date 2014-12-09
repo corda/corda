@@ -45,7 +45,7 @@ class OperandMask {
   {
   }
 
-  OperandMask() : typeMask(~0), lowRegisterMask(RegisterMask::Any), highRegisterMask(RegisterMask::Any)
+  OperandMask() : typeMask(~0), lowRegisterMask(AnyRegisterMask), highRegisterMask(AnyRegisterMask)
   {
   }
 

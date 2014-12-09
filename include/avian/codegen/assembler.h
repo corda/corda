@@ -53,7 +53,7 @@ class Assembler {
  public:
   class Client {
    public:
-    virtual Register acquireTemporary(RegisterMask mask = RegisterMask::Any) = 0;
+    virtual Register acquireTemporary(RegisterMask mask = AnyRegisterMask) = 0;
     virtual void releaseTemporary(Register r) = 0;
 
     virtual void save(Register r) = 0;

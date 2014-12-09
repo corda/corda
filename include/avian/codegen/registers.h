@@ -61,10 +61,26 @@ constexpr Register NoRegister;
 class RegisterMask {
 private:
   uint64_t mask;
+
+  static constexpr unsigned maskStart(uint64_t mask, unsigned offset = 64) {
+    return mask == 0 ? (offset & 63) : maskStart(mask << 1, offset - 1);
+  }
+
+  static constexpr unsigned maskLimit(uint64_t mask, unsigned offset = 0) {
+    return mask == 0 ? offset : maskLimit(mask >> 1, offset + 1);
+  }
 public:
   constexpr RegisterMask(uint64_t mask) : mask(mask) {}
   constexpr RegisterMask() : mask(0) {}
   constexpr RegisterMask(Register reg) : mask(static_cast<uint64_t>(1) << reg.index()) {}
+
+  constexpr unsigned begin() const {
+    return maskStart(mask);
+  }
+
+  constexpr unsigned end() const {
+    return maskLimit(mask);
+  }
 
   constexpr RegisterMask operator &(RegisterMask o) const {
     return RegisterMask(mask & o.mask);
@@ -102,28 +118,71 @@ public:
   constexpr explicit operator bool() const {
     return mask != 0;
   }
-
-  static RegisterMask Any;
-  static RegisterMask None;
 };
+
+constexpr RegisterMask AnyRegisterMask(~static_cast<uint64_t>(0));
+constexpr RegisterMask NoneRegisterMask(0);
 
 constexpr RegisterMask Register::operator | (Register o) const {
   return RegisterMask(*this) | o;
 }
+
+class RegisterIterator;
 
 class BoundedRegisterMask : public RegisterMask {
  public:
   uint8_t start;
   uint8_t limit;
 
-  static unsigned maskStart(RegisterMask mask);
-  static unsigned maskLimit(RegisterMask mask);
-
-  inline BoundedRegisterMask(RegisterMask mask)
-      : RegisterMask(mask), start(maskStart(mask)), limit(maskLimit(mask))
+  BoundedRegisterMask(RegisterMask mask)
+      : RegisterMask(mask), start(mask.begin()), limit(mask.end())
   {
   }
+
+  RegisterIterator begin() const;
+
+  RegisterIterator end() const;
 };
+
+class RegisterIterator {
+ public:
+  int index;
+  int direction;
+  int limit;
+  const RegisterMask mask;
+
+  RegisterIterator(int index, int direction, int limit, RegisterMask mask)
+      : index(index), direction(direction), limit(limit), mask(mask)
+  {
+  }
+
+  bool operator !=(const RegisterIterator& o) const {
+    return index != o.index;
+  }
+
+  Register operator *() {
+    return Register(index);
+  }
+
+  void operator ++ () {
+    if(index != limit) {
+      index += direction;
+    }
+    while(index != limit && !mask.contains(Register(index))) {
+      index += direction;
+    }
+  }
+};
+
+inline RegisterIterator BoundedRegisterMask::begin() const {
+  // We use reverse iteration... for some reason.
+  return RegisterIterator(limit - 1, -1, start - 1, *this);
+}
+
+inline RegisterIterator BoundedRegisterMask::end() const {
+  // We use reverse iteration... for some reason.
+  return RegisterIterator(start - 1, -1, start - 1, *this);
+}
 
 class RegisterFile {
  public:
@@ -131,36 +190,11 @@ class RegisterFile {
   BoundedRegisterMask generalRegisters;
   BoundedRegisterMask floatRegisters;
 
-  inline RegisterFile(RegisterMask generalRegisterMask, RegisterMask floatRegisterMask)
+  RegisterFile(RegisterMask generalRegisterMask, RegisterMask floatRegisterMask)
       : allRegisters(generalRegisterMask | floatRegisterMask),
         generalRegisters(generalRegisterMask),
         floatRegisters(floatRegisterMask)
   {
-  }
-};
-
-class RegisterIterator {
- public:
-  int index;
-  const BoundedRegisterMask& mask;
-
-  inline RegisterIterator(const BoundedRegisterMask& mask)
-      : index(mask.start), mask(mask)
-  {
-  }
-
-  inline bool hasNext()
-  {
-    return index < mask.limit;
-  }
-
-  inline Register next()
-  {
-    int r = index;
-    do {
-      index++;
-    } while (index < mask.limit && !(mask.contains(Register(index))));
-    return Register(r);
   }
 };
 

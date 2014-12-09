@@ -596,7 +596,7 @@ class MyArchitecture : public Architecture {
 
     case lir::Move:
       aMask.typeMask = ~0;
-      aMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
+      aMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
@@ -697,7 +697,7 @@ class MyArchitecture : public Architecture {
                         const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
-    srcMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
+    srcMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
 
     tmpMask.typeMask = 0;
     tmpMask.setLowHighRegisterMasks(0, 0);

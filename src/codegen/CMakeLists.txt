@@ -1,6 +1,5 @@
 add_library (avian_codegen
   compiler.cpp
-  registers.cpp
   runtime.cpp
   targets.cpp
 

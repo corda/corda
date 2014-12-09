@@ -397,7 +397,7 @@ class MyArchitecture : public Architecture {
                     bool* thunk)
   {
     aMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::ConstantMask;
-    aMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
+    aMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
     *thunk = false;
   }
 
@@ -506,7 +506,7 @@ class MyArchitecture : public Architecture {
                         const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
-    srcMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
+    srcMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
 
     tmpMask.typeMask = 0;
     tmpMask.setLowHighRegisterMasks(0, 0);
@@ -520,7 +520,7 @@ class MyArchitecture : public Architecture {
                && dstMask.lowRegisterMask & FPR_MASK) {
       srcMask.typeMask = tmpMask.typeMask = lir::Operand::RegisterPairMask
                                             | lir::Operand::MemoryMask;
-      tmpMask.setLowHighRegisterMasks(~static_cast<uint64_t>(0), ~static_cast<uint64_t>(0));
+      tmpMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
     }
   }
 

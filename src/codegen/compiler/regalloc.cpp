@@ -95,9 +95,7 @@ Register pickRegisterTarget(Context* c,
   *cost = Target::Impossible;
 
   if (mask & c->regFile->generalRegisters) {
-    for (Register i = Register(c->regFile->generalRegisters.limit - 1);
-         i.index() >= c->regFile->generalRegisters.start;
-         i = Register(i.index() - 1)) {
+    for (Register i : c->regFile->generalRegisters) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -105,9 +103,7 @@ Register pickRegisterTarget(Context* c,
   }
 
   if (mask & c->regFile->floatRegisters) {
-    for (Register i = Register(c->regFile->floatRegisters.start);
-         i.index() < c->regFile->floatRegisters.limit;
-         i = Register(i.index() + 1)) {
+    for (Register i : c->regFile->floatRegisters) {
       if (pickRegisterTarget(c, i, v, mask, &target, cost, costCalculator)) {
         return i;
       }
@@ -235,7 +231,7 @@ Target pickTarget(Context* c,
   Value* value = read->value;
 
   RegisterMask registerMask
-      = (isFloatValue(value) ? RegisterMask::Any : (RegisterMask)c->regFile->generalRegisters);
+      = (isFloatValue(value) ? AnyRegisterMask : (RegisterMask)c->regFile->generalRegisters);
 
   SiteMask mask(~0, registerMask, AnyFrameIndex);
   read->intersect(&mask);
