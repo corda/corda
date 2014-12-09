@@ -34,7 +34,11 @@
 
 #define THREAD_STATE_IP(state) ((state).FIELD(pc))
 #define THREAD_STATE_STACK(state) ((state).FIELD(sp))
+#if (defined __APPLE__) && (defined ARCH_arm64)
+#define THREAD_STATE_THREAD(state) ((state).FIELD(x[8]))
+#else
 #define THREAD_STATE_THREAD(state) ((state).FIELD(r[8]))
+#endif
 #define THREAD_STATE_LINK(state) ((state).FIELD(lr))
 
 #define IP_REGISTER(context) THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
