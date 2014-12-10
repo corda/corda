@@ -1206,7 +1206,7 @@ vm-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/process.cpp
 
-vm-asm-sources = $(src)/$(asm).$(asm-format)
+vm-asm-sources = $(src)/$(arch).$(asm-format)
 
 target-asm = $(asm)
 
@@ -1257,7 +1257,7 @@ ifeq ($(process),compile)
 		endif
 	endif
 
-	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
+	vm-asm-sources += $(src)/compile-$(arch).$(asm-format)
 endif
 cflags += -DAVIAN_PROCESS_$(process)
 ifeq ($(aot-only),true)
