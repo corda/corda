@@ -81,13 +81,13 @@ endif
 
 ifeq ($(platform),macosx)
 	ifneq ($(filter arm arm64,$(arch)),)
-		x := $(error "please use 'arch=arm' or 'arch=arm64' 'platform=ios' to build for ios-arm")
+		x := $(error "please use ('arch=arm' or 'arch=arm64') 'platform=ios' to build for ios-arm")
 	endif
 endif
 
 ifeq ($(platform),ios)
-	ifeq ($(filter arm i386,$(arch)),)
-		x := $(error "please specify 'arch=i386' or 'arch=arm' with 'platform=ios'")
+	ifeq ($(filter i386 arm arm64,$(arch)),)
+		x := $(error "please specify 'arch=i386', 'arch=arm', or 'arch=arm64' with 'platform=ios'")
 	endif
 endif
 

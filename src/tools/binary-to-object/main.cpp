@@ -50,20 +50,11 @@ bool writeObject(uint8_t* data,
                  OutputStream* out,
                  const char* startName,
                  const char* endName,
-                 const char* format,
-                 const char* architecture,
+                 Platform* platform,
                  unsigned alignment,
                  bool writable,
                  bool executable)
 {
-  Platform* platform = Platform::getPlatform(
-      PlatformInfo(PlatformInfo::formatFromString(format),
-                   PlatformInfo::archFromString(architecture)));
-
-  if (!platform) {
-    fprintf(stderr, "unsupported platform: %s/%s\n", format, architecture);
-    return false;
-  }
 
   SymbolInfo symbols[] = {SymbolInfo(0, startName), SymbolInfo(size, endName)};
 
@@ -113,6 +104,19 @@ int main(int argc, const char** argv)
     }
   }
 
+  const char* format = argv[5];
+  const char* architecture = argv[6];
+
+  Platform* platform = Platform::getPlatform(
+      PlatformInfo(PlatformInfo::formatFromString(format),
+                   PlatformInfo::archFromString(architecture)));
+
+  if (!platform) {
+    fprintf(stderr, "unsupported platform: %s/%s\n", format, architecture);
+    return 1;
+  }
+
+
   uint8_t* data = 0;
   unsigned size;
   int fd = open(argv[1], O_RDONLY);
@@ -148,8 +152,7 @@ int main(int argc, const char** argv)
                             &out,
                             argv[3],
                             argv[4],
-                            argv[5],
-                            argv[6],
+                            platform,
                             alignment,
                             writable,
                             executable);

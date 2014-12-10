@@ -51,7 +51,7 @@ GLOBAL(vmNativeCall):
   mov   w23, w6
 
   // setup stack arguments if necessary
-  sub   sp, sp, w20 // allocate stack
+  sub   sp, sp, w20, uxtw // allocate stack
   mov   x9, sp
 LOCAL(loop):
   cmp   w3, wzr
@@ -79,16 +79,16 @@ LOCAL(populateVFPs):
 
 LOCAL(doCall):
   blr   x19         // call function
-  add   sp, sp, w20 // deallocate stack
+  add   sp, sp, w20, uxtw // deallocate stack
 
   cmp   w23,#FLOAT_TYPE
-  bne   LOCAL(double)
+  b.ne   LOCAL(double)
   fmov  w0,s0
   b     LOCAL(exit)
 
 LOCAL(double):
   cmp   w23,#DOUBLE_TYPE
-  bne   LOCAL(exit)
+  b.ne   LOCAL(exit)
   fmov  x0,d0
 
 LOCAL(exit):
