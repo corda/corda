@@ -58,7 +58,7 @@ GLOBAL(vmInvoke):
   str   x5, [x0,#TARGET_THREAD_SCRATCH]
 
   // copy arguments into place
-  sub   sp, sp, w3
+  sub   sp, sp, w3, uxtw
   mov   x5, #0
   b     LOCAL(vmInvoke_argumentTest)
 
@@ -69,7 +69,7 @@ LOCAL(vmInvoke_argumentLoop):
 
 LOCAL(vmInvoke_argumentTest):
   cmp   x4, x3
-  blt   LOCAL(vmInvoke_argumentLoop)
+  b.lt   LOCAL(vmInvoke_argumentLoop)
 
   // we use x19 to hold the thread pointer, by convention
   mov   x19, x0
