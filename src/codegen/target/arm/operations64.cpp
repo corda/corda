@@ -16,31 +16,41 @@
 
 #if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
 
-namespace {
+namespace avian {
+namespace codegen {
+namespace arm {
 
-using namespace avian::codegen::arm;
+inline int fpr(Register reg)
+{
+  return reg.index() - N_GPRS;
+}
+
+inline int fpr(lir::RegisterPair* reg)
+{
+  return fpr(reg->low);
+}
 
 void append(Context* c, uint32_t instruction)
 {
   c->code.append4(instruction);
 }
 
-uint32_t lslv(int Rd, int Rn, int Rm, unsigned size)
+uint32_t lslv(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0x9ac12000 : 0x1ac02000) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0x9ac12000 : 0x1ac02000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t ubfm(int Rd, int Rn, int r, int s, unsigned size)
+uint32_t ubfm(Register Rd, Register Rn, int r, int s, unsigned size)
 {
-  return (size == 8 ? 0xd3608000 : 0x53000000) | (r << 16) | (s << 10) | (Rn << 5) | Rd;
+  return (size == 8 ? 0xd3608000 : 0x53000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t sbfm(int Rd, int Rn, int r, int s, unsigned size)
+uint32_t sbfm(Register Rd, Register Rn, int r, int s, unsigned size)
 {
-  return (size == 8 ? 0x93408000 : 0x13000000) | (r << 16) | (s << 10) | (Rn << 5) | Rd;
+  return (size == 8 ? 0x93408000 : 0x13000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t lsli(int Rd, int Rn, int shift, unsigned size)
+uint32_t lsli(Register Rd, Register Rn, int shift, unsigned size)
 {
   if (size == 4) {
     return ubfm(Rd, Rn, (32 - shift) & 0x1f, 31 - shift, size);
@@ -49,49 +59,49 @@ uint32_t lsli(int Rd, int Rn, int shift, unsigned size)
   }
 }
 
-uint32_t asrv(int Rd, int Rn, int Rm, unsigned size)
+uint32_t asrv(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0x9ac02800 : 0x1ac02800) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0x9ac02800 : 0x1ac02800) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t lsrv(int Rd, int Rn, int Rm, unsigned size)
+uint32_t lsrv(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0x9ac02400 : 0x1ac02400) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0x9ac02400 : 0x1ac02400) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t lsri(int Rd, int Rn, int shift, unsigned size)
+uint32_t lsri(Register Rd, Register Rn, int shift, unsigned size)
 {
   return ubfm(Rd, Rn, shift, size == 8 ? 63 : 31, size);
 }
 
-uint32_t asri(int Rd, int Rn, int shift, unsigned size)
+uint32_t asri(Register Rd, Register Rn, int shift, unsigned size)
 {
   return sbfm(Rd, Rn, shift, size == 8 ? 63 : 31, size);
 }
 
-uint32_t sxtb(int Rd, int Rn)
+uint32_t sxtb(Register Rd, Register Rn)
 {
   return sbfm(Rd, Rn, 0, 7, 8);
 }
 
-uint32_t sxth(int Rd, int Rn)
+uint32_t sxth(Register Rd, Register Rn)
 {
   return sbfm(Rd, Rn, 0, 15, 8);
 }
 
-uint32_t uxth(int Rd, int Rn)
+uint32_t uxth(Register Rd, Register Rn)
 {
   return ubfm(Rd, Rn, 0, 15, 4);
 }
 
-uint32_t sxtw(int Rd, int Rn)
+uint32_t sxtw(Register Rd, Register Rn)
 {
   return sbfm(Rd, Rn, 0, 31, 8);
 }
 
-uint32_t br(int Rn)
+uint32_t br(Register Rn)
 {
-  return 0xd61f0000 | (Rn << 5);
+  return 0xd61f0000 | (Rn.index() << 5);
 }
 
 uint32_t fmovFdFn(int Fd, int Fn, unsigned size)
@@ -99,80 +109,80 @@ uint32_t fmovFdFn(int Fd, int Fn, unsigned size)
   return (size == 8 ? 0x1e604000 : 0x1e204000) | (Fn << 5) | Fd;
 }
 
-uint32_t fmovRdFn(int Rd, int Fn, unsigned size)
+uint32_t fmovRdFn(Register Rd, int Fn, unsigned size)
 {
-  return (size == 8 ? 0x9e660000 : 0x1e260000) | (Fn << 5) | Rd;
+  return (size == 8 ? 0x9e660000 : 0x1e260000) | (Fn << 5) | Rd.index();
 }
 
-uint32_t fmovFdRn(int Fd, int Rn, unsigned size)
+uint32_t fmovFdRn(int Fd, Register Rn, unsigned size)
 {
-  return (size == 8 ? 0x9e670000 : 0x1e270000) | (Rn << 5) | Fd;
+  return (size == 8 ? 0x9e670000 : 0x1e270000) | (Rn.index() << 5) | Fd;
 }
 
-uint32_t orr(int Rd, int Rn, int Rm, unsigned size)
+uint32_t orr(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0xaa0003e0 : 0x2a0003e0) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0xaa0003e0 : 0x2a0003e0) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t mov(int Rd, int Rn, unsigned size)
+uint32_t mov(Register Rd, Register Rn, unsigned size)
 {
-  return orr(Rd, 31, Rn, size);
+  return orr(Rd, Register(31), Rn, size);
 }
 
-uint32_t movz(int Rd, int value, unsigned shift, unsigned size)
+uint32_t movz(Register Rd, int value, unsigned shift, unsigned size)
 {
   return (size == 8 ? 0xd2800000 : 0x52800000) | ((shift >> 4) << 21)
-    | (value << 5) | Rd;
+    | (value << 5) | Rd.index();
 }
 
-uint32_t movn(int Rd, int value, unsigned shift, unsigned size)
+uint32_t movn(Register Rd, int value, unsigned shift, unsigned size)
 {
   return (size == 8 ? 0x92800000 : 0x12800000) | ((shift >> 4) << 21)
-    | (value << 5) | Rd;
+    | (value << 5) | Rd.index();
 }
 
-uint32_t movk(int Rd, int value, unsigned shift, unsigned size)
+uint32_t movk(Register Rd, int value, unsigned shift, unsigned size)
 {
   return (size == 8 ? 0xf2800000 : 0x72800000) | ((shift >> 4) << 21)
-    | (value << 5) | Rd;
+    | (value << 5) | Rd.index();
 }
 
-uint32_t ldrPCRel(int Rd, int offset, unsigned size)
+uint32_t ldrPCRel(Register Rd, int offset, unsigned size)
 {
-  return (size == 8 ? 0x58000000 : 0x18000000) | (offset << 5) | Rd;
+  return (size == 8 ? 0x58000000 : 0x18000000) | (offset << 5) | Rd.index();
 }
 
-uint32_t add(int Rd, int Rn, int Rm, unsigned size)
+uint32_t add(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0x8b000000 : 0x0b000000) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0x8b000000 : 0x0b000000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t sub(int Rd, int Rn, int Rm, unsigned size)
+uint32_t sub(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0xcb000000 : 0x4b000000) | (Rm << 16) | (Rn << 5) | Rd;
+  return (size == 8 ? 0xcb000000 : 0x4b000000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t madd(int Rd, int Rn, int Rm, int Ra, unsigned size)
+uint32_t madd(Register Rd, Register Rn, Register Rm, Register Ra, unsigned size)
 {
   return (size == 8 ? 0x9b000000 : 0x1b000000)
-    | (Rm << 16) | (Ra << 10) | (Rn << 5) | Rd;
+    | (Rm.index() << 16) | (Ra.index() << 10) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t mul(int Rd, int Rn, int Rm, unsigned size)
+uint32_t mul(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return madd(Rd, Rn, Rm, 31, size);
+  return madd(Rd, Rn, Rm, Register(31), size);
 }
 
-uint32_t addi(int Rd, int Rn, int value, int shift, unsigned size)
+uint32_t addi(Register Rd, Register Rn, int value, int shift, unsigned size)
 {
   return (size == 8 ? 0x91000000 : 0x11000000) | (shift ? 0x400000 : 0)
-    | (value << 10) | (Rn << 5) | Rd;
+    | (value << 10) | (Rn.index() << 5) | Rd.index();
 }
 
-uint32_t subi(int Rd, int Rn, int value, int shift, unsigned size)
+uint32_t subi(Register Rd, Register Rn, int value, int shift, unsigned size)
 {
   return (size == 8 ? 0xd1000000 : 0x51000000) | (shift ? 0x400000 : 0)
-    | (value << 10) | (Rn << 5) | Rd;
+    | (value << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t fabs(int Fd, int Fn, unsigned size)
@@ -195,21 +205,15 @@ uint32_t fcvtDdSn(int Fd, int Fn)
   return 0x1e22c000 | (Fn << 5) | Fd;
 }
 
-uint32_t fcvtasXdDn(int Rd, int Fn)
+uint32_t fcvtasXdDn(Register Rd, int Fn)
 {
-  return 0x9e640000 | (Fn << 5) | Rd;
+  return 0x9e640000 | (Fn << 5) | Rd.index();
 }
 
-uint32_t fcvtasWdSn(int Rd, int Fn)
+uint32_t fcvtasWdSn(Register Rd, int Fn)
 {
-  return 0x1e240000 | (Fn << 5) | Rd;
+  return 0x1e240000 | (Fn << 5) | Rd.index();
 }
-
-} // namespace
-
-namespace avian {
-namespace codegen {
-namespace arm {
 
 using namespace avian::util;
 
@@ -308,9 +312,9 @@ void moveRR(Context* c,
     if (srcIsFpr and dstIsFpr) {
       append(c, fmovFdFn(fpr(dst), fpr(src), srcSize));
     } else if (srcIsFpr) {
-      append(c, fmovRdFn(fpr(dst), fpr(src), srcSize));
+      append(c, fmovRdFn(dst->low, fpr(src), srcSize));
     } else {
-      append(c, fmovFdRn(fpr(dst), fpr(src), srcSize));
+      append(c, fmovFdRn(fpr(dst), src->low, srcSize));
     }
   } else {
     switch (srcSize) {
@@ -365,7 +369,7 @@ void moveCR2(Context* c,
   if (isFpr(dst)) {
     // todo: could use a single fmov here and avoid the temporary for
     // constants that fit
-    lir::Register tmp(c->client->acquireTemporary(GPR_MASK));
+    lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
     moveCR(c, size, src, size, &tmp);
     moveRR(c, size, &tmp, size, dst);
     c->client->releaseTemporary(tmp.low);

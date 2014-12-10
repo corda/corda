@@ -33,15 +33,6 @@ const int N_FPRS = 32;
 const RegisterMask GPR_MASK = 0xffffffff;
 const RegisterMask FPR_MASK = 0xffffffff00000000;
 
-inline int fpr(int reg)
-{
-  return reg - N_GPRS;
-}
-
-inline int fpr(lir::RegisterPair* reg)
-{
-  return fpr(reg->low);
-}
 #else
 constexpr Register ThreadRegister(8);
 constexpr Register StackRegister(13);
