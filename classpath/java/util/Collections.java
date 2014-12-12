@@ -340,7 +340,101 @@ public class Collections {
   }
 
   public static <V> Set<V> synchronizedSet(Set<V> set) {
-    return new SynchronizedSet<V> (new Object(), set);
+    return new SynchronizedSet<V> (set, set);
+  }
+  
+  static class SynchronizedList<T>
+    extends SynchronizedCollection<T>
+    implements List<T>
+  {
+    private final List<T> list;
+    
+    public SynchronizedList(List<T> list) {
+      super(list, list);
+      
+      this.list = list;
+    }
+
+    @Override
+    public T get(int index) {
+      synchronized (lock) {
+        return list.get(index);
+      }
+    }
+
+    @Override
+    public T set(int index, T value) {
+      synchronized (lock) {
+        return list.set(index, value);
+      }
+    }
+
+    @Override
+    public T remove(int index) {
+      synchronized (lock) {
+        return list.remove(index);
+      }
+    }
+
+    @Override
+    public void add(int index, T element) {
+      synchronized (lock) {
+        list.add(index, element);
+      }
+    }
+
+    @Override
+    public boolean addAll(int startIndex, Collection<? extends T> c) {
+      synchronized (lock) {
+        return list.addAll(startIndex, c);
+      }
+    }
+
+    @Override
+    public int indexOf(Object value) {
+      synchronized (lock) {
+        return list.indexOf(value);
+      }
+    }
+
+    @Override
+    public int lastIndexOf(Object value) {
+      synchronized (lock) {
+        return list.lastIndexOf(value);
+      }
+    }
+
+    @Override
+    public ListIterator<T> listIterator(int index) {
+      // as described in the javadocs, user should be synchronized on list before calling
+      return list.listIterator(index);
+    }
+
+    @Override
+    public ListIterator<T> listIterator() {
+      // as described in the javadocs, user should be synchronized on list before calling
+      return list.listIterator();
+    }
+  }
+  
+  static class RandomAccessSynchronizedList<T>
+    extends SynchronizedList<T>
+    implements RandomAccess
+  {
+    public RandomAccessSynchronizedList(List<T> list) {
+      super(list);
+    }
+  }
+  
+  public static <T> List<T> synchronizedList(List<T> list) {
+    List<T> result;
+    if (list instanceof RandomAccess) {
+      result = new RandomAccessSynchronizedList<T>(list);
+    } else {
+      result = new SynchronizedList<T>(list);
+    }
+    
+    return result;
   }
 
   static class SynchronizedIterator<T> implements Iterator<T> {
