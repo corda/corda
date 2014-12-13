@@ -18,7 +18,7 @@ package java.security;
  */
 public class AccessController {
 
-  public static Object doPrivileged (PrivilegedAction action) {
+  public static <T> T doPrivileged (PrivilegedAction<T> action) {
     return action.run();
   }
   
