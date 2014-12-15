@@ -14,6 +14,8 @@ import java.util.Collection;
 
 public interface ExecutorService extends Executor {
     public void shutdown();
+    
+    public List<Runnable> shutdownNow();
 
     public boolean isShutdown();
 
