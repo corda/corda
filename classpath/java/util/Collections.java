@@ -38,11 +38,7 @@ public class Collections {
   public static void sort(List list) {
     sort(list, new Comparator() {
         public int compare(Object a, Object b) {
-          if (a instanceof Comparable) {
-            return ((Comparable) a).compareTo(b);
-          } else {
-            return a.hashCode() - b.hashCode();
-          }
+          return ((Comparable) a).compareTo(b);
         }
       });
   }
