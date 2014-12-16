@@ -10,6 +10,15 @@
 
 package java.util.concurrent;
 
-public interface Delayed extends Comparable<Delayed> {
-  public long getDelay(TimeUnit unit);
+public class Executors {
+  public static <T> Callable<T> callable(final Runnable task, final T result) {
+    return new Callable<T>() {
+      @Override
+      public T call() throws Exception {
+        task.run();
+        
+        return result;
+      }
+    };
+  }
 }

@@ -49,6 +49,14 @@ public class ConcurrentHashMap<K,V>
     this();
   }
 
+  public ConcurrentHashMap(int initialCapacity,  float loadFactor) {
+    this();
+  }
+
+  public ConcurrentHashMap(int initialCapacity,  float loadFactor, int concurrencyLevel) {
+    this();
+  }
+
   public boolean isEmpty() {
     return content.size == 0;
   }
