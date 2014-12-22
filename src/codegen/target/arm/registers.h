@@ -14,6 +14,8 @@
 #include <avian/codegen/lir.h>
 #include <avian/codegen/assembler.h>
 
+#include "avian/environment.h"
+
 namespace avian {
 namespace codegen {
 namespace arm {
@@ -21,11 +23,10 @@ namespace arm {
 const uint64_t MASK_LO32 = 0xffffffff;
 const unsigned MASK_LO8 = 0xff;
 
-#ifdef ARCH_arm64
+#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
 constexpr Register ThreadRegister(19);
 constexpr Register StackRegister(31);
 constexpr Register LinkRegister(30);
-constexpr Register LinkRegister(29);
 constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
 
 const int N_GPRS = 32;
