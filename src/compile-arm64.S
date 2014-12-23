@@ -16,11 +16,11 @@
 #define BYTES_PER_WORD 4
 
 #define LOCAL(x) .L##x
-   
+
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
 #endif
 
 #define CONTINUATION_NEXT 4
@@ -29,7 +29,7 @@
 #define CONTINUATION_FRAME_POINTER_OFFSET 24
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
-   
+
 .globl GLOBAL(vmInvoke)
 .align 2
 GLOBAL(vmInvoke):
@@ -89,8 +89,7 @@ GLOBAL(vmInvoke_returnAddress):
   // MyProcess::getStackTrace in compile.cpp for details on how we get
   // a reliable stack trace from a thread that might be interrupted at
   // any point in its execution.
-  mov  x5, #0
-  str  x5, [x19, #TARGET_THREAD_STACK]
+  str  xzr, [x19, #TARGET_THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
 .align 2
@@ -100,11 +99,10 @@ GLOBAL(vmInvoke_safeStack):
 #error todo
 #endif // AVIAN_CONTINUATIONS
 
-  mov   x5, #0
-  str   x5, [x19, #TARGET_THREAD_STACK]
+  str   xzr, [x19, #TARGET_THREAD_STACK]
 
   // restore return type
-  ldr   w5, [sp], #4
+  ldr   w5, [sp,#16]!
 
   // restore callee-saved register values
   ldp   x19, x20, [sp,#16]
@@ -112,7 +110,7 @@ GLOBAL(vmInvoke_safeStack):
   ldp   x23, x24, [sp,#48]
   ldp   x25, x26, [sp,#64]
   ldp   x27, x28, [sp,#80]
-  ldp   x29, x30, [sp],#96
+  ldp   x29, x30, [sp,#96]!
 
 LOCAL(vmInvoke_return):
   br    x30

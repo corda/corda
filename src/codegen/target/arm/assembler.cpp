@@ -946,11 +946,20 @@ class MyAssembler : public Assembler {
           unsigned instruction = o->block->start + padding(o->block, o->offset)
                                  + o->offset;
 
+          int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
+
+#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
+          int32_t v = entry - instruction;
+          expect(&con, v == (v & PoolOffsetMask));
+
+          const int32_t mask = (PoolOffsetMask >> 2) << 5;
+          *p = (((v >> 2) << 5) & mask) | ((~mask) & *p);
+#else
           int32_t v = (entry - 8) - instruction;
           expect(&con, v == (v & PoolOffsetMask));
 
-          int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
           *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
+#endif
 
           poolSize += TargetBytesPerWord;
         }

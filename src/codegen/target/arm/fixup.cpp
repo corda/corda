@@ -92,14 +92,27 @@ bool bounded(int right, int left, int32_t v)
 
 void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value)
 {
-  // ARM's PC is two words ahead, and branches drop the bottom 2 bits.
-  int32_t v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
-
-  int32_t mask;
-  expect(s, bounded(0, 8, v));
-  mask = 0xFFFFFF;
-
   int32_t* p = reinterpret_cast<int32_t*>(instruction);
+
+#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
+  int32_t v;
+  int32_t mask;
+  if ((*p >> 24) == 0x54) {
+    // conditional branch
+    v = ((reinterpret_cast<uint8_t*>(value) - instruction) >> 2) << 5;
+    mask = 0xFFFFE0;
+  } else {
+    // unconditional branch
+    v = (reinterpret_cast<uint8_t*>(value) - instruction) >> 2;
+    mask = 0x3FFFFFF;
+  }
+#else
+  int32_t v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
+  const int32_t mask = 0xFFFFFF;
+#endif
+
+  expect(s, bounded(0, 8, v));
+
   *p = (v & mask) | ((~mask) & *p);
 
   return instruction + 4;
@@ -212,6 +225,101 @@ void appendPoolEvent(Context* con,
     b->poolEventHead = e;
   }
   b->poolEventTail = e;
+}
+
+bool needJump(MyBlock* b)
+{
+  return b->next or b->size != (b->size & PoolOffsetMask);
+}
+
+unsigned padding(MyBlock* b, unsigned offset)
+{
+  unsigned total = 0;
+  for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
+    if (e->offset <= offset) {
+      if (needJump(b)) {
+        total += vm::TargetBytesPerWord;
+      }
+      for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
+        total += vm::TargetBytesPerWord;
+      }
+    } else {
+      break;
+    }
+  }
+  return total;
+}
+
+void resolve(MyBlock* b)
+{
+  Context* con = b->context;
+
+  if (b->poolOffsetHead) {
+    if (con->poolOffsetTail) {
+      con->poolOffsetTail->next = b->poolOffsetHead;
+    } else {
+      con->poolOffsetHead = b->poolOffsetHead;
+    }
+    con->poolOffsetTail = b->poolOffsetTail;
+  }
+
+  if (con->poolOffsetHead) {
+    bool append;
+    if (b->next == 0 or b->next->poolEventHead) {
+      append = true;
+    } else {
+      int32_t v
+          = (b->start + b->size + b->next->size + vm::TargetBytesPerWord - 8)
+            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
+
+      append = (v != (v & PoolOffsetMask));
+
+      if (DebugPool) {
+        fprintf(stderr,
+                "current %p %d %d next %p %d %d\n",
+                b,
+                b->start,
+                b->size,
+                b->next,
+                b->start + b->size,
+                b->next->size);
+        fprintf(stderr,
+                "offset %p %d is of distance %d to next block; append? %d\n",
+                con->poolOffsetHead,
+                con->poolOffsetHead->offset,
+                v,
+                append);
+      }
+    }
+
+    if (append) {
+#ifndef NDEBUG
+      int32_t v
+          = (b->start + b->size - 8)
+            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
+
+      expect(con, v == (v & PoolOffsetMask));
+#endif  // not NDEBUG
+
+      appendPoolEvent(
+          con, b, b->size, con->poolOffsetHead, con->poolOffsetTail);
+
+      if (DebugPool) {
+        for (PoolOffset* o = con->poolOffsetHead; o; o = o->next) {
+          fprintf(stderr,
+                  "include %p %d in pool event %p at offset %d in block %p\n",
+                  o,
+                  o->offset,
+                  b->poolEventTail,
+                  b->size,
+                  b);
+        }
+      }
+
+      con->poolOffsetHead = 0;
+      con->poolOffsetTail = 0;
+    }
+  }
 }
 
 }  // namespace arm

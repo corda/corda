@@ -125,9 +125,16 @@ uint32_t orr(Register Rd, Register Rn, Register Rm, unsigned size)
   return (size == 8 ? 0xaa0003e0 : 0x2a0003e0) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
+uint32_t addi(Register Rd, Register Rn, int value, int shift, unsigned size)
+{
+  return (size == 8 ? 0x91000000 : 0x11000000) | (shift ? 0x400000 : 0)
+    | (value << 10) | (Rn.index() << 5) | Rd.index();
+}
+
 uint32_t mov(Register Rd, Register Rn, unsigned size)
 {
-  return orr(Rd, Register(31), Rn, size);
+  return Rn.index() == 31 ? addi(Rd, Rn, 0, 0, size)
+    : orr(Rd, Register(31), Rn, size);
 }
 
 uint32_t movz(Register Rd, int value, unsigned shift, unsigned size)
@@ -150,7 +157,8 @@ uint32_t movk(Register Rd, int value, unsigned shift, unsigned size)
 
 uint32_t ldrPCRel(Register Rd, int offset, unsigned size)
 {
-  return (size == 8 ? 0x58000000 : 0x18000000) | (offset << 5) | Rd.index();
+  return (size == 8 ? 0x58000000 : 0x18000000) | ((offset >> 2) << 5)
+         | Rd.index();
 }
 
 uint32_t add(Register Rd, Register Rn, Register Rm, unsigned size)
@@ -184,12 +192,6 @@ uint32_t madd(Register Rd, Register Rn, Register Rm, Register Ra, unsigned size)
 uint32_t mul(Register Rd, Register Rn, Register Rm, unsigned size)
 {
   return madd(Rd, Rn, Rm, Register(31), size);
-}
-
-uint32_t addi(Register Rd, Register Rn, int value, int shift, unsigned size)
-{
-  return (size == 8 ? 0x91000000 : 0x11000000) | (shift ? 0x400000 : 0)
-    | (value << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t subi(Register Rd, Register Rn, int value, int shift, unsigned size)
@@ -307,8 +309,8 @@ uint32_t strhi(Register Rs, Register Rn, int offset)
 
 uint32_t stri(Register Rs, Register Rn, int offset, unsigned size)
 {
-  return (size == 8 ? 0xb9000000 : 0xf9000000) | (offset << 10)
-         | (Rn.index() << 5) | Rs.index();
+  return (size == 8 ? 0xf9000000 : 0xb9000000)
+    | ((offset >> (size == 8 ? 3 : 2)) << 10) | (Rn.index() << 5) | Rs.index();
 }
 
 uint32_t ldrFd(Register Fd, Register Rn, Register Rm, unsigned size)
@@ -381,8 +383,8 @@ uint32_t ldrswi(Register Rd, Register Rn, int offset)
 
 uint32_t ldri(Register Rd, Register Rn, int offset, unsigned size)
 {
-  return (size == 8 ? 0xb9400000 : 0xf9400000) | (offset << 10)
-         | (Rn.index() << 5) | Rd.index();
+  return (size == 8 ? 0xf9400000 : 0xb9400000)
+    | ((offset >> (size == 8 ? 3 : 2)) << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t fcmp(Register Fn, Register Fm, unsigned size)
@@ -400,7 +402,7 @@ uint32_t neg(Register Rd, Register Rm, unsigned size)
 uint32_t cmp(Register Rn, Register Rm, unsigned size)
 {
   return (size == 8 ? 0xeb00001f : 0x6b00001f) | (Rm.index() << 16)
-         | (Rn.index() << 5);
+         | (Rn.index() == 31 ? 0x2063ff : (Rn.index() << 5));
 }
 
 uint32_t cmpi(Register Rn, int value, unsigned shift, unsigned size)
@@ -426,42 +428,42 @@ uint32_t blr(Register Rn)
 
 uint32_t beq(int offset)
 {
-  return 0x54000000 | (offset >> 2);
+  return 0x54000000 | ((offset >> 2) << 5);
 }
 
 uint32_t bne(int offset)
 {
-  return 0x54000001 | (offset >> 2);
+  return 0x54000001 | ((offset >> 2) << 5);
 }
 
 uint32_t blt(int offset)
 {
-  return 0x5400000b | (offset >> 2);
+  return 0x5400000b | ((offset >> 2) << 5);
 }
 
 uint32_t bgt(int offset)
 {
-  return 0x5400000c | (offset >> 2);
+  return 0x5400000c | ((offset >> 2) << 5);
 }
 
 uint32_t ble(int offset)
 {
-  return 0x5400000d | (offset >> 2);
+  return 0x5400000d | ((offset >> 2) << 5);
 }
 
 uint32_t bge(int offset)
 {
-  return 0x5400000a | (offset >> 2);
+  return 0x5400000a | ((offset >> 2) << 5);
 }
 
 uint32_t bhi(int offset)
 {
-  return 0x54000008 | (offset >> 2);
+  return 0x54000008 | ((offset >> 2) << 5);
 }
 
 uint32_t bpl(int offset)
 {
-  return 0x54000005 | (offset >> 2);
+  return 0x54000005 | ((offset >> 2) << 5);
 }
 
 uint32_t brk(int flag)
@@ -966,7 +968,7 @@ void store(Context* c,
     if (release) {
       c->client->releaseTemporary(normalized);
     }
-  } else if (abs(offset) == (abs(offset) & 0xFF)) {
+  } else if (abs(offset) == (abs(offset) & 0xFFF)) {
     if (isFpr(src)) {
       switch (size) {
       case 4:
@@ -988,7 +990,12 @@ void store(Context* c,
         break;
 
       case 4:
+        assertT(c, offset == (offset & (~3)));
+        append(c, stri(src->low, base, offset, size));
+        break;
+
       case 8:
+        assertT(c, offset == (offset & (~7)));
         append(c, stri(src->low, base, offset, size));
         break;
 
@@ -1020,8 +1027,21 @@ void moveRM(Context* c,
 {
   assertT(c, srcSize == dstSize);
 
-  store(
-      c, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
+  if (src->low.index() == 31) {
+    assertT(c, c->client == 0); // the compiler should never ask us to
+                                // store the SP; we'll only get here
+                                // when assembling a thunk
+
+    lir::RegisterPair tmp(Register(9)); // we're in a thunk, so we can
+                                        // clobber this
+
+    moveRR(c, srcSize, src, srcSize, &tmp);
+    store(
+          c, srcSize, &tmp, dst->base, dst->offset, dst->index, dst->scale, true);
+  } else {
+    store(
+          c, srcSize, src, dst->base, dst->offset, dst->index, dst->scale, true);
+  }
 }
 
 void load(Context* c,
@@ -1085,7 +1105,7 @@ void load(Context* c,
     if (release) {
       c->client->releaseTemporary(normalized);
     }
-  } else if (abs(offset) == (abs(offset) & 0xFF)) {
+  } else if (abs(offset) == (abs(offset) & 0xFFF)) {
     if (isFpr(dst)) {
       switch (srcSize) {
       case 4:
@@ -1119,6 +1139,7 @@ void load(Context* c,
         if (signExtend and srcSize == 4 and dstSize == 8) {
           append(c, ldrswi(dst->low, base, offset));
         } else {
+          assertT(c, offset == (offset & (srcSize == 8 ? (~7) : (~3))));
           append(c, ldri(dst->low, base, offset, srcSize));
         }
         break;
@@ -1238,7 +1259,8 @@ void moveAR(Context* c,
             unsigned dstSize,
             lir::RegisterPair* dst)
 {
-  assertT(c, srcSize == TargetBytesPerWord and dstSize == TargetBytesPerWord);
+  assertT(c, srcSize == vm::TargetBytesPerWord
+          and dstSize == vm::TargetBytesPerWord);
 
   lir::Constant constant(src->address);
   moveCR(c, srcSize, &constant, dstSize, dst);
@@ -1309,6 +1331,20 @@ void compareRM(Context* c,
   lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
   moveMR(c, bSize, b, bSize, &tmp);
   compareRR(c, aSize, a, bSize, &tmp);
+  c->client->releaseTemporary(tmp.low);
+}
+
+void compareMR(Context* c,
+               unsigned aSize,
+               lir::Memory* a,
+               unsigned bSize,
+               lir::RegisterPair* b)
+{
+  assertT(c, aSize == bSize);
+
+  lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
+  moveMR(c, aSize, a, aSize, &tmp);
+  compareRR(c, aSize, &tmp, bSize, b);
   c->client->releaseTemporary(tmp.low);
 }
 
@@ -1397,8 +1433,17 @@ void branchRM(Context* c,
   assertT(c, not isFloatBranch(op));
   assertT(c, size <= vm::TargetBytesPerWord);
 
-  compareRM(c, size, a, size, b);
-  branch(c, op, target);
+  if (a->low.index() == 31) {
+    // stack overflow checks need to compare to the stack pointer, but
+    // we can only encode that in the opposite operand order we're
+    // given, so we need to reverse everything:
+    assertT(c, op == lir::JumpIfGreaterOrEqual);
+    compareMR(c, size, b, size, a);
+    branch(c, lir::JumpIfLess, target);
+  } else {
+    compareRM(c, size, a, size, b);
+    branch(c, op, target);
+  }
 }
 
 void branchCM(Context* c,
@@ -1535,21 +1580,6 @@ void storeStoreBarrier(Context* c)
 void storeLoadBarrier(Context* c)
 {
   memoryBarrier(c);
-}
-
-bool needJump(MyBlock*)
-{
-  return false;
-}
-
-unsigned padding(MyBlock*, unsigned)
-{
-  return 0;
-}
-
-void resolve(MyBlock*)
-{
-  // ignore
 }
 
 }  // namespace arm
