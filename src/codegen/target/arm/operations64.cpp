@@ -122,7 +122,7 @@ uint32_t fmovFdRn(Register Fd, Register Rn, unsigned size)
 
 uint32_t orr(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0xaa0003e0 : 0x2a0003e0) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
+  return (size == 8 ? 0xaa000000 : 0x2a000000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t addi(Register Rd, Register Rn, int value, int shift, unsigned size)
@@ -368,12 +368,12 @@ uint32_t ldrsbi(Register Rd, Register Rn, int offset)
 
 uint32_t ldrhi(Register Rd, Register Rn, int offset)
 {
-  return 0x79400000 | (offset << 10) | (Rn.index() << 5) | Rd.index();
+  return 0x79400000 | ((offset >> 1) << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t ldrshi(Register Rd, Register Rn, int offset)
 {
-  return 0x79c00000 | (offset << 10) | (Rn.index() << 5) | Rd.index();
+  return 0x79c00000 | ((offset >> 1) << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t ldrswi(Register Rd, Register Rn, int offset)
@@ -653,7 +653,7 @@ void moveCR2(Context* c,
           }
         }
       }
-    } else if (value < 0) {
+    } else {
       append(c, movn(dst->low, (~value) & 0xFFFF, 0, size));
       if (~(value >> 16)) {
         append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
@@ -986,6 +986,7 @@ void store(Context* c,
         break;
 
       case 2:
+        assertT(c, offset == (offset & (~1)));
         append(c, strhi(src->low, base, offset));
         break;
 
@@ -1127,6 +1128,7 @@ void load(Context* c,
         break;
 
       case 2:
+        assertT(c, offset == (offset & (~1)));
         if (signExtend) {
           append(c, ldrshi(dst->low, base, offset));
         } else {
