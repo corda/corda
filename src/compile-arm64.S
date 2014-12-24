@@ -13,7 +13,7 @@
 
 .text
 
-#define BYTES_PER_WORD 4
+#define BYTES_PER_WORD 8
 
 #define LOCAL(x) .L##x
 
@@ -59,7 +59,7 @@ GLOBAL(vmInvoke):
 
   // copy arguments into place
   sub   sp, sp, w3, uxtw
-  mov   x5, #0
+  mov   x4, #0
   b     LOCAL(vmInvoke_argumentTest)
 
 LOCAL(vmInvoke_argumentLoop):

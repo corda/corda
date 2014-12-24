@@ -38,17 +38,17 @@ void append(Context* c, uint32_t instruction)
 
 uint32_t lslv(Register Rd, Register Rn, Register Rm, unsigned size)
 {
-  return (size == 8 ? 0x9ac12000 : 0x1ac02000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
+  return (size == 8 ? 0x9ac02000 : 0x1ac02000) | (Rm.index() << 16) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t ubfm(Register Rd, Register Rn, int r, int s, unsigned size)
 {
-  return (size == 8 ? 0xd3608000 : 0x53000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
+  return (size == 8 ? 0xd3400000 : 0x53000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t sbfm(Register Rd, Register Rn, int r, int s, unsigned size)
 {
-  return (size == 8 ? 0x93408000 : 0x13000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
+  return (size == 8 ? 0x93400000 : 0x13000000) | (r << 16) | (s << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t lsli(Register Rd, Register Rn, int shift, unsigned size)
@@ -501,9 +501,9 @@ void shiftLeftC(Context* c,
 {
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
-    append(c, lsli(dst->low, b->low, value, 4));
+    append(c, lsli(dst->low, b->low, value & 0x1F, 4));
   } else if (size == 8 and (value & 0x3F)) {
-    append(c, lsli(dst->low, b->low, value, 8));
+    append(c, lsli(dst->low, b->low, value & 0x3F, 8));
   } else {
     moveRR(c, size, b, size, dst);
   }
@@ -526,9 +526,9 @@ void shiftRightC(Context* c,
 {
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
-    append(c, lsri(dst->low, b->low, value, 4));
+    append(c, asri(dst->low, b->low, value & 0x1F, 4));
   } else if (size == 8 and (value & 0x3F)) {
-    append(c, lsri(dst->low, b->low, value, 8));
+    append(c, asri(dst->low, b->low, value & 0x3F, 8));
   } else {
     moveRR(c, size, b, size, dst);
   }
@@ -551,9 +551,9 @@ void unsignedShiftRightC(Context* c,
 {
   uint64_t value = a->value->value();
   if (size == 4 and (value & 0x1F)) {
-    append(c, asri(dst->low, b->low, value, 4));
+    append(c, lsri(dst->low, b->low, value & 0x1F, 4));
   } else if (size == 8 and (value & 0x3F)) {
-    append(c, asri(dst->low, b->low, value, 8));
+    append(c, lsri(dst->low, b->low, value & 0x3F, 8));
   } else {
     moveRR(c, size, b, size, dst);
   }
@@ -645,9 +645,13 @@ void moveCR2(Context* c,
     if (value >= 0) {
       append(c, movz(dst->low, value & 0xFFFF, 0, size));
       if (value >> 16) {
-        append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
+        if ((value >> 16) & 0xFFFF) {
+          append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
+        }
         if (value >> 32) {
-          append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
+          if ((value >> 32) & 0xFFFF) {
+            append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
+          }
           if (value >> 48) {
             append(c, movk(dst->low, (value >> 48) & 0xFFFF, 48, size));
           }
@@ -656,9 +660,13 @@ void moveCR2(Context* c,
     } else {
       append(c, movn(dst->low, (~value) & 0xFFFF, 0, size));
       if (~(value >> 16)) {
-        append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
+        if (((value >> 16) & 0xFFFF) != 0xFFFF) {
+          append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
+        }
         if (~(value >> 32)) {
-          append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
+          if (((value >> 32) & 0xFFFF) != 0xFFFF) {
+            append(c, movk(dst->low, (value >> 32) & 0xFFFF, 32, size));
+          }
           if (~(value >> 48)) {
             append(c, movk(dst->low, (value >> 48) & 0xFFFF, 48, size));
           }
@@ -704,7 +712,7 @@ void addC(Context* c,
           lir::RegisterPair* b,
           lir::RegisterPair* dst)
 {
-  int32_t v = a->value->value();
+  int64_t v = a->value->value();
   if (v) {
     if (v > 0 and v < 0x1000) {
       append(c, addi(dst->low, b->low, v, 0, size));
@@ -725,7 +733,7 @@ void subC(Context* c,
           lir::RegisterPair* b,
           lir::RegisterPair* dst)
 {
-  int32_t v = a->value->value();
+  int64_t v = a->value->value();
   if (v) {
     if (v > 0 and v < 0x1000) {
       append(c, subi(dst->low, b->low, v, 0, size));
@@ -1297,7 +1305,7 @@ void compareCR(Context* c,
   assertT(c, aSize == bSize);
 
   if (!isFpr(b) && a->value->resolved()) {
-    int32_t v = a->value->value();
+    int64_t v = a->value->value();
     if (v == 0) {
       append(c, cmp(b->low, Register(31), aSize));
       return;
