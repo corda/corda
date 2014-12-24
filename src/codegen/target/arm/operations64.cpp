@@ -378,7 +378,7 @@ uint32_t ldrshi(Register Rd, Register Rn, int offset)
 
 uint32_t ldrswi(Register Rd, Register Rn, int offset)
 {
-  return 0xb9800000 | (offset << 10) | (Rn.index() << 5) | Rd.index();
+  return 0xb9800000 | ((offset >> 2) << 10) | (Rn.index() << 5) | Rd.index();
 }
 
 uint32_t ldri(Register Rd, Register Rn, int offset, unsigned size)
@@ -642,7 +642,7 @@ void moveCR2(Context* c,
     c->client->releaseTemporary(tmp.low);
   } else if (src->value->resolved()) {
     int64_t value = src->value->value();
-    if (value > 0) {
+    if (value >= 0) {
       append(c, movz(dst->low, value & 0xFFFF, 0, size));
       if (value >> 16) {
         append(c, movk(dst->low, (value >> 16) & 0xFFFF, 16, size));
@@ -695,7 +695,7 @@ void subR(Context* c,
           lir::RegisterPair* b,
           lir::RegisterPair* dst)
 {
-  append(c, sub(dst->low, a->low, b->low, size));
+  append(c, sub(dst->low, b->low, a->low, size));
 }
 
 void addC(Context* c,
@@ -1137,6 +1137,7 @@ void load(Context* c,
       case 4:
       case 8:
         if (signExtend and srcSize == 4 and dstSize == 8) {
+          assertT(c, offset == (offset & (~3)));
           append(c, ldrswi(dst->low, base, offset));
         } else {
           assertT(c, offset == (offset & (srcSize == 8 ? (~7) : (~3))));
@@ -1293,17 +1294,24 @@ void compareCR(Context* c,
 {
   assertT(c, aSize == bSize);
 
-  int32_t v = a->value->value();
-  if (v) {
-    if (v > 0 and v < 0x1000) {
+  if (!isFpr(b) && a->value->resolved()) {
+    int32_t v = a->value->value();
+    if (v == 0) {
+      append(c, cmp(b->low, Register(31), aSize));
+      return;
+    } else if (v > 0 and v < 0x1000) {
       append(c, cmpi(b->low, v, 0, aSize));
+      return;
     } else if (v > 0 and v < 0x1000000 and v % 0x1000 == 0) {
       append(c, cmpi(b->low, v >> 12, 12, aSize));
-    } else {
-      // todo
-      abort(c);
+      return;
     }
   }
+
+  lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
+  moveCR(c, aSize, a, bSize, &tmp);
+  compareRR(c, bSize, &tmp, bSize, b);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void compareCM(Context* c,
@@ -1474,23 +1482,10 @@ void moveCM(Context* c,
             unsigned dstSize,
             lir::Memory* dst)
 {
-  switch (dstSize) {
-  case 8: {
-    lir::Constant srcHigh(shiftMaskPromise(c, src->value, 32, 0xFFFFFFFF));
-    lir::Constant srcLow(shiftMaskPromise(c, src->value, 0, 0xFFFFFFFF));
-
-    lir::Memory dstLow(dst->base, dst->offset + 4, dst->index, dst->scale);
-
-    moveCM(c, 4, &srcLow, 4, &dstLow);
-    moveCM(c, 4, &srcHigh, 4, dst);
-  } break;
-
-  default:
-    lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
-    moveCR(c, srcSize, src, dstSize, &tmp);
-    moveRM(c, dstSize, &tmp, dstSize, dst);
-    c->client->releaseTemporary(tmp.low);
-  }
+  lir::RegisterPair tmp(c->client->acquireTemporary(GPR_MASK));
+  moveCR(c, srcSize, src, dstSize, &tmp);
+  moveRM(c, dstSize, &tmp, dstSize, dst);
+  c->client->releaseTemporary(tmp.low);
 }
 
 void negateRR(Context* c,

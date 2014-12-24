@@ -89,11 +89,11 @@ void nextFrame(ArchitectureContext* con,
                void** stack)
 {
   assertT(con, *ip >= start);
-  assertT(con, *ip <= start + (size / TargetBytesPerWord));
+  assertT(con, *ip <= start + (size / 4));
 
   uint32_t* instruction = static_cast<uint32_t*>(*ip);
 
-  if ((*start >> 20) == 0xe59) {
+  if ((*start >> 20) == (TargetBytesPerWord == 8 ? 0xf94 : 0xe59)) {
     // skip stack overflow check
     start += 3;
   }
@@ -111,7 +111,8 @@ void nextFrame(ArchitectureContext* con,
     return;
   }
 
-  if (*instruction == 0xe12fff1e) {  // return
+  if (*instruction == (TargetBytesPerWord == 8 ? 0xd61f03c0 : 0xe12fff1e)) {
+    // return
     *ip = link;
     return;
   }
@@ -124,7 +125,21 @@ void nextFrame(ArchitectureContext* con,
 
     // check for post-non-tail-call stack adjustment of the form "sub
     // sp, sp, #offset":
-    if ((*instruction >> 12) == 0xe24dd) {
+    if (TargetBytesPerWord == 8 and (*instruction & 0xff0003ff) == 0xd10003ff)
+    {
+      unsigned value = (*instruction >> 10) & 0xfff;
+      unsigned shift = (*instruction >> 22) & 1;
+      switch (shift) {
+      case 0:
+        offset -= value;
+        break;
+      case 1:
+        offset -= value << 12;
+        break;
+      default:
+        abort(con);
+      }
+    } else if (TargetBytesPerWord == 4 and (*instruction >> 12) == 0xe24dd) {
       unsigned value = *instruction & 0xff;
       unsigned rotation = (*instruction >> 8) & 0xf;
       switch (rotation) {

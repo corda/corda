@@ -102,7 +102,7 @@ GLOBAL(vmInvoke_safeStack):
   str   xzr, [x19, #TARGET_THREAD_STACK]
 
   // restore return type
-  ldr   w5, [sp,#16]!
+  ldr   w5, [sp],#16
 
   // restore callee-saved register values
   ldp   x19, x20, [sp,#16]
@@ -110,7 +110,7 @@ GLOBAL(vmInvoke_safeStack):
   ldp   x23, x24, [sp,#48]
   ldp   x25, x26, [sp,#64]
   ldp   x27, x28, [sp,#80]
-  ldp   x29, x30, [sp,#96]!
+  ldp   x29, x30, [sp],#96
 
 LOCAL(vmInvoke_return):
   br    x30
