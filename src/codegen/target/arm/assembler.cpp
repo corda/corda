@@ -570,6 +570,11 @@ class MyArchitecture : public Architecture {
       aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
+    // todo: Although ARM has instructions for integer division and
+    // remainder, they don't trap on division by zero, which is why
+    // we use thunks.  Alternatively, we could generate inline code
+    // with an explicit zero check, which would probably be a bit
+    // faster.
     case lir::Divide:
     case lir::Remainder:
     case lir::FloatRemainder:
