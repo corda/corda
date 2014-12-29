@@ -417,9 +417,9 @@ void multiplyR(Context* con,
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
     Register tmpLow = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
-                                : t->low;
+                                     : t->low;
     Register tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
-                                 : t->high;
+                                      : t->high;
 
     emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
     emit(con, mla(tmpHigh, a->low, b->high, tmpHigh));
@@ -572,11 +572,11 @@ void floatDivideR(Context* con,
 }
 
 Register normalize(Context* con,
-              int offset,
-              Register index,
-              unsigned scale,
-              bool* preserveIndex,
-              bool* release)
+                   int offset,
+                   Register index,
+                   unsigned scale,
+                   bool* preserveIndex,
+                   bool* release)
 {
   if (offset != 0 or scale != 1) {
     lir::RegisterPair normalizedIndex(
@@ -854,26 +854,8 @@ void load(Context* con,
       case 8: {
         if (dstSize == 8) {
           lir::RegisterPair dstHigh(dst->high);
-          load(con,
-               4,
-               base,
-               offset,
-               NoRegister,
-               1,
-               4,
-               &dstHigh,
-               false,
-               false);
-          load(con,
-               4,
-               base,
-               offset + 4,
-               NoRegister,
-               1,
-               4,
-               dst,
-               false,
-               false);
+          load(con, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
+          load(con, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
         } else {
           emit(con, ldri(dst->low, base, offset));
         }
@@ -1407,7 +1389,8 @@ void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
-  lir::RegisterPair tmp(Register(4));  // a non-arg reg that we don't mind clobbering
+  lir::RegisterPair tmp(
+      Register(4));  // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, vm::TargetBytesPerWord, &tmp);
 }
@@ -1462,4 +1445,4 @@ void storeLoadBarrier(Context* con)
 }  // namespace codegen
 }  // namespace avian
 
-#endif // AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
+#endif  // AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM

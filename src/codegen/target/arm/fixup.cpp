@@ -16,7 +16,7 @@ namespace {
 
 const unsigned InstructionSize = 4;
 
-} // namespace
+}  // namespace
 
 namespace avian {
 namespace codegen {
@@ -44,8 +44,7 @@ int64_t OffsetPromise::value()
   assertT(con, resolved());
 
   unsigned o = offset - block->offset;
-  return block->start
-         + padding(block, forTrace ? o - InstructionSize : o) + o;
+  return block->start + padding(block, forTrace ? o - InstructionSize : o) + o;
 }
 
 Promise* offsetPromise(Context* con, bool forTrace)

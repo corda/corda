@@ -125,8 +125,7 @@ void nextFrame(ArchitectureContext* con,
 
     // check for post-non-tail-call stack adjustment of the form "sub
     // sp, sp, #offset":
-    if (TargetBytesPerWord == 8 and (*instruction & 0xff0003ff) == 0xd10003ff)
-    {
+    if (TargetBytesPerWord == 8 and (*instruction & 0xff0003ff) == 0xd10003ff) {
       unsigned value = (*instruction >> 10) & 0xfff;
       unsigned shift = (*instruction >> 22) & 1;
       switch (shift) {

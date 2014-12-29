@@ -27,7 +27,7 @@ const unsigned MASK_LO8 = 0xff;
 constexpr Register ThreadRegister(19);
 constexpr Register StackRegister(31);
 constexpr Register LinkRegister(30);
-constexpr Register ProgramCounter(0xFE); // i.e. unaddressable
+constexpr Register ProgramCounter(0xFE);  // i.e. unaddressable
 
 const int N_GPRS = 32;
 const int N_FPRS = 32;
@@ -38,7 +38,7 @@ const RegisterMask FPR_MASK = 0xffffffff00000000;
 constexpr Register ThreadRegister(8);
 constexpr Register StackRegister(13);
 constexpr Register LinkRegister(14);
-constexpr Register FrameRegister(0xFE); // i.e. there is none
+constexpr Register FrameRegister(0xFE);  // i.e. there is none
 constexpr Register ProgramCounter(15);
 
 const int N_GPRS = 16;
