@@ -981,6 +981,8 @@ class MyAssembler : public Assembler {
 
         bool jump = needJump(b);
         if (jump) {
+          expect(&con, TargetBytesPerWord == 4);
+
           write4(dst + dstOffset,
                  isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }

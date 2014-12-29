@@ -12,6 +12,12 @@
 #include "fixup.h"
 #include "block.h"
 
+namespace {
+
+const unsigned InstructionSize = 4;
+
+} // namespace
+
 namespace avian {
 namespace codegen {
 namespace arm {
@@ -39,7 +45,7 @@ int64_t OffsetPromise::value()
 
   unsigned o = offset - block->offset;
   return block->start
-         + padding(block, forTrace ? o - vm::TargetBytesPerWord : o) + o;
+         + padding(block, forTrace ? o - InstructionSize : o) + o;
 }
 
 Promise* offsetPromise(Context* con, bool forTrace)
@@ -115,7 +121,7 @@ void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value)
 
   *p = (v & mask) | ((~mask) & *p);
 
-  return instruction + 4;
+  return instruction + InstructionSize;
 }
 
 ConstantPoolEntry::ConstantPoolEntry(Context* con,
