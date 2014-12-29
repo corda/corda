@@ -15,7 +15,7 @@
 #include "fixup.h"
 #include "multimethod.h"
 
-#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
+#if TARGET_BYTES_PER_WORD == 4
 
 namespace avian {
 namespace codegen {
@@ -1445,4 +1445,4 @@ void storeLoadBarrier(Context* con)
 }  // namespace codegen
 }  // namespace avian
 
-#endif  // AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM
+#endif  // TARGET_BYTES_PER_WORD == 4
