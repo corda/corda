@@ -259,9 +259,9 @@ uint32_t fcvtasWdSn(Register Rd, Register Fn)
   return 0x1e240000 | (Fn.index() << 5) | Rd.index();
 }
 
-uint32_t scvtfDdWn(Register Fd, Register Rn)
+uint32_t scvtfDdXn(Register Fd, Register Rn)
 {
-  return 0x1e620000 | (Rn.index() << 5) | Fd.index();
+  return 0x9e620000 | (Rn.index() << 5) | Fd.index();
 }
 
 uint32_t scvtfSdWn(Register Fd, Register Rn)
@@ -287,8 +287,8 @@ uint32_t strh(Register Rs, Register Rn, Register Rm)
 
 uint32_t striFs(Register Fs, Register Rn, int offset, unsigned size)
 {
-  return (size == 8 ? 0xfc000000 : 0xbc000000) | (offset << 16)
-         | (Rn.index() << 5) | Fs.index();
+  return (size == 8 ? 0xfd000000 : 0xbd000000)
+    | ((offset >> (size == 8 ? 3 : 2)) << 10) | (Rn.index() << 5) | Fs.index();
 }
 
 uint32_t str(Register Rs, Register Rn, Register Rm, unsigned size)
@@ -352,8 +352,8 @@ uint32_t ldr(Register Rd, Register Rn, Register Rm, unsigned size)
 
 uint32_t ldriFd(Register Fd, Register Rn, int offset, unsigned size)
 {
-  return (size == 8 ? 0xfc400000 : 0xbc400000) | (offset << 16)
-         | (Rn.index() << 5) | Fd.index();
+  return (size == 8 ? 0xfd400000 : 0xbd400000)
+    | ((offset >> (size == 8 ? 3 : 2)) << 10) | (Rn.index() << 5) | Fd.index();
 }
 
 uint32_t ldrbi(Register Rd, Register Rn, int offset)
@@ -808,9 +808,9 @@ void int2FloatRR(Context* c,
                  lir::RegisterPair* b)
 {
   if (size == 8) {
-    append(c, scvtfDdWn(fpr(a), b->low));
+    append(c, scvtfDdXn(fpr(b), a->low));
   } else {
-    append(c, scvtfSdWn(fpr(a), b->low));
+    append(c, scvtfSdWn(fpr(b), a->low));
   }
 }
 
@@ -981,6 +981,7 @@ void store(Context* c,
       switch (size) {
       case 4:
       case 8:
+        assertT(c, offset == (offset & (size == 8 ? (~7) : (~3))));
         append(c, striFs(fpr(src->low), base, offset, size));
         break;
 
@@ -1119,6 +1120,7 @@ void load(Context* c,
       switch (srcSize) {
       case 4:
       case 8:
+        assertT(c, offset == (offset & (srcSize == 8 ? (~7) : (~3))));
         append(c, ldriFd(fpr(dst->low), base, offset, srcSize));
         break;
 

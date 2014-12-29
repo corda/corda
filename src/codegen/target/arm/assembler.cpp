@@ -582,7 +582,7 @@ class MyArchitecture : public Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (vfpSupported()) {
-        bMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
         bMask = aMask;
       } else {
