@@ -304,7 +304,7 @@ uint32_t strbi(Register Rs, Register Rn, int offset)
 
 uint32_t strhi(Register Rs, Register Rn, int offset)
 {
-  return 0x79000000 | (offset << 10) | (Rn.index() << 5) | Rs.index();
+  return 0x79000000 | ((offset >> 1) << 10) | (Rn.index() << 5) | Rs.index();
 }
 
 uint32_t stri(Register Rs, Register Rn, int offset, unsigned size)
