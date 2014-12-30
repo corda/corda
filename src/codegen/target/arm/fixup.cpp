@@ -99,9 +99,9 @@ void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value)
 {
   int32_t* p = reinterpret_cast<int32_t*>(instruction);
 
-#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
   int32_t v;
   int32_t mask;
+  if (vm::TargetBytesPerWord == 8) {
   if ((*p >> 24) == 0x54) {
     // conditional branch
     v = ((reinterpret_cast<uint8_t*>(value) - instruction) >> 2) << 5;
@@ -111,10 +111,10 @@ void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value)
     v = (reinterpret_cast<uint8_t*>(value) - instruction) >> 2;
     mask = 0x3FFFFFF;
   }
-#else
-  int32_t v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
-  const int32_t mask = 0xFFFFFF;
-#endif
+  } else {
+    v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
+    mask = 0xFFFFFF;
+  }
 
   expect(s, bounded(0, 8, v));
 

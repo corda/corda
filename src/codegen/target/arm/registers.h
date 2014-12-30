@@ -23,10 +23,11 @@ namespace arm {
 const uint64_t MASK_LO32 = 0xffffffff;
 const unsigned MASK_LO8 = 0xff;
 
-#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
+#if TARGET_BYTES_PER_WORD == 8
 constexpr Register ThreadRegister(19);
 constexpr Register StackRegister(31);
 constexpr Register LinkRegister(30);
+constexpr Register FrameRegister(29);
 constexpr Register ProgramCounter(0xFE);  // i.e. unaddressable
 
 const int N_GPRS = 32;

@@ -27,11 +27,7 @@ namespace arm {
 
 const bool DebugPool = false;
 
-#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
-const int32_t PoolOffsetMask = 0x1FFFFF;
-#else
-const int32_t PoolOffsetMask = 0xFFF;
-#endif
+const int32_t PoolOffsetMask = vm::TargetBytesPerWord == 8 ? 0x1FFFFF : 0xFFF;
 
 class Task {
  public:

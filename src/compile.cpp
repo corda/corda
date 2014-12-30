@@ -2189,6 +2189,8 @@ GcContinuation* makeCurrentContinuation(MyThread* t,
 
   *targetIp = 0;
   while (*targetIp == 0) {
+    assertT(t, ip);
+
     GcMethod* method = methodForIp(t, ip);
     if (method) {
       PROTECT(t, method);

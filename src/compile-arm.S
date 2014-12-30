@@ -109,7 +109,7 @@ GLOBAL(vmInvoke_safeStack):
    ldr  r6,[r5,#CONTINUATION_LENGTH]
    lsl  r6,r6,#2
    neg  r7,r6
-   add  r7,r7,#-80
+   add  r7,r7,#-80 // 80 bytes for callee-saved register values
    mov  r4,sp
    str  r4,[sp,r7]!
 
@@ -167,10 +167,10 @@ LOCAL(vmInvoke_handleException):
    bx   r7
 
 LOCAL(vmInvoke_exit):
-#endif // AVIAN_CONTINUATIONS
 
   mov   ip, #0
   str   ip, [r8, #TARGET_THREAD_STACK]
+#endif // AVIAN_CONTINUATIONS
 
   // restore return type
   ldr   ip, [sp], #4

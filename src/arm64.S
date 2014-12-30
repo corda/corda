@@ -35,6 +35,7 @@ GLOBAL(vmNativeCall):
 
   // allocate frame
   stp   x29, x30, [sp,#-64]!
+  mov   x29, sp
 
   // save callee-saved register values so we can clobber them
   stp   x19, x20, [sp,#16]
@@ -118,6 +119,7 @@ GLOBAL(vmRun):
 
   // allocate frame
   stp   x29, x30, [sp,#-96]!
+  mov   x29, sp
 
   // save callee-saved register values
   stp   x19, x20, [sp,#16]
