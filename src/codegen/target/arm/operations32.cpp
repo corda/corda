@@ -15,6 +15,8 @@
 #include "fixup.h"
 #include "multimethod.h"
 
+#if TARGET_BYTES_PER_WORD == 4
+
 namespace avian {
 namespace codegen {
 namespace arm {
@@ -179,101 +181,6 @@ void unsignedShiftRightC(Context* con,
   }
 }
 
-bool needJump(MyBlock* b)
-{
-  return b->next or b->size != (b->size & PoolOffsetMask);
-}
-
-unsigned padding(MyBlock* b, unsigned offset)
-{
-  unsigned total = 0;
-  for (PoolEvent* e = b->poolEventHead; e; e = e->next) {
-    if (e->offset <= offset) {
-      if (needJump(b)) {
-        total += vm::TargetBytesPerWord;
-      }
-      for (PoolOffset* o = e->poolOffsetHead; o; o = o->next) {
-        total += vm::TargetBytesPerWord;
-      }
-    } else {
-      break;
-    }
-  }
-  return total;
-}
-
-void resolve(MyBlock* b)
-{
-  Context* con = b->context;
-
-  if (b->poolOffsetHead) {
-    if (con->poolOffsetTail) {
-      con->poolOffsetTail->next = b->poolOffsetHead;
-    } else {
-      con->poolOffsetHead = b->poolOffsetHead;
-    }
-    con->poolOffsetTail = b->poolOffsetTail;
-  }
-
-  if (con->poolOffsetHead) {
-    bool append;
-    if (b->next == 0 or b->next->poolEventHead) {
-      append = true;
-    } else {
-      int32_t v
-          = (b->start + b->size + b->next->size + vm::TargetBytesPerWord - 8)
-            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
-
-      append = (v != (v & PoolOffsetMask));
-
-      if (DebugPool) {
-        fprintf(stderr,
-                "current %p %d %d next %p %d %d\n",
-                b,
-                b->start,
-                b->size,
-                b->next,
-                b->start + b->size,
-                b->next->size);
-        fprintf(stderr,
-                "offset %p %d is of distance %d to next block; append? %d\n",
-                con->poolOffsetHead,
-                con->poolOffsetHead->offset,
-                v,
-                append);
-      }
-    }
-
-    if (append) {
-#ifndef NDEBUG
-      int32_t v
-          = (b->start + b->size - 8)
-            - (con->poolOffsetHead->offset + con->poolOffsetHead->block->start);
-
-      expect(con, v == (v & PoolOffsetMask));
-#endif  // not NDEBUG
-
-      appendPoolEvent(
-          con, b, b->size, con->poolOffsetHead, con->poolOffsetTail);
-
-      if (DebugPool) {
-        for (PoolOffset* o = con->poolOffsetHead; o; o = o->next) {
-          fprintf(stderr,
-                  "include %p %d in pool event %p at offset %d in block %p\n",
-                  o,
-                  o->offset,
-                  b->poolEventTail,
-                  b->size,
-                  b);
-        }
-      }
-
-      con->poolOffsetHead = 0;
-      con->poolOffsetTail = 0;
-    }
-  }
-}
-
 void jumpR(Context* con, unsigned size UNUSED, lir::RegisterPair* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
@@ -410,7 +317,8 @@ void moveCR2(Context* con,
     lir::RegisterPair dstHi(dst->high);
     moveCR(con, 4, &srcLo, 4, dst);
     moveCR(con, 4, &srcHi, 4, &dstHi);
-  } else if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
+  } else if (callOffset == 0 and src->value->resolved()
+             and isOfWidth(getValue(src), 8)) {
     emit(con, movi(dst->low, lo8(getValue(src))));  // fits in immediate
   } else {
     appendConstantPoolEntry(con, src->value, callOffset);
@@ -510,9 +418,9 @@ void multiplyR(Context* con,
   if (size == 8) {
     bool useTemporaries = b->low == t->low;
     Register tmpLow = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
-                                : t->low;
+                                     : t->low;
     Register tmpHigh = useTemporaries ? con->client->acquireTemporary(GPR_MASK)
-                                 : t->high;
+                                      : t->high;
 
     emit(con, umull(tmpLow, tmpHigh, a->low, b->low));
     emit(con, mla(tmpHigh, a->low, b->high, tmpHigh));
@@ -665,11 +573,11 @@ void floatDivideR(Context* con,
 }
 
 Register normalize(Context* con,
-              int offset,
-              Register index,
-              unsigned scale,
-              bool* preserveIndex,
-              bool* release)
+                   int offset,
+                   Register index,
+                   unsigned scale,
+                   bool* preserveIndex,
+                   bool* release)
 {
   if (offset != 0 or scale != 1) {
     lir::RegisterPair normalizedIndex(
@@ -947,26 +855,8 @@ void load(Context* con,
       case 8: {
         if (dstSize == 8) {
           lir::RegisterPair dstHigh(dst->high);
-          load(con,
-               4,
-               base,
-               offset,
-               NoRegister,
-               1,
-               4,
-               &dstHigh,
-               false,
-               false);
-          load(con,
-               4,
-               base,
-               offset + 4,
-               NoRegister,
-               1,
-               4,
-               dst,
-               false,
-               false);
+          load(con, 4, base, offset, NoRegister, 1, 4, &dstHigh, false, false);
+          load(con, 4, base, offset + 4, NoRegister, 1, 4, dst, false, false);
         } else {
           emit(con, ldri(dst->low, base, offset));
         }
@@ -1496,13 +1386,24 @@ void longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
   callR(con, vm::TargetBytesPerWord, &tmp);
 }
 
+void alignedLongCallC(Context* con, unsigned size, lir::Constant* target)
+{
+  longCallC(con, size, target);
+}
+
 void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
 
-  lir::RegisterPair tmp(Register(4));  // a non-arg reg that we don't mind clobbering
+  lir::RegisterPair tmp(
+      Register(4));  // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, vm::TargetBytesPerWord, &tmp);
+}
+
+void alignedLongJumpC(Context* con, unsigned size, lir::Constant* target)
+{
+  longJumpC(con, size, target);
 }
 
 void jumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
@@ -1554,3 +1455,5 @@ void storeLoadBarrier(Context* con)
 }  // namespace arm
 }  // namespace codegen
 }  // namespace avian
+
+#endif  // TARGET_BYTES_PER_WORD == 4

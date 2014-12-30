@@ -13,23 +13,23 @@
 
 .text
 
-#define BYTES_PER_WORD 4
+#define BYTES_PER_WORD 8
 
 #define LOCAL(x) .L##x
-   
+
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
 #endif
 
-#define CONTINUATION_NEXT 4
-#define CONTINUATION_ADDRESS 16
-#define CONTINUATION_RETURN_ADDRESS_OFFSET 20
-#define CONTINUATION_FRAME_POINTER_OFFSET 24
-#define CONTINUATION_LENGTH 28
-#define CONTINUATION_BODY 32
-   
+#define CONTINUATION_NEXT 8
+#define CONTINUATION_ADDRESS 32
+#define CONTINUATION_RETURN_ADDRESS_OFFSET 40
+#define CONTINUATION_FRAME_POINTER_OFFSET 48
+#define CONTINUATION_LENGTH 56
+#define CONTINUATION_BODY 64
+
 .globl GLOBAL(vmInvoke)
 .align 2
 GLOBAL(vmInvoke):
@@ -43,6 +43,7 @@ GLOBAL(vmInvoke):
 
   // allocate frame
   stp   x29, x30, [sp,#-96]!
+  mov   x29, sp
 
   // save callee-saved register values
   stp   x19, x20, [sp,#16]
@@ -59,7 +60,7 @@ GLOBAL(vmInvoke):
 
   // copy arguments into place
   sub   sp, sp, w3, uxtw
-  mov   x5, #0
+  mov   x4, #0
   b     LOCAL(vmInvoke_argumentTest)
 
 LOCAL(vmInvoke_argumentLoop):
@@ -89,22 +90,74 @@ GLOBAL(vmInvoke_returnAddress):
   // MyProcess::getStackTrace in compile.cpp for details on how we get
   // a reliable stack trace from a thread that might be interrupted at
   // any point in its execution.
-  mov  x5, #0
-  str  x5, [x19, #TARGET_THREAD_STACK]
+  str  xzr, [x19, #TARGET_THREAD_STACK]
 
 .globl GLOBAL(vmInvoke_safeStack)
 .align 2
 GLOBAL(vmInvoke_safeStack):
 
 #ifdef AVIAN_CONTINUATIONS
-#error todo
+  // call the next continuation, if any
+  ldr   x5, [x19,#TARGET_THREAD_CONTINUATION]
+  cmp   x5, xzr
+  b.eq  LOCAL(vmInvoke_exit)
+
+  ldr   x6, [x5,#CONTINUATION_LENGTH]
+  lsl   x6, x6, #3
+  neg   x7, x6
+  add   x7, x7, #-128 // 128 bytes for callee-saved register values
+  mov   x4, sp
+  add   sp, sp, x7
+  str   x4, [sp]
+
+  add   x7, x5, #CONTINUATION_BODY
+  mov   x11, xzr
+  b     LOCAL(vmInvoke_continuationTest)
+
+LOCAL(vmInvoke_continuationLoop):
+  ldr   x9, [x7,x11]
+  str   x9, [sp,x11]
+  add   x11, x11, #8
+
+LOCAL(vmInvoke_continuationTest):
+  cmp   x11, x6
+  b.le  LOCAL(vmInvoke_continuationLoop)
+
+  ldr   x7, [x5,#CONTINUATION_RETURN_ADDRESS_OFFSET]
+  adr   x11, GLOBAL(vmInvoke_returnAddress)
+  str   x11, [sp,x7]
+
+  ldr   x7, [x5,#CONTINUATION_NEXT]
+  str   x7, [x19,#TARGET_THREAD_CONTINUATION]
+
+  // call the continuation unless we're handling an exception
+  ldr   x7, [x19,#TARGET_THREAD_EXCEPTION]
+  cmp   x7, xzr
+  b.ne  LOCAL(vmInvoke_handleException)
+  ldr   x7, [x5,#CONTINUATION_ADDRESS]
+  br    x7
+
+LOCAL(vmInvoke_handleException):
+   // we're handling an exception - call the exception handler instead
+  str   xzr, [x19,#TARGET_THREAD_EXCEPTION]
+  ldr   x11, [x19,#TARGET_THREAD_EXCEPTIONSTACKADJUSTMENT]
+  ldr   x9, [sp]
+  neg   x11, x11
+  add   sp, sp, x11
+  str   x9, [sp]
+  ldr   x11, [x19,#TARGET_THREAD_EXCEPTIONOFFSET]
+  str   x7, [sp,x11]
+
+  ldr   x7, [x19,#TARGET_THREAD_EXCEPTIONHANDLER]
+  br    x7
+
+LOCAL(vmInvoke_exit):
+  str   xzr, [x19, #TARGET_THREAD_STACK]
+
 #endif // AVIAN_CONTINUATIONS
 
-  mov   x5, #0
-  str   x5, [x19, #TARGET_THREAD_STACK]
-
   // restore return type
-  ldr   w5, [sp], #4
+  ldr   w5, [sp],#16
 
   // restore callee-saved register values
   ldp   x19, x20, [sp,#16]
@@ -121,7 +174,44 @@ LOCAL(vmInvoke_return):
 .align 2
 GLOBAL(vmJumpAndInvoke):
 #ifdef AVIAN_CONTINUATIONS
-#error todo
+   // x0: thread
+   // x1: address
+   // x2: stack
+   // x3: argumentFootprint
+   // x4: arguments
+   // x5: frameSize
+
+   // allocate new frame, adding room for callee-saved registers, plus
+   // 8 bytes of padding since the calculation of frameSize assumes 8
+   // bytes have already been allocated to save the return address,
+   // which is not true in this case
+   sub   x2, x2, x5
+   sub   x2, x2, #136
+
+   mov   x19, x0
+
+   // copy arguments into place
+   mov   x6, xzr
+   b     LOCAL(vmJumpAndInvoke_argumentTest)
+
+LOCAL(vmJumpAndInvoke_argumentLoop):
+   ldr   x12, [x4,x6]
+   str   x12, [x2,x6]
+   add   x6, x6, #4
+
+LOCAL(vmJumpAndInvoke_argumentTest):
+   cmp   x6, x3
+   ble   LOCAL(vmJumpAndInvoke_argumentLoop)
+
+   // the arguments have been copied, so we can set the real stack
+   // pointer now
+   mov   sp, x2
+
+   // set return address to vmInvoke_returnAddress
+   adr   x30, GLOBAL(vmInvoke_returnAddress)
+
+   br    x1
+
 #else // not AVIAN_CONTINUATIONS
    // vmJumpAndInvoke should only be called when continuations are
    // enabled, so we force a crash if we reach here:

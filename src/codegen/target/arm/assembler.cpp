@@ -39,7 +39,7 @@ namespace isa {
 bool vfpSupported()
 {
 // TODO: Use at runtime detection
-#if defined(__ARM_PCS_VFP)
+#if (defined __ARM_PCS_VFP) || (defined ARCH_arm64)
   // armhf
   return true;
 #else
@@ -55,9 +55,9 @@ bool vfpSupported()
 const RegisterFile MyRegisterFileWithoutFloats(GPR_MASK, 0);
 const RegisterFile MyRegisterFileWithFloats(GPR_MASK, FPR_MASK);
 
-const unsigned FrameHeaderSize = 1;
+const unsigned FrameHeaderSize = TargetBytesPerWord / 4;
 
-const unsigned StackAlignmentInBytes = 8;
+const unsigned StackAlignmentInBytes = TargetBytesPerWord * 2;
 const unsigned StackAlignmentInWords = StackAlignmentInBytes
                                        / TargetBytesPerWord;
 
@@ -89,11 +89,11 @@ void nextFrame(ArchitectureContext* con,
                void** stack)
 {
   assertT(con, *ip >= start);
-  assertT(con, *ip <= start + (size / TargetBytesPerWord));
+  assertT(con, *ip <= start + (size / 4));
 
   uint32_t* instruction = static_cast<uint32_t*>(*ip);
 
-  if ((*start >> 20) == 0xe59) {
+  if ((*start >> 20) == (TargetBytesPerWord == 8 ? 0xf94 : 0xe59)) {
     // skip stack overflow check
     start += 3;
   }
@@ -111,7 +111,8 @@ void nextFrame(ArchitectureContext* con,
     return;
   }
 
-  if (*instruction == 0xe12fff1e) {  // return
+  if (*instruction == (TargetBytesPerWord == 8 ? 0xd61f03c0 : 0xe12fff1e)) {
+    // return
     *ip = link;
     return;
   }
@@ -124,7 +125,20 @@ void nextFrame(ArchitectureContext* con,
 
     // check for post-non-tail-call stack adjustment of the form "sub
     // sp, sp, #offset":
-    if ((*instruction >> 12) == 0xe24dd) {
+    if (TargetBytesPerWord == 8 and (*instruction & 0xff0003ff) == 0xd10003ff) {
+      unsigned value = (*instruction >> 10) & 0xfff;
+      unsigned shift = (*instruction >> 22) & 1;
+      switch (shift) {
+      case 0:
+        offset -= value / TargetBytesPerWord;
+        break;
+      case 1:
+        offset -= (value << 12) / TargetBytesPerWord;
+        break;
+      default:
+        abort(con);
+      }
+    } else if (TargetBytesPerWord == 4 and (*instruction >> 12) == 0xe24dd) {
       unsigned value = *instruction & 0xff;
       unsigned rotation = (*instruction >> 8) & 0xf;
       switch (rotation) {
@@ -218,6 +232,7 @@ class MyArchitecture : public Architecture {
   {
     switch (register_.index()) {
     case LinkRegister.index():
+    case FrameRegister.index():
     case StackRegister.index():
     case ThreadRegister.index():
     case ProgramCounter.index():
@@ -258,7 +273,7 @@ class MyArchitecture : public Architecture {
 
   virtual unsigned argumentRegisterCount()
   {
-    return 4;
+    return TargetBytesPerWord;
   }
 
   virtual Register argumentRegister(unsigned index)
@@ -306,8 +321,13 @@ class MyArchitecture : public Architecture {
     case lir::AlignedLongCall:
     case lir::AlignedLongJump: {
       uint32_t* p = static_cast<uint32_t*>(returnAddress) - 2;
-      *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
-          = newTarget;
+      if (TargetBytesPerWord == 8) {
+        const int32_t mask = (PoolOffsetMask >> 2) << 5;
+        *reinterpret_cast<void**>(p + ((*p & mask) >> 5)) = newTarget;
+      } else {
+        *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
+            = newTarget;
+      }
     } break;
 
     default:
@@ -434,11 +454,11 @@ class MyArchitecture : public Architecture {
       break;
 
     case lir::Float2Int:
-      // todo: Java requires different semantics than SSE for
+      // todo: Java requires different semantics than VFP for
       // converting floats to integers, we we need to either use
       // thunks or produce inline machine code which handles edge
       // cases properly.
-      if (false && vfpSupported() && bSize == 4) {
+      if (false && vfpSupported() && bSize <= TargetBytesPerWord) {
         aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
       } else {
@@ -447,7 +467,7 @@ class MyArchitecture : public Architecture {
       break;
 
     case lir::Int2Float:
-      if (vfpSupported() && aSize == 4) {
+      if (vfpSupported() && aSize <= TargetBytesPerWord) {
         aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(GPR_MASK, GPR_MASK);
       } else {
@@ -544,7 +564,7 @@ class MyArchitecture : public Architecture {
     case lir::ShiftLeft:
     case lir::ShiftRight:
     case lir::UnsignedShiftRight:
-      if (bSize == 8)
+      if (bSize > TargetBytesPerWord)
         aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
@@ -556,6 +576,11 @@ class MyArchitecture : public Architecture {
       aMask.typeMask = bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
+    // todo: Although ARM has instructions for integer division and
+    // remainder, they don't trap on division by zero, which is why
+    // we use thunks.  Alternatively, we could generate inline code
+    // with an explicit zero check, which would probably be a bit
+    // faster.
     case lir::Divide:
     case lir::Remainder:
     case lir::FloatRemainder:
@@ -567,7 +592,7 @@ class MyArchitecture : public Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (vfpSupported()) {
-        bMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
         aMask.setLowHighRegisterMasks(FPR_MASK, FPR_MASK);
         bMask = aMask;
       } else {
@@ -745,19 +770,45 @@ class MyAssembler : public Assembler {
     // how to handle them:
     assertT(&con, footprint < 256);
 
-    lir::RegisterPair stack(StackRegister);
-    ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
-    lir::Constant footprintConstant(&footprintPromise);
-    subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+    // todo: the ARM ABI says the frame preamble should be of the form
+    //
+    //   stp x29, x30, [sp,#-footprint]!
+    //   mov x29, sp
+    //
+    // and the frame should be popped with e.g.
+    //
+    //   ldp x29, x30, [sp],#footprint
+    //   br x30
+    //
+    // However, that will invalidate a lot of assumptions elsewhere
+    // about the return address being stored at the opposite end of
+    // the frame, so lots of other code will need to change before we
+    // can do that.  The code below can be enabled as a starting point
+    // when we're ready to tackle that.
+    if (false and TargetBytesPerWord == 8) {
+      // stp x29, x30, [sp,#-footprint]!
+      con.code.append4(0xa9800000 | ((-footprint & 0x7f) << 15)
+                       | (StackRegister.index() << 5)
+                       | (LinkRegister.index() << 10) | FrameRegister.index());
 
-    lir::RegisterPair returnAddress(LinkRegister);
-    lir::Memory returnAddressDst(StackRegister,
-                                 (footprint - 1) * TargetBytesPerWord);
-    moveRM(&con,
-           TargetBytesPerWord,
-           &returnAddress,
-           TargetBytesPerWord,
-           &returnAddressDst);
+      lir::RegisterPair stack(StackRegister);
+      lir::RegisterPair frame(FrameRegister);
+      moveRR(&con, TargetBytesPerWord, &stack, TargetBytesPerWord, &frame);
+    } else {
+      lir::RegisterPair stack(StackRegister);
+      ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
+      lir::Constant footprintConstant(&footprintPromise);
+      subC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+
+      lir::RegisterPair returnAddress(LinkRegister);
+      lir::Memory returnAddressDst(StackRegister,
+                                   (footprint - 1) * TargetBytesPerWord);
+      moveRM(&con,
+             TargetBytesPerWord,
+             &returnAddress,
+             TargetBytesPerWord,
+             &returnAddressDst);
+    }
   }
 
   virtual void adjustFrame(unsigned difference)
@@ -772,19 +823,26 @@ class MyAssembler : public Assembler {
   {
     footprint += FrameHeaderSize;
 
-    lir::RegisterPair returnAddress(LinkRegister);
-    lir::Memory returnAddressSrc(StackRegister,
-                                 (footprint - 1) * TargetBytesPerWord);
-    moveMR(&con,
-           TargetBytesPerWord,
-           &returnAddressSrc,
-           TargetBytesPerWord,
-           &returnAddress);
+    // see comment regarding the ARM64 ABI in allocateFrame
+    if (false and TargetBytesPerWord == 8) {
+      // ldp x29, x30, [sp],#footprint
+      con.code.append4(0xa8c00000 | (footprint << 15) | (31 << 5) | (30 << 10)
+                       | 29);
+    } else {
+      lir::RegisterPair returnAddress(LinkRegister);
+      lir::Memory returnAddressSrc(StackRegister,
+                                   (footprint - 1) * TargetBytesPerWord);
+      moveMR(&con,
+             TargetBytesPerWord,
+             &returnAddressSrc,
+             TargetBytesPerWord,
+             &returnAddress);
 
-    lir::RegisterPair stack(StackRegister);
-    ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
-    lir::Constant footprintConstant(&footprintPromise);
-    addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+      lir::RegisterPair stack(StackRegister);
+      ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
+      lir::Constant footprintConstant(&footprintPromise);
+      addC(&con, TargetBytesPerWord, &footprintConstant, &stack, &stack);
+    }
   }
 
   virtual void popFrameForTailCall(unsigned footprint,
@@ -851,10 +909,26 @@ class MyAssembler : public Assembler {
     return_(&con);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+  virtual void popFrameAndUpdateStackAndReturn(unsigned footprint,
                                                unsigned stackOffsetFromThread)
   {
-    popFrame(frameFootprint);
+    footprint += FrameHeaderSize;
+
+    // see comment regarding the ARM64 ABI in allocateFrame
+    if (false and TargetBytesPerWord == 8) {
+      // ldp x29, x30, [sp],#footprint
+      con.code.append4(0xa8c00000 | (footprint << 15) | (31 << 5) | (30 << 10)
+                       | 29);
+    } else {
+      lir::RegisterPair returnAddress(LinkRegister);
+      lir::Memory returnAddressSrc(StackRegister,
+                                   (footprint - 1) * TargetBytesPerWord);
+      moveMR(&con,
+             TargetBytesPerWord,
+             &returnAddressSrc,
+             TargetBytesPerWord,
+             &returnAddress);
+    }
 
     lir::RegisterPair stack(StackRegister);
     lir::Memory newStackSrc(ThreadRegister, stackOffsetFromThread);
@@ -946,17 +1020,28 @@ class MyAssembler : public Assembler {
           unsigned instruction = o->block->start + padding(o->block, o->offset)
                                  + o->offset;
 
-          int32_t v = (entry - 8) - instruction;
-          expect(&con, v == (v & PoolOffsetMask));
-
           int32_t* p = reinterpret_cast<int32_t*>(dst + instruction);
-          *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
+
+          if (TargetBytesPerWord == 8) {
+            int32_t v = entry - instruction;
+            expect(&con, v == (v & PoolOffsetMask));
+
+            const int32_t mask = (PoolOffsetMask >> 2) << 5;
+            *p = (((v >> 2) << 5) & mask) | ((~mask) & *p);
+          } else {
+            int32_t v = (entry - 8) - instruction;
+            expect(&con, v == (v & PoolOffsetMask));
+
+            *p = (v & PoolOffsetMask) | ((~PoolOffsetMask) & *p);
+          }
 
           poolSize += TargetBytesPerWord;
         }
 
         bool jump = needJump(b);
         if (jump) {
+          expect(&con, TargetBytesPerWord == 4);
+
           write4(dst + dstOffset,
                  isa::b((poolSize + TargetBytesPerWord - 8) >> 2));
         }

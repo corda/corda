@@ -16,11 +16,11 @@
 #define BYTES_PER_WORD 4
 
 #define LOCAL(x) .L##x
-   
+
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
 #endif
 
 #define CONTINUATION_NEXT 4
@@ -29,7 +29,7 @@
 #define CONTINUATION_FRAME_POINTER_OFFSET 24
 #define CONTINUATION_LENGTH 28
 #define CONTINUATION_BODY 32
-   
+
 .globl GLOBAL(vmInvoke)
 .align 2
 GLOBAL(vmInvoke):
@@ -56,7 +56,7 @@ GLOBAL(vmInvoke):
   eor   r4, sp, r3
   tst   r4, #4
   subne sp, sp, #4
-   
+
   // copy arguments into place
   sub   sp, r3
   mov   r4, #0
@@ -87,7 +87,7 @@ LOCAL(vmInvoke_argumentTest):
 GLOBAL(vmInvoke_returnAddress):
   // restore stack pointer
   ldr   sp, [r8, #TARGET_THREAD_SCRATCH]
-   
+
    // clear MyThread::stack to avoid confusing another thread calling
    // java.lang.Thread.getStackTrace on this one.  See
    // MyProcess::getStackTrace in compile.cpp for details on how we get
@@ -109,7 +109,7 @@ GLOBAL(vmInvoke_safeStack):
    ldr  r6,[r5,#CONTINUATION_LENGTH]
    lsl  r6,r6,#2
    neg  r7,r6
-   add  r7,r7,#-80
+   add  r7,r7,#-80 // 80 bytes for callee-saved register values
    mov  r4,sp
    str  r4,[sp,r7]!
 
@@ -167,10 +167,10 @@ LOCAL(vmInvoke_handleException):
    bx   r7
 
 LOCAL(vmInvoke_exit):
-#endif // AVIAN_CONTINUATIONS
 
   mov   ip, #0
   str   ip, [r8, #TARGET_THREAD_STACK]
+#endif // AVIAN_CONTINUATIONS
 
   // restore return type
   ldr   ip, [sp], #4
@@ -201,7 +201,7 @@ GLOBAL(vmJumpAndInvoke):
    // which is not true in this case
    sub  r2,r2,r6
    sub  r2,r2,#84
-   
+
    mov  r8,r0
 
    // copy arguments into place
@@ -220,7 +220,7 @@ LOCAL(vmJumpAndInvoke_argumentTest):
    // the arguments have been copied, so we can set the real stack
    // pointer now
    mov  sp,r2
-   
+
    // set return address to vmInvoke_returnAddress
 #ifdef __APPLE__
    movw r11, :lower16:(GLOBAL(vmInvoke_returnAddress)-(LOCAL(vmJumpAndInvoke_getAddress)+8))
@@ -246,7 +246,7 @@ LOCAL(vmInvoke_getAddress_word):
 LOCAL(vmJumpAndInvoke_getAddress_word):
    .word _GLOBAL_OFFSET_TABLE_-(LOCAL(vmJumpAndInvoke_getAddress)+8)
 #endif // not __APPLE__
-   
+
 #else // not AVIAN_CONTINUATIONS
    // vmJumpAndInvoke should only be called when continuations are
    // enabled, so we force a crash if we reach here:

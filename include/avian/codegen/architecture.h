@@ -28,8 +28,6 @@ namespace codegen {
 
 class Assembler;
 
-class RegisterFile;
-
 class OperandMask {
  public:
   uint8_t typeMask;

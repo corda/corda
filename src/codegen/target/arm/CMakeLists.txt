@@ -4,5 +4,6 @@ add_library(avian_codegen_arm
   context.cpp
   fixup.cpp
   multimethod.cpp
-  operations.cpp
+  operations32.cpp
+  operations64.cpp
 )
