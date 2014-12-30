@@ -130,10 +130,10 @@ void nextFrame(ArchitectureContext* con,
       unsigned shift = (*instruction >> 22) & 1;
       switch (shift) {
       case 0:
-        offset -= value;
+        offset -= value / TargetBytesPerWord;
         break;
       case 1:
-        offset -= value << 12;
+        offset -= (value << 12) / TargetBytesPerWord;
         break;
       default:
         abort(con);
@@ -769,6 +769,11 @@ class MyAssembler : public Assembler {
     // how to handle them:
     assertT(&con, footprint < 256);
 
+    // todo: ARM64 frame allocation should be of the form:
+    //   stp   x29, x30, [sp,#size]!
+    // and deallocation should be of the form:
+    //   ldp   x29, x30, [sp],#size
+
     lir::RegisterPair stack(StackRegister);
     ResolvedPromise footprintPromise(footprint * TargetBytesPerWord);
     lir::Constant footprintConstant(&footprintPromise);
@@ -875,10 +880,19 @@ class MyAssembler : public Assembler {
     return_(&con);
   }
 
-  virtual void popFrameAndUpdateStackAndReturn(unsigned frameFootprint,
+  virtual void popFrameAndUpdateStackAndReturn(unsigned footprint,
                                                unsigned stackOffsetFromThread)
   {
-    popFrame(frameFootprint);
+    footprint += FrameHeaderSize;
+
+    lir::RegisterPair returnAddress(LinkRegister);
+    lir::Memory returnAddressSrc(StackRegister,
+                                 (footprint - 1) * TargetBytesPerWord);
+    moveMR(&con,
+           TargetBytesPerWord,
+           &returnAddressSrc,
+           TargetBytesPerWord,
+           &returnAddress);
 
     lir::RegisterPair stack(StackRegister);
     lir::Memory newStackSrc(ThreadRegister, stackOffsetFromThread);

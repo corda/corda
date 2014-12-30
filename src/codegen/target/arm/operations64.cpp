@@ -139,8 +139,8 @@ uint32_t addi(Register Rd, Register Rn, int value, int shift, unsigned size)
 
 uint32_t mov(Register Rd, Register Rn, unsigned size)
 {
-  return Rn.index() == 31 ? addi(Rd, Rn, 0, 0, size)
-                          : orr(Rd, Register(31), Rn, size);
+  return Rn.index() == 31 or Rd.index() == 31 ? addi(Rd, Rn, 0, 0, size)
+    : orr(Rd, Register(31), Rn, size);
 }
 
 uint32_t movz(Register Rd, int value, unsigned shift, unsigned size)
@@ -653,6 +653,10 @@ void moveCR2(Context* c,
     moveRR(c, size, &tmp, size, dst);
     c->client->releaseTemporary(tmp.low);
   } else if (callOffset == 0 and src->value->resolved()) {
+    // todo: Is it better performance-wise to load using immediate
+    // moves or via a PC-relative constant pool?  Does it depend on
+    // how many significant bits there are?
+
     int64_t value = src->value->value();
     if (value >= 0) {
       append(c, movz(dst->low, value & 0xFFFF, 0, size));
@@ -1195,16 +1199,28 @@ void moveMR(Context* c,
             unsigned dstSize,
             lir::RegisterPair* dst)
 {
-  load(c,
-       srcSize,
-       src->base,
-       src->offset,
-       src->index,
-       src->scale,
-       dstSize,
-       dst,
-       true,
-       true);
+  if (dst->low.index() == 31) {
+    assertT(c, c->client == 0);  // the compiler should never ask us to
+                                 // load the SP; we'll only get here
+                                 // when assembling a thunk
+
+    lir::RegisterPair tmp(Register(9));  // we're in a thunk, so we can
+                                         // clobber this
+
+    load(c, srcSize, src->base, src->offset, src->index, src->scale, dstSize, &tmp, true, true);
+    moveRR(c, dstSize, &tmp, dstSize, dst);
+  } else {
+    load(c,
+         srcSize,
+         src->base,
+         src->offset,
+         src->index,
+         src->scale,
+         dstSize,
+         dst,
+         true,
+         true);
+  }
 }
 
 void moveZMR(Context* c,
