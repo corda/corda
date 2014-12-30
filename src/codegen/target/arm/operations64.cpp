@@ -652,7 +652,7 @@ void moveCR2(Context* c,
     moveCR(c, size, src, size, &tmp);
     moveRR(c, size, &tmp, size, dst);
     c->client->releaseTemporary(tmp.low);
-  } else if (src->value->resolved()) {
+  } else if (callOffset == 0 and src->value->resolved()) {
     int64_t value = src->value->value();
     if (value >= 0) {
       append(c, movz(dst->low, value & 0xFFFF, 0, size));

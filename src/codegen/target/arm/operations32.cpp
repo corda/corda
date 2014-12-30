@@ -317,7 +317,8 @@ void moveCR2(Context* con,
     lir::RegisterPair dstHi(dst->high);
     moveCR(con, 4, &srcLo, 4, dst);
     moveCR(con, 4, &srcHi, 4, &dstHi);
-  } else if (src->value->resolved() and isOfWidth(getValue(src), 8)) {
+  } else if (callOffset == 0 and src->value->resolved()
+             and isOfWidth(getValue(src), 8)) {
     emit(con, movi(dst->low, lo8(getValue(src))));  // fits in immediate
   } else {
     appendConstantPoolEntry(con, src->value, callOffset);
@@ -1385,6 +1386,11 @@ void longCallC(Context* con, unsigned size UNUSED, lir::Constant* target)
   callR(con, vm::TargetBytesPerWord, &tmp);
 }
 
+void alignedLongCallC(Context* con, unsigned size, lir::Constant* target)
+{
+  longCallC(con, size, target);
+}
+
 void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
 {
   assertT(con, size == vm::TargetBytesPerWord);
@@ -1393,6 +1399,11 @@ void longJumpC(Context* con, unsigned size UNUSED, lir::Constant* target)
       Register(4));  // a non-arg reg that we don't mind clobbering
   moveCR2(con, vm::TargetBytesPerWord, target, &tmp, offsetPromise(con));
   jumpR(con, vm::TargetBytesPerWord, &tmp);
+}
+
+void alignedLongJumpC(Context* con, unsigned size, lir::Constant* target)
+{
+  longJumpC(con, size, target);
 }
 
 void jumpC(Context* con, unsigned size UNUSED, lir::Constant* target)

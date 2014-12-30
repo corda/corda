@@ -320,8 +320,13 @@ class MyArchitecture : public Architecture {
     case lir::AlignedLongCall:
     case lir::AlignedLongJump: {
       uint32_t* p = static_cast<uint32_t*>(returnAddress) - 2;
+#if AVIAN_TARGET_ARCH == AVIAN_ARCH_ARM64
+      const int32_t mask = (PoolOffsetMask >> 2) << 5;
+      *reinterpret_cast<void**>(p + ((*p & mask) >> 5)) = newTarget;
+#else
       *reinterpret_cast<void**>(p + (((*p & PoolOffsetMask) + 8) / 4))
           = newTarget;
+#endif
     } break;
 
     default:
