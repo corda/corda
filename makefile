@@ -1655,7 +1655,8 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
-		$(classpath-classes))"; if [ -n "$${classes}" ]; then \
+		$(classpath-classes) arch=$(build-arch) platform=$(build-platform))"; \
+	if [ -n "$${classes}" ]; then \
 		$(javac) -source 1.6 -target 1.6 \
 			-d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$${classes}; fi

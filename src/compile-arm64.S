@@ -58,8 +58,11 @@ GLOBAL(vmInvoke):
   mov   x5, sp
   str   x5, [x0,#TARGET_THREAD_SCRATCH]
 
-  // copy arguments into place
-  sub   sp, sp, w3, uxtw
+  // copy arguments into place, reserving enough space for them, plus
+  // alignment padding
+  sub   x5, sp, w3, uxtw
+  and   sp, x5, #-16
+
   mov   x4, #0
   b     LOCAL(vmInvoke_argumentTest)
 
