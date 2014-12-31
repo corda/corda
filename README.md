@@ -20,7 +20,7 @@ to use forward slashes in the path.
     $ export JAVA_HOME=$(/usr/libexec/java_home)
     $ make
     $ build/macosx-x86_64/avian -cp build/macosx-x86_64/test Hello
- 
+
 #### on Windows (MSYS):
     $ git clone git@github.com:ReadyTalk/win64.git ../win64
     $ export JAVA_HOME="C:/Program Files/Java/jdk1.7.0_45"
@@ -59,10 +59,10 @@ Supported Platforms
 
 Avian can currently target the following platforms:
 
-  * Linux (i386, x86_64, and ARM)
+  * Linux (i386, x86_64, ARM, and ARM64)
   * Windows (i386 and x86_64)
   * Mac OS X (i386 and x86_64)
-  * Apple iOS (i386 and ARM)
+  * Apple iOS (i386, ARM, and ARM64)
   * FreeBSD (i386, x86_64)
 
 
@@ -86,7 +86,7 @@ certain flags described below, all of which are optional.
 
     $ make \
         platform={linux,windows,macosx,ios,freebsd} \
-        arch={i386,x86_64,arm} \
+        arch={i386,x86_64,arm,arm64} \
         process={compile,interpret} \
         mode={debug,debug-fast,fast,small} \
         lzma=<lzma source directory> \
@@ -99,26 +99,26 @@ certain flags described below, all of which are optional.
         openjdk-src=<openjdk source directory> \
         android=<android source directory>
 
-  * `platform` - the target platform  
+  * `platform` - the target platform
     * _default:_ output of $(uname -s | tr [:upper:] [:lower:]),
-normalized in some cases (e.g. CYGWIN_NT-5.1 -> windows)  
+normalized in some cases (e.g. CYGWIN_NT-5.1 -> windows)
 
-  * `arch` - the target architecture  
+  * `arch` - the target architecture
     * _default:_ output of $(uname -m), normalized in some cases
 (e.g. i686 -> i386)
 
-  * `process` - choice between pure interpreter or JIT compiler  
+  * `process` - choice between pure interpreter or JIT compiler
     * _default:_ compile
 
   * `mode` - which set of compilation flags to use to determine
 optimization level, debug symbols, and whether to enable
-assertions  
+assertions
     * _default:_ fast
 
   * `lzma` - if set, support use of LZMA to compress embedded JARs and
 boot images.  The value of this option should be a directory
 containing a recent LZMA SDK (available [here](http://www.7-zip.org/sdk.html)).  Currently, only version 9.20 of
-the SDK has been tested, but other versions might work.  
+the SDK has been tested, but other versions might work.
     * _default:_ not set
 
   * `armv6` - if true, don't use any instructions newer than armv6.  By
@@ -129,42 +129,42 @@ memory barrier instructions to ensure cache coherency
 class library and ahead-of-time compiled methods.  This option is
 only valid for process=compile builds.  Note that you may need to
 specify both build-arch=x86_64 and arch=x86_64 on 64-bit systems
-where "uname -m" prints "i386".  
+where "uname -m" prints "i386".
     * _default:_ false
 
   * `heapdump` - if true, implement avian.Machine.dumpHeap(String),
 which, when called, will generate a snapshot of the heap in a
 simple, ad-hoc format for memory profiling purposes.  See
-heapdump.cpp for details.  
+heapdump.cpp for details.
     * _default:_ false
 
   * `tails` - if true, optimize each tail call by replacing the caller's
 stack frame with the callee's.  This convention ensures proper
 tail recursion, suitable for languages such as Scheme.  This
-option is only valid for process=compile builds.  
+option is only valid for process=compile builds.
     * _default:_ false
 
   * `continuations` - if true, support continuations via the
 avian.Continuations methods callWithCurrentContinuation and
 dynamicWind.  See Continuations.java for details.  This option is
-only valid for process=compile builds.  
+only valid for process=compile builds.
     * _default:_ false
 
   * `use-clang` - if true, use LLVM's clang instead of GCC to build.
 Note that this does not currently affect cross compiles, only
-native builds.  
+native builds.
     * _default:_ false
 
   * `openjdk` - if set, use the OpenJDK class library instead of the
 default Avian class library.  See "Building with the OpenJDK Class
-Library" below for details.  
+Library" below for details.
     * _default:_ not set
 
   * `openjdk-src` - if this and the openjdk option above are both set,
 build an embeddable VM using the OpenJDK class library.  The JNI
 components of the OpenJDK class library will be built from the
 sources found under the specified directory.  See "Building with
-the OpenJDK Class Library" below for details.  
+the OpenJDK Class Library" below for details.
     * _default:_ not set
 
   * `android` - if set, use the Android class library instead of the
@@ -184,7 +184,7 @@ Note that not all combinations of these flags are valid.  For instance,
 non-jailbroken iOS devices do not allow JIT compilation, so only
 process=interpret or bootimage=true builds will run on such
 devices.  See [here](https://github.com/ReadyTalk/hello-ios) for an
-example of an Xcode project for iOS which uses Avian.  
+example of an Xcode project for iOS which uses Avian.
 
 If you are compiling for Windows, you may either cross-compile using
 MinGW or build natively on Windows under MSYS or Cygwin.
@@ -366,7 +366,7 @@ the following, starting from the Avian directory:
     git clone https://android.googlesource.com/platform/bionic
     (cd bionic && \
        git checkout 84983592ade3ec7d72d082262fb6646849979bfc)
-    
+
     git clone https://android.googlesource.com/platform/system/core \
       system/core
     (cd system/core && \
@@ -517,37 +517,37 @@ setting the boot classpath to "[bootJar]".
     $ cat >embedded-jar-main.cpp <<EOF
     #include "stdint.h"
     #include "jni.h"
-    #include "stdlib.h" 
-    
+    #include "stdlib.h"
+
     #if (defined __MINGW32__) || (defined _MSC_VER)
     #  define EXPORT __declspec(dllexport)
     #else
     #  define EXPORT __attribute__ ((visibility("default"))) \
       __attribute__ ((used))
     #endif
-    
+
     #if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
     #  define SYMBOL(x) binary_boot_jar_##x
     #else
     #  define SYMBOL(x) _binary_boot_jar_##x
     #endif
-    
+
     extern "C" {
-    
+
       extern const uint8_t SYMBOL(start)[];
       extern const uint8_t SYMBOL(end)[];
-    
+
       EXPORT const uint8_t*
       bootJar(unsigned* size)
       {
         *size = SYMBOL(end) - SYMBOL(start);
         return SYMBOL(start);
       }
-    
+
     } // extern "C"
-	
-	extern "C" void __cxa_pure_virtual(void) { abort(); }
-    
+
+    extern "C" void __cxa_pure_virtual(void) { abort(); }
+
     int
     main(int ac, const char** av)
     {
@@ -555,17 +555,17 @@ setting the boot classpath to "[bootJar]".
       vmArgs.version = JNI_VERSION_1_2;
       vmArgs.nOptions = 1;
       vmArgs.ignoreUnrecognized = JNI_TRUE;
-    
+
       JavaVMOption options[vmArgs.nOptions];
       vmArgs.options = options;
-    
+
       options[0].optionString = const_cast<char*>("-Xbootclasspath:[bootJar]");
-    
+
       JavaVM* vm;
       void* env;
       JNI_CreateJavaVM(&vm, &env, &vmArgs);
       JNIEnv* e = static_cast<JNIEnv*>(env);
-    
+
       jclass c = e->FindClass("Hello");
       if (not e->ExceptionCheck()) {
         jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
@@ -577,21 +577,21 @@ setting the boot classpath to "[bootJar]".
               for (int i = 1; i < ac; ++i) {
                 e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
               }
-              
+
               e->CallStaticVoidMethod(c, m, a);
             }
           }
         }
       }
-    
+
       int exitCode = 0;
       if (e->ExceptionCheck()) {
         exitCode = -1;
         e->ExceptionDescribe();
       }
-    
+
       vm->DestroyJavaVM();
-    
+
       return exitCode;
     }
     EOF
@@ -745,13 +745,13 @@ containing them.  See the previous example for instructions.
     $ cat >bootimage-main.cpp <<EOF
     #include "stdint.h"
     #include "jni.h"
-    
+
     #if (defined __MINGW32__) || (defined _MSC_VER)
     #  define EXPORT __declspec(dllexport)
     #else
     #  define EXPORT __attribute__ ((visibility("default")))
     #endif
-    
+
     #if (! defined __x86_64__) && ((defined __MINGW32__) || (defined _MSC_VER))
     #  define BOOTIMAGE_BIN(x) binary_bootimage_bin_##x
     #  define CODEIMAGE_BIN(x) binary_codeimage_bin_##x
@@ -759,31 +759,31 @@ containing them.  See the previous example for instructions.
     #  define BOOTIMAGE_BIN(x) _binary_bootimage_bin_##x
     #  define CODEIMAGE_BIN(x) _binary_codeimage_bin_##x
     #endif
-    
+
     extern "C" {
-    
+
       extern const uint8_t BOOTIMAGE_BIN(start)[];
       extern const uint8_t BOOTIMAGE_BIN(end)[];
-    
+
       EXPORT const uint8_t*
       bootimageBin(unsigned* size)
       {
         *size = BOOTIMAGE_BIN(end) - BOOTIMAGE_BIN(start);
         return BOOTIMAGE_BIN(start);
       }
-    
+
       extern const uint8_t CODEIMAGE_BIN(start)[];
       extern const uint8_t CODEIMAGE_BIN(end)[];
-    
+
       EXPORT const uint8_t*
       codeimageBin(unsigned* size)
       {
         *size = CODEIMAGE_BIN(end) - CODEIMAGE_BIN(start);
         return CODEIMAGE_BIN(start);
       }
-    
+
     } // extern "C"
-    
+
     int
     main(int ac, const char** av)
     {
@@ -791,21 +791,21 @@ containing them.  See the previous example for instructions.
       vmArgs.version = JNI_VERSION_1_2;
       vmArgs.nOptions = 2;
       vmArgs.ignoreUnrecognized = JNI_TRUE;
-    
+
       JavaVMOption options[vmArgs.nOptions];
       vmArgs.options = options;
-    
+
       options[0].optionString
         = const_cast<char*>("-Davian.bootimage=bootimageBin");
-    
+
       options[1].optionString
         = const_cast<char*>("-Davian.codeimage=codeimageBin");
-    
+
       JavaVM* vm;
       void* env;
       JNI_CreateJavaVM(&vm, &env, &vmArgs);
       JNIEnv* e = static_cast<JNIEnv*>(env);
-    
+
       jclass c = e->FindClass("Hello");
       if (not e->ExceptionCheck()) {
         jmethodID m = e->GetStaticMethodID(c, "main", "([Ljava/lang/String;)V");
@@ -817,25 +817,25 @@ containing them.  See the previous example for instructions.
               for (int i = 1; i < ac; ++i) {
                 e->SetObjectArrayElement(a, i-1, e->NewStringUTF(av[i]));
               }
-              
+
               e->CallStaticVoidMethod(c, m, a);
             }
           }
         }
       }
-    
+
       int exitCode = 0;
       if (e->ExceptionCheck()) {
         exitCode = -1;
         e->ExceptionDescribe();
       }
-    
+
       vm->DestroyJavaVM();
-    
+
       return exitCode;
     }
     EOF
-    
+
      $ g++ -I$JAVA_HOME/include -I$JAVA_HOME/include/linux \
          -D_JNI_IMPLEMENTATION_ -c bootimage-main.cpp -o main.o
 
