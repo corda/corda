@@ -243,6 +243,9 @@ publishing {
 }
 
 artifactoryPublish {
+  onlyIf {
+    System.env.'TRAVIS_BRANCH' == "master"
+  }
   dependsOn assemble
 }
 
