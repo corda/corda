@@ -6,15 +6,7 @@ before_install:
 
 env:
   matrix:
-  - BUILD_STEP="jdk-test"
-  - BUILD_STEP="test"
-  - BUILD_STEP="mode=debug test"
-  - BUILD_STEP="process=interpret test"
-  - BUILD_STEP="mode=debug bootimage=true test"
-  - BUILD_STEP="bootimage=true test"
-  - BUILD_STEP="openjdk=$JAVA_HOME test"
-  - BUILD_STEP="tails=true continuations=true heapdump=true test"
-  - BUILD_STEP="codegen-targets=all test"
+  - BUILD_STEP=""
   - BUILD_STEP="PUBLISH"
   global:
   - TERM=dumb
@@ -24,4 +16,4 @@ env:
 matrix:
   fast_finish: true
 
-script: ./test/ci.sh STEP ${BUILD_STEP}
+script: ./test/ci.sh ${BUILD_STEP}

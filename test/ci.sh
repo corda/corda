@@ -54,16 +54,11 @@ has_flag() {
 
 make_target=test
 
-if [[ "${1}" == "STEP" ]]; then
-  shift 1
-  if [[ "${1}" == "PUBLISH" ]]; then
-    if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then
-      publish "macosx" "i386 x86_64"
-    elif [[ $(uname -s) == "Linux" ]]; then
-      publish "linux windows" "i386 x86_64"
-    fi
-  else
-    run make ${@}
+if [[ "${1}" == "PUBLISH" ]]; then
+  if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then
+    publish "macosx" "i386 x86_64"
+  elif [[ $(uname -s) == "Linux" ]]; then
+    publish "linux windows" "i386 x86_64"
   fi
 else
   if [[ $(uname -o) != "Cygwin" ]]; then
