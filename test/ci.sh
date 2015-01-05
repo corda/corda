@@ -6,6 +6,23 @@ root_dir=$(pwd)
 
 flags="${@}"
 
+is-mac() {
+  if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+install-deps() {
+  if is-mac; then
+    echo "------ Installing dependencies for Mac ------"
+  else
+    echo "------ Installing dependencies for Linux ------"
+    sudo apt-get update -qq
+    sudo apt-get install -y libc6-dev-i386 mingw-w64 gcc-mingw-w64-x86-64 g++-mingw-w64-i686 binutils-mingw-w64-x86-64 lib32z1-dev zlib1g-dev g++-mingw-w64-x86-64
+  fi
+}
+
 run() {
   echo '==============================================='
   if [ ! $(pwd) = ${root_dir} ]; then
@@ -52,10 +69,12 @@ has_flag() {
   return 1
 }
 
-make_target=test
+### START ###
+
+install-deps
 
 if [[ "${1}" == "PUBLISH" ]]; then
-  if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then
+  if is-mac; then
     publish "macosx" "i386 x86_64"
   elif [[ $(uname -s) == "Linux" ]]; then
     publish "linux windows" "i386 x86_64"
@@ -64,6 +83,8 @@ else
   if [[ $(uname -o) != "Cygwin" ]]; then
     run_cmake -DCMAKE_BUILD_TYPE=Debug
   fi
+
+  make_target=test
 
   run make jdk-test
   run make ${flags} ${make_target}
