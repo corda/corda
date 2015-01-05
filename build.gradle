@@ -107,12 +107,6 @@ model {
       operatingSystem SupportedOS.valueOf(platform.toUpperCase())
       architecture "${arch}"
     }
-    if(platformArch != currentPlatformArch) {
-      create(currentPlatformArch) {
-        operatingSystem SupportedOS.CURRENT
-        architecture "${currentArch}"
-      }
-    }
   }
 
   tasks {
@@ -235,7 +229,7 @@ publishing {
         artifact("${nativeBuildDir}/avian${binSuffix}") {
           name "avian"
           type publishBinSuffix
-          extension binSuffix
+          extension publishBinSuffix
         }
 
         artifact("${nativeBuildDir}/libavian.a") {
@@ -249,6 +243,9 @@ publishing {
 }
 
 artifactoryPublish {
+  onlyIf {
+    System.env.'TRAVIS_BRANCH' == "master" && !System.env.'TRAVIS_PULL_REQUEST'.toBoolean()
+  }
   dependsOn assemble
 }
 

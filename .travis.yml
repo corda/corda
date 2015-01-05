@@ -1,12 +1,19 @@
 language: cpp
+
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install -y libc6-dev-i386 mingw-w64 gcc-mingw-w64-x86-64 g++-mingw-w64-i686 binutils-mingw-w64-x86-64 lib32z1-dev zlib1g-dev g++-mingw-w64-x86-64
+
 env:
+  matrix:
+  - BUILD_STEP=""
+  - BUILD_STEP="PUBLISH"
   global:
   - TERM=dumb
-  - secure: Pe7OLUvdk3DeTAShyaYsdAXBcnjdNOrtfTPt1mCP5+JKBUw3z0n7BpTgATVRBmkn866pDqxL0N3+jBgjKUpEpqOj23bTB2AeDdIzlYkFGvTd3GQQV1lMFn16I9LOgWJhkfICTJ1rIYiNf8xSkJoeKGB7eGUM0KGsTvelFfsaGVc=
-  # BINTRAY_USER
-  - secure: CauPpj2QrbgEaePEPQx+FDeZqc46HmWXHfdAyn+DA9g6np3RMyc+N/ESrJ9efc4E772rnxory2QRyyNffzi29ceNTpIzsIRDuk5WvvC+zePEsQm8kX1afsDK5g16QEvJN24jGSW9ci9uxuknqjeKVOukcFQdxssIyDe11tYWJeI=
-  # BINTRAY_API_KEY
-  - secure: Gao6KTkCbqrdCDI2hQswh1v+SpHBeF4hR1WXmCe9gjmPyJb731K2eWigQOrhPOw7Ns3nubo1FwCb5YevYmwPMLryh0f4sKJyqLL1MLbffNl5GttNF2oO3p73cJpgBfHdzabAMwAYGYbneqUZ0Qn4K8RkzXUaoBDv465KmZhqbA0=
-script: "./test/ci.sh"
-after_success:
-- "./gradlew artifactoryPublish"
+  - secure: rh1utD4shKmYtokItuRYEF9WsfTnvZO5XqnTU4DHTS7quHHgLihtOO2/3+B+2W2hEd5Obr2or8zx+zmzWcNUyLokZ0j/FRLWSScNkLzTtm12pupLrncY+/g1NIdfbhn+OLRIzBz6zB6m6a2qWFEJ+bScUNGD/7wZVtzkujqlDEE=
+  - secure: j9DOzZMCYk/BzhKK9u4XMKpCzyGOsvP2cLTp6cXE7/tkWDAPVv6BFmeqNbiLTEqk0aGX+HYbY/2YVtpRZmDzfeWtnBFF5mL1Y1tgzx1Kf155C+P6rZgt5PiQTUdXlp2umuRifY1BbXAPc3DZ2UOPUjWKnLHVbZLQRgO1zimmMx8=
+
+matrix:
+  fast_finish: true
+
+script: ./test/ci.sh ${BUILD_STEP}
