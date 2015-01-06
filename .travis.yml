@@ -16,5 +16,8 @@ env:
 
 matrix:
   fast_finish: true
+  exclude:
+    - os: osx
+      env: BUILD_STEP=""
 
 script: ./test/ci.sh ${BUILD_STEP}
