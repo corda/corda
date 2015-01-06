@@ -1,8 +1,9 @@
 language: cpp
+cache: apt
 
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -y libc6-dev-i386 mingw-w64 gcc-mingw-w64-x86-64 g++-mingw-w64-i686 binutils-mingw-w64-x86-64 lib32z1-dev zlib1g-dev g++-mingw-w64-x86-64
+os:
+  - linux
+  - osx
 
 env:
   matrix:
@@ -15,5 +16,8 @@ env:
 
 matrix:
   fast_finish: true
+  exclude:
+    - os: osx
+      env: BUILD_STEP=""
 
 script: ./test/ci.sh ${BUILD_STEP}
