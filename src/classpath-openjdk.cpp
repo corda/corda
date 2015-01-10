@@ -1576,6 +1576,10 @@ int64_t JNICALL
 
 ZipFile::Entry* find(ZipFile* file, const char* path, unsigned pathLength)
 {
+  if (pathLength > 0 && path[0] == '/') {
+    ++path;
+    --pathLength;
+  }
   unsigned i = hash(path) & (file->indexSize - 1);
   for (ZipFile::Entry* e = file->index[i]; e; e = e->next) {
     const uint8_t* p = e->start;
@@ -1601,13 +1605,17 @@ int64_t JNICALL
     memcpy(RUNTIME_ARRAY_BODY(p), path->body().begin(), path->length());
     RUNTIME_ARRAY_BODY(p)[path->length()] = 0;
     replace('\\', '/', RUNTIME_ARRAY_BODY(p));
-    if (addSlash) {
+
+    ZipFile::Entry *e = find(file, RUNTIME_ARRAY_BODY(p), path->length());
+
+    if (e == 0 and addSlash and RUNTIME_ARRAY_BODY(p)[path->length()] != '/') {
       RUNTIME_ARRAY_BODY(p)[path->length()] = '/';
       RUNTIME_ARRAY_BODY(p)[path->length() + 1] = 0;
+
+      e = find(file, RUNTIME_ARRAY_BODY(p), path->length());
     }
 
-    return reinterpret_cast<int64_t>(
-        find(file, RUNTIME_ARRAY_BODY(p), path->length()));
+    return reinterpret_cast<int64_t>(e);
   } else {
     int64_t entry
         = cast<GcLong>(t,
