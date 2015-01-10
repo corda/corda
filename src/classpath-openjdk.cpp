@@ -1792,9 +1792,9 @@ void JNICALL freeZipFileEntry(Thread* t, GcMethod* method, uintptr_t* arguments)
         0,
         file->file,
         entry->entry);
-  }
 
-  t->m->heap->free(entry, sizeof(ZipFile::Entry));
+    t->m->heap->free(entry, sizeof(ZipFile::Entry));
+  }
 }
 
 int64_t JNICALL
