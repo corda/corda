@@ -244,7 +244,9 @@ publishing {
 
 artifactoryPublish {
   onlyIf {
-    System.env.'TRAVIS_BRANCH' == "master" && !System.env.'TRAVIS_PULL_REQUEST'.toBoolean()
+    // TRAVIS_BRANCH reports master if it is a master build or a PR going to master
+    // TRAVIS_PULL_REQUEST reports false if not a pull request and the PR number if it is
+    System.env.'TRAVIS_BRANCH' == "master" && System.env.'TRAVIS_PULL_REQUEST' == "false"
   }
   dependsOn assemble
 }
