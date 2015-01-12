@@ -611,10 +611,10 @@ void intercept(Thread* t,
   if (m) {
     PROTECT(t, m);
 
-    m->flags() |= ACC_NATIVE;
-
     if (updateRuntimeData) {
       GcMethod* clone = methodClone(t, m);
+
+      m->flags() |= ACC_NATIVE;
 
       // make clone private to prevent vtable updates at compilation
       // time.  Otherwise, our interception might be bypassed by calls
@@ -628,6 +628,8 @@ void intercept(Thread* t,
       GcMethodRuntimeData* runtimeData = getMethodRuntimeData(t, m);
 
       runtimeData->setNative(t, native->as<GcNative>(t));
+    } else {
+      m->flags() |= ACC_NATIVE;
     }
   } else {
     // If we can't find the method, just ignore it, since ProGuard may
