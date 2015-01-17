@@ -1,8 +1,27 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-set -e
+set -eo pipefail
 
 root_dir=$(pwd)
+
+flags="${@}"
+
+is-mac() {
+  if [[ $(uname -s) == "Darwin" || ${TRAVIS_OS_NAME} == "osx" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+install-deps() {
+  if is-mac; then
+    echo "------ Installing dependencies for Mac ------"
+  else
+    echo "------ Installing dependencies for Linux ------"
+    sudo apt-get update -qq
+    sudo apt-get install -y libc6-dev-i386 mingw-w64 gcc-mingw-w64-x86-64 g++-mingw-w64-i686 binutils-mingw-w64-x86-64 lib32z1-dev zlib1g-dev g++-mingw-w64-x86-64
+  fi
+}
 
 run() {
   echo '==============================================='
@@ -23,10 +42,24 @@ run_cmake() {
   cd ..
 }
 
-flags="${@}"
+publish() {
+  local platforms="${1}"
+  local arches="${2}"
+
+  local platform
+  for platform in ${platforms}; do
+    local arch
+    for arch in ${arches}; do
+      echo "------ Publishing ${platform}-${arch} ------"
+      ./gradlew artifactoryPublish -Pplatform=${platform} -Parch=${arch}
+    done
+  done
+}
 
 has_flag() {
-  local arg=$1
+  local arg=${1}
+
+  local f
   for f in ${flags}; do
     local key=$(echo $f | awk -F '=' '{print $1}')
     if [ ${key} = ${arg} ]; then
@@ -36,21 +69,35 @@ has_flag() {
   return 1
 }
 
-make_target=test
+### START ###
 
-test `uname -o` = "Cygwin" || run_cmake -DCMAKE_BUILD_TYPE=Debug
+install-deps
 
-run make jdk-test
-run make ${flags} ${make_target}
-run make ${flags} mode=debug ${make_target}
-run make ${flags} process=interpret ${make_target}
+if [[ "${1}" == "PUBLISH" ]]; then
+  if is-mac; then
+    publish "macosx" "i386 x86_64"
+  elif [[ $(uname -s) == "Linux" ]]; then
+    publish "linux windows" "i386 x86_64"
+  fi
+else
+  if [[ $(uname -o) != "Cygwin" ]]; then
+    run_cmake -DCMAKE_BUILD_TYPE=Debug
+  fi
 
-(has_flag openjdk-src || ! has_flag openjdk) && \
-  run make ${flags} mode=debug bootimage=true ${make_target} && \
-  run make ${flags} bootimage=true ${make_target}
+  make_target=test
 
-(! has_flag openjdk && ! has_flag android) && \
-  run make ${flags} openjdk=$JAVA_HOME ${make_target}
+  run make jdk-test
+  run make ${flags} ${make_target}
+  run make ${flags} mode=debug ${make_target}
+  run make ${flags} process=interpret ${make_target}
 
-run make ${flags} tails=true continuations=true heapdump=true ${make_target}
-run make ${flags} codegen-targets=all
+  (has_flag openjdk-src || ! has_flag openjdk) && \
+    run make ${flags} mode=debug bootimage=true ${make_target} && \
+    run make ${flags} bootimage=true ${make_target}
+
+  (! has_flag openjdk && ! has_flag android) && \
+    run make ${flags} openjdk=$JAVA_HOME ${make_target}
+
+  run make ${flags} tails=true continuations=true heapdump=true ${make_target}
+  run make ${flags} codegen-targets=all
+fi

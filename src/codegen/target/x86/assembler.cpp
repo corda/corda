@@ -183,37 +183,37 @@ class MyArchitecture : public Architecture {
     return &myRegisterFile;
   }
 
-  virtual int scratch()
+  virtual Register scratch()
   {
     return rax;
   }
 
-  virtual int stack()
+  virtual Register stack()
   {
     return rsp;
   }
 
-  virtual int thread()
+  virtual Register thread()
   {
     return rbx;
   }
 
-  virtual int returnLow()
+  virtual Register returnLow()
   {
     return rax;
   }
 
-  virtual int returnHigh()
+  virtual Register returnHigh()
   {
-    return (TargetBytesPerWord == 4 ? rdx : lir::NoRegister);
+    return (TargetBytesPerWord == 4 ? rdx : NoRegister);
   }
 
-  virtual int virtualCallTarget()
+  virtual Register virtualCallTarget()
   {
     return rax;
   }
 
-  virtual int virtualCallIndex()
+  virtual Register virtualCallIndex()
   {
     return rdx;
   }
@@ -233,14 +233,14 @@ class MyArchitecture : public Architecture {
     return 0x7FFFFFFF;
   }
 
-  virtual bool reserved(int register_)
+  virtual bool reserved(Register register_)
   {
-    switch (register_) {
-    case rbp:
+    switch (register_.index()) {
+    case rbp.index():
       return UseFramePointer;
 
-    case rsp:
-    case rbx:
+    case rsp.index():
+    case rbx.index():
       return true;
 
     default:
@@ -289,7 +289,7 @@ class MyArchitecture : public Architecture {
       return 0;
   }
 
-  virtual int argumentRegister(unsigned index)
+  virtual Register argumentRegister(unsigned index)
   {
     assertT(&c, TargetBytesPerWord == 8);
     switch (index) {
@@ -501,8 +501,8 @@ class MyArchitecture : public Architecture {
                     OperandMask& aMask,
                     bool* thunk)
   {
-    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::MemoryOperand)
-                     | (1 << lir::ConstantOperand);
+    aMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::MemoryMask
+                     | lir::Operand::ConstantMask;
     *thunk = false;
   }
 
@@ -512,22 +512,20 @@ class MyArchitecture : public Architecture {
                           unsigned bSize,
                           bool* thunk)
   {
-    aMask.registerMask = GeneralRegisterMask
-                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+    aMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
 
     *thunk = false;
 
     switch (op) {
     case lir::Negate:
-      aMask.typeMask = (1 << lir::RegisterOperand);
-      aMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
-                           | (static_cast<uint64_t>(1) << rax);
+      aMask.typeMask = lir::Operand::RegisterPairMask;
+      aMask.setLowHighRegisterMasks(rax, rdx);
       break;
 
     case lir::Absolute:
       if (aSize <= TargetBytesPerWord) {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = (static_cast<uint64_t>(1) << rax);
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(rax, 0);
       } else {
         *thunk = true;
       }
@@ -535,9 +533,8 @@ class MyArchitecture : public Architecture {
 
     case lir::FloatAbsolute:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                             | FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       } else {
         *thunk = true;
       }
@@ -546,8 +543,8 @@ class MyArchitecture : public Architecture {
     case lir::FloatNegate:
       // floatNegateRR does not support doubles
       if (useSSE(&c) and aSize == 4 and bSize == 4) {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, 0);
       } else {
         *thunk = true;
       }
@@ -555,10 +552,9 @@ class MyArchitecture : public Architecture {
 
     case lir::FloatSquareRoot:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                             | FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       } else {
         *thunk = true;
       }
@@ -566,10 +562,9 @@ class MyArchitecture : public Architecture {
 
     case lir::Float2Float:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                             | FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       } else {
         *thunk = true;
       }
@@ -581,10 +576,9 @@ class MyArchitecture : public Architecture {
       // thunks or produce inline machine code which handles edge
       // cases properly.
       if (false and useSSE(&c) and bSize <= TargetBytesPerWord) {
-        aMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                             | FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       } else {
         *thunk = true;
       }
@@ -592,11 +586,9 @@ class MyArchitecture : public Architecture {
 
     case lir::Int2Float:
       if (useSSE(&c) and aSize <= TargetBytesPerWord) {
-        aMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        aMask.registerMask
-            = GeneralRegisterMask
-              | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+        aMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
       } else {
         *thunk = true;
       }
@@ -604,21 +596,20 @@ class MyArchitecture : public Architecture {
 
     case lir::Move:
       aMask.typeMask = ~0;
-      aMask.registerMask = ~static_cast<uint64_t>(0);
+      aMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          aMask.typeMask = (1 << lir::RegisterOperand)
-                           | (1 << lir::MemoryOperand);
-          const uint32_t mask = GeneralRegisterMask
-                                & ~((1 << rax) | (1 << rdx));
-          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+          aMask.typeMask = lir::Operand::RegisterPairMask
+                           | lir::Operand::MemoryMask;
+          const RegisterMask mask = GeneralRegisterMask
+                                .excluding(rax).excluding(rdx);
+          aMask.setLowHighRegisterMasks(mask, mask);
         } else if (aSize == 1 or bSize == 1) {
-          aMask.typeMask = (1 << lir::RegisterOperand)
-                           | (1 << lir::MemoryOperand);
-          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
-                                | (1 << rbx);
-          aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+          aMask.typeMask = lir::Operand::RegisterPairMask
+                           | lir::Operand::MemoryMask;
+          const RegisterMask mask = rax | rcx | rdx | rbx;
+          aMask.setLowHighRegisterMasks(mask, mask);
         }
       }
       break;
@@ -635,68 +626,62 @@ class MyArchitecture : public Architecture {
                                OperandMask& bMask)
   {
     bMask.typeMask = ~0;
-    bMask.registerMask = GeneralRegisterMask
-                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+    bMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
 
     switch (op) {
     case lir::Absolute:
-      bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = (static_cast<uint64_t>(1) << rax);
+      bMask.typeMask = lir::Operand::RegisterPairMask;
+      bMask.setLowHighRegisterMasks(rax, 0);
       break;
 
     case lir::FloatAbsolute:
-      bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = aMask.registerMask;
+      bMask.typeMask = lir::Operand::RegisterPairMask;
+      bMask.lowRegisterMask = aMask.lowRegisterMask;
+      bMask.highRegisterMask = aMask.highRegisterMask;
       break;
 
     case lir::Negate:
-      bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = aMask.registerMask;
+      bMask.typeMask = lir::Operand::RegisterPairMask;
+      bMask.lowRegisterMask = aMask.lowRegisterMask;
+      bMask.highRegisterMask = aMask.highRegisterMask;
       break;
 
     case lir::FloatNegate:
     case lir::FloatSquareRoot:
     case lir::Float2Float:
     case lir::Int2Float:
-      bMask.typeMask = (1 << lir::RegisterOperand);
-      bMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                           | FloatRegisterMask;
+      bMask.typeMask = lir::Operand::RegisterPairMask;
+      bMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       break;
 
     case lir::Float2Int:
-      bMask.typeMask = (1 << lir::RegisterOperand);
+      bMask.typeMask = lir::Operand::RegisterPairMask;
       break;
 
     case lir::Move:
       if (aMask.typeMask
-          & ((1 << lir::MemoryOperand) | 1 << lir::AddressOperand)) {
-        bMask.typeMask = (1 << lir::RegisterOperand);
-        bMask.registerMask = GeneralRegisterMask
-                             | (static_cast<uint64_t>(GeneralRegisterMask)
-                                << 32) | FloatRegisterMask;
-      } else if (aMask.typeMask & (1 << lir::RegisterOperand)) {
-        bMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        if (aMask.registerMask & FloatRegisterMask) {
-          bMask.registerMask = FloatRegisterMask;
+          & (lir::Operand::MemoryMask | lir::Operand::AddressMask)) {
+        bMask.typeMask = lir::Operand::RegisterPairMask;
+        bMask.setLowHighRegisterMasks(GeneralRegisterMask | FloatRegisterMask, GeneralRegisterMask);
+      } else if (aMask.typeMask & lir::Operand::RegisterPairMask) {
+        bMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        if (aMask.lowRegisterMask & FloatRegisterMask) {
+          bMask.setLowHighRegisterMasks(FloatRegisterMask, 0);
         } else {
-          bMask.registerMask
-              = GeneralRegisterMask
-                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          bMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
         }
       } else {
-        bMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
+        bMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
       }
 
       if (TargetBytesPerWord == 4) {
         if (aSize == 4 and bSize == 8) {
-          bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32))
-                               | (static_cast<uint64_t>(1) << rax);
+          bMask.setLowHighRegisterMasks(rax, rdx);
         } else if (aSize == 1 or bSize == 1) {
-          const uint32_t mask = (1 << rax) | (1 << rcx) | (1 << rdx)
-                                | (1 << rbx);
-          bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+          const RegisterMask mask = rax | rcx | rdx | rbx;
+          bMask.setLowHighRegisterMasks(mask, mask);
         }
       }
       break;
@@ -712,46 +697,38 @@ class MyArchitecture : public Architecture {
                         const OperandMask& dstMask)
   {
     srcMask.typeMask = ~0;
-    srcMask.registerMask = ~static_cast<uint64_t>(0);
+    srcMask.setLowHighRegisterMasks(AnyRegisterMask, AnyRegisterMask);
 
     tmpMask.typeMask = 0;
-    tmpMask.registerMask = 0;
+    tmpMask.setLowHighRegisterMasks(0, 0);
 
-    if (dstMask.typeMask & (1 << lir::MemoryOperand)) {
+    if (dstMask.typeMask & lir::Operand::MemoryMask) {
       // can't move directly from memory to memory
-      srcMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::ConstantOperand);
-      tmpMask.typeMask = 1 << lir::RegisterOperand;
-      tmpMask.registerMask
-          = GeneralRegisterMask
-            | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
-    } else if (dstMask.typeMask & (1 << lir::RegisterOperand)) {
+      srcMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::ConstantMask;
+      tmpMask.typeMask = lir::Operand::RegisterPairMask;
+      tmpMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
+    } else if (dstMask.typeMask & lir::Operand::RegisterPairMask) {
       if (size > TargetBytesPerWord) {
         // can't move directly from FPR to GPR or vice-versa for
         // values larger than the GPR size
-        if (dstMask.registerMask & FloatRegisterMask) {
-          srcMask.registerMask
-              = FloatRegisterMask
-                | (static_cast<uint64_t>(FloatRegisterMask) << 32);
-          tmpMask.typeMask = 1 << lir::MemoryOperand;
-        } else if (dstMask.registerMask & GeneralRegisterMask) {
-          srcMask.registerMask
-              = GeneralRegisterMask
-                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
-          tmpMask.typeMask = 1 << lir::MemoryOperand;
+        if (dstMask.lowRegisterMask & FloatRegisterMask) {
+          srcMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
+          tmpMask.typeMask = lir::Operand::MemoryMask;
+        } else if (dstMask.lowRegisterMask & GeneralRegisterMask) {
+          srcMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
+          tmpMask.typeMask = lir::Operand::MemoryMask;
         }
       }
-      if (dstMask.registerMask & FloatRegisterMask) {
+      if (dstMask.lowRegisterMask & FloatRegisterMask) {
         // can't move directly from constant to FPR
-        srcMask.typeMask &= ~(1 << lir::ConstantOperand);
+        srcMask.typeMask &= ~lir::Operand::ConstantMask;
         if (size > TargetBytesPerWord) {
-          tmpMask.typeMask = 1 << lir::MemoryOperand;
+          tmpMask.typeMask = lir::Operand::MemoryMask;
         } else {
-          tmpMask.typeMask = (1 << lir::RegisterOperand)
-                             | (1 << lir::MemoryOperand);
-          tmpMask.registerMask
-              = GeneralRegisterMask
-                | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+          tmpMask.typeMask = lir::Operand::RegisterPairMask
+                             | lir::Operand::MemoryMask;
+          tmpMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
         }
       }
     }
@@ -765,13 +742,11 @@ class MyArchitecture : public Architecture {
                           unsigned,
                           bool* thunk)
   {
-    aMask.typeMask = (1 << lir::RegisterOperand) | (1 << lir::ConstantOperand);
-    aMask.registerMask = GeneralRegisterMask
-                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+    aMask.typeMask = lir::Operand::RegisterPairMask | lir::Operand::ConstantMask;
+    aMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
 
-    bMask.typeMask = (1 << lir::RegisterOperand);
-    bMask.registerMask = GeneralRegisterMask
-                         | (static_cast<uint64_t>(GeneralRegisterMask) << 32);
+    bMask.typeMask = lir::Operand::RegisterPairMask;
+    bMask.setLowHighRegisterMasks(GeneralRegisterMask, GeneralRegisterMask);
 
     *thunk = false;
 
@@ -781,14 +756,12 @@ class MyArchitecture : public Architecture {
     case lir::FloatMultiply:
     case lir::FloatDivide:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand)
-                         | (1 << lir::MemoryOperand);
-        bMask.typeMask = (1 << lir::RegisterOperand);
+        aMask.typeMask = lir::Operand::RegisterPairMask
+                         | lir::Operand::MemoryMask;
+        bMask.typeMask = lir::Operand::RegisterPairMask;
 
-        const uint64_t mask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                              | FloatRegisterMask;
-        aMask.registerMask = mask;
-        bMask.registerMask = mask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
+        bMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
       } else {
         *thunk = true;
       }
@@ -800,12 +773,12 @@ class MyArchitecture : public Architecture {
 
     case lir::Multiply:
       if (TargetBytesPerWord == 4 and aSize == 8) {
-        const uint32_t mask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
-        bMask.registerMask = (static_cast<uint64_t>(1) << (rdx + 32)) | mask;
+        const RegisterMask mask = GeneralRegisterMask .excluding(rax).excluding(rdx);
+        aMask.setLowHighRegisterMasks(mask, mask);
+        bMask.setLowHighRegisterMasks(mask, rdx);
       } else {
-        aMask.registerMask = GeneralRegisterMask;
-        bMask.registerMask = GeneralRegisterMask;
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask, 0);
+        bMask.setLowHighRegisterMasks(GeneralRegisterMask, 0);
       }
       break;
 
@@ -813,9 +786,9 @@ class MyArchitecture : public Architecture {
       if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;
       } else {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        bMask.registerMask = 1 << rax;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask .excluding(rax).excluding(rdx), 0);
+        bMask.setLowHighRegisterMasks(rax, 0);
       }
       break;
 
@@ -823,9 +796,9 @@ class MyArchitecture : public Architecture {
       if (TargetBytesPerWord == 4 and aSize == 8) {
         *thunk = true;
       } else {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = GeneralRegisterMask & ~((1 << rax) | (1 << rdx));
-        bMask.registerMask = 1 << rax;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(GeneralRegisterMask .excluding(rax).excluding(rdx), 0);
+        bMask.setLowHighRegisterMasks(rax, 0);
       }
       break;
 
@@ -833,14 +806,13 @@ class MyArchitecture : public Architecture {
     case lir::ShiftRight:
     case lir::UnsignedShiftRight: {
       if (TargetBytesPerWord == 4 and bSize == 8) {
-        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
-        aMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
-        bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        const RegisterMask mask = GeneralRegisterMask.excluding(rcx);
+        aMask.setLowHighRegisterMasks(mask, mask);
+        bMask.setLowHighRegisterMasks(mask, mask);
       } else {
-        aMask.registerMask = (static_cast<uint64_t>(GeneralRegisterMask) << 32)
-                             | (static_cast<uint64_t>(1) << rcx);
-        const uint32_t mask = GeneralRegisterMask & ~(1 << rcx);
-        bMask.registerMask = (static_cast<uint64_t>(mask) << 32) | mask;
+        aMask.setLowHighRegisterMasks(rcx, GeneralRegisterMask);
+        const RegisterMask mask = GeneralRegisterMask.excluding(rcx);
+        bMask.setLowHighRegisterMasks(mask, mask);
       }
     } break;
 
@@ -855,11 +827,11 @@ class MyArchitecture : public Architecture {
     case lir::JumpIfFloatLessOrEqualOrUnordered:
     case lir::JumpIfFloatGreaterOrEqualOrUnordered:
       if (useSSE(&c)) {
-        aMask.typeMask = (1 << lir::RegisterOperand);
-        aMask.registerMask = (static_cast<uint64_t>(FloatRegisterMask) << 32)
-                             | FloatRegisterMask;
+        aMask.typeMask = lir::Operand::RegisterPairMask;
+        aMask.setLowHighRegisterMasks(FloatRegisterMask, FloatRegisterMask);
         bMask.typeMask = aMask.typeMask;
-        bMask.registerMask = aMask.registerMask;
+        bMask.lowRegisterMask = aMask.lowRegisterMask;
+        bMask.highRegisterMask = aMask.highRegisterMask;
       } else {
         *thunk = true;
       }
@@ -879,11 +851,12 @@ class MyArchitecture : public Architecture {
                                OperandMask& cMask)
   {
     if (isBranch(op)) {
-      cMask.typeMask = (1 << lir::ConstantOperand);
-      cMask.registerMask = 0;
+      cMask.typeMask = lir::Operand::ConstantMask;
+      cMask.setLowHighRegisterMasks(0, 0);
     } else {
-      cMask.typeMask = (1 << lir::RegisterOperand);
-      cMask.registerMask = bMask.registerMask;
+      cMask.typeMask = lir::Operand::RegisterPairMask;
+      cMask.lowRegisterMask = bMask.lowRegisterMask;
+      cMask.highRegisterMask = bMask.highRegisterMask;
     }
   }
 
@@ -927,7 +900,7 @@ class MyAssembler : public Assembler {
   virtual void checkStackOverflow(uintptr_t handler,
                                   unsigned stackLimitOffsetFromThread)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackLimit(rbx, stackLimitOffsetFromThread);
     lir::Constant handlerConstant(resolvedPromise(&c, handler));
     branchRM(&c,
@@ -940,11 +913,11 @@ class MyAssembler : public Assembler {
 
   virtual void saveFrame(unsigned stackOffset, unsigned)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackDst(rbx, stackOffset);
     apply(lir::Move,
-          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-          OperandInfo(TargetBytesPerWord, lir::MemoryOperand, &stackDst));
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::Memory, &stackDst));
   }
 
   virtual void pushFrame(unsigned argumentCount, ...)
@@ -952,7 +925,7 @@ class MyAssembler : public Assembler {
     // TODO: Argument should be replaced by OperandInfo...
     struct Argument {
       unsigned size;
-      lir::OperandType type;
+      lir::Operand::Type type;
       lir::Operand* operand;
     };
     RUNTIME_ARRAY(Argument, arguments, argumentCount);
@@ -962,7 +935,7 @@ class MyAssembler : public Assembler {
     for (unsigned i = 0; i < argumentCount; ++i) {
       RUNTIME_ARRAY_BODY(arguments)[i].size = va_arg(a, unsigned);
       RUNTIME_ARRAY_BODY(arguments)[i].type
-          = static_cast<lir::OperandType>(va_arg(a, int));
+          = static_cast<lir::Operand::Type>(va_arg(a, int));
       RUNTIME_ARRAY_BODY(arguments)[i].operand = va_arg(a, lir::Operand*);
       footprint += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
                                  TargetBytesPerWord);
@@ -974,14 +947,14 @@ class MyAssembler : public Assembler {
     unsigned offset = 0;
     for (unsigned i = 0; i < argumentCount; ++i) {
       if (i < arch_->argumentRegisterCount()) {
-        lir::Register dst(arch_->argumentRegister(i));
+        lir::RegisterPair dst(arch_->argumentRegister(i));
         apply(lir::Move,
               OperandInfo(RUNTIME_ARRAY_BODY(arguments)[i].size,
                           RUNTIME_ARRAY_BODY(arguments)[i].type,
                           RUNTIME_ARRAY_BODY(arguments)[i].operand),
               OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
                               TargetBytesPerWord),
-                          lir::RegisterOperand,
+                          lir::Operand::Type::RegisterPair,
                           &dst));
       } else {
         lir::Memory dst(rsp, offset * TargetBytesPerWord);
@@ -991,7 +964,7 @@ class MyAssembler : public Assembler {
                           RUNTIME_ARRAY_BODY(arguments)[i].operand),
               OperandInfo(pad(RUNTIME_ARRAY_BODY(arguments)[i].size,
                               TargetBytesPerWord),
-                          lir::MemoryOperand,
+                          lir::Operand::Type::Memory,
                           &dst));
         offset += ceilingDivide(RUNTIME_ARRAY_BODY(arguments)[i].size,
                                 TargetBytesPerWord);
@@ -1001,67 +974,67 @@ class MyAssembler : public Assembler {
 
   virtual void allocateFrame(unsigned footprint)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
 
     if (UseFramePointer) {
-      lir::Register base(rbp);
+      lir::RegisterPair base(rbp);
       pushR(&c, TargetBytesPerWord, &base);
 
       apply(lir::Move,
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base));
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &base));
     }
 
     lir::Constant footprintConstant(
         resolvedPromise(&c, footprint * TargetBytesPerWord));
     apply(lir::Subtract,
           OperandInfo(
-              TargetBytesPerWord, lir::ConstantOperand, &footprintConstant),
-          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+              TargetBytesPerWord, lir::Operand::Type::Constant, &footprintConstant),
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack));
   }
 
   virtual void adjustFrame(unsigned difference)
   {
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Constant differenceConstant(
         resolvedPromise(&c, difference * TargetBytesPerWord));
     apply(lir::Subtract,
           OperandInfo(
-              TargetBytesPerWord, lir::ConstantOperand, &differenceConstant),
-          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-          OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+              TargetBytesPerWord, lir::Operand::Type::Constant, &differenceConstant),
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
+          OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack));
   }
 
   virtual void popFrame(unsigned frameFootprint)
   {
     if (UseFramePointer) {
-      lir::Register base(rbp);
-      lir::Register stack(rsp);
+      lir::RegisterPair base(rbp);
+      lir::RegisterPair stack(rsp);
       apply(lir::Move,
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &base),
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &base),
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack));
 
       popR(&c, TargetBytesPerWord, &base);
     } else {
-      lir::Register stack(rsp);
+      lir::RegisterPair stack(rsp);
       lir::Constant footprint(
           resolvedPromise(&c, frameFootprint * TargetBytesPerWord));
       apply(lir::Add,
-            OperandInfo(TargetBytesPerWord, lir::ConstantOperand, &footprint),
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack),
-            OperandInfo(TargetBytesPerWord, lir::RegisterOperand, &stack));
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::Constant, &footprint),
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack),
+            OperandInfo(TargetBytesPerWord, lir::Operand::Type::RegisterPair, &stack));
     }
   }
 
   virtual void popFrameForTailCall(unsigned frameFootprint,
                                    int offset,
-                                   int returnAddressSurrogate,
-                                   int framePointerSurrogate)
+                                   Register returnAddressSurrogate,
+                                   Register framePointerSurrogate)
   {
     if (TailCalls) {
       if (offset) {
-        lir::Register tmp(c.client->acquireTemporary());
+        lir::RegisterPair tmp(c.client->acquireTemporary());
 
         unsigned baseSize = UseFramePointer ? 1 : 0;
 
@@ -1085,28 +1058,28 @@ class MyAssembler : public Assembler {
 
         if (UseFramePointer) {
           lir::Memory baseSrc(rsp, frameFootprint * TargetBytesPerWord);
-          lir::Register base(rbp);
+          lir::RegisterPair base(rbp);
           moveMR(&c, TargetBytesPerWord, &baseSrc, TargetBytesPerWord, &base);
         }
 
-        lir::Register stack(rsp);
+        lir::RegisterPair stack(rsp);
         lir::Constant footprint(resolvedPromise(
             &c, (frameFootprint - offset + baseSize) * TargetBytesPerWord));
 
         addCR(&c, TargetBytesPerWord, &footprint, TargetBytesPerWord, &stack);
 
-        if (returnAddressSurrogate != lir::NoRegister) {
+        if (returnAddressSurrogate != NoRegister) {
           assertT(&c, offset > 0);
 
-          lir::Register ras(returnAddressSurrogate);
+          lir::RegisterPair ras(returnAddressSurrogate);
           lir::Memory dst(rsp, offset * TargetBytesPerWord);
           moveRM(&c, TargetBytesPerWord, &ras, TargetBytesPerWord, &dst);
         }
 
-        if (framePointerSurrogate != lir::NoRegister) {
+        if (framePointerSurrogate != NoRegister) {
           assertT(&c, offset > 0);
 
-          lir::Register fps(framePointerSurrogate);
+          lir::RegisterPair fps(framePointerSurrogate);
           lir::Memory dst(rsp, (offset - 1) * TargetBytesPerWord);
           moveRM(&c, TargetBytesPerWord, &fps, TargetBytesPerWord, &dst);
         }
@@ -1127,10 +1100,10 @@ class MyAssembler : public Assembler {
     assertT(&c, (argumentFootprint % StackAlignmentInWords) == 0);
 
     if (TailCalls and argumentFootprint > StackAlignmentInWords) {
-      lir::Register returnAddress(rcx);
+      lir::RegisterPair returnAddress(rcx);
       popR(&c, TargetBytesPerWord, &returnAddress);
 
-      lir::Register stack(rsp);
+      lir::RegisterPair stack(rsp);
       lir::Constant adjustment(resolvedPromise(
           &c,
           (argumentFootprint - StackAlignmentInWords) * TargetBytesPerWord));
@@ -1147,10 +1120,10 @@ class MyAssembler : public Assembler {
   {
     popFrame(frameFootprint);
 
-    lir::Register returnAddress(rcx);
+    lir::RegisterPair returnAddress(rcx);
     popR(&c, TargetBytesPerWord, &returnAddress);
 
-    lir::Register stack(rsp);
+    lir::RegisterPair stack(rsp);
     lir::Memory stackSrc(rbx, stackOffsetFromThread);
     moveMR(&c, TargetBytesPerWord, &stackSrc, TargetBytesPerWord, &stack);
 
@@ -1182,7 +1155,7 @@ class MyAssembler : public Assembler {
     if (isBranch(op)) {
       assertT(&this->c, a.size == b.size);
       assertT(&this->c, c.size == TargetBytesPerWord);
-      assertT(&this->c, c.type == lir::ConstantOperand);
+      assertT(&this->c, c.type == lir::Operand::Type::Constant);
 
       arch_->c.branchOperations[branchIndex(&(arch_->c), a.type, b.type)](
           &this->c, op, a.size, a.operand, b.operand, c.operand);

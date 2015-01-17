@@ -118,6 +118,7 @@ class PlatformInfo {
     x86 = AVIAN_ARCH_X86,
     x86_64 = AVIAN_ARCH_X86_64,
     Arm = AVIAN_ARCH_ARM,
+    Arm64 = AVIAN_ARCH_ARM64,
     UnknownArch = AVIAN_ARCH_UNKNOWN
   };
 

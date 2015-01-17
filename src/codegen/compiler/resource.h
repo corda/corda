@@ -48,7 +48,7 @@ class RegisterResource : public Resource {
 
   virtual unsigned toString(Context* c, char* buffer, unsigned bufferSize);
 
-  virtual unsigned index(Context*);
+  virtual Register index(Context*);
 
   void increment(Context*);
 

@@ -27,7 +27,7 @@ namespace arm {
 
 const bool DebugPool = false;
 
-const int32_t PoolOffsetMask = 0xFFF;
+const int32_t PoolOffsetMask = vm::TargetBytesPerWord == 8 ? 0x1FFFFF : 0xFFF;
 
 class Task {
  public:

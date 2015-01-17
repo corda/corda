@@ -32,42 +32,42 @@ void maybeRex(Context* c,
               int base,
               bool always);
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Register* b);
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b);
 
-void alwaysRex(Context* c, unsigned size, lir::Register* a, lir::Register* b);
+void alwaysRex(Context* c, unsigned size, lir::RegisterPair* a, lir::RegisterPair* b);
 
-void maybeRex(Context* c, unsigned size, lir::Register* a);
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a);
 
-void maybeRex(Context* c, unsigned size, lir::Register* a, lir::Memory* b);
+void maybeRex(Context* c, unsigned size, lir::RegisterPair* a, lir::Memory* b);
 
 void maybeRex(Context* c, unsigned size, lir::Memory* a);
 
-inline int regCode(int a)
+inline int regCode(Register a)
 {
-  return a & 7;
+  return a.index() & 7;
 }
 
-inline int regCode(lir::Register* a)
+inline int regCode(lir::RegisterPair* a)
 {
   return regCode(a->low);
 }
 
-inline bool isFloatReg(lir::Register* a)
+inline bool isFloatReg(lir::RegisterPair* a)
 {
   return a->low >= xmm0;
 }
 
-void modrm(Context* c, uint8_t mod, int a, int b);
+void modrm(Context* c, uint8_t mod, Register a, Register b);
 
-void modrm(Context* c, uint8_t mod, lir::Register* a, lir::Register* b);
+void modrm(Context* c, uint8_t mod, lir::RegisterPair* a, lir::RegisterPair* b);
 
-void sib(Context* c, unsigned scale, int index, int base);
+void sib(Context* c, unsigned scale, Register index, Register base);
 
-void modrmSib(Context* c, int width, int a, int scale, int index, int base);
+void modrmSib(Context* c, int width, Register a, int scale, Register index, Register base);
 
-void modrmSibImm(Context* c, int a, int scale, int index, int base, int offset);
+void modrmSibImm(Context* c, Register a, int scale, Register index, Register base, int offset);
 
-void modrmSibImm(Context* c, lir::Register* a, lir::Memory* b);
+void modrmSibImm(Context* c, lir::RegisterPair* a, lir::Memory* b);
 
 void opcode(Context* c, uint8_t op);
 
@@ -79,25 +79,25 @@ void conditional(Context* c, unsigned condition, lir::Constant* a);
 
 void sseMoveRR(Context* c,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                unsigned bSize UNUSED,
-               lir::Register* b);
+               lir::RegisterPair* b);
 
 void sseMoveCR(Context* c,
                unsigned aSize,
                lir::Constant* a,
                unsigned bSize,
-               lir::Register* b);
+               lir::RegisterPair* b);
 
 void sseMoveMR(Context* c,
                unsigned aSize,
                lir::Memory* a,
                unsigned bSize UNUSED,
-               lir::Register* b);
+               lir::RegisterPair* b);
 
 void sseMoveRM(Context* c,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                UNUSED unsigned bSize,
                lir::Memory* b);
 
@@ -107,9 +107,9 @@ void branchFloat(Context* c, lir::TernaryOperation op, lir::Constant* target);
 
 void floatRegOp(Context* c,
                 unsigned aSize,
-                lir::Register* a,
+                lir::RegisterPair* a,
                 unsigned bSize,
-                lir::Register* b,
+                lir::RegisterPair* b,
                 uint8_t op,
                 uint8_t mod = 0xc0);
 
@@ -117,14 +117,14 @@ void floatMemOp(Context* c,
                 unsigned aSize,
                 lir::Memory* a,
                 unsigned bSize,
-                lir::Register* b,
+                lir::RegisterPair* b,
                 uint8_t op);
 
 void moveCR2(Context* c,
              UNUSED unsigned aSize,
              lir::Constant* a,
              UNUSED unsigned bSize,
-             lir::Register* b,
+             lir::RegisterPair* b,
              unsigned promiseOffset);
 
 }  // namespace x86

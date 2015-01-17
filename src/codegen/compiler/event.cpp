@@ -372,7 +372,7 @@ class CallEvent : public Event {
                                    ? arguments.count
                                    : 0)
   {
-    uint32_t registerMask = c->regFile->generalRegisters.mask;
+    RegisterMask registerMask = c->regFile->generalRegisters;
 
     if (callingConvention == ir::CallingConvention::Native) {
       assertT(c, (flags & Compiler::TailJump) == 0);
@@ -396,14 +396,14 @@ class CallEvent : public Event {
         SiteMask targetMask;
         if (index + (c->arch->argumentRegisterAlignment() ? footprint : 1)
             <= c->arch->argumentRegisterCount()) {
-          int number = c->arch->argumentRegister(index);
+          Register number = c->arch->argumentRegister(index);
 
           if (DebugReads) {
-            fprintf(stderr, "reg %d arg read %p\n", number, v);
+            fprintf(stderr, "reg %d arg read %p\n", number.index(), v);
           }
 
           targetMask = SiteMask::fixedRegisterMask(number);
-          registerMask &= ~(1 << number);
+          registerMask = registerMask.excluding(number);
         } else {
           if (index < c->arch->argumentRegisterCount()) {
             index = c->arch->argumentRegisterCount();
@@ -415,7 +415,7 @@ class CallEvent : public Event {
             fprintf(stderr, "stack %d arg read %p\n", frameIndex, v);
           }
 
-          targetMask = SiteMask(1 << lir::MemoryOperand, 0, frameIndex);
+          targetMask = SiteMask(lir::Operand::MemoryMask, 0, frameIndex);
         }
 
         this->addRead(c, v, targetMask);
@@ -445,7 +445,7 @@ class CallEvent : public Event {
       this->addRead(
           c,
           address,
-          SiteMask(op.typeMask, registerMask & op.registerMask, AnyFrameIndex));
+          SiteMask(op.typeMask, registerMask & op.lowRegisterMask, AnyFrameIndex));
     }
 
     Stack* stack = stackBefore;
@@ -512,7 +512,7 @@ class CallEvent : public Event {
             this->addRead(c, v, generalRegisterMask(c));
           } else {
             this->addRead(
-                c, v, SiteMask(1 << lir::MemoryOperand, 0, frameIndex));
+                c, v, SiteMask(lir::Operand::MemoryMask, 0, frameIndex));
           }
         }
       }
@@ -544,7 +544,7 @@ class CallEvent : public Event {
 
           this->addRead(c,
                         stack->value,
-                        SiteMask(1 << lir::MemoryOperand, 0, logicalIndex));
+                        SiteMask(lir::Operand::MemoryMask, 0, logicalIndex));
         }
 
         stack = stack->next;
@@ -581,29 +581,29 @@ class CallEvent : public Event {
       assertT(
           c,
           returnAddressSurrogate == 0
-          or returnAddressSurrogate->source->type(c) == lir::RegisterOperand);
+          or returnAddressSurrogate->source->type(c) == lir::Operand::Type::RegisterPair);
       assertT(
           c,
           framePointerSurrogate == 0
-          or framePointerSurrogate->source->type(c) == lir::RegisterOperand);
+          or framePointerSurrogate->source->type(c) == lir::Operand::Type::RegisterPair);
 
-      int ras;
+      Register ras;
       if (returnAddressSurrogate) {
         returnAddressSurrogate->source->freeze(c, returnAddressSurrogate);
 
         ras = static_cast<RegisterSite*>(returnAddressSurrogate->source)
                   ->number;
       } else {
-        ras = lir::NoRegister;
+        ras = NoRegister;
       }
 
-      int fps;
+      Register fps;
       if (framePointerSurrogate) {
         framePointerSurrogate->source->freeze(c, framePointerSurrogate);
 
         fps = static_cast<RegisterSite*>(framePointerSurrogate->source)->number;
       } else {
-        fps = lir::NoRegister;
+        fps = NoRegister;
       }
 
       int offset = static_cast<int>(footprint)
@@ -783,9 +783,9 @@ class MoveEvent : public Event {
         op,
         srcSelectSize,
         OperandMask(
-            1 << srcValue->source->type(c),
-            (static_cast<uint64_t>(srcValue->nextWord->source->registerMask(c))
-             << 32) | static_cast<uint64_t>(srcValue->source->registerMask(c))),
+            1 << (unsigned)srcValue->source->type(c),
+            srcValue->source->registerMask(c),
+            srcValue->nextWord->source->registerMask(c)),
         dstSize,
         dst);
 
@@ -866,7 +866,7 @@ class MoveEvent : public Event {
       assertT(c, srcSelectSize == c->targetInfo.pointerSize);
 
       if (dstValue->nextWord->target or live(c, dstValue->nextWord)) {
-        assertT(c, dstLowMask.typeMask & (1 << lir::RegisterOperand));
+        assertT(c, dstLowMask.typeMask & lir::Operand::RegisterPairMask);
 
         Site* low = freeRegisterSite(c, dstLowMask.registerMask);
 
@@ -897,7 +897,7 @@ class MoveEvent : public Event {
 
         srcValue->source->thaw(c, srcValue);
 
-        assertT(c, dstHighMask.typeMask & (1 << lir::RegisterOperand));
+        assertT(c, dstHighMask.typeMask & lir::Operand::RegisterPairMask);
 
         Site* high = freeRegisterSite(c, dstHighMask.registerMask);
 
@@ -1126,18 +1126,14 @@ class CombineEvent : public Event {
         op,
         firstValue->type.size(c->targetInfo),
         OperandMask(
-            1 << firstValue->source->type(c),
-            (static_cast<uint64_t>(
-                 firstValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+            1 << (unsigned)firstValue->source->type(c),
+            firstValue->source->registerMask(c),
+            firstValue->nextWord->source->registerMask(c)),
         secondValue->type.size(c->targetInfo),
         OperandMask(
-            1 << secondValue->source->type(c),
-            (static_cast<uint64_t>(
-                 secondValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(secondValue->source->registerMask(c))),
+            1 << (unsigned)secondValue->source->type(c),
+            secondValue->source->registerMask(c),
+            secondValue->nextWord->source->registerMask(c)),
         resultValue->type.size(c->targetInfo),
         cMask);
 
@@ -1318,11 +1314,9 @@ class TranslateEvent : public Event {
         op,
         firstValue->type.size(c->targetInfo),
         OperandMask(
-            1 << firstValue->source->type(c),
-            (static_cast<uint64_t>(
-                 firstValue->nextWord->source->registerMask(c))
-             << 32)
-            | static_cast<uint64_t>(firstValue->source->registerMask(c))),
+            1 << (unsigned)firstValue->source->type(c),
+            firstValue->source->registerMask(c),
+            firstValue->nextWord->source->registerMask(c)),
         resultValue->type.size(c->targetInfo),
         bMask);
 
@@ -1457,7 +1451,7 @@ ConstantSite* findConstantSite(Context* c, Value* v)
 {
   for (SiteIterator it(c, v); it.hasMore();) {
     Site* s = it.next();
-    if (s->type(c) == lir::ConstantOperand) {
+    if (s->type(c) == lir::Operand::Type::Constant) {
       return static_cast<ConstantSite*>(s);
     }
   }
@@ -1467,7 +1461,7 @@ ConstantSite* findConstantSite(Context* c, Value* v)
 void moveIfConflict(Context* c, Value* v, MemorySite* s)
 {
   if (v->reads) {
-    SiteMask mask(1 << lir::RegisterOperand, ~0, AnyFrameIndex);
+    SiteMask mask(lir::Operand::RegisterPairMask, ~0, AnyFrameIndex);
     v->reads->intersect(&mask);
     if (s->conflicts(mask)) {
       maybeMove(c, v->reads, true, false);
@@ -1504,29 +1498,29 @@ class MemoryEvent : public Event {
 
   virtual void compile(Context* c)
   {
-    int indexRegister;
+    Register indexRegister;
     int displacement = this->displacement;
     unsigned scale = this->scale;
     if (index) {
       ConstantSite* constant = findConstantSite(c, index);
 
       if (constant) {
-        indexRegister = lir::NoRegister;
+        indexRegister = NoRegister;
         displacement += (constant->value->value() * scale);
         scale = 1;
       } else {
-        assertT(c, index->source->type(c) == lir::RegisterOperand);
+        assertT(c, index->source->type(c) == lir::Operand::Type::RegisterPair);
         indexRegister = static_cast<RegisterSite*>(index->source)->number;
       }
     } else {
-      indexRegister = lir::NoRegister;
+      indexRegister = NoRegister;
     }
-    assertT(c, base->source->type(c) == lir::RegisterOperand);
-    int baseRegister = static_cast<RegisterSite*>(base->source)->number;
+    assertT(c, base->source->type(c) == lir::Operand::Type::RegisterPair);
+    Register baseRegister = static_cast<RegisterSite*>(base->source)->number;
 
     popRead(c, this, base);
     if (index) {
-      if (c->targetInfo.pointerSize == 8 and indexRegister != lir::NoRegister) {
+      if (c->targetInfo.pointerSize == 8 and indexRegister != NoRegister) {
         apply(c,
               lir::Move,
               4,
@@ -1718,9 +1712,9 @@ class BranchEvent : public Event {
     OperandMask dstMask;
     c->arch->planDestination(op,
                              firstValue->type.size(c->targetInfo),
-                             OperandMask(0, 0),
+                             OperandMask(0, 0, 0),
                              firstValue->type.size(c->targetInfo),
-                             OperandMask(0, 0),
+                             OperandMask(0, 0, 0),
                              c->targetInfo.pointerSize,
                              dstMask);
 
@@ -1879,12 +1873,12 @@ void clean(Context* c, Value* v, unsigned popIndex)
 {
   for (SiteIterator it(c, v); it.hasMore();) {
     Site* s = it.next();
-    if (not(s->match(c, SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex))
+    if (not(s->match(c, SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex))
             and offsetToFrameIndex(c, static_cast<MemorySite*>(s)->offset)
                 >= popIndex)) {
       if (false
           and s->match(c,
-                       SiteMask(1 << lir::MemoryOperand, 0, AnyFrameIndex))) {
+                       SiteMask(lir::Operand::MemoryMask, 0, AnyFrameIndex))) {
         char buffer[256];
         s->toString(c, buffer, 256);
         fprintf(stderr,
@@ -2016,7 +2010,7 @@ class BoundsCheckEvent : public Event {
         lir::Constant handlerConstant(resolvedPromise(c, handler));
         a->apply(lir::Call,
                  OperandInfo(c->targetInfo.pointerSize,
-                             lir::ConstantOperand,
+                             lir::Operand::Type::Constant,
                              &handlerConstant));
       }
     } else {
@@ -2038,10 +2032,10 @@ class BoundsCheckEvent : public Event {
     }
 
     if (constant == 0 or constant->value->value() >= 0) {
-      assertT(c, object->source->type(c) == lir::RegisterOperand);
+      assertT(c, object->source->type(c) == lir::Operand::Type::RegisterPair);
       MemorySite length(static_cast<RegisterSite*>(object->source)->number,
                         lengthOffset,
-                        lir::NoRegister,
+                        NoRegister,
                         1);
       length.acquired = true;
 
@@ -2072,7 +2066,7 @@ class BoundsCheckEvent : public Event {
       lir::Constant handlerConstant(resolvedPromise(c, handler));
       a->apply(lir::Call,
                OperandInfo(c->targetInfo.pointerSize,
-                           lir::ConstantOperand,
+                           lir::Operand::Type::Constant,
                            &handlerConstant));
 
       nextPromise->offset = a->offset();

@@ -28,42 +28,42 @@ using namespace util;
 
 unsigned index(ArchitectureContext*,
                lir::BinaryOperation operation,
-               lir::OperandType operand1,
-               lir::OperandType operand2)
+               lir::Operand::Type operand1,
+               lir::Operand::Type operand2)
 {
   return operation + ((lir::BinaryOperationCount
-                       + lir::NonBranchTernaryOperationCount) * operand1)
+                       + lir::NonBranchTernaryOperationCount) * (unsigned)operand1)
          + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-            * lir::OperandTypeCount * operand2);
+            * lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 unsigned index(ArchitectureContext* c UNUSED,
                lir::TernaryOperation operation,
-               lir::OperandType operand1,
-               lir::OperandType operand2)
+               lir::Operand::Type operand1,
+               lir::Operand::Type operand2)
 {
   assertT(c, not isBranch(operation));
 
   return lir::BinaryOperationCount + operation
          + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-            * operand1)
+            * (unsigned)operand1)
          + ((lir::BinaryOperationCount + lir::NonBranchTernaryOperationCount)
-            * lir::OperandTypeCount * operand2);
+            * lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 unsigned branchIndex(ArchitectureContext* c UNUSED,
-                     lir::OperandType operand1,
-                     lir::OperandType operand2)
+                     lir::Operand::Type operand1,
+                     lir::Operand::Type operand2)
 {
-  return operand1 + (lir::OperandTypeCount * operand2);
+  return (unsigned)operand1 + (lir::Operand::TypeCount * (unsigned)operand2);
 }
 
 void populateTables(ArchitectureContext* c)
 {
-  const lir::OperandType C = lir::ConstantOperand;
-  const lir::OperandType A = lir::AddressOperand;
-  const lir::OperandType R = lir::RegisterOperand;
-  const lir::OperandType M = lir::MemoryOperand;
+  const lir::Operand::Type C = lir::Operand::Type::Constant;
+  const lir::Operand::Type A = lir::Operand::Type::Address;
+  const lir::Operand::Type R = lir::Operand::Type::RegisterPair;
+  const lir::Operand::Type M = lir::Operand::Type::Memory;
 
   OperationType* zo = c->operations;
   UnaryOperationType* uo = c->unaryOperations;

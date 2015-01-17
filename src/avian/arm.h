@@ -34,7 +34,11 @@
 
 #define THREAD_STATE_IP(state) ((state).FIELD(pc))
 #define THREAD_STATE_STACK(state) ((state).FIELD(sp))
+#if (defined __APPLE__) && (defined ARCH_arm64)
+#define THREAD_STATE_THREAD(state) ((state).FIELD(x[19]))
+#else
 #define THREAD_STATE_THREAD(state) ((state).FIELD(r[8]))
+#endif
 #define THREAD_STATE_LINK(state) ((state).FIELD(lr))
 
 #define IP_REGISTER(context) THREAD_STATE_IP(context->uc_mcontext->FIELD(ss))
@@ -53,10 +57,17 @@
 #define THREAD_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_IP])
 #define LINK_REGISTER(context) (context->uc_mcontext.cpu.gpr[ARM_REG_LR])
 #else
+#ifdef ARCH_arm
 #define IP_REGISTER(context) (context->uc_mcontext.arm_pc)
 #define STACK_REGISTER(context) (context->uc_mcontext.arm_sp)
 #define THREAD_REGISTER(context) (context->uc_mcontext.arm_ip)
 #define LINK_REGISTER(context) (context->uc_mcontext.arm_lr)
+#else
+#define IP_REGISTER(context) (context->uc_mcontext.pc)
+#define STACK_REGISTER(context) (context->uc_mcontext.sp)
+#define THREAD_REGISTER(context) (context->uc_mcontext.regs[19])
+#define LINK_REGISTER(context) (context->uc_mcontext.regs[30])
+#endif
 #endif
 
 #define VA_LIST(x) (&(x))
@@ -76,7 +87,7 @@ inline void trap()
 #ifdef _MSC_VER
   __debugbreak();
 #else
-  asm("bkpt");
+  asm("brk 0");
 #endif
 }
 
@@ -162,6 +173,8 @@ inline bool atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
       old, new_, reinterpret_cast<int32_t*>(p));
 #elif(defined __QNX__)
   return old == _smp_cmpxchg(p, old, new_);
+#elif (defined ARCH_arm64)
+  return __sync_bool_compare_and_swap(p, old, new_);
 #else
   int r = __kernel_cmpxchg(
       static_cast<int>(old), static_cast<int>(new_), reinterpret_cast<int*>(p));
@@ -169,10 +182,22 @@ inline bool atomicCompareAndSwap32(uint32_t* p, uint32_t old, uint32_t new_)
 #endif
 }
 
+#ifdef ARCH_arm64
+inline bool atomicCompareAndSwap64(uint64_t* p, uint64_t old, uint64_t new_)
+{
+  return __sync_bool_compare_and_swap(p, old, new_);
+}
+
+inline bool atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
+{
+  return atomicCompareAndSwap64(reinterpret_cast<uint64_t*>(p), old, new_);
+}
+#else
 inline bool atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 {
   return atomicCompareAndSwap32(reinterpret_cast<uint32_t*>(p), old, new_);
 }
+#endif
 
 inline uint64_t dynamicCall(void* function,
                             uintptr_t* arguments,
@@ -181,17 +206,17 @@ inline uint64_t dynamicCall(void* function,
                             unsigned argumentsSize UNUSED,
                             unsigned returnType)
 {
-#ifdef __APPLE__
+#if (defined __APPLE__) || (defined ARCH_arm64)
   const unsigned Alignment = 1;
 #else
   const unsigned Alignment = 2;
 #endif
 
-  const unsigned GprCount = 4;
+  const unsigned GprCount = BytesPerWord;
   uintptr_t gprTable[GprCount];
   unsigned gprIndex = 0;
 
-  const unsigned VfpCount = 16;
+  const unsigned VfpCount = BytesPerWord == 8 ? 8 : 16;
   uintptr_t vfpTable[VfpCount];
   unsigned vfpIndex = 0;
   unsigned vfpBackfillIndex UNUSED = 0;
@@ -206,7 +231,7 @@ inline uint64_t dynamicCall(void* function,
   for (unsigned ati = 0; ati < argumentCount; ++ati) {
     switch (argumentTypes[ati]) {
     case DOUBLE_TYPE:
-#if defined(__ARM_PCS_VFP)
+#if (defined __ARM_PCS_VFP) || (defined ARCH_arm64)
     {
       if (vfpIndex + Alignment <= VfpCount) {
         if (vfpIndex % Alignment) {

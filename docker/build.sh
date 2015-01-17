@@ -8,6 +8,8 @@ if test $# -eq 0; then
     exit 1
 fi
 
+THE_USER="-u $(id -u "${USER}")"
+
 while test $# -gt 1 ; do
     key="$1"
     case $key in
@@ -15,6 +17,10 @@ while test $# -gt 1 ; do
             shift
             CONTAINER="$1"
             shift
+            ;;
+        -r|--root)
+            shift
+            THE_USER=
             ;;
         --)
             shift
@@ -32,4 +38,4 @@ fi
 
 DIR=$(cd $(dirname "$0") && cd .. && pwd)
 
-docker run --rm -i -t -v "${DIR}":/var/avian -u $(id -u "${USER}") "${CONTAINER}" "${@}"
+docker run --rm -i -t -v "${DIR}":/var/avian ${THE_USER} "${CONTAINER}" "${@}"

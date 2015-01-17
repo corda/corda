@@ -7,12 +7,13 @@ build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
 	| sed 's/^x86pc$$/i386/' \
 	| sed 's/amd64/x86_64/' \
-	| sed 's/^arm.*$$/arm/')
+	| sed 's/^arm.*$$/arm/' \
+	| sed 's/aarch64/arm64/')
 
 build-platform := \
 	$(shell uname -s | tr [:upper:] [:lower:] \
 		| sed \
-		  -e 's/^mingw32.*$$/mingw32/' \
+			-e 's/^mingw32.*$$/mingw32/' \
 			-e 's/^cygwin.*$$/cygwin/' \
 			-e 's/^darwin.*$$/macosx/')
 
@@ -62,8 +63,8 @@ ifeq ($(filter compile interpret,$(process)),)
 	x := $(error "'$(process)' is not a valid process (choose one of: compile interpret)")
 endif
 
-ifeq ($(filter x86_64 i386 arm,$(arch)),)
-	x := $(error "'$(arch)' is not a supported architecture (choose one of: x86_64 i386 arm)")
+ifeq ($(filter x86_64 i386 arm arm64,$(arch)),)
+	x := $(error "'$(arch)' is not a supported architecture (choose one of: x86_64 i386 arm arm64)")
 endif
 
 ifeq ($(platform),darwin)
@@ -79,14 +80,14 @@ ifeq ($(filter linux windows macosx ios freebsd,$(platform)),)
 endif
 
 ifeq ($(platform),macosx)
-	ifeq ($(arch),arm)
-		x := $(error "please use 'arch=arm' 'platform=ios' to build for ios-arm")
+	ifneq ($(filter arm arm64,$(arch)),)
+		x := $(error "please use ('arch=arm' or 'arch=arm64') 'platform=ios' to build for ios-arm")
 	endif
 endif
 
 ifeq ($(platform),ios)
-	ifeq ($(filter arm i386,$(arch)),)
-		x := $(error "please specify 'arch=i386' or 'arch=arm' with 'platform=ios'")
+	ifeq ($(filter i386 arm arm64,$(arch)),)
+		x := $(error "please specify 'arch=i386', 'arch=arm', or 'arch=arm64' with 'platform=ios'")
 	endif
 endif
 
@@ -476,15 +477,15 @@ cflags = $(build-cflags)
 common-lflags = -lm -lz
 
 ifeq ($(use-clang),true)
-  ifeq ($(build-kernel),darwin)
-    common-lflags += -Wl,-export_dynamic
-  else
-    ifneq ($(platform),windows)
-      common-lflags += -Wl,-E
-    else
-      common-lflags += -Wl,--export-all-symbols
-    endif
-  endif
+	ifeq ($(build-kernel),darwin)
+		common-lflags += -Wl,-export_dynamic
+	else
+		ifneq ($(platform),windows)
+			common-lflags += -Wl,-E
+		else
+			common-lflags += -Wl,--export-all-symbols
+		endif
+	endif
 endif
 
 build-lflags = -lz -lpthread -ldl
@@ -542,30 +543,39 @@ codeimage-symbols = _binary_codeimage_bin_start:_binary_codeimage_bin_end
 developer-dir := $(shell if test -d /Developer/Platforms/$(target).platform/Developer/SDKs; then echo /Developer; \
 	else echo /Applications/Xcode.app/Contents/Developer; fi)
 
-ifeq ($(arch),i386)
+ifneq (,$(filter i386 arm,$(arch)))
 	pointer-size = 4
 endif
 
-ifeq ($(arch),arm)
+ifneq (,$(filter arm arm64,$(arch)))
 	asm = arm
-	pointer-size = 4
 
 	ifneq ($(platform),ios)
-		no-psabi = -Wno-psabi
-		cflags += -marm $(no-psabi)
+		ifneq ($(arch),arm64)
+			no-psabi = -Wno-psabi
+			cflags += -marm $(no-psabi)
 
-		# By default, assume we can't use armv7-specific instructions on
-		# non-iOS platforms.  Ideally, we'd detect this at runtime.
-		armv6=true
+			# By default, assume we can't use armv7-specific instructions on
+			# non-iOS platforms.  Ideally, we'd detect this at runtime.
+			armv6=true
+		endif
 	endif
 
 	ifneq ($(arch),$(build-arch))
 		ifneq ($(kernel),darwin)
-			cxx = arm-linux-gnueabi-g++
-			cc = arm-linux-gnueabi-gcc
-			ar = arm-linux-gnueabi-ar
-			ranlib = arm-linux-gnueabi-ranlib
-			strip = arm-linux-gnueabi-strip
+			ifeq ($(arch),arm64)
+				cxx = aarch64-linux-gnu-g++
+				cc = aarch64-linux-gnu-gcc
+				ar = aarch64-linux-gnu-ar
+				ranlib = aarch64-linux-gnu-ranlib
+				strip = aarch64-linux-gnu-strip
+			else
+				cxx = arm-linux-gnueabi-g++
+				cc = arm-linux-gnueabi-gcc
+				ar = arm-linux-gnueabi-ar
+				ranlib = arm-linux-gnueabi-ranlib
+				strip = arm-linux-gnueabi-strip
+			endif
 		endif
 	endif
 endif
@@ -704,7 +714,7 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		mac-version := $(shell \
-			  if test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
+				if test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
 			elif test -d $(sdk-dir)/MacOSX10.8.sdk; then echo 10.8; \
 			elif test -d $(sdk-dir)/MacOSX10.7.sdk; then echo 10.7; \
 			elif test -d $(sdk-dir)/MacOSX10.6.sdk; then echo 10.6; \
@@ -743,7 +753,11 @@ ifeq ($(kernel),darwin)
 		else
 			target = iPhoneOS
 			sdk = iphoneos$(ios-version)
-			arch-flag = -arch armv7
+			ifeq ($(arch),arm)
+				arch-flag = -arch armv7
+			else
+				arch-flag = -arch arm64
+			endif
 			release = Release-iphoneos
 		endif
 
@@ -751,7 +765,8 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-			  if test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
+				if test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
+			elif test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
 			elif test -d $(sdk-dir)/$(target)7.1.sdk; then echo 7.1; \
 			elif test -d $(sdk-dir)/$(target)7.0.sdk; then echo 7.0; \
 			elif test -d $(sdk-dir)/$(target)6.1.sdk; then echo 6.1; \
@@ -844,7 +859,7 @@ ifeq ($(platform),windows)
 			&& echo i686-w64-mingw32- || echo x86_64-w64-mingw32-)
 		cxx = $(prefix)g++ -m32
 		cc = $(prefix)gcc -m32
-		dlltool = $(prefix)dlltool -mi386 --as-flags=--32 
+		dlltool = $(prefix)dlltool -mi386 --as-flags=--32
 		ar = $(prefix)ar
 		ranlib = $(prefix)ranlib
 		strip = $(prefix)strip --strip-all
@@ -1213,7 +1228,7 @@ vm-sources = \
 	$(src)/jnienv.cpp \
 	$(src)/process.cpp
 
-vm-asm-sources = $(src)/$(asm).$(asm-format)
+vm-asm-sources = $(src)/$(arch).$(asm-format)
 
 target-asm = $(asm)
 
@@ -1230,7 +1245,6 @@ compiler-sources = \
 	$(src)/codegen/compiler.cpp \
 	$(wildcard $(src)/codegen/compiler/*.cpp) \
 	$(src)/debug-util.cpp \
-	$(src)/codegen/registers.cpp \
 	$(src)/codegen/runtime.cpp \
 	$(src)/codegen/targets.cpp \
 	$(src)/util/fixed-allocator.cpp
@@ -1256,7 +1270,7 @@ ifeq ($(process),compile)
 		vm-sources += $(native-assembler-sources)
 	endif
 	ifeq ($(codegen-targets),all)
-		ifeq ($(arch),arm)
+		ifneq (,$(filter arm arm64,$(arch)))
 			# The x86 jit has a dependency on the x86 assembly code,
 			# and thus can't be successfully built on non-x86 platforms.
 			vm-sources += $(native-assembler-sources)
@@ -1265,7 +1279,7 @@ ifeq ($(process),compile)
 		endif
 	endif
 
-	vm-asm-sources += $(src)/compile-$(asm).$(asm-format)
+	vm-asm-sources += $(src)/compile-$(arch).$(asm-format)
 endif
 cflags += -DAVIAN_PROCESS_$(process)
 ifeq ($(aot-only),true)
@@ -1277,7 +1291,7 @@ all-codegen-target-objects = $(call cpp-objects,$(all-codegen-target-sources),$(
 vm-asm-objects = $(call asm-objects,$(vm-asm-sources),$(src),$(build))
 vm-objects = $(vm-cpp-objects) $(vm-asm-objects)
 
-heapwalk-sources = $(src)/heapwalk.cpp 
+heapwalk-sources = $(src)/heapwalk.cpp
 heapwalk-objects = \
 	$(call cpp-objects,$(heapwalk-sources),$(src),$(build))
 
@@ -1533,6 +1547,10 @@ ifeq ($(target-arch),arm)
 	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM
 endif
 
+ifeq ($(target-arch),arm64)
+	cflags += -DAVIAN_TARGET_ARCH=AVIAN_ARCH_ARM64
+endif
+
 ifeq ($(target-format),elf)
 	cflags += -DAVIAN_TARGET_FORMAT=AVIAN_FORMAT_ELF
 endif
@@ -1659,9 +1677,10 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
-		$(classpath-classes))"; if [ -n "$${classes}" ]; then \
+		$(classpath-classes) arch=$(build-arch) platform=$(build-platform))"; \
+	if [ -n "$${classes}" ]; then \
 		$(javac) -source 1.6 -target 1.6 \
-		  -d $(classpath-build) -bootclasspath $(boot-classpath) \
+			-d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$${classes}; fi
 	@touch $(@)
 
@@ -1726,7 +1745,7 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
 		$(build)/android/java/security/security.properties
 	chmod +w $(build)/android/java/security/security.properties
 	cp -r $(build)/android/* $(classpath-build)
-	@touch $(@)	
+	@touch $(@)
 
 $(test-build)/%.class: $(test)/%.java
 	@echo $(<)
@@ -1737,7 +1756,7 @@ $(test-dep): $(test-sources) $(test-library)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
 	if test -n "$${files}"; then \
 		$(javac) -source 1.6 -target 1.6 \
-		  -classpath $(test-build) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
+			-classpath $(test-build) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
 		-bootclasspath $(boot-classpath) test/Subroutine.java
@@ -1749,7 +1768,7 @@ $(test-extra-dep): $(test-extra-sources)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-extra-classes))"; \
 	if test -n "$${files}"; then \
 		$(javac) -source 1.6 -target 1.6 \
-		  -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
+			-d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	@touch $(@)
 
@@ -1831,7 +1850,7 @@ ifdef mt
 endif
 else
 	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(^)
-	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@))) 
+	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@)))
 	$(ld) $(addsuffix .exp,$(basename $(@))) $(^) \
 		$(lflags) $(bootimage-lflags) -o $(@)
 endif

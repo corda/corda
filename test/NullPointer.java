@@ -17,6 +17,12 @@ public class NullPointer {
 
   public static void main(String[] args) {
     try {
+      ((Object) null).getClass();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+
+    try {
       throw_(null);
       throw new RuntimeException();
     } catch (NullPointerException e) {

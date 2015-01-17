@@ -38,7 +38,7 @@ public class Classes {
   public static native VMClass primitiveClass(char name);
 
   public static native void initialize(VMClass vmClass);
-  
+
   public static native boolean isAssignableFrom(VMClass a, VMClass b);
 
   public static native VMClass getVMClass(Object o);
@@ -134,7 +134,7 @@ public class Classes {
         array[i] = parseAnnotationValue(loader, pool, in);
       }
       return array;
-    }    
+    }
 
     default: throw new AssertionError();
     }
@@ -207,7 +207,7 @@ public class Classes {
         while (spec[end] != ';') ++ end;
         ++ end;
         break;
-        
+
       default:
         ++ end;
       }
@@ -295,9 +295,9 @@ public class Classes {
     }
     Class c = loader.loadClass(name);
     VMClass vmc = SystemClassLoader.vmClass(c);
-    Classes.link(vmc, loader);
+    link(vmc, loader);
     if (initialize) {
-      Classes.initialize(vmc);
+      initialize(vmc);
     }
     return c;
   }
@@ -315,7 +315,7 @@ public class Classes {
       } else {
         if (name.length() == 1) {
           return SystemClassLoader.getClass
-            (Classes.primitiveClass(name.charAt(0)));
+            (primitiveClass(name.charAt(0)));
         } else {
           throw new ClassNotFoundException(name);
         }
@@ -378,7 +378,7 @@ public class Classes {
 
   public static int findField(VMClass vmClass, String name) {
     if (vmClass.fieldTable != null) {
-      Classes.link(vmClass);
+      link(vmClass);
 
       for (int i = 0; i < vmClass.fieldTable.length; ++i) {
         if (toString(vmClass.fieldTable[i].name).equals(name)) {
@@ -426,7 +426,7 @@ public class Classes {
   {
     VMMethod[] methodTable = vmClass.methodTable;
     if (methodTable != null) {
-      Classes.link(vmClass);
+      link(vmClass);
 
       if (parameterTypes == null) {
         parameterTypes = new Class[0];
@@ -464,7 +464,7 @@ public class Classes {
     Method[] array = new Method[countMethods(vmClass, publicOnly)];
     VMMethod[] methodTable = vmClass.methodTable;
     if (methodTable != null) {
-      Classes.link(vmClass);
+      link(vmClass);
 
       int ai = 0;
       for (int i = 0, j = declaredMethodCount(vmClass); i < j; ++i) {
@@ -498,7 +498,7 @@ public class Classes {
   public static Field[] getFields(VMClass vmClass, boolean publicOnly) {
     Field[] array = new Field[countFields(vmClass, publicOnly)];
     if (vmClass.fieldTable != null) {
-      Classes.link(vmClass);
+      link(vmClass);
 
       int ai = 0;
       for (int i = 0; i < vmClass.fieldTable.length; ++i) {
@@ -568,9 +568,9 @@ public class Classes {
 
     return new ProtectionDomain(source, p);
   }
-  
+
   public static native Method makeMethod(Class c, int slot);
-  
+
   public static native Field makeField(Class c, int slot);
 
   private static native void acquireClassLock();

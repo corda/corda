@@ -46,34 +46,34 @@ enum CONDITION {
 enum SHIFTOP { LSL, LSR, ASR, ROR };
 // INSTRUCTION FORMATS
 inline int
-    DATA(int cond, int opcode, int S, int Rn, int Rd, int shift, int Sh, int Rm)
+    DATA(int cond, int opcode, int S, Register Rn, Register Rd, int shift, int Sh, Register Rm)
 {
-  return cond << 28 | opcode << 21 | S << 20 | Rn << 16 | Rd << 12 | shift << 7
-         | Sh << 5 | Rm;
+  return cond << 28 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12 | shift << 7
+         | Sh << 5 | Rm.index();
 }
 inline int
-    DATAS(int cond, int opcode, int S, int Rn, int Rd, int Rs, int Sh, int Rm)
+    DATAS(int cond, int opcode, int S, Register Rn, Register Rd, Register Rs, int Sh, Register Rm)
 {
-  return cond << 28 | opcode << 21 | S << 20 | Rn << 16 | Rd << 12 | Rs << 8
-         | Sh << 5 | 1 << 4 | Rm;
+  return cond << 28 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12 | Rs.index() << 8
+         | Sh << 5 | 1 << 4 | Rm.index();
 }
-inline int DATAI(int cond, int opcode, int S, int Rn, int Rd, int rot, int imm)
+inline int DATAI(int cond, int opcode, int S, Register Rn, Register Rd, int rot, int imm)
 {
-  return cond << 28 | 1 << 25 | opcode << 21 | S << 20 | Rn << 16 | Rd << 12
+  return cond << 28 | 1 << 25 | opcode << 21 | S << 20 | Rn.index() << 16 | Rd.index() << 12
          | rot << 8 | (imm & 0xff);
 }
 inline int BRANCH(int cond, int L, int offset)
 {
   return cond << 28 | 5 << 25 | L << 24 | (offset & 0xffffff);
 }
-inline int BRANCHX(int cond, int L, int Rm)
+inline int BRANCHX(int cond, int L, Register Rm)
 {
-  return cond << 28 | 0x4bffc << 6 | L << 5 | 1 << 4 | Rm;
+  return cond << 28 | 0x4bffc << 6 | L << 5 | 1 << 4 | Rm.index();
 }
-inline int MULTIPLY(int cond, int mul, int S, int Rd, int Rn, int Rs, int Rm)
+inline int MULTIPLY(int cond, int mul, int S, Register Rd, Register Rn, Register Rs, Register Rm)
 {
-  return cond << 28 | mul << 21 | S << 20 | Rd << 16 | Rn << 12 | Rs << 8
-         | 9 << 4 | Rm;
+  return cond << 28 | mul << 21 | S << 20 | Rd.index() << 16 | Rn.index() << 12 | Rs.index() << 8
+         | 9 << 4 | Rm.index();
 }
 inline int XFER(int cond,
                 int P,
@@ -81,14 +81,14 @@ inline int XFER(int cond,
                 int B,
                 int W,
                 int L,
-                int Rn,
-                int Rd,
+                Register Rn,
+                Register Rd,
                 int shift,
                 int Sh,
-                int Rm)
+                Register Rm)
 {
   return cond << 28 | 3 << 25 | P << 24 | U << 23 | B << 22 | W << 21 | L << 20
-         | Rn << 16 | Rd << 12 | shift << 7 | Sh << 5 | Rm;
+         | Rn.index() << 16 | Rd.index() << 12 | shift << 7 | Sh << 5 | Rm.index();
 }
 inline int XFERI(int cond,
                  int P,
@@ -96,41 +96,41 @@ inline int XFERI(int cond,
                  int B,
                  int W,
                  int L,
-                 int Rn,
-                 int Rd,
+                 Register Rn,
+                 Register Rd,
                  int offset)
 {
   return cond << 28 | 2 << 25 | P << 24 | U << 23 | B << 22 | W << 21 | L << 20
-         | Rn << 16 | Rd << 12 | (offset & 0xfff);
+         | Rn.index() << 16 | Rd.index() << 12 | (offset & 0xfff);
 }
 inline int XFER2(int cond,
                  int P,
                  int U,
                  int W,
                  int L,
-                 int Rn,
-                 int Rd,
+                 Register Rn,
+                 Register Rd,
                  int S,
                  int H,
-                 int Rm)
+                 Register Rm)
 {
-  return cond << 28 | P << 24 | U << 23 | W << 21 | L << 20 | Rn << 16
-         | Rd << 12 | 1 << 7 | S << 6 | H << 5 | 1 << 4 | Rm;
+  return cond << 28 | P << 24 | U << 23 | W << 21 | L << 20 | Rn.index() << 16
+         | Rd.index() << 12 | 1 << 7 | S << 6 | H << 5 | 1 << 4 | Rm.index();
 }
 inline int XFER2I(int cond,
                   int P,
                   int U,
                   int W,
                   int L,
-                  int Rn,
-                  int Rd,
+                  Register Rn,
+                  Register Rd,
                   int offsetH,
                   int S,
                   int H,
                   int offsetL)
 {
-  return cond << 28 | P << 24 | U << 23 | 1 << 22 | W << 21 | L << 20 | Rn << 16
-         | Rd << 12 | offsetH << 8 | 1 << 7 | S << 6 | H << 5 | 1 << 4
+  return cond << 28 | P << 24 | U << 23 | 1 << 22 | W << 21 | L << 20 | Rn.index() << 16
+         | Rd.index() << 12 | offsetH << 8 | 1 << 7 | S << 6 | H << 5 | 1 << 4
          | (offsetL & 0xf);
 }
 inline int COOP(int cond,
@@ -150,30 +150,30 @@ inline int COXFER(int cond,
                   int N,
                   int W,
                   int L,
-                  int Rn,
+                  Register Rn,
                   int CRd,
                   int cp_num,
                   int offset)  // offset is in words, not bytes
 {
   return cond << 28 | 0x6 << 25 | P << 24 | U << 23 | N << 22 | W << 21
-         | L << 20 | Rn << 16 | CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
+         | L << 20 | Rn.index() << 16 | CRd << 12 | cp_num << 8 | (offset & 0xff) >> 2;
 }
 inline int COREG(int cond,
                  int opcode_1,
                  int L,
                  int CRn,
-                 int Rd,
+                 Register Rd,
                  int cp_num,
                  int opcode_2,
                  int CRm)
 {
   return cond << 28 | 0xe << 24 | opcode_1 << 21 | L << 20 | CRn << 16
-         | Rd << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | CRm;
+         | Rd.index() << 12 | cp_num << 8 | opcode_2 << 5 | 1 << 4 | CRm;
 }
 inline int
-    COREG2(int cond, int L, int Rn, int Rd, int cp_num, int opcode, int CRm)
+    COREG2(int cond, int L, Register Rn, Register Rd, int cp_num, int opcode, int CRm)
 {
-  return cond << 28 | 0xc4 << 20 | L << 20 | Rn << 16 | Rd << 12 | cp_num << 8
+  return cond << 28 | 0xc4 << 20 | L << 20 | Rn.index() << 16 | Rd.index() << 12 | cp_num << 8
          | opcode << 4 | CRm;
 }
 // FIELD CALCULATORS
@@ -191,143 +191,143 @@ inline int bl(int offset)
 {
   return BRANCH(AL, 1, offset);
 }
-inline int bx(int Rm)
+inline int bx(Register Rm)
 {
   return BRANCHX(AL, 0, Rm);
 }
-inline int blx(int Rm)
+inline int blx(Register Rm)
 {
   return BRANCHX(AL, 1, Rm);
 }
-inline int and_(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int and_(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x0, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int eor(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int eor(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x1, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int rsb(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int rsb(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x3, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int add(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int add(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x4, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int adc(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int adc(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x5, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int rsc(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int rsc(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0x7, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int cmp(int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int cmp(Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xa, 1, Rn, 0, shift, Sh, Rm);
+  return DATA(AL, 0xa, 1, Rn, Register(0), shift, Sh, Rm);
 }
-inline int orr(int Rd, int Rn, int Rm, int Sh = 0, int shift = 0)
+inline int orr(Register Rd, Register Rn, Register Rm, int Sh = 0, int shift = 0)
 {
   return DATA(AL, 0xc, 0, Rn, Rd, shift, Sh, Rm);
 }
-inline int mov(int Rd, int Rm, int Sh = 0, int shift = 0)
+inline int mov(Register Rd, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xd, 0, 0, Rd, shift, Sh, Rm);
+  return DATA(AL, 0xd, 0, Register(0), Rd, shift, Sh, Rm);
 }
-inline int mvn(int Rd, int Rm, int Sh = 0, int shift = 0)
+inline int mvn(Register Rd, Register Rm, int Sh = 0, int shift = 0)
 {
-  return DATA(AL, 0xf, 0, 0, Rd, shift, Sh, Rm);
+  return DATA(AL, 0xf, 0, Register(0), Rd, shift, Sh, Rm);
 }
-inline int andi(int Rd, int Rn, int imm, int rot = 0)
+inline int andi(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0x0, 0, Rn, Rd, rot, imm);
 }
-inline int subi(int Rd, int Rn, int imm, int rot = 0)
+inline int subi(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0x2, 0, Rn, Rd, rot, imm);
 }
-inline int rsbi(int Rd, int Rn, int imm, int rot = 0)
+inline int rsbi(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0x3, 0, Rn, Rd, rot, imm);
 }
-inline int addi(int Rd, int Rn, int imm, int rot = 0)
+inline int addi(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0x4, 0, Rn, Rd, rot, imm);
 }
-inline int adci(int Rd, int Rn, int imm, int rot = 0)
+inline int adci(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0x5, 0, Rn, Rd, rot, imm);
 }
-inline int bici(int Rd, int Rn, int imm, int rot = 0)
+inline int bici(Register Rd, Register Rn, int imm, int rot = 0)
 {
   return DATAI(AL, 0xe, 0, Rn, Rd, rot, imm);
 }
-inline int cmpi(int Rn, int imm, int rot = 0)
+inline int cmpi(Register Rn, int imm, int rot = 0)
 {
-  return DATAI(AL, 0xa, 1, Rn, 0, rot, imm);
+  return DATAI(AL, 0xa, 1, Rn, Register(0), rot, imm);
 }
-inline int movi(int Rd, int imm, int rot = 0)
+inline int movi(Register Rd, int imm, int rot = 0)
 {
-  return DATAI(AL, 0xd, 0, 0, Rd, rot, imm);
+  return DATAI(AL, 0xd, 0, Register(0), Rd, rot, imm);
 }
-inline int orrsh(int Rd, int Rn, int Rm, int Rs, int Sh)
+inline int orrsh(Register Rd, Register Rn, Register Rm, Register Rs, int Sh)
 {
   return DATAS(AL, 0xc, 0, Rn, Rd, Rs, Sh, Rm);
 }
-inline int movsh(int Rd, int Rm, int Rs, int Sh)
+inline int movsh(Register Rd, Register Rm, Register Rs, int Sh)
 {
-  return DATAS(AL, 0xd, 0, 0, Rd, Rs, Sh, Rm);
+  return DATAS(AL, 0xd, 0, Register(0), Rd, Rs, Sh, Rm);
 }
-inline int mul(int Rd, int Rm, int Rs)
+inline int mul(Register Rd, Register Rm, Register Rs)
 {
-  return MULTIPLY(AL, 0, 0, Rd, 0, Rs, Rm);
+  return MULTIPLY(AL, 0, 0, Rd, Register(0), Rs, Rm);
 }
-inline int mla(int Rd, int Rm, int Rs, int Rn)
+inline int mla(Register Rd, Register Rm, Register Rs, Register Rn)
 {
   return MULTIPLY(AL, 1, 0, Rd, Rn, Rs, Rm);
 }
-inline int umull(int RdLo, int RdHi, int Rm, int Rs)
+inline int umull(Register RdLo, Register RdHi, Register Rm, Register Rs)
 {
   return MULTIPLY(AL, 4, 0, RdHi, RdLo, Rs, Rm);
 }
-inline int ldr(int Rd, int Rn, int Rm, int W = 0)
+inline int ldr(Register Rd, Register Rn, Register Rm, int W = 0)
 {
   return XFER(AL, 1, 1, 0, W, 1, Rn, Rd, 0, 0, Rm);
 }
-inline int ldri(int Rd, int Rn, int imm, int W = 0)
+inline int ldri(Register Rd, Register Rn, int imm, int W = 0)
 {
   return XFERI(AL, 1, calcU(imm), 0, W, 1, Rn, Rd, abs(imm));
 }
-inline int ldrb(int Rd, int Rn, int Rm)
+inline int ldrb(Register Rd, Register Rn, Register Rm)
 {
   return XFER(AL, 1, 1, 1, 0, 1, Rn, Rd, 0, 0, Rm);
 }
-inline int ldrbi(int Rd, int Rn, int imm)
+inline int ldrbi(Register Rd, Register Rn, int imm)
 {
   return XFERI(AL, 1, calcU(imm), 1, 0, 1, Rn, Rd, abs(imm));
 }
-inline int str(int Rd, int Rn, int Rm, int W = 0)
+inline int str(Register Rd, Register Rn, Register Rm, int W = 0)
 {
   return XFER(AL, 1, 1, 0, W, 0, Rn, Rd, 0, 0, Rm);
 }
-inline int stri(int Rd, int Rn, int imm, int W = 0)
+inline int stri(Register Rd, Register Rn, int imm, int W = 0)
 {
   return XFERI(AL, 1, calcU(imm), 0, W, 0, Rn, Rd, abs(imm));
 }
-inline int strb(int Rd, int Rn, int Rm)
+inline int strb(Register Rd, Register Rn, Register Rm)
 {
   return XFER(AL, 1, 1, 1, 0, 0, Rn, Rd, 0, 0, Rm);
 }
-inline int strbi(int Rd, int Rn, int imm)
+inline int strbi(Register Rd, Register Rn, int imm)
 {
   return XFERI(AL, 1, calcU(imm), 1, 0, 0, Rn, Rd, abs(imm));
 }
-inline int ldrh(int Rd, int Rn, int Rm)
+inline int ldrh(Register Rd, Register Rn, Register Rm)
 {
   return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 0, 1, Rm);
 }
-inline int ldrhi(int Rd, int Rn, int imm)
+inline int ldrhi(Register Rd, Register Rn, int imm)
 {
   return XFER2I(AL,
                 1,
@@ -341,11 +341,11 @@ inline int ldrhi(int Rd, int Rn, int imm)
                 1,
                 abs(imm) & 0xf);
 }
-inline int strh(int Rd, int Rn, int Rm)
+inline int strh(Register Rd, Register Rn, Register Rm)
 {
   return XFER2(AL, 1, 1, 0, 0, Rn, Rd, 0, 1, Rm);
 }
-inline int strhi(int Rd, int Rn, int imm)
+inline int strhi(Register Rd, Register Rn, int imm)
 {
   return XFER2I(AL,
                 1,
@@ -359,11 +359,11 @@ inline int strhi(int Rd, int Rn, int imm)
                 1,
                 abs(imm) & 0xf);
 }
-inline int ldrsh(int Rd, int Rn, int Rm)
+inline int ldrsh(Register Rd, Register Rn, Register Rm)
 {
   return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 1, Rm);
 }
-inline int ldrshi(int Rd, int Rn, int imm)
+inline int ldrshi(Register Rd, Register Rn, int imm)
 {
   return XFER2I(AL,
                 1,
@@ -377,11 +377,11 @@ inline int ldrshi(int Rd, int Rn, int imm)
                 1,
                 abs(imm) & 0xf);
 }
-inline int ldrsb(int Rd, int Rn, int Rm)
+inline int ldrsb(Register Rd, Register Rn, Register Rm)
 {
   return XFER2(AL, 1, 1, 0, 1, Rn, Rd, 1, 0, Rm);
 }
-inline int ldrsbi(int Rd, int Rn, int imm)
+inline int ldrsbi(Register Rd, Register Rn, int imm)
 {
   return XFER2I(AL,
                 1,
@@ -403,27 +403,27 @@ inline int bkpt(int16_t immed)
 // COPROCESSOR INSTRUCTIONS
 inline int mcr(int coproc,
                int opcode_1,
-               int Rd,
+               Register Rd,
                int CRn,
                int CRm,
                int opcode_2 = 0)
 {
   return COREG(AL, opcode_1, 0, CRn, Rd, coproc, opcode_2, CRm);
 }
-inline int mcrr(int coproc, int opcode, int Rd, int Rn, int CRm)
+inline int mcrr(int coproc, int opcode, Register Rd, Register Rn, int CRm)
 {
   return COREG2(AL, 0, Rn, Rd, coproc, opcode, CRm);
 }
 inline int mrc(int coproc,
                int opcode_1,
-               int Rd,
+               Register Rd,
                int CRn,
                int CRm,
                int opcode_2 = 0)
 {
   return COREG(AL, opcode_1, 1, CRn, Rd, coproc, opcode_2, CRm);
 }
-inline int mrrc(int coproc, int opcode, int Rd, int Rn, int CRm)
+inline int mrrc(int coproc, int opcode, Register Rd, Register Rn, int CRm)
 {
   return COREG2(AL, 1, Rn, Rd, coproc, opcode, CRm);
 }
@@ -551,42 +551,42 @@ inline int ftosizd(int Sd, int Dm)
   return COOP(AL, 0xb | (Sd & 1) << 2, 0xd, Sd >> 1, 11, 6, Dm);
 }
 // single load/store instructions for both precision types
-inline int flds(int Sd, int Rn, int offset = 0)
+inline int flds(int Sd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, Sd & 1, 0, 1, Rn, Sd >> 1, 10, offset);
 };
-inline int fldd(int Dd, int Rn, int offset = 0)
+inline int fldd(int Dd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, 0, 0, 1, Rn, Dd, 11, offset);
 };
-inline int fsts(int Sd, int Rn, int offset = 0)
+inline int fsts(int Sd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, Sd & 1, 0, 0, Rn, Sd >> 1, 10, offset);
 };
-inline int fstd(int Dd, int Rn, int offset = 0)
+inline int fstd(int Dd, Register Rn, int offset = 0)
 {
   return COXFER(AL, 1, 1, 0, 0, 0, Rn, Dd, 11, offset);
 };
 // move between GPRs and FPRs
-inline int fmsr(int Sn, int Rd)
+inline int fmsr(int Sn, Register Rd)
 {
   return mcr(10, 0, Rd, Sn >> 1, 0, (Sn & 1) << 2);
 }
-inline int fmrs(int Rd, int Sn)
+inline int fmrs(Register Rd, int Sn)
 {
   return mrc(10, 0, Rd, Sn >> 1, 0, (Sn & 1) << 2);
 }
 // move to/from VFP system registers
-inline int fmrx(int Rd, int reg)
+inline int fmrx(Register Rd, int reg)
 {
   return mrc(10, 7, Rd, reg, 0);
 }
 // these move around pairs of single-precision registers
-inline int fmdrr(int Dm, int Rd, int Rn)
+inline int fmdrr(int Dm, Register Rd, Register Rn)
 {
   return mcrr(11, 1, Rd, Rn, Dm);
 }
-inline int fmrrd(int Rd, int Rn, int Dm)
+inline int fmrrd(Register Rd, Register Rn, int Dm)
 {
   return mrrc(11, 1, Rd, Rn, Dm);
 }
@@ -600,27 +600,27 @@ inline int SETS(int ins)
   return ins | 1 << 20;
 }
 // PSEUDO-INSTRUCTIONS
-inline int lsl(int Rd, int Rm, int Rs)
+inline int lsl(Register Rd, Register Rm, Register Rs)
 {
   return movsh(Rd, Rm, Rs, LSL);
 }
-inline int lsli(int Rd, int Rm, int imm)
+inline int lsli(Register Rd, Register Rm, int imm)
 {
   return mov(Rd, Rm, LSL, imm);
 }
-inline int lsr(int Rd, int Rm, int Rs)
+inline int lsr(Register Rd, Register Rm, Register Rs)
 {
   return movsh(Rd, Rm, Rs, LSR);
 }
-inline int lsri(int Rd, int Rm, int imm)
+inline int lsri(Register Rd, Register Rm, int imm)
 {
   return mov(Rd, Rm, LSR, imm);
 }
-inline int asr(int Rd, int Rm, int Rs)
+inline int asr(Register Rd, Register Rm, Register Rs)
 {
   return movsh(Rd, Rm, Rs, ASR);
 }
-inline int asri(int Rd, int Rm, int imm)
+inline int asri(Register Rd, Register Rm, int imm)
 {
   return mov(Rd, Rm, ASR, imm);
 }
@@ -670,7 +670,7 @@ inline int bpl(int offset)
 }
 inline int fmstat()
 {
-  return fmrx(15, FPSCR);
+  return fmrx(Register(15), FPSCR);
 }
 // todo: make this pretty:
 inline int dmb()

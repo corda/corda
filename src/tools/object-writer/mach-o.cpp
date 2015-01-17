@@ -33,10 +33,12 @@
 #define CPU_TYPE_I386 7
 #define CPU_TYPE_X86_64 (CPU_TYPE_I386 | CPU_ARCH_ABI64)
 #define CPU_TYPE_ARM 12
+#define CPU_TYPE_ARM64 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
 
 #define CPU_SUBTYPE_I386_ALL 3
 #define CPU_SUBTYPE_X86_64_ALL CPU_SUBTYPE_I386_ALL
 #define CPU_SUBTYPE_ARM_V7 9
+#define CPU_SUBTYPE_ARM_V8 13
 
 namespace {
 
@@ -156,6 +158,10 @@ class MachOPlatform : public Platform {
     case PlatformInfo::Arm:
       cpuType = CPU_TYPE_ARM;
       cpuSubType = CPU_SUBTYPE_ARM_V7;
+      break;
+    case PlatformInfo::Arm64:
+      cpuType = CPU_TYPE_ARM64;
+      cpuSubType = CPU_SUBTYPE_ARM_V8;
       break;
     default:
       // should never happen (see MachOPlatform declarations at bottom)
@@ -280,6 +286,7 @@ class MachOPlatform : public Platform {
 
 MachOPlatform<uint32_t> darwinx86Platform(PlatformInfo::x86);
 MachOPlatform<uint32_t> darwinArmPlatform(PlatformInfo::Arm);
+MachOPlatform<uint64_t> darwinArm64Platform(PlatformInfo::Arm64);
 MachOPlatform<uint64_t> darwinx86_64Platform(PlatformInfo::x86_64);
 
 }  // namespace

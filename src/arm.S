@@ -10,7 +10,7 @@
    details. */
 
 #include "avian/types.h"
-   
+
 .text
 
 #define LOCAL(x) .L##x
@@ -18,7 +18,7 @@
 #ifdef __APPLE__
 #  define GLOBAL(x) _##x
 #else
-#  define GLOBAL(x) x   
+#  define GLOBAL(x) x
 #endif
 
 .globl GLOBAL(vmNativeCall)
@@ -83,9 +83,9 @@ LOCAL(loop):
 LOCAL(double):
   cmp   r8,#DOUBLE_TYPE
   bne   LOCAL(exit)
-  fmrrd r0,r1,d0   
+  fmrrd r0,r1,d0
 #endif
-   
+
 LOCAL(exit):
   ldmfd sp!, {r4-r8, pc} // restore non-volatile regs and return
 
@@ -111,7 +111,7 @@ GLOBAL(vmRun):
   stmfd sp!, {r4-r11, lr}
   // align stack
   sub   sp, sp, #12
-   
+
   str   sp, [r2, #CHECKPOINT_STACK]
 
   mov   r12, r0

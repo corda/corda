@@ -25,17 +25,17 @@ class Context;
 
 // shortcut functions
 
-inline int newTemp(Context* con)
+inline Register newTemp(Context* con)
 {
   return con->client->acquireTemporary(GPR_MASK);
 }
 
-inline int newTemp(Context* con, unsigned mask)
+inline Register newTemp(Context* con, RegisterMask mask)
 {
   return con->client->acquireTemporary(mask);
 }
 
-inline void freeTemp(Context* con, int r)
+inline void freeTemp(Context* con, Register r)
 {
   con->client->releaseTemporary(r);
 }
@@ -45,67 +45,67 @@ inline int64_t getValue(lir::Constant* con)
   return con->value->value();
 }
 
-inline lir::Register makeTemp(Context* con)
+inline lir::RegisterPair makeTemp(Context* con)
 {
-  lir::Register tmp(newTemp(con));
+  lir::RegisterPair tmp(newTemp(con));
   return tmp;
 }
 
-inline lir::Register makeTemp64(Context* con)
+inline lir::RegisterPair makeTemp64(Context* con)
 {
-  lir::Register tmp(newTemp(con), newTemp(con));
+  lir::RegisterPair tmp(newTemp(con), newTemp(con));
   return tmp;
 }
 
-inline void freeTemp(Context* con, const lir::Register& tmp)
+inline void freeTemp(Context* con, const lir::RegisterPair& tmp)
 {
-  if (tmp.low != lir::NoRegister)
+  if (tmp.low != NoRegister)
     freeTemp(con, tmp.low);
-  if (tmp.high != lir::NoRegister)
+  if (tmp.high != NoRegister)
     freeTemp(con, tmp.high);
 }
 
 void shiftLeftR(Context* con,
                 unsigned size,
-                lir::Register* a,
-                lir::Register* b,
-                lir::Register* t);
+                lir::RegisterPair* a,
+                lir::RegisterPair* b,
+                lir::RegisterPair* t);
 
 void moveRR(Context* con,
             unsigned srcSize,
-            lir::Register* src,
+            lir::RegisterPair* src,
             unsigned dstSize,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void shiftLeftC(Context* con,
                 unsigned size UNUSED,
                 lir::Constant* a,
-                lir::Register* b,
-                lir::Register* t);
+                lir::RegisterPair* b,
+                lir::RegisterPair* t);
 
 void shiftRightR(Context* con,
                  unsigned size,
-                 lir::Register* a,
-                 lir::Register* b,
-                 lir::Register* t);
+                 lir::RegisterPair* a,
+                 lir::RegisterPair* b,
+                 lir::RegisterPair* t);
 
 void shiftRightC(Context* con,
                  unsigned size UNUSED,
                  lir::Constant* a,
-                 lir::Register* b,
-                 lir::Register* t);
+                 lir::RegisterPair* b,
+                 lir::RegisterPair* t);
 
 void unsignedShiftRightR(Context* con,
                          unsigned size,
-                         lir::Register* a,
-                         lir::Register* b,
-                         lir::Register* t);
+                         lir::RegisterPair* a,
+                         lir::RegisterPair* b,
+                         lir::RegisterPair* t);
 
 void unsignedShiftRightC(Context* con,
                          unsigned size UNUSED,
                          lir::Constant* a,
-                         lir::Register* b,
-                         lir::Register* t);
+                         lir::RegisterPair* b,
+                         lir::RegisterPair* t);
 
 bool needJump(MyBlock* b);
 
@@ -113,133 +113,133 @@ unsigned padding(MyBlock* b, unsigned offset);
 
 void resolve(MyBlock* b);
 
-void jumpR(Context* con, unsigned size UNUSED, lir::Register* target);
+void jumpR(Context* con, unsigned size UNUSED, lir::RegisterPair* target);
 
 void swapRR(Context* con,
             unsigned aSize,
-            lir::Register* a,
+            lir::RegisterPair* a,
             unsigned bSize,
-            lir::Register* b);
+            lir::RegisterPair* b);
 
 void moveRR(Context* con,
             unsigned srcSize,
-            lir::Register* src,
+            lir::RegisterPair* src,
             unsigned dstSize,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void moveZRR(Context* con,
              unsigned srcSize,
-             lir::Register* src,
+             lir::RegisterPair* src,
              unsigned,
-             lir::Register* dst);
+             lir::RegisterPair* dst);
 
 void moveCR(Context* con,
             unsigned size,
             lir::Constant* src,
             unsigned,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void moveCR2(Context* con,
              unsigned size,
              lir::Constant* src,
-             lir::Register* dst,
+             lir::RegisterPair* dst,
              Promise* callOffset);
 
 void moveCR(Context* con,
             unsigned size,
             lir::Constant* src,
             unsigned,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void addR(Context* con,
           unsigned size,
-          lir::Register* a,
-          lir::Register* b,
-          lir::Register* t);
+          lir::RegisterPair* a,
+          lir::RegisterPair* b,
+          lir::RegisterPair* t);
 
 void subR(Context* con,
           unsigned size,
-          lir::Register* a,
-          lir::Register* b,
-          lir::Register* t);
+          lir::RegisterPair* a,
+          lir::RegisterPair* b,
+          lir::RegisterPair* t);
 
 void addC(Context* con,
           unsigned size,
           lir::Constant* a,
-          lir::Register* b,
-          lir::Register* dst);
+          lir::RegisterPair* b,
+          lir::RegisterPair* dst);
 
 void subC(Context* con,
           unsigned size,
           lir::Constant* a,
-          lir::Register* b,
-          lir::Register* dst);
+          lir::RegisterPair* b,
+          lir::RegisterPair* dst);
 
 void multiplyR(Context* con,
                unsigned size,
-               lir::Register* a,
-               lir::Register* b,
-               lir::Register* t);
+               lir::RegisterPair* a,
+               lir::RegisterPair* b,
+               lir::RegisterPair* t);
 
 void floatAbsoluteRR(Context* con,
                      unsigned size,
-                     lir::Register* a,
+                     lir::RegisterPair* a,
                      unsigned,
-                     lir::Register* b);
+                     lir::RegisterPair* b);
 
 void floatNegateRR(Context* con,
                    unsigned size,
-                   lir::Register* a,
+                   lir::RegisterPair* a,
                    unsigned,
-                   lir::Register* b);
+                   lir::RegisterPair* b);
 
 void float2FloatRR(Context* con,
                    unsigned size,
-                   lir::Register* a,
+                   lir::RegisterPair* a,
                    unsigned,
-                   lir::Register* b);
+                   lir::RegisterPair* b);
 
 void float2IntRR(Context* con,
                  unsigned size,
-                 lir::Register* a,
+                 lir::RegisterPair* a,
                  unsigned,
-                 lir::Register* b);
+                 lir::RegisterPair* b);
 
 void int2FloatRR(Context* con,
                  unsigned,
-                 lir::Register* a,
+                 lir::RegisterPair* a,
                  unsigned size,
-                 lir::Register* b);
+                 lir::RegisterPair* b);
 
 void floatSqrtRR(Context* con,
                  unsigned size,
-                 lir::Register* a,
+                 lir::RegisterPair* a,
                  unsigned,
-                 lir::Register* b);
+                 lir::RegisterPair* b);
 
 void floatAddR(Context* con,
                unsigned size,
-               lir::Register* a,
-               lir::Register* b,
-               lir::Register* t);
+               lir::RegisterPair* a,
+               lir::RegisterPair* b,
+               lir::RegisterPair* t);
 
 void floatSubtractR(Context* con,
                     unsigned size,
-                    lir::Register* a,
-                    lir::Register* b,
-                    lir::Register* t);
+                    lir::RegisterPair* a,
+                    lir::RegisterPair* b,
+                    lir::RegisterPair* t);
 
 void floatMultiplyR(Context* con,
                     unsigned size,
-                    lir::Register* a,
-                    lir::Register* b,
-                    lir::Register* t);
+                    lir::RegisterPair* a,
+                    lir::RegisterPair* b,
+                    lir::RegisterPair* t);
 
 void floatDivideR(Context* con,
                   unsigned size,
-                  lir::Register* a,
-                  lir::Register* b,
-                  lir::Register* t);
+                  lir::RegisterPair* a,
+                  lir::RegisterPair* b,
+                  lir::RegisterPair* t);
 
 int normalize(Context* con,
               int offset,
@@ -250,7 +250,7 @@ int normalize(Context* con,
 
 void store(Context* con,
            unsigned size,
-           lir::Register* src,
+           lir::RegisterPair* src,
            int base,
            int offset,
            int index,
@@ -259,7 +259,7 @@ void store(Context* con,
 
 void moveRM(Context* con,
             unsigned srcSize,
-            lir::Register* src,
+            lir::RegisterPair* src,
             unsigned dstSize UNUSED,
             lir::Memory* dst);
 
@@ -270,7 +270,7 @@ void load(Context* con,
           int index,
           unsigned scale,
           unsigned dstSize,
-          lir::Register* dst,
+          lir::RegisterPair* dst,
           bool preserveIndex,
           bool signExtend);
 
@@ -278,61 +278,61 @@ void moveMR(Context* con,
             unsigned srcSize,
             lir::Memory* src,
             unsigned dstSize,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void moveZMR(Context* con,
              unsigned srcSize,
              lir::Memory* src,
              unsigned dstSize,
-             lir::Register* dst);
+             lir::RegisterPair* dst);
 
 void andR(Context* con,
           unsigned size,
-          lir::Register* a,
-          lir::Register* b,
-          lir::Register* dst);
+          lir::RegisterPair* a,
+          lir::RegisterPair* b,
+          lir::RegisterPair* dst);
 
 void andC(Context* con,
           unsigned size,
           lir::Constant* a,
-          lir::Register* b,
-          lir::Register* dst);
+          lir::RegisterPair* b,
+          lir::RegisterPair* dst);
 
 void orR(Context* con,
          unsigned size,
-         lir::Register* a,
-         lir::Register* b,
-         lir::Register* dst);
+         lir::RegisterPair* a,
+         lir::RegisterPair* b,
+         lir::RegisterPair* dst);
 
 void xorR(Context* con,
           unsigned size,
-          lir::Register* a,
-          lir::Register* b,
-          lir::Register* dst);
+          lir::RegisterPair* a,
+          lir::RegisterPair* b,
+          lir::RegisterPair* dst);
 
 void moveAR2(Context* con,
              unsigned srcSize,
              lir::Address* src,
              unsigned dstSize,
-             lir::Register* dst);
+             lir::RegisterPair* dst);
 
 void moveAR(Context* con,
             unsigned srcSize,
             lir::Address* src,
             unsigned dstSize,
-            lir::Register* dst);
+            lir::RegisterPair* dst);
 
 void compareRR(Context* con,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                unsigned bSize UNUSED,
-               lir::Register* b);
+               lir::RegisterPair* b);
 
 void compareCR(Context* con,
                unsigned aSize,
                lir::Constant* a,
                unsigned bSize,
-               lir::Register* b);
+               lir::RegisterPair* b);
 
 void compareCM(Context* con,
                unsigned aSize,
@@ -342,7 +342,7 @@ void compareCM(Context* con,
 
 void compareRM(Context* con,
                unsigned aSize,
-               lir::Register* a,
+               lir::RegisterPair* a,
                unsigned bSize,
                lir::Memory* b);
 
@@ -365,21 +365,21 @@ void branchLong(Context* con,
 void branchRR(Context* con,
               lir::TernaryOperation op,
               unsigned size,
-              lir::Register* a,
-              lir::Register* b,
+              lir::RegisterPair* a,
+              lir::RegisterPair* b,
               lir::Constant* target);
 
 void branchCR(Context* con,
               lir::TernaryOperation op,
               unsigned size,
               lir::Constant* a,
-              lir::Register* b,
+              lir::RegisterPair* b,
               lir::Constant* target);
 
 void branchRM(Context* con,
               lir::TernaryOperation op,
               unsigned size,
-              lir::Register* a,
+              lir::RegisterPair* a,
               lir::Memory* b,
               lir::Constant* target);
 
@@ -403,11 +403,11 @@ void moveCM(Context* con,
 
 void negateRR(Context* con,
               unsigned srcSize,
-              lir::Register* src,
+              lir::RegisterPair* src,
               unsigned dstSize UNUSED,
-              lir::Register* dst);
+              lir::RegisterPair* dst);
 
-void callR(Context* con, unsigned size UNUSED, lir::Register* target);
+void callR(Context* con, unsigned size UNUSED, lir::RegisterPair* target);
 
 void callC(Context* con, unsigned size UNUSED, lir::Constant* target);
 

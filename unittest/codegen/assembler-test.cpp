@@ -79,6 +79,6 @@ TEST(ArchitecturePlan)
         (lir::UnaryOperation)op, vm::TargetBytesPerWord, mask, &thunk);
     assertFalse(thunk);
     assertNotEqual(static_cast<uint8_t>(0), mask.typeMask);
-    assertNotEqual(static_cast<uint64_t>(0), mask.registerMask);
+    assertNotEqual(static_cast<uint64_t>(0), (uint64_t)mask.lowRegisterMask);
   }
 }

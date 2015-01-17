@@ -1408,8 +1408,20 @@ void writeInitializations(Output* out, Module& module)
   }
 }
 
-void writeJavaInitialization(Output* out, Class* cl)
+void writeJavaInitialization(Output* out,
+                             Class* cl,
+                             std::set<Class*>& alreadyInited)
 {
+  if (alreadyInited.find(cl) != alreadyInited.end()) {
+    return;
+  }
+
+  alreadyInited.insert(cl);
+
+  if (cl->super) {
+    writeJavaInitialization(out, cl->super, alreadyInited);
+  }
+
   out->write("bootJavaClass(t, Gc::");
   out->write(capitalize(cl->name));
   out->write("Type, ");
@@ -1436,10 +1448,11 @@ void writeJavaInitialization(Output* out, Class* cl)
 
 void writeJavaInitializations(Output* out, Module& module)
 {
+  std::set<Class*> alreadyInited;
   for (const auto p : module.classes) {
     Class* cl = p.second;
     if (cl->javaName.size()) {
-      writeJavaInitialization(out, cl);
+      writeJavaInitialization(out, cl, alreadyInited);
     }
   }
 }
