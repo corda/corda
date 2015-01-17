@@ -353,104 +353,20 @@ but have not yet been tested.
 
 Building with the Android Class Library
 ---------------------------------------
-
 As an alternative to both the Avian and OpenJDK class libaries, you
-can also build with the Android class library on some platforms
-(currently Linux works and OS X mostly works).  To build this way, do
-the following, starting from the Avian directory:
+can also build with the Android class library. Now it should work on Linux, OS X and Windows.
 
-    cd ..
-    mkdir -p android/system android/external
-    cd android
+The simpliest way to build Avian with Android classpath is to use `avian-pack` project: https://github.com/bigfatbrowncat/avian-pack
 
-    git clone https://android.googlesource.com/platform/bionic
-    (cd bionic && \
-       git checkout 84983592ade3ec7d72d082262fb6646849979bfc)
+Avian-pack consists of Avian itself with some Android components (such as libcore and icu4c). 
 
-    git clone https://android.googlesource.com/platform/system/core \
-      system/core
-    (cd system/core && \
-       git checkout 373c77583f9d8eab88e4321d1a2e2af8f5ae8ea7)
-
-    git clone https://android.googlesource.com/platform/external/fdlibm \
-      external/fdlibm
-    (cd external/fdlibm && \
-       git checkout 0da5f683c9ddc9442af3b389b4220e91ccffb320)
-
-    git clone https://android.googlesource.com/platform/external/icu4c \
-      external/icu4c
-    (cd external/icu4c && \
-       git checkout e5311394ca22b280da41cd17059288dab3fb1ea6)
-
-    git clone https://android.googlesource.com/platform/libnativehelper
-    (cd libnativehelper && \
-       git checkout b14825c7c75420049e03849994265be651cc4a4e)
-
-    git clone https://android.googlesource.com/platform/external/openssl \
-      external/openssl
-    (cd external/openssl && \
-       git checkout 1417357d893849c4b6afdd98c32b6ca1b4b19a8b)
-
-    git clone https://android.googlesource.com/platform/external/zlib \
-      external/zlib
-    (cd external/zlib && \
-       git checkout 15b6223aa57a347ce113729253802cb2fdeb4ad0)
-
-    git clone https://github.com/dicej/android-conscrypt external/conscrypt
-    (cd external/conscrypt && \
-       git checkout a96719f834232634e9160873bd4c44834b84eb15)
-
-    git clone git://git.openssl.org/openssl.git openssl-upstream
-    (cd openssl-upstream && git checkout OpenSSL_1_0_1h)
-
-    git clone https://github.com/dicej/android-libcore64 libcore
-    (cd libcore && \
-      git checkout 69a1fd8623b85f978ead36dcf1c6c78c5ff79932)
-
-    curl -Of http://oss.readytalk.com/avian-web/expat-2.1.0.tar.gz
-    (cd external && tar xzf ../expat-2.1.0.tar.gz && mv expat-2.1.0 expat)
-
-    (cd external/expat && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
-       --enable-static && make)
-
-    (cd external/fdlibm && (mv makefile.in Makefile.in || true) \
-       && CFLAGS=-fPIC bash configure && make)
-
-    (cd external/icu4c && CFLAGS=-fPIC CXXFLAGS=-fPIC ./configure \
-       --enable-static && make)
-
-NB: use 'CC="gcc -fPIC" ./Configure darwin64-x86_64-cc' when building
-for x86_64 OS X instead of 'CC="gcc -fPIC" ./config':
-
-    (cd openssl-upstream \
-       && (for x in ../external/openssl/patches/*.patch; \
-             do patch -p1 < $x; done) \
-       && CC="gcc -fPIC" ./config && make)
-
-    cd ../avian
-    make android=$(pwd)/../android test
-
-Note that we use https://github.com/dicej/android-libcore64 above
-instead of the upstream
-https://android.googlesource.com/platform/libcore repository, since
-the former has patches to provide better support for non-Linux
-platforms.  We have also forked
-https://android.googlesource.com/platform/external/conscrypt as
-https://github.com/dicej/android-conscrypt to patch that project as
-well.
-
-Also note that we use the upstream OpenSSL repository and apply the
+Note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build
 the Android fork of OpenSSL directly without checking out and building
 the entire platform.  As of this writing, the patches apply cleanly
 against OpenSSL 1.0.1h, so that's the tag we check out, but this may
 change in the future when the Android fork rebases against a new
 OpenSSL version.
-
-Finally, we specify specific commit hashes for each repository which
-are known to work.  Later versions may also work, but have not been
-tested.
-
 
 Installing
 ----------
