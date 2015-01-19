@@ -343,13 +343,35 @@ ifneq ($(android),)
 
 	xml-java = $(android)/libcore/xml/src/main/java
 	xml-javas := $(shell find $(xml-java) -name '*.java')
+
+	okhttp-android-java = $(android)/external/okhttp/android/main/java
+	okhttp-android-javas := $(shell find $(okhttp-android-java) -name '*.java')
+
+	okhttp-java = $(android)/external/okhttp/okhttp/src/main/java
+	okhttp-javas := $(shell find $(okhttp-java) -name '*.java')
+
+	okio-java = $(android)/external/okhttp/okio/src/main/java
+	okio-javas := $(shell find $(okio-java) -name '*.java')
+	
+	bcpkix-java = $(android)/external/bouncycastle/bcpkix/src/main/java
+	bcpkix-javas := $(shell find $(bcpkix-java) -name '*.java')
+
+	bcprov-java = $(android)/external/bouncycastle/bcprov/src/main/java
+	bcprov-javas := $(shell find $(bcprov-java) -name '*.java')
+	
 	android-classes = \
 		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
 		$(call java-classes,$(crypto-javas),$(crypto-java),$(build)/android) \
 		$(call java-classes,$(crypto-platform-javas),$(crypto-platform-java),$(build)/android) \
 		$(call java-classes,$(dalvik-javas),$(dalvik-java),$(build)/android) \
 		$(call java-classes,$(libart-javas),$(libart-java),$(build)/android) \
-		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android)
+		$(call java-classes,$(xml-javas),$(xml-java),$(build)/android) \
+		$(call java-classes,$(okhttp-javas),$(okhttp-java),$(build)/android) \
+		$(call java-classes,$(okhttp-android-javas),$(okhttp-android-java),$(build)/android) \
+		$(call java-classes,$(okio-javas),$(okio-java),$(build)/android) \
+		$(call java-classes,$(bcpkix-javas),$(bcpkix-java),$(build)/android) \
+		$(call java-classes,$(bcprov-javas),$(bcprov-java),$(build)/android)
+
 	classpath = android
 
 	javahome-files = tzdata
@@ -1684,7 +1706,8 @@ $(build)/%.o: $(build)/android-src/%.cpp $(build)/android.dep
 		$$($(windows-path) $(<)) $(call output,$(@))
 
 $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
-		$(xml-javas) $(luni-nonjavas) $(crypto-javas) $(crypto-platform-javas)
+		$(xml-javas) $(okhttp-android-javas) $(okhttp-javas) $(okio-javas) \
+		$(bcpkix-javas) $(bcprov-javas) $(luni-nonjavas) $(crypto-javas) $(crypto-platform-javas)
 	@echo "compiling luni classes"
 	@mkdir -p $(classpath-build)
 	@mkdir -p $(build)/android
@@ -1692,7 +1715,7 @@ $(build)/android.dep: $(luni-javas) $(dalvik-javas) $(libart-javas) \
 	@mkdir -p $(build)/android-src/libexpat
 	cp $(android)/external/fdlibm/fdlibm.h $(build)/android-src/external/fdlibm/
 	cp $(android)/external/expat/lib/expat*.h $(build)/android-src/libexpat/
-	cp -a $(luni-java)/* $(xml-java)/* $(build)/android-src/
+	cp -a $(luni-java)/* $(xml-java)/* $(okhttp-android-java)/* $(okhttp-java)/* $(okio-java)/* $(bcpkix-java)/* $(bcprov-java)/* $(build)/android-src/
 	rm $(call noop-files,$(luni-blacklist),$(luni-java),$(build)/android-src)
 	(cd $(dalvik-java) && \
 			$(jar) c $(call noop-files,$(dalvik-javas),$(dalvik-java),.)) \
