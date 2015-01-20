@@ -1483,12 +1483,17 @@ void branchRM(Context* c,
   assertT(c, size <= vm::TargetBytesPerWord);
 
   if (a->low.index() == 31) {
-    // stack overflow checks need to compare to the stack pointer, but
+    // Stack overflow checks need to compare to the stack pointer, but
     // we can only encode that in the opposite operand order we're
-    // given, so we need to reverse everything:
+    // given, so we need to reverse everything.  Also, we can't do a
+    // conditional jump further than 2^19 instructions away, which can
+    // cause trouble with large code, so we branch past an
+    // unconditional branch which can jump further, which reverses the
+    // logic again.  Confused?  Good.
     assertT(c, op == lir::JumpIfGreaterOrEqual);
     compareMR(c, size, b, size, a);
-    branch(c, lir::JumpIfLess, target);
+    append(c, bge(8));
+    jumpC(c, vm::TargetBytesPerWord, target);
   } else {
     compareRM(c, size, a, size, b);
     branch(c, op, target);
