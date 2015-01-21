@@ -102,21 +102,22 @@ void* updateOffset(vm::System* s, uint8_t* instruction, int64_t value)
   int32_t v;
   int32_t mask;
   if (vm::TargetBytesPerWord == 8) {
-  if ((*p >> 24) == 0x54) {
-    // conditional branch
-    v = ((reinterpret_cast<uint8_t*>(value) - instruction) >> 2) << 5;
-    mask = 0xFFFFE0;
-  } else {
-    // unconditional branch
-    v = (reinterpret_cast<uint8_t*>(value) - instruction) >> 2;
-    mask = 0x3FFFFFF;
-  }
+    if ((*p >> 24) == 0x54) {
+      // conditional branch
+      v = ((reinterpret_cast<uint8_t*>(value) - instruction) >> 2) << 5;
+      mask = 0xFFFFE0;
+      expect(s, bounded(5, 8, v));
+    } else {
+      // unconditional branch
+      v = (reinterpret_cast<uint8_t*>(value) - instruction) >> 2;
+      mask = 0x3FFFFFF;
+      expect(s, bounded(0, 6, v));
+    }
   } else {
     v = (reinterpret_cast<uint8_t*>(value) - (instruction + 8)) >> 2;
     mask = 0xFFFFFF;
+    expect(s, bounded(0, 8, v));
   }
-
-  expect(s, bounded(0, 8, v));
 
   *p = (v & mask) | ((~mask) & *p);
 

@@ -95,7 +95,7 @@ void nextFrame(ArchitectureContext* con,
 
   if ((*start >> 20) == (TargetBytesPerWord == 8 ? 0xf94 : 0xe59)) {
     // skip stack overflow check
-    start += 3;
+    start += TargetBytesPerWord == 8 ? 4 : 3;
   }
 
   if (instruction <= start) {
