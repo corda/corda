@@ -352,13 +352,13 @@ ifneq ($(android),)
 
 	okio-java = $(android)/external/okhttp/okio/src/main/java
 	okio-javas := $(shell find $(okio-java) -name '*.java')
-	
+
 	bcpkix-java = $(android)/external/bouncycastle/bcpkix/src/main/java
 	bcpkix-javas := $(shell find $(bcpkix-java) -name '*.java')
 
 	bcprov-java = $(android)/external/bouncycastle/bcprov/src/main/java
 	bcprov-javas := $(shell find $(bcprov-java) -name '*.java')
-	
+
 	android-classes = \
 		$(call java-classes,$(luni-javas),$(luni-java),$(build)/android) \
 		$(call java-classes,$(crypto-javas),$(crypto-java),$(build)/android) \
@@ -1677,7 +1677,7 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	@echo "compiling classpath classes"
 	@mkdir -p $(classpath-build)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
-		$(classpath-classes) arch=$(build-arch) platform=$(build-platform))"; \
+		$(classpath-classes) arch=$(build-arch) platform=$(bootimage-platform))"; \
 	if [ -n "$${classes}" ]; then \
 		$(javac) -source 1.6 -target 1.6 \
 			-d $(classpath-build) -bootclasspath $(boot-classpath) \
