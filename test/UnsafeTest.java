@@ -135,6 +135,9 @@ public class UnsafeTest {
   }
 
   public static void main(String[] args) {
+    System.out.println("method count is "
+                       + Unsafe.class.getDeclaredMethods().length);
+
     Unsafe u = avian.Machine.getUnsafe();
 
     unsafeCatch(u);
