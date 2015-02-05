@@ -72,6 +72,8 @@ typedef unsigned __int64 uint64_t;
 #define ARCH_x86_64
 #elif defined __arm__
 #define ARCH_arm
+#elif defined __aarch64__
+#define ARCH_arm64
 #endif
 
 #endif  // not _MSC_VER

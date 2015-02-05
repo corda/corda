@@ -199,6 +199,72 @@ inline bool atomicCompareAndSwap(uintptr_t* p, uintptr_t old, uintptr_t new_)
 }
 #endif
 
+#if (defined __APPLE__) && (defined ARCH_arm64)
+const bool AppleARM64 = true;
+#else
+const bool AppleARM64 = false;
+#endif
+
+inline void advance(unsigned* stackIndex,
+                    unsigned* stackSubIndex,
+                    unsigned newStackSubIndex)
+{
+  if (AppleARM64) {
+    if (newStackSubIndex == BytesPerWord) {
+      *stackSubIndex = 0;
+      ++(*stackIndex);
+    } else {
+      *stackSubIndex = newStackSubIndex;
+    }
+  }
+}
+
+inline void push(uint8_t type,
+                 uintptr_t* stack,
+                 unsigned* stackIndex,
+                 unsigned* stackSubIndex,
+                 uintptr_t argument)
+{
+  if (AppleARM64) {
+    // See
+    // https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html
+    // for how Apple diverges from the generic ARM64 ABI on iOS.
+    // Specifically, arguments passed on the stack are aligned to
+    // their natural alignment rather than 8.
+    switch (type) {
+    case INT8_TYPE:
+      reinterpret_cast<int8_t*>(stack + *stackIndex)[*stackSubIndex] = argument;
+      advance(stackIndex, stackSubIndex, *stackSubIndex + 1);
+      break;
+
+    case INT16_TYPE:
+      advance(stackIndex, stackSubIndex, pad(*stackSubIndex, 2));
+      reinterpret_cast<int16_t*>(stack + *stackIndex)[*stackSubIndex / 2]
+          = argument;
+      advance(stackIndex, stackSubIndex, *stackSubIndex + 2);
+      break;
+
+    case INT32_TYPE:
+    case FLOAT_TYPE:
+      advance(stackIndex, stackSubIndex, pad(*stackSubIndex, 4));
+      reinterpret_cast<int32_t*>(stack + *stackIndex)[*stackSubIndex / 4]
+          = argument;
+      advance(stackIndex, stackSubIndex, *stackSubIndex + 4);
+      break;
+
+    case POINTER_TYPE:
+      advance(stackIndex, stackSubIndex, pad(*stackSubIndex));
+      stack[(*stackIndex)++] = argument;
+      break;
+
+    default:
+      abort();
+    }
+  } else {
+    stack[(*stackIndex)++] = argument;
+  }
+}
+
 inline uint64_t dynamicCall(void* function,
                             uintptr_t* arguments,
                             uint8_t* argumentTypes,
@@ -226,6 +292,7 @@ inline uint64_t dynamicCall(void* function,
                 (argumentCount * 8)
                 / BytesPerWord);  // is > argumentSize to account for padding
   unsigned stackIndex = 0;
+  unsigned stackSubIndex = 0;
 
   unsigned ai = 0;
   for (unsigned ati = 0; ati < argumentCount; ++ati) {
@@ -242,6 +309,7 @@ inline uint64_t dynamicCall(void* function,
         memcpy(vfpTable + vfpIndex, arguments + ai, 8);
         vfpIndex += 8 / BytesPerWord;
       } else {
+        advance(&stackIndex, &stackSubIndex, pad(stackSubIndex));
         vfpIndex = VfpCount;
         if (stackIndex % Alignment) {
           ++stackIndex;
@@ -260,7 +328,11 @@ inline uint64_t dynamicCall(void* function,
       } else if (vfpIndex < VfpCount) {
         vfpTable[vfpIndex++] = arguments[ai];
       } else {
-        RUNTIME_ARRAY_BODY(stack)[stackIndex++] = arguments[ai];
+        push(argumentTypes[ati],
+             RUNTIME_ARRAY_BODY(stack),
+             &stackIndex,
+             &stackSubIndex,
+             arguments[ai]);
       }
       ++ai;
       break;
@@ -280,6 +352,7 @@ inline uint64_t dynamicCall(void* function,
           gprIndex += 8 / BytesPerWord;
         }
       } else {  // pass argument on stack
+        advance(&stackIndex, &stackSubIndex, pad(stackSubIndex));
         gprIndex = GprCount;
         if (stackIndex % Alignment) {
           ++stackIndex;
@@ -295,7 +368,11 @@ inline uint64_t dynamicCall(void* function,
       if (gprIndex < GprCount) {
         gprTable[gprIndex++] = arguments[ai];
       } else {
-        RUNTIME_ARRAY_BODY(stack)[stackIndex++] = arguments[ai];
+        push(argumentTypes[ati],
+             RUNTIME_ARRAY_BODY(stack),
+             &stackIndex,
+             &stackSubIndex,
+             arguments[ai]);
       }
       ++ai;
     } break;
