@@ -175,32 +175,22 @@ public final class Character implements Comparable<Character> {
   }
 
   public static boolean isJavaIdentifierStart(char ch) {
-    if (isLetter(ch)){
-	  return true;
-    }
-	if (ch == '$'){  //TODO: if (getType(ch)==CURRENCY_SYMBOL)
-	  return true;
-	}
-	if (ch == '_'){
-	  return true;
-	}
-	//TODO: if (getType(ch)==LETTER_NUMBER) return true
-	
-	return false;	  
+    return isLetter(ch) || ch == '$' || ch == '_';
+    //TODO: add if (getType(ch)==LETTER_NUMBER) || getType(ch)==CURRENCY_SYMBOL
+  }
+  
+  public static boolean isJavaIdentifierStart(int c) {
+    return canCastToChar(c) && isJavaIdentifierStart((char) c);
   }
   
   public static boolean isJavaIdentifierPart(char ch) {
-    if (isJavaIdentifierStart(ch)){
-      return true;
-    }
-	if (isDigit(ch)){
-	  return true;
-	}
-	
+    return isJavaIdentifierStart(ch) || isDigit(ch);
 	//TODO:Check for numeric letters (such as a Roman numeral character),combining marks,non-spacing marks
-	//if (isIdentifierIgnorable(ch)) return true
-	
-	return false;
+	//add isIdentifierIgnorable(ch)
+  }
+
+  public static boolean isJavaIdentifierPart(int c) {
+    return canCastToChar(c) && isJavaIdentifierPart((char) c);
   }
 
   public static int toCodePoint(char high, char low) {
