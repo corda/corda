@@ -853,6 +853,12 @@ extern "C" JNIEXPORT jobjectArray JNICALL
 #elif defined ARCH_arm
   e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=arm"));
 
+#elif defined ARCH_arm64
+  e->SetObjectArrayElement(array, index++, e->NewStringUTF("os.arch=arm64"));
+
+#else
+#error "unknown architecture"
+
 #endif
 
 #ifdef PLATFORM_WINDOWS
