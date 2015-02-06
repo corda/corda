@@ -174,6 +174,25 @@ public final class Character implements Comparable<Character> {
    return ch <= '\u001F' || (ch >= '\u007F' && ch <= '\u009F');
   }
 
+  public static boolean isJavaIdentifierStart(char ch) {
+    return isLetter(ch) || ch == '$' || ch == '_';
+    //TODO: add if (getType(ch)==LETTER_NUMBER) || getType(ch)==CURRENCY_SYMBOL
+  }
+  
+  public static boolean isJavaIdentifierStart(int c) {
+    return canCastToChar(c) && isJavaIdentifierStart((char) c);
+  }
+  
+  public static boolean isJavaIdentifierPart(char ch) {
+    return isJavaIdentifierStart(ch) || isDigit(ch);
+	//TODO:Check for numeric letters (such as a Roman numeral character),combining marks,non-spacing marks
+	//add isIdentifierIgnorable(ch)
+  }
+
+  public static boolean isJavaIdentifierPart(int c) {
+    return canCastToChar(c) && isJavaIdentifierPart((char) c);
+  }
+
   public static int toCodePoint(char high, char low) {
     return (((high & 0x3FF) << 10) | (low & 0x3FF)) + 0x10000;
   }
