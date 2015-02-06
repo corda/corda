@@ -1,4 +1,4 @@
-public class Threads implements Runnable {  
+public class Threads implements Runnable {
   private static boolean success = false;
 
   private static void expect(boolean v) {
@@ -6,6 +6,9 @@ public class Threads implements Runnable {
   }
 
   public static void main(String[] args) throws Exception {
+    ((Thread.UncaughtExceptionHandler) Thread.currentThread().getThreadGroup())
+      .uncaughtException(Thread.currentThread(), new Exception());
+
     { Threads test = new Threads();
       Thread thread = new Thread(test);
 
@@ -41,7 +44,7 @@ public class Threads implements Runnable {
           // do nothing
         }
       };
-    
+
       thread.start();
       thread.join();
     }

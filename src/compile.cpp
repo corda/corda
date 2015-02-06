@@ -8639,8 +8639,6 @@ class MyProcessor : public Processor {
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
-    method = findMethod(t, method, this_);
-
     const char* spec = reinterpret_cast<char*>(method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
@@ -8655,6 +8653,8 @@ class MyProcessor : public Processor {
                       arguments);
 
     PROTECT(t, method);
+
+    method = findMethod(t, method, this_);
 
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)),
@@ -8677,8 +8677,6 @@ class MyProcessor : public Processor {
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
-    method = findMethod(t, method, this_);
-
     const char* spec = reinterpret_cast<char*>(method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
@@ -8693,6 +8691,8 @@ class MyProcessor : public Processor {
                       arguments);
 
     PROTECT(t, method);
+
+    method = findMethod(t, method, this_);
 
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)),
@@ -8716,8 +8716,6 @@ class MyProcessor : public Processor {
 
     assertT(t, ((method->flags() & ACC_STATIC) == 0) xor (this_ == 0));
 
-    method = findMethod(t, method, this_);
-
     const char* spec = reinterpret_cast<char*>(method->spec()->body().begin());
 
     unsigned size = method->parameterFootprint();
@@ -8733,6 +8731,8 @@ class MyProcessor : public Processor {
                       arguments);
 
     PROTECT(t, method);
+
+    method = findMethod(t, method, this_);
 
     compile(static_cast<MyThread*>(t),
             local::codeAllocator(static_cast<MyThread*>(t)),
