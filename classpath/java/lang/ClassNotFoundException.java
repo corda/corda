@@ -25,4 +25,9 @@ public class ClassNotFoundException extends Exception {
   public ClassNotFoundException() {
     this(null, null);
   }
+  
+  public Throwable getException() {
+    return cause2;
+  }
+  
 }
