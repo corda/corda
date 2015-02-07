@@ -485,8 +485,27 @@ public class Arrays {
     };
   }
 
+  private static void checkRange(int len, int start, int stop) {
+    if (start < 0) {
+      throw new ArrayIndexOutOfBoundsException(start);
+    }
+    if (stop > len) {
+      throw new ArrayIndexOutOfBoundsException(stop);
+    }
+    if (start > stop) {
+      throw new IllegalArgumentException("start(" + start + ") > stop(" + stop + ")");
+    }
+  }
+
   public static void fill(int[] array, int value) {
     for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(int[] array, int start, int stop, int value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
       array[i] = value;
     }
   }
@@ -497,14 +516,35 @@ public class Arrays {
     }
   }
 
+  public static void fill(char[] array, int start, int stop, char value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
+      array[i] = value;
+    }
+  }
+
   public static void fill(short[] array, short value) {
     for (int i=0;i<array.length;i++) {
       array[i] = value;
     }
   }
 
+  public static void fill(short[] array, int start, int stop, short value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
+      array[i] = value;
+    }
+  }
+
   public static void fill(byte[] array, byte value) {
     for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+  
+  public static void fill(byte[] array, int start, int stop, byte value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
       array[i] = value;
     }
   }
@@ -515,8 +555,22 @@ public class Arrays {
     }
   }
 
+  public static void fill(boolean[] array, int start, int stop, boolean value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
+      array[i] = value;
+    }
+  }
+
   public static void fill(long[] array, long value) {
     for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static void fill(long[] array, int start, int stop, long value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
       array[i] = value;
     }
   }
@@ -527,14 +581,35 @@ public class Arrays {
     }
   }
 
+  public static void fill(float[] array, int start, int stop, float value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
+      array[i] = value;
+    }
+  }
+
  public static void fill(double[] array, double value) {
     for (int i=0;i<array.length;i++) {
       array[i] = value;
     }
   }
 
+  public static void fill(double[] array, int start, int stop, double value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
+      array[i] = value;
+    }
+  }
+
   public static <T> void fill(T[] array, T value) {
     for (int i=0;i<array.length;i++) {
+      array[i] = value;
+    }
+  }
+
+  public static <T> void fill(T[] array, int start, int stop, T value) {
+    checkRange(array.length, start, stop);
+    for (int i=start;i<stop;i++) {
       array[i] = value;
     }
   }
