@@ -23,6 +23,10 @@ public class ArrayIndexOutOfBoundsException extends IndexOutOfBoundsException {
     this(null, cause);
   }
 
+  public ArrayIndexOutOfBoundsException(int idx) {
+    this("Array index out of range: " + idx);
+  }
+
   public ArrayIndexOutOfBoundsException() {
     this(null, null);
   }
