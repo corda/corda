@@ -98,6 +98,28 @@ public class ByteArrayOutputStream extends OutputStream {
     return array;
   }
   
+  public synchronized void writeTo(OutputStream out) throws IOException {
+	  if (length==0)
+		  return;
+	  
+      flushBuffer();
+    
+      int cnt = 0;
+      for (Cell c = chain; c != null; c = c.next) {
+		  cnt++;
+      }
+	  
+	  Cell[] cellArray = new Cell[cnt];
+	  
+      for (Cell c = chain; c != null; c = c.next) {
+		  cellArray[--cnt] = c;
+      }
+	  
+	  for (Cell c : cellArray){
+	    out.write(c.array, c.offset, c.length);
+	  }
+  }
+  
   @Override
   public String toString() {
     return new String(toByteArray());
