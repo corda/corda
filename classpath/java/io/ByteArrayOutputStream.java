@@ -13,7 +13,8 @@ package java.io;
 public class ByteArrayOutputStream extends OutputStream {
   private static final int BufferSize = 32;
 
-  private Cell chain;
+  private Cell firstCell;
+  private Cell curCell;
   private int length;
   private byte[] buffer;
   private int position;
@@ -25,7 +26,8 @@ public class ByteArrayOutputStream extends OutputStream {
   }
 
   public void reset() {
-    chain = null;
+    firstCell = null;
+    curCell = null;
     length = 0;
     buffer = null;
     position = 0;
@@ -69,10 +71,20 @@ public class ByteArrayOutputStream extends OutputStream {
       position += length;
     } else {
       flushBuffer();
-      chain = new Cell(copy(b, offset, length), 0, length, chain);
+      chainCell( new Cell(copy(b, offset, length), 0, length) );
     }
 
     this.length += length;
+  }
+  
+  private void chainCell(Cell cell){
+    if (curCell == null){
+      firstCell = cell;
+      curCell = cell;
+    }else{
+      curCell.next = cell;
+      curCell = cell;
+    }
   }
 
   private void flushBuffer() {
@@ -81,7 +93,8 @@ public class ByteArrayOutputStream extends OutputStream {
       int p = position;
       buffer = null;
       position = 0;
-      chain = new Cell(b, 0, p, chain);
+
+      chainCell( new Cell(b, 0, p) );
     }    
   }
 
@@ -89,35 +102,26 @@ public class ByteArrayOutputStream extends OutputStream {
     flushBuffer();
     
     byte[] array = new byte[length];
-    int index = length;
-    for (Cell c = chain; c != null; c = c.next) {
-      int start = index - c.length;
-      System.arraycopy(c.array, c.offset, array, start, c.length);
-      index = start;
+    int pos = 0;
+    for (Cell c = firstCell; c != null; c = c.next) {
+      System.arraycopy(c.array, c.offset, array, pos, c.length);
+      pos += c.length;
     }
     return array;
   }
   
   public synchronized void writeTo(OutputStream out) throws IOException {
-	  if (length==0)
-		  return;
-	  
-      flushBuffer();
-    
-      int cnt = 0;
-      for (Cell c = chain; c != null; c = c.next) {
-		  cnt++;
-      }
-	  
-	  Cell[] cellArray = new Cell[cnt];
-	  
-      for (Cell c = chain; c != null; c = c.next) {
-		  cellArray[--cnt] = c;
-      }
-	  
-	  for (Cell c : cellArray){
-	    out.write(c.array, c.offset, c.length);
-	  }
+    if (length==0) return;
+
+    if (out == null){
+      throw new NullPointerException();
+    }
+
+    flushBuffer();
+
+    for (Cell c = firstCell; c != null; c = c.next) {
+      out.write(c.array, c.offset, c.length);
+    }
   }
   
   @Override
@@ -133,13 +137,12 @@ public class ByteArrayOutputStream extends OutputStream {
     public byte[] array;
     public int offset;
     public int length;
-    public Cell next;
+    public Cell next = null;
 
-    public Cell(byte[] array, int offset, int length, Cell next) {
+    public Cell(byte[] array, int offset, int length) {
       this.array = array;
       this.offset = offset;
       this.length = length;
-      this.next = next;
     }
   }
 }
