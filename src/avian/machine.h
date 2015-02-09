@@ -2675,7 +2675,12 @@ inline GcMethod* findInterfaceMethod(Thread* t,
                                      GcMethod* method,
                                      GcClass* class_)
 {
-  assertT(t, (class_->vmFlags() & BootstrapFlag) == 0);
+  if (UNLIKELY(class_->vmFlags() & BootstrapFlag)) {
+    PROTECT(t, method);
+    PROTECT(t, class_);
+
+    resolveSystemClass(t, roots(t)->bootLoader(), class_->name());
+  }
 
   GcClass* interface = method->class_();
   GcArray* itable = cast<GcArray>(t, class_->interfaceTable());

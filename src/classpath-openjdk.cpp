@@ -2452,18 +2452,9 @@ object makeJconstructor(Thread* t,
 }
 #endif  // HAVE_JexecutableHasRealParameterData
 
-void resolveBootstrap(Thread* t, Gc::Type type)
-{
-  if (vm::type(t, type)->vmFlags() & BootstrapFlag) {
-    resolveSystemClass(t, roots(t)->bootLoader(), vm::type(t, type)->name());
-  }
-}
-
 object makeJmethod(Thread* t, GcMethod* vmMethod, int index)
 {
   PROTECT(t, vmMethod);
-
-  resolveBootstrap(t, GcJmethod::Type);
 
   object name
       = intern(t,
@@ -2567,8 +2558,6 @@ object makeJconstructor(Thread* t, GcMethod* vmMethod, int index)
 {
   PROTECT(t, vmMethod);
 
-  resolveBootstrap(t, GcJconstructor::Type);
-
   unsigned parameterCount;
   unsigned returnTypeSpec;
   object parameterTypes = resolveParameterJTypes(t,
@@ -2648,8 +2637,6 @@ object makeJconstructor(Thread* t, GcMethod* vmMethod, int index)
 object makeJfield(Thread* t, GcField* vmField, int index)
 {
   PROTECT(t, vmField);
-
-  resolveBootstrap(t, GcJfield::Type);
 
   object name
       = intern(t,
