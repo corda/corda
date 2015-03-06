@@ -389,7 +389,7 @@ Java_java_io_File_delete(JNIEnv* e, jclass, jstring path)
   int r;
   if (chars) {
 #ifdef PLATFORM_WINDOWS
-    if (GetFileAttributes(chars) == FILE_ATTRIBUTE_DIRECTORY) {
+    if (GetFileAttributes(chars) & FILE_ATTRIBUTE_DIRECTORY) {
       r = !RemoveDirectory(chars);
     } else {
       r = REMOVE(chars);
