@@ -3101,7 +3101,7 @@ void removeString(Thread* t, object o)
 void bootClass(Thread* t,
                Gc::Type type,
                int superType,
-               uint32_t objectMask,
+               uint32_t* objectMask,
                unsigned fixedSize,
                unsigned arrayElementSize,
                unsigned vtableLength)
@@ -3109,15 +3109,20 @@ void bootClass(Thread* t,
   GcClass* super
       = (superType >= 0 ? vm::type(t, static_cast<Gc::Type>(superType)) : 0);
 
+  unsigned maskSize
+      = ceilingDivide(fixedSize + arrayElementSize, 32 * BytesPerWord);
+
   GcIntArray* mask;
   if (objectMask) {
     if (super and super->objectMask()
-        and super->objectMask()->body()[0]
-            == static_cast<int32_t>(objectMask)) {
+        and super->objectMask()->length() == maskSize
+        and memcmp(super->objectMask()->body().begin(),
+                   objectMask,
+                   sizeof(uint32_t) * maskSize) == 0) {
       mask = vm::type(t, static_cast<Gc::Type>(superType))->objectMask();
     } else {
-      mask = makeIntArray(t, 1);
-      mask->body()[0] = objectMask;
+      mask = makeIntArray(t, maskSize);
+      memcpy(mask->body().begin(), objectMask, sizeof(uint32_t) * maskSize);
     }
   } else {
     mask = 0;

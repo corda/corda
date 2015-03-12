@@ -120,11 +120,20 @@ class Output {
 
   virtual void write(const std::string& s) = 0;
 
-  void write(int i)
+  void write(int32_t i)
   {
     static const int Size = 32;
     char s[Size];
     int c UNUSED = vm::snprintf(s, Size, "%d", i);
+    assert(c > 0 and c < Size);
+    write(s);
+  }
+
+  void writeUnsigned(uint32_t i)
+  {
+    static const int Size = 32;
+    char s[Size];
+    int c UNUSED = vm::snprintf(s, Size, "%u", i);
     assert(c > 0 and c < Size);
     write(s);
   }
