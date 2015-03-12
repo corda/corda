@@ -25,6 +25,7 @@
 
 #include <avian/util/arg-parser.h>
 #include <avian/util/stream.h>
+#include <avian/util/math.h>
 
 #include "io.h"
 #include "sexpr.h"
@@ -1326,17 +1327,23 @@ void set(uint32_t* mask, unsigned index)
   }
 }
 
-uint32_t typeObjectMask(Module& module, Class* cl)
+void set(std::vector<uint32_t>& mask, unsigned index)
 {
-  assert(cl->fixedSize + (cl->arrayField ? cl->arrayField->elementSize : 0)
-         < 32 * BytesPerWord);
+  set(&(mask[index / 32]), index % 32);
+}
 
-  uint32_t mask = 1;
+std::vector<uint32_t> typeObjectMask(Module& module, Class* cl)
+{
+  std::vector<uint32_t> mask(ceilingDivide(
+      cl->fixedSize + (cl->arrayField ? cl->arrayField->elementSize : 0),
+      32 * BytesPerWord));
+
+  set(mask, 0);
 
   for (const auto f : cl->fields) {
     unsigned offset = f->offset / BytesPerWord;
     if (isFieldGcVisible(module, f)) {
-      set(&mask, offset);
+      set(mask, offset);
     }
   }
 
@@ -1344,11 +1351,26 @@ uint32_t typeObjectMask(Module& module, Class* cl)
     Field* f = cl->arrayField;
     unsigned offset = f->offset / BytesPerWord;
     if (isFieldGcVisible(module, f)) {
-      set(&mask, offset);
+      set(mask, offset);
     }
   }
 
   return mask;
+}
+
+bool trivialMask(const std::vector<uint32_t>& mask)
+{
+  if (mask[0] != 1) {
+    return false;
+  }
+
+  for (size_t i = 1; i < mask.size(); ++i) {
+    if (mask[i]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void writeInitialization(Output* out,
@@ -1363,6 +1385,24 @@ void writeInitialization(Output* out,
   if (cl->super && cl->name != "intArray" && cl->name != "class") {
     writeInitialization(out, module, alreadyInited, cl->super);
   }
+
+  std::vector<uint32_t> mask = typeObjectMask(module, cl);
+  bool trivialMask = local::trivialMask(mask);
+  if (trivialMask) {
+    out->write("{ ");
+  } else {
+    out->write("{ uint32_t mask[");
+    out->write(mask.size());
+    out->write("] = { ");
+    for (size_t i = 0; i < mask.size(); ++i) {
+      out->writeUnsigned(mask[i]);
+      if (i < mask.size() - 1) {
+        out->write(", ");
+      }
+    }
+    out->write(" };\n");
+  }
+
   out->write("bootClass(t, Gc::");
   out->write(capitalize(cl->name));
   out->write("Type, ");
@@ -1376,10 +1416,10 @@ void writeInitialization(Output* out,
   }
   out->write(", ");
 
-  if (typeObjectMask(module, cl) != 1) {
-    out->write(typeObjectMask(module, cl));
-  } else {
+  if (trivialMask) {
     out->write("0");
+  } else {
+    out->write("mask");
   }
   out->write(", ");
 
@@ -1390,7 +1430,7 @@ void writeInitialization(Output* out,
   out->write(", ");
 
   out->write(cl->methods.size());
-  out->write(");\n");
+  out->write("); }\n");
 }
 
 void writeInitializations(Output* out, Module& module)
