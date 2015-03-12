@@ -23,7 +23,7 @@
 # Please contact Sun Microsystems, Inc., 4150 Network Circle, Santa Clara,
 # CA 95054 USA or visit www.sun.com if you need additional information or
 # have any questions.
-#  
+#
 #
 
 # Define public interface.
@@ -159,6 +159,7 @@ SUNWprivate_1.1 {
                 JVM_GetMethodParameterAnnotations;
                 JVM_GetPrimitiveArrayElement;
                 JVM_GetProtectionDomain;
+                JVM_GetResourceLookupCacheURLs;
                 JVM_GetSockName;
                 JVM_GetSockOpt;
                 JVM_GetStackAccessControlContext;
@@ -291,4 +292,3 @@ SUNWprivate_1.1 {
                 # This is for Forte Analyzer profiling support.
                 AsyncGetCallTrace;
 };
-

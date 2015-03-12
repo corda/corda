@@ -441,6 +441,11 @@ class MyClasspath : public Classpath {
     setObjectClass(t, c, type(t, GcJclass::Type));
     c->setName(t, name);
     c->setVmClass(t, class_);
+#ifdef HAVE_JclassClassLoader
+    if (class_->loader() != roots(t)->bootLoader()) {
+      c->setClassLoader(t, class_->loader());
+    }
+#endif
 
     return c;
   }
@@ -4562,6 +4567,12 @@ extern "C" AVIAN_EXPORT jobject JNICALL
   uintptr_t arguments[] = {reinterpret_cast<uintptr_t>(c)};
 
   return reinterpret_cast<jobject>(run(t, jvmGetProtectionDomain, arguments));
+}
+
+extern "C" AVIAN_EXPORT jobject JNICALL
+    EXPORT(JVM_GetResourceLookupCacheURLs)(Thread*, jobject)
+{
+  return 0;
 }
 
 extern "C" AVIAN_EXPORT void JNICALL
