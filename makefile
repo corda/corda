@@ -1623,8 +1623,9 @@ jdk-test: $(test-dep) $(build)/classpath.jar $(build)/jdk-run-tests.sh $(build)/
 tarball:
 	@echo "creating build/avian-$(version).tar.bz2"
 	@mkdir -p build
-	(cd .. && tar --exclude=build --exclude='.*' --exclude='*~' -cjf \
-		avian/build/avian-$(version).tar.bz2 avian)
+	(cd .. && tar --exclude=build --exclude=cmake-build --exclude=distrib \
+		--exclude='.*' --exclude='*~' \
+		-cjf avian/build/avian-$(version).tar.bz2 avian)
 
 .PHONY: clean-current
 clean-current:
@@ -1634,7 +1635,7 @@ clean-current:
 .PHONY: clean
 clean:
 	@echo "removing build"
-	rm -rf build
+	rm -rf build cmake-build distrib
 
 ifeq ($(continuations),true)
 $(build)/compile-x86-asm.o: $(src)/continuations-x86.$(asm-format)
