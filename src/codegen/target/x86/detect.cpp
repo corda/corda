@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2008-2014, Avian Contributors
+/* Copyright (c) 2008-2015, Avian Contributors
 
    Permission to use, copy, modify, and/or distribute this software
    for any purpose with or without fee is hereby granted, provided
