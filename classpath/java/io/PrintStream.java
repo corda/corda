@@ -78,6 +78,25 @@ public class PrintStream extends OutputStream {
     print(String.valueOf(s));
   }
 
+  public synchronized void printf(java.util.Locale locale, String format, Object... args) {
+    // should this be cached in an instance variable??
+    final java.util.Formatter formatter = new java.util.Formatter(this);
+    formatter.format(locale, format, args);
+  }
+
+  public synchronized void printf(String format, Object... args) {
+    final java.util.Formatter formatter = new java.util.Formatter(this);
+    formatter.format(format, args);
+  }
+
+  public void format(String format, Object... args) {
+    printf(format, args);
+  }
+
+  public void format(java.util.Locale locale, String format, Object... args) {
+    printf(locale, format, args);
+  }
+
   public synchronized void println(String s) {
     try {
       out.write(s.getBytes());    
