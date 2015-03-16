@@ -1624,7 +1624,7 @@ tarball:
 	@echo "creating build/avian-$(version).tar.bz2"
 	@mkdir -p build
 	(cd .. && tar --exclude=build --exclude=cmake-build --exclude=distrib \
-		--exclude='.*' --exclude='*~' \
+		--exclude=lib --exclude='.*' --exclude='*~' \
 		-cjf avian/build/avian-$(version).tar.bz2 avian)
 
 .PHONY: clean-current
@@ -1634,8 +1634,8 @@ clean-current:
 
 .PHONY: clean
 clean:
-	@echo "removing build"
-	rm -rf build cmake-build distrib
+	@echo "removing build directories"
+	rm -rf build cmake-build distrib lib
 
 ifeq ($(continuations),true)
 $(build)/compile-x86-asm.o: $(src)/continuations-x86.$(asm-format)
