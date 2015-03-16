@@ -86,7 +86,7 @@ else
 
   make_target=test
 
-  run make jdk-test
+  (! has_flag arch) && run make ${flags} jdk-test
   run make ${flags} ${make_target}
   run make ${flags} mode=debug ${make_target}
   run make ${flags} process=interpret ${make_target}
@@ -95,7 +95,7 @@ else
     run make ${flags} mode=debug bootimage=true ${make_target} && \
     run make ${flags} bootimage=true ${make_target}
 
-  (! has_flag openjdk && ! has_flag android) && \
+  (! has_flag openjdk && ! has_flag android && ! has_flag arch) && \
     run make ${flags} openjdk=$JAVA_HOME ${make_target}
 
   run make ${flags} tails=true continuations=true heapdump=true ${make_target}
