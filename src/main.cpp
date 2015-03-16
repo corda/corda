@@ -91,8 +91,8 @@ const char* mainClass(const char* jar)
 
   System::Region* region = finder->find("META-INF/MANIFEST.MF");
   if (region) {
-    unsigned start = 0;
-    unsigned length;
+    size_t start = 0;
+    size_t length;
     while (readLine(region->start(), region->length(), &start, &length)) {
       const unsigned PrefixLength = 12;
       if (strncasecmp("Main-Class: ",
@@ -226,8 +226,8 @@ int main(int ac, const char** av)
 
 #define CLASSPATH_PROPERTY "-Djava.class.path="
 
-  unsigned classpathSize = strlen(classpath);
-  unsigned classpathPropertyBufferSize = sizeof(CLASSPATH_PROPERTY)
+  size_t classpathSize = strlen(classpath);
+  size_t classpathPropertyBufferSize = sizeof(CLASSPATH_PROPERTY)
                                          + classpathSize;
 
   RUNTIME_ARRAY(char, classpathPropertyBuffer, classpathPropertyBufferSize);

@@ -32,7 +32,7 @@ class Element {
  public:
   class Iterator {
    public:
-    virtual const char* next(unsigned* size) = 0;
+    virtual const char* next(size_t* size) = 0;
     virtual void dispose() = 0;
   };
 
@@ -43,7 +43,7 @@ class Element {
   virtual Iterator* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
   virtual System::FileType stat(const char* name,
-                                unsigned* length,
+                                size_t* length,
                                 bool tryDirectory) = 0;
   virtual const char* urlPrefix() = 0;
   virtual const char* sourceUrl() = 0;
@@ -70,7 +70,7 @@ class DirectoryElement : public Element {
       }
     }
 
-    virtual const char* next(unsigned* size)
+    virtual const char* next(size_t* size)
     {
       if (it) {
         const char* v = it->next(size);
@@ -90,7 +90,7 @@ class DirectoryElement : public Element {
         for (const char* v = directory->next(); v; v = directory->next()) {
           if (v[0] != '.') {
             last = append(allocator, name, "/", v);
-            unsigned length;
+            size_t length;
             if (s->stat(last, &length) == System::TypeDirectory) {
               it = new (allocator->allocate(sizeof(Iterator)))
                   Iterator(s, allocator, last, skip);
@@ -157,7 +157,7 @@ class DirectoryElement : public Element {
     }
   }
 
-  virtual System::FileType stat(const char* name, unsigned* length, bool)
+  virtual System::FileType stat(const char* name, size_t* length, bool)
   {
     const char* file = append(allocator, this->name, "/", name);
     System::FileType type = s->stat(file, length);
@@ -344,7 +344,7 @@ class JarIndex {
 
   List<Entry>* findNode(const char* name)
   {
-    unsigned length = strlen(name);
+    size_t length = strlen(name);
     unsigned i = hash(name) & (capacity - 1);
     for (List<Entry>* n = table[i]; n; n = n->next) {
       const uint8_t* p = n->item.entry;
@@ -403,7 +403,7 @@ class JarIndex {
     return 0;
   }
 
-  System::FileType stat(const char* name, unsigned* length, bool tryDirectory)
+  System::FileType stat(const char* name, size_t* length, bool tryDirectory)
   {
     List<Entry>* node = findNode(name);
     if (node) {
@@ -413,7 +413,7 @@ class JarIndex {
       *length = 0;
 
       // try again with '/' appended
-      unsigned length = strlen(name);
+      size_t length = strlen(name);
       RUNTIME_ARRAY(char, n, length + 2);
       memcpy(RUNTIME_ARRAY_BODY(n), name, length);
       RUNTIME_ARRAY_BODY(n)[length] = '/';
@@ -455,7 +455,7 @@ class JarElement : public Element {
     {
     }
 
-    virtual const char* next(unsigned* size)
+    virtual const char* next(size_t* size)
     {
       if (position < index->position) {
         List<JarIndex::Entry>* n = index->nodes + (position++);
@@ -548,7 +548,7 @@ class JarElement : public Element {
   }
 
   virtual System::FileType stat(const char* name,
-                                unsigned* length,
+                                size_t* length,
                                 bool tryDirectory)
   {
     init();
@@ -629,16 +629,16 @@ class BuiltinElement : public JarElement {
 
         void* p = library->resolve(symbolName);
         if (p) {
-          uint8_t* (*function)(unsigned*);
+          uint8_t* (*function)(size_t*);
           memcpy(&function, &p, BytesPerWord);
 
-          unsigned size;
+          size_t size = 0;
           uint8_t* data = function(&size);
           if (data) {
             bool freePointer;
             if (lzma) {
 #ifdef AVIAN_USE_LZMA
-              unsigned outSize;
+              size_t outSize;
               data = decodeLZMA(s, allocator, data, size, &outSize);
               size = outSize;
               freePointer = true;
@@ -751,8 +751,8 @@ void addTokens(System* s,
 
 bool continuationLine(const uint8_t* base,
                       unsigned total,
-                      unsigned* start,
-                      unsigned* length)
+                      size_t* start,
+                      size_t* length)
 {
   return readLine(base, total, start, length) and *length > 0
          and base[*start] == ' ';
@@ -778,8 +778,8 @@ void addJar(System* s,
 
   System::Region* region = e->find("META-INF/MANIFEST.MF");
   if (region) {
-    unsigned start = 0;
-    unsigned length;
+    size_t start = 0;
+    size_t length;
     while (readLine(region->start(), region->length(), &start, &length)) {
       unsigned multilineTotal = 0;
 
@@ -789,8 +789,8 @@ void addJar(System* s,
                       reinterpret_cast<const char*>(region->start() + start),
                       PrefixLength) == 0) {
         {
-          unsigned nextStart = start + length;
-          unsigned nextLength;
+          size_t nextStart = start + length;
+          size_t nextLength;
           while (continuationLine(
               region->start(), region->length(), &nextStart, &nextLength)) {
             multilineTotal += nextLength;
@@ -810,8 +810,8 @@ void addJar(System* s,
 
           unsigned offset = lineLength;
           {
-            unsigned nextStart = start + length;
-            unsigned nextLength;
+            size_t nextStart = start + length;
+            size_t nextLength;
             while (continuationLine(
                 region->start(), region->length(), &nextStart, &nextLength)) {
               unsigned continuationLength = nextLength - 1;
@@ -880,7 +880,7 @@ void add(System* s,
     memcpy(name, token, tokenLength);
     name[tokenLength] = 0;
 
-    unsigned length;
+    size_t length;
     switch (s->stat(name, &length)) {
     case System::TypeFile: {
       addJar(s, first, last, allocator, name, bootLibrary);
@@ -934,7 +934,7 @@ class MyIterator : public Finder::IteratorImp {
   {
   }
 
-  virtual const char* next(unsigned* size)
+  virtual const char* next(size_t* size)
   {
     while (it) {
       const char* v = it->next(size);
@@ -1010,7 +1010,7 @@ class MyFinder : public Finder {
   }
 
   virtual System::FileType stat(const char* name,
-                                unsigned* length,
+                                size_t* length,
                                 bool tryDirectory)
   {
     for (Element* e = path_; e; e = e->next) {
@@ -1034,7 +1034,7 @@ class MyFinder : public Finder {
     Element*& e = reinterpret_cast<Element*&>(finderElementPtr);
     e = e ? e->next : path_;
     for (; e; e = e->next) {
-      unsigned length;
+      size_t length;
       System::FileType type = e->stat(name, &length, true);
       if (type != System::TypeDoesNotExist) {
         return e->urlPrefix();
@@ -1047,7 +1047,7 @@ class MyFinder : public Finder {
   virtual const char* sourceUrl(const char* name)
   {
     for (Element* e = path_; e; e = e->next) {
-      unsigned length;
+      size_t length;
       System::FileType type = e->stat(name, &length, true);
       if (type != System::TypeDoesNotExist) {
         return e->sourceUrl();
@@ -1096,7 +1096,7 @@ AVIAN_EXPORT Finder* makeFinder(System* s,
 Finder* makeFinder(System* s,
                    Alloc* a,
                    const uint8_t* jarData,
-                   unsigned jarLength)
+                   size_t jarLength)
 {
   return new (a->allocate(sizeof(MyFinder))) MyFinder(s, a, jarData, jarLength);
 }

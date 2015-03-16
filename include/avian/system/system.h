@@ -111,7 +111,7 @@ class System : public avian::util::Aborter {
   };
 
   virtual bool success(Status) = 0;
-  virtual void* tryAllocate(unsigned sizeInBytes) = 0;
+  virtual void* tryAllocate(size_t sizeInBytes) = 0;
   virtual void free(const void* p) = 0;
   virtual Status attach(Runnable*) = 0;
   virtual Status start(Runnable*) = 0;
@@ -123,7 +123,7 @@ class System : public avian::util::Aborter {
       = 0;
 
   virtual Status map(Region**, const char* name) = 0;
-  virtual FileType stat(const char* name, unsigned* length) = 0;
+  virtual FileType stat(const char* name, size_t* length) = 0;
   virtual Status open(Directory**, const char* name) = 0;
   virtual const char* libraryPrefix() = 0;
   virtual const char* librarySuffix() = 0;
@@ -138,7 +138,7 @@ class System : public avian::util::Aborter {
   virtual void dispose() = 0;
 };
 
-inline void* allocate(System* s, unsigned size)
+inline void* allocate(System* s, size_t size)
 {
   void* p = s->tryAllocate(size);
   if (p == 0)

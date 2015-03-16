@@ -648,7 +648,7 @@ void intercept(Thread* t,
   }
 }
 
-Finder* getFinder(Thread* t, const char* name, unsigned nameLength)
+Finder* getFinder(Thread* t, const char* name, size_t nameLength)
 {
   ACQUIRE(t, t->m->referenceLock);
 
@@ -668,10 +668,10 @@ Finder* getFinder(Thread* t, const char* name, unsigned nameLength)
       reinterpret_cast<const char*>(n->body().begin()));
 
   if (p) {
-    uint8_t* (*function)(unsigned*);
+    uint8_t* (*function)(size_t*);
     memcpy(&function, &p, BytesPerWord);
 
-    unsigned size;
+    size_t size = 0;
     uint8_t* data = function(&size);
     if (data) {
       Finder* f = makeFinder(t->m->system, t->m->heap, data, size);

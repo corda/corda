@@ -3810,10 +3810,10 @@ void Thread::init()
 
       void* imagep = m->libraries->resolve(symbolName);
       if (imagep) {
-        uint8_t* (*imageFunction)(unsigned*);
+        uint8_t* (*imageFunction)(size_t*);
         memcpy(&imageFunction, &imagep, BytesPerWord);
 
-        unsigned size;
+        size_t size = 0;
         uint8_t* imageBytes = imageFunction(&size);
         if (lzma) {
 #ifdef AVIAN_USE_LZMA
@@ -3830,7 +3830,7 @@ void Thread::init()
         if (codeFunctionName) {
           void* codep = m->libraries->resolve(codeFunctionName);
           if (codep) {
-            uint8_t* (*codeFunction)(unsigned*);
+            uint8_t* (*codeFunction)(size_t*);
             memcpy(&codeFunction, &codep, BytesPerWord);
 
             code = codeFunction(&size);
