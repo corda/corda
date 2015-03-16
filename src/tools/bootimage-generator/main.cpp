@@ -348,13 +348,13 @@ GcTriple* makeCodeImage(Thread* t,
       roots(t)->bootLoader()->as<GcSystemClassLoader>(t)->finder());
 
   for (Finder::Iterator it(finder); it.hasMore();) {
-    unsigned nameSize = 0;
+    size_t nameSize = 0;
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
       if (false) {
-        fprintf(stderr, "pass 1 %.*s\n", nameSize - 6, name);
+        fprintf(stderr, "pass 1 %.*s\n", (int)nameSize - 6, name);
       }
       GcClass* c
           = resolveSystemClass(t,
@@ -686,13 +686,13 @@ GcTriple* makeCodeImage(Thread* t,
   }
 
   for (Finder::Iterator it(finder); it.hasMore();) {
-    unsigned nameSize = 0;
+    size_t nameSize = 0;
     const char* name = it.next(&nameSize);
 
     if (endsWith(".class", name, nameSize)
         and (className == 0 or strncmp(name, className, nameSize - 6) == 0)) {
       if (false) {
-        fprintf(stderr, "pass 2 %.*s\n", nameSize - 6, name);
+        fprintf(stderr, "pass 2 %.*s\n", (int)nameSize - 6, name);
       }
       GcClass* c = 0;
       PROTECT(t, c);

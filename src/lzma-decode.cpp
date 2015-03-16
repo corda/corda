@@ -29,11 +29,11 @@ namespace vm {
 uint8_t* decodeLZMA(System* s,
                     avian::util::Alloc* a,
                     uint8_t* in,
-                    unsigned inSize,
-                    unsigned* outSize)
+                    size_t inSize,
+                    size_t* outSize)
 {
-  const unsigned PropHeaderSize = 5;
-  const unsigned HeaderSize = 13;
+  const size_t PropHeaderSize = 5;
+  const size_t HeaderSize = 13;
 
   int32_t outSize32 = read4(in + PropHeaderSize);
   expect(s, outSize32 >= 0);

@@ -454,7 +454,7 @@ setting the boot classpath to "[bootJar]".
       extern const uint8_t SYMBOL(end)[];
 
       EXPORT const uint8_t*
-      bootJar(unsigned* size)
+      bootJar(size_t* size)
       {
         *size = SYMBOL(end) - SYMBOL(start);
         return SYMBOL(start);
@@ -682,7 +682,7 @@ containing them.  See the previous example for instructions.
       extern const uint8_t BOOTIMAGE_BIN(end)[];
 
       EXPORT const uint8_t*
-      bootimageBin(unsigned* size)
+      bootimageBin(size_t* size)
       {
         *size = BOOTIMAGE_BIN(end) - BOOTIMAGE_BIN(start);
         return BOOTIMAGE_BIN(start);
@@ -692,7 +692,7 @@ containing them.  See the previous example for instructions.
       extern const uint8_t CODEIMAGE_BIN(end)[];
 
       EXPORT const uint8_t*
-      codeimageBin(unsigned* size)
+      codeimageBin(size_t* size)
       {
         *size = CODEIMAGE_BIN(end) - CODEIMAGE_BIN(start);
         return CODEIMAGE_BIN(start);

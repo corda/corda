@@ -1062,7 +1062,7 @@ class Machine {
   JNIEnvVTable jniEnvVTable;
   uintptr_t* heapPool[ThreadHeapPoolSize];
   unsigned heapPoolIndex;
-  unsigned bootimageSize;
+  size_t bootimageSize;
 };
 
 void printTrace(Thread* t, GcThrowable* exception);

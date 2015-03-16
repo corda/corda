@@ -654,7 +654,7 @@ class MySystem : public System {
     return sigaction(signals[index], &sa, oldHandlers + index) == 0;
   }
 
-  virtual void* tryAllocate(unsigned sizeInBytes)
+  virtual void* tryAllocate(size_t sizeInBytes)
   {
     return malloc(sizeInBytes);
   }
@@ -808,7 +808,7 @@ class MySystem : public System {
     return status;
   }
 
-  virtual FileType stat(const char* name, unsigned* length)
+  virtual FileType stat(const char* name, size_t* length)
   {
 #ifdef __FreeBSD__
     // Now the hack below causes the error "Dereferencing type-punned

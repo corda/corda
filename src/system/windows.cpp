@@ -664,7 +664,7 @@ class MySystem : public System {
     assertT(this, mutex);
   }
 
-  virtual void* tryAllocate(unsigned sizeInBytes)
+  virtual void* tryAllocate(size_t sizeInBytes)
   {
     return malloc(sizeInBytes);
   }
@@ -862,7 +862,7 @@ class MySystem : public System {
     return status;
   }
 
-  virtual FileType stat(const char* name, unsigned* length)
+  virtual FileType stat(const char* name, size_t* length)
   {
     size_t nameLen = strlen(name) * 2;
     RUNTIME_ARRAY(wchar_t, wideName, nameLen + 1);

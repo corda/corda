@@ -22,7 +22,7 @@ extern "C" {
 extern const uint8_t SYMBOL(start)[];
 extern const uint8_t SYMBOL(end)[];
 
-AVIAN_EXPORT const uint8_t* javahomeJar(unsigned* size)
+AVIAN_EXPORT const uint8_t* javahomeJar(size_t* size)
 {
   *size = SYMBOL(end) - SYMBOL(start);
   return SYMBOL(start);

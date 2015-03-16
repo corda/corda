@@ -126,8 +126,8 @@ inline const uint8_t* endOfEntry(const uint8_t* p)
 
 inline bool readLine(const uint8_t* base,
                      unsigned total,
-                     unsigned* start,
-                     unsigned* length)
+                     size_t* start,
+                     size_t* length)
 {
   const uint8_t* p = base + *start;
   const uint8_t* end = base + total;
@@ -147,7 +147,7 @@ class Finder {
  public:
   class IteratorImp {
    public:
-    virtual const char* next(unsigned* size) = 0;
+    virtual const char* next(size_t* size) = 0;
     virtual void dispose() = 0;
   };
 
@@ -171,7 +171,7 @@ class Finder {
       return current != 0;
     }
 
-    const char* next(unsigned* size)
+    const char* next(size_t* size)
     {
       if (hasMore()) {
         *size = currentSize;
@@ -185,13 +185,13 @@ class Finder {
 
     IteratorImp* it;
     const char* current;
-    unsigned currentSize;
+    size_t currentSize;
   };
 
   virtual IteratorImp* iterator() = 0;
   virtual System::Region* find(const char* name) = 0;
   virtual System::FileType stat(const char* name,
-                                unsigned* length,
+                                size_t* length,
                                 bool tryDirectory = false) = 0;
   virtual const char* urlPrefix(const char* name) = 0;
   virtual const char* nextUrlPrefix(const char* name, void*& finderElementPtr)
@@ -209,7 +209,7 @@ AVIAN_EXPORT Finder* makeFinder(System* s,
 Finder* makeFinder(System* s,
                    avian::util::Alloc* a,
                    const uint8_t* jarData,
-                   unsigned jarLength);
+                   size_t jarLength);
 
 }  // namespace vm
 
