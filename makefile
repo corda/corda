@@ -86,8 +86,8 @@ ifeq ($(platform),macosx)
 endif
 
 ifeq ($(platform),ios)
-	ifeq ($(filter i386 arm arm64,$(arch)),)
-		x := $(error "please specify 'arch=i386', 'arch=arm', or 'arch=arm64' with 'platform=ios'")
+	ifeq ($(filter i386 x86_64 arm arm64,$(arch)),)
+		x := $(error "please specify 'arch=i386', 'arch=x86_64', 'arch=arm', or 'arch=arm64' with 'platform=ios'")
 	endif
 endif
 
@@ -745,10 +745,14 @@ ifeq ($(kernel),darwin)
 	rpath =
 
 	ifeq ($(platform),ios)
-		ifeq ($(arch),i386)
+		ifeq (,$(filter arm arm64,$(arch)))
 			target = iPhoneSimulator
 			sdk = iphonesimulator$(ios-version)
-			arch-flag = -arch i386
+			ifeq ($(arch),i386)
+				arch-flag = -arch i386
+			else
+				arch-flag = -arch x86_64
+			endif
 			release = Release-iphonesimulator
 		else
 			target = iPhoneOS
@@ -765,7 +769,8 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-				if test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
+				if test -d $(sdk-dir)/$(target)8.2.sdk; then echo 8.2; \
+			elif test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
 			elif test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
 			elif test -d $(sdk-dir)/$(target)7.1.sdk; then echo 7.1; \
 			elif test -d $(sdk-dir)/$(target)7.0.sdk; then echo 7.0; \
@@ -823,10 +828,18 @@ ifeq ($(kernel),darwin)
 	endif
 
 	ifeq ($(arch),x86_64)
-		classpath-extra-cflags += -arch x86_64
-		cflags += -arch x86_64
-		asmflags += -arch x86_64
-		lflags += -arch x86_64
+		ifeq ($(platform),ios)
+			classpath-extra-cflags += \
+				-arch x86_64 -miphoneos-version-min=$(ios-version)
+			cflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
+			asmflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
+			lflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
+		else
+			classpath-extra-cflags += -arch x86_64
+			cflags += -arch x86_64
+			asmflags += -arch x86_64
+			lflags += -arch x86_64
+		endif
 	endif
 
 	cflags += -I$(JAVA_HOME)/include/darwin

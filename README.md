@@ -62,7 +62,7 @@ Avian can currently target the following platforms:
   * Linux (i386, x86_64, ARM, and ARM64)
   * Windows (i386 and x86_64)
   * Mac OS X (i386 and x86_64)
-  * Apple iOS (i386, ARM, and ARM64)
+  * Apple iOS (i386, x86_64, ARM, and ARM64)
   * FreeBSD (i386, x86_64)
 
 
@@ -358,7 +358,7 @@ can also build with the Android class library. Now it should work on Linux, OS X
 
 The simpliest way to build Avian with Android classpath is to use `avian-pack` project: https://github.com/bigfatbrowncat/avian-pack
 
-Avian-pack consists of Avian itself with some Android components (such as libcore and icu4c). 
+Avian-pack consists of Avian itself with some Android components (such as libcore and icu4c).
 
 Note that we use the upstream OpenSSL repository and apply the
 Android patches to it.  This is because it is not clear how to build
