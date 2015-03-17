@@ -8,14 +8,6 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
-import avian.FormatString;
-import java.net.URL;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-
 /*
  * @author bcg
  */
@@ -36,7 +28,7 @@ public class FormatStrings {
   }
 
   private void _testFormat(String expected, String format, Object... args) {
-    String actual = FormatString.compile(format).format(args);
+    String actual = String.format(format, args);
     ensureEquals(expected, actual);
     System.err.println("Expected: " + expected + ", Actual: " + actual);
   }
