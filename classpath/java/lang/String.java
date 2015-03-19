@@ -13,6 +13,7 @@ package java.lang;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.util.Comparator;
+import java.util.Formatter;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -573,6 +574,20 @@ public final class String
   }
 
   public native String intern();
+
+  public static String format(String fmt, Object... args) {
+    final Formatter formatter = new Formatter();
+    final String result = formatter.format(fmt, args).toString();
+    formatter.close();
+    return result;
+  }
+
+  public static String format(Locale l, String fmt, Object... args) {
+    final Formatter formatter = new Formatter();
+    final String result = formatter.format(l, fmt, args).toString();
+    formatter.close();
+    return result;
+  }
 
   public static String valueOf(Object s) {
     return s == null ? "null" : s.toString();
