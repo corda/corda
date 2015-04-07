@@ -262,6 +262,20 @@ publishing {
             type "a"
             extension "a"
           }
+
+          if (buildOption == "-lzma") {
+            artifact("${nativeBuildDir}/libavian-lzma.a") {
+              name "libavian-lzma"
+              type "a"
+              extension "a"
+            }
+
+            artifact("${nativeBuildDir}/lzma/lzma") {
+              name "lzma"
+              type publishBinSuffix
+              extension binSuffix
+            }
+          }
         }
       }
     }
