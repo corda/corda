@@ -118,7 +118,7 @@ model {
         if(platform.operatingSystem.name == "windows") {
           def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
 
-          task "extract${platform.name}"(type: Copy) {
+          task "extract${platform.name}${buildOption}"(type: Copy) {
             from {
               tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
             }
@@ -137,7 +137,7 @@ model {
           }
 
           if(platform.operatingSystem.name == "windows") {
-              dependsOn "extract${platform.name}"
+              dependsOn "extract${platform.name}${buildOption}"
               args "win32=${libDir}/tools/win32",
                    "win64=${libDir}/tools/win64"
           }
