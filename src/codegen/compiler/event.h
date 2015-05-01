@@ -90,6 +90,8 @@ class Event {
   unsigned readCount;
 };
 
+void finishAddRead(Context* c, Value* v, Read* r);
+
 class StubReadPair {
  public:
   Value* value;

@@ -8266,11 +8266,11 @@ class CompilationHandlerList {
 
   void dispose(Allocator* allocator)
   {
-    if (this) {
+    if (next) {
       next->dispose(allocator);
-      handler->dispose();
-      allocator->free(this, sizeof(*this));
     }
+    handler->dispose();
+    allocator->free(this, sizeof(*this));
   }
 
   CompilationHandlerList* next;
@@ -8804,7 +8804,9 @@ class MyProcessor : public Processor {
 #endif
     }
 
-    compilationHandlers->dispose(allocator);
+    if(compilationHandlers) {
+      compilationHandlers->dispose(allocator);
+    }
 
     signals.unregisterHandler(SignalRegistrar::SegFault);
     signals.unregisterHandler(SignalRegistrar::DivideByZero);

@@ -1909,9 +1909,7 @@ void setStubRead(Context* c, StubReadPair* p, Value* v)
     if (DebugReads) {
       fprintf(stderr, "add stub read %p to %p\n", r, v);
     }
-    // TODO: this is rather icky looking... but despite how it looks, it will
-    // not cause an NPE
-    ((Event*)0)->addRead(c, v, r);
+    finishAddRead(c, v, r);
 
     p->value = v;
     p->read = r;
@@ -2113,9 +2111,7 @@ void addForkElement(Context* c, Value* v, ForkState* state, unsigned index)
   if (DebugReads) {
     fprintf(stderr, "add multi read %p to %p\n", r, v);
   }
-  // TODO: this is rather icky looking... but despite how it looks, it will not
-  // cause an NPE
-  ((Event*)0)->addRead(c, v, r);
+  finishAddRead(c, v, r);
 
   ForkElement* p = state->elements + index;
   p->value = v;
