@@ -1703,9 +1703,6 @@ bool instanceOf(Thread* t, GcClass* class_, object o);
 template <class T>
 T* GcObject::as(Thread* t UNUSED)
 {
-  if (this == 0) {
-    return 0;
-  }
   assertT(t,
           t->m->unsafe || instanceOf(t,
                                      reinterpret_cast<GcClass*>(arrayBodyUnsafe(

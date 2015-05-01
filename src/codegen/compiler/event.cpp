@@ -136,16 +136,20 @@ void Event::addRead(Context* c, Value* v, Read* r)
             v,
             v->lastRead,
             this,
-            (this ? this->name() : 0));
+            this->name());
   }
 
+  r->event = this;
+  r->eventNext = this->reads;
+  this->reads = r;
+  ++this->readCount;
+
+  finishAddRead(c, v, r);
+}
+
+void finishAddRead(Context* c, Value* v, Read* r)
+{
   r->value = v;
-  if (this) {
-    r->event = this;
-    r->eventNext = this->reads;
-    this->reads = r;
-    ++this->readCount;
-  }
 
   if (v->lastRead) {
     if (DebugReads) {
