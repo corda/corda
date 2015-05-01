@@ -237,6 +237,9 @@ class MyArchitecture : public Architecture {
     case ThreadRegister.index():
     case ProgramCounter.index():
       return true;
+    case 18:
+      // x18 is a reserved platform register on arm64
+      return TargetBytesPerWord == 8;
 
     default:
       return false;
