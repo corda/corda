@@ -1295,7 +1295,6 @@ ifeq ($(process),compile)
 
 	vm-asm-sources += $(src)/compile-$(arch).$(asm-format)
 endif
-cflags += -DAVIAN_PROCESS_$(process)
 ifeq ($(aot-only),true)
 	cflags += -DAVIAN_AOT_ONLY
 endif
