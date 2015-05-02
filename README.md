@@ -91,7 +91,6 @@ certain flags described below, all of which are optional.
         mode={debug,debug-fast,fast,small} \
         lzma=<lzma source directory> \
         bootimage={true,false} \
-        heapdump={true,false} \
         tails={true,false} \
         continuations={true,false} \
         use-clang={true,false} \
@@ -130,12 +129,6 @@ class library and ahead-of-time compiled methods.  This option is
 only valid for process=compile builds.  Note that you may need to
 specify both build-arch=x86_64 and arch=x86_64 on 64-bit systems
 where "uname -m" prints "i386".
-    * _default:_ false
-
-  * `heapdump` - if true, implement avian.Machine.dumpHeap(String),
-which, when called, will generate a snapshot of the heap in a
-simple, ad-hoc format for memory profiling purposes.  See
-heapdump.cpp for details.
     * _default:_ false
 
   * `tails` - if true, optimize each tail call by replacing the caller's
