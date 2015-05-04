@@ -1852,7 +1852,7 @@ void writeBootImage2(Thread* t,
     }
 
     uint8_t* bootimage;
-    unsigned bootimageLength;
+    size_t bootimageLength;
     if (useLZMA) {
 #ifdef AVIAN_USE_LZMA
       bootimage = encodeLZMA(t->m->system,
@@ -1861,7 +1861,7 @@ void writeBootImage2(Thread* t,
                              bootimageData.length,
                              &bootimageLength);
 
-      fprintf(stderr, "compressed heap size %d\n", bootimageLength);
+      fprintf(stderr, "compressed heap size %zu\n", bootimageLength);
 #else
       abort(t);
 #endif
