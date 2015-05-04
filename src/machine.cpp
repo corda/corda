@@ -3338,12 +3338,11 @@ void boot(Thread* t)
         = makeMethod(t, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, bootCode);
     PROTECT(t, bootMethod);
 
-#include "type-java-initializations.cpp"
+#    include "type-java-initializations.cpp"
+#    include "type-name-initializations.cpp"
 
-//#ifdef AVIAN_HEAPDUMP
-#include "type-name-initializations.cpp"
-    //#endif
   }
+
 }
 
 class HeapClient : public Heap::Client {

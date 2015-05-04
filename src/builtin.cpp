@@ -300,8 +300,6 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
   }
 }
 
-#ifdef AVIAN_HEAPDUMP
-
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_avian_Machine_dumpHeap(Thread* t, object, uintptr_t* arguments)
 {
@@ -325,8 +323,6 @@ extern "C" AVIAN_EXPORT void JNICALL
              RUNTIME_ARRAY_BODY(n));
   }
 }
-
-#endif  // AVIAN_HEAPDUMP
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_avian_Machine_tryNative(Thread* t, object, uintptr_t* arguments)

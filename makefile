@@ -42,9 +42,6 @@ endif
 ifeq ($(bootimage),true)
 	options := $(options)-bootimage
 endif
-ifeq ($(heapdump),true)
-	options := $(options)-heapdump
-endif
 ifeq ($(tails),true)
 	options := $(options)-tails
 endif
@@ -1240,7 +1237,8 @@ vm-sources = \
 	$(src)/classpath-$(classpath).cpp \
 	$(src)/builtin.cpp \
 	$(src)/jnienv.cpp \
-	$(src)/process.cpp
+	$(src)/process.cpp \
+	$(src)/heapdump.cpp
 
 vm-asm-sources = $(src)/$(arch).$(asm-format)
 
@@ -1310,11 +1308,7 @@ heapwalk-objects = \
 
 unittest-objects = $(call cpp-objects,$(unittest-sources),$(unittest),$(build)/unittest)
 
-ifeq ($(heapdump),true)
-	vm-sources += $(src)/heapdump.cpp
-	vm-heapwalk-objects = $(heapwalk-objects)
-	cflags += -DAVIAN_HEAPDUMP
-endif
+vm-heapwalk-objects = $(heapwalk-objects)
 
 ifeq ($(tails),true)
 	cflags += -DAVIAN_TAILS

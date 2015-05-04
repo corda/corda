@@ -2551,7 +2551,6 @@ inline void NO_RETURN throw_(Thread* t, GcThrowable* e)
   t->exception = e;
 
   if (objectClass(t, e) == type(t, GcOutOfMemoryError::Type)) {
-#ifdef AVIAN_HEAPDUMP
     if (not t->m->dumpedHeapOnOOM) {
       t->m->dumpedHeapOnOOM = true;
       const char* path = findProperty(t, "avian.heap.dump");
@@ -2563,7 +2562,6 @@ inline void NO_RETURN throw_(Thread* t, GcThrowable* e)
         }
       }
     }
-#endif  // AVIAN_HEAPDUMP
 
     if (AbortOnOutOfMemoryError) {
       fprintf(stderr, "OutOfMemoryError\n");
