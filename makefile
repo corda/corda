@@ -1689,7 +1689,7 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
 		$(classpath-classes) arch=$(build-arch) platform=$(bootimage-platform))"; \
 	if [ -n "$${classes}" ]; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.8 -target 1.8 \
 			-d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$${classes}; fi
 	@touch $(@)
@@ -1765,7 +1765,7 @@ $(test-dep): $(test-sources) $(test-library)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.8 -target 1.8 \
 			-classpath $(test-build) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
@@ -1777,7 +1777,7 @@ $(test-extra-dep): $(test-extra-sources)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-extra-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.8 -target 1.8 \
 			-d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	@touch $(@)

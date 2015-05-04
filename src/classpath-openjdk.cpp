@@ -2091,12 +2091,21 @@ void interceptFileOperations(Thread* t, bool updateRuntimeData)
       if (fileInputStreamFdField) {
         cp->fileInputStreamFdField = fileInputStreamFdField->offset();
 
-        intercept(t,
-                  fileInputStreamClass,
-                  "open",
-                  "(Ljava/lang/String;)V",
-                  voidPointer(openFile),
-                  updateRuntimeData);
+        if (findMethodOrNull(t, fileInputStreamClass, "open0", "(Ljava/lang/String;)V") != 0) {
+          intercept(t,
+                    fileInputStreamClass,
+                    "open0",
+                    "(Ljava/lang/String;)V",
+                    voidPointer(openFile),
+                    updateRuntimeData);
+        } else {
+          intercept(t,
+                    fileInputStreamClass,
+                    "open",
+                    "(Ljava/lang/String;)V",
+                    voidPointer(openFile),
+                    updateRuntimeData);
+        }
 
         if (findMethodOrNull(t, fileInputStreamClass, "read0", "()I") != 0) {
           intercept(t,

@@ -34,6 +34,7 @@ FIELD(virtualThunks)
 
 THUNK_FIELD(default_);
 THUNK_FIELD(defaultVirtual);
+THUNK_FIELD(defaultDynamic);
 THUNK_FIELD(native);
 THUNK_FIELD(aioob);
 THUNK_FIELD(stackOverflow);

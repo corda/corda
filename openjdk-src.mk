@@ -49,6 +49,7 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
 	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
 	$(openjdk-src)/share/native/sun/misc/GC.c \
+	$(openjdk-src)/share/native/sun/misc/URLClassPath.c \
 	$(openjdk-src)/share/native/sun/misc/MessageUtils.c \
 	$(openjdk-src)/share/native/sun/misc/NativeSignalHandler.c \
 	$(openjdk-src)/share/native/sun/misc/Signal.c \
@@ -121,6 +122,7 @@ openjdk-headers-classes = \
 	sun.misc.VM \
 	sun.misc.VMSupport \
 	sun.misc.Version \
+	sun.misc.URLClassPath \
 	sun.net.spi.DefaultProxySelector \
 	sun.nio.ch.FileKey \
 	sun.nio.ch.FileChannelImpl \

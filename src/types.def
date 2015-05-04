@@ -78,7 +78,7 @@
   (int32_t index)
   (object class)
   (object pool)
-  (object template)
+  (method template)
   (object site))
 
 (type triple
@@ -406,7 +406,8 @@
   (finder virtualFileFinders)
   (field array virtualFiles)
   (field array arrayInterfaceTable)
-  (object threadTerminated))
+  (object threadTerminated)
+  (field array invocations))
 
 (type compileRoots
   (field array callTable)
@@ -415,6 +416,7 @@
   (object objectPools)
   (object staticTableArray)
   (wordArray virtualThunks)
+  (wordArray dynamicThunks)
   (method receiveMethod)
   (method windMethod)
   (method rewindMethod))

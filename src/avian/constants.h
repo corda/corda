@@ -146,6 +146,7 @@ enum OpCode {
   imul = 0x68,
   ineg = 0x74,
   instanceof = 0xc1,
+  invokedynamic = 0xba,
   invokeinterface = 0xb9,
   invokespecial = 0xb7,
   invokestatic = 0xb8,

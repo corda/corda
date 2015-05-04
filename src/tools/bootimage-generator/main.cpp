@@ -398,7 +398,8 @@ GcTriple* makeCodeImage(Thread* t,
           RUNTIME_ARRAY_BODY(types)[1] = Type_intptr_t;
 
           for (unsigned i = 2; i < count + 2; ++i) {
-            switch (s.read1()) {
+           unsigned constType = s.read1();
+            switch (constType) {
             case CONSTANT_Class:
             case CONSTANT_String:
               RUNTIME_ARRAY_BODY(types)[i] = Type_object;
@@ -436,7 +437,25 @@ GcTriple* makeCodeImage(Thread* t,
               s.skip(s.read2());
               break;
 
+
+
+           case CONSTANT_MethodHandle:
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
+             s.skip(3);
+             break;
+
+           case CONSTANT_MethodType:
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
+             s.skip(2);
+             break;
+
+           case CONSTANT_InvokeDynamic:
+              RUNTIME_ARRAY_BODY(types)[i] = Type_object;
+             s.skip(4);
+             break;
+
             default:
+             fprintf(stderr, "unknown class constant: %d\n", constType);
               abort(t);
             }
           }

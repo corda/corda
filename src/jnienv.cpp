@@ -3784,3 +3784,22 @@ extern "C" AVIAN_EXPORT jint JNICALL
 
   return run(*t, local::boot, 0) ? 0 : -1;
 }
+
+extern "C" AVIAN_EXPORT jstring JNICALL JVM_GetTemporaryDirectory(JNIEnv* e UNUSED)
+{
+  // Unimplemented
+  // This is used in newer builds of openjdk8, as a place to store statistics or something...
+  abort();
+}
+
+extern "C" AVIAN_EXPORT jboolean JNICALL JVM_KnownToNotExist(JNIEnv* e UNUSED, jobject loader UNUSED, jstring classname UNUSED)
+{
+  // Unimplemented
+  abort();
+}
+
+extern "C" AVIAN_EXPORT jintArray JNICALL JVM_GetResourceLookupCache(JNIEnv* e UNUSED, jobject loader UNUSED, jstring resourcename UNUSED)
+{
+  // Unimplemented
+  abort();
+}
