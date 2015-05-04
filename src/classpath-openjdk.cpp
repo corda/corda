@@ -993,7 +993,7 @@ int64_t JNICALL
         return Exists | Directory;
       }
 
-      unsigned length;
+      size_t length;
       System::FileType type = finder->stat(ef.path, &length, true);
       switch (type) {
       case System::TypeUnknown:
@@ -1052,7 +1052,7 @@ int64_t JNICALL
         return mask == Read;
       }
 
-      unsigned length;
+      size_t length;
       System::FileType type = finder->stat(ef.path, &length, true);
       switch (type) {
       case System::TypeDoesNotExist:
@@ -1106,7 +1106,7 @@ int64_t JNICALL getFileLength(Thread* t, GcMethod* method, uintptr_t* arguments)
         return 0;
       }
 
-      unsigned fileLength;
+      size_t fileLength;
       finder->stat(ef.path, &fileLength);
       return fileLength;
     }
