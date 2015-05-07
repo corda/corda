@@ -4040,6 +4040,8 @@ void enter(Thread* t, Thread::State s)
 
       t->state = s;
 
+      STORE_LOAD_MEMORY_BARRIER;
+
       if (t->m->exclusive) {
         ACQUIRE_LOCK;
 
@@ -4090,6 +4092,8 @@ void enter(Thread* t, Thread::State s)
       INCREMENT(&(t->m->activeCount), 1);
 
       t->state = s;
+
+      STORE_LOAD_MEMORY_BARRIER;
 
       if (t->m->exclusive) {
         // another thread has entered the exclusive state, so we
