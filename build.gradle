@@ -229,7 +229,7 @@ publishing {
 
       def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
       def binSuffix = currentPlatform == "windows" ? ".exe" : ""
-      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject") {
+      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject${binSuffix}") {
         name "binaryToObject"
         type publishBinSuffix
         extension binSuffix
@@ -270,7 +270,7 @@ publishing {
               extension "a"
             }
 
-            artifact("${nativeBuildDir}/lzma/lzma") {
+            artifact("${nativeBuildDir}/lzma/lzma${binSuffix}") {
               name "lzma"
               type publishBinSuffix
               extension binSuffix
