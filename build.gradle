@@ -232,7 +232,7 @@ publishing {
       artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject${binSuffix}") {
         name "binaryToObject"
         type publishBinSuffix
-        extension binSuffix
+        extension publishBinSuffix
       }
     }
 
@@ -273,7 +273,7 @@ publishing {
             artifact("${nativeBuildDir}/lzma/lzma${binSuffix}") {
               name "lzma"
               type publishBinSuffix
-              extension binSuffix
+              extension publishBinSuffix
             }
           }
         }
