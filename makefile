@@ -235,8 +235,8 @@ ifneq ($(android),)
 		-D__DARWIN_UNIX03=1 \
 		-D__PROVIDE_FIXMES \
 		-DSTATIC_LIB \
+		-D__STDC_FORMAT_MACROS=1 \
 		-g3 \
-		-Werror \
 		-Wno-shift-count-overflow
 
 	# on Windows (in MinGW-based build) there are neither __BEGIN_DECLS nor __END_DECLS
@@ -270,7 +270,7 @@ ifneq ($(android),)
 		icu-libs := $(android)/external/icu4c/lib/libsicuin.a \
 			$(android)/external/icu4c/lib/libsicuuc.a \
 			$(android)/external/icu4c/lib/sicudt.a
-		platform-lflags := -lgdi32 -lshlwapi -lwsock32
+		platform-lflags := -lgdi32 -lshlwapi -lwsock32 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
 	else
 		android-cflags += -fPIC -DHAVE_SYS_UIO_H -DHAVE_POSIX_FILEMAP
 		blacklist =
@@ -1862,7 +1862,7 @@ else
 	$(dlltool) -z $(addsuffix .def,$(basename $(@))) $(^)
 	$(dlltool) -d $(addsuffix .def,$(basename $(@))) -e $(addsuffix .exp,$(basename $(@)))
 	$(ld) $(addsuffix .exp,$(basename $(@))) $(^) \
-		$(lflags) $(bootimage-lflags) -o $(@)
+		$(lflags) $(classpath-lflags) $(bootimage-lflags) -o $(@)
 endif
 	$(strip) $(strip-all) $(@)
 
