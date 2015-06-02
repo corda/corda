@@ -71,6 +71,9 @@ ext {
   java_home = java_home
 
   libDir = "${buildDir}/lib"
+  lzmaDir = "${libDir}/lzma"
+
+  buildOptions = ['', '-lzma']
 }
 
 repositories {
@@ -110,32 +113,40 @@ model {
   }
 
   tasks {
-    platforms.each { platform ->
-      if(platform.operatingSystem.name == "windows") {
-        def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
-
-        task "extract${platform.name}"(type: Copy) {
-          from {
-            tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
-          }
-          into "${libDir}/tools"
-        }
-      }
-
-      task "build${platform.name}"(type: Exec) {
-        executable "make"
-        args "platform=${platform.operatingSystem.name}",
-             "arch=${platform.architecture.name}"
+    buildOptions.each { buildOption ->
+      platforms.each { platform ->
         if(platform.operatingSystem.name == "windows") {
-            dependsOn "extract${platform.name}"
-            args "win32=${libDir}/tools/win32",
-                 "win64=${libDir}/tools/win64"
-        }
-        environment JAVA_HOME: java_home
-      }
+          def artifactName = platform.architecture.name == "i386" ? 'win32' : 'win64'
 
-      assemble {
-        dependsOn "build${platform.name}"
+          task "extract${platform.name}${buildOption}"(type: Copy) {
+            from {
+              tarTree(configurations."${platform.name}".find { it.name =~ artifactName })
+            }
+            into "${libDir}/tools"
+          }
+        }
+
+        task "build${platform.name}${buildOption}"(type: Exec) {
+          executable "make"
+          args "platform=${platform.operatingSystem.name}",
+               "arch=${platform.architecture.name}"
+
+          if(buildOption == "-lzma") {
+            dependsOn 'extractLzma'
+            args "lzma=${lzmaDir}"
+          }
+
+          if(platform.operatingSystem.name == "windows") {
+              dependsOn "extract${platform.name}${buildOption}"
+              args "win32=${libDir}/tools/win32",
+                   "win64=${libDir}/tools/win64"
+          }
+          environment JAVA_HOME: java_home
+        }
+
+        assemble {
+          dependsOn "build${platform.name}${buildOption}"
+        }
       }
     }
   }
@@ -175,6 +186,19 @@ jar {
   baseName "classpath-avian"
 }
 
+task downloadLzma(type: Exec) {
+  commandLine "curl"
+  args "--create-dirs", "-o", "${lzmaDir}/lzma920.tar.bz2", "-f", "http://oss.readytalk.com/avian-web/lzma920.tar.bz2"
+}
+
+task extractLzma(type: Copy) {
+  dependsOn downloadLzma
+  from {
+    tarTree(resources.bzip2("${lzmaDir}/lzma920.tar.bz2"))
+  }
+  into lzmaDir
+}
+
 task install {
   dependsOn assemble, publish
 }
@@ -205,37 +229,53 @@ publishing {
 
       def publishBinSuffix = currentPlatform == "windows" ? "exe" : "bin"
       def binSuffix = currentPlatform == "windows" ? ".exe" : ""
-      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject") {
+      artifact("${buildDir}/${currentPlatform}-${currentArch}/binaryToObject/binaryToObject${binSuffix}") {
         name "binaryToObject"
         type publishBinSuffix
-        extension binSuffix
+        extension publishBinSuffix
       }
     }
 
-    platforms.each { platform ->
-      def binSuffix=""
-      def publishBinSuffix="bin"
+    buildOptions.each { buildOption ->
+      platforms.each { platform ->
+        def binSuffix=""
+        def publishBinSuffix="bin"
 
-      create(platform.name, IvyPublication) {
-        def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}"
+        create("${platform.name}${buildOption}", IvyPublication) {
+          def nativeBuildDir = "${buildDir}/${platform.operatingSystem.name}-${platform.architecture.name}${buildOption}"
 
-        if(platform.operatingSystem.name == "windows") {
-          publishBinSuffix = "exe"
-          binSuffix = ".${publishBinSuffix}"
-        }
+          if(platform.operatingSystem.name == "windows") {
+            publishBinSuffix = "exe"
+            binSuffix = ".${publishBinSuffix}"
+          }
 
-        module "runtime-avian-${platform.name}"
+          module "runtime-avian${buildOption}-${platform.name}"
 
-        artifact("${nativeBuildDir}/avian${binSuffix}") {
-          name "avian"
-          type publishBinSuffix
-          extension publishBinSuffix
-        }
+          artifact("${nativeBuildDir}/avian${binSuffix}") {
+            name "avian"
+            type publishBinSuffix
+            extension publishBinSuffix
+          }
 
-        artifact("${nativeBuildDir}/libavian.a") {
-          name "libavian"
-          type "a"
-          extension "a"
+          artifact("${nativeBuildDir}/libavian.a") {
+            name "libavian"
+            type "a"
+            extension "a"
+          }
+
+          if (buildOption == "-lzma") {
+            artifact("${nativeBuildDir}/libavian-lzma.a") {
+              name "libavian-lzma"
+              type "a"
+              extension "a"
+            }
+
+            artifact("${nativeBuildDir}/lzma/lzma${binSuffix}") {
+              name "lzma"
+              type publishBinSuffix
+              extension publishBinSuffix
+            }
+          }
         }
       }
     }

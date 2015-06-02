@@ -1403,6 +1403,8 @@ ifneq ($(lzma),)
 		$(call generator-c-objects,$(lzma-encoder-lzma-sources),$(lzma)/C,$(build))
 
 	lzma-loader = $(build)/lzma/load.o
+
+	lzma-library = $(build)/libavian-lzma.a
 endif
 
 generator-cpp-objects = \
@@ -1580,11 +1582,11 @@ test-args = $(test-flags) $(input)
 
 .PHONY: build
 ifneq ($(supports_avian_executable),false)
-build: $(static-library) $(executable) $(dynamic-library) $(lzma-loader) \
+build: $(static-library) $(executable) $(dynamic-library) $(lzma-library) \
 	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
 	$(test-extra-dep) $(embed) $(build)/classpath.jar
 else
-build: $(static-library) $(dynamic-library) $(lzma-loader) \
+build: $(static-library) $(dynamic-library) $(lzma-library) \
 	$(lzma-encoder) $(classpath-dep) $(test-dep) \
 	$(test-extra-dep) $(embed) $(build)/classpath.jar
 endif
@@ -1913,6 +1915,21 @@ $(lzma-encoder-objects): $(build)/lzma/%.o: $(src)/lzma/%.cpp
 
 $(lzma-encoder): $(lzma-encoder-objects) $(lzma-encoder-lzma-objects)
 	$(build-cc) $(^) -g -o $(@)
+
+$(lzma-library): $(lzma-loader) $(lzma-decode-objects)
+	@echo "creating $(@)"
+	@rm -rf $(build)/libavian-lzma
+	@mkdir -p $(build)/libavian-lzma
+	rm -rf $(@)
+	for x in $(^); \
+		do cp $${x} $(build)/libavian-lzma/$$(echo $${x} | sed s:/:_:g); \
+	done
+ifdef ms_cl_compiler
+	$(ar) $(arflags) $(build)/libavian-lzma/*.o -out:$(@)
+else
+	$(ar) cru $(@) $(build)/libavian-lzma/*.o
+	$(ranlib) $(@)
+endif
 
 $(lzma-loader): $(src)/lzma/load.cpp
 	$(compile-object)
