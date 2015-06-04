@@ -388,11 +388,11 @@ inline uint64_t dynamicCall(void* function,
     vfpIndex = VfpCount;
   }
 
-  unsigned stackSize = pad(stackIndex * BytesPerWord, 16);
+  unsigned stackSize = pad(stackIndex * BytesPerWord + stackSubIndex, 16);
   return vmNativeCall(function,
                       stackSize,
                       RUNTIME_ARRAY_BODY(stack),
-                      stackIndex * BytesPerWord,
+                      pad(stackIndex * BytesPerWord + stackSubIndex, BytesPerWord),
                       (gprIndex ? gprTable : 0),
                       (vfpIndex ? vfpTable : 0),
                       returnType);
