@@ -100,6 +100,41 @@ extern "C" JNIEXPORT jdouble JNICALL Java_JNI_addMix(JNIEnv*,
          + a14 + a15 + a16 + a17 + a18 + a19 + a20;
 }
 
+extern "C" JNIEXPORT jint JNICALL
+    Java_JNI_addStackBoundary2(JNIEnv*, jclass, jobject, jobject, jobject,
+                               jint i1, jint i2)
+{
+  return i1 + i2;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+    Java_JNI_addStackBoundary3(JNIEnv*, jclass, jobject, jobject, jobject,
+                               jint i1, jint i2, jint i3)
+{
+  return i1 + i2 + i3;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+    Java_JNI_addStackBoundary4(JNIEnv*, jclass, jobject, jobject, jobject,
+                               jint i1, jint i2, jint i3, jint i4)
+{
+  return i1 + i2 + i3 + i4;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+    Java_JNI_addStackBoundary5(JNIEnv*, jclass, jobject, jobject, jobject,
+                               jint i1, jint i2, jint i3, jint i4, jint i5)
+{
+  return i1 + i2 + i3 + i4 + i5;
+}
+
+extern "C" JNIEXPORT jint JNICALL
+    Java_JNI_addStackBoundary6(JNIEnv*, jclass, jobject, jobject, jobject,
+                               jint i1, jint i2, jint i3, jint i4, jint i5, jint i6)
+{
+  return i1 + i2 + i3 + i4 + i5 + i6;
+}
+
 extern "C" JNIEXPORT jfloat JNICALL
     Java_JNI_doEcho__F(JNIEnv* e, jclass c, jfloat f)
 {

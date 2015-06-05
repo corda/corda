@@ -43,6 +43,21 @@ public class JNI {
      float a13, float a14, float a15, double a16, float a17, float a18,
      float a19, float a20);
 
+  private static native int addStackBoundary2
+    (Object o1, Object o2, Object o3, int i1, int i2);
+
+  private static native int addStackBoundary3
+    (Object o1, Object o2, Object o3, int i1, int i2, int i3);
+
+  private static native int addStackBoundary4
+    (Object o1, Object o2, Object o3, int i1, int i2, int i3, int i4);
+
+  private static native int addStackBoundary5
+    (Object o1, Object o2, Object o3, int i1, int i2, int i3, int i4, int i5);
+
+  private static native int addStackBoundary6
+    (Object o1, Object o2, Object o3, int i1, int i2, int i3, int i4, int i5, int i6);
+
   private static native long fromReflectedMethod(Object m);
 
   private static native Object toReflectedMethod(Class c, long id,
@@ -82,6 +97,12 @@ public class JNI {
            (1.0f, 2.0d, 3.0f, 4.0d, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f,
             12.0f, 13.0f, 14.0f, 15.0f, 16.0d, 17.0f, 18.0f, 19.0f, 20.0f)
            == 210.0d);
+
+    expect(addStackBoundary2(null, null, null, 1, 10) == 11);
+    expect(addStackBoundary3(null, null, null, 1, 10, 100) == 111);
+    expect(addStackBoundary4(null, null, null, 1, 10, 100, 1000) == 1111);
+    expect(addStackBoundary5(null, null, null, 1, 10, 100, 1000, 10000) == 11111);
+    expect(addStackBoundary6(null, null, null, 1, 10, 100, 1000, 10000, 100000) == 111111);
 
     expect(doEcho(42.0f) == 42.0f);
     expect(doEcho(42.0d) == 42.0d);
