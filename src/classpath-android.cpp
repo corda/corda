@@ -8,6 +8,9 @@
    There is NO WARRANTY for this software.  See license.txt for
    details. */
 
+#include <cmath>
+using namespace std;
+
 struct JavaVM;
 struct _JavaVM;
 struct _JNIEnv;
@@ -1206,7 +1209,7 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Math_abs__J(Thread*, object, uintptr_t* arguments)
 {
-  return llabs(arguments[0]);
+  return llabs(static_cast<int64_t>(arguments[0]));
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
