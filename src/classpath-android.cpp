@@ -1209,7 +1209,8 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_java_lang_Math_abs__J(Thread*, object, uintptr_t* arguments)
 {
-  return llabs(static_cast<int64_t>(arguments[0]));
+  int64_t v; memcpy(&v, arguments, 8);
+  return llabs(v);
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
