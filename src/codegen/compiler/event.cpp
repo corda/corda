@@ -1111,10 +1111,10 @@ class CombineEvent : public Event {
                 "%p %p %d : %p %p %d\n",
                 secondValue,
                 secondValue->source,
-                secondValue->source->type(c),
+                static_cast<int>(secondValue->source->type(c)),
                 secondValue->nextWord,
                 secondValue->nextWord->source,
-                secondValue->nextWord->source->type(c));
+                static_cast<int>(secondValue->nextWord->source->type(c)));
       }
     }
 
