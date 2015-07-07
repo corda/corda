@@ -1001,8 +1001,8 @@ void sweepFixies(Context* c)
   assertT(c, c->markedFixies == 0);
 
   if (c->mode == Heap::MajorCollection) {
-    free(c, &(c->tenuredFixies));
-    free(c, &(c->dirtyTenuredFixies));
+    free(c, &(c->tenuredFixies), true);
+    free(c, &(c->dirtyTenuredFixies), true);
 
     c->tenuredFixieFootprint = 0;
   }
