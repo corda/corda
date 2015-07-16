@@ -1580,11 +1580,32 @@ test-flags = -Djava.library.path=$(build) \
 
 test-args = $(test-flags) $(input)
 
+ifneq ($(filter linux windows macosx,$(platform)),)
+eclipse-exec-env = eclipse-ee
+eclipse-jdk-dir = $(build)/eclipse/jdk
+eclipse-ee-file = $(eclipse-jdk-dir)/avian.ee
+eclipse-bin-dir = $(eclipse-jdk-dir)/bin
+eclipse-lib-dir = $(eclipse-jdk-dir)/jre/lib
+eclipse-src-dir = $(eclipse-jdk-dir)/src
+define eclipse-ee-descriptor
+# An Eclipse execution environment for the Avian JVM\
+\n-Dee.executable=bin/java${exe-suffix}\
+\n-Dee.bootclasspath=jre/lib/rt.jar\
+\n-Dee.language.level=1.7\
+\n-Dee.name=$(name)-$(version)-$(platform)-$(arch)$(options)\
+\n-Dee.src=src\
+\n-Dee.javadoc=file://$${ee.home}/doc\
+\n-Djava.home=$${ee.home}\n
+endef
+else
+eclipse-exec-env =
+endif
+
 .PHONY: build
 ifneq ($(supports_avian_executable),false)
 build: $(static-library) $(executable) $(dynamic-library) $(lzma-library) \
 	$(lzma-encoder) $(executable-dynamic) $(classpath-dep) $(test-dep) \
-	$(test-extra-dep) $(embed) $(build)/classpath.jar
+	$(test-extra-dep) $(embed) $(build)/classpath.jar $(eclipse-exec-env)
 else
 build: $(static-library) $(dynamic-library) $(lzma-library) \
 	$(lzma-encoder) $(classpath-dep) $(test-dep) \
@@ -1645,6 +1666,39 @@ clean-current:
 clean:
 	@echo "removing build directories"
 	rm -rf build cmake-build distrib lib
+
+.PHONY: eclipse-ee
+ifneq ($(strip $(eclipse-exec-env)),)
+eclipse-ee: $(eclipse-ee-file) $(eclipse-lib-dir)/rt.jar $(eclipse-bin-dir)/java${exe-suffix} $(eclipse-src-dir)
+
+$(eclipse-bin-dir):
+	@mkdir -p $(@)
+
+$(eclipse-lib-dir):
+	@mkdir -p $(@)
+
+$(eclipse-jdk-dir):
+	@mkdir -p $(@)
+
+$(eclipse-ee-file): $(eclipse-jdk-dir)
+	@echo "writing eclipse execution environment descriptor to $(@)"
+	@printf '${eclipse-ee-descriptor}' > $(@)
+
+$(eclipse-src-dir): $(eclipse-jdk-dir)
+	@echo "symlinking classpath for $(@)"
+	@ln -sf ../../classpath $(@)
+
+$(eclipse-bin-dir)/java$(exe-suffix): $(eclipse-bin-dir) $(executable)
+	@echo "symlinking $(executable) for $(@)"
+	@ln -sf ../../../$(name)${exe-suffix} $(@)
+
+$(eclipse-lib-dir)/rt.jar: $(eclipse-lib-dir) $(build)/classpath.jar
+	@echo "symlinking $(build)/classpath.jar for $(@)"
+	@ln -sf ../../../../classpath.jar $(@)
+else
+eclipse-ee:
+	$(error "Eclipse execution environment for platform '$(platform)' is not supported")
+endif
 
 ifeq ($(continuations),true)
 $(build)/compile-x86-asm.o: $(src)/continuations-x86.$(asm-format)
