@@ -1686,7 +1686,7 @@ $(eclipse-ee-file): $(eclipse-jdk-dir)
 
 $(eclipse-src-dir): $(eclipse-jdk-dir)
 	@echo "symlinking classpath for $(@)"
-	@ln -sf ../../classpath $(@)
+	@ln -sf ../../../../classpath $(@)
 
 $(eclipse-bin-dir)/java$(exe-suffix): $(eclipse-bin-dir) $(executable)
 	@echo "symlinking $(executable) for $(@)"
