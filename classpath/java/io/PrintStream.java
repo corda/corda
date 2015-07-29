@@ -78,23 +78,25 @@ public class PrintStream extends OutputStream {
     print(String.valueOf(s));
   }
 
-  public synchronized void printf(java.util.Locale locale, String format, Object... args) {
+  public synchronized PrintStream printf(java.util.Locale locale, String format, Object... args) {
     // should this be cached in an instance variable??
     final java.util.Formatter formatter = new java.util.Formatter(this);
     formatter.format(locale, format, args);
+    return this;
   }
 
-  public synchronized void printf(String format, Object... args) {
+  public synchronized PrintStream printf(String format, Object... args) {
     final java.util.Formatter formatter = new java.util.Formatter(this);
     formatter.format(format, args);
+    return this;
   }
 
-  public void format(String format, Object... args) {
-    printf(format, args);
+  public PrintStream format(String format, Object... args) {
+    return printf(format, args);
   }
 
-  public void format(java.util.Locale locale, String format, Object... args) {
-    printf(locale, format, args);
+  public PrintStream format(java.util.Locale locale, String format, Object... args) {
+    return printf(locale, format, args);
   }
 
   public synchronized void println(String s) {
