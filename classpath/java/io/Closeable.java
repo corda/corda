@@ -10,7 +10,7 @@
 
 package java.io;
 
-public interface Closeable {
+public interface Closeable extends AutoCloseable {
   void close()
     throws IOException;
 }
