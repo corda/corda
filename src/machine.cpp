@@ -1220,7 +1220,7 @@ GcClassAddendum* getClassAddendum(Thread* t, GcClass* class_, GcSingleton* pool)
   if (addendum == 0) {
     PROTECT(t, class_);
 
-    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0);
+    addendum = makeClassAddendum(t, pool, 0, 0, 0, 0, -1, 0, 0, 0);
     setField(t, class_, ClassAddendum, addendum);
   }
   return addendum;
@@ -2811,6 +2811,25 @@ void parseAttributeTable(Thread* t,
 
       GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
       addendum->setAnnotationTable(t, body);
+    } else if (vm::strcmp(reinterpret_cast<const int8_t*>("BootstrapMethods"),
+                          name->body().begin()) == 0) {
+      unsigned count = s.read2();
+      GcArray* array = makeArray(t, count);
+      PROTECT(t, array);
+
+      for (unsigned i = 0; i < count; ++i) {
+        unsigned reference = s.read2() - 1;
+        unsigned argumentCount = s.read2();
+        GcCharArray* element = makeCharArray(t, 1 + argumentCount);
+        element->body()[0] = reference;
+        for (unsigned ai = 0; ai < argumentCount; ++ai) {
+          element->body()[1 + ai] = s.read2() - 1;
+        }
+        array->setBodyElement(t, i, element);
+      }
+
+      GcClassAddendum* addendum = getClassAddendum(t, class_, pool);
+      addendum->setBootstrapMethodTable(t, array);
     } else if (vm::strcmp(reinterpret_cast<const int8_t*>("EnclosingMethod"),
                           name->body().begin()) == 0) {
       int16_t enclosingClass = s.read2();

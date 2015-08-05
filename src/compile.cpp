@@ -1284,6 +1284,8 @@ unsigned& dynamicIndex(MyThread* t);
 
 void**& dynamicTable(MyThread* t);
 
+unsigned& dynamicTableSize(MyThread* t);
+
 void updateDynamicTable(MyThread* t, MyThread* o)
 {
   o->dynamicTable = dynamicTable(t);
@@ -1301,6 +1303,7 @@ uintptr_t compileVirtualThunk(MyThread* t,
                               uintptr_t thunk,
                               const char* baseName);
 
+Allocator* allocator(MyThread* t);
 
 unsigned addDynamic(MyThread* t, GcInvocation* invocation)
 {
@@ -1319,7 +1322,7 @@ unsigned addDynamic(MyThread* t, GcInvocation* invocation)
       unsigned newCapacity = oldCapacity ? 2 * oldCapacity : 4096;
 
       void** newTable = static_cast<void**>(
-          t->m->heap->allocate(newCapacity * BytesPerWord));
+          allocator(t)->allocate(newCapacity * BytesPerWord));
 
       GcArray* newData = makeArray(t, newCapacity);
       PROTECT(t, newData);
@@ -1345,7 +1348,11 @@ unsigned addDynamic(MyThread* t, GcInvocation* invocation)
 
       ENTER(t, Thread::ExclusiveState);
 
+      if (dynamicTable(t)) {
+        allocator(t)->free(dynamicTable(t), dynamicTableSize(t));
+      }
       dynamicTable(t) = newTable;
+      dynamicTableSize(t) = newCapacity * BytesPerWord;
       roots(t)->setInvocations(t, newData);
 
       updateDynamicTable(static_cast<MyThread*>(t->m->rootThread), t);
@@ -7050,13 +7057,13 @@ void finish(MyThread* t, FixedAllocator* allocator, Context* context)
       reinterpret_cast<const char*>(context->method->spec()->body().begin()));
 
   // for debugging:
-  if (true
+  if (false
       and ::strcmp(reinterpret_cast<const char*>(
                        context->method->class_()->name()->body().begin()),
-                   "InvokeDynamic") == 0
+                   "java/lang/System") == 0
       and ::strcmp(reinterpret_cast<const char*>(
                        context->method->name()->body().begin()),
-                   "main") == 0) {
+                   "<clinit>") == 0) {
     trap();
   }
   syncInstructionCache(start, codeSize);
@@ -7269,6 +7276,187 @@ uint64_t compileVirtualMethod(MyThread* t)
   t->virtualCallIndex = 0;
 
   return reinterpret_cast<uintptr_t>(compileVirtualMethod2(t, class_, index));
+}
+
+GcCallSite* resolveDynamic(MyThread* t, GcInvocation* invocation)
+{
+  PROTECT(t, invocation);
+
+  GcClass* c = invocation->class_();
+  PROTECT(t, c);
+
+  GcCharArray* bootstrapArray = cast<GcCharArray>(
+      t,
+      cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
+          ->body()[invocation->bootstrap()]);
+
+  PROTECT(t, bootstrapArray);
+
+  GcMethod* bootstrap = cast<GcMethod>(t,
+                                       resolve(t,
+                                               c->loader(),
+                                               invocation->pool(),
+                                               bootstrapArray->body()[0],
+                                               findMethodInClass,
+                                               GcNoSuchMethodError::Type));
+  PROTECT(t, bootstrap);
+
+  assertT(t, bootstrap->parameterCount() == 2 + bootstrapArray->length());
+
+  GcLookup* lookup
+      = makeLookup(t, c, ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC);
+  PROTECT(t, lookup);
+
+  GcByteArray* nameBytes = invocation->template_()->name();
+  GcString* name
+      = t->m->classpath->makeString(t, nameBytes, 0, nameBytes->length() - 1);
+  PROTECT(t, name);
+
+  GcMethodType* type = makeMethodType(
+      t, c->loader(), invocation->template_()->spec(), 0, 0, 0);
+  PROTECT(t, type);
+
+  GcArray* array = makeArray(t, bootstrap->parameterCount());
+  PROTECT(t, array);
+
+  unsigned argument = 0;
+  array->setBodyElement(t, argument++, lookup);
+  array->setBodyElement(t, argument++, name);
+  array->setBodyElement(t, argument++, type);
+
+  MethodSpecIterator it(
+      t, reinterpret_cast<const char*>(bootstrap->spec()->body().begin()));
+
+  for (unsigned i = 0; i < argument; ++i)
+    it.next();
+
+  unsigned i = 0;
+  while (it.hasNext()) {
+    const char* p = it.next();
+    switch (*p) {
+    case 'L': {
+      const char* const methodType = "Ljava/lang/invoke/MethodType;";
+      const char* const methodHandle = "Ljava/lang/invoke/MethodHandle;";
+      if (strncmp(p, methodType, strlen(methodType)) == 0) {
+        GcMethodType* type = makeMethodType(
+            t,
+            c->loader(),
+            cast<GcByteArray>(
+                t,
+                singletonObject(
+                    t, invocation->pool(), bootstrapArray->body()[i + 1])),
+            0,
+            0,
+            0);
+
+        array->setBodyElement(t, i + argument, type);
+      } else if (strncmp(p, methodHandle, strlen(methodHandle)) == 0) {
+        GcMethod* method = cast<GcMethod>(t,
+                                          resolve(t,
+                                                  c->loader(),
+                                                  invocation->pool(),
+                                                  bootstrapArray->body()[i + 1],
+                                                  findMethodInClass,
+                                                  GcNoSuchMethodError::Type));
+
+        GcMethodHandle* handle = makeMethodHandle(t, c->loader(), method, 0);
+
+        array->setBodyElement(t, i + argument, handle);
+      } else {
+        abort(t);
+      }
+    } break;
+
+    case 'I':
+    case 'F': {
+      GcInt* box = makeInt(
+          t,
+          singletonValue(t, invocation->pool(), bootstrapArray->body()[i + 1]));
+
+      array->setBodyElement(t, i + argument, box);
+    } break;
+
+    case 'J':
+    case 'D': {
+      uint64_t v;
+      memcpy(
+          &v,
+          &singletonValue(t, invocation->pool(), bootstrapArray->body()[i + 1]),
+          8);
+
+      GcLong* box = makeLong(t, v);
+
+      array->setBodyElement(t, i + argument, box);
+    } break;
+
+    default:
+      abort(t);
+    }
+
+    ++i;
+  }
+
+  GcMethodHandle* handle = (bootstrap->flags() & ACC_STATIC)
+                               ? 0
+                               : makeMethodHandle(t, c->loader(), bootstrap, 0);
+
+  return cast<GcCallSite>(
+      t, t->m->processor->invokeArray(t, bootstrap, handle, array));
+}
+
+void* linkDynamicMethod2(MyThread* t, unsigned index)
+{
+  GcInvocation* invocation
+      = cast<GcInvocation>(t, roots(t)->invocations()->body()[index]);
+
+  GcCallSite* site = invocation->site();
+
+  loadMemoryBarrier();
+
+  if (site == 0) {
+    t->trace->targetMethod = invocation->template_();
+
+    THREAD_RESOURCE0(t, static_cast<MyThread*>(t)->trace->targetMethod = 0;);
+
+    PROTECT(t, invocation);
+
+    site = resolveDynamic(t, invocation);
+    PROTECT(t, site);
+
+    compile(t, codeAllocator(t), 0, site->target()->method());
+
+    ACQUIRE(t, t->m->classLock);
+
+    if (invocation->site() == 0) {
+      void* address
+          = reinterpret_cast<void*>(methodAddress(t, site->target()->method()));
+
+      if ((site->target()->method()->flags() & ACC_NATIVE) == 0) {
+        t->dynamicTable[index] = address;
+      }
+    }
+
+    storeStoreMemoryBarrier();
+
+    invocation->setSite(t, site);
+    site->setInvocation(t, invocation);
+  }
+
+  GcMethod* target = invocation->site()->target()->method();
+
+  if (target->flags() & ACC_NATIVE) {
+    t->trace->nativeMethod = target;
+  }
+
+  return reinterpret_cast<void*>(methodAddress(t, target));
+}
+
+uint64_t linkDynamicMethod(MyThread* t)
+{
+  unsigned index = t->virtualCallIndex;
+  t->virtualCallIndex = 0;
+
+  return reinterpret_cast<uintptr_t>(linkDynamicMethod2(t, index));
 }
 
 uint64_t invokeNativeFast(MyThread* t, GcMethod* method, void* function)
@@ -8482,10 +8670,12 @@ class MyProcessor : public Processor {
         dynamicIndex(0),
         useNativeFeatures(useNativeFeatures),
         compilationHandlers(0),
-        dynamicTable(0)
+        dynamicTable(0),
+        dynamicTableSize(0)
   {
     thunkTable[compileMethodIndex] = voidPointer(local::compileMethod);
     thunkTable[compileVirtualMethodIndex] = voidPointer(compileVirtualMethod);
+    thunkTable[linkDynamicMethodIndex] = voidPointer(linkDynamicMethod);
     thunkTable[invokeNativeIndex] = voidPointer(invokeNative);
     thunkTable[throwArrayIndexOutOfBoundsIndex]
         = voidPointer(throwArrayIndexOutOfBounds);
@@ -8956,6 +9146,10 @@ class MyProcessor : public Processor {
     signals.unregisterHandler(SignalRegistrar::DivideByZero);
     signals.setCrashDumpDirectory(0);
 
+    if (dynamicTable) {
+      allocator->free(dynamicTable, dynamicTableSize);
+    }
+
     this->~MyProcessor();
 
     allocator->free(this, sizeof(*this));
@@ -9244,6 +9438,7 @@ class MyProcessor : public Processor {
   void* thunkTable[dummyIndex + 1];
   CompilationHandlerList* compilationHandlers;
   void** dynamicTable;
+  unsigned dynamicTableSize;
 };
 
 unsigned& dynamicIndex(MyThread* t)
@@ -9254,6 +9449,11 @@ unsigned& dynamicIndex(MyThread* t)
 void**& dynamicTable(MyThread* t)
 {
   return static_cast<MyProcessor*>(t->m->processor)->dynamicTable;
+}
+
+unsigned& dynamicTableSize(MyThread* t)
+{
+  return static_cast<MyProcessor*>(t->m->processor)->dynamicTableSize;
 }
 
 const char* stringOrNull(const char* str)
@@ -10431,6 +10631,11 @@ GcCompileRoots* compileRoots(Thread* t)
 avian::util::FixedAllocator* codeAllocator(MyThread* t)
 {
   return &(processor(t)->codeAllocator);
+}
+
+Allocator* allocator(MyThread* t)
+{
+  return processor(t)->allocator;
 }
 
 }  // namespace local

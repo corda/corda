@@ -2,6 +2,7 @@ import avian.Stream;
 import avian.ConstantPool;
 import avian.ConstantPool.PoolEntry;
 import avian.Assembler;
+import avian.Assembler.FieldData;
 import avian.Assembler.MethodData;
 
 import java.util.ArrayList;
@@ -95,7 +96,7 @@ public class Subroutine {
     Assembler.writeClass
       (out, pool, ConstantPool.addClass(pool, name),
        ConstantPool.addClass(pool, "java/lang/Object"),
-       new int[0], new MethodData[]
+       new int[0], new FieldData[0], new MethodData[]
        { new MethodData(Assembler.ACC_STATIC | Assembler.ACC_PUBLIC,
                         ConstantPool.addUtf8(pool, "test"),
                         ConstantPool.addUtf8(pool, "()V"),

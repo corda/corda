@@ -1,4 +1,9 @@
 package java.lang.invoke;
 
-public abstract class CallSite {
+public class CallSite {
+  private final MethodHandle target;
+
+  CallSite(MethodHandle target) {
+    this.target = target;
+  }
 }

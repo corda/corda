@@ -3408,18 +3408,18 @@ inline GcClass* resolveClassInPool(Thread* t,
 inline object resolve(
     Thread* t,
     GcClassLoader* loader,
-    GcMethod* method,
+    GcSingleton* pool,
     unsigned index,
     object (*find)(vm::Thread*, GcClass*, GcByteArray*, GcByteArray*),
     Gc::Type errorType,
     bool throw_ = true)
 {
-  object o = singletonObject(t, method->code()->pool(), index);
+  object o = singletonObject(t, pool, index);
 
   loadMemoryBarrier();
 
   if (objectClass(t, o) == type(t, GcReference::Type)) {
-    PROTECT(t, method);
+    PROTECT(t, pool);
 
     GcReference* reference = cast<GcReference>(t, o);
     PROTECT(t, reference);
@@ -3439,8 +3439,7 @@ inline object resolve(
       if (o) {
         storeStoreMemoryBarrier();
 
-        method->code()->pool()->setBodyElement(
-            t, index, reinterpret_cast<uintptr_t>(o));
+        pool->setBodyElement(t, index, reinterpret_cast<uintptr_t>(o));
       }
     } else {
       o = 0;
@@ -3459,7 +3458,7 @@ inline GcField* resolveField(Thread* t,
   return cast<GcField>(t,
                        resolve(t,
                                loader,
-                               method,
+                               method->code()->pool(),
                                index,
                                findFieldInClass,
                                GcNoSuchFieldError::Type,
@@ -3562,7 +3561,7 @@ inline GcMethod* resolveMethod(Thread* t,
   return cast<GcMethod>(t,
                         resolve(t,
                                 loader,
-                                method,
+                                method->code()->pool(),
                                 index,
                                 findMethodInClass,
                                 GcNoSuchMethodError::Type,

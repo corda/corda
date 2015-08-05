@@ -23,6 +23,7 @@ import avian.ConstantPool;
 import avian.ConstantPool.PoolEntry;
 
 import avian.Assembler;
+import avian.Assembler.FieldData;
 import avian.Assembler.MethodData;
 
 import java.util.List;
@@ -402,6 +403,7 @@ public class Proxy {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Assembler.writeClass
       (out, pool, nameIndex, superIndex, interfaceIndexes,
+       new FieldData[0],
        methodTable.toArray(new MethodData[methodTable.size()]));
 
     byte[] classData = out.toByteArray();

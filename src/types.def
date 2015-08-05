@@ -22,6 +22,16 @@
 
 (type cloneable java/lang/Cloneable)
 
+(type callSite java/lang/invoke/CallSite
+  (require invocation invocation))
+
+(type methodHandle java/lang/invoke/MethodHandle
+  (alias method method vmtarget))
+
+(type methodType java/lang/invoke/MethodType)
+
+(type lookup java/lang/invoke/MethodHandles$Lookup)
+
 (type singleton avian/Singleton
   (array maybe_object body))
 
@@ -76,10 +86,10 @@
 (type invocation
   (uint16_t bootstrap)
   (int32_t index)
-  (object class)
-  (object pool)
+  (class class)
+  (singleton pool)
   (method template)
-  (object site))
+  (callSite site))
 
 (type triple
   (object first)

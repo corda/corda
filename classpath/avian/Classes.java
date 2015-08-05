@@ -48,8 +48,8 @@ public class Classes {
   private static native VMClass resolveVMClass(ClassLoader loader, byte[] spec)
     throws ClassNotFoundException;
 
-  private static VMClass loadVMClass(ClassLoader loader,
-                                     byte[] nameBytes, int offset, int length)
+  public static VMClass loadVMClass(ClassLoader loader,
+                                    byte[] nameBytes, int offset, int length)
   {
     byte[] spec = new byte[length + 1];
     System.arraycopy(nameBytes, offset, spec, 0, length);
@@ -576,6 +576,6 @@ public class Classes {
   private static native void acquireClassLock();
 
   private static native void releaseClassLock();
-
+  
   public static native String makeString(byte[] array, int offset, int length);
 }
