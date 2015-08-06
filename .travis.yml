@@ -1,9 +1,6 @@
 language: cpp
 cache: apt
 
-jdk:
-  - oraclejdk8
-
 os:
   - linux
   - osx
