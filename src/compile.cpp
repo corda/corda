@@ -7351,6 +7351,12 @@ GcCallSite* resolveDynamic(MyThread* t, GcInvocation* invocation)
 
         array->setBodyElement(t, i + argument, type);
       } else if (strncmp(p, methodHandle, strlen(methodHandle)) == 0) {
+        GcReference* reference = cast<GcReference>(
+            t,
+            singletonObject(
+                t, invocation->pool(), bootstrapArray->body()[i + 1]));
+        int kind = reference->kind();
+
         GcMethod* method = cast<GcMethod>(t,
                                           resolve(t,
                                                   c->loader(),
@@ -7359,7 +7365,8 @@ GcCallSite* resolveDynamic(MyThread* t, GcInvocation* invocation)
                                                   findMethodInClass,
                                                   GcNoSuchMethodError::Type));
 
-        GcMethodHandle* handle = makeMethodHandle(t, c->loader(), method, 0);
+        GcMethodHandle* handle
+            = makeMethodHandle(t, kind, c->loader(), method, 0);
 
         array->setBodyElement(t, i + argument, handle);
       } else {
@@ -7396,9 +7403,10 @@ GcCallSite* resolveDynamic(MyThread* t, GcInvocation* invocation)
     ++i;
   }
 
-  GcMethodHandle* handle = (bootstrap->flags() & ACC_STATIC)
-                               ? 0
-                               : makeMethodHandle(t, c->loader(), bootstrap, 0);
+  GcMethodHandle* handle
+      = (bootstrap->flags() & ACC_STATIC)
+            ? 0
+            : makeMethodHandle(t, REF_invokeSpecial, c->loader(), bootstrap, 0);
 
   return cast<GcCallSite>(
       t, t->m->processor->invokeArray(t, bootstrap, handle, array));

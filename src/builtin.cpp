@@ -113,6 +113,13 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
       cast<GcJclass>(t, reinterpret_cast<object>(arguments[0]))->vmClass());
 }
 
+extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_avian_Classes_toVMMethod(Thread* t, object, uintptr_t* arguments)
+{
+  return reinterpret_cast<intptr_t>(t->m->classpath->getVMMethod(
+      t, cast<GcJmethod>(t, reinterpret_cast<object>(arguments[0]))));
+}
+
 extern "C" AVIAN_EXPORT void JNICALL
     Avian_avian_Classes_initialize(Thread* t, object, uintptr_t* arguments)
 {

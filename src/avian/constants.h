@@ -263,6 +263,16 @@ const unsigned ACC_INTERFACE = 1 << 9;
 const unsigned ACC_ABSTRACT = 1 << 10;
 const unsigned ACC_STRICT = 1 << 11;
 
+const unsigned REF_getField = 1;
+const unsigned REF_getStatic = 2;
+const unsigned REF_putField = 3;
+const unsigned REF_putStatic = 4;
+const unsigned REF_invokeVirtual = 5;
+const unsigned REF_invokeStatic = 6;
+const unsigned REF_invokeSpecial = 7;
+const unsigned REF_newInvokeSpecial = 8;
+const unsigned REF_invokeInterface = 9;
+
 const int AVIAN_JNI_COMMIT = 1;
 const int AVIAN_JNI_ABORT = 2;
 

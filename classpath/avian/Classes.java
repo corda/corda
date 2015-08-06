@@ -45,6 +45,8 @@ public class Classes {
 
   public static native VMClass toVMClass(Class c);
 
+  public static native VMMethod toVMMethod(Method m);
+  
   private static native VMClass resolveVMClass(ClassLoader loader, byte[] spec)
     throws ClassNotFoundException;
 

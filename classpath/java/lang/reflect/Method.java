@@ -58,18 +58,6 @@ public class Method<T> extends AccessibleObject implements Member {
   private String getSpec() {
     return getSpec(vmMethod);
   }
-
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    if (vmMethod.class_ != null) {
-      sb.append(Classes.makeString(vmMethod.class_.name, 0,
-                                   vmMethod.class_.name.length - 1));
-      sb.append(".");
-    }
-    sb.append(getName());
-    sb.append(getSpec());
-    return sb.toString();
-  }
   
   public static String getSpec(VMMethod vmMethod) {
     return Classes.makeString(vmMethod.spec, 0, vmMethod.spec.length - 1);

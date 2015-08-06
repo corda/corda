@@ -484,6 +484,7 @@ class MyClasspath : public Classpath {
       }
 
       oarray = charArray;
+      offset = 0;
     } else {
       expect(t, objectClass(t, oarray) == type(t, GcCharArray::Type));
     }

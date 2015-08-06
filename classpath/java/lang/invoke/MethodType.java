@@ -2,12 +2,18 @@ package java.lang.invoke;
 
 import static avian.Assembler.*;
 
+import avian.Assembler;
 import avian.Classes;
+import avian.VMClass;
 
 import java.util.List;
 import java.util.ArrayList;
 
 public final class MethodType implements java.io.Serializable {
+  private static final char[] Primitives = new char[] {
+    'V', 'Z', 'B', 'C', 'S', 'I', 'F', 'J', 'D'
+  };
+  
   final ClassLoader loader;
   final byte[] spec;
   private volatile List<Parameter> parameters;
@@ -17,6 +23,77 @@ public final class MethodType implements java.io.Serializable {
   MethodType(ClassLoader loader, byte[] spec) {
     this.loader = loader;
     this.spec = spec;
+  }
+
+  public String toMethodDescriptorString() {
+    return Classes.makeString(spec, 0, spec.length - 1);
+  }
+  
+  private static String spec(Class c) {
+    if (c.isPrimitive()) {
+      VMClass vmc = Classes.toVMClass(c);
+      for (char p: Primitives) {
+        if (vmc == Classes.primitiveClass(p)) {
+          return String.valueOf(p);
+        }
+      }
+      throw new AssertionError();
+    } else if (c.isArray()) {
+      return "[" + spec(c.getComponentType());
+    } else {
+      return "L" + c.getName().replace('.', '/') + ";";
+    }
+  }
+
+  private MethodType(Class rtype,
+                     Class ... ptypes)
+  {
+    loader = rtype.getClassLoader();
+    
+    StringBuilder sb = new StringBuilder();
+    sb.append('(');
+    parameters = new ArrayList(ptypes.length);
+    int position = 0;
+    for (int i = 0; i < ptypes.length; ++i) {
+      String spec = spec(ptypes[i]);
+      sb.append(spec);
+
+      Type type = type(spec);
+      
+      parameters.add(new Parameter(i,
+                                   position,
+                                   spec,
+                                   ptypes[i],
+                                   type.load));
+
+      position += type.size;
+    }
+    sb.append(')');
+
+    footprint = position;
+
+    String spec = spec(rtype);
+    sb.append(spec);
+
+    result = new Result(spec, rtype, type(spec).return_);
+
+    this.spec = sb.toString().getBytes();
+  }
+  
+  public static MethodType methodType(Class rtype,
+                                      Class ptype0,
+                                      Class ... ptypes)
+  {
+    Class[] array = new Class[ptypes.length + 1];
+    array[0] = ptype0;
+    System.arraycopy(ptypes, 0, array, 1, ptypes.length);
+    return methodType(rtype, array);
+  }
+
+  public static MethodType methodType(Class rtype,
+                                      Class ... ptypes)
+  {
+    return new MethodType(rtype, ptypes);
   }
 
   public String toString() {
@@ -53,21 +130,14 @@ public final class MethodType implements java.io.Serializable {
       int index = 0;
       int position = 0;
       for (i = 1; spec[i] != ')'; ++i) {
+        int start = i;
         switch (spec[i]) {
         case 'L': {
-          int start = i;
           ++ i;
           while (spec[i] != ';') ++ i;
-          
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, start, (i - start) + 1),
-                    aload));
         } break;
 
         case '[': {
-          int start = i;
           ++ i;
           while (spec[i] == '[') ++ i;
         
@@ -80,12 +150,6 @@ public final class MethodType implements java.io.Serializable {
           default:
             break;
           }
-          
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, start, (i - start) + 1),
-                    aload));
         } break;
 
         case 'Z':
@@ -93,107 +157,38 @@ public final class MethodType implements java.io.Serializable {
         case 'S':
         case 'C':
         case 'I':
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, i, 1),
-                    iload));
-          break;
-
         case 'F':
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, i, 1),
-                    fload));
-          break;
-
         case 'J':
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, i, 1),
-                    lload));
-
-          ++ position;
-          break;
-
         case 'D':
-          list.add(new Parameter
-                   (index,
-                    position,
-                    Classes.makeString(spec, i, 1),
-                    dload));
-
-          ++ position;
           break;
 
         default: throw new AssertionError();
         }
 
+        String paramSpec = Classes.makeString(spec, start, (i - start) + 1);
+        Type type = type(paramSpec);
+        
+        list.add(new Parameter
+                 (index,
+                  position,
+                  paramSpec,
+                  Classes.forCanonicalName(loader, paramSpec),
+                  type.load));
+
         ++ index;
-        ++ position;
+        position += type.size;
       }
 
       footprint = position;
 
       ++ i;
 
-      switch (spec[i]) {
-      case 'L': {
-        int start = i;
-        ++ i;
-        while (spec[i] != ';') ++ i;
-          
-        result = new Result
-          (Classes.makeString(spec, start, (i - start) + 1), areturn);
-      } break;
-
-      case '[': {
-        int start = i;
-        ++ i;
-        while (spec[i] == '[') ++ i;
-        
-        switch (spec[i]) {
-        case 'L':
-          ++ i;
-          while (spec[i] != ';') ++ i;
-          break;
-
-        default:
-          break;
-        }
-          
-        result = new Result(Classes.makeString(spec, start, (i - start) + 1),
-                            areturn);
-      } break;
-
-      case 'V':
-        result = new Result(Classes.makeString(spec, i, 1), return_);
-        break;
-
-      case 'Z':
-      case 'B':
-      case 'S':
-      case 'C':
-      case 'I':
-        result = new Result(Classes.makeString(spec, i, 1), ireturn);
-        break;
-
-      case 'F':
-        result = new Result(Classes.makeString(spec, i, 1), freturn);        
-        break;
-        
-      case 'J':
-        result = new Result(Classes.makeString(spec, i, 1), lreturn);
-        break;
-        
-      case 'D':
-        result = new Result(Classes.makeString(spec, i, 1), dreturn);
-        break;
-        
-      default: throw new AssertionError();
-      }
+      String paramSpec = Classes.makeString(spec, i, spec.length - i - 1);
+      Type type = type(paramSpec);
+      
+      result = new Result(paramSpec,
+                          Classes.forCanonicalName(loader, paramSpec),
+                          type.return_);
       
       parameters = list;
     }
@@ -207,7 +202,55 @@ public final class MethodType implements java.io.Serializable {
     return result;
   }
 
-  public class Parameter {
+  private static Type type(String spec) {
+    switch (spec.charAt(0)) {
+    case 'L':
+    case '[':
+      return Type.ObjectType;
+
+    case 'Z':
+    case 'B':
+    case 'S':
+    case 'C':
+    case 'I':
+      return Type.IntegerType;
+
+    case 'F':
+      return Type.FloatType;
+
+    case 'J':
+      return Type.LongType;
+
+    case 'D':
+      return Type.DoubleType;
+
+    case 'V':
+      return Type.VoidType;
+
+    default: throw new AssertionError();        
+    }    
+  }
+
+  private static enum Type {
+    ObjectType(aload, areturn, 1),
+    IntegerType(iload, ireturn, 1),
+    FloatType(fload, freturn, 1),
+    LongType(lload, lreturn, 1),
+    DoubleType(dload, dreturn, 1),
+    VoidType(-1, Assembler.return_, -1);
+    
+    public final int load;
+    public final int return_;
+    public final int size;
+
+    private Type(int load, int return_, int size) {
+      this.load = load;
+      this.return_ = return_;
+      this.size = size;
+    }
+  }
+  
+  public static class Parameter {
     private final int index;
     private final int position;
     private final String spec;
@@ -217,12 +260,13 @@ public final class MethodType implements java.io.Serializable {
     private Parameter(int index,
                       int position,
                       String spec,
+                      Class type,
                       int load)
     {
       this.index = index;
       this.position = position;
       this.spec = spec;
-      this.type = Classes.forCanonicalName(loader, spec);
+      this.type = type;
       this.load = load;
     }
 
@@ -243,14 +287,14 @@ public final class MethodType implements java.io.Serializable {
     }
   }
 
-  public class Result {
+  public static class Result {
     private final String spec;
     private final Class type;
     private final int return_;
 
-    public Result(String spec, int return_) {
+    public Result(String spec, Class type, int return_) {
       this.spec = spec;
-      this.type = Classes.forCanonicalName(loader, spec);
+      this.type = type;
       this.return_ = return_;
     }
 

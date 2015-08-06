@@ -155,7 +155,19 @@ public class LambdaMetafactory {
       write1(out, p.position() + 1);
     }
 
-    write1(out, invokestatic);
+    switch (implementation.kind) {
+    case MethodHandle.REF_invokeStatic:
+      write1(out, invokestatic);
+      break;
+
+    case MethodHandle.REF_invokeSpecial:
+      write1(out, invokespecial);
+      break;
+
+    default: throw new AssertionError
+        ("todo: implement per http://docs.oracle.com/javase/specs/jvms/se8/html/jvms-5.html#jvms-5.4.3.5");
+    }
+    
     write2(out, ConstantPool.addMethodRef
            (pool,
             Classes.makeString(implementation.method.class_.name, 0,
@@ -213,11 +225,9 @@ public class LambdaMetafactory {
     try {
       methodTable.add
         (new MethodData
-         (Modifier.STATIC,
+         (Modifier.PUBLIC | Modifier.STATIC,
           ConstantPool.addUtf8(pool, "make"),
-          ConstantPool.addUtf8(pool, Classes.makeString
-                               (invokedType.spec, 0,
-                                invokedType.spec.length - 1)),
+          ConstantPool.addUtf8(pool, invokedType.toMethodDescriptorString()),
           makeFactoryCode(pool, className, constructorSpec, invokedType)));
 
       methodTable.add
@@ -231,9 +241,7 @@ public class LambdaMetafactory {
         (new MethodData
          (Modifier.PUBLIC,
           ConstantPool.addUtf8(pool, invokedName),
-          ConstantPool.addUtf8(pool, Classes.makeString
-                               (methodType.spec, 0,
-                                methodType.spec.length - 1)),
+          ConstantPool.addUtf8(pool, methodType.toMethodDescriptorString()),
           makeInvocationCode(pool, className, constructorSpec, invokedType,
                              methodType, methodImplementation)));
     } catch (IOException e) {
@@ -262,10 +270,11 @@ public class LambdaMetafactory {
     try {
       return new CallSite
         (new MethodHandle
-         (invokedType.loader, avian.SystemClassLoader.getClass
-          (avian.Classes.defineVMClass
-           (invokedType.loader, classData, 0, classData.length))
-          .getMethod("make", invokedType.parameterArray()).vmMethod));
+         (MethodHandle.REF_invokeStatic, invokedType.loader, Classes.toVMMethod
+          (avian.SystemClassLoader.getClass
+           (avian.Classes.defineVMClass
+            (invokedType.loader, classData, 0, classData.length))
+           .getMethod("make", invokedType.parameterArray()))));
     } catch (NoSuchMethodException e) {
       AssertionError error = new AssertionError();
       error.initCause(e);

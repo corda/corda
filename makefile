@@ -1473,7 +1473,12 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
 		$(classpath-src)/avian/avianvmresource/Handler.java \
-		$(classpath-src)/avian/file/Handler.java
+		$(classpath-src)/avian/file/Handler.java \
+		$(classpath-src)/java/lang/invoke/MethodHandle.java \
+		$(classpath-src)/java/lang/invoke/MethodHandles.java \
+		$(classpath-src)/java/lang/invoke/MethodType.java \
+		$(classpath-src)/java/lang/invoke/LambdaMetafactory.java \
+		$(classpath-src)/java/lang/invoke/CallSite.java
 
 	ifeq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
