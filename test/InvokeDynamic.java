@@ -18,7 +18,9 @@ public class InvokeDynamic {
     Operation op = (a, b) -> a + b - c;
     expect(op.operate(2, 3) == (2 + 3) - 4);
 
-    new InvokeDynamic(3).test();
+    for (int i = 0; i < 4; ++i) {
+      new InvokeDynamic(i).test();
+    }
   }
 
   private void test() {

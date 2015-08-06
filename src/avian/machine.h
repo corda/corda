@@ -2349,6 +2349,8 @@ GcClass* findLoadedClass(Thread* t, GcClassLoader* loader, GcByteArray* spec);
 
 GcJclass* getDeclaringClass(Thread* t, GcClass* c);
 
+GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation);
+
 inline bool emptyMethod(Thread* t UNUSED, GcMethod* method)
 {
   return ((method->flags() & ACC_NATIVE) == 0)

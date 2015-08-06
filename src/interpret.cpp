@@ -1981,6 +1981,34 @@ loop:
   }
     goto loop;
 
+  case invokedynamic: {
+    uint16_t index = codeReadInt16(t, code, ip);
+
+    ip += 2;
+
+    GcInvocation* invocation = cast<GcInvocation>(t, singletonObject(t, code->pool(), index - 1));
+
+    GcCallSite* site = invocation->site();
+
+    loadMemoryBarrier();
+
+    if (site == 0) {
+      PROTECT(t, invocation);
+
+      invocation->setClass(t, frameMethod(t, frame)->class_());
+
+      site = resolveDynamic(t, invocation);
+      PROTECT(t, site);
+
+      storeStoreMemoryBarrier();
+
+      invocation->setSite(t, site);
+      site->setInvocation(t, invocation);
+    }
+
+    method = site->target()->method();
+  } goto invoke;
+
   case invokeinterface: {
     uint16_t index = codeReadInt16(t, code, ip);
 

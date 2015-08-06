@@ -6032,6 +6032,140 @@ GcJclass* getDeclaringClass(Thread* t, GcClass* c)
   return 0;
 }
 
+GcCallSite* resolveDynamic(Thread* t, GcInvocation* invocation)
+{
+  PROTECT(t, invocation);
+
+  GcClass* c = invocation->class_();
+  PROTECT(t, c);
+
+  GcCharArray* bootstrapArray = cast<GcCharArray>(
+      t,
+      cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
+          ->body()[invocation->bootstrap()]);
+
+  PROTECT(t, bootstrapArray);
+
+  GcMethod* bootstrap = cast<GcMethod>(t,
+                                       resolve(t,
+                                               c->loader(),
+                                               invocation->pool(),
+                                               bootstrapArray->body()[0],
+                                               findMethodInClass,
+                                               GcNoSuchMethodError::Type));
+  PROTECT(t, bootstrap);
+
+  assertT(t, bootstrap->parameterCount() == 2 + bootstrapArray->length());
+
+  GcLookup* lookup
+      = makeLookup(t, c, ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED | ACC_STATIC);
+  PROTECT(t, lookup);
+
+  GcByteArray* nameBytes = invocation->template_()->name();
+  GcString* name
+      = t->m->classpath->makeString(t, nameBytes, 0, nameBytes->length() - 1);
+  PROTECT(t, name);
+
+  GcMethodType* type = makeMethodType(
+      t, c->loader(), invocation->template_()->spec(), 0, 0, 0);
+  PROTECT(t, type);
+
+  GcArray* array = makeArray(t, bootstrap->parameterCount());
+  PROTECT(t, array);
+
+  unsigned argument = 0;
+  array->setBodyElement(t, argument++, lookup);
+  array->setBodyElement(t, argument++, name);
+  array->setBodyElement(t, argument++, type);
+
+  MethodSpecIterator it(
+      t, reinterpret_cast<const char*>(bootstrap->spec()->body().begin()));
+
+  for (unsigned i = 0; i < argument; ++i)
+    it.next();
+
+  unsigned i = 0;
+  while (it.hasNext()) {
+    const char* p = it.next();
+    switch (*p) {
+    case 'L': {
+      const char* const methodType = "Ljava/lang/invoke/MethodType;";
+      const char* const methodHandle = "Ljava/lang/invoke/MethodHandle;";
+      if (strncmp(p, methodType, strlen(methodType)) == 0) {
+        GcMethodType* type = makeMethodType(
+            t,
+            c->loader(),
+            cast<GcByteArray>(
+                t,
+                singletonObject(
+                    t, invocation->pool(), bootstrapArray->body()[i + 1])),
+            0,
+            0,
+            0);
+
+        array->setBodyElement(t, i + argument, type);
+      } else if (strncmp(p, methodHandle, strlen(methodHandle)) == 0) {
+        GcReference* reference = cast<GcReference>(
+            t,
+            singletonObject(
+                t, invocation->pool(), bootstrapArray->body()[i + 1]));
+        int kind = reference->kind();
+
+        GcMethod* method = cast<GcMethod>(t,
+                                          resolve(t,
+                                                  c->loader(),
+                                                  invocation->pool(),
+                                                  bootstrapArray->body()[i + 1],
+                                                  findMethodInClass,
+                                                  GcNoSuchMethodError::Type));
+
+        GcMethodHandle* handle
+            = makeMethodHandle(t, kind, c->loader(), method, 0);
+
+        array->setBodyElement(t, i + argument, handle);
+      } else {
+        abort(t);
+      }
+    } break;
+
+    case 'I':
+    case 'F': {
+      GcInt* box = makeInt(
+          t,
+          singletonValue(t, invocation->pool(), bootstrapArray->body()[i + 1]));
+
+      array->setBodyElement(t, i + argument, box);
+    } break;
+
+    case 'J':
+    case 'D': {
+      uint64_t v;
+      memcpy(
+          &v,
+          &singletonValue(t, invocation->pool(), bootstrapArray->body()[i + 1]),
+          8);
+
+      GcLong* box = makeLong(t, v);
+
+      array->setBodyElement(t, i + argument, box);
+    } break;
+
+    default:
+      abort(t);
+    }
+
+    ++i;
+  }
+
+  GcMethodHandle* handle
+      = (bootstrap->flags() & ACC_STATIC)
+            ? 0
+            : makeMethodHandle(t, REF_invokeSpecial, c->loader(), bootstrap, 0);
+
+  return cast<GcCallSite>(
+      t, t->m->processor->invokeArray(t, bootstrap, handle, array));
+}
+
 void noop()
 {
 }
