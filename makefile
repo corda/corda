@@ -3,6 +3,10 @@ MAKEFLAGS = -s
 name = avian
 version := $(shell grep version gradle.properties | cut -d'=' -f2)
 
+java-version := $(shell $(JAVA_HOME)/bin/java -version 2>&1 \
+	| head -n 1 \
+	| sed 's/.*version "1.\([^.]*\).*/\1/')
+
 build-arch := $(shell uname -m \
 	| sed 's/^i.86$$/i386/' \
 	| sed 's/^x86pc$$/i386/' \
@@ -1473,7 +1477,13 @@ ifneq ($(classpath),avian)
 		$(classpath-src)/avian/VMField.java \
 		$(classpath-src)/avian/VMMethod.java \
 		$(classpath-src)/avian/avianvmresource/Handler.java \
-		$(classpath-src)/avian/file/Handler.java
+		$(classpath-src)/avian/file/Handler.java \
+		$(classpath-src)/java/lang/invoke/MethodHandle.java \
+		$(classpath-src)/java/lang/invoke/MethodHandles.java \
+		$(classpath-src)/java/lang/invoke/MethodType.java \
+		$(classpath-src)/java/lang/invoke/LambdaMetafactory.java \
+		$(classpath-src)/java/lang/invoke/LambdaConversionException.java \
+		$(classpath-src)/java/lang/invoke/CallSite.java
 
 	ifeq ($(openjdk),)
 		classpath-sources := $(classpath-sources) \
@@ -1509,7 +1519,10 @@ vm-classes = \
 	avian/resource/*.class
 
 test-support-sources = $(shell find $(test)/avian/ -name '*.java')
-test-sources = $(wildcard $(test)/*.java)
+test-sources := $(wildcard $(test)/*.java)
+ifeq (7,$(java-version))
+	test-sources := $(subst $(test)/InvokeDynamic.java,,$(test-sources))
+endif
 test-cpp-sources = $(wildcard $(test)/*.cpp)
 test-sources += $(test-support-sources)
 test-support-classes = $(call java-classes, $(test-support-sources),$(test),$(test-build))
@@ -1689,7 +1702,7 @@ $(classpath-dep): $(classpath-sources) $(classpath-jar-dep)
 	classes="$(shell $(MAKE) -s --no-print-directory build=$(build) \
 		$(classpath-classes) arch=$(build-arch) platform=$(bootimage-platform))"; \
 	if [ -n "$${classes}" ]; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.$(java-version) -target 1.$(java-version) \
 			-d $(classpath-build) -bootclasspath $(boot-classpath) \
 		$${classes}; fi
 	@touch $(@)
@@ -1765,7 +1778,7 @@ $(test-dep): $(test-sources) $(test-library)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.$(java-version) -target 1.$(java-version) \
 			-classpath $(test-build) -d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	$(javac) -source 1.2 -target 1.1 -XDjsrlimit=0 -d $(test-build) \
@@ -1777,7 +1790,7 @@ $(test-extra-dep): $(test-extra-sources)
 	@mkdir -p $(test-build)
 	files="$(shell $(MAKE) -s --no-print-directory build=$(build) $(test-extra-classes))"; \
 	if test -n "$${files}"; then \
-		$(javac) -source 1.6 -target 1.6 \
+		$(javac) -source 1.$(java-version) -target 1.$(java-version) \
 			-d $(test-build) -bootclasspath $(boot-classpath) $${files}; \
 	fi
 	@touch $(@)

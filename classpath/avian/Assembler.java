@@ -60,6 +60,7 @@ public class Assembler {
                                 int name,
                                 int super_,
                                 int[] interfaces,
+                                FieldData[] fields,
                                 MethodData[] methods)
     throws IOException
   {
@@ -83,7 +84,13 @@ public class Assembler {
       write2(out, i + 1);
     }
 
-    write2(out, 0); // field count
+    write2(out, fields.length);
+    for (FieldData f: fields) {
+      write2(out, f.flags);
+      write2(out, f.nameIndex + 1);
+      write2(out, f.specIndex + 1);
+      write2(out, 0); // attribute count
+    }
 
     write2(out, methods.length);
     for (MethodData m: methods) {
@@ -111,6 +118,18 @@ public class Assembler {
       this.nameIndex = nameIndex;
       this.specIndex = specIndex;
       this.code = code;
+    }
+  }
+
+  public static class FieldData {
+    public final int flags;
+    public final int nameIndex;
+    public final int specIndex;
+
+    public FieldData(int flags, int nameIndex, int specIndex) {
+      this.flags = flags;
+      this.nameIndex = nameIndex;
+      this.specIndex = specIndex;
     }
   }
 }

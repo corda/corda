@@ -18,7 +18,7 @@ import avian.Classes;
 import java.lang.annotation.Annotation;
 
 public class Method<T> extends AccessibleObject implements Member {
-  private final VMMethod vmMethod;
+  public final VMMethod vmMethod;
   private boolean accessible;
 
   public Method(VMMethod vmMethod) {
@@ -58,7 +58,7 @@ public class Method<T> extends AccessibleObject implements Member {
   private String getSpec() {
     return getSpec(vmMethod);
   }
-
+  
   public static String getSpec(VMMethod vmMethod) {
     return Classes.makeString(vmMethod.spec, 0, vmMethod.spec.length - 1);
   }
