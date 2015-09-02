@@ -14,6 +14,9 @@ public class File implements Serializable {
   private static final String FileSeparator
     = System.getProperty("file.separator");
 
+  private static final boolean IsWindows
+    = System.getProperty("os.name").equals("Windows");
+
   public static final String separator = FileSeparator;
 
   public static final char separatorChar = FileSeparator.charAt(0);
@@ -89,6 +92,14 @@ public class File implements Serializable {
   }
 
   private static String normalize(String path) {
+    if(IsWindows
+      && path.length() > 2
+      && path.charAt(0) == '/'
+      && path.charAt(2) == ':')
+    {
+      // remove a leading slash on Windows
+      path = path.substring(1);
+    }
     return stripSeparators
       ("\\".equals(FileSeparator) ? path.replace('/', '\\') : path);
   }
