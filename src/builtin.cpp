@@ -184,6 +184,12 @@ extern "C" AVIAN_EXPORT int64_t JNICALL
 }
 
 extern "C" AVIAN_EXPORT int64_t JNICALL
+    Avian_avian_SystemClassLoader_appLoader(Thread* t, object, uintptr_t*)
+{
+  return reinterpret_cast<int64_t>(roots(t)->appLoader());
+}
+
+extern "C" AVIAN_EXPORT int64_t JNICALL
     Avian_avian_SystemClassLoader_findLoadedVMClass(Thread* t,
                                                     object,
                                                     uintptr_t* arguments)

@@ -3512,7 +3512,8 @@ class MyProcessor : public Processor {
                              GcTriple**,
                              avian::codegen::DelayedPromise**,
                              GcMethod*,
-                             OffsetResolver*)
+                             OffsetResolver*,
+                             JavaVM*)
   {
     abort(s);
   }

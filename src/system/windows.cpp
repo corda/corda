@@ -1018,6 +1018,7 @@ class MySystem : public System {
   }
 
   HANDLE mutex;
+  bool reentrant;
 };
 
 }  // namespace

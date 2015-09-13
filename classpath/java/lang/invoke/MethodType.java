@@ -4,6 +4,7 @@ import static avian.Assembler.*;
 
 import avian.Assembler;
 import avian.Classes;
+import avian.SystemClassLoader;
 import avian.VMClass;
 
 import java.util.List;
@@ -25,6 +26,12 @@ public final class MethodType implements java.io.Serializable {
     this.spec = spec;
   }
 
+  MethodType(String spec) {
+    this.loader = SystemClassLoader.appLoader();
+    this.spec = new byte[spec.length() + 1];
+    spec.getBytes(0, spec.length(), this.spec, 0);
+  }
+  
   public String toMethodDescriptorString() {
     return Classes.makeString(spec, 0, spec.length - 1);
   }

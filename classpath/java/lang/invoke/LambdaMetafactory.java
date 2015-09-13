@@ -187,14 +187,28 @@ public class LambdaMetafactory {
 
     return result;
   }
-  
-  public static CallSite metafactory(MethodHandles.Lookup caller,
-                                     String invokedName,
-                                     MethodType invokedType,
-                                     MethodType methodType,
-                                     MethodHandle methodImplementation,
-                                     MethodType instantiatedMethodType)
-    throws LambdaConversionException
+
+  public static byte[] makeLambda(String invokedName,
+                                  String invokedType,
+                                  String methodType,
+                                  String implementationClass,
+                                  String implementationName,
+                                  String implementationSpec,
+                                  int implementationKind)
+  {
+    return makeLambda(invokedName,
+                      new MethodType(invokedType),
+                      new MethodType(methodType),
+                      new MethodHandle(implementationClass,
+                                       implementationName,
+                                       implementationSpec,
+                                       implementationKind));
+  }
+
+  private static byte[] makeLambda(String invokedName,
+                                   MethodType invokedType,
+                                   MethodType methodType,
+                                   MethodHandle methodImplementation)
   {
     String className;
     { int number;
@@ -265,8 +279,19 @@ public class LambdaMetafactory {
       throw error;      
     }
 
-    byte[] classData = out.toByteArray();
-
+    return out.toByteArray();
+  }
+  
+  public static CallSite metafactory(MethodHandles.Lookup caller,
+                                     String invokedName,
+                                     MethodType invokedType,
+                                     MethodType methodType,
+                                     MethodHandle methodImplementation,
+                                     MethodType instantiatedMethodType)
+    throws LambdaConversionException
+  {
+    byte[] classData = makeLambda(invokedName, invokedType, methodType, methodImplementation);
+    
     try {
       return new CallSite
         (new MethodHandle
