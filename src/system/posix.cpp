@@ -92,7 +92,7 @@ const int signals[] = {VisitSignal, InterruptSignal, PipeSignal};
 const unsigned SignalCount = 3;
 
 class MySystem;
-MySystem* system;
+MySystem* globalSystem;
 
 void handleSignal(int signal, siginfo_t* info, void* context);
 
@@ -624,16 +624,18 @@ class MySystem : public System {
     System::Library* next_;
   };
 
-  MySystem() : threadVisitor(0), visitTarget(0)
+  MySystem(bool reentrant) : reentrant(reentrant), threadVisitor(0), visitTarget(0)
   {
-    expect(this, system == 0);
-    system = this;
+    if (not reentrant) {
+      expect(this, globalSystem == 0);
+      globalSystem = this;
 
-    expect(this, registerHandler(InterruptSignalIndex));
-    expect(this, registerHandler(VisitSignalIndex));
-    expect(this, registerHandler(PipeSignalIndex));
-
-    expect(this, make(&visitLock) == 0);
+      expect(this, registerHandler(InterruptSignalIndex));
+      expect(this, registerHandler(VisitSignalIndex));
+      expect(this, registerHandler(PipeSignalIndex));
+    
+      expect(this, make(&visitLock) == 0);
+    }
   }
 
   // Returns true on success, false on failure
@@ -708,6 +710,8 @@ class MySystem : public System {
                        System::Thread* sTarget,
                        ThreadVisitor* visitor)
   {
+    expect(this, not reentrant);
+    
     assertT(this, st != sTarget);
 
     Thread* target = static_cast<Thread*>(sTarget);
@@ -767,7 +771,7 @@ class MySystem : public System {
 
     threadVisitor = 0;
 
-    system->visitLock->notifyAll(t);
+    globalSystem->visitLock->notifyAll(t);
 
     return result;
 #endif  // not  __APPLE__
@@ -938,18 +942,21 @@ class MySystem : public System {
 
   virtual void dispose()
   {
-    visitLock->dispose();
+    if (not reentrant) {
+      visitLock->dispose();
 
-    expect(this, unregisterHandler(InterruptSignalIndex));
-    expect(this, unregisterHandler(VisitSignalIndex));
-    expect(this, unregisterHandler(PipeSignalIndex));
-    system = 0;
+      expect(this, unregisterHandler(InterruptSignalIndex));
+      expect(this, unregisterHandler(VisitSignalIndex));
+      expect(this, unregisterHandler(PipeSignalIndex));
+      globalSystem = 0;
+    }
 
     ::free(this);
   }
 
   struct sigaction oldHandlers[SignalCount];
 
+  bool reentrant;
   ThreadVisitor* threadVisitor;
   Thread* visitTarget;
   System::Monitor* visitLock;
@@ -965,13 +972,13 @@ void handleSignal(int signal, siginfo_t*, void* context)
 
   switch (signal) {
   case VisitSignal: {
-    system->threadVisitor->visit(ip, stack, link);
+    globalSystem->threadVisitor->visit(ip, stack, link);
 
-    System::Thread* t = system->visitTarget;
-    system->visitTarget = 0;
+    System::Thread* t = globalSystem->visitTarget;
+    globalSystem->visitTarget = 0;
 
-    ACQUIRE_MONITOR(t, system->visitLock);
-    system->visitLock->notifyAll(t);
+    ACQUIRE_MONITOR(t, globalSystem->visitLock);
+    globalSystem->visitLock->notifyAll(t);
   } break;
 
   case InterruptSignal:
@@ -987,9 +994,9 @@ void handleSignal(int signal, siginfo_t*, void* context)
 
 namespace vm {
 
-AVIAN_EXPORT System* makeSystem()
+AVIAN_EXPORT System* makeSystem(bool reentrant)
 {
-  return new (malloc(sizeof(MySystem))) MySystem();
+  return new (malloc(sizeof(MySystem))) MySystem(reentrant);
 }
 
 }  // namespace vm

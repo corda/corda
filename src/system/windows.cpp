@@ -115,7 +115,7 @@ class MutexResource {
 };
 
 class MySystem;
-MySystem* system;
+MySystem* globalSystem;
 
 DWORD WINAPI run(void* r)
 {
@@ -655,10 +655,12 @@ class MySystem : public System {
     System::Library* next_;
   };
 
-  MySystem()
+  MySystem(bool reentrant): reentrant(reentrant)
   {
-    expect(this, system == 0);
-    system = this;
+    if (not reentrant) {
+      expect(this, globalSystem == 0);
+      globalSystem = this;
+    }
 
     mutex = CreateMutex(0, false, 0);
     assertT(this, mutex);
@@ -1007,7 +1009,10 @@ class MySystem : public System {
 
   virtual void dispose()
   {
-    system = 0;
+    if (not reentrant) {
+      globalSystem = 0;
+    }
+    
     CloseHandle(mutex);
     ::free(this);
   }
@@ -1019,9 +1024,9 @@ class MySystem : public System {
 
 namespace vm {
 
-AVIAN_EXPORT System* makeSystem()
+AVIAN_EXPORT System* makeSystem(bool reentrant)
 {
-  return new (malloc(sizeof(MySystem))) MySystem();
+  return new (malloc(sizeof(MySystem))) MySystem(reentrant);
 }
 
 }  // namespace vm
