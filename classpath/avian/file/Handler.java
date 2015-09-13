@@ -34,7 +34,7 @@ public class Handler extends URLStreamHandler {
     }
 
     public InputStream getInputStream() throws IOException {
-      return new FileInputStream(url.getFile());
+      return new FileInputStream(new File(url.getFile()));
     }
 
     public void connect() {

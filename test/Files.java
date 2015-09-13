@@ -3,6 +3,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 public class Files {
+  private static final boolean IsWindows
+    = System.getProperty("os.name").equals("Windows");
+
   private static void expect(boolean v) {
     if (! v) throw new RuntimeException();
   }
@@ -79,6 +82,12 @@ public class Files {
       } finally {
         f.delete();
       }
+    }
+
+    if(IsWindows) {
+      expect(new File("/c:\\test").getPath().equals("c:\\test"));
+    } else {
+      expect(new File("/c:\\test").getPath().equals("/c:\\test"));
     }
 
     expect(new File("foo/bar").getParent().equals("foo"));
