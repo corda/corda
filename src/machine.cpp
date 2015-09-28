@@ -5889,14 +5889,14 @@ GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke)
   return v.method;
 }
 
-object defineClass(Thread* t,
-                   GcClassLoader* loader,
-                   const uint8_t* buffer,
-                   unsigned length)
+GcClass* defineClass(Thread* t,
+                     GcClassLoader* loader,
+                     const uint8_t* buffer,
+                     unsigned length)
 {
   PROTECT(t, loader);
 
-  object c = parseClass(t, loader, buffer, length);
+  GcClass* c = parseClass(t, loader, buffer, length);
 
   // char name[byteArrayLength(t, className(t, c))];
   // memcpy(name, &byteArrayBody(t, className(t, c), 0),
@@ -5915,7 +5915,7 @@ object defineClass(Thread* t,
 
   PROTECT(t, c);
 
-  saveLoadedClass(t, loader, cast<GcClass>(t, c));
+  saveLoadedClass(t, loader, c);
 
   return c;
 }

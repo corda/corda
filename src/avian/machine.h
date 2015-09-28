@@ -198,6 +198,14 @@ const unsigned ConstructorFlag = 1 << 1;
 #define JNI_VERSION_1_6 0x00010006
 #endif
 
+#ifndef JNI_TRUE
+#define JNI_TRUE 1
+#endif
+
+#ifndef JNI_OK
+#define JNI_OK 0
+#endif
+
 typedef Machine JavaVM;
 typedef Thread JNIEnv;
 
@@ -205,6 +213,19 @@ struct JNINativeMethod {
   char* name;
   char* signature;
   void* function;
+};
+
+struct JavaVMOption {
+  char* optionString;
+  void* extraInfo;
+};
+
+struct JavaVMInitArgs {
+  jint version;
+
+  jint nOptions;
+  JavaVMOption* options;
+  jboolean ignoreUnrecognized;
 };
 
 struct JavaVMVTable {
@@ -3737,10 +3758,10 @@ void populateMultiArray(Thread* t,
 
 GcMethod* getCaller(Thread* t, unsigned target, bool skipMethodInvoke = false);
 
-object defineClass(Thread* t,
-                   GcClassLoader* loader,
-                   const uint8_t* buffer,
-                   unsigned length);
+GcClass* defineClass(Thread* t,
+                     GcClassLoader* loader,
+                     const uint8_t* buffer,
+                     unsigned length);
 
 inline GcMethod* methodClone(Thread* t, GcMethod* method)
 {

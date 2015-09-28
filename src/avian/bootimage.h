@@ -55,10 +55,13 @@ class BootImage {
 } PACKED;
 
 class GcField;
+class GcClass;
 
 class OffsetResolver {
  public:
   virtual unsigned fieldOffset(Thread*, GcField*) = 0;
+
+  virtual void addClass(Thread*, GcClass*, const uint8_t*, size_t) = 0;
 };
 
 #define NAME(x) Target##x

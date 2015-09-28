@@ -170,7 +170,8 @@ class Processor {
                              GcTriple** calls,
                              avian::codegen::DelayedPromise** addresses,
                              GcMethod* method,
-                             OffsetResolver* resolver) = 0;
+                             OffsetResolver* resolver,
+                             Machine* hostVM) = 0;
 
   virtual void visitRoots(Thread* t, HeapWalker* w) = 0;
 

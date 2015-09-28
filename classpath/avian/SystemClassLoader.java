@@ -20,6 +20,8 @@ import java.util.Enumeration;
 import java.util.NoSuchElementException;
 
 public class SystemClassLoader extends ClassLoader {
+  public static native ClassLoader appLoader();
+
   private native VMClass findVMClass(String name)
     throws ClassNotFoundException;
 

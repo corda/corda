@@ -168,8 +168,8 @@ Library" below for details.
 These flags determine the name of the directory used for the build.
 The name always starts with _${platform}-${arch}_, and each non-default
 build option is appended to the name.  For example, a debug build with
-bootimage enabled on Linux/i386 would be built in
-_build/linux-i386-debug-bootimage_.  This allows you to build with
+bootimage enabled on Linux/x86_64 would be built in
+_build/linux-x86_64-debug-bootimage_.  This allows you to build with
 several different sets of options independently and even
 simultaneously without doing a clean build each time.
 
@@ -575,7 +575,7 @@ For boot image builds:
 Note you can use ProGuard without using a boot image and vice-versa,
 as desired.
 
-The following instructions assume we are building for Linux/i386.
+The following instructions assume we are building for Linux/x86_64.
 Please refer to the previous example for guidance on other platforms.
 
 __1.__ Build Avian, create a new directory, and populate it with the
@@ -584,13 +584,13 @@ VM object files.
     $ make bootimage=true
     $ mkdir hello
     $ cd hello
-    $ ar x ../build/linux-i386-bootimage/libavian.a
+    $ ar x ../build/linux-x86_64-bootimage/libavian.a
 
 __2.__ Create a stage1 directory and extract the contents of the
 class library jar into it.
 
     $ mkdir stage1
-    $ (cd stage1 && jar xf ../../build/linux-i386-bootimage/classpath.jar)
+    $ (cd stage1 && jar xf ../../build/linux-x86_64-bootimage/classpath.jar)
 
 __3.__ Build the Java code and add it to stage1.
 
@@ -630,10 +630,11 @@ using the OpenJDK library.)
 
 __6.__ Build the boot and code images.
 
-     $ ../build/linux-i386-bootimage/bootimage-generator \
+     $ ../build/linux-x86_64-bootimage/bootimage-generator \
         -cp stage2 \
         -bootimage bootimage-bin.o \
-        -codeimage codeimage-bin.o
+        -codeimage codeimage-bin.o \
+        -hostvm ../build/linux-x86_64-interpret/libjvm.so
 
 Note that you can override the default names for the start and end
 symbols in the boot/code image by also passing:

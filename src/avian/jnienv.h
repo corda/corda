@@ -20,6 +20,7 @@
 #define EMBED_PREFIX_PROPERTY "avian.embed.prefix"
 #define CLASSPATH_PROPERTY "java.class.path"
 #define JAVA_HOME_PROPERTY "java.home"
+#define REENTRANT_PROPERTY "avian.reentrant"
 #define BOOTCLASSPATH_PREPEND_OPTION "bootclasspath/p"
 #define BOOTCLASSPATH_OPTION "bootclasspath"
 #define BOOTCLASSPATH_APPEND_OPTION "bootclasspath/a"

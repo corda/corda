@@ -1333,6 +1333,12 @@ bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
 
+ifneq ($(mode),fast)
+	host-vm-options := -$(mode)
+endif
+
+host-vm = build/$(build-platform)-$(build-arch)-interpret$(host-vm-options)/libjvm.so
+
 bootimage-object = $(build)/bootimage-bin.o
 codeimage-object = $(build)/codeimage-bin.o
 
@@ -2064,7 +2070,8 @@ $(bootimage-object) $(codeimage-object): $(bootimage-generator) \
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
 	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
-		-codeimage-symbols $(codeimage-symbols)
+		-codeimage-symbols $(codeimage-symbols) \
+		-hostvm $(host-vm)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
@@ -2119,6 +2126,7 @@ $(unittest-executable): $(unittest-executable-objects)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
+	$(MAKE) process=interpret bootimage= mode=$(mode)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \

@@ -3617,6 +3617,7 @@ extern "C" AVIAN_EXPORT jint JNICALL
   const char* bootLibraries = 0;
   const char* classpath = 0;
   const char* javaHome = AVIAN_JAVA_HOME;
+  bool reentrant = false;
   const char* embedPrefix = AVIAN_EMBED_PREFIX;
   const char* bootClasspathPrepend = "";
   const char* bootClasspath = 0;
@@ -3667,6 +3668,9 @@ extern "C" AVIAN_EXPORT jint JNICALL
       } else if (strncmp(p, JAVA_HOME_PROPERTY "=", sizeof(JAVA_HOME_PROPERTY))
                  == 0) {
         javaHome = p + sizeof(JAVA_HOME_PROPERTY);
+      } else if (strncmp(p, REENTRANT_PROPERTY "=", sizeof(REENTRANT_PROPERTY))
+                 == 0) {
+        reentrant = strcmp(p + sizeof(REENTRANT_PROPERTY), "true") == 0;
       } else if (strncmp(p,
                          EMBED_PREFIX_PROPERTY "=",
                          sizeof(EMBED_PREFIX_PROPERTY)) == 0) {
@@ -3689,7 +3693,7 @@ extern "C" AVIAN_EXPORT jint JNICALL
     ++propertyCount;
   }
 
-  System* s = makeSystem();
+  System* s = makeSystem(reentrant);
   Heap* h = makeHeap(s, heapLimit);
   Classpath* c = makeClasspath(s, h, javaHome, embedPrefix);
 
