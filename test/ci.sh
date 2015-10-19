@@ -97,6 +97,7 @@ else
   if has_flag openjdk-src || ! has_flag openjdk; then
     run make ${flags} mode=debug bootimage=true ${make_target}
     run make ${flags} bootimage=true ${make_target}
+    run make ${flags} bootimage=true bootimage-test=true ${make_target}
   fi
 
   if ! has_flag openjdk && ! has_flag android && ! has_flag arch; then

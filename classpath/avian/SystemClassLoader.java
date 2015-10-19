@@ -83,6 +83,8 @@ public class SystemClassLoader extends ClassLoader {
       if (source != null) {
         // todo: load attributes from JAR manifest
         definePackage(name, null, null, null, null, null, null, null);
+      } else {
+        definePackage(name, null, null, null, null, null, null, null);
       }
     }
 

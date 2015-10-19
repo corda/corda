@@ -45,6 +45,11 @@ ifneq ($(lzma),)
 endif
 ifeq ($(bootimage),true)
 	options := $(options)-bootimage
+	ifeq ($(bootimage-test),true)
+    # this option indicates that we should AOT-compile the test
+    # classes as well as the class library
+		options := $(options)-test
+	endif
 endif
 ifeq ($(tails),true)
 	options := $(options)-tails
@@ -108,6 +113,12 @@ winrt ?= $(root)/winrt
 wp8 ?= $(root)/wp8
 
 classpath = avian
+
+bootimage-classpath = $(classpath-build)
+
+ifeq ($(bootimage-test),true)
+	bootimage-classpath = $(classpath-build):$(test-build)
+endif
 
 test-executable = $(shell pwd)/$(executable)
 boot-classpath = $(classpath-build)
@@ -1647,7 +1658,6 @@ debug: build
 vg: build
 	$(library-path) $(vg) $(test-executable) $(test-args)
 
-
 .PHONY: test
 test: build-test run-test
 
@@ -2066,9 +2076,9 @@ else
 endif
 
 $(bootimage-object) $(codeimage-object): $(bootimage-generator) \
-		$(classpath-jar-dep)
+		$(classpath-jar-dep) $(test-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
-	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
+	$(<) -cp $(bootimage-classpath) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
 		-codeimage-symbols $(codeimage-symbols) \
 		-hostvm $(host-vm)
