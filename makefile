@@ -97,6 +97,12 @@ ifeq ($(platform),ios)
 	endif
 endif
 
+ifeq ($(bootimage-test),true)
+	ifneq ($(bootimage),true)
+		x := $(error "bootimage-test=true only works when bootimage=true")
+	endif
+endif
+
 aot-only = false
 root := $(shell (cd .. && pwd))
 build = build/$(platform)-$(arch)$(options)
@@ -2136,7 +2142,7 @@ $(unittest-executable): $(unittest-executable-objects)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
-	$(MAKE) process=interpret bootimage= mode=$(mode)
+	$(MAKE) process=interpret bootimage= bootimage-test= mode=$(mode)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \
