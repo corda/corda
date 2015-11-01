@@ -763,13 +763,14 @@ ifeq ($(kernel),darwin)
 	rpath =
 
 	ifeq ($(platform),ios)
-		ifeq (,$(filter arm arm64,$(arch)))
+		ifeq ($(sim),true)
 			target = iPhoneSimulator
 			sdk = iphonesimulator$(ios-version)
 			ifeq ($(arch),i386)
 				arch-flag = -arch i386
 			else
 				arch-flag = -arch x86_64
+				arch = x86_64
 			endif
 			release = Release-iphonesimulator
 		else
@@ -779,6 +780,7 @@ ifeq ($(kernel),darwin)
 				arch-flag = -arch armv7
 			else
 				arch-flag = -arch arm64
+				arch = arm64
 			endif
 			release = Release-iphoneos
 		endif
@@ -787,7 +789,9 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-				if test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
+				if test -L $(sdk-dir)/$(target)9.1.sdk; then echo 9.1; \
+			elif test -L $(sdk-dir)/$(target)9.0.sdk; then echo 9.0; \
+			elif test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
 			elif test -d $(sdk-dir)/$(target)8.2.sdk; then echo 8.2; \
 			elif test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
 			elif test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
@@ -828,39 +832,57 @@ ifeq ($(kernel),darwin)
 		cflags += $(flags)
 		asmflags += $(flags)
 		lflags += $(flags)
-	endif
-
-	ifeq ($(arch),i386)
-		ifeq ($(platform),ios)
-			classpath-extra-cflags += \
-				-arch i386 -miphoneos-version-min=$(ios-version)
-			cflags += -arch i386 -miphoneos-version-min=$(ios-version)
-			asmflags += -arch i386 -miphoneos-version-min=$(ios-version)
-			lflags += -arch i386 -miphoneos-version-min=$(ios-version)
+		
+		ios-version-min=$(ios-version)
+		ifdef ios_deployment_target
+			ios-version-min=ios_deployment_target
+		endif
+		
+		ifeq ($(sim),true)
+			ifeq ($(arch),x86_64)
+				classpath-extra-cflags += \
+					-arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+			else
+				classpath-extra-cflags += \
+					-arch i386 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+			endif
 		else
-			classpath-extra-cflags += \
-				-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+			ifeq ($(arch),arm64)
+				classpath-extra-cflags += \
+					-arch arm64 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+			else
+				classpath-extra-cflags += \
+					-arch armv7 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+			endif
+		endif
+	else # not ios
+		ifeq ($(arch),i386)
+				classpath-extra-cflags += \
+					-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		endif
+	
+		ifeq ($(arch),x86_64)
+				classpath-extra-cflags += -arch x86_64
+				cflags += -arch x86_64
+				asmflags += -arch x86_64
+				lflags += -arch x86_64
 		endif
 	endif
-
-	ifeq ($(arch),x86_64)
-		ifeq ($(platform),ios)
-			classpath-extra-cflags += \
-				-arch x86_64 -miphoneos-version-min=$(ios-version)
-			cflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-			asmflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-			lflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-		else
-			classpath-extra-cflags += -arch x86_64
-			cflags += -arch x86_64
-			asmflags += -arch x86_64
-			lflags += -arch x86_64
-		endif
-	endif
-
 	cflags += -I$(JAVA_HOME)/include/darwin
 endif
 
