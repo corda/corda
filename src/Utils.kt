@@ -8,14 +8,11 @@ import kotlin.test.fail
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // REQUIREMENTS
-
-fun requireThat(message: String, expression: Boolean) {
-    if (!expression) throw IllegalArgumentException(message)
-}
-
+//
 // To understand how requireThat works, read the section "type safe builders" on the Kotlin website:
 //
 //   https://kotlinlang.org/docs/reference/type-safe-builders.html
+
 object Requirements {
     infix fun String.by(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
