@@ -7,6 +7,7 @@ class DummyPublicKey(private val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getEncoded() = s.toByteArray()
     override fun getFormat() = "ASN.1"
     override fun compareTo(other: PublicKey): Int = BigInteger(encoded).compareTo(BigInteger(other.encoded))
+    override fun toString() = "PUBKEY[$s]"
 }
 
 // A few dummy values for testing.
@@ -80,6 +81,14 @@ data class TransactionForTest(
         tx.args.addAll(args)
         tx.body()
         return tx
+    }
+
+    override fun toString(): String {
+        return """transaction {
+            inputs:   $inStates
+            outputs:  $outStates
+            args:     $args
+        }"""
     }
 }
 
