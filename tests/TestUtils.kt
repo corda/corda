@@ -1,6 +1,5 @@
 import java.math.BigInteger
 import java.security.PublicKey
-import kotlin.test.assertTrue
 import kotlin.test.fail
 
 class DummyPublicKey(private val s: String) : PublicKey, Comparable<PublicKey> {
@@ -23,7 +22,26 @@ val keyToCorpMap: Map<PublicKey, Institution> = mapOf(
         MINI_CORP_KEY to MINI_CORP
 )
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
+//
+// Define a transaction like this:
+//
+// transaction {
+//    input { someExpression }
+//    output { someExpression }
+//    arg { someExpression }
+//
+//    transaction {
+//         ... same thing but works with a copy of the parent, can add inputs/outputs/args just within this scope.
+//    }
+//
+//    contract.accepts() -> should pass
+//    contract `fails requirement` "some substring of the error message"
+// }
+//
+// TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 // Corresponds to the args to Contract.verify
 data class TransactionForTest(
@@ -43,7 +61,7 @@ data class TransactionForTest(
             if (m == null)
                 fail("Threw exception without a message")
             else
-                assertTrue(m.contains(msg), "Error was actually: $m")
+                if (!m.contains(msg)) throw AssertionError("Error was actually: $m")
         }
     }
 
