@@ -5,9 +5,6 @@ import java.util.*
 //
 // Cash
 
-// TODO: Does multi-currency also make sense? Probably?
-// TODO: Implement a generate function.
-
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
 
@@ -15,7 +12,9 @@ val CASH_PROGRAM_ID = SecureHash.sha256("cash")
  * Reference to some money being stored by an institution e.g. in a vault or (more likely) on their normal ledger.
  * The deposit reference is intended to be encrypted so it's meaningless to anyone other than the institution.
  */
-data class DepositPointer(val institution: Institution, val reference: OpaqueBytes)
+data class DepositPointer(val institution: Institution, val reference: OpaqueBytes) {
+    override fun toString() = "${institution.name}$reference"
+}
 
 /** A state representing a claim on the cash reserves of some institution */
 data class CashState(
@@ -28,14 +27,21 @@ data class CashState(
     val owner: PublicKey
 ) : ContractState {
     override val programRef = CASH_PROGRAM_ID
+    override fun toString() = "Cash($amount at $deposit owned by $owner)"
 }
 
 /** A command proving ownership of some input states, the signature covers the output states. */
-class MoveCashCommand : Command
+class MoveCashCommand : Command {
+    override fun equals(other: Any?) = other is MoveCashCommand
+    override fun hashCode() = 0
+}
 /** A command stating that money has been withdrawn from the shared ledger and is now accounted for in some other way */
-class ExitCashCommand(val amount: Amount) : Command
+class ExitCashCommand(val amount: Amount) : Command {
+    override fun equals(other: Any?) = other is ExitCashCommand && other.amount == amount
+    override fun hashCode() = amount.hashCode()
+}
 
-class InsufficientBalanceException : Exception()
+class InsufficientBalanceException(val amountMissing: Amount) : Exception()
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
@@ -50,7 +56,8 @@ class InsufficientBalanceException : Exception()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-class CashContract : Contract {
+object CashContract : Contract {
+    /** This is the function EVERYONE runs */
     override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSignedCommand>) {
         val cashInputs = inStates.filterIsInstance<CashState>()
 
@@ -98,9 +105,9 @@ class CashContract : Contract {
         // Accept.
     }
 
-    /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey */
+    /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey. */
     @Throws(InsufficientBalanceException::class)
-    fun craftSpend(amount: Amount, to: PublicKey, inStates: List<CashState>): TransactionForTest {
+    fun craftSpend(amount: Amount, to: PublicKey, wallet: List<CashState>): TransactionForTest {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -123,6 +130,43 @@ class CashContract : Contract {
         // must handle the case where they are. Once the signatures are generated, a MoveCommand for each key/sig pair
         // is put into the transaction, which is finally returned.
 
-        return transaction {  }
+        val currency = amount.currency
+        val coinsOfCurrency = wallet.asSequence().filter { it.amount.currency == currency }
+
+        val gathered = arrayListOf<CashState>()
+        var gatheredAmount = Amount(0, currency)
+        for (c in coinsOfCurrency) {
+            if (gatheredAmount >= amount) break
+            gathered.add(c)
+            gatheredAmount += c.amount
+        }
+
+        if (gatheredAmount < amount)
+            throw InsufficientBalanceException(amount - gatheredAmount)
+
+        val change = gatheredAmount - amount
+        val keysUsed = gathered.map { it.owner }.toSet()
+
+        val states = gathered.groupBy { it.deposit }.map {
+            val (deposit, coins) = it
+            val totalAmount = coins.map { it.amount }.sum()
+            CashState(deposit, totalAmount, to)
+        }
+
+        val outputs = if (change.pennies > 0) {
+            // Just copy a key across as the change key. In real life of course, this works but leaks private data.
+            // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
+            // value flows through the transaction graph.
+            val changeKey = gathered.first().owner
+            // Add a change output and adjust the last output downwards.
+            states.subList(0, states.lastIndex) +
+                    states.last().let { it.copy(amount = it.amount - change) } +
+                    CashState(gathered.last().deposit, change, changeKey)
+        } else states
+
+        // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
+        val commands = keysUsed.map { VerifiedSignedCommand(it, null, MoveCashCommand()) }
+
+        return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }
 }

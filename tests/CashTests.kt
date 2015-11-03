@@ -13,7 +13,7 @@ class CashTests {
             owner = DUMMY_PUBKEY_1
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
-    val contract = CashContract()
+    val contract = CashContract
 
     fun CashState.editInstitution(institution: Institution) = copy(deposit = deposit.copy(institution = institution))
     fun CashState.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
@@ -214,11 +214,15 @@ class CashTests {
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Spend crafting
+
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
     val WALLET = listOf(
             CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
-            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(2)), 400.DOLLARS, OUR_PUBKEY_1),
+            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
             CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
             CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
     )
