@@ -4,11 +4,10 @@ import org.junit.Test
 // 1. No duplicate input states
 // 2. There must be at least one input state (note: not "one of the type the contract wants")
 
-
 class CashTests {
     val inState = CashState(
             issuingInstitution = MEGA_CORP,
-            depositReference = byteArrayOf(1),
+            depositReference = OpaqueBytes.of(1),
             amount = 1000.DOLLARS,
             owner = DUMMY_PUBKEY_1
     )
@@ -100,8 +99,8 @@ class CashTests {
         // Can't change deposit reference when splitting.
         transaction {
             input { inState }
-            output { outState.copy(depositReference = byteArrayOf(0), amount = inState.amount / 2) }
-            output { outState.copy(depositReference = byteArrayOf(1), amount = inState.amount / 2) }
+            output { outState.copy(depositReference = OpaqueBytes.of(0), amount = inState.amount / 2) }
+            output { outState.copy(depositReference = OpaqueBytes.of(1), amount = inState.amount / 2) }
             contract `fails requirement` "the deposit references are the same"
         }
         // Can't mix currencies.

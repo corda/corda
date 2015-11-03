@@ -1,6 +1,5 @@
 import java.security.PublicKey
 import java.security.Timestamp
-import java.util.*
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
@@ -67,7 +66,7 @@ data class SignedCommand(
     val commandDataSignature: DigitalSignature.WithKey,
 
     /** Command data, deserialized to an implementation of [Command] */
-    val serialized: ByteArray,
+    val serialized: OpaqueBytes,
     /** Identifies what command the serialized data contains (should maybe be a hash too) */
     val classID: String,
     /** Hash of a derivative of the transaction data, so this command can only ever apply to one transaction */

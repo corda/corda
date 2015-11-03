@@ -5,7 +5,6 @@ import java.util.*
 //
 // Cash
 
-
 // TODO: Think about state merging: when does it make sense to merge multiple cash states from the same issuer?
 // TODO: Does multi-currency also make sense? Probably?
 // TODO: Implement a generate function.
@@ -19,7 +18,7 @@ data class CashState(
     val issuingInstitution: Institution,
 
     /** Whatever internal ID the bank needs in order to locate that deposit, may be encrypted (propagated) */
-    val depositReference: ByteArray,
+    val depositReference: OpaqueBytes,
 
     val amount: Amount,
 
@@ -69,8 +68,7 @@ class CashContract : Contract {
 
             requireThat {
                 "for issuer ${issuer.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
-                // TODO: Introduce a byte array wrapper that makes == do what we expect (Kotlin does not do this for us)
-                "for issuer ${issuer.name} the deposit references are the same" by outputs.all { Arrays.equals(it.depositReference, depositReference) }
+                "for issuer ${issuer.name} the deposit references are the same" by outputs.all { it.depositReference == depositReference }
             }
         }
 

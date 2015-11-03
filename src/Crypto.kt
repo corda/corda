@@ -1,9 +1,10 @@
 import com.google.common.io.BaseEncoding
 import java.security.MessageDigest
 import java.security.PublicKey
+import java.util.*
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
-sealed class SecureHash(val bits: ByteArray) {
+sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
         init { require(bits.size == 32) }
     }
@@ -28,7 +29,7 @@ sealed class SecureHash(val bits: ByteArray) {
  * A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
  * signature.
  */
-sealed class DigitalSignature(val bits: ByteArray, val covering: Int) {
+sealed class DigitalSignature(bits: ByteArray, val covering: Int) : OpaqueBytes(bits) {
     /** A digital signature that identifies who the public key is owned by */
     open class WithKey(val by: PublicKey, bits: ByteArray, covering: Int) : DigitalSignature(bits, covering)
     class LegallyIdentifiable(val signer: Institution, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
