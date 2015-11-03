@@ -11,13 +11,16 @@ import java.util.*
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
 
+/**
+ * Reference to some money being stored by an institution e.g. in a vault or (more likely) on their normal ledger.
+ * The deposit reference is intended to be encrypted so it's meaningless to anyone other than the institution.
+ */
+data class DepositPointer(val institution: Institution, val reference: OpaqueBytes)
+
 /** A state representing a claim on the cash reserves of some institution */
 data class CashState(
-    /** The institution that has this original cash deposit (propagated) */
-    val issuingInstitution: Institution,
-
-    /** Whatever internal ID the bank needs in order to locate that deposit, may be encrypted (propagated) */
-    val depositReference: OpaqueBytes,
+    /** Where the underlying currency backing this ledger entry can be found (propagated) */
+    val deposit: DepositPointer,
 
     val amount: Amount,
 
@@ -68,19 +71,18 @@ class CashContract : Contract {
         // For each deposit that's represented in the inputs, group the inputs together and verify that the outputs
         // balance, taking into account a possible exit command from that issuer.
         var outputsLeft = cashOutputs.size
-        for ((pair, inputs) in cashInputs.groupBy { Pair(it.issuingInstitution, it.depositReference) }) {
-            val (issuer, depositRef) = pair
-            val outputs = cashOutputs.filter { it.issuingInstitution == issuer && it.depositReference == depositRef }
+        for ((deposit, inputs) in cashInputs.groupBy { it.deposit }) {
+            val outputs = cashOutputs.filter { it.deposit == deposit }
             outputsLeft -= outputs.size
 
             val inputAmount = inputs.map { it.amount }.sum()
             val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
-            val issuerCommand = args.filter { it.signingInstitution == issuer }.map { it.command as? ExitCashCommand }.filterNotNull().singleOrNull()
+            val issuerCommand = args.filter { it.signingInstitution == deposit.institution }.map { it.command as? ExitCashCommand }.filterNotNull().singleOrNull()
             val amountExitingLedger = issuerCommand?.amount ?: Amount(0, inputAmount.currency)
 
             requireThat {
-                "for deposit $depositRef at issuer ${issuer.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
+                "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
             }
         }
 

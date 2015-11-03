@@ -8,14 +8,15 @@ import kotlin.test.assertFailsWith
 
 class CashTests {
     val inState = CashState(
-            issuingInstitution = MEGA_CORP,
-            depositReference = OpaqueBytes.of(1),
+            deposit = DepositPointer(MEGA_CORP, OpaqueBytes.of(1)),
             amount = 1000.DOLLARS,
             owner = DUMMY_PUBKEY_1
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
-    
     val contract = CashContract()
+
+    fun CashState.editInstitution(institution: Institution) = copy(deposit = deposit.copy(institution = institution))
+    fun CashState.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
 
     @Test
     fun trivial() {
@@ -41,7 +42,7 @@ class CashTests {
             }
             transaction {
                 output { outState }
-                output { outState.copy(issuingInstitution = MINI_CORP) }
+                output { outState.editInstitution(MINI_CORP) }
                 contract `fails requirement` "no output states are unaccounted for"
             }
             // Simple reallocation works.
@@ -95,14 +96,14 @@ class CashTests {
         // Can't change issuer.
         transaction {
             input { inState }
-            output { outState.copy(issuingInstitution = MINI_CORP) }
+            output { outState.editInstitution(MINI_CORP) }
             contract `fails requirement` "at issuer MegaCorp the amounts balance"
         }
         // Can't change deposit reference when splitting.
         transaction {
             input { inState }
-            output { outState.copy(depositReference = OpaqueBytes.of(0), amount = inState.amount / 2) }
-            output { outState.copy(depositReference = OpaqueBytes.of(1), amount = inState.amount / 2) }
+            output { outState.editDepositRef(0).copy(amount = inState.amount / 2) }
+            output { outState.editDepositRef(1).copy(amount = inState.amount / 2) }
             contract `fails requirement` "for deposit [01] at issuer MegaCorp the amounts balance"
         }
         // Can't mix currencies.
@@ -126,15 +127,15 @@ class CashTests {
         // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
-            input { inState.copy(issuingInstitution = MINI_CORP) }
+            input { inState.editInstitution(MINI_CORP) }
             output { outState }
             contract `fails requirement` "at issuer MiniCorp the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
         transaction {
             input { inState }
-            input { inState.copy(depositReference = OpaqueBytes.of(3)) }
-            output { outState.copy(amount = inState.amount * 2, depositReference = OpaqueBytes.of(3)) }
+            input { inState.editDepositRef(3) }
+            output { outState.copy(amount = inState.amount * 2).editDepositRef(3) }
             contract `fails requirement` "for deposit [01]"
         }
     }
@@ -164,9 +165,9 @@ class CashTests {
         // Multi-issuer case.
         transaction {
             input { inState }
-            input { inState.copy(issuingInstitution = MINI_CORP) }
+            input { inState.editInstitution(MINI_CORP) }
 
-            output { inState.copy(issuingInstitution = MINI_CORP, amount = inState.amount - 200.DOLLARS) }
+            output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
             arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
@@ -186,7 +187,7 @@ class CashTests {
         transaction {
             // Gather 2000 dollars from two different issuers.
             input { inState }
-            input { inState.copy(issuingInstitution = MINI_CORP) }
+            input { inState.editInstitution(MINI_CORP) }
 
             // Can't merge them together.
             transaction {
@@ -202,7 +203,7 @@ class CashTests {
 
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
-            output { inState.copy(issuingInstitution = MINI_CORP, owner = DUMMY_PUBKEY_2) }
+            output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
             arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
             contract.accepts()
         }
@@ -216,10 +217,10 @@ class CashTests {
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
     val WALLET = listOf(
-            CashState(issuingInstitution = MEGA_CORP, depositReference = OpaqueBytes.of(1), amount = 100.DOLLARS, owner = OUR_PUBKEY_1),
-            CashState(issuingInstitution = MEGA_CORP, depositReference = OpaqueBytes.of(2), amount = 400.DOLLARS, owner = OUR_PUBKEY_1),
-            CashState(issuingInstitution = MINI_CORP, depositReference = OpaqueBytes.of(1), amount =  80.DOLLARS, owner = OUR_PUBKEY_1),
-            CashState(issuingInstitution = MINI_CORP, depositReference = OpaqueBytes.of(2), amount =  80.SWISS_FRANCS, owner = OUR_PUBKEY_1)
+            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
+            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(2)), 400.DOLLARS, OUR_PUBKEY_1),
+            CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
+            CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
     )
 
     @Test
