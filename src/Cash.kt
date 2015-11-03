@@ -4,18 +4,6 @@ import java.util.*
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Cash
-//
-// A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
-// input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
-// (a blend of issuer+depositRef) and you couldn't merge outputs of two colours together, but you COULD put them in
-// the same transaction.
-//
-// The goal of this design is to ensure that money can be withdrawn from the ledger easily: if you receive some money
-// via this contract, you always know where to go in order to extract it from the R3 ledger via a regular wire transfer,
-// no matter how many hands it has passed through in the intervening time.
-//
-// At the same time, other contracts that just want money and don't care much who is currently holding it in their
-// vaults can ignore the issuer/depositRefs and just examine the amount fields.
 
 // TODO: Does multi-currency also make sense? Probably?
 // TODO: Implement a generate function.
@@ -44,6 +32,21 @@ class MoveCashCommand : Command
 /** A command stating that money has been withdrawn from the shared ledger and is now accounted for in some other way */
 class ExitCashCommand(val amount: Amount) : Command
 
+class InsufficientBalanceException : Exception()
+
+/**
+ * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
+ * input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
+ * (a blend of issuer+depositRef) and you couldn't merge outputs of two colours together, but you COULD put them in
+ * the same transaction.
+ *
+ * The goal of this design is to ensure that money can be withdrawn from the ledger easily: if you receive some money
+ * via this contract, you always know where to go in order to extract it from the R3 ledger via a regular wire transfer,
+ * no matter how many hands it has passed through in the intervening time.
+ *
+ * At the same time, other contracts that just want money and don't care much who is currently holding it in their
+ * vaults can ignore the issuer/depositRefs and just examine the amount fields.
+ */
 class CashContract : Contract {
     override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSignedCommand>) {
         val cashInputs = inStates.filterIsInstance<CashState>()
@@ -91,5 +94,33 @@ class CashContract : Contract {
         requireThat { "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned) }
 
         // Accept.
+    }
+
+    /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey */
+    @Throws(InsufficientBalanceException::class)
+    fun craftSpend(amount: Amount, to: PublicKey, inStates: List<CashState>): TransactionForTest {
+        // Discussion
+        //
+        // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
+        //
+        // First we must select a set of cash states (which for convenience we will call 'coins' here, as in bitcoinj).
+        // The input states can be considered our "wallet", and may consist of coins of different currencies, and from
+        // different institutions and deposits.
+        //
+        // Coin selection is a complex problem all by itself and many different approaches can be used. It is easily
+        // possible for different actors to use different algorithms and approaches that, for example, compete on
+        // privacy vs efficiency (number of states created). Some spends may be artificial just for the purposes of
+        // obfuscation and so on.
+        //
+        // Having selected coins of the right currency, we must craft output states for the amount we're sending and
+        // the "change", which goes back to us. The change is required to make the amounts balance. We may need more
+        // than one change output in order to avoid merging coins from different deposits.
+        //
+        // Once we've selected our inputs and generated our outputs, we must calculate a signature for each key that
+        // appears in the input set. Same as with Bitcoin, ideally keys are never reused for privacy reasons, but we
+        // must handle the case where they are. Once the signatures are generated, a MoveCommand for each key/sig pair
+        // is put into the transaction, which is finally returned.
+
+        return transaction {  }
     }
 }

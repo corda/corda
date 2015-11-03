@@ -1,4 +1,6 @@
 import org.junit.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 // TODO: Some basic invariants should be enforced by the platform before contract execution:
 // 1. No duplicate input states
@@ -208,6 +210,78 @@ class CashTests {
         transaction {
             input { inState }
             input { inState }
+        }
+    }
+
+    val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
+    val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
+    val WALLET = listOf(
+            CashState(issuingInstitution = MEGA_CORP, depositReference = OpaqueBytes.of(1), amount = 100.DOLLARS, owner = OUR_PUBKEY_1),
+            CashState(issuingInstitution = MEGA_CORP, depositReference = OpaqueBytes.of(2), amount = 400.DOLLARS, owner = OUR_PUBKEY_1),
+            CashState(issuingInstitution = MINI_CORP, depositReference = OpaqueBytes.of(1), amount =  80.DOLLARS, owner = OUR_PUBKEY_1),
+            CashState(issuingInstitution = MINI_CORP, depositReference = OpaqueBytes.of(2), amount =  80.SWISS_FRANCS, owner = OUR_PUBKEY_1)
+    )
+
+    @Test
+    fun craftSimpleDirectSpend() {
+        assertEquals(
+                transaction {
+                    input { WALLET[0] }
+                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1) }
+                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                },
+                contract.craftSpend(100.DOLLARS, THEIR_PUBKEY_1, WALLET)
+        )
+    }
+
+    @Test
+    fun craftSimpleSpendWithChange() {
+        assertEquals(
+                transaction {
+                    input { WALLET[0] }
+                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS) }
+                    output { WALLET[0].copy(owner = OUR_PUBKEY_1, amount = 90.DOLLARS) }
+                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                },
+                contract.craftSpend(10.DOLLARS, THEIR_PUBKEY_1, WALLET)
+        )
+    }
+
+    @Test
+    fun craftSpendWithTwoInputs() {
+        assertEquals(
+                transaction {
+                    input { WALLET[0] }
+                    input { WALLET[1] }
+                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
+                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                },
+                contract.craftSpend(500.DOLLARS, THEIR_PUBKEY_1, WALLET)
+        )
+    }
+
+    @Test
+    fun craftSpendMixedDeposits() {
+        assertEquals(
+                transaction {
+                    input { WALLET[0] }
+                    input { WALLET[1] }
+                    input { WALLET[2] }
+                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
+                    output { WALLET[2].copy(owner = THEIR_PUBKEY_1) }
+                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                },
+                contract.craftSpend(580.DOLLARS, THEIR_PUBKEY_1, WALLET)
+        )
+    }
+
+    @Test
+    fun craftSpendInsufficientBalance() {
+        assertFailsWith(InsufficientBalanceException::class) {
+            contract.craftSpend(1000.DOLLARS, THEIR_PUBKEY_1, WALLET)
+        }
+        assertFailsWith(InsufficientBalanceException::class) {
+            contract.craftSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1, WALLET)
         }
     }
 }
