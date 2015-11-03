@@ -2,25 +2,6 @@ import java.security.PublicKey
 import java.security.Timestamp
 import java.util.*
 
-data class Amount(val pennies: Int, val currency: Currency) {
-    init {
-        // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
-        // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
-        // TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
-        require(pennies >= 0) { "Negative amounts are not allowed: $pennies" }
-    }
-
-    operator fun plus(other: Amount): Amount {
-        require(other.currency == currency)
-        return Amount(pennies + other.pennies, currency)
-    }
-
-    operator fun minus(other: Amount): Amount {
-        require(other.currency == currency)
-        return Amount(pennies - other.pennies, currency)
-    }
-}
-
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
