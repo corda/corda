@@ -94,14 +94,14 @@ class CashTests {
         transaction {
             input { inState }
             output { outState.copy(issuingInstitution = MINI_CORP) }
-            contract `fails requirement` "for issuer MegaCorp the amounts balance"
+            contract `fails requirement` "at issuer MegaCorp the amounts balance"
         }
         // Can't change deposit reference when splitting.
         transaction {
             input { inState }
             output { outState.copy(depositReference = OpaqueBytes.of(0), amount = inState.amount / 2) }
             output { outState.copy(depositReference = OpaqueBytes.of(1), amount = inState.amount / 2) }
-            contract `fails requirement` "the deposit references are the same"
+            contract `fails requirement` "for deposit [01] at issuer MegaCorp the amounts balance"
         }
         // Can't mix currencies.
         transaction {
@@ -121,11 +121,19 @@ class CashTests {
             output { outState.copy(amount = 1150.DOLLARS) }
             contract `fails requirement` "all inputs use the same currency"
         }
+        // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
             input { inState.copy(issuingInstitution = MINI_CORP) }
             output { outState }
-            contract `fails requirement` "for issuer MiniCorp the amounts balance"
+            contract `fails requirement` "at issuer MiniCorp the amounts balance"
+        }
+        // Can't combine two different deposits at the same issuer.
+        transaction {
+            input { inState }
+            input { inState.copy(depositReference = OpaqueBytes.of(3)) }
+            output { outState.copy(amount = inState.amount * 2, depositReference = OpaqueBytes.of(3)) }
+            contract `fails requirement` "for deposit [01]"
         }
     }
 
@@ -161,10 +169,10 @@ class CashTests {
 
             arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
 
-            contract `fails requirement` "for issuer MegaCorp the amounts balance"
+            contract `fails requirement` "at issuer MegaCorp the amounts balance"
 
             arg(MEGA_CORP_KEY) { ExitCashCommand(200.DOLLARS) }
-            contract `fails requirement` "for issuer MiniCorp the amounts balance"
+            contract `fails requirement` "at issuer MiniCorp the amounts balance"
 
             arg(MINI_CORP_KEY) { ExitCashCommand(200.DOLLARS) }
             contract.accepts()
@@ -181,13 +189,13 @@ class CashTests {
             // Can't merge them together.
             transaction {
                 output { inState.copy(owner = DUMMY_PUBKEY_2, amount = 2000.DOLLARS) }
-                contract `fails requirement` "for issuer MegaCorp the amounts balance"
+                contract `fails requirement` "at issuer MegaCorp the amounts balance"
             }
             // Missing MiniCorp deposit
             transaction {
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
-                contract `fails requirement` "for issuer MegaCorp the amounts balance"
+                contract `fails requirement` "at issuer MegaCorp the amounts balance"
             }
 
             // This works.
