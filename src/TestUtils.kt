@@ -18,7 +18,7 @@ val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
 val MEGA_CORP = Institution("MegaCorp", MEGA_CORP_KEY)
 val MINI_CORP = Institution("MiniCorp", MINI_CORP_KEY)
 
-val keyToCorpMap: Map<PublicKey, Institution> = mapOf(
+val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
         MEGA_CORP_KEY to MEGA_CORP,
         MINI_CORP_KEY to MINI_CORP
 )
@@ -52,7 +52,7 @@ data class TransactionForTest(
 ) {
     fun input(s: () -> ContractState) = inStates.add(s())
     fun output(s: () -> ContractState) = outStates.add(s())
-    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSignedCommand(key, keyToCorpMap[key], c()))
+    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSignedCommand(key, TEST_KEYS_TO_CORP_MAP[key], c()))
 
     infix fun Contract.`fails requirement`(msg: String) {
         try {

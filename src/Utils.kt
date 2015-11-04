@@ -17,35 +17,3 @@ open class OpaqueBytes(val bits: ByteArray) {
 
     override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
 }
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// REQUIREMENTS
-//
-// To understand how requireThat works, read the section "type safe builders" on the Kotlin website:
-//
-//   https://kotlinlang.org/docs/reference/type-safe-builders.html
-
-object Requirements {
-    infix fun String.by(expr: Boolean) {
-        if (!expr) throw IllegalArgumentException("Failed requirement: $this")
-    }
-}
-fun requireThat(body: Requirements.() -> Unit) {
-    Requirements.body()
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// CURRENCIES   (convenience accessors)
-
-val USD = Currency.getInstance("USD")
-val GBP = Currency.getInstance("GBP")
-val CHF = Currency.getInstance("CHF")
-
-val Int.DOLLARS: Amount get() = Amount(this * 100, USD)
-val Int.POUNDS: Amount get() = Amount(this * 100, GBP)
-val Int.SWISS_FRANCS: Amount get() = Amount(this * 100, CHF)
-val Double.DOLLARS: Amount get() = Amount((this * 100).toInt(), USD)
-val Double.POUNDS: Amount get() = Amount((this * 100).toInt(), USD)
-val Double.SWISS_FRANCS: Amount get() = Amount((this * 100).toInt(), USD)
