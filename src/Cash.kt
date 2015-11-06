@@ -1,5 +1,4 @@
 import java.security.PublicKey
-import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -85,7 +84,12 @@ object CashContract : Contract {
             val inputAmount = inputs.map { it.amount }.sum()
             val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
-            val issuerCommand = args.filter { it.signingInstitution == deposit.institution }.map { it.command as? ExitCashCommand }.filterNotNull().singleOrNull()
+            val issuerCommand = args.
+                    filter { it.signingInstitution == deposit.institution }.
+                    // TODO: this map+filterNotNull pattern will become a single function in the next Kotlin beta.
+                    map { it.command as? ExitCashCommand }.
+                    filterNotNull().
+                    singleOrNull()
             val amountExitingLedger = issuerCommand?.amount ?: Amount(0, inputAmount.currency)
 
             requireThat {
@@ -100,10 +104,15 @@ object CashContract : Contract {
         // data by the platform before execution.
         val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
         val keysThatSigned = args.filter { it.command is MoveCashCommand }.map { it.signer }.toSortedSet()
-        requireThat { "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned) }
+        requireThat {
+            "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
+        }
 
         // Accept.
     }
+
+    // TODO: craftSpend should work more like in bitcoinj, where it takes and modifies a transaction template.
+    // This would allow multiple contracts to compose properly (e.g. bond trade+cash movement).
 
     /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey. */
     @Throws(InsufficientBalanceException::class)
