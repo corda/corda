@@ -20,7 +20,7 @@ buildscript {
 }
 
 dependencies {
-    testCompile group: 'junit', name: 'junit', version: '4.11'
+    testCompile 'junit:junit:4.11'
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "com.google.guava:guava:18.0"
     compile "org.funktionale:funktionale:0.6_1.0.0-beta"
@@ -28,4 +28,5 @@ dependencies {
 
 sourceSets {
     main.java.srcDirs += 'src'
+    test.java.srcDirs += 'tests'
 }
