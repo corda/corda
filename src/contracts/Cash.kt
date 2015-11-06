@@ -8,14 +8,6 @@ import java.security.PublicKey
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
 
-/**
- * Reference to some money being stored by an institution e.g. in a vault or (more likely) on their normal ledger.
- * The deposit reference is intended to be encrypted so it's meaningless to anyone other than the institution.
- */
-data class DepositPointer(val institution: Institution, val reference: OpaqueBytes) {
-    override fun toString() = "${institution.name}$reference"
-}
-
 /** A state representing a claim on the cash reserves of some institution */
 data class CashState(
     /** Where the underlying currency backing this ledger entry can be found (propagated) */

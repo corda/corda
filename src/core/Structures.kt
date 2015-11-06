@@ -93,3 +93,10 @@ interface Contract {
     fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSignedCommand>)
 }
 
+/**
+ * Reference to some money being stored by an institution e.g. in a vault or (more likely) on their normal ledger.
+ * The deposit reference is intended to be encrypted so it's meaningless to anyone other than the institution.
+ */
+data class DepositPointer(val institution: Institution, val reference: OpaqueBytes) {
+    override fun toString() = "${institution.name}$reference"
+}
