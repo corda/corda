@@ -1,3 +1,5 @@
+package core
+
 import java.security.PublicKey
 import java.security.Timestamp
 

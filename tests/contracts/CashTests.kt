@@ -1,3 +1,4 @@
+import core.*
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

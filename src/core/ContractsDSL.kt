@@ -1,3 +1,5 @@
+package core
+
 import java.math.BigDecimal
 import java.util.*
 import kotlin.math.div

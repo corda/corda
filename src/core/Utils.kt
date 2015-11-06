@@ -1,3 +1,5 @@
+package core
+
 import com.google.common.io.BaseEncoding
 import java.util.*
 

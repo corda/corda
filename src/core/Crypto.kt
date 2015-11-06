@@ -1,7 +1,8 @@
+package core
+
 import com.google.common.io.BaseEncoding
 import java.security.MessageDigest
 import java.security.PublicKey
-import java.util.*
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
