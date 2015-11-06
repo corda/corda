@@ -2,6 +2,7 @@ package core
 
 import java.security.PublicKey
 import java.security.Timestamp
+import java.time.Instant
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
@@ -86,11 +87,12 @@ data class VerifiedSigned<out T : Command>(
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
  * every [Transaction] they see on the network, for every input state. All input states must accept the transaction
- * for it to be accepted: failure of any aborts the entire thing.
+ * for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted timestamp attached
+ * to the transaction itself i.e. it is NOT necessarily the current time.
  */
 interface Contract {
     /** Must throw an exception if there's a problem that should prevent state transition. */
-    fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>)
+    fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant)
 }
 
 /**

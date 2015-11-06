@@ -2,6 +2,7 @@ package core
 
 import java.math.BigInteger
 import java.security.PublicKey
+import java.time.Instant
 import kotlin.test.fail
 
 class DummyPublicKey(private val s: String) : PublicKey, Comparable<PublicKey> {
@@ -58,7 +59,7 @@ data class TransactionForTest(
 
     infix fun Contract.`fails requirement`(msg: String) {
         try {
-            verify(inStates, outStates, args)
+            verify(inStates, outStates, args, Instant.now())
         } catch(e: Exception) {
             val m = e.message
             if (m == null)
@@ -72,7 +73,7 @@ data class TransactionForTest(
     fun Contract.fails_requirement(msg: String) = this.`fails requirement`(msg)
 
     fun Contract.accepts() {
-        verify(inStates, outStates, args)
+        verify(inStates, outStates, args, Instant.now())
     }
 
     // Allow customisation of partial transactions.

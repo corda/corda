@@ -2,6 +2,7 @@ package contracts
 
 import core.*
 import java.security.PublicKey
+import java.time.Instant
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -55,7 +56,7 @@ fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = this.filterIsInstance<
  */
 object CashContract : Contract {
     /** This is the function EVERYONE runs */
-    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>) {
+    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant) {
         val cashInputs = inStates.filterIsInstance<CashState>()
 
         requireThat {
