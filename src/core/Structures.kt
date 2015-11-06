@@ -76,11 +76,11 @@ data class SignedCommand(
 )
 
 /** Obtained from a [SignedCommand], deserialised and signature checked */
-data class VerifiedSignedCommand(
+data class VerifiedSigned<out T : Command>(
     val signer: PublicKey,
     /** If the public key was recognised, the looked up institution is available here, otherwise it's null */
     val signingInstitution: Institution?,
-    val command: Command
+    val value: T
 )
 
 /**
@@ -90,13 +90,13 @@ data class VerifiedSignedCommand(
  */
 interface Contract {
     /** Must throw an exception if there's a problem that should prevent state transition. */
-    fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSignedCommand>)
+    fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>)
 }
 
 /**
- * Reference to some money being stored by an institution e.g. in a vault or (more likely) on their normal ledger.
- * The deposit reference is intended to be encrypted so it's meaningless to anyone other than the institution.
+ * Reference to something being stored or issued by an institution e.g. in a vault or (more likely) on their normal
+ * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the institution.
  */
-data class DepositPointer(val institution: Institution, val reference: OpaqueBytes) {
+data class InstitutionReference(val institution: Institution, val reference: OpaqueBytes) {
     override fun toString() = "${institution.name}$reference"
 }

@@ -50,11 +50,11 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
 data class TransactionForTest(
     private val inStates: MutableList<ContractState> = arrayListOf(),
     private val outStates: MutableList<ContractState> = arrayListOf(),
-    private val args: MutableList<VerifiedSignedCommand> = arrayListOf()
+    private val args: MutableList<VerifiedSigned<Command>> = arrayListOf()
 ) {
     fun input(s: () -> ContractState) = inStates.add(s())
     fun output(s: () -> ContractState) = outStates.add(s())
-    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSignedCommand(key, TEST_KEYS_TO_CORP_MAP[key], c()))
+    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSigned(key, TEST_KEYS_TO_CORP_MAP[key], c()))
 
     infix fun Contract.`fails requirement`(msg: String) {
         try {

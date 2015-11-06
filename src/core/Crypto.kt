@@ -36,3 +36,10 @@ sealed class DigitalSignature(bits: ByteArray, val covering: Int) : OpaqueBytes(
     class LegallyIdentifiable(val signer: Institution, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
 }
 
+object NullPublicKey : PublicKey, Comparable<PublicKey> {
+    override fun getAlgorithm() = "NULL"
+    override fun getEncoded() = byteArrayOf(0)
+    override fun getFormat() = "NULL"
+    override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
+    override fun toString() = "NULL_KEY"
+}

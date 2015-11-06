@@ -1,6 +1,7 @@
 package core
 
 import java.math.BigDecimal
+import java.security.PublicKey
 import java.util.*
 import kotlin.math.div
 
@@ -13,6 +14,17 @@ import kotlin.math.div
  */
 
 // TODO: Look into replacing Currency and Amount with CurrencyUnit and MonetaryAmount from the javax.money API (JSR 354)
+
+// region Misc
+inline fun <reified T : Command> List<VerifiedSigned<Command>>.select(signer: PublicKey? = null, institution: Institution? = null) =
+        filter { it.value is T }.
+        filter { if (signer == null) true else signer == it.signer }.
+        filter { if (institution == null) true else institution == it.signingInstitution }.
+        map { VerifiedSigned<T>(it.signer, it.signingInstitution, it.value as T) }
+
+inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleCommand() = select<T>().single()
+
+// endregion
 
 // region Currencies
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -44,7 +56,6 @@ fun requireThat(body: Requirements.() -> Unit) {
 }
 
 // endregion
-
 
 
 // region Amounts

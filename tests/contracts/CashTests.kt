@@ -1,3 +1,4 @@
+import contracts.*
 import core.*
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -9,7 +10,7 @@ import kotlin.test.assertFailsWith
 
 class CashTests {
     val inState = CashState(
-            deposit = DepositPointer(MEGA_CORP, OpaqueBytes.of(1)),
+            deposit = InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)),
             amount = 1000.DOLLARS,
             owner = DUMMY_PUBKEY_1
     )
@@ -222,10 +223,10 @@ class CashTests {
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
     val WALLET = listOf(
-            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
-            CashState(DepositPointer(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
-            CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
-            CashState(DepositPointer(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
+            CashState(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
+            CashState(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
+            CashState(InstitutionReference(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
+            CashState(InstitutionReference(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
     )
 
     @Test

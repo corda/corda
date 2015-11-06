@@ -1,3 +1,5 @@
+package contracts
+
 import core.*
 import java.security.PublicKey
 
@@ -11,7 +13,7 @@ val CASH_PROGRAM_ID = SecureHash.sha256("cash")
 /** A state representing a claim on the cash reserves of some institution */
 data class CashState(
     /** Where the underlying currency backing this ledger entry can be found (propagated) */
-    val deposit: DepositPointer,
+    val deposit: InstitutionReference,
 
     val amount: Amount,
 
@@ -35,6 +37,9 @@ class ExitCashCommand(val amount: Amount) : Command {
 
 class InsufficientBalanceException(val amountMissing: Amount) : Exception()
 
+// Small DSL extension.
+fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = this.filterIsInstance<CashState>().filter { it.owner == owner }.map { it.amount }.sum()
+
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
  * input and output states. Imagine a Bitcoin transaction but in which all UTXOs had a colour
@@ -50,7 +55,7 @@ class InsufficientBalanceException(val amountMissing: Amount) : Exception()
  */
 object CashContract : Contract {
     /** This is the function EVERYONE runs */
-    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSignedCommand>) {
+    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>) {
         val cashInputs = inStates.filterIsInstance<CashState>()
 
         requireThat {
@@ -77,13 +82,8 @@ object CashContract : Contract {
             val inputAmount = inputs.map { it.amount }.sum()
             val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
-            val issuerCommand = args.
-                    filter { it.signingInstitution == deposit.institution }.
-                    // TODO: this map+filterNotNull pattern will become a single function in the next Kotlin beta.
-                    map { it.command as? ExitCashCommand }.
-                    filterNotNull().
-                    singleOrNull()
-            val amountExitingLedger = issuerCommand?.amount ?: Amount(0, inputAmount.currency)
+            val issuerCommand = args.select<ExitCashCommand>(institution = deposit.institution).singleOrNull()
+            val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
 
             requireThat {
                 "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
@@ -96,7 +96,7 @@ object CashContract : Contract {
         // see a signature from each of those keys. The actual signatures have been verified against the transaction
         // data by the platform before execution.
         val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-        val keysThatSigned = args.filter { it.command is MoveCashCommand }.map { it.signer }.toSortedSet()
+        val keysThatSigned = args.select<MoveCashCommand>().map { it.signer }.toSortedSet()
         requireThat {
             "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
         }
@@ -167,7 +167,7 @@ object CashContract : Contract {
         } else states
 
         // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { VerifiedSignedCommand(it, null, MoveCashCommand()) }
+        val commands = keysUsed.map { VerifiedSigned(it, null, MoveCashCommand()) }
 
         return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }
