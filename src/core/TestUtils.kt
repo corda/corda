@@ -26,6 +26,9 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
         MINI_CORP_KEY to MINI_CORP
 )
 
+// A dummy time at which we will be pretending test transactions are created.
+val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
@@ -59,21 +62,33 @@ data class TransactionForTest(
 
     infix fun Contract.`fails requirement`(msg: String) {
         try {
-            verify(inStates, outStates, args, Instant.now())
+            verify(inStates, outStates, args, TEST_TX_TIME)
         } catch(e: Exception) {
             val m = e.message
             if (m == null)
                 fail("Threw exception without a message")
             else
-                if (!m.contains(msg)) throw AssertionError("Error was actually: $m")
+                if (!m.contains(msg)) throw AssertionError("Error was actually: $m", e)
         }
     }
 
     // which is uglier?? :)
     fun Contract.fails_requirement(msg: String) = this.`fails requirement`(msg)
 
-    fun Contract.accepts() {
-        verify(inStates, outStates, args, Instant.now())
+    fun Contract.accepts() = verify(inStates, outStates, args, TEST_TX_TIME)
+    fun Contract.rejects(withMessage: String? = null) {
+        val r = try {
+            accepts()
+            false
+        } catch (e: Exception) {
+            val m = e.message
+            if (m == null)
+                fail("Threw exception without a message")
+            else
+                if (withMessage != null && !m.contains(withMessage)) throw AssertionError("Error was actually: $m", e)
+            true
+        }
+        if (!r) throw AssertionError("Expected exception but didn't get one")
     }
 
     // Allow customisation of partial transactions.
