@@ -51,7 +51,7 @@ object Requirements {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
 }
-fun requireThat(body: Requirements.() -> Unit) {
+inline fun requireThat(body: Requirements.() -> Unit) {
     Requirements.body()
 }
 

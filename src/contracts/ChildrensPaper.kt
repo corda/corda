@@ -17,6 +17,8 @@ import java.time.Instant
  *    issue: need to find a cleaner way to allow this. Does the single-execution-per-transaction model make sense?
  */
 
+// TODO: This is very incomplete! Do not attempt to find mistakes in it just yet.
+
 val CP_PROGRAM_ID = SecureHash.sha256("childrens-paper")
 
 data class ChildrensPaperState(
@@ -53,6 +55,7 @@ object ChildrensPaper : Contract {
             }
 
             is CPCommands.RedeemCommand -> {
+                // TODO: Lots more needed here: the CP state must be destroyed by this transaction, command.signer is not really right etc
                 val received = outStates.sumCashBy(command.signer)
                 requireThat {
                     "the paper must have matured" by (input.maturityDate < time)
