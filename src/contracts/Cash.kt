@@ -40,6 +40,7 @@ class InsufficientBalanceException(val amountMissing: Amount) : Exception()
 
 // Small DSL extension.
 fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = this.filterIsInstance<CashState>().filter { it.owner == owner }.map { it.amount }.sum()
+fun Iterable<ContractState>.sumCash() = this.filterIsInstance<CashState>().map { it.amount }.sum()
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple

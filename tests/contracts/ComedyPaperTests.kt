@@ -5,10 +5,10 @@ import org.junit.Test
 
 // TODO: Finish this off.
 
-class ChildrensPaperTests {
-    val contract = ChildrensPaper
+class ComedyPaperTests {
+    val contract = ComedyPaper
 
-    val PAPER_1 = ChildrensPaperState(
+    val PAPER_1 = ComedyPaper.State(
             issuance = InstitutionReference(MEGA_CORP, OpaqueBytes.of(123)),
             owner = DUMMY_PUBKEY_1,
             faceValue = 1000.DOLLARS,
@@ -26,12 +26,12 @@ class ChildrensPaperTests {
             contract.rejects()
 
             transaction {
-                arg(DUMMY_PUBKEY_2) { CPCommands.MoveCommand() }
+                arg(DUMMY_PUBKEY_2) { ComedyPaper.Commands.Move() }
                 contract `fails requirement` "is signed by the owner"
             }
 
             transaction {
-                arg(DUMMY_PUBKEY_1) { CPCommands.MoveCommand() }
+                arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move() }
                 contract.accepts()
             }
         }
