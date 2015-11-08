@@ -23,6 +23,8 @@ val CP_PROGRAM_ID = SecureHash.sha256("comedy-paper")
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 object ComedyPaper : Contract {
+    override val legalContractReference: String = "https://www.gotlines.com/jokes/1"
+
     data class State(
         val issuance: InstitutionReference,
         val owner: PublicKey,
