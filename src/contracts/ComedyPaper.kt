@@ -21,13 +21,13 @@ import java.time.Instant
 
 val CP_PROGRAM_ID = SecureHash.sha256("comedy-paper")
 
-// TODO: Generalise the notion of an owned object into a superclass/supercontract. Consider composition vs inheritance.
+// TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 object ComedyPaper : Contract {
     data class State(
-            val issuance: InstitutionReference,
-            val owner: PublicKey,
-            val faceValue: Amount,
-            val maturityDate: Instant
+        val issuance: InstitutionReference,
+        val owner: PublicKey,
+        val faceValue: Amount,
+        val maturityDate: Instant
     ) : ContractState {
         override val programRef = CP_PROGRAM_ID
 

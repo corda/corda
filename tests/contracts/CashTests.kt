@@ -1,4 +1,5 @@
-import contracts.*
+import contracts.Cash
+import contracts.InsufficientBalanceException
 import core.*
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -9,16 +10,16 @@ import kotlin.test.assertFailsWith
 // 2. There must be at least one input state (note: not "one of the type the contract wants")
 
 class CashTests {
-    val inState = CashState(
+    val inState = Cash.State(
             deposit = InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)),
             amount = 1000.DOLLARS,
             owner = DUMMY_PUBKEY_1
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
-    val contract = CashContract
+    val contract = Cash
 
-    fun CashState.editInstitution(institution: Institution) = copy(deposit = deposit.copy(institution = institution))
-    fun CashState.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
+    fun Cash.State.editInstitution(institution: Institution) = copy(deposit = deposit.copy(institution = institution))
+    fun Cash.State.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
 
     @Test
     fun trivial() {
@@ -39,7 +40,7 @@ class CashTests {
             }
             transaction {
                 output { outState }
-                arg(DUMMY_PUBKEY_2) { MoveCashCommand() }
+                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
                 contract `fails requirement` "the owning keys are the same as the signing keys"
             }
             transaction {
@@ -50,7 +51,7 @@ class CashTests {
             // Simple reallocation works.
             transaction {
                 output { outState }
-                arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 contract.accepts()
             }
         }
@@ -60,7 +61,7 @@ class CashTests {
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             transaction {
                 input { inState }
                 for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
@@ -150,16 +151,16 @@ class CashTests {
             output { outState.copy(amount = inState.amount - 200.DOLLARS) }
 
             transaction {
-                arg(MEGA_CORP_KEY) { ExitCashCommand(100.DOLLARS) }
+                arg(MEGA_CORP_KEY) { Cash.Commands.Exit(100.DOLLARS) }
                 contract `fails requirement` "the amounts balance"
             }
 
             transaction {
-                arg(MEGA_CORP_KEY) { ExitCashCommand(200.DOLLARS) }
+                arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
                 contract `fails requirement` "the owning keys are the same as the signing keys"   // No move command.
 
                 transaction {
-                    arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
+                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                     contract.accepts()
                 }
             }
@@ -172,14 +173,14 @@ class CashTests {
             output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
-            arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
 
             contract `fails requirement` "at issuer MegaCorp the amounts balance"
 
-            arg(MEGA_CORP_KEY) { ExitCashCommand(200.DOLLARS) }
+            arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
             contract `fails requirement` "at issuer MiniCorp the amounts balance"
 
-            arg(MINI_CORP_KEY) { ExitCashCommand(200.DOLLARS) }
+            arg(MINI_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
             contract.accepts()
         }
     }
@@ -206,7 +207,7 @@ class CashTests {
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
             output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
-            arg(DUMMY_PUBKEY_1) { MoveCashCommand() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             contract.accepts()
         }
 
@@ -223,10 +224,10 @@ class CashTests {
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
     val WALLET = listOf(
-            CashState(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
-            CashState(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
-            CashState(InstitutionReference(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
-            CashState(InstitutionReference(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
+            Cash.State(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
+            Cash.State(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
+            Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
+            Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
     )
 
     @Test
@@ -235,7 +236,7 @@ class CashTests {
                 transaction {
                     input { WALLET[0] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
                 },
                 contract.craftSpend(100.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -248,7 +249,7 @@ class CashTests {
                     input { WALLET[0] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS) }
                     output { WALLET[0].copy(owner = OUR_PUBKEY_1, amount = 90.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
                 },
                 contract.craftSpend(10.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -261,7 +262,7 @@ class CashTests {
                     input { WALLET[0] }
                     input { WALLET[1] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
                 },
                 contract.craftSpend(500.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -276,7 +277,7 @@ class CashTests {
                     input { WALLET[2] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
                     output { WALLET[2].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { MoveCashCommand() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
                 },
                 contract.craftSpend(580.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )

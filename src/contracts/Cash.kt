@@ -11,36 +11,7 @@ import java.time.Instant
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
 
-/** A state representing a claim on the cash reserves of some institution */
-data class CashState(
-    /** Where the underlying currency backing this ledger entry can be found (propagated) */
-    val deposit: InstitutionReference,
-
-    val amount: Amount,
-
-    /** There must be a MoveCommand signed by this key to claim the amount */
-    val owner: PublicKey
-) : ContractState {
-    override val programRef = CASH_PROGRAM_ID
-    override fun toString() = "Cash($amount at $deposit owned by $owner)"
-}
-
-/** A command proving ownership of some input states, the signature covers the output states. */
-class MoveCashCommand : Command {
-    override fun equals(other: Any?) = other is MoveCashCommand
-    override fun hashCode() = 0
-}
-/** A command stating that money has been withdrawn from the shared ledger and is now accounted for in some other way */
-class ExitCashCommand(val amount: Amount) : Command {
-    override fun equals(other: Any?) = other is ExitCashCommand && other.amount == amount
-    override fun hashCode() = amount.hashCode()
-}
-
 class InsufficientBalanceException(val amountMissing: Amount) : Exception()
-
-// Small DSL extension.
-fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = this.filterIsInstance<CashState>().filter { it.owner == owner }.map { it.amount }.sum()
-fun Iterable<ContractState>.sumCash() = this.filterIsInstance<CashState>().map { it.amount }.sum()
 
 /**
  * A cash transaction may split and merge money represented by a set of (issuer, depositRef) pairs, across multiple
@@ -55,10 +26,39 @@ fun Iterable<ContractState>.sumCash() = this.filterIsInstance<CashState>().map {
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-object CashContract : Contract {
+object Cash : Contract {
+    /** A state representing a claim on the cash reserves of some institution */
+    data class State(
+            /** Where the underlying currency backing this ledger entry can be found (propagated) */
+            val deposit: InstitutionReference,
+
+            val amount: Amount,
+
+            /** There must be a MoveCommand signed by this key to claim the amount */
+            val owner: PublicKey
+    ) : ContractState {
+        override val programRef = CASH_PROGRAM_ID
+        override fun toString() = "Cash($amount at $deposit owned by $owner)"
+    }
+
+
+    sealed class Commands {
+        /** A command proving ownership of some input states, the signature covers the output states. */
+        class Move : Command {
+            override fun equals(other: Any?) = other is Move
+            override fun hashCode() = 0
+        }
+
+        /** A command stating that money has been withdrawn from the shared ledger and is now accounted for in some other way */
+        class Exit(val amount: Amount) : Command {
+            override fun equals(other: Any?) = other is Exit && other.amount == amount
+            override fun hashCode() = amount.hashCode()
+        }
+    }
+
     /** This is the function EVERYONE runs */
     override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant) {
-        val cashInputs = inStates.filterIsInstance<CashState>()
+        val cashInputs = inStates.filterIsInstance<Cash.State>()
 
         requireThat {
             "there is at least one cash input" by cashInputs.isNotEmpty()
@@ -69,7 +69,7 @@ object CashContract : Contract {
         val currency = cashInputs.first().amount.currency
 
         // Select all the output states that are cash states. There may be zero if all money is being withdrawn.
-        val cashOutputs = outStates.filterIsInstance<CashState>()
+        val cashOutputs = outStates.filterIsInstance<Cash.State>()
         requireThat {
             "all outputs use the currency of the inputs" by cashOutputs.all { it.amount.currency == currency }
         }
@@ -84,7 +84,7 @@ object CashContract : Contract {
             val inputAmount = inputs.map { it.amount }.sum()
             val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
-            val issuerCommand = args.select<ExitCashCommand>(institution = deposit.institution).singleOrNull()
+            val issuerCommand = args.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
             val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
 
             requireThat {
@@ -98,7 +98,7 @@ object CashContract : Contract {
         // see a signature from each of those keys. The actual signatures have been verified against the transaction
         // data by the platform before execution.
         val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-        val keysThatSigned = args.select<MoveCashCommand>().map { it.signer }.toSortedSet()
+        val keysThatSigned = args.select<Commands.Move>().map { it.signer }.toSortedSet()
         requireThat {
             "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
         }
@@ -111,7 +111,7 @@ object CashContract : Contract {
 
     /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey. */
     @Throws(InsufficientBalanceException::class)
-    fun craftSpend(amount: Amount, to: PublicKey, wallet: List<CashState>): TransactionForTest {
+    fun craftSpend(amount: Amount, to: PublicKey, wallet: List<Cash.State>): TransactionForTest {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -135,9 +135,9 @@ object CashContract : Contract {
         // is put into the transaction, which is finally returned.
 
         val currency = amount.currency
-        val coinsOfCurrency = wallet.asSequence().filter { it.amount.currency == currency }
+        val coinsOfCurrency = wallet.filter { it.amount.currency == currency }
 
-        val gathered = arrayListOf<CashState>()
+        val gathered = arrayListOf<State>()
         var gatheredAmount = Amount(0, currency)
         for (c in coinsOfCurrency) {
             if (gatheredAmount >= amount) break
@@ -154,7 +154,7 @@ object CashContract : Contract {
         val states = gathered.groupBy { it.deposit }.map {
             val (deposit, coins) = it
             val totalAmount = coins.map { it.amount }.sum()
-            CashState(deposit, totalAmount, to)
+            State(deposit, totalAmount, to)
         }
 
         val outputs = if (change.pennies > 0) {
@@ -165,12 +165,16 @@ object CashContract : Contract {
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
                     states.last().let { it.copy(amount = it.amount - change) } +
-                    CashState(gathered.last().deposit, change, changeKey)
+                    State(gathered.last().deposit, change, changeKey)
         } else states
 
         // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { VerifiedSigned(it, null, MoveCashCommand()) }
+        val commands = keysUsed.map { VerifiedSigned(it, null, Commands.Move()) }
 
         return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }
 }
+
+// Small DSL extension.
+fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sum()
+fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sum()
