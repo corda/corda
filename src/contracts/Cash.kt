@@ -27,7 +27,7 @@ class InsufficientBalanceException(val amountMissing: Amount) : Exception()
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
 object Cash : Contract {
-    /** A state representing a claim on the cash reserves of some institution */
+    /** A state representing a cash claim against some institution */
     data class State(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
             val deposit: InstitutionReference,
