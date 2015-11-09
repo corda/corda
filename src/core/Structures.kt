@@ -94,6 +94,7 @@ interface Contract {
     /** Must throw an exception if there's a problem that should prevent state transition. */
     fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant)
 
+    // TODO: This should probably be a hash of a document, rather than a URL to it.
     /** Unparsed reference to the natural language contract that this code is supposed to express (usually a URL). */
     val legalContractReference: String
 }

@@ -7,6 +7,11 @@ import java.time.Instant
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Cash
+//
+// Open issues:
+//  - Cannot do currency exchanges this way, as the contract insists that there be a single currency involved!
+//  - Nothing ensures cash states are not created out of thin air.
+//  - Complex logic to do grouping: can it be generalised out into platform code?
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
