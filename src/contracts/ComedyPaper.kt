@@ -58,6 +58,8 @@ object ComedyPaper : Contract {
 
             is Commands.Redeem -> requireThat {
                 val received = outStates.sumCash()
+                // Do we need to check the signature of the issuer here too?
+                "the transaction is signed by the owner of the CP" by (command.signer == input.owner)
                 "the paper must have matured" by (input.maturityDate < time)
                 "the received amount equals the face value" by (received == input.faceValue)
                 "the paper must be destroyed" by outStates.filterIsInstance<ComedyPaper.State>().none()

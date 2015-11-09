@@ -24,8 +24,6 @@ class CashTests {
     @Test
     fun trivial() {
         transaction {
-            contract `fails requirement` "there is at least one cash input"
-
             input { inState }
             contract `fails requirement` "the amounts balance"
 

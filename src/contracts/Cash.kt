@@ -63,7 +63,6 @@ object Cash : Contract {
         val cashInputs = inStates.filterIsInstance<Cash.State>()
 
         requireThat {
-            "there is at least one cash input" by cashInputs.isNotEmpty()
             "there are no zero sized inputs" by cashInputs.none { it.amount.pennies == 0 }
             "all inputs use the same currency" by (cashInputs.groupBy { it.amount.currency }.size == 1)
         }
