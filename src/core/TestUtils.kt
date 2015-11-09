@@ -1,5 +1,6 @@
 package core
 
+import contracts.*
 import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Instant
@@ -28,6 +29,14 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
 
 // A dummy time at which we will be pretending test transactions are created.
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
+
+// In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
+// a sandbox. For now we just instantiate right at the start of the program.
+val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
+        CASH_PROGRAM_ID to Cash,
+        CP_PROGRAM_ID to ComedyPaper,
+        DUMMY_PROGRAM_ID to DummyContract
+)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -60,9 +69,11 @@ data class TransactionForTest(
     fun output(s: () -> ContractState) = outStates.add(s())
     fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSigned(key, TEST_KEYS_TO_CORP_MAP[key], c()))
 
-    infix fun Contract.`fails requirement`(msg: String) {
+    private fun run() = TransactionForVerification(inStates, outStates, args, TEST_TX_TIME).verify(TEST_PROGRAM_MAP)
+
+    infix fun `fails requirement`(msg: String) {
         try {
-            verify(inStates, outStates, args, TEST_TX_TIME)
+            run()
         } catch(e: Exception) {
             val m = e.message
             if (m == null)
@@ -73,12 +84,12 @@ data class TransactionForTest(
     }
 
     // which is uglier?? :)
-    fun Contract.fails_requirement(msg: String) = this.`fails requirement`(msg)
+    fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
-    fun Contract.accepts() = verify(inStates, outStates, args, TEST_TX_TIME)
-    fun Contract.rejects(withMessage: String? = null) {
+    fun accepts() = run()
+    fun rejects(withMessage: String? = null) {
         val r = try {
-            accepts()
+            run()
             false
         } catch (e: Exception) {
             val m = e.message

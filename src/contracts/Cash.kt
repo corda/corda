@@ -2,7 +2,6 @@ package contracts
 
 import core.*
 import java.security.PublicKey
-import java.time.Instant
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -64,52 +63,55 @@ object Cash : Contract {
     }
 
     /** This is the function EVERYONE runs */
-    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant) {
-        val cashInputs = inStates.filterIsInstance<Cash.State>()
-
-        requireThat {
-            "there are no zero sized inputs" by cashInputs.none { it.amount.pennies == 0 }
-            "all inputs use the same currency" by (cashInputs.groupBy { it.amount.currency }.size == 1)
-        }
-
-        val currency = cashInputs.first().amount.currency
-
-        // Select all the output states that are cash states. There may be zero if all money is being withdrawn.
-        val cashOutputs = outStates.filterIsInstance<Cash.State>()
-        requireThat {
-            "all outputs use the currency of the inputs" by cashOutputs.all { it.amount.currency == currency }
-        }
-
-        // For each deposit that's represented in the inputs, group the inputs together and verify that the outputs
-        // balance, taking into account a possible exit command from that issuer.
-        var outputsLeft = cashOutputs.size
-        for ((deposit, inputs) in cashInputs.groupBy { it.deposit }) {
-            val outputs = cashOutputs.filter { it.deposit == deposit }
-            outputsLeft -= outputs.size
-
-            val inputAmount = inputs.map { it.amount }.sum()
-            val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
-
-            val issuerCommand = args.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
-            val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
+    override fun verify(tx: TransactionForVerification) {
+        with(tx) {
+            val cashInputs = inStates.filterIsInstance<Cash.State>()
 
             requireThat {
-                "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
+                "there is at least one cash input" by cashInputs.isNotEmpty()
+                "there are no zero sized inputs" by cashInputs.none { it.amount.pennies == 0 }
+                "all inputs use the same currency" by (cashInputs.groupBy { it.amount.currency }.size == 1)
             }
+
+            val currency = cashInputs.first().amount.currency
+
+            // Select all the output states that are cash states. There may be zero if all money is being withdrawn.
+            val cashOutputs = outStates.filterIsInstance<Cash.State>()
+            requireThat {
+                "all outputs use the currency of the inputs" by cashOutputs.all { it.amount.currency == currency }
+            }
+
+            // For each deposit that's represented in the inputs, group the inputs together and verify that the outputs
+            // balance, taking into account a possible exit command from that issuer.
+            var outputsLeft = cashOutputs.size
+            for ((deposit, inputs) in cashInputs.groupBy { it.deposit }) {
+                val outputs = cashOutputs.filter { it.deposit == deposit }
+                outputsLeft -= outputs.size
+
+                val inputAmount = inputs.map { it.amount }.sum()
+                val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
+
+                val issuerCommand = args.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
+                val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
+
+                requireThat {
+                    "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
+                }
+            }
+
+            requireThat { "no output states are unaccounted for" by (outputsLeft == 0) }
+
+            // Now check the digital signatures on the move commands. Every input has an owning public key, and we must
+            // see a signature from each of those keys. The actual signatures have been verified against the transaction
+            // data by the platform before execution.
+            val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
+            val keysThatSigned = args.select<Commands.Move>().map { it.signer }.toSortedSet()
+            requireThat {
+                "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
+            }
+
+            // Accept.
         }
-
-        requireThat { "no output states are unaccounted for" by (outputsLeft == 0) }
-
-        // Now check the digital signatures on the move commands. Every input has an owning public key, and we must
-        // see a signature from each of those keys. The actual signatures have been verified against the transaction
-        // data by the platform before execution.
-        val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-        val keysThatSigned = args.select<Commands.Move>().map { it.signer }.toSortedSet()
-        requireThat {
-            "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
-        }
-
-        // Accept.
     }
 
     // TODO: craftSpend should work more like in bitcoinj, where it takes and modifies a transaction template.

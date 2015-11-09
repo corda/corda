@@ -41,28 +41,30 @@ object ComedyPaper : Contract {
         class Redeem : Commands()
     }
 
-    override fun verify(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>, time: Instant) {
-        // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
-        // for cash on or after the maturity date.
-        val command = args.requireSingleCommand<ComedyPaper.Commands>()
+    override fun verify(tx: TransactionForVerification) {
+        with(tx) {
+            // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
+            // for cash on or after the maturity date.
+            val command = args.requireSingleCommand<ComedyPaper.Commands>()
 
-        // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
-        val input = inStates.filterIsInstance<ComedyPaper.State>().single()
+            // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
+            val input = inStates.filterIsInstance<ComedyPaper.State>().single()
 
-        when (command.value) {
-            is Commands.Move -> requireThat {
-                val output = outStates.filterIsInstance<ComedyPaper.State>().single()
-                "the transaction is signed by the owner of the CP" by (command.signer == input.owner)
-                "the output state is the same as the input state except for owner" by (input.withoutOwner() == output.withoutOwner())
-            }
+            when (command.value) {
+                is Commands.Move -> requireThat {
+                    val output = outStates.filterIsInstance<ComedyPaper.State>().single()
+                    "the transaction is signed by the owner of the CP" by (command.signer == input.owner)
+                    "the output state is the same as the input state except for owner" by (input.withoutOwner() == output.withoutOwner())
+                }
 
-            is Commands.Redeem -> requireThat {
-                val received = outStates.sumCash()
-                // Do we need to check the signature of the issuer here too?
-                "the transaction is signed by the owner of the CP" by (command.signer == input.owner)
-                "the paper must have matured" by (input.maturityDate < time)
-                "the received amount equals the face value" by (received == input.faceValue)
-                "the paper must be destroyed" by outStates.filterIsInstance<ComedyPaper.State>().none()
+                is Commands.Redeem -> requireThat {
+                    val received = outStates.sumCash()
+                    // Do we need to check the signature of the issuer here too?
+                    "the transaction is signed by the owner of the CP" by (command.signer == input.owner)
+                    "the paper must have matured" by (input.maturityDate < time)
+                    "the received amount equals the face value" by (received == input.faceValue)
+                    "the paper must be destroyed" by outStates.filterIsInstance<ComedyPaper.State>().none()
+                }
             }
         }
     }
