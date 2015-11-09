@@ -34,7 +34,7 @@ class CashTests {
             transaction {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "the owning keys are the same as the signing keys"
+                this `fails requirement` "required move command"
             }
             transaction {
                 output { outState }
@@ -161,12 +161,13 @@ class CashTests {
 
             transaction {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(100.DOLLARS) }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this `fails requirement` "the amounts balance"
             }
 
             transaction {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
-                this `fails requirement` "the owning keys are the same as the signing keys"   // No move command.
+                this `fails requirement` "required move command"
 
                 transaction {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }

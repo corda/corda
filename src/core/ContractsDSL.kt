@@ -18,11 +18,16 @@ import kotlin.math.div
 // region Misc
 inline fun <reified T : Command> List<VerifiedSigned<Command>>.select(signer: PublicKey? = null, institution: Institution? = null) =
         filter { it.value is T }.
-        filter { if (signer == null) true else signer == it.signer }.
-        filter { if (institution == null) true else institution == it.signingInstitution }.
-        map { VerifiedSigned<T>(it.signer, it.signingInstitution, it.value as T) }
+        filter { if (signer == null) true else it.signers.contains(signer) }.
+        filter { if (institution == null) true else it.signingInstitutions.contains(institution) }.
+        map { VerifiedSigned<T>(it.signers, it.signingInstitutions, it.value as T) }
 
-inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleCommand() = select<T>().single()
+inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleCommand() = try {
+    select<T>().single()
+} catch (e: NoSuchElementException) {
+    // Better error message.
+    throw IllegalStateException("Required ${T::class.simpleName} command")
+}
 
 // endregion
 

@@ -105,7 +105,7 @@ object Cash : Contract {
             // see a signature from each of those keys. The actual signatures have been verified against the transaction
             // data by the platform before execution.
             val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-            val keysThatSigned = args.select<Commands.Move>().map { it.signer }.toSortedSet()
+            val keysThatSigned = args.requireSingleCommand<Commands.Move>().signers.toSortedSet()
             requireThat {
                 "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
             }
@@ -177,7 +177,7 @@ object Cash : Contract {
         } else states
 
         // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { VerifiedSigned(it, null, Commands.Move()) }
+        val commands = keysUsed.map { VerifiedSigned(listOf(it), emptyList(), Commands.Move()) }
 
         return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }

@@ -7,13 +7,17 @@ import java.time.Instant
 // WireTransaction -> LedgerTransaction -> TransactionForVerification
 //                                         TransactionForTest
 
-class WireTransaction {
-    // TODO: This is supposed to be a protocol buffer, FIX SPE message, etc. For prototype it can just be Kryo serialised
-}
+class WireTransaction(
+    // TODO: This is supposed to be a protocol buffer, FIX SPE message, etc. For prototype it can just be Kryo serialised.
+    val tx: ByteArray,
+
+    // We assume Ed25519 signatures for all. Num signatures == array.length / 64 (each sig is 64 bytes in size)
+    val signatures: ByteArray
+)
 
 /**
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
- * It is the first step after extraction
+ * It is the first step after extraction from a WireTransaction. The signature part is tricky.
  */
 class LedgerTransaction(
     /** The input states which will be consumed/invalidated by the execution of this transaction. */

@@ -67,7 +67,7 @@ data class TransactionForTest(
 ) {
     fun input(s: () -> ContractState) = inStates.add(s())
     fun output(s: () -> ContractState) = outStates.add(s())
-    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSigned(key, TEST_KEYS_TO_CORP_MAP[key], c()))
+    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSigned(listOf(key), TEST_KEYS_TO_CORP_MAP[key].let { if (it != null) listOf(it) else emptyList() }, c()))
 
     private fun run() = TransactionForVerification(inStates, outStates, args, TEST_TX_TIME).verify(TEST_PROGRAM_MAP)
 
@@ -79,7 +79,7 @@ data class TransactionForTest(
             if (m == null)
                 fail("Threw exception without a message")
             else
-                if (!m.contains(msg)) throw AssertionError("Error was actually: $m", e)
+                if (!m.toLowerCase().contains(msg.toLowerCase())) throw AssertionError("Error was actually: $m", e)
         }
     }
 

@@ -49,22 +49,20 @@ interface Command
 
 /** Provided as an input to a contract; converted to a [VerifiedSignedCommand] by the platform before execution. */
 data class SignedCommand(
-    /** Signature over this object to prove who it came from */
-    val commandDataSignature: DigitalSignature.WithKey,
+    /** Signatures over this object to prove who it came from: this is fetched off the end of the transaction wire format. */
+    val commandDataSignatures: List<DigitalSignature.WithKey>,
 
     /** Command data, deserialized to an implementation of [Command] */
     val serialized: OpaqueBytes,
-    /** Identifies what command the serialized data contains (should maybe be a hash too) */
-    val classID: String,
-    /** Hash of a derivative of the transaction data, so this command can only ever apply to one transaction */
-    val txBindingHash: SecureHash.SHA256
+    /** Identifies what command the serialized data contains (hash of bytecode?) */
+    val classID: SecureHash
 )
 
 /** Obtained from a [SignedCommand], deserialised and signature checked */
 data class VerifiedSigned<out T : Command>(
-    val signer: PublicKey,
+    val signers: List<PublicKey>,
     /** If the public key was recognised, the looked up institution is available here, otherwise it's null */
-    val signingInstitution: Institution?,
+    val signingInstitutions: List<Institution>,
     val value: T
 )
 
