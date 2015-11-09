@@ -45,7 +45,7 @@ Introduction
 Avian is a lightweight virtual machine and class library designed to
 provide a useful subset of Java's features, suitable for building
 self-contained applications.  More information is available at the
-project [web site](http://oss.readytalk.com/avian).
+project [web site](http://readytalk.github.io/avian).
 
 If you have any trouble building, running, or embedding Avian, please
 post a message to our [discussion group](http://groups.google.com/group/avian).
@@ -293,9 +293,10 @@ You can reduce the size futher for embedded builds by using ProGuard
 and the supplied openjdk.pro configuration file (see "Embedding with
 ProGuard and a Boot Image" below).  Note that you'll still need to use
 vm.pro in that case -- openjdk.pro just adds additional constraints
-specific to the OpenJDK port.  Also see app.mk in
-_git://oss.readytalk.com/avian-swt-examples.git_ for an example of using
-Avian, OpenJDK, ProGuard, and UPX in concert.
+specific to the OpenJDK port.  Also see
+[app.mk](https://github.com/ReadyTalk/avian-swt-examples/blob/master/app.mk)
+in the _avian-swt-examples_ project for an example of using Avian,
+OpenJDK, ProGuard, and UPX in concert.
 
 Here are some examples of how to install OpenJDK and build Avian with
 it on various OSes:
