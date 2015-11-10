@@ -12,6 +12,8 @@ class WireTransaction(
     val tx: ByteArray,
 
     // We assume Ed25519 signatures for all. Num signatures == array.length / 64 (each sig is 64 bytes in size)
+    // This array is in the same order as the public keys in the commands array, so signatures can be matched to
+    // public keys in that manner.
     val signatures: ByteArray
 )
 
@@ -41,14 +43,10 @@ class TransactionForVerification(
     fun verify(programMap: Map<SecureHash, Contract>) {
         // For each input and output state, locate the program to run. Then execute the verification function. If any
         // throws an exception, the entire transaction is invalid.
-        fun runContracts(desc: String, l: List<ContractState>) {
-            for ((index, state) in l.withIndex()) {
-                val contract = programMap[state.programRef] ?: throw IllegalStateException("$desc state $index refers to unknown contract ${state.programRef}")
-                contract.verify(this)
-            }
+        val programHashes = (inStates.map { it.programRef } + outStates.map { it.programRef }).toSet()
+        for (hash in programHashes) {
+            val program = programMap[hash] ?: throw IllegalStateException("Unknown program hash $hash")
+            program.verify(this)
         }
-
-        runContracts("input", inStates)
-        runContracts("output", outStates)
     }
 }
