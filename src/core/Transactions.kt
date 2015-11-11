@@ -30,6 +30,8 @@ class LedgerTransaction(
     val args: List<SignedCommand>,
     /** The moment the transaction was timestamped for */
     val time: Instant
+
+    // TODO: nLockTime equivalent?
 )
 
 /** A transaction in fully resolved form, ready for passing as input to a verification function */

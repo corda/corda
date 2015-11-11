@@ -61,7 +61,7 @@ data class SignedCommand(
 /** Obtained from a [SignedCommand], deserialised and signature checked */
 data class VerifiedSigned<out T : Command>(
     val signers: List<PublicKey>,
-    /** If the public key was recognised, the looked up institution is available here, otherwise it's null */
+    /** If any public keys were recognised, the looked up institutions are available here */
     val signingInstitutions: List<Institution>,
     val value: T
 )

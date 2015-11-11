@@ -55,7 +55,10 @@ object Cash : Contract {
             override fun hashCode() = 0
         }
 
-        /** A command stating that money has been withdrawn from the shared ledger and is now accounted for in some other way */
+        /**
+         * A command stating that money has been withdrawn from the shared ledger and is now accounted for
+         * in some other way.
+         */
         class Exit(val amount: Amount) : Command {
             override fun equals(other: Any?) = other is Exit && other.amount == amount
             override fun hashCode() = amount.hashCode()
