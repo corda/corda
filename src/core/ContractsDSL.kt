@@ -110,8 +110,9 @@ data class Amount(val pennies: Int, val currency: Currency) : Comparable<Amount>
 }
 
 // Note: this will throw an exception if the iterable is empty.
-fun Iterable<Amount>.sum() = reduce { left, right -> left + right }
-fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sum() else Amount(0, currency)
+fun Iterable<Amount>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
+fun Iterable<Amount>.sumOrThrow() = reduce { left, right -> left + right }
+fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
 
 // TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
 // endregion

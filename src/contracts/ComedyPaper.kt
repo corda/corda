@@ -61,11 +61,7 @@ object ComedyPaper : Contract {
                 }
 
                 is Commands.Redeem -> requireThat {
-                    val received = try {
-                        outStates.sumCash()
-                    } catch (e: UnsupportedOperationException) {
-                        throw IllegalStateException("invalid cash outputs")
-                    }
+                    val received = outStates.sumCashOrNull() ?: throw IllegalStateException("no cash being redeemed")
                     // Do we need to check the signature of the issuer here too?
                     "the paper must have matured" by (input.maturityDate < time)
                     "the received amount equals the face value" by (received == input.faceValue)

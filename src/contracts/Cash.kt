@@ -2,6 +2,7 @@ package contracts
 
 import core.*
 import java.security.PublicKey
+import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -91,7 +92,7 @@ object Cash : Contract {
                 val outputs = cashOutputs.filter { it.deposit == deposit }
                 outputsLeft -= outputs.size
 
-                val inputAmount = inputs.map { it.amount }.sum()
+                val inputAmount = inputs.map { it.amount }.sumOrThrow()
                 val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
                 val issuerCommand = args.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
@@ -164,7 +165,7 @@ object Cash : Contract {
 
         val states = gathered.groupBy { it.deposit }.map {
             val (deposit, coins) = it
-            val totalAmount = coins.map { it.amount }.sum()
+            val totalAmount = coins.map { it.amount }.sumOrThrow()
             State(deposit, totalAmount, to)
         }
 
@@ -187,5 +188,7 @@ object Cash : Contract {
 }
 
 // Small DSL extension.
-fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sum()
-fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sum()
+fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
+fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
+fun Iterable<ContractState>.sumCashOrZero(currency: Currency) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)

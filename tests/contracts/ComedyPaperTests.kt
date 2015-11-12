@@ -41,7 +41,7 @@ class ComedyPaperTests {
             arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { ComedyPaper.Commands.Redeem() }
 
             // No cash output, can't redeem like that!
-            this.rejects("invalid cash outputs")
+            this.rejects("no cash being redeemed")
 
             input { CASH_3 }
             output { CASH_2 }
