@@ -60,43 +60,48 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 // Corresponds to the args to Contract.verify
-data class TransactionForTest(
-    private val inStates: MutableList<ContractState> = arrayListOf(),
-    private val outStates: MutableList<ContractState> = arrayListOf(),
+class TransactionForTest() {
+    private val inStates = arrayListOf<ContractState>()
+
+    class LabeledOutput(val label: String?, val state: ContractState) {
+        override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
+        override fun equals(other: Any?) = other is LabeledOutput && state.equals(other.state)
+        override fun hashCode(): Int = state.hashCode()
+    }
+    private val outStates = arrayListOf<LabeledOutput>()
     private val args: MutableList<VerifiedSigned<Command>> = arrayListOf()
-) {
-    fun input(s: () -> ContractState) = inStates.add(s())
-    fun output(s: () -> ContractState) = outStates.add(s())
-    fun arg(key: PublicKey, c: () -> Command) = args.add(VerifiedSigned(listOf(key), TEST_KEYS_TO_CORP_MAP[key].let { if (it != null) listOf(it) else emptyList() }, c()))
 
-    private fun run() = TransactionForVerification(inStates, outStates, args, TEST_TX_TIME).verify(TEST_PROGRAM_MAP)
-
-    infix fun `fails requirement`(msg: String) {
-        try {
-            run()
-        } catch(e: Exception) {
-            val m = e.message
-            if (m == null)
-                fail("Threw exception without a message")
-            else
-                if (!m.toLowerCase().contains(msg.toLowerCase())) throw AssertionError("Error was actually: $m", e)
-        }
+    constructor(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>) : this() {
+        this.inStates.addAll(inStates)
+        this.outStates.addAll(outStates.map { LabeledOutput(null, it) })
+        this.args.addAll(args)
     }
 
+    fun input(s: () -> ContractState) = inStates.add(s())
+    fun output(label: String? = null, s: () -> ContractState) = outStates.add(LabeledOutput(label, s()))
+    fun arg(vararg key: PublicKey, c: () -> Command) {
+        val keys = listOf(*key)
+        // TODO: replace map->filterNotNull once upgraded to next Kotlin
+        args.add(VerifiedSigned(keys, keys.map { TEST_KEYS_TO_CORP_MAP[it] }.filterNotNull(), c()))
+    }
+
+    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, args, time).verify(TEST_PROGRAM_MAP)
+
+    infix fun `fails requirement`(msg: String) = rejects(msg)
     // which is uglier?? :)
     fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
-    fun accepts() = run()
-    fun rejects(withMessage: String? = null) {
+    fun accepts(time: Instant = TEST_TX_TIME) = run(time)
+    fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME) {
         val r = try {
-            run()
+            run(time)
             false
         } catch (e: Exception) {
             val m = e.message
             if (m == null)
                 fail("Threw exception without a message")
             else
-                if (withMessage != null && !m.contains(withMessage)) throw AssertionError("Error was actually: $m", e)
+                if (withMessage != null && !m.toLowerCase().contains(withMessage.toLowerCase())) throw AssertionError("Error was actually: $m", e)
             true
         }
         if (!r) throw AssertionError("Expected exception but didn't get one")
@@ -112,12 +117,36 @@ data class TransactionForTest(
         return tx
     }
 
+    // Use this to create transactions where the output of this transaction is automatically used as an input of
+    // the next.
+    fun chain(vararg outputLabels: String, body: TransactionForTest.() -> Unit) {
+        val states = outStates.filter {
+            val l = it.label
+            if (l != null)
+                outputLabels.contains(l)
+            else
+                false
+        }.map { it.state }    // TODO: replace with mapNotNull after next Kotlin upgrade
+        val tx = TransactionForTest()
+        tx.inStates.addAll(states)
+        tx.body()
+    }
+
     override fun toString(): String {
         return """transaction {
             inputs:   $inStates
             outputs:  $outStates
             args:     $args
         }"""
+    }
+
+    override fun equals(other: Any?) = this === other || (other is TransactionForTest && inStates == other.inStates && outStates == other.outStates && args == other.args)
+
+    override fun hashCode(): Int {
+        var result = inStates.hashCode()
+        result += 31 * result + outStates.hashCode()
+        result += 31 * result + args.hashCode()
+        return result
     }
 }
 

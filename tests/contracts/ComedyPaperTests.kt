@@ -14,12 +14,18 @@ class ComedyPaperTests {
     )
     val PAPER_2 = PAPER_1.copy(owner = DUMMY_PUBKEY_2)
 
+    val CASH_1 = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1)), 1000.DOLLARS, DUMMY_PUBKEY_1)
+    val CASH_2 = CASH_1.copy(owner = DUMMY_PUBKEY_2)
+    val CASH_3 = CASH_1.copy(owner = DUMMY_PUBKEY_1)
+
     @Test
     fun move() {
-        // One entity sells the paper to another (e.g. the issuer sells it to a first time buyer)
         transaction {
+            // One entity sells the paper to another (e.g. the issuer sells it to a first time buyer)
             input { PAPER_1 }
-            output { PAPER_2 }
+            input { CASH_1 }
+            output("a") { PAPER_2 }
+            output { CASH_2 }
 
             this.rejects()
 
@@ -28,10 +34,25 @@ class ComedyPaperTests {
                 this `fails requirement` "is signed by the owner"
             }
 
-            transaction {
-                arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move() }
-                this.accepts()
-            }
+            arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            this.accepts()
+        }.chain("a") {
+            arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { ComedyPaper.Commands.Redeem() }
+
+            // No cash output, can't redeem like that!
+            this.rejects("invalid cash outputs")
+
+            input { CASH_3 }
+            output { CASH_2 }
+
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+
+            // Time passes, but not enough. An attempt to redeem is made.
+            this.rejects("must have matured")
+
+            // Try again at the right time.
+            this.accepts(TEST_TX_TIME + 10.days)
         }
     }
 }

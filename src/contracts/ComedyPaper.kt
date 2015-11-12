@@ -50,17 +50,23 @@ object ComedyPaper : Contract {
             // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
             val input = inStates.filterIsInstance<ComedyPaper.State>().single()
 
+            requireThat {
+                "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+            }
+
             when (command.value) {
                 is Commands.Move -> requireThat {
                     val output = outStates.filterIsInstance<ComedyPaper.State>().single()
-                    "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
                     "the output state is the same as the input state except for owner" by (input.withoutOwner() == output.withoutOwner())
                 }
 
                 is Commands.Redeem -> requireThat {
-                    val received = outStates.sumCash()
+                    val received = try {
+                        outStates.sumCash()
+                    } catch (e: UnsupportedOperationException) {
+                        throw IllegalStateException("invalid cash outputs")
+                    }
                     // Do we need to check the signature of the issuer here too?
-                    "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
                     "the paper must have matured" by (input.maturityDate < time)
                     "the received amount equals the face value" by (received == input.faceValue)
                     "the paper must be destroyed" by outStates.filterIsInstance<ComedyPaper.State>().none()

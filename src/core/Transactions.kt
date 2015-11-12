@@ -41,7 +41,6 @@ class TransactionForVerification(
     val args: List<VerifiedSigned<Command>>,
     val time: Instant
 ) {
-
     fun verify(programMap: Map<SecureHash, Contract>) {
         // For each input and output state, locate the program to run. Then execute the verification function. If any
         // throws an exception, the entire transaction is invalid.

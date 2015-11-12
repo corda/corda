@@ -26,7 +26,7 @@ inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleComm
     select<T>().single()
 } catch (e: NoSuchElementException) {
     // Better error message.
-    throw IllegalStateException("Required ${T::class.simpleName} command")
+    throw IllegalStateException("Required ${T::class.qualifiedName} command")
 }
 
 // endregion
@@ -51,13 +51,14 @@ val Double.SWISS_FRANCS: Amount get() = Amount((this * 100).toInt(), USD)
 // region Requirements
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-object Requirements {
+class Requirements {
     infix fun String.by(expr: Boolean) {
         if (!expr) throw IllegalArgumentException("Failed requirement: $this")
     }
 }
+val R = Requirements()
 inline fun requireThat(body: Requirements.() -> Unit) {
-    Requirements.body()
+    R.body()
 }
 
 // endregion
