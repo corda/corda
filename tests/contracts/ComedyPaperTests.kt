@@ -45,7 +45,6 @@ class ComedyPaperTests {
 
             input { CASH_3 }
             output { CASH_2 }
-
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
 
             // Time passes, but not enough. An attempt to redeem is made.

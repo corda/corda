@@ -1,7 +1,6 @@
 package core
 
 import java.security.PublicKey
-import java.security.Timestamp
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
@@ -18,25 +17,9 @@ interface ContractState {
 }
 
 /**
- * A stateref is a pointer to a state, normally a hash but this version is opaque.
+ * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin.
  */
-class ContractStateRef(private val hash: SecureHash.SHA256)
-
-/**
- * A transition groups one or more transactions together, and combines them with a signed timestamp. A transaction
- * may not stand independent of a transition and all transactions are applied or reverted together as a unit.
- *
- * Consider the following attack: a malicious actor extracts a single transaction like "pay $X to me" from a transition
- * and then broadcasts it with a fresh timestamp. This cannot work because the original transition will always take
- * priority over the later attempt as it has an earlier timestamp. As long as both are visible, the first transition
- * will always win.
- */
-data class Transition(
-    val tx: LedgerTransaction,
-
-    /** Timestamp of the serialised transaction as fetched from a timestamping authority (RFC 3161) */
-    val signedTimestamp: Timestamp
-)
+class ContractStateRef(private val txhash: SecureHash.SHA256, private val index: Int)
 
 class Institution(
     val name: String,
@@ -47,7 +30,7 @@ class Institution(
 
 interface Command
 
-/** Provided as an input to a contract; converted to a [VerifiedSignedCommand] by the platform before execution. */
+/** Provided as an input to a contract; converted to a [VerifiedSigned] by the platform before execution. */
 data class SignedCommand(
     /** Signatures over this object to prove who it came from: this is fetched off the end of the transaction wire format. */
     val commandDataSignatures: List<DigitalSignature.WithKey>,

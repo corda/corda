@@ -4,8 +4,8 @@ import java.time.Instant
 
 // Various views of transactions as they progress through the pipeline:
 //
-// WireTransaction -> LedgerTransaction -> TransactionForVerification
-//                                         TransactionForTest
+// TimestampedWireTransaction(WireTransaction) -> LedgerTransaction -> TransactionForVerification
+//                                                                     TransactionForTest
 
 class WireTransaction(
     // TODO: This is supposed to be a protocol buffer, FIX SPE message, etc. For prototype it can just be Kryo serialised.
@@ -15,6 +15,14 @@ class WireTransaction(
     // This array is in the same order as the public keys in the commands array, so signatures can be matched to
     // public keys in that manner.
     val signatures: ByteArray
+)
+
+class TimestampedWireTransaction(
+    // A serialised WireTransaction
+    val wireTX: ByteArray,
+
+    // This is, for example, an RFC 3161 serialised structure (but we probably want something more compact).
+    val timestamp: ByteArray
 )
 
 /**

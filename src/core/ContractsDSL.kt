@@ -25,8 +25,7 @@ inline fun <reified T : Command> List<VerifiedSigned<Command>>.select(signer: Pu
 inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
-    // Better error message.
-    throw IllegalStateException("Required ${T::class.qualifiedName} command")
+    throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
 
 // endregion
