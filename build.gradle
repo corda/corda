@@ -25,6 +25,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "com.google.guava:guava:18.0"
     compile "org.funktionale:funktionale:0.6_1.0.0-beta"
+    compile "com.esotericsoftware:kryo:3.0.3"
 }
 
 sourceSets {
