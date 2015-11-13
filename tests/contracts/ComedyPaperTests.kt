@@ -30,22 +30,22 @@ class ComedyPaperTests {
             this.rejects()
 
             transaction {
-                arg(DUMMY_PUBKEY_2) { ComedyPaper.Commands.Move() }
+                arg(DUMMY_PUBKEY_2) { ComedyPaper.Commands.Move }
                 this `fails requirement` "is signed by the owner"
             }
 
-            arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move() }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
             this.accepts()
         }.chain("a") {
-            arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { ComedyPaper.Commands.Redeem() }
+            arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { ComedyPaper.Commands.Redeem }
 
             // No cash output, can't redeem like that!
             this.rejects("no cash being redeemed")
 
             input { CASH_3 }
             output { CASH_2 }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
 
             // Time passes, but not enough. An attempt to redeem is made.
             this.rejects("must have matured")

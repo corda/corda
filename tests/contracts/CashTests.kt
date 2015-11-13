@@ -38,7 +38,7 @@ class CashTests {
             }
             transaction {
                 output { outState }
-                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
+                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move }
                 this `fails requirement` "the owning keys are the same as the signing keys"
             }
             transaction {
@@ -49,7 +49,7 @@ class CashTests {
             // Simple reallocation works.
             transaction {
                 output { outState }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                 this.accepts()
             }
         }
@@ -70,7 +70,7 @@ class CashTests {
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
             transaction {
                 input { inState }
                 for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
@@ -161,7 +161,7 @@ class CashTests {
 
             transaction {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(100.DOLLARS) }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                 this `fails requirement` "the amounts balance"
             }
 
@@ -170,7 +170,7 @@ class CashTests {
                 this `fails requirement` "required move command"
 
                 transaction {
-                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                     this.accepts()
                 }
             }
@@ -183,7 +183,7 @@ class CashTests {
             output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
 
             this `fails requirement` "at issuer MegaCorp the amounts balance"
 
@@ -217,7 +217,7 @@ class CashTests {
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
             output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
             this.accepts()
         }
 
@@ -246,7 +246,7 @@ class CashTests {
                 transaction {
                     input { WALLET[0] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
                 },
                 Cash.craftSpend(100.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -259,7 +259,7 @@ class CashTests {
                     input { WALLET[0] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS) }
                     output { WALLET[0].copy(owner = OUR_PUBKEY_1, amount = 90.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
                 },
                 Cash.craftSpend(10.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -272,7 +272,7 @@ class CashTests {
                     input { WALLET[0] }
                     input { WALLET[1] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
                 },
                 Cash.craftSpend(500.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )
@@ -287,7 +287,7 @@ class CashTests {
                     input { WALLET[2] }
                     output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
                     output { WALLET[2].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move() }
+                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
                 },
                 Cash.craftSpend(580.DOLLARS, THEIR_PUBKEY_1, WALLET)
         )

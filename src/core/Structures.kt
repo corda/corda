@@ -28,6 +28,7 @@ class Institution(
     override fun toString() = name
 }
 
+/** Marker interface for objects that represent commands */
 interface Command
 
 /** Provided as an input to a contract; converted to a [VerifiedSigned] by the platform before execution. */

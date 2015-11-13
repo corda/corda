@@ -37,8 +37,8 @@ object ComedyPaper : Contract {
     }
 
     sealed class Commands : Command {
-        class Move : Commands()
-        class Redeem : Commands()
+        object Move : Commands()
+        object Redeem : Commands()
     }
 
     override fun verify(tx: TransactionForVerification) {

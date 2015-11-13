@@ -51,10 +51,7 @@ object Cash : Contract {
 
     sealed class Commands {
         /** A command proving ownership of some input states, the signature covers the output states. */
-        class Move : Command {
-            override fun equals(other: Any?) = other is Move
-            override fun hashCode() = 0
-        }
+        object Move : Command
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
@@ -181,7 +178,7 @@ object Cash : Contract {
         } else states
 
         // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { VerifiedSigned(listOf(it), emptyList(), Commands.Move()) }
+        val commands = keysUsed.map { VerifiedSigned(listOf(it), emptyList(), Commands.Move) }
 
         return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }

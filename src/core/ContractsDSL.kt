@@ -27,7 +27,6 @@ inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleComm
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
-
 // endregion
 
 // region Currencies
