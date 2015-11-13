@@ -1,12 +1,13 @@
 package core
 
 import contracts.*
+import core.serialization.SerializeableWithKryo
 import java.math.BigInteger
 import java.security.PublicKey
 import java.time.Instant
 import kotlin.test.fail
 
-class DummyPublicKey(private val s: String) : PublicKey, Comparable<PublicKey> {
+class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey>, SerializeableWithKryo {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()
     override fun getFormat() = "ASN.1"
@@ -69,9 +70,9 @@ class TransactionForTest() {
         override fun hashCode(): Int = state.hashCode()
     }
     private val outStates = arrayListOf<LabeledOutput>()
-    private val args: MutableList<VerifiedSigned<Command>> = arrayListOf()
+    private val args: MutableList<AuthenticatedObject<Command>> = arrayListOf()
 
-    constructor(inStates: List<ContractState>, outStates: List<ContractState>, args: List<VerifiedSigned<Command>>) : this() {
+    constructor(inStates: List<ContractState>, outStates: List<ContractState>, args: List<AuthenticatedObject<Command>>) : this() {
         this.inStates.addAll(inStates)
         this.outStates.addAll(outStates.map { LabeledOutput(null, it) })
         this.args.addAll(args)
@@ -82,7 +83,7 @@ class TransactionForTest() {
     fun arg(vararg key: PublicKey, c: () -> Command) {
         val keys = listOf(*key)
         // TODO: replace map->filterNotNull once upgraded to next Kotlin
-        args.add(VerifiedSigned(keys, keys.map { TEST_KEYS_TO_CORP_MAP[it] }.filterNotNull(), c()))
+        args.add(AuthenticatedObject(keys, keys.map { TEST_KEYS_TO_CORP_MAP[it] }.filterNotNull(), c()))
     }
 
     private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, args, time).verify(TEST_PROGRAM_MAP)

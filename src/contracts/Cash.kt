@@ -57,10 +57,7 @@ object Cash : Contract {
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        class Exit(val amount: Amount) : Command {
-            override fun equals(other: Any?) = other is Exit && other.amount == amount
-            override fun hashCode() = amount.hashCode()
-        }
+        data class Exit(val amount: Amount) : Command
     }
 
     /** This is the function EVERYONE runs */
@@ -178,7 +175,7 @@ object Cash : Contract {
         } else states
 
         // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { VerifiedSigned(listOf(it), emptyList(), Commands.Move) }
+        val commands = keysUsed.map { AuthenticatedObject(listOf(it), emptyList(), Commands.Move) }
 
         return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
     }

@@ -1,11 +1,12 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import core.serialization.SerializeableWithKryo
 import java.time.Duration
 import java.util.*
 
 /** A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect */
-open class OpaqueBytes(val bits: ByteArray) {
+open class OpaqueBytes(val bits: ByteArray) : SerializeableWithKryo {
     companion object {
         fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
     }
@@ -17,7 +18,6 @@ open class OpaqueBytes(val bits: ByteArray) {
     }
 
     override fun hashCode() = Arrays.hashCode(bits)
-
     override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
 }
 

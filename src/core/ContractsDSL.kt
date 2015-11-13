@@ -1,5 +1,6 @@
 package core
 
+import core.serialization.SerializeableWithKryo
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -8,29 +9,16 @@ import kotlin.math.div
 /**
  * Defines a simple domain specific language for the specificiation of financial contracts. Currently covers:
  *
+ *  - Some utilities for working with commands.
  *  - Code for working with currencies.
  *  - An Amount type that represents a positive quantity of a specific currency.
  *  - A simple language extension for specifying requirements in English, along with logic to enforce them.
+ *
+ *  TODO: Look into replacing Currency and Amount with CurrencyUnit and MonetaryAmount from the javax.money API (JSR 354)
  */
 
-// TODO: Look into replacing Currency and Amount with CurrencyUnit and MonetaryAmount from the javax.money API (JSR 354)
+//// Currencies ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// region Misc
-inline fun <reified T : Command> List<VerifiedSigned<Command>>.select(signer: PublicKey? = null, institution: Institution? = null) =
-        filter { it.value is T }.
-        filter { if (signer == null) true else it.signers.contains(signer) }.
-        filter { if (institution == null) true else it.signingInstitutions.contains(institution) }.
-        map { VerifiedSigned<T>(it.signers, it.signingInstitutions, it.value as T) }
-
-inline fun <reified T : Command> List<VerifiedSigned<Command>>.requireSingleCommand() = try {
-    select<T>().single()
-} catch (e: NoSuchElementException) {
-    throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
-}
-// endregion
-
-// region Currencies
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 fun currency(code: String) = Currency.getInstance(code)
 
 val USD = currency("USD")
@@ -40,14 +28,8 @@ val CHF = currency("CHF")
 val Int.DOLLARS: Amount get() = Amount(this * 100, USD)
 val Int.POUNDS: Amount get() = Amount(this * 100, GBP)
 val Int.SWISS_FRANCS: Amount get() = Amount(this * 100, CHF)
-val Double.DOLLARS: Amount get() = Amount((this * 100).toInt(), USD)
-val Double.POUNDS: Amount get() = Amount((this * 100).toInt(), USD)
-val Double.SWISS_FRANCS: Amount get() = Amount((this * 100).toInt(), USD)
-// endregion
 
-
-// region Requirements
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class Requirements {
     infix fun String.by(expr: Boolean) {
@@ -59,11 +41,7 @@ inline fun requireThat(body: Requirements.() -> Unit) {
     R.body()
 }
 
-// endregion
-
-
-// region Amounts
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// Amounts //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Amount represents a positive quantity of currency, measured in pennies, which are the smallest representable units.
@@ -75,8 +53,10 @@ inline fun requireThat(body: Requirements.() -> Unit) {
  *
  * It probably makes sense to replace this with convenience extensions over the JSR 354 MonetaryAmount interface, if
  * that spec doesn't turn out to be too heavy (it looks fairly complicated).
+ *
+ * TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
  */
-data class Amount(val pennies: Int, val currency: Currency) : Comparable<Amount> {
+data class Amount(val pennies: Int, val currency: Currency) : Comparable<Amount>, SerializeableWithKryo {
     init {
         // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
         // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.
@@ -113,5 +93,15 @@ fun Iterable<Amount>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThr
 fun Iterable<Amount>.sumOrThrow() = reduce { left, right -> left + right }
 fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
 
-// TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
-// endregion
+//// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
+inline fun <reified T : Command> List<AuthenticatedObject<Command>>.select(signer: PublicKey? = null, institution: Institution? = null) =
+        filter { it.value is T }.
+                filter { if (signer == null) true else it.signers.contains(signer) }.
+                filter { if (institution == null) true else it.signingInstitutions.contains(institution) }.
+                map { AuthenticatedObject<T>(it.signers, it.signingInstitutions, it.value as T) }
+
+inline fun <reified T : Command> List<AuthenticatedObject<Command>>.requireSingleCommand() = try {
+    select<T>().single()
+} catch (e: NoSuchElementException) {
+    throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
+}

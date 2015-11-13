@@ -8,16 +8,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
-data class Person(val name: String, val birthday: Instant?) : SerializeableWithKryo
-
-data class MustBeWhizzy(val s: String) : SerializeableWithKryo {
-    init {
-        assert(s.startsWith("whiz")) { "must be whizzy" }
-    }
-}
-
 class KryoTests {
-    private val kryo: Kryo = kryo().apply {
+    data class Person(val name: String, val birthday: Instant?) : SerializeableWithKryo
+    data class MustBeWhizzy(val s: String) : SerializeableWithKryo {
+        init {
+            assert(s.startsWith("whiz")) { "must be whizzy" }
+        }
+    }
+
+    private val kryo: Kryo = createKryo().apply {
         registerDataClass<Person>()
         registerDataClass<MustBeWhizzy>()
     }

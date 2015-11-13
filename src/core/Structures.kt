@@ -1,5 +1,7 @@
 package core
 
+import core.serialization.SerializeableWithKryo
+import core.serialization.serialize
 import java.security.PublicKey
 
 /**
@@ -7,7 +9,7 @@ import java.security.PublicKey
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
  * updated, instead, any changes must generate a new successor state.
  */
-interface ContractState {
+interface ContractState : SerializeableWithKryo {
     /**
      * Refers to a bytecode program that has previously been published to the network. This contract program
      * will be executed any time this state is used in an input. It must accept in order for the
@@ -16,34 +18,30 @@ interface ContractState {
     val programRef: SecureHash
 }
 
-/**
- * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin.
- */
-class ContractStateRef(private val txhash: SecureHash.SHA256, private val index: Int)
+/** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
+fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
 
-class Institution(
-    val name: String,
-    val owningKey: PublicKey
-) {
+/** A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. */
+data class ContractStateRef(val txhash: SecureHash.SHA256, val index: Int) : SerializeableWithKryo
+
+/** An Institution is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
+data class Institution(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
     override fun toString() = name
 }
 
-/** Marker interface for objects that represent commands */
-interface Command
+/**
+ * Reference to something being stored or issued by an institution e.g. in a vault or (more likely) on their normal
+ * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the institution.
+ */
+data class InstitutionReference(val institution: Institution, val reference: OpaqueBytes) : SerializeableWithKryo {
+    override fun toString() = "${institution.name}$reference"
+}
 
-/** Provided as an input to a contract; converted to a [VerifiedSigned] by the platform before execution. */
-data class SignedCommand(
-    /** Signatures over this object to prove who it came from: this is fetched off the end of the transaction wire format. */
-    val commandDataSignatures: List<DigitalSignature.WithKey>,
+/** Marker interface for classes that represent commands */
+interface Command : SerializeableWithKryo
 
-    /** Command data, deserialized to an implementation of [Command] */
-    val serialized: OpaqueBytes,
-    /** Identifies what command the serialized data contains (hash of bytecode?) */
-    val classID: SecureHash
-)
-
-/** Obtained from a [SignedCommand], deserialised and signature checked */
-data class VerifiedSigned<out T : Command>(
+/** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
+data class AuthenticatedObject<out T : Any>(
     val signers: List<PublicKey>,
     /** If any public keys were recognised, the looked up institutions are available here */
     val signingInstitutions: List<Institution>,
@@ -68,12 +66,4 @@ interface Contract {
     // TODO: This should probably be a hash of a document, rather than a URL to it.
     /** Unparsed reference to the natural language contract that this code is supposed to express (usually a URL). */
     val legalContractReference: String
-}
-
-/**
- * Reference to something being stored or issued by an institution e.g. in a vault or (more likely) on their normal
- * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the institution.
- */
-data class InstitutionReference(val institution: Institution, val reference: OpaqueBytes) {
-    override fun toString() = "${institution.name}$reference"
 }

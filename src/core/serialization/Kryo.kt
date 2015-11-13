@@ -6,13 +6,14 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import core.Amount
-import core.InstitutionReference
-import core.OpaqueBytes
+import contracts.Cash
+import contracts.ComedyPaper
+import core.*
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
-import java.security.PublicKey
+import java.security.KeyPairGenerator
 import java.time.Instant
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.jvm.javaType
@@ -68,9 +69,10 @@ import kotlin.reflect.primaryConstructor
  *
  *   - Must be immutable: all properties are final. Note that Kotlin never generates bare public fields, but we should
  *     add some checks for this being done anyway for cases where a contract is defined using Java.
- *   - The only properties that exist must be arguments to the constructor. This will need to be relaxed to allow
- *     for pure-code (no backing state) getters, and to support constant fields like legalContractRef.
  *   - Requires that the data class be marked as intended for serialization using a marker interface.
+ *   - Properties that are not in the constructor are not serialised (but as they are final, they must be either
+ *     initialised to a constant or derived from the constructor arguments unless they are reading external state,
+ *     which is intended to be forbidden).
  *
  *
  * CONVENIENCE
@@ -96,6 +98,11 @@ import kotlin.reflect.primaryConstructor
  *
  */
 
+
+/**
+ * Marker interface for classes to use with [DataClassSerializer]. Note that only constructor defined properties will
+ * be serialised!
+ */
 interface SerializeableWithKryo
 
 class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Serializer<T>() {
@@ -104,12 +111,7 @@ class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Ser
     val constructor = klass.primaryConstructor!!
 
     init {
-        // Verify that this class is safe to serialise.
-        //
-        // 1) No properties that aren't in the constructor.
-        // 2) Objects are immutable (all properties are final)
-        assert(props.size == constructor.parameters.size)
-        assert(props.map { it.name }.toSortedSet() == constructor.parameters.map { it.name }.toSortedSet())
+        // Verify that this class is immutable (all properties are final)
         assert(props.none { it is KMutableProperty<*> })
     }
 
@@ -126,7 +128,11 @@ class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Ser
                 "byte" -> output.writeByte(kProperty.get(obj) as Byte)
                 "double" -> output.writeDouble(kProperty.get(obj) as Double)
                 "float" -> output.writeFloat(kProperty.get(obj) as Float)
-                else -> kryo.writeClassAndObject(output, kProperty.get(obj))
+                else -> try {
+                    kryo.writeClassAndObject(output, kProperty.get(obj))
+                } catch (e: Exception) {
+                    throw IllegalStateException("Failed to serialize ${param.name} in ${klass.qualifiedName}", e)
+                }
             }
         }
     }
@@ -163,10 +169,12 @@ class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Ser
     }
 }
 
-inline fun <reified T : SerializeableWithKryo> Kryo.registerDataClass() = register(T::class.java, DataClassSerializer(T::class))
-inline fun <reified T : SerializeableWithKryo> ByteArray.deserialize(kryo: Kryo): T = kryo.readObject(Input(this), T::class.java)
+val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
 
-fun SerializeableWithKryo.serialize(kryo: Kryo): ByteArray {
+inline fun <reified T : SerializeableWithKryo> Kryo.registerDataClass() = register(T::class.java, DataClassSerializer(T::class))
+inline fun <reified T : SerializeableWithKryo> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
+
+fun SerializeableWithKryo.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): ByteArray {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
         kryo.writeObject(it, this)
@@ -174,20 +182,52 @@ fun SerializeableWithKryo.serialize(kryo: Kryo): ByteArray {
     return stream.toByteArray()
 }
 
-fun kryo(): Kryo {
+private val UNUSED_EC_KEYPAIR = KeyPairGenerator.getInstance("EC").genKeyPair()
+
+fun createKryo(): Kryo {
     return Kryo().apply {
+        // Require explicit listing of all types that can be deserialised, to defend against classes that aren't
+        // designed for serialisation being unexpectedly instantiated.
         isRegistrationRequired = true
+
+        // Allow various array and list types. Sometimes when the type is private/internal we have to give an example
+        // instead and then get the class from that. These have built in Kryo serializers that are safe to use.
         register(ByteArray::class.java)
-        register(IntArray::class.java)
+        register(Collections.EMPTY_LIST.javaClass)
+        register(Collections.EMPTY_MAP.javaClass)
+        register(Collections.singletonList(null).javaClass)
+        register(Collections.singletonMap(1, 2).javaClass)
+        register(ArrayList::class.java)
 
         // These JDK classes use a very minimal custom serialization format and are written to defend against malicious
-        // streams, so we can just kick it over to java serialization.
+        // streams, so we can just kick it over to java serialization. We get ECPublicKeyImpl/ECPrivteKeyImpl via an
+        // example: it'd be faster to just import the sun.security.ec package directly, but that wouldn't play nice
+        // when Java 9 is released, as Project Jigsaw will make internal packages will become unavailable without hacks.
         register(Instant::class.java, JavaSerializer())
-        register(PublicKey::class.java, JavaSerializer())
+        register(Currency::class.java, JavaSerializer())   // Only serialises the currency code as a string.
+        register(UNUSED_EC_KEYPAIR.private.javaClass, JavaSerializer())
+        register(UNUSED_EC_KEYPAIR.public.javaClass, JavaSerializer())
 
         // Now register platform types.
+        registerDataClass<SecureHash.SHA256>()
         registerDataClass<Amount>()
         registerDataClass<InstitutionReference>()
+        registerDataClass<Institution>()
         registerDataClass<OpaqueBytes>()
+        registerDataClass<SignedWireTransaction>()
+        registerDataClass<ContractStateRef>()
+        registerDataClass<WireTransaction>()
+        registerDataClass<WireCommand>()
+
+        // TODO: This is obviously a short term hack: there needs to be a way to bundle up and register contracts.
+        registerDataClass<Cash.State>()
+        register(Cash.Commands.Move.javaClass)
+        registerDataClass<Cash.Commands.Exit>()
+        registerDataClass<ComedyPaper.State>()
+        register(ComedyPaper.Commands.Move.javaClass)
+        register(ComedyPaper.Commands.Redeem.javaClass)
+
+        // And for unit testing ...
+        registerDataClass<DummyPublicKey>()
     }
 }

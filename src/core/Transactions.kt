@@ -1,33 +1,124 @@
 package core
 
+import core.serialization.SerializeableWithKryo
+import core.serialization.deserialize
+import core.serialization.serialize
+import java.security.KeyPair
+import java.security.PublicKey
+import java.security.SignatureException
 import java.time.Instant
+import java.util.*
 
-// Various views of transactions as they progress through the pipeline:
-//
-// TimestampedWireTransaction(WireTransaction) -> LedgerTransaction -> TransactionForVerification
-//                                                                     TransactionForTest
+/**
+ * Views of a transaction as it progresses through the pipeline, from bytes loaded from disk/network to the object
+ * tree passed into a contract.
+ *
+ * TimestampedWireTransaction wraps a serialized SignedWireTransaction. The timestamp is a signature from a timestamping
+ * authority and is what gives the contract a sense of time. This isn't used yet.
+ *
+ * SignedWireTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
+ * a public key that is mentioned inside a transaction command.
+ *
+ * WireTransaction is a transaction in a form ready to be serialised/unserialised/hashed. This is the object from which
+ * a transaction ID (hash) is calculated. It contains no signatures and no timestamp. That means, sending a transaction
+ * to a timestamping authority does NOT change its hash (this may be an issue that leads to confusion and should be
+ * examined more closely).
+ *
+ * LedgerTransaction is derived from WireTransaction and TimestampedWireTransaction together. It is the result of
+ * doing some basic key lookups on WireCommand to see if any keys are from a recognised institution, thus converting
+ * the WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->institution
+ * map. In future it'd make more sense to use a certificate scheme and so that logic would get more complex.
+ *
+ * All the above refer to inputs using a (txhash, output index) pair.
+ *
+ * TransactionForVerification is the same as LedgerTransaction but with the input states looked up from a local
+ * database and replaced with the real objects. TFV is the form that is finally fed into the contracts.
+ */
 
-class WireTransaction(
-    // TODO: This is supposed to be a protocol buffer, FIX SPE message, etc. For prototype it can just be Kryo serialised.
-    val tx: ByteArray,
+/** Serialized command plus pubkey pair: the signature is stored at the end of the serialized bytes */
+data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) : SerializeableWithKryo
 
-    // We assume Ed25519 signatures for all. Num signatures == array.length / 64 (each sig is 64 bytes in size)
-    // This array is in the same order as the public keys in the commands array, so signatures can be matched to
-    // public keys in that manner.
-    val signatures: ByteArray
-)
+/** Transaction ready for serialisation, without any signatures attached. */
+data class WireTransaction(val inputStates: List<ContractStateRef>,
+                           val outputStates: List<ContractState>,
+                           val args: List<WireCommand>) : SerializeableWithKryo {
+    fun signWith(keys: List<KeyPair>): SignedWireTransaction {
+        val keyMap = keys.map { it.public to it.private }.toMap()
+        val bits = serialize()
+        val signWith = args.flatMap { it.pubkeys }.toSet()
+        if (keys.size != signWith.size)
+            throw IllegalArgumentException("Incorrect number of keys provided: ${keys.size} vs ${signWith.size}")
+        val sigs = ArrayList<DigitalSignature.WithKey>()
+        for (key in signWith) {
+            val priv = keyMap[key] ?: throw IllegalArgumentException("Command without private signing key found")
+            sigs.add(priv.signWithECDSA(bits, key) as DigitalSignature.WithKey)
+        }
+        return SignedWireTransaction(bits, sigs)
+    }
 
-class TimestampedWireTransaction(
-    // A serialised WireTransaction
+    val hash: SecureHash get() = SecureHash.sha256(serialize())
+
+    fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
+        val authenticatedArgs = args.map {
+            // TODO: Replace map/filterNotNull with mapNotNull on next Kotlin upgrade.
+            val institutions = it.pubkeys.map { pk -> institutionKeyMap[pk] }.filterNotNull()
+            AuthenticatedObject(it.pubkeys, institutions, it.command)
+        }
+        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp)
+    }
+}
+
+data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
+    init {
+        check(sigs.isNotEmpty())
+    }
+
+    /**
+     * Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
+     * to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
+     * checking a partially signed transaction being prepared by multiple co-operating parties.
+     *
+     * @throws SignatureException if the signature is invalid or does not match.
+     */
+    fun verifySignatures() {
+        for (sig in sigs)
+            sig.verifyWithECDSA(txBits)
+    }
+
+    /**
+     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
+     * the set of pubkeys in the commands.
+     *
+     * @throws SignatureException if the signature is invalid or does not match.
+     */
+    fun verify(): WireTransaction {
+        verifySignatures()
+        val wtx = txBits.deserialize<WireTransaction>()
+        // Verify that every command key was in the set that we just verified: there should be no commands that were
+        // unverified.
+        val cmdKeys = wtx.args.flatMap { it.pubkeys }.toSet()
+        val sigKeys = sigs.map { it.by }.toSet()
+        if (cmdKeys != sigKeys)
+            throw SignatureException("Command keys don't match the signatures: $cmdKeys vs $sigKeys")
+        return wtx
+    }
+}
+
+// Not used yet.
+data class TimestampedWireTransaction(
+    /** A serialised SignedWireTransaction */
     val wireTX: ByteArray,
 
-    // This is, for example, an RFC 3161 serialised structure (but we probably want something more compact).
+    /** Signature from a timestamping authority. For instance using RFC 3161 */
     val timestamp: ByteArray
-)
+) : SerializeableWithKryo
 
 /**
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
- * It is the first step after extraction from a WireTransaction. The signature part is tricky.
+ * It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
+ * with the commands from the wire, and verified/looked up.
+ *
+ * Not used yet.
  */
 class LedgerTransaction(
     /** The input states which will be consumed/invalidated by the execution of this transaction. */
@@ -35,20 +126,18 @@ class LedgerTransaction(
     /** The states that will be generated by the execution of this transaction. */
     val outputStates: List<ContractState>,
     /** Arbitrary data passed to the program of each input state. */
-    val args: List<SignedCommand>,
+    val args: List<AuthenticatedObject<Command>>,
     /** The moment the transaction was timestamped for */
     val time: Instant
-
     // TODO: nLockTime equivalent?
 )
 
-/** A transaction in fully resolved form, ready for passing as input to a verification function */
-class TransactionForVerification(
-    val inStates: List<ContractState>,
-    val outStates: List<ContractState>,
-    val args: List<VerifiedSigned<Command>>,
-    val time: Instant
-) {
+/** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
+class TransactionForVerification(val inStates: List<ContractState>,
+                                 val outStates: List<ContractState>,
+                                 val args: List<AuthenticatedObject<Command>>,
+                                 val time: Instant) {
+
     fun verify(programMap: Map<SecureHash, Contract>) {
         // For each input and output state, locate the program to run. Then execute the verification function. If any
         // throws an exception, the entire transaction is invalid.
@@ -58,4 +147,5 @@ class TransactionForVerification(
             program.verify(this)
         }
     }
+
 }

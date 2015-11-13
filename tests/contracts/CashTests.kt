@@ -34,7 +34,7 @@ class CashTests {
             transaction {
                 output { outState }
                 // No command arguments
-                this `fails requirement` "required move command"
+                this `fails requirement` "required contracts.Cash.Commands.Move command"
             }
             transaction {
                 output { outState }
@@ -167,7 +167,7 @@ class CashTests {
 
             transaction {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
-                this `fails requirement` "required move command"
+                this `fails requirement` "required contracts.Cash.Commands.Move command"
 
                 transaction {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
