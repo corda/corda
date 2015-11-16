@@ -2,6 +2,7 @@ package contracts
 
 import core.*
 import java.security.PublicKey
+import java.security.SecureRandom
 import java.util.*
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,10 +49,15 @@ object Cash : Contract {
         override fun toString() = "Cash($amount at $deposit owned by $owner)"
     }
 
-
-    sealed class Commands {
-        /** A command proving ownership of some input states, the signature covers the output states. */
+    // Just for grouping
+    class Commands {
         object Move : Command
+
+        /**
+         * Allows new cash states to be issued into existence: the nonce ("number used onces") ensures the transaction
+         * has a unique ID even when there are no inputs.
+         */
+        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Command
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
@@ -63,6 +69,26 @@ object Cash : Contract {
     /** This is the function EVERYONE runs */
     override fun verify(tx: TransactionForVerification) {
         with(tx) {
+            val cashOutputs = outStates.filterIsInstance<Cash.State>()
+            requireThat {
+                "all outputs represent at least one penny" by cashOutputs.none { it.amount.pennies == 0 }
+            }
+
+            // If we have an issue command, perform special processing: the transaction is allowed to have no inputs,
+            // and the output states must have a deposit reference owned by the signer. Note that this means literally
+            // anyone with access to the network can issue cash claims of arbitrary amounts! It is up to the recipient
+            // to decide if the backing institution is trustworthy or not, via some as-yet-unwritten identity service.
+            // See ADP-22 for discussion.
+            val issueCommand = args.select<Commands.Issue>().singleOrNull()
+            if (issueCommand != null) {
+                requireThat {
+                    "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
+                    "output deposits are owned by a command signer" by
+                            cashOutputs.all { issueCommand.signingInstitutions.contains(it.deposit.institution) }
+                }
+                return
+            }
+
             val cashInputs = inStates.filterIsInstance<Cash.State>()
 
             requireThat {
@@ -74,7 +100,6 @@ object Cash : Contract {
             val currency = cashInputs.first().amount.currency
 
             // Select all the output states that are cash states. There may be zero if all money is being withdrawn.
-            val cashOutputs = outStates.filterIsInstance<Cash.State>()
             requireThat {
                 "all outputs use the currency of the inputs" by cashOutputs.all { it.amount.currency == currency }
             }

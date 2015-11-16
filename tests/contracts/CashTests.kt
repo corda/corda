@@ -6,10 +6,6 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-// TODO: Some basic invariants should be enforced by the platform before contract execution:
-// 1. No duplicate input states
-// 2. There must be at least one input state (note: not "one of the type the contract wants")
-
 class CashTests {
     val inState = Cash.State(
             deposit = InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)),
@@ -56,13 +52,37 @@ class CashTests {
     }
 
     @Test
-    fun testCannotSummonMoney() {
-        // Make sure that the contract runs even if there are no cash input states.
+    fun issueMoney() {
+        // Check we can't "move" money into existence.
         transaction {
             input { DummyContract.State() }
             output { outState }
+            arg { Cash.Commands.Move }
 
             this `fails requirement` "there is at least one cash input"
+        }
+
+        // Check we can issue money only as long as the issuer institution is a command signer, i.e. any recognised
+        // institution is allowed to issue as much cash as they want.
+        transaction {
+            output { outState }
+            arg { Cash.Commands.Issue() }
+            this `fails requirement` "output deposits are owned by a command signer"
+        }
+        transaction {
+            output {
+                Cash.State(
+                    amount = 1000.DOLLARS,
+                    owner = DUMMY_PUBKEY_1,
+                    deposit = InstitutionReference(MINI_CORP, OpaqueBytes.of(12, 34))
+                )
+            }
+            transaction {
+                arg(MINI_CORP_KEY) { Cash.Commands.Issue(0) }
+                this `fails requirement` "has a nonce"
+            }
+            arg(MINI_CORP_KEY) { Cash.Commands.Issue() }
+            this.accepts()
         }
     }
 
