@@ -7,7 +7,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import contracts.Cash
-import contracts.ComedyPaper
+import contracts.CommercialPaper
 import core.*
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
@@ -223,9 +223,9 @@ fun createKryo(): Kryo {
         registerDataClass<Cash.State>()
         register(Cash.Commands.Move.javaClass)
         registerDataClass<Cash.Commands.Exit>()
-        registerDataClass<ComedyPaper.State>()
-        register(ComedyPaper.Commands.Move.javaClass)
-        register(ComedyPaper.Commands.Redeem.javaClass)
+        registerDataClass<CommercialPaper.State>()
+        register(CommercialPaper.Commands.Move.javaClass)
+        register(CommercialPaper.Commands.Redeem.javaClass)
 
         // And for unit testing ...
         registerDataClass<DummyPublicKey>()

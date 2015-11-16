@@ -5,8 +5,8 @@ import org.junit.Test
 
 // TODO: Finish this off.
 
-class ComedyPaperTests {
-    val PAPER_1 = ComedyPaper.State(
+class CommercialPaperTests {
+    val PAPER_1 = CommercialPaper.State(
             issuance = InstitutionReference(MEGA_CORP, OpaqueBytes.of(123)),
             owner = DUMMY_PUBKEY_1,
             faceValue = 1000.DOLLARS,
@@ -30,15 +30,15 @@ class ComedyPaperTests {
             this.rejects()
 
             transaction {
-                arg(DUMMY_PUBKEY_2) { ComedyPaper.Commands.Move }
+                arg(DUMMY_PUBKEY_2) { CommercialPaper.Commands.Move }
                 this `fails requirement` "is signed by the owner"
             }
 
-            arg(DUMMY_PUBKEY_1) { ComedyPaper.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Move }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
             this.accepts()
         }.chain("a") {
-            arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { ComedyPaper.Commands.Redeem }
+            arg(DUMMY_PUBKEY_2, MINI_CORP_KEY) { CommercialPaper.Commands.Redeem }
 
             // No cash output, can't redeem like that!
             this.rejects("no cash being redeemed")

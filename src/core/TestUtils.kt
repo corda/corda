@@ -35,7 +35,7 @@ val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 // a sandbox. For now we just instantiate right at the start of the program.
 val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
         CASH_PROGRAM_ID to Cash,
-        CP_PROGRAM_ID to ComedyPaper,
+        CP_PROGRAM_ID to CommercialPaper,
         DUMMY_PROGRAM_ID to DummyContract
 )
 
