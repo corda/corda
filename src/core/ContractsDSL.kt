@@ -94,11 +94,13 @@ fun Iterable<Amount>.sumOrThrow() = reduce { left, right -> left + right }
 fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
 
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
+
+/** Filters the command list by type, institution and public key all at once. */
 inline fun <reified T : Command> List<AuthenticatedObject<Command>>.select(signer: PublicKey? = null, institution: Institution? = null) =
         filter { it.value is T }.
-                filter { if (signer == null) true else it.signers.contains(signer) }.
-                filter { if (institution == null) true else it.signingInstitutions.contains(institution) }.
-                map { AuthenticatedObject<T>(it.signers, it.signingInstitutions, it.value as T) }
+        filter { if (signer == null) true else it.signers.contains(signer) }.
+        filter { if (institution == null) true else it.signingInstitutions.contains(institution) }.
+        map { AuthenticatedObject<T>(it.signers, it.signingInstitutions, it.value as T) }
 
 inline fun <reified T : Command> List<AuthenticatedObject<Command>>.requireSingleCommand() = try {
     select<T>().single()
