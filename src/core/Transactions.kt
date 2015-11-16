@@ -108,6 +108,11 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
         check(currentSigs.isEmpty())
         args.add(arg)
     }
+
+    // Accessors that yield immutable snapshots.
+    fun inputStates(): List<ContractStateRef> = ArrayList(inputStates)
+    fun outputStates(): List<ContractState> = ArrayList(outputStates)
+    fun args(): List<WireCommand> = ArrayList(args)
 }
 
 

@@ -8,6 +8,7 @@ import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CashTests {
     val inState = Cash.State(
@@ -87,6 +88,16 @@ class CashTests {
             arg(MINI_CORP_KEY) { Cash.Commands.Issue() }
             this.accepts()
         }
+
+        val ptx = PartialTransaction()
+        Cash.craftIssue(ptx, 100.DOLLARS, InstitutionReference(MINI_CORP, OpaqueBytes.of(12, 34)), owner = DUMMY_PUBKEY_1)
+        assertTrue(ptx.inputStates().isEmpty())
+        val s = ptx.outputStates()[0] as Cash.State
+        assertEquals(100.DOLLARS, s.amount)
+        assertEquals(MINI_CORP, s.deposit.institution)
+        assertEquals(DUMMY_PUBKEY_1, s.owner)
+        assertTrue(ptx.args()[0].command is Cash.Commands.Issue)
+        assertEquals(MINI_CORP_KEY, ptx.args()[0].pubkeys[0])
     }
 
     @Test

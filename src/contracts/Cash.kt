@@ -137,6 +137,16 @@ object Cash : Contract {
     }
 
     /**
+     * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
+     */
+    fun craftIssue(tx: PartialTransaction, amount: Amount, at: InstitutionReference, owner: PublicKey) {
+        check(tx.inputStates().isEmpty())
+        check(tx.outputStates().sumCashOrNull() == null)
+        tx.addOutputState(Cash.State(at, amount, owner))
+        tx.addArg(WireCommand(Cash.Commands.Issue(), listOf(at.institution.owningKey)))
+    }
+
+    /**
      * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
      * Note that the wallet list is not updated: it's up to you to do that.
      */
