@@ -105,3 +105,6 @@ inline fun <reified T : Command> List<AuthenticatedObject<Command>>.requireSingl
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
+
+// For Java
+fun List<AuthenticatedObject<Command>>.requireSingleCommand(klass: Class<out Command>) = filter { klass.isInstance(it) }.single()
