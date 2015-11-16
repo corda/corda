@@ -48,9 +48,15 @@ class TransactionSerializationTests {
 
         val signedTX = tx.signWith(listOf(TestUtils.keypair))
 
-        // If the signature was removed in transit, we don't like it.
+        // Cannot construct with an empty sigs list.
+        assertFailsWith(IllegalStateException::class) {
+            signedTX.copy(sigs = emptyList())
+        }
+
+        // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            signedTX.copy(sigs = emptyList()).verify()
+            val tx2 = tx.copy(args = listOf(WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair2.public)))).signWith(listOf(TestUtils.keypair2))
+            signedTX.copy(sigs = tx2.sigs).verify()
         }
     }
 }
