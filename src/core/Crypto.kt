@@ -53,13 +53,15 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
 }
 
 /** Utility to simplify the act of signing a byte array */
-fun PrivateKey.signWithECDSA(bits: ByteArray, publicKey: PublicKey? = null): DigitalSignature {
+fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
     val signer = Signature.getInstance("SHA256withECDSA")
     signer.initSign(this)
     signer.update(bits)
     val sig = signer.sign()
-    return if (publicKey == null) DigitalSignature(sig) else DigitalSignature.WithKey(publicKey, sig)
+    return DigitalSignature(sig)
 }
+
+fun PrivateKey.signWithECDSA(bits: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, signWithECDSA(bits).bits)
 
 /** Utility to simplify the act of verifying a signature */
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {

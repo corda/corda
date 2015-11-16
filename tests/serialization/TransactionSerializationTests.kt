@@ -2,6 +2,7 @@ package serialization
 
 import contracts.Cash
 import core.*
+import org.junit.Before
 import org.junit.Test
 import testutils.TestUtils
 import java.security.SignatureException
@@ -15,15 +16,19 @@ class TransactionSerializationTests {
     val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
 
     val fakeStateRef = ContractStateRef(SecureHash.sha256("fake tx id"), 0)
-    val tx = WireTransaction(
-            arrayListOf(fakeStateRef),
-            arrayListOf(outputState, changeState),
-            arrayListOf(WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair.public)))
-    )
+    lateinit var tx: PartialTransaction
+
+    @Before
+    fun setup() {
+        tx = PartialTransaction(
+            fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair.public))
+        )
+    }
 
     @Test
     fun signWireTX() {
-        val signedTX: SignedWireTransaction = tx.signWith(listOf(TestUtils.keypair))
+        tx.signWith(TestUtils.keypair)
+        val signedTX = tx.toSignedTransaction()
 
         // Now check that the signature we just made verifies.
         signedTX.verify()
@@ -36,17 +41,23 @@ class TransactionSerializationTests {
     }
 
     @Test
-    fun wrongKeys() {
-        // Can't sign without the private key.
-        assertFailsWith(IllegalArgumentException::class) {
-            tx.signWith(listOf())
+    fun tooManyKeys() {
+        assertFailsWith(IllegalStateException::class) {
+            tx.signWith(TestUtils.keypair)
+            tx.signWith(TestUtils.keypair2)
+            tx.toSignedTransaction()
         }
-        // Can't sign with too many keys.
-        assertFailsWith(IllegalArgumentException::class) {
-            tx.signWith(listOf(TestUtils.keypair, TestUtils.keypair2))
+    }
+
+    @Test
+    fun wrongKeys() {
+        // Can't convert if we don't have enough signatures.
+        assertFailsWith(IllegalStateException::class) {
+            tx.toSignedTransaction()
         }
 
-        val signedTX = tx.signWith(listOf(TestUtils.keypair))
+        tx.signWith(TestUtils.keypair)
+        val signedTX = tx.toSignedTransaction()
 
         // Cannot construct with an empty sigs list.
         assertFailsWith(IllegalStateException::class) {
@@ -55,8 +66,11 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = tx.copy(args = listOf(WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair2.public)))).signWith(listOf(TestUtils.keypair2))
-            signedTX.copy(sigs = tx2.sigs).verify()
+            val tx2 = PartialTransaction(fakeStateRef, outputState, changeState,
+                    WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair2.public)))
+            tx2.signWith(TestUtils.keypair2)
+
+            signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
         }
     }
 }

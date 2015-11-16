@@ -24,6 +24,11 @@ import java.util.*
  * to a timestamping authority does NOT change its hash (this may be an issue that leads to confusion and should be
  * examined more closely).
  *
+ * A PartialTransaction is a transaction class that's mutable (unlike the others which are all immutable). It is
+ * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
+ * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
+ * multiple parties.
+ *
  * LedgerTransaction is derived from WireTransaction and TimestampedWireTransaction together. It is the result of
  * doing some basic key lookups on WireCommand to see if any keys are from a recognised institution, thus converting
  * the WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->institution
@@ -42,20 +47,6 @@ data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) : Ser
 data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val outputStates: List<ContractState>,
                            val args: List<WireCommand>) : SerializeableWithKryo {
-    fun signWith(keys: List<KeyPair>): SignedWireTransaction {
-        val keyMap = keys.map { it.public to it.private }.toMap()
-        val bits = serialize()
-        val signWith = args.flatMap { it.pubkeys }.toSet()
-        if (keys.size != signWith.size)
-            throw IllegalArgumentException("Incorrect number of keys provided: ${keys.size} vs ${signWith.size}")
-        val sigs = ArrayList<DigitalSignature.WithKey>()
-        for (key in signWith) {
-            val priv = keyMap[key] ?: throw IllegalArgumentException("Command without private signing key found")
-            sigs.add(priv.signWithECDSA(bits, key) as DigitalSignature.WithKey)
-        }
-        return SignedWireTransaction(bits, sigs)
-    }
-
     val hash: SecureHash get() = SecureHash.sha256(serialize())
 
     fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
@@ -66,6 +57,59 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp)
     }
 }
+
+/** A mutable transaction that's in the process of being built, before all signatures are present. */
+class PartialTransaction(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
+                         private val outputStates: MutableList<ContractState> = arrayListOf(),
+                         private val args: MutableList<WireCommand> = arrayListOf()) {
+
+    /** A more convenient constructor that sorts things into the right lists for you */
+    constructor(vararg things: Any) : this() {
+        for (t in things) {
+            when (t) {
+                is ContractStateRef -> inputStates.add(t)
+                is ContractState -> outputStates.add(t)
+                is WireCommand -> args.add(t)
+                else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
+            }
+        }
+    }
+
+    /** The signatures that have been collected so far - might be incomplete! */
+    private val currentSigs = arrayListOf<DigitalSignature.WithKey>()
+
+    fun signWith(key: KeyPair) {
+        check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
+        check(args.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
+        val bits = toWire().serialize()
+        currentSigs.add(key.private.signWithECDSA(bits, key.public))
+    }
+
+    private fun toWire() = WireTransaction(inputStates, outputStates, args)
+
+    fun toSignedTransaction(): SignedWireTransaction {
+        val requiredKeys = args.flatMap { it.pubkeys }.toSet()
+        val gotKeys = currentSigs.map { it.by }.toSet()
+        check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
+        return SignedWireTransaction(toWire().serialize(), ArrayList(currentSigs))
+    }
+
+    fun addInputState(ref: ContractStateRef) {
+        check(currentSigs.isEmpty())
+        inputStates.add(ref)
+    }
+
+    fun addOutputState(state: ContractState) {
+        check(currentSigs.isEmpty())
+        outputStates.add(state)
+    }
+
+    fun addArg(arg: WireCommand) {
+        check(currentSigs.isEmpty())
+        args.add(arg)
+    }
+}
+
 
 data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
     init {
