@@ -81,17 +81,17 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         check(args.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
-        val bits = toWire().serialize()
+        val bits = toWireTransaction().serialize()
         currentSigs.add(key.private.signWithECDSA(bits, key.public))
     }
 
-    private fun toWire() = WireTransaction(inputStates, outputStates, args)
+    fun toWireTransaction() = WireTransaction(inputStates, outputStates, args)
 
     fun toSignedTransaction(): SignedWireTransaction {
         val requiredKeys = args.flatMap { it.pubkeys }.toSet()
         val gotKeys = currentSigs.map { it.by }.toSet()
         check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
-        return SignedWireTransaction(toWire().serialize(), ArrayList(currentSigs))
+        return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
     fun addInputState(ref: ContractStateRef) {

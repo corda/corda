@@ -11,7 +11,6 @@ import java.util.*
 //
 // Open issues:
 //  - Cannot do currency exchanges this way, as the contract insists that there be a single currency involved!
-//  - Nothing ensures cash states are not created out of thin air.
 //  - Complex logic to do grouping: can it be generalised out into platform code?
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
@@ -54,7 +53,7 @@ object Cash : Contract {
         object Move : Command
 
         /**
-         * Allows new cash states to be issued into existence: the nonce ("number used onces") ensures the transaction
+         * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
         data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Command
@@ -137,12 +136,12 @@ object Cash : Contract {
         }
     }
 
-    // TODO: craftSpend should work more like in bitcoinj, where it takes and modifies a transaction template.
-    // This would allow multiple contracts to compose properly (e.g. bond trade+cash movement).
-
-    /** Generate a transaction that consumes one or more of the given input states to move money to the given pubkey. */
+    /**
+     * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
+     * Note that the wallet list is not updated: it's up to you to do that.
+     */
     @Throws(InsufficientBalanceException::class)
-    fun craftSpend(amount: Amount, to: PublicKey, wallet: List<Cash.State>): TransactionForTest {
+    fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey, wallet: List<StateAndRef<Cash.State>>) {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -158,33 +157,31 @@ object Cash : Contract {
         //
         // Having selected coins of the right currency, we must craft output states for the amount we're sending and
         // the "change", which goes back to us. The change is required to make the amounts balance. We may need more
-        // than one change output in order to avoid merging coins from different deposits.
+        // than one change output in order to avoid merging coins from different deposits. The point of this design
+        // is to ensure that ledger entries are immutable and globally identifiable.
         //
-        // Once we've selected our inputs and generated our outputs, we must calculate a signature for each key that
-        // appears in the input set. Same as with Bitcoin, ideally keys are never reused for privacy reasons, but we
-        // must handle the case where they are. Once the signatures are generated, a MoveCommand for each key/sig pair
-        // is put into the transaction, which is finally returned.
+        // Finally, we add the states to the provided partial transaction.
 
         val currency = amount.currency
-        val coinsOfCurrency = wallet.filter { it.amount.currency == currency }
+        val coinsOfCurrency = wallet.filter { it.state.amount.currency == currency }
 
-        val gathered = arrayListOf<State>()
+        val gathered = arrayListOf<StateAndRef<Cash.State>>()
         var gatheredAmount = Amount(0, currency)
         for (c in coinsOfCurrency) {
             if (gatheredAmount >= amount) break
             gathered.add(c)
-            gatheredAmount += c.amount
+            gatheredAmount += c.state.amount
         }
 
         if (gatheredAmount < amount)
             throw InsufficientBalanceException(amount - gatheredAmount)
 
         val change = gatheredAmount - amount
-        val keysUsed = gathered.map { it.owner }.toSet()
+        val keysUsed = gathered.map { it.state.owner }.toSet()
 
-        val states = gathered.groupBy { it.deposit }.map {
+        val states = gathered.groupBy { it.state.deposit }.map {
             val (deposit, coins) = it
-            val totalAmount = coins.map { it.amount }.sumOrThrow()
+            val totalAmount = coins.map { it.state.amount }.sumOrThrow()
             State(deposit, totalAmount, to)
         }
 
@@ -192,17 +189,17 @@ object Cash : Contract {
             // Just copy a key across as the change key. In real life of course, this works but leaks private data.
             // In bitcoinj we derive a fresh key here and then shuffle the outputs to ensure it's hard to follow
             // value flows through the transaction graph.
-            val changeKey = gathered.first().owner
+            val changeKey = gathered.first().state.owner
             // Add a change output and adjust the last output downwards.
             states.subList(0, states.lastIndex) +
                     states.last().let { it.copy(amount = it.amount - change) } +
-                    State(gathered.last().deposit, change, changeKey)
+                    State(gathered.last().state.deposit, change, changeKey)
         } else states
 
-        // Finally, generate the commands. Pretend to sign here, real signatures aren't done yet.
-        val commands = keysUsed.map { AuthenticatedObject(listOf(it), emptyList(), Commands.Move) }
-
-        return TransactionForTest(gathered.toArrayList(), outputs.toArrayList(), commands.toArrayList())
+        for (state in gathered) tx.addInputState(state.ref)
+        for (state in outputs) tx.addOutputState(state)
+        // What if we already have a move command with the right keys? Filter it out here or in platform code?
+        tx.addArg(WireCommand(Commands.Move, keysUsed.toList()))
     }
 }
 

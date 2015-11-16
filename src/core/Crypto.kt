@@ -1,6 +1,8 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import core.serialization.SerializeableWithKryo
+import java.math.BigInteger
 import java.security.*
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
@@ -21,6 +23,8 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
 
         fun sha256(bits: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bits))
         fun sha256(str: String) = sha256(str.toByteArray())
+
+        fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
     }
 
     abstract val signatureAlgorithmName: String
@@ -50,6 +54,14 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun getFormat() = "NULL"
     override fun compareTo(other: PublicKey): Int = if (other == NullPublicKey) 0 else -1
     override fun toString() = "NULL_KEY"
+}
+
+class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey>, SerializeableWithKryo {
+    override fun getAlgorithm() = "DUMMY"
+    override fun getEncoded() = s.toByteArray()
+    override fun getFormat() = "ASN.1"
+    override fun compareTo(other: PublicKey): Int = BigInteger(encoded).compareTo(BigInteger(other.encoded))
+    override fun toString() = "PUBKEY[$s]"
 }
 
 /** Utility to simplify the act of signing a byte array */

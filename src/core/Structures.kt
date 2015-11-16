@@ -21,8 +21,14 @@ interface ContractState : SerializeableWithKryo {
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
 
-/** A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. */
+/**
+ * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
+ * defined the state and where in that transaction it was.
+ */
 data class ContractStateRef(val txhash: SecureHash.SHA256, val index: Int) : SerializeableWithKryo
+
+/** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
+data class StateAndRef<T : ContractState>(val state: T, val ref: ContractStateRef)
 
 /** An Institution is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Institution(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {

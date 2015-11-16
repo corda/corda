@@ -3,6 +3,9 @@ import contracts.DummyContract
 import contracts.InsufficientBalanceException
 import core.*
 import org.junit.Test
+import testutils.*
+import java.security.PublicKey
+import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -253,76 +256,72 @@ class CashTests {
 
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
+
+    fun makeCash(amount: Amount, corp: Institution, depositRef: Byte = 1) =
+            StateAndRef(
+                    Cash.State(InstitutionReference(corp, OpaqueBytes.of(depositRef)), amount, OUR_PUBKEY_1),
+                    ContractStateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+            )
+
     val WALLET = listOf(
-            Cash.State(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 100.DOLLARS, OUR_PUBKEY_1),
-            Cash.State(InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)), 400.DOLLARS, OUR_PUBKEY_1),
-            Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1)), 80.DOLLARS, OUR_PUBKEY_1),
-            Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(2)), 80.SWISS_FRANCS, OUR_PUBKEY_1)
+            makeCash(100.DOLLARS, MEGA_CORP),
+            makeCash(400.DOLLARS, MEGA_CORP),
+            makeCash(80.DOLLARS, MINI_CORP),
+            makeCash(80.SWISS_FRANCS, MINI_CORP, 2)
     )
+
+    fun makeSpend(amount: Amount, dest: PublicKey): WireTransaction {
+        val tx = PartialTransaction()
+        Cash.craftSpend(tx, amount, dest, WALLET)
+        return tx.toWireTransaction()
+    }
 
     @Test
     fun craftSimpleDirectSpend() {
-        assertEquals(
-                transaction {
-                    input { WALLET[0] }
-                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
-                },
-                Cash.craftSpend(100.DOLLARS, THEIR_PUBKEY_1, WALLET)
-        )
+        val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
+        assertEquals(WALLET[0].ref, wtx.inputStates[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[0])
+        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
     }
 
     @Test
     fun craftSimpleSpendWithChange() {
-        assertEquals(
-                transaction {
-                    input { WALLET[0] }
-                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS) }
-                    output { WALLET[0].copy(owner = OUR_PUBKEY_1, amount = 90.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
-                },
-                Cash.craftSpend(10.DOLLARS, THEIR_PUBKEY_1, WALLET)
-        )
+        val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
+        assertEquals(WALLET[0].ref, wtx.inputStates[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputStates[0])
+        assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputStates[1])
+        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
     }
 
     @Test
     fun craftSpendWithTwoInputs() {
-        assertEquals(
-                transaction {
-                    input { WALLET[0] }
-                    input { WALLET[1] }
-                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
-                },
-                Cash.craftSpend(500.DOLLARS, THEIR_PUBKEY_1, WALLET)
-        )
+        val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
+        assertEquals(WALLET[0].ref, wtx.inputStates[0])
+        assertEquals(WALLET[1].ref, wtx.inputStates[1])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
+        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
     }
 
     @Test
     fun craftSpendMixedDeposits() {
-        assertEquals(
-                transaction {
-                    input { WALLET[0] }
-                    input { WALLET[1] }
-                    input { WALLET[2] }
-                    output { WALLET[0].copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS) }
-                    output { WALLET[2].copy(owner = THEIR_PUBKEY_1) }
-                    arg(OUR_PUBKEY_1) { Cash.Commands.Move }
-                },
-                Cash.craftSpend(580.DOLLARS, THEIR_PUBKEY_1, WALLET)
-        )
+        val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
+        assertEquals(WALLET[0].ref, wtx.inputStates[0])
+        assertEquals(WALLET[1].ref, wtx.inputStates[1])
+        assertEquals(WALLET[2].ref, wtx.inputStates[2])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
+        assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[1])
+        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
     }
 
     @Test
     fun craftSpendInsufficientBalance() {
-        try {
-            Cash.craftSpend(1000.DOLLARS, THEIR_PUBKEY_1, WALLET)
-            assert(false)
-        } catch (e: InsufficientBalanceException) {
-            assertEquals(1000 - 580, e.amountMissing.pennies / 100)
+        val e: InsufficientBalanceException = assertFailsWith("balance") {
+            makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
         }
+        assertEquals(1000 - 580, e.amountMissing.pennies / 100)
+
         assertFailsWith(InsufficientBalanceException::class) {
-            Cash.craftSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1, WALLET)
+            makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)
         }
     }
 }
