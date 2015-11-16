@@ -82,8 +82,7 @@ class TransactionForTest() {
     fun output(label: String? = null, s: () -> ContractState) = outStates.add(LabeledOutput(label, s()))
     fun arg(vararg key: PublicKey, c: () -> Command) {
         val keys = listOf(*key)
-        // TODO: replace map->filterNotNull once upgraded to next Kotlin
-        args.add(AuthenticatedObject(keys, keys.map { TEST_KEYS_TO_CORP_MAP[it] }.filterNotNull(), c()))
+        args.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
     }
 
     private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, args, time).verify(TEST_PROGRAM_MAP)
@@ -121,13 +120,13 @@ class TransactionForTest() {
     // Use this to create transactions where the output of this transaction is automatically used as an input of
     // the next.
     fun chain(vararg outputLabels: String, body: TransactionForTest.() -> Unit) {
-        val states = outStates.filter {
+        val states = outStates.mapNotNull {
             val l = it.label
-            if (l != null)
-                outputLabels.contains(l)
+            if (l != null && outputLabels.contains(l))
+                it.state
             else
-                false
-        }.map { it.state }    // TODO: replace with mapNotNull after next Kotlin upgrade
+                null
+        }
         val tx = TransactionForTest()
         tx.inStates.addAll(states)
         tx.body()

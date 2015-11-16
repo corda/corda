@@ -60,8 +60,7 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
 
     fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
         val authenticatedArgs = args.map {
-            // TODO: Replace map/filterNotNull with mapNotNull on next Kotlin upgrade.
-            val institutions = it.pubkeys.map { pk -> institutionKeyMap[pk] }.filterNotNull()
+            val institutions = it.pubkeys.mapNotNull { pk -> institutionKeyMap[pk] }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
         }
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp)
