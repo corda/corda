@@ -50,14 +50,14 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public static class Commands implements core.Command {
-        public static class Move {
+        public static class Move extends Commands {
             @Override
             public boolean equals(Object obj) {
                 return obj instanceof Move;
             }
         }
 
-        public static class Redeem {
+        public static class Redeem extends Commands {
             @Override
             public boolean equals(Object obj) {
                 return obj instanceof Redeem;
