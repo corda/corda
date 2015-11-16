@@ -118,6 +118,8 @@ data class TimestampedWireTransaction(
  * with the commands from the wire, and verified/looked up.
  *
  * Not used yet.
+ *
+ * TODO: When converting LedgerTransaction into TransactionForVerification, make sure to check for duped inputs.
  */
 class LedgerTransaction(
     /** The input states which will be consumed/invalidated by the execution of this transaction. */
