@@ -3,20 +3,23 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
-
-repositories {
-    mavenCentral()
-    jcenter()
-}
+apply plugin: 'org.jetbrains.dokka'
 
 buildscript {
     ext.kotlin_version = '1.0.0-beta-1103'
     repositories {
         mavenCentral()
+        jcenter()
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.1"
     }
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
 }
 
 dependencies {
