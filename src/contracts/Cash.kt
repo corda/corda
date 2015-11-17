@@ -25,8 +25,8 @@ class InsufficientBalanceException(val amountMissing: Amount) : Exception()
  * the same transaction.
  *
  * The goal of this design is to ensure that money can be withdrawn from the ledger easily: if you receive some money
- * via this contract, you always know where to go in order to extract it from the R3 ledger via a regular wire transfer,
- * no matter how many hands it has passed through in the intervening time.
+ * via this contract, you always know where to go in order to extract it from the R3 ledger, no matter how many hands
+ * it has passed through in the intervening time.
  *
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
