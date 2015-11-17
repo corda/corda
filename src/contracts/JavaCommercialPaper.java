@@ -71,7 +71,7 @@ public class JavaCommercialPaper implements Contract {
         // for cash on or after the maturity date.
 
         // Find the command that instructs us what to do and check there's exactly one.
-        AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getArgs(), Commands.class);
+        AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
         // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
         State input = single(filterIsInstance(tx.getInStates(), State.class));
 

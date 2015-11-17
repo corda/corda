@@ -67,22 +67,22 @@ class TransactionForTest() {
         override fun hashCode(): Int = state.hashCode()
     }
     private val outStates = arrayListOf<LabeledOutput>()
-    private val args: MutableList<AuthenticatedObject<Command>> = arrayListOf()
+    private val commands: MutableList<AuthenticatedObject<Command>> = arrayListOf()
 
-    constructor(inStates: List<ContractState>, outStates: List<ContractState>, args: List<AuthenticatedObject<Command>>) : this() {
+    constructor(inStates: List<ContractState>, outStates: List<ContractState>, commands: List<AuthenticatedObject<Command>>) : this() {
         this.inStates.addAll(inStates)
         this.outStates.addAll(outStates.map { LabeledOutput(null, it) })
-        this.args.addAll(args)
+        this.commands.addAll(commands)
     }
 
     fun input(s: () -> ContractState) = inStates.add(s())
     fun output(label: String? = null, s: () -> ContractState) = outStates.add(LabeledOutput(label, s()))
     fun arg(vararg key: PublicKey, c: () -> Command) {
         val keys = listOf(*key)
-        args.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
+        commands.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
     }
 
-    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, args, time).verify(TEST_PROGRAM_MAP)
+    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, commands, time).verify(TEST_PROGRAM_MAP)
 
     infix fun `fails requirement`(msg: String) = rejects(msg)
     // which is uglier?? :)
@@ -109,7 +109,7 @@ class TransactionForTest() {
         val tx = TransactionForTest()
         tx.inStates.addAll(inStates)
         tx.outStates.addAll(outStates)
-        tx.args.addAll(args)
+        tx.commands.addAll(commands)
         tx.body()
         return tx
     }
@@ -133,16 +133,16 @@ class TransactionForTest() {
         return """transaction {
             inputs:   $inStates
             outputs:  $outStates
-            args:     $args
+            commands  $commands
         }"""
     }
 
-    override fun equals(other: Any?) = this === other || (other is TransactionForTest && inStates == other.inStates && outStates == other.outStates && args == other.args)
+    override fun equals(other: Any?) = this === other || (other is TransactionForTest && inStates == other.inStates && outStates == other.outStates && commands == other.commands)
 
     override fun hashCode(): Int {
         var result = inStates.hashCode()
         result += 31 * result + outStates.hashCode()
-        result += 31 * result + args.hashCode()
+        result += 31 * result + commands.hashCode()
         return result
     }
 }

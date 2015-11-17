@@ -78,7 +78,7 @@ object Cash : Contract {
             // anyone with access to the network can issue cash claims of arbitrary amounts! It is up to the recipient
             // to decide if the backing institution is trustworthy or not, via some as-yet-unwritten identity service.
             // See ADP-22 for discussion.
-            val issueCommand = args.select<Commands.Issue>().singleOrNull()
+            val issueCommand = commands.select<Commands.Issue>().singleOrNull()
             if (issueCommand != null) {
                 requireThat {
                     "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
@@ -113,7 +113,7 @@ object Cash : Contract {
                 val inputAmount = inputs.map { it.amount }.sumOrThrow()
                 val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
 
-                val issuerCommand = args.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
+                val issuerCommand = commands.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
                 val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
 
                 requireThat {
@@ -127,7 +127,7 @@ object Cash : Contract {
             // see a signature from each of those keys. The actual signatures have been verified against the transaction
             // data by the platform before execution.
             val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-            val keysThatSigned = args.requireSingleCommand<Commands.Move>().signers.toSortedSet()
+            val keysThatSigned = commands.requireSingleCommand<Commands.Move>().signers.toSortedSet()
             requireThat {
                 "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
             }

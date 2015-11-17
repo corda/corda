@@ -47,7 +47,7 @@ object CommercialPaper : Contract {
         with(tx) {
             // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
             // for cash on or after the maturity date.
-            val command = args.requireSingleCommand<CommercialPaper.Commands>()
+            val command = commands.requireSingleCommand<CommercialPaper.Commands>()
 
             // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
             val input = inStates.filterIsInstance<CommercialPaper.State>().single()

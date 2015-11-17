@@ -96,8 +96,8 @@ class CashTests {
         assertEquals(100.DOLLARS, s.amount)
         assertEquals(MINI_CORP, s.deposit.institution)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
-        assertTrue(ptx.args()[0].command is Cash.Commands.Issue)
-        assertEquals(MINI_CORP_KEY, ptx.args()[0].pubkeys[0])
+        assertTrue(ptx.commands()[0].command is Cash.Commands.Issue)
+        assertEquals(MINI_CORP_KEY, ptx.commands()[0].pubkeys[0])
     }
 
     @Test
@@ -292,7 +292,7 @@ class CashTests {
         val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputStates[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[0])
-        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
@@ -301,7 +301,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputStates[0])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputStates[0])
         assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputStates[1])
-        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
@@ -310,7 +310,7 @@ class CashTests {
         assertEquals(WALLET[0].ref, wtx.inputStates[0])
         assertEquals(WALLET[1].ref, wtx.inputStates[1])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
-        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
@@ -321,7 +321,7 @@ class CashTests {
         assertEquals(WALLET[2].ref, wtx.inputStates[2])
         assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
         assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[1])
-        assertEquals(OUR_PUBKEY_1, wtx.args[0].pubkeys[0])
+        assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
