@@ -1,7 +1,6 @@
-package serialization
+package core.serialization
 
 import com.esotericsoftware.kryo.Kryo
-import core.serialization.*
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals

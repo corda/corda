@@ -1,4 +1,4 @@
-package testutils
+package core.testutils
 
 import contracts.*
 import core.*

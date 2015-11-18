@@ -2,8 +2,8 @@ import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
 import core.*
+import core.testutils.*
 import org.junit.Test
-import testutils.*
 import java.security.PublicKey
 import java.util.*
 import kotlin.test.assertEquals

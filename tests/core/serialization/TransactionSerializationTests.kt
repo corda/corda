@@ -1,12 +1,12 @@
-package serialization
+package core.serialization
 
 import contracts.Cash
 import core.*
+import core.testutils.DUMMY_PUBKEY_1
+import core.testutils.MINI_CORP
+import core.testutils.TestUtils
 import org.junit.Before
 import org.junit.Test
-import testutils.DUMMY_PUBKEY_1
-import testutils.MINI_CORP
-import testutils.TestUtils
 import java.security.SignatureException
 import kotlin.test.assertFailsWith
 
