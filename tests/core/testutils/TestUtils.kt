@@ -5,6 +5,7 @@ import core.*
 import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
+import java.util.*
 import kotlin.test.fail
 
 object TestUtils {
@@ -17,6 +18,8 @@ val MEGA_CORP_KEY = DummyPublicKey("mini")
 val MINI_CORP_KEY = DummyPublicKey("mega")
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
+val ALICE = DummyPublicKey("alice")
+val BOB = DummyPublicKey("bob")
 val MEGA_CORP = Institution("MegaCorp", MEGA_CORP_KEY)
 val MINI_CORP = Institution("MiniCorp", MINI_CORP_KEY)
 
@@ -38,7 +41,7 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
+// Defines a simple DSL for building pseudo-transactions (not the same as the wire protocol) for testing purposes.
 //
 // Define a transaction like this:
 //
@@ -57,37 +60,41 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 //
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
-// Corresponds to the args to Contract.verify
-class TransactionForTest() {
-    private val inStates = arrayListOf<ContractState>()
+infix fun Cash.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
 
-    class LabeledOutput(val label: String?, val state: ContractState) {
-        override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
-        override fun equals(other: Any?) = other is LabeledOutput && state.equals(other.state)
-        override fun hashCode(): Int = state.hashCode()
-    }
-    private val outStates = arrayListOf<LabeledOutput>()
+class LabeledOutput(val label: String?, val state: ContractState) {
+    override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
+    override fun equals(other: Any?) = other is LabeledOutput && state.equals(other.state)
+    override fun hashCode(): Int = state.hashCode()
+}
 
-    private val commands: MutableList<AuthenticatedObject<Command>> = arrayListOf()
+infix fun ContractState.label(label: String) = LabeledOutput(label, this)
 
-    constructor(inStates: List<ContractState>, outStates: List<ContractState>, commands: List<AuthenticatedObject<Command>>) : this() {
-        this.inStates.addAll(inStates)
-        this.outStates.addAll(outStates.map { LabeledOutput(null, it) })
-        this.commands.addAll(commands)
-    }
+abstract class AbstractTransactionForTest {
+    protected val outStates = ArrayList<LabeledOutput>()
+    protected val commands  = ArrayList<AuthenticatedObject<Command>>()
 
-    fun input(s: () -> ContractState) = inStates.add(s())
-    fun output(label: String? = null, s: () -> ContractState) = outStates.add(LabeledOutput(label, s()))
+    open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
+
     fun arg(vararg key: PublicKey, c: () -> Command) {
         val keys = listOf(*key)
         commands.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
     }
 
-    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, commands, time, SecureHash.randomSHA256()).verify(TEST_PROGRAM_MAP)
+    // Forbid patterns like:  transaction { ... transaction { ... } }
+    @Deprecated("Cannot nest transactions, use tweak", level = DeprecationLevel.ERROR)
+    fun transaction(body: TransactionForTest.() -> Unit) {}
+}
 
-    infix fun `fails requirement`(msg: String) = rejects(msg)
-    // which is uglier?? :)
-    fun fails_requirement(msg: String) = this.`fails requirement`(msg)
+// Corresponds to the args to Contract.verify
+open class TransactionForTest : AbstractTransactionForTest() {
+    private val inStates = arrayListOf<ContractState>()
+    fun input(s: () -> ContractState) = inStates.add(s())
+
+    protected fun run(time: Instant) {
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, commands, time, SecureHash.randomSHA256())
+        tx.verify(TEST_PROGRAM_MAP)
+    }
 
     fun accepts(time: Instant = TEST_TX_TIME) = run(time)
     fun rejects(withMessage: String? = null, time: Instant = TEST_TX_TIME) {
@@ -105,15 +112,9 @@ class TransactionForTest() {
         if (!r) throw AssertionError("Expected exception but didn't get one")
     }
 
-    // Allow customisation of partial transactions.
-    fun tweak(body: TransactionForTest.() -> Unit): TransactionForTest {
-        val tx = TransactionForTest()
-        tx.inStates.addAll(inStates)
-        tx.outStates.addAll(outStates)
-        tx.commands.addAll(commands)
-        tx.body()
-        return tx
-    }
+    // which is uglier?? :)
+    infix fun `fails requirement`(msg: String) = rejects(msg)
+    fun fails_requirement(msg: String) = this.`fails requirement`(msg)
 
     // Use this to create transactions where the output of this transaction is automatically used as an input of
     // the next.
@@ -127,6 +128,16 @@ class TransactionForTest() {
         }
         val tx = TransactionForTest()
         tx.inStates.addAll(states)
+        tx.body()
+        return tx
+    }
+
+    // Allow customisation of partial transactions.
+    fun tweak(body: TransactionForTest.() -> Unit): TransactionForTest {
+        val tx = TransactionForTest()
+        tx.inStates.addAll(inStates)
+        tx.outStates.addAll(outStates)
+        tx.commands.addAll(commands)
         tx.body()
         return tx
     }
@@ -149,8 +160,67 @@ class TransactionForTest() {
     }
 }
 
-fun transaction(body: TransactionForTest.() -> Unit): TransactionForTest {
-    val tx = TransactionForTest()
-    tx.body()
-    return tx
+fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().apply { body() }
+
+class TransactionGroupForTest {
+    open inner class LedgerTransactionForTest : AbstractTransactionForTest() {
+        private val inputs = ArrayList<ContractStateRef>()
+
+        fun input(label: String) {
+            inputs.add(labelToRefs[label] ?: throw IllegalArgumentException("Unknown label \"$label\""))
+        }
+
+        fun toLedgerTransaction(time: Instant): LedgerTransaction {
+            val wireCmds = commands.map { WireCommand(it.value, it.signers) }
+            return WireTransaction(inputs, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP)
+        }
+    }
+
+    private inner class InternalLedgerTransactionForTest : LedgerTransactionForTest() {
+        fun finaliseAndInsertLabels(time: Instant): LedgerTransaction {
+            val ltx = toLedgerTransaction(time)
+            for ((index, state) in outStates.withIndex()) {
+                if (state.label != null)
+                    labelToRefs[state.label] = ContractStateRef(ltx.hash, index)
+            }
+            return ltx
+        }
+    }
+
+    private val rootTxns = ArrayList<LedgerTransaction>()
+    private val labelToRefs = HashMap<String, ContractStateRef>()
+    inner class Roots {
+        fun transaction(vararg outputStates: LabeledOutput) {
+            val outs = outputStates.map { it.state }
+            val wtx = WireTransaction(emptyList(), outs, emptyList())
+            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP)
+            outputStates.forEachIndexed { index, labeledOutput -> labelToRefs[labeledOutput.label!!] = ContractStateRef(ltx.hash, index) }
+            rootTxns.add(ltx)
+        }
+
+        @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
+        fun roots(body: Roots.() -> Unit) {}
+    }
+    fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
+
+    val txns = ArrayList<LedgerTransaction>()
+
+    fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionForTest.() -> Unit): LedgerTransaction {
+        val forTest = InternalLedgerTransactionForTest()
+        forTest.body()
+        val ltx = forTest.finaliseAndInsertLabels(time)
+        txns.add(ltx)
+        return ltx
+    }
+
+    @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
+    fun transactionGroup(body: TransactionGroupForTest.() -> Unit) {}
+
+    fun verify() {
+        toTransactionGroup().verify(TEST_PROGRAM_MAP)
+    }
+
+    fun toTransactionGroup() = TransactionGroup(txns.map { it }.toSet(), rootTxns.toSet())
 }
+
+fun transactionGroup(body: TransactionGroupForTest.() -> Unit) = TransactionGroupForTest().apply { this.body() }

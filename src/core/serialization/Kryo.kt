@@ -198,6 +198,8 @@ fun createKryo(): Kryo {
         register(Collections.singletonList(null).javaClass)
         register(Collections.singletonMap(1, 2).javaClass)
         register(ArrayList::class.java)
+        register(emptyList<Any>().javaClass)
+        register(Arrays.asList(1,3).javaClass)
 
         // These JDK classes use a very minimal custom serialization format and are written to defend against malicious
         // streams, so we can just kick it over to java serialization. We get ECPublicKeyImpl/ECPrivteKeyImpl via an
@@ -223,6 +225,7 @@ fun createKryo(): Kryo {
         registerDataClass<Cash.State>()
         register(Cash.Commands.Move.javaClass)
         registerDataClass<Cash.Commands.Exit>()
+        registerDataClass<Cash.Commands.Issue>()
         registerDataClass<CommercialPaper.State>()
         register(CommercialPaper.Commands.Move.javaClass)
         register(CommercialPaper.Commands.Redeem.javaClass)
