@@ -27,27 +27,27 @@ class CashTests {
             input { inState }
             this `fails requirement` "the amounts balance"
 
-            transaction {
+            tweak {
                 output { outState.copy(amount = 2000.DOLLARS )}
                 this `fails requirement` "the amounts balance"
             }
-            transaction {
+            tweak {
                 output { outState }
                 // No command arguments
                 this `fails requirement` "required contracts.Cash.Commands.Move command"
             }
-            transaction {
+            tweak {
                 output { outState }
                 arg(DUMMY_PUBKEY_2) { Cash.Commands.Move }
                 this `fails requirement` "the owning keys are the same as the signing keys"
             }
-            transaction {
+            tweak {
                 output { outState }
                 output { outState.editInstitution(MINI_CORP) }
                 this `fails requirement` "no output states are unaccounted for"
             }
             // Simple reallocation works.
-            transaction {
+            tweak {
                 output { outState }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                 this.accepts()
@@ -81,7 +81,7 @@ class CashTests {
                     deposit = InstitutionReference(MINI_CORP, OpaqueBytes.of(12, 34))
                 )
             }
-            transaction {
+            tweak {
                 arg(MINI_CORP_KEY) { Cash.Commands.Issue(0) }
                 this `fails requirement` "has a nonce"
             }
@@ -105,20 +105,20 @@ class CashTests {
         // Splitting value works.
         transaction {
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
-            transaction {
+            tweak {
                 input { inState }
                 for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
                 this.accepts()
             }
             // Merging 4 inputs into 2 outputs works.
-            transaction {
+            tweak {
                 for (i in 1..4) input { inState.copy(amount = inState.amount / 4) }
                 output { inState.copy(amount = inState.amount / 2) }
                 output { inState.copy(amount = inState.amount / 2) }
                 this.accepts()
             }
             // Merging 2 inputs into 1 works.
-            transaction {
+            tweak {
                 input { inState.copy(amount = inState.amount / 2) }
                 input { inState.copy(amount = inState.amount / 2) }
                 output { inState }
@@ -193,17 +193,17 @@ class CashTests {
             input { inState }
             output { outState.copy(amount = inState.amount - 200.DOLLARS) }
 
-            transaction {
+            tweak {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(100.DOLLARS) }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                 this `fails requirement` "the amounts balance"
             }
 
-            transaction {
+            tweak {
                 arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
                 this `fails requirement` "required contracts.Cash.Commands.Move command"
 
-                transaction {
+                tweak {
                     arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                     this.accepts()
                 }
@@ -237,12 +237,12 @@ class CashTests {
             input { inState.editInstitution(MINI_CORP) }
 
             // Can't merge them together.
-            transaction {
+            tweak {
                 output { inState.copy(owner = DUMMY_PUBKEY_2, amount = 2000.DOLLARS) }
                 this `fails requirement` "at issuer MegaCorp the amounts balance"
             }
             // Missing MiniCorp deposit
-            transaction {
+            tweak {
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
                 output { inState.copy(owner = DUMMY_PUBKEY_2) }
                 this `fails requirement` "at issuer MegaCorp the amounts balance"

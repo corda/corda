@@ -47,7 +47,7 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 //    output { someExpression }
 //    arg { someExpression }
 //
-//    transaction {
+//    tweak {
 //         ... same thing but works with a copy of the parent, can add inputs/outputs/args just within this scope.
 //    }
 //
@@ -106,7 +106,7 @@ class TransactionForTest() {
     }
 
     // Allow customisation of partial transactions.
-    fun transaction(body: TransactionForTest.() -> Unit): TransactionForTest {
+    fun tweak(body: TransactionForTest.() -> Unit): TransactionForTest {
         val tx = TransactionForTest()
         tx.inStates.addAll(inStates)
         tx.outStates.addAll(outStates)
@@ -117,7 +117,7 @@ class TransactionForTest() {
 
     // Use this to create transactions where the output of this transaction is automatically used as an input of
     // the next.
-    fun chain(vararg outputLabels: String, body: TransactionForTest.() -> Unit) {
+    fun chain(vararg outputLabels: String, body: TransactionForTest.() -> Unit): TransactionForTest {
         val states = outStates.mapNotNull {
             val l = it.label
             if (l != null && outputLabels.contains(l))
@@ -128,6 +128,7 @@ class TransactionForTest() {
         val tx = TransactionForTest()
         tx.inStates.addAll(states)
         tx.body()
+        return tx
     }
 
     override fun toString(): String {

@@ -33,7 +33,7 @@ class CommercialPaperTests {
 
             this.rejects()
 
-            transaction {
+            tweak {
                 arg(DUMMY_PUBKEY_2) { CommercialPaper.Commands.Move }
                 this `fails requirement` "is signed by the owner"
             }
