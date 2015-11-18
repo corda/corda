@@ -67,6 +67,7 @@ class TransactionForTest() {
         override fun hashCode(): Int = state.hashCode()
     }
     private val outStates = arrayListOf<LabeledOutput>()
+
     private val commands: MutableList<AuthenticatedObject<Command>> = arrayListOf()
 
     constructor(inStates: List<ContractState>, outStates: List<ContractState>, commands: List<AuthenticatedObject<Command>>) : this() {
@@ -82,7 +83,7 @@ class TransactionForTest() {
         commands.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
     }
 
-    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, commands, time).verify(TEST_PROGRAM_MAP)
+    private fun run(time: Instant) = TransactionForVerification(inStates, outStates.map { it.state }, commands, time, SecureHash.randomSHA256()).verify(TEST_PROGRAM_MAP)
 
     infix fun `fails requirement`(msg: String) = rejects(msg)
     // which is uglier?? :)
