@@ -97,4 +97,25 @@ class TransactionGroupTests {
         }
         assertEquals(e.hash, ref.txhash)
     }
+
+    @Test
+    fun duplicatedInputs() {
+        // Check that a transaction cannot refer to the same input more than once.
+        transactionGroup {
+            roots {
+                transaction(A_THOUSAND_POUNDS label "£1000")
+            }
+
+            transaction {
+                input("£1000")
+                input("£1000")
+                output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
+                arg(MINI_CORP_KEY) { Cash.Commands.Move }
+            }
+
+            assertFailsWith(TransactionConflictException::class) {
+                verify()
+            }
+        }
+    }
 }

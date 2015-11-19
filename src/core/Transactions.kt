@@ -165,10 +165,6 @@ data class TimestampedWireTransaction(
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
  * It is the first step after extraction from a WireTransaction. The signatures at this point have been lined up
  * with the commands from the wire, and verified/looked up.
- *
- * Not used yet.
- *
- * TODO: When converting LedgerTransaction into TransactionForVerification, make sure to check for duped inputs.
  */
 data class LedgerTransaction(
     /** The input states which will be consumed/invalidated by the execution of this transaction. */
