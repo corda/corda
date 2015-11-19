@@ -164,15 +164,15 @@ fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().appl
 
 class TransactionGroupForTest {
     open inner class LedgerTransactionForTest : AbstractTransactionForTest() {
-        private val inputs = ArrayList<ContractStateRef>()
+        private val inStates = ArrayList<ContractStateRef>()
 
         fun input(label: String) {
-            inputs.add(labelToRefs[label] ?: throw IllegalArgumentException("Unknown label \"$label\""))
+            inStates.add(labelToRefs[label] ?: throw IllegalArgumentException("Unknown label \"$label\""))
         }
 
         fun toLedgerTransaction(time: Instant): LedgerTransaction {
             val wireCmds = commands.map { WireCommand(it.value, it.signers) }
-            return WireTransaction(inputs, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP)
+            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP)
         }
     }
 
@@ -200,6 +200,8 @@ class TransactionGroupForTest {
 
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
         fun roots(body: Roots.() -> Unit) {}
+        @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
+        fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionForTest.() -> Unit) {}
     }
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
 

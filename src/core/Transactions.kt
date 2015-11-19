@@ -194,10 +194,10 @@ data class TransactionForVerification(val inStates: List<ContractState>,
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
 
     /**
-     * @throws VerificationException if a contract throws an exception, the original is in the cause field
+     * @throws TransactionVerificationException if a contract throws an exception, the original is in the cause field
      * @throws IllegalStateException if a state refers to an unknown contract.
      */
-    @Throws(VerificationException::class, IllegalStateException::class)
+    @Throws(TransactionVerificationException::class, IllegalStateException::class)
     fun verify(programMap: Map<SecureHash, Contract>) {
         // For each input and output state, locate the program to run. Then execute the verification function. If any
         // throws an exception, the entire transaction is invalid.
@@ -207,11 +207,11 @@ data class TransactionForVerification(val inStates: List<ContractState>,
             try {
                 program.verify(this)
             } catch(e: Throwable) {
-                throw VerificationException(this, program, e)
+                throw TransactionVerificationException(this, program, e)
             }
         }
     }
 }
 
 /** Thrown if a verification fails due to a contract rejection. */
-class VerificationException(val tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : Exception(cause)
+class TransactionVerificationException(val tx: TransactionForVerification, val contract: Contract, cause: Throwable?) : Exception(cause)

@@ -44,14 +44,8 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
             resolved.add(TransactionForVerification(inputs, tx.outStates, tx.commands, tx.time, tx.hash))
         }
 
-        for (tx in resolved) {
-            try {
-                tx.verify(programMap)
-            } catch(e: Exception) {
-                println(tx)
-                throw e
-            }
-        }
+        for (tx in resolved)
+            tx.verify(programMap)
         return resolved
     }
 
