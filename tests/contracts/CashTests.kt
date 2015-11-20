@@ -44,7 +44,8 @@ class CashTests {
             tweak {
                 output { outState }
                 output { outState.editInstitution(MINI_CORP) }
-                this `fails requirement` "no output states are unaccounted for"
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+                this `fails requirement` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
@@ -157,7 +158,7 @@ class CashTests {
             input { inState }
             output { outState.copy(amount = 800.DOLLARS) }
             output { outState.copy(amount = 200.POUNDS) }
-            this `fails requirement` "all outputs use the currency of the inputs"
+            this `fails requirement` "the amounts balance"
         }
         transaction {
             input { inState }
@@ -168,13 +169,14 @@ class CashTests {
                 )
             }
             output { outState.copy(amount = 1150.DOLLARS) }
-            this `fails requirement` "all inputs use the same currency"
+            this `fails requirement` "the amounts balance"
         }
         // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
             input { inState.editInstitution(MINI_CORP) }
             output { outState }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
             this `fails requirement` "at issuer MiniCorp the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
@@ -258,6 +260,21 @@ class CashTests {
         transaction {
             input { inState }
             input { inState }
+        }
+    }
+
+    @Test
+    fun multiCurrency() {
+        // Check we can do an atomic currency trade tx.
+        transaction {
+            val pounds = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(3, 4, 5)), 658.POUNDS, DUMMY_PUBKEY_2)
+            input { inState `owned by` DUMMY_PUBKEY_1 }
+            input { pounds }
+            output { inState `owned by` DUMMY_PUBKEY_2 }
+            output { pounds `owned by` DUMMY_PUBKEY_1 }
+            arg(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move }
+
+            this.accepts()
         }
     }
 

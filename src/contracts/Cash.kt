@@ -9,9 +9,6 @@ import java.util.*
 //
 // Cash
 //
-// Open issues:
-//  - Cannot do currency exchanges this way, as the contract insists that there be a single currency involved!
-//  - Complex logic to do grouping: can it be generalised out into platform code?
 
 // Just a fake program identifier for now. In a real system it could be, for instance, the hash of the program bytecode.
 val CASH_PROGRAM_ID = SecureHash.sha256("cash")
@@ -65,74 +62,89 @@ object Cash : Contract {
         data class Exit(val amount: Amount) : Command
     }
 
+    data class InOutGroup(val inputs: List<Cash.State>, val outputs: List<Cash.State>)
+
+    private fun groupStates(allInputs: List<ContractState>, allOutputs: List<ContractState>): List<InOutGroup> {
+        val inputs = allInputs.filterIsInstance<Cash.State>()
+        val outputs = allOutputs.filterIsInstance<Cash.State>()
+
+        val inGroups = inputs.groupBy { Pair(it.deposit, it.amount.currency) }
+        val outGroups = outputs.groupBy { Pair(it.deposit, it.amount.currency) }
+
+        val result = ArrayList<InOutGroup>()
+
+        for ((k, v) in inGroups.entries)
+            result.add(InOutGroup(v, outGroups[k] ?: emptyList()))
+        for ((k, v) in outGroups.entries) {
+            if (inGroups[k] == null)
+                result.add(InOutGroup(emptyList(), v))
+        }
+
+        return result
+    }
+
     /** This is the function EVERYONE runs */
     override fun verify(tx: TransactionForVerification) {
-        with(tx) {
-            val cashOutputs = outStates.filterIsInstance<Cash.State>()
+        // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
+        // of cash are not fungible and must be kept separated for bookkeeping purposes.
+        val groups = groupStates(tx.inStates, tx.outStates)
+        for ((inputs, outputs) in groups) {
             requireThat {
-                "all outputs represent at least one penny" by cashOutputs.none { it.amount.pennies == 0 }
+                "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0 }
             }
 
-            // If we have an issue command, perform special processing: the transaction is allowed to have no inputs,
-            // and the output states must have a deposit reference owned by the signer. Note that this means literally
-            // anyone with access to the network can issue cash claims of arbitrary amounts! It is up to the recipient
-            // to decide if the backing institution is trustworthy or not, via some as-yet-unwritten identity service.
-            // See ADP-22 for discussion.
-            val issueCommand = commands.select<Commands.Issue>().singleOrNull()
+            val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
             if (issueCommand != null) {
-                requireThat {
-                    "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
-                    "output deposits are owned by a command signer" by
-                            cashOutputs.all { issueCommand.signingInstitutions.contains(it.deposit.institution) }
-                }
-                return
-            }
-
-            val cashInputs = inStates.filterIsInstance<Cash.State>()
-
-            requireThat {
-                "there is at least one cash input" by cashInputs.isNotEmpty()
-                "there are no zero sized inputs" by cashInputs.none { it.amount.pennies == 0 }
-                "all inputs use the same currency" by (cashInputs.groupBy { it.amount.currency }.size == 1)
-            }
-
-            val currency = cashInputs.first().amount.currency
-
-            // Select all the output states that are cash states. There may be zero if all money is being withdrawn.
-            requireThat {
-                "all outputs use the currency of the inputs" by cashOutputs.all { it.amount.currency == currency }
-            }
-
-            // For each deposit that's represented in the inputs, group the inputs together and verify that the outputs
-            // balance, taking into account a possible exit command from that issuer.
-            var outputsLeft = cashOutputs.size
-            for ((deposit, inputs) in cashInputs.groupBy { it.deposit }) {
-                val outputs = cashOutputs.filter { it.deposit == deposit }
-                outputsLeft -= outputs.size
-
-                val inputAmount = inputs.map { it.amount }.sumOrThrow()
-                val outputAmount = outputs.map { it.amount }.sumOrZero(currency)
-
-                val issuerCommand = commands.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
-                val amountExitingLedger = issuerCommand?.value?.amount ?: Amount(0, inputAmount.currency)
-
-                requireThat {
-                    "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by (inputAmount == outputAmount + amountExitingLedger)
+                // If we have an issue command, perform special processing: the group is allowed to have no inputs,
+                // and the output states must have a deposit reference owned by the signer. Note that this means
+                // literally anyone with access to the network can issue cash claims of arbitrary amounts! It is up
+                // to the recipient to decide if the backing institution is trustworthy or not, via some
+                // as-yet-unwritten identity service. See ADP-22 for discussion.
+                val outputsInstitution = outputs.map { it.deposit.institution }.singleOrNull()
+                if (outputsInstitution != null) {
+                    requireThat {
+                        "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
+                        "output deposits are owned by a command signer" by
+                                outputs.all { issueCommand.signingInstitutions.contains(it.deposit.institution) }
+                        "there are no inputs in this group" by inputs.isEmpty()
+                    }
+                    continue
+                } else {
+                    // There was an issue command, but it wasn't signed for this group. It may apply to other
+                    // groups.
                 }
             }
 
-            requireThat { "no output states are unaccounted for" by (outputsLeft == 0) }
+            // sumCash throws if there's a currency mismatch, or if there are no items in the list.
+            val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
+            val outputAmount = outputs.sumCashOrZero(inputAmount.currency)
 
-            // Now check the digital signatures on the move commands. Every input has an owning public key, and we must
+            val deposit = inputs.first().deposit
+
+            requireThat {
+                "there is at least one cash input" by inputs.isNotEmpty()
+                "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0 }
+                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0 }
+                "all outputs in this group use the currency of the inputs" by
+                        outputs.all { it.amount.currency == inputAmount.currency }
+            }
+
+            val exitCommand = tx.commands.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
+            val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, inputAmount.currency)
+
+            requireThat {
+                "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by
+                        (inputAmount == outputAmount + amountExitingLedger)
+            }
+
+            // Now check the digital signatures on the move command. Every input has an owning public key, and we must
             // see a signature from each of those keys. The actual signatures have been verified against the transaction
             // data by the platform before execution.
-            val owningPubKeys  = cashInputs.map  { it.owner }.toSortedSet()
-            val keysThatSigned = commands.requireSingleCommand<Commands.Move>().signers.toSortedSet()
+            val owningPubKeys  = inputs.map  { it.owner }.toSortedSet()
+            val keysThatSigned = tx.commands.requireSingleCommand<Commands.Move>().signers.toSortedSet()
             requireThat {
-                "the owning keys are the same as the signing keys" by (owningPubKeys == keysThatSigned)
+                "the owning keys are the same as the signing keys" by keysThatSigned.containsAll(owningPubKeys)
             }
-
-            // Accept.
         }
     }
 
