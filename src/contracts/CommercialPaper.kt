@@ -17,8 +17,6 @@ import java.time.Instant
  * Open issues:
  *  - In this model, you cannot merge or split CP. Can you do this normally? We could model CP as a specialised form
  *    of cash, or reuse some of the cash code?
- *  - Currently cannot trade more than one piece of CP in a single transaction. This is probably going to be a common
- *    issue: need to find a cleaner way to allow this. Does the single-execution-per-transaction model make sense?
  */
 
 val CP_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash")
@@ -44,30 +42,31 @@ object CommercialPaper : Contract {
     }
 
     override fun verify(tx: TransactionForVerification) {
-        with(tx) {
-            // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
-            // for cash on or after the maturity date.
-            val command = commands.requireSingleCommand<CommercialPaper.Commands>()
+        // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
+        val groups = groupStates<State>(tx.inStates, tx.outStates) { it.withoutOwner() }
 
-            // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
-            val input = inStates.filterIsInstance<CommercialPaper.State>().single()
+        // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
+        // it for cash on or after the maturity date.
+        val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
 
+        for (group in groups) {
+            val input = group.inputs.single()
             requireThat {
                 "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
             }
 
+            val output = group.outputs.singleOrNull()
             when (command.value) {
-                is Commands.Move -> requireThat {
-                    val output = outStates.filterIsInstance<CommercialPaper.State>().single()
-                    "the output state is the same as the input state except for owner" by (input.withoutOwner() == output.withoutOwner())
-                }
+                is Commands.Move -> requireThat { "the output state is present" by (output != null) }
 
-                is Commands.Redeem -> requireThat {
-                    val received = outStates.sumCashOrNull() ?: throw IllegalStateException("no cash being redeemed")
-                    // Do we need to check the signature of the issuer here too?
-                    "the paper must have matured" by (input.maturityDate < time)
-                    "the received amount equals the face value" by (received == input.faceValue)
-                    "the paper must be destroyed" by outStates.filterIsInstance<CommercialPaper.State>().none()
+                is Commands.Redeem -> {
+                    val received = tx.outStates.sumCashOrNull() ?: throw IllegalStateException("no cash being redeemed")
+                    requireThat {
+                        // Do we need to check the signature of the issuer here too?
+                        "the paper must have matured" by (input.maturityDate < tx.time)
+                        "the received amount equals the face value" by (received == input.faceValue)
+                        "the paper must be destroyed" by (output == null)
+                    }
                 }
             }
         }

@@ -62,32 +62,12 @@ object Cash : Contract {
         data class Exit(val amount: Amount) : Command
     }
 
-    data class InOutGroup(val inputs: List<Cash.State>, val outputs: List<Cash.State>)
-
-    private fun groupStates(allInputs: List<ContractState>, allOutputs: List<ContractState>): List<InOutGroup> {
-        val inputs = allInputs.filterIsInstance<Cash.State>()
-        val outputs = allOutputs.filterIsInstance<Cash.State>()
-
-        val inGroups = inputs.groupBy { Pair(it.deposit, it.amount.currency) }
-        val outGroups = outputs.groupBy { Pair(it.deposit, it.amount.currency) }
-
-        val result = ArrayList<InOutGroup>()
-
-        for ((k, v) in inGroups.entries)
-            result.add(InOutGroup(v, outGroups[k] ?: emptyList()))
-        for ((k, v) in outGroups.entries) {
-            if (inGroups[k] == null)
-                result.add(InOutGroup(emptyList(), v))
-        }
-
-        return result
-    }
-
     /** This is the function EVERYONE runs */
     override fun verify(tx: TransactionForVerification) {
         // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = groupStates(tx.inStates, tx.outStates)
+        val groups = groupStates<Cash.State>(tx.inStates, tx.outStates) { Pair(it.deposit, it.amount.currency) }
+
         for ((inputs, outputs) in groups) {
             requireThat {
                 "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0 }

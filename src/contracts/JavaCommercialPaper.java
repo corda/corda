@@ -2,10 +2,12 @@ package contracts;
 
 import core.*;
 import core.serialization.*;
+import kotlin.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
 import java.time.*;
+import java.util.*;
 
 import static core.ContractsDSLKt.*;
 import static kotlin.CollectionsKt.*;
@@ -17,7 +19,7 @@ import static kotlin.CollectionsKt.*;
  * NOTE: For illustration only. Not unit tested.
  */
 public class JavaCommercialPaper implements Contract {
-    public static class State implements SerializeableWithKryo {
+    public static class State implements ContractState, SerializeableWithKryo {
         private InstitutionReference issuance;
         private PublicKey owner;
         private Amount faceValue;
@@ -47,6 +49,12 @@ public class JavaCommercialPaper implements Contract {
         public Instant getMaturityDate() {
             return maturityDate;
         }
+
+        @NotNull
+        @Override
+        public SecureHash getProgramRef() {
+            return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+        }
     }
 
     public static class Commands implements core.Command {
@@ -69,32 +77,41 @@ public class JavaCommercialPaper implements Contract {
     public void verify(@NotNull TransactionForVerification tx) {
         // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
         // for cash on or after the maturity date.
+        List<InOutGroup<State>> groups = ContractTools.groupStates(State.class, tx.getInStates(), tx.getOutStates(),
+                state -> new Pair<>(state.getIssuance(), state.faceValue.getCurrency()));
 
         // Find the command that instructs us what to do and check there's exactly one.
         AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
-        // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
-        State input = single(filterIsInstance(tx.getInStates(), State.class));
 
-        if (!cmd.getSigners().contains(input.getOwner()))
-            throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+        for (InOutGroup<State> group : groups) {
+            List<State> inputs = group.getInputs();
+            List<State> outputs = group.getOutputs();
 
-        if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-            // Check the output CP state is the same as the input state, ignoring the owner field.
-            State output = single(filterIsInstance(tx.getOutStates(), State.class));
-            if (!output.getFaceValue().equals(input.getFaceValue()) ||
-                    !output.getIssuance().equals(input.getIssuance()) ||
-                    !output.getMaturityDate().equals(input.getMaturityDate()))
-                throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
-        } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-            Amount received = CashKt.sumCashOrNull(tx.getInStates());
-            if (received == null)
-                throw new IllegalStateException("Failed requirement: no cash being redeemed");
-            if (input.getMaturityDate().isAfter(tx.getTime()))
-                throw new IllegalStateException("Failed requirement: the paper must have matured");
-            if (!input.getFaceValue().equals(received))
-                throw new IllegalStateException("Failed requirement: the received amount equals the face value");
-            if (!filterIsInstance(tx.getOutStates(), State.class).isEmpty())
-                throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+            // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
+            State input = single(filterIsInstance(inputs, State.class));
+
+            if (!cmd.getSigners().contains(input.getOwner()))
+                throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+
+            if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
+                // Check the output CP state is the same as the input state, ignoring the owner field.
+                State output = single(outputs);
+
+                if (!output.getFaceValue().equals(input.getFaceValue()) ||
+                        !output.getIssuance().equals(input.getIssuance()) ||
+                        !output.getMaturityDate().equals(input.getMaturityDate()))
+                    throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
+            } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
+                Amount received = CashKt.sumCashOrNull(inputs);
+                if (received == null)
+                    throw new IllegalStateException("Failed requirement: no cash being redeemed");
+                if (input.getMaturityDate().isAfter(tx.getTime()))
+                    throw new IllegalStateException("Failed requirement: the paper must have matured");
+                if (!input.getFaceValue().equals(received))
+                    throw new IllegalStateException("Failed requirement: the received amount equals the face value");
+                if (!outputs.isEmpty())
+                    throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+            }
         }
     }
 
