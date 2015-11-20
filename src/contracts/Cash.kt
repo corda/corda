@@ -66,7 +66,7 @@ object Cash : Contract {
     override fun verify(tx: TransactionForVerification) {
         // Each group is a set of input/output states with distinct (deposit, currency) attributes. These types
         // of cash are not fungible and must be kept separated for bookkeeping purposes.
-        val groups = groupStates<Cash.State>(tx.inStates, tx.outStates) { Pair(it.deposit, it.amount.currency) }
+        val groups = tx.groupStates<Cash.State>() { Pair(it.deposit, it.amount.currency) }
 
         for ((inputs, outputs) in groups) {
             requireThat {

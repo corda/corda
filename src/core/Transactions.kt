@@ -207,6 +207,50 @@ data class TransactionForVerification(val inStates: List<ContractState>,
             }
         }
     }
+
+    /**
+     * Utilities for contract writers to incorporate into their logic.
+     */
+
+    data class InOutGroup<T : ContractState>(val inputs: List<T>, val outputs: List<T>)
+
+    // For Java users.
+    fun <T : ContractState> groupStates(ofType: Class<T>, selector: (T) -> Any): List<InOutGroup<T>> {
+        val inputs = inStates.filterIsInstance(ofType)
+        val outputs = outStates.filterIsInstance(ofType)
+
+        val inGroups = inputs.groupBy(selector)
+        val outGroups = outputs.groupBy(selector)
+
+        @Suppress("DEPRECATION")
+        return groupStatesInternal(inGroups, outGroups)
+    }
+
+    // For Kotlin users: this version has nicer syntax and avoids reflection/object creation for the lambda.
+    inline fun <reified T : ContractState> groupStates(selector: (T) -> Any): List<InOutGroup<T>> {
+        val inputs = inStates.filterIsInstance<T>()
+        val outputs = outStates.filterIsInstance<T>()
+
+        val inGroups = inputs.groupBy(selector)
+        val outGroups = outputs.groupBy(selector)
+
+        @Suppress("DEPRECATION")
+        return groupStatesInternal(inGroups, outGroups)
+    }
+
+    @Deprecated("Do not use this directly: exposed as public only due to function inlining")
+    fun <T : ContractState> groupStatesInternal(inGroups: Map<Any, List<T>>, outGroups: Map<Any, List<T>>): List<InOutGroup<T>> {
+        val result = ArrayList<InOutGroup<T>>()
+
+        for ((k, v) in inGroups.entries)
+            result.add(InOutGroup(v, outGroups[k] ?: emptyList()))
+        for ((k, v) in outGroups.entries) {
+            if (inGroups[k] == null)
+                result.add(InOutGroup(emptyList(), v))
+        }
+
+        return result
+    }
 }
 
 /** Thrown if a verification fails due to a contract rejection. */

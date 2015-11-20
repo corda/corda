@@ -1,6 +1,7 @@
 package contracts;
 
 import core.*;
+import core.TransactionForVerification.*;
 import core.serialization.*;
 import kotlin.*;
 import org.jetbrains.annotations.*;
@@ -77,8 +78,8 @@ public class JavaCommercialPaper implements Contract {
     public void verify(@NotNull TransactionForVerification tx) {
         // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
         // for cash on or after the maturity date.
-        List<InOutGroup<State>> groups = ContractTools.groupStates(State.class, tx.getInStates(), tx.getOutStates(),
-                state -> new Pair<>(state.getIssuance(), state.faceValue.getCurrency()));
+        List<InOutGroup<State>> groups =
+                tx.groupStates(State.class, state -> new Pair<>(state.getIssuance(), state.faceValue.getCurrency()));
 
         // Find the command that instructs us what to do and check there's exactly one.
         AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
