@@ -18,5 +18,6 @@ object DummyContract : Contract {
         // Always accepts.
     }
 
-    override val legalContractReference: String = "/dev/null"
+    // The "empty contract"
+    override val legalContractReference: SecureHash = SecureHash.sha256("")
 }

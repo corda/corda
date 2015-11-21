@@ -118,7 +118,8 @@ public class JavaCommercialPaper implements Contract {
 
     @NotNull
     @Override
-    public String getLegalContractReference() {
-        return "https://en.wikipedia.org/wiki/Commercial_paper";
+    public SecureHash getLegalContractReference() {
+        // TODO: Should return hash of the contract's contents, not its URI
+        return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 }

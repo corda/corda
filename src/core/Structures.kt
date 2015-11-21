@@ -69,7 +69,9 @@ interface Contract {
      */
     fun verify(tx: TransactionForVerification)
 
-    // TODO: This should probably be a hash of a document, rather than a URL to it.
-    /** Unparsed reference to the natural language contract that this code is supposed to express (usually a URL). */
-    val legalContractReference: String
+    /**
+     * Unparsed reference to the natural language contract that this code is supposed to express (usually a hash of
+     * the contract's contents).
+     */
+    val legalContractReference: SecureHash
 }

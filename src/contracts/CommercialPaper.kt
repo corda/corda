@@ -23,7 +23,8 @@ val CP_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash")
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
 object CommercialPaper : Contract {
-    override val legalContractReference: String = "https://en.wikipedia.org/wiki/Commercial_paper"
+    // TODO: should reference the content of the legal agreement, not its URI
+    override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
     data class State(
         val issuance: InstitutionReference,
