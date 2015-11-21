@@ -1,3 +1,5 @@
+@file:Suppress("UNUSED_PARAMETER")
+
 package core.testutils
 
 import contracts.*
