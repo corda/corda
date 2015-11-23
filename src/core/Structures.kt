@@ -56,9 +56,9 @@ data class AuthenticatedObject<out T : Any>(
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
- * every [LedgerTransaction] they see on the network, for every input state. All input states must accept the transaction
- * for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted timestamp attached
- * to the transaction itself i.e. it is NOT necessarily the current time.
+ * every [LedgerTransaction] they see on the network, for every input and output state. All contracts must accept the
+ * transaction for it to be accepted: failure of any aborts the entire thing. The time is taken from a trusted
+ * timestamp attached to the transaction itself i.e. it is NOT necessarily the current time.
  */
 interface Contract {
     /**
