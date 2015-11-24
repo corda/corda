@@ -6,9 +6,9 @@ import java.time.Instant
 
 /**
  * This is an ultra-trivial implementation of commercial paper, which is essentially a simpler version of a corporate
- * bond. It can be seen as a company-specific currency. A company issues CP with a particular face value, like $100
+ * bond. It can be seen as a company-specific currency. A company issues CP with a particular face value, say $100,
  * but sells it for less, say $90. The paper can be redeemed for cash at a given date in the future. Thus this example
- * would have a 10% interest rate with a single repayment. Commercial paper is often rolled out (redeemed and the
+ * would have a 10% interest rate with a single repayment. Commercial paper is often rolled over (redeemed and the
  * money used to immediately rebuy).
  *
  * This contract is not intended to realistically model CP. It is here only to act as a next step up above cash in
@@ -16,13 +16,15 @@ import java.time.Instant
  *
  * Open issues:
  *  - In this model, you cannot merge or split CP. Can you do this normally? We could model CP as a specialised form
- *    of cash, or reuse some of the cash code?
+ *    of cash, or reuse some of the cash code? Waiting on response from Ayoub and Rajar about whether CP can always
+ *    be split/merged or only in secondary markets. Even if current systems can't do this, would it be a desirable
+ *    feature to have anyway?
  */
 
 val CP_PROGRAM_ID = SecureHash.sha256("replace-me-later-with-bytecode-hash")
 
 // TODO: Generalise the notion of an owned instrument into a superclass/supercontract. Consider composition vs inheritance.
-object CommercialPaper : Contract {
+class CommercialPaper : Contract {
     // TODO: should reference the content of the legal agreement, not its URI
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 

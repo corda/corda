@@ -22,6 +22,17 @@ class CommercialPaperTests {
     val CASH_2 = CASH_1.copy(owner = DUMMY_PUBKEY_2)
     val CASH_3 = CASH_1.copy(owner = DUMMY_PUBKEY_1)
 
+    val A_THOUSAND_DOLLARS = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1,2,3)), 1000.DOLLARS, ALICE)
+
+    @Test
+    fun move2() {
+        transactionGroup {
+            transaction {
+                output { A_THOUSAND_DOLLARS `owned by` MINI_CORP_KEY }
+            }
+        }
+    }
+
     @Test
     fun move() {
         transaction {

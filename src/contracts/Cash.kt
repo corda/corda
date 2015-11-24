@@ -28,7 +28,7 @@ class InsufficientBalanceException(val amountMissing: Amount) : Exception()
  * At the same time, other contracts that just want money and don't care much who is currently holding it in their
  * vaults can ignore the issuer/depositRefs and just examine the amount fields.
  */
-object Cash : Contract {
+class Cash : Contract {
     /**
      * TODO:
      * 1) hash should be of the contents, not the URI
