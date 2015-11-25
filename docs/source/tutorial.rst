@@ -455,15 +455,178 @@ bankrupt, if there is a dispute, and so on.
 As the prototype evolves, these requirements will be explored and this tutorial updated to reflect improvements in the
 contracts API.
 
+How to test your contract
+-------------------------
+
+Of course, it is essential to unit test your new nugget of business logic to ensure that it behaves as you expect.
+Although you can write traditional unit tests in Java, the platform also provides a *domain specific language*
+(DSL) for writing contract unit tests that automates many of the common patterns. This DSL builds on top of JUnit yet
+is a Kotlin DSL, and therefore this section will not show Java equivalent code (for Java unit tests you would not
+benefit from the DSL and would write them by hand).
+
+We start by defining a new test class, with a basic CP state:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      class CommercialPaperTests {
+          val PAPER_1 = CommercialPaper.State(
+                  issuance = InstitutionReference(MEGA_CORP, OpaqueBytes.of(123)),
+                  owner = MEGA_CORP_KEY,
+                  faceValue = 1000.DOLLARS,
+                  maturityDate = TEST_TX_TIME + 7.days
+          )
+
+          @Test
+          fun key_mismatch_at_issue() {
+              transactionGroup {
+                  transaction {
+                      output { PAPER_1 }
+                      arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
+                  }
+
+                  expectFailureOfTx(1, "signed by the claimed issuer")
+              }
+          }
+      }
+
+We start by defining a commercial paper state. It will be owned by a pre-defined unit test institution, affectionately
+called `MEGA_CORP` (this constant, along with many others, is defined in `TestUtils.kt`). Due to Kotin's extensive
+type inference, many types are not written out explicitly in this code and it has the feel of a scripting language.
+But the types are there, and you can ask IntelliJ to reveal them by pressing Alt-Enter on a "val" or "var" and selecting
+"Specify type explicitly".
+
+There are a few things that are unusual here:
+
+* We can specify quantities of money by writing 1000.DOLLARS or 1000.POUNDS
+* We can specify quantities of time by writing 7.days
+* We can add quantities of time to the TEST_TX_TIME constant, which merely defines an arbitrary java.time.Instant
+
+If you examine the code in the actual repository, you will also notice that it makes use of method names with spaces
+in them by surrounding the name with backticks, rather than using underscores. We don't show this here as it breaks the
+doc website's syntax highlighting engine.
+
+The `1000.DOLLARS` construct is quite simple: Kotlin allows you to define extension functions on primitive types like
+Int or Double. So by writing 7.days, for instance, the compiler will emit a call to a static method that takes an int
+and returns a `java.time.Duration`.
+
+As this is JUnit, we must remember to annotate each test method with @Test. Let's examine the contents of the first test.
+We are trying to check that it's not possible for just anyone to issue commercial paper in MegaCorp's name. That would
+be bad!
+
+The `transactionGroup` function works the same way as the `requireThat` construct above. It is an example of what
+Kotlin calls a type safe builder, which you can read about in `the documentation for builders <https://kotlinlang.org/docs/reference/type-safe-builders.html>`_.
+The code block that follows it is run in the scope of a freshly created `TransactionGroupForTest` object, which assists
+you with building little transaction graphs and verifying them as a whole. Here, our "group" only actually has a
+single transaction in it, with a single output, no inputs, and an Issue command signed by `DUMMY_PUBKEY_1` which is just
+an arbitrary public key. As the paper claims to be issued by `MEGA_CORP`, this doesn't match and should cause a
+failure. The `expectFailureOfTx` method takes a 1-based index (in this case we expect the first transaction to fail)
+and a string that should appear in the exception message. Then it runs the `TransactionGroup.verify()` method to
+invoke all the involved contracts.
+
+It's worth bearing in mind that even though this code may look like a totally different language to normal Kotlin or
+Java, it's actually not, and so you can embed arbitrary code anywhere inside any of these blocks.
+
+Let's set up a full trade and ensure it works:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      // Generate a trade lifecycle with various parameters.
+      private fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
+                        aliceGetsBack: Amount = 1000.DOLLARS,
+                        destroyPaperAtRedemption: Boolean = true): TransactionGroupForTest {
+        val someProfits = 1200.DOLLARS
+        return transactionGroup {
+            roots {
+                transaction(900.DOLLARS.CASH owned_by ALICE label "alice's $900")
+                transaction(someProfits.CASH owned_by MEGA_CORP_KEY label "some profits")
+            }
+
+            // Some CP is issued onto the ledger by MegaCorp.
+            transaction {
+                output("paper") { PAPER_1 }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue() }
+            }
+
+            // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
+            // that sounds a bit too good to be true!
+            transaction {
+                input("paper")
+                input("alice's $900")
+                output { 900.DOLLARS.CASH owned_by MEGA_CORP_KEY }
+                output("alice's paper") { PAPER_1 owned_by ALICE }
+                arg(ALICE) { Cash.Commands.Move }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Move }
+            }
+
+            // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
+            // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
+            transaction(time = redemptionTime) {
+                input("alice's paper")
+                input("some profits")
+
+                output { aliceGetsBack.CASH owned_by ALICE }
+                output { (someProfits - aliceGetsBack).CASH owned_by MEGA_CORP_KEY }
+                if (!destroyPaperAtRedemption)
+                    output { PAPER_1 owned_by ALICE }
+
+                arg(MEGA_CORP_KEY) { Cash.Commands.Move }
+                arg(ALICE) { CommercialPaper.Commands.Redeem }
+            }
+        }
+    }
+
+In this example we see some new features of the DSL:
+
+* The `roots` construct. Sometimes you don't want to write transactions that laboriously issue everything you need
+  in a formally correct way. Inside `roots` you can create a bunch of states without any contract checking what you're
+  doing. As states may not exist outside of transactions, each line inside defines a fake/invalid transaction with the
+  given output states, which may be *labelled* with a short string. Those labels can be used later to join transactions
+  together.
+* The `.CASH` suffix. This is a part of the unit test DSL specific to the cash contract. It takes a monetary amount
+  like 1000.DOLLARS and then wraps it in a cash ledger state, with some fake data.
+* The owned_by `infix function <https://kotlinlang.org/docs/reference/functions.html#infix-notation>`_. This is just
+  a normal function that we're allowed to write in a slightly different way, which returns a copy of the cash state
+  with the owner field altered to be the given public key. `ALICE` is a constant defined by the test utilities that
+  is, like `DUMMY_PUBKEY_1`, just an arbitrary keypair.
+* We are now defining several transactions that chain together. We can optionally label any output we create. Obviously
+  then, the `input` method requires us to give the label of some other output that it connects to.
+* The `transaction` function can also be given a time, to override the default timestamp on a transaction.
+
+The `trade` function is not itself a unit test. Instead it builds up a trade/transaction group, with some slight
+differences depending on the parameters provided (Kotlin allows parameters to have default valus). Then it returns
+it, unexecuted.
+
+We use it like this:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      @Test
+      fun ok() {
+          trade().verify()
+      }
+
+      @Test
+      fun not_matured_at_redemption() {
+          trade(redemptionTime = TEST_TX_TIME + 2.days).expectFailureOfTx(3, "must have matured")
+      }
+
+That's pretty simple: we just call `verify` in order to check all the transactions in the group. If any are invalid,
+an exception will be thrown indicating which transaction failed and why. In the second case, we call `expectFailureOfTx`
+again to ensure the third transaction fails with a message that contains "must have matured" (it doesn't have to be
+the exact message).
+
+
 Adding a crafting API to your contract
 --------------------------------------
 
 TODO: Write this after the CP contract has had a crafting API actually added.
 
-How to test your contract
--------------------------
-
-TODO: Write this next
 
 Non-asset-oriented based smart contracts
 ----------------------------------------
