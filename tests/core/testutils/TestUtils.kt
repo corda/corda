@@ -8,6 +8,8 @@ import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 object TestUtils {
@@ -63,6 +65,9 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
+// Allows you to write 100.DOLLARS.CASH
+val Amount.CASH: Cash.State get() = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1,2,3)), this, NullPublicKey)
 
 class LabeledOutput(val label: String?, val state: ContractState) {
     override fun toString() = state.toString() + (if (label != null) " ($label)" else "")
@@ -220,11 +225,30 @@ class TransactionGroupForTest {
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
     fun transactionGroup(body: TransactionGroupForTest.() -> Unit) {}
 
+    fun toTransactionGroup() = TransactionGroup(txns.map { it }.toSet(), rootTxns.toSet())
+
+    class Failed(val index: Int, cause: Throwable) : Exception("Transaction $index didn't verify", cause)
+
     fun verify() {
-        toTransactionGroup().verify(TEST_PROGRAM_MAP)
+        val group = toTransactionGroup()
+        try {
+            group.verify(TEST_PROGRAM_MAP)
+        } catch (e: TransactionVerificationException) {
+            // Let the developer know the index of the transaction that failed.
+            val ltx: LedgerTransaction = txns.find { it.hash == e.tx.origHash }!!
+            throw Failed(txns.indexOf(ltx) + 1, e)
+        }
     }
 
-    fun toTransactionGroup() = TransactionGroup(txns.map { it }.toSet(), rootTxns.toSet())
+    fun expectFailureOfTx(index: Int, message: String): Exception {
+        val e = assertFailsWith(Failed::class) {
+            verify()
+        }
+        assertEquals(index, e.index)
+        if (!e.cause!!.message!!.contains(message))
+            throw AssertionError("Exception should have said '$message' but was actually: ${e.cause.message}")
+        return e
+    }
 }
 
 fun transactionGroup(body: TransactionGroupForTest.() -> Unit) = TransactionGroupForTest().apply { this.body() }

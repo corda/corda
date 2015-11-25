@@ -229,6 +229,7 @@ fun createKryo(): Kryo {
         registerDataClass<CommercialPaper.State>()
         register(CommercialPaper.Commands.Move.javaClass)
         register(CommercialPaper.Commands.Redeem.javaClass)
+        registerDataClass<CommercialPaper.Commands.Issue>()
 
         // And for unit testing ...
         registerDataClass<DummyPublicKey>()

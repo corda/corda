@@ -2,6 +2,7 @@ package contracts
 
 import core.*
 import java.security.PublicKey
+import java.security.SecureRandom
 import java.time.Instant
 
 /**
@@ -39,9 +40,15 @@ class CommercialPaper : Contract {
         fun withoutOwner() = copy(owner = NullPublicKey)
     }
 
-    sealed class Commands : Command {
-        object Move : Commands()
-        object Redeem : Commands()
+    interface Commands : Command {
+        object Move : Commands
+        object Redeem : Commands
+
+        /**
+         * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
+         * has a unique ID even when there are no inputs.
+         */
+        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -53,24 +60,41 @@ class CommercialPaper : Contract {
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
 
         for (group in groups) {
-            val input = group.inputs.single()
-            requireThat {
-                "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
-            }
-
-            val output = group.outputs.singleOrNull()
             when (command.value) {
-                is Commands.Move -> requireThat { "the output state is present" by (output != null) }
-
-                is Commands.Redeem -> {
-                    val received = tx.outStates.sumCashOrNull() ?: throw IllegalStateException("no cash being redeemed")
+                is Commands.Move -> {
+                    val input = group.inputs.single()
                     requireThat {
-                        // Do we need to check the signature of the issuer here too?
-                        "the paper must have matured" by (input.maturityDate < tx.time)
-                        "the received amount equals the face value" by (received == input.faceValue)
-                        "the paper must be destroyed" by (output == null)
+                        "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+                        "the state is propagated" by (group.outputs.size == 1)
                     }
                 }
+
+                is Commands.Redeem -> {
+                    val input = group.inputs.single()
+                    val received = tx.outStates.sumCashBy(input.owner)
+                    requireThat {
+                        "the paper must have matured" by (input.maturityDate < tx.time)
+                        "the received amount equals the face value" by (received == input.faceValue)
+                        "the paper must be destroyed" by group.outputs.isEmpty()
+                        "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+                    }
+                }
+
+                is Commands.Issue -> {
+                    val output = group.outputs.single()
+                    requireThat {
+                        // Don't allow people to issue commercial paper under other entities identities.
+                        "the issuance is signed by the claimed issuer of the paper" by
+                                (command.signers.contains(output.issuance.institution.owningKey))
+                        "the face value is not zero" by (output.faceValue.pennies > 0)
+                        "the maturity date is not in the past" by (output.maturityDate > tx.time)
+                        // Don't allow an existing CP state to be replaced by this issuance.
+                        "there is no input state" by group.inputs.isEmpty()
+                    }
+                }
+
+                // TODO: Think about how to evolve contracts over time with new commands.
+                else -> throw IllegalArgumentException("Unrecognised command")
             }
         }
     }

@@ -55,20 +55,20 @@ class Cash : Contract {
     }
 
     // Just for grouping
-    class Commands {
-        object Move : Command
+    interface Commands : Command {
+        object Move : Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
          * has a unique ID even when there are no inputs.
          */
-        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Command
+        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
 
         /**
          * A command stating that money has been withdrawn from the shared ledger and is now accounted for
          * in some other way.
          */
-        data class Exit(val amount: Amount) : Command
+        data class Exit(val amount: Amount) : Commands
     }
 
     /** This is the function EVERYONE runs */
@@ -81,6 +81,7 @@ class Cash : Contract {
             requireThat {
                 "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0 }
             }
+
 
             val issueCommand = tx.commands.select<Commands.Issue>().singleOrNull()
             if (issueCommand != null) {
@@ -104,7 +105,6 @@ class Cash : Contract {
                 }
             }
 
-            // sumCash throws if there's a currency mismatch, or if there are no items in the list.
             val inputAmount = inputs.sumCashOrNull() ?: throw IllegalArgumentException("there is at least one cash input for this group")
             val outputAmount = outputs.sumCashOrZero(inputAmount.currency)
 
@@ -214,8 +214,9 @@ class Cash : Contract {
     }
 }
 
-// Small DSL extension.
+// Small DSL extensions.
 fun Iterable<ContractState>.sumCashBy(owner: PublicKey) = filterIsInstance<Cash.State>().filter { it.owner == owner }.map { it.amount }.sumOrThrow()
 fun Iterable<ContractState>.sumCash() = filterIsInstance<Cash.State>().map { it.amount }.sumOrThrow()
 fun Iterable<ContractState>.sumCashOrNull() = filterIsInstance<Cash.State>().map { it.amount }.sumOrNull()
 fun Iterable<ContractState>.sumCashOrZero(currency: Currency) = filterIsInstance<Cash.State>().map { it.amount }.sumOrZero(currency)
+
