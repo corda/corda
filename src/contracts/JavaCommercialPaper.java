@@ -3,7 +3,6 @@ package contracts;
 import core.*;
 import core.TransactionForVerification.*;
 import core.serialization.*;
-import kotlin.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
@@ -56,6 +55,33 @@ public class JavaCommercialPaper implements Contract {
         public SecureHash getProgramRef() {
             return SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            State state = (State) o;
+
+            if (issuance != null ? !issuance.equals(state.issuance) : state.issuance != null) return false;
+            if (owner != null ? !owner.equals(state.owner) : state.owner != null) return false;
+            if (faceValue != null ? !faceValue.equals(state.faceValue) : state.faceValue != null) return false;
+            return !(maturityDate != null ? !maturityDate.equals(state.maturityDate) : state.maturityDate != null);
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result = issuance != null ? issuance.hashCode() : 0;
+            result = 31 * result + (owner != null ? owner.hashCode() : 0);
+            result = 31 * result + (faceValue != null ? faceValue.hashCode() : 0);
+            result = 31 * result + (maturityDate != null ? maturityDate.hashCode() : 0);
+            return result;
+        }
+
+        public State withoutOwner() {
+            return new State(issuance, NullPublicKey.INSTANCE, faceValue, maturityDate);
+        }
     }
 
     public static class Commands implements core.Command {
@@ -78,8 +104,7 @@ public class JavaCommercialPaper implements Contract {
     public void verify(@NotNull TransactionForVerification tx) {
         // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
         // for cash on or after the maturity date.
-        List<InOutGroup<State>> groups =
-                tx.groupStates(State.class, state -> new Pair<>(state.getIssuance(), state.faceValue.getCurrency()));
+        List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
 
         // Find the command that instructs us what to do and check there's exactly one.
         AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
