@@ -159,7 +159,10 @@ We have four fields in our state:
 
 * `issuance`: a reference to a specific piece of commercial paper at an institution
 * `owner`: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
-  attached identity and is expected to be one-time-use for privacy reasons.
+  attached identity and is expected to be one-time-use for privacy reasons. However, unlike in Bitcoin, we model
+  ownership at the level of individual contracts rather than as a platform-level concept as we envisage many
+  (possibly most) contracts on the platform will not represent "owner/issuer" relationships, but "party/party"
+  relationships such as a derivative contract.
 * `faceValue`: an `Amount`, which wraps an integer number of pennies and a currency.
 * `maturityDate`: an `Instant <https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html>`, which is a type
   from the Java 8 standard time library. It defines a point on the timeline.
@@ -264,12 +267,17 @@ Understanding fungibility
 We say states are *fungible* if they are treated identically to each other by the recipient, despite the fact that they
 aren't quite identical. Dollar bills are fungible because even though one may be worn/a bit dirty and another may
 be crisp and new, they are still both worth exactly $1. Likewise, ten $1 bills are almost exactly equivalent to
-one $10 bill. On the other hand, $10 and £10 are not fungible: if you tried to pay for something that cost $20 with
+one $10 bill. On the other hand, $10 and £10 are not fungible: if you tried to pay for something that cost £20 with
 $10+£10 notes your trade would not be accepted.
 
 So whilst our ledger could represent every monetary amount with a collection of states worth one penny, this would become
 extremely unwieldy. It's better to allow states to represent varying amounts and then define rules for merging them
-and splitting them.
+and splitting them. Similarly, we could also have considered modelling cash as a single contract that records the
+ownership of all holders of a given currency from a given issuer. Whilst this is possible, and is effectively how
+some other platforms work, this prototype favours a design that doesn't necessarily require state to be shared between
+multiple actors if they don't have a direct relationship with each other (as would implicitly be required if we had a
+single state representing multiple people's ownership). Keeping the states separated also has scalability benefits, as
+different parts of the global transaction graph can be updated in parallel.
 
 To make this easier the contract API provides a notion of groups. A group is a set of input states and output states
 that should be checked for validity independently. It solves the following problem: because every contract sees every
