@@ -1,0 +1,579 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Tutorial &mdash; Playground 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Playground 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Roadmap" href="roadmap.html"/>
+        <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Playground
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#starting-the-commercial-paper-class">Starting the commercial paper class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#states">States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#commands">Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-verify-function">The verify function</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#understanding-fungibility">Understanding fungibility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#checking-the-requirements">Checking the requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Playground</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/tutorial.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial will take you through how the commercial paper contract works, and then teaches you how to define your own
+&#8220;hello world&#8221; contract for managing the ownership of an office building.</p>
+<p>The code in this tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling
+for how Kotlin syntax works.</p>
+<div class="section" id="starting-the-commercial-paper-class">
+<h2>Starting the commercial paper class<a class="headerlink" href="#starting-the-commercial-paper-class" title="Permalink to this headline">¶</a></h2>
+<p>A smart contract is a class that implements the <code class="docutils literal"><span class="pre">Contract</span></code> interface. Therefore, we start like this:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">class</span> <span class="nc">CommercialPaper</span> <span class="p">:</span> <span class="n">Contract</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">val</span> <span class="py">legalContractReference</span><span class="p">:</span> <span class="n">SecureHash</span> <span class="p">=</span> <span class="n">SecureHash</span><span class="p">.</span><span class="n">sha256</span><span class="p">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="p">);</span>
+
+    <span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">TODO</span><span class="p">()</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">class</span> <span class="nc">Cash</span> <span class="kd">implements</span> <span class="n">Contract</span> <span class="o">{</span>
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="n">SecureHash</span> <span class="nf">getLegalContractReference</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">SecureHash</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">sha256</span><span class="o">(</span><span class="s">&quot;https://en.wikipedia.org/wiki/Commercial_paper&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="nd">@Override</span>
+    <span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="n">TransactionForVerification</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">UnsupportedOperationException</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>Every contract must have at least a <code class="docutils literal"><span class="pre">getLegalContractReference()</span></code> and a <code class="docutils literal"><span class="pre">verify()</span></code> method. In Kotlin we express
+a getter without a setter as an immutable property (val). The <em>legal contract reference</em> is supposed to be a hash
+of a document that describes the legal contract and may take precedence over the code, in case of a dispute.</p>
+<p>The verify method returns nothing. This is intentional: the function either completes correctly, or throws an exception,
+in which case the transaction is rejected.</p>
+<p>We also need to define a constant hash that would, in a real system, be the hash of the program bytecode. For now
+we just set it to a dummy value as dynamic loading and sandboxing of bytecode is not implemented. This constant
+isn&#8217;t shown in the code snippet but is called <cite>CP_PROGRAM_ID</cite>.</p>
+<p>So far, so simple. Now we need to define the commercial paper <em>state</em>, which represents the fact of ownership of a
+piece of issued paper.</p>
+</div>
+<div class="section" id="states">
+<h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
+<p>A state is a class that stores data that is checked by the contract.</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
+  <span class="k">val</span> <span class="py">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span>
+  <span class="k">val</span> <span class="py">owner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">,</span>
+  <span class="k">val</span> <span class="py">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
+  <span class="k">val</span> <span class="py">maturityDate</span><span class="p">:</span> <span class="n">Instant</span>
+<span class="p">)</span> <span class="p">:</span> <span class="n">ContractState</span> <span class="p">{</span>
+  <span class="k">override</span> <span class="k">val</span> <span class="py">programRef</span> <span class="p">=</span> <span class="n">CP_PROGRAM_ID</span>
+
+  <span class="k">fun</span> <span class="nf">withoutOwner</span><span class="p">()</span> <span class="p">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">owner</span> <span class="p">=</span> <span class="n">NullPublicKey</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">State</span> <span class="kd">implements</span> <span class="n">ContractState</span><span class="o">,</span> <span class="n">SerializeableWithKryo</span> <span class="o">{</span>
+  <span class="kd">private</span> <span class="n">InstitutionReference</span> <span class="n">issuance</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">PublicKey</span> <span class="n">owner</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Amount</span> <span class="n">faceValue</span><span class="o">;</span>
+  <span class="kd">private</span> <span class="n">Instant</span> <span class="n">maturityDate</span><span class="o">;</span>
+
+  <span class="kd">public</span> <span class="nf">State</span><span class="o">()</span> <span class="o">{}</span>  <span class="c1">// For serialization</span>
+
+  <span class="kd">public</span> <span class="nf">State</span><span class="o">(</span><span class="n">InstitutionReference</span> <span class="n">issuance</span><span class="o">,</span> <span class="n">PublicKey</span> <span class="n">owner</span><span class="o">,</span> <span class="n">Amount</span> <span class="n">faceValue</span><span class="o">,</span> <span class="n">Instant</span> <span class="n">maturityDate</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">issuance</span> <span class="o">=</span> <span class="n">issuance</span><span class="o">;</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">owner</span> <span class="o">=</span> <span class="n">owner</span><span class="o">;</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">faceValue</span> <span class="o">=</span> <span class="n">faceValue</span><span class="o">;</span>
+      <span class="k">this</span><span class="o">.</span><span class="na">maturityDate</span> <span class="o">=</span> <span class="n">maturityDate</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">InstitutionReference</span> <span class="nf">getIssuance</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">issuance</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">PublicKey</span> <span class="nf">getOwner</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">owner</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">Amount</span> <span class="nf">getFaceValue</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">faceValue</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">Instant</span> <span class="nf">getMaturityDate</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">maturityDate</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="nd">@NotNull</span>
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="n">SecureHash</span> <span class="nf">getProgramRef</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="n">SecureHash</span><span class="o">.</span><span class="na">Companion</span><span class="o">.</span><span class="na">sha256</span><span class="o">(</span><span class="s">&quot;java commercial paper (this should be a bytecode hash)&quot;</span><span class="o">);</span>
+  <span class="o">}</span>
+
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="n">Object</span> <span class="n">o</span><span class="o">)</span> <span class="o">{</span>
+      <span class="k">if</span> <span class="o">(</span><span class="k">this</span> <span class="o">==</span> <span class="n">o</span><span class="o">)</span> <span class="k">return</span> <span class="kc">true</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">o</span> <span class="o">==</span> <span class="kc">null</span> <span class="o">||</span> <span class="n">getClass</span><span class="o">()</span> <span class="o">!=</span> <span class="n">o</span><span class="o">.</span><span class="na">getClass</span><span class="o">())</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+
+      <span class="n">State</span> <span class="n">state</span> <span class="o">=</span> <span class="o">(</span><span class="n">State</span><span class="o">)</span> <span class="n">o</span><span class="o">;</span>
+
+      <span class="k">if</span> <span class="o">(</span><span class="n">issuance</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="o">!</span><span class="n">issuance</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">issuance</span><span class="o">)</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">issuance</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">owner</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="o">!</span><span class="n">owner</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">owner</span><span class="o">)</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">owner</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="k">if</span> <span class="o">(</span><span class="n">faceValue</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="o">!</span><span class="n">faceValue</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">faceValue</span><span class="o">)</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">faceValue</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">)</span> <span class="k">return</span> <span class="kc">false</span><span class="o">;</span>
+      <span class="k">return</span> <span class="o">!(</span><span class="n">maturityDate</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="o">!</span><span class="n">maturityDate</span><span class="o">.</span><span class="na">equals</span><span class="o">(</span><span class="n">state</span><span class="o">.</span><span class="na">maturityDate</span><span class="o">)</span> <span class="o">:</span> <span class="n">state</span><span class="o">.</span><span class="na">maturityDate</span> <span class="o">!=</span> <span class="kc">null</span><span class="o">);</span>
+
+  <span class="o">}</span>
+
+  <span class="nd">@Override</span>
+  <span class="kd">public</span> <span class="kt">int</span> <span class="nf">hashCode</span><span class="o">()</span> <span class="o">{</span>
+      <span class="kt">int</span> <span class="n">result</span> <span class="o">=</span> <span class="n">issuance</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">issuance</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">;</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="mi">31</span> <span class="o">*</span> <span class="n">result</span> <span class="o">+</span> <span class="o">(</span><span class="n">owner</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">owner</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">);</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="mi">31</span> <span class="o">*</span> <span class="n">result</span> <span class="o">+</span> <span class="o">(</span><span class="n">faceValue</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">faceValue</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">);</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="mi">31</span> <span class="o">*</span> <span class="n">result</span> <span class="o">+</span> <span class="o">(</span><span class="n">maturityDate</span> <span class="o">!=</span> <span class="kc">null</span> <span class="o">?</span> <span class="n">maturityDate</span><span class="o">.</span><span class="na">hashCode</span><span class="o">()</span> <span class="o">:</span> <span class="mi">0</span><span class="o">);</span>
+      <span class="k">return</span> <span class="n">result</span><span class="o">;</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="n">State</span> <span class="nf">withoutOwner</span><span class="o">()</span> <span class="o">{</span>
+      <span class="k">return</span> <span class="k">new</span> <span class="n">State</span><span class="o">(</span><span class="n">issuance</span><span class="o">,</span> <span class="n">NullPublicKey</span><span class="o">.</span><span class="na">INSTANCE</span><span class="o">,</span> <span class="n">faceValue</span><span class="o">,</span> <span class="n">maturityDate</span><span class="o">);</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>We define a class that implements the <cite>ContractState</cite> and <cite>SerializableWithKryo</cite> interfaces. The
+latter is an artifact of how the prototype implements serialization and can be ignored for now: it wouldn&#8217;t work
+like this in any final product.</p>
+<p>The <cite>ContractState</cite> interface requires us to provide a <cite>getProgramRef</cite> method that is supposed to return a hash of
+the bytecode of the contract itself. For now this is a dummy value and isn&#8217;t used: later on, this mechanism will change.
+Beyond that it&#8217;s a freeform object into which we can put anything which can be serialized.</p>
+<p>We have four fields in our state:</p>
+<ul class="simple">
+<li><cite>issuance</cite>: a reference to a specific piece of commercial paper at an institution</li>
+<li><cite>owner</cite>: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
+attached identity and is expected to be one-time-use for privacy reasons.</li>
+<li><cite>faceValue</cite>: an <cite>Amount</cite>, which wraps an integer number of pennies and a currency.</li>
+<li><cite>maturityDate</cite>: an <cite>Instant &lt;https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html&gt;</cite>, which is a type
+from the Java 8 standard time library. It defines a point on the timeline.</li>
+</ul>
+<p>States are immutable, and thus the class is defined as immutable as well. The <cite>data</cite> modifier in the Kotlin version
+causes the compiler to generate the equals/hashCode/toString methods automatically, along with a copy method that can
+be used to create variants of the original object. Data classes are similar to case classes in Scala, if you are
+familiar with that language. The <cite>withoutOwner</cite> method uses the auto-generated copy method to return a version of
+the state with the owner public key blanked out: this will prove useful later.</p>
+<p>The Java code compiles to the same bytecode as the Kotlin version, but as you can see, is much more verbose.</p>
+</div>
+<div class="section" id="commands">
+<h2>Commands<a class="headerlink" href="#commands" title="Permalink to this headline">¶</a></h2>
+<p>The logic for a contract may vary depending on what stage of a lifecycle it is automating. So it can be useful to
+pass additional data into the contract code that isn&#8217;t represented by the states which exist permanently in the ledger.</p>
+<p>For this purpose we have commands. Often, they don&#8217;t need to contain any data at all, they just need to exist. A command
+is a piece of data associated with some <em>signatures</em>. By the time the contract runs the signatures have already been
+checked, so from the contract code&#8217;s perspective, a command is simply a data structure with a list of attached
+public keys. Each key had a signature proving that the corresponding private key was used to sign.</p>
+<p>Let&#8217;s define a couple of commands now:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">sealed</span> <span class="k">class</span> <span class="nc">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
+    <span class="k">object</span> <span class="nc">Move</span> <span class="p">:</span> <span class="n">Commands</span><span class="p">()</span>
+    <span class="k">object</span> <span class="nc">Redeem</span> <span class="p">:</span> <span class="n">Commands</span><span class="p">()</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Commands</span> <span class="kd">implements</span> <span class="n">core</span><span class="o">.</span><span class="na">Command</span> <span class="o">{</span>
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Move</span> <span class="kd">extends</span> <span class="n">Commands</span> <span class="o">{</span>
+      <span class="nd">@Override</span>
+      <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+          <span class="k">return</span> <span class="n">obj</span> <span class="k">instanceof</span> <span class="n">Move</span><span class="o">;</span>
+      <span class="o">}</span>
+  <span class="o">}</span>
+
+  <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Redeem</span> <span class="kd">extends</span> <span class="n">Commands</span> <span class="o">{</span>
+      <span class="nd">@Override</span>
+      <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
+          <span class="k">return</span> <span class="n">obj</span> <span class="k">instanceof</span> <span class="n">Redeem</span><span class="o">;</span>
+      <span class="o">}</span>
+  <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>The <cite>object</cite> keyword in Kotlin just defines a singleton object. As the commands don&#8217;t need any additional data in our
+case, they can be empty and we just use their type as the important information. Java has no syntax for declaring
+singletons, so we just define a class that considers any other instance to be equal and that&#8217;s good enough.</p>
+</div>
+<div class="section" id="the-verify-function">
+<h2>The verify function<a class="headerlink" href="#the-verify-function" title="Permalink to this headline">¶</a></h2>
+<p>The heart of a smart contract is the code that verifies a set of state transitions (a <em>transaction</em>). The function is
+simple: it&#8217;s given a class representing the transaction, and if the function returns then the transaction is considered
+acceptable. If it throws an exception, the transaction is rejected.</p>
+<p>Each transaction can have multiple input and output states of different types. The set of contracts to run is decided
+by taking the code references inside each state. Each contract is run only once. As an example, a contract that includes
+2 cash states and 1 commercial paper state as input, and has as output 1 cash state and 1 commercial paper state, will
+run two contracts one time each: Cash and CommercialPaper.</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">override</span> <span class="k">fun</span> <span class="nf">verify</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionForVerification</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.</span>
+    <span class="k">val</span> <span class="py">groups</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">groupStates</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;()</span> <span class="p">{</span> <span class="n">it</span><span class="p">.</span><span class="n">withoutOwner</span><span class="p">()</span> <span class="p">}</span>
+
+    <span class="c1">// There are two possible things that can be done with this CP. The first is trading it. The second is redeeming</span>
+    <span class="c1">// it for cash on or after the maturity date.</span>
+    <span class="k">val</span> <span class="py">command</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">commands</span><span class="p">.</span><span class="n">requireSingleCommand</span><span class="p">&lt;</span><span class="n">CommercialPaper</span><span class="p">.</span><span class="n">Commands</span><span class="p">&gt;()</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span class="nd">@Override</span>
+<span class="kd">public</span> <span class="kt">void</span> <span class="nf">verify</span><span class="o">(</span><span class="nd">@NotNull</span> <span class="n">TransactionForVerification</span> <span class="n">tx</span><span class="o">)</span> <span class="o">{</span>
+    <span class="c1">// There are two possible things that can be done with CP. The first is trading it. The second is redeeming it</span>
+    <span class="c1">// for cash on or after the maturity date.</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;&gt;</span> <span class="n">groups</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">groupStates</span><span class="o">(</span><span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">,</span> <span class="n">State</span><span class="o">::</span><span class="n">withoutOwner</span><span class="o">);</span>
+
+    <span class="c1">// Find the command that instructs us what to do and check there&#39;s exactly one.</span>
+    <span class="n">AuthenticatedObject</span><span class="o">&lt;</span><span class="n">Command</span><span class="o">&gt;</span> <span class="n">cmd</span> <span class="o">=</span> <span class="n">requireSingleCommand</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getCommands</span><span class="o">(),</span> <span class="n">Commands</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+</pre></div>
+</div>
+</div>
+<p>We start by using the <cite>groupStates</cite> method, which takes a type and a function (in functional programming a function
+that takes another function as an argument is called a <em>higher order function</em>). State grouping is a way of handling
+<em>fungibility</em> in a contract, which is explained next. The second line does what the code suggests: it searches for
+a command object that inherits from the <cite>CommercialPaper.Commands</cite> supertype, and either returns it, or throws an
+exception if there&#8217;s zero or more than one such command.</p>
+</div>
+<div class="section" id="understanding-fungibility">
+<h2>Understanding fungibility<a class="headerlink" href="#understanding-fungibility" title="Permalink to this headline">¶</a></h2>
+<p>We say states are <em>fungible</em> if they are treated identically to each other by the recipient, despite the fact that they
+aren&#8217;t quite identical. Dollar bills are fungible because even though one may be worn/a bit dirty and another may
+be crisp and new, they are still both worth exactly $1. Likewise, ten $1 bills are almost exactly equivalent to
+one $10 bill. On the other hand, $10 and £10 are not fungible: if you tried to pay for something that cost $20 with
+$10+£10 notes your trade would not be accepted.</p>
+<p>So whilst our ledger could represent every monetary amount with a collection of states worth one penny, this would become
+extremely unwieldy. It&#8217;s better to allow states to represent varying amounts and then define rules for merging them
+and splitting them.</p>
+<p>To make this easier the contract API provides a notion of groups. A group is a set of input states and output states
+that should be checked for validity independently. It solves the following problem: because every contract sees every
+input and output state in a transaction, it would easy to accidentally write a contract that disallows useful
+combinations of states. For example, our cash contract might end up lazily assuming there&#8217;s only one currency involved
+in a transaction, whereas in reality we would like the ability to model a currency trade in which two parties contribute
+inputs of different currencies, and both parties get outputs of the opposite currency.</p>
+<p>Consider the following simplified currency trade transaction:</p>
+<ul class="simple">
+<li><strong>Input</strong>:  $12,000 owned by Alice   (A)</li>
+<li><strong>Input</strong>:   $3,000 owned by Alice   (A)</li>
+<li><strong>Input</strong>:  £10,000 owned by Bob     (B)</li>
+<li><strong>Output</strong>: £10,000 owned by Alice   (B)</li>
+<li><strong>Output</strong>: $15,000 owned by Bob     (A)</li>
+</ul>
+<p>In this transaction Alice and Bob are trading $15,000 for £10,000. Alice has her money in the form of two different
+inputs e.g. because she received the dollars in two payments. The input and output amounts do balance correctly, but
+the cash smart contract must consider the pounds and the dollars separately because they are not fungible: they cannot
+be merged together. So we have two groups: A and B.</p>
+<p>The <cite>TransactionForVerification.groupStates</cite> method handles this logic for us: firstly, it selects only states of the
+given type (as the transaction may include other types of state, such as states representing bond ownership, or a
+multi-sig state) and then it takes a function that maps a state to a grouping key. All states that share the same key are
+grouped together. In the case of the cash example above, the grouping key would be the currency.</p>
+<p>In our commercial paper contract, we don&#8217;t want CP to be fungible: merging and splitting is (in our example) not allowed.
+So we just use a copy of the state minus the owner field as the grouping key. As a result, a single transaction can
+trade many different pieces of commercial paper in a single atomic step.</p>
+<p>A group may have zero inputs or zero outputs: this can occur when issuing assets onto the ledger, or removing them.</p>
+</div>
+<div class="section" id="checking-the-requirements">
+<h2>Checking the requirements<a class="headerlink" href="#checking-the-requirements" title="Permalink to this headline">¶</a></h2>
+<p>After extracting the command and the groups, we then iterate over each group and verify it meets the required business
+logic.</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">for</span> <span class="p">(</span><span class="n">group</span> <span class="k">in</span> <span class="n">groups</span><span class="p">)</span> <span class="p">{</span>
+   <span class="k">val</span> <span class="py">input</span> <span class="p">=</span> <span class="n">group</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span>
+   <span class="n">requireThat</span> <span class="p">{</span>
+       <span class="s">&quot;the transaction is signed by the owner of the CP&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
+   <span class="p">}</span>
+
+   <span class="k">val</span> <span class="py">output</span> <span class="p">=</span> <span class="n">group</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">singleOrNull</span><span class="p">()</span>
+   <span class="k">when</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span>
+       <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Move</span> <span class="p">-&gt;</span> <span class="n">requireThat</span> <span class="p">{</span> <span class="s">&quot;the output state is present&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">output</span> <span class="p">!=</span> <span class="k">null</span><span class="p">)</span> <span class="p">}</span>
+
+       <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Redeem</span> <span class="p">-&gt;</span> <span class="p">{</span>
+           <span class="k">val</span> <span class="py">received</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">outStates</span><span class="p">.</span><span class="n">sumCashOrNull</span><span class="p">()</span> <span class="o">?:</span> <span class="k">throw</span> <span class="n">IllegalStateException</span><span class="p">(</span><span class="s">&quot;no cash being redeemed&quot;</span><span class="p">)</span>
+           <span class="n">requireThat</span> <span class="p">{</span>
+               <span class="s">&quot;the paper must have matured&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">maturityDate</span> <span class="p">&lt;</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span><span class="p">)</span>
+               <span class="s">&quot;the received amount equals the face value&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">received</span> <span class="p">==</span> <span class="n">input</span><span class="p">.</span><span class="n">faceValue</span><span class="p">)</span>
+               <span class="s">&quot;the paper must be destroyed&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">output</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span>
+           <span class="p">}</span>
+       <span class="p">}</span>
+   <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="highlight-java"><div class="highlight"><pre><span class="k">for</span> <span class="o">(</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">groups</span><span class="o">)</span> <span class="o">{</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">inputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getInputs</span><span class="o">();</span>
+    <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getOutputs</span><span class="o">();</span>
+
+    <span class="c1">// For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!</span>
+    <span class="n">State</span> <span class="n">input</span> <span class="o">=</span> <span class="n">single</span><span class="o">(</span><span class="n">filterIsInstance</span><span class="o">(</span><span class="n">inputs</span><span class="o">,</span> <span class="n">State</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+
+    <span class="k">if</span> <span class="o">(!</span><span class="n">cmd</span><span class="o">.</span><span class="na">getSigners</span><span class="o">().</span><span class="na">contains</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getOwner</span><span class="o">()))</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the transaction is signed by the owner of the CP&quot;</span><span class="o">);</span>
+
+    <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Move</span><span class="o">)</span> <span class="o">{</span>
+        <span class="c1">// Check the output CP state is the same as the input state, ignoring the owner field.</span>
+        <span class="n">State</span> <span class="n">output</span> <span class="o">=</span> <span class="n">single</span><span class="o">(</span><span class="n">outputs</span><span class="o">);</span>
+
+        <span class="k">if</span> <span class="o">(!</span><span class="n">output</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">())</span> <span class="o">||</span>
+                <span class="o">!</span><span class="n">output</span><span class="o">.</span><span class="na">getIssuance</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getIssuance</span><span class="o">())</span> <span class="o">||</span>
+                <span class="o">!</span><span class="n">output</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">()))</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the output state is the same as the input state except for owner&quot;</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Redeem</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Amount</span> <span class="n">received</span> <span class="o">=</span> <span class="n">CashKt</span><span class="o">.</span><span class="na">sumCashOrNull</span><span class="o">(</span><span class="n">inputs</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">received</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: no cash being redeemed&quot;</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">isAfter</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getTime</span><span class="o">()))</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the paper must have matured&quot;</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">received</span><span class="o">))</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the received amount equals the face value&quot;</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(!</span><span class="n">outputs</span><span class="o">.</span><span class="na">isEmpty</span><span class="o">())</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the paper must be destroyed&quot;</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+</div>
+<p>This loop is the core logic of the contract.</p>
+<p>The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
+this group. We do not allow multiple units of CP to be split or merged even if they are owned by the same owner. The
+<cite>single()</cite> method is a static <em>extension method</em> defined by the Kotlin standard library: given a list, it throws an
+exception if the list size is not 1, otherwise it returns the single item in that list. In Java, this appears as a
+regular static method of the type familiar from many FooUtils type singleton classes. In Kotlin, it appears as a
+method that can be called on any JDK list. The syntax is slightly different but behind the scenes, the code compiles
+to the same bytecodes.</p>
+<p>Next, we check that the transaction was signed by the public key that&#8217;s marked as the current owner of the commercial
+paper. Because the platform has already verified all the digital signatures before the contract begins execution,
+all we have to do is verify that the owner&#8217;s public key was one of the keys that signed the transaction. The Java code
+is straightforward. The Kotlin version looks a little odd: we have a <em>requireThat</em> construct that looks like it&#8217;s
+built into the language. In fact <em>requireThat</em> is an ordinary function provided by the platform&#8217;s contract API. Kotlin
+supports the creation of <em>domain specific languages</em> through the intersection of several features of the language, and
+we use it here to support the natural listing of requirements. To see what it compiles down to, look at the Java version.
+Each <cite>&#8220;string&#8221; by (expression)</cite> statement inside a <cite>requireThat</cite> turns into an assertion that the given expression is
+true, with an exception being thrown that contains the string if not. It&#8217;s just another way to write out a regular
+assertion, but with the English-language requirement being put front and center.</p>
+<p>Next, we take one of two paths, depending on what the type of the command object is.</p>
+<p>If the command is a <cite>Move</cite> command, then we simply verify that the output state is actually present: a move is not
+allowed to delete the CP from the ledger. The grouping logic already ensured that the details are identical and haven&#8217;t
+been changed, save for the public key of the owner.</p>
+<p>If the command is a <cite>Redeem</cite> command, then the requirements are more complex:</p>
+<ol class="arabic simple">
+<li>We want to see that the face value of the CP is being moved as a cash claim against some institution, that is, the
+issuer of the CP is really paying back the face value.</li>
+<li>The transaction must be happening after the maturity date.</li>
+<li>The commercial paper must <em>not</em> be propagated by this transaction: it must be deleted, by the group having no
+output state. This prevents the same CP being considered redeemable multiple times.</li>
+</ol>
+<p>To calculate how much cash is moving, we use the <cite>sumCashOrNull</cite> utility method. Again, this is an extension method,
+so in Kotlin code it appears as if it was a method on the <cite>List&lt;Cash.State&gt;</cite> type even though JDK provides no such
+method. In Java we see its true nature: it is actually a static method named <cite>CashKt.sumCashOrNull</cite>. This method simply
+returns an <cite>Amount</cite> object containing the sum of all the cash states in the transaction output, or null if there were
+no such states <em>or</em> if there were different currencies represented in the outputs! So we can see that this contract
+imposes a limitation on the structure of a redemption transaction: you are not allowed to move currencies in the same
+transaction that the CP does not involve. This limitation could be addressed with better APIs, if it were to be a
+real limitation.</p>
+<p>This contract is extremely simple and does not implement all the business logic a real commercial paper lifecycle
+management program would. For instance, there is no logic requiring a signature from the issuer for redemption:
+it is assumed that any transfer of money that takes place at the same time as redemption is good enough. Perhaps
+that is something that should be tightened. Likewise, there is no logic handling what happens if the issuer has gone
+bankrupt, if there is a dispute, and so on.</p>
+<p>As the prototype evolves, these requirements will be explored and this tutorial updated to reflect improvements in the
+contracts API.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="roadmap.html" class="btn btn-neutral float-right" title="Roadmap" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="getting-set-up.html" class="btn btn-neutral" title="Getting set up" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
