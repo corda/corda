@@ -7,8 +7,7 @@
 Tutorial
 ========
 
-This tutorial will take you through how the commercial paper contract works, and then teaches you how to define your own
-"hello world" contract for managing the ownership of an office building.
+This tutorial will take you through how the commercial paper contract works.
 
 The code in this tutorial is available in both Kotlin and Java. You can quickly switch between them to get a feeling
 for how Kotlin syntax works.
