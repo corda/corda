@@ -2,7 +2,6 @@ package contracts
 
 import core.*
 import java.security.PublicKey
-import java.security.SecureRandom
 import java.time.Instant
 
 /**
@@ -43,12 +42,9 @@ class CommercialPaper : Contract {
     interface Commands : Command {
         object Move : Commands
         object Redeem : Commands
-
-        /**
-         * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
-         * has a unique ID even when there are no inputs.
-         */
-        data class Issue(val nonce: Long = SecureRandom.getInstanceStrong().nextLong()) : Commands
+        // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
+        // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
+        object Issue : Commands
     }
 
     override fun verify(tx: TransactionForVerification) {

@@ -28,7 +28,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1 }
-                arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
+                arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue }
             }
 
             expectFailureOfTx(1, "signed by the claimed issuer")
@@ -40,7 +40,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1.copy(faceValue = 0.DOLLARS) }
-                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue }
             }
 
             expectFailureOfTx(1, "face value is not zero")
@@ -52,19 +52,23 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1.copy(maturityDate = TEST_TX_TIME - 10.days) }
-                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue }
             }
 
             expectFailureOfTx(1, "maturity date is not in the past")
         }
     }
 
+    @Test
     fun `issue cannot replace an existing state`() {
         transactionGroup {
+            roots {
+                transaction(PAPER_1 label "paper")
+            }
             transaction {
                 input("paper")
                 output { PAPER_1 }
-                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue }
             }
 
             expectFailureOfTx(1, "there is no input state")
@@ -95,7 +99,7 @@ class CommercialPaperTests {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction {
                 output("paper") { PAPER_1 }
-                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Issue }
             }
 
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
