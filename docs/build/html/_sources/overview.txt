@@ -21,12 +21,16 @@ consume/destroy, these are called **inputs**, and contains a set of new states t
 States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
 **code contract**, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
 contracts (or just "contracts" in the rest of this document) are globally shared pieces of business logic. Contracts
-define a **verify function**, which is a pure function of the entire transaction.
+define a **verify function**, which is a pure function given the entire transaction as input.
 
 To be considered valid, the transaction must be **accepted** by the verify function of every contract pointed to by the
 input and output states. Beyond inputs and outputs, transactions may also contain **commands**, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
 arguments to the verify function.
+
+Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it's up to the
+contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
+maximise flexibility for the contract developer.
 
 A transaction has one or more **signatures** attached to it. The signatures do not mean anything by themselves, rather,
 their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
@@ -44,7 +48,16 @@ timestamp, and they are therefore never exposed to private data.
 .. note:: In the current code, use of TSAs is not implemented.
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
-distributed ledger systems you may be familiar with.
+distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
+differs from existing systems in `the R3 wiki <https://r3-cev.atlassian.net/wiki/>`_, but to summarise, the driving
+factors are:
+
+* Improved contract flexibility vs Bitcoin
+* Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)
+* No reliance on proof of work
+* Re-us of existing sandboxing virtual machines
+* Use of type safe GCd implementation languages.
+* Simplified auditing
 
 Comparison with Bitcoin
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -73,7 +86,7 @@ Differences:
 * A Bitcoin script can only be given a fixed set of byte arrays as the input. This means there's no way for a contract
   to examine the structure of the entire transaction, which severely limits what contracts can do.
 * Our contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.
-* Our transactions and contracts have get their time from an attached timestamp rather than a block chain. This is
+* Our transactions and contracts have to get their time from an attached timestamp rather than a block chain. This is
   important given that we are currently considering block-free conflict resolution algorithms.
 * We use the term "contract" to refer to a bundle of business logic that may handle various different tasks, beyond
   transaction verification. For instance, currently our contracts also include code for creating valid transactions
@@ -92,13 +105,14 @@ Differences:
 
 * The term "contract" in Ethereum refers to an *instantiation* of a program that is replicated and maintained by
   every participating node. This instantiation is very much like an object in an OO program: it can receive and send
-  messages, update local storage and so on. In contrast, use the term "contract" to refer to a set of functions, only
+  messages, update local storage and so on. In contrast, we use the term "contract" to refer to a set of functions, only
   one of which is a part of keeping the system synchronised (the verify function). That function is pure and
   stateless i.e. it may not interact with any other part of the system whilst executing.
 * There is no notion of an "account", as there is in Ethereum.
 * As contracts don't have any kind of mutable storage, there is no notion of a "message" as in Ethereum.
 * Ethereum claims to be a platform not only for financial logic, but literally any kind of application at all. Our
   platform considers non-financial applications to be out of scope.
+
 
 
 Contracts

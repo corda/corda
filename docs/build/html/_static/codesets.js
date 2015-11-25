@@ -15,6 +15,11 @@ $(document).ready(function() {
             kotlinButton.setAttribute("class", "");
             javaButton.setAttribute("class", "current");
         };
+
+        if ($(el).children(".highlight-java").length == 0) {
+            // No Java for this example.
+            javaButton.style.display = "none";
+        }
         c.insertBefore(el);
     });
 });

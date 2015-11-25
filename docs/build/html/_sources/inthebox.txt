@@ -12,7 +12,7 @@ The current prototype consists of a small amount of code that defines:
 
 Some things it does not currently include but should gain later are:
 
-* Sandboxing of smart contract code
+* Sandboxing, distribution or publication of smart contract code
 * A peer to peer network
 * Database persistence
 * An API for integrating external software

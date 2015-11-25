@@ -158,11 +158,14 @@ consume/destroy, these are called <strong>inputs</strong>, and contains a set of
 <p>States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
 <strong>code contract</strong>, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
 contracts (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic. Contracts
-define a <strong>verify function</strong>, which is a pure function of the entire transaction.</p>
+define a <strong>verify function</strong>, which is a pure function given the entire transaction as input.</p>
 <p>To be considered valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
 input and output states. Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
 arguments to the verify function.</p>
+<p>Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it&#8217;s up to the
+contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
+maximise flexibility for the contract developer.</p>
 <p>A transaction has one or more <strong>signatures</strong> attached to it. The signatures do not mean anything by themselves, rather,
 their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
 Signatures may be from an arbitrary, random <strong>public key</strong> that has no identity attached. A public key may be
@@ -179,7 +182,17 @@ timestamp, and they are therefore never exposed to private data.</p>
 <p class="last">In the current code, use of TSAs is not implemented.</p>
 </div>
 <p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
-distributed ledger systems you may be familiar with.</p>
+distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
+differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/">the R3 wiki</a>, but to summarise, the driving
+factors are:</p>
+<ul class="simple">
+<li>Improved contract flexibility vs Bitcoin</li>
+<li>Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)</li>
+<li>No reliance on proof of work</li>
+<li>Re-us of existing sandboxing virtual machines</li>
+<li>Use of type safe GCd implementation languages.</li>
+<li>Simplified auditing</li>
+</ul>
 <div class="section" id="comparison-with-bitcoin">
 <h3>Comparison with Bitcoin<a class="headerlink" href="#comparison-with-bitcoin" title="Permalink to this headline">¶</a></h3>
 <p>Similarities:</p>
@@ -206,7 +219,7 @@ this has proved limiting. Our transactions invoke not only input contracts but a
 <li>A Bitcoin script can only be given a fixed set of byte arrays as the input. This means there&#8217;s no way for a contract
 to examine the structure of the entire transaction, which severely limits what contracts can do.</li>
 <li>Our contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.</li>
-<li>Our transactions and contracts have get their time from an attached timestamp rather than a block chain. This is
+<li>Our transactions and contracts have to get their time from an attached timestamp rather than a block chain. This is
 important given that we are currently considering block-free conflict resolution algorithms.</li>
 <li>We use the term &#8220;contract&#8221; to refer to a bundle of business logic that may handle various different tasks, beyond
 transaction verification. For instance, currently our contracts also include code for creating valid transactions
@@ -225,7 +238,7 @@ based programming languages can be used for contract programming.</li>
 <ul class="simple">
 <li>The term &#8220;contract&#8221; in Ethereum refers to an <em>instantiation</em> of a program that is replicated and maintained by
 every participating node. This instantiation is very much like an object in an OO program: it can receive and send
-messages, update local storage and so on. In contrast, use the term &#8220;contract&#8221; to refer to a set of functions, only
+messages, update local storage and so on. In contrast, we use the term &#8220;contract&#8221; to refer to a set of functions, only
 one of which is a part of keeping the system synchronised (the verify function). That function is pure and
 stateless i.e. it may not interact with any other part of the system whilst executing.</li>
 <li>There is no notion of an &#8220;account&#8221;, as there is in Ethereum.</li>
