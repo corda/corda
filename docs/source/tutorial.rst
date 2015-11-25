@@ -192,28 +192,36 @@ Let's define a couple of commands now:
 
    .. sourcecode:: kotlin
 
-      sealed class Commands : Command {
-          object Move : Commands()
-          object Redeem : Commands()
+      interface Commands : Command {
+          object Move : Commands
+          object Redeem : Commands
+          object Issue : Commands
       }
 
 
    .. sourcecode:: java
 
       public static class Commands implements core.Command {
-        public static class Move extends Commands {
-            @Override
-            public boolean equals(Object obj) {
-                return obj instanceof Move;
-            }
-        }
+          public static class Move extends Commands {
+              @Override
+              public boolean equals(Object obj) {
+                  return obj instanceof Move;
+              }
+          }
 
-        public static class Redeem extends Commands {
-            @Override
-            public boolean equals(Object obj) {
-                return obj instanceof Redeem;
-            }
-        }
+          public static class Redeem extends Commands {
+              @Override
+              public boolean equals(Object obj) {
+                  return obj instanceof Redeem;
+              }
+          }
+
+          public static class Issue extends Commands {
+              @Override
+              public boolean equals(Object obj) {
+                  return obj instanceof Redeem;
+              }
+          }
       }
 
 The `object` keyword in Kotlin just defines a singleton object. As the commands don't need any additional data in our
@@ -338,6 +346,21 @@ logic.
                      "the paper must be destroyed" by (output == null)
                  }
              }
+
+             is Commands.Issue -> {
+                    val output = group.outputs.single()
+                    requireThat {
+                        // Don't allow people to issue commercial paper under other entities identities.
+                        "the issuance is signed by the claimed issuer of the paper" by
+                                (command.signers.contains(output.issuance.institution.owningKey))
+                        "the face value is not zero" by (output.faceValue.pennies > 0)
+                        "the maturity date is not in the past" by (output.maturityDate > tx.time)
+                        // Don't allow an existing CP state to be replaced by this issuance.
+                        "there is no input state" by group.inputs.isEmpty()
+                    }
+             }
+
+             else -> throw IllegalArgumentException("Unrecognised command")
          }
       }
 
@@ -371,6 +394,8 @@ logic.
                   throw new IllegalStateException("Failed requirement: the received amount equals the face value");
               if (!outputs.isEmpty())
                   throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+          } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
+              // .. etc .. (see Kotlin for full definition)
           }
       }
 
@@ -417,6 +442,9 @@ no such states *or* if there were different currencies represented in the output
 imposes a limitation on the structure of a redemption transaction: you are not allowed to move currencies in the same
 transaction that the CP does not involve. This limitation could be addressed with better APIs, if it were to be a
 real limitation.
+
+Finally, we support an `Issue` command, to create new instances of commercial paper on the ledger. It likewise
+enforces various invariants upon the issuance.
 
 This contract is extremely simple and does not implement all the business logic a real commercial paper lifecycle
 management program would. For instance, there is no logic requiring a signature from the issuer for redemption:
