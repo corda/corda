@@ -17,7 +17,7 @@ Starting the commercial paper class
 
 A smart contract is a class that implements the ``Contract`` interface. For now, they have to be a part of the main
 codebase, as dynamic loading of contract code is not yet implemented. Therefore, we start by creating a file named
-either `CommercialPaper.kt` or `CommercialPaper.java` in the src/contracts directory with the following contents:
+either ``CommercialPaper.kt`` or ``CommercialPaper.java`` in the src/contracts directory with the following contents:
 
 .. container:: codeset
 
@@ -54,7 +54,7 @@ in which case the transaction is rejected.
 
 We also need to define a constant hash that would, in a real system, be the hash of the program bytecode. For now
 we just set it to a dummy value as dynamic loading and sandboxing of bytecode is not implemented. This constant
-isn't shown in the code snippet but is called `CP_PROGRAM_ID`.
+isn't shown in the code snippet but is called ``CP_PROGRAM_ID``.
 
 So far, so simple. Now we need to define the commercial paper *state*, which represents the fact of ownership of a
 piece of issued paper.
@@ -146,30 +146,30 @@ A state is a class that stores data that is checked by the contract.
         }
       }
 
-We define a class that implements the `ContractState` and `SerializableWithKryo` interfaces. The
+We define a class that implements the ``ContractState`` and ``SerializableWithKryo`` interfaces. The
 latter is an artifact of how the prototype implements serialization and can be ignored for now: it wouldn't work
 like this in any final product.
 
-The `ContractState` interface requires us to provide a `getProgramRef` method that is supposed to return a hash of
+The ``ContractState`` interface requires us to provide a ``getProgramRef`` method that is supposed to return a hash of
 the bytecode of the contract itself. For now this is a dummy value and isn't used: later on, this mechanism will change.
 Beyond that it's a freeform object into which we can put anything which can be serialized.
 
 We have four fields in our state:
 
-* `issuance`: a reference to a specific piece of commercial paper at an institution
-* `owner`: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
+* ``issuance``: a reference to a specific piece of commercial paper at an institution
+* ``owner``: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
   attached identity and is expected to be one-time-use for privacy reasons. However, unlike in Bitcoin, we model
   ownership at the level of individual contracts rather than as a platform-level concept as we envisage many
   (possibly most) contracts on the platform will not represent "owner/issuer" relationships, but "party/party"
   relationships such as a derivative contract.
-* `faceValue`: an `Amount`, which wraps an integer number of pennies and a currency.
-* `maturityDate`: an `Instant <https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html>`, which is a type
+* ``faceValue``: an ``Amount``, which wraps an integer number of pennies and a currency.
+* ``maturityDate``: an `Instant <https://docs.oracle.com/javase/8/docs/api/java/time/Instant.html>`_, which is a type
   from the Java 8 standard time library. It defines a point on the timeline.
 
-States are immutable, and thus the class is defined as immutable as well. The `data` modifier in the Kotlin version
+States are immutable, and thus the class is defined as immutable as well. The ``data`` modifier in the Kotlin version
 causes the compiler to generate the equals/hashCode/toString methods automatically, along with a copy method that can
 be used to create variants of the original object. Data classes are similar to case classes in Scala, if you are
-familiar with that language. The `withoutOwner` method uses the auto-generated copy method to return a version of
+familiar with that language. The ``withoutOwner```` method uses the auto-generated copy method to return a version of
 the state with the owner public key blanked out: this will prove useful later.
 
 The Java code compiles to the same bytecode as the Kotlin version, but as you can see, is much more verbose.
@@ -185,7 +185,7 @@ is a piece of data associated with some *signatures*. By the time the contract r
 checked, so from the contract code's perspective, a command is simply a data structure with a list of attached
 public keys. Each key had a signature proving that the corresponding private key was used to sign.
 
-Let's define a couple of commands now:
+Let's define a few commands now:
 
 .. container:: codeset
 
@@ -223,7 +223,7 @@ Let's define a couple of commands now:
           }
       }
 
-The `object` keyword in Kotlin just defines a singleton object. As the commands don't need any additional data in our
+The ``object`` keyword in Kotlin just defines a singleton object. As the commands don't need any additional data in our
 case, they can be empty and we just use their type as the important information. Java has no syntax for declaring
 singletons, so we just define a class that considers any other instance to be equal and that's good enough.
 
@@ -246,26 +246,19 @@ run two contracts one time each: Cash and CommercialPaper.
       override fun verify(tx: TransactionForVerification) {
           // Group by everything except owner: any modification to the CP at all is considered changing it fundamentally.
           val groups = tx.groupStates<State>() { it.withoutOwner() }
-
-          // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
-          // it for cash on or after the maturity date.
           val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
 
    .. sourcecode:: java
 
       @Override
       public void verify(@NotNull TransactionForVerification tx) {
-          // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
-          // for cash on or after the maturity date.
           List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
-
-          // Find the command that instructs us what to do and check there's exactly one.
           AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
-We start by using the `groupStates` method, which takes a type and a function (in functional programming a function
+We start by using the ``groupStates`` method, which takes a type and a function (in functional programming a function
 that takes another function as an argument is called a *higher order function*). State grouping is a way of handling
 *fungibility* in a contract, which is explained next. The second line does what the code suggests: it searches for
-a command object that inherits from the `CommercialPaper.Commands` supertype, and either returns it, or throws an
+a command object that inherits from the ``CommercialPaper.Commands`` supertype, and either returns it, or throws an
 exception if there's zero or more than one such command.
 
 Understanding fungibility
@@ -286,7 +279,7 @@ multiple actors if they don't have a direct relationship with each other (as wou
 single state representing multiple people's ownership). Keeping the states separated also has scalability benefits, as
 different parts of the global transaction graph can be updated in parallel.
 
-To make this easier the contract API provides a notion of groups. A group is a set of input states and output states
+To make all this easier the contract API provides a notion of groups. A group is a set of input states and output states
 that should be checked for validity independently. It solves the following problem: because every contract sees every
 input and output state in a transaction, it would easy to accidentally write a contract that disallows useful
 combinations of states. For example, our cash contract might end up lazily assuming there's only one currency involved
@@ -306,7 +299,7 @@ inputs e.g. because she received the dollars in two payments. The input and outp
 the cash smart contract must consider the pounds and the dollars separately because they are not fungible: they cannot
 be merged together. So we have two groups: A and B.
 
-The `TransactionForVerification.groupStates` method handles this logic for us: firstly, it selects only states of the
+The ``TransactionForVerification.groupStates`` method handles this logic for us: firstly, it selects only states of the
 given type (as the transaction may include other types of state, such as states representing bond ownership, or a
 multi-sig state) and then it takes a function that maps a state to a grouping key. All states that share the same key are
 grouped together. In the case of the cash example above, the grouping key would be the currency.
@@ -328,39 +321,42 @@ logic.
    .. sourcecode:: kotlin
 
       for (group in groups) {
-         val input = group.inputs.single()
-         requireThat {
-             "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
-         }
+          when (command.value) {
+              is Commands.Move -> {
+                  val input = group.inputs.single()
+                  requireThat {
+                      "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+                      "the state is propagated" by (group.outputs.size == 1)
+                  }
+              }
 
-         val output = group.outputs.singleOrNull()
-         when (command.value) {
-             is Commands.Move -> requireThat { "the output state is present" by (output != null) }
+              is Commands.Redeem -> {
+                  val input = group.inputs.single()
+                  val received = tx.outStates.sumCashBy(input.owner)
+                  requireThat {
+                      "the paper must have matured" by (input.maturityDate < tx.time)
+                      "the received amount equals the face value" by (received == input.faceValue)
+                      "the paper must be destroyed" by group.outputs.isEmpty()
+                      "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
+                  }
+              }
 
-             is Commands.Redeem -> {
-                 val received = tx.outStates.sumCashOrNull() ?: throw IllegalStateException("no cash being redeemed")
-                 requireThat {
-                     "the paper must have matured" by (input.maturityDate < tx.time)
-                     "the received amount equals the face value" by (received == input.faceValue)
-                     "the paper must be destroyed" by (output == null)
-                 }
-             }
+              is Commands.Issue -> {
+                  val output = group.outputs.single()
+                  requireThat {
+                      // Don't allow people to issue commercial paper under other entities identities.
+                      "the issuance is signed by the claimed issuer of the paper" by
+                              (command.signers.contains(output.issuance.institution.owningKey))
+                      "the face value is not zero" by (output.faceValue.pennies > 0)
+                      "the maturity date is not in the past" by (output.maturityDate > tx.time)
+                      // Don't allow an existing CP state to be replaced by this issuance.
+                      "there is no input state" by group.inputs.isEmpty()
+                  }
+              }
 
-             is Commands.Issue -> {
-                    val output = group.outputs.single()
-                    requireThat {
-                        // Don't allow people to issue commercial paper under other entities identities.
-                        "the issuance is signed by the claimed issuer of the paper" by
-                                (command.signers.contains(output.issuance.institution.owningKey))
-                        "the face value is not zero" by (output.faceValue.pennies > 0)
-                        "the maturity date is not in the past" by (output.maturityDate > tx.time)
-                        // Don't allow an existing CP state to be replaced by this issuance.
-                        "there is no input state" by group.inputs.isEmpty()
-                    }
-             }
-
-             else -> throw IllegalArgumentException("Unrecognised command")
-         }
+              // TODO: Think about how to evolve contracts over time with new commands.
+              else -> throw IllegalArgumentException("Unrecognised command")
+          }
       }
 
    .. sourcecode:: java
@@ -402,7 +398,7 @@ This loop is the core logic of the contract.
 
 The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
 this group. We do not allow multiple units of CP to be split or merged even if they are owned by the same owner. The
-`single()` method is a static *extension method* defined by the Kotlin standard library: given a list, it throws an
+``single()`` method is a static *extension method* defined by the Kotlin standard library: given a list, it throws an
 exception if the list size is not 1, otherwise it returns the single item in that list. In Java, this appears as a
 regular static method of the type familiar from many FooUtils type singleton classes. In Kotlin, it appears as a
 method that can be called on any JDK list. The syntax is slightly different but behind the scenes, the code compiles
@@ -415,17 +411,17 @@ is straightforward. The Kotlin version looks a little odd: we have a *requireTha
 built into the language. In fact *requireThat* is an ordinary function provided by the platform's contract API. Kotlin
 supports the creation of *domain specific languages* through the intersection of several features of the language, and
 we use it here to support the natural listing of requirements. To see what it compiles down to, look at the Java version.
-Each `"string" by (expression)` statement inside a `requireThat` turns into an assertion that the given expression is
+Each ``"string" by (expression)`` statement inside a ``requireThat`` turns into an assertion that the given expression is
 true, with an exception being thrown that contains the string if not. It's just another way to write out a regular
 assertion, but with the English-language requirement being put front and center.
 
 Next, we take one of two paths, depending on what the type of the command object is.
 
-If the command is a `Move` command, then we simply verify that the output state is actually present: a move is not
+If the command is a ``Move`` command, then we simply verify that the output state is actually present: a move is not
 allowed to delete the CP from the ledger. The grouping logic already ensured that the details are identical and haven't
 been changed, save for the public key of the owner.
 
-If the command is a `Redeem` command, then the requirements are more complex:
+If the command is a ``Redeem`` command, then the requirements are more complex:
 
 1. We want to see that the face value of the CP is being moved as a cash claim against some institution, that is, the
    issuer of the CP is really paying back the face value.
@@ -433,16 +429,16 @@ If the command is a `Redeem` command, then the requirements are more complex:
 3. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
    output state. This prevents the same CP being considered redeemable multiple times.
 
-To calculate how much cash is moving, we use the `sumCashOrNull` utility method. Again, this is an extension method,
-so in Kotlin code it appears as if it was a method on the `List<Cash.State>` type even though JDK provides no such
-method. In Java we see its true nature: it is actually a static method named `CashKt.sumCashOrNull`. This method simply
-returns an `Amount` object containing the sum of all the cash states in the transaction output, or null if there were
+To calculate how much cash is moving, we use the ``sumCashOrNull`` utility method. Again, this is an extension method,
+so in Kotlin code it appears as if it was a method on the ``List<Cash.State>`` type even though JDK provides no such
+method. In Java we see its true nature: it is actually a static method named ``CashKt.sumCashOrNull``. This method simply
+returns an ``Amount`` object containing the sum of all the cash states in the transaction output, or null if there were
 no such states *or* if there were different currencies represented in the outputs! So we can see that this contract
 imposes a limitation on the structure of a redemption transaction: you are not allowed to move currencies in the same
 transaction that the CP does not involve. This limitation could be addressed with better APIs, if it were to be a
 real limitation.
 
-Finally, we support an `Issue` command, to create new instances of commercial paper on the ledger. It likewise
+Finally, we support an ``Issue`` command, to create new instances of commercial paper on the ledger. It likewise
 enforces various invariants upon the issuance.
 
 This contract is extremely simple and does not implement all the business logic a real commercial paper lifecycle
@@ -491,7 +487,7 @@ We start by defining a new test class, with a basic CP state:
       }
 
 We start by defining a commercial paper state. It will be owned by a pre-defined unit test institution, affectionately
-called `MEGA_CORP` (this constant, along with many others, is defined in `TestUtils.kt`). Due to Kotin's extensive
+called ``MEGA_CORP`` (this constant, along with many others, is defined in ``TestUtils.kt``). Due to Kotin's extensive
 type inference, many types are not written out explicitly in this code and it has the feel of a scripting language.
 But the types are there, and you can ask IntelliJ to reveal them by pressing Alt-Enter on a "val" or "var" and selecting
 "Specify type explicitly".
@@ -506,22 +502,22 @@ If you examine the code in the actual repository, you will also notice that it m
 in them by surrounding the name with backticks, rather than using underscores. We don't show this here as it breaks the
 doc website's syntax highlighting engine.
 
-The `1000.DOLLARS` construct is quite simple: Kotlin allows you to define extension functions on primitive types like
+The ``1000.DOLLARS`` construct is quite simple: Kotlin allows you to define extension functions on primitive types like
 Int or Double. So by writing 7.days, for instance, the compiler will emit a call to a static method that takes an int
-and returns a `java.time.Duration`.
+and returns a ``java.time.Duration``.
 
 As this is JUnit, we must remember to annotate each test method with @Test. Let's examine the contents of the first test.
 We are trying to check that it's not possible for just anyone to issue commercial paper in MegaCorp's name. That would
 be bad!
 
-The `transactionGroup` function works the same way as the `requireThat` construct above. It is an example of what
+The ``transactionGroup`` function works the same way as the ``requireThat`` construct above. It is an example of what
 Kotlin calls a type safe builder, which you can read about in `the documentation for builders <https://kotlinlang.org/docs/reference/type-safe-builders.html>`_.
-The code block that follows it is run in the scope of a freshly created `TransactionGroupForTest` object, which assists
+The code block that follows it is run in the scope of a freshly created ``TransactionGroupForTest`` object, which assists
 you with building little transaction graphs and verifying them as a whole. Here, our "group" only actually has a
-single transaction in it, with a single output, no inputs, and an Issue command signed by `DUMMY_PUBKEY_1` which is just
-an arbitrary public key. As the paper claims to be issued by `MEGA_CORP`, this doesn't match and should cause a
-failure. The `expectFailureOfTx` method takes a 1-based index (in this case we expect the first transaction to fail)
-and a string that should appear in the exception message. Then it runs the `TransactionGroup.verify()` method to
+single transaction in it, with a single output, no inputs, and an Issue command signed by ``DUMMY_PUBKEY_1`` which is just
+an arbitrary public key. As the paper claims to be issued by ``MEGA_CORP``, this doesn't match and should cause a
+failure. The ``expectFailureOfTx`` method takes a 1-based index (in this case we expect the first transaction to fail)
+and a string that should appear in the exception message. Then it runs the ``TransactionGroup.verify()`` method to
 invoke all the involved contracts.
 
 It's worth bearing in mind that even though this code may look like a totally different language to normal Kotlin or
@@ -580,22 +576,22 @@ Let's set up a full trade and ensure it works:
 
 In this example we see some new features of the DSL:
 
-* The `roots` construct. Sometimes you don't want to write transactions that laboriously issue everything you need
-  in a formally correct way. Inside `roots` you can create a bunch of states without any contract checking what you're
+* The ``roots`` construct. Sometimes you don't want to write transactions that laboriously issue everything you need
+  in a formally correct way. Inside ``roots`` you can create a bunch of states without any contract checking what you're
   doing. As states may not exist outside of transactions, each line inside defines a fake/invalid transaction with the
   given output states, which may be *labelled* with a short string. Those labels can be used later to join transactions
   together.
-* The `.CASH` suffix. This is a part of the unit test DSL specific to the cash contract. It takes a monetary amount
+* The ``.CASH`` suffix. This is a part of the unit test DSL specific to the cash contract. It takes a monetary amount
   like 1000.DOLLARS and then wraps it in a cash ledger state, with some fake data.
 * The owned_by `infix function <https://kotlinlang.org/docs/reference/functions.html#infix-notation>`_. This is just
   a normal function that we're allowed to write in a slightly different way, which returns a copy of the cash state
-  with the owner field altered to be the given public key. `ALICE` is a constant defined by the test utilities that
-  is, like `DUMMY_PUBKEY_1`, just an arbitrary keypair.
+  with the owner field altered to be the given public key. ``ALICE`` is a constant defined by the test utilities that
+  is, like ``DUMMY_PUBKEY_1``, just an arbitrary keypair.
 * We are now defining several transactions that chain together. We can optionally label any output we create. Obviously
-  then, the `input` method requires us to give the label of some other output that it connects to.
-* The `transaction` function can also be given a time, to override the default timestamp on a transaction.
+  then, the ``input`` method requires us to give the label of some other output that it connects to.
+* The ``transaction`` function can also be given a time, to override the default timestamp on a transaction.
 
-The `trade` function is not itself a unit test. Instead it builds up a trade/transaction group, with some slight
+The ``trade`` function is not itself a unit test. Instead it builds up a trade/transaction group, with some slight
 differences depending on the parameters provided (Kotlin allows parameters to have default valus). Then it returns
 it, unexecuted.
 
@@ -615,8 +611,8 @@ We use it like this:
           trade(redemptionTime = TEST_TX_TIME + 2.days).expectFailureOfTx(3, "must have matured")
       }
 
-That's pretty simple: we just call `verify` in order to check all the transactions in the group. If any are invalid,
-an exception will be thrown indicating which transaction failed and why. In the second case, we call `expectFailureOfTx`
+That's pretty simple: we just call ``verify`` in order to check all the transactions in the group. If any are invalid,
+an exception will be thrown indicating which transaction failed and why. In the second case, we call ``expectFailureOfTx``
 again to ensure the third transaction fails with a message that contains "must have matured" (it doesn't have to be
 the exact message).
 
