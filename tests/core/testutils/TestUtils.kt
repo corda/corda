@@ -246,7 +246,7 @@ class TransactionGroupForTest {
         }
         assertEquals(index, e.index)
         if (!e.cause!!.message!!.contains(message))
-            throw AssertionError("Exception should have said '$message' but was actually: ${e.cause.message}")
+            throw AssertionError("Exception should have said '$message' but was actually: ${e.cause.message}", e.cause)
         return e
     }
 }
