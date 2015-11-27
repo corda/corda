@@ -1,0 +1,359 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Overview &mdash; Playground 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="Playground 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Getting set up" href="getting-set-up.html"/>
+        <link rel="prev" title="What’s included?" href="inthebox.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Playground
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#data-model">Data model</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#comparison-with-ethereum">Comparison with Ethereum</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contracts">Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kotlin">Kotlin</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Playground</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Overview</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/overview.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<p>This article covers the data model: how <em>states</em>, <em>transactions</em> and <em>code contracts</em> interact with each other and
+how they are represented in the code. It doesn&#8217;t attempt to give detailed design rationales or information on future
+design elements: please refer to the R3 wiki for background information.</p>
+<div class="section" id="data-model">
+<h2>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h2>
+<p>We begin with the idea of a global ledger. In our model, although the ledger is shared, it is not always the case that
+transactions and ledger entries are globally visible. In cases where a set of transactions stays within a small subgroup of
+users it should be possible to keep the relevant data purely within that group.</p>
+<p>To ensure consistency in a global, shared system where not all data may be visible to all participants, we rely
+heavily on secure hashes like SHA-256 to identify things. The ledger is defined as a set of immutable <strong>states</strong>, which
+are created and destroyed by digitally signed <strong>transactions</strong>. Each transaction points to a set of states that it will
+consume/destroy, these are called <strong>inputs</strong>, and contains a set of new states that it will create, these are called
+<strong>outputs</strong>.</p>
+<p>States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
+<strong>code contract</strong>, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
+contracts (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic. Contracts
+define a <strong>verify function</strong>, which is a pure function given the entire transaction as input.</p>
+<p>To be considered valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
+input and output states. Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
+the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
+arguments to the verify function.</p>
+<p>Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it&#8217;s up to the
+contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
+maximise flexibility for the contract developer.</p>
+<p>A transaction has one or more <strong>signatures</strong> attached to it. The signatures do not mean anything by themselves, rather,
+their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
+Signatures may be from an arbitrary, random <strong>public key</strong> that has no identity attached. A public key may be
+well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by an
+<strong>institution</strong>, which is defined (for now) as being merely a (public key, name) pair.</p>
+<p>A transaction may also be <strong>timestamped</strong>. A timestamp is a (hash, datetime, signature) triple from a
+<em>timestamping authority</em> (TSA). The notion of a TSA is not ledger specific and is defined by
+<a class="reference external" href="https://www.ietf.org/rfc/rfc3161.txt">IETF RFC 3161</a> which defines the internet standard Timestamping Protocol (TSP).
+The purpose of the TSA is to attach a single, globally agreed upon time which a contract may use to enforce certain
+types of time-based logic. The TSA&#8217;s do not need to know about the contents of the transaction in order to provide a
+timestamp, and they are therefore never exposed to private data.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the current code, use of TSAs is not implemented.</p>
+</div>
+<p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
+distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
+differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/">the R3 wiki</a>, but to summarise, the driving
+factors are:</p>
+<ul class="simple">
+<li>Improved contract flexibility vs Bitcoin</li>
+<li>Improved scalability vs Ethereum, as well as ability to keep parts of the transaction graph private (yet still uniquely addressable)</li>
+<li>No reliance on proof of work</li>
+<li>Re-us of existing sandboxing virtual machines</li>
+<li>Use of type safe GCd implementation languages.</li>
+<li>Simplified auditing</li>
+</ul>
+<div class="section" id="comparison-with-bitcoin">
+<h3>Comparison with Bitcoin<a class="headerlink" href="#comparison-with-bitcoin" title="Permalink to this headline">¶</a></h3>
+<p>Similarities:</p>
+<ul class="simple">
+<li>The basic notion of immutable states that are consumed and created by transactions is the same.</li>
+<li>The notion of transactions having multiple inputs and outputs is the same. Bitcoin sometimes refers to the ledger
+as the unspent transaction output set (UTXO set) as a result.</li>
+<li>Like in Bitcoin, a contract is pure function. Contracts do not have storage or the ability to interact with anything.
+Given the same transaction, a contract&#8217;s accept function always yields exactly the same result.</li>
+<li>Bitcoin output scripts are parameterised by the input scripts in the spending transaction. This is somewhat similar
+to our notion of a <em>command</em>.</li>
+<li>Bitcoin transactions, like ours, refer to the states they consume by using a (txhash, index) pair. The Bitcoin
+protocol calls these &#8220;outpoints&#8221;. In our prototype code they are known as <code class="docutils literal"><span class="pre">StateRefs</span></code> but the concept is identical.</li>
+<li>Bitcoin transactions have an associated timestamp (the time at which they are mined).</li>
+</ul>
+<p>Differences:</p>
+<ul class="simple">
+<li>A Bitcoin transaction has a single, rigid data format. A &#8220;state&#8221; in Bitcoin is always a (quantity of bitcoin, script)
+pair and cannot hold any other data. Some people have been known to try and hack around this limitation by embedding
+data in semi-standardised places in the contract code so the data can be extracted through pattern matching, but this
+is a poor approach. Our states can include arbitrary typed data.</li>
+<li>A Bitcoin transaction&#8217;s acceptance is controlled only by the contract code in the consumed input states. In practice
+this has proved limiting. Our transactions invoke not only input contracts but also the contracts of the outputs.</li>
+<li>A Bitcoin script can only be given a fixed set of byte arrays as the input. This means there&#8217;s no way for a contract
+to examine the structure of the entire transaction, which severely limits what contracts can do.</li>
+<li>Our contracts are Turing-complete and can be written in any ordinary programming language that targets the JVM.</li>
+<li>Our transactions and contracts have to get their time from an attached timestamp rather than a block chain. This is
+important given that we are currently considering block-free conflict resolution algorithms.</li>
+<li>We use the term &#8220;contract&#8221; to refer to a bundle of business logic that may handle various different tasks, beyond
+transaction verification. For instance, currently our contracts also include code for creating valid transactions
+(this is often called &#8220;wallet code&#8221; in Bitcoin).</li>
+</ul>
+</div>
+<div class="section" id="comparison-with-ethereum">
+<h3>Comparison with Ethereum<a class="headerlink" href="#comparison-with-ethereum" title="Permalink to this headline">¶</a></h3>
+<p>Similarities:</p>
+<ul class="simple">
+<li>Like Ethereum, code runs inside a relatively powerful virtual machine and can contain complex logic. Non-assembly
+based programming languages can be used for contract programming.</li>
+<li>They are both intended for the modelling of many different kinds of financial contract.</li>
+</ul>
+<p>Differences:</p>
+<ul class="simple">
+<li>The term &#8220;contract&#8221; in Ethereum refers to an <em>instantiation</em> of a program that is replicated and maintained by
+every participating node. This instantiation is very much like an object in an OO program: it can receive and send
+messages, update local storage and so on. In contrast, we use the term &#8220;contract&#8221; to refer to a set of functions, only
+one of which is a part of keeping the system synchronised (the verify function). That function is pure and
+stateless i.e. it may not interact with any other part of the system whilst executing.</li>
+<li>There is no notion of an &#8220;account&#8221;, as there is in Ethereum.</li>
+<li>As contracts don&#8217;t have any kind of mutable storage, there is no notion of a &#8220;message&#8221; as in Ethereum.</li>
+<li>Ethereum claims to be a platform not only for financial logic, but literally any kind of application at all. Our
+platform considers non-financial applications to be out of scope.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="contracts">
+<h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>
+<p>The primary goal of this prototype is to implement various kinds of contracts and verify that useful business logic
+can be expressed with the data model, developing and refining an API along the way. To that end there are currently
+two contracts in the repository:</p>
+<ol class="arabic simple">
+<li>Cash</li>
+<li>Commercial paper</li>
+</ol>
+<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institution, denominated in some currency,
+identified by some <em>deposit reference</em>. A deposit reference is an opaque byte array which is usable by
+the issuing institution for internal bookkeeping purposes.</p>
+<p>Cash states are <em>fungible</em> with each other (can be merged and split arbitrarily) if they use the same currency,
+institution and deposit reference.</p>
+<p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> implements an asset with a <em>face value</em> denominated in a certain currency, which may be redeemed at
+the issuing institution after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
+at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
+contract is implemented twice, once in Java and once in a language called Kotlin.</p>
+<p>Each contract comes with unit tests.</p>
+</div>
+<div class="section" id="kotlin">
+<h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
+<p>The prototype is written in a language called <a class="reference external" href="https://kotlinlang.org/">Kotlin</a>. Kotlin is a language that targets the JVM
+and can be thought of as a simpler Scala, with much better Java interop. It is developed by and has commercial support
+from JetBrains, the makers of the IntelliJ IDE and other popular developer tools.</p>
+<p>As Kotlin is very new, without a doubt you have not encountered it before. Don&#8217;t worry: it is designed as a better
+Java for industrial use and as such, the syntax was carefully designed to be readable even to people who don&#8217;t know
+the language, after only a few minutes of introduction.</p>
+<p>Due to the seamless Java interop the use of Kotlin to extend the platform is <em>not</em> required and the tutorial shows how
+to write contracts in both Kotlin and Java. You can <a class="reference external" href="https://medium.com/&#64;octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3">read more about why Kotlin is a potentially strong successor to Java here</a>.</p>
+<p>Kotlin programs use the regular Java standard library and ordinary Java frameworks. Frameworks used at this time are:</p>
+<ul class="simple">
+<li>JUnit for unit testing</li>
+<li>Kryo for serialisation (this is not intended to be permanent)</li>
+<li>Gradle for the build</li>
+<li>Guava for a few utility functions</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="getting-set-up.html" class="btn btn-neutral float-right" title="Getting set up" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -1,0 +1,27 @@
+@import "theme.css";
+
+.highlight .k, .highlight .kd {
+    color: blue;
+}
+
+.codesnippet-widgets {
+    min-width: 100%;
+    display: block;
+    background: lightskyblue;
+    color: white;
+    padding: 10px 0;
+    margin: 0 0 -1px 0;
+}
+
+.codesnippet-widgets > span {
+    padding: 10px;
+    cursor: pointer;
+}
+
+.codesnippet-widgets > .current {
+    background: deepskyblue;
+}
+
+.codeset > .highlight-java {
+    display: none;
+}
