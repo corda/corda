@@ -13,7 +13,7 @@ import kotlin.test.assertFailsWith
 class TransactionSerializationTests {
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
     // It refers to a fake TX/state that we don't bother creating here.
-    val depositRef = InstitutionReference(MINI_CORP, OpaqueBytes.of(1))
+    val depositRef = MINI_CORP.ref(1)
     val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1)
     val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
 

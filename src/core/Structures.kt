@@ -33,6 +33,9 @@ data class StateAndRef<T : ContractState>(val state: T, val ref: ContractStateRe
 /** An Institution is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Institution(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
     override fun toString() = name
+
+    fun ref(bytes: OpaqueBytes) = InstitutionReference(this, bytes)
+    fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 }
 
 /**

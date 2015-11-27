@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 
 class CashTests {
     val inState = Cash.State(
-            deposit = InstitutionReference(MEGA_CORP, OpaqueBytes.of(1)),
+            deposit = MEGA_CORP.ref(1),
             amount = 1000.DOLLARS,
             owner = DUMMY_PUBKEY_1
     )
@@ -79,7 +79,7 @@ class CashTests {
                 Cash.State(
                     amount = 1000.DOLLARS,
                     owner = DUMMY_PUBKEY_1,
-                    deposit = InstitutionReference(MINI_CORP, OpaqueBytes.of(12, 34))
+                    deposit = MINI_CORP.ref(12, 34)
                 )
             }
             tweak {
@@ -91,7 +91,7 @@ class CashTests {
         }
 
         val ptx = PartialTransaction()
-        Cash().craftIssue(ptx, 100.DOLLARS, InstitutionReference(MINI_CORP, OpaqueBytes.of(12, 34)), owner = DUMMY_PUBKEY_1)
+        Cash().craftIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12,34), owner = DUMMY_PUBKEY_1)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
         assertEquals(100.DOLLARS, s.amount)
@@ -267,7 +267,7 @@ class CashTests {
     fun multiCurrency() {
         // Check we can do an atomic currency trade tx.
         transaction {
-            val pounds = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(3, 4, 5)), 658.POUNDS, DUMMY_PUBKEY_2)
+            val pounds = Cash.State(MINI_CORP.ref(3, 4, 5), 658.POUNDS, DUMMY_PUBKEY_2)
             input { inState `owned by` DUMMY_PUBKEY_1 }
             input { pounds }
             output { inState `owned by` DUMMY_PUBKEY_2 }
@@ -287,7 +287,7 @@ class CashTests {
 
     fun makeCash(amount: Amount, corp: Institution, depositRef: Byte = 1) =
             StateAndRef(
-                    Cash.State(InstitutionReference(corp, OpaqueBytes.of(depositRef)), amount, OUR_PUBKEY_1),
+                    Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1),
                     ContractStateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 

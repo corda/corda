@@ -1,13 +1,15 @@
 package contracts
 
-import core.*
+import core.Amount
+import core.DOLLARS
+import core.days
 import core.testutils.*
 import org.junit.Test
 import java.time.Instant
 
 class CommercialPaperTests {
     val PAPER_1 = CommercialPaper.State(
-            issuance = InstitutionReference(MEGA_CORP, OpaqueBytes.of(123)),
+            issuance = MEGA_CORP.ref(123),
             owner = MEGA_CORP_KEY,
             faceValue = 1000.DOLLARS,
             maturityDate = TEST_TX_TIME + 7.days

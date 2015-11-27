@@ -67,7 +67,7 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 infix fun Cash.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
 infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
 // Allows you to write 100.DOLLARS.CASH
-val Amount.CASH: Cash.State get() = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1,2,3)), this, NullPublicKey)
+val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1,2,3), this, NullPublicKey)
 
 class LabeledOutput(val label: String?, val state: ContractState) {
     override fun toString() = state.toString() + (if (label != null) " ($label)" else "")

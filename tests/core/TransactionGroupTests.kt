@@ -8,7 +8,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
 class TransactionGroupTests {
-    val A_THOUSAND_POUNDS = Cash.State(InstitutionReference(MINI_CORP, OpaqueBytes.of(1, 2, 3)), 1000.POUNDS, MINI_CORP_KEY)
+    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_KEY)
 
     @Test
     fun success() {
