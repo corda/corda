@@ -8,7 +8,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 
 class TransactionGroupTests {
-    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_KEY)
+    val A_THOUSAND_POUNDS = Cash.State(MINI_CORP.ref(1, 2, 3), 1000.POUNDS, MINI_CORP_PUBKEY)
 
     @Test
     fun success() {
@@ -20,13 +20,13 @@ class TransactionGroupTests {
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE }
-                arg(MINI_CORP_KEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
             }
 
             transaction {
                 input("alice's £1000")
                 arg(ALICE) { Cash.Commands.Move }
-                arg(MINI_CORP_KEY) { Cash.Commands.Exit(1000.POUNDS) }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
             }
 
             verify()
@@ -38,7 +38,7 @@ class TransactionGroupTests {
         transactionGroup {
             val t = transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_KEY) { Cash.Commands.Issue() }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             }
 
             val conflict1 = transaction {
@@ -46,7 +46,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_KEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
             }
 
             verify()
@@ -57,7 +57,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_KEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
             }
 
             assertNotEquals(conflict1, conflict2)
@@ -76,7 +76,7 @@ class TransactionGroupTests {
         val tg = transactionGroup {
             transaction {
                 output("cash") { A_THOUSAND_POUNDS }
-                arg(MINI_CORP_KEY) { Cash.Commands.Issue() }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             }
 
             transaction {
@@ -110,7 +110,7 @@ class TransactionGroupTests {
                 input("£1000")
                 input("£1000")
                 output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
-                arg(MINI_CORP_KEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
             }
 
             assertFailsWith(TransactionConflictException::class) {

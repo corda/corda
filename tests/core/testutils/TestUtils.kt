@@ -18,18 +18,22 @@ object TestUtils {
 }
 
 // A few dummy values for testing.
-val MEGA_CORP_KEY = TestUtils.keypair.public
-val MINI_CORP_KEY = TestUtils.keypair2.public
+val MEGA_CORP_KEY = TestUtils.keypair
+val MEGA_CORP_PUBKEY = MEGA_CORP_KEY.public
+val MINI_CORP_KEY = TestUtils.keypair2
+val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
-val ALICE = DummyPublicKey("alice")
-val BOB = DummyPublicKey("bob")
-val MEGA_CORP = Institution("MegaCorp", MEGA_CORP_KEY)
-val MINI_CORP = Institution("MiniCorp", MINI_CORP_KEY)
+val ALICE_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val ALICE = ALICE_KEY.public
+val BOB_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val BOB = BOB_KEY.public
+val MEGA_CORP = Institution("MegaCorp", MEGA_CORP_PUBKEY)
+val MINI_CORP = Institution("MiniCorp", MINI_CORP_PUBKEY)
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
-        MEGA_CORP_KEY to MEGA_CORP,
-        MINI_CORP_KEY to MINI_CORP
+        MEGA_CORP_PUBKEY to MEGA_CORP,
+        MINI_CORP_PUBKEY to MINI_CORP
 )
 
 // A dummy time at which we will be pretending test transactions are created.

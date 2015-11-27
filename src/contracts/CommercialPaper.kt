@@ -94,5 +94,39 @@ class CommercialPaper : Contract {
             }
         }
     }
+
+    /**
+     * Returns a transaction that issues commercial paper, owned by the issuing institution's key. Does not update
+     * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
+     * at the moment: this restriction is not fundamental and may be lifted later.
+     */
+    fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
+        val state = State(issuance, issuance.institution.owningKey, faceValue, maturityDate)
+        return PartialTransaction(state, WireCommand(Commands.Issue, issuance.institution.owningKey))
+    }
+
+    /**
+     * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
+     */
+    fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
+        tx.addInputState(paper.ref)
+        tx.addOutputState(paper.state.copy(owner = newOwner))
+        tx.addArg(WireCommand(Commands.Move, paper.state.owner))
+    }
+
+    /**
+     * Intended to be called by the issuer of some commercial paper, when an owner has notified us that they wish
+     * to redeem the paper. We must therefore send enough money to the key that owns the paper to satisfy the face
+     * value, and then ensure the paper is removed from the ledger.
+     *
+     * @throws InsufficientBalanceException if the wallet doesn't contain enough money to pay the redeemer
+     */
+    @Throws(InsufficientBalanceException::class)
+    fun craftRedeem(tx: PartialTransaction, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+        // Add the cash movement using the states in our wallet.
+        Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
+        tx.addInputState(paper.ref)
+        tx.addArg(WireCommand(CommercialPaper.Commands.Redeem, paper.state.owner))
+    }
 }
 

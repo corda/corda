@@ -83,10 +83,10 @@ class CashTests {
                 )
             }
             tweak {
-                arg(MINI_CORP_KEY) { Cash.Commands.Issue(0) }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue(0) }
                 this `fails requirement` "has a nonce"
             }
-            arg(MINI_CORP_KEY) { Cash.Commands.Issue() }
+            arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
             this.accepts()
         }
 
@@ -98,7 +98,7 @@ class CashTests {
         assertEquals(MINI_CORP, s.deposit.institution)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(ptx.commands()[0].command is Cash.Commands.Issue)
-        assertEquals(MINI_CORP_KEY, ptx.commands()[0].pubkeys[0])
+        assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].pubkeys[0])
     }
 
     @Test
@@ -196,13 +196,13 @@ class CashTests {
             output { outState.copy(amount = inState.amount - 200.DOLLARS) }
 
             tweak {
-                arg(MEGA_CORP_KEY) { Cash.Commands.Exit(100.DOLLARS) }
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS) }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
                 this `fails requirement` "the amounts balance"
             }
 
             tweak {
-                arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS) }
                 this `fails requirement` "required contracts.Cash.Commands.Move command"
 
                 tweak {
@@ -223,10 +223,10 @@ class CashTests {
 
             this `fails requirement` "at issuer MegaCorp the amounts balance"
 
-            arg(MEGA_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
+            arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS) }
             this `fails requirement` "at issuer MiniCorp the amounts balance"
 
-            arg(MINI_CORP_KEY) { Cash.Commands.Exit(200.DOLLARS) }
+            arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(200.DOLLARS) }
             this.accepts()
         }
     }
