@@ -124,6 +124,16 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun commands(): List<WireCommand> = ArrayList(commands)
 }
 
+/**
+ * Simple interface (for testing) to an abstract timestamping service, in the style of RFC 3161. Note that this is not
+ * 'timestamping' in the block chain sense, but rather, implies a semi-trusted third party taking a reading of the
+ * current time, typically from an atomic clock, and then digitally signing (current time, hash) to produce a timestamp
+ * triple (signature, time, hash). The purpose of these timestamps is to locate a transaction in the timeline, which is
+ * important in the absence of blocks. Here we model the timestamp as an opaque byte array.
+ */
+interface TimestamperService {
+    fun timestamp(hash: SecureHash): ByteArray
+}
 
 data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
     init {
@@ -159,16 +169,26 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
             throw SignatureException("Command keys don't match the signatures: $cmdKeys vs $sigKeys")
         return wtx
     }
+
+    fun toTimestampedTransaction(timestamper: TimestamperService): TimestampedWireTransaction {
+        val bits = serialize()
+        return TimestampedWireTransaction(bits, timestamper.timestamp(bits.sha256()))
+    }
 }
 
-// Not used yet.
+/**
+ * A TimestampedWireTransaction is the outermost, final form that a transaction takes. The hash of this structure is
+ * how transactions are identified on the network and in the ledger.
+ */
 data class TimestampedWireTransaction(
     /** A serialised SignedWireTransaction */
     val wireTX: ByteArray,
 
     /** Signature from a timestamping authority. For instance using RFC 3161 */
     val timestamp: ByteArray
-) : SerializeableWithKryo
+) : SerializeableWithKryo {
+    val transactionID: SecureHash = serialize().sha256()
+}
 
 /**
  * A LedgerTransaction wraps the data needed to calculate one or more successor states from a set of input states.
@@ -187,7 +207,17 @@ data class LedgerTransaction(
     /** The hash of the original serialised TimestampedWireTransaction or SignedTransaction */
     val hash: SecureHash
     // TODO: nLockTime equivalent?
-)
+) {
+    @Suppress("UNCHECKED_CAST")
+    fun <T : ContractState> outRef(index: Int) = StateAndRef(outStates[index] as T, ContractStateRef(hash, index))
+
+    fun <T : ContractState> outRef(state: T): StateAndRef<T> {
+        val i = outStates.indexOf(state)
+        if (i == -1)
+            throw IllegalArgumentException("State not found in this transaction")
+        return outRef(i)
+    }
+}
 
 /** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
 data class TransactionForVerification(val inStates: List<ContractState>,
