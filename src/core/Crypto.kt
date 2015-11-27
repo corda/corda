@@ -32,6 +32,8 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
     // In future, maybe SHA3, truncated hashes etc.
 }
 
+fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
+
 /**
  * A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
  * signature. It isn't used currently, but experience from Bitcoin suggests such a feature is useful, especially when
