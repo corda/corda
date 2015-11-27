@@ -88,9 +88,9 @@ class CommercialPaperTests {
     // Generate a trade lifecycle with various parameters.
     private fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
                       aliceGetsBack: Amount = 1000.DOLLARS,
-                      destroyPaperAtRedemption: Boolean = true): TransactionGroupForTest {
+                      destroyPaperAtRedemption: Boolean = true): TransactionGroupForTest<CommercialPaper.State> {
         val someProfits = 1200.DOLLARS
-        return transactionGroup {
+        return transactionGroupFor() {
             roots {
                 transaction(900.DOLLARS.CASH `owned by` ALICE label "alice's $900")
                 transaction(someProfits.CASH `owned by` MEGA_CORP_KEY label "some profits")
@@ -108,7 +108,7 @@ class CommercialPaperTests {
                 input("paper")
                 input("alice's $900")
                 output { 900.DOLLARS.CASH `owned by` MEGA_CORP_KEY }
-                output("alice's paper") { PAPER_1 `owned by` ALICE }
+                output("alice's paper") { "paper".output `owned by` ALICE }
                 arg(ALICE) { Cash.Commands.Move }
                 arg(MEGA_CORP_KEY) { CommercialPaper.Commands.Move }
             }
@@ -122,7 +122,7 @@ class CommercialPaperTests {
                 output { aliceGetsBack.CASH `owned by` ALICE }
                 output { (someProfits - aliceGetsBack).CASH `owned by` MEGA_CORP_KEY }
                 if (!destroyPaperAtRedemption)
-                    output { PAPER_1 `owned by` ALICE }
+                    output { "paper".output }
 
                 arg(MEGA_CORP_KEY) { Cash.Commands.Move }
                 arg(ALICE) { CommercialPaper.Commands.Redeem }
