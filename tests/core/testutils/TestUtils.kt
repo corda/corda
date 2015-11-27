@@ -18,8 +18,8 @@ object TestUtils {
 }
 
 // A few dummy values for testing.
-val MEGA_CORP_KEY = DummyPublicKey("mini")
-val MINI_CORP_KEY = DummyPublicKey("mega")
+val MEGA_CORP_KEY = TestUtils.keypair.public
+val MINI_CORP_KEY = TestUtils.keypair2.public
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
 val ALICE = DummyPublicKey("alice")
@@ -169,7 +169,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
 fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().apply { body() }
 
-class TransactionGroupForTest<T : ContractState>(private val stateType: Class<T>) {
+class TransactionGroupForTest<out T : ContractState>(private val stateType: Class<T>) {
     open inner class LedgerTransactionForTest : AbstractTransactionForTest() {
         private val inStates = ArrayList<ContractStateRef>()
 
@@ -178,9 +178,13 @@ class TransactionGroupForTest<T : ContractState>(private val stateType: Class<T>
         }
 
 
+        /**
+         * Converts to a [LedgerTransaction] with the givn time, the test institution map, and just assigns a random
+         * hash (i.e. pretend it was signed)
+         */
         fun toLedgerTransaction(time: Instant): LedgerTransaction {
             val wireCmds = commands.map { WireCommand(it.value, it.signers) }
-            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP)
+            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
         }
     }
 
@@ -208,7 +212,7 @@ class TransactionGroupForTest<T : ContractState>(private val stateType: Class<T>
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), outs, emptyList())
-            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP)
+            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
             outputStates.forEachIndexed { index, labeledOutput -> labelToRefs[labeledOutput.label!!] = ContractStateRef(ltx.hash, index) }
             rootTxns.add(ltx)
         }
@@ -260,4 +264,4 @@ class TransactionGroupForTest<T : ContractState>(private val stateType: Class<T>
 }
 
 inline fun <reified T : ContractState> transactionGroupFor(body: TransactionGroupForTest<T>.() -> Unit) = TransactionGroupForTest<T>(T::class.java).apply { this.body() }
-fun transactionGroup(body: TransactionGroupForTest<ContractState>.() -> Unit) = TransactionGroupForTest<ContractState>(ContractState::class.java).apply { this.body() }
+fun transactionGroup(body: TransactionGroupForTest<ContractState>.() -> Unit) = TransactionGroupForTest(ContractState::class.java).apply { this.body() }

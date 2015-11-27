@@ -19,10 +19,10 @@ import java.util.*
  * SignedWireTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
  * a public key that is mentioned inside a transaction command.
  *
- * WireTransaction is a transaction in a form ready to be serialised/unserialised/hashed. This is the object from which
- * a transaction ID (hash) is calculated. It contains no signatures and no timestamp. That means, sending a transaction
- * to a timestamping authority does NOT change its hash (this may be an issue that leads to confusion and should be
- * examined more closely).
+ * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
+ * in various ways to calculate a *signature hash* (or sighash), this is the hash that is signed by the various involved
+ * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of a
+ * TimestampedWireTransaction i.e. the outermost serialised form with everything included.
  *
  * A PartialTransaction is a transaction class that's mutable (unlike the others which are all immutable). It is
  * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
@@ -41,20 +41,22 @@ import java.util.*
  */
 
 /** Serialized command plus pubkey pair: the signature is stored at the end of the serialized bytes */
-data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) : SerializeableWithKryo
+data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) : SerializeableWithKryo {
+    constructor(command: Command, key: PublicKey) : this(command, listOf(key))
+}
 
 /** Transaction ready for serialisation, without any signatures attached. */
 data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val outputStates: List<ContractState>,
                            val commands: List<WireCommand>) : SerializeableWithKryo {
-    val hash: SecureHash get() = SecureHash.sha256(serialize())
+    fun serializeForSignature(): ByteArray = serialize()
 
-    fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
+    fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> institutionKeyMap[pk] }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
         }
-        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, hash)
+        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, originalHash)
     }
 }
 
@@ -63,9 +65,14 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
                          private val outputStates: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<WireCommand> = arrayListOf()) {
 
-    /** A more convenient constructor that sorts things into the right lists for you */
-    constructor(vararg things: Any) : this() {
-        for (t in things) {
+    /**  A more convenient way to add items to this transaction that calls the add* methods for you based on type */
+    constructor(vararg items: Any) : this() {
+        addItems(*items)
+    }
+
+    /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
+    public fun addItems(vararg items: Any) {
+        for (t in items) {
             when (t) {
                 is ContractStateRef -> inputStates.add(t)
                 is ContractState -> outputStates.add(t)
@@ -81,7 +88,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         check(commands.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
-        val bits = toWireTransaction().serialize()
+        val bits = toWireTransaction().serializeForSignature()
         currentSigs.add(key.private.signWithECDSA(bits, key.public))
     }
 
@@ -106,6 +113,8 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
 
     fun addArg(arg: WireCommand) {
         check(currentSigs.isEmpty())
+
+        // We should probably merge the lists of pubkeys for identical commands here.
         commands.add(arg)
     }
 
@@ -175,7 +184,7 @@ data class LedgerTransaction(
     val commands: List<AuthenticatedObject<Command>>,
     /** The moment the transaction was timestamped for */
     val time: Instant,
-    /** The hash of the original serialised WireTransaction */
+    /** The hash of the original serialised TimestampedWireTransaction or SignedTransaction */
     val hash: SecureHash
     // TODO: nLockTime equivalent?
 )
