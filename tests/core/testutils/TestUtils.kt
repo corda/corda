@@ -44,6 +44,7 @@ val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
         CASH_PROGRAM_ID to Cash(),
         CP_PROGRAM_ID to CommercialPaper(),
+        CROWDFUND_PROGRAM_ID to CrowdFund(),
         DUMMY_PROGRAM_ID to DummyContract
 )
 
