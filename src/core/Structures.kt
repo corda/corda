@@ -28,7 +28,7 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
 data class ContractStateRef(val txhash: SecureHash, val index: Int) : SerializeableWithKryo
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<T : ContractState>(val state: T, val ref: ContractStateRef)
+data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef)
 
 /** An Institution is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Institution(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
