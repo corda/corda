@@ -132,8 +132,14 @@ class CommercialPaperTests {
         }
     }
 
+    fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
+        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), TEST_TX_TIME, SecureHash.randomSHA256())
+        return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, ContractStateRef(ltx.hash, index)) })
+    }
+
     @Test
     fun `issue move and then redeem`() {
+        // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
             val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days)
             ptx.signWith(MINI_CORP_KEY)
@@ -141,25 +147,32 @@ class CommercialPaperTests {
             stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
         }
 
+        val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
+                3000.DOLLARS.CASH `owned by` ALICE,
+                3000.DOLLARS.CASH `owned by` ALICE,
+                3000.DOLLARS.CASH `owned by` ALICE
+        )
+
+        // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
             val ptx = PartialTransaction()
+            Cash().craftSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
             CommercialPaper().craftMove(ptx, issueTX.outRef(0), ALICE)
             ptx.signWith(MINI_CORP_KEY)
+            ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
             stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
         }
 
         // Won't be validated.
-        val someCash = LedgerTransaction(emptyList(), listOf(
+        val (corpWalletTX, corpWallet) = cashOutputsToWallet(
                 9000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY,
                 4000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY
-        ),  emptyList(), TEST_TX_TIME, SecureHash.randomSHA256())
-        val wallet = listOf<StateAndRef<Cash.State>>(someCash.outRef(0), someCash.outRef(1))
-
+        )
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
             val ptx = PartialTransaction()
-            CommercialPaper().craftRedeem(ptx, moveTX.outRef(0), wallet)
+            CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
             return ptx.toSignedTransaction().verify().toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
@@ -169,10 +182,10 @@ class CommercialPaperTests {
         val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
 
         val e = assertFailsWith(TransactionVerificationException::class) {
-            TransactionGroup(setOf(issueTX, moveTX, tooEarlyRedemption), setOf(someCash)).verify(TEST_PROGRAM_MAP)
+            TransactionGroup(setOf(issueTX, moveTX, tooEarlyRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(TEST_PROGRAM_MAP)
         }
         assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
-        TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(someCash)).verify(TEST_PROGRAM_MAP)
+        TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(TEST_PROGRAM_MAP)
     }
 }
