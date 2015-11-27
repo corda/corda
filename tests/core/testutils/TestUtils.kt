@@ -1,4 +1,4 @@
-@file:Suppress("UNUSED_PARAMETER")
+@file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
 
 package core.testutils
 
@@ -193,7 +193,6 @@ class TransactionGroupForTest<T : ContractState>(private val stateType: Class<T>
                 if (labelledState.label != null) {
                     labelToRefs[labelledState.label] = ContractStateRef(ltx.hash, index)
                     if (stateType.isInstance(labelledState.state)) {
-                        @Suppress("UNCHECKED_CAST")
                         labelToOutputs[labelledState.label] = labelledState.state as T
                     }
                 }
