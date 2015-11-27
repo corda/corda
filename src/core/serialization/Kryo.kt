@@ -12,6 +12,7 @@ import core.*
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPairGenerator
+import java.security.PublicKey
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
@@ -209,6 +210,7 @@ fun createKryo(): Kryo {
         register(Currency::class.java, JavaSerializer())   // Only serialises the currency code as a string.
         register(UNUSED_EC_KEYPAIR.private.javaClass, JavaSerializer())
         register(UNUSED_EC_KEYPAIR.public.javaClass, JavaSerializer())
+        register(PublicKey::class.java, JavaSerializer())
 
         // Now register platform types.
         registerDataClass<SecureHash.SHA256>()
@@ -220,16 +222,36 @@ fun createKryo(): Kryo {
         registerDataClass<ContractStateRef>()
         registerDataClass<WireTransaction>()
         registerDataClass<WireCommand>()
+        registerDataClass<TimestampedWireTransaction>()
+
+        // Can't use data classes for this in Kotlin 1.0 due to lack of support for inheritance: must write a manual
+        // serialiser instead :(
+        register(DigitalSignature.WithKey::class.java, object : Serializer<DigitalSignature.WithKey>(false, true) {
+            override fun write(kryo: Kryo, output: Output, sig: DigitalSignature.WithKey) {
+                output.writeVarInt(sig.bits.size, true)
+                output.write(sig.bits)
+                output.writeInt(sig.covering, true)
+                kryo.writeObject(output, sig.by)
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<DigitalSignature.WithKey>): DigitalSignature.WithKey {
+                val sigLen = input.readVarInt(true)
+                val sigBits = input.readBytes(sigLen)
+                val covering = input.readInt(true)
+                val pubkey = kryo.readObject(input, PublicKey::class.java)
+                return DigitalSignature.WithKey(pubkey, sigBits, covering)
+            }
+        })
 
         // TODO: This is obviously a short term hack: there needs to be a way to bundle up and register contracts.
         registerDataClass<Cash.State>()
-        register(Cash.Commands.Move.javaClass)
+        register(Cash.Commands.Move::class.java)
         registerDataClass<Cash.Commands.Exit>()
         registerDataClass<Cash.Commands.Issue>()
         registerDataClass<CommercialPaper.State>()
-        register(CommercialPaper.Commands.Move.javaClass)
-        register(CommercialPaper.Commands.Redeem.javaClass)
-        register(CommercialPaper.Commands.Issue.javaClass)
+        register(CommercialPaper.Commands.Move::class.java)
+        register(CommercialPaper.Commands.Redeem::class.java)
+        register(CommercialPaper.Commands.Issue::class.java)
 
         // And for unit testing ...
         registerDataClass<DummyPublicKey>()

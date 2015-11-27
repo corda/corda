@@ -40,11 +40,11 @@ class CommercialPaper : Contract {
     }
 
     interface Commands : Command {
-        object Move : Commands
-        object Redeem : Commands
+        class Move : TypeOnlyCommand(), Commands
+        class Redeem : TypeOnlyCommand(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        object Issue : Commands
+        class Issue : TypeOnlyCommand(), Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -54,6 +54,7 @@ class CommercialPaper : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
+        val time = tx.time
 
         for (group in groups) {
             when (command.value) {
@@ -68,8 +69,9 @@ class CommercialPaper : Contract {
                 is Commands.Redeem -> {
                     val input = group.inputs.single()
                     val received = tx.outStates.sumCashBy(input.owner)
+                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
                     requireThat {
-                        "the paper must have matured" by (input.maturityDate < tx.time)
+                        "the paper must have matured" by (time > input.maturityDate)
                         "the received amount equals the face value" by (received == input.faceValue)
                         "the paper must be destroyed" by group.outputs.isEmpty()
                         "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
@@ -78,12 +80,13 @@ class CommercialPaper : Contract {
 
                 is Commands.Issue -> {
                     val output = group.outputs.single()
+                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "the issuance is signed by the claimed issuer of the paper" by
                                 (command.signers.contains(output.issuance.institution.owningKey))
                         "the face value is not zero" by (output.faceValue.pennies > 0)
-                        "the maturity date is not in the past" by (output.maturityDate > tx.time)
+                        "the maturity date is not in the past" by (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
                         "there is no input state" by group.inputs.isEmpty()
                     }
@@ -102,7 +105,7 @@ class CommercialPaper : Contract {
      */
     fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
         val state = State(issuance, issuance.institution.owningKey, faceValue, maturityDate)
-        return PartialTransaction(state, WireCommand(Commands.Issue, issuance.institution.owningKey))
+        return PartialTransaction(state, WireCommand(Commands.Issue(), issuance.institution.owningKey))
     }
 
     /**
@@ -111,7 +114,7 @@ class CommercialPaper : Contract {
     fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper.ref)
         tx.addOutputState(paper.state.copy(owner = newOwner))
-        tx.addArg(WireCommand(Commands.Move, paper.state.owner))
+        tx.addArg(WireCommand(Commands.Move(), paper.state.owner))
     }
 
     /**
@@ -126,7 +129,7 @@ class CommercialPaper : Contract {
         // Add the cash movement using the states in our wallet.
         Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
         tx.addInputState(paper.ref)
-        tx.addArg(WireCommand(CommercialPaper.Commands.Redeem, paper.state.owner))
+        tx.addArg(WireCommand(CommercialPaper.Commands.Redeem(), paper.state.owner))
     }
 }
 

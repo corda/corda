@@ -2,8 +2,13 @@
 
 package core.testutils
 
+import com.google.common.io.BaseEncoding
 import contracts.*
 import core.*
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
@@ -46,6 +51,33 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
         CP_PROGRAM_ID to CommercialPaper(),
         DUMMY_PROGRAM_ID to DummyContract
 )
+
+/**
+ * A test/mock timestamping service that doesn't use any signatures or security. It always timestamps with
+ * [TEST_TX_TIME], an arbitrary point on the timeline.
+ */
+class DummyTimestamper(private val time: Instant = TEST_TX_TIME) : TimestamperService {
+    override fun timestamp(hash: SecureHash): ByteArray {
+        val bos = ByteArrayOutputStream()
+        DataOutputStream(bos).use {
+            it.writeLong(time.toEpochMilli())
+            it.write(hash.bits)
+        }
+        return bos.toByteArray()
+    }
+
+    override fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant {
+        val dis = DataInputStream(ByteArrayInputStream(signedTimestamp))
+        val epochMillis = dis.readLong()
+        val serHash = ByteArray(32)
+        dis.readFully(serHash)
+        if (!Arrays.equals(serHash, hash.bits))
+            throw IllegalStateException("Hash mismatch: ${BaseEncoding.base16().encode(serHash)} vs ${BaseEncoding.base16().encode(hash.bits)}")
+        return Instant.ofEpochMilli(epochMillis)
+    }
+}
+
+val DUMMY_TIMESTAMPER = DummyTimestamper()
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

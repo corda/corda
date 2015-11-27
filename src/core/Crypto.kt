@@ -63,6 +63,8 @@ class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey>, Serializ
     override fun getEncoded() = s.toByteArray()
     override fun getFormat() = "ASN.1"
     override fun compareTo(other: PublicKey): Int = BigInteger(encoded).compareTo(BigInteger(other.encoded))
+    override fun equals(other: Any?) = other is DummyPublicKey && other.s == s
+    override fun hashCode(): Int = s.hashCode()
     override fun toString() = "PUBKEY[$s]"
 }
 
