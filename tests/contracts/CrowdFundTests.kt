@@ -62,11 +62,13 @@ class CrowdFundTests {
             transaction {
                 input ("funding opportunity")
                 input("alice's $1000")
-                output ("pledged opportunity") { CF_1.copy(
-                        pledges = CF_1.pledges + CrowdFund.Pledge(ALICE, 1000.DOLLARS),
-                        pledgeCount = CF_1.pledgeCount + 1,
-                        pledgeTotal = CF_1.pledgeTotal + 1000.DOLLARS
-                ) }
+                output ("pledged opportunity") {
+                    CF_1.copy(
+                            pledges = CF_1.pledges + CrowdFund.Pledge(ALICE, 1000.DOLLARS),
+                            pledgeCount = CF_1.pledgeCount + 1,
+                            pledgeTotal = CF_1.pledgeTotal + 1000.DOLLARS
+                    )
+                }
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
                 arg(ALICE) { Cash.Commands.Move() }
                 arg(ALICE) { CrowdFund.Commands.Fund }
@@ -78,7 +80,7 @@ class CrowdFundTests {
                 output ("funded and closed") { "pledged opportunity".output.copy(closed = true) }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Funded }
             }
-         }
+        }
     }
 
     fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
@@ -129,4 +131,4 @@ class CrowdFundTests {
 
     }
 
-    }
+}

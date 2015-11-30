@@ -29,7 +29,7 @@ class CrowdFund : Contract {
         override fun toString() = "Crowdsourcing($fundingTarget sought by $owner by $closingTime)"
     }
 
-    data class Pledge (
+    data class Pledge(
             val owner: PublicKey,
             val amount: Amount
     ) : SerializeableWithKryo
@@ -37,22 +37,25 @@ class CrowdFund : Contract {
 
     interface Commands : Command {
         object Register : Commands
+
         object Fund : Commands
+
         object Funded : Commands
+
         object Unfunded : Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
-    // There are two possible things that can be done with Crowdsourcing.
-    // The first is creating it. The second is funding it with cash
-    // The third is closing it on or after the closing date, and returning funds to
-    // pledge-makers if the target is unmet, or passing to the recipient.
-    val command = tx.commands.requireSingleCommand<CrowdFund.Commands>()
+        // There are two possible things that can be done with Crowdsourcing.
+        // The first is creating it. The second is funding it with cash
+        // The third is closing it on or after the closing date, and returning funds to
+        // pledge-makers if the target is unmet, or passing to the recipient.
+        val command = tx.commands.requireSingleCommand<CrowdFund.Commands>()
 
         val outputCrowdFund: CrowdFund.State = tx.outStates.filterIsInstance<CrowdFund.State>().single()
         val outputCash: List<Cash.State> = tx.outStates.filterIsInstance<Cash.State>()
 
-    when (command.value) {
+        when (command.value) {
             is Commands.Register -> {
                 requireThat {
                     "the transaction is signed by the owner of the crowdsourcing" by (command.signers.contains(outputCrowdFund.owner))
@@ -93,56 +96,55 @@ class CrowdFund : Contract {
                 }
             }
 
-        is Commands.Unfunded -> {
-            val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
-            // TODO how can this be made smarter? feels wrong as a separate function
-            fun checkReturns(inputCrowdFund: CrowdFund.State, outputCash: List<Cash.State>): Boolean {
-                for (pledge in inputCrowdFund.pledges) {
-                    if (outputCash.filter { it.amount == pledge.amount && it.owner == pledge.owner}.isEmpty()) return false
+            is Commands.Unfunded -> {
+                val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
+                // TODO how can this be made smarter? feels wrong as a separate function
+                fun checkReturns(inputCrowdFund: CrowdFund.State, outputCash: List<Cash.State>): Boolean {
+                    for (pledge in inputCrowdFund.pledges) {
+                        if (outputCash.filter { it.amount == pledge.amount && it.owner == pledge.owner }.isEmpty()) return false
+                    }
+                    return true
                 }
-                return true
+
+                val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
+
+                requireThat {
+                    "the closing date has past" by (time >= outputCrowdFund.closingTime)
+                    "the pledges did not meet the target" by (inputCrowdFund.pledgeTotal < inputCrowdFund.fundingTarget)
+                    "the output cash returns equal the pledge total, if the target is not reached" by (outputCash.sumCash() == inputCrowdFund.pledgeTotal)
+                    "the output cash is distributed to the pledge-makers, if the target is not reached" by (checkReturns(inputCrowdFund, outputCash))
+                    "the output cash is distributed to the pledge-makers, if the target is not reached" by (outputCash.map { it.amount }.containsAll(inputCrowdFund.pledges.map { it.amount }))
+                    "the input has an open state" by (!inputCrowdFund.closed)
+                    "the output registration has a closed state" by (outputCrowdFund.closed)
+                    // TODO how to simplify the boilerplate associated with unchanged elements
+                    "the owner hasn't changed" by (outputCrowdFund.owner == inputCrowdFund.owner)
+                    "the funding name has not changed" by (outputCrowdFund.fundingName == inputCrowdFund.fundingName)
+                    "the funding target has not changed" by (outputCrowdFund.fundingTarget == inputCrowdFund.fundingTarget)
+                    "the closing time has not changed" by (outputCrowdFund.closingTime == inputCrowdFund.closingTime)
+                    "the pledged total is unchanged" by (outputCrowdFund.pledgeTotal == inputCrowdFund.pledgeTotal)
+                    "the pledged count is unchanged" by (outputCrowdFund.pledgeCount == inputCrowdFund.pledgeCount)
+                    "the pledges are unchanged" by (outputCrowdFund.pledges == inputCrowdFund.pledges)
+                }
             }
 
-            val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
-
-            requireThat {
-                "the closing date has past" by (time >= outputCrowdFund.closingTime)
-                "the pledges did not meet the target" by (inputCrowdFund.pledgeTotal < inputCrowdFund.fundingTarget)
-                "the output cash returns equal the pledge total, if the target is not reached" by (outputCash.sumCash() == inputCrowdFund.pledgeTotal)
-                "the output cash is distributed to the pledge-makers, if the target is not reached" by (checkReturns(inputCrowdFund, outputCash))
-                "the output cash is distributed to the pledge-makers, if the target is not reached" by (outputCash.map { it.amount }.containsAll(inputCrowdFund.pledges.map { it.amount }))
-                "the input has an open state" by (!inputCrowdFund.closed)
-                "the output registration has a closed state" by (outputCrowdFund.closed)
-                // TODO how to simplify the boilerplate associated with unchanged elements
-                "the owner hasn't changed" by (outputCrowdFund.owner == inputCrowdFund.owner)
-                "the funding name has not changed" by (outputCrowdFund.fundingName == inputCrowdFund.fundingName)
-                "the funding target has not changed" by (outputCrowdFund.fundingTarget == inputCrowdFund.fundingTarget)
-                "the closing time has not changed" by (outputCrowdFund.closingTime == inputCrowdFund.closingTime)
-                "the pledged total is unchanged" by (outputCrowdFund.pledgeTotal == inputCrowdFund.pledgeTotal)
-                "the pledged count is unchanged" by (outputCrowdFund.pledgeCount == inputCrowdFund.pledgeCount)
-                "the pledges are unchanged" by (outputCrowdFund.pledges == inputCrowdFund.pledges)
+            is Commands.Funded -> {
+                val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
+                val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
+                requireThat {
+                    "the closing date has past" by (time >= outputCrowdFund.closingTime)
+                    "the input has an open state" by (!inputCrowdFund.closed)
+                    "the output registration has a closed state" by (outputCrowdFund.closed)
+                    // TODO how to simplify the boilerplate associated with unchanged elements
+                    "the owner hasn't changed" by (outputCrowdFund.owner == inputCrowdFund.owner)
+                    "the funding name has not changed" by (outputCrowdFund.fundingName == inputCrowdFund.fundingName)
+                    "the funding target has not changed" by (outputCrowdFund.fundingTarget == inputCrowdFund.fundingTarget)
+                    "the closing time has not changed" by (outputCrowdFund.closingTime == inputCrowdFund.closingTime)
+                    "the pledged total is unchanged" by (outputCrowdFund.pledgeTotal == inputCrowdFund.pledgeTotal)
+                    "the pledged count is unchanged" by (outputCrowdFund.pledgeCount == inputCrowdFund.pledgeCount)
+                    "the pledges are unchanged" by (outputCrowdFund.pledges == inputCrowdFund.pledges)
+                }
             }
-        }
 
-        is Commands.Funded -> {
-            val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
-            val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
-            requireThat {
-                "the closing date has past" by (time >= outputCrowdFund.closingTime)
-                "the input has an open state" by (!inputCrowdFund.closed)
-                "the output registration has a closed state" by (outputCrowdFund.closed)
-                // TODO how to simplify the boilerplate associated with unchanged elements
-                "the owner hasn't changed" by (outputCrowdFund.owner == inputCrowdFund.owner)
-                "the funding name has not changed" by (outputCrowdFund.fundingName == inputCrowdFund.fundingName)
-                "the funding target has not changed" by (outputCrowdFund.fundingTarget == inputCrowdFund.fundingTarget)
-                "the closing time has not changed" by (outputCrowdFund.closingTime == inputCrowdFund.closingTime)
-                "the pledged total is unchanged" by (outputCrowdFund.pledgeTotal == inputCrowdFund.pledgeTotal)
-                "the pledged count is unchanged" by (outputCrowdFund.pledgeCount == inputCrowdFund.pledgeCount)
-                "the pledges are unchanged" by (outputCrowdFund.pledges == inputCrowdFund.pledges)
-            }
-        }
-
-    // TODO: Think about how to evolve contracts over time with new commands.
             else -> throw IllegalArgumentException("Unrecognised command")
         }
     }
