@@ -1,3 +1,7 @@
+/*
+ * Copyright 2015, R3 CEV. All rights reserved.
+ */
+
 @file:Suppress("UNUSED_PARAMETER", "UNCHECKED_CAST")
 
 package core.testutils

@@ -1,3 +1,7 @@
+/*
+ * Copyright 2015, R3 CEV. All rights reserved.
+ */
+
 package contracts
 
 import core.Contract

@@ -1,3 +1,7 @@
+/*
+ * Copyright 2015, R3 CEV. All rights reserved.
+ */
+
 package core
 
 import core.serialization.SerializeableWithKryo
