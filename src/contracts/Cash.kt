@@ -154,9 +154,14 @@ class Cash : Contract {
     /**
      * Generate a transaction that consumes one or more of the given input states to move money to the given pubkey.
      * Note that the wallet list is not updated: it's up to you to do that.
+     *
+     * @param onlyFromParties if non-null, the wallet will be filtered to only include cash states issued by the set
+     *                        of given parties. This can be useful if the party you're trying to pay has expectations
+     *                        about which type of cash claims they are willing to accept.
      */
     @Throws(InsufficientBalanceException::class)
-    fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey, wallet: List<StateAndRef<Cash.State>>) {
+    fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey,
+                   wallet: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null) {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -178,11 +183,17 @@ class Cash : Contract {
         // Finally, we add the states to the provided partial transaction.
 
         val currency = amount.currency
-        val coinsOfCurrency = wallet.filter { it.state.amount.currency == currency }
+        val acceptableCoins = run {
+            val ofCurrency = wallet.filter { it.state.amount.currency == currency }
+            if (onlyFromParties != null)
+                ofCurrency.filter { it.state.deposit.party in onlyFromParties }
+            else
+                ofCurrency
+        }
 
         val gathered = arrayListOf<StateAndRef<Cash.State>>()
         var gatheredAmount = Amount(0, currency)
-        for (c in coinsOfCurrency) {
+        for (c in acceptableCoins) {
             if (gatheredAmount >= amount) break
             gathered.add(c)
             gatheredAmount += c.state.amount

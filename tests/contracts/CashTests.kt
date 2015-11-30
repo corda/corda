@@ -317,6 +317,13 @@ class CashTests {
     }
 
     @Test
+    fun craftSimpleSpendWithParties() {
+        val tx = PartialTransaction()
+        Cash().craftSpend(tx, 80.DOLLARS, ALICE, WALLET, setOf(MINI_CORP))
+        assertEquals(WALLET[2].ref, tx.inputStates()[0])
+    }
+
+    @Test
     fun craftSimpleSpendWithChange() {
         val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
         assertEquals(WALLET[0].ref, wtx.inputStates[0])
