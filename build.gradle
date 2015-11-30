@@ -1,4 +1,4 @@
-group 'com.r3cev.experimental'
+group 'com.r3cev.prototyping'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'

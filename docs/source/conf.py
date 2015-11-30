@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Playground documentation build configuration file, created by
+# R3 prototyping documentation build configuration file, created by
 # sphinx-quickstart on Mon Nov 23 21:19:35 2015.
 #
 # This file is execfile()d with the current directory set to its
@@ -45,7 +45,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Playground'
+project = u'R3 Prototyping'
 copyright = u'2015, R3 CEV'
 author = u'R3 CEV'
 
@@ -207,7 +207,7 @@ html_style = 'css/custom.css'
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Playgrounddoc'
+htmlhelp_basename = 'R3doc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -229,7 +229,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'Playground.tex', u'Playground Documentation',
+  (master_doc, 'R3Prototyping.tex', u'R3 Prototyping Documentation',
    u'R3 CEV', 'manual'),
 ]
 
@@ -252,40 +252,3 @@ latex_documents = [
 
 # If false, no module index is generated.
 #latex_domain_indices = True
-
-
-# -- Options for manual page output ---------------------------------------
-
-# One entry per manual page. List of tuples
-# (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'playground', u'Playground Documentation',
-     [author], 1)
-]
-
-# If true, show URL addresses after external links.
-#man_show_urls = False
-
-
-# -- Options for Texinfo output -------------------------------------------
-
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
-texinfo_documents = [
-  (master_doc, 'Playground', u'Playground Documentation',
-   author, 'Playground', 'One line description of project.',
-   'Miscellaneous'),
-]
-
-# Documents to append as an appendix to all manuals.
-#texinfo_appendices = []
-
-# If false, no module index is generated.
-#texinfo_domain_indices = True
-
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#texinfo_show_urls = 'footnote'
-
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-#texinfo_no_detailmenu = False

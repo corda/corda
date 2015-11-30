@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Tutorial &mdash; Playground 0.1 documentation</title>
+  <title>Tutorial &mdash; R3 Prototyping 0.1 documentation</title>
   
 
   
@@ -30,7 +30,7 @@
   
 
   
-    <link rel="top" title="Playground 0.1 documentation" href="index.html"/>
+    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
         <link rel="next" title="Roadmap" href="roadmap.html"/>
         <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
 
@@ -50,7 +50,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home"> Playground
+            <a href="index.html" class="icon icon-home"> R3 Prototyping
           
 
           
@@ -111,7 +111,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="index.html">Playground</a>
+        <a href="index.html">R3 Prototyping</a>
       </nav>
 
 
@@ -292,7 +292,7 @@ from the Java 8 standard time library. It defines a point on the timeline.</li>
 <p>States are immutable, and thus the class is defined as immutable as well. The <code class="docutils literal"><span class="pre">data</span></code> modifier in the Kotlin version
 causes the compiler to generate the equals/hashCode/toString methods automatically, along with a copy method that can
 be used to create variants of the original object. Data classes are similar to case classes in Scala, if you are
-familiar with that language. The <code class="docutils literal"><span class="pre">withoutOwner``</span></code> method uses the auto-generated copy method to return a version of
+familiar with that language. The <code class="docutils literal"><span class="pre">withoutOwner</span></code> method uses the auto-generated copy method to return a version of
 the state with the owner public key blanked out: this will prove useful later.</p>
 <p>The Java code compiles to the same bytecode as the Kotlin version, but as you can see, is much more verbose.</p>
 </div>
@@ -506,7 +506,7 @@ may be missing here. We check for it being null later.</p>
 <p class="first admonition-title">Note</p>
 <p class="last">In the Kotlin version, as long as we write a comparison with the transaction time first, the compiler will
 verify we didn&#8217;t forget to check if it&#8217;s missing. Unfortunately due to the need for smooth Java interop, this
-check won&#8217;t happen if we write e.g. <cite>someDate &gt; time</cite>, it has to be <cite>time &lt; someDate</cite>. So it&#8217;s good practice to
+check won&#8217;t happen if we write e.g. <code class="docutils literal"><span class="pre">someDate</span> <span class="pre">&gt;</span> <span class="pre">time</span></code>, it has to be <code class="docutils literal"><span class="pre">time</span> <span class="pre">&lt;</span> <span class="pre">someDate</span></code>. So it&#8217;s good practice to
 always write the transaction timestamp first.</p>
 </div>
 <p>The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
@@ -742,12 +742,13 @@ multiple contracts.</p>
 <p class="last">Crafting methods should ideally be written to compose with each other, that is, they should take a
 <code class="docutils literal"><span class="pre">PartialTransaction</span></code> as an argument instead of returning one, unless you are sure it doesn&#8217;t make sense to
 combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
-would just introduce complexity that isn&#8217;t likely to be worth it, so we return a fresh object each time.</p>
+would just introduce complexity that isn&#8217;t likely to be worth it, so we return a fresh object each time: instead,
+an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.</p>
 </div>
 <p>The function we define creates a <code class="docutils literal"><span class="pre">CommercialPaper.State</span></code> object that mostly just uses the arguments we were given,
 but it fills out the owner field of the state to be the same public key as the issuing institution. If the caller wants
 to issue CP onto the ledger that&#8217;s immediately owned by someone else, they&#8217;ll have to create the state themselves.</p>
-<p>The returned partial transaction has a <code class="docutils literal"><span class="pre">WireCommand</span></code> object as a parameter. This is just a container for any object
+<p>The returned partial transaction has a <code class="docutils literal"><span class="pre">WireCommand</span></code> object as a parameter. This is a container for any object
 that implements the <code class="docutils literal"><span class="pre">Command</span></code> interface, along with a key that is expected to sign this transaction. In this case,
 issuance requires that the issuing institution sign, so we put the key of the institution there.</p>
 <p>The <code class="docutils literal"><span class="pre">PartialTransaction</span></code> constructor we used above takes a variable argument list for convenience. You can pass in
@@ -784,6 +785,12 @@ state on the ledger.</p>
 </div>
 <p>Here we can see an example of composing contracts together. When an owner wishes to redeem the commercial paper, the
 issuer (i.e. the caller) must gather cash from its wallet and send the face value to the owner of the paper.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last"><strong>Exercise for the reader</strong>: In this early, simplified model of CP there is no built in support
+for rollover. Extend the contract code to support rollover as well as redemption (reissuance of the paper with a
+higher face value without any transfer of cash)</p>
+</div>
 <p>The <em>wallet</em> is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of cash states that are
 owned by the caller. Here, we use the wallet to update the partial transaction we are handed with a movement of cash
 from the issuer of the commercial paper to the current owner. If we don&#8217;t have enough quantity of cash in our wallet,
@@ -812,9 +819,11 @@ logic that uses standardised APIs and runs in a sandbox.</p>
 <em>must</em> be concerned with ownership of an asset. It is better to think of states as representing useful facts about the
 world, and (code) contracts as imposing logical relations on how facts combine to produce new facts.</p>
 <p>For example, in the case that the transfer of an asset cannot be performed entirely on-ledger, one possible usage of
-the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade,
-another state representing an in-progress delivery, and a final state in which the delivery is marked as complete and
-payment is being awaited.</p>
+the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade
+and two other states that can be interpreted by off-ledger platforms as firm instructions to move the respective asset
+or cash - and a final state in which the exchange is marked as complete. The key point here is that the two off-platform
+instructions form pa rt of the same Transaction and so either both are signed (and can be processed by the off-ledger
+systems) or neither are.</p>
 <p>As another example, consider multi-signature transactions, a feature which is commonly used in Bitcoin to implement
 various kinds of useful protocols. This technique allows you to lock an asset to ownership of a group, in which a
 threshold of signers (e.g. 3 out of 4) must all sign simultaneously to enable the asset to move. It is initially
