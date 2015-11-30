@@ -320,6 +320,7 @@ logic.
 
    .. sourcecode:: kotlin
 
+      val time = tx.time
       for (group in groups) {
           when (command.value) {
               is Commands.Move -> {
@@ -333,8 +334,9 @@ logic.
               is Commands.Redeem -> {
                   val input = group.inputs.single()
                   val received = tx.outStates.sumCashBy(input.owner)
+                  if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
                   requireThat {
-                      "the paper must have matured" by (input.maturityDate < tx.time)
+                      "the paper must have matured" by (time > input.maturityDate)
                       "the received amount equals the face value" by (received == input.faceValue)
                       "the paper must be destroyed" by group.outputs.isEmpty()
                       "the transaction is signed by the owner of the CP" by (command.signers.contains(input.owner))
@@ -343,12 +345,13 @@ logic.
 
               is Commands.Issue -> {
                   val output = group.outputs.single()
+                  if (time == null) throw IllegalArgumentException("Issuance transactions must be timestamped")
                   requireThat {
                       // Don't allow people to issue commercial paper under other entities identities.
                       "the issuance is signed by the claimed issuer of the paper" by
                               (command.signers.contains(output.issuance.institution.owningKey))
                       "the face value is not zero" by (output.faceValue.pennies > 0)
-                      "the maturity date is not in the past" by (output.maturityDate > tx.time)
+                      "the maturity date is not in the past" by (time < output.maturityDate )
                       // Don't allow an existing CP state to be replaced by this issuance.
                       "there is no input state" by group.inputs.isEmpty()
                   }
@@ -361,6 +364,7 @@ logic.
 
    .. sourcecode:: java
 
+      Instant time = tx.getTime();   // Can be null/missing.
       for (InOutGroup<State> group : groups) {
           List<State> inputs = group.getInputs();
           List<State> outputs = group.getOutputs();
@@ -381,9 +385,11 @@ logic.
                   throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
           } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
               Amount received = CashKt.sumCashOrNull(inputs);
+              if (time == null)
+                  throw new IllegalArgumentException("Redemption transactions must be timestamped");
               if (received == null)
                   throw new IllegalStateException("Failed requirement: no cash being redeemed");
-              if (input.getMaturityDate().isAfter(tx.getTime()))
+              if (input.getMaturityDate().isAfter(time))
                   throw new IllegalStateException("Failed requirement: the paper must have matured");
               if (!input.getFaceValue().equals(received))
                   throw new IllegalStateException("Failed requirement: the received amount equals the face value");
@@ -395,6 +401,14 @@ logic.
       }
 
 This loop is the core logic of the contract.
+
+The first line simply gets the timestamp out of the transaction. Timestamping of transactions is optional, so a time
+may be missing here. We check for it being null later.
+
+.. note:: In the Kotlin version, as long as we write a comparison with the transaction time first, the compiler will
+   verify we didn't forget to check if it's missing. Unfortunately due to the need for smooth Java interop, this
+   check won't happen if we write e.g. ``someDate > time``, it has to be ``time < someDate``. So it's good practice to
+   always write the transaction timestamp first.
 
 The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
 this group. We do not allow multiple units of CP to be split or merged even if they are owned by the same owner. The

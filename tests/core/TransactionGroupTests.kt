@@ -20,12 +20,12 @@ class TransactionGroupTests {
             transaction {
                 input("£1000")
                 output("alice's £1000") { A_THOUSAND_POUNDS `owned by` ALICE }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             transaction {
                 input("alice's £1000")
-                arg(ALICE) { Cash.Commands.Move }
+                arg(ALICE) { Cash.Commands.Move() }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Exit(1000.POUNDS) }
             }
 
@@ -46,7 +46,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` BOB
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             verify()
@@ -57,7 +57,7 @@ class TransactionGroupTests {
                 val HALF = A_THOUSAND_POUNDS.copy(amount = 500.POUNDS) `owned by` ALICE
                 output { HALF }
                 output { HALF }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             assertNotEquals(conflict1, conflict2)
@@ -89,7 +89,7 @@ class TransactionGroupTests {
         // points nowhere.
         val ref = ContractStateRef(SecureHash.randomSHA256(), 0)
         tg.txns.add(LedgerTransaction(
-                listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move)), TEST_TX_TIME, SecureHash.randomSHA256())
+                listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move())), TEST_TX_TIME, SecureHash.randomSHA256())
         )
 
         val e = assertFailsWith(TransactionResolutionException::class) {
@@ -110,7 +110,7 @@ class TransactionGroupTests {
                 input("£1000")
                 input("£1000")
                 output { A_THOUSAND_POUNDS.copy(amount = A_THOUSAND_POUNDS.amount * 2) }
-                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move }
+                arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
             }
 
             assertFailsWith(TransactionConflictException::class) {

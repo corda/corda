@@ -30,7 +30,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1 }
-                arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue }
+                arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
             }
 
             expectFailureOfTx(1, "signed by the claimed issuer")
@@ -42,7 +42,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1.copy(faceValue = 0.DOLLARS) }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue }
+                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             }
 
             expectFailureOfTx(1, "face value is not zero")
@@ -54,7 +54,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1.copy(maturityDate = TEST_TX_TIME - 10.days) }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue }
+                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             }
 
             expectFailureOfTx(1, "maturity date is not in the past")
@@ -70,7 +70,7 @@ class CommercialPaperTests {
             transaction {
                 input("paper")
                 output { PAPER_1 }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue }
+                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             }
 
             expectFailureOfTx(1, "there is no input state")
@@ -101,7 +101,7 @@ class CommercialPaperTests {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction {
                 output("paper") { PAPER_1 }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue }
+                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
             }
 
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
@@ -111,8 +111,8 @@ class CommercialPaperTests {
                 input("alice's $900")
                 output { 900.DOLLARS.CASH `owned by` MEGA_CORP_PUBKEY }
                 output("alice's paper") { "paper".output `owned by` ALICE }
-                arg(ALICE) { Cash.Commands.Move }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move }
+                arg(ALICE) { Cash.Commands.Move() }
+                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
             }
 
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
@@ -126,8 +126,8 @@ class CommercialPaperTests {
                 if (!destroyPaperAtRedemption)
                     output { "paper".output }
 
-                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move }
-                arg(ALICE) { CommercialPaper.Commands.Redeem }
+                arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+                arg(ALICE) { CommercialPaper.Commands.Redeem() }
             }
         }
     }

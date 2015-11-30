@@ -68,7 +68,7 @@ class CrowdFundTests {
                         pledgeTotal = CF_1.pledgeTotal + 1000.DOLLARS
                 ) }
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
-                arg(ALICE) { Cash.Commands.Move }
+                arg(ALICE) { Cash.Commands.Move() }
                 arg(ALICE) { CrowdFund.Commands.Fund }
             }
 

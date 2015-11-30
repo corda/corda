@@ -56,7 +56,7 @@ class Cash : Contract {
 
     // Just for grouping
     interface Commands : Command {
-        object Move : Commands
+        class Move() : TypeOnlyCommand(), Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
@@ -210,7 +210,7 @@ class Cash : Contract {
         for (state in gathered) tx.addInputState(state.ref)
         for (state in outputs) tx.addOutputState(state)
         // What if we already have a move command with the right keys? Filter it out here or in platform code?
-        tx.addArg(WireCommand(Commands.Move, keysUsed.toList()))
+        tx.addArg(WireCommand(Commands.Move(), keysUsed.toList()))
     }
 }
 

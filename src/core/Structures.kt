@@ -49,6 +49,12 @@ data class InstitutionReference(val institution: Institution, val reference: Opa
 /** Marker interface for classes that represent commands */
 interface Command : SerializeableWithKryo
 
+/** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
+abstract class TypeOnlyCommand : Command {
+    override fun equals(other: Any?) = other?.javaClass == javaClass
+    override fun hashCode() = javaClass.name.hashCode()
+}
+
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
     val signers: List<PublicKey>,

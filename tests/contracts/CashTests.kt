@@ -38,19 +38,19 @@ class CashTests {
             }
             tweak {
                 output { outState }
-                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move }
+                arg(DUMMY_PUBKEY_2) { Cash.Commands.Move() }
                 this `fails requirement` "the owning keys are the same as the signing keys"
             }
             tweak {
                 output { outState }
                 output { outState.editInstitution(MINI_CORP) }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this `fails requirement` "at least one cash input"
             }
             // Simple reallocation works.
             tweak {
                 output { outState }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this.accepts()
             }
         }
@@ -62,7 +62,7 @@ class CashTests {
         transaction {
             input { DummyContract.State() }
             output { outState }
-            arg { Cash.Commands.Move }
+            arg { Cash.Commands.Move() }
 
             this `fails requirement` "there is at least one cash input"
         }
@@ -105,7 +105,7 @@ class CashTests {
     fun testMergeSplit() {
         // Splitting value works.
         transaction {
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             tweak {
                 input { inState }
                 for (i in 1..4) output { inState.copy(amount = inState.amount / 4) }
@@ -176,7 +176,7 @@ class CashTests {
             input { inState }
             input { inState.editInstitution(MINI_CORP) }
             output { outState }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this `fails requirement` "at issuer MiniCorp the amounts balance"
         }
         // Can't combine two different deposits at the same issuer.
@@ -197,7 +197,7 @@ class CashTests {
 
             tweak {
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Exit(100.DOLLARS) }
-                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+                arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this `fails requirement` "the amounts balance"
             }
 
@@ -206,7 +206,7 @@ class CashTests {
                 this `fails requirement` "required contracts.Cash.Commands.Move command"
 
                 tweak {
-                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+                    arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                     this.accepts()
                 }
             }
@@ -219,7 +219,7 @@ class CashTests {
             output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
 
             this `fails requirement` "at issuer MegaCorp the amounts balance"
 
@@ -253,7 +253,7 @@ class CashTests {
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
             output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
-            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this.accepts()
         }
 
@@ -272,7 +272,7 @@ class CashTests {
             input { pounds }
             output { inState `owned by` DUMMY_PUBKEY_2 }
             output { pounds `owned by` DUMMY_PUBKEY_1 }
-            arg(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move }
+            arg(DUMMY_PUBKEY_1, DUMMY_PUBKEY_2) { Cash.Commands.Move() }
 
             this.accepts()
         }

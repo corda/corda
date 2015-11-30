@@ -418,7 +418,8 @@ trade many different pieces of commercial paper in a single atomic step.</p>
 <p>After extracting the command and the groups, we then iterate over each group and verify it meets the required business
 logic.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">for</span> <span class="p">(</span><span class="n">group</span> <span class="k">in</span> <span class="n">groups</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">val</span> <span class="py">time</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">group</span> <span class="k">in</span> <span class="n">groups</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">when</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">value</span><span class="p">)</span> <span class="p">{</span>
         <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Move</span> <span class="p">-&gt;</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">input</span> <span class="p">=</span> <span class="n">group</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span>
@@ -431,8 +432,9 @@ logic.</p>
         <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Redeem</span> <span class="p">-&gt;</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">input</span> <span class="p">=</span> <span class="n">group</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span>
             <span class="k">val</span> <span class="py">received</span> <span class="p">=</span> <span class="n">tx</span><span class="p">.</span><span class="n">outStates</span><span class="p">.</span><span class="n">sumCashBy</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">owner</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">time</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span> <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Redemption transactions must be timestamped&quot;</span><span class="p">)</span>
             <span class="n">requireThat</span> <span class="p">{</span>
-                <span class="s">&quot;the paper must have matured&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">maturityDate</span> <span class="p">&lt;</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span><span class="p">)</span>
+                <span class="s">&quot;the paper must have matured&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">time</span> <span class="p">&gt;</span> <span class="n">input</span><span class="p">.</span><span class="n">maturityDate</span><span class="p">)</span>
                 <span class="s">&quot;the received amount equals the face value&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">received</span> <span class="p">==</span> <span class="n">input</span><span class="p">.</span><span class="n">faceValue</span><span class="p">)</span>
                 <span class="s">&quot;the paper must be destroyed&quot;</span> <span class="k">by</span> <span class="n">group</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">()</span>
                 <span class="s">&quot;the transaction is signed by the owner of the CP&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
@@ -441,12 +443,13 @@ logic.</p>
 
         <span class="k">is</span> <span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span> <span class="p">-&gt;</span> <span class="p">{</span>
             <span class="k">val</span> <span class="py">output</span> <span class="p">=</span> <span class="n">group</span><span class="p">.</span><span class="n">outputs</span><span class="p">.</span><span class="n">single</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">time</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span> <span class="k">throw</span> <span class="n">IllegalArgumentException</span><span class="p">(</span><span class="s">&quot;Issuance transactions must be timestamped&quot;</span><span class="p">)</span>
             <span class="n">requireThat</span> <span class="p">{</span>
                 <span class="c1">// Don&#39;t allow people to issue commercial paper under other entities identities.</span>
                 <span class="s">&quot;the issuance is signed by the claimed issuer of the paper&quot;</span> <span class="k">by</span>
                         <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">issuance</span><span class="p">.</span><span class="n">institution</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
                 <span class="s">&quot;the face value is not zero&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">faceValue</span><span class="p">.</span><span class="n">pennies</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
-                <span class="s">&quot;the maturity date is not in the past&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">maturityDate</span> <span class="p">&gt;</span> <span class="n">tx</span><span class="p">.</span><span class="n">time</span><span class="p">)</span>
+                <span class="s">&quot;the maturity date is not in the past&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">time</span> <span class="p">&lt;</span> <span class="n">output</span><span class="p">.</span><span class="n">maturityDate</span> <span class="p">)</span>
                 <span class="c1">// Don&#39;t allow an existing CP state to be replaced by this issuance.</span>
                 <span class="s">&quot;there is no input state&quot;</span> <span class="k">by</span> <span class="n">group</span><span class="p">.</span><span class="n">inputs</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">()</span>
             <span class="p">}</span>
@@ -458,7 +461,8 @@ logic.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-java"><div class="highlight"><pre><span class="k">for</span> <span class="o">(</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">groups</span><span class="o">)</span> <span class="o">{</span>
+<div class="highlight-java"><div class="highlight"><pre><span class="n">Instant</span> <span class="n">time</span> <span class="o">=</span> <span class="n">tx</span><span class="o">.</span><span class="na">getTime</span><span class="o">();</span>   <span class="c1">// Can be null/missing.</span>
+<span class="k">for</span> <span class="o">(</span><span class="n">InOutGroup</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">group</span> <span class="o">:</span> <span class="n">groups</span><span class="o">)</span> <span class="o">{</span>
     <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">inputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getInputs</span><span class="o">();</span>
     <span class="n">List</span><span class="o">&lt;</span><span class="n">State</span><span class="o">&gt;</span> <span class="n">outputs</span> <span class="o">=</span> <span class="n">group</span><span class="o">.</span><span class="na">getOutputs</span><span class="o">();</span>
 
@@ -478,9 +482,11 @@ logic.</p>
             <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the output state is the same as the input state except for owner&quot;</span><span class="o">);</span>
     <span class="o">}</span> <span class="k">else</span> <span class="k">if</span> <span class="o">(</span><span class="n">cmd</span><span class="o">.</span><span class="na">getValue</span><span class="o">()</span> <span class="k">instanceof</span> <span class="n">JavaCommercialPaper</span><span class="o">.</span><span class="na">Commands</span><span class="o">.</span><span class="na">Redeem</span><span class="o">)</span> <span class="o">{</span>
         <span class="n">Amount</span> <span class="n">received</span> <span class="o">=</span> <span class="n">CashKt</span><span class="o">.</span><span class="na">sumCashOrNull</span><span class="o">(</span><span class="n">inputs</span><span class="o">);</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">time</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalArgumentException</span><span class="o">(</span><span class="s">&quot;Redemption transactions must be timestamped&quot;</span><span class="o">);</span>
         <span class="k">if</span> <span class="o">(</span><span class="n">received</span> <span class="o">==</span> <span class="kc">null</span><span class="o">)</span>
             <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: no cash being redeemed&quot;</span><span class="o">);</span>
-        <span class="k">if</span> <span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">isAfter</span><span class="o">(</span><span class="n">tx</span><span class="o">.</span><span class="na">getTime</span><span class="o">()))</span>
+        <span class="k">if</span> <span class="o">(</span><span class="n">input</span><span class="o">.</span><span class="na">getMaturityDate</span><span class="o">().</span><span class="na">isAfter</span><span class="o">(</span><span class="n">time</span><span class="o">))</span>
             <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the paper must have matured&quot;</span><span class="o">);</span>
         <span class="k">if</span> <span class="o">(!</span><span class="n">input</span><span class="o">.</span><span class="na">getFaceValue</span><span class="o">().</span><span class="na">equals</span><span class="o">(</span><span class="n">received</span><span class="o">))</span>
             <span class="k">throw</span> <span class="k">new</span> <span class="n">IllegalStateException</span><span class="o">(</span><span class="s">&quot;Failed requirement: the received amount equals the face value&quot;</span><span class="o">);</span>
@@ -494,6 +500,15 @@ logic.</p>
 </div>
 </div>
 <p>This loop is the core logic of the contract.</p>
+<p>The first line simply gets the timestamp out of the transaction. Timestamping of transactions is optional, so a time
+may be missing here. We check for it being null later.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">In the Kotlin version, as long as we write a comparison with the transaction time first, the compiler will
+verify we didn&#8217;t forget to check if it&#8217;s missing. Unfortunately due to the need for smooth Java interop, this
+check won&#8217;t happen if we write e.g. <cite>someDate &gt; time</cite>, it has to be <cite>time &lt; someDate</cite>. So it&#8217;s good practice to
+always write the transaction timestamp first.</p>
+</div>
 <p>The first line (first three lines in Java) impose a requirement that there be a single piece of commercial paper in
 this group. We do not allow multiple units of CP to be split or merged even if they are owned by the same owner. The
 <code class="docutils literal"><span class="pre">single()</span></code> method is a static <em>extension method</em> defined by the Kotlin standard library: given a list, it throws an

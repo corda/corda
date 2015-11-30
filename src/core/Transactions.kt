@@ -51,7 +51,7 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val commands: List<WireCommand>) : SerializeableWithKryo {
     fun serializeForSignature(): ByteArray = serialize()
 
-    fun toLedgerTransaction(timestamp: Instant, institutionKeyMap: Map<PublicKey, Institution>, originalHash: SecureHash): LedgerTransaction {
+    fun toLedgerTransaction(timestamp: Instant?, institutionKeyMap: Map<PublicKey, Institution>, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> institutionKeyMap[pk] }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
@@ -133,6 +133,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
  */
 interface TimestamperService {
     fun timestamp(hash: SecureHash): ByteArray
+    fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
 }
 
 data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
@@ -170,10 +171,14 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
         return wtx
     }
 
+    /** Uses the given timestamper service to calculate a signed timestamp and then returns a wrapper for both */
     fun toTimestampedTransaction(timestamper: TimestamperService): TimestampedWireTransaction {
         val bits = serialize()
         return TimestampedWireTransaction(bits, timestamper.timestamp(bits.sha256()))
     }
+
+    /** Returns a [TimestampedWireTransaction] with an empty byte array as the timestamp: this means, no time was provided. */
+    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize(), ByteArray(0))
 }
 
 /**
@@ -182,12 +187,19 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
  */
 data class TimestampedWireTransaction(
     /** A serialised SignedWireTransaction */
-    val wireTX: ByteArray,
+    val signedWireTX: ByteArray,
 
     /** Signature from a timestamping authority. For instance using RFC 3161 */
     val timestamp: ByteArray
 ) : SerializeableWithKryo {
     val transactionID: SecureHash = serialize().sha256()
+
+    fun verifyToLedgerTransaction(timestamper: TimestamperService, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
+        val stx: SignedWireTransaction = signedWireTX.deserialize()
+        val wtx: WireTransaction = stx.verify()
+        val instant: Instant? = if (timestamp.size != 0) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp) else null
+        return wtx.toLedgerTransaction(instant, institutionKeyMap, transactionID)
+    }
 }
 
 /**
@@ -202,8 +214,8 @@ data class LedgerTransaction(
     val outStates: List<ContractState>,
     /** Arbitrary data passed to the program of each input state. */
     val commands: List<AuthenticatedObject<Command>>,
-    /** The moment the transaction was timestamped for */
-    val time: Instant,
+    /** The moment the transaction was timestamped for, if a timestamp was present. */
+    val time: Instant?,
     /** The hash of the original serialised TimestampedWireTransaction or SignedTransaction */
     val hash: SecureHash
     // TODO: nLockTime equivalent?
@@ -223,7 +235,7 @@ data class LedgerTransaction(
 data class TransactionForVerification(val inStates: List<ContractState>,
                                       val outStates: List<ContractState>,
                                       val commands: List<AuthenticatedObject<Command>>,
-                                      val time: Instant,
+                                      val time: Instant?,
                                       val origHash: SecureHash) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash

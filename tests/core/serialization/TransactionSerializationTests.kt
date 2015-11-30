@@ -2,13 +2,13 @@ package core.serialization
 
 import contracts.Cash
 import core.*
-import core.testutils.DUMMY_PUBKEY_1
-import core.testutils.MINI_CORP
-import core.testutils.TestUtils
+import core.testutils.*
 import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class TransactionSerializationTests {
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
@@ -23,7 +23,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = PartialTransaction(
-            fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair.public))
+            fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
 
@@ -69,10 +69,27 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = PartialTransaction(fakeStateRef, outputState, changeState,
-                    WireCommand(Cash.Commands.Move, arrayListOf(TestUtils.keypair2.public)))
+                    WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair2.public)))
             tx2.signWith(TestUtils.keypair2)
 
             signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
         }
+    }
+
+    @Test
+    fun timestamp() {
+        tx.signWith(TestUtils.keypair)
+        val ttx = tx.toSignedTransaction().toTimestampedTransactionWithoutTime()
+        val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, TEST_KEYS_TO_CORP_MAP)
+        assertEquals(tx.commands().map { it.command }, ltx.commands.map { it.value })
+        assertEquals(tx.inputStates(), ltx.inStateRefs)
+        assertEquals(tx.outputStates(), ltx.outStates)
+        assertNull(ltx.time)
+
+        val ltx2: LedgerTransaction = tx.
+                toSignedTransaction().
+                toTimestampedTransaction(DUMMY_TIMESTAMPER).
+                verifyToLedgerTransaction(DUMMY_TIMESTAMPER, TEST_KEYS_TO_CORP_MAP)
+        assertEquals(TEST_TX_TIME, ltx2.time)
     }
 }

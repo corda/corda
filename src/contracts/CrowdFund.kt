@@ -72,8 +72,9 @@ class CrowdFund : Contract {
                 val inputCash: List<Cash.State> = tx.inStates.filterIsInstance<Cash.State>()
                 val pledge = outputCrowdFund.pledges.last()
                 val pledgedCash = outputCash.single()
+                val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
                 requireThat {
-                    "the funding is still open" by (inputCrowdFund.closingTime >= tx.time)
+                    "the funding is still open" by (time <= inputCrowdFund.closingTime)
                     // TODO  "the transaction is signed by the owner of the pledge" by (command.signers.contains(inputCrowdFund.owner))
                     "the transaction is signed by the pledge-maker" by (command.signers.contains(pledge.owner))
                     "the pledge must be for a non-zero amount" by (pledge.amount.pennies > 0)
@@ -102,8 +103,10 @@ class CrowdFund : Contract {
                 return true
             }
 
+            val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
+
             requireThat {
-                "the closing date has past" by (tx.time >= outputCrowdFund.closingTime)
+                "the closing date has past" by (time >= outputCrowdFund.closingTime)
                 "the pledges did not meet the target" by (inputCrowdFund.pledgeTotal < inputCrowdFund.fundingTarget)
                 "the output cash returns equal the pledge total, if the target is not reached" by (outputCash.sumCash() == inputCrowdFund.pledgeTotal)
                 "the output cash is distributed to the pledge-makers, if the target is not reached" by (checkReturns(inputCrowdFund, outputCash))
@@ -123,8 +126,9 @@ class CrowdFund : Contract {
 
         is Commands.Funded -> {
             val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
-             requireThat {
-                "the closing date has past" by (tx.time >= outputCrowdFund.closingTime)
+            val time = tx.time ?: throw IllegalStateException("Transaction must be timestamped")
+            requireThat {
+                "the closing date has past" by (time >= outputCrowdFund.closingTime)
                 "the input has an open state" by (!inputCrowdFund.closed)
                 "the output registration has a closed state" by (outputCrowdFund.closed)
                 // TODO how to simplify the boilerplate associated with unchanged elements
