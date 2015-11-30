@@ -22,7 +22,7 @@ class CrowdFundTests {
         transactionGroup {
             transaction {
                 output { CF_1 }
-                arg(DUMMY_PUBKEY_1) { CrowdFund.Commands.Register }
+                arg(DUMMY_PUBKEY_1) { CrowdFund.Commands.Register() }
             }
 
             expectFailureOfTx(1, "the transaction is signed by the owner of the crowdsourcing")
@@ -34,7 +34,7 @@ class CrowdFundTests {
         transactionGroup {
             transaction {
                 output { CF_1.copy(closingTime = TEST_TX_TIME - 1.days) }
-                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register }
+                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register() }
             }
 
             expectFailureOfTx(1, "the output registration has a closing time in the future")
@@ -55,7 +55,7 @@ class CrowdFundTests {
             // 1. Create the funding opportunity
             transaction {
                 output("funding opportunity") { CF_1 }
-                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register }
+                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register() }
             }
 
             // 2. Place a pledge
@@ -71,14 +71,14 @@ class CrowdFundTests {
                 }
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
                 arg(ALICE) { Cash.Commands.Move() }
-                arg(ALICE) { CrowdFund.Commands.Fund }
+                arg(ALICE) { CrowdFund.Commands.Fund() }
             }
 
             // 3. Close the opportunity, assuming the target has been met
             transaction(TEST_TX_TIME + 8.days) {
                 input ("pledged opportunity")
                 output ("funded and closed") { "pledged opportunity".output.copy(closed = true) }
-                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Funded }
+                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Funded() }
             }
         }
     }

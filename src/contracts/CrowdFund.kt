@@ -36,13 +36,10 @@ class CrowdFund : Contract {
 
 
     interface Commands : Command {
-        object Register : Commands
-
-        object Fund : Commands
-
-        object Funded : Commands
-
-        object Unfunded : Commands
+        class Register : TypeOnlyCommand(), Commands
+        class Fund : TypeOnlyCommand(), Commands
+        class Funded : TypeOnlyCommand(), Commands
+        class Unfunded : TypeOnlyCommand(), Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -155,7 +152,7 @@ class CrowdFund : Contract {
      */
     fun craftRegister(owner: InstitutionReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
         val state = State(owner = owner.institution.owningKey, fundingName = fundingName, fundingTarget = fundingTarget, closingTime = closingTime)
-        return PartialTransaction(state, WireCommand(CrowdFund.Commands.Register, owner.institution.owningKey))
+        return PartialTransaction(state, WireCommand(CrowdFund.Commands.Register(), owner.institution.owningKey))
     }
 
     /**
@@ -168,13 +165,13 @@ class CrowdFund : Contract {
                 pledgeCount = campaign.state.pledgeCount + 1,
                 pledgeTotal = campaign.state.pledgeTotal + 1000.DOLLARS
         ))
-        tx.addArg(WireCommand(CrowdFund.Commands.Fund, subscriber))
+        tx.addArg(WireCommand(CrowdFund.Commands.Fund(), subscriber))
     }
 
     fun craftFunded(tx: PartialTransaction, campaign: StateAndRef<State>) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(closed = true))
-        tx.addArg(WireCommand(CrowdFund.Commands.Funded, campaign.state.owner))
+        tx.addArg(WireCommand(CrowdFund.Commands.Funded(), campaign.state.owner))
     }
 
     override val legalContractReference: SecureHash = SecureHash.sha256("Crowdsourcing")
