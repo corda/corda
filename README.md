@@ -1,5 +1,4 @@
-This source tree contains experimental code written by Mike Hearn. It explores a simple DSL for a state transition
-model with the following characteristics:
+This source tree contains experimental code that explores a simple DSL for a state transition model with the following characteristics:
 
 * A blockchain-esque UTXO model is used in which immutable states are consumed as _inputs_ by _transactions_ yielding
   _outputs_. Transactions do not specify the code to run directly: rather, each state contains a pointer to a program
@@ -207,4 +206,3 @@ extension functions. Differences are:
     m.put("b", 2);
     m.put("c", 3);
     System.out.println(m.get("a"));
-    
