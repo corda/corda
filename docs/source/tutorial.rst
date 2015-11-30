@@ -169,7 +169,7 @@ We have four fields in our state:
 States are immutable, and thus the class is defined as immutable as well. The ``data`` modifier in the Kotlin version
 causes the compiler to generate the equals/hashCode/toString methods automatically, along with a copy method that can
 be used to create variants of the original object. Data classes are similar to case classes in Scala, if you are
-familiar with that language. The ``withoutOwner```` method uses the auto-generated copy method to return a version of
+familiar with that language. The ``withoutOwner`` method uses the auto-generated copy method to return a version of
 the state with the owner public key blanked out: this will prove useful later.
 
 The Java code compiles to the same bytecode as the Kotlin version, but as you can see, is much more verbose.
@@ -620,8 +620,118 @@ the exact message).
 Adding a crafting API to your contract
 --------------------------------------
 
-TODO: Write this after the CP contract has had a crafting API actually added.
+Contract classes **must** provide a verify function, but they may optionally also provide helper functions to simplify
+their usage. A simple class of functions most contracts provide are *crafting functions*, which either generate or
+modify a transaction to perform certain actions (an action is normally mappable 1:1 to a command, but doesn't have to
+be so).
 
+Crafting may involve complex logic. For example, the cash contract has a ``craftSpend`` method that is given a set of
+cash states and chooses a way to combine them together to satisfy the amount of money that is being sent. In the
+immutable-state model that we are using ledger entries (states) can only be created and deleted, but never modified.
+Therefore to send $1200 when we have only $900 and $500 requires combining both states together, and then creating
+two new output states of $1200 and $200 back to ourselves. This latter state is called the *change* and is a concept
+that should be familiar to anyone who has worked with Bitcoin.
+
+As another example, we can imagine code that implements a netting algorithm may craft complex transactions that must
+be signed by many people. Whilst such code might be too big for a single utility method (it'd probably be sized more
+like a module), the basic concept is the same: preparation of a transaction using complex logic.
+
+For our commercial paper contract however, the things that can be done with it are quite simple. Let's start with
+a method to wrap up the issuance process:
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
+          val state = State(issuance, issuance.institution.owningKey, faceValue, maturityDate)
+          return PartialTransaction(state, WireCommand(Commands.Issue, issuance.institution.owningKey))
+      }
+
+We take a reference that points to the issuing institution (i.e. the caller) and which can contain any internal
+bookkeeping/reference numbers that we may require. Then the face value of the paper, and the maturity date. It
+returns a ``PartialTransaction``. A ``PartialTransaction`` is one of the few mutable classes the platform provides.
+It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
+multiple contracts.
+
+.. note:: Crafting methods should ideally be written to compose with each other, that is, they should take a
+   ``PartialTransaction`` as an argument instead of returning one, unless you are sure it doesn't make sense to
+   combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
+   would just introduce complexity that isn't likely to be worth it, so we return a fresh object each time: instead,
+   an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.
+
+The function we define creates a ``CommercialPaper.State`` object that mostly just uses the arguments we were given,
+but it fills out the owner field of the state to be the same public key as the issuing institution. If the caller wants
+to issue CP onto the ledger that's immediately owned by someone else, they'll have to create the state themselves.
+
+The returned partial transaction has a ``WireCommand`` object as a parameter. This is a container for any object
+that implements the ``Command`` interface, along with a key that is expected to sign this transaction. In this case,
+issuance requires that the issuing institution sign, so we put the key of the institution there.
+
+The ``PartialTransaction`` constructor we used above takes a variable argument list for convenience. You can pass in
+any ``ContractStateRef`` (input), ``ContractState`` (output) or ``Command`` objects and it'll build up the transaction
+for you.
+
+What about moving the paper, i.e. reassigning ownership to someone else?
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
+          tx.addInputState(paper.ref)
+          tx.addOutputState(paper.state.copy(owner = newOwner))
+          tx.addArg(WireCommand(Commands.Move, paper.state.owner))
+      }
+
+Here, the method takes a pre-existing ``PartialTransaction`` and adds to it. This is correct because typically
+you will want to combine a sale of CP atomically with the movement of some other asset, such as cash. So both
+craft methods should operate on the same transaction. You can see an example of this being done in the unit tests
+for the commercial paper contract.
+
+The paper is given to us as a ``StateAndRef<CommercialPaper.State>`` object. This is exactly what it sounds like:
+a small object that has a (copy of) a state object, and also the (txhash, index) that indicates the location of this
+state on the ledger.
+
+Finally, we can do redemption.
+
+.. container:: codeset
+
+   .. sourcecode:: kotlin
+
+      @Throws(InsufficientBalanceException::class)
+      fun craftRedeem(tx: PartialTransaction, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+          // Add the cash movement using the states in our wallet.
+          Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
+          tx.addInputState(paper.ref)
+          tx.addArg(WireCommand(CommercialPaper.Commands.Redeem, paper.state.owner))
+      }
+
+Here we can see an example of composing contracts together. When an owner wishes to redeem the commercial paper, the
+issuer (i.e. the caller) must gather cash from its wallet and send the face value to the owner of the paper.
+
+.. note:: **Exercise for the reader**: In this early, simplified model of CP there is no built in support
+   for rollover. Extend the contract code to support rollover as well as redemption (reissuance of the paper with a
+   higher face value without any transfer of cash)
+
+The *wallet* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of cash states that are
+owned by the caller. Here, we use the wallet to update the partial transaction we are handed with a movement of cash
+from the issuer of the commercial paper to the current owner. If we don't have enough quantity of cash in our wallet,
+an exception is thrown. And then we add the paper itself as an input, but, not an output (as we wish to delete it
+from the ledger permanently). Finally, we add a Redeem command that should be signed by the owner of the commercial
+paper.
+
+A ``PartialTransaction`` is not by itself ready to be used anywhere, so first, we must convert it to something that
+is recognised by the network. The most important next step is for the participating entities to sign it using the
+``signWith()`` method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
+signature inside the ``PartialTransaction``. Once all parties have signed, you can call ``PartialTransaction.toSignedTransaction()``
+to get a ``SignedWireTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*.
+
+.. note:: Timestamping and passing around of partial transactions for group signing is not yet fully implemented.
+   This tutorial will be updated once it is.
+
+You can see how transactions flow through the different stages of construction by examining the commercial paper
+unit tests.
 
 Non-asset-oriented based smart contracts
 ----------------------------------------
@@ -635,9 +745,11 @@ Although this tutorial covers how to implement an owned asset, there is no requi
 world, and (code) contracts as imposing logical relations on how facts combine to produce new facts.
 
 For example, in the case that the transfer of an asset cannot be performed entirely on-ledger, one possible usage of
-the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade,
-another state representing an in-progress delivery, and a final state in which the delivery is marked as complete and
-payment is being awaited.
+the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade
+and two other states that can be interpreted by off-ledger platforms as firm instructions to move the respective asset
+or cash - and a final state in which the exchange is marked as complete. The key point here is that the two off-platform
+instructions form pa rt of the same Transaction and so either both are signed (and can be processed by the off-ledger
+systems) or neither are.
 
 As another example, consider multi-signature transactions, a feature which is commonly used in Bitcoin to implement
 various kinds of useful protocols. This technique allows you to lock an asset to ownership of a group, in which a
