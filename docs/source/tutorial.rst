@@ -169,7 +169,7 @@ We have four fields in our state:
 States are immutable, and thus the class is defined as immutable as well. The ``data`` modifier in the Kotlin version
 causes the compiler to generate the equals/hashCode/toString methods automatically, along with a copy method that can
 be used to create variants of the original object. Data classes are similar to case classes in Scala, if you are
-familiar with that language. The ``withoutOwner```` method uses the auto-generated copy method to return a version of
+familiar with that language. The ``withoutOwner`` method uses the auto-generated copy method to return a version of
 the state with the owner public key blanked out: this will prove useful later.
 
 The Java code compiles to the same bytecode as the Kotlin version, but as you can see, is much more verbose.
@@ -657,13 +657,14 @@ multiple contracts.
 .. note:: Crafting methods should ideally be written to compose with each other, that is, they should take a
    ``PartialTransaction`` as an argument instead of returning one, unless you are sure it doesn't make sense to
    combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
-   would just introduce complexity that isn't likely to be worth it, so we return a fresh object each time.
+   would just introduce complexity that isn't likely to be worth it, so we return a fresh object each time: instead,
+   an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.
 
 The function we define creates a ``CommercialPaper.State`` object that mostly just uses the arguments we were given,
 but it fills out the owner field of the state to be the same public key as the issuing institution. If the caller wants
 to issue CP onto the ledger that's immediately owned by someone else, they'll have to create the state themselves.
 
-The returned partial transaction has a ``WireCommand`` object as a parameter. This is just a container for any object
+The returned partial transaction has a ``WireCommand`` object as a parameter. This is a container for any object
 that implements the ``Command`` interface, along with a key that is expected to sign this transaction. In this case,
 issuance requires that the issuing institution sign, so we put the key of the institution there.
 
@@ -709,6 +710,10 @@ Finally, we can do redemption.
 Here we can see an example of composing contracts together. When an owner wishes to redeem the commercial paper, the
 issuer (i.e. the caller) must gather cash from its wallet and send the face value to the owner of the paper.
 
+.. note:: **Exercise for the reader**: In this early, simplified model of CP there is no built in support
+   for rollover. Extend the contract code to support rollover as well as redemption (reissuance of the paper with a
+   higher face value without any transfer of cash)
+
 The *wallet* is a concept that may be familiar from Bitcoin and Ethereum. It is simply a set of cash states that are
 owned by the caller. Here, we use the wallet to update the partial transaction we are handed with a movement of cash
 from the issuer of the commercial paper to the current owner. If we don't have enough quantity of cash in our wallet,
@@ -740,9 +745,11 @@ Although this tutorial covers how to implement an owned asset, there is no requi
 world, and (code) contracts as imposing logical relations on how facts combine to produce new facts.
 
 For example, in the case that the transfer of an asset cannot be performed entirely on-ledger, one possible usage of
-the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade,
-another state representing an in-progress delivery, and a final state in which the delivery is marked as complete and
-payment is being awaited.
+the model is to implement a delivery-vs-payment lifecycle in which there is a state representing an intention to trade
+and two other states that can be interpreted by off-ledger platforms as firm instructions to move the respective asset
+or cash - and a final state in which the exchange is marked as complete. The key point here is that the two off-platform
+instructions form pa rt of the same Transaction and so either both are signed (and can be processed by the off-ledger
+systems) or neither are.
 
 As another example, consider multi-signature transactions, a feature which is commonly used in Bitcoin to implement
 various kinds of useful protocols. This technique allows you to lock an asset to ownership of a group, in which a
