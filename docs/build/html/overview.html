@@ -169,8 +169,8 @@ maximise flexibility for the contract developer.</p>
 <p>A transaction has one or more <strong>signatures</strong> attached to it. The signatures do not mean anything by themselves, rather,
 their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
 Signatures may be from an arbitrary, random <strong>public key</strong> that has no identity attached. A public key may be
-well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by an
-<strong>institution</strong>, which is defined (for now) as being merely a (public key, name) pair.</p>
+well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by a
+<strong>party</strong>, which is defined (for now) as being merely a (public key, name) pair.</p>
 <p>A transaction may also be <strong>timestamped</strong>. A timestamp is a (hash, datetime, signature) triple from a
 <em>timestamping authority</em> (TSA). The notion of a TSA is not ledger specific and is defined by
 <a class="reference external" href="https://www.ietf.org/rfc/rfc3161.txt">IETF RFC 3161</a> which defines the internet standard Timestamping Protocol (TSP).
@@ -257,13 +257,13 @@ two contracts in the repository:</p>
 <li>Cash</li>
 <li>Commercial paper</li>
 </ol>
-<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institution, denominated in some currency,
+<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
 identified by some <em>deposit reference</em>. A deposit reference is an opaque byte array which is usable by
-the issuing institution for internal bookkeeping purposes.</p>
+the issuing party for internal bookkeeping purposes.</p>
 <p>Cash states are <em>fungible</em> with each other (can be merged and split arbitrarily) if they use the same currency,
-institution and deposit reference.</p>
+party and deposit reference.</p>
 <p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> implements an asset with a <em>face value</em> denominated in a certain currency, which may be redeemed at
-the issuing institution after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
+the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
 at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
 contract is implemented twice, once in Java and once in a language called Kotlin.</p>
 <p>Each contract comes with unit tests.</p>

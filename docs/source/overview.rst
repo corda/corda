@@ -35,8 +35,8 @@ maximise flexibility for the contract developer.
 A transaction has one or more **signatures** attached to it. The signatures do not mean anything by themselves, rather,
 their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
 Signatures may be from an arbitrary, random **public key** that has no identity attached. A public key may be
-well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by an
-**institution**, which is defined (for now) as being merely a (public key, name) pair.
+well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by a
+**party**, which is defined (for now) as being merely a (public key, name) pair.
 
 A transaction may also be **timestamped**. A timestamp is a (hash, datetime, signature) triple from a
 *timestamping authority* (TSA). The notion of a TSA is not ledger specific and is defined by
@@ -125,15 +125,15 @@ two contracts in the repository:
 1. Cash
 2. Commercial paper
 
-``Cash`` implements the idea of a claim on some quantity of deposits at some institution, denominated in some currency,
+``Cash`` implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
 identified by some *deposit reference*. A deposit reference is an opaque byte array which is usable by
-the issuing institution for internal bookkeeping purposes.
+the issuing party for internal bookkeeping purposes.
 
 Cash states are *fungible* with each other (can be merged and split arbitrarily) if they use the same currency,
-institution and deposit reference.
+party and deposit reference.
 
 ``CommercialPaper`` implements an asset with a *face value* denominated in a certain currency, which may be redeemed at
-the issuing institution after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
+the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
 at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
 contract is implemented twice, once in Java and once in a language called Kotlin.
 

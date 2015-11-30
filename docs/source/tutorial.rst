@@ -156,7 +156,7 @@ Beyond that it's a freeform object into which we can put anything which can be s
 
 We have four fields in our state:
 
-* ``issuance``: a reference to a specific piece of commercial paper at an institution
+* ``issuance``: a reference to a specific piece of commercial paper at a party
 * ``owner``: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
   attached identity and is expected to be one-time-use for privacy reasons. However, unlike in Bitcoin, we model
   ownership at the level of individual contracts rather than as a platform-level concept as we envisage many
@@ -349,7 +349,7 @@ logic.
                   requireThat {
                       // Don't allow people to issue commercial paper under other entities identities.
                       "the issuance is signed by the claimed issuer of the paper" by
-                              (command.signers.contains(output.issuance.institution.owningKey))
+                              (command.signers.contains(output.issuance.party.owningKey))
                       "the face value is not zero" by (output.faceValue.pennies > 0)
                       "the maturity date is not in the past" by (time < output.maturityDate )
                       // Don't allow an existing CP state to be replaced by this issuance.
@@ -437,7 +437,7 @@ been changed, save for the public key of the owner.
 
 If the command is a ``Redeem`` command, then the requirements are more complex:
 
-1. We want to see that the face value of the CP is being moved as a cash claim against some institution, that is, the
+1. We want to see that the face value of the CP is being moved as a cash claim against some party, that is, the
    issuer of the CP is really paying back the face value.
 2. The transaction must be happening after the maturity date.
 3. The commercial paper must *not* be propagated by this transaction: it must be deleted, by the group having no
@@ -500,7 +500,7 @@ We start by defining a new test class, with a basic CP state:
           }
       }
 
-We start by defining a commercial paper state. It will be owned by a pre-defined unit test institution, affectionately
+We start by defining a commercial paper state. It will be owned by a pre-defined unit test party, affectionately
 called ``MEGA_CORP`` (this constant, along with many others, is defined in ``TestUtils.kt``). Due to Kotin's extensive
 type inference, many types are not written out explicitly in this code and it has the feel of a scripting language.
 But the types are there, and you can ask IntelliJ to reveal them by pressing Alt-Enter on a "val" or "var" and selecting
@@ -658,11 +658,11 @@ a method to wrap up the issuance process:
    .. sourcecode:: kotlin
 
       fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
-          val state = State(issuance, issuance.institution.owningKey, faceValue, maturityDate)
-          return PartialTransaction(state, WireCommand(Commands.Issue, issuance.institution.owningKey))
+          val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+          return PartialTransaction(state, WireCommand(Commands.Issue, issuance.party.owningKey))
       }
 
-We take a reference that points to the issuing institution (i.e. the caller) and which can contain any internal
+We take a reference that points to the issuing party (i.e. the caller) and which can contain any internal
 bookkeeping/reference numbers that we may require. Then the face value of the paper, and the maturity date. It
 returns a ``PartialTransaction``. A ``PartialTransaction`` is one of the few mutable classes the platform provides.
 It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
@@ -675,12 +675,12 @@ multiple contracts.
    an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.
 
 The function we define creates a ``CommercialPaper.State`` object that mostly just uses the arguments we were given,
-but it fills out the owner field of the state to be the same public key as the issuing institution. If the caller wants
+but it fills out the owner field of the state to be the same public key as the issuing party. If the caller wants
 to issue CP onto the ledger that's immediately owned by someone else, they'll have to create the state themselves.
 
 The returned partial transaction has a ``WireCommand`` object as a parameter. This is a container for any object
 that implements the ``Command`` interface, along with a key that is expected to sign this transaction. In this case,
-issuance requires that the issuing institution sign, so we put the key of the institution there.
+issuance requires that the issuing party sign, so we put the key of the party there.
 
 The ``PartialTransaction`` constructor we used above takes a variable argument list for convenience. You can pass in
 any ``ContractStateRef`` (input), ``ContractState`` (output) or ``Command`` objects and it'll build up the transaction

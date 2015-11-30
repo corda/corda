@@ -279,7 +279,7 @@ the bytecode of the contract itself. For now this is a dummy value and isn&#8217
 Beyond that it&#8217;s a freeform object into which we can put anything which can be serialized.</p>
 <p>We have four fields in our state:</p>
 <ul class="simple">
-<li><code class="docutils literal"><span class="pre">issuance</span></code>: a reference to a specific piece of commercial paper at an institution</li>
+<li><code class="docutils literal"><span class="pre">issuance</span></code>: a reference to a specific piece of commercial paper at a party</li>
 <li><code class="docutils literal"><span class="pre">owner</span></code>: the public key of the current owner. This is the same concept as seen in Bitcoin: the public key has no
 attached identity and is expected to be one-time-use for privacy reasons. However, unlike in Bitcoin, we model
 ownership at the level of individual contracts rather than as a platform-level concept as we envisage many
@@ -447,7 +447,7 @@ logic.</p>
             <span class="n">requireThat</span> <span class="p">{</span>
                 <span class="c1">// Don&#39;t allow people to issue commercial paper under other entities identities.</span>
                 <span class="s">&quot;the issuance is signed by the claimed issuer of the paper&quot;</span> <span class="k">by</span>
-                        <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">issuance</span><span class="p">.</span><span class="n">institution</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
+                        <span class="p">(</span><span class="n">command</span><span class="p">.</span><span class="n">signers</span><span class="p">.</span><span class="n">contains</span><span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
                 <span class="s">&quot;the face value is not zero&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">output</span><span class="p">.</span><span class="n">faceValue</span><span class="p">.</span><span class="n">pennies</span> <span class="p">&gt;</span> <span class="m">0</span><span class="p">)</span>
                 <span class="s">&quot;the maturity date is not in the past&quot;</span> <span class="k">by</span> <span class="p">(</span><span class="n">time</span> <span class="p">&lt;</span> <span class="n">output</span><span class="p">.</span><span class="n">maturityDate</span> <span class="p">)</span>
                 <span class="c1">// Don&#39;t allow an existing CP state to be replaced by this issuance.</span>
@@ -532,7 +532,7 @@ allowed to delete the CP from the ledger. The grouping logic already ensured tha
 been changed, save for the public key of the owner.</p>
 <p>If the command is a <code class="docutils literal"><span class="pre">Redeem</span></code> command, then the requirements are more complex:</p>
 <ol class="arabic simple">
-<li>We want to see that the face value of the CP is being moved as a cash claim against some institution, that is, the
+<li>We want to see that the face value of the CP is being moved as a cash claim against some party, that is, the
 issuer of the CP is really paying back the face value.</li>
 <li>The transaction must be happening after the maturity date.</li>
 <li>The commercial paper must <em>not</em> be propagated by this transaction: it must be deleted, by the group having no
@@ -588,7 +588,7 @@ benefit from the DSL and would write them by hand).</p>
 </pre></div>
 </div>
 </div>
-<p>We start by defining a commercial paper state. It will be owned by a pre-defined unit test institution, affectionately
+<p>We start by defining a commercial paper state. It will be owned by a pre-defined unit test party, affectionately
 called <code class="docutils literal"><span class="pre">MEGA_CORP</span></code> (this constant, along with many others, is defined in <code class="docutils literal"><span class="pre">TestUtils.kt</span></code>). Due to Kotin&#8217;s extensive
 type inference, many types are not written out explicitly in this code and it has the feel of a scripting language.
 But the types are there, and you can ask IntelliJ to reveal them by pressing Alt-Enter on a &#8220;val&#8221; or &#8220;var&#8221; and selecting
@@ -726,13 +726,13 @@ like a module), the basic concept is the same: preparation of a transaction usin
 a method to wrap up the issuance process:</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">PartialTransaction</span> <span class="p">{</span>
-    <span class="k">val</span> <span class="py">state</span> <span class="p">=</span> <span class="n">State</span><span class="p">(</span><span class="n">issuance</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">institution</span><span class="p">.</span><span class="n">owningKey</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">PartialTransaction</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">institution</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
+    <span class="k">val</span> <span class="py">state</span> <span class="p">=</span> <span class="n">State</span><span class="p">(</span><span class="n">issuance</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">PartialTransaction</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
-<p>We take a reference that points to the issuing institution (i.e. the caller) and which can contain any internal
+<p>We take a reference that points to the issuing party (i.e. the caller) and which can contain any internal
 bookkeeping/reference numbers that we may require. Then the face value of the paper, and the maturity date. It
 returns a <code class="docutils literal"><span class="pre">PartialTransaction</span></code>. A <code class="docutils literal"><span class="pre">PartialTransaction</span></code> is one of the few mutable classes the platform provides.
 It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
@@ -746,11 +746,11 @@ would just introduce complexity that isn&#8217;t likely to be worth it, so we re
 an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.</p>
 </div>
 <p>The function we define creates a <code class="docutils literal"><span class="pre">CommercialPaper.State</span></code> object that mostly just uses the arguments we were given,
-but it fills out the owner field of the state to be the same public key as the issuing institution. If the caller wants
+but it fills out the owner field of the state to be the same public key as the issuing party. If the caller wants
 to issue CP onto the ledger that&#8217;s immediately owned by someone else, they&#8217;ll have to create the state themselves.</p>
 <p>The returned partial transaction has a <code class="docutils literal"><span class="pre">WireCommand</span></code> object as a parameter. This is a container for any object
 that implements the <code class="docutils literal"><span class="pre">Command</span></code> interface, along with a key that is expected to sign this transaction. In this case,
-issuance requires that the issuing institution sign, so we put the key of the institution there.</p>
+issuance requires that the issuing party sign, so we put the key of the party there.</p>
 <p>The <code class="docutils literal"><span class="pre">PartialTransaction</span></code> constructor we used above takes a variable argument list for convenience. You can pass in
 any <code class="docutils literal"><span class="pre">ContractStateRef</span></code> (input), <code class="docutils literal"><span class="pre">ContractState</span></code> (output) or <code class="docutils literal"><span class="pre">Command</span></code> objects and it&#8217;ll build up the transaction
 for you.</p>
