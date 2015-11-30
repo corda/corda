@@ -7,13 +7,16 @@ package contracts
 import core.*
 import core.testutils.*
 import org.junit.Test
+import java.time.Instant
 import java.util.*
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class CrowdFundTests {
     val CF_1 = CrowdFund.State(
             owner = MINI_CORP_PUBKEY,
-            fundingName = "kickstart me",
-            fundingTarget = 1000.DOLLARS,
+            campaignName = "kickstart me",
+            campaignTarget = 1000.DOLLARS,
             pledgeTotal = 0.DOLLARS,
             pledgeCount = 0,
             closingTime = TEST_TX_TIME + 7.days,
@@ -75,14 +78,14 @@ class CrowdFundTests {
                 }
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
                 arg(ALICE) { Cash.Commands.Move() }
-                arg(ALICE) { CrowdFund.Commands.Fund() }
+                arg(ALICE) { CrowdFund.Commands.Pledge() }
             }
 
             // 3. Close the opportunity, assuming the target has been met
             transaction(TEST_TX_TIME + 8.days) {
                 input ("pledged opportunity")
                 output ("funded and closed") { "pledged opportunity".output.copy(closed = true) }
-                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Funded() }
+                arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Close() }
             }
         }
     }
@@ -93,8 +96,8 @@ class CrowdFundTests {
     }
 
     @Test
-    fun `raise more funds`() {
-        // MiniCorp registers a crowdfunding of $1,000, to close in 30 days.
+    fun `raise more funds using output-state generation functions`() {
+        // MiniCorp registers a crowdfunding of $1,000, to close in 7 days.
         val registerTX: LedgerTransaction = run {
             // craftRegister returns a partial transaction
             val ptx = CrowdFund().craftRegister(MINI_CORP.ref(123), 1000.DOLLARS, "crowd funding", TEST_TX_TIME + 7.days)
@@ -113,7 +116,7 @@ class CrowdFundTests {
         // Alice pays $1000 to MiniCorp to fund their campaign.
         val pledgeTX: LedgerTransaction = run {
             val ptx = PartialTransaction()
-            CrowdFund().craftFund(ptx, registerTX.outRef(0), ALICE)
+            CrowdFund().craftPledge(ptx, registerTX.outRef(0), ALICE)
             Cash().craftSpend(ptx, 1000.DOLLARS, MINI_CORP_PUBKEY, aliceWallet)
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
@@ -121,17 +124,30 @@ class CrowdFundTests {
             stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
         }
 
+        // Won't be validated.
+        val (miniCorpWalletTx, miniCorpWallet) = cashOutputsToWallet(
+                900.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY,
+                400.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY
+        )
         // MiniCorp closes their campaign.
-        val fundedTX: LedgerTransaction = run {
+        fun makeFundedTX(time: Instant): LedgerTransaction  {
             val ptx = PartialTransaction()
-            CrowdFund().craftFunded(ptx, pledgeTX.outRef(0))
+            CrowdFund().craftClose(ptx, pledgeTX.outRef(0), miniCorpWallet)
             ptx.signWith(MINI_CORP_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME + 8.days, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            return stx.verify().toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
         }
 
+        val tooEarlyClose = makeFundedTX(TEST_TX_TIME + 6.days)
+        val validClose = makeFundedTX(TEST_TX_TIME + 8.days)
+
+        val e = assertFailsWith(TransactionVerificationException::class) {
+            TransactionGroup(setOf(registerTX, pledgeTX, tooEarlyClose), setOf(miniCorpWalletTx, aliceWalletTX)).verify(TEST_PROGRAM_MAP)
+        }
+        assertTrue(e.cause!!.message!!.contains("the closing date has past"))
+
         // This verification passes
-        TransactionGroup(setOf(registerTX, pledgeTX, fundedTX), setOf(aliceWalletTX)).verify(TEST_PROGRAM_MAP)
+        TransactionGroup(setOf(registerTX, pledgeTX, validClose), setOf(aliceWalletTX)).verify(TEST_PROGRAM_MAP)
 
     }
 

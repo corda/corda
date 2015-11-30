@@ -260,8 +260,8 @@ fun createKryo(): Kryo {
         registerDataClass<CrowdFund.State>()
         registerDataClass<CrowdFund.Pledge>()
         register(CrowdFund.Commands.Register::class.java)
-        register(CrowdFund.Commands.Fund::class.java)
-        register(CrowdFund.Commands.Funded::class.java)
+        register(CrowdFund.Commands.Pledge::class.java)
+        register(CrowdFund.Commands.Close::class.java)
 
         // And for unit testing ...
         registerDataClass<DummyPublicKey>()
