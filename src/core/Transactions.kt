@@ -34,8 +34,8 @@ import java.util.*
  * multiple parties.
  *
  * LedgerTransaction is derived from WireTransaction and TimestampedWireTransaction together. It is the result of
- * doing some basic key lookups on WireCommand to see if any keys are from a recognised institution, thus converting
- * the WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->institution
+ * doing some basic key lookups on WireCommand to see if any keys are from a recognised party, thus converting
+ * the WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party
  * map. In future it'd make more sense to use a certificate scheme and so that logic would get more complex.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
@@ -55,9 +55,9 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val commands: List<WireCommand>) : SerializeableWithKryo {
     fun serializeForSignature(): ByteArray = serialize()
 
-    fun toLedgerTransaction(timestamp: Instant?, institutionKeyMap: Map<PublicKey, Institution>, originalHash: SecureHash): LedgerTransaction {
+    fun toLedgerTransaction(timestamp: Instant?, partyKeyMap: Map<PublicKey, Party>, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
-            val institutions = it.pubkeys.mapNotNull { pk -> institutionKeyMap[pk] }
+            val institutions = it.pubkeys.mapNotNull { pk -> partyKeyMap[pk] }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
         }
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, originalHash)
@@ -198,11 +198,11 @@ data class TimestampedWireTransaction(
 ) : SerializeableWithKryo {
     val transactionID: SecureHash = serialize().sha256()
 
-    fun verifyToLedgerTransaction(timestamper: TimestamperService, institutionKeyMap: Map<PublicKey, Institution>): LedgerTransaction {
+    fun verifyToLedgerTransaction(timestamper: TimestamperService, partyKeyMap: Map<PublicKey, Party>): LedgerTransaction {
         val stx: SignedWireTransaction = signedWireTX.deserialize()
         val wtx: WireTransaction = stx.verify()
         val instant: Instant? = if (timestamp.size != 0) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp) else null
-        return wtx.toLedgerTransaction(instant, institutionKeyMap, transactionID)
+        return wtx.toLedgerTransaction(instant, partyKeyMap, transactionID)
     }
 }
 

@@ -33,10 +33,10 @@ class CommercialPaper : Contract {
     override val legalContractReference: SecureHash = SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper")
 
     data class State(
-        val issuance: InstitutionReference,
-        val owner: PublicKey,
-        val faceValue: Amount,
-        val maturityDate: Instant
+            val issuance: PartyReference,
+            val owner: PublicKey,
+            val faceValue: Amount,
+            val maturityDate: Instant
     ) : ContractState {
         override val programRef = CP_PROGRAM_ID
 
@@ -88,7 +88,7 @@ class CommercialPaper : Contract {
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "the issuance is signed by the claimed issuer of the paper" by
-                                (command.signers.contains(output.issuance.institution.owningKey))
+                                (command.signers.contains(output.issuance.party.owningKey))
                         "the face value is not zero" by (output.faceValue.pennies > 0)
                         "the maturity date is not in the past" by (time < output.maturityDate)
                         // Don't allow an existing CP state to be replaced by this issuance.
@@ -103,13 +103,13 @@ class CommercialPaper : Contract {
     }
 
     /**
-     * Returns a transaction that issues commercial paper, owned by the issuing institution's key. Does not update
+     * Returns a transaction that issues commercial paper, owned by the issuing parties key. Does not update
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
-        val state = State(issuance, issuance.institution.owningKey, faceValue, maturityDate)
-        return PartialTransaction(state, WireCommand(Commands.Issue(), issuance.institution.owningKey))
+    fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
+        val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
+        return PartialTransaction(state, WireCommand(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**

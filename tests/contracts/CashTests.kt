@@ -22,7 +22,7 @@ class CashTests {
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
 
-    fun Cash.State.editInstitution(institution: Institution) = copy(deposit = deposit.copy(institution = institution))
+    fun Cash.State.editInstitution(party: Party) = copy(deposit = deposit.copy(party = party))
     fun Cash.State.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
 
     @Test
@@ -99,7 +99,7 @@ class CashTests {
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
         assertEquals(100.DOLLARS, s.amount)
-        assertEquals(MINI_CORP, s.deposit.institution)
+        assertEquals(MINI_CORP, s.deposit.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
         assertTrue(ptx.commands()[0].command is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].pubkeys[0])
@@ -289,7 +289,7 @@ class CashTests {
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
 
-    fun makeCash(amount: Amount, corp: Institution, depositRef: Byte = 1) =
+    fun makeCash(amount: Amount, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
                     Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1),
                     ContractStateRef(SecureHash.randomSHA256(), Random().nextInt(32))

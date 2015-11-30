@@ -50,7 +50,7 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
     }
 
-    class LegallyIdentifiable(val signer: Institution, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
+    class LegallyIdentifiable(val signer: Party, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
 
 }
 

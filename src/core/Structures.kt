@@ -34,20 +34,20 @@ data class ContractStateRef(val txhash: SecureHash, val index: Int) : Serializea
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
 data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef)
 
-/** An Institution is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
-data class Institution(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
+/** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
+data class Party(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
     override fun toString() = name
 
-    fun ref(bytes: OpaqueBytes) = InstitutionReference(this, bytes)
+    fun ref(bytes: OpaqueBytes) = PartyReference(this, bytes)
     fun ref(vararg bytes: Byte) = ref(OpaqueBytes.of(*bytes))
 }
 
 /**
- * Reference to something being stored or issued by an institution e.g. in a vault or (more likely) on their normal
- * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the institution.
+ * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
+ * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-data class InstitutionReference(val institution: Institution, val reference: OpaqueBytes) : SerializeableWithKryo {
-    override fun toString() = "${institution.name}$reference"
+data class PartyReference(val party: Party, val reference: OpaqueBytes) : SerializeableWithKryo {
+    override fun toString() = "${party.name}$reference"
 }
 
 /** Marker interface for classes that represent commands */
@@ -61,10 +61,10 @@ abstract class TypeOnlyCommand : Command {
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
-    val signers: List<PublicKey>,
-    /** If any public keys were recognised, the looked up institutions are available here */
-    val signingInstitutions: List<Institution>,
-    val value: T
+        val signers: List<PublicKey>,
+        /** If any public keys were recognised, the looked up institutions are available here */
+    val signingParties: List<Party>,
+        val value: T
 )
 
 /**

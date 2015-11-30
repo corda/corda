@@ -44,10 +44,10 @@ class Cash : Contract {
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html");
 
-    /** A state representing a cash claim against some institution */
+    /** A state representing a cash claim against some party */
     data class State(
             /** Where the underlying currency backing this ledger entry can be found (propagated) */
-            val deposit: InstitutionReference,
+            val deposit: PartyReference,
 
             val amount: Amount,
 
@@ -92,14 +92,14 @@ class Cash : Contract {
                 // If we have an issue command, perform special processing: the group is allowed to have no inputs,
                 // and the output states must have a deposit reference owned by the signer. Note that this means
                 // literally anyone with access to the network can issue cash claims of arbitrary amounts! It is up
-                // to the recipient to decide if the backing institution is trustworthy or not, via some
+                // to the recipient to decide if the backing party is trustworthy or not, via some
                 // as-yet-unwritten identity service. See ADP-22 for discussion.
-                val outputsInstitution = outputs.map { it.deposit.institution }.singleOrNull()
+                val outputsInstitution = outputs.map { it.deposit.party }.singleOrNull()
                 if (outputsInstitution != null) {
                     requireThat {
                         "the issue command has a nonce" by (issueCommand.value.nonce != 0L)
                         "output deposits are owned by a command signer" by
-                                outputs.all { issueCommand.signingInstitutions.contains(it.deposit.institution) }
+                                outputs.all { issueCommand.signingParties.contains(it.deposit.party) }
                         "there are no inputs in this group" by inputs.isEmpty()
                     }
                     continue
@@ -122,11 +122,11 @@ class Cash : Contract {
                         outputs.all { it.amount.currency == inputAmount.currency }
             }
 
-            val exitCommand = tx.commands.select<Commands.Exit>(institution = deposit.institution).singleOrNull()
+            val exitCommand = tx.commands.select<Commands.Exit>(party = deposit.party).singleOrNull()
             val amountExitingLedger = exitCommand?.value?.amount ?: Amount(0, inputAmount.currency)
 
             requireThat {
-                "for deposit ${deposit.reference} at issuer ${deposit.institution.name} the amounts balance" by
+                "for deposit ${deposit.reference} at issuer ${deposit.party.name} the amounts balance" by
                         (inputAmount == outputAmount + amountExitingLedger)
             }
 
@@ -144,11 +144,11 @@ class Cash : Contract {
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun craftIssue(tx: PartialTransaction, amount: Amount, at: InstitutionReference, owner: PublicKey) {
+    fun craftIssue(tx: PartialTransaction, amount: Amount, at: PartyReference, owner: PublicKey) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
         tx.addOutputState(Cash.State(at, amount, owner))
-        tx.addArg(WireCommand(Cash.Commands.Issue(), listOf(at.institution.owningKey)))
+        tx.addArg(WireCommand(Cash.Commands.Issue(), listOf(at.party.owningKey)))
     }
 
     /**

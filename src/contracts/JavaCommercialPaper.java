@@ -24,21 +24,21 @@ import static kotlin.CollectionsKt.*;
  */
 public class JavaCommercialPaper implements Contract {
     public static class State implements ContractState, SerializeableWithKryo {
-        private InstitutionReference issuance;
+        private PartyReference issuance;
         private PublicKey owner;
         private Amount faceValue;
         private Instant maturityDate;
 
         public State() {}  // For serialization
 
-        public State(InstitutionReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
+        public State(PartyReference issuance, PublicKey owner, Amount faceValue, Instant maturityDate) {
             this.issuance = issuance;
             this.owner = owner;
             this.faceValue = faceValue;
             this.maturityDate = maturityDate;
         }
 
-        public InstitutionReference getIssuance() {
+        public PartyReference getIssuance() {
             return issuance;
         }
 

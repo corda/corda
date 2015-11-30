@@ -37,10 +37,10 @@ val ALICE_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
 val ALICE = ALICE_KEY.public
 val BOB_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
 val BOB = BOB_KEY.public
-val MEGA_CORP = Institution("MegaCorp", MEGA_CORP_PUBKEY)
-val MINI_CORP = Institution("MiniCorp", MINI_CORP_PUBKEY)
+val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
+val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Institution> = mapOf(
+val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
         MINI_CORP_PUBKEY to MINI_CORP
 )

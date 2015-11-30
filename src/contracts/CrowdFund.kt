@@ -151,12 +151,12 @@ class CrowdFund : Contract {
     }
 
     /**
-     * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
+     * Returns a transaction that registers a crowd-funding campaing, owned by the issuing parties key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun craftRegister(owner: InstitutionReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
-        val state = State(owner = owner.institution.owningKey, fundingName = fundingName, fundingTarget = fundingTarget, closingTime = closingTime)
-        return PartialTransaction(state, WireCommand(CrowdFund.Commands.Register(), owner.institution.owningKey))
+    fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
+        val state = State(owner = owner.party.owningKey, fundingName = fundingName, fundingTarget = fundingTarget, closingTime = closingTime)
+        return PartialTransaction(state, WireCommand(CrowdFund.Commands.Register(), owner.party.owningKey))
     }
 
     /**

@@ -220,8 +220,8 @@ fun createKryo(): Kryo {
         // Now register platform types.
         registerDataClass<SecureHash.SHA256>()
         registerDataClass<Amount>()
-        registerDataClass<InstitutionReference>()
-        registerDataClass<Institution>()
+        registerDataClass<PartyReference>()
+        registerDataClass<Party>()
         registerDataClass<OpaqueBytes>()
         registerDataClass<SignedWireTransaction>()
         registerDataClass<ContractStateRef>()
