@@ -50,7 +50,7 @@ class CrowdFundTests {
         raiseFunds().verify()
     }
 
-    private fun raiseFunds(): TransactionGroupForTest<CrowdFund.State> {
+    private fun raiseFunds(): TransactionGroupDSL<CrowdFund.State> {
         return transactionGroupFor<CrowdFund.State> {
             roots {
                 transaction(1000.DOLLARS.CASH `owned by` ALICE label "alice's $1000")
@@ -79,7 +79,7 @@ class CrowdFundTests {
             }
 
             // 3. Close the opportunity, assuming the target has been met
-            transaction(TEST_TX_TIME + 8.days) {
+            transaction(time = TEST_TX_TIME + 8.days) {
                 input ("pledged opportunity")
                 output ("funded and closed") { "pledged opportunity".output.copy(closed = true) }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Funded() }

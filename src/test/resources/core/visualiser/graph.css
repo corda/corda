@@ -1,0 +1,41 @@
+node.tx {
+    size: 10px;
+    fill-color: blue;
+    shape: rounded-box;
+    z-index: 4;
+}
+
+node.state {
+    size: 25px;
+    fill-color: beige;
+    stroke-width: 2px;
+    stroke-color: black;
+    stroke-mode: plain;
+}
+
+node {
+    text-background-mode: rounded-box;
+    text-background-color: darkslategrey;
+    text-padding: 5px;
+    text-offset: 10px;
+    text-color: white;
+    text-alignment: under;
+    text-size: 16;
+}
+
+node.command {
+    text-size: 12;
+    size: 8px;
+    fill-color: white;
+    stroke-width: 2px;
+    stroke-color: black;
+    stroke-mode: plain;
+}
+
+node.cash {
+    fill-color: red;
+}
+
+graph {
+    padding: 100px;
+}

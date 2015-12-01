@@ -33,9 +33,9 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "com.google.guava:guava:18.0"
     compile "com.esotericsoftware:kryo:3.0.3"
-}
 
-sourceSets {
-    main.java.srcDirs += 'src'
-    test.java.srcDirs += 'tests'
+    // For visualisation
+    compile "org.graphstream:gs-core:1.3"
+    compile "org.graphstream:gs-ui:1.3"
+    compile "com.intellij:forms_rt:7.0.3"
 }

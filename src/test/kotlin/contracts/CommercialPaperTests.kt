@@ -94,7 +94,7 @@ class CommercialPaperTests {
     // Generate a trade lifecycle with various parameters.
     private fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
                       aliceGetsBack: Amount = 1000.DOLLARS,
-                      destroyPaperAtRedemption: Boolean = true): TransactionGroupForTest<CommercialPaper.State> {
+                      destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<CommercialPaper.State> {
         val someProfits = 1200.DOLLARS
         return transactionGroupFor() {
             roots {

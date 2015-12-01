@@ -210,8 +210,8 @@ open class TransactionForTest : AbstractTransactionForTest() {
 
 fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().apply { body() }
 
-class TransactionGroupForTest<out T : ContractState>(private val stateType: Class<T>) {
-    open inner class LedgerTransactionForTest : AbstractTransactionForTest() {
+class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
+    open inner class LedgerTransactionDSL : AbstractTransactionForTest() {
         private val inStates = ArrayList<ContractStateRef>()
 
         fun input(label: String) {
@@ -231,7 +231,7 @@ class TransactionGroupForTest<out T : ContractState>(private val stateType: Clas
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
 
-    private inner class InternalLedgerTransactionForTest : LedgerTransactionForTest() {
+    private inner class InternalLedgerTransactionDSL : LedgerTransactionDSL() {
         fun finaliseAndInsertLabels(time: Instant): LedgerTransaction {
             val ltx = toLedgerTransaction(time)
             for ((index, labelledState) in outStates.withIndex()) {
@@ -240,6 +240,7 @@ class TransactionGroupForTest<out T : ContractState>(private val stateType: Clas
                     if (stateType.isInstance(labelledState.state)) {
                         labelToOutputs[labelledState.label] = labelledState.state as T
                     }
+                    outputsToLabels[labelledState.state] = labelledState.label
                 }
             }
             return ltx
@@ -249,34 +250,47 @@ class TransactionGroupForTest<out T : ContractState>(private val stateType: Clas
     private val rootTxns = ArrayList<LedgerTransaction>()
     private val labelToRefs = HashMap<String, ContractStateRef>()
     private val labelToOutputs = HashMap<String, T>()
+    private val outputsToLabels = HashMap<ContractState, String>()
+
+    fun labelForState(state: T): String? = outputsToLabels[state]
+
     inner class Roots {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), outs, emptyList())
             val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
-            outputStates.forEachIndexed { index, labeledOutput -> labelToRefs[labeledOutput.label!!] = ContractStateRef(ltx.hash, index) }
+            for ((index, state) in outputStates.withIndex()) {
+                val label = state.label!!
+                labelToRefs[label] = ContractStateRef(ltx.hash, index)
+                outputsToLabels[state.state] = label
+            }
             rootTxns.add(ltx)
         }
 
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
         fun roots(body: Roots.() -> Unit) {}
         @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
-        fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionForTest.() -> Unit) {}
+        fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionDSL.() -> Unit) {}
     }
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
 
     val txns = ArrayList<LedgerTransaction>()
+    private val txnToLabelMap = HashMap<LedgerTransaction, String>()
 
-    fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionForTest.() -> Unit): LedgerTransaction {
-        val forTest = InternalLedgerTransactionForTest()
+    fun transaction(label: String? = null, time: Instant = TEST_TX_TIME, body: LedgerTransactionDSL.() -> Unit): LedgerTransaction {
+        val forTest = InternalLedgerTransactionDSL()
         forTest.body()
         val ltx = forTest.finaliseAndInsertLabels(time)
         txns.add(ltx)
+        if (label != null)
+            txnToLabelMap[ltx] = label
         return ltx
     }
 
+    fun labelForTransaction(ltx: LedgerTransaction): String? = txnToLabelMap[ltx]
+
     @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
-    fun transactionGroup(body: TransactionGroupForTest<T>.() -> Unit) {}
+    fun transactionGroup(body: TransactionGroupDSL<T>.() -> Unit) {}
 
     fun toTransactionGroup() = TransactionGroup(txns.map { it }.toSet(), rootTxns.toSet())
 
@@ -304,5 +318,5 @@ class TransactionGroupForTest<out T : ContractState>(private val stateType: Clas
     }
 }
 
-inline fun <reified T : ContractState> transactionGroupFor(body: TransactionGroupForTest<T>.() -> Unit) = TransactionGroupForTest<T>(T::class.java).apply { this.body() }
-fun transactionGroup(body: TransactionGroupForTest<ContractState>.() -> Unit) = TransactionGroupForTest(ContractState::class.java).apply { this.body() }
+inline fun <reified T : ContractState> transactionGroupFor(body: TransactionGroupDSL<T>.() -> Unit) = TransactionGroupDSL<T>(T::class.java).apply { this.body() }
+fun transactionGroup(body: TransactionGroupDSL<ContractState>.() -> Unit) = TransactionGroupDSL(ContractState::class.java).apply { this.body() }
