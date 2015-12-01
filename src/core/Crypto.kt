@@ -16,6 +16,10 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
         override val signatureAlgorithmName: String get() = "SHA256withECDSA"
     }
 
+    override fun toString() = BaseEncoding.base16().encode(bits)
+
+    fun prefixChars(prefixLen: Int = 6) = toString().substring(0, prefixLen)
+
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
         fun parse(str: String) = BaseEncoding.base16().decode(str.toLowerCase()).let {
