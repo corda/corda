@@ -263,6 +263,7 @@ fun createKryo(): Kryo {
         register(CommercialPaper.Commands.Issue::class.java)
         registerDataClass<CrowdFund.State>()
         registerDataClass<CrowdFund.Pledge>()
+        registerDataClass<CrowdFund.Campaign>()
         register(CrowdFund.Commands.Register::class.java)
         register(CrowdFund.Commands.Pledge::class.java)
         register(CrowdFund.Commands.Close::class.java)
