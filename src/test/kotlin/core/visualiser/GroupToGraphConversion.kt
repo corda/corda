@@ -15,10 +15,11 @@ import core.testutils.TransactionGroupDSL
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
 import org.graphstream.graph.implementations.SingleGraph
+import kotlin.reflect.memberProperties
 
-class GraphConverter(val dsl: TransactionGroupDSL<in ContractState>) {
+class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
     companion object {
-        val css = GraphConverter::class.java.getResourceAsStream("graph.css").bufferedReader().readText()
+        val css = GraphVisualiser::class.java.getResourceAsStream("graph.css").bufferedReader().readText()
     }
 
     fun convert(): SingleGraph {
@@ -69,4 +70,14 @@ class GraphConverter(val dsl: TransactionGroupDSL<in ContractState>) {
     private fun commandToTypeName(state: Command) = state.javaClass.canonicalName.removePrefix("contracts.").replace('$', '.')
     private fun stateToTypeName(state: ContractState) = state.javaClass.canonicalName.removePrefix("contracts.").removeSuffix(".State")
     private fun stateToCSSClass(state: ContractState) = stateToTypeName(state).replace('.', '_').toLowerCase()
+
+    fun display() {
+        runGraph(convert(), nodeOnClick = { node ->
+            val state: ContractState? = node.getAttribute("state")
+            if (state != null) {
+                val props: List<Pair<String, Any?>> = state.javaClass.kotlin.memberProperties.map { it.name to it.getter.call(state) }
+                StateViewer.show(props)
+            }
+        })
+    }
 }
