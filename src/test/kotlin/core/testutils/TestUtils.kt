@@ -13,6 +13,7 @@ package core.testutils
 import com.google.common.io.BaseEncoding
 import contracts.*
 import core.*
+import core.visualiser.GraphVisualiser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
@@ -319,6 +320,11 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         if (!e.cause!!.message!!.contains(message))
             throw AssertionError("Exception should have said '$message' but was actually: ${e.cause.message}", e.cause)
         return e
+    }
+
+    fun visualise() {
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
     }
 }
 

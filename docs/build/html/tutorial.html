@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
-        <link rel="next" title="Roadmap" href="roadmap.html"/>
+        <link rel="next" title="Using the visualiser" href="visualiser.html"/>
         <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
 
   
@@ -97,6 +97,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#non-asset-oriented-based-smart-contracts">Non-asset-oriented based smart contracts</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 </ul>
 
@@ -608,9 +609,15 @@ and returns a <code class="docutils literal"><span class="pre">java.time.Duratio
 <p>As this is JUnit, we must remember to annotate each test method with &#64;Test. Let&#8217;s examine the contents of the first test.
 We are trying to check that it&#8217;s not possible for just anyone to issue commercial paper in MegaCorp&#8217;s name. That would
 be bad!</p>
-<p>The <code class="docutils literal"><span class="pre">transactionGroup</span></code> function works the same way as the <code class="docutils literal"><span class="pre">requireThat</span></code> construct above. It is an example of what
-Kotlin calls a type safe builder, which you can read about in <a class="reference external" href="https://kotlinlang.org/docs/reference/type-safe-builders.html">the documentation for builders</a>.
-The code block that follows it is run in the scope of a freshly created <code class="docutils literal"><span class="pre">TransactionGroupForTest</span></code> object, which assists
+<p>The <code class="docutils literal"><span class="pre">transactionGroup</span></code> function works the same way as the <code class="docutils literal"><span class="pre">requireThat</span></code> construct above.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This DSL is an example of what Kotlin calls a type safe builder, which you can read about in <a class="reference external" href="https://kotlinlang.org/docs/reference/type-safe-builders.html">the
+documentation for builders</a>. You can mix and match
+ordinary code inside such DSLs so please read the linked page to make sure you fully understand what they are capable
+of.</p>
+</div>
+<p>The code block that follows it is run in the scope of a freshly created <code class="docutils literal"><span class="pre">TransactionGroupForTest</span></code> object, which assists
 you with building little transaction graphs and verifying them as a whole. Here, our &#8220;group&#8221; only actually has a
 single transaction in it, with a single output, no inputs, and an Issue command signed by <code class="docutils literal"><span class="pre">DUMMY_PUBKEY_1</span></code> which is just
 an arbitrary public key. As the paper claims to be issued by <code class="docutils literal"><span class="pre">MEGA_CORP</span></code>, this doesn&#8217;t match and should cause a
@@ -850,7 +857,7 @@ be implemented once in a separate contract, with the controlling data being held
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="roadmap.html" class="btn btn-neutral float-right" title="Roadmap" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="visualiser.html" class="btn btn-neutral float-right" title="Using the visualiser" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="getting-set-up.html" class="btn btn-neutral" title="Getting set up" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

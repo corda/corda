@@ -26,5 +26,6 @@ Read on to learn:
    overview
    getting-set-up
    tutorial
+   visualiser
    roadmap
 

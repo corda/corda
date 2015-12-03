@@ -524,8 +524,13 @@ As this is JUnit, we must remember to annotate each test method with @Test. Let'
 We are trying to check that it's not possible for just anyone to issue commercial paper in MegaCorp's name. That would
 be bad!
 
-The ``transactionGroup`` function works the same way as the ``requireThat`` construct above. It is an example of what
-Kotlin calls a type safe builder, which you can read about in `the documentation for builders <https://kotlinlang.org/docs/reference/type-safe-builders.html>`_.
+The ``transactionGroup`` function works the same way as the ``requireThat`` construct above.
+
+.. note:: This DSL is an example of what Kotlin calls a type safe builder, which you can read about in `the
+   documentation for builders <https://kotlinlang.org/docs/reference/type-safe-builders.html>`_. You can mix and match
+   ordinary code inside such DSLs so please read the linked page to make sure you fully understand what they are capable
+   of.
+
 The code block that follows it is run in the scope of a freshly created ``TransactionGroupForTest`` object, which assists
 you with building little transaction graphs and verifying them as a whole. Here, our "group" only actually has a
 single transaction in it, with a single output, no inputs, and an Issue command signed by ``DUMMY_PUBKEY_1`` which is just

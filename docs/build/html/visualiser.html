@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using the visualiser &mdash; R3 Prototyping 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Roadmap" href="roadmap.html"/>
+        <link rel="prev" title="Tutorial" href="tutorial.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Prototyping
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Prototyping</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Using the visualiser</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/visualiser.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <script type="text/javascript" src="_static/jquery.js"></script>
+<script type="text/javascript" src="_static/codesets.js"></script><div class="section" id="using-the-visualiser">
+<h1>Using the visualiser<a class="headerlink" href="#using-the-visualiser" title="Permalink to this headline">¶</a></h1>
+<p>In order to assist with understanding of the state model, the repository includes a simple graph visualiser. The
+visualiser is integrated with the unit test framework and the same domain specific language. It is currently very
+early and the diagrams it produces are not especially beautiful. The intention is to improve it in future releases.</p>
+<img alt="_images/visualiser.png" src="_images/visualiser.png" />
+<p>An example of how to use it can be seen in <code class="docutils literal"><span class="pre">src/test/kotlin/contracts/CommercialPaperTests.kt</span></code>.</p>
+<p>Briefly, define a set of transactions in a group using the same DSL that is used in the unit tests. Here&#8217;s an example
+of a trade lifecycle using the commercial paper contract</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre>val group: TransactionGroupDSL&lt;ContractState&gt; = transactionGroupFor() {
+      roots {
+          transaction(900.DOLLARS.CASH `owned by` ALICE label &quot;alice&#39;s $900&quot;)
+          transaction(someProfits.CASH `owned by` MEGA_CORP_PUBKEY label &quot;some profits&quot;)
+      }
+
+      // Some CP is issued onto the ledger by MegaCorp.
+      transaction(&quot;Issuance&quot;) {
+          output(&quot;paper&quot;) { PAPER_1 }
+          arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+      }
+
+      // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
+      // that sounds a bit too good to be true!
+      transaction(&quot;Trade&quot;) {
+          input(&quot;paper&quot;)
+          input(&quot;alice&#39;s $900&quot;)
+          output(&quot;borrowed $900&quot;) { 900.DOLLARS.CASH `owned by` MEGA_CORP_PUBKEY }
+          output(&quot;alice&#39;s paper&quot;) { &quot;paper&quot;.output `owned by` ALICE }
+          arg(ALICE) { Cash.Commands.Move() }
+          arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+      }
+
+      // Time passes, and Alice redeem&#39;s her CP for $1000, netting a $100 profit. MegaCorp has received $1200
+      // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
+      transaction(&quot;Redemption&quot;, redemptionTime) {
+          input(&quot;alice&#39;s paper&quot;)
+          input(&quot;some profits&quot;)
+
+          output(&quot;Alice&#39;s profit&quot;) { aliceGetsBack.CASH `owned by` ALICE }
+          output(&quot;Change&quot;) { (someProfits - aliceGetsBack).CASH `owned by` MEGA_CORP_PUBKEY }
+          if (!destroyPaperAtRedemption)
+              output { &quot;paper&quot;.output }
+
+          arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
+          arg(ALICE) { CommercialPaper.Commands.Redeem() }
+      }
+  }
+</pre></div>
+</div>
+</div>
+<p>Now you can define a main method in your unit test class that takes the <code class="docutils literal"><span class="pre">TransactionGroupDSL</span></code> object and uses it:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">CommercialPaperTests</span><span class="p">().</span><span class="n">trade</span><span class="p">().</span><span class="n">visualise</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>This will open up a window with the following features:</p>
+<ul class="simple">
+<li>The nodes can be dragged around to try and obtain a better layout (an improved layout algorithm will be a future
+feature).</li>
+<li>States are rendered as circles. Transactions are small blue squares. Commands are small diamonds.</li>
+<li>Clicking a state will open up a window that shows its fields.</li>
+</ul>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="roadmap.html" class="btn btn-neutral float-right" title="Roadmap" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial.html" class="btn btn-neutral" title="Tutorial" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
