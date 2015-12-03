@@ -33,6 +33,10 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "com.google.guava:guava:18.0"
     compile "com.esotericsoftware:kryo:3.0.3"
+    compile "com.google.code.findbugs:jsr305:3.0.1"
+
+    // Logging
+    compile "org.slf4j:slf4j-jdk14:1.7.13"
 
     // For visualisation
     compile "org.graphstream:gs-core:1.3"
