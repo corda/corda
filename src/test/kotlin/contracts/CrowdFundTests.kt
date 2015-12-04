@@ -18,12 +18,12 @@ import kotlin.test.assertTrue
 
 class CrowdFundTests {
     val CF_1 = CrowdFund.State(
-            owner = MINI_CORP_PUBKEY,
-            campaignName = "kickstart me",
-            campaignTarget = 1000.DOLLARS,
-            pledgeTotal = 0.DOLLARS,
-            pledgeCount = 0,
-            closingTime = TEST_TX_TIME + 7.days,
+            campaign = CrowdFund.Campaign(
+                owner = MINI_CORP_PUBKEY,
+                name = "kickstart me",
+                target = 1000.DOLLARS,
+                closingTime = TEST_TX_TIME + 7.days
+            ),
             closed = false,
             pledges = ArrayList<CrowdFund.Pledge>()
     )
@@ -44,7 +44,7 @@ class CrowdFundTests {
     fun `closing time not in the future`() {
         transactionGroup {
             transaction {
-                output { CF_1.copy(closingTime = TEST_TX_TIME - 1.days) }
+                output { CF_1.copy(campaign = CF_1.campaign.copy(closingTime = TEST_TX_TIME - 1.days)) }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register() }
             }
 
@@ -58,7 +58,7 @@ class CrowdFundTests {
     }
 
     private fun raiseFunds(): TransactionGroupDSL<CrowdFund.State> {
-        return transactionGroupFor<CrowdFund.State> {
+        return transactionGroupFor {
             roots {
                 transaction(1000.DOLLARS.CASH `owned by` ALICE label "alice's $1000")
             }
@@ -75,9 +75,7 @@ class CrowdFundTests {
                 input("alice's $1000")
                 output ("pledged opportunity") {
                     CF_1.copy(
-                            pledges = CF_1.pledges + CrowdFund.Pledge(ALICE, 1000.DOLLARS),
-                            pledgeCount = CF_1.pledgeCount + 1,
-                            pledgeTotal = CF_1.pledgeTotal + 1000.DOLLARS
+                            pledges = CF_1.pledges + CrowdFund.Pledge(ALICE, 1000.DOLLARS)
                     )
                 }
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
