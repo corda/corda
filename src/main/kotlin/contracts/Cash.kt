@@ -56,10 +56,12 @@ class Cash : Contract {
             val amount: Amount,
 
             /** There must be a MoveCommand signed by this key to claim the amount */
-            val owner: PublicKey
-    ) : ContractState {
+            override val owner: PublicKey
+    ) : OwnableState {
         override val programRef = CASH_PROGRAM_ID
         override fun toString() = "Cash($amount at $deposit owned by $owner)"
+
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
     // Just for grouping
@@ -165,7 +167,7 @@ class Cash : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey,
-                   cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null) {
+                   cashStates: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -229,7 +231,9 @@ class Cash : Contract {
         for (state in gathered) tx.addInputState(state.ref)
         for (state in outputs) tx.addOutputState(state)
         // What if we already have a move command with the right keys? Filter it out here or in platform code?
-        tx.addArg(WireCommand(Commands.Move(), keysUsed.toList()))
+        val keysList = keysUsed.toList()
+        tx.addArg(WireCommand(Commands.Move(), keysList))
+        return keysList
     }
 }
 

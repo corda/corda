@@ -9,6 +9,9 @@
 package core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
+import core.serialization.SerializeableWithKryo
+import core.serialization.deserialize
+import core.serialization.serialize
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.Executor
@@ -33,12 +36,14 @@ interface MessagingSystem {
      * If no executor is received then the callback will run on threads provided by the messaging system, and the
      * callback is expected to be thread safe as a result.
      *
-     * The returned object is an opaque handle that may be used to un-register handlers later with [addMessageHandler].
+     * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
+     * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
+     * itself and yet addMessageHandler hasn't returned the handle yet.
      *
      * If the callback throws an exception then the message is discarded and will not be retried, unless the exception
      * is a subclass of [RetryMessageLaterException], in which case the message will be queued and attempted later.
      */
-    fun addMessageHandler(executor: Executor? = null, topic: String = "", callback: (Message) -> Unit): MessageHandlerRegistration
+    fun addMessageHandler(topic: String = "", executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
     /**
      * Removes a handler given the object returned from [addMessageHandler]. The callback will no longer be invoked once
@@ -66,6 +71,33 @@ interface MessagingSystem {
      * Returns an initialised [Message] with the current time, etc, already filled in.
      */
     fun createMessage(topic: String, data: ByteArray): Message
+}
+
+/**
+ * Registers a handler for the given topic that runs the given callback with the message and then removes itself. This
+ * is useful for one-shot handlers that aren't supposed to stick around permanently. Note that this callback doesn't
+ * take the registration object, unlike the callback to [MessagingSystem.addMessageHandler].
+ */
+fun MessagingSystem.runOnNextMessage(topic: String = "", executor: Executor? = null, callback: (Message) -> Unit) {
+    addMessageHandler(topic, executor) { msg, reg ->
+        callback(msg)
+        removeMessageHandler(reg)
+    }
+}
+
+fun MessagingSystem.send(topic: String, to: MessageRecipients, obj: SerializeableWithKryo) = send(createMessage(topic, obj.serialize()), to)
+
+/**
+ * Registers a handler for the given topic that runs the given callback with the message content deserialised to the
+ * given type, and then removes itself.
+ */
+inline fun <reified T : SerializeableWithKryo> MessagingSystem.runOnNextMessageWith(topic: String = "",
+                                                                                    executor: Executor? = null,
+                                                                                    noinline callback: (T) -> Unit) {
+    addMessageHandler(topic, executor) { msg, reg ->
+        callback(msg.data.deserialize<T>())
+        removeMessageHandler(reg)
+    }
 }
 
 /**

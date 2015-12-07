@@ -65,10 +65,10 @@ class BriefLogFormatter : Formatter() {
             handlers[0].formatter = BriefLogFormatter()
         }
 
-        fun initVerbose() {
+        fun initVerbose(packageSpec: String = "") {
             init()
-            loggerRef.level = Level.ALL
             loggerRef.handlers[0].level = Level.ALL
+            Logger.getLogger(packageSpec).level = Level.ALL
         }
     }
 }

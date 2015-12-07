@@ -89,7 +89,7 @@ public class InMemoryNetwork {
      * An instance can be obtained by creating a builder and then using the start method.
      */
     inner class Node(private val manuallyPumped: Boolean): MessagingSystem {
-        inner class Handler(val executor: Executor?, val topic: String, val callback: (Message) -> Unit) : MessageHandlerRegistration
+        inner class Handler(val executor: Executor?, val topic: String, val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
         @GuardedBy("this")
         protected val handlers: MutableList<Handler> = ArrayList()
         @GuardedBy("this")
@@ -101,7 +101,7 @@ public class InMemoryNetwork {
         }
 
         @Synchronized
-        override fun addMessageHandler(executor: Executor?, topic: String, callback: (Message) -> Unit): MessageHandlerRegistration {
+        override fun addMessageHandler(topic: String, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
             check(running)
             return Handler(executor, topic, callback).apply { handlers.add(this) }
         }
@@ -115,7 +115,7 @@ public class InMemoryNetwork {
         @Synchronized
         override fun send(message: Message, target: MessageRecipients) {
             check(running)
-            L.trace { "Sending $message to '$target'" }
+            L.trace { "Sending message of topic '${message.topic}' to '$target'" }
             when (target) {
                 is InMemoryNodeHandle -> {
                     val node = networkMap[target] ?: throw IllegalArgumentException("Unknown message recipient: $target")
@@ -172,7 +172,7 @@ public class InMemoryNetwork {
 
             for (handler in deliverTo) {
                 // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
-                (handler.executor ?: MoreExecutors.directExecutor()).execute { handler.callback(message) }
+                (handler.executor ?: MoreExecutors.directExecutor()).execute { handler.callback(message, handler) }
             }
 
             return true

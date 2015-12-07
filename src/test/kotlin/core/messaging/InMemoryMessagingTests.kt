@@ -18,13 +18,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertTrue
 
-class InMemoryMessagingTests {
+open class TestWithInMemoryNetwork {
     val nodes: MutableMap<SingleMessageRecipient, InMemoryNetwork.Node> = HashMap()
     lateinit var network: InMemoryNetwork
-
-    init {
-        // BriefLogFormatter.initVerbose()
-    }
 
     fun makeNode(): Pair<SingleMessageRecipient, InMemoryNetwork.Node> {
         // The manuallyPumped = true bit means that we must call the pump method on the system in order to
@@ -34,27 +30,30 @@ class InMemoryMessagingTests {
         return Pair(address, node)
     }
 
-    fun pumpAll() {
-        nodes.values.forEach { it.pump(false) }
-    }
-
-    // Utilities to help define messaging rounds.
-    fun roundWithPumpings(times: Int, body: () -> Unit) {
-        body()
-        repeat(times) { pumpAll() }
-    }
-
-    fun round(body: () -> Unit) = roundWithPumpings(1, body)
-
     @Before
-    fun before() {
+    fun setupNetwork() {
         network = InMemoryNetwork()
         nodes.clear()
     }
 
     @After
-    fun after() {
+    fun stopNetwork() {
         network.stop()
+    }
+
+    fun pumpAll() = nodes.values.map { it.pump(false) }
+
+    // Keep calling "pump" in rounds until every node in the network reports that it had nothing to do.
+    fun <T> runNetwork(body: () -> T): T {
+        val result = body()
+        while (pumpAll().any { it }) {}
+        return result
+    }
+}
+
+class InMemoryMessagingTests : TestWithInMemoryNetwork() {
+    init {
+        // BriefLogFormatter.initVerbose()
     }
 
     @Test
@@ -82,19 +81,19 @@ class InMemoryMessagingTests {
         var finalDelivery: Message? = null
 
         with(node2) {
-            addMessageHandler {
-                send(it, addr3)
+            addMessageHandler { msg, registration ->
+                send(msg, addr3)
             }
         }
 
         with(node3) {
-            addMessageHandler {
-                finalDelivery = it
+            addMessageHandler { msg, registration ->
+                finalDelivery = msg
             }
         }
 
         // Node 1 sends a message and it should end up in finalDelivery, after we pump each node.
-        roundWithPumpings(2) {
+        runNetwork {
             node1.send(node1.createMessage("test.topic", bits), addr2)
         }
 
@@ -110,8 +109,8 @@ class InMemoryMessagingTests {
         val bits = "test-content".toByteArray()
 
         var counter = 0
-        listOf(node1, node2, node3).forEach { it.addMessageHandler { counter++ } }
-        round {
+        listOf(node1, node2, node3).forEach { it.addMessageHandler { msg, registration -> counter++ } }
+        runNetwork {
             node1.send(node2.createMessage("test.topic", bits), network.entireNetwork)
         }
         assertEquals(3, counter)

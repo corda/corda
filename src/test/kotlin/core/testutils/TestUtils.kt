@@ -220,7 +220,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         private val inStates = ArrayList<ContractStateRef>()
 
         fun input(label: String) {
-            inStates.add(labelToRefs[label] ?: throw IllegalArgumentException("Unknown label \"$label\""))
+            inStates.add(label.outputRef)
         }
 
 
@@ -235,6 +235,9 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
+    val String.outputRef: ContractStateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
+
+    fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
     private inner class InternalLedgerTransactionDSL : LedgerTransactionDSL() {
         fun finaliseAndInsertLabels(time: Instant): LedgerTransaction {
@@ -268,6 +271,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
                 val label = state.label!!
                 labelToRefs[label] = ContractStateRef(ltx.hash, index)
                 outputsToLabels[state.state] = label
+                labelToOutputs[label] = state.state as T
             }
             rootTxns.add(ltx)
         }

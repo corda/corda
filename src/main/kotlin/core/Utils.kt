@@ -9,6 +9,8 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import com.google.common.util.concurrent.SettableFuture
+import org.slf4j.Logger
 import java.time.Duration
 import java.util.*
 
@@ -38,3 +40,14 @@ val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
+
+/** Executes the given block and sets the future to either the result, or any exception that was thrown. */
+fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {
+    try {
+        set(block())
+    } catch (e: Exception) {
+        logger?.error("Caught exception", e)
+        setException(e)
+    }
+    return this
+}

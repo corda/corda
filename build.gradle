@@ -24,6 +24,9 @@ buildscript {
 
 repositories {
     mavenCentral()
+    maven {
+        url 'http://oss.sonatype.org/content/repositories/snapshots'
+    }
     jcenter()
 }
 
@@ -38,6 +41,23 @@ dependencies {
 
     // Logging
     compile "org.slf4j:slf4j-jdk14:1.7.13"
+
+    // For the continuations in the state machine tests. Note: JavaFlow is old and unmaintained but still seems to work
+    // just fine, once the patch here is applied to update it to a Java8 compatible asm:
+    //
+    //   https://github.com/playframework/play1/commit/e0e28e6780a48c000e7ed536962f1f284cef9437
+    //
+    // Obviously using this year-old upload to Maven Central by the Maven Play Plugin team is a short term hack for
+    // experimenting. Using this for real would mean forking JavaFlow and taking over maintenance (luckily it's small
+    // and Java is stable, so this is unlikely to be a big burden). We have to manually force an in-place upgrade to
+    // asm 5.0.3 here (javaflow wants 5.0.2) in order to avoid version conflicts. This is also something that should be
+    // fixed in any fork. Sadly, even Jigsaw doesn't solve this problem out of the box.
+    compile "com.google.code.maven-play-plugin.org.apache.commons:commons-javaflow:1590792-patched-play-1.3.0"
+    compile "org.ow2.asm:asm:5.0.3"
+    compile "org.ow2.asm:asm-analysis:5.0.3"
+    compile "org.ow2.asm:asm-tree:5.0.3"
+    compile "org.ow2.asm:asm-commons:5.0.3"
+    compile "org.ow2.asm:asm-util:5.0.3"
 
     // For visualisation
     compile "org.graphstream:gs-core:1.3"
