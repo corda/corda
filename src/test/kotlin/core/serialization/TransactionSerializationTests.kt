@@ -44,7 +44,7 @@ class TransactionSerializationTests {
         signedTX.verify()
 
         // Corrupt the data and ensure the signature catches the problem.
-        signedTX.txBits[5] = 0
+        signedTX.txBits.bits[5] = 0
         assertFailsWith(SignatureException::class) {
             signedTX.verify()
         }

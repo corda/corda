@@ -183,6 +183,7 @@ val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
 
 inline fun <reified T : SerializeableWithKryo> Kryo.registerDataClass() = register(T::class.java, DataClassSerializer(T::class))
 inline fun <reified T : SerializeableWithKryo> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
+inline fun <reified T : SerializeableWithKryo> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this.bits), T::class.java)
 
 fun SerializeableWithKryo.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): ByteArray {
     val stream = ByteArrayOutputStream()
@@ -232,6 +233,7 @@ fun createKryo(): Kryo {
         registerDataClass<WireTransaction>()
         registerDataClass<WireCommand>()
         registerDataClass<TimestampedWireTransaction>()
+        registerDataClass<StateAndRef<ContractState>>()
 
         // Can't use data classes for this in Kotlin 1.0 due to lack of support for inheritance: must write a manual
         // serialiser instead :(

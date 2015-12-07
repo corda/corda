@@ -102,11 +102,13 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
 
     fun toWireTransaction() = WireTransaction(inputStates, outputStates, commands)
 
-    fun toSignedTransaction(): SignedWireTransaction {
-        val requiredKeys = commands.flatMap { it.pubkeys }.toSet()
-        val gotKeys = currentSigs.map { it.by }.toSet()
-        check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
-        return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
+    fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedWireTransaction {
+        if (checkSufficientSignatures) {
+            val requiredKeys = commands.flatMap { it.pubkeys }.toSet()
+            val gotKeys = currentSigs.map { it.by }.toSet()
+            check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
+        }
+        return SignedWireTransaction(toWireTransaction().serialize().opaque(), ArrayList(currentSigs))
     }
 
     fun addInputState(ref: ContractStateRef) {
@@ -144,7 +146,7 @@ interface TimestamperService {
     fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
 }
 
-data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
+data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
     init {
         check(sigs.isNotEmpty())
     }
@@ -158,7 +160,7 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
      */
     fun verifySignatures() {
         for (sig in sigs)
-            sig.verifyWithECDSA(txBits)
+            sig.verifyWithECDSA(txBits.bits)
     }
 
     /**
@@ -182,11 +184,11 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
     /** Uses the given timestamper service to calculate a signed timestamp and then returns a wrapper for both */
     fun toTimestampedTransaction(timestamper: TimestamperService): TimestampedWireTransaction {
         val bits = serialize()
-        return TimestampedWireTransaction(bits, timestamper.timestamp(bits.sha256()))
+        return TimestampedWireTransaction(bits.opaque(), timestamper.timestamp(bits.sha256()).opaque())
     }
 
     /** Returns a [TimestampedWireTransaction] with an empty byte array as the timestamp: this means, no time was provided. */
-    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize(), ByteArray(0))
+    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize().opaque(), null)
 }
 
 /**
@@ -195,17 +197,17 @@ data class SignedWireTransaction(val txBits: ByteArray, val sigs: List<DigitalSi
  */
 data class TimestampedWireTransaction(
     /** A serialised SignedWireTransaction */
-    val signedWireTX: ByteArray,
+    val signedWireTX: OpaqueBytes,
 
     /** Signature from a timestamping authority. For instance using RFC 3161 */
-    val timestamp: ByteArray
+    val timestamp: OpaqueBytes?
 ) : SerializeableWithKryo {
     val transactionID: SecureHash = serialize().sha256()
 
     fun verifyToLedgerTransaction(timestamper: TimestamperService, partyKeyMap: Map<PublicKey, Party>): LedgerTransaction {
         val stx: SignedWireTransaction = signedWireTX.deserialize()
         val wtx: WireTransaction = stx.verify()
-        val instant: Instant? = if (timestamp.size != 0) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp) else null
+        val instant: Instant? = if (timestamp != null) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp.bits) else null
         return wtx.toLedgerTransaction(instant, partyKeyMap, transactionID)
     }
 }

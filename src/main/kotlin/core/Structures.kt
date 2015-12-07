@@ -26,6 +26,14 @@ interface ContractState : SerializeableWithKryo {
     val programRef: SecureHash
 }
 
+interface OwnableState : ContractState {
+    /** There must be a MoveCommand signed by this key to claim the amount */
+    val owner: PublicKey
+
+    /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
+    fun withNewOwner(newOwner: PublicKey): Pair<Command, OwnableState>
+}
+
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
 
@@ -36,7 +44,7 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
 data class ContractStateRef(val txhash: SecureHash, val index: Int) : SerializeableWithKryo
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef)
+data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef) : SerializeableWithKryo
 
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Party(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {

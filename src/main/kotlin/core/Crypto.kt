@@ -45,6 +45,7 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
 }
 
 fun ByteArray.sha256(): SecureHash.SHA256 = SecureHash.sha256(this)
+fun OpaqueBytes.sha256(): SecureHash.SHA256 = SecureHash.sha256(this.bits)
 
 /**
  * A wrapper around a digital signature. The covering field is a generic tag usable by whatever is interpreting the
@@ -90,6 +91,7 @@ fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
 }
 
 fun PrivateKey.signWithECDSA(bits: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, signWithECDSA(bits).bits)
+fun KeyPair.signWithECDSA(bits: ByteArray) = private.signWithECDSA(bits, public)
 
 /** Utility to simplify the act of verifying a signature */
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {

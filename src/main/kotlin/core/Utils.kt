@@ -29,7 +29,11 @@ open class OpaqueBytes(val bits: ByteArray) : SerializeableWithKryo {
 
     override fun hashCode() = Arrays.hashCode(bits)
     override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
+
+    val size: Int get() = bits.size
 }
+
+fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
