@@ -5,8 +5,8 @@ The current prototype consists of a small amount of code that defines:
 
 * Key data structures
 * Algorithms that work with them, such as serialising, hashing, signing, and verification of the signatures.
-* Two smart contracts that implement a notion of a cash claim, and a notion of commercial paper. These are simplified
-  versions of the real things.
+* Three smart contracts that implement a notion of a cash claim, a basic commercial paper and a crowdfunding contract.
+  These are simplified versions of the real things.
 * Unit tests that check the algorithms do what is expected, and which verify the behaviour of the smart contracts.
 * API documentation and tutorials (what you're reading)
 
