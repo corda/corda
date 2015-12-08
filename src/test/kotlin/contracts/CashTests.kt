@@ -365,7 +365,7 @@ class CashTests {
         val e: InsufficientBalanceException = assertFailsWith("balance") {
             makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
         }
-        assertEquals(1000 - 580, e.amountMissing.pennies / 100)
+        assertEquals((1000 - 580).DOLLARS, e.amountMissing)
 
         assertFailsWith(InsufficientBalanceException::class) {
             makeSpend(81.SWISS_FRANCS, THEIR_PUBKEY_1)

@@ -87,7 +87,7 @@ class Cash : Contract {
 
         for ((inputs, outputs) in groups) {
             requireThat {
-                "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0 }
+                "all outputs represent at least one penny" by outputs.none { it.amount.pennies == 0L }
             }
 
 
@@ -120,8 +120,8 @@ class Cash : Contract {
 
             requireThat {
                 "there is at least one cash input" by inputs.isNotEmpty()
-                "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0 }
-                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0 }
+                "there are no zero sized inputs" by inputs.none { it.amount.pennies == 0L }
+                "there are no zero sized outputs" by outputs.none { it.amount.pennies == 0L }
                 "all outputs in this group use the currency of the inputs" by
                         outputs.all { it.amount.currency == inputAmount.currency }
             }
