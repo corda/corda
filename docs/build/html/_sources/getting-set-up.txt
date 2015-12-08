@@ -23,6 +23,24 @@ The code should build, the unit tests should show as all green.
 
 You can catch up with the latest code by selecting "VCS -> Update Project" in the menu.
 
+If IntelliJ complains about lack of an SDK
+------------------------------------------
+
+If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:
+
+   Configure -> Project Defaults -> Project Structure
+
+on that tab:
+
+   Project Settings / Project
+
+click on New… next to the red <No SDK> symbol, and select JDK.  It should then pop up and show the latest JDK it has
+found at something like
+
+    jdk1.8.0_xx…/Contents/Home
+
+Also select Project language level: as 8.  Click OK.  Open should now work.
+
 Doing it without IntelliJ
 -------------------------
 

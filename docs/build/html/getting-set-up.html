@@ -85,10 +85,12 @@
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="">Getting set up</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#if-intellij-complains-about-lack-of-an-sdk">If IntelliJ complains about lack of an SDK</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#doing-it-without-intellij">Doing it without IntelliJ</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 </ul>
 
@@ -150,6 +152,20 @@ then clicking &#8220;Install JetBrains plugin&#8221;, then searching for Kotlin,
 gradle logo next to it).</p>
 <p>The code should build, the unit tests should show as all green.</p>
 <p>You can catch up with the latest code by selecting &#8220;VCS -&gt; Update Project&#8221; in the menu.</p>
+<div class="section" id="if-intellij-complains-about-lack-of-an-sdk">
+<h2>If IntelliJ complains about lack of an SDK<a class="headerlink" href="#if-intellij-complains-about-lack-of-an-sdk" title="Permalink to this headline">¶</a></h2>
+<p>If on attempting to open the project, IntelliJ refuses because SDK was not selected, do the following:</p>
+<blockquote>
+<div>Configure -&gt; Project Defaults -&gt; Project Structure</div></blockquote>
+<p>on that tab:</p>
+<blockquote>
+<div>Project Settings / Project</div></blockquote>
+<p>click on New… next to the red &lt;No SDK&gt; symbol, and select JDK.  It should then pop up and show the latest JDK it has
+found at something like</p>
+<blockquote>
+<div>jdk1.8.0_xx…/Contents/Home</div></blockquote>
+<p>Also select Project language level: as 8.  Click OK.  Open should now work.</p>
+</div>
 <div class="section" id="doing-it-without-intellij">
 <h2>Doing it without IntelliJ<a class="headerlink" href="#doing-it-without-intellij" title="Permalink to this headline">¶</a></h2>
 <p>If you don&#8217;t want to explore or modify the code in a local IDE, you can also just use the command line and a text editor:</p>
