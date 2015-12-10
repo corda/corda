@@ -67,15 +67,15 @@ import kotlin.reflect.primaryConstructor
  *
  * Therefore we take the following measures:
  *
- *   - The DataClassSerializer knows how to build deserialised objects using the primary constructor. Any invariants
+ *   - The ImmutableClassSerializer knows how to build deserialised objects using the primary constructor. Any invariants
  *     enforced by this constructor are therefore enforced (in Kotlin this means logic inside an init{} block, in
  *     Java it means any code in the only defined constructor).
- *   - The DCS asserts that Kryo is configured to only deserialise registered classes. Every class that might appear
+ *   - The ICS asserts that Kryo is configured to only deserialise registered classes. Every class that might appear
  *     in a stream must be specified up front: Kryo will not rummage through the classpath to find any arbitrary
  *     class the stream happens to mention. This improves both performance and security at a loss of developer
  *     convenience.
  *
- * The DCS is intended to be used with classes that meet the following constraints:
+ * The ICS is intended to be used with classes that meet the following constraints:
  *
  *   - Must be immutable: all properties are final. Note that Kotlin never generates bare public fields, but we should
  *     add some checks for this being done anyway for cases where a contract is defined using Java.
@@ -90,18 +90,18 @@ import kotlin.reflect.primaryConstructor
  *
  * We define a few utilities to make using Kryo convenient.
  *
- * The kryo() function returns a pre-configured Kryo class with a very small number of classes registered, that are
- * known to be safe.
+ * The createKryo() function returns a pre-configured Kryo class with a very small number of classes registered, that
+ * are known to be safe.
  *
  * A serialize() extension function is added to the SerializeableWithKryo marker interface. This is intended for
  * serializing immutable data classes (i.e immutable javabeans). A deserialize() method is added to ByteArray to
- * get the given class back from the stream. A Kryo.registerDataClass<>() function is added to clean up the Java
+ * get the given class back from the stream. A Kryo.registerImmutableClass<>() function is added to clean up the Java
  * syntax a bit:
  *
  *     data class Person(val name: String, val birthdate: Instant?) : SerializeableWithKryo
  *
  *     val kryo = kryo()
- *     kryo.registerDataClass<Person>()
+ *     kryo.registerImmutableClass<Person>()
  *
  *     val bits: ByteArray = somePerson.serialize(kryo)
  *     val person2 = bits.deserialize<Person>(kryo)
@@ -110,12 +110,12 @@ import kotlin.reflect.primaryConstructor
 
 
 /**
- * Marker interface for classes to use with [DataClassSerializer]. Note that only constructor defined properties will
+ * Marker interface for classes to use with [ImmutableClassSerializer]. Note that only constructor defined properties will
  * be serialised!
  */
 interface SerializeableWithKryo
 
-class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Serializer<T>() {
+class ImmutableClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Serializer<T>() {
     val props = klass.memberProperties.sortedBy { it.name }
     val propsByName = props.toMapBy { it.name }
     val constructor = klass.primaryConstructor!!
@@ -181,7 +181,7 @@ class DataClassSerializer<T : SerializeableWithKryo>(val klass: KClass<T>) : Ser
 
 val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
 
-inline fun <reified T : SerializeableWithKryo> Kryo.registerDataClass() = register(T::class.java, DataClassSerializer(T::class))
+inline fun <reified T : SerializeableWithKryo> Kryo.registerImmutableClass() = register(T::class.java, ImmutableClassSerializer(T::class))
 inline fun <reified T : SerializeableWithKryo> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
 inline fun <reified T : SerializeableWithKryo> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this.bits), T::class.java)
 
@@ -223,17 +223,17 @@ fun createKryo(): Kryo {
         register(PublicKey::class.java, JavaSerializer())
 
         // Now register platform types.
-        registerDataClass<SecureHash.SHA256>()
-        registerDataClass<Amount>()
-        registerDataClass<PartyReference>()
-        registerDataClass<Party>()
-        registerDataClass<OpaqueBytes>()
-        registerDataClass<SignedWireTransaction>()
-        registerDataClass<ContractStateRef>()
-        registerDataClass<WireTransaction>()
-        registerDataClass<WireCommand>()
-        registerDataClass<TimestampedWireTransaction>()
-        registerDataClass<StateAndRef<ContractState>>()
+        registerImmutableClass<SecureHash.SHA256>()
+        registerImmutableClass<Amount>()
+        registerImmutableClass<PartyReference>()
+        registerImmutableClass<Party>()
+        registerImmutableClass<OpaqueBytes>()
+        registerImmutableClass<SignedWireTransaction>()
+        registerImmutableClass<ContractStateRef>()
+        registerImmutableClass<WireTransaction>()
+        registerImmutableClass<WireCommand>()
+        registerImmutableClass<TimestampedWireTransaction>()
+        registerImmutableClass<StateAndRef<ContractState>>()
 
         // Can't use data classes for this in Kotlin 1.0 due to lack of support for inheritance: must write a manual
         // serialiser instead :(
@@ -255,22 +255,22 @@ fun createKryo(): Kryo {
         })
 
         // TODO: This is obviously a short term hack: there needs to be a way to bundle up and register contracts.
-        registerDataClass<Cash.State>()
+        registerImmutableClass<Cash.State>()
         register(Cash.Commands.Move::class.java)
-        registerDataClass<Cash.Commands.Exit>()
-        registerDataClass<Cash.Commands.Issue>()
-        registerDataClass<CommercialPaper.State>()
+        registerImmutableClass<Cash.Commands.Exit>()
+        registerImmutableClass<Cash.Commands.Issue>()
+        registerImmutableClass<CommercialPaper.State>()
         register(CommercialPaper.Commands.Move::class.java)
         register(CommercialPaper.Commands.Redeem::class.java)
         register(CommercialPaper.Commands.Issue::class.java)
-        registerDataClass<CrowdFund.State>()
-        registerDataClass<CrowdFund.Pledge>()
-        registerDataClass<CrowdFund.Campaign>()
+        registerImmutableClass<CrowdFund.State>()
+        registerImmutableClass<CrowdFund.Pledge>()
+        registerImmutableClass<CrowdFund.Campaign>()
         register(CrowdFund.Commands.Register::class.java)
         register(CrowdFund.Commands.Pledge::class.java)
         register(CrowdFund.Commands.Close::class.java)
 
         // And for unit testing ...
-        registerDataClass<DummyPublicKey>()
+        registerImmutableClass<DummyPublicKey>()
     }
 }

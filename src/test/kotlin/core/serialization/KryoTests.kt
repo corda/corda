@@ -24,8 +24,8 @@ class KryoTests {
     }
 
     private val kryo: Kryo = createKryo().apply {
-        registerDataClass<Person>()
-        registerDataClass<MustBeWhizzy>()
+        registerImmutableClass<Person>()
+        registerImmutableClass<MustBeWhizzy>()
     }
 
     @Test
