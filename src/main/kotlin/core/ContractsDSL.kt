@@ -8,7 +8,6 @@
 
 package core
 
-import core.serialization.SerializeableWithKryo
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
@@ -67,7 +66,7 @@ inline fun requireThat(body: Requirements.() -> Unit) {
  * TODO: Should amount be abstracted to cover things like quantities of a stock, bond, commercial paper etc? Probably.
  * TODO: Think about how positive-only vs positive-or-negative amounts can be represented in the type system.
  */
-data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount>, SerializeableWithKryo {
+data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount> {
     init {
         // Negative amounts are of course a vital part of any ledger, but negative values are only valid in certain
         // contexts: you cannot send a negative amount of cash, but you can (sometimes) have a negative balance.

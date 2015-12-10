@@ -8,7 +8,6 @@
 
 package core
 
-import core.serialization.SerializeableWithKryo
 import core.serialization.serialize
 import java.security.PublicKey
 
@@ -17,7 +16,7 @@ import java.security.PublicKey
  * file that the program can use to persist data across transactions. States are immutable: once created they are never
  * updated, instead, any changes must generate a new successor state.
  */
-interface ContractState : SerializeableWithKryo {
+interface ContractState {
     /**
      * Refers to a bytecode program that has previously been published to the network. This contract program
      * will be executed any time this state is used in an input. It must accept in order for the
@@ -41,13 +40,13 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
  * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
  * defined the state and where in that transaction it was.
  */
-data class ContractStateRef(val txhash: SecureHash, val index: Int) : SerializeableWithKryo
+data class ContractStateRef(val txhash: SecureHash, val index: Int) 
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef) : SerializeableWithKryo
+data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef) 
 
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
-data class Party(val name: String, val owningKey: PublicKey) : SerializeableWithKryo {
+data class Party(val name: String, val owningKey: PublicKey)  {
     override fun toString() = name
 
     fun ref(bytes: OpaqueBytes) = PartyReference(this, bytes)
@@ -58,12 +57,12 @@ data class Party(val name: String, val owningKey: PublicKey) : SerializeableWith
  * Reference to something being stored or issued by a party e.g. in a vault or (more likely) on their normal
  * ledger. The reference is intended to be encrypted so it's meaningless to anyone other than the party.
  */
-data class PartyReference(val party: Party, val reference: OpaqueBytes) : SerializeableWithKryo {
+data class PartyReference(val party: Party, val reference: OpaqueBytes) {
     override fun toString() = "${party.name}$reference"
 }
 
 /** Marker interface for classes that represent commands */
-interface Command : SerializeableWithKryo
+interface Command 
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
 abstract class TypeOnlyCommand : Command {

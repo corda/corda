@@ -9,7 +9,6 @@
 package core
 
 import com.google.common.io.BaseEncoding
-import core.serialization.SerializeableWithKryo
 import java.math.BigInteger
 import java.security.*
 
@@ -71,7 +70,7 @@ object NullPublicKey : PublicKey, Comparable<PublicKey> {
     override fun toString() = "NULL_KEY"
 }
 
-class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey>, SerializeableWithKryo {
+class DummyPublicKey(val s: String) : PublicKey, Comparable<PublicKey> {
     override fun getAlgorithm() = "DUMMY"
     override fun getEncoded() = s.toByteArray()
     override fun getFormat() = "ASN.1"

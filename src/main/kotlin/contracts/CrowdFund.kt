@@ -9,7 +9,6 @@
 package contracts
 
 import core.*
-import core.serialization.SerializeableWithKryo
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -47,7 +46,7 @@ class CrowdFund : Contract {
             val name: String,
             val target: Amount,
             val closingTime: Instant
-    ) : SerializeableWithKryo {
+    ) {
         override fun toString() = "Crowdsourcing($target sought by $owner by $closingTime)"
     }
 
@@ -62,9 +61,9 @@ class CrowdFund : Contract {
     }
 
     data class Pledge(
-            val owner: PublicKey,
-            val amount: Amount
-    ) : SerializeableWithKryo
+        val owner: PublicKey,
+        val amount: Amount
+    )
 
 
     interface Commands : Command {

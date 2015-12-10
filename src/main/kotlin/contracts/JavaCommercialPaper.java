@@ -10,7 +10,6 @@ package contracts;
 
 import core.*;
 import core.TransactionForVerification.*;
-import core.serialization.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
@@ -27,7 +26,7 @@ import static kotlin.CollectionsKt.*;
  * NOTE: For illustration only. Not unit tested.
  */
 public class JavaCommercialPaper implements Contract {
-    public static class State implements ContractState, SerializeableWithKryo {
+    public static class State implements ContractState {
         private PartyReference issuance;
         private PublicKey owner;
         private Amount faceValue;

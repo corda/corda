@@ -8,7 +8,6 @@
 
 package core
 
-import core.serialization.SerializeableWithKryo
 import core.serialization.deserialize
 import core.serialization.serialize
 import java.security.KeyPair
@@ -49,14 +48,14 @@ import java.util.*
  */
 
 /** Serialized command plus pubkey pair: the signature is stored at the end of the serialized bytes */
-data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) : SerializeableWithKryo {
+data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) {
     constructor(command: Command, key: PublicKey) : this(command, listOf(key))
 }
 
 /** Transaction ready for serialisation, without any signatures attached. */
 data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val outputStates: List<ContractState>,
-                           val commands: List<WireCommand>) : SerializeableWithKryo {
+                           val commands: List<WireCommand>) {
     fun serializeForSignature(): ByteArray = serialize()
 
     fun toLedgerTransaction(timestamp: Instant?, partyKeyMap: Map<PublicKey, Party>, originalHash: SecureHash): LedgerTransaction {
@@ -146,7 +145,7 @@ interface TimestamperService {
     fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
 }
 
-data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) : SerializeableWithKryo {
+data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) {
     init {
         check(sigs.isNotEmpty())
     }
@@ -201,7 +200,7 @@ data class TimestampedWireTransaction(
 
     /** Signature from a timestamping authority. For instance using RFC 3161 */
     val timestamp: OpaqueBytes?
-) : SerializeableWithKryo {
+) {
     val transactionID: SecureHash = serialize().sha256()
 
     fun verifyToLedgerTransaction(timestamper: TimestamperService, partyKeyMap: Map<PublicKey, Party>): LedgerTransaction {

@@ -9,12 +9,11 @@
 package core
 
 import com.google.common.io.BaseEncoding
-import core.serialization.SerializeableWithKryo
 import java.time.Duration
 import java.util.*
 
 /** A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect */
-open class OpaqueBytes(val bits: ByteArray) : SerializeableWithKryo {
+open class OpaqueBytes(val bits: ByteArray) {
     init { check(bits.isNotEmpty()) }
 
     companion object {

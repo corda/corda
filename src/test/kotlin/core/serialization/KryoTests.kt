@@ -12,28 +12,18 @@ import com.esotericsoftware.kryo.Kryo
 import org.junit.Test
 import java.time.Instant
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class KryoTests {
-    data class Person(val name: String, val birthday: Instant?) : SerializeableWithKryo
-    data class MustBeWhizzy(val s: String) : SerializeableWithKryo {
-        init {
-            assert(s.startsWith("whiz")) { "must be whizzy" }
-        }
-    }
+    data class Person(val name: String, val birthday: Instant?)
 
-    private val kryo: Kryo = createKryo().apply {
-        registerImmutableClass<Person>()
-        registerImmutableClass<MustBeWhizzy>()
-    }
+    private val kryo: Kryo = createKryo()
 
     @Test
     fun ok() {
         val april_17th = Instant.parse("1984-04-17T00:30:00.00Z")
         val mike = Person("mike", april_17th)
         val bits = mike.serialize(kryo)
-        assertEquals(64, bits.size)
         with(bits.deserialize<Person>(kryo)) {
             assertEquals("mike", name)
             assertEquals(april_17th, birthday)
@@ -47,17 +37,6 @@ class KryoTests {
         with(bits.deserialize<Person>(kryo)) {
             assertEquals("bob", name)
             assertNull(birthday)
-        }
-    }
-
-    @Test
-    fun constructorInvariant() {
-        val pos = MustBeWhizzy("whizzle")
-        val bits = pos.serialize(kryo)
-        // Hack the serialized bytes here, like a very naughty hacker might.
-        bits[10] = 'o'.toByte()
-        assertFailsWith<AssertionError>("must be whizzy") {
-            bits.deserialize<MustBeWhizzy>(kryo)
         }
     }
 }
