@@ -33,6 +33,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "com.google.guava:guava:18.0"
     compile "com.esotericsoftware:kryo:3.0.3"
+    compile "de.javakaffee:kryo-serializers:0.37"
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // Logging
