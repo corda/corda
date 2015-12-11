@@ -9,19 +9,12 @@
 package contracts.protocols
 
 import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.SettableFuture
 import contracts.Cash
 import contracts.sumCashBy
 import core.*
-import core.messaging.MessagingSystem
-import core.messaging.SingleMessageRecipient
-import core.serialization.SerializeableWithKryo
-import core.serialization.THREAD_LOCAL_KRYO
+import core.messaging.*
 import core.serialization.deserialize
-import core.serialization.registerDataClass
-import core.utilities.continuations.*
 import core.utilities.trace
-import org.slf4j.LoggerFactory
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -47,18 +40,17 @@ import java.security.SecureRandom
  * To see an example of how to use this class, look at the unit tests.
  */
 abstract class TwoPartyTradeProtocol {
+    // TODO: Replace some args with the context objects
     abstract fun runSeller(
-            net: MessagingSystem,
             otherSide: SingleMessageRecipient,
             assetToSell: StateAndRef<OwnableState>,
             price: Amount,
             myKey: KeyPair,
             partyKeyMap: Map<PublicKey, Party>,
             timestamper: TimestamperService
-    ): ListenableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>>
+    ): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>>
 
     abstract fun runBuyer(
-            net: MessagingSystem,
             otherSide: SingleMessageRecipient,
             acceptablePrice: Amount,
             typeToSell: Class<out OwnableState>,
@@ -66,24 +58,20 @@ abstract class TwoPartyTradeProtocol {
             myKeys: Map<PublicKey, PrivateKey>,
             timestamper: TimestamperService,
             partyKeyMap: Map<PublicKey, Party>
-    ): ListenableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>>
+    ): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>>
 
-    companion object {
-        @JvmStatic fun create(): TwoPartyTradeProtocol {
-            return TwoPartyTradeProtocolImpl()
-        }
-    }
-}
+    class BuyerInitialArgs(
+            val acceptablePrice: Amount,
+            val typeToSell: String
+    )
 
-private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
-    companion object {
-        val TRADE_TOPIC = "com.r3cev.protocols.trade"
-        fun makeSessionID() = Math.abs(SecureRandom.getInstanceStrong().nextLong())
-    }
-
-    init {
-        THREAD_LOCAL_KRYO.get().registerDataClass<TwoPartyTradeProtocolImpl.SellerTradeInfo>()
-    }
+    class BuyerContext(
+            val wallet: List<StateAndRef<Cash.State>>,
+            val myKeys: Map<PublicKey, PrivateKey>,
+            val timestamper: TimestamperService,
+            val partyKeyMap: Map<PublicKey, Party>,
+            val initialArgs: BuyerInitialArgs?
+    )
 
     // This wraps some of the arguments passed to runSeller that are persistent across the lifetime of the trade and
     // can be serialised.
@@ -91,7 +79,7 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
             val assetToSell: StateAndRef<OwnableState>,
             val price: Amount,
             val myKeyPair: KeyPair
-    ) : SerializeableWithKryo
+    )
 
     // This wraps the things which the seller needs, but which might change whilst the continuation is suspended,
     // e.g. due to a VM restart, networking issue, configuration file reload etc. It also contains the initial args
@@ -99,17 +87,32 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
     class SellerContext(
             val timestamper: TimestamperService,
             val partyKeyMap: Map<PublicKey, Party>,
-            val initialArgs: SellerInitialArgs?,
-            val resultFuture: SettableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>> = SettableFuture.create()
+            val initialArgs: SellerInitialArgs?
     )
+
+    abstract class Buyer : ProtocolStateMachine<BuyerContext, Pair<TimestampedWireTransaction, LedgerTransaction>>()
+    abstract class Seller : ProtocolStateMachine<SellerContext, Pair<TimestampedWireTransaction, LedgerTransaction>>()
+
+    companion object {
+        @JvmStatic fun create(smm: StateMachineManager): TwoPartyTradeProtocol {
+            return TwoPartyTradeProtocolImpl(smm)
+        }
+    }
+}
+
+private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : TwoPartyTradeProtocol() {
+    companion object {
+        val TRADE_TOPIC = "com.r3cev.protocols.trade"
+        fun makeSessionID() = Math.abs(SecureRandom.getInstanceStrong().nextLong())
+    }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount,
-            val primaryOwnerKey: PublicKey,
+            val sellerOwnerKey: PublicKey,
             val sessionID: Long
-    ) : SerializeableWithKryo
+    )
 
     // The seller's side of the protocol. IMPORTANT: This class is loaded in a separate classloader and auto-mangled
     // by JavaFlow. Therefore, we cannot cast the object to Seller and poke it directly because the class we'd be
@@ -117,8 +120,8 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
     // interaction with this class must be through either interfaces, or objects passed to and from the continuation
     // by the state machine framework. Please refer to the documentation website (docs/build/html) to learn more about
     // the protocol state machine framework.
-    class Seller : ProtocolStateMachine<SellerContext> {
-        override fun run() {
+    class SellerImpl : Seller() {
+        override fun call(): Pair<TimestampedWireTransaction, LedgerTransaction> {
             val sessionID = makeSessionID()
             val args = context().initialArgs!!
 
@@ -153,7 +156,7 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
             val timestamped: TimestampedWireTransaction = fullySigned.toTimestampedTransaction(ctx2.timestamper)
             logger().trace { "Built finished transaction, sending back to secondary!" }
             send(TRADE_TOPIC, sessionID, timestamped)
-            ctx2.resultFuture.set(Pair(timestamped, timestamped.verifyToLedgerTransaction(ctx2.timestamper, ctx2.partyKeyMap)))
+            return Pair(timestamped, timestamped.verifyToLedgerTransaction(ctx2.timestamper, ctx2.partyKeyMap))
         }
     }
 
@@ -162,20 +165,11 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
-
-    class BuyerContext(
-            val acceptablePrice: Amount,
-            val typeToSell: Class<out OwnableState>,
-            val wallet: List<StateAndRef<Cash.State>>,
-            val myKeys: Map<PublicKey, PrivateKey>,
-            val timestamper: TimestamperService,
-            val partyKeyMap: Map<PublicKey, Party>,
-            val resultFuture: SettableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>> = SettableFuture.create()
-    )
-
     // The buyer's side of the protocol. See note above Seller to learn about the caveats here.
-    class Buyer : ProtocolStateMachine<BuyerContext> {
-        override fun run() {
+    class BuyerImpl : Buyer() {
+        override fun call(): Pair<TimestampedWireTransaction, LedgerTransaction> {
+            val acceptablePrice = context().initialArgs!!.acceptablePrice
+            val typeToSell = context().initialArgs!!.typeToSell
             // Start a new scope here so we can't accidentally reuse 'ctx' after doing the sendAndReceive below,
             // as the context object we're meant to use might change each time we suspend (e.g. due to VM restart).
             val (stx, theirSessionID) = run {
@@ -187,10 +181,10 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
 
                 // Check the start message for acceptability.
                 check(tradeRequest.sessionID > 0)
-                if (tradeRequest.price > ctx.acceptablePrice)
+                if (tradeRequest.price > acceptablePrice)
                     throw UnacceptablePriceException(tradeRequest.price)
-                if (!ctx.typeToSell.isInstance(tradeRequest.assetForSale.state))
-                    throw AssetMismatchException(ctx.typeToSell.name, assetTypeName)
+                if (!Class.forName(typeToSell).isInstance(tradeRequest.assetForSale.state))
+                    throw AssetMismatchException(typeToSell, assetTypeName)
 
                 // TODO: Either look up the stateref here in our local db, or accept a long chain of states and
                 // validate them to audit the other side and ensure it actually owns the state we are being offered!
@@ -199,7 +193,7 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
                 // Generate the shared transaction that both sides will sign, using the data we have.
                 val ptx = PartialTransaction()
                 // Add input and output states for the movement of cash.
-                val cashSigningPubKeys = Cash().craftSpend(ptx, tradeRequest.price, tradeRequest.primaryOwnerKey, ctx.wallet)
+                val cashSigningPubKeys = Cash().craftSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, ctx.wallet)
                 // Add inputs/outputs/a command for the movement of the asset.
                 ptx.addInputState(tradeRequest.assetForSale.ref)
                 // Just pick some arbitrary public key for now (this provides poor privacy).
@@ -219,33 +213,29 @@ private class TwoPartyTradeProtocolImpl : TwoPartyTradeProtocol() {
             }
 
             // TODO: Could run verify() here to make sure the only signature missing is the primaries.
-            logger().trace { "Sending partially signed transaction to primary" }
-            // We'll just reuse the session ID the primary selected here for convenience.
+            logger().trace { "Sending partially signed transaction to seller" }
+            // We'll just reuse the session ID the seller selected here for convenience.
             val (ctx, fullySigned) = sendAndReceive<TimestampedWireTransaction, BuyerContext>(TRADE_TOPIC, theirSessionID, theirSessionID, stx)
             logger().trace { "Got fully signed transaction, verifying ... "}
             val ltx = fullySigned.verifyToLedgerTransaction(ctx.timestamper, ctx.partyKeyMap)
             logger().trace { "Fully signed transaction was valid. Trade complete! :-)" }
-            ctx.resultFuture.set(Pair(fullySigned, ltx))
+            return Pair(fullySigned, ltx)
         }
     }
 
-    override fun runSeller(net: MessagingSystem, otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>,
+    override fun runSeller(otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>,
                            price: Amount, myKey: KeyPair, partyKeyMap: Map<PublicKey, Party>,
-                           timestamper: TimestamperService): ListenableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>> {
+                           timestamper: TimestamperService): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>> {
         val args = SellerInitialArgs(assetToSell, price, myKey)
         val context = SellerContext(timestamper, partyKeyMap, args)
-        val logger = LoggerFactory.getLogger("$TRADE_TOPIC.primary")
-        loadContinuationClass<Seller>(javaClass.classLoader).iterateStateMachine(net, otherSide, context, context, logger)
-        return context.resultFuture
+        return smm.add(otherSide, context, "$TRADE_TOPIC.seller", SellerImpl::class.java)
     }
 
-    override fun runBuyer(net: MessagingSystem, otherSide: SingleMessageRecipient, acceptablePrice: Amount,
+    override fun runBuyer(otherSide: SingleMessageRecipient, acceptablePrice: Amount,
                           typeToSell: Class<out OwnableState>, wallet: List<StateAndRef<Cash.State>>,
                           myKeys: Map<PublicKey, PrivateKey>, timestamper: TimestamperService,
-                          partyKeyMap: Map<PublicKey, Party>): ListenableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>> {
-        val context = BuyerContext(acceptablePrice, typeToSell, wallet, myKeys, timestamper, partyKeyMap)
-        val logger = LoggerFactory.getLogger("$TRADE_TOPIC.secondary")
-        loadContinuationClass<Buyer>(javaClass.classLoader).iterateStateMachine(net, otherSide, context, context, logger)
-        return context.resultFuture
+                          partyKeyMap: Map<PublicKey, Party>): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>> {
+        val context = BuyerContext(wallet, myKeys, timestamper, partyKeyMap, BuyerInitialArgs(acceptablePrice, typeToSell.name))
+        return smm.add(otherSide, context, "$TRADE_TOPIC.buyer", BuyerImpl::class.java)
     }
 }
