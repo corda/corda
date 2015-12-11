@@ -165,7 +165,7 @@ class Cash : Contract {
      */
     @Throws(InsufficientBalanceException::class)
     fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey,
-                   wallet: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null) {
+                   cashStates: List<StateAndRef<State>>, onlyFromParties: Set<Party>? = null) {
         // Discussion
         //
         // This code is analogous to the Wallet.send() set of methods in bitcoinj, and has the same general outline.
@@ -188,7 +188,7 @@ class Cash : Contract {
 
         val currency = amount.currency
         val acceptableCoins = run {
-            val ofCurrency = wallet.filter { it.state.amount.currency == currency }
+            val ofCurrency = cashStates.filter { it.state.amount.currency == currency }
             if (onlyFromParties != null)
                 ofCurrency.filter { it.state.deposit.party in onlyFromParties }
             else
