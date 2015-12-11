@@ -8,12 +8,14 @@
 
 package core.messaging
 
-import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import contracts.Cash
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
-import core.*
+import core.ContractState
+import core.DOLLARS
+import core.StateAndRef
+import core.days
 import core.testutils.*
 import org.junit.After
 import org.junit.Before
@@ -25,13 +27,12 @@ import java.util.logging.LogRecord
 import java.util.logging.Logger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /**
- * In this example, Alessia wishes to sell her commercial paper to Boris in return for $1,000,000 and they wish to do
+ * In this example, Alice wishes to sell her commercial paper to Bob in return for $1,000,000 and they wish to do
  * it on the ledger atomically. Therefore they must work together to build a transaction.
  *
- * We assume that Alessia and Boris already found each other via some market, and have agreed the details already.
+ * We assume that Alice and Bob already found each other via some market, and have agreed the details already.
  */
 class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
     @Before
@@ -50,15 +51,10 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
     @Test
     fun cashForCP() {
-        val (addr1, node1) = makeNode(inBackground = true)
-        val (addr2, node2) = makeNode(inBackground = true)
-
         val backgroundThread = Executors.newSingleThreadExecutor()
-        val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(node1, backgroundThread))
-        val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(node2, backgroundThread))
 
         transactionGroupFor<ContractState> {
-            // Bob (S) has some cash, Alice (P) has some commercial paper she wants to sell to Bob.
+            // Bob (Buyer) has some cash, Alice (Seller) has some commercial paper she wants to sell to Bob.
             roots {
                 transaction(CommercialPaper.State(MEGA_CORP.ref(1, 2, 3), ALICE, 1200.DOLLARS, TEST_TX_TIME + 7.days) label "alice's paper")
                 transaction(800.DOLLARS.CASH `owned by` BOB label "bob cash1")
@@ -67,22 +63,33 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val bobsWallet = listOf<StateAndRef<Cash.State>>(lookup("bob cash1"), lookup("bob cash2"))
 
+            val (alicesAddress, alicesNode) = makeNode(inBackground = true)
+            val (bobsAddress, bobsNode) = makeNode(inBackground = true)
+
+            val alicesServices = MockServices(wallet = null, keyManagement = null, net = alicesNode)
+            val bobsServices = MockServices(
+                    wallet = MockWalletService(bobsWallet),
+                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    net = bobsNode
+            )
+
+            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread))
+            val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread))
+
             val aliceResult = tpSeller.runSeller(
-                    addr2,
-                    lookup("alice's paper"),
-                    1000.DOLLARS,
-                    ALICE_KEY,
-                    TEST_KEYS_TO_CORP_MAP,
-                    DUMMY_TIMESTAMPER
+                    bobsAddress,
+                    TwoPartyTradeProtocol.SellerInitialArgs(
+                            lookup("alice's paper"),
+                            1000.DOLLARS,
+                            ALICE_KEY
+                    )
             )
             val bobResult = tpBuyer.runBuyer(
-                    addr1,
-                    1000.DOLLARS,
-                    CommercialPaper.State::class.java,
-                    bobsWallet,
-                    mapOf(BOB to BOB_KEY.private),
-                    DUMMY_TIMESTAMPER,
-                    TEST_KEYS_TO_CORP_MAP
+                    alicesAddress,
+                    TwoPartyTradeProtocol.BuyerInitialArgs(
+                        1000.DOLLARS,
+                        CommercialPaper.State::class.java
+                    )
             )
 
             assertEquals(aliceResult.get(), bobResult.get())
@@ -95,14 +102,6 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
     @Test
     fun serializeAndRestore() {
-        val (addr1, node1) = makeNode(inBackground = false)
-        var (addr2, node2) = makeNode(inBackground = false)
-
-        val smmSeller = StateMachineManager(node1, MoreExecutors.directExecutor())
-        val tpSeller = TwoPartyTradeProtocol.create(smmSeller)
-        val smmBuyer = StateMachineManager(node2, MoreExecutors.directExecutor())
-        val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
-
         transactionGroupFor<ContractState> {
             // Buyer Bob has some cash, Seller Alice has some commercial paper she wants to sell to Bob.
             roots {
@@ -113,56 +112,71 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val bobsWallet = listOf<StateAndRef<Cash.State>>(lookup("bob cash1"), lookup("bob cash2"))
 
+            val (alicesAddress, alicesNode) = makeNode(inBackground = false)
+            var (bobsAddress, bobsNode) = makeNode(inBackground = false)
+
+            val bobsStorage = MockStorageService()
+
+            val alicesServices = MockServices(wallet = null, keyManagement = null, net = alicesNode)
+            var bobsServices = MockServices(
+                    wallet = MockWalletService(bobsWallet),
+                    keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
+                    net = bobsNode,
+                    storage = bobsStorage
+            )
+
+            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, MoreExecutors.directExecutor()))
+            val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
+            val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
+
             tpSeller.runSeller(
-                    addr2,
-                    lookup("alice's paper"),
-                    1000.DOLLARS,
-                    ALICE_KEY,
-                    TEST_KEYS_TO_CORP_MAP,
-                    DUMMY_TIMESTAMPER
+                    bobsAddress,
+                    TwoPartyTradeProtocol.SellerInitialArgs(
+                            lookup("alice's paper"),
+                            1000.DOLLARS,
+                            ALICE_KEY
+                    )
             )
             tpBuyer.runBuyer(
-                    addr1,
-                    1000.DOLLARS,
-                    CommercialPaper.State::class.java,
-                    bobsWallet,
-                    mapOf(BOB to BOB_KEY.private),
-                    DUMMY_TIMESTAMPER,
-                    TEST_KEYS_TO_CORP_MAP
+                    alicesAddress,
+                    TwoPartyTradeProtocol.BuyerInitialArgs(
+                            1000.DOLLARS,
+                            CommercialPaper.State::class.java
+                    )
             )
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
             // Seller Alice already sent a message to Buyer Bob. Pump once:
-            node2.pump(false)
+            bobsNode.pump(false)
+
             // OK, now Bob has sent the partial transaction back to Alice and is waiting for Alice's signature.
-            val storageBob = smmBuyer.saveToBytes()
+            // Save the state machine to "disk" (i.e. a variable, here)
+            assertEquals(1, bobsStorage.getMap<Any, Any>("state machines").size)
+
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
-            node2.stop()
+            bobsNode.stop()
 
             // Alice doesn't know that and sends Bob the now finalised transaction. Alice sends a message to a node
             // that has gone offline.
-            node1.pump(false)
+            alicesNode.pump(false)
 
-            // ... bring the network back up ...
-            node2 = network.createNodeWithID(true, addr2.id).start().get()
+            // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
+            // that Bob was waiting on before the reboot occurred.
+            bobsNode = network.createNodeWithID(true, bobsAddress.id).start().get()
+            val smm = StateMachineManager(
+                    MockServices(wallet = null, keyManagement = null, net = bobsNode, storage = bobsStorage),
+                    MoreExecutors.directExecutor()
+            )
 
-            // We must provide the state machines with all the stuff that couldn't be saved to disk.
-            var bobFuture: ListenableFuture<Pair<TimestampedWireTransaction, LedgerTransaction>>? = null
-            fun resumeStateMachine(forObj: ProtocolStateMachine<*,*>): Any {
-                return when (forObj) {
-                    is TwoPartyTradeProtocol.Buyer -> {
-                        bobFuture = forObj.resultFuture
-                        return TwoPartyTradeProtocol.BuyerContext(bobsWallet, mapOf(BOB to BOB_KEY.private), DUMMY_TIMESTAMPER, TEST_KEYS_TO_CORP_MAP, null)
-                    }
-                    else -> fail()
-                }
-            }
-            // The act of constructing this object will re-register the message handlers that Bob was waiting on before
-            // the reboot occurred.
-            StateMachineManager(node2, MoreExecutors.directExecutor(), storageBob, ::resumeStateMachine)
-            assertTrue(node2.pump(false))
+            // Find the future representing the result of this state machine again.
+            assertEquals(1, smm.stateMachines.size)
+            var bobFuture = smm.stateMachines.filterIsInstance<TwoPartyTradeProtocol.Buyer>().first().resultFuture
+
+            // Let Bob process his mailbox.
+            assertTrue(bobsNode.pump(false))
+
             // Bob is now finished and has the same transaction as Alice.
-            val tx: Pair<TimestampedWireTransaction, LedgerTransaction> = bobFuture!!.get()
+            val tx = bobFuture.get()
             txns.add(tx.second)
             verify()
         }

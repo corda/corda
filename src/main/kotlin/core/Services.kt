@@ -8,6 +8,8 @@
 
 package core
 
+import core.messaging.MessagingSystem
+import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Instant
@@ -18,12 +20,15 @@ import java.time.Instant
  */
 
 /**
- * A wallet (name may be temporary) wraps a set of private keys, and a set of states that are known about and that can
- * be influenced by those keys, for instance, because we own them. This class represents an immutable, stable state
- * of a wallet: it is guaranteed not to change out from underneath you, even though the canonical currently-best-known
- * wallet may change as we learn new transactions from our peers.
+ * A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
+ * because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
+ * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
+ * about new transactions from our peers and generate new transactiont that consume states ourselves.
  */
-data class Wallet(val states: List<StateAndRef<OwnableState>>, val keys: Map<PublicKey, PrivateKey>)
+data class Wallet(val states: List<StateAndRef<OwnableState>>) {
+    @Suppress("UNCHECKED_CAST")
+    inline fun <reified T : OwnableState> statesOfType() = states.filter { it.state is T } as List<StateAndRef<T>>
+}
 
 /**
  * A [WalletService] is responsible for securely and safely persisting the current state of a wallet to storage. The
@@ -32,7 +37,27 @@ data class Wallet(val states: List<StateAndRef<OwnableState>>, val keys: Map<Pub
  * consumed by someone else first!
  */
 interface WalletService {
+    /**
+     * Returns a read-only snapshot of the wallet at the time the call is made. Note that if you consume states or
+     * keys in this wallet, you must inform the wallet service so it can update its internal state.
+     */
     val currentWallet: Wallet
+}
+
+/**
+ * The KMS is responsible for storing and using private keys to sign things. An implementation of this may, for example,
+ * call out to a hardware security module that enforces various auditing and frequency-of-use requirements.
+ *
+ * The current interface is obviously not usable for those use cases: this is just where we'd put a real signing
+ * interface if/when one is developed.
+ */
+interface KeyManagementService {
+    val keys: Map<PublicKey, PrivateKey>
+
+    fun toPrivate(publicKey: PublicKey) = keys[publicKey] ?: throw IllegalStateException("No private key known for requested public key")
+
+    /** Generates a new random key and adds it to the exposed map. */
+    fun freshKey(): KeyPair
 }
 
 /**
@@ -41,7 +66,7 @@ interface WalletService {
  * service would provide.
  */
 interface IdentityService {
-    fun partyFromKey(key: PublicKey): Party
+    fun partyFromKey(key: PublicKey): Party?
 }
 
 /**
@@ -57,12 +82,24 @@ interface TimestamperService {
 }
 
 /**
+ * A sketch of an interface to a simple key/value storage system. Intended for persistence of simple blobs like
+ * transactions, serialised protocol state machines and so on. Again, this isn't intended to imply lack of SQL or
+ * anything like that, this interface is only big enough to support the prototyping work.
+ */
+interface StorageService {
+    fun <K,V> getMap(tableName: String): MutableMap<K, V>
+}
+
+/**
  * A service hub simply vends references to the other services a node has. Some of those services may be missing or
  * mocked out. This class is useful to pass to chunks of pluggable code that might have need of many different kinds of
  * functionality and you don't want to hard-code which types in the interface.
  */
 interface ServiceHub {
     val walletService: WalletService
+    val keyManagementService: KeyManagementService
     val identityService: IdentityService
     val timestampingService: TimestamperService
+    val storageService: StorageService
+    val networkService: MessagingSystem   // TODO: Rename class to be consistent.
 }

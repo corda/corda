@@ -107,7 +107,7 @@ class CommercialPaperTests {
             val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days)
             ptx.signWith(MINI_CORP_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
@@ -124,7 +124,7 @@ class CommercialPaperTests {
             ptx.signWith(MINI_CORP_KEY)
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
         }
 
         // Won't be validated.
@@ -138,7 +138,7 @@ class CommercialPaperTests {
             CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
-            return ptx.toSignedTransaction().verify().toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            return ptx.toSignedTransaction().verify().toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
         }
 
         val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)

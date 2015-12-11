@@ -88,7 +88,7 @@ class TransactionSerializationTests {
     fun timestamp() {
         tx.signWith(TestUtils.keypair)
         val ttx = tx.toSignedTransaction().toTimestampedTransactionWithoutTime()
-        val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, TEST_KEYS_TO_CORP_MAP)
+        val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
         assertEquals(tx.commands().map { it.command }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inStateRefs)
         assertEquals(tx.outputStates(), ltx.outStates)
@@ -97,7 +97,7 @@ class TransactionSerializationTests {
         val ltx2: LedgerTransaction = tx.
                 toSignedTransaction().
                 toTimestampedTransaction(DUMMY_TIMESTAMPER).
-                verifyToLedgerTransaction(DUMMY_TIMESTAMPER, TEST_KEYS_TO_CORP_MAP)
+                verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
         assertEquals(TEST_TX_TIME, ltx2.time)
     }
 }

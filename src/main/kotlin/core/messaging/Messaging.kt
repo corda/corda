@@ -9,9 +9,7 @@
 package core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import core.serialization.deserialize
 import core.serialization.serialize
-import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
@@ -38,9 +36,6 @@ interface MessagingSystem {
      * The returned object is an opaque handle that may be used to un-register handlers later with [removeMessageHandler].
      * The handle is passed to the callback as well, to avoid race conditions whereby the callback wants to unregister
      * itself and yet addMessageHandler hasn't returned the handle yet.
-     *
-     * If the callback throws an exception then the message is discarded and will not be retried, unless the exception
-     * is a subclass of [RetryMessageLaterException], in which case the message will be queued and attempted later.
      */
     fun addMessageHandler(topic: String = "", executor: Executor? = null, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration
 
@@ -87,19 +82,6 @@ fun MessagingSystem.runOnNextMessage(topic: String = "", executor: Executor? = n
 fun MessagingSystem.send(topic: String, to: MessageRecipients, obj: Any) = send(createMessage(topic, obj.serialize()), to)
 
 /**
- * Registers a handler for the given topic that runs the given callback with the message content deserialised to the
- * given type, and then removes itself.
- */
-inline fun <reified T : Any> MessagingSystem.runOnNextMessageWith(topic: String = "",
-                                                                  executor: Executor? = null,
-                                                                  noinline callback: (T) -> Unit) {
-    addMessageHandler(topic, executor) { msg, reg ->
-        callback(msg.data.deserialize<T>())
-        removeMessageHandler(reg)
-    }
-}
-
-/**
  * This class lets you start up a [MessagingSystem]. Its purpose is to stop you from getting access to the methods
  * on the messaging system interface until you have successfully started up the system. One of these objects should
  * be the only way to obtain a reference to a [MessagingSystem]. Startup may be a slow process: some implementations
@@ -113,11 +95,6 @@ interface MessagingSystemBuilder<out T : MessagingSystem> {
 }
 
 interface MessageHandlerRegistration
-
-class RetryMessageLaterException : Exception() {
-    /** If set, the message will be re-queued and retried after the requested interval. */
-    var delayPeriod: Duration? = null
-}
 
 /**
  * A message is defined, at this level, to be a (topic, timestamp, byte arrays) triple, where the topic is a string in

@@ -58,9 +58,9 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val commands: List<WireCommand>) {
     fun serializeForSignature(): ByteArray = serialize()
 
-    fun toLedgerTransaction(timestamp: Instant?, partyKeyMap: Map<PublicKey, Party>, originalHash: SecureHash): LedgerTransaction {
+    fun toLedgerTransaction(timestamp: Instant?, identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
-            val institutions = it.pubkeys.mapNotNull { pk -> partyKeyMap[pk] }
+            val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
         }
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, originalHash)
@@ -191,11 +191,11 @@ data class TimestampedWireTransaction(
 ) {
     val transactionID: SecureHash = serialize().sha256()
 
-    fun verifyToLedgerTransaction(timestamper: TimestamperService, partyKeyMap: Map<PublicKey, Party>): LedgerTransaction {
+    fun verifyToLedgerTransaction(timestamper: TimestamperService, identityService: IdentityService): LedgerTransaction {
         val stx: SignedWireTransaction = signedWireTX.deserialize()
         val wtx: WireTransaction = stx.verify()
         val instant: Instant? = if (timestamp != null) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp.bits) else null
-        return wtx.toLedgerTransaction(instant, partyKeyMap, transactionID)
+        return wtx.toLedgerTransaction(instant, identityService, transactionID)
     }
 }
 
