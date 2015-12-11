@@ -133,18 +133,6 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun commands(): List<WireCommand> = ArrayList(commands)
 }
 
-/**
- * Simple interface (for testing) to an abstract timestamping service, in the style of RFC 3161. Note that this is not
- * 'timestamping' in the block chain sense, but rather, implies a semi-trusted third party taking a reading of the
- * current time, typically from an atomic clock, and then digitally signing (current time, hash) to produce a timestamp
- * triple (signature, time, hash). The purpose of these timestamps is to locate a transaction in the timeline, which is
- * important in the absence of blocks. Here we model the timestamp as an opaque byte array.
- */
-interface TimestamperService {
-    fun timestamp(hash: SecureHash): ByteArray
-    fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
-}
-
 data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) {
     init {
         check(sigs.isNotEmpty())
