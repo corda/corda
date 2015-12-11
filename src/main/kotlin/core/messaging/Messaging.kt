@@ -9,7 +9,6 @@
 package core.messaging
 
 import com.google.common.util.concurrent.ListenableFuture
-import core.serialization.SerializeableWithKryo
 import core.serialization.deserialize
 import core.serialization.serialize
 import java.time.Duration
@@ -85,15 +84,15 @@ fun MessagingSystem.runOnNextMessage(topic: String = "", executor: Executor? = n
     }
 }
 
-fun MessagingSystem.send(topic: String, to: MessageRecipients, obj: SerializeableWithKryo) = send(createMessage(topic, obj.serialize()), to)
+fun MessagingSystem.send(topic: String, to: MessageRecipients, obj: Any) = send(createMessage(topic, obj.serialize()), to)
 
 /**
  * Registers a handler for the given topic that runs the given callback with the message content deserialised to the
  * given type, and then removes itself.
  */
-inline fun <reified T : SerializeableWithKryo> MessagingSystem.runOnNextMessageWith(topic: String = "",
-                                                                                    executor: Executor? = null,
-                                                                                    noinline callback: (T) -> Unit) {
+inline fun <reified T : Any> MessagingSystem.runOnNextMessageWith(topic: String = "",
+                                                                  executor: Executor? = null,
+                                                                  noinline callback: (T) -> Unit) {
     addMessageHandler(topic, executor) { msg, reg ->
         callback(msg.data.deserialize<T>())
         removeMessageHandler(reg)
@@ -109,8 +108,8 @@ inline fun <reified T : SerializeableWithKryo> MessagingSystem.runOnNextMessageW
  * A specific implementation of the controller class will have extra features that let you customise it before starting
  * it up.
  */
-interface MessagingSystemBuilder<T : MessagingSystem> {
-    fun start(): ListenableFuture<T>
+interface MessagingSystemBuilder<out T : MessagingSystem> {
+    fun start(): ListenableFuture<out T>
 }
 
 interface MessageHandlerRegistration
