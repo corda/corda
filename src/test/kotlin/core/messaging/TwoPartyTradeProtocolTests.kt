@@ -20,6 +20,7 @@ import core.testutils.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import java.security.SecureRandom
 import java.util.concurrent.Executors
 import java.util.logging.Formatter
 import java.util.logging.Level
@@ -76,19 +77,23 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread))
             val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread))
 
+            val buyerSessionID = SecureRandom.getInstanceStrong().nextLong()
+
             val aliceResult = tpSeller.runSeller(
                     bobsAddress,
                     TwoPartyTradeProtocol.SellerInitialArgs(
                             lookup("alice's paper"),
                             1000.DOLLARS,
-                            ALICE_KEY
+                            ALICE_KEY,
+                            buyerSessionID
                     )
             )
             val bobResult = tpBuyer.runBuyer(
                     alicesAddress,
                     TwoPartyTradeProtocol.BuyerInitialArgs(
                         1000.DOLLARS,
-                        CommercialPaper.State::class.java
+                        CommercialPaper.State::class.java,
+                        buyerSessionID
                     )
             )
 
@@ -129,19 +134,23 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
             val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
 
+            val buyerSessionID = SecureRandom.getInstanceStrong().nextLong()
+
             tpSeller.runSeller(
                     bobsAddress,
                     TwoPartyTradeProtocol.SellerInitialArgs(
                             lookup("alice's paper"),
                             1000.DOLLARS,
-                            ALICE_KEY
+                            ALICE_KEY,
+                            buyerSessionID
                     )
             )
             tpBuyer.runBuyer(
                     alicesAddress,
                     TwoPartyTradeProtocol.BuyerInitialArgs(
                             1000.DOLLARS,
-                            CommercialPaper.State::class.java
+                            CommercialPaper.State::class.java,
+                            buyerSessionID
                     )
             )
 
