@@ -49,7 +49,7 @@ public class InMemoryNetwork {
      * executor.
      */
     @Synchronized
-    fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingSystemBuilder<Node>> {
+    fun createNode(manuallyPumped: Boolean): Pair<Handle, MessagingServiceBuilder<Node>> {
         check(counter >= 0) { "In memory network stopped: please recreate. "}
         val builder = createNodeWithID(manuallyPumped, counter) as Builder
         counter++
@@ -58,7 +58,7 @@ public class InMemoryNetwork {
     }
 
     /** Creates a node at the given address: useful if you want to recreate a node to simulate a restart */
-    fun createNodeWithID(manuallyPumped: Boolean, id: Int): MessagingSystemBuilder<Node> {
+    fun createNodeWithID(manuallyPumped: Boolean, id: Int): MessagingServiceBuilder<Node> {
         return Builder(manuallyPumped, Handle(id))
     }
 
@@ -99,7 +99,7 @@ public class InMemoryNetwork {
         messageQueues.clear()
     }
 
-    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingSystemBuilder<Node> {
+    inner class Builder(val manuallyPumped: Boolean, val id: Handle) : MessagingServiceBuilder<Node> {
         override fun start(): ListenableFuture<Node> {
             synchronized(this@InMemoryNetwork) {
                 val node = Node(manuallyPumped, id)
@@ -116,13 +116,13 @@ public class InMemoryNetwork {
     }
 
     /**
-     * An [Node] provides a [MessagingSystem] that isn't backed by any kind of network or disk storage
+     * An [Node] provides a [MessagingService] that isn't backed by any kind of network or disk storage
      * system, but just uses regular queues on the heap instead. It is intended for unit testing and developer convenience
      * when all entities on 'the network' are being simulated in-process.
      *
      * An instance can be obtained by creating a builder and then using the start method.
      */
-    inner class Node(private val manuallyPumped: Boolean, private val handle: Handle): MessagingSystem {
+    inner class Node(private val manuallyPumped: Boolean, private val handle: Handle): MessagingService {
         inner class Handler(val executor: Executor?, val topic: String, val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
         @GuardedBy("this")
         protected val handlers: MutableList<Handler> = ArrayList()

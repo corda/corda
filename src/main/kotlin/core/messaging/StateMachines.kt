@@ -124,7 +124,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         checkpointsMap[SecureHash.sha256(new)] = new
     }
 
-    private fun iterateStateMachine(c: Continuation, net: MessagingSystem, otherSide: MessageRecipients,
+    private fun iterateStateMachine(c: Continuation, net: MessagingService, otherSide: MessageRecipients,
                                     continuationInput: Any?, logger: Logger,
                                     prevPersistedBytes: ByteArray?): Continuation {
         // This will resume execution of the run() function inside the continuation at the place it left off.
@@ -165,7 +165,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
-    private fun setupNextMessageHandler(logger: Logger, net: MessagingSystem, nextState: Continuation,
+    private fun setupNextMessageHandler(logger: Logger, net: MessagingService, nextState: Continuation,
                                         otherSide: MessageRecipients, responseType: Class<*>,
                                         topic: String, prevPersistedBytes: ByteArray?) {
         val checkpoint = Checkpoint(nextState, otherSide, logger.name, topic, responseType.name)

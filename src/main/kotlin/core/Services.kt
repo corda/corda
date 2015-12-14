@@ -8,7 +8,7 @@
 
 package core
 
-import core.messaging.MessagingSystem
+import core.messaging.MessagingService
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
@@ -101,5 +101,5 @@ interface ServiceHub {
     val identityService: IdentityService
     val timestampingService: TimestamperService
     val storageService: StorageService
-    val networkService: MessagingSystem   // TODO: Rename class to be consistent.
+    val networkService: MessagingService   // TODO: Rename class to be consistent.
 }

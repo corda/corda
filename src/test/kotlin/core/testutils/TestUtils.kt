@@ -13,7 +13,7 @@ package core.testutils
 import com.google.common.io.BaseEncoding
 import contracts.*
 import core.*
-import core.messaging.MessagingSystem
+import core.messaging.MessagingService
 import core.visualiser.GraphVisualiser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -121,7 +121,7 @@ class MockStorageService : StorageService {
 class MockServices(
         val wallet: WalletService?,
         val keyManagement: KeyManagementService?,
-        val net: MessagingSystem?,
+        val net: MessagingService?,
         val identity: IdentityService? = MockIdentityService,
         val storage: StorageService? = MockStorageService(),
         val timestamping: TimestamperService? = DUMMY_TIMESTAMPER
@@ -134,7 +134,7 @@ class MockServices(
         get() = identity ?: throw UnsupportedOperationException()
     override val timestampingService: TimestamperService
         get() = timestamping ?: throw UnsupportedOperationException()
-    override val networkService: MessagingSystem
+    override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()
