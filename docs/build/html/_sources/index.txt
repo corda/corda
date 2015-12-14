@@ -26,6 +26,8 @@ Read on to learn:
    overview
    getting-set-up
    tutorial
+   messaging
+   protocol-state-machines
    visualiser
    roadmap
 
