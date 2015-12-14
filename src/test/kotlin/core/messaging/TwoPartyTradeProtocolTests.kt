@@ -188,6 +188,8 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val tx = bobFuture.get()
             txns.add(tx.second)
             verify()
+
+            assertTrue(smm.stateMachines.isEmpty())
         }
     }
 }
