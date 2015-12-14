@@ -35,7 +35,7 @@ import java.util.concurrent.Executor
  * and, if run with a single-threaded executor, will ensure no two state machines run concurrently with each other
  * (bad for performance, good for programmer mental health!).
  *
- * TODO: The framework should do automatic error handling.
+ * TODO: The framework should propagate exceptions and handle error handling automatically.
  */
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
     private val checkpointsMap = serviceHub.storageService.getMap<SecureHash, ByteArray>("state machines")
@@ -95,8 +95,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
-    fun <T, R> add(otherSide: MessageRecipients, initialArgs: T, loggerName: String,
-                   continuationClass: Class<out ProtocolStateMachine<*, R>>): ListenableFuture<out R> {
+    fun <T : ProtocolStateMachine<I, *>, I> add(otherSide: MessageRecipients, initialArgs: I, loggerName: String,
+                                                continuationClass: Class<out T>): T {
         val logger = LoggerFactory.getLogger(loggerName)
         val (sm, continuation) = loadContinuationClass(continuationClass)
         sm.serviceHub = serviceHub
@@ -107,7 +107,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             iterateStateMachine(continuation, serviceHub.networkService, otherSide, initialArgs, logger, null)
         }
         @Suppress("UNCHECKED_CAST")
-        return (sm as ProtocolStateMachine<T, R>).resultFuture
+        return sm as T
     }
 
     @Suppress("UNCHECKED_CAST")

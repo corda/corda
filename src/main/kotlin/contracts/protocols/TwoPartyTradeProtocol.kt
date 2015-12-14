@@ -8,7 +8,6 @@
 
 package contracts.protocols
 
-import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.sumCashBy
 import core.*
@@ -49,18 +48,14 @@ abstract class TwoPartyTradeProtocol {
             val myKeyPair: KeyPair
     )
 
-    abstract fun runSeller(otherSide: SingleMessageRecipient,
-                           args: SellerInitialArgs): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>>
+    abstract fun runSeller(otherSide: SingleMessageRecipient, args: SellerInitialArgs): Seller
 
     class BuyerInitialArgs(
             val acceptablePrice: Amount,
             val typeToBuy: Class<out OwnableState>
     )
 
-    abstract fun runBuyer(
-            otherSide: SingleMessageRecipient,
-            args: BuyerInitialArgs
-    ): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>>
+    abstract fun runBuyer(otherSide: SingleMessageRecipient, args: BuyerInitialArgs): Buyer
 
     abstract class Buyer : ProtocolStateMachine<BuyerInitialArgs, Pair<TimestampedWireTransaction, LedgerTransaction>>()
     abstract class Seller : ProtocolStateMachine<SellerInitialArgs, Pair<TimestampedWireTransaction, LedgerTransaction>>()
@@ -203,11 +198,11 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
         }
     }
 
-    override fun runSeller(otherSide: SingleMessageRecipient, args: SellerInitialArgs): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>> {
+    override fun runSeller(otherSide: SingleMessageRecipient, args: SellerInitialArgs): Seller {
         return smm.add(otherSide, args, "$TRADE_TOPIC.seller", SellerImpl::class.java)
     }
 
-    override fun runBuyer(otherSide: SingleMessageRecipient, args: BuyerInitialArgs): ListenableFuture<out Pair<TimestampedWireTransaction, LedgerTransaction>> {
+    override fun runBuyer(otherSide: SingleMessageRecipient, args: BuyerInitialArgs): Buyer {
         return smm.add(otherSide, args, "$TRADE_TOPIC.buyer", BuyerImpl::class.java)
     }
 }

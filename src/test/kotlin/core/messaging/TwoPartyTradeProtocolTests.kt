@@ -92,9 +92,9 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                     )
             )
 
-            assertEquals(aliceResult.get(), bobResult.get())
+            assertEquals(aliceResult.resultFuture.get(), bobResult.resultFuture.get())
 
-            txns.add(aliceResult.get().second)
+            txns.add(aliceResult.resultFuture.get().second)
             verify()
         }
         backgroundThread.shutdown()
