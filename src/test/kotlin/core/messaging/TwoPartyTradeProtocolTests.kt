@@ -12,15 +12,11 @@ import com.google.common.util.concurrent.MoreExecutors
 import contracts.Cash
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
-import core.ContractState
-import core.DOLLARS
-import core.StateAndRef
-import core.days
+import core.*
 import core.testutils.*
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import java.security.SecureRandom
 import java.util.concurrent.Executors
 import java.util.logging.Formatter
 import java.util.logging.Level
@@ -77,7 +73,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread))
             val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread))
 
-            val buyerSessionID = SecureRandom.getInstanceStrong().nextLong()
+            val buyerSessionID = random63BitValue()
 
             val aliceResult = tpSeller.runSeller(
                     bobsAddress,
@@ -134,7 +130,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
             val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
 
-            val buyerSessionID = SecureRandom.getInstanceStrong().nextLong()
+            val buyerSessionID = random63BitValue()
 
             tpSeller.runSeller(
                     bobsAddress,

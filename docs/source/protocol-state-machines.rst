@@ -140,14 +140,17 @@ Let's unpack what this code does:
 - Two of the classes are simply wrappers for parameters to the trade; things like what is being sold, what the price
   of the asset is, how much the buyer is willing to pay and so on. The ``myKeyPair`` field is simply the public key
   that the seller wishes the buyer to send the cash to. The session ID field is sent from buyer to seller when the
-  trade is being set up and is just a big random number. It's used to keep messages separated on the network, and stop
-  malicious entities trying to interfere with the message stream.
+  trade is being set up and is used to keep messages separated on the network, and stop malicious entities trying to
+  interfere with the message stream.
 - The other two classes define empty abstract classes called ``Buyer`` and ``Seller``. These inherit from a class
   called ``ProtocolStateMachine`` and provide two type parameters: the arguments class we just defined for each side
   and the type of the object that the protocol finally produces (this doesn't have to be identical for each side, even
   though in this case it is).
 - Finally it simply defines a static method that creates an instance of an object that inherits from this base class
   and returns it, with a ``StateMachineManager`` as an instance. The Impl class will be defined below.
+
+.. note:: Session IDs keep different traffic streams separated, so for security they must be large and random enough
+to be unguessable. 63 bits is good enough.
 
 Alright, so using this protocol shouldn't be too hard: in the simplest case we can just pass in the details of the trade
 to either runBuyer or runSeller, depending on who we are, and then call ``.get()`` on the resulting future to block the
@@ -179,7 +182,6 @@ Implementing the seller
       private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : TwoPartyTradeProtocol() {
           companion object {
               val TRADE_TOPIC = "com.r3cev.protocols.trade"
-              fun makeSessionID() = Math.abs(SecureRandom.getInstanceStrong().nextLong())
           }
 
           class SellerImpl : Seller() {
@@ -206,10 +208,7 @@ Implementing the seller
 
 We start with a skeleton on which we will build the protocol. Putting things in a *companion object* in Kotlin is like
 declaring them as static members in Java. Here, we define a "topic" that will identify trade related messages that
-arrive at a node (see :doc:`messaging` for details), and a convenience function to pick a large random session ID.
-
-.. note:: Session IDs keep different traffic streams separated, so for security they must be large and random enough
-   to be unguessable. 63 bits is good enough.
+arrive at a node (see :doc:`messaging` for details).
 
 The runSeller and runBuyer methods simply start the state machines, passing in a reference to the classes and the topics
 each side will use.
@@ -240,7 +239,7 @@ Next we add some code to the ``SellerImpl.call`` method:
 
    .. sourcecode:: kotlin
 
-      val sessionID = makeSessionID()
+      val sessionID = random63BitValue()
 
       // Make the first message we'll send to kick off the protocol.
       val hello = SellerTradeInfo(args.assetToSell, args.price, args.myKeyPair.public, sessionID)

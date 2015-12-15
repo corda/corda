@@ -16,7 +16,6 @@ import core.serialization.deserialize
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
-import java.security.SecureRandom
 
 /**
  * This asset trading protocol has two parties (B and S for buyer and seller) and the following steps:
@@ -73,7 +72,6 @@ abstract class TwoPartyTradeProtocol {
 private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : TwoPartyTradeProtocol() {
     companion object {
         val TRADE_TOPIC = "com.r3cev.protocols.trade"
-        fun makeSessionID() = Math.abs(SecureRandom.getInstanceStrong().nextLong())
     }
 
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
@@ -92,7 +90,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
     // learn more about the protocol state machine framework.
     class SellerImpl : Seller() {
         override fun call(args: SellerInitialArgs): Pair<TimestampedWireTransaction, LedgerTransaction> {
-            val sessionID = makeSessionID()
+            val sessionID = random63BitValue()
 
             // Make the first message we'll send to kick off the protocol.
             val hello = SellerTradeInfo(args.assetToSell, args.price, args.myKeyPair.public, sessionID)
