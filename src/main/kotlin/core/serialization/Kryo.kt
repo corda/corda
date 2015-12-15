@@ -11,7 +11,6 @@ package core.serialization
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import core.OpaqueBytes
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
@@ -50,12 +49,12 @@ val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
 inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
 inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this.bits), T::class.java)
 
-fun Any.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): ByteArray {
+fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
         kryo.writeObject(it, this)
     }
-    return stream.toByteArray()
+    return SerializedBytes<T>(stream.toByteArray())
 }
 
 fun createKryo(): Kryo {

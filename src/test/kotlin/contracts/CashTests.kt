@@ -14,6 +14,7 @@ import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
 import core.*
+import core.serialization.OpaqueBytes
 import core.testutils.*
 import org.junit.Test
 import java.security.PublicKey

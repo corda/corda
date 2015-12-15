@@ -8,8 +8,7 @@
 
 package core
 
-import core.serialization.deserialize
-import core.serialization.serialize
+import core.serialization.*
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -21,7 +20,7 @@ import java.util.*
  * tree passed into a contract.
  *
  * TimestampedWireTransaction wraps a serialized SignedWireTransaction. The timestamp is a signature from a timestamping
- * authority and is what gives the contract a sense of time. This isn't used yet.
+ * authority and is what gives the contract a sense of time. This arrangement may change in future.
  *
  * SignedWireTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
  * a public key that is mentioned inside a transaction command.
@@ -56,8 +55,6 @@ data class WireCommand(val command: Command, val pubkeys: List<PublicKey>) {
 data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val outputStates: List<ContractState>,
                            val commands: List<WireCommand>) {
-    fun serializeForSignature(): ByteArray = serialize()
-
     fun toLedgerTransaction(timestamp: Instant?, identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
@@ -95,8 +92,8 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun signWith(key: KeyPair) {
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         check(commands.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
-        val bits = toWireTransaction().serializeForSignature()
-        currentSigs.add(key.private.signWithECDSA(bits, key.public))
+        val data = toWireTransaction().serialize()
+        currentSigs.add(key.private.signWithECDSA(data.bits, key.public))
     }
 
     fun toWireTransaction() = WireTransaction(inputStates, outputStates, commands)
@@ -107,7 +104,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
             val gotKeys = currentSigs.map { it.by }.toSet()
             check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
         }
-        return SignedWireTransaction(toWireTransaction().serialize().opaque(), ArrayList(currentSigs))
+        return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
     fun addInputState(ref: ContractStateRef) {
@@ -133,7 +130,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun commands(): List<WireCommand> = ArrayList(commands)
 }
 
-data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) {
+data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
     init {
         check(sigs.isNotEmpty())
     }
@@ -158,7 +155,7 @@ data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<Digital
      */
     fun verify(): WireTransaction {
         verifySignatures()
-        val wtx = txBits.deserialize<WireTransaction>()
+        val wtx = txBits.deserialize()
         // Verify that every command key was in the set that we just verified: there should be no commands that were
         // unverified.
         val cmdKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
@@ -171,11 +168,11 @@ data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<Digital
     /** Uses the given timestamper service to calculate a signed timestamp and then returns a wrapper for both */
     fun toTimestampedTransaction(timestamper: TimestamperService): TimestampedWireTransaction {
         val bits = serialize()
-        return TimestampedWireTransaction(bits.opaque(), timestamper.timestamp(bits.sha256()).opaque())
+        return TimestampedWireTransaction(bits, timestamper.timestamp(bits.sha256()).opaque())
     }
 
     /** Returns a [TimestampedWireTransaction] with an empty byte array as the timestamp: this means, no time was provided. */
-    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize().opaque(), null)
+    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize(), null)
 }
 
 /**
@@ -184,7 +181,7 @@ data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<Digital
  */
 data class TimestampedWireTransaction(
     /** A serialised SignedWireTransaction */
-    val signedWireTX: OpaqueBytes,
+    val signedWireTXBytes: SerializedBytes<SignedWireTransaction>,
 
     /** Signature from a timestamping authority. For instance using RFC 3161 */
     val timestamp: OpaqueBytes?
@@ -192,9 +189,13 @@ data class TimestampedWireTransaction(
     val transactionID: SecureHash = serialize().sha256()
 
     fun verifyToLedgerTransaction(timestamper: TimestamperService, identityService: IdentityService): LedgerTransaction {
-        val stx: SignedWireTransaction = signedWireTX.deserialize()
+        val stx = signedWireTXBytes.deserialize()
         val wtx: WireTransaction = stx.verify()
-        val instant: Instant? = if (timestamp != null) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp.bits) else null
+        val instant: Instant? =
+                if (timestamp != null)
+                    timestamper.verifyTimestamp(signedWireTXBytes.sha256(), timestamp.bits)
+                else
+                    null
         return wtx.toLedgerTransaction(instant, identityService, transactionID)
     }
 }

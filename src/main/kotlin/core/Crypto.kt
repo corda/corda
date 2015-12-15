@@ -9,6 +9,7 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import core.serialization.OpaqueBytes
 import java.math.BigInteger
 import java.security.*
 

@@ -8,37 +8,13 @@
 
 package core
 
-import com.google.common.io.BaseEncoding
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import org.slf4j.Logger
 import java.security.SecureRandom
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.Executor
-
-/** A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect */
-open class OpaqueBytes(val bits: ByteArray) {
-    init { check(bits.isNotEmpty()) }
-
-    companion object {
-        fun of(vararg b: Byte) = OpaqueBytes(byteArrayOf(*b))
-    }
-
-    override fun equals(other: Any?): Boolean{
-        if (this === other) return true
-        if (other !is OpaqueBytes) return false
-        return Arrays.equals(bits, other.bits)
-    }
-
-    override fun hashCode() = Arrays.hashCode(bits)
-    override fun toString() = "[" + BaseEncoding.base16().encode(bits) + "]"
-
-    val size: Int get() = bits.size
-}
-
-fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())

@@ -79,7 +79,7 @@ fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = 
     }
 }
 
-fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any) = send(createMessage(topic, obj.serialize()), to)
+fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any) = send(createMessage(topic, obj.serialize().bits), to)
 
 /**
  * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods

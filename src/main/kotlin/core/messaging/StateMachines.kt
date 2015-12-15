@@ -196,7 +196,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         req.obj?.let {
             val topic = "${req.topic}.${req.sessionIDForSend}"
             logger.trace { "-> $topic : message of type ${it.javaClass.name}" }
-            net.send(net.createMessage(topic, it.serialize()), otherSide)
+            net.send(net.createMessage(topic, it.serialize().bits), otherSide)
         }
         if (req is ContinuationResult.NotExpectingResponse) {
             // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
@@ -210,7 +210,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                                         otherSide: MessageRecipients, responseType: Class<*>,
                                         topic: String, prevPersistedBytes: ByteArray?) {
         val checkpoint = Checkpoint(nextState, otherSide, logger.name, topic, responseType.name)
-        val curPersistedBytes = checkpoint.serialize()
+        val curPersistedBytes = checkpoint.serialize().bits
         persistCheckpoint(prevPersistedBytes, curPersistedBytes)
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)

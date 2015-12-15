@@ -8,6 +8,7 @@
 
 package core
 
+import core.serialization.OpaqueBytes
 import core.serialization.serialize
 import java.security.PublicKey
 
@@ -34,7 +35,7 @@ interface OwnableState : ContractState {
 }
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
-fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
+fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bits)
 
 /**
  * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
