@@ -40,10 +40,10 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256((serialize()))
  * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
  * defined the state and where in that transaction it was.
  */
-data class ContractStateRef(val txhash: SecureHash, val index: Int) 
+data class ContractStateRef(val txhash: SecureHash, val index: Int)
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
-data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef) 
+data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef)
 
 /** A [Party] is well known (name, pubkey) pair. In a real system this would probably be an X.509 certificate. */
 data class Party(val name: String, val owningKey: PublicKey)  {
@@ -62,7 +62,7 @@ data class PartyReference(val party: Party, val reference: OpaqueBytes) {
 }
 
 /** Marker interface for classes that represent commands */
-interface Command 
+interface Command
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
 abstract class TypeOnlyCommand : Command {
@@ -72,10 +72,10 @@ abstract class TypeOnlyCommand : Command {
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
 data class AuthenticatedObject<out T : Any>(
-        val signers: List<PublicKey>,
-        /** If any public keys were recognised, the looked up institutions are available here */
+    val signers: List<PublicKey>,
+    /** If any public keys were recognised, the looked up institutions are available here */
     val signingParties: List<Party>,
-        val value: T
+    val value: T
 )
 
 /**

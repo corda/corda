@@ -23,7 +23,7 @@ import java.time.Instant
  * A wallet (name may be temporary) wraps a set of states that are useful for us to keep track of, for instance,
  * because we own them. This class represents an immutable, stable state of a wallet: it is guaranteed not to
  * change out from underneath you, even though the canonical currently-best-known wallet may change as we learn
- * about new transactions from our peers and generate new transactiont that consume states ourselves.
+ * about new transactions from our peers and generate new transactions that consume states ourselves.
  */
 data class Wallet(val states: List<StateAndRef<OwnableState>>) {
     @Suppress("UNCHECKED_CAST")
@@ -101,5 +101,5 @@ interface ServiceHub {
     val identityService: IdentityService
     val timestampingService: TimestamperService
     val storageService: StorageService
-    val networkService: MessagingService   // TODO: Rename class to be consistent.
+    val networkService: MessagingService
 }

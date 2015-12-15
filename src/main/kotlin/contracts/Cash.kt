@@ -41,10 +41,11 @@ class Cash : Contract {
      * TODO:
      * 1) hash should be of the contents, not the URI
      * 2) allow the content to be specified at time of instance creation?
-     *  Motivation: it's the difference between a state object referencing a programRef, which references a
-     *  legalContractReference and a state object which directly references both.  The latter allows the legal wording
-     *  to evolve without requiring code changes. But creates a risk that users create objects governed by a program
-     *  that is inconsistent with the legal contract
+     *
+     * Motivation: it's the difference between a state object referencing a programRef, which references a
+     * legalContractReference and a state object which directly references both.  The latter allows the legal wording
+     * to evolve without requiring code changes. But creates a risk that users create objects governed by a program
+     * that is inconsistent with the legal contract
      */
     override val legalContractReference: SecureHash = SecureHash.sha256("https://www.big-book-of-banking-law.gov/cash-claims.html");
 

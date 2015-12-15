@@ -99,7 +99,6 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
     }
 }
 
-// Note: this will throw an exception if the iterable is empty.
 fun Iterable<Amount>.sumOrNull() = if (!iterator().hasNext()) null else sumOrThrow()
 fun Iterable<Amount>.sumOrThrow() = reduce { left, right -> left + right }
 fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) sumOrThrow() else Amount(0, currency)
