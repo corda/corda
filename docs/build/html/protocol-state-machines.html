@@ -263,8 +263,8 @@ run the buyer side of the protocol and one to run the seller side.</li>
 <li>Two of the classes are simply wrappers for parameters to the trade; things like what is being sold, what the price
 of the asset is, how much the buyer is willing to pay and so on. The <code class="docutils literal"><span class="pre">myKeyPair</span></code> field is simply the public key
 that the seller wishes the buyer to send the cash to. The session ID field is sent from buyer to seller when the
-trade is being set up and is just a big random number. It&#8217;s used to keep messages separated on the network, and stop
-malicious entities trying to interfere with the message stream.</li>
+trade is being set up and is used to keep messages separated on the network, and stop malicious entities trying to
+interfere with the message stream.</li>
 <li>The other two classes define empty abstract classes called <code class="docutils literal"><span class="pre">Buyer</span></code> and <code class="docutils literal"><span class="pre">Seller</span></code>. These inherit from a class
 called <code class="docutils literal"><span class="pre">ProtocolStateMachine</span></code> and provide two type parameters: the arguments class we just defined for each side
 and the type of the object that the protocol finally produces (this doesn&#8217;t have to be identical for each side, even
@@ -272,6 +272,11 @@ though in this case it is).</li>
 <li>Finally it simply defines a static method that creates an instance of an object that inherits from this base class
 and returns it, with a <code class="docutils literal"><span class="pre">StateMachineManager</span></code> as an instance. The Impl class will be defined below.</li>
 </ul>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Session IDs keep different traffic streams separated, so for security they must be large and random enough</p>
+</div>
+<p>to be unguessable. 63 bits is good enough.</p>
 <p>Alright, so using this protocol shouldn&#8217;t be too hard: in the simplest case we can just pass in the details of the trade
 to either runBuyer or runSeller, depending on who we are, and then call <code class="docutils literal"><span class="pre">.get()</span></code> on the resulting future to block the
 calling thread until the protocol has finished. Or we could register a callback on the returned future that will be
@@ -295,7 +300,6 @@ unit tests to see how it&#8217;s done.</p>
 <div class="highlight-kotlin"><div class="highlight"><pre>private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : TwoPartyTradeProtocol() {
     companion object {
         val TRADE_TOPIC = &quot;com.r3cev.protocols.trade&quot;
-        fun makeSessionID() = Math.abs(SecureRandom.getInstanceStrong().nextLong())
     }
 
     class SellerImpl : Seller() {
@@ -324,12 +328,7 @@ unit tests to see how it&#8217;s done.</p>
 </div>
 <p>We start with a skeleton on which we will build the protocol. Putting things in a <em>companion object</em> in Kotlin is like
 declaring them as static members in Java. Here, we define a &#8220;topic&#8221; that will identify trade related messages that
-arrive at a node (see <a class="reference internal" href="messaging.html"><em>Networking and messaging</em></a> for details), and a convenience function to pick a large random session ID.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">Session IDs keep different traffic streams separated, so for security they must be large and random enough
-to be unguessable. 63 bits is good enough.</p>
-</div>
+arrive at a node (see <a class="reference internal" href="messaging.html"><em>Networking and messaging</em></a> for details).</p>
 <p>The runSeller and runBuyer methods simply start the state machines, passing in a reference to the classes and the topics
 each side will use.</p>
 <p>Now let&#8217;s try implementing the seller side. Firstly, we&#8217;re going to need a message to send to the buyer describing what
@@ -351,7 +350,7 @@ the details that were agreed so we can double check them. It also contains a ses
 trade&#8217;s messages, and a pointer to where the asset that is being sold can be found on the ledger.</p>
 <p>Next we add some code to the <code class="docutils literal"><span class="pre">SellerImpl.call</span></code> method:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">val</span> <span class="py">sessionID</span> <span class="p">=</span> <span class="n">makeSessionID</span><span class="p">()</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">val</span> <span class="py">sessionID</span> <span class="p">=</span> <span class="n">random63BitValue</span><span class="p">()</span>
 
 <span class="c1">// Make the first message we&#39;ll send to kick off the protocol.</span>
 <span class="k">val</span> <span class="py">hello</span> <span class="p">=</span> <span class="n">SellerTradeInfo</span><span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">assetToSell</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">price</span><span class="p">,</span> <span class="n">args</span><span class="p">.</span><span class="n">myKeyPair</span><span class="p">.</span><span class="k">public</span><span class="p">,</span> <span class="n">sessionID</span><span class="p">)</span>
