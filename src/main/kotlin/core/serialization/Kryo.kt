@@ -12,8 +12,10 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import core.OpaqueBytes
+import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
+import java.util.*
 
 /**
  * Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
@@ -63,5 +65,7 @@ fun createKryo(): Kryo {
         // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no
         // no-arg constructor available.
         instantiatorStrategy = Kryo.DefaultInstantiatorStrategy(StdInstantiatorStrategy())
+
+        register(Arrays.asList( "" ).javaClass, ArraysAsListSerializer());
     }
 }

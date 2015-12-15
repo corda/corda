@@ -9,8 +9,14 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
+import com.google.common.util.concurrent.SettableFuture
+import org.slf4j.Logger
+import java.security.SecureRandom
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.Executor
 
 /** A simple class that wraps a byte array and makes the equals/hashCode/toString methods work as you actually expect */
 open class OpaqueBytes(val bits: ByteArray) {
@@ -38,3 +44,24 @@ val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
 val Int.minutes: Duration get() = Duration.ofMinutes(this.toLong())
 val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
+
+/**
+ * Returns a random positive long generated using a secure RNG. This function sacrifies a bit of entropy in order to
+ * avoid potential bugs where the value is used in a context where negative numbers are not expected.
+ */
+fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLong())
+
+fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: () -> Unit) {
+    addListener(Runnable { body() }, executor ?: MoreExecutors.directExecutor())
+}
+
+/** Executes the given block and sets the future to either the result, or any exception that was thrown. */
+fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): SettableFuture<T> {
+    try {
+        set(block())
+    } catch (e: Exception) {
+        logger?.error("Caught exception", e)
+        setException(e)
+    }
+    return this
+}

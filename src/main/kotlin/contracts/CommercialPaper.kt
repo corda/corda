@@ -38,13 +38,14 @@ class CommercialPaper : Contract {
 
     data class State(
             val issuance: PartyReference,
-            val owner: PublicKey,
+            override val owner: PublicKey,
             val faceValue: Amount,
             val maturityDate: Instant
-    ) : ContractState {
+    ) : OwnableState {
         override val programRef = CP_PROGRAM_ID
 
         fun withoutOwner() = copy(owner = NullPublicKey)
+        override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
     interface Commands : Command {

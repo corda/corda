@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Networking and messaging &mdash; R3 Prototyping 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Protocol state machines" href="protocol-state-machines.html"/>
+        <link rel="prev" title="Tutorial" href="tutorial.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Prototyping
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Networking and messaging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#messaging-vs-networking">Messaging vs networking</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#interfaces">Interfaces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#in-memory-implementation">In memory implementation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Prototyping</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Networking and messaging</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/messaging.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="networking-and-messaging">
+<h1>Networking and messaging<a class="headerlink" href="#networking-and-messaging" title="Permalink to this headline">¶</a></h1>
+<p>Although the platform does not currently provide a network backend, some preliminary interfaces are defined along with
+an in-memory implementation provided for use by unit tests and other exploratory code. An implementation based on Apache
+Kafka is also being developed, which should be sufficient for real use cases to be implemented in the short run, even
+though in the long run a fully peer to peer protocol will be required.</p>
+<p>This article quickly explains the basic networking interfaces in the code.</p>
+<div class="section" id="messaging-vs-networking">
+<h2>Messaging vs networking<a class="headerlink" href="#messaging-vs-networking" title="Permalink to this headline">¶</a></h2>
+<p>It is important to understand that the code expects any networking module to provide the following services:</p>
+<ul class="simple">
+<li>Persistent, reliable and secure delivery of complete messages. The module is expected to retry delivery if initial
+attempts fail.</li>
+<li>Ability to send messages both 1:1 and 1:many, where &#8216;many&#8217; may mean the entire group of network users.</li>
+</ul>
+<p>The details of how this is achieved are not exposed to the rest of the code.</p>
+</div>
+<div class="section" id="interfaces">
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline">¶</a></h2>
+<p>The most important interface is called <code class="docutils literal"><span class="pre">MessagingService</span></code> and is defined in the <code class="docutils literal"><span class="pre">core/messaging/Messaging.kt</span></code> file.
+It declares an interface with the following operations:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">addMessageHandler(topic:</span> <span class="pre">String,</span> <span class="pre">executor:</span> <span class="pre">Executor,</span> <span class="pre">callback:</span> <span class="pre">(Message,</span> <span class="pre">MessageHandlerRegistration)</span> <span class="pre">-&gt;</span> <span class="pre">Unit)</span></code></li>
+<li><code class="docutils literal"><span class="pre">createMessage(topic:</span> <span class="pre">String,</span> <span class="pre">data:</span> <span class="pre">ByteArray):</span> <span class="pre">Message</span></code></li>
+<li><code class="docutils literal"><span class="pre">send(message:</span> <span class="pre">Message,</span> <span class="pre">targetRecipients:</span> <span class="pre">MessageRecipients)</span></code></li>
+<li><code class="docutils literal"><span class="pre">stop()</span></code></li>
+</ul>
+<p>along with a few misc others that are not important enough to discuss here.</p>
+<p>A <em>topic</em> is simply a string that identifies the kind of message that is being sent. When a message is received, the
+topic is compared exactly to the list of registered message handlers and if it matches, the callback is invoked.
+Adding a handler returns a <code class="docutils literal"><span class="pre">MessageHandlerRegistration</span></code> object that can be used to remove the handler, and that
+registration object is also passed to each invocation to simplify the case where a handler wishes to remove itself.</p>
+<p>Some helper functions are also provided that simplify the process of sending a message by using Kryo serialisation, and
+registering one-shot handlers that remove themselves once they finished running, but those don&#8217;t need to be implemented
+by network module authors themselves.</p>
+<p>Destinations are represented using opaque classes (i.e. their contents are defined by the implementation). The
+<code class="docutils literal"><span class="pre">MessageRecipients</span></code> interface represents any possible set of recipients: it&#8217;s used when a piece of code doesn&#8217;t
+care who is going to get a message, just that someone does. The <code class="docutils literal"><span class="pre">SingleMessageRecipient</span></code> interface inherits from
+<code class="docutils literal"><span class="pre">MessageRecipients</span></code> and represents a handle to some specific individual receiver on the network. Whether they are
+identified by IP address, public key, message router ID or some other kind of address is not exposed at this level.
+<code class="docutils literal"><span class="pre">MessageRecipientGroup</span></code> is not used anywhere at the moment but represents multiple simultaneous recipients. And
+finally <code class="docutils literal"><span class="pre">AllPossibleRecipients</span></code> is used for network wide broadcast. It&#8217;s also unused right now, outside of unit tests.</p>
+</div>
+<div class="section" id="in-memory-implementation">
+<h2>In memory implementation<a class="headerlink" href="#in-memory-implementation" title="Permalink to this headline">¶</a></h2>
+<p>To ease unit testing of business logic, a simple in-memory messaging service is provided. To access this you can inherit
+your test case class from the <code class="docutils literal"><span class="pre">TestWithInMemoryNetwork</span></code> class. This provides a few utility methods to help test
+code that involves message passing.</p>
+<p>You can run a mock network session in one of two modes:</p>
+<ul class="simple">
+<li>Manually &#8220;pumped&#8221;</li>
+<li>Automatically pumped with background threads</li>
+</ul>
+<p>&#8220;Pumping&#8221; is the act of telling a mock network node to pop a message off its queue and process it. Typically you want
+unit tests to be fast, repeatable and you want to be able to insert your own changes into the middle of any given
+message sequence. This is what the manual mode is for. In this mode, all logic runs on the same thread (the thread
+running the unit tests). You can create and use a node like this:</p>
+<div class="codeset container">
+<div class="highlight-kotlin"><div class="highlight"><pre>val (aliceAddr, aliceNode) = makeNode(inBackground = false)
+val (bobAddr, bobNode) = makeNode(false)
+
+aliceNode.send(&quot;test.topic&quot;, aliceAddr, &quot;foo&quot;)
+bobNode.pump(blocking = false)
+</pre></div>
+</div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Currently only Kotlin examples are available for networking and protocol state machines. Java examples may
+follow later. Naming arguments in Kotlin like above is optional but sometimes useful to make code examples clearer.</p>
+</div>
+<p>The above code won&#8217;t actually do anything because no message handler is registered for &#8220;test.topic&#8221; so the message will
+go into a holding area. If/when we add a handler that can accept test.topic, the message will be delivered then.</p>
+<p>Sometimes you don&#8217;t want to have to call the pump method over and over again. You can use the <code class="docutils literal"><span class="pre">runNetwork</span> <span class="pre">{</span> <span class="pre">..</span> <span class="pre">}</span></code>
+construct to fix this: any code inside the block will be run, and then all nodes you created will be pumped over and
+over until all of them have reported that they have no work left to do. This means any ping-pongs of messages will
+be run until everything settles.</p>
+<p>You can see more examples of how to use this in the file <code class="docutils literal"><span class="pre">InMemoryMessagingTests.kt</span></code>.</p>
+<p>If you specify <code class="docutils literal"><span class="pre">inBackground</span> <span class="pre">=</span> <span class="pre">true</span></code> to <code class="docutils literal"><span class="pre">makeNode</span></code> then each node will create its own background thread which will
+sit around waiting for messages to be delivered. Handlers will then be invoked on that background thread. This is a
+more difficult style of programming that can be used to increase the realism of the unit tests by ensuring multiple
+nodes run in parallel, just as they would on a real network spread over multiple machines.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="protocol-state-machines.html" class="btn btn-neutral float-right" title="Protocol state machines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tutorial.html" class="btn btn-neutral" title="Tutorial" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

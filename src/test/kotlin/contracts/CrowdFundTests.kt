@@ -105,7 +105,7 @@ class CrowdFundTests {
             val ptx = CrowdFund().craftRegister(MINI_CORP.ref(123), 1000.DOLLARS, "crowd funding", TEST_TX_TIME + 7.days)
             ptx.signWith(MINI_CORP_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
         }
 
         // let's give Alice some funds that she can invest
@@ -123,7 +123,7 @@ class CrowdFundTests {
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
             // this verify passes - the transaction contains an output cash, necessary to verify the fund command
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
         }
 
         // Won't be validated.
@@ -137,7 +137,7 @@ class CrowdFundTests {
             CrowdFund().craftClose(ptx, pledgeTX.outRef(0), miniCorpWallet)
             ptx.signWith(MINI_CORP_KEY)
             val stx = ptx.toSignedTransaction()
-            return stx.verify().toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            return stx.verify().toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
         }
 
         val tooEarlyClose = makeFundedTX(TEST_TX_TIME + 6.days)

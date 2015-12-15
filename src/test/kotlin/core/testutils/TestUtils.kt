@@ -13,15 +13,19 @@ package core.testutils
 import com.google.common.io.BaseEncoding
 import contracts.*
 import core.*
+import core.messaging.MessagingService
 import core.visualiser.GraphVisualiser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.security.KeyPair
 import java.security.KeyPairGenerator
+import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import javax.annotation.concurrent.ThreadSafe
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
@@ -88,6 +92,53 @@ class DummyTimestamper(private val time: Instant = TEST_TX_TIME) : TimestamperSe
 }
 
 val DUMMY_TIMESTAMPER = DummyTimestamper()
+
+object MockIdentityService : IdentityService {
+    override fun partyFromKey(key: PublicKey): Party? = TEST_KEYS_TO_CORP_MAP[key]
+}
+
+class MockKeyManagementService(
+        override val keys: Map<PublicKey, PrivateKey>,
+        val nextKeys: MutableList<KeyPair> = arrayListOf(KeyPairGenerator.getInstance("EC").genKeyPair())
+) : KeyManagementService {
+    override fun freshKey() = nextKeys.removeAt(nextKeys.lastIndex)
+}
+
+class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {
+    override val currentWallet = Wallet(states)
+}
+
+@ThreadSafe
+class MockStorageService : StorageService {
+    private val mapOfMaps = HashMap<String, MutableMap<Any, Any>>()
+
+    @Synchronized
+    override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
+        return mapOfMaps.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
+    }
+}
+
+class MockServices(
+        val wallet: WalletService?,
+        val keyManagement: KeyManagementService?,
+        val net: MessagingService?,
+        val identity: IdentityService? = MockIdentityService,
+        val storage: StorageService? = MockStorageService(),
+        val timestamping: TimestamperService? = DUMMY_TIMESTAMPER
+) : ServiceHub {
+    override val walletService: WalletService
+        get() = wallet ?: throw UnsupportedOperationException()
+    override val keyManagementService: KeyManagementService
+        get() = keyManagement ?: throw UnsupportedOperationException()
+    override val identityService: IdentityService
+        get() = identity ?: throw UnsupportedOperationException()
+    override val timestampingService: TimestamperService
+        get() = timestamping ?: throw UnsupportedOperationException()
+    override val networkService: MessagingService
+        get() = net ?: throw UnsupportedOperationException()
+    override val storageService: StorageService
+        get() = storage ?: throw UnsupportedOperationException()
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -220,7 +271,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         private val inStates = ArrayList<ContractStateRef>()
 
         fun input(label: String) {
-            inStates.add(labelToRefs[label] ?: throw IllegalArgumentException("Unknown label \"$label\""))
+            inStates.add(label.outputRef)
         }
 
 
@@ -230,11 +281,14 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
          */
         fun toLedgerTransaction(time: Instant): LedgerTransaction {
             val wireCmds = commands.map { WireCommand(it.value, it.signers) }
-            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
         }
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
+    val String.outputRef: ContractStateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
+
+    fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
     private inner class InternalLedgerTransactionDSL : LedgerTransactionDSL() {
         fun finaliseAndInsertLabels(time: Instant): LedgerTransaction {
@@ -263,11 +317,12 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), outs, emptyList())
-            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, TEST_KEYS_TO_CORP_MAP, SecureHash.randomSHA256())
+            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
                 labelToRefs[label] = ContractStateRef(ltx.hash, index)
                 outputsToLabels[state.state] = label
+                labelToOutputs[label] = state.state as T
             }
             rootTxns.add(ltx)
         }

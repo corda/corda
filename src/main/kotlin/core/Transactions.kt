@@ -58,9 +58,9 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val commands: List<WireCommand>) {
     fun serializeForSignature(): ByteArray = serialize()
 
-    fun toLedgerTransaction(timestamp: Instant?, partyKeyMap: Map<PublicKey, Party>, originalHash: SecureHash): LedgerTransaction {
+    fun toLedgerTransaction(timestamp: Instant?, identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
-            val institutions = it.pubkeys.mapNotNull { pk -> partyKeyMap[pk] }
+            val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
             AuthenticatedObject(it.pubkeys, institutions, it.command)
         }
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, originalHash)
@@ -133,18 +133,6 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     fun commands(): List<WireCommand> = ArrayList(commands)
 }
 
-/**
- * Simple interface (for testing) to an abstract timestamping service, in the style of RFC 3161. Note that this is not
- * 'timestamping' in the block chain sense, but rather, implies a semi-trusted third party taking a reading of the
- * current time, typically from an atomic clock, and then digitally signing (current time, hash) to produce a timestamp
- * triple (signature, time, hash). The purpose of these timestamps is to locate a transaction in the timeline, which is
- * important in the absence of blocks. Here we model the timestamp as an opaque byte array.
- */
-interface TimestamperService {
-    fun timestamp(hash: SecureHash): ByteArray
-    fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
-}
-
 data class SignedWireTransaction(val txBits: OpaqueBytes, val sigs: List<DigitalSignature.WithKey>) {
     init {
         check(sigs.isNotEmpty())
@@ -203,11 +191,11 @@ data class TimestampedWireTransaction(
 ) {
     val transactionID: SecureHash = serialize().sha256()
 
-    fun verifyToLedgerTransaction(timestamper: TimestamperService, partyKeyMap: Map<PublicKey, Party>): LedgerTransaction {
+    fun verifyToLedgerTransaction(timestamper: TimestamperService, identityService: IdentityService): LedgerTransaction {
         val stx: SignedWireTransaction = signedWireTX.deserialize()
         val wtx: WireTransaction = stx.verify()
         val instant: Instant? = if (timestamp != null) timestamper.verifyTimestamp(signedWireTX.sha256(), timestamp.bits) else null
-        return wtx.toLedgerTransaction(instant, partyKeyMap, transactionID)
+        return wtx.toLedgerTransaction(instant, identityService, transactionID)
     }
 }
 
