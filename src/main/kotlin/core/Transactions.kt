@@ -68,14 +68,8 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
 class PartialTransaction(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
                          private val outputStates: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<WireCommand> = arrayListOf()) {
-
-    /**  A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    constructor(vararg items: Any) : this() {
-        addItems(*items)
-    }
-
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    public fun addItems(vararg items: Any) {
+    public fun withItems(vararg items: Any): PartialTransaction {
         for (t in items) {
             when (t) {
                 is ContractStateRef -> inputStates.add(t)
@@ -84,6 +78,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
         }
+        return this
     }
 
     /** The signatures that have been collected so far - might be incomplete! */

@@ -146,7 +146,7 @@ class CrowdFund : Contract {
     fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
         val state = State(campaign)
-        return PartialTransaction(state, WireCommand(Commands.Register(), owner.party.owningKey))
+        return PartialTransaction().withItems(state, WireCommand(Commands.Register(), owner.party.owningKey))
     }
 
     /**

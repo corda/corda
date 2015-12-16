@@ -30,7 +30,7 @@ class TransactionSerializationTests {
 
     @Before
     fun setup() {
-        tx = PartialTransaction(
+        tx = PartialTransaction().withItems(
             fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
@@ -76,7 +76,7 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = PartialTransaction(fakeStateRef, outputState, changeState,
+            val tx2 = PartialTransaction().withItems(fakeStateRef, outputState, changeState,
                     WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair2.public)))
             tx2.signWith(TestUtils.keypair2)
 

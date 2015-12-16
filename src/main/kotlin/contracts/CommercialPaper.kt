@@ -119,7 +119,7 @@ class CommercialPaper : Contract {
      */
     fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
-        return PartialTransaction(state, WireCommand(Commands.Issue(), issuance.party.owningKey))
+        return PartialTransaction().withItems(state, WireCommand(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
