@@ -116,7 +116,10 @@ public class JavaCommercialPaper implements Contract {
         // Find the command that instructs us what to do and check there's exactly one.
         AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
-        Instant time = tx.getTime();   // Can be null/missing.
+        TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
+        if (timestampCommand == null)
+            throw new IllegalArgumentException("must be timestamped");
+        Instant time = timestampCommand.getMidpoint();
 
         for (InOutGroup<State> group : groups) {
             List<State> inputs = group.getInputs();
@@ -138,8 +141,6 @@ public class JavaCommercialPaper implements Contract {
                     throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
             } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
                 Amount received = CashKt.sumCashOrNull(inputs);
-                if (time == null)
-                    throw new IllegalArgumentException("Redemption transactions must be timestamped");
                 if (received == null)
                     throw new IllegalStateException("Failed requirement: no cash being redeemed");
                 if (input.getMaturityDate().isAfter(time))

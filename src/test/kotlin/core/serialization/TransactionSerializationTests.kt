@@ -16,7 +16,6 @@ import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 class TransactionSerializationTests {
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
@@ -86,18 +85,14 @@ class TransactionSerializationTests {
 
     @Test
     fun timestamp() {
+        tx.setTime(TEST_TX_TIME, DUMMY_TIMESTAMPER.identity)
+        tx.timestamp(DUMMY_TIMESTAMPER)
         tx.signWith(TestUtils.keypair)
-        val ttx = tx.toSignedTransaction().toTimestampedTransactionWithoutTime()
-        val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
+        val stx = tx.toSignedTransaction()
+        val ltx = stx.verifyToLedgerTransaction(MockIdentityService)
         assertEquals(tx.commands().map { it.data }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inStateRefs)
         assertEquals(tx.outputStates(), ltx.outStates)
-        assertNull(ltx.time)
-
-        val ltx2: LedgerTransaction = tx.
-                toSignedTransaction().
-                toTimestampedTransaction(DUMMY_TIMESTAMPER).
-                verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
-        assertEquals(TEST_TX_TIME, ltx2.time)
+        assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_TIMESTAMPER.identity)!!.midpoint)
     }
 }

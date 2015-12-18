@@ -68,7 +68,7 @@ class CommercialPaper : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
-        val time = tx.time
+        val timestamp: TimestampCommand? = tx.getTimestampBy(DummyTimestampingAuthority.identity)
 
         for (group in groups) {
             when (command.value) {
@@ -83,7 +83,7 @@ class CommercialPaper : Contract {
                 is Commands.Redeem -> {
                     val input = group.inputs.single()
                     val received = tx.outStates.sumCashBy(input.owner)
-                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
+                    val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                     requireThat {
                         "the paper must have matured" by (time > input.maturityDate)
                         "the received amount equals the face value" by (received == input.faceValue)
@@ -94,7 +94,7 @@ class CommercialPaper : Contract {
 
                 is Commands.Issue -> {
                     val output = group.outputs.single()
-                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
+                    val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "the issuance is signed by the claimed issuer of the paper" by

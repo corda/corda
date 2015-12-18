@@ -79,7 +79,9 @@ class CrowdFund : Contract {
         val command = tx.commands.requireSingleCommand<CrowdFund.Commands>()
         val outputCrowdFund: CrowdFund.State = tx.outStates.filterIsInstance<CrowdFund.State>().single()
         val outputCash: List<Cash.State> = tx.outStates.filterIsInstance<Cash.State>()
-        val time = tx.time
+
+        val time = tx.getTimestampBy(DummyTimestampingAuthority.identity)?.midpoint
+        if (time == null) throw IllegalArgumentException("must be timestamped")
 
         when (command.value) {
             is Commands.Register -> {
@@ -89,7 +91,7 @@ class CrowdFund : Contract {
                     "the output registration is empty of pledges" by (outputCrowdFund.pledges.isEmpty())
                     "the output registration has a non-zero target" by (outputCrowdFund.campaign.target.pennies > 0)
                     "the output registration has a name" by (outputCrowdFund.campaign.name.isNotBlank())
-                    "the output registration has a closing time in the future" by (outputCrowdFund.campaign.closingTime > tx.time)
+                    "the output registration has a closing time in the future" by (time < outputCrowdFund.campaign.closingTime)
                     "the output registration has an open state" by (!outputCrowdFund.closed)
                 }
             }
@@ -97,7 +99,6 @@ class CrowdFund : Contract {
             is Commands.Pledge -> {
                 val inputCrowdFund: CrowdFund.State = tx.inStates.filterIsInstance<CrowdFund.State>().single()
                 val pledgedCash = outputCash.sumCashBy(inputCrowdFund.campaign.owner)
-                if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
                 requireThat {
                     "campaign details have not changed" by (inputCrowdFund.campaign == outputCrowdFund.campaign)
                     "the campaign is still open" by (inputCrowdFund.campaign.closingTime >= time)
@@ -116,8 +117,6 @@ class CrowdFund : Contract {
                     }
                     return true
                 }
-
-                if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
 
                 requireThat {
                     "campaign details have not changed" by (inputCrowdFund.campaign == outputCrowdFund.campaign)

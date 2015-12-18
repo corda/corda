@@ -49,7 +49,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the output in that transaction by index.
                 inputs.add(ltx.outStates[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outStates, tx.commands, tx.time, tx.hash))
+            resolved.add(TransactionForVerification(inputs, tx.outStates, tx.commands, tx.hash))
         }
 
         for (tx in resolved)

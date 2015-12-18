@@ -8,10 +8,13 @@
 
 package core
 
-import core.serialization.*
+import core.serialization.SerializedBytes
+import core.serialization.deserialize
+import core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
+import java.time.Duration
 import java.time.Instant
 import java.util.*
 
@@ -19,26 +22,23 @@ import java.util.*
  * Views of a transaction as it progresses through the pipeline, from bytes loaded from disk/network to the object
  * tree passed into a contract.
  *
- * TimestampedWireTransaction wraps a serialized SignedWireTransaction. The timestamp is a signature from a timestamping
- * authority and is what gives the contract a sense of time. This arrangement may change in future.
- *
  * SignedWireTransaction wraps a serialized WireTransaction. It contains one or more ECDSA signatures, each one from
  * a public key that is mentioned inside a transaction command.
  *
  * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
  * in various ways to calculate a *signature hash* (or sighash), this is the hash that is signed by the various involved
- * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of a
- * TimestampedWireTransaction i.e. the outermost serialised form with everything included.
+ * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of a SignedWireTransaction
+ * i.e. the outermost serialised form with everything included.
  *
  * A PartialTransaction is a transaction class that's mutable (unlike the others which are all immutable). It is
  * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
  * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
  * multiple parties.
  *
- * LedgerTransaction is derived from WireTransaction and TimestampedWireTransaction together. It is the result of
- * doing some basic key lookups on WireCommand to see if any keys are from a recognised party, thus converting
- * the WireCommand objects into AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party
- * map. In future it'd make more sense to use a certificate scheme and so that logic would get more complex.
+ * LedgerTransaction is derived from WireTransaction. It is the result of doing some basic key lookups on WireCommand
+ * to see if any keys are from a recognised party, thus converting the WireCommand objects into
+ * AuthenticatedObject<Command>. Currently we just assume a hard coded pubkey->party map. In future it'd make more
+ * sense to use a certificate scheme and so that logic would get more complex.
  *
  * All the above refer to inputs using a (txhash, output index) pair.
  *
@@ -50,19 +50,38 @@ import java.util.*
 data class WireTransaction(val inputStates: List<ContractStateRef>,
                            val outputStates: List<ContractState>,
                            val commands: List<Command>) {
-    fun toLedgerTransaction(timestamp: Instant?, identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
+    fun toLedgerTransaction(identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
             AuthenticatedObject(it.pubkeys, institutions, it.data)
         }
-        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, timestamp, originalHash)
+        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, originalHash)
     }
 }
+
+/**
+ * Thrown if an attempt is made to timestamp a transaction using a trusted timestamper, but the time on the transaction
+ * is too far in the past or future relative to the local clock and thus the timestamper would reject it.
+ */
+class TooLateException : Exception()
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
 class PartialTransaction(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
                          private val outputStates: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<Command> = arrayListOf()) {
+
+    val time: TimestampCommand? get() = commands.mapNotNull { it.data as? TimestampCommand }.singleOrNull()
+
+    /**
+     * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
+     * To get the right signature from the timestamping service, use the [timestamp] method.
+     */
+    fun setTime(time: Instant, authenticatedBy: Party) {
+        check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
+        commands.removeAll { it.data is TimestampCommand }
+        addCommand(TimestampCommand(time, 30.seconds), authenticatedBy.owningKey)
+    }
+
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
     public fun withItems(vararg items: Any): PartialTransaction {
         for (t in items) {
@@ -83,16 +102,45 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
         check(currentSigs.none { it.by == key.public }) { "This partial transaction was already signed by ${key.public}" }
         check(commands.count { it.pubkeys.contains(key.public) } > 0) { "Trying to sign with a key that isn't in any command" }
         val data = toWireTransaction().serialize()
-        currentSigs.add(key.private.signWithECDSA(data.bits, key.public))
+        currentSigs.add(key.signWithECDSA(data.bits))
     }
 
-    fun toWireTransaction() = WireTransaction(inputStates, outputStates, commands)
+    /**
+     * Uses the given timestamper service to request a signature over the WireTransaction be added. There must always be
+     * at least one such signature, but others may be added as well. You may want to have multiple redundant timestamps
+     * in the following cases:
+     *
+     * - Cross border contracts where local law says that only local timestamping authorities are acceptable.
+     * - Backup in case a TSA's signing key is compromised.
+     *
+     * The signature of the trusted timestamper merely asserts that the time field of this transaction is valid.
+     */
+    fun timestamp(timestamper: TimestamperService) {
+        // TODO: Once we switch to a more advanced bytecode rewriting framework, we can call into a real implementation.
+        check(timestamper.javaClass.simpleName == "DummyTimestamper")
+        val t = time ?: throw IllegalStateException("Timestamping requested but no time was inserted into the transaction")
+
+        // Obviously this is just a hard-coded dummy value for now.
+        val maxExpectedLatency = 5.seconds
+        if (Duration.between(Instant.now(), t.before) > maxExpectedLatency)
+            throw TooLateException()
+
+        // The timestamper may also throw TooLateException if our clocks are desynchronised or if we are right on the
+        // boundary of t.notAfter and network latency pushes us over the edge. By "synchronised" here we mean relative
+        // to GPS time i.e. the United States Naval Observatory.
+        val sig = timestamper.timestamp(toWireTransaction().serialize())
+        currentSigs.add(sig)
+    }
+
+    fun toWireTransaction() = WireTransaction(ArrayList(inputStates), ArrayList(outputStates), ArrayList(commands))
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedWireTransaction {
         if (checkSufficientSignatures) {
-            val requiredKeys = commands.flatMap { it.pubkeys }.toSet()
             val gotKeys = currentSigs.map { it.by }.toSet()
-            check(gotKeys == requiredKeys) { "The set of required signatures isn't equal to the signatures we've got" }
+            for (command in commands) {
+                if (!gotKeys.containsAll(command.pubkeys))
+                    throw IllegalStateException("Missing signatures on the transaction for a ${command.data.javaClass.canonicalName} command")
+            }
         }
         return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
@@ -153,43 +201,17 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
         // unverified.
         val cmdKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
-        if (cmdKeys != sigKeys)
-            throw SignatureException("Command keys don't match the signatures: $cmdKeys vs $sigKeys")
+        if (!sigKeys.containsAll(cmdKeys))
+            throw SignatureException("Missing signatures on the transaction for: ${cmdKeys - sigKeys}")
         return wtx
     }
 
-    /** Uses the given timestamper service to calculate a signed timestamp and then returns a wrapper for both */
-    fun toTimestampedTransaction(timestamper: TimestamperService): TimestampedWireTransaction {
-        val bits = serialize()
-        return TimestampedWireTransaction(bits, timestamper.timestamp(bits.sha256()).opaque())
-    }
-
-    /** Returns a [TimestampedWireTransaction] with an empty byte array as the timestamp: this means, no time was provided. */
-    fun toTimestampedTransactionWithoutTime() = TimestampedWireTransaction(serialize(), null)
-}
-
-/**
- * A TimestampedWireTransaction is the outermost, final form that a transaction takes. The hash of this structure is
- * how transactions are identified on the network and in the ledger.
- */
-data class TimestampedWireTransaction(
-    /** A serialised SignedWireTransaction */
-    val signedWireTXBytes: SerializedBytes<SignedWireTransaction>,
-
-    /** Signature from a timestamping authority. For instance using RFC 3161 */
-    val timestamp: OpaqueBytes?
-) {
-    val transactionID: SecureHash = serialize().sha256()
-
-    fun verifyToLedgerTransaction(timestamper: TimestamperService, identityService: IdentityService): LedgerTransaction {
-        val stx = signedWireTXBytes.deserialize()
-        val wtx: WireTransaction = stx.verify()
-        val instant: Instant? =
-                if (timestamp != null)
-                    timestamper.verifyTimestamp(signedWireTXBytes.sha256(), timestamp.bits)
-                else
-                    null
-        return wtx.toLedgerTransaction(instant, identityService, transactionID)
+    /**
+     * Calls [verify] to check all required signatures are present, and then uses the passed [IdentityService] to call
+     * [WireTransaction.toLedgerTransaction] to look up well known identities from pubkeys.
+     */
+    fun verifyToLedgerTransaction(identityService: IdentityService): LedgerTransaction {
+        return verify().toLedgerTransaction(identityService, txBits.bits.sha256())
     }
 }
 
@@ -205,11 +227,8 @@ data class LedgerTransaction(
     val outStates: List<ContractState>,
     /** Arbitrary data passed to the program of each input state. */
     val commands: List<AuthenticatedObject<CommandData>>,
-    /** The moment the transaction was timestamped for, if a timestamp was present. */
-    val time: Instant?,
     /** The hash of the original serialised TimestampedWireTransaction or SignedTransaction */
     val hash: SecureHash
-    // TODO: nLockTime equivalent?
 ) {
     @Suppress("UNCHECKED_CAST")
     fun <T : ContractState> outRef(index: Int) = StateAndRef(outStates[index] as T, ContractStateRef(hash, index))
@@ -222,11 +241,11 @@ data class LedgerTransaction(
     }
 }
 
+// TODO: Move class this into TransactionGroup.kt
 /** A transaction in fully resolved and sig-checked form, ready for passing as input to a verification function. */
 data class TransactionForVerification(val inStates: List<ContractState>,
                                       val outStates: List<ContractState>,
                                       val commands: List<AuthenticatedObject<CommandData>>,
-                                      val time: Instant?,
                                       val origHash: SecureHash) {
     override fun hashCode() = origHash.hashCode()
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
@@ -255,6 +274,9 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      */
 
     data class InOutGroup<T : ContractState>(val inputs: List<T>, val outputs: List<T>)
+
+    // A shortcut to make IDE auto-completion more intuitive for Java users.
+    fun getTimestampBy(timestampingAuthority: Party): TimestampCommand? = commands.getTimestampBy(timestampingAuthority)
 
     // For Java users.
     fun <T : ContractState> groupStates(ofType: Class<T>, selector: (T) -> Any): List<InOutGroup<T>> {

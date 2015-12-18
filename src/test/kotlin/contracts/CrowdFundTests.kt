@@ -34,6 +34,7 @@ class CrowdFundTests {
             transaction {
                 output { CF_1 }
                 arg(DUMMY_PUBKEY_1) { CrowdFund.Commands.Register() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "the transaction is signed by the owner of the crowdsourcing")
@@ -46,6 +47,7 @@ class CrowdFundTests {
             transaction {
                 output { CF_1.copy(campaign = CF_1.campaign.copy(closingTime = TEST_TX_TIME - 1.days)) }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "the output registration has a closing time in the future")
@@ -67,6 +69,7 @@ class CrowdFundTests {
             transaction {
                 output("funding opportunity") { CF_1 }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Register() }
+                timestamp(TEST_TX_TIME)
             }
 
             // 2. Place a pledge
@@ -81,19 +84,21 @@ class CrowdFundTests {
                 output { 1000.DOLLARS.CASH `owned by` MINI_CORP_PUBKEY }
                 arg(ALICE) { Cash.Commands.Move() }
                 arg(ALICE) { CrowdFund.Commands.Pledge() }
+                timestamp(TEST_TX_TIME)
             }
 
             // 3. Close the opportunity, assuming the target has been met
-            transaction(time = TEST_TX_TIME + 8.days) {
+            transaction {
                 input ("pledged opportunity")
                 output ("funded and closed") { "pledged opportunity".output.copy(closed = true) }
                 arg(MINI_CORP_PUBKEY) { CrowdFund.Commands.Close() }
+                timestamp(time = TEST_TX_TIME + 8.days)
             }
         }
     }
 
     fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), TEST_TX_TIME, SecureHash.randomSHA256())
+        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
         return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, ContractStateRef(ltx.hash, index)) })
     }
 
@@ -102,10 +107,13 @@ class CrowdFundTests {
         // MiniCorp registers a crowdfunding of $1,000, to close in 7 days.
         val registerTX: LedgerTransaction = run {
             // craftRegister returns a partial transaction
-            val ptx = CrowdFund().craftRegister(MINI_CORP.ref(123), 1000.DOLLARS, "crowd funding", TEST_TX_TIME + 7.days)
-            ptx.signWith(MINI_CORP_KEY)
+            val ptx = CrowdFund().craftRegister(MINI_CORP.ref(123), 1000.DOLLARS, "crowd funding", TEST_TX_TIME + 7.days).apply {
+                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity)
+                signWith(MINI_CORP_KEY)
+                timestamp(DUMMY_TIMESTAMPER)
+            }
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
+            stx.verifyToLedgerTransaction(MockIdentityService)
         }
 
         // let's give Alice some funds that she can invest
@@ -120,10 +128,12 @@ class CrowdFundTests {
             val ptx = PartialTransaction()
             CrowdFund().craftPledge(ptx, registerTX.outRef(0), ALICE)
             Cash().craftSpend(ptx, 1000.DOLLARS, MINI_CORP_PUBKEY, aliceWallet)
+            ptx.setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity)
             ptx.signWith(ALICE_KEY)
+            ptx.timestamp(DUMMY_TIMESTAMPER)
             val stx = ptx.toSignedTransaction()
             // this verify passes - the transaction contains an output cash, necessary to verify the fund command
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
+            stx.verifyToLedgerTransaction(MockIdentityService)
         }
 
         // Won't be validated.
@@ -134,10 +144,12 @@ class CrowdFundTests {
         // MiniCorp closes their campaign.
         fun makeFundedTX(time: Instant): LedgerTransaction  {
             val ptx = PartialTransaction()
+            ptx.setTime(time, DUMMY_TIMESTAMPER.identity)
             CrowdFund().craftClose(ptx, pledgeTX.outRef(0), miniCorpWallet)
             ptx.signWith(MINI_CORP_KEY)
+            ptx.timestamp(DUMMY_TIMESTAMPER)
             val stx = ptx.toSignedTransaction()
-            return stx.verify().toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
+            return stx.verifyToLedgerTransaction(MockIdentityService)
         }
 
         val tooEarlyClose = makeFundedTX(TEST_TX_TIME + 6.days)
@@ -150,7 +162,5 @@ class CrowdFundTests {
 
         // This verification passes
         TransactionGroup(setOf(registerTX, pledgeTX, validClose), setOf(aliceWalletTX)).verify(TEST_PROGRAM_MAP)
-
     }
-
 }

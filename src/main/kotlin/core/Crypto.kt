@@ -60,7 +60,6 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
     }
 
     class LegallyIdentifiable(val signer: Party, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)
-
 }
 
 object NullPublicKey : PublicKey, Comparable<PublicKey> {
@@ -90,8 +89,16 @@ fun PrivateKey.signWithECDSA(bits: ByteArray): DigitalSignature {
     return DigitalSignature(sig)
 }
 
-fun PrivateKey.signWithECDSA(bits: ByteArray, publicKey: PublicKey) = DigitalSignature.WithKey(publicKey, signWithECDSA(bits).bits)
-fun KeyPair.signWithECDSA(bits: ByteArray) = private.signWithECDSA(bits, public)
+fun PrivateKey.signWithECDSA(bitsToSign: ByteArray, publicKey: PublicKey): DigitalSignature.WithKey {
+    return DigitalSignature.WithKey(publicKey, signWithECDSA(bitsToSign).bits)
+}
+fun KeyPair.signWithECDSA(bitsToSign: ByteArray) = private.signWithECDSA(bitsToSign, public)
+fun KeyPair.signWithECDSA(bitsToSign: OpaqueBytes) = private.signWithECDSA(bitsToSign.bits, public)
+fun KeyPair.signWithECDSA(bitsToSign: ByteArray, party: Party): DigitalSignature.LegallyIdentifiable {
+    check(public == party.owningKey)
+    val sig = signWithECDSA(bitsToSign)
+    return DigitalSignature.LegallyIdentifiable(party, sig.bits, 0)
+}
 
 /** Utility to simplify the act of verifying a signature */
 fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {

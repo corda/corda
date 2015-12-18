@@ -11,6 +11,8 @@ package core
 import core.serialization.OpaqueBytes
 import core.serialization.serialize
 import java.security.PublicKey
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
@@ -83,6 +85,23 @@ data class AuthenticatedObject<out T : Any>(
     val signingParties: List<Party>,
     val value: T
 )
+
+/**
+ * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
+ * public keys are identified in the containing [Command] object.
+ */
+data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData {
+    init {
+        if (after == null && before == null)
+            throw IllegalArgumentException("At least one of before/after must be specified")
+        if (after != null && before != null)
+            check(after <= before)
+    }
+
+    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
+
+    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+}
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
