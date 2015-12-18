@@ -110,7 +110,7 @@ class CashTests {
         assertEquals(100.DOLLARS, s.amount)
         assertEquals(MINI_CORP, s.deposit.party)
         assertEquals(DUMMY_PUBKEY_1, s.owner)
-        assertTrue(ptx.commands()[0].command is Cash.Commands.Issue)
+        assertTrue(ptx.commands()[0].data is Cash.Commands.Issue)
         assertEquals(MINI_CORP_PUBKEY, ptx.commands()[0].pubkeys[0])
     }
 

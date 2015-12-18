@@ -53,12 +53,12 @@ class CommercialPaper : Contract {
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
-    interface Commands : Command {
-        class Move : TypeOnlyCommand(), Commands
-        class Redeem : TypeOnlyCommand(), Commands
+    interface Commands : CommandData {
+        class Move : TypeOnlyCommandData(), Commands
+        class Redeem : TypeOnlyCommandData(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        class Issue : TypeOnlyCommand(), Commands
+        class Issue : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -119,7 +119,7 @@ class CommercialPaper : Contract {
      */
     fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
-        return PartialTransaction().withItems(state, WireCommand(Commands.Issue(), issuance.party.owningKey))
+        return PartialTransaction().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
@@ -128,7 +128,7 @@ class CommercialPaper : Contract {
     fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper.ref)
         tx.addOutputState(paper.state.copy(owner = newOwner))
-        tx.addArg(WireCommand(Commands.Move(), paper.state.owner))
+        tx.addCommand(Commands.Move(), paper.state.owner)
     }
 
     /**
@@ -143,7 +143,7 @@ class CommercialPaper : Contract {
         // Add the cash movement using the states in our wallet.
         Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
         tx.addInputState(paper.ref)
-        tx.addArg(WireCommand(CommercialPaper.Commands.Redeem(), paper.state.owner))
+        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.owner)
     }
 }
 

@@ -106,17 +106,17 @@ fun Iterable<Amount>.sumOrZero(currency: Currency) = if (iterator().hasNext()) s
 //// Authenticated commands ///////////////////////////////////////////////////////////////////////////////////////////
 
 /** Filters the command list by type, party and public key all at once. */
-inline fun <reified T : Command> List<AuthenticatedObject<Command>>.select(signer: PublicKey? = null, party: Party? = null) =
+inline fun <reified T : CommandData> List<AuthenticatedObject<CommandData>>.select(signer: PublicKey? = null, party: Party? = null) =
         filter { it.value is T }.
         filter { if (signer == null) true else it.signers.contains(signer) }.
         filter { if (party == null) true else it.signingParties.contains(party) }.
         map { AuthenticatedObject<T>(it.signers, it.signingParties, it.value as T) }
 
-inline fun <reified T : Command> List<AuthenticatedObject<Command>>.requireSingleCommand() = try {
+inline fun <reified T : CommandData> List<AuthenticatedObject<CommandData>>.requireSingleCommand() = try {
     select<T>().single()
 } catch (e: NoSuchElementException) {
     throw IllegalStateException("Required ${T::class.qualifiedName} command")   // Better error message.
 }
 
 // For Java
-fun List<AuthenticatedObject<Command>>.requireSingleCommand(klass: Class<out Command>) = filter { klass.isInstance(it) }.single()
+fun List<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<out CommandData>) = filter { klass.isInstance(it) }.single()

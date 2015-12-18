@@ -66,8 +66,8 @@ class Cash : Contract {
     }
 
     // Just for grouping
-    interface Commands : Command {
-        class Move() : TypeOnlyCommand(), Commands
+    interface Commands : CommandData {
+        class Move() : TypeOnlyCommandData(), Commands
 
         /**
          * Allows new cash states to be issued into existence: the nonce ("number used once") ensures the transaction
@@ -155,7 +155,7 @@ class Cash : Contract {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
         tx.addOutputState(Cash.State(at, amount, owner))
-        tx.addArg(WireCommand(Cash.Commands.Issue(), listOf(at.party.owningKey)))
+        tx.addCommand(Cash.Commands.Issue(), at.party.owningKey)
     }
 
     /**
@@ -233,7 +233,7 @@ class Cash : Contract {
         for (state in outputs) tx.addOutputState(state)
         // What if we already have a move command with the right keys? Filter it out here or in platform code?
         val keysList = keysUsed.toList()
-        tx.addArg(WireCommand(Commands.Move(), keysList))
+        tx.addCommand(Commands.Move(), keysList)
         return keysList
     }
 }

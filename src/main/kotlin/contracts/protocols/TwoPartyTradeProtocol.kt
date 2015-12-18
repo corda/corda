@@ -167,7 +167,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
             val freshKey = serviceHub.keyManagementService.freshKey()
             val (command, state) = tradeRequest.assetForSale.state.withNewOwner(freshKey.public)
             ptx.addOutputState(state)
-            ptx.addArg(WireCommand(command, tradeRequest.assetForSale.state.owner))
+            ptx.addCommand(command, tradeRequest.assetForSale.state.owner)
 
             // Now sign the transaction with whatever keys we need to move the cash.
             for (k in cashSigningPubKeys) {

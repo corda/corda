@@ -91,7 +91,7 @@ public class JavaCommercialPaper implements Contract {
         }
     }
 
-    public static class Commands implements core.Command {
+    public static class Commands implements core.CommandData {
         public static class Move extends Commands {
             @Override
             public boolean equals(Object obj) {
@@ -114,7 +114,7 @@ public class JavaCommercialPaper implements Contract {
         List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
 
         // Find the command that instructs us what to do and check there's exactly one.
-        AuthenticatedObject<Command> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
+        AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
         Instant time = tx.getTime();   // Can be null/missing.
 

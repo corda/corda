@@ -8,7 +8,7 @@
 
 package core.visualiser
 
-import core.Command
+import core.CommandData
 import core.ContractState
 import core.SecureHash
 import core.testutils.TransactionGroupDSL
@@ -67,7 +67,7 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
         return dsl.labelForState(state) ?: stateToTypeName(state)
     }
 
-    private fun commandToTypeName(state: Command) = state.javaClass.canonicalName.removePrefix("contracts.").replace('$', '.')
+    private fun commandToTypeName(state: CommandData) = state.javaClass.canonicalName.removePrefix("contracts.").replace('$', '.')
     private fun stateToTypeName(state: ContractState) = state.javaClass.canonicalName.removePrefix("contracts.").removeSuffix(".State")
     private fun stateToCSSClass(state: ContractState) = stateToTypeName(state).replace('.', '_').toLowerCase()
 

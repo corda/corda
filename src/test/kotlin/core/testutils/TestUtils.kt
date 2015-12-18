@@ -176,13 +176,17 @@ infix fun ContractState.label(label: String) = LabeledOutput(label, this)
 
 abstract class AbstractTransactionForTest {
     protected val outStates = ArrayList<LabeledOutput>()
-    protected val commands  = ArrayList<AuthenticatedObject<Command>>()
+    protected val commands  = ArrayList<Command>()
 
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
 
-    fun arg(vararg key: PublicKey, c: () -> Command) {
+    protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
+        return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, it.data) }
+    }
+
+    fun arg(vararg key: PublicKey, c: () -> CommandData) {
         val keys = listOf(*key)
-        commands.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
+        commands.add(Command(c(), keys))
     }
 
     // Forbid patterns like:  transaction { ... transaction { ... } }
@@ -196,7 +200,8 @@ open class TransactionForTest : AbstractTransactionForTest() {
     fun input(s: () -> ContractState) = inStates.add(s())
 
     protected fun run(time: Instant) {
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, commands, time, SecureHash.randomSHA256())
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, commandsToAuthenticatedObjects(),
+                time, SecureHash.randomSHA256())
         tx.verify(TEST_PROGRAM_MAP)
     }
 
@@ -280,8 +285,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
          * hash (i.e. pretend it was signed)
          */
         fun toLedgerTransaction(time: Instant): LedgerTransaction {
-            val wireCmds = commands.map { WireCommand(it.value, it.signers) }
-            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
+            val wtx = WireTransaction(inStates, outStates.map { it.state }, commands)
+            return wtx.toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
         }
     }
 

@@ -31,7 +31,7 @@ interface OwnableState : ContractState {
     val owner: PublicKey
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: PublicKey): Pair<Command, OwnableState>
+    fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
 }
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
@@ -63,12 +63,17 @@ data class PartyReference(val party: Party, val reference: OpaqueBytes) {
 }
 
 /** Marker interface for classes that represent commands */
-interface Command
+interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
-abstract class TypeOnlyCommand : Command {
+abstract class TypeOnlyCommandData : CommandData {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()
+}
+
+/** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
+data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
+    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */

@@ -31,7 +31,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = PartialTransaction().withItems(
-            fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
+            fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
 
@@ -77,7 +77,7 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = PartialTransaction().withItems(fakeStateRef, outputState, changeState,
-                    WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair2.public)))
+                    Command(Cash.Commands.Move(), TestUtils.keypair2.public))
             tx2.signWith(TestUtils.keypair2)
 
             signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
@@ -89,7 +89,7 @@ class TransactionSerializationTests {
         tx.signWith(TestUtils.keypair)
         val ttx = tx.toSignedTransaction().toTimestampedTransactionWithoutTime()
         val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
-        assertEquals(tx.commands().map { it.command }, ltx.commands.map { it.value })
+        assertEquals(tx.commands().map { it.data }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inStateRefs)
         assertEquals(tx.outputStates(), ltx.outStates)
         assertNull(ltx.time)

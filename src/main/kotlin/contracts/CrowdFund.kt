@@ -66,10 +66,10 @@ class CrowdFund : Contract {
     )
 
 
-    interface Commands : Command {
-        class Register : TypeOnlyCommand(), Commands
-        class Pledge : TypeOnlyCommand(), Commands
-        class Close : TypeOnlyCommand(), Commands
+    interface Commands : CommandData {
+        class Register : TypeOnlyCommandData(), Commands
+        class Pledge : TypeOnlyCommandData(), Commands
+        class Close : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -146,7 +146,7 @@ class CrowdFund : Contract {
     fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
         val state = State(campaign)
-        return PartialTransaction().withItems(state, WireCommand(Commands.Register(), owner.party.owningKey))
+        return PartialTransaction().withItems(state, Command(Commands.Register(), owner.party.owningKey))
     }
 
     /**
@@ -157,13 +157,13 @@ class CrowdFund : Contract {
         tx.addOutputState(campaign.state.copy(
                 pledges = campaign.state.pledges + CrowdFund.Pledge(subscriber, 1000.DOLLARS)
         ))
-        tx.addArg(WireCommand(Commands.Pledge(), subscriber))
+        tx.addCommand(Commands.Pledge(), subscriber)
     }
 
     fun craftClose(tx: PartialTransaction, campaign: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(closed = true))
-        tx.addArg(WireCommand(Commands.Close(), campaign.state.campaign.owner))
+        tx.addCommand(Commands.Close(), campaign.state.campaign.owner)
         // If campaign target has not been met, compose cash returns
         if (campaign.state.pledgedAmount < campaign.state.campaign.target) {
             for (pledge in campaign.state.pledges) {
