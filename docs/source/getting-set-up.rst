@@ -7,12 +7,12 @@ Then install IntelliJ version 15 community edition:
 
    https://www.jetbrains.com/idea/download/
 
-Upgrade the Kotlin plugin to the latest version (1.0-beta-2423) by clicking "Configure > Plugins" in the opening screen,
+Upgrade the Kotlin plugin to the latest version (1.0-beta-3595) by clicking "Configure > Plugins" in the opening screen,
 then clicking "Install JetBrains plugin", then searching for Kotlin, then hitting "Upgrade" and then "Restart".
 
 Choose "Check out from version control" and use this git URL
 
-     https://your_username@bitbucket.org/R3-CEV/playground.git
+     https://your_username@bitbucket.org/R3-CEV/r3repository.git
 
 Agree to the defaults for importing a Gradle project. Wait for it to think and download the dependencies.
 
