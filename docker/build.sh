@@ -38,4 +38,4 @@ fi
 
 DIR=$(cd $(dirname "$0") && cd .. && pwd)
 
-docker run --rm -i -t -v "${DIR}":/var/avian ${THE_USER} "${CONTAINER}" "${@}"
+docker run --rm -i -t -v "${DIR}":/var/src/avian ${THE_USER} "${CONTAINER}" "${@}"
