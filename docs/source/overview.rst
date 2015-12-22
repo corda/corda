@@ -18,7 +18,7 @@ are created and destroyed by digitally signed **transactions**. Each transaction
 consume/destroy, these are called **inputs**, and contains a set of new states that it will create, these are called
 **outputs**.
 
-States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
+States contain arbitrary data, but they always contain at minimum a hash of the bytecode of a
 **code contract**, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
 contracts (or just "contracts" in the rest of this document) are globally shared pieces of business logic. Contracts
 define a **verify function**, which is a pure function given the entire transaction as input.
@@ -26,26 +26,21 @@ define a **verify function**, which is a pure function given the entire transact
 To be considered valid, the transaction must be **accepted** by the verify function of every contract pointed to by the
 input and output states. Beyond inputs and outputs, transactions may also contain **commands**, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
-arguments to the verify function.
+arguments to the verify function. Each command has a list of **public keys** associated with it. The platform ensures
+that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
+may be random/identityless for privacy, or linked to a well known legal identity via a *public key infrastructure* (PKI).
 
 Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it's up to the
 contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
 maximise flexibility for the contract developer.
 
-A transaction has one or more **signatures** attached to it. The signatures do not mean anything by themselves, rather,
-their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
-Signatures may be from an arbitrary, random **public key** that has no identity attached. A public key may be
-well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by a
-**party**, which is defined (for now) as being merely a (public key, name) pair.
-
-A transaction may also be **timestamped**. A timestamp is a (hash, datetime, signature) triple from a
-*timestamping authority* (TSA). The notion of a TSA is not ledger specific and is defined by
-`IETF RFC 3161 <https://www.ietf.org/rfc/rfc3161.txt>`_ which defines the internet standard Timestamping Protocol (TSP).
-The purpose of the TSA is to attach a single, globally agreed upon time which a contract may use to enforce certain
-types of time-based logic. The TSA's do not need to know about the contents of the transaction in order to provide a
-timestamp, and they are therefore never exposed to private data.
-
-.. note:: In the current code, use of TSAs is not implemented.
+Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
+prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
+facts are called **oracles** and they provide facts to the ledger by signing transactions that contain commands they
+recognise. The commands contain the fact and the signature shows agreement to that fact. Time is also modelled as
+a fact, with the signature of a special kind of oracle called a **timestamping authority** (TSA). A TSA signs
+a transaction if a pre-defined timestamping command in it defines a after/before time window that includes "true
+time" (i.e. GPS time as calibrated to the US Naval Observatory).
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
