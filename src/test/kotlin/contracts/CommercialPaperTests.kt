@@ -149,7 +149,7 @@ class CommercialPaperTests {
 
         // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
-            val ptx = PartialTransaction()
+            val ptx = TransactionBuilder()
             Cash().craftSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
             CommercialPaper().craftMove(ptx, issueTX.outRef(0), ALICE)
             ptx.signWith(MINI_CORP_KEY)
@@ -165,7 +165,7 @@ class CommercialPaperTests {
         )
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
-            val ptx = PartialTransaction()
+            val ptx = TransactionBuilder()
             ptx.setTime(time, DummyTimestampingAuthority.identity, 30.seconds)
             CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)

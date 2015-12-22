@@ -103,7 +103,7 @@ class CashTests {
             this.accepts()
         }
 
-        val ptx = PartialTransaction()
+        val ptx = TransactionBuilder()
         Cash().craftIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12,34), owner = DUMMY_PUBKEY_1)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
@@ -312,7 +312,7 @@ class CashTests {
     )
 
     fun makeSpend(amount: Amount, dest: PublicKey): WireTransaction {
-        val tx = PartialTransaction()
+        val tx = TransactionBuilder()
         Cash().craftSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
     }
@@ -327,7 +327,7 @@ class CashTests {
 
     @Test
     fun craftSimpleSpendWithParties() {
-        val tx = PartialTransaction()
+        val tx = TransactionBuilder()
         Cash().craftSpend(tx, 80.DOLLARS, ALICE, WALLET, setOf(MINI_CORP))
         assertEquals(WALLET[2].ref, tx.inputStates()[0])
     }

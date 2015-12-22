@@ -31,7 +31,7 @@ import java.util.*
  * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of a SignedWireTransaction
  * i.e. the outermost serialised form with everything included.
  *
- * A PartialTransaction is a transaction class that's mutable (unlike the others which are all immutable). It is
+ * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
  * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
  * Then once the states and commands are right, this class can be used as a holding bucket to gather signatures from
  * multiple parties.
@@ -67,7 +67,7 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
 class NotOnTimeException : Exception()
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
-class PartialTransaction(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
+class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
                          private val outputStates: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<Command> = arrayListOf()) {
 
@@ -92,7 +92,7 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
     }
 
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
-    public fun withItems(vararg items: Any): PartialTransaction {
+    public fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
                 is ContractStateRef -> inputStates.add(t)

@@ -662,19 +662,19 @@ a method to wrap up the issuance process:
 
    .. sourcecode:: kotlin
 
-      fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
+      fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
           val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
-          return PartialTransaction(state, WireCommand(Commands.Issue, issuance.party.owningKey))
+          return TransactionBuilder(state, WireCommand(Commands.Issue, issuance.party.owningKey))
       }
 
 We take a reference that points to the issuing party (i.e. the caller) and which can contain any internal
 bookkeeping/reference numbers that we may require. Then the face value of the paper, and the maturity date. It
-returns a ``PartialTransaction``. A ``PartialTransaction`` is one of the few mutable classes the platform provides.
+returns a ``TransactionBuilder``. A ``TransactionBuilder`` is one of the few mutable classes the platform provides.
 It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
 multiple contracts.
 
 .. note:: Crafting methods should ideally be written to compose with each other, that is, they should take a
-   ``PartialTransaction`` as an argument instead of returning one, unless you are sure it doesn't make sense to
+   ``TransactionBuilder`` as an argument instead of returning one, unless you are sure it doesn't make sense to
    combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
    would just introduce complexity that isn't likely to be worth it, so we return a fresh object each time: instead,
    an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.
@@ -687,7 +687,7 @@ The returned partial transaction has a ``WireCommand`` object as a parameter. Th
 that implements the ``Command`` interface, along with a key that is expected to sign this transaction. In this case,
 issuance requires that the issuing party sign, so we put the key of the party there.
 
-The ``PartialTransaction`` constructor we used above takes a variable argument list for convenience. You can pass in
+The ``TransactionBuilder`` constructor we used above takes a variable argument list for convenience. You can pass in
 any ``ContractStateRef`` (input), ``ContractState`` (output) or ``Command`` objects and it'll build up the transaction
 for you.
 
@@ -697,13 +697,13 @@ What about moving the paper, i.e. reassigning ownership to someone else?
 
    .. sourcecode:: kotlin
 
-      fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
+      fun craftMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
           tx.addInputState(paper.ref)
           tx.addOutputState(paper.state.copy(owner = newOwner))
           tx.addArg(WireCommand(Commands.Move, paper.state.owner))
       }
 
-Here, the method takes a pre-existing ``PartialTransaction`` and adds to it. This is correct because typically
+Here, the method takes a pre-existing ``TransactionBuilder`` and adds to it. This is correct because typically
 you will want to combine a sale of CP atomically with the movement of some other asset, such as cash. So both
 craft methods should operate on the same transaction. You can see an example of this being done in the unit tests
 for the commercial paper contract.
@@ -719,7 +719,7 @@ Finally, we can do redemption.
    .. sourcecode:: kotlin
 
       @Throws(InsufficientBalanceException::class)
-      fun craftRedeem(tx: PartialTransaction, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+      fun craftRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
           // Add the cash movement using the states in our wallet.
           Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
           tx.addInputState(paper.ref)
@@ -740,10 +740,10 @@ an exception is thrown. And then we add the paper itself as an input, but, not a
 from the ledger permanently). Finally, we add a Redeem command that should be signed by the owner of the commercial
 paper.
 
-A ``PartialTransaction`` is not by itself ready to be used anywhere, so first, we must convert it to something that
+A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, we must convert it to something that
 is recognised by the network. The most important next step is for the participating entities to sign it using the
 ``signWith()`` method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
-signature inside the ``PartialTransaction``. Once all parties have signed, you can call ``PartialTransaction.toSignedTransaction()``
+signature inside the ``TransactionBuilder``. Once all parties have signed, you can call ``TransactionBuilder.toSignedTransaction()``
 to get a ``SignedWireTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*.
 
 .. note:: Timestamping and passing around of partial transactions for group signing is not yet fully implemented.

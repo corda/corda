@@ -25,11 +25,11 @@ class TransactionSerializationTests {
     val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
 
     val fakeStateRef = ContractStateRef(SecureHash.sha256("fake tx id"), 0)
-    lateinit var tx: PartialTransaction
+    lateinit var tx: TransactionBuilder
 
     @Before
     fun setup() {
-        tx = PartialTransaction().withItems(
+        tx = TransactionBuilder().withItems(
             fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
@@ -75,7 +75,7 @@ class TransactionSerializationTests {
 
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
-            val tx2 = PartialTransaction().withItems(fakeStateRef, outputState, changeState,
+            val tx2 = TransactionBuilder().withItems(fakeStateRef, outputState, changeState,
                     Command(Cash.Commands.Move(), TestUtils.keypair2.public))
             tx2.signWith(TestUtils.keypair2)
 

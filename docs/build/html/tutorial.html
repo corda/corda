@@ -741,22 +741,22 @@ like a module), the basic concept is the same: preparation of a transaction usin
 <p>For our commercial paper contract however, the things that can be done with it are quite simple. Let&#8217;s start with
 a method to wrap up the issuance process:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">PartialTransaction</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftIssue</span><span class="p">(</span><span class="n">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">:</span> <span class="n">Instant</span><span class="p">):</span> <span class="n">TransactionBuilder</span> <span class="p">{</span>
     <span class="k">val</span> <span class="py">state</span> <span class="p">=</span> <span class="n">State</span><span class="p">(</span><span class="n">issuance</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">,</span> <span class="n">faceValue</span><span class="p">,</span> <span class="n">maturityDate</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">PartialTransaction</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">TransactionBuilder</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Issue</span><span class="p">,</span> <span class="n">issuance</span><span class="p">.</span><span class="n">party</span><span class="p">.</span><span class="n">owningKey</span><span class="p">))</span>
 <span class="p">}</span>
 </pre></div>
 </div>
 </div>
 <p>We take a reference that points to the issuing party (i.e. the caller) and which can contain any internal
 bookkeeping/reference numbers that we may require. Then the face value of the paper, and the maturity date. It
-returns a <code class="docutils literal"><span class="pre">PartialTransaction</span></code>. A <code class="docutils literal"><span class="pre">PartialTransaction</span></code> is one of the few mutable classes the platform provides.
+returns a <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>. A <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> is one of the few mutable classes the platform provides.
 It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
 multiple contracts.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>
 <p class="last">Crafting methods should ideally be written to compose with each other, that is, they should take a
-<code class="docutils literal"><span class="pre">PartialTransaction</span></code> as an argument instead of returning one, unless you are sure it doesn&#8217;t make sense to
+<code class="docutils literal"><span class="pre">TransactionBuilder</span></code> as an argument instead of returning one, unless you are sure it doesn&#8217;t make sense to
 combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
 would just introduce complexity that isn&#8217;t likely to be worth it, so we return a fresh object each time: instead,
 an issuer should issue the CP (starting out owned by themselves), and then sell it in a separate transaction.</p>
@@ -767,12 +767,12 @@ to issue CP onto the ledger that&#8217;s immediately owned by someone else, they
 <p>The returned partial transaction has a <code class="docutils literal"><span class="pre">WireCommand</span></code> object as a parameter. This is a container for any object
 that implements the <code class="docutils literal"><span class="pre">Command</span></code> interface, along with a key that is expected to sign this transaction. In this case,
 issuance requires that the issuing party sign, so we put the key of the party there.</p>
-<p>The <code class="docutils literal"><span class="pre">PartialTransaction</span></code> constructor we used above takes a variable argument list for convenience. You can pass in
+<p>The <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> constructor we used above takes a variable argument list for convenience. You can pass in
 any <code class="docutils literal"><span class="pre">ContractStateRef</span></code> (input), <code class="docutils literal"><span class="pre">ContractState</span></code> (output) or <code class="docutils literal"><span class="pre">Command</span></code> objects and it&#8217;ll build up the transaction
 for you.</p>
 <p>What about moving the paper, i.e. reassigning ownership to someone else?</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">PartialTransaction</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">fun</span> <span class="nf">craftMove</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">newOwner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addInputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">ref</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addOutputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">copy</span><span class="p">(</span><span class="n">owner</span> <span class="p">=</span> <span class="n">newOwner</span><span class="p">))</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addArg</span><span class="p">(</span><span class="n">WireCommand</span><span class="p">(</span><span class="n">Commands</span><span class="p">.</span><span class="n">Move</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">))</span>
@@ -780,7 +780,7 @@ for you.</p>
 </pre></div>
 </div>
 </div>
-<p>Here, the method takes a pre-existing <code class="docutils literal"><span class="pre">PartialTransaction</span></code> and adds to it. This is correct because typically
+<p>Here, the method takes a pre-existing <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> and adds to it. This is correct because typically
 you will want to combine a sale of CP atomically with the movement of some other asset, such as cash. So both
 craft methods should operate on the same transaction. You can see an example of this being done in the unit tests
 for the commercial paper contract.</p>
@@ -790,7 +790,7 @@ state on the ledger.</p>
 <p>Finally, we can do redemption.</p>
 <div class="codeset container">
 <div class="highlight-kotlin"><div class="highlight"><pre><span class="n">@Throws</span><span class="p">(</span><span class="n">InsufficientBalanceException</span><span class="o">::</span><span class="k">class</span><span class="p">)</span>
-<span class="k">fun</span> <span class="nf">craftRedeem</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">PartialTransaction</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">wallet</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;)</span> <span class="p">{</span>
+<span class="k">fun</span> <span class="nf">craftRedeem</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TransactionBuilder</span><span class="p">,</span> <span class="n">paper</span><span class="p">:</span> <span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">State</span><span class="p">&gt;,</span> <span class="n">wallet</span><span class="p">:</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">StateAndRef</span><span class="p">&lt;</span><span class="n">Cash</span><span class="p">.</span><span class="n">State</span><span class="p">&gt;&gt;)</span> <span class="p">{</span>
     <span class="c1">// Add the cash movement using the states in our wallet.</span>
     <span class="n">Cash</span><span class="p">().</span><span class="n">craftSpend</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">faceValue</span><span class="p">,</span> <span class="n">paper</span><span class="p">.</span><span class="n">state</span><span class="p">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">wallet</span><span class="p">)</span>
     <span class="n">tx</span><span class="p">.</span><span class="n">addInputState</span><span class="p">(</span><span class="n">paper</span><span class="p">.</span><span class="n">ref</span><span class="p">)</span>
@@ -813,10 +813,10 @@ from the issuer of the commercial paper to the current owner. If we don&#8217;t 
 an exception is thrown. And then we add the paper itself as an input, but, not an output (as we wish to delete it
 from the ledger permanently). Finally, we add a Redeem command that should be signed by the owner of the commercial
 paper.</p>
-<p>A <code class="docutils literal"><span class="pre">PartialTransaction</span></code> is not by itself ready to be used anywhere, so first, we must convert it to something that
+<p>A <code class="docutils literal"><span class="pre">TransactionBuilder</span></code> is not by itself ready to be used anywhere, so first, we must convert it to something that
 is recognised by the network. The most important next step is for the participating entities to sign it using the
 <code class="docutils literal"><span class="pre">signWith()</span></code> method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
-signature inside the <code class="docutils literal"><span class="pre">PartialTransaction</span></code>. Once all parties have signed, you can call <code class="docutils literal"><span class="pre">PartialTransaction.toSignedTransaction()</span></code>
+signature inside the <code class="docutils literal"><span class="pre">TransactionBuilder</span></code>. Once all parties have signed, you can call <code class="docutils literal"><span class="pre">TransactionBuilder.toSignedTransaction()</span></code>
 to get a <code class="docutils literal"><span class="pre">SignedWireTransaction</span></code> object. This is an immutable form of the transaction that&#8217;s ready for <em>timestamping</em>.</p>
 <div class="admonition note">
 <p class="first admonition-title">Note</p>

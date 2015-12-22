@@ -142,16 +142,16 @@ class CrowdFund : Contract {
      * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): PartialTransaction {
+    fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
         val state = State(campaign)
-        return PartialTransaction().withItems(state, Command(Commands.Register(), owner.party.owningKey))
+        return TransactionBuilder().withItems(state, Command(Commands.Register(), owner.party.owningKey))
     }
 
     /**
      * Updates the given partial transaction with an input/output/command to fund the opportunity.
      */
-    fun craftPledge(tx: PartialTransaction, campaign: StateAndRef<State>, subscriber: PublicKey) {
+    fun craftPledge(tx: TransactionBuilder, campaign: StateAndRef<State>, subscriber: PublicKey) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(
                 pledges = campaign.state.pledges + CrowdFund.Pledge(subscriber, 1000.DOLLARS)
@@ -159,7 +159,7 @@ class CrowdFund : Contract {
         tx.addCommand(Commands.Pledge(), subscriber)
     }
 
-    fun craftClose(tx: PartialTransaction, campaign: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+    fun craftClose(tx: TransactionBuilder, campaign: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(closed = true))
         tx.addCommand(Commands.Close(), campaign.state.campaign.owner)

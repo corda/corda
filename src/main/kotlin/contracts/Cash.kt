@@ -151,7 +151,7 @@ class Cash : Contract {
     /**
      * Puts together an issuance transaction for the specified amount that starts out being owned by the given pubkey.
      */
-    fun craftIssue(tx: PartialTransaction, amount: Amount, at: PartyReference, owner: PublicKey) {
+    fun craftIssue(tx: TransactionBuilder, amount: Amount, at: PartyReference, owner: PublicKey) {
         check(tx.inputStates().isEmpty())
         check(tx.outputStates().sumCashOrNull() == null)
         tx.addOutputState(Cash.State(at, amount, owner))
@@ -167,7 +167,7 @@ class Cash : Contract {
      *                        about which type of cash claims they are willing to accept.
      */
     @Throws(InsufficientBalanceException::class)
-    fun craftSpend(tx: PartialTransaction, amount: Amount, to: PublicKey,
+    fun craftSpend(tx: TransactionBuilder, amount: Amount, to: PublicKey,
                    cashStates: List<StateAndRef<Cash.State>>, onlyFromParties: Set<Party>? = null): List<PublicKey> {
         // Discussion
         //

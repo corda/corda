@@ -117,15 +117,15 @@ class CommercialPaper : Contract {
      * an existing transaction because you aren't able to issue multiple pieces of CP in a single transaction
      * at the moment: this restriction is not fundamental and may be lifted later.
      */
-    fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
+    fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
-        return PartialTransaction().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
+        return TransactionBuilder().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
      * Updates the given partial transaction with an input/output/command to reassign ownership of the paper.
      */
-    fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
+    fun craftMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper.ref)
         tx.addOutputState(paper.state.copy(owner = newOwner))
         tx.addCommand(Commands.Move(), paper.state.owner)
@@ -139,7 +139,7 @@ class CommercialPaper : Contract {
      * @throws InsufficientBalanceException if the wallet doesn't contain enough money to pay the redeemer
      */
     @Throws(InsufficientBalanceException::class)
-    fun craftRedeem(tx: PartialTransaction, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+    fun craftRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         // Add the cash movement using the states in our wallet.
         Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
         tx.addInputState(paper.ref)

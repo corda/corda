@@ -353,7 +353,7 @@ OK, let's do the same for the buyer side:
               // the state we are being offered! For now, just assume validity!
 
               // Generate the shared transaction that both sides will sign, using the data we have.
-              val ptx = PartialTransaction()
+              val ptx = TransactionBuilder()
               // Add input and output states for the movement of cash, by using the Cash contract
               // to generate the states.
               val wallet = serviceHub.walletService.currentWallet
