@@ -78,7 +78,7 @@ class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.syste
         val wtx = wtxBytes.deserialize()
         val timestamp = wtx.commands.mapNotNull { it.data as? TimestampCommand }.single()
         if (Duration.between(timestamp.before, clock.instant()) > tolerance)
-            throw TooLateException()
+            throw NotOnTimeException()
         return DummyTimestampingAuthority.key.signWithECDSA(wtxBytes.bits, identity)
     }
 }
@@ -182,7 +182,12 @@ abstract class AbstractTransactionForTest {
     }
 
     fun timestamp(time: Instant) {
-        commands.add(Command(TimestampCommand(time, 30.seconds), DUMMY_TIMESTAMPER.identity.owningKey))
+        val data = TimestampCommand(time, 30.seconds)
+        timestamp(data)
+    }
+
+    fun timestamp(data: TimestampCommand) {
+        commands.add(Command(data, DUMMY_TIMESTAMPER.identity.owningKey))
     }
 
     // Forbid patterns like:  transaction { ... transaction { ... } }

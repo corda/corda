@@ -85,7 +85,7 @@ class TransactionSerializationTests {
 
     @Test
     fun timestamp() {
-        tx.setTime(TEST_TX_TIME, DUMMY_TIMESTAMPER.identity)
+        tx.setTime(TEST_TX_TIME, DUMMY_TIMESTAMPER.identity, 30.seconds)
         tx.timestamp(DUMMY_TIMESTAMPER)
         tx.signWith(TestUtils.keypair)
         val stx = tx.toSignedTransaction()

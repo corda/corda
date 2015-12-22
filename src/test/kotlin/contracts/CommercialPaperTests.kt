@@ -11,7 +11,9 @@ package contracts
 import core.*
 import core.testutils.*
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -73,6 +75,28 @@ class CommercialPaperTests {
     }
 
     @Test
+    fun `timestamp out of range`() {
+        // Check what happens if the timestamp on the transaction itself defines a range that doesn't include true
+        // time as measured by a TSA (which is running five hours ahead in this test).
+        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+            signWith(MINI_CORP_KEY)
+            assertFailsWith(NotOnTimeException::class) {
+                timestamp(DummyTimestamper(Clock.fixed(TEST_TX_TIME + 5.hours, ZoneOffset.UTC)))
+            }
+        }
+        // Check that it also fails if true time is before the threshold (we are trying to timestamp too early).
+        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+            signWith(MINI_CORP_KEY)
+            assertFailsWith(NotOnTimeException::class) {
+                val tsaClock = Clock.fixed(TEST_TX_TIME - 5.hours, ZoneOffset.UTC)
+                timestamp(DummyTimestamper(tsaClock), Clock.fixed(TEST_TX_TIME, ZoneOffset.UTC))
+            }
+        }
+    }
+
+    @Test
     fun `issue cannot replace an existing state`() {
         transactionGroup {
             roots {
@@ -109,7 +133,7 @@ class CommercialPaperTests {
         // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
             val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
-                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity)
+                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
                 signWith(MINI_CORP_KEY)
                 timestamp(DUMMY_TIMESTAMPER)
             }
@@ -142,7 +166,7 @@ class CommercialPaperTests {
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
             val ptx = PartialTransaction()
-            ptx.setTime(time, DummyTimestampingAuthority.identity   )
+            ptx.setTime(time, DummyTimestampingAuthority.identity, 30.seconds)
             CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)

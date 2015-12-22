@@ -14,6 +14,7 @@ import core.serialization.serialize
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
+import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.*
@@ -63,7 +64,7 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
  * Thrown if an attempt is made to timestamp a transaction using a trusted timestamper, but the time on the transaction
  * is too far in the past or future relative to the local clock and thus the timestamper would reject it.
  */
-class TooLateException : Exception()
+class NotOnTimeException : Exception()
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
 class PartialTransaction(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
@@ -74,12 +75,20 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
 
     /**
      * Places a [TimestampCommand] in this transaction, removing any existing command if there is one.
-     * To get the right signature from the timestamping service, use the [timestamp] method.
+     * To get the right signature from the timestamping service, use the [timestamp] method after building is
+     * finished.
+     *
+     * The window of time in which the final timestamp may lie is defined as [time] +/- [timeTolerance].
+     * If you want a non-symmetrical time window you must add the command via [addCommand] yourself. The tolerance
+     * should be chosen such that your code can finish building the transaction and sending it to the TSA within that
+     * window of time, taking into account factors such as network latency. Transactions being built by a group of
+     * collaborating parties may therefore require a higher time tolerance than a transaction being built by a single
+     * node.
      */
-    fun setTime(time: Instant, authenticatedBy: Party) {
+    fun setTime(time: Instant, authenticatedBy: Party, timeTolerance: Duration) {
         check(currentSigs.isEmpty()) { "Cannot change timestamp after signing" }
         commands.removeAll { it.data is TimestampCommand }
-        addCommand(TimestampCommand(time, 30.seconds), authenticatedBy.owningKey)
+        addCommand(TimestampCommand(time, timeTolerance), authenticatedBy.owningKey)
     }
 
     /** A more convenient way to add items to this transaction that calls the add* methods for you based on type */
@@ -115,17 +124,17 @@ class PartialTransaction(private val inputStates: MutableList<ContractStateRef> 
      *
      * The signature of the trusted timestamper merely asserts that the time field of this transaction is valid.
      */
-    fun timestamp(timestamper: TimestamperService) {
+    fun timestamp(timestamper: TimestamperService, clock: Clock = Clock.systemUTC()) {
         // TODO: Once we switch to a more advanced bytecode rewriting framework, we can call into a real implementation.
         check(timestamper.javaClass.simpleName == "DummyTimestamper")
         val t = time ?: throw IllegalStateException("Timestamping requested but no time was inserted into the transaction")
 
         // Obviously this is just a hard-coded dummy value for now.
         val maxExpectedLatency = 5.seconds
-        if (Duration.between(Instant.now(), t.before) > maxExpectedLatency)
-            throw TooLateException()
+        if (Duration.between(clock.instant(), t.before) > maxExpectedLatency)
+            throw NotOnTimeException()
 
-        // The timestamper may also throw TooLateException if our clocks are desynchronised or if we are right on the
+        // The timestamper may also throw NotOnTimeException if our clocks are desynchronised or if we are right on the
         // boundary of t.notAfter and network latency pushes us over the edge. By "synchronised" here we mean relative
         // to GPS time i.e. the United States Naval Observatory.
         val sig = timestamper.timestamp(toWireTransaction().serialize())

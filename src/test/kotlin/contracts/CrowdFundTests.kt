@@ -108,7 +108,7 @@ class CrowdFundTests {
         val registerTX: LedgerTransaction = run {
             // craftRegister returns a partial transaction
             val ptx = CrowdFund().craftRegister(MINI_CORP.ref(123), 1000.DOLLARS, "crowd funding", TEST_TX_TIME + 7.days).apply {
-                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity)
+                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
                 signWith(MINI_CORP_KEY)
                 timestamp(DUMMY_TIMESTAMPER)
             }
@@ -128,7 +128,7 @@ class CrowdFundTests {
             val ptx = PartialTransaction()
             CrowdFund().craftPledge(ptx, registerTX.outRef(0), ALICE)
             Cash().craftSpend(ptx, 1000.DOLLARS, MINI_CORP_PUBKEY, aliceWallet)
-            ptx.setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity)
+            ptx.setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
             ptx.signWith(ALICE_KEY)
             ptx.timestamp(DUMMY_TIMESTAMPER)
             val stx = ptx.toSignedTransaction()
@@ -144,7 +144,7 @@ class CrowdFundTests {
         // MiniCorp closes their campaign.
         fun makeFundedTX(time: Instant): LedgerTransaction  {
             val ptx = PartialTransaction()
-            ptx.setTime(time, DUMMY_TIMESTAMPER.identity)
+            ptx.setTime(time, DUMMY_TIMESTAMPER.identity, 30.seconds)
             CrowdFund().craftClose(ptx, pledgeTX.outRef(0), miniCorpWallet)
             ptx.signWith(MINI_CORP_KEY)
             ptx.timestamp(DUMMY_TIMESTAMPER)
