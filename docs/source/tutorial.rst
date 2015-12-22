@@ -4,8 +4,8 @@
    <script type="text/javascript" src="_static/jquery.js"></script>
    <script type="text/javascript" src="_static/codesets.js"></script>
 
-Tutorial
-========
+Writing a contract
+==================
 
 This tutorial will take you through how the commercial paper contract works.
 

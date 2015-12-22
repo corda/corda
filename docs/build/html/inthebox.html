@@ -31,7 +31,7 @@
 
   
     <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
-        <link rel="next" title="Overview" href="overview.html"/>
+        <link rel="next" title="Getting set up" href="getting-set-up.html"/>
         <link rel="prev" title="Welcome to the R3 prototyping repository!" href="index.html"/> 
 
   
@@ -81,13 +81,24 @@
           
             
             
-                <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="">What&#8217;s included?</a></li>
-<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">What&#8217;s included?</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#contracts">Contracts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#kotlin">Kotlin</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 </ul>
@@ -161,6 +172,44 @@ would not in order to boost productivity:</p>
 <li>It uses a serialization framework instead of a well specified, vendor neutral protocol.</li>
 <li>It uses secp256r1, an obsolete elliptic curve.</li>
 </ul>
+<div class="section" id="contracts">
+<h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>
+<p>The primary goal of this prototype is to implement various kinds of contracts and verify that useful business logic
+can be expressed with the data model, developing and refining an API along the way. To that end there are currently
+two contracts in the repository:</p>
+<ol class="arabic simple">
+<li>Cash</li>
+<li>Commercial paper</li>
+</ol>
+<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
+identified by some <em>deposit reference</em>. A deposit reference is an opaque byte array which is usable by
+the issuing party for internal bookkeeping purposes.</p>
+<p>Cash states are <em>fungible</em> with each other (can be merged and split arbitrarily) if they use the same currency,
+party and deposit reference.</p>
+<p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> implements an asset with a <em>face value</em> denominated in a certain currency, which may be redeemed at
+the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
+at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
+contract is implemented twice, once in Java and once in a language called Kotlin.</p>
+<p>Each contract comes with unit tests.</p>
+</div>
+<div class="section" id="kotlin">
+<h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
+<p>The prototype is written in a language called <a class="reference external" href="https://kotlinlang.org/">Kotlin</a>. Kotlin is a language that targets the JVM
+and can be thought of as a simpler Scala, with much better Java interop. It is developed by and has commercial support
+from JetBrains, the makers of the IntelliJ IDE and other popular developer tools.</p>
+<p>As Kotlin is very new, without a doubt you have not encountered it before. Don&#8217;t worry: it is designed as a better
+Java for industrial use and as such, the syntax was carefully designed to be readable even to people who don&#8217;t know
+the language, after only a few minutes of introduction.</p>
+<p>Due to the seamless Java interop the use of Kotlin to extend the platform is <em>not</em> required and the tutorial shows how
+to write contracts in both Kotlin and Java. You can <a class="reference external" href="https://medium.com/&#64;octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3">read more about why Kotlin is a potentially strong successor to Java here</a>.</p>
+<p>Kotlin programs use the regular Java standard library and ordinary Java frameworks. Frameworks used at this time are:</p>
+<ul class="simple">
+<li>JUnit for unit testing</li>
+<li>Kryo for serialisation (this is not intended to be permanent)</li>
+<li>Gradle for the build</li>
+<li>Guava for a few utility functions</li>
+</ul>
+</div>
 </div>
 
 
@@ -170,7 +219,7 @@ would not in order to boost productivity:</p>
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="overview.html" class="btn btn-neutral float-right" title="Overview" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="getting-set-up.html" class="btn btn-neutral float-right" title="Getting set up" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="index.html" class="btn btn-neutral" title="Welcome to the R3 prototyping repository!" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>

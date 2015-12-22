@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Overview &mdash; R3 Prototyping 0.1 documentation</title>
+  <title>Data model &mdash; R3 Prototyping 0.1 documentation</title>
   
 
   
@@ -31,8 +31,8 @@
 
   
     <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
-        <link rel="next" title="Getting set up" href="getting-set-up.html"/>
-        <link rel="prev" title="What’s included?" href="inthebox.html"/> 
+        <link rel="next" title="Networking and messaging" href="messaging.html"/>
+        <link rel="prev" title="Getting set up" href="getting-set-up.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -81,22 +81,25 @@
           
             
             
-                <ul class="current">
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="">Overview</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#data-model">Data model</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#comparison-with-ethereum">Comparison with Ethereum</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="#contracts">Contracts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#kotlin">Kotlin</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Data model</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#description">Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#comparison-with-bitcoin">Comparison with Bitcoin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#comparison-with-ethereum">Comparison with Ethereum</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
 <li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
 </ul>
@@ -129,11 +132,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li>Overview</li>
+    <li>Data model</li>
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/overview.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/data-model.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -143,13 +146,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="overview">
-<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="data-model">
+<h1>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="description">
+<h2>Description<a class="headerlink" href="#description" title="Permalink to this headline">¶</a></h2>
 <p>This article covers the data model: how <em>states</em>, <em>transactions</em> and <em>code contracts</em> interact with each other and
 how they are represented in the code. It doesn&#8217;t attempt to give detailed design rationales or information on future
 design elements: please refer to the R3 wiki for background information.</p>
-<div class="section" id="data-model">
-<h2>Data model<a class="headerlink" href="#data-model" title="Permalink to this headline">¶</a></h2>
 <p>We begin with the idea of a global ledger. In our model, although the ledger is shared, it is not always the case that
 transactions and ledger entries are globally visible. In cases where a set of transactions stays within a small subgroup of
 users it should be possible to keep the relevant data purely within that group.</p>
@@ -158,32 +161,26 @@ heavily on secure hashes like SHA-256 to identify things. The ledger is defined 
 are created and destroyed by digitally signed <strong>transactions</strong>. Each transaction points to a set of states that it will
 consume/destroy, these are called <strong>inputs</strong>, and contains a set of new states that it will create, these are called
 <strong>outputs</strong>.</p>
-<p>States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
+<p>States contain arbitrary data, but they always contain at minimum a hash of the bytecode of a
 <strong>code contract</strong>, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
 contracts (or just &#8220;contracts&#8221; in the rest of this document) are globally shared pieces of business logic. Contracts
 define a <strong>verify function</strong>, which is a pure function given the entire transaction as input.</p>
 <p>To be considered valid, the transaction must be <strong>accepted</strong> by the verify function of every contract pointed to by the
 input and output states. Beyond inputs and outputs, transactions may also contain <strong>commands</strong>, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
-arguments to the verify function.</p>
+arguments to the verify function. Each command has a list of <strong>public keys</strong> associated with it. The platform ensures
+that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
+may be random/identityless for privacy, or linked to a well known legal identity via a <em>public key infrastructure</em> (PKI).</p>
 <p>Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it&#8217;s up to the
 contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
 maximise flexibility for the contract developer.</p>
-<p>A transaction has one or more <strong>signatures</strong> attached to it. The signatures do not mean anything by themselves, rather,
-their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
-Signatures may be from an arbitrary, random <strong>public key</strong> that has no identity attached. A public key may be
-well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by a
-<strong>party</strong>, which is defined (for now) as being merely a (public key, name) pair.</p>
-<p>A transaction may also be <strong>timestamped</strong>. A timestamp is a (hash, datetime, signature) triple from a
-<em>timestamping authority</em> (TSA). The notion of a TSA is not ledger specific and is defined by
-<a class="reference external" href="https://www.ietf.org/rfc/rfc3161.txt">IETF RFC 3161</a> which defines the internet standard Timestamping Protocol (TSP).
-The purpose of the TSA is to attach a single, globally agreed upon time which a contract may use to enforce certain
-types of time-based logic. The TSA&#8217;s do not need to know about the contents of the transaction in order to provide a
-timestamp, and they are therefore never exposed to private data.</p>
-<div class="admonition note">
-<p class="first admonition-title">Note</p>
-<p class="last">In the current code, use of TSAs is not implemented.</p>
-</div>
+<p>Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
+prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
+facts are called <strong>oracles</strong> and they provide facts to the ledger by signing transactions that contain commands they
+recognise. The commands contain the fact and the signature shows agreement to that fact. Time is also modelled as
+a fact, with the signature of a special kind of oracle called a <strong>timestamping authority</strong> (TSA). A TSA signs
+a transaction if a pre-defined timestamping command in it defines a after/before time window that includes &#8220;true
+time&#8221; (i.e. GPS time as calibrated to the US Naval Observatory).</p>
 <p>As the same terminology often crops up in different distributed ledger designs, let&#8217;s compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
 differs from existing systems in <a class="reference external" href="https://r3-cev.atlassian.net/wiki/">the R3 wiki</a>, but to summarise, the driving
@@ -196,8 +193,9 @@ factors are:</p>
 <li>Use of type safe GCd implementation languages.</li>
 <li>Simplified auditing</li>
 </ul>
+</div>
 <div class="section" id="comparison-with-bitcoin">
-<h3>Comparison with Bitcoin<a class="headerlink" href="#comparison-with-bitcoin" title="Permalink to this headline">¶</a></h3>
+<h2>Comparison with Bitcoin<a class="headerlink" href="#comparison-with-bitcoin" title="Permalink to this headline">¶</a></h2>
 <p>Similarities:</p>
 <ul class="simple">
 <li>The basic notion of immutable states that are consumed and created by transactions is the same.</li>
@@ -230,7 +228,7 @@ transaction verification. For instance, currently our contracts also include cod
 </ul>
 </div>
 <div class="section" id="comparison-with-ethereum">
-<h3>Comparison with Ethereum<a class="headerlink" href="#comparison-with-ethereum" title="Permalink to this headline">¶</a></h3>
+<h2>Comparison with Ethereum<a class="headerlink" href="#comparison-with-ethereum" title="Permalink to this headline">¶</a></h2>
 <p>Similarities:</p>
 <ul class="simple">
 <li>Like Ethereum, code runs inside a relatively powerful virtual machine and can contain complex logic. Non-assembly
@@ -251,45 +249,6 @@ platform considers non-financial applications to be out of scope.</li>
 </ul>
 </div>
 </div>
-<div class="section" id="contracts">
-<h2>Contracts<a class="headerlink" href="#contracts" title="Permalink to this headline">¶</a></h2>
-<p>The primary goal of this prototype is to implement various kinds of contracts and verify that useful business logic
-can be expressed with the data model, developing and refining an API along the way. To that end there are currently
-two contracts in the repository:</p>
-<ol class="arabic simple">
-<li>Cash</li>
-<li>Commercial paper</li>
-</ol>
-<p><code class="docutils literal"><span class="pre">Cash</span></code> implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
-identified by some <em>deposit reference</em>. A deposit reference is an opaque byte array which is usable by
-the issuing party for internal bookkeeping purposes.</p>
-<p>Cash states are <em>fungible</em> with each other (can be merged and split arbitrarily) if they use the same currency,
-party and deposit reference.</p>
-<p><code class="docutils literal"><span class="pre">CommercialPaper</span></code> implements an asset with a <em>face value</em> denominated in a certain currency, which may be redeemed at
-the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
-at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
-contract is implemented twice, once in Java and once in a language called Kotlin.</p>
-<p>Each contract comes with unit tests.</p>
-</div>
-<div class="section" id="kotlin">
-<h2>Kotlin<a class="headerlink" href="#kotlin" title="Permalink to this headline">¶</a></h2>
-<p>The prototype is written in a language called <a class="reference external" href="https://kotlinlang.org/">Kotlin</a>. Kotlin is a language that targets the JVM
-and can be thought of as a simpler Scala, with much better Java interop. It is developed by and has commercial support
-from JetBrains, the makers of the IntelliJ IDE and other popular developer tools.</p>
-<p>As Kotlin is very new, without a doubt you have not encountered it before. Don&#8217;t worry: it is designed as a better
-Java for industrial use and as such, the syntax was carefully designed to be readable even to people who don&#8217;t know
-the language, after only a few minutes of introduction.</p>
-<p>Due to the seamless Java interop the use of Kotlin to extend the platform is <em>not</em> required and the tutorial shows how
-to write contracts in both Kotlin and Java. You can <a class="reference external" href="https://medium.com/&#64;octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3">read more about why Kotlin is a potentially strong successor to Java here</a>.</p>
-<p>Kotlin programs use the regular Java standard library and ordinary Java frameworks. Frameworks used at this time are:</p>
-<ul class="simple">
-<li>JUnit for unit testing</li>
-<li>Kryo for serialisation (this is not intended to be permanent)</li>
-<li>Gradle for the build</li>
-<li>Guava for a few utility functions</li>
-</ul>
-</div>
-</div>
 
 
            </div>
@@ -298,10 +257,10 @@ to write contracts in both Kotlin and Java. You can <a class="reference external
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="getting-set-up.html" class="btn btn-neutral float-right" title="Getting set up" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="messaging.html" class="btn btn-neutral float-right" title="Networking and messaging" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="inthebox.html" class="btn btn-neutral" title="What’s included?" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="getting-set-up.html" class="btn btn-neutral" title="Getting set up" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

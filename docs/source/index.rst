@@ -21,13 +21,24 @@ Read on to learn:
 
 .. toctree::
    :maxdepth: 2
+   :caption: Overview
 
    inthebox
-   overview
    getting-set-up
-   tutorial
+   data-model
    messaging
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   tutorial
    protocol-state-machines
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Appendix
+
    visualiser
    roadmap
 

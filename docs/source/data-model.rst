@@ -1,12 +1,12 @@
-Overview
-========
+Data model
+==========
+
+Description
+-----------
 
 This article covers the data model: how *states*, *transactions* and *code contracts* interact with each other and
 how they are represented in the code. It doesn't attempt to give detailed design rationales or information on future
 design elements: please refer to the R3 wiki for background information.
-
-Data model
-----------
 
 We begin with the idea of a global ledger. In our model, although the ledger is shared, it is not always the case that
 transactions and ledger entries are globally visible. In cases where a set of transactions stays within a small subgroup of
@@ -18,7 +18,7 @@ are created and destroyed by digitally signed **transactions**. Each transaction
 consume/destroy, these are called **inputs**, and contains a set of new states that it will create, these are called
 **outputs**.
 
-States contain arbitrary data, but they always contain at minimum a pointer to the bytecode of a
+States contain arbitrary data, but they always contain at minimum a hash of the bytecode of a
 **code contract**, which is a program expressed in some byte code that runs sandboxed inside a virtual machine. Code
 contracts (or just "contracts" in the rest of this document) are globally shared pieces of business logic. Contracts
 define a **verify function**, which is a pure function given the entire transaction as input.
@@ -26,26 +26,21 @@ define a **verify function**, which is a pure function given the entire transact
 To be considered valid, the transaction must be **accepted** by the verify function of every contract pointed to by the
 input and output states. Beyond inputs and outputs, transactions may also contain **commands**, small data packets that
 the platform does not interpret itself, but which can parameterise execution of the contracts. They can be thought of as
-arguments to the verify function.
+arguments to the verify function. Each command has a list of **public keys** associated with it. The platform ensures
+that the transaction is signed by every key listed in the commands before the contracts start to execute. Public keys
+may be random/identityless for privacy, or linked to a well known legal identity via a *public key infrastructure* (PKI).
 
 Note that there is nothing that explicitly binds together specific inputs, outputs or commands. Instead it's up to the
 contract code to interpret the pieces inside the transaction and ensure they fit together correctly. This is done to
 maximise flexibility for the contract developer.
 
-A transaction has one or more **signatures** attached to it. The signatures do not mean anything by themselves, rather,
-their existence is given as input to the contract which can then decide which set of signatures it demands (if any).
-Signatures may be from an arbitrary, random **public key** that has no identity attached. A public key may be
-well known, that is, appears in some sort of public identity registry. In this case we say the key is owned by a
-**party**, which is defined (for now) as being merely a (public key, name) pair.
-
-A transaction may also be **timestamped**. A timestamp is a (hash, datetime, signature) triple from a
-*timestamping authority* (TSA). The notion of a TSA is not ledger specific and is defined by
-`IETF RFC 3161 <https://www.ietf.org/rfc/rfc3161.txt>`_ which defines the internet standard Timestamping Protocol (TSP).
-The purpose of the TSA is to attach a single, globally agreed upon time which a contract may use to enforce certain
-types of time-based logic. The TSA's do not need to know about the contents of the transaction in order to provide a
-timestamp, and they are therefore never exposed to private data.
-
-.. note:: In the current code, use of TSAs is not implemented.
+Transactions may sometimes need to provide a contract with data from the outside world. Examples may include stock
+prices, facts about events or the statuses of legal entities (e.g. bankruptcy), and so on. The providers of such
+facts are called **oracles** and they provide facts to the ledger by signing transactions that contain commands they
+recognise. The commands contain the fact and the signature shows agreement to that fact. Time is also modelled as
+a fact, with the signature of a special kind of oracle called a **timestamping authority** (TSA). A TSA signs
+a transaction if a pre-defined timestamping command in it defines a after/before time window that includes "true
+time" (i.e. GPS time as calibrated to the US Naval Observatory).
 
 As the same terminology often crops up in different distributed ledger designs, let's compare this to other
 distributed ledger systems you may be familiar with. You can find more detailed design rationales for why the platform
@@ -60,7 +55,7 @@ factors are:
 * Simplified auditing
 
 Comparison with Bitcoin
-^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------
 
 Similarities:
 
@@ -93,7 +88,7 @@ Differences:
   (this is often called "wallet code" in Bitcoin).
 
 Comparison with Ethereum
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 Similarities:
 
@@ -113,49 +108,3 @@ Differences:
 * Ethereum claims to be a platform not only for financial logic, but literally any kind of application at all. Our
   platform considers non-financial applications to be out of scope.
 
-
-
-Contracts
----------
-
-The primary goal of this prototype is to implement various kinds of contracts and verify that useful business logic
-can be expressed with the data model, developing and refining an API along the way. To that end there are currently
-two contracts in the repository:
-
-1. Cash
-2. Commercial paper
-
-``Cash`` implements the idea of a claim on some quantity of deposits at some institutional party, denominated in some currency,
-identified by some *deposit reference*. A deposit reference is an opaque byte array which is usable by
-the issuing party for internal bookkeeping purposes.
-
-Cash states are *fungible* with each other (can be merged and split arbitrarily) if they use the same currency,
-party and deposit reference.
-
-``CommercialPaper`` implements an asset with a *face value* denominated in a certain currency, which may be redeemed at
-the issuing party after a certain time. Commercial paper states define the face value (e.g. $1000) and the time
-at which they may be redeemed. The contract allows the paper to be issued, traded and redeemed. The commercial paper
-contract is implemented twice, once in Java and once in a language called Kotlin.
-
-Each contract comes with unit tests.
-
-Kotlin
-------
-
-The prototype is written in a language called `Kotlin <https://kotlinlang.org/>`_. Kotlin is a language that targets the JVM
-and can be thought of as a simpler Scala, with much better Java interop. It is developed by and has commercial support
-from JetBrains, the makers of the IntelliJ IDE and other popular developer tools.
-
-As Kotlin is very new, without a doubt you have not encountered it before. Don't worry: it is designed as a better
-Java for industrial use and as such, the syntax was carefully designed to be readable even to people who don't know
-the language, after only a few minutes of introduction.
-
-Due to the seamless Java interop the use of Kotlin to extend the platform is *not* required and the tutorial shows how
-to write contracts in both Kotlin and Java. You can `read more about why Kotlin is a potentially strong successor to Java here <https://medium.com/@octskyward/why-kotlin-is-my-next-programming-language-c25c001e26e3>`_.
-
-Kotlin programs use the regular Java standard library and ordinary Java frameworks. Frameworks used at this time are:
-
-* JUnit for unit testing
-* Kryo for serialisation (this is not intended to be permanent)
-* Gradle for the build
-* Guava for a few utility functions
