@@ -16,7 +16,6 @@ import org.junit.Test
 import java.security.SignatureException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 
 class TransactionSerializationTests {
     // Simple TX that takes 1000 pounds from me and sends 600 to someone else (with 400 change).
@@ -31,7 +30,7 @@ class TransactionSerializationTests {
     @Before
     fun setup() {
         tx = PartialTransaction().withItems(
-            fakeStateRef, outputState, changeState, WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
+            fakeStateRef, outputState, changeState, Command(Cash.Commands.Move(), arrayListOf(TestUtils.keypair.public))
         )
     }
 
@@ -77,7 +76,7 @@ class TransactionSerializationTests {
         // If the signature was replaced in transit, we don't like it.
         assertFailsWith(SignatureException::class) {
             val tx2 = PartialTransaction().withItems(fakeStateRef, outputState, changeState,
-                    WireCommand(Cash.Commands.Move(), arrayListOf(TestUtils.keypair2.public)))
+                    Command(Cash.Commands.Move(), TestUtils.keypair2.public))
             tx2.signWith(TestUtils.keypair2)
 
             signedTX.copy(sigs = tx2.toSignedTransaction().sigs).verify()
@@ -86,18 +85,14 @@ class TransactionSerializationTests {
 
     @Test
     fun timestamp() {
+        tx.setTime(TEST_TX_TIME, DUMMY_TIMESTAMPER.identity, 30.seconds)
+        tx.timestamp(DUMMY_TIMESTAMPER)
         tx.signWith(TestUtils.keypair)
-        val ttx = tx.toSignedTransaction().toTimestampedTransactionWithoutTime()
-        val ltx = ttx.verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
-        assertEquals(tx.commands().map { it.command }, ltx.commands.map { it.value })
+        val stx = tx.toSignedTransaction()
+        val ltx = stx.verifyToLedgerTransaction(MockIdentityService)
+        assertEquals(tx.commands().map { it.data }, ltx.commands.map { it.value })
         assertEquals(tx.inputStates(), ltx.inStateRefs)
         assertEquals(tx.outputStates(), ltx.outStates)
-        assertNull(ltx.time)
-
-        val ltx2: LedgerTransaction = tx.
-                toSignedTransaction().
-                toTimestampedTransaction(DUMMY_TIMESTAMPER).
-                verifyToLedgerTransaction(DUMMY_TIMESTAMPER, MockIdentityService)
-        assertEquals(TEST_TX_TIME, ltx2.time)
+        assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_TIMESTAMPER.identity)!!.midpoint)
     }
 }

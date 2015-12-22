@@ -9,10 +9,11 @@
 package core
 
 import core.messaging.MessagingService
+import core.serialization.SerializedBytes
 import java.security.KeyPair
+import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
-import java.time.Instant
 
 /**
  * This file defines various 'services' which are not currently fleshed out. A service is a module that provides
@@ -70,15 +71,25 @@ interface IdentityService {
 }
 
 /**
- * Simple interface (for testing) to an abstract timestamping service, in the style of RFC 3161. Note that this is not
- * 'timestamping' in the block chain sense, but rather, implies a semi-trusted third party taking a reading of the
- * current time, typically from an atomic clock, and then digitally signing (current time, hash) to produce a timestamp
- * triple (signature, time, hash). The purpose of these timestamps is to locate a transaction in the timeline, which is
- * important in the absence of blocks. Here we model the timestamp as an opaque byte array.
+ * Simple interface (for testing) to an abstract timestamping service. Note that this is not "timestamping" in the
+ * blockchain sense of a total ordering of transactions, but rather, a signature from a well known/trusted timestamping
+ * service over a transaction that indicates the timestamp in it is accurate. Such a signature may not always be
+ * necessary: if there are multiple parties involved in a transaction then they can cross-check the timestamp
+ * themselves.
  */
 interface TimestamperService {
-    fun timestamp(hash: SecureHash): ByteArray
-    fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant
+    fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable
+
+    /** The name+pubkey that this timestamper will sign with. */
+    val identity: Party
+}
+
+// Smart contracts may wish to specify explicitly which timestamping authorities are trusted to assert the time.
+// We define a dummy authority here to allow to us to develop prototype contracts in the absence of a real authority.
+// The timestamper itself is implemented in the unit test part of the code (in TestUtils.kt).
+object DummyTimestampingAuthority {
+    val key = KeyPairGenerator.getInstance("EC").genKeyPair()
+    val identity = Party("The dummy timestamper", key.public)
 }
 
 /**

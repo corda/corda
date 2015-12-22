@@ -10,20 +10,20 @@
 
 package core.testutils
 
-import com.google.common.io.BaseEncoding
 import contracts.*
 import core.*
 import core.messaging.MessagingService
+import core.serialization.SerializedBytes
+import core.serialization.deserialize
 import core.visualiser.GraphVisualiser
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.time.Clock
+import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import java.util.*
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.test.assertEquals
@@ -67,27 +67,19 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 )
 
 /**
- * A test/mock timestamping service that doesn't use any signatures or security. It always timestamps with
- * [TEST_TX_TIME], an arbitrary point on the timeline.
+ * A test/mock timestamping service that doesn't use any signatures or security. It timestamps with
+ * the provided clock which defaults to [TEST_TX_TIME], an arbitrary point on the timeline.
  */
-class DummyTimestamper(private val time: Instant = TEST_TX_TIME) : TimestamperService {
-    override fun timestamp(hash: SecureHash): ByteArray {
-        val bos = ByteArrayOutputStream()
-        DataOutputStream(bos).use {
-            it.writeLong(time.toEpochMilli())
-            it.write(hash.bits)
-        }
-        return bos.toByteArray()
-    }
+class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.systemDefault()),
+                       val tolerance: Duration = 30.seconds) : TimestamperService {
+    override val identity = DummyTimestampingAuthority.identity
 
-    override fun verifyTimestamp(hash: SecureHash, signedTimestamp: ByteArray): Instant {
-        val dis = DataInputStream(ByteArrayInputStream(signedTimestamp))
-        val epochMillis = dis.readLong()
-        val serHash = ByteArray(32)
-        dis.readFully(serHash)
-        if (!Arrays.equals(serHash, hash.bits))
-            throw IllegalStateException("Hash mismatch: ${BaseEncoding.base16().encode(serHash)} vs ${BaseEncoding.base16().encode(hash.bits)}")
-        return Instant.ofEpochMilli(epochMillis)
+    override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
+        val wtx = wtxBytes.deserialize()
+        val timestamp = wtx.commands.mapNotNull { it.data as? TimestampCommand }.single()
+        if (Duration.between(timestamp.before, clock.instant()) > tolerance)
+            throw NotOnTimeException()
+        return DummyTimestampingAuthority.key.signWithECDSA(wtxBytes.bits, identity)
     }
 }
 
@@ -176,13 +168,26 @@ infix fun ContractState.label(label: String) = LabeledOutput(label, this)
 
 abstract class AbstractTransactionForTest {
     protected val outStates = ArrayList<LabeledOutput>()
-    protected val commands  = ArrayList<AuthenticatedObject<Command>>()
+    protected val commands  = ArrayList<Command>()
 
     open fun output(label: String? = null, s: () -> ContractState) = LabeledOutput(label, s()).apply { outStates.add(this) }
 
-    fun arg(vararg key: PublicKey, c: () -> Command) {
+    protected fun commandsToAuthenticatedObjects(): List<AuthenticatedObject<CommandData>> {
+        return commands.map { AuthenticatedObject(it.pubkeys, it.pubkeys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, it.data) }
+    }
+
+    fun arg(vararg key: PublicKey, c: () -> CommandData) {
         val keys = listOf(*key)
-        commands.add(AuthenticatedObject(keys, keys.mapNotNull { TEST_KEYS_TO_CORP_MAP[it] }, c()))
+        commands.add(Command(c(), keys))
+    }
+
+    fun timestamp(time: Instant) {
+        val data = TimestampCommand(time, 30.seconds)
+        timestamp(data)
+    }
+
+    fun timestamp(data: TimestampCommand) {
+        commands.add(Command(data, DUMMY_TIMESTAMPER.identity.owningKey))
     }
 
     // Forbid patterns like:  transaction { ... transaction { ... } }
@@ -196,7 +201,8 @@ open class TransactionForTest : AbstractTransactionForTest() {
     fun input(s: () -> ContractState) = inStates.add(s())
 
     protected fun run(time: Instant) {
-        val tx = TransactionForVerification(inStates, outStates.map { it.state }, commands, time, SecureHash.randomSHA256())
+        val cmds = commandsToAuthenticatedObjects()
+        val tx = TransactionForVerification(inStates, outStates.map { it.state }, cmds, SecureHash.randomSHA256())
         tx.verify(TEST_PROGRAM_MAP)
     }
 
@@ -276,12 +282,12 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
 
 
         /**
-         * Converts to a [LedgerTransaction] with the givn time, the test institution map, and just assigns a random
-         * hash (i.e. pretend it was signed)
+         * Converts to a [LedgerTransaction] with the test institution map, and just assigns a random hash
+         * (i.e. pretend it was signed)
          */
-        fun toLedgerTransaction(time: Instant): LedgerTransaction {
-            val wireCmds = commands.map { WireCommand(it.value, it.signers) }
-            return WireTransaction(inStates, outStates.map { it.state }, wireCmds).toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
+        fun toLedgerTransaction(): LedgerTransaction {
+            val wtx = WireTransaction(inStates, outStates.map { it.state }, commands)
+            return wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
         }
     }
 
@@ -291,8 +297,8 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
     private inner class InternalLedgerTransactionDSL : LedgerTransactionDSL() {
-        fun finaliseAndInsertLabels(time: Instant): LedgerTransaction {
-            val ltx = toLedgerTransaction(time)
+        fun finaliseAndInsertLabels(): LedgerTransaction {
+            val ltx = toLedgerTransaction()
             for ((index, labelledState) in outStates.withIndex()) {
                 if (labelledState.label != null) {
                     labelToRefs[labelledState.label] = ContractStateRef(ltx.hash, index)
@@ -317,7 +323,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         fun transaction(vararg outputStates: LabeledOutput) {
             val outs = outputStates.map { it.state }
             val wtx = WireTransaction(emptyList(), outs, emptyList())
-            val ltx = wtx.toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
+            val ltx = wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
                 labelToRefs[label] = ContractStateRef(ltx.hash, index)
@@ -330,17 +336,17 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         @Deprecated("Does not nest ", level = DeprecationLevel.ERROR)
         fun roots(body: Roots.() -> Unit) {}
         @Deprecated("Use the vararg form of transaction inside roots", level = DeprecationLevel.ERROR)
-        fun transaction(time: Instant = TEST_TX_TIME, body: LedgerTransactionDSL.() -> Unit) {}
+        fun transaction(body: LedgerTransactionDSL.() -> Unit) {}
     }
     fun roots(body: Roots.() -> Unit) = Roots().apply { body() }
 
     val txns = ArrayList<LedgerTransaction>()
     private val txnToLabelMap = HashMap<LedgerTransaction, String>()
 
-    fun transaction(label: String? = null, time: Instant = TEST_TX_TIME, body: LedgerTransactionDSL.() -> Unit): LedgerTransaction {
+    fun transaction(label: String? = null, body: LedgerTransactionDSL.() -> Unit): LedgerTransaction {
         val forTest = InternalLedgerTransactionDSL()
         forTest.body()
-        val ltx = forTest.finaliseAndInsertLabels(time)
+        val ltx = forTest.finaliseAndInsertLabels()
         txns.add(ltx)
         if (label != null)
             txnToLabelMap[ltx] = label

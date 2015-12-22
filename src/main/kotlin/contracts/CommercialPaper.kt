@@ -53,12 +53,12 @@ class CommercialPaper : Contract {
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }
 
-    interface Commands : Command {
-        class Move : TypeOnlyCommand(), Commands
-        class Redeem : TypeOnlyCommand(), Commands
+    interface Commands : CommandData {
+        class Move : TypeOnlyCommandData(), Commands
+        class Redeem : TypeOnlyCommandData(), Commands
         // We don't need a nonce in the issue command, because the issuance.reference field should already be unique per CP.
         // However, nothing in the platform enforces that uniqueness: it's up to the issuer.
-        class Issue : TypeOnlyCommand(), Commands
+        class Issue : TypeOnlyCommandData(), Commands
     }
 
     override fun verify(tx: TransactionForVerification) {
@@ -68,7 +68,7 @@ class CommercialPaper : Contract {
         // There are two possible things that can be done with this CP. The first is trading it. The second is redeeming
         // it for cash on or after the maturity date.
         val command = tx.commands.requireSingleCommand<CommercialPaper.Commands>()
-        val time = tx.time
+        val timestamp: TimestampCommand? = tx.getTimestampBy(DummyTimestampingAuthority.identity)
 
         for (group in groups) {
             when (command.value) {
@@ -83,7 +83,7 @@ class CommercialPaper : Contract {
                 is Commands.Redeem -> {
                     val input = group.inputs.single()
                     val received = tx.outStates.sumCashBy(input.owner)
-                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
+                    val time = timestamp?.after ?: throw IllegalArgumentException("Redemptions must be timestamped")
                     requireThat {
                         "the paper must have matured" by (time > input.maturityDate)
                         "the received amount equals the face value" by (received == input.faceValue)
@@ -94,7 +94,7 @@ class CommercialPaper : Contract {
 
                 is Commands.Issue -> {
                     val output = group.outputs.single()
-                    if (time == null) throw IllegalArgumentException("Redemption transactions must be timestamped")
+                    val time = timestamp?.before ?: throw IllegalArgumentException("Issuances must be timestamped")
                     requireThat {
                         // Don't allow people to issue commercial paper under other entities identities.
                         "the issuance is signed by the claimed issuer of the paper" by
@@ -119,7 +119,7 @@ class CommercialPaper : Contract {
      */
     fun craftIssue(issuance: PartyReference, faceValue: Amount, maturityDate: Instant): PartialTransaction {
         val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
-        return PartialTransaction().withItems(state, WireCommand(Commands.Issue(), issuance.party.owningKey))
+        return PartialTransaction().withItems(state, Command(Commands.Issue(), issuance.party.owningKey))
     }
 
     /**
@@ -128,7 +128,7 @@ class CommercialPaper : Contract {
     fun craftMove(tx: PartialTransaction, paper: StateAndRef<State>, newOwner: PublicKey) {
         tx.addInputState(paper.ref)
         tx.addOutputState(paper.state.copy(owner = newOwner))
-        tx.addArg(WireCommand(Commands.Move(), paper.state.owner))
+        tx.addCommand(Commands.Move(), paper.state.owner)
     }
 
     /**
@@ -143,7 +143,7 @@ class CommercialPaper : Contract {
         // Add the cash movement using the states in our wallet.
         Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
         tx.addInputState(paper.ref)
-        tx.addArg(WireCommand(CommercialPaper.Commands.Redeem(), paper.state.owner))
+        tx.addCommand(CommercialPaper.Commands.Redeem(), paper.state.owner)
     }
 }
 

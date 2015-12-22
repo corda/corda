@@ -97,7 +97,7 @@ class TransactionGroupTests {
         // points nowhere.
         val ref = ContractStateRef(SecureHash.randomSHA256(), 0)
         tg.txns.add(LedgerTransaction(
-                listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move())), TEST_TX_TIME, SecureHash.randomSHA256())
+                listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move())), SecureHash.randomSHA256())
         )
 
         val e = assertFailsWith(TransactionResolutionException::class) {

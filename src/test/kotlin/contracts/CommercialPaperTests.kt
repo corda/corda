@@ -11,7 +11,9 @@ package contracts
 import core.*
 import core.testutils.*
 import org.junit.Test
+import java.time.Clock
 import java.time.Instant
+import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
@@ -39,6 +41,7 @@ class CommercialPaperTests {
             transaction {
                 output { PAPER_1 }
                 arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "signed by the claimed issuer")
@@ -51,6 +54,7 @@ class CommercialPaperTests {
             transaction {
                 output { PAPER_1.copy(faceValue = 0.DOLLARS) }
                 arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "face value is not zero")
@@ -63,9 +67,32 @@ class CommercialPaperTests {
             transaction {
                 output { PAPER_1.copy(maturityDate = TEST_TX_TIME - 10.days) }
                 arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "maturity date is not in the past")
+        }
+    }
+
+    @Test
+    fun `timestamp out of range`() {
+        // Check what happens if the timestamp on the transaction itself defines a range that doesn't include true
+        // time as measured by a TSA (which is running five hours ahead in this test).
+        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+            signWith(MINI_CORP_KEY)
+            assertFailsWith(NotOnTimeException::class) {
+                timestamp(DummyTimestamper(Clock.fixed(TEST_TX_TIME + 5.hours, ZoneOffset.UTC)))
+            }
+        }
+        // Check that it also fails if true time is before the threshold (we are trying to timestamp too early).
+        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+            setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+            signWith(MINI_CORP_KEY)
+            assertFailsWith(NotOnTimeException::class) {
+                val tsaClock = Clock.fixed(TEST_TX_TIME - 5.hours, ZoneOffset.UTC)
+                timestamp(DummyTimestamper(tsaClock), Clock.fixed(TEST_TX_TIME, ZoneOffset.UTC))
+            }
         }
     }
 
@@ -79,6 +106,7 @@ class CommercialPaperTests {
                 input("paper")
                 output { PAPER_1 }
                 arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                timestamp(TEST_TX_TIME)
             }
 
             expectFailureOfTx(1, "there is no input state")
@@ -96,7 +124,7 @@ class CommercialPaperTests {
     }
 
     fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
-        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), TEST_TX_TIME, SecureHash.randomSHA256())
+        val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
         return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, ContractStateRef(ltx.hash, index)) })
     }
 
@@ -104,10 +132,13 @@ class CommercialPaperTests {
     fun `issue move and then redeem`() {
         // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
-            val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days)
-            ptx.signWith(MINI_CORP_KEY)
+            val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+                setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
+                signWith(MINI_CORP_KEY)
+                timestamp(DUMMY_TIMESTAMPER)
+            }
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
+            stx.verifyToLedgerTransaction(MockIdentityService)
         }
 
         val (alicesWalletTX, alicesWallet) = cashOutputsToWallet(
@@ -124,7 +155,7 @@ class CommercialPaperTests {
             ptx.signWith(MINI_CORP_KEY)
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
-            stx.verify().toLedgerTransaction(TEST_TX_TIME, MockIdentityService, SecureHash.randomSHA256())
+            stx.verifyToLedgerTransaction(MockIdentityService)
         }
 
         // Won't be validated.
@@ -135,10 +166,12 @@ class CommercialPaperTests {
 
         fun makeRedeemTX(time: Instant): LedgerTransaction {
             val ptx = PartialTransaction()
+            ptx.setTime(time, DummyTimestampingAuthority.identity, 30.seconds)
             CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
-            return ptx.toSignedTransaction().verify().toLedgerTransaction(time, MockIdentityService, SecureHash.randomSHA256())
+            ptx.timestamp(DUMMY_TIMESTAMPER)
+            return ptx.toSignedTransaction().verifyToLedgerTransaction(MockIdentityService)
         }
 
         val tooEarlyRedemption = makeRedeemTX(TEST_TX_TIME + 10.days)
@@ -154,8 +187,8 @@ class CommercialPaperTests {
 
     // Generate a trade lifecycle with various parameters.
     fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
-                      aliceGetsBack: Amount = 1000.DOLLARS,
-                      destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<CommercialPaper.State> {
+              aliceGetsBack: Amount = 1000.DOLLARS,
+              destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<CommercialPaper.State> {
         val someProfits = 1200.DOLLARS
         return transactionGroupFor() {
             roots {
@@ -167,6 +200,7 @@ class CommercialPaperTests {
             transaction("Issuance") {
                 output("paper") { PAPER_1 }
                 arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                timestamp(TEST_TX_TIME)
             }
 
             // The CP is sold to alice for her $900, $100 less than the face value. At 10% interest after only 7 days,
@@ -182,7 +216,7 @@ class CommercialPaperTests {
 
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
             // as a single payment from somewhere and uses it to pay Alice off, keeping the remaining $200 as change.
-            transaction("Redemption", redemptionTime) {
+            transaction("Redemption") {
                 input("alice's paper")
                 input("some profits")
 
@@ -193,6 +227,8 @@ class CommercialPaperTests {
 
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
                 arg(ALICE) { CommercialPaper.Commands.Redeem() }
+
+                timestamp(redemptionTime)
             }
         }
     }

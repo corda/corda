@@ -11,6 +11,8 @@ package core
 import core.serialization.OpaqueBytes
 import core.serialization.serialize
 import java.security.PublicKey
+import java.time.Duration
+import java.time.Instant
 
 /**
  * A contract state (or just "state") contains opaque data used by a contract program. It can be thought of as a disk
@@ -31,7 +33,7 @@ interface OwnableState : ContractState {
     val owner: PublicKey
 
     /** Copies the underlying data structure, replacing the owner field with this new value and leaving the rest alone */
-    fun withNewOwner(newOwner: PublicKey): Pair<Command, OwnableState>
+    fun withNewOwner(newOwner: PublicKey): Pair<CommandData, OwnableState>
 }
 
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
@@ -63,12 +65,17 @@ data class PartyReference(val party: Party, val reference: OpaqueBytes) {
 }
 
 /** Marker interface for classes that represent commands */
-interface Command
+interface CommandData
 
 /** Commands that inherit from this are intended to have no data items: it's only their presence that matters. */
-abstract class TypeOnlyCommand : Command {
+abstract class TypeOnlyCommandData : CommandData {
     override fun equals(other: Any?) = other?.javaClass == javaClass
     override fun hashCode() = javaClass.name.hashCode()
+}
+
+/** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
+data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
+    constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */
@@ -78,6 +85,23 @@ data class AuthenticatedObject<out T : Any>(
     val signingParties: List<Party>,
     val value: T
 )
+
+/**
+ * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
+ * public keys are identified in the containing [Command] object.
+ */
+data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData {
+    init {
+        if (after == null && before == null)
+            throw IllegalArgumentException("At least one of before/after must be specified")
+        if (after != null && before != null)
+            check(after <= before)
+    }
+
+    constructor(time: Instant, tolerance: Duration) : this(time - tolerance, time + tolerance)
+
+    val midpoint: Instant get() = after!! + Duration.between(after, before!!).dividedBy(2)
+}
 
 /**
  * Implemented by a program that implements business logic on the shared ledger. All participants run this code for
