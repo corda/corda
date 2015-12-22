@@ -28,8 +28,8 @@ import java.util.*
  *
  * WireTransaction is a transaction in a form ready to be serialised/unserialised. A WireTransaction can be hashed
  * in various ways to calculate a *signature hash* (or sighash), this is the hash that is signed by the various involved
- * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of a SignedWireTransaction
- * i.e. the outermost serialised form with everything included.
+ * keypairs. Note that a sighash is not the same thing as a *transaction id*, which is the hash of the entire
+ * WireTransaction i.e. the outermost serialised form with everything included.
  *
  * A TransactionBuilder is a transaction class that's mutable (unlike the others which are all immutable). It is
  * intended to be passed around contracts that may edit it by adding new states/commands or modifying the existing set.
@@ -59,6 +59,55 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, originalHash)
     }
 }
+
+/** Container for a [WireTransaction] and attached signatures. */
+data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
+    init { check(sigs.isNotEmpty()) }
+
+    // Lazily calculated access to the deserialised/hashed transaction data.
+    @Transient val tx: WireTransaction by lazy { txBits.deserialize() }
+
+    /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
+    val id: SecureHash get() = txBits.hash
+
+    /**
+     * Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
+     * to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
+     * checking a partially signed transaction being prepared by multiple co-operating parties.
+     *
+     * @throws SignatureException if the signature is invalid or does not match.
+     */
+    fun verifySignatures() {
+        for (sig in sigs)
+            sig.verifyWithECDSA(txBits.bits)
+    }
+
+    /**
+     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
+     * the set of pubkeys in the commands.
+     *
+     * @throws SignatureException if the signature is invalid or does not match.
+     */
+    fun verify() {
+        verifySignatures()
+        // Verify that every command key was in the set that we just verified: there should be no commands that were
+        // unverified.
+        val cmdKeys = tx.commands.flatMap { it.pubkeys }.toSet()
+        val sigKeys = sigs.map { it.by }.toSet()
+        if (!sigKeys.containsAll(cmdKeys))
+            throw SignatureException("Missing signatures on the transaction for: ${cmdKeys - sigKeys}")
+    }
+
+    /**
+     * Calls [verify] to check all required signatures are present, and then uses the passed [IdentityService] to call
+     * [WireTransaction.toLedgerTransaction] to look up well known identities from pubkeys.
+     */
+    fun verifyToLedgerTransaction(identityService: IdentityService): LedgerTransaction {
+        verify()
+        return tx.toLedgerTransaction(identityService, id)
+    }
+}
+
 
 /**
  * Thrown if an attempt is made to timestamp a transaction using a trusted timestamper, but the time on the transaction
@@ -178,50 +227,6 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
     fun inputStates(): List<ContractStateRef> = ArrayList(inputStates)
     fun outputStates(): List<ContractState> = ArrayList(outputStates)
     fun commands(): List<Command> = ArrayList(commands)
-}
-
-data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
-    init {
-        check(sigs.isNotEmpty())
-    }
-
-    /**
-     * Verifies the given signatures against the serialized transaction data. Does NOT deserialise or check the contents
-     * to ensure there are no missing signatures: use verify() to do that. This weaker version can be useful for
-     * checking a partially signed transaction being prepared by multiple co-operating parties.
-     *
-     * @throws SignatureException if the signature is invalid or does not match.
-     */
-    fun verifySignatures() {
-        for (sig in sigs)
-            sig.verifyWithECDSA(txBits.bits)
-    }
-
-    /**
-     * Verify the signatures, deserialise the wire transaction and then check that the set of signatures found matches
-     * the set of pubkeys in the commands.
-     *
-     * @throws SignatureException if the signature is invalid or does not match.
-     */
-    fun verify(): WireTransaction {
-        verifySignatures()
-        val wtx = txBits.deserialize()
-        // Verify that every command key was in the set that we just verified: there should be no commands that were
-        // unverified.
-        val cmdKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
-        val sigKeys = sigs.map { it.by }.toSet()
-        if (!sigKeys.containsAll(cmdKeys))
-            throw SignatureException("Missing signatures on the transaction for: ${cmdKeys - sigKeys}")
-        return wtx
-    }
-
-    /**
-     * Calls [verify] to check all required signatures are present, and then uses the passed [IdentityService] to call
-     * [WireTransaction.toLedgerTransaction] to look up well known identities from pubkeys.
-     */
-    fun verifyToLedgerTransaction(identityService: IdentityService): LedgerTransaction {
-        return verify().toLedgerTransaction(identityService, txBits.bits.sha256())
-    }
 }
 
 /**

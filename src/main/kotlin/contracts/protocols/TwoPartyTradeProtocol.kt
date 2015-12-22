@@ -191,7 +191,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
 
             logger().trace { "Fully signed transaction was valid. Trade complete! :-)" }
 
-            return Pair(fullySigned.verify(), ltx)
+            return Pair(fullySigned.tx, ltx)
         }
     }
 
