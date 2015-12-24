@@ -20,7 +20,6 @@ import javax.annotation.concurrent.GuardedBy
 import javax.annotation.concurrent.ThreadSafe
 import kotlin.concurrent.currentThread
 import kotlin.concurrent.thread
-import kotlin.test.fail
 
 /**
  * An in-memory network allows you to manufacture [Node]s for a set of participants. Each
@@ -73,7 +72,7 @@ public class InMemoryNetwork {
                 for (handle in networkMap.keys)
                     getQueueForHandle(handle).add(message)
             }
-            else -> fail("Unknown type of recipient handle")
+            else -> throw IllegalArgumentException("Unknown type of recipient handle")
         }
     }
 

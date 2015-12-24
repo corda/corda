@@ -65,7 +65,7 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
     init { check(sigs.isNotEmpty()) }
 
     // Lazily calculated access to the deserialised/hashed transaction data.
-    @Transient val tx: WireTransaction by lazy { txBits.deserialize() }
+    val tx: WireTransaction by lazy { txBits.deserialize() }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
     val id: SecureHash get() = txBits.hash

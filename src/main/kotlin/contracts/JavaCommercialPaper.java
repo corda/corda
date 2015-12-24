@@ -17,7 +17,7 @@ import java.time.*;
 import java.util.*;
 
 import static core.ContractsDSLKt.*;
-import static kotlin.CollectionsKt.*;
+import static kotlin.collections.CollectionsKt.*;
 
 /**
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the

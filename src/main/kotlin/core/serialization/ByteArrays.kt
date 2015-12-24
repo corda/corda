@@ -38,7 +38,7 @@ open class OpaqueBytes(val bits: ByteArray) {
 }
 
 class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
-    @Transient val hash: SecureHash by lazy { bits.sha256() }
+    val hash: SecureHash by lazy { bits.sha256() }
 }
 
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
