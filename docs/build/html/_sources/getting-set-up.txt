@@ -7,7 +7,7 @@ Then install IntelliJ version 15 community edition:
 
    https://www.jetbrains.com/idea/download/
 
-Upgrade the Kotlin plugin to the latest version (1.0-beta-3595) by clicking "Configure > Plugins" in the opening screen,
+Upgrade the Kotlin plugin to the latest version (1.0-beta-4584) by clicking "Configure > Plugins" in the opening screen,
 then clicking "Install JetBrains plugin", then searching for Kotlin, then hitting "Upgrade" and then "Restart".
 
 Choose "Check out from version control" and use this git URL
