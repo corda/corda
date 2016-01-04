@@ -13,7 +13,9 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import core.SecureHash
 import core.SignedWireTransaction
+import core.sha256
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
@@ -53,11 +55,26 @@ import kotlin.reflect.primaryConstructor
  * a formal evaluation process.
  */
 
+// A convenient instance of Kryo pre-configured with some useful things. Used as a default by various functions.
 val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
 
+/**
+ * A type safe wrapper around a byte array that contains a serialised object. You can call [SerializedBytes.deserialize]
+ * to get the original object back.
+ */
+class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
+    val hash: SecureHash by lazy { bits.sha256() }
+}
+
+// Some extension functions that make deserialisation convenient and provide auto-casting of the result.
 inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
 inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this.bits), T::class.java)
+inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
 
+/**
+ * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
+ * the type is marked as serializable or was designed for it (so be careful!)
+ */
 fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
@@ -66,6 +83,10 @@ fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes
     return SerializedBytes(stream.toByteArray())
 }
 
+/**
+ * Serializes properties and deserializes by using the constructor. This assumes that all backed properties are
+ * set via the constructor and the class is immutable.
+ */
 class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
     val props = klass.memberProperties.sortedBy { it.name }
     val propsByName = props.toMapBy { it.name }

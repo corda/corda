@@ -9,8 +9,6 @@
 package core.serialization
 
 import com.google.common.io.BaseEncoding
-import core.SecureHash
-import core.sha256
 import java.util.*
 
 /**
@@ -37,9 +35,4 @@ open class OpaqueBytes(val bits: ByteArray) {
     val size: Int get() = bits.size
 }
 
-class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
-    val hash: SecureHash by lazy { bits.sha256() }
-}
-
 fun ByteArray.opaque(): OpaqueBytes = OpaqueBytes(this)
-inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
