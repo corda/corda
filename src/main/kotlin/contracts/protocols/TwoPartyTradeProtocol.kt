@@ -8,14 +8,19 @@
 
 package contracts.protocols
 
+import co.paralleluniverse.fibers.Suspendable
 import contracts.Cash
 import contracts.sumCashBy
 import core.*
-import core.messaging.*
+import core.messaging.ProtocolStateMachine
+import core.messaging.SingleMessageRecipient
+import core.messaging.StateMachineManager
 import core.serialization.deserialize
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
+
+// TODO: Get rid of the "initial args" concept and just use the class c'tors, now we are using Quasar.
 
 /**
  * This asset trading protocol has two parties (B and S for buyer and seller) and the following steps:
@@ -89,6 +94,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
     // the continuation by the state machine framework. Please refer to the documentation website (docs/build/html) to
     // learn more about the protocol state machine framework.
     class SellerImpl : Seller() {
+        @Suspendable
         override fun call(args: SellerInitialArgs): Pair<WireTransaction, LedgerTransaction> {
             val sessionID = random63BitValue()
 
@@ -96,7 +102,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
             val hello = SellerTradeInfo(args.assetToSell, args.price, args.myKeyPair.public, sessionID)
 
             val partialTX = sendAndReceive<SignedWireTransaction>(TRADE_TOPIC, args.buyerSessionID, sessionID, hello)
-            logger().trace { "Received partially signed transaction" }
+            logger.trace { "Received partially signed transaction" }
 
             partialTX.verifySignatures()
             val wtx: WireTransaction = partialTX.txBits.deserialize()
@@ -120,7 +126,7 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
             val fullySigned: SignedWireTransaction = partialTX.copy(sigs = partialTX.sigs + ourSignature)
             // We should run it through our full TransactionGroup of all transactions here.
             fullySigned.verify()
-            logger().trace { "Built finished transaction, sending back to secondary!" }
+            logger.trace { "Built finished transaction, sending back to secondary!" }
 
             send(TRADE_TOPIC, args.buyerSessionID, fullySigned)
 
@@ -135,13 +141,14 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
 
     // The buyer's side of the protocol. See note above Seller to learn about the caveats here.
     class BuyerImpl : Buyer() {
+        @Suspendable
         override fun call(args: BuyerInitialArgs): Pair<WireTransaction, LedgerTransaction> {
             // Wait for a trade request to come in on our pre-provided session ID.
             val tradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, args.sessionID)
 
             // What is the seller trying to sell us?
             val assetTypeName = tradeRequest.assetForSale.state.javaClass.name
-            logger().trace { "Got trade request for a $assetTypeName" }
+            logger.trace { "Got trade request for a $assetTypeName" }
 
             // Check the start message for acceptability.
             check(tradeRequest.sessionID > 0)
@@ -179,17 +186,17 @@ private class TwoPartyTradeProtocolImpl(private val smm: StateMachineManager) : 
 
             // TODO: Could run verify() here to make sure the only signature missing is the sellers.
 
-            logger().trace { "Sending partially signed transaction to seller" }
+            logger.trace { "Sending partially signed transaction to seller" }
 
             // TODO: Protect against the buyer terminating here and leaving us in the lurch without the final tx.
             // TODO: Protect against a malicious buyer sending us back a different transaction to the one we built.
             val fullySigned = sendAndReceive<SignedWireTransaction>(TRADE_TOPIC, tradeRequest.sessionID, args.sessionID, stx)
 
-            logger().trace { "Got fully signed transaction, verifying ... "}
+            logger.trace { "Got fully signed transaction, verifying ... "}
 
             val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
 
-            logger().trace { "Fully signed transaction was valid. Trade complete! :-)" }
+            logger.trace { "Fully signed transaction was valid. Trade complete! :-)" }
 
             return Pair(fullySigned.tx, ltx)
         }

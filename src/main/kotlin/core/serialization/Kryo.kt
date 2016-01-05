@@ -153,8 +153,8 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
     }
 }
 
-fun createKryo(): Kryo {
-    return Kryo().apply {
+fun createKryo(k: Kryo = Kryo()): Kryo {
+    return k.apply {
         // Allow any class to be deserialized (this is insecure but for prototyping we don't care)
         isRegistrationRequired = false
         // Allow construction of objects using a JVM backdoor that skips invoking the constructors, if there is no

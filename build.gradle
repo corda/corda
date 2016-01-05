@@ -3,7 +3,7 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
-apply plugin: 'org.jetbrains.dokka'
+//apply plugin: 'org.jetbrains.dokka'
 
 allprojects {
     sourceCompatibility = 1.8
@@ -12,6 +12,9 @@ allprojects {
 
 buildscript {
     ext.kotlin_version = '1.0.0-beta-4584'
+    ext.quasar_version = '0.7.4-SNAPSHOT'
+    ext.asm_version = '0.5.3'
+
     repositories {
         mavenCentral()
         jcenter()
@@ -22,7 +25,9 @@ buildscript {
     }
 }
 
+
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
@@ -30,38 +35,61 @@ repositories {
     jcenter()
 }
 
+configurations {
+    quasar
+}
+
+// This block makes Gradle print an error and refuse to continue if we get multiple versions of the same library
+// included simultaneously.
+configurations.all() {
+    resolutionStrategy {
+        failOnVersionConflict()
+    }
+}
+
 dependencies {
-    testCompile 'junit:junit:4.11'
+    testCompile 'junit:junit:4.12'
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     compile "com.google.guava:guava:18.0"
-    compile "com.esotericsoftware:kryo:3.0.3"
+    compile("com.esotericsoftware:kryo:3.0.3") {
+        force = true
+    }
     compile "de.javakaffee:kryo-serializers:0.37"
     compile "com.google.code.findbugs:jsr305:3.0.1"
 
     // Logging
     compile "org.slf4j:slf4j-jdk14:1.7.13"
 
-    // For the continuations in the state machine tests. Note: JavaFlow is old and unmaintained but still seems to work
-    // just fine, once the patch here is applied to update it to a Java8 compatible asm:
-    //
-    //   https://github.com/playframework/play1/commit/e0e28e6780a48c000e7ed536962f1f284cef9437
-    //
-    // Obviously using this year-old upload to Maven Central by the Maven Play Plugin team is a short term hack for
-    // experimenting. Using this for real would mean forking JavaFlow and taking over maintenance (luckily it's small
-    // and Java is stable, so this is unlikely to be a big burden). We have to manually force an in-place upgrade to
-    // asm 5.0.3 here (javaflow wants 5.0.2) in order to avoid version conflicts. This is also something that should be
-    // fixed in any fork. Sadly, even Jigsaw doesn't solve this problem out of the box.
-    compile "com.google.code.maven-play-plugin.org.apache.commons:commons-javaflow:1590792-patched-play-1.3.0"
-    compile "org.ow2.asm:asm:5.0.3"
-    compile "org.ow2.asm:asm-analysis:5.0.3"
-    compile "org.ow2.asm:asm-tree:5.0.3"
-    compile "org.ow2.asm:asm-commons:5.0.3"
-    compile "org.ow2.asm:asm-util:5.0.3"
+    // Quasar: for the bytecode rewriting for state machines.
+    compile("co.paralleluniverse:quasar-core:${quasar_version}:jdk8") {
+        // Quasar currently depends on an old version of Kryo, but it works fine with the newer version, so exclude it
+        // here so the newer version is picked up.
+        exclude group: "com.esotericsoftware.kryo", module: "kryo"
+    }
+    quasar("co.paralleluniverse:quasar-core:${quasar_version}:jdk8@jar") {
+        exclude group: "com.esotericsoftware.kryo", module: "kryo"
+    }
 
     // For visualisation
     compile "org.graphstream:gs-core:1.3"
     compile "org.graphstream:gs-ui:1.3"
-    compile "com.intellij:forms_rt:7.0.3"
+    compile("com.intellij:forms_rt:7.0.3") {
+        exclude group: "asm"
+    }
+}
+
+// These lines tell Gradle to add a couple of JVM command line arguments to unit test and program runs, which set up
+// the Quasar bytecode rewriting system so fibers can be suspended. The verifyInstrumentation line makes things run
+// slower but you get a much better error message if you forget to annotate a method with @Suspendable that needs it.
+//
+// In Java 9 (hopefully) the requirement to annotate methods as @Suspendable will go away.
+tasks.withType(Test) {
+    jvmArgs "-javaagent:${configurations.quasar.singleFile}"
+    jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
+}
+tasks.withType(JavaExec) {
+    jvmArgs "-javaagent:${configurations.quasar.singleFile}"
+    jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
 }

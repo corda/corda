@@ -8,8 +8,14 @@
 
 package core.messaging
 
+import co.paralleluniverse.fibers.Fiber
+import co.paralleluniverse.fibers.FiberExecutorScheduler
+import co.paralleluniverse.fibers.Suspendable
+import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.io.Input
+import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
 import core.SecureHash
 import core.ServiceHub
@@ -17,14 +23,11 @@ import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.sha256
 import core.utilities.trace
-import core.whenComplete
-import org.apache.commons.javaflow.Continuation
-import org.apache.commons.javaflow.ContinuationClassLoader
-import org.objenesis.instantiator.ObjectInstantiator
-import org.objenesis.strategy.InstantiatorStrategy
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.ByteArrayOutputStream
 import java.util.*
 import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
@@ -44,6 +47,7 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: This needs extension to the >2 party case.
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
  *       continuation is always unique?
+ * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
@@ -61,13 +65,20 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
+    // Used to work around a small limitation in Quasar.
+    private val QUASAR_UNBLOCKER = run {
+        val field = Fiber::class.java.getDeclaredField("SERIALIZER_BLOCKER")
+        field.isAccessible = true
+        field.get(null)
+    }
+
     // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
     private class Checkpoint(
-            val continuation: Continuation,
-            val otherSide: MessageRecipients,
-            val loggerName: String,
-            val awaitingTopic: String,
-            val awaitingObjectOfType: String   // java class name
+        val serialisedFiber: ByteArray,
+        val otherSide: MessageRecipients,
+        val loggerName: String,
+        val awaitingTopic: String,
+        val awaitingObjectOfType: String   // java class name
     )
 
     init {
@@ -77,48 +88,33 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     /** Reads the database map and resurrects any serialised state machines. */
     private fun restoreCheckpoints() {
         for (bytes in checkpointsMap.values) {
-            val kryo = createKryo()
+            val checkpoint = bytes.deserialize<Checkpoint>()
+            val checkpointKey = SecureHash.sha256(bytes)
 
-            // Set up Kryo to use the JavaFlow classloader when deserialising, so the magical continuation bytecode
-            // rewriting is performed correctly.
-            var _psm: ProtocolStateMachine<*, *>? = null
-            kryo.instantiatorStrategy = object : InstantiatorStrategy {
-                val forwardingTo = kryo.instantiatorStrategy
-
-                override fun <T> newInstantiatorOf(type: Class<T>): ObjectInstantiator<T> {
-                    // If this is some object that isn't a state machine, use the default behaviour.
-                    if (!ProtocolStateMachine::class.java.isAssignableFrom(type))
-                        return forwardingTo.newInstantiatorOf(type)
-
-                    // Otherwise, return an 'object instantiator' (i.e. factory) that uses the JavaFlow classloader.
-                    @Suppress("UNCHECKED_CAST", "CAST_NEVER_SUCCEEDS")
-                    return ObjectInstantiator<T> {
-                        val p = loadContinuationClass(type as Class<out ProtocolStateMachine<*, *>>).first
-                        // Pass the new object a pointer to the service hub where it can find objects that don't
-                        // survive restarts.
-                        p.serviceHub = serviceHub
-                        _psm = p
-                        p as T
-                    }
-                }
-            }
-
-            val checkpoint = bytes.deserialize<Checkpoint>(kryo)
-            val continuation = checkpoint.continuation
-
-            // We know _psm can't be null here, because we always serialise a ProtocolStateMachine subclass, so the
-            // code above that does "_psm = p" will always run. But the Kotlin compiler can't know that so we have to
-            // forcibly cast away the nullness with the !! operator.
-            val psm = _psm!!
-            registerStateMachine(psm)
-
+            // Grab the Kryo engine configured by Quasar for its own stuff, and then do our own configuration on top
+            // so we can deserialised the nested stream that holds the fiber.
+            val psm = deserializeFiber(checkpoint.serialisedFiber)
+            _stateMachines.add(psm)
             val logger = LoggerFactory.getLogger(checkpoint.loggerName)
             val awaitingObjectOfType = Class.forName(checkpoint.awaitingObjectOfType)
+            val topic = checkpoint.awaitingTopic
 
             // And now re-wire the deserialised continuation back up to the network service.
-            setupNextMessageHandler(logger, serviceHub.networkService, continuation, checkpoint.otherSide,
-                    awaitingObjectOfType, checkpoint.awaitingTopic, bytes)
+            serviceHub.networkService.runOnNextMessage(topic, runInThread) { netMsg ->
+                val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), awaitingObjectOfType)
+                logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
+                iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpoint.otherSide, checkpointKey) {
+                    Fiber.unparkDeserialized(it, SameThreadFiberScheduler)
+                }
+            }
         }
+    }
+
+    private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*, *> {
+        val deserializer = Fiber.getFiberSerializer() as KryoSerializer
+        val kryo = createKryo(deserializer.kryo)
+        val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*, *>
+        return psm
     }
 
     /**
@@ -128,99 +124,84 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
      * and will be removed once it completes.
      */
     fun <T : ProtocolStateMachine<I, *>, I> add(otherSide: MessageRecipients, initialArgs: I, loggerName: String,
-                                                continuationClass: Class<out T>): T {
+                                                klass: Class<out T>): T {
         val logger = LoggerFactory.getLogger(loggerName)
-        val (sm, continuation) = loadContinuationClass(continuationClass)
-        sm.serviceHub = serviceHub
-        registerStateMachine(sm)
-        runInThread.execute {
-            // The current state of the continuation is held in the closure attached to the messaging system whenever
-            // the continuation suspends and tells us it expects a response.
-            iterateStateMachine(continuation, serviceHub.networkService, otherSide, initialArgs, logger, null)
+        val fiber = klass.newInstance()
+        iterateStateMachine(fiber, serviceHub.networkService, logger, initialArgs, otherSide, null) {
+            it.start()
         }
-        @Suppress("UNCHECKED_CAST")
-        return sm as T
+        return fiber
     }
 
-    private fun registerStateMachine(psm: ProtocolStateMachine<*, *>) {
-        _stateMachines.add(psm)
-        psm.resultFuture.whenComplete(runInThread) {
-            _stateMachines.remove(psm)
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun loadContinuationClass(continuationClass: Class<out ProtocolStateMachine<*, *>>): Pair<ProtocolStateMachine<*, *>, Continuation> {
-        val url = continuationClass.protectionDomain.codeSource.location
-        val cl = ContinuationClassLoader(arrayOf(url), this.javaClass.classLoader)
-        val obj = cl.forceLoadClass(continuationClass.name).newInstance() as ProtocolStateMachine<*, *>
-        return Pair(obj, Continuation.startSuspendedWith(obj))
-    }
-
-    private fun persistCheckpoint(prev: ByteArray?, new: ByteArray) {
+    private fun persistCheckpoint(prevCheckpointKey: SecureHash?, new: ByteArray): SecureHash {
         // It's OK for this to be unsynchronised, as the prev/new byte arrays are specific to a continuation instance,
         // and the underlying map provided by the database layer is expected to be thread safe.
-        if (prev != null)
-            checkpointsMap.remove(SecureHash.sha256(prev))
-        checkpointsMap[SecureHash.sha256(new)] = new
+        if (prevCheckpointKey != null)
+            checkpointsMap.remove(prevCheckpointKey)
+        val key = SecureHash.sha256(new)
+        checkpointsMap[key] = new
+        return key
     }
 
-    private fun iterateStateMachine(c: Continuation, net: MessagingService, otherSide: MessageRecipients,
-                                    continuationInput: Any?, logger: Logger,
-                                    prevPersistedBytes: ByteArray?): Continuation {
-        // This will resume execution of the run() function inside the continuation at the place it left off.
-        val oldLogger = CONTINUATION_LOGGER.get()
-        val nextState: Continuation? = try {
-            CONTINUATION_LOGGER.set(logger)
-            Continuation.continueWith(c, continuationInput)
+    private fun iterateStateMachine(psm: ProtocolStateMachine<*, *>, net: MessagingService, logger: Logger,
+                                    obj: Any?, otherSide: MessageRecipients, prevCheckpointKey: SecureHash?,
+                                    resumeFunc: (ProtocolStateMachine<*, *>) -> Unit) {
+        val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
+            // We have a request to do something: send, receive, or send-and-receive.
+            if (request is FiberRequest.ExpectingResponse<*>) {
+                // Prepare a listener on the network that runs in the background thread when we received a message.
+                checkpointAndSetupMessageHandler(logger, net, psm, otherSide, request.responseType,
+                        "${request.topic}.${request.sessionIDForReceive}", prevCheckpointKey, serFiber)
+            }
+            // If an object to send was provided (not null), send it now.
+            request.obj?.let {
+                val topic = "${request.topic}.${request.sessionIDForSend}"
+                logger.trace { "-> $topic : message of type ${it.javaClass.name}" }
+                net.send(net.createMessage(topic, it.serialize().bits), otherSide)
+            }
+            if (request is FiberRequest.NotExpectingResponse) {
+                // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
+                iterateStateMachine(psm, net, logger, null, otherSide, prevCheckpointKey) {
+                    Fiber.unpark(it, QUASAR_UNBLOCKER)
+                }
+            }
+        }
+
+        psm.prepareForResumeWith(serviceHub, obj, logger, onSuspend)
+
+        try {
+            // Now either start or carry on with the protocol from where it left off (or at the start).
+            resumeFunc(psm)
+
+            // We're back! Check if the fiber is finished and if so, clean up.
+            if (psm.isTerminated) {
+                _stateMachines.remove(psm)
+                checkpointsMap.remove(prevCheckpointKey)
+            }
         } catch (t: Throwable) {
             logger.error("Caught error whilst invoking protocol state machine", t)
             throw t
-        } finally {
-            CONTINUATION_LOGGER.set(oldLogger)
-        }
-
-        // If continuation returns null, it's finished and the result future has been set.
-        if (nextState == null)
-            return c
-
-        val req = nextState.value() as? ContinuationResult ?: return c
-
-        // Else, it wants us to do something: send, receive, or send-and-receive.
-        if (req is ContinuationResult.ExpectingResponse<*>) {
-            // Prepare a listener on the network that runs in the background thread when we received a message.
-            val topic = "${req.topic}.${req.sessionIDForReceive}"
-            setupNextMessageHandler(logger, net, nextState, otherSide, req.responseType, topic, prevPersistedBytes)
-        }
-        // If an object to send was provided (not null), send it now.
-        req.obj?.let {
-            val topic = "${req.topic}.${req.sessionIDForSend}"
-            logger.trace { "-> $topic : message of type ${it.javaClass.name}" }
-            net.send(net.createMessage(topic, it.serialize().bits), otherSide)
-        }
-        if (req is ContinuationResult.NotExpectingResponse) {
-            // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-            return iterateStateMachine(nextState, net, otherSide, null, logger, prevPersistedBytes)
-        } else {
-            return nextState
         }
     }
 
-    private fun setupNextMessageHandler(logger: Logger, net: MessagingService, nextState: Continuation,
-                                        otherSide: MessageRecipients, responseType: Class<*>,
-                                        topic: String, prevPersistedBytes: ByteArray?) {
-        val checkpoint = Checkpoint(nextState, otherSide, logger.name, topic, responseType.name)
+    private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*,*>,
+                                                 otherSide: MessageRecipients, responseType: Class<*>,
+                                                 topic: String, prevCheckpointKey: SecureHash?, serialisedFiber: ByteArray) {
+        val checkpoint = Checkpoint(serialisedFiber, otherSide, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
-        persistCheckpoint(prevPersistedBytes, curPersistedBytes)
+        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
+        val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
             logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-            iterateStateMachine(nextState, net, otherSide, obj, logger, curPersistedBytes)
+            iterateStateMachine(psm, net, logger, obj, otherSide, newCheckpointKey) {
+                Fiber.unpark(it, QUASAR_UNBLOCKER)
+            }
         }
     }
 }
 
-val CONTINUATION_LOGGER = ThreadLocal<Logger>()
+object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler", MoreExecutors.directExecutor())
 
 /**
  * The base class that should be used by any object that wishes to act as a protocol state machine. Sub-classes should
@@ -240,54 +221,89 @@ val CONTINUATION_LOGGER = ThreadLocal<Logger>()
  *   define your own constructor. Instead define a separate class that holds your initial arguments, and take it as
  *   the argument to [call].
  */
-@Suppress("UNCHECKED_CAST")
-abstract class ProtocolStateMachine<T, R> : Runnable {
-    protected fun logger(): Logger = CONTINUATION_LOGGER.get()
-
-    // These fields shouldn't be serialised.
+abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiberScheduler) {
+    // These fields shouldn't be serialised, so they are marked @Transient.
+    @Transient private var suspendFunc: ((result: FiberRequest, serFiber: ByteArray) -> Unit)? = null
+    @Transient private var resumeWithObject: Any? = null
+    @Transient protected lateinit var serviceHub: ServiceHub
+    @Transient protected lateinit var logger: Logger
     @Transient private var _resultFuture: SettableFuture<R> = SettableFuture.create<R>()
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R> get() = _resultFuture
 
-    /** This field is initialised by the framework to point to various infrastructure submodules. */
-    @Transient lateinit var serviceHub: ServiceHub
+    fun prepareForResumeWith(serviceHub: ServiceHub, withObject: Any?, logger: Logger,
+                             suspendFunc: (FiberRequest, ByteArray) -> Unit) {
+        this.suspendFunc = suspendFunc
+        this.logger = logger
+        this.resumeWithObject = withObject
+        this.serviceHub = serviceHub
+    }
 
-    abstract fun call(args: T): R
+    @Suspendable
+    abstract fun call(args: C): R
 
-    override fun run() {
-        // TODO: Catch any exceptions here and put them in the future.
-        val r = call(Continuation.getContext() as T)
-        if (r != null)
-            _resultFuture.set(r)
+    @Suspendable @Suppress("UNCHECKED_CAST")
+    override fun run(): R {
+        val result = call(resumeWithObject!! as C)
+        if (result != null)
+            _resultFuture.set(result)
+        return result
+    }
+
+    @Suspendable @Suppress("UNCHECKED_CAST")
+    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): T {
+        Fiber.parkAndSerialize { fiber, serializer ->
+            // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
+            val deserializer = Fiber.getFiberSerializer() as KryoSerializer
+            val kryo = createKryo(deserializer.kryo)
+            val stream = ByteArrayOutputStream()
+            Output(stream).use {
+                kryo.writeClassAndObject(it, this)
+            }
+            suspendFunc!!(with, stream.toByteArray())
+        }
+        val tmp = resumeWithObject ?: throw IllegalStateException("Expected to receive something")
+        resumeWithObject = null
+        return tmp as T
+    }
+
+    @Suspendable @Suppress("UNCHECKED_CAST")
+    protected fun <T : Any> sendAndReceive(topic: String, sessionIDForSend: Long, sessionIDForReceive: Long,
+                                           obj: Any, recvType: Class<T>): T {
+        val result = FiberRequest.ExpectingResponse(topic, sessionIDForSend, sessionIDForReceive, obj, recvType)
+        return suspendAndExpectReceive<T>(result)
+    }
+
+    @Suspendable
+    protected fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): T {
+        val result = FiberRequest.ExpectingResponse(topic, -1, sessionIDForReceive, null, recvType)
+        return suspendAndExpectReceive<T>(result)
+    }
+
+    @Suspendable
+    protected fun send(topic: String, sessionID: Long, obj: Any) {
+        val result = FiberRequest.NotExpectingResponse(topic, sessionID, obj)
+        Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
+    }
+
+    // Convenience functions for Kotlin users.
+    inline protected fun <reified R : Any> sendAndReceive(topic: String, sessionIDForSend: Long,
+                                                          sessionIDForReceive: Long, obj: Any): R {
+        return sendAndReceive(topic, sessionIDForSend, sessionIDForReceive, obj, R::class.java)
+    }
+    inline protected fun <reified R : Any> receive(topic: String, sessionIDForReceive: Long): R {
+        return receive(topic, sessionIDForReceive, R::class.java)
     }
 }
 
-@Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST")
-inline fun <S : Any> ProtocolStateMachine<*, *>.send(topic: String, sessionID: Long, obj: S) =
-        Continuation.suspend(ContinuationResult.NotExpectingResponse(topic, sessionID, obj))
-
-@Suppress("UNCHECKED_CAST")
-inline fun <reified R : Any> ProtocolStateMachine<*, *>.sendAndReceive(
-        topic: String, sessionIDForSend: Long, sessionIDForReceive: Long, obj: Any): R {
-    return Continuation.suspend(ContinuationResult.ExpectingResponse(topic, sessionIDForSend, sessionIDForReceive,
-            obj, R::class.java)) as R
-}
-
-
-@Suppress("UNCHECKED_CAST")
-inline fun <reified R : Any> ProtocolStateMachine<*, *>.receive(
-        topic: String, sessionIDForReceive: Long): R {
-    return Continuation.suspend(ContinuationResult.ExpectingResponse(topic, -1, sessionIDForReceive, null, R::class.java)) as R
-}
-
-open class ContinuationResult(val topic: String, val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
+open class FiberRequest(val topic: String, val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
     class ExpectingResponse<R : Any>(
             topic: String,
             sessionIDForSend: Long,
             sessionIDForReceive: Long,
             obj: Any?,
             val responseType: Class<R>
-    ) : ContinuationResult(topic, sessionIDForSend, sessionIDForReceive, obj)
+    ) : FiberRequest(topic, sessionIDForSend, sessionIDForReceive, obj)
 
-    class NotExpectingResponse(topic: String, sessionIDForSend: Long, obj: Any?) : ContinuationResult(topic, sessionIDForSend, -1, obj)
+    class NotExpectingResponse(topic: String, sessionIDForSend: Long, obj: Any?) : FiberRequest(topic, sessionIDForSend, -1, obj)
 }
