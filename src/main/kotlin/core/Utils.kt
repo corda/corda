@@ -14,6 +14,7 @@ import com.google.common.util.concurrent.SettableFuture
 import org.slf4j.Logger
 import java.security.SecureRandom
 import java.time.Duration
+import java.time.temporal.Temporal
 import java.util.concurrent.Executor
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
@@ -41,3 +42,6 @@ fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): Setta
     }
     return this
 }
+
+// Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
+infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)
