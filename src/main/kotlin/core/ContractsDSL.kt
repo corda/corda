@@ -11,7 +11,6 @@ package core
 import java.math.BigDecimal
 import java.security.PublicKey
 import java.util.*
-import kotlin.math.div
 
 /**
  * Defines a simple domain specific language for the specificiation of financial contracts. Currently covers:
