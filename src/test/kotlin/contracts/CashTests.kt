@@ -75,7 +75,7 @@ class CashTests {
         transaction {
             input { DummyContract.State() }
             output { outState }
-            arg { Cash.Commands.Move() }
+            arg(MINI_CORP_PUBKEY) { Cash.Commands.Move() }
 
             this `fails requirement` "there is at least one cash input"
         }
@@ -84,7 +84,7 @@ class CashTests {
         // institution is allowed to issue as much cash as they want.
         transaction {
             output { outState }
-            arg { Cash.Commands.Issue() }
+            arg(DUMMY_PUBKEY_1) { Cash.Commands.Issue() }
             this `fails requirement` "output deposits are owned by a command signer"
         }
         transaction {

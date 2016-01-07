@@ -75,6 +75,9 @@ abstract class TypeOnlyCommandData : CommandData {
 
 /** Command data/content plus pubkey pair: the signature is stored at the end of the serialized bytes */
 data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
+    init {
+        require(pubkeys.isNotEmpty())
+    }
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
 }
 
@@ -88,7 +91,7 @@ data class AuthenticatedObject<out T : Any>(
 
 /**
  * If present in a transaction, contains a time that was verified by the timestamping authority/authorities whose
- * public keys are identified in the containing [Command] object.
+ * public keys are identified in the containing [Command] object. The true time must be between (after, before)
  */
 data class TimestampCommand(val after: Instant?, val before: Instant?) : CommandData {
     init {
