@@ -62,16 +62,17 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = true)
             val (bobsAddress, bobsNode) = makeNode(inBackground = true)
+            val timestamper = network.setupTimestampingNode(false).first
 
-            val alicesServices = MockServices(wallet = null, keyManagement = null, net = alicesNode)
+            val alicesServices = MockServices(net = alicesNode)
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet),
                     keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
                     net = bobsNode
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread))
-            val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread))
+            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread), timestamper)
+            val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread), timestamper)
 
             val buyerSessionID = random63BitValue()
 
@@ -115,6 +116,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = false)
             var (bobsAddress, bobsNode) = makeNode(inBackground = false)
+            val timestamper = network.setupTimestampingNode(true)
 
             val bobsStorage = MockStorageService()
 
@@ -126,9 +128,9 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                     storage = bobsStorage
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, MoreExecutors.directExecutor()))
+            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, MoreExecutors.directExecutor()), timestamper.first)
             val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
-            val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
+            val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer, timestamper.first)
 
             val buyerSessionID = random63BitValue()
 
@@ -161,9 +163,11 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobsNode.stop()
 
-            // Alice doesn't know that and sends Bob the now finalised transaction. Alice sends a message to a node
-            // that has gone offline.
-            alicesNode.pump(false)
+            // Alice doesn't know that and carries on: first timestamping and then sending Bob the now finalised
+            // transaction. Alice sends a message to a node that has gone offline.
+            assertTrue(alicesNode.pump(false))
+            assertTrue(timestamper.second.pump(false))
+            assertTrue(alicesNode.pump(false))
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.

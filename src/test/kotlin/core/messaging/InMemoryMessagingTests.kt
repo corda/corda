@@ -43,7 +43,7 @@ open class TestWithInMemoryNetwork {
         network.stop()
     }
 
-    fun pumpAll(blocking: Boolean) = nodes.values.map { it.pump(blocking) }
+    fun pumpAll(blocking: Boolean) = network.nodes.map { it.pump(blocking) }
 
     // Keep calling "pump" in rounds until every node in the network reports that it had nothing to do
     fun <T> runNetwork(body: () -> T): T {

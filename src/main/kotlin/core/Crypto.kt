@@ -57,6 +57,7 @@ open class DigitalSignature(bits: ByteArray, val covering: Int = 0) : OpaqueByte
     /** A digital signature that identifies who the public key is owned by. */
     open class WithKey(val by: PublicKey, bits: ByteArray, covering: Int = 0) : DigitalSignature(bits, covering) {
         fun verifyWithECDSA(content: ByteArray) = by.verifyWithECDSA(content, this)
+        fun verifyWithECDSA(content: OpaqueBytes) = by.verifyWithECDSA(content.bits, this)
     }
 
     class LegallyIdentifiable(val signer: Party, bits: ByteArray, covering: Int) : WithKey(signer.owningKey, bits, covering)

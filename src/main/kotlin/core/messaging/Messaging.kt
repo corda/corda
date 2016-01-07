@@ -66,8 +66,11 @@ interface MessagingService {
      */
     fun createMessage(topic: String, data: ByteArray): Message
 
-    /** Returns an address that refers to this node */
+    /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
+
+    /** Allows you to look up services and nodes that are available on the network. */
+    val networkMap: NetworkMap
 }
 
 /**

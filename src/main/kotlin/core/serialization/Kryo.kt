@@ -8,6 +8,8 @@
 
 package core.serialization
 
+import co.paralleluniverse.fibers.Fiber
+import co.paralleluniverse.io.serialization.kryo.KryoSerializer
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
@@ -16,13 +18,13 @@ import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
 import core.SecureHash
 import core.SignedWireTransaction
-import core.TimestampCommand
 import core.sha256
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.security.KeyPairGenerator
+import java.time.Instant
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
@@ -163,17 +165,30 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         register(Arrays.asList( "" ).javaClass, ArraysAsListSerializer());
 
-        val keyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+        // Because we like to stick a Kryo object in a ThreadLocal to speed things up a bit, we can end up trying to
+        // serialise the Kryo object itself when suspending a fiber. That's dumb, useless AND can cause crashes, so
+        // we avoid it here.
+        register(Kryo::class.java, object : Serializer<Kryo>() {
+            override fun write(kryo: Kryo, output: Output, obj: Kryo) {
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<Kryo>): Kryo {
+                return createKryo((Fiber.getFiberSerializer() as KryoSerializer).kryo)
+            }
+        })
+
+        // Some things where the JRE provides an efficient custom serialisation.
         val ser = JavaSerializer()
+        val keyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
         register(keyPair.public.javaClass, ser)
         register(keyPair.private.javaClass, ser)
+        register(Instant::class.java, ser)
 
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
         val immutables = listOf(
             SignedWireTransaction::class,
-            SerializedBytes::class,
-            TimestampCommand::class
+            SerializedBytes::class
         )
 
         immutables.forEach {

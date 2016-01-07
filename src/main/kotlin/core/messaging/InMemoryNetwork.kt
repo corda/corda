@@ -11,7 +11,11 @@ package core.messaging
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import core.Party
+import core.node.TimestamperNodeService
 import core.sha256
+import core.utilities.loggerFor
+import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
@@ -31,12 +35,14 @@ import kotlin.concurrent.thread
 @ThreadSafe
 public class InMemoryNetwork {
     private var counter = 0   // -1 means stopped.
-    private val networkMap = HashMap<Handle, Node>()
+    private val handleNodeMap = HashMap<Handle, Node>()
     // All messages are kept here until the messages are pumped off the queue by a caller to the node class.
     // Queues are created on-demand when a message is sent to an address: the receiving node doesn't have to have
     // been created yet. If the node identified by the given handle has gone away/been shut down then messages
     // stack up here waiting for it to come back. The intent of this is to simulate a reliable messaging network.
     private val messageQueues = HashMap<Handle, LinkedBlockingQueue<Message>>()
+
+    val nodes: List<Node> @Synchronized get() = handleNodeMap.values.toList()
 
     /**
      * Creates a node and returns the new object that identifies its location on the network to senders, and the
@@ -69,7 +75,7 @@ public class InMemoryNetwork {
             is AllPossibleRecipients -> {
                 // This means all possible recipients _that the network knows about at the time_, not literally everyone
                 // who joins into the indefinite future.
-                for (handle in networkMap.keys)
+                for (handle in handleNodeMap.keys)
                     getQueueForHandle(handle).add(message)
             }
             else -> throw IllegalArgumentException("Unknown type of recipient handle")
@@ -78,7 +84,7 @@ public class InMemoryNetwork {
 
     @Synchronized
     private fun netNodeHasShutdown(handle: Handle) {
-        networkMap.remove(handle)
+        handleNodeMap.remove(handle)
     }
 
     @Synchronized
@@ -90,11 +96,11 @@ public class InMemoryNetwork {
     fun stop() {
         // toArrayList here just copies the collection, which we need because node.stop() will delete itself from
         // the network map by calling netNodeHasShutdown. So we would get a CoModException if we didn't copy first.
-        for (node in networkMap.values.toArrayList())
+        for (node in handleNodeMap.values.toArrayList())
             node.stop()
 
         counter = -1
-        networkMap.clear()
+        handleNodeMap.clear()
         messageQueues.clear()
     }
 
@@ -102,7 +108,7 @@ public class InMemoryNetwork {
         override fun start(): ListenableFuture<Node> {
             synchronized(this@InMemoryNetwork) {
                 val node = Node(manuallyPumped, id)
-                networkMap[id] = node
+                handleNodeMap[id] = node
                 return Futures.immediateFuture(node)
             }
         }
@@ -112,6 +118,20 @@ public class InMemoryNetwork {
         override fun toString() = "In memory node $id"
         override fun equals(other: Any?) = other is Handle && other.id == id
         override fun hashCode() = id.hashCode()
+    }
+
+    private var timestampingAdvert: LegallyIdentifiableNode? = null
+
+    @Synchronized
+    fun setupTimestampingNode(manuallyPumped: Boolean): Pair<LegallyIdentifiableNode, Node> {
+        check(timestampingAdvert == null)
+        val (handle, builder) = createNode(manuallyPumped)
+        val node = builder.start().get()
+        val key = KeyPairGenerator.getInstance("EC").genKeyPair()
+        val identity = Party("Unit test timestamping authority", key.public)
+        TimestamperNodeService(node, identity, key)
+        timestampingAdvert = LegallyIdentifiableNode(handle, identity)
+        return Pair(timestampingAdvert!!, node)
     }
 
     /**
@@ -131,6 +151,10 @@ public class InMemoryNetwork {
         protected val pendingRedelivery = LinkedList<Message>()
 
         override val myAddress: SingleMessageRecipient = handle
+
+        override val networkMap: NetworkMap get() = object : NetworkMap {
+            override val timestampingNodes = if (timestampingAdvert != null) listOf(timestampingAdvert!!) else emptyList()
+        }
 
         protected val backgroundThread = if (manuallyPumped) null else thread(isDaemon = true, name = "In-memory message dispatcher ") {
             while (!currentThread.isInterrupted) {
@@ -228,7 +252,13 @@ public class InMemoryNetwork {
 
             for (handler in deliverTo) {
                 // Now deliver via the requested executor, or on this thread if no executor was provided at registration time.
-                (handler.executor ?: MoreExecutors.directExecutor()).execute { handler.callback(message, handler) }
+                (handler.executor ?: MoreExecutors.directExecutor()).execute {
+                    try {
+                        handler.callback(message, handler)
+                    } catch(e: Exception) {
+                        loggerFor<InMemoryNetwork>().error("Caught exception in handler for $this/${handler.topic}", e)
+                    }
+                }
             }
 
             return true

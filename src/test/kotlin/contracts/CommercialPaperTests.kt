@@ -9,6 +9,7 @@
 package contracts
 
 import core.*
+import core.node.TimestampingError
 import core.testutils.*
 import org.junit.Test
 import java.time.Clock
@@ -81,7 +82,7 @@ class CommercialPaperTests {
         CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
             setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
             signWith(MINI_CORP_KEY)
-            assertFailsWith(NotOnTimeException::class) {
+            assertFailsWith(TimestampingError.NotOnTimeException::class) {
                 timestamp(DummyTimestamper(Clock.fixed(TEST_TX_TIME + 5.hours, ZoneOffset.UTC)))
             }
         }
@@ -89,7 +90,7 @@ class CommercialPaperTests {
         CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
             setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
             signWith(MINI_CORP_KEY)
-            assertFailsWith(NotOnTimeException::class) {
+            assertFailsWith(TimestampingError.NotOnTimeException::class) {
                 val tsaClock = Clock.fixed(TEST_TX_TIME - 5.hours, ZoneOffset.UTC)
                 timestamp(DummyTimestamper(tsaClock), Clock.fixed(TEST_TX_TIME, ZoneOffset.UTC))
             }

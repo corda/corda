@@ -44,6 +44,7 @@ import javax.annotation.concurrent.ThreadSafe
  * a bytecode rewriting engine called JavaFlow, to ensure the code can be suspended and resumed at any point.
  *
  * TODO: The framework should propagate exceptions and handle error handling automatically.
+ * TODO: Session IDs should be set up and propagated automatically, on demand.
  * TODO: This needs extension to the >2 party case.
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
  *       continuation is always unique?
@@ -75,7 +76,6 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     // This class will be serialised, so everything it points to transitively must also be serialisable (with Kryo).
     private class Checkpoint(
         val serialisedFiber: ByteArray,
-        val otherSide: MessageRecipients,
         val loggerName: String,
         val awaitingTopic: String,
         val awaitingObjectOfType: String   // java class name
@@ -103,7 +103,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
             serviceHub.networkService.runOnNextMessage(topic, runInThread) { netMsg ->
                 val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), awaitingObjectOfType)
                 logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-                iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpoint.otherSide, checkpointKey) {
+                iterateStateMachine(psm, serviceHub.networkService, logger, obj, checkpointKey) {
                     Fiber.unparkDeserialized(it, SameThreadFiberScheduler)
                 }
             }
@@ -118,16 +118,14 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     /**
-     * Kicks off a brand new state machine of the given class. It will send messages to the network node identified by
-     * the [otherSide] parameter, log with the named logger, and the [initialArgs] object will be passed to the call
-     * method of the [ProtocolStateMachine] object that is created. The state machine will be persisted when it suspends
-     * and will be removed once it completes.
+     * Kicks off a brand new state machine of the given class. It will log with the named logger, and the
+     * [initialArgs] object will be passed to the call method of the [ProtocolStateMachine] object.
+     * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
+     * restarted with checkpointed state machines in the storage service.
      */
-    fun <T : ProtocolStateMachine<I, *>, I> add(otherSide: MessageRecipients, initialArgs: I, loggerName: String,
-                                                klass: Class<out T>): T {
+    fun <T : ProtocolStateMachine<I, *>, I> add(initialArgs: I, loggerName: String, fiber: T): T {
         val logger = LoggerFactory.getLogger(loggerName)
-        val fiber = klass.newInstance()
-        iterateStateMachine(fiber, serviceHub.networkService, logger, initialArgs, otherSide, null) {
+        iterateStateMachine(fiber, serviceHub.networkService, logger, initialArgs, null) {
             it.start()
         }
         return fiber
@@ -144,24 +142,23 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     private fun iterateStateMachine(psm: ProtocolStateMachine<*, *>, net: MessagingService, logger: Logger,
-                                    obj: Any?, otherSide: MessageRecipients, prevCheckpointKey: SecureHash?,
-                                    resumeFunc: (ProtocolStateMachine<*, *>) -> Unit) {
+                                    obj: Any?, prevCheckpointKey: SecureHash?, resumeFunc: (ProtocolStateMachine<*, *>) -> Unit) {
         val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
                 // Prepare a listener on the network that runs in the background thread when we received a message.
-                checkpointAndSetupMessageHandler(logger, net, psm, otherSide, request.responseType,
+                checkpointAndSetupMessageHandler(logger, net, psm, request.responseType,
                         "${request.topic}.${request.sessionIDForReceive}", prevCheckpointKey, serFiber)
             }
             // If an object to send was provided (not null), send it now.
             request.obj?.let {
                 val topic = "${request.topic}.${request.sessionIDForSend}"
-                logger.trace { "-> $topic : message of type ${it.javaClass.name}" }
-                net.send(net.createMessage(topic, it.serialize().bits), otherSide)
+                logger.trace { "-> ${request.destination}/$topic : message of type ${it.javaClass.name}" }
+                net.send(net.createMessage(topic, it.serialize().bits), request.destination!!)
             }
             if (request is FiberRequest.NotExpectingResponse) {
                 // We sent a message, but don't expect a response, so re-enter the continuation to let it keep going.
-                iterateStateMachine(psm, net, logger, null, otherSide, prevCheckpointKey) {
+                iterateStateMachine(psm, net, logger, null, prevCheckpointKey) {
                     Fiber.unpark(it, QUASAR_UNBLOCKER)
                 }
             }
@@ -185,16 +182,16 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*,*>,
-                                                 otherSide: MessageRecipients, responseType: Class<*>,
-                                                 topic: String, prevCheckpointKey: SecureHash?, serialisedFiber: ByteArray) {
-        val checkpoint = Checkpoint(serialisedFiber, otherSide, logger.name, topic, responseType.name)
+                                                 responseType: Class<*>, topic: String, prevCheckpointKey: SecureHash?,
+                                                 serialisedFiber: ByteArray) {
+        val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
         persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
             logger.trace { "<- $topic : message of type ${obj.javaClass.name}" }
-            iterateStateMachine(psm, net, logger, obj, otherSide, newCheckpointKey) {
+            iterateStateMachine(psm, net, logger, obj, newCheckpointKey) {
                 Fiber.unpark(it, QUASAR_UNBLOCKER)
             }
         }
@@ -204,9 +201,11 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler", MoreExecutors.directExecutor())
 
 /**
- * The base class that should be used by any object that wishes to act as a protocol state machine. Sub-classes should
- * override the [call] method and return whatever the final result of the protocol is. Inside the call method,
- * the rules of normal object oriented programming are a little different:
+ * The base class that should be used by any object that wishes to act as a protocol state machine. The type variable
+ * C is the type of the initial arguments. R is the type of the return.
+ *
+ * Sub-classes should override the [call] method and return whatever the final result of the protocol is. Inside the
+ * call method, the rules of normal object oriented programming are a little different:
  *
  * - You can call send/receive/sendAndReceive in order to suspend the state machine and request network interaction.
  *   This does not block a thread and when a state machine is suspended like this, it will be serialised and written
@@ -225,11 +224,18 @@ abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiber
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient private var suspendFunc: ((result: FiberRequest, serFiber: ByteArray) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
-    @Transient protected lateinit var serviceHub: ServiceHub
+    @Transient lateinit var serviceHub: ServiceHub
     @Transient protected lateinit var logger: Logger
-    @Transient private var _resultFuture: SettableFuture<R> = SettableFuture.create<R>()
+    @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
+
     /** This future will complete when the call method returns. */
-    val resultFuture: ListenableFuture<R> get() = _resultFuture
+    val resultFuture: ListenableFuture<R> get() {
+        return _resultFuture ?: run {
+            val f = SettableFuture.create<R>()
+            _resultFuture = f
+            return f
+        }
+    }
 
     fun prepareForResumeWith(serviceHub: ServiceHub, withObject: Any?, logger: Logger,
                              suspendFunc: (FiberRequest, ByteArray) -> Unit) {
@@ -244,9 +250,9 @@ abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiber
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     override fun run(): R {
-        val result = call(resumeWithObject!! as C)
+        val result = call(resumeWithObject as C)
         if (result != null)
-            _resultFuture.set(result)
+            (resultFuture as SettableFuture<R>).set(result)
         return result
     }
 
@@ -268,42 +274,46 @@ abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiber
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    protected fun <T : Any> sendAndReceive(topic: String, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                           obj: Any, recvType: Class<T>): T {
-        val result = FiberRequest.ExpectingResponse(topic, sessionIDForSend, sessionIDForReceive, obj, recvType)
-        return suspendAndExpectReceive<T>(result)
+    fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
+                                 obj: Any, recvType: Class<T>): T {
+        val result = FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, obj, recvType)
+        return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    protected fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): T {
-        val result = FiberRequest.ExpectingResponse(topic, -1, sessionIDForReceive, null, recvType)
-        return suspendAndExpectReceive<T>(result)
+    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): T {
+        val result = FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
+        return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    protected fun send(topic: String, sessionID: Long, obj: Any) {
-        val result = FiberRequest.NotExpectingResponse(topic, sessionID, obj)
+    fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
+        val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
     }
 
     // Convenience functions for Kotlin users.
-    inline protected fun <reified R : Any> sendAndReceive(topic: String, sessionIDForSend: Long,
-                                                          sessionIDForReceive: Long, obj: Any): R {
-        return sendAndReceive(topic, sessionIDForSend, sessionIDForReceive, obj, R::class.java)
+    inline fun <reified R : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long,
+                                                sessionIDForReceive: Long, obj: Any): R {
+        return sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, R::class.java)
     }
-    inline protected fun <reified R : Any> receive(topic: String, sessionIDForReceive: Long): R {
+    inline fun <reified R : Any> receive(topic: String, sessionIDForReceive: Long): R {
         return receive(topic, sessionIDForReceive, R::class.java)
     }
 }
 
-open class FiberRequest(val topic: String, val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
+// TODO: Clean this up
+open class FiberRequest(val topic: String, val destination: MessageRecipients?,
+                        val sessionIDForSend: Long, val sessionIDForReceive: Long, val obj: Any?) {
     class ExpectingResponse<R : Any>(
             topic: String,
+            destination: MessageRecipients?,
             sessionIDForSend: Long,
             sessionIDForReceive: Long,
             obj: Any?,
             val responseType: Class<R>
-    ) : FiberRequest(topic, sessionIDForSend, sessionIDForReceive, obj)
+    ) : FiberRequest(topic, destination, sessionIDForSend, sessionIDForReceive, obj)
 
-    class NotExpectingResponse(topic: String, sessionIDForSend: Long, obj: Any?) : FiberRequest(topic, sessionIDForSend, -1, obj)
+    class NotExpectingResponse(topic: String, destination: MessageRecipients, sessionIDForSend: Long, obj: Any?)
+        : FiberRequest(topic, destination, sessionIDForSend, -1, obj)
 }
