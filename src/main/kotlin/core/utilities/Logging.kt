@@ -56,19 +56,22 @@ class BriefLogFormatter : Formatter() {
         // OpenJDK made a questionable, backwards incompatible change to the Logger implementation. It internally uses
         // weak references now which means simply fetching the logger and changing its configuration won't work. We must
         // keep a reference to our custom logger around.
-        private lateinit var loggerRef: Logger
+        private val loggerRefs = ArrayList<Logger>()
 
         /** Configures JDK logging to use this class for everything.  */
         fun init() {
-            loggerRef = Logger.getLogger("")
-            val handlers = loggerRef.handlers
+            val logger = Logger.getLogger("")
+            val handlers = logger.handlers
             handlers[0].formatter = BriefLogFormatter()
+            loggerRefs.add(logger)
         }
 
         fun initVerbose(packageSpec: String = "") {
             init()
-            loggerRef.handlers[0].level = Level.ALL
-            Logger.getLogger(packageSpec).level = Level.ALL
+            loggerRefs[0].handlers[0].level = Level.ALL
+            val logger = Logger.getLogger(packageSpec)
+            logger.level = Level.ALL
+            loggerRefs.add(logger)
         }
     }
 }
