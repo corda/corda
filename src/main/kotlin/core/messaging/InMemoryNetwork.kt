@@ -130,6 +130,8 @@ public class InMemoryNetwork {
         @GuardedBy("this")
         protected val pendingRedelivery = LinkedList<Message>()
 
+        override val myAddress: SingleMessageRecipient = handle
+
         protected val backgroundThread = if (manuallyPumped) null else thread(isDaemon = true, name = "In-memory message dispatcher ") {
             while (!currentThread.isInterrupted) {
                 try {

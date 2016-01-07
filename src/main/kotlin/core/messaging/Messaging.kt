@@ -65,6 +65,9 @@ interface MessagingService {
      * Returns an initialised [Message] with the current time, etc, already filled in.
      */
     fun createMessage(topic: String, data: ByteArray): Message
+
+    /** Returns an address that refers to this node */
+    val myAddress: SingleMessageRecipient
 }
 
 /**
