@@ -13,13 +13,16 @@ import com.esotericsoftware.kryo.KryoException
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import com.esotericsoftware.kryo.serializers.JavaSerializer
 import core.SecureHash
 import core.SignedWireTransaction
+import core.TimestampCommand
 import core.sha256
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
+import java.security.KeyPairGenerator
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KMutableProperty
@@ -160,11 +163,17 @@ fun createKryo(): Kryo {
 
         register(Arrays.asList( "" ).javaClass, ArraysAsListSerializer());
 
+        val keyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+        val ser = JavaSerializer()
+        register(keyPair.public.javaClass, ser)
+        register(keyPair.private.javaClass, ser)
+
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
         val immutables = listOf(
             SignedWireTransaction::class,
-            SerializedBytes::class
+            SerializedBytes::class,
+            TimestampCommand::class
         )
 
         immutables.forEach {
