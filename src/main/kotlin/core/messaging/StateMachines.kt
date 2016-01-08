@@ -29,6 +29,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayOutputStream
 import java.util.*
+import java.util.concurrent.Callable
 import java.util.concurrent.Executor
 import javax.annotation.concurrent.ThreadSafe
 
@@ -57,10 +58,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     private val checkpointsMap = serviceHub.storageService.getMap<SecureHash, ByteArray>("state machines")
     // A list of all the state machines being managed by this class. We expose snapshots of it via the stateMachines
     // property.
-    private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolStateMachine<*,*>>())
+    private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolStateMachine<*>>())
 
     /** Returns a snapshot of the currently registered state machines. */
-    val stateMachines: List<ProtocolStateMachine<*,*>> get() {
+    val stateMachines: List<ProtocolStateMachine<*>> get() {
         synchronized(_stateMachines) {
             return ArrayList(_stateMachines)
         }
@@ -110,10 +111,10 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
-    private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*, *> {
+    private fun deserializeFiber(bits: ByteArray): ProtocolStateMachine<*> {
         val deserializer = Fiber.getFiberSerializer() as KryoSerializer
         val kryo = createKryo(deserializer.kryo)
-        val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*, *>
+        val psm = kryo.readClassAndObject(Input(bits)) as ProtocolStateMachine<*>
         return psm
     }
 
@@ -123,9 +124,9 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
-    fun <T : ProtocolStateMachine<I, *>, I> add(initialArgs: I, loggerName: String, fiber: T): T {
+    fun <T : ProtocolStateMachine<*>> add(loggerName: String, fiber: T): T {
         val logger = LoggerFactory.getLogger(loggerName)
-        iterateStateMachine(fiber, serviceHub.networkService, logger, initialArgs, null) {
+        iterateStateMachine(fiber, serviceHub.networkService, logger, null, null) {
             it.start()
         }
         return fiber
@@ -141,8 +142,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         return key
     }
 
-    private fun iterateStateMachine(psm: ProtocolStateMachine<*, *>, net: MessagingService, logger: Logger,
-                                    obj: Any?, prevCheckpointKey: SecureHash?, resumeFunc: (ProtocolStateMachine<*, *>) -> Unit) {
+    private fun iterateStateMachine(psm: ProtocolStateMachine<*>, net: MessagingService, logger: Logger,
+                                    obj: Any?, prevCheckpointKey: SecureHash?, resumeFunc: (ProtocolStateMachine<*>) -> Unit) {
         val onSuspend = fun(request: FiberRequest, serFiber: ByteArray) {
             // We have a request to do something: send, receive, or send-and-receive.
             if (request is FiberRequest.ExpectingResponse<*>) {
@@ -181,7 +182,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
         }
     }
 
-    private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*,*>,
+    private fun checkpointAndSetupMessageHandler(logger: Logger, net: MessagingService, psm: ProtocolStateMachine<*>,
                                                  responseType: Class<*>, topic: String, prevCheckpointKey: SecureHash?,
                                                  serialisedFiber: ByteArray) {
         val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
@@ -201,8 +202,9 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler", MoreExecutors.directExecutor())
 
 /**
- * The base class that should be used by any object that wishes to act as a protocol state machine. The type variable
- * C is the type of the initial arguments. R is the type of the return.
+ * The base class that should be used by any object that wishes to act as a protocol state machine. A PSM is
+ * a kind of "fiber", and a fiber in turn is a bit like a thread, but a thread that can be suspended to the heap,
+ * serialised to disk, and resumed on demand.
  *
  * Sub-classes should override the [call] method and return whatever the final result of the protocol is. Inside the
  * call method, the rules of normal object oriented programming are a little different:
@@ -216,11 +218,15 @@ object SameThreadFiberScheduler : FiberExecutorScheduler("Same thread scheduler"
  *   via the [serviceHub] property which is provided. Don't try and keep data you got from a service across calls to
  *   send/receive/sendAndReceive because the world might change in arbitrary ways out from underneath you, for instance,
  *   if the node is restarted or reconfigured!
- * - Don't pass initial data in using a constructor. This object will be instantiated using reflection so you cannot
- *   define your own constructor. Instead define a separate class that holds your initial arguments, and take it as
- *   the argument to [call].
+ *
+ * Note that the result of the [call] method can be obtained in a couple of different ways. One is to call the get
+ * method, as the PSM is a [Future]. But that will block the calling thread until the result is ready, which may not
+ * be what you want (unless you know it's finished already). So you can also use the [resultFuture] property, which is
+ * a [ListenableFuture] and will let you register a callback.
+ *
+ * Once created, a PSM should be passed to a [StateMachineManager] which will start it and manage its execution.
  */
-abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiberScheduler) {
+abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberScheduler), Callable<R> {
     // These fields shouldn't be serialised, so they are marked @Transient.
     @Transient private var suspendFunc: ((result: FiberRequest, serFiber: ByteArray) -> Unit)? = null
     @Transient private var resumeWithObject: Any? = null
@@ -245,12 +251,12 @@ abstract class ProtocolStateMachine<C, R> : Fiber<R>("protocol", SameThreadFiber
         this.serviceHub = serviceHub
     }
 
-    @Suspendable
-    abstract fun call(args: C): R
+    // This line may look useless, but it's needed to convince the Quasar bytecode rewriter to do the right thing.
+    @Suspendable override abstract fun call(): R
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     override fun run(): R {
-        val result = call(resumeWithObject as C)
+        val result = call()
         if (result != null)
             (resultFuture as SettableFuture<R>).set(result)
         return result

@@ -107,7 +107,7 @@ class TimestamperNodeService(private val net: MessagingService,
 }
 
 @ThreadSafe
-class TimestamperClient(private val psm: ProtocolStateMachine<*, *>, private val node: LegallyIdentifiableNode) : TimestamperService {
+class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val node: LegallyIdentifiableNode) : TimestamperService {
     override val identity: Party = node.identity
 
     @Suspendable

@@ -54,9 +54,9 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         service = TimestamperNodeService(serviceNode.second, Party("Unit test suite", ALICE), ALICE_KEY)
     }
 
-    class TestPSM(val server: LegallyIdentifiableNode, val now: Instant) : ProtocolStateMachine<Any?, Boolean>() {
+    class TestPSM(val server: LegallyIdentifiableNode, val now: Instant) : ProtocolStateMachine<Boolean>() {
         @Suspendable
-        override fun call(args: Any?): Boolean {
+        override fun call(): Boolean {
             val client = TimestamperClient(this, server)
             val ptx = TransactionBuilder().apply {
                 addInputState(ContractStateRef(SecureHash.randomSHA256(), 0))
@@ -77,7 +77,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
             val smm = StateMachineManager(MockServices(net = myNode.second), RunOnCallerThread)
             val logName = TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC
             val psm = TestPSM(myNode.second.networkMap.timestampingNodes[0], clock.instant())
-            smm.add(serviceNode.first, logName, psm)
+            smm.add(logName, psm)
             psm
         }
         assertTrue(psm.isDone)

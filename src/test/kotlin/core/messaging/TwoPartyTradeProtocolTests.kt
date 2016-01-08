@@ -71,32 +71,29 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                     net = bobsNode
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread), timestamper)
-            val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread), timestamper)
-
             val buyerSessionID = random63BitValue()
 
-            val aliceResult = tpSeller.runSeller(
+            val aliceResult = TwoPartyTradeProtocol.runSeller(
+                    StateMachineManager(alicesServices, backgroundThread),
+                    timestamper,
                     bobsAddress,
-                    TwoPartyTradeProtocol.SellerInitialArgs(
-                            lookup("alice's paper"),
-                            1000.DOLLARS,
-                            ALICE_KEY,
-                            buyerSessionID
-                    )
+                    lookup("alice's paper"),
+                    1000.DOLLARS,
+                    ALICE_KEY,
+                    buyerSessionID
             )
-            val bobResult = tpBuyer.runBuyer(
+            val bobResult = TwoPartyTradeProtocol.runBuyer(
+                    StateMachineManager(bobsServices, backgroundThread),
+                    timestamper,
                     alicesAddress,
-                    TwoPartyTradeProtocol.BuyerInitialArgs(
-                        1000.DOLLARS,
-                        CommercialPaper.State::class.java,
-                        buyerSessionID
-                    )
+                    1000.DOLLARS,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
             )
 
-            assertEquals(aliceResult.resultFuture.get(), bobResult.resultFuture.get())
+            assertEquals(aliceResult.get(), bobResult.get())
 
-            txns.add(aliceResult.resultFuture.get().second)
+            txns.add(aliceResult.get().second)
             verify()
         }
         backgroundThread.shutdown()
@@ -128,28 +125,26 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                     storage = bobsStorage
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, MoreExecutors.directExecutor()), timestamper.first)
             val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
-            val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer, timestamper.first)
 
             val buyerSessionID = random63BitValue()
 
-            tpSeller.runSeller(
+            TwoPartyTradeProtocol.runSeller(
+                    StateMachineManager(alicesServices, MoreExecutors.directExecutor()),
+                    timestamper.first,
                     bobsAddress,
-                    TwoPartyTradeProtocol.SellerInitialArgs(
-                            lookup("alice's paper"),
-                            1000.DOLLARS,
-                            ALICE_KEY,
-                            buyerSessionID
-                    )
+                    lookup("alice's paper"),
+                    1000.DOLLARS,
+                    ALICE_KEY,
+                    buyerSessionID
             )
-            tpBuyer.runBuyer(
+            TwoPartyTradeProtocol.runBuyer(
+                    smmBuyer,
+                    timestamper.first,
                     alicesAddress,
-                    TwoPartyTradeProtocol.BuyerInitialArgs(
-                            1000.DOLLARS,
-                            CommercialPaper.State::class.java,
-                            buyerSessionID
-                    )
+                    1000.DOLLARS,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
             )
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
