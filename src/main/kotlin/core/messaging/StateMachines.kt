@@ -46,7 +46,6 @@ import javax.annotation.concurrent.ThreadSafe
  *
  * TODO: The framework should propagate exceptions and handle error handling automatically.
  * TODO: Session IDs should be set up and propagated automatically, on demand.
- * TODO: This needs extension to the >2 party case.
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
  *       continuation is always unique?
  * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
