@@ -55,7 +55,7 @@ class TimestamperNodeService(private val net: MessagingService,
                              private val clock: Clock = Clock.systemDefaultZone(),
                              val tolerance: Duration = 30.seconds) {
     companion object {
-        val TIMESTAMPING_PROTOCOL_TOPIC = "dlg.timestamping.request"
+        val TIMESTAMPING_PROTOCOL_TOPIC = "platform.timestamping.request"
 
         private val logger = LoggerFactory.getLogger(TimestamperNodeService::class.java)
     }

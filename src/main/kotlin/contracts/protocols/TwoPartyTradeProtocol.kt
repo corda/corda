@@ -49,7 +49,7 @@ import java.time.Instant
  * To see an example of how to use this class, look at the unit tests.
  */
 object TwoPartyTradeProtocol {
-    val TRADE_TOPIC = "com.r3cev.protocols.trade"
+    val TRADE_TOPIC = "platform.trade"
 
     fun runSeller(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
                   otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
