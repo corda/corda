@@ -102,4 +102,12 @@ class DirectByteBuffer extends ByteBuffer {
       + " limit: " + limit
       + " capacity: " + capacity + ")";
   }
+
+  @Override
+  public ByteBuffer duplicate() {
+    ByteBuffer b = new DirectByteBuffer(address, capacity, isReadOnly());
+    b.limit(this.limit());
+    b.position(this.position());
+    return b;
+  }
 }

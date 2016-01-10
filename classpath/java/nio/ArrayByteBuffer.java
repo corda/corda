@@ -89,4 +89,12 @@ class ArrayByteBuffer extends ByteBuffer {
       + " limit: " + limit
       + " capacity: " + capacity + ")";
   }
+  
+  @Override
+  public ByteBuffer duplicate() {
+    ByteBuffer b = new ArrayByteBuffer(array, arrayOffset, capacity, isReadOnly());
+    b.limit(this.limit());
+    b.position(this.position());
+    return b;
+  }
 }
