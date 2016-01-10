@@ -423,6 +423,27 @@ public class Classes {
     }
   }
 
+  public static VMMethod findMethod(ClassLoader loader,
+                                    String class_,
+                                    String name,
+                                    String spec)
+    throws ClassNotFoundException
+  {
+    VMClass c = SystemClassLoader.vmClass(loader.loadClass(class_));
+    VMMethod[] methodTable = c.methodTable;
+    if (methodTable != null) {
+      link(c);
+
+      for (int i = 0; i < methodTable.length; ++i) {
+        VMMethod m = methodTable[i];
+        if (toString(m.name).equals(name) && toString(m.spec).equals(spec)) {
+          return m;
+        }
+      }
+    }
+    return null;
+  }
+  
   public static int findMethod(VMClass vmClass, String name,
                                 Class[] parameterTypes)
   {

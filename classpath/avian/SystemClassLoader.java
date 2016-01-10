@@ -20,6 +20,8 @@ import java.util.Enumeration;
 import java.util.NoSuchElementException;
 
 public class SystemClassLoader extends ClassLoader {
+  public static native ClassLoader appLoader();
+
   private native VMClass findVMClass(String name)
     throws ClassNotFoundException;
 
@@ -80,6 +82,8 @@ public class SystemClassLoader extends ClassLoader {
       String source = getPackageSource(name);
       if (source != null) {
         // todo: load attributes from JAR manifest
+        definePackage(name, null, null, null, null, null, null, null);
+      } else {
         definePackage(name, null, null, null, null, null, null, null);
       }
     }

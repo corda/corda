@@ -909,14 +909,16 @@ class BootContext {
               GcTriple* calls,
               avian::codegen::DelayedPromise* addresses,
               Zone* zone,
-              OffsetResolver* resolver)
+              OffsetResolver* resolver,
+              JavaVM* hostVM)
       : protector(t, this),
         constants(constants),
         calls(calls),
         addresses(addresses),
         addressSentinal(addresses),
         zone(zone),
-        resolver(resolver)
+        resolver(resolver),
+        hostVM(hostVM)
   {
   }
 
@@ -927,6 +929,7 @@ class BootContext {
   avian::codegen::DelayedPromise* addressSentinal;
   Zone* zone;
   OffsetResolver* resolver;
+  JavaVM* hostVM;
 };
 
 class Context {
@@ -3991,6 +3994,34 @@ void checkField(Thread* t, GcField* field, bool shouldBeStatic)
   }
 }
 
+bool isLambda(Thread* t,
+              GcClassLoader* loader,
+              GcCharArray* bootstrapArray,
+              GcInvocation* invocation)
+{
+  GcMethod* bootstrap = cast<GcMethod>(t,
+                                       resolve(t,
+                                               loader,
+                                               invocation->pool(),
+                                               bootstrapArray->body()[0],
+                                               findMethodInClass,
+                                               GcNoSuchMethodError::Type));
+  PROTECT(t, bootstrap);
+
+  return vm::strcmp(reinterpret_cast<const int8_t*>(
+                        "java/lang/invoke/LambdaMetafactory"),
+                    bootstrap->class_()->name()->body().begin()) == 0
+         and vm::strcmp(reinterpret_cast<const int8_t*>("metafactory"),
+                        bootstrap->name()->body().begin()) == 0
+         and vm::strcmp(
+                 reinterpret_cast<const int8_t*>(
+                     "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/"
+                     "String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/"
+                     "MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/"
+                     "invoke/MethodType;)Ljava/lang/invoke/CallSite;"),
+                 bootstrap->spec()->body().begin()) == 0;
+}
+
 void compile(MyThread* t,
              Frame* initialFrame,
              unsigned initialIp,
@@ -5054,36 +5085,168 @@ loop:
 
       invocation->setClass(t, context->method->class_());
 
-      unsigned index = addDynamic(t, invocation);
+      BootContext* bc = context->bootContext;
+      if (bc) {
+        // When we're AOT-compiling an application, we can't handle
+        // invokedynamic in general, since it usually implies runtime
+        // code generation.  However, Java 8 lambda expressions are a
+        // special case for which we can generate code ahead of time.
+        //
+        // The only tricky part about it is that the class synthesis
+        // code resides in LambdaMetaFactory, which means we need to
+        // call out to a separate Java VM to execute it (the VM we're
+        // currently executing in won't work because it only knows how
+        // to compile code for the target machine, which might not be
+        // the same as the host; plus we don't want to pollute the
+        // runtime heap image with stuff that's only needed at compile
+        // time).
 
-      GcMethod* template_ = invocation->template_();
-      unsigned returnCode = template_->returnCode();
-      unsigned rSize = resultSize(t, returnCode);
-      unsigned parameterFootprint = template_->parameterFootprint();
+        GcClass* c = context->method->class_();
+        PROTECT(t, c);
 
-      // TODO: can we allow tailCalls in general?
-      // e.g. what happens if the call site is later bound to a method that can't be tail called?
-      // NOTE: calling isTailCall right now would cause an segfault, since
-      // invocation->template_()->class_() will be null.
-      // bool tailCall
-      //     = isTailCall(t, code, ip, context->method, invocation->template_());
-      bool tailCall = false;
+        GcCharArray* bootstrapArray = cast<GcCharArray>(
+            t,
+            cast<GcArray>(t, c->addendum()->bootstrapMethodTable())
+                ->body()[invocation->bootstrap()]);
+        PROTECT(t, bootstrapArray);
 
-      // todo: do we need to tell the compiler to add a load barrier
-      // here for VolatileCallSite instances?
+        if (isLambda(t, c->loader(), bootstrapArray, invocation)) {
+          JNIEnv* e;
+          if (bc->hostVM->vtable->AttachCurrentThread(bc->hostVM, &e, 0) == 0) {
+            e->vtable->PushLocalFrame(e, 256);
 
-      ir::Value* result = c->stackCall(
-          c->memory(c->memory(c->threadRegister(), ir::Type::object(),
-                              TARGET_THREAD_DYNAMICTABLE),
-                    ir::Type::object(), index * TargetBytesPerWord),
-          tailCall ? Compiler::TailJump : 0, frame->trace(0, 0),
-          operandTypeForFieldCode(t, returnCode),
-          frame->peekMethodArguments(parameterFootprint));
+            jclass lmfClass
+                = e->vtable->FindClass(e, "java/lang/invoke/LambdaMetafactory");
+            jmethodID makeLambda = e->vtable->GetStaticMethodID(
+                e,
+                lmfClass,
+                "makeLambda",
+                "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/"
+                "lang/String;Ljava/lang/String;Ljava/lang/String;I)[B");
 
-      frame->popFootprint(parameterFootprint);
+            GcReference* reference = cast<GcReference>(
+                t,
+                singletonObject(
+                    t, invocation->pool(), bootstrapArray->body()[2]));
+            int kind = reference->kind();
 
-      if (rSize) {
-        frame->pushReturnValue(returnCode, result);
+            GcMethod* method
+                = cast<GcMethod>(t,
+                                 resolve(t,
+                                         c->loader(),
+                                         invocation->pool(),
+                                         bootstrapArray->body()[2],
+                                         findMethodInClass,
+                                         GcNoSuchMethodError::Type));
+
+            jarray lambda = e->vtable->CallStaticObjectMethod(
+                e,
+                lmfClass,
+                makeLambda,
+                e->vtable->NewStringUTF(
+                    e,
+                    reinterpret_cast<const char*>(
+                        invocation->template_()->name()->body().begin())),
+                e->vtable->NewStringUTF(
+                    e,
+                    reinterpret_cast<const char*>(
+                        invocation->template_()->spec()->body().begin())),
+                e->vtable->NewStringUTF(
+                    e,
+                    reinterpret_cast<const char*>(
+                        cast<GcByteArray>(
+                            t,
+                            singletonObject(t,
+                                            invocation->pool(),
+                                            bootstrapArray->body()[1]))
+                            ->body()
+                            .begin())),
+                e->vtable->NewStringUTF(
+                    e,
+                    reinterpret_cast<const char*>(
+                        method->class_()->name()->body().begin())),
+                e->vtable->NewStringUTF(e,
+                                        reinterpret_cast<const char*>(
+                                            method->name()->body().begin())),
+                e->vtable->NewStringUTF(e,
+                                        reinterpret_cast<const char*>(
+                                            method->spec()->body().begin())),
+                kind);
+
+            uint8_t* bytes = reinterpret_cast<uint8_t*>(
+                e->vtable->GetPrimitiveArrayCritical(e, lambda, 0));
+
+            GcClass* lambdaClass
+                = defineClass(t,
+                              roots(t)->appLoader(),
+                              bytes,
+                              e->vtable->GetArrayLength(e, lambda));
+
+            bc->resolver->addClass(
+                t, lambdaClass, bytes, e->vtable->GetArrayLength(e, lambda));
+
+            e->vtable->ReleasePrimitiveArrayCritical(e, lambda, bytes, 0);
+
+            e->vtable->PopLocalFrame(e, 0);
+
+            THREAD_RUNTIME_ARRAY(
+                t, char, spec, invocation->template_()->spec()->length());
+            memcpy(RUNTIME_ARRAY_BODY(spec),
+                   invocation->template_()->spec()->body().begin(),
+                   invocation->template_()->spec()->length());
+
+            GcMethod* target = resolveMethod(
+                t, lambdaClass, "make", RUNTIME_ARRAY_BODY(spec));
+
+            bool tailCall = isTailCall(t, code, ip, context->method, target);
+            compileDirectInvoke(t, frame, target, tailCall);
+          } else {
+            throwNew(
+                t, GcVirtualMachineError::Type, "unable to attach to host VM");
+          }
+        } else {
+          throwNew(t,
+                   GcVirtualMachineError::Type,
+                   "invokedynamic not supported for AOT-compiled code except "
+                   "in the case of lambda expressions");
+        }
+      } else {
+        unsigned index = addDynamic(t, invocation);
+
+        GcMethod* template_ = invocation->template_();
+        unsigned returnCode = template_->returnCode();
+        unsigned rSize = resultSize(t, returnCode);
+        unsigned parameterFootprint = template_->parameterFootprint();
+
+        // TODO: can we allow tailCalls in general?
+        // e.g. what happens if the call site is later bound to a method that
+        // can't be tail called?
+        // NOTE: calling isTailCall right now would cause an segfault, since
+        // invocation->template_()->class_() will be null.
+        // bool tailCall
+        //     = isTailCall(t, code, ip, context->method,
+        //     invocation->template_());
+        bool tailCall = false;
+
+        // todo: do we need to tell the compiler to add a load barrier
+        // here for VolatileCallSite instances?
+
+        ir::Value* result
+            = c->stackCall(c->memory(c->memory(c->threadRegister(),
+                                               ir::Type::object(),
+                                               TARGET_THREAD_DYNAMICTABLE),
+                                     ir::Type::object(),
+                                     index * TargetBytesPerWord),
+                           tailCall ? Compiler::TailJump : 0,
+                           frame->trace(0, 0),
+                           operandTypeForFieldCode(t, returnCode),
+                           frame->peekMethodArguments(parameterFootprint));
+
+        frame->popFootprint(parameterFootprint);
+
+        if (rSize) {
+          frame->pushReturnValue(returnCode, result);
+        }
       }
     } break;
 
@@ -9134,10 +9297,12 @@ class MyProcessor : public Processor {
                              GcTriple** calls,
                              avian::codegen::DelayedPromise** addresses,
                              GcMethod* method,
-                             OffsetResolver* resolver)
+                             OffsetResolver* resolver,
+                             JavaVM* hostVM)
   {
     MyThread* t = static_cast<MyThread*>(vmt);
-    BootContext bootContext(t, *constants, *calls, *addresses, zone, resolver);
+    BootContext bootContext(
+        t, *constants, *calls, *addresses, zone, resolver, hostVM);
 
     compile(t, &codeAllocator, &bootContext, method);
 

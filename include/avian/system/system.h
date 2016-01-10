@@ -176,7 +176,7 @@ inline void NO_RETURN sysAbort(System* s)
 
 // #endif // not NDEBUG
 
-AVIAN_EXPORT System* makeSystem();
+AVIAN_EXPORT System* makeSystem(bool reentrant = false);
 
 }  // namespace vm
 

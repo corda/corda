@@ -291,9 +291,18 @@ public class Misc {
           test = true;
         }
       }
-      expect(count == 2);
-      expect(test);
-      expect(extraDir);
+      // This test is only relevant if multi-classpath-test.txt
+      // actually exists in somewhere under the classpath from which
+      // Misc.class was loaded.  Since we run this test from an
+      // AOT-compiled boot image as well as straight from the
+      // filesystem, and the boot image does not contain
+      // multi-classpath-test.txt, we'll skip the test if it's not
+      // present.
+      if (count != 0) {
+        expect(count == 2);
+        expect(test);
+        expect(extraDir);
+      }
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

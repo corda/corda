@@ -45,6 +45,11 @@ ifneq ($(lzma),)
 endif
 ifeq ($(bootimage),true)
 	options := $(options)-bootimage
+	ifeq ($(bootimage-test),true)
+    # this option indicates that we should AOT-compile the test
+    # classes as well as the class library
+		options := $(options)-test
+	endif
 endif
 ifeq ($(tails),true)
 	options := $(options)-tails
@@ -92,6 +97,12 @@ ifeq ($(platform),ios)
 	endif
 endif
 
+ifeq ($(bootimage-test),true)
+	ifneq ($(bootimage),true)
+		x := $(error "bootimage-test=true only works when bootimage=true")
+	endif
+endif
+
 aot-only = false
 root := $(shell (cd .. && pwd))
 build = build/$(platform)-$(arch)$(options)
@@ -108,6 +119,12 @@ winrt ?= $(root)/winrt
 wp8 ?= $(root)/wp8
 
 classpath = avian
+
+bootimage-classpath = $(classpath-build)
+
+ifeq ($(bootimage-test),true)
+	bootimage-classpath = $(classpath-build):$(test-build)
+endif
 
 test-executable = $(shell pwd)/$(executable)
 boot-classpath = $(classpath-build)
@@ -746,13 +763,14 @@ ifeq ($(kernel),darwin)
 	rpath =
 
 	ifeq ($(platform),ios)
-		ifeq (,$(filter arm arm64,$(arch)))
+		ifeq ($(sim),true)
 			target = iPhoneSimulator
 			sdk = iphonesimulator$(ios-version)
 			ifeq ($(arch),i386)
 				arch-flag = -arch i386
 			else
 				arch-flag = -arch x86_64
+				arch = x86_64
 			endif
 			release = Release-iphonesimulator
 		else
@@ -762,6 +780,7 @@ ifeq ($(kernel),darwin)
 				arch-flag = -arch armv7
 			else
 				arch-flag = -arch arm64
+				arch = arm64
 			endif
 			release = Release-iphoneos
 		endif
@@ -770,7 +789,9 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		ios-version := $(shell \
-				if test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
+				if test -L $(sdk-dir)/$(target)9.1.sdk; then echo 9.1; \
+			elif test -L $(sdk-dir)/$(target)9.0.sdk; then echo 9.0; \
+			elif test -d $(sdk-dir)/$(target)8.3.sdk; then echo 8.3; \
 			elif test -d $(sdk-dir)/$(target)8.2.sdk; then echo 8.2; \
 			elif test -d $(sdk-dir)/$(target)8.1.sdk; then echo 8.1; \
 			elif test -d $(sdk-dir)/$(target)8.0.sdk; then echo 8.0; \
@@ -811,39 +832,57 @@ ifeq ($(kernel),darwin)
 		cflags += $(flags)
 		asmflags += $(flags)
 		lflags += $(flags)
-	endif
-
-	ifeq ($(arch),i386)
-		ifeq ($(platform),ios)
-			classpath-extra-cflags += \
-				-arch i386 -miphoneos-version-min=$(ios-version)
-			cflags += -arch i386 -miphoneos-version-min=$(ios-version)
-			asmflags += -arch i386 -miphoneos-version-min=$(ios-version)
-			lflags += -arch i386 -miphoneos-version-min=$(ios-version)
+		
+		ios-version-min=$(ios-version)
+		ifdef ios_deployment_target
+			ios-version-min=ios_deployment_target
+		endif
+		
+		ifeq ($(sim),true)
+			ifeq ($(arch),x86_64)
+				classpath-extra-cflags += \
+					-arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch x86_64 -miphoneos-version-min=$(ios-version-min)
+			else
+				classpath-extra-cflags += \
+					-arch i386 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch i386 -miphoneos-version-min=$(ios-version-min)
+			endif
 		else
-			classpath-extra-cflags += \
-				-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
-			lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+			ifeq ($(arch),arm64)
+				classpath-extra-cflags += \
+					-arch arm64 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch arm64 -miphoneos-version-min=$(ios-version-min)
+			else
+				classpath-extra-cflags += \
+					-arch armv7 -miphoneos-version-min=$(ios-version-min)
+				cflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+				asmflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+				lflags += -arch armv7 -miphoneos-version-min=$(ios-version-min)
+			endif
+		endif
+	else # not ios
+		ifeq ($(arch),i386)
+				classpath-extra-cflags += \
+					-arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				cflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				asmflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+				lflags += -arch i386 -mmacosx-version-min=${OSX_SDK_VERSION}
+		endif
+	
+		ifeq ($(arch),x86_64)
+				classpath-extra-cflags += -arch x86_64
+				cflags += -arch x86_64
+				asmflags += -arch x86_64
+				lflags += -arch x86_64
 		endif
 	endif
-
-	ifeq ($(arch),x86_64)
-		ifeq ($(platform),ios)
-			classpath-extra-cflags += \
-				-arch x86_64 -miphoneos-version-min=$(ios-version)
-			cflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-			asmflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-			lflags += -arch x86_64 -miphoneos-version-min=$(ios-version)
-		else
-			classpath-extra-cflags += -arch x86_64
-			cflags += -arch x86_64
-			asmflags += -arch x86_64
-			lflags += -arch x86_64
-		endif
-	endif
-
 	cflags += -I$(JAVA_HOME)/include/darwin
 endif
 
@@ -1333,6 +1372,12 @@ bootimage-generator-objects = \
 	$(call cpp-objects,$(bootimage-generator-sources),$(src),$(build))
 bootimage-generator = $(build)/bootimage-generator
 
+ifneq ($(mode),fast)
+	host-vm-options := -$(mode)
+endif
+
+host-vm = build/$(build-platform)-$(build-arch)-interpret$(host-vm-options)/libjvm.so
+
 bootimage-object = $(build)/bootimage-bin.o
 codeimage-object = $(build)/codeimage-bin.o
 
@@ -1640,7 +1685,6 @@ debug: build
 .PHONY: vg
 vg: build
 	$(library-path) $(vg) $(test-executable) $(test-args)
-
 
 .PHONY: test
 test: build-test run-test
@@ -2060,11 +2104,12 @@ else
 endif
 
 $(bootimage-object) $(codeimage-object): $(bootimage-generator) \
-		$(classpath-jar-dep)
+		$(classpath-jar-dep) $(test-dep)
 	@echo "generating bootimage and codeimage binaries from $(classpath-build) using $(<)"
-	$(<) -cp $(classpath-build) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
+	$(<) -cp $(bootimage-classpath) -bootimage $(bootimage-object) -codeimage $(codeimage-object) \
 		-bootimage-symbols $(bootimage-symbols) \
-		-codeimage-symbols $(codeimage-symbols)
+		-codeimage-symbols $(codeimage-symbols) \
+		-hostvm $(host-vm)
 
 executable-objects = $(vm-objects) $(classpath-objects) $(driver-object) \
 	$(vm-heapwalk-objects) $(boot-object) $(vm-classpath-objects) \
@@ -2119,6 +2164,7 @@ $(unittest-executable): $(unittest-executable-objects)
 
 $(bootimage-generator): $(bootimage-generator-objects) $(vm-objects)
 	echo building $(bootimage-generator) arch=$(build-arch) platform=$(bootimage-platform)
+	$(MAKE) process=interpret bootimage= bootimage-test= mode=$(mode)
 	$(MAKE) mode=$(mode) \
 		build=$(host-build-root) \
 		arch=$(build-arch) \

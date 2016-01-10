@@ -1,6 +1,7 @@
 package java.lang.invoke;
 
 import avian.Classes;
+import avian.SystemClassLoader;
 
 public class MethodHandle {
   static final int REF_invokeStatic = 6;
@@ -15,6 +16,20 @@ public class MethodHandle {
     this.kind = kind;
     this.loader = loader;
     this.method = method;
+  }
+
+  MethodHandle(String class_,
+               String name,
+               String spec,
+               int kind)
+  {
+    this.kind = kind;
+    this.loader = SystemClassLoader.appLoader();
+    try {
+      this.method = Classes.findMethod(this.loader, class_, name, spec);
+    } catch (ClassNotFoundException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public String toString() {
