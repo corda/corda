@@ -80,7 +80,7 @@ object TwoPartyTradeProtocol {
             // Make the first message we'll send to kick off the protocol.
             val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
 
-            val partialTX = sendAndReceive<SignedWireTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
+            val partialTX = sendAndReceive(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello, SignedWireTransaction::class.java)
             logger.trace { "Received partially signed transaction" }
 
             partialTX.verifySignatures()
@@ -140,7 +140,7 @@ object TwoPartyTradeProtocol {
         @Suspendable
         override fun call(): Pair<WireTransaction, LedgerTransaction> {
             // Wait for a trade request to come in on our pre-provided session ID.
-            val tradeRequest = receive<SellerTradeInfo>(TRADE_TOPIC, sessionID)
+            val tradeRequest = receive(TRADE_TOPIC, sessionID, SellerTradeInfo::class.java)
 
             // What is the seller trying to sell us?
             val assetTypeName = tradeRequest.assetForSale.state.javaClass.name
@@ -191,8 +191,8 @@ object TwoPartyTradeProtocol {
             // TODO: Protect against the buyer terminating here and leaving us in the lurch without the final tx.
             // TODO: Protect against a malicious buyer sending us back a different transaction to the one we built.
 
-            val fullySigned = sendAndReceive<SignedWireTransaction>(TRADE_TOPIC, otherSide, tradeRequest.sessionID,
-                    sessionID, stx)
+            val fullySigned = sendAndReceive(TRADE_TOPIC, otherSide, tradeRequest.sessionID,
+                    sessionID, stx, SignedWireTransaction::class.java)
 
             logger.trace { "Got fully signed transaction, verifying ... "}
 

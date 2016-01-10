@@ -115,8 +115,8 @@ class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val no
         val sessionID = random63BitValue()
         val replyTopic = "${TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC}.$sessionID"
         val req = TimestampingMessages.Request(wtxBytes, psm.serviceHub.networkService.myAddress, replyTopic)
-        val signature = psm.sendAndReceive<DigitalSignature.LegallyIdentifiable>(
-                TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0, sessionID, req)
+        val signature = psm.sendAndReceive(TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC, node.address, 0,
+                sessionID, req, DigitalSignature.LegallyIdentifiable::class.java)
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
         signature.verifyWithECDSA(wtxBytes)
         return signature

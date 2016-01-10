@@ -296,15 +296,6 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
         val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
     }
-
-    // Convenience functions for Kotlin users.
-    inline fun <reified R : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long,
-                                                sessionIDForReceive: Long, obj: Any): R {
-        return sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, R::class.java)
-    }
-    inline fun <reified R : Any> receive(topic: String, sessionIDForReceive: Long): R {
-        return receive(topic, sessionIDForReceive, R::class.java)
-    }
 }
 
 // TODO: Clean this up
