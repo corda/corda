@@ -46,6 +46,14 @@ class FixedArrayByteBuffer extends DirectByteBuffer {
     return new FixedArrayByteBuffer
       (address + position, array, arrayOffset + position, remaining(), true);
   }
+  
+  @Override
+  public ByteBuffer duplicate() {
+    ByteBuffer b = new FixedArrayByteBuffer(address, array, arrayOffset, capacity, isReadOnly());
+    b.limit(this.limit());
+    b.position(this.position());
+    return b;
+  }
 
   public String toString() {
     return "(FixedArrayByteBuffer with address: " + address

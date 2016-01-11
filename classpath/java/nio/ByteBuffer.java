@@ -14,10 +14,9 @@ public abstract class ByteBuffer
   extends Buffer
   implements Comparable<ByteBuffer>
 {
-  private final boolean readOnly;
 
   protected ByteBuffer(boolean readOnly) {
-    this.readOnly = readOnly;
+    this.readonly = readOnly;
   }
 
   public static ByteBuffer allocate(int capacity) {
@@ -39,6 +38,8 @@ public abstract class ByteBuffer
   public abstract ByteBuffer asReadOnlyBuffer();
 
   public abstract ByteBuffer slice();
+  
+  public abstract ByteBuffer duplicate();
 
   protected abstract void doPut(int offset, byte val);
 
@@ -122,7 +123,7 @@ public abstract class ByteBuffer
   public ByteBuffer put(byte[] arr) {
     return put(arr, 0, arr.length);
   }
-
+  
   private void rawPutLong(int position, long val) {
     doPut(position    , (byte) ((val >> 56) & 0xff));
     doPut(position + 1, (byte) ((val >> 48) & 0xff));
@@ -144,6 +145,14 @@ public abstract class ByteBuffer
   private void rawPutShort(int position, short val) {
     doPut(position    , (byte) ((val >> 8) & 0xff));
     doPut(position + 1, (byte) ((val     ) & 0xff));
+  }
+  
+  public ByteBuffer putDouble(int position, double val) {
+    return putLong(position, Double.doubleToRawLongBits(val));
+  }
+  
+  public ByteBuffer putFloat(int position, float val) {
+    return putInt(position, Float.floatToRawIntBits(val));
   }
 
   public ByteBuffer putLong(int position, long val) {
@@ -168,6 +177,14 @@ public abstract class ByteBuffer
     rawPutShort(position, val);
 
     return this;
+  }
+  
+  public ByteBuffer putDouble(double val) {
+    return putLong(Double.doubleToRawLongBits(val));
+  }
+  
+  public ByteBuffer putFloat(float val) {
+    return putInt(Float.floatToRawIntBits(val));
   }
 
   public ByteBuffer putLong(long val) {
@@ -206,6 +223,14 @@ public abstract class ByteBuffer
 
   public ByteBuffer get(byte[] dst) {
     return get(dst, 0, dst.length);
+  }
+  
+  public double getDouble(int position) {
+    return Double.longBitsToDouble(getLong(position));
+  }
+  
+  public float getFloat(int position) {
+    return Float.intBitsToFloat(getInt(position));
   }
 
   public long getLong(int position) {
@@ -248,7 +273,15 @@ public abstract class ByteBuffer
     return (short) ((  ((int) (doGet(position    ) & 0xFF)) << 8)
                     | (((int) (doGet(position + 1) & 0xFF))     ));
   }
-
+  
+  public double getDouble() {
+    return Double.longBitsToDouble(getLong());
+  }
+  
+  public float getFloat() {
+    return Float.intBitsToFloat(getInt());
+  }
+  
   public long getLong() {
     checkGet(position, 8, false);
 
@@ -274,7 +307,7 @@ public abstract class ByteBuffer
   }
 
   protected void checkPut(int position, int amount, boolean absolute) {
-    if (readOnly) {
+    if (isReadOnly()) {
       throw new ReadOnlyBufferException();
     }
 

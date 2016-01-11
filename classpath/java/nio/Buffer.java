@@ -14,6 +14,7 @@ public abstract class Buffer {
   protected int capacity;
   protected int position;
   protected int limit;
+  protected boolean readonly;
 
   public final int limit() {
     return limit;
@@ -60,5 +61,9 @@ public abstract class Buffer {
   public final Buffer rewind() {
     position = 0;
     return this;
+  }
+  
+  public boolean isReadOnly() {
+    return readonly;
   }
 }
