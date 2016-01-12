@@ -27,7 +27,7 @@ buildscript {
 
 
 repositories {
-    mavenLocal()
+    // mavenLocal()
     mavenCentral()
     maven {
         url 'http://oss.sonatype.org/content/repositories/snapshots'
@@ -52,7 +52,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     compile "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
-    compile "com.google.guava:guava:18.0"
+    compile "com.google.guava:guava:19.0"
     compile("com.esotericsoftware:kryo:3.0.3") {
         force = true
     }
