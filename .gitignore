@@ -12,7 +12,14 @@ TODO
 *.iml
 
 ## Directory-based project format:
-.idea/
+.idea/*.xml
+.idea/.name
+.idea/copyright
+.idea/inspectionProfiles
+.idea/libraries
+.idea/shelf
+
+
 # if you remove the above rule, at least ignore the following:
 
 # User-specific stuff:
