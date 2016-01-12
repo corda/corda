@@ -39,7 +39,7 @@ class BriefLogFormatter : Formatter() {
         arguments[1] = className
         arguments[2] = logRecord.sourceMethodName
         arguments[3] = Date(logRecord.millis)
-        arguments[4] = logRecord.message
+        arguments[4] = MessageFormat.format(logRecord.message, *logRecord.parameters)
         if (logRecord.thrown != null) {
             val result = StringWriter()
             logRecord.thrown.printStackTrace(PrintWriter(result))
