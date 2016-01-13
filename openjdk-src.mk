@@ -49,7 +49,6 @@ openjdk-sources = \
 	$(openjdk-src)/share/native/java/util/zip/zip_util.c \
 	$(openjdk-src)/share/native/sun/management/VMManagementImpl.c \
 	$(openjdk-src)/share/native/sun/misc/GC.c \
-	$(openjdk-src)/share/native/sun/misc/URLClassPath.c \
 	$(openjdk-src)/share/native/sun/misc/MessageUtils.c \
 	$(openjdk-src)/share/native/sun/misc/NativeSignalHandler.c \
 	$(openjdk-src)/share/native/sun/misc/Signal.c \
@@ -143,6 +142,11 @@ openjdk-headers-classes = \
 	sun.reflect.Reflection \
 	sun.security.provider.NativeSeedGenerator
 
+ifneq (7,$(openjdk-version))
+	openjdk-sources += \
+		$(openjdk-src)/share/native/sun/misc/URLClassPath.c
+endif
+
 # todo: set properties according to architecture targeted and OpenJDK
 # version used:
 openjdk-cflags = \
@@ -181,15 +185,14 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/java/io/FileDescriptor_md.c \
 		$(openjdk-src)/windows/native/java/io/FileInputStream_md.c \
 		$(openjdk-src)/windows/native/java/io/FileOutputStream_md.c \
-		$(openjdk-src)/windows/native/java/io/FileSystem_md.c \
 		$(openjdk-src)/windows/native/java/io/io_util_md.c \
 		$(openjdk-src)/windows/native/java/io/RandomAccessFile_md.c \
-		$(openjdk-src)/windows/native/java/io/Win32FileSystem_md.c \
 		$(openjdk-src)/windows/native/java/io/WinNTFileSystem_md.c \
 		$(openjdk-src)/windows/native/java/lang/java_props_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/windows/native/java/lang/ProcessImpl_md.c \
 		$(openjdk-src)/windows/native/java/net/net_util_md.c \
+		$(openjdk-src)/windows/native/java/net/ExtendedOptionsImpl.c \
 		$(openjdk-src)/windows/native/java/net/DualStackPlainSocketImpl.c \
 		$(openjdk-src)/windows/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/windows/native/java/net/Inet4AddressImpl.c \
@@ -218,6 +221,12 @@ ifeq ($(platform),windows)
 		$(openjdk-src)/windows/native/sun/nio/fs/WindowsNativeDispatcher.c \
 		$(openjdk-src)/windows/native/sun/security/provider/WinCAPISeedGenerator.c
 
+	ifeq (7,$(openjdk-version))
+		openjdk-sources += \
+			$(openjdk-src)/windows/native/java/io/FileSystem_md.c \
+			$(openjdk-src)/windows/native/java/io/Win32FileSystem_md.c
+	endif
+
 	openjdk-headers-classes += \
 		java.net.DualStackPlainSocketImpl \
 		java.net.SocketImpl \
@@ -236,14 +245,20 @@ ifeq ($(platform),windows)
 		"-I$(openjdk-src)/windows/native/java/util" \
 		"-I$(openjdk-src)/windows/native/sun/nio/ch" \
 		"-I$(openjdk-src)/windows/javavm/include" \
-		"-I$(root)/win32/include" \
 		-DLOCALE_SNAME=0x0000005c \
 		-DLOCALE_SISO3166CTRYNAME2=0x00000068 \
 		-DLOCALE_SISO639LANGNAME2=0x00000067 \
 		-D_JNI_IMPLEMENTATION_ \
 		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
+		-D_WIN32_WINNT=0x0600 \
 		-Ds6_words=_s6_words \
 		-Ds6_bytes=_s6_bytes
+
+		ifeq ($(arch),x86_64)
+			openjdk-cflags += "-I$(root)/win64/include"
+		else
+			openjdk-cflags += "-I$(root)/win32/include"
+		endif
 else
 	openjdk-sources += \
 		$(shell find $(openjdk-src)/solaris/native/common -name '*.c') \
@@ -261,6 +276,7 @@ else
 		$(openjdk-src)/solaris/native/java/lang/ProcessEnvironment_md.c \
 		$(openjdk-src)/solaris/native/java/lang/UNIXProcess_md.c \
 		$(openjdk-src)/solaris/native/java/net/net_util_md.c \
+		$(openjdk-src)/solaris/native/java/net/ExtendedOptionsImpl.c \
 		$(openjdk-src)/solaris/native/java/net/InetAddressImplFactory.c \
 		$(openjdk-src)/solaris/native/java/net/Inet4AddressImpl.c \
 		$(openjdk-src)/solaris/native/java/net/Inet6AddressImpl.c \
@@ -295,6 +311,11 @@ else
 		java.io.UnixFileSystem \
 		sun.nio.ch.InheritedChannel \
 		sun.nio.fs.UnixNativeDispatcher \
+
+	ifneq (7,$(openjdk-version))
+		openjdk-headers-classes += \
+			jdk.net.SocketFlow
+	endif
 
 	openjdk-cflags += \
 		"-I$(openjdk-src)/solaris/javavm/export" \
