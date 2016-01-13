@@ -314,6 +314,11 @@ else
 		sun.nio.ch.InheritedChannel \
 		sun.nio.fs.UnixNativeDispatcher \
 
+	ifneq (7,$(openjdk-version))
+		openjdk-headers-classes += \
+			jdk.net.SocketFlow
+	endif
+
 	openjdk-cflags += \
 		"-I$(openjdk-src)/solaris/javavm/export" \
 		"-I$(openjdk-src)/solaris/native/common" \
