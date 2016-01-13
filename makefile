@@ -736,7 +736,9 @@ ifeq ($(kernel),darwin)
 		sdk-dir = $(platform-dir)/Developer/SDKs
 
 		mac-version := $(shell \
-				if test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
+			  if test -d $(sdk-dir)/MacOSX10.11.sdk; then echo 10.11; \
+			elif test -d $(sdk-dir)/MacOSX10.10.sdk; then echo 10.10; \
+			elif test -d $(sdk-dir)/MacOSX10.9.sdk; then echo 10.9; \
 			elif test -d $(sdk-dir)/MacOSX10.8.sdk; then echo 10.8; \
 			elif test -d $(sdk-dir)/MacOSX10.7.sdk; then echo 10.7; \
 			elif test -d $(sdk-dir)/MacOSX10.6.sdk; then echo 10.6; \
