@@ -8,6 +8,7 @@
 
 package core
 
+import co.paralleluniverse.fibers.Suspendable
 import core.messaging.MessagingService
 import core.serialization.SerializedBytes
 import java.security.KeyPair
@@ -78,6 +79,7 @@ interface IdentityService {
  * themselves.
  */
 interface TimestamperService {
+    @Suspendable
     fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable
 
     /** The name+pubkey that this timestamper will sign with. */
@@ -99,6 +101,13 @@ object DummyTimestampingAuthority {
  */
 interface StorageService {
     fun <K,V> getMap(tableName: String): MutableMap<K, V>
+
+    /**
+     * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is
+     * first installed.
+     */
+    val myLegalIdentity: Party
+    val myLegalIdentityKey: KeyPair
 }
 
 /**
@@ -110,7 +119,6 @@ interface ServiceHub {
     val walletService: WalletService
     val keyManagementService: KeyManagementService
     val identityService: IdentityService
-    val timestampingService: TimestamperService
     val storageService: StorageService
     val networkService: MessagingService
 }

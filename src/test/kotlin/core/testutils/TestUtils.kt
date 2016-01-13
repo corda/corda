@@ -12,20 +12,11 @@ package core.testutils
 
 import contracts.*
 import core.*
-import core.messaging.MessagingService
-import core.serialization.SerializedBytes
-import core.serialization.deserialize
 import core.visualiser.GraphVisualiser
-import java.security.KeyPair
 import java.security.KeyPairGenerator
-import java.security.PrivateKey
 import java.security.PublicKey
-import java.time.Clock
-import java.time.Duration
 import java.time.Instant
-import java.time.ZoneId
 import java.util.*
-import javax.annotation.concurrent.ThreadSafe
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.fail
@@ -65,72 +56,6 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
         CROWDFUND_PROGRAM_ID to CrowdFund(),
         DUMMY_PROGRAM_ID to DummyContract
 )
-
-/**
- * A test/mock timestamping service that doesn't use any signatures or security. It timestamps with
- * the provided clock which defaults to [TEST_TX_TIME], an arbitrary point on the timeline.
- */
-class DummyTimestamper(var clock: Clock = Clock.fixed(TEST_TX_TIME, ZoneId.systemDefault()),
-                       val tolerance: Duration = 30.seconds) : TimestamperService {
-    override val identity = DummyTimestampingAuthority.identity
-
-    override fun timestamp(wtxBytes: SerializedBytes<WireTransaction>): DigitalSignature.LegallyIdentifiable {
-        val wtx = wtxBytes.deserialize()
-        val timestamp = wtx.commands.mapNotNull { it.data as? TimestampCommand }.single()
-        if (Duration.between(timestamp.before, clock.instant()) > tolerance)
-            throw NotOnTimeException()
-        return DummyTimestampingAuthority.key.signWithECDSA(wtxBytes.bits, identity)
-    }
-}
-
-val DUMMY_TIMESTAMPER = DummyTimestamper()
-
-object MockIdentityService : IdentityService {
-    override fun partyFromKey(key: PublicKey): Party? = TEST_KEYS_TO_CORP_MAP[key]
-}
-
-class MockKeyManagementService(
-        override val keys: Map<PublicKey, PrivateKey>,
-        val nextKeys: MutableList<KeyPair> = arrayListOf(KeyPairGenerator.getInstance("EC").genKeyPair())
-) : KeyManagementService {
-    override fun freshKey() = nextKeys.removeAt(nextKeys.lastIndex)
-}
-
-class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletService {
-    override val currentWallet = Wallet(states)
-}
-
-@ThreadSafe
-class MockStorageService : StorageService {
-    private val mapOfMaps = HashMap<String, MutableMap<Any, Any>>()
-
-    @Synchronized
-    override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-        return mapOfMaps.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
-    }
-}
-
-class MockServices(
-        val wallet: WalletService?,
-        val keyManagement: KeyManagementService?,
-        val net: MessagingService?,
-        val identity: IdentityService? = MockIdentityService,
-        val storage: StorageService? = MockStorageService(),
-        val timestamping: TimestamperService? = DUMMY_TIMESTAMPER
-) : ServiceHub {
-    override val walletService: WalletService
-        get() = wallet ?: throw UnsupportedOperationException()
-    override val keyManagementService: KeyManagementService
-        get() = keyManagement ?: throw UnsupportedOperationException()
-    override val identityService: IdentityService
-        get() = identity ?: throw UnsupportedOperationException()
-    override val timestampingService: TimestamperService
-        get() = timestamping ?: throw UnsupportedOperationException()
-    override val networkService: MessagingService
-        get() = net ?: throw UnsupportedOperationException()
-    override val storageService: StorageService
-        get() = storage ?: throw UnsupportedOperationException()
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

@@ -62,40 +62,38 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = true)
             val (bobsAddress, bobsNode) = makeNode(inBackground = true)
+            val timestamper = network.setupTimestampingNode(false).first
 
-            val alicesServices = MockServices(wallet = null, keyManagement = null, net = alicesNode)
+            val alicesServices = MockServices(net = alicesNode)
             val bobsServices = MockServices(
                     wallet = MockWalletService(bobsWallet),
                     keyManagement = MockKeyManagementService(mapOf(BOB to BOB_KEY.private)),
                     net = bobsNode
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, backgroundThread))
-            val tpBuyer = TwoPartyTradeProtocol.create(StateMachineManager(bobsServices, backgroundThread))
-
             val buyerSessionID = random63BitValue()
 
-            val aliceResult = tpSeller.runSeller(
+            val aliceResult = TwoPartyTradeProtocol.runSeller(
+                    StateMachineManager(alicesServices, backgroundThread),
+                    timestamper,
                     bobsAddress,
-                    TwoPartyTradeProtocol.SellerInitialArgs(
-                            lookup("alice's paper"),
-                            1000.DOLLARS,
-                            ALICE_KEY,
-                            buyerSessionID
-                    )
+                    lookup("alice's paper"),
+                    1000.DOLLARS,
+                    ALICE_KEY,
+                    buyerSessionID
             )
-            val bobResult = tpBuyer.runBuyer(
+            val bobResult = TwoPartyTradeProtocol.runBuyer(
+                    StateMachineManager(bobsServices, backgroundThread),
+                    timestamper,
                     alicesAddress,
-                    TwoPartyTradeProtocol.BuyerInitialArgs(
-                        1000.DOLLARS,
-                        CommercialPaper.State::class.java,
-                        buyerSessionID
-                    )
+                    1000.DOLLARS,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
             )
 
-            assertEquals(aliceResult.resultFuture.get(), bobResult.resultFuture.get())
+            assertEquals(aliceResult.get(), bobResult.get())
 
-            txns.add(aliceResult.resultFuture.get().second)
+            txns.add(aliceResult.get().second)
             verify()
         }
         backgroundThread.shutdown()
@@ -115,6 +113,7 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
 
             val (alicesAddress, alicesNode) = makeNode(inBackground = false)
             var (bobsAddress, bobsNode) = makeNode(inBackground = false)
+            val timestamper = network.setupTimestampingNode(true)
 
             val bobsStorage = MockStorageService()
 
@@ -126,28 +125,26 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
                     storage = bobsStorage
             )
 
-            val tpSeller = TwoPartyTradeProtocol.create(StateMachineManager(alicesServices, MoreExecutors.directExecutor()))
             val smmBuyer = StateMachineManager(bobsServices, MoreExecutors.directExecutor())
-            val tpBuyer = TwoPartyTradeProtocol.create(smmBuyer)
 
             val buyerSessionID = random63BitValue()
 
-            tpSeller.runSeller(
+            TwoPartyTradeProtocol.runSeller(
+                    StateMachineManager(alicesServices, MoreExecutors.directExecutor()),
+                    timestamper.first,
                     bobsAddress,
-                    TwoPartyTradeProtocol.SellerInitialArgs(
-                            lookup("alice's paper"),
-                            1000.DOLLARS,
-                            ALICE_KEY,
-                            buyerSessionID
-                    )
+                    lookup("alice's paper"),
+                    1000.DOLLARS,
+                    ALICE_KEY,
+                    buyerSessionID
             )
-            tpBuyer.runBuyer(
+            TwoPartyTradeProtocol.runBuyer(
+                    smmBuyer,
+                    timestamper.first,
                     alicesAddress,
-                    TwoPartyTradeProtocol.BuyerInitialArgs(
-                            1000.DOLLARS,
-                            CommercialPaper.State::class.java,
-                            buyerSessionID
-                    )
+                    1000.DOLLARS,
+                    CommercialPaper.State::class.java,
+                    buyerSessionID
             )
 
             // Everything is on this thread so we can now step through the protocol one step at a time.
@@ -161,9 +158,11 @@ class TwoPartyTradeProtocolTests : TestWithInMemoryNetwork() {
             // .. and let's imagine that Bob's computer has a power cut. He now has nothing now beyond what was on disk.
             bobsNode.stop()
 
-            // Alice doesn't know that and sends Bob the now finalised transaction. Alice sends a message to a node
-            // that has gone offline.
-            alicesNode.pump(false)
+            // Alice doesn't know that and carries on: first timestamping and then sending Bob the now finalised
+            // transaction. Alice sends a message to a node that has gone offline.
+            assertTrue(alicesNode.pump(false))
+            assertTrue(timestamper.second.pump(false))
+            assertTrue(alicesNode.pump(false))
 
             // ... bring the node back up ... the act of constructing the SMM will re-register the message handlers
             // that Bob was waiting on before the reboot occurred.

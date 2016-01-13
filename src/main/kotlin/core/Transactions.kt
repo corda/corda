@@ -8,6 +8,8 @@
 
 package core
 
+import co.paralleluniverse.fibers.Suspendable
+import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -106,14 +108,10 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
         verify()
         return tx.toLedgerTransaction(identityService, id)
     }
+
+    /** Returns the same transaction but with an additional (unchecked) signature */
+    fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
 }
-
-
-/**
- * Thrown if an attempt is made to timestamp a transaction using a trusted timestamper, but the time on the transaction
- * is too far in the past or future relative to the local clock and thus the timestamper would reject it.
- */
-class NotOnTimeException : Exception()
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
 class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
@@ -164,6 +162,20 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
     }
 
     /**
+     * Checks that the given signature matches one of the commands and that it is a correct signature over the tx, then
+     * adds it.
+     *
+     * @throws SignatureException if the signature didn't match the transaction contents
+     * @throws IllegalArgumentException if the signature key doesn't appear in any command.
+     */
+    fun checkAndAddSignature(sig: DigitalSignature.WithKey) {
+        require(commands.count { it.pubkeys.contains(sig.by) } > 0) { "Signature key doesn't match any command" }
+        val data = toWireTransaction().serialize()
+        sig.verifyWithECDSA(data.bits)
+        currentSigs.add(sig)
+    }
+
+    /**
      * Uses the given timestamper service to request a signature over the WireTransaction be added. There must always be
      * at least one such signature, but others may be added as well. You may want to have multiple redundant timestamps
      * in the following cases:
@@ -173,15 +185,14 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
      *
      * The signature of the trusted timestamper merely asserts that the time field of this transaction is valid.
      */
+    @Suspendable
     fun timestamp(timestamper: TimestamperService, clock: Clock = Clock.systemUTC()) {
-        // TODO: Once we switch to a more advanced bytecode rewriting framework, we can call into a real implementation.
-        check(timestamper.javaClass.simpleName == "DummyTimestamper")
         val t = time ?: throw IllegalStateException("Timestamping requested but no time was inserted into the transaction")
 
         // Obviously this is just a hard-coded dummy value for now.
         val maxExpectedLatency = 5.seconds
         if (Duration.between(clock.instant(), t.before) > maxExpectedLatency)
-            throw NotOnTimeException()
+            throw TimestampingError.NotOnTimeException()
 
         // The timestamper may also throw NotOnTimeException if our clocks are desynchronised or if we are right on the
         // boundary of t.notAfter and network latency pushes us over the edge. By "synchronised" here we mean relative

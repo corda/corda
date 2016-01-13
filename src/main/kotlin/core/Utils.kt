@@ -45,3 +45,5 @@ fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): Setta
 
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
 infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)
+
+val RunOnCallerThread = MoreExecutors.directExecutor()
