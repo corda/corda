@@ -2278,6 +2278,9 @@ ifneq (7,$(openjdk-version))
 	if [ -f openjdk-patches/$(notdir $(<)).8.patch ]; then \
 		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).8.patch; \
 	fi
+	if [ -f openjdk-patches/$(notdir $(<)).8.$(platform).patch ]; then \
+		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).8.$(platform).patch; \
+	fi
 endif
 	if [ -f openjdk-patches/$(notdir $(<)).patch ]; then \
 		( cd $(build) && patch -p0 ) < openjdk-patches/$(notdir $(<)).patch; \

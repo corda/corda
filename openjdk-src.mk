@@ -252,9 +252,7 @@ ifeq ($(platform),windows)
 		-D_JAVASOFT_WIN32_TYPEDEF_MD_H_ \
 		-D_WIN32_WINNT=0x0600 \
 		-Ds6_words=_s6_words \
-		-Ds6_bytes=_s6_bytes \
-		"-D__try=if (1)" \
-		"-D__except(a)=else"
+		-Ds6_bytes=_s6_bytes
 
 		ifeq ($(arch),x86_64)
 			openjdk-cflags += "-I$(root)/win64/include"
