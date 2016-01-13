@@ -1,0 +1,15 @@
+--- openjdk/Inet6AddressImpl.c
++++ openjdk/Inet6AddressImpl.c
+@@ -360,6 +360,11 @@
+
+ #ifdef AF_INET6
+
++typedef struct icmpv6_echo_reply_lh {
++  IPV6_ADDRESS_EX Address;
++  ULONG           Status;
++  unsigned int    RoundTripTime;
++} ICMPV6_ECHO_REPLY, *PICMPV6_ECHO_REPLY;
+
+ /**
+   * ping implementation.
+

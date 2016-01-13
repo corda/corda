@@ -662,7 +662,10 @@ class MyClasspath : public Classpath {
 #ifdef AVIAN_OPENJDK_SRC
     interceptFileOperations(t, true);
 #else   // not AVIAN_OPENJDK_SRC
-    expect(t, loadLibrary(t, libraryPath, "verify", true, true));
+#  ifdef PLATFORM_WINDOWS    
+    expect(t, loadLibrary(t, libraryPath, "msvcr100", true, true));
+#  endif
+    expect(t, loadLibrary(t, libraryPath, "verify", true, true));    
     expect(t, loadLibrary(t, libraryPath, "java", true, true));
 #endif  // not AVIAN_OPENJDK_SRC
 
@@ -3121,6 +3124,11 @@ extern "C" AVIAN_EXPORT void JNICALL
 namespace {
 
 namespace local {
+
+extern "C" AVIAN_EXPORT jobjectArray JNICALL EXPORT(JVM_GetMethodParameters)(Thread*, jobject)
+{
+  abort();
+}
 
 extern "C" AVIAN_EXPORT jint JNICALL EXPORT(JVM_GetInterfaceVersion)()
 {
@@ -5970,6 +5978,28 @@ extern "C" int JDK_InitJvmHandle()
 extern "C" void* JDK_FindJvmEntry(const char* name)
 {
   return voidPointer(GetProcAddress(jvmHandle, name));
+}
+
+extern "C" HMODULE JDK_LoadSystemLibrary(const char* name) {
+  HMODULE handle;
+  char path[MAX_PATH];
+
+  if (GetSystemDirectory(path, sizeof(path)) != 0) {
+    strcat(path, "\\");
+    strcat(path, name);
+    handle = LoadLibrary(path);
+  } else {
+    handle = nullptr;
+  }
+
+  if (handle == nullptr) {
+    if (GetWindowsDirectory(path, sizeof(path)) != 0) {
+      strcat(path, "\\");
+      strcat(path, name);
+      handle = LoadLibrary(path);
+    }
+  }
+  return handle;
 }
 
 #ifdef AVIAN_OPENJDK_SRC
