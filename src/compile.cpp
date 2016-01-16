@@ -2146,7 +2146,7 @@ void releaseLock(MyThread* t, GcMethod* method, void* stack)
     if (t->methodLockIsClean) {
       object lock;
       if (method->flags() & ACC_STATIC) {
-        lock = method->class_();
+        lock = getJClass(t, method->class_());
       } else {
         lock = *localObject(t,
                             stackForFrame(t, stack, method),
@@ -2731,6 +2731,26 @@ void releaseMonitorForObject(MyThread* t, object o)
 {
   if (LIKELY(o)) {
     release(t, o);
+  } else {
+    throwNew(t, GcNullPointerException::Type);
+  }
+}
+
+void acquireMonitorForClassOnEntrance(MyThread* t, GcClass* o)
+{
+  if (LIKELY(o)) {
+    t->methodLockIsClean = false;
+    acquire(t, getJClass(t, o));
+    t->methodLockIsClean = true;
+  } else {
+    throwNew(t, GcNullPointerException::Type);
+  }
+}
+
+void releaseMonitorForClass(MyThread* t, GcClass* o)
+{
+  if (LIKELY(o)) {
+    release(t, getJClass(t, o));
   } else {
     throwNew(t, GcNullPointerException::Type);
   }
@@ -3406,13 +3426,22 @@ void handleEntrance(MyThread* t, Frame* frame)
     frame->set(index, ir::Type::object());
   }
 
-  handleMonitorEvent(
-      t, frame, getThunk(t, acquireMonitorForObjectOnEntranceThunk));
+  handleMonitorEvent(t,
+                     frame,
+                     getThunk(t,
+                              method->flags() & ACC_STATIC
+                                  ? acquireMonitorForClassOnEntranceThunk
+                                  : acquireMonitorForObjectOnEntranceThunk));
 }
 
 void handleExit(MyThread* t, Frame* frame)
 {
-  handleMonitorEvent(t, frame, getThunk(t, releaseMonitorForObjectThunk));
+  handleMonitorEvent(t,
+                     frame,
+                     getThunk(t,
+                              frame->context->method->flags() & ACC_STATIC
+                                  ? releaseMonitorForClassThunk
+                                  : releaseMonitorForObjectThunk));
 }
 
 bool inTryBlock(MyThread* t UNUSED, GcCode* code, unsigned ip)
@@ -7588,7 +7617,7 @@ uint64_t invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      acquire(t, method->class_());
+      acquire(t, getJClass(t, method->class_()));
     } else {
       acquire(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
@@ -7613,7 +7642,7 @@ uint64_t invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, method->class_());
+      release(t, getJClass(t, method->class_()));
     } else {
       release(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
