@@ -2736,6 +2736,26 @@ void releaseMonitorForObject(MyThread* t, object o)
   }
 }
 
+void acquireMonitorForClassOnEntrance(MyThread* t, GcClass* o)
+{
+  if (LIKELY(o)) {
+    t->methodLockIsClean = false;
+    acquire(t, getJClass(t, o));
+    t->methodLockIsClean = true;
+  } else {
+    throwNew(t, GcNullPointerException::Type);
+  }
+}
+
+void releaseMonitorForClass(MyThread* t, GcClass* o)
+{
+  if (LIKELY(o)) {
+    release(t, getJClass(t, o));
+  } else {
+    throwNew(t, GcNullPointerException::Type);
+  }
+}
+
 object makeMultidimensionalArray2(MyThread* t,
                                   GcClass* class_,
                                   uintptr_t* countStack,
@@ -3377,7 +3397,7 @@ void handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (method->flags() & ACC_STATIC) {
       PROTECT(t, method);
 
-      lock = frame->append(getJClass(t, method->class_()));
+      lock = frame->append(method->class_());
     } else {
       lock = loadLocal(
           frame->context, 1, ir::Type::object(), savedTargetIndex(t, method));
@@ -3406,13 +3426,22 @@ void handleEntrance(MyThread* t, Frame* frame)
     frame->set(index, ir::Type::object());
   }
 
-  handleMonitorEvent(
-      t, frame, getThunk(t, acquireMonitorForObjectOnEntranceThunk));
+  handleMonitorEvent(t,
+                     frame,
+                     getThunk(t,
+                              method->flags() & ACC_STATIC
+                                  ? acquireMonitorForClassOnEntranceThunk
+                                  : acquireMonitorForObjectOnEntranceThunk));
 }
 
 void handleExit(MyThread* t, Frame* frame)
 {
-  handleMonitorEvent(t, frame, getThunk(t, releaseMonitorForObjectThunk));
+  handleMonitorEvent(t,
+                     frame,
+                     getThunk(t,
+                              frame->context->method->flags() & ACC_STATIC
+                                  ? releaseMonitorForClassThunk
+                                  : releaseMonitorForObjectThunk));
 }
 
 bool inTryBlock(MyThread* t UNUSED, GcCode* code, unsigned ip)
