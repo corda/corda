@@ -145,6 +145,10 @@ public class Misc {
     }
   }
 
+  private static synchronized void testStaticNotify() {
+    Misc.class.notify();
+  }
+  
   public static void main(String[] args) throws Exception {
     zam();
 
@@ -165,6 +169,8 @@ public class Misc {
 
     ClassLoader.getSystemClassLoader().toString();
 
+    testStaticNotify();
+    
     { Misc m = new Misc();
       m.toString();
 

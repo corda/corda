@@ -2146,7 +2146,7 @@ void releaseLock(MyThread* t, GcMethod* method, void* stack)
     if (t->methodLockIsClean) {
       object lock;
       if (method->flags() & ACC_STATIC) {
-        lock = method->class_();
+        lock = getJClass(t, method->class_());
       } else {
         lock = *localObject(t,
                             stackForFrame(t, stack, method),
@@ -3377,7 +3377,7 @@ void handleMonitorEvent(MyThread* t, Frame* frame, intptr_t function)
     if (method->flags() & ACC_STATIC) {
       PROTECT(t, method);
 
-      lock = frame->append(method->class_());
+      lock = frame->append(getJClass(t, method->class_()));
     } else {
       lock = loadLocal(
           frame->context, 1, ir::Type::object(), savedTargetIndex(t, method));
@@ -7588,7 +7588,7 @@ uint64_t invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      acquire(t, method->class_());
+      acquire(t, getJClass(t, method->class_()));
     } else {
       acquire(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }
@@ -7613,7 +7613,7 @@ uint64_t invokeNativeSlow(MyThread* t, GcMethod* method, void* function)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, method->class_());
+      release(t, getJClass(t, method->class_()));
     } else {
       release(t, *reinterpret_cast<object*>(RUNTIME_ARRAY_BODY(args)[1]));
     }

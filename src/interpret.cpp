@@ -294,7 +294,7 @@ void pushFrame(Thread* t, GcMethod* method)
     // to release a monitor we never successfully acquired when we try
     // to pop the frame back off.
     if (method->flags() & ACC_STATIC) {
-      acquire(t, method->class_());
+      acquire(t, getJClass(t, method->class_()));
     } else {
       acquire(t, peekObject(t, base));
     }
@@ -332,7 +332,7 @@ void popFrame(Thread* t)
 
   if (method->flags() & ACC_SYNCHRONIZED) {
     if (method->flags() & ACC_STATIC) {
-      release(t, method->class_());
+      release(t, getJClass(t, method->class_()));
     } else {
       release(t, peekObject(t, frameBase(t, t->frame)));
     }
