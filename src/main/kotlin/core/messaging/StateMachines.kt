@@ -42,7 +42,7 @@ import javax.annotation.concurrent.ThreadSafe
  * (bad for performance, good for programmer mental health!).
  *
  * A "state machine" is a class with a single call method. The call method and any others it invokes are rewritten by
- * a bytecode rewriting engine called JavaFlow, to ensure the code can be suspended and resumed at any point.
+ * a bytecode rewriting engine called Quasar, to ensure the code can be suspended and resumed at any point.
  *
  * TODO: The framework should propagate exceptions and handle error handling automatically.
  * TODO: Session IDs should be set up and propagated automatically, on demand.

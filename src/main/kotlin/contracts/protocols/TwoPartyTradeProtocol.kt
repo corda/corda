@@ -40,11 +40,10 @@ import java.time.Instant
  *
  * Note that it's the *seller* who initiates contact with the buyer, not vice-versa as you might imagine.
  *
- * To get an implementation of this class, use the static [TwoPartyTradeProtocol.create] method. Then use either
- * the [runBuyer] or [runSeller] methods, depending on which side of the trade your node is taking. These methods
- * return a future which will complete once the trade is over and a fully signed transaction is available: you can
- * either block your thread waiting for the protocol to complete by using [ListenableFuture.get] or more usefully,
- * register a callback that will be invoked when the time comes.
+ * To initiate the protocol, use either the [runBuyer] or [runSeller] methods, depending on which side of the trade
+ * your node is taking. These methods return a future which will complete once the trade is over and a fully signed
+ * transaction is available: you can either block your thread waiting for the protocol to complete by using
+ * [ListenableFuture.get] or more usefully, register a callback that will be invoked when the time comes.
  *
  * To see an example of how to use this class, look at the unit tests.
  */
