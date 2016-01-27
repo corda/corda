@@ -72,8 +72,12 @@ class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
 }
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
-inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this), T::class.java)
-inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T = kryo.readObject(Input(this.bits), T::class.java)
+inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+    return kryo.readObject(Input(this), T::class.java)
+}
+inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
+    return kryo.readObject(Input(this.bits), T::class.java)
+}
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
 
 /**
@@ -132,7 +136,8 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         // A few quick checks for data evolution. Note that this is not guaranteed to catch every problem! But it's
         // good enough for a prototype.
         if (numFields != constructor.parameters.size)
-            throw KryoException("Mismatch between number of constructor parameters and number of serialised fields for ${klass.qualifiedName} ($numFields vs ${constructor.parameters.size})")
+            throw KryoException("Mismatch between number of constructor parameters and number of serialised fields " +
+                    "for ${klass.qualifiedName} ($numFields vs ${constructor.parameters.size})")
         if (fieldTypeHash != constructor.parameters.hashCode())
             throw KryoException("Hashcode mismatch for parameter types for ${klass.qualifiedName}: unsupported type evolution has happened.")
 

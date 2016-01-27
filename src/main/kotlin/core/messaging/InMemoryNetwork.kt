@@ -142,7 +142,8 @@ public class InMemoryNetwork {
      * An instance can be obtained by creating a builder and then using the start method.
      */
     inner class Node(private val manuallyPumped: Boolean, private val handle: Handle): MessagingService {
-        inner class Handler(val executor: Executor?, val topic: String, val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
+        inner class Handler(val executor: Executor?, val topic: String,
+                            val callback: (Message, MessageHandlerRegistration) -> Unit) : MessageHandlerRegistration
         @GuardedBy("this")
         protected val handlers: MutableList<Handler> = ArrayList()
         @GuardedBy("this")
@@ -156,16 +157,17 @@ public class InMemoryNetwork {
             override val timestampingNodes = if (timestampingAdvert != null) listOf(timestampingAdvert!!) else emptyList()
         }
 
-        protected val backgroundThread = if (manuallyPumped) null else thread(isDaemon = true, name = "In-memory message dispatcher ") {
-            while (!currentThread.isInterrupted) {
-                try {
-                    pumpInternal(true)
-                } catch(e: InterruptedException) {
-                    if (synchronized(this) { running })
-                        throw e
+        protected val backgroundThread = if (manuallyPumped) null else
+            thread(isDaemon = true, name = "In-memory message dispatcher ") {
+                while (!currentThread.isInterrupted) {
+                    try {
+                        pumpInternal(true)
+                    } catch(e: InterruptedException) {
+                        if (synchronized(this) { running })
+                            throw e
+                    }
                 }
             }
-        }
 
         @Synchronized
         override fun addMessageHandler(topic: String, executor: Executor?, callback: (Message, MessageHandlerRegistration) -> Unit): MessageHandlerRegistration {
