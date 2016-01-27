@@ -176,6 +176,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                 checkpointsMap.remove(prevCheckpointKey)
             }
         } catch (t: Throwable) {
+            // TODO: Quasar is logging exceptions by itself too, find out where and stop it.
             logger.error("Caught error whilst invoking protocol state machine", t)
             throw t
         }

@@ -153,10 +153,6 @@ public class InMemoryNetwork {
 
         override val myAddress: SingleMessageRecipient = handle
 
-        override val networkMap: NetworkMap get() = object : NetworkMap {
-            override val timestampingNodes = if (timestampingAdvert != null) listOf(timestampingAdvert!!) else emptyList()
-        }
-
         protected val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher ") {
                 while (!currentThread.isInterrupted) {

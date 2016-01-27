@@ -3,7 +3,9 @@ version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
 apply plugin: 'kotlin'
-//apply plugin: 'org.jetbrains.dokka'
+apply plugin: 'application'
+
+// apply plugin: 'org.jetbrains.dokka'
 
 allprojects {
     sourceCompatibility = 1.8
@@ -62,6 +64,8 @@ dependencies {
         force = true     // Conflict between Quasar and Artemis
     }
 
+    compile "net.sf.jopt-simple:jopt-simple:4.9"
+
     compile("com.esotericsoftware:kryo:3.0.3")
     compile "de.javakaffee:kryo-serializers:0.37"
 
@@ -95,4 +99,19 @@ tasks.withType(Test) {
 tasks.withType(JavaExec) {
     jvmArgs "-javaagent:${configurations.quasar.singleFile}"
     jvmArgs "-Dco.paralleluniverse.fibers.verifyInstrumentation"
+}
+
+mainClassName = 'core.node.TraderDemoKt'
+
+task runDemoBuyer(type: JavaExec, dependsOn: ':classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'core.node.TraderDemoKt'
+    args = ['--dir=alpha', '--service-fake-trades', '--network-address=alpha']
+}
+
+task runDemoSeller(type: JavaExec, dependsOn: ':classes') {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'core.node.TraderDemoKt'
+    args = ['--dir=beta', '--fake-trade-with=alpha', '--network-address=beta:31338',
+            '--timestamper-identity-file=alpha/identity-public', '--timestamper-address=alpha']
 }

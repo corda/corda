@@ -109,3 +109,7 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     if (verifier.verify(signature.bits) == false)
         throw SignatureException("Signature did not match")
 }
+
+// Allow Kotlin destructuring:    val (private, public) = keypair
+fun KeyPair.component1() = this.private
+fun KeyPair.component2() = this.public

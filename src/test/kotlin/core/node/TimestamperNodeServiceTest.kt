@@ -48,7 +48,10 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         myNode = makeNode()
         serviceNode = makeNode()
         mockServices = MockServices(net = serviceNode.second, storage = MockStorageService())
-        serverKey = network.setupTimestampingNode(true).first.identity.owningKey
+
+        val timestampingNodeID = network.setupTimestampingNode(true).first
+        (mockServices.networkMapService as MockNetworkMap).timestampingNodes.add(timestampingNodeID)
+        serverKey = timestampingNodeID.identity.owningKey
 
         // And a separate one to be tested directly, to make the unit tests a bit faster.
         service = TimestamperNodeService(serviceNode.second, Party("Unit test suite", ALICE), ALICE_KEY)
@@ -76,7 +79,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         val psm = runNetwork {
             val smm = StateMachineManager(MockServices(net = myNode.second), RunOnCallerThread)
             val logName = TimestamperNodeService.TIMESTAMPING_PROTOCOL_TOPIC
-            val psm = TestPSM(myNode.second.networkMap.timestampingNodes[0], clock.instant())
+            val psm = TestPSM(mockServices.networkMapService.timestampingNodes[0], clock.instant())
             smm.add(logName, psm)
             psm
         }

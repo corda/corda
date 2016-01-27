@@ -10,6 +10,7 @@ package core
 
 import co.paralleluniverse.fibers.Suspendable
 import core.messaging.MessagingService
+import core.messaging.NetworkMap
 import core.serialization.SerializedBytes
 import java.security.KeyPair
 import java.security.KeyPairGenerator
@@ -121,4 +122,5 @@ interface ServiceHub {
     val identityService: IdentityService
     val storageService: StorageService
     val networkService: MessagingService
+    val networkMapService: NetworkMap
 }

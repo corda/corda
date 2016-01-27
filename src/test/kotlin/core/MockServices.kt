@@ -9,6 +9,8 @@
 package core
 
 import core.messaging.MessagingService
+import core.messaging.MockNetworkMap
+import core.messaging.NetworkMap
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
@@ -63,11 +65,13 @@ class MockStorageService : StorageService {
     override val myLegalIdentityKey: KeyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
     override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
 
-    private val mapOfMaps = HashMap<String, MutableMap<Any, Any>>()
+    private val tables = HashMap<String, MutableMap<Any, Any>>()
 
-    @Synchronized
+    @Suppress("UNCHECKED_CAST")
     override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
-        return mapOfMaps.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
+        synchronized(tables) {
+            return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
+        }
     }
 }
 
@@ -76,7 +80,8 @@ class MockServices(
         val keyManagement: KeyManagementService? = null,
         val net: MessagingService? = null,
         val identity: IdentityService? = MockIdentityService,
-        val storage: StorageService? = MockStorageService()
+        val storage: StorageService? = MockStorageService(),
+        val networkMap: NetworkMap? = MockNetworkMap()
 ) : ServiceHub {
     override val walletService: WalletService
         get() = wallet ?: throw UnsupportedOperationException()
@@ -86,6 +91,8 @@ class MockServices(
         get() = identity ?: throw UnsupportedOperationException()
     override val networkService: MessagingService
         get() = net ?: throw UnsupportedOperationException()
+    override val networkMapService: NetworkMap
+        get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()
 }

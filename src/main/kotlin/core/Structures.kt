@@ -39,6 +39,7 @@ interface OwnableState : ContractState {
 /** Returns the SHA-256 hash of the serialised contents of this state (not cached!) */
 fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bits)
 
+// TODO: Give this a shorter name.
 /**
  * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
  * defined the state and where in that transaction it was.
