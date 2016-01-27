@@ -1,0 +1,355 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Code style guide &mdash; R3 Prototyping 0.1 documentation</title>
+  
+
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/custom.css" type="text/css" />
+  
+
+  
+
+  
+    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+        <link rel="prev" title="Roadmap" href="roadmap.html"/> 
+
+  
+  <script src="_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="index.html" class="icon icon-home"> R3 Prototyping
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.1
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+                <p class="caption"><span class="caption-text">Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
+<li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Writing a contract</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol-state-machines.html">Protocol state machines</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Appendix</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
+<li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Code style guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#general-style">1. General style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#comments">2. Comments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#threading">3. Threading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#assertions-and-errors">4. Assertions and errors</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">R3 Prototyping</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Code style guide</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/codestyle.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="code-style-guide">
+<h1>Code style guide<a class="headerlink" href="#code-style-guide" title="Permalink to this headline">¶</a></h1>
+<p>This document explains the coding style used in the R3 prototyping repository. You will be expected to follow these
+recommendations when submitting patches for review. Please take the time to read them and internalise them, to save
+time during code review.</p>
+<p>What follows are <em>recommendations</em> and not <em>rules</em>. They are in places intentionally vague, so use your good judgement
+when interpreting them.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Parts of the codebase may not follow this style guide yet. If you see a place that doesn&#8217;t, please fix it!</p>
+</div>
+<div class="section" id="general-style">
+<h2>1. General style<a class="headerlink" href="#general-style" title="Permalink to this headline">¶</a></h2>
+<p>We use the standard Java coding style from Sun, adapted for Kotlin in ways that should be fairly intuitive.</p>
+<p>We aim for line widths of no more than 120 characters. That is wide enough to avoid lots of pointless wrapping but
+narrow enough that with a widescreen monitor and a 12 point fixed width font (like Menlo) you can fit two files
+next to each other. This is not a rigidly enforced rule and if wrapping a line would be excessively awkward, let it
+overflow. Overflow of a few characters here and there isn&#8217;t a big deal: the goal is general convenience.</p>
+<p>Code is vertically dense, blank lines in methods are used sparingly. This is so more code can fit on screen at once.</p>
+<p>Each file has a copyright notice at the top. Copy it from the existing files if you create a new one. We do not mark
+classes with &#64;author Javadoc annotations.</p>
+<p>In Kotlin code, KDoc is used rather than JavaDoc. It&#8217;s very similar except it uses Markdown for formatting instead
+of HTML tags.</p>
+<p>We target Java 8 and use the latest Java APIs whenever convenient. We use <code class="docutils literal"><span class="pre">java.time.Instant</span></code> to represent timestamps
+and <code class="docutils literal"><span class="pre">java.nio.file.Path</span></code> to represent file paths.</p>
+<p>We use spaces and not tabs.</p>
+<p>Never apply any design pattern religiously. There are no silver bullets in programming and if something is fashionable,
+that doesn&#8217;t mean it&#8217;s always better. In particular:</p>
+<ul class="simple">
+<li>Use functional programming patterns like map, filter, fold only where it&#8217;s genuinely more convenient. Never be afraid
+to use a simple imperative construct like a for loop or a mutable counter if that results in more direct, English-like
+code.</li>
+<li>Use immutability when you don&#8217;t anticipate very rapid or complex changes to the content. Immutability can help avoid
+bugs, but over-used it can make code that has to adjust fields of an immutable object (in a clone) hard to read and
+stress the garbage collector. When such code becomes a widespread pattern it can lead to code that is just generically
+slow but without hotspots.</li>
+<li>The tradeoffs between various thread safety techniques are complex, subtle, and no technique is always superior to
+the others. Our code uses a mix of locks, worker threads and messaging depending on the situation.</li>
+</ul>
+</div>
+<div class="section" id="comments">
+<h2>2. Comments<a class="headerlink" href="#comments" title="Permalink to this headline">¶</a></h2>
+<p>We like them as long as they add detail that is missing from the code. Comments that simply repeat the story already
+told by the code are best deleted. Comments should:</p>
+<ul class="simple">
+<li>Explain what the code is doing at a higher level than is obtainable from just examining the statement and
+surrounding code.</li>
+<li>Explain why certain choices were made and the tradeoffs considered.</li>
+<li>Explain how things can go wrong, which is a detail often not easily seen just by reading the code.</li>
+<li>Use good grammar with capital letters and full stops. This gets us in the right frame of mind for writing real
+explanations of things.</li>
+</ul>
+<p>When writing code, imagine that you have an intelligent colleague looking over your shoulder asking you questions
+as you go. Think about what they might ask, and then put your answers in the code.</p>
+<p>Don’t be afraid of redundancy, many people will start reading your code in the middle with little or no idea of what
+it’s about, eg, due to a bug or a need to introduce a new feature. It’s OK to repeat basic facts or descriptions in
+different places if that increases the chance developers will see something important.</p>
+<p>API docs: all public methods, constants and classes should have doc comments in either JavaDoc or KDoc. API docs should:</p>
+<ul class="simple">
+<li>Explain what the method does in words different to how the code describes it.</li>
+<li>Always have some text, annotation-only JavaDocs don’t render well. Write “Returns a blah blah blah” rather
+than “&#64;returns blah blah blah” if that&#8217;s the only content (or leave it out if you have nothing more to say than the
+code already says).</li>
+<li>Illustrate with examples when you might want to use the method or class. Point the user at alternatives if this code
+is not always right.</li>
+<li>Make good use of <a class="reference external" href="mailto:{&#37;&#52;&#48;link">{<span>&#64;</span>link</a>} annotations.</li>
+</ul>
+<p>Bad JavaDocs look like this:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="cm">/** @return the size of the Bloom filter. */</span>
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">getBloomFilterSize</span><span class="o">()</span> <span class="o">{</span>
+    <span class="k">return</span> <span class="n">block</span><span class="o">;</span>
+<span class="o">}</span>
+</pre></div>
+</div>
+<p>Good JavaDocs look like this:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="cm">/**</span>
+<span class="cm"> * Returns the size of the current {@link BloomFilter} in bytes. Larger filters have</span>
+<span class="cm"> * lower false positive rates for the same number of inserted keys and thus lower privacy,</span>
+<span class="cm"> * but bandwidth usage is also correspondingly reduced.</span>
+<span class="cm"> */</span>
+<span class="kd">public</span> <span class="kt">int</span> <span class="nf">getBloomFilterSize</span><span class="o">()</span> <span class="o">{</span> <span class="o">...</span> <span class="o">}</span>
+</pre></div>
+</div>
+<p>We use C-style (<code class="docutils literal"><span class="pre">/**</span> <span class="pre">*/</span></code>) comments for API docs and we use C++ style comments (<code class="docutils literal"><span class="pre">//</span></code>) for explanations that are
+only intended to be viewed by people who read the code.</p>
+</div>
+<div class="section" id="threading">
+<h2>3. Threading<a class="headerlink" href="#threading" title="Permalink to this headline">¶</a></h2>
+<p>Classes that are thread safe should be annotated with the <code class="docutils literal"><span class="pre">&#64;ThreadSafe</span></code> annotation. The class or method comments
+should describe how threads are expected to interact with your code, unless it&#8217;s obvious because the class is
+(for example) a simple immutable data holder.</p>
+<p>Code that supports callbacks or event listeners should always accept an <code class="docutils literal"><span class="pre">Executor</span></code> argument that defaults to
+<code class="docutils literal"><span class="pre">MoreExecutors.directThreadExecutor()</span></code> (i.e. the calling thread) when registering the callback. This makes it easy
+to integrate the callbacks with whatever threading environment the calling code expects, e.g. serialised onto a single
+worker thread if necessary, or run directly on the background threads used by the class if the callback is thread safe
+and doesn&#8217;t care in what context it&#8217;s invoked.</p>
+<p>In the prototyping code it&#8217;s OK to use synchronised methods i.e. with an exposed lock when the use of locking is quite
+trivial. If the synchronisation in your code is getting more complex, consider the following:</p>
+<ol class="arabic simple">
+<li>Is the complexity necessary? At this early stage, don&#8217;t worry too much about performance or scalability, as we&#8217;re
+exploring the design space rather than making an optimal implementation of a design that&#8217;s already nailed down.</li>
+<li>Could you simplify it by making the data be owned by a dedicated, encapsulated worker thread? If so, remember to
+think about flow control and what happens if a work queue fills up: the actor model can often be useful but be aware
+of the downsides and try to avoid explicitly defining messages, prefer to send closures onto the worker thread
+instead.</li>
+<li>If you use an explicit lock and the locking gets complex, and <em>always</em> if the class supports callbacks, use the
+cycle detecting locks from the Guava library.</li>
+<li>Can you simplify some things by using thread-safe collections like <code class="docutils literal"><span class="pre">CopyOnWriteArrayList</span></code> or <code class="docutils literal"><span class="pre">ConcurrentHashMap</span></code>?
+These data structures are more expensive than their non-thread-safe equivalents but can be worth it if it lets us
+simplify the code.</li>
+</ol>
+<p>Immutable data structures can be very useful for making it easier to reason about multi-threaded code. Kotlin makes it
+easy to define these via the &#8220;data&#8221; attribute, which auto-generates a copy() method. That lets you create clones of
+an immutable object with arbitrary fields adjusted in the clone. But if you can&#8217;t use the data attribute for some
+reason, for instance, you are working in Java or because you need an inheritance heirarchy, then consider that making
+a class fully immutable may result in very awkward code if there&#8217;s ever a need to make complex changes to it. If in
+doubt, ask. Remember, never apply any design pattern religiously.</p>
+</div>
+<div class="section" id="assertions-and-errors">
+<h2>4. Assertions and errors<a class="headerlink" href="#assertions-and-errors" title="Permalink to this headline">¶</a></h2>
+<p>We use them liberally and we use them at runtime, in production. That means we avoid the &#8220;assert&#8221; keyword in Java,
+and instead prefer to use the <code class="docutils literal"><span class="pre">check()</span></code> or <code class="docutils literal"><span class="pre">require()</span></code> functions in Kotlin (for an <code class="docutils literal"><span class="pre">IllegalStateException</span></code> or
+<code class="docutils literal"><span class="pre">IllegalArgumentException</span></code> respectively), or the Guava <code class="docutils literal"><span class="pre">Preconditions.check</span></code> method from Java.</p>
+<p>We define new exception types liberally. We prefer not to provide English language error messages in exceptions at
+the throw site, instead we define new types with any useful information as fields, with a toString() method if
+really necessary. In other words, don&#8217;t do this:</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="k">throw</span> <span class="k">new</span> <span class="n">Exception</span><span class="o">(</span><span class="s">&quot;The foo broke&quot;</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>instead do this</p>
+<div class="highlight-java"><div class="highlight"><pre><span class="kd">class</span> <span class="nc">FooBrokenException</span> <span class="kd">extends</span> <span class="n">Exception</span> <span class="o">{}</span>
+<span class="k">throw</span> <span class="k">new</span> <span class="n">FooBrokenException</span><span class="o">()</span>
+</pre></div>
+</div>
+<p>The latter is easier to catch and handle if later necessary, and the type name should explain what went wrong.</p>
+<p>Note that Kotlin does not require exception types to be declared in method prototypes like Java does.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="roadmap.html" class="btn btn-neutral" title="Roadmap" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, R3 CEV.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'0.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

@@ -108,6 +108,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 </ul>
 
             
@@ -202,7 +203,7 @@ piece of issued paper.</p>
 <h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
 <p>A state is a class that stores data that is checked by the contract.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
   <span class="k">val</span> <span class="py">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">owner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
@@ -316,7 +317,7 @@ checked, so from the contract code&#8217;s perspective, a command is simply a da
 public keys. Each key had a signature proving that the corresponding private key was used to sign.</p>
 <p>Let&#8217;s define a few commands now:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">interface</span> <span class="n">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">interface</span> <span class="nc">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
     <span class="k">object</span> <span class="nc">Move</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Redeem</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Issue</span> <span class="p">:</span> <span class="n">Commands</span>

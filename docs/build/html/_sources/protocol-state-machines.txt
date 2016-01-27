@@ -146,8 +146,8 @@ each side.
           )
 
 
-          private class UnacceptablePriceException(val givenPrice: Amount) : Exception()
-          private class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
+          class UnacceptablePriceException(val givenPrice: Amount) : Exception()
+          class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
               override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
           }
 

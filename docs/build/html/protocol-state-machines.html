@@ -106,6 +106,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="visualiser.html">Using the visualiser</a></li>
 <li class="toctree-l1"><a class="reference internal" href="roadmap.html">Roadmap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="codestyle.html">Code style guide</a></li>
 </ul>
 
             
@@ -275,8 +276,8 @@ each side.</p>
     <span class="p">)</span>
 
 
-    <span class="k">private</span> <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span>
-    <span class="k">private</span> <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">class</span> <span class="nc">UnacceptablePriceException</span><span class="p">(</span><span class="k">val</span> <span class="py">givenPrice</span><span class="p">:</span> <span class="n">Amount</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span>
+    <span class="k">class</span> <span class="nc">AssetMismatchException</span><span class="p">(</span><span class="k">val</span> <span class="py">expectedTypeName</span><span class="p">:</span> <span class="n">String</span><span class="p">,</span> <span class="k">val</span> <span class="py">typeName</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="p">:</span> <span class="n">Exception</span><span class="p">()</span> <span class="p">{</span>
         <span class="k">override</span> <span class="k">fun</span> <span class="nf">toString</span><span class="p">()</span> <span class="p">=</span> <span class="s">&quot;The submitted asset didn&#39;t match the expected type: $expectedTypeName vs $typeName&quot;</span>
     <span class="p">}</span>
 
