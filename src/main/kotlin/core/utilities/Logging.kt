@@ -34,8 +34,8 @@ class BriefLogFormatter : Formatter() {
         val arguments = arrayOfNulls<Any>(6)
         arguments[0] = logRecord.threadID
         val fullClassName = logRecord.sourceClassName
-        val lastDot = fullClassName.lastIndexOf('.')
-        val className = fullClassName.substring(lastDot + 1)
+        val dollarIndex = fullClassName.indexOf('$')
+        val className = fullClassName.substring(fullClassName.lastIndexOf('.') + 1, if (dollarIndex == -1) fullClassName.length else dollarIndex)
         arguments[1] = className
         arguments[2] = logRecord.sourceMethodName
         arguments[3] = Date(logRecord.millis)
