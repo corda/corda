@@ -41,6 +41,11 @@ public class JavaCommercialPaper implements Contract {
             this.maturityDate = maturityDate;
         }
 
+        public State copy() {
+            State ret = new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
+            return ret;
+        }
+
         public PartyReference getIssuance() {
             return issuance;
         }
@@ -108,7 +113,7 @@ public class JavaCommercialPaper implements Contract {
         public static class Issue extends Commands {
             @Override
             public boolean equals(Object obj) {
-                return obj instanceof Redeem;
+                return obj instanceof Issue;
             }
         }
     }
