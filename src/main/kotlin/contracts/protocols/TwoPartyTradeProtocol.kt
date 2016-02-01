@@ -165,7 +165,10 @@ object TwoPartyTradeProtocol {
             val cashSigningPubKeys = Cash().craftSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.
             ptx.addInputState(tradeRequest.assetForSale.ref)
-            // Just pick some new public key for now.
+            // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
+            // we want for privacy reasons: the key is here ONLY to manage and control ownership, it is not intended to
+            // reveal who the owner actually is. The key management service is expected to derive a unique key from some
+            // initial seed in order to provide privacy protection.
             val freshKey = serviceHub.keyManagementService.freshKey()
             val (command, state) = tradeRequest.assetForSale.state.withNewOwner(freshKey.public)
             ptx.addOutputState(state)
