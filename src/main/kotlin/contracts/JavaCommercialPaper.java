@@ -105,6 +105,12 @@ public class JavaCommercialPaper implements Contract {
                 return obj instanceof Redeem;
             }
         }
+        public static class Issue extends Commands {
+            @Override
+            public boolean equals(Object obj) {
+                return obj instanceof Redeem;
+            }
+        }
     }
 
     @Override
