@@ -252,7 +252,7 @@ data class LedgerTransaction(
     val outStates: List<ContractState>,
     /** Arbitrary data passed to the program of each input state. */
     val commands: List<AuthenticatedObject<CommandData>>,
-    /** The hash of the original serialised TimestampedWireTransaction or SignedTransaction */
+    /** The hash of the original serialised SignedTransaction */
     val hash: SecureHash
 ) {
     @Suppress("UNCHECKED_CAST")
