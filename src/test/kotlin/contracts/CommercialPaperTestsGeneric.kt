@@ -18,13 +18,17 @@ import java.time.ZoneOffset
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-class CommercialPaperTests {
-    val PAPER_1 = CommercialPaper.State(
-            issuance = MEGA_CORP.ref(123),
-            owner = MEGA_CORP_PUBKEY,
-            faceValue = 1000.DOLLARS,
-            maturityDate = TEST_TX_TIME + 7.days
-    )
+interface ICommercialPaperTestTemplate {
+    open fun getPaper() : ICommercialPaperState
+    open fun getIssueCommand() : CommandData
+    open fun getRedeemCommand() : CommandData
+    open fun getMoveCommand() : CommandData
+}
+
+open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTemplate) {
+
+    val thisTest = templateToTest
+    val PAPER_1 = thisTest.getPaper()
 
     @Test
     fun ok() {
@@ -41,7 +45,7 @@ class CommercialPaperTests {
         transactionGroup {
             transaction {
                 output { PAPER_1 }
-                arg(DUMMY_PUBKEY_1) { CommercialPaper.Commands.Issue() }
+                arg(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -53,8 +57,8 @@ class CommercialPaperTests {
     fun `face value is not zero`() {
         transactionGroup {
             transaction {
-                output { PAPER_1.copy(faceValue = 0.DOLLARS) }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                output { PAPER_1.withFaceValue(0.DOLLARS) }
+                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -66,8 +70,8 @@ class CommercialPaperTests {
     fun `maturity date not in the past`() {
         transactionGroup {
             transaction {
-                output { PAPER_1.copy(maturityDate = TEST_TX_TIME - 10.days) }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                output { PAPER_1.withMaturityDate(TEST_TX_TIME - 10.days) }
+                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -106,7 +110,7 @@ class CommercialPaperTests {
             transaction {
                 input("paper")
                 output { PAPER_1 }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -189,7 +193,7 @@ class CommercialPaperTests {
     // Generate a trade lifecycle with various parameters.
     fun trade(redemptionTime: Instant = TEST_TX_TIME + 8.days,
               aliceGetsBack: Amount = 1000.DOLLARS,
-              destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<CommercialPaper.State> {
+              destroyPaperAtRedemption: Boolean = true): TransactionGroupDSL<ICommercialPaperState> {
         val someProfits = 1200.DOLLARS
         return transactionGroupFor() {
             roots {
@@ -200,7 +204,7 @@ class CommercialPaperTests {
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
                 output("paper") { PAPER_1 }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Issue() }
+                arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
 
@@ -212,7 +216,7 @@ class CommercialPaperTests {
                 output("borrowed $900") { 900.DOLLARS.CASH `owned by` MEGA_CORP_PUBKEY }
                 output("alice's paper") { "paper".output `owned by` ALICE }
                 arg(ALICE) { Cash.Commands.Move() }
-                arg(MEGA_CORP_PUBKEY) { CommercialPaper.Commands.Move() }
+                arg(MEGA_CORP_PUBKEY) { thisTest.getMoveCommand() }
             }
 
             // Time passes, and Alice redeem's her CP for $1000, netting a $100 profit. MegaCorp has received $1200
@@ -227,14 +231,10 @@ class CommercialPaperTests {
                     output { "paper".output }
 
                 arg(MEGA_CORP_PUBKEY) { Cash.Commands.Move() }
-                arg(ALICE) { CommercialPaper.Commands.Redeem() }
+                arg(ALICE) { thisTest.getRedeemCommand() }
 
                 timestamp(redemptionTime)
             }
         }
     }
-}
-
-fun main(args: Array<String>) {
-    CommercialPaperTests().trade().visualise()
 }
