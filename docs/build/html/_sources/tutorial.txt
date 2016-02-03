@@ -218,7 +218,7 @@ Let's define a few commands now:
           public static class Issue extends Commands {
               @Override
               public boolean equals(Object obj) {
-                  return obj instanceof Redeem;
+                  return obj instanceof Issue;
               }
           }
       }
