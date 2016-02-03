@@ -124,7 +124,7 @@ inline fun <reified T : CommandData> List<AuthenticatedObject<CommandData>>.requ
 
 // For Java
 fun List<AuthenticatedObject<CommandData>>.requireSingleCommand(klass: Class<out CommandData>) =
-        filter { klass.isInstance(it) }.single()
+        filter { klass.isInstance(it.value) }.single()
 
 /** Returns a timestamp that was signed by the given authority, or returns null if missing. */
 fun List<AuthenticatedObject<CommandData>>.getTimestampBy(timestampingAuthority: Party): TimestampCommand? {
