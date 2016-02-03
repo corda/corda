@@ -35,6 +35,8 @@ val Int.DOLLARS: Amount get() = Amount(this.toLong() * 100, USD)
 val Int.POUNDS: Amount get() = Amount(this.toLong() * 100, GBP)
 val Int.SWISS_FRANCS: Amount get() = Amount(this.toLong() * 100, CHF)
 
+val Double.DOLLARS: Amount get() = Amount((this * 100).toLong(), USD)
+
 //// Requirements /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class Requirements {
@@ -89,6 +91,8 @@ data class Amount(val pennies: Long, val currency: Currency) : Comparable<Amount
 
     operator fun div(other: Long): Amount = Amount(pennies / other, currency)
     operator fun times(other: Long): Amount = Amount(Math.multiplyExact(pennies, other), currency)
+    operator fun div(other: Int): Amount = Amount(pennies / other, currency)
+    operator fun times(other: Int): Amount = Amount(Math.multiplyExact(pennies, other.toLong()), currency)
 
     override fun toString(): String = currency.currencyCode + " " + (BigDecimal(pennies) / BigDecimal(100)).toPlainString()
 
