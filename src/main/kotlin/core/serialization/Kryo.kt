@@ -26,11 +26,8 @@ import java.lang.reflect.InvocationTargetException
 import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KMutableProperty
+import kotlin.reflect.*
 import kotlin.reflect.jvm.javaType
-import kotlin.reflect.memberProperties
-import kotlin.reflect.primaryConstructor
 
 /**
  * Serialization utilities, using the Kryo framework with a custom serialiser for immutable data classes and a dead
@@ -106,9 +103,16 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         assert(props.none { it is KMutableProperty<*> })
     }
 
+    // Just a utility to help us catch cases where nodes are running out of sync versions.
+    private fun hashParameters(params: List<KParameter>): Int {
+        return params.map {
+            (it.name ?: "") + it.index.toString() + it.type.javaType.typeName
+        }.hashCode()
+    }
+
     override fun write(kryo: Kryo, output: Output, obj: T) {
         output.writeVarInt(constructor.parameters.size, true)
-        output.writeInt(constructor.parameters.hashCode())
+        output.writeInt(hashParameters(constructor.parameters))
         for (param in constructor.parameters) {
             val kProperty = propsByName[param.name!!]!!
             when (param.type.javaType.typeName) {
@@ -138,7 +142,7 @@ class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() 
         if (numFields != constructor.parameters.size)
             throw KryoException("Mismatch between number of constructor parameters and number of serialised fields " +
                     "for ${klass.qualifiedName} ($numFields vs ${constructor.parameters.size})")
-        if (fieldTypeHash != constructor.parameters.hashCode())
+        if (fieldTypeHash != hashParameters(constructor.parameters))
             throw KryoException("Hashcode mismatch for parameter types for ${klass.qualifiedName}: unsupported type evolution has happened.")
 
         val args = arrayOfNulls<Any?>(numFields)
