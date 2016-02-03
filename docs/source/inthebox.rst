@@ -9,6 +9,9 @@ The current prototype consists of a small amount of code that defines:
   These are simplified versions of the real things.
 * Unit tests that check the algorithms do what is expected, and which verify the behaviour of the smart contracts.
 * API documentation and tutorials (what you're reading)
+* A simple standalone node that uses an embedded message queue broker as its P2P messaging layer
+* A trading demo that runs the node in either a listening/buying mode, or a connecting/selling mode, and swaps some
+  fake commercial paper assets for some self-issued IOU cash.
 
 Some things it does not currently include but should gain later are:
 
