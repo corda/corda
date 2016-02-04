@@ -44,7 +44,9 @@ fun ContractState.hash(): SecureHash = SecureHash.sha256(serialize().bits)
  * A stateref is a pointer to a state, this is an equivalent of an "outpoint" in Bitcoin. It records which transaction
  * defined the state and where in that transaction it was.
  */
-data class ContractStateRef(val txhash: SecureHash, val index: Int)
+data class ContractStateRef(val txhash: SecureHash, val index: Int) {
+    override fun toString() = "$txhash($index)"
+}
 
 /** A StateAndRef is simply a (state, ref) pair. For instance, a wallet (which holds available assets) contains these. */
 data class StateAndRef<out T : ContractState>(val state: T, val ref: ContractStateRef)
@@ -80,6 +82,9 @@ data class Command(val data: CommandData, val pubkeys: List<PublicKey>) {
         require(pubkeys.isNotEmpty())
     }
     constructor(data: CommandData, key: PublicKey) : this(data, listOf(key))
+
+    private fun commandDataToString() = data.toString().let { if (it.contains("@")) it.replace('$', '.').split("@")[0] else it }
+    override fun toString() = "${commandDataToString()} with pubkeys ${pubkeys.map { it.toStringShort() }}"
 }
 
 /** Wraps an object that was signed by a public key, which may be a well known/recognised institutional key. */

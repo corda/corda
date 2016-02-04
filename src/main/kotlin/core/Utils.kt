@@ -31,8 +31,8 @@ val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
  */
 fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLong())
 
-fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: () -> Unit) {
-    addListener(Runnable { body() }, executor ?: MoreExecutors.directExecutor())
+fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: (T) -> Unit) {
+    addListener(Runnable { body(get()) }, executor ?: RunOnCallerThread)
 }
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */

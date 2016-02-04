@@ -13,6 +13,7 @@ import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.serialization.serialize
+import core.utilities.Emoji
 import java.security.KeyPair
 import java.security.PublicKey
 import java.security.SignatureException
@@ -59,6 +60,15 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
             AuthenticatedObject(it.pubkeys, institutions, it.data)
         }
         return LedgerTransaction(inputStates, outputStates, authenticatedArgs, originalHash)
+    }
+
+    override fun toString(): String {
+        val buf = StringBuilder()
+        buf.appendln("Transaction:")
+        for (input in inputStates) buf.appendln("${Emoji.rightArrow}INPUT:   $input")
+        for (output in outputStates) buf.appendln("${Emoji.leftArrow}OUTPUT:  $output")
+        for (command in commands) buf.appendln("${Emoji.diamond}COMMAND: $command")
+        return buf.toString()
     }
 }
 

@@ -9,6 +9,7 @@
 package contracts
 
 import core.*
+import core.utilities.Emoji
 import java.security.PublicKey
 import java.security.SecureRandom
 import java.util.*
@@ -60,7 +61,7 @@ class Cash : Contract {
             override val owner: PublicKey
     ) : OwnableState {
         override val programRef = CASH_PROGRAM_ID
-        override fun toString() = "Cash($amount at $deposit owned by $owner)"
+        override fun toString() = "${Emoji.bagOfCash}Cash($amount at $deposit owned by ${owner.toStringShort()})"
 
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
     }

@@ -18,6 +18,7 @@ import core.messaging.runOnNextMessage
 import core.messaging.send
 import core.serialization.deserialize
 import core.utilities.BriefLogFormatter
+import core.utilities.Emoji
 import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -122,12 +123,19 @@ fun main(args: Array<String>) {
                     CommercialPaper.State::class.java, buyerSessionID)
 
             future.whenComplete {
-                println("Purchase complete - we are a happy customer!")
-                node.stop()
+                println()
+                println("Purchase complete - we are a happy customer! Final transaction is:")
+                println()
+                println(Emoji.renderIfSupported(it.first))
+                println()
+                println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
             }
 
             node.net.send("test.junktrade.initiate", replyTo, buyerSessionID)
         }
+        println()
+        println("Waiting for a seller to connect to us (run the other node) ...")
+        println()
     } else {
         // Grab a session ID for the fake trade from the other side, then kick off the seller and sell them some junk.
         if (!options.has(fakeTradeWithArg)) {
@@ -148,11 +156,19 @@ fun main(args: Array<String>) {
                     otherSide, commercialPaper, 100.DOLLARS, cpOwnerKey, sessionID)
 
             future.whenComplete {
+                println()
                 println("Sale completed - we have a happy customer!")
+                println()
+                println("Final transaction is")
+                println()
+                println(Emoji.renderIfSupported(it.first))
+                println()
                 node.stop()
             }
         }
-        println("Sending a request to get a session ID to the other side")
+        println()
+        println("Sending a message to the listening/buying node ...")
+        println()
         node.net.send("test.junktrade", otherSide, node.net.myAddress, includeClassName = true)
     }
 }
