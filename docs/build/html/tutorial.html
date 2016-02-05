@@ -32,7 +32,7 @@
   
     <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
         <link rel="next" title="Protocol state machines" href="protocol-state-machines.html"/>
-        <link rel="prev" title="Networking and messaging" href="messaging.html"/> 
+        <link rel="prev" title="Running the trading demo" href="running-the-trading-demo.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -87,6 +87,7 @@
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul class="current">
@@ -203,7 +204,7 @@ piece of issued paper.</p>
 <h2>States<a class="headerlink" href="#states" title="Permalink to this headline">¶</a></h2>
 <p>A state is a class that stores data that is checked by the contract.</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">data</span> <span class="k">class</span> <span class="nc">State</span><span class="p">(</span>
   <span class="k">val</span> <span class="py">issuance</span><span class="p">:</span> <span class="n">InstitutionReference</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">owner</span><span class="p">:</span> <span class="n">PublicKey</span><span class="p">,</span>
   <span class="k">val</span> <span class="py">faceValue</span><span class="p">:</span> <span class="n">Amount</span><span class="p">,</span>
@@ -317,7 +318,7 @@ checked, so from the contract code&#8217;s perspective, a command is simply a da
 public keys. Each key had a signature proving that the corresponding private key was used to sign.</p>
 <p>Let&#8217;s define a few commands now:</p>
 <div class="codeset container">
-<div class="highlight-kotlin"><div class="highlight"><pre><span class="k">interface</span> <span class="nc">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="n">interface</span> <span class="n">Commands</span> <span class="p">:</span> <span class="n">Command</span> <span class="p">{</span>
     <span class="k">object</span> <span class="nc">Move</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Redeem</span> <span class="p">:</span> <span class="n">Commands</span>
     <span class="k">object</span> <span class="nc">Issue</span> <span class="p">:</span> <span class="n">Commands</span>
@@ -342,7 +343,7 @@ public keys. Each key had a signature proving that the corresponding private key
     <span class="kd">public</span> <span class="kd">static</span> <span class="kd">class</span> <span class="nc">Issue</span> <span class="kd">extends</span> <span class="n">Commands</span> <span class="o">{</span>
         <span class="nd">@Override</span>
         <span class="kd">public</span> <span class="kt">boolean</span> <span class="nf">equals</span><span class="o">(</span><span class="n">Object</span> <span class="n">obj</span><span class="o">)</span> <span class="o">{</span>
-            <span class="k">return</span> <span class="n">obj</span> <span class="k">instanceof</span> <span class="n">Redeem</span><span class="o">;</span>
+            <span class="k">return</span> <span class="n">obj</span> <span class="k">instanceof</span> <span class="n">Issue</span><span class="o">;</span>
         <span class="o">}</span>
     <span class="o">}</span>
 <span class="o">}</span>
@@ -870,7 +871,7 @@ be implemented once in a separate contract, with the controlling data being held
         <a href="protocol-state-machines.html" class="btn btn-neutral float-right" title="Protocol state machines" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="messaging.html" class="btn btn-neutral" title="Networking and messaging" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="running-the-trading-demo.html" class="btn btn-neutral" title="Running the trading demo" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

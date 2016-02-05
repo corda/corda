@@ -27,6 +27,7 @@ Read on to learn:
    getting-set-up
    data-model
    messaging
+   running-the-trading-demo
 
 .. toctree::
    :maxdepth: 2

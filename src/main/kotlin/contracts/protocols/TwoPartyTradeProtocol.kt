@@ -105,6 +105,7 @@ object TwoPartyTradeProtocol {
             val ourSignature = myKeyPair.signWithECDSA(partialTX.txBits)
             val tsaSig = TimestamperClient(this, timestampingAuthority).timestamp(partialTX.txBits)
             val fullySigned = partialTX.withAdditionalSignature(tsaSig).withAdditionalSignature(ourSignature)
+            val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
 
             // We should run it through our full TransactionGroup of all transactions here.
 
@@ -112,7 +113,7 @@ object TwoPartyTradeProtocol {
 
             send(TRADE_TOPIC, otherSide, buyerSessionID, fullySigned)
 
-            return Pair(wtx, fullySigned.verifyToLedgerTransaction(serviceHub.identityService))
+            return Pair(wtx, ltx)
         }
     }
 

@@ -23,6 +23,8 @@ import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.*
@@ -66,14 +68,19 @@ val THREAD_LOCAL_KRYO = ThreadLocal.withInitial { createKryo() }
  */
 class SerializedBytes<T : Any>(bits: ByteArray) : OpaqueBytes(bits) {
     val hash: SecureHash by lazy { bits.sha256() }
+
+    fun writeToFile(path: Path) = Files.write(path, bits)
 }
 
 // Some extension functions that make deserialisation convenient and provide auto-casting of the result.
-inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
-    return kryo.readObject(Input(this), T::class.java)
+inline fun <reified T : Any> ByteArray.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
+    if (includeClassName)
+        return kryo.readClassAndObject(Input(this)) as T
+    else
+        return kryo.readObject(Input(this), T::class.java)
 }
-inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): T {
-    return kryo.readObject(Input(this.bits), T::class.java)
+inline fun <reified T : Any> OpaqueBytes.deserialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): T {
+    return this.bits.deserialize(kryo, includeClassName)
 }
 inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserialize()
 
@@ -81,10 +88,13 @@ inline fun <reified T : Any> SerializedBytes<T>.deserialize(): T = bits.deserial
  * Can be called on any object to convert it to a byte array (wrapped by [SerializedBytes]), regardless of whether
  * the type is marked as serializable or was designed for it (so be careful!)
  */
-fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get()): SerializedBytes<T> {
+fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName: Boolean = false): SerializedBytes<T> {
     val stream = ByteArrayOutputStream()
     Output(stream).use {
-        kryo.writeObject(it, this)
+        if (includeClassName)
+            kryo.writeClassAndObject(it, this)
+        else
+            kryo.writeObject(it, this)
     }
     return SerializedBytes(stream.toByteArray())
 }

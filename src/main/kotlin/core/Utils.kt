@@ -16,6 +16,9 @@ import java.security.SecureRandom
 import java.time.Duration
 import java.time.temporal.Temporal
 import java.util.concurrent.Executor
+import java.util.concurrent.locks.Lock
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 val Int.days: Duration get() = Duration.ofDays(this.toLong())
 val Int.hours: Duration get() = Duration.ofHours(this.toLong())
@@ -28,8 +31,8 @@ val Int.seconds: Duration get() = Duration.ofSeconds(this.toLong())
  */
 fun random63BitValue(): Long = Math.abs(SecureRandom.getInstanceStrong().nextLong())
 
-fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: () -> Unit) {
-    addListener(Runnable { body() }, executor ?: MoreExecutors.directExecutor())
+fun <T> ListenableFuture<T>.whenComplete(executor: Executor? = null, body: (T) -> Unit) {
+    addListener(Runnable { body(get()) }, executor ?: RunOnCallerThread)
 }
 
 /** Executes the given block and sets the future to either the result, or any exception that was thrown. */
@@ -46,4 +49,38 @@ fun <T> SettableFuture<T>.setFrom(logger: Logger? = null, block: () -> T): Setta
 // Simple infix function to add back null safety that the JDK lacks:  timeA until timeB
 infix fun Temporal.until(endExclusive: Temporal) = Duration.between(this, endExclusive)
 
+// An alias that can sometimes make code clearer to read.
 val RunOnCallerThread = MoreExecutors.directExecutor()
+
+inline fun <T> logElapsedTime(label: String, logger: Logger? = null, body: () -> T): T {
+    val now = System.currentTimeMillis()
+    val r = body()
+    val elapsed = System.currentTimeMillis() - now
+    if (logger != null)
+        logger.info("$label took $elapsed msec")
+    else
+        println("$label took $elapsed msec")
+    return r
+}
+
+/**
+ * A threadbox is a simple utility that makes it harder to forget to take a lock before accessing some shared state.
+ * Simply define a private class to hold the data that must be grouped under the same lock, and then pass the only
+ * instance to the ThreadBox constructor. You can now use the [locked] method with a lambda to take the lock in a
+ * way that ensures it'll be released if there's an exception.
+ *
+ * Note that this technique is not infallible: if you capture a reference to the fields in another lambda which then
+ * gets stored and invoked later, there may still be unsafe multi-threaded access going on, so watch out for that.
+ * This is just a simple guard rail that makes it harder to slip up.
+ *
+ * Example:
+ *
+ * private class MutableState { var i = 5 }
+ * private val state = ThreadBox(MutableState())
+ *
+ * val ii = state.locked { i }
+ */
+class ThreadBox<T>(content: T, private val lock: Lock = ReentrantLock()) {
+    private val content = content
+    fun <R> locked(body: T.() -> R): R = lock.withLock { body(content) }
+}

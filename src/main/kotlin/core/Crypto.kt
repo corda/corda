@@ -9,9 +9,11 @@
 package core
 
 import com.google.common.io.BaseEncoding
+import core.crypto.Base58
 import core.serialization.OpaqueBytes
 import java.math.BigInteger
 import java.security.*
+import java.security.interfaces.ECPublicKey
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
 sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
@@ -34,6 +36,7 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
         }
 
         fun sha256(bits: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bits))
+        fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
         fun sha256(str: String) = sha256(str.toByteArray())
 
         fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
@@ -109,3 +112,14 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
     if (verifier.verify(signature.bits) == false)
         throw SignatureException("Signature did not match")
 }
+
+/** Render a public key to a string, using a short form if it's an elliptic curve public key */
+fun PublicKey.toStringShort(): String {
+    return (this as? ECPublicKey)?.let { key ->
+        "DL" + Base58.encode(key.w.affineX.toByteArray())   // DL -> Distributed Ledger
+    } ?: toString()
+}
+
+// Allow Kotlin destructuring:    val (private, public) = keypair
+operator fun KeyPair.component1() = this.private
+operator fun KeyPair.component2() = this.public

@@ -68,9 +68,6 @@ interface MessagingService {
 
     /** Returns an address that refers to this node. */
     val myAddress: SingleMessageRecipient
-
-    /** Allows you to look up services and nodes that are available on the network. */
-    val networkMap: NetworkMap
 }
 
 /**
@@ -85,7 +82,9 @@ fun MessagingService.runOnNextMessage(topic: String = "", executor: Executor? = 
     }
 }
 
-fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any) = send(createMessage(topic, obj.serialize().bits), to)
+fun MessagingService.send(topic: String, to: MessageRecipients, obj: Any, includeClassName: Boolean = false) {
+    send(createMessage(topic, obj.serialize(includeClassName = includeClassName).bits), to)
+}
 
 /**
  * This class lets you start up a [MessagingService]. Its purpose is to stop you from getting access to the methods

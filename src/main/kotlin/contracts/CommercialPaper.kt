@@ -9,6 +9,7 @@
 package contracts
 
 import core.*
+import core.utilities.Emoji
 import java.security.PublicKey
 import java.time.Instant
 
@@ -51,6 +52,7 @@ class CommercialPaper : Contract {
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
+        override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by ${owner.toStringShort()})"
     }
 
     interface Commands : CommandData {

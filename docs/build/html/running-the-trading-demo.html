@@ -1,6 +1,5 @@
 
 
-
 <!DOCTYPE html>
 <!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
 <!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
@@ -9,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Index &mdash; R3 Prototyping 0.1 documentation</title>
+  <title>Running the trading demo &mdash; R3 Prototyping 0.1 documentation</title>
   
 
   
@@ -31,7 +30,9 @@
   
 
   
-    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/> 
+    <link rel="top" title="R3 Prototyping 0.1 documentation" href="index.html"/>
+        <link rel="next" title="Writing a contract" href="tutorial.html"/>
+        <link rel="prev" title="Networking and messaging" href="messaging.html"/> 
 
   
   <script src="_static/js/modernizr.min.js"></script>
@@ -81,12 +82,12 @@
             
             
                 <p class="caption"><span class="caption-text">Overview</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="inthebox.html">What&#8217;s included?</a></li>
 <li class="toctree-l1"><a class="reference internal" href="getting-set-up.html">Getting set up</a></li>
 <li class="toctree-l1"><a class="reference internal" href="data-model.html">Data model</a></li>
 <li class="toctree-l1"><a class="reference internal" href="messaging.html">Networking and messaging</a></li>
-<li class="toctree-l1"><a class="reference internal" href="running-the-trading-demo.html">Running the trading demo</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="">Running the trading demo</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Tutorials</span></p>
 <ul>
@@ -128,9 +129,11 @@
   <ul class="wy-breadcrumbs">
     <li><a href="index.html">Docs</a> &raquo;</li>
       
-    <li></li>
+    <li>Running the trading demo</li>
       <li class="wy-breadcrumbs-aside">
         
+          
+            <a href="_sources/running-the-trading-demo.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -140,17 +143,47 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- 
+  <div class="section" id="running-the-trading-demo">
+<h1>Running the trading demo<a class="headerlink" href="#running-the-trading-demo" title="Permalink to this headline">¶</a></h1>
+<p>The repository contains a program that implements a demo of two nodes running the two-party trading protocol, which you
+can learn about in <a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a>.</p>
+<p>The node has only currently been tested on MacOS X. If you have success on other platforms, please let us know.</p>
+<p>To run the demo, firstly edit your /etc/hosts file or Windows equivalent to add two aliases for localhost: alpha and
+beta. This is necessary for now because parts of the code use the DNS hostname to identify nodes and thus defining two
+nodes both called localhost won&#8217;t work. We might fix this in future to include the port number everywhere, so making
+this easier.</p>
+<p>You should now be able to run <code class="docutils literal"><span class="pre">ping</span> <span class="pre">alpha</span></code> and <code class="docutils literal"><span class="pre">ping</span> <span class="pre">beta</span></code> and not see errors.</p>
+<p>Now, open two terminals, and in the first run::</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">gradlew</span> <span class="n">runDemoBuyer</span>
+</pre></div>
+</div>
+<p>It will create a directory named &#8220;alpha&#8221; and ask you to edit the configuration file inside. Open up <code class="docutils literal"><span class="pre">alpha/config</span></code>
+in your favourite text editor and give the node a legal identity of &#8220;Alpha Corp, Inc&#8221; or whatever else you feel like.
+The actual text string is not important. Now run the gradle command again, and it should start up and wait for
+a seller to connect.</p>
+<p>In the second terminal, run:</p>
+<div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">gradlew</span> <span class="n">runDemoSeller</span>
+</pre></div>
+</div>
+<p>and repeat the process, this time calling the node ... something else.</p>
+<p>You should see some log lines scroll past, and within a few seconds the messages &#8220;Purchase complete - we are a
+happy customer!&#8221; and &#8220;Sale completed - we have a happy customer!&#8221; should be printed.</p>
+<p>If it doesn&#8217;t work, jump on the mailing list and let us know.</p>
 </div>
 
 
            </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tutorial.html" class="btn btn-neutral float-right" title="Writing a contract" accesskey="n">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="messaging.html" class="btn btn-neutral" title="Networking and messaging" accesskey="p"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
