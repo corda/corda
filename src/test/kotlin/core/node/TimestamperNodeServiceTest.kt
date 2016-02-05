@@ -27,8 +27,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
-    lateinit var myNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.Node>
-    lateinit var serviceNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.Node>
+    lateinit var myNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode>
+    lateinit var serviceNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode>
     lateinit var service: TimestamperNodeService
 
     val ptx = TransactionBuilder().apply {
