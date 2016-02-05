@@ -10,6 +10,7 @@ package core.serialization
 
 import contracts.Cash
 import core.*
+import core.crypto.SecureHash
 import core.testutils.*
 import org.junit.Before
 import org.junit.Test

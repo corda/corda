@@ -12,6 +12,9 @@ package core.testutils
 
 import contracts.*
 import core.*
+import core.crypto.DummyPublicKey
+import core.crypto.NullPublicKey
+import core.crypto.SecureHash
 import core.visualiser.GraphVisualiser
 import java.security.KeyPairGenerator
 import java.security.PublicKey

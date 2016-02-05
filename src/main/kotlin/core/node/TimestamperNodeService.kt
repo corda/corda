@@ -11,6 +11,8 @@ package core.node
 import co.paralleluniverse.common.util.VisibleForTesting
 import co.paralleluniverse.fibers.Suspendable
 import core.*
+import core.crypto.DigitalSignature
+import core.crypto.signWithECDSA
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.MessageRecipients
 import core.messaging.MessagingService

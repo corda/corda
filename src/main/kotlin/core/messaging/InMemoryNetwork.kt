@@ -12,8 +12,8 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
+import core.crypto.sha256
 import core.node.TimestamperNodeService
-import core.sha256
 import core.utilities.loggerFor
 import java.security.KeyPairGenerator
 import java.time.Instant

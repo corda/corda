@@ -16,9 +16,9 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import core.SecureHash
+import core.crypto.SecureHash
 import core.SignedWireTransaction
-import core.sha256
+import core.crypto.sha256
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
 import java.io.ByteArrayOutputStream

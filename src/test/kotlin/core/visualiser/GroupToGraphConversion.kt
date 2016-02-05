@@ -10,7 +10,7 @@ package core.visualiser
 
 import core.CommandData
 import core.ContractState
-import core.SecureHash
+import core.crypto.SecureHash
 import core.testutils.TransactionGroupDSL
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node

@@ -10,6 +10,7 @@ package contracts;
 
 import core.*;
 import core.TransactionForVerification.*;
+import core.crypto.*;
 import org.jetbrains.annotations.*;
 
 import java.security.*;
@@ -26,7 +27,7 @@ import static kotlin.collections.CollectionsKt.*;
  *
  */
 public class JavaCommercialPaper implements Contract {
-    public static SecureHash JCP_PROGRAM_ID = SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+    public static SecureHash JCP_PROGRAM_ID = SecureHash.sha256("java commercial paper (this should be a bytecode hash)");
 
     public static class State implements ContractState, ICommercialPaperState {
         private PartyReference issuance;
@@ -217,7 +218,7 @@ public class JavaCommercialPaper implements Contract {
     @Override
     public SecureHash getLegalContractReference() {
         // TODO: Should return hash of the contract's contents, not its URI
-        return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
+        return SecureHash.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
     public TransactionBuilder generateIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {

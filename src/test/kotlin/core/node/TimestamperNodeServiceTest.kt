@@ -10,6 +10,7 @@ package core.node
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*
+import core.crypto.SecureHash
 import core.messaging.*
 import core.serialization.serialize
 import core.testutils.ALICE

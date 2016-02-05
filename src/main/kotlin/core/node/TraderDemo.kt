@@ -12,6 +12,7 @@ import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
+import core.crypto.SecureHash
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.runOnNextMessage

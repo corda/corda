@@ -10,7 +10,7 @@ package contracts
 
 import core.Contract
 import core.ContractState
-import core.SecureHash
+import core.crypto.SecureHash
 import core.TransactionForVerification
 
 // The dummy contract doesn't do anything useful. It exists for testing purposes.

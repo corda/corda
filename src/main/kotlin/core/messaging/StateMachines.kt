@@ -17,13 +17,13 @@ import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import core.SecureHash
+import core.crypto.SecureHash
 import core.ServiceHub
 import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
-import core.sha256
+import core.crypto.sha256
 import core.utilities.trace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory

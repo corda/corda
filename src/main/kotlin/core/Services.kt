@@ -9,6 +9,7 @@
 package core
 
 import co.paralleluniverse.fibers.Suspendable
+import core.crypto.DigitalSignature
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
 import core.serialization.SerializedBytes

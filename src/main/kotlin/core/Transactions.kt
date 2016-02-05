@@ -9,6 +9,9 @@
 package core
 
 import co.paralleluniverse.fibers.Suspendable
+import core.crypto.DigitalSignature
+import core.crypto.SecureHash
+import core.crypto.signWithECDSA
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize

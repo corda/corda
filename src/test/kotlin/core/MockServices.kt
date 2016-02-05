@@ -8,6 +8,8 @@
 
 package core
 
+import core.crypto.DigitalSignature
+import core.crypto.signWithECDSA
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
 import core.messaging.NetworkMap

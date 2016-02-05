@@ -8,6 +8,7 @@
 
 package core
 
+import core.crypto.SecureHash
 import java.util.*
 
 class TransactionResolutionException(val hash: SecureHash) : Exception()

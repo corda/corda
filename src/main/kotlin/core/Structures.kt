@@ -8,6 +8,8 @@
 
 package core
 
+import core.crypto.SecureHash
+import core.crypto.toStringShort
 import core.serialization.OpaqueBytes
 import core.serialization.serialize
 import java.security.PublicKey

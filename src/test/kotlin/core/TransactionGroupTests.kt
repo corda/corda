@@ -9,6 +9,7 @@
 package core
 
 import contracts.Cash
+import core.crypto.SecureHash
 import core.testutils.*
 import org.junit.Test
 import kotlin.test.assertEquals

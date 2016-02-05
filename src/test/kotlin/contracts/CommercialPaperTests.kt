@@ -9,6 +9,7 @@
 package contracts
 
 import core.*
+import core.crypto.SecureHash
 import core.node.TimestampingError
 import core.testutils.*
 import org.junit.Test
