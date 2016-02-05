@@ -264,7 +264,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         // We will be talking to our server purely in memory.
         config.setAcceptorConfigurations(
                 setOf(
-                        tcpTransport(ConnectionDirection.INBOUND, "localhost", hp.port),
+                        tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port),
                         TransportConfiguration(InVMAcceptorFactory::class.java.name)
                 )
         )
