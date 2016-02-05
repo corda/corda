@@ -147,18 +147,14 @@
 <h1>Running the trading demo<a class="headerlink" href="#running-the-trading-demo" title="Permalink to this headline">¶</a></h1>
 <p>The repository contains a program that implements a demo of two nodes running the two-party trading protocol, which you
 can learn about in <a class="reference internal" href="protocol-state-machines.html"><em>Protocol state machines</em></a>.</p>
-<p>The node has only currently been tested on MacOS X. If you have success on other platforms, please let us know.</p>
-<p>To run the demo, firstly edit your /etc/hosts file or Windows equivalent to add two aliases for localhost: alpha and
-beta. This is necessary for now because parts of the code use the DNS hostname to identify nodes and thus defining two
-nodes both called localhost won&#8217;t work. We might fix this in future to include the port number everywhere, so making
-this easier.</p>
-<p>You should now be able to run <code class="docutils literal"><span class="pre">ping</span> <span class="pre">alpha</span></code> and <code class="docutils literal"><span class="pre">ping</span> <span class="pre">beta</span></code> and not see errors.</p>
+<p>The node has only currently been tested on MacOS X and Ubuntu Linux. If you have success on other platforms, please
+let us know.</p>
 <p>Now, open two terminals, and in the first run::</p>
 <div class="highlight-kotlin"><div class="highlight"><pre><span class="p">./</span><span class="n">gradlew</span> <span class="n">runDemoBuyer</span>
 </pre></div>
 </div>
-<p>It will create a directory named &#8220;alpha&#8221; and ask you to edit the configuration file inside. Open up <code class="docutils literal"><span class="pre">alpha/config</span></code>
-in your favourite text editor and give the node a legal identity of &#8220;Alpha Corp, Inc&#8221; or whatever else you feel like.
+<p>It will create a directory named &#8220;buyer&#8221; and ask you to edit the configuration file inside. Open up <code class="docutils literal"><span class="pre">buyer/config</span></code>
+in your favourite text editor and give the node a legal identity of &#8220;Big Buyer Corp, Inc&#8221; or whatever else you feel like.
 The actual text string is not important. Now run the gradle command again, and it should start up and wait for
 a seller to connect.</p>
 <p>In the second terminal, run:</p>
