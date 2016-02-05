@@ -38,8 +38,8 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
 
         val resolved = HashSet<TransactionForVerification>(transactions.size)
         for (tx in transactions) {
-            val inputs = ArrayList<ContractState>(tx.inStateRefs.size)
-            for (ref in tx.inStateRefs) {
+            val inputs = ArrayList<ContractState>(tx.inputs.size)
+            for (ref in tx.inputs) {
                 val conflict = refToConsumingTXMap[ref]
                 if (conflict != null)
                     throw TransactionConflictException(ref, tx, conflict)
@@ -48,9 +48,9 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
                 // Look up the connecting transaction.
                 val ltx = hashToTXMap[ref.txhash]?.single() ?: throw TransactionResolutionException(ref.txhash)
                 // Look up the output in that transaction by index.
-                inputs.add(ltx.outStates[ref.index])
+                inputs.add(ltx.outputs[ref.index])
             }
-            resolved.add(TransactionForVerification(inputs, tx.outStates, tx.commands, tx.hash))
+            resolved.add(TransactionForVerification(inputs, tx.outputs, tx.commands, tx.hash))
         }
 
         for (tx in resolved)

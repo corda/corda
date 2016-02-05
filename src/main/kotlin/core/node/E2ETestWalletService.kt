@@ -60,7 +60,7 @@ class E2ETestWalletService(private val services: ServiceHub) : WalletService {
         }
 
         val statesAndRefs = transactions.map {
-            StateAndRef(it.tx.outputStates[0] as OwnableState, StateRef(it.id, 0))
+            StateAndRef(it.tx.outputs[0] as OwnableState, StateRef(it.id, 0))
         }
 
         mutex.locked {

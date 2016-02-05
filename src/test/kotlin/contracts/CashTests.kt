@@ -321,8 +321,8 @@ class CashTests {
     @Test
     fun generateSimpleDirectSpend() {
         val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[0])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
@@ -336,29 +336,29 @@ class CashTests {
     @Test
     fun generateSimpleSpendWithChange() {
         val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputStates[0])
-        assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputStates[1])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputs[0])
+        assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputs[1])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
     fun generateSpendWithTwoInputs() {
         val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[1].ref, wtx.inputStates[1])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[1].ref, wtx.inputs[1])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
     fun generateSpendMixedDeposits() {
         val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[1].ref, wtx.inputStates[1])
-        assertEquals(WALLET[2].ref, wtx.inputStates[2])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
-        assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[1])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[1].ref, wtx.inputs[1])
+        assertEquals(WALLET[2].ref, wtx.inputs[2])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
+        assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 

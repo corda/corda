@@ -87,7 +87,7 @@ object TwoPartyTradeProtocol {
             val wtx: WireTransaction = partialTX.txBits.deserialize()
 
             requireThat {
-                "transaction sends us the right amount of cash" by (wtx.outputStates.sumCashBy(myKeyPair.public) == price)
+                "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
                 // There are all sorts of funny games a malicious secondary might play here, we should fix them:
                 //
                 // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
