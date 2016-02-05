@@ -24,7 +24,7 @@ class TransactionSerializationTests {
     val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1)
     val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
 
-    val fakeStateRef = ContractStateRef(SecureHash.sha256("fake tx id"), 0)
+    val fakeStateRef = StateRef(SecureHash.sha256("fake tx id"), 0)
     lateinit var tx: TransactionBuilder
 
     @Before

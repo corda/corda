@@ -162,7 +162,7 @@ object TwoPartyTradeProtocol {
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
             val wallet = serviceHub.walletService.currentWallet
             val cashStates = wallet.statesOfType<Cash.State>()
-            val cashSigningPubKeys = Cash().craftSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
+            val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.
             ptx.addInputState(tradeRequest.assetForSale.ref)
             // Just pick some new public key for now. This won't be linked with our identity in any way, which is what

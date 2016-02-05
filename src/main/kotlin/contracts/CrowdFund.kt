@@ -142,7 +142,7 @@ class CrowdFund : Contract {
      * Returns a transaction that registers a crowd-funding campaing, owned by the issuing institution's key. Does not update
      * an existing transaction because it's not possible to register multiple campaigns in a single transaction
      */
-    fun craftRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
+    fun generateRegister(owner: PartyReference, fundingTarget: Amount, fundingName: String, closingTime: Instant): TransactionBuilder {
         val campaign = Campaign(owner = owner.party.owningKey, name = fundingName, target = fundingTarget, closingTime = closingTime)
         val state = State(campaign)
         return TransactionBuilder().withItems(state, Command(Commands.Register(), owner.party.owningKey))
@@ -151,7 +151,7 @@ class CrowdFund : Contract {
     /**
      * Updates the given partial transaction with an input/output/command to fund the opportunity.
      */
-    fun craftPledge(tx: TransactionBuilder, campaign: StateAndRef<State>, subscriber: PublicKey) {
+    fun generatePledge(tx: TransactionBuilder, campaign: StateAndRef<State>, subscriber: PublicKey) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(
                 pledges = campaign.state.pledges + CrowdFund.Pledge(subscriber, 1000.DOLLARS)
@@ -159,14 +159,14 @@ class CrowdFund : Contract {
         tx.addCommand(Commands.Pledge(), subscriber)
     }
 
-    fun craftClose(tx: TransactionBuilder, campaign: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+    fun generateClose(tx: TransactionBuilder, campaign: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
         tx.addInputState(campaign.ref)
         tx.addOutputState(campaign.state.copy(closed = true))
         tx.addCommand(Commands.Close(), campaign.state.campaign.owner)
         // If campaign target has not been met, compose cash returns
         if (campaign.state.pledgedAmount < campaign.state.campaign.target) {
             for (pledge in campaign.state.pledges) {
-                Cash().craftSpend(tx, pledge.amount, pledge.owner, wallet)
+                Cash().generateSpend(tx, pledge.amount, pledge.owner, wallet)
             }
         }
     }

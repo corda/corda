@@ -53,14 +53,14 @@ class E2ETestWalletService(private val services: ServiceHub) : WalletService {
 
             val issuance = TransactionBuilder()
             val freshKey = services.keyManagementService.freshKey()
-            cash.craftIssue(issuance, Amount(pennies, howMuch.currency), depositRef, freshKey.public)
+            cash.generateIssue(issuance, Amount(pennies, howMuch.currency), depositRef, freshKey.public)
             issuance.signWith(myKey)
 
             return@map issuance.toSignedTransaction(true)
         }
 
         val statesAndRefs = transactions.map {
-            StateAndRef(it.tx.outputStates[0] as OwnableState, ContractStateRef(it.id, 0))
+            StateAndRef(it.tx.outputStates[0] as OwnableState, StateRef(it.id, 0))
         }
 
         mutex.locked {

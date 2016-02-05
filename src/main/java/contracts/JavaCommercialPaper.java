@@ -226,7 +226,7 @@ public class JavaCommercialPaper implements Contract {
     }
 
     public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException  {
-        new Cash().craftSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
+        new Cash().generateSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
         tx.addInputState(paper.getRef());
         tx.addCommand(new Command( new Commands.Redeem(), paper.getState().getOwner()));
     }

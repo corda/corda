@@ -73,7 +73,7 @@ class TransactionGroupTests {
             val e = assertFailsWith(TransactionConflictException::class) {
                 verify()
             }
-            assertEquals(ContractStateRef(t.hash, 0), e.conflictRef)
+            assertEquals(StateRef(t.hash, 0), e.conflictRef)
             assertEquals(setOf(conflict1, conflict2), setOf(e.tx1, e.tx2))
         }
     }
@@ -95,7 +95,7 @@ class TransactionGroupTests {
 
         // We have to do this manually without the DSL because transactionGroup { } won't let us create a tx that
         // points nowhere.
-        val ref = ContractStateRef(SecureHash.randomSHA256(), 0)
+        val ref = StateRef(SecureHash.randomSHA256(), 0)
         tg.txns.add(LedgerTransaction(
                 listOf(ref), listOf(A_THOUSAND_POUNDS), listOf(AuthenticatedObject(listOf(BOB), emptyList(), Cash.Commands.Move())), SecureHash.randomSHA256())
         )

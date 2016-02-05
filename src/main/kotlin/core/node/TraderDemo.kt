@@ -178,7 +178,7 @@ fun makeFakeCommercialPaper(ownedBy: PublicKey): StateAndRef<CommercialPaper.Sta
     val party = Party("MegaCorp, Inc", KeyPairGenerator.getInstance("EC").genKeyPair().public)
     // ownedBy here is the random key that gives us control over it.
     val paper = CommercialPaper.State(party.ref(1,2,3), ownedBy, 1100.DOLLARS, Instant.now() + 10.days)
-    val randomRef = ContractStateRef(SecureHash.randomSHA256(), 0)
+    val randomRef = StateRef(SecureHash.randomSHA256(), 0)
     return StateAndRef(paper, randomRef)
 }
 

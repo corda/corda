@@ -201,7 +201,7 @@ fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().appl
 
 class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     open inner class LedgerTransactionDSL : AbstractTransactionForTest() {
-        private val inStates = ArrayList<ContractStateRef>()
+        private val inStates = ArrayList<StateRef>()
 
         fun input(label: String) {
             inStates.add(label.outputRef)
@@ -219,7 +219,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
-    val String.outputRef: ContractStateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
+    val String.outputRef: StateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
 
     fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
@@ -228,7 +228,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             val ltx = toLedgerTransaction()
             for ((index, labelledState) in outStates.withIndex()) {
                 if (labelledState.label != null) {
-                    labelToRefs[labelledState.label] = ContractStateRef(ltx.hash, index)
+                    labelToRefs[labelledState.label] = StateRef(ltx.hash, index)
                     if (stateType.isInstance(labelledState.state)) {
                         labelToOutputs[labelledState.label] = labelledState.state as T
                     }
@@ -240,7 +240,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     private val rootTxns = ArrayList<LedgerTransaction>()
-    private val labelToRefs = HashMap<String, ContractStateRef>()
+    private val labelToRefs = HashMap<String, StateRef>()
     private val labelToOutputs = HashMap<String, T>()
     private val outputsToLabels = HashMap<ContractState, String>()
 
@@ -253,7 +253,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             val ltx = wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
-                labelToRefs[label] = ContractStateRef(ltx.hash, index)
+                labelToRefs[label] = StateRef(ltx.hash, index)
                 outputsToLabels[state.state] = label
                 labelToOutputs[label] = state.state as T
             }

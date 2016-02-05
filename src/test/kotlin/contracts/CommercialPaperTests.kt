@@ -115,7 +115,7 @@ class CommercialPaperTestsGeneric {
     fun `timestamp out of range`() {
         // Check what happens if the timestamp on the transaction itself defines a range that doesn't include true
         // time as measured by a TSA (which is running five hours ahead in this test).
-        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+        CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
             setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
             signWith(MINI_CORP_KEY)
             assertFailsWith(TimestampingError.NotOnTimeException::class) {
@@ -123,7 +123,7 @@ class CommercialPaperTestsGeneric {
             }
         }
         // Check that it also fails if true time is before the threshold (we are trying to timestamp too early).
-        CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+        CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
             setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
             signWith(MINI_CORP_KEY)
             assertFailsWith(TimestampingError.NotOnTimeException::class) {
@@ -162,14 +162,14 @@ class CommercialPaperTestsGeneric {
 
     fun cashOutputsToWallet(vararg states: Cash.State): Pair<LedgerTransaction, List<StateAndRef<Cash.State>>> {
         val ltx = LedgerTransaction(emptyList(), listOf(*states), emptyList(), SecureHash.randomSHA256())
-        return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, ContractStateRef(ltx.hash, index)) })
+        return Pair(ltx, states.mapIndexed { index, state -> StateAndRef(state, StateRef(ltx.hash, index)) })
     }
 
     @Test
     fun `issue move and then redeem`() {
         // MiniCorp issues $10,000 of commercial paper, to mature in 30 days, owned initially by itself.
         val issueTX: LedgerTransaction = run {
-            val ptx = CommercialPaper().craftIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
+            val ptx = CommercialPaper().generateIssue(MINI_CORP.ref(123), 10000.DOLLARS, TEST_TX_TIME + 30.days).apply {
                 setTime(TEST_TX_TIME, DummyTimestampingAuthority.identity, 30.seconds)
                 signWith(MINI_CORP_KEY)
                 timestamp(DUMMY_TIMESTAMPER)
@@ -187,8 +187,8 @@ class CommercialPaperTestsGeneric {
         // Alice pays $9000 to MiniCorp to own some of their debt.
         val moveTX: LedgerTransaction = run {
             val ptx = TransactionBuilder()
-            Cash().craftSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
-            CommercialPaper().craftMove(ptx, issueTX.outRef(0), ALICE)
+            Cash().generateSpend(ptx, 9000.DOLLARS, MINI_CORP_PUBKEY, alicesWallet)
+            CommercialPaper().generateMove(ptx, issueTX.outRef(0), ALICE)
             ptx.signWith(MINI_CORP_KEY)
             ptx.signWith(ALICE_KEY)
             val stx = ptx.toSignedTransaction()
@@ -204,7 +204,7 @@ class CommercialPaperTestsGeneric {
         fun makeRedeemTX(time: Instant): LedgerTransaction {
             val ptx = TransactionBuilder()
             ptx.setTime(time, DummyTimestampingAuthority.identity, 30.seconds)
-            CommercialPaper().craftRedeem(ptx, moveTX.outRef(1), corpWallet)
+            CommercialPaper().generateRedeem(ptx, moveTX.outRef(1), corpWallet)
             ptx.signWith(ALICE_KEY)
             ptx.signWith(MINI_CORP_KEY)
             ptx.timestamp(DUMMY_TIMESTAMPER)

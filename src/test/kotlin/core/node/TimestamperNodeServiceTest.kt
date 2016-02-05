@@ -31,7 +31,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
     lateinit var service: TimestamperNodeService
 
     val ptx = TransactionBuilder().apply {
-        addInputState(ContractStateRef(SecureHash.randomSHA256(), 0))
+        addInputState(StateRef(SecureHash.randomSHA256(), 0))
         addOutputState(100.DOLLARS.CASH)
     }
 
@@ -62,7 +62,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         override fun call(): Boolean {
             val client = TimestamperClient(this, server)
             val ptx = TransactionBuilder().apply {
-                addInputState(ContractStateRef(SecureHash.randomSHA256(), 0))
+                addInputState(StateRef(SecureHash.randomSHA256(), 0))
                 addOutputState(100.DOLLARS.CASH)
             }
             ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), server.identity.owningKey)

@@ -11,7 +11,7 @@ package core
 import java.util.*
 
 class TransactionResolutionException(val hash: SecureHash) : Exception()
-class TransactionConflictException(val conflictRef: ContractStateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
+class TransactionConflictException(val conflictRef: StateRef, val tx1: LedgerTransaction, val tx2: LedgerTransaction) : Exception()
 
 /**
  * A TransactionGroup defines a directed acyclic graph of transactions that can be resolved with each other and then
@@ -33,7 +33,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
         check(transactions.intersect(nonVerifiedRoots).isEmpty())
 
         val hashToTXMap: Map<SecureHash, List<LedgerTransaction>> = (transactions + nonVerifiedRoots).groupBy { it.hash }
-        val refToConsumingTXMap = hashMapOf<ContractStateRef, LedgerTransaction>()
+        val refToConsumingTXMap = hashMapOf<StateRef, LedgerTransaction>()
 
         val resolved = HashSet<TransactionForVerification>(transactions.size)
         for (tx in transactions) {
