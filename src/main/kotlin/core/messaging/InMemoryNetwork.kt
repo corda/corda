@@ -12,10 +12,10 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import core.Party
+import core.crypto.generateKeyPair
 import core.crypto.sha256
 import core.node.TimestamperNodeService
 import core.utilities.loggerFor
-import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
@@ -126,7 +126,7 @@ public class InMemoryNetwork {
         check(timestampingAdvert == null)
         val (handle, builder) = createNode(manuallyPumped)
         val node = builder.start().get()
-        val key = KeyPairGenerator.getInstance("EC").genKeyPair()
+        val key = generateKeyPair()
         val identity = Party("Unit test timestamping authority", key.public)
         TimestamperNodeService(node, identity, key)
         timestampingAdvert = LegallyIdentifiableNode(handle, identity)

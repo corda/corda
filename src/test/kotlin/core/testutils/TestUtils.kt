@@ -15,8 +15,8 @@ import core.*
 import core.crypto.DummyPublicKey
 import core.crypto.NullPublicKey
 import core.crypto.SecureHash
+import core.crypto.generateKeyPair
 import core.visualiser.GraphVisualiser
-import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -25,8 +25,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 object TestUtils {
-    val keypair = KeyPairGenerator.getInstance("EC").genKeyPair()
-    val keypair2 = KeyPairGenerator.getInstance("EC").genKeyPair()
+    val keypair = generateKeyPair()
+    val keypair2 = generateKeyPair()
 }
 
 // A few dummy values for testing.
@@ -36,9 +36,9 @@ val MINI_CORP_KEY = TestUtils.keypair2
 val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
-val ALICE_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val ALICE_KEY = generateKeyPair()
 val ALICE = ALICE_KEY.public
-val BOB_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val BOB_KEY = generateKeyPair()
 val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)

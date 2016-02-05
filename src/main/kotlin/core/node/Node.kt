@@ -10,6 +10,7 @@ package core.node
 
 import com.google.common.net.HostAndPort
 import core.*
+import core.crypto.generateKeyPair
 import core.messaging.*
 import core.serialization.deserialize
 import core.serialization.serialize
@@ -21,7 +22,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.util.*
 import java.util.concurrent.Executors
 
@@ -127,7 +127,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
 
         val (identity, keypair) = if (!Files.exists(privKeyFile)) {
             log.info("Identity key not found, generating fresh key!")
-            val keypair: KeyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+            val keypair: KeyPair = generateKeyPair()
             keypair.serialize().writeToFile(privKeyFile)
             val myIdentity = Party(configuration.myLegalName, keypair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the

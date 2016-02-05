@@ -9,6 +9,7 @@
 package core
 
 import core.crypto.DigitalSignature
+import core.crypto.generateKeyPair
 import core.crypto.signWithECDSA
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
@@ -19,7 +20,6 @@ import core.serialization.deserialize
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_TX_TIME
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Clock
@@ -53,7 +53,7 @@ object MockIdentityService : IdentityService {
 
 class MockKeyManagementService(
         override val keys: Map<PublicKey, PrivateKey>,
-        val nextKeys: MutableList<KeyPair> = arrayListOf(KeyPairGenerator.getInstance("EC").genKeyPair())
+        val nextKeys: MutableList<KeyPair> = arrayListOf(generateKeyPair())
 ) : KeyManagementService {
     override fun freshKey() = nextKeys.removeAt(nextKeys.lastIndex)
 }
@@ -64,7 +64,7 @@ class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletSer
 
 @ThreadSafe
 class MockStorageService : StorageService {
-    override val myLegalIdentityKey: KeyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+    override val myLegalIdentityKey: KeyPair = generateKeyPair()
     override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
 
     private val tables = HashMap<String, MutableMap<Any, Any>>()

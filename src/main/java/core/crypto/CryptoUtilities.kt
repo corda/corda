@@ -124,3 +124,6 @@ fun PublicKey.toStringShort(): String {
 // Allow Kotlin destructuring:    val (private, public) = keypair
 operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
+
+/** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
+fun generateKeyPair() = KeyPairGenerator.getInstance("EC").genKeyPair()

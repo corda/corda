@@ -16,8 +16,9 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import core.crypto.SecureHash
 import core.SignedWireTransaction
+import core.crypto.SecureHash
+import core.crypto.generateKeyPair
 import core.crypto.sha256
 import de.javakaffee.kryoserializers.ArraysAsListSerializer
 import org.objenesis.strategy.StdInstantiatorStrategy
@@ -25,7 +26,6 @@ import java.io.ByteArrayOutputStream
 import java.lang.reflect.InvocationTargetException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.security.KeyPairGenerator
 import java.time.Instant
 import java.util.*
 import kotlin.reflect.*
@@ -198,7 +198,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
 
         // Some things where the JRE provides an efficient custom serialisation.
         val ser = JavaSerializer()
-        val keyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+        val keyPair = generateKeyPair()
         register(keyPair.public.javaClass, ser)
         register(keyPair.private.javaClass, ser)
         register(Instant::class.java, ser)

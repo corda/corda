@@ -13,6 +13,7 @@ import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
 import core.crypto.SecureHash
+import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.runOnNextMessage
@@ -24,7 +25,6 @@ import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -176,7 +176,7 @@ fun main(args: Array<String>) {
 
 fun makeFakeCommercialPaper(ownedBy: PublicKey): StateAndRef<CommercialPaper.State> {
     // Make a fake company that's issued its own paper.
-    val party = Party("MegaCorp, Inc", KeyPairGenerator.getInstance("EC").genKeyPair().public)
+    val party = Party("MegaCorp, Inc", generateKeyPair().public)
     // ownedBy here is the random key that gives us control over it.
     val paper = CommercialPaper.State(party.ref(1,2,3), ownedBy, 1100.DOLLARS, Instant.now() + 10.days)
     val randomRef = StateRef(SecureHash.randomSHA256(), 0)
