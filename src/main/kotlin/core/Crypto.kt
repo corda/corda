@@ -116,7 +116,7 @@ fun PublicKey.verifyWithECDSA(content: ByteArray, signature: DigitalSignature) {
 /** Render a public key to a string, using a short form if it's an elliptic curve public key */
 fun PublicKey.toStringShort(): String {
     return (this as? ECPublicKey)?.let { key ->
-        "R3" + Base58.encode(key.w.affineX.toByteArray())
+        "DL" + Base58.encode(key.w.affineX.toByteArray())   // DL -> Distributed Ledger
     } ?: toString()
 }
 
