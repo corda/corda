@@ -184,7 +184,9 @@ fun makeFakeCommercialPaper(ownedBy: PublicKey): StateAndRef<CommercialPaper.Sta
 
 private fun loadConfigFile(configFile: Path): NodeConfiguration {
     fun askAdminToEditConfig(configFile: Path?) {
+        println()
         println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
+        println()
         System.exit(1)
     }
 

@@ -106,12 +106,12 @@ mainClassName = 'core.node.TraderDemoKt'
 task runDemoBuyer(type: JavaExec, dependsOn: ':classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = 'core.node.TraderDemoKt'
-    args = ['--dir=alpha', '--service-fake-trades', '--network-address=alpha']
+    args = ['--dir=buyer', '--service-fake-trades', '--network-address=localhost']
 }
 
 task runDemoSeller(type: JavaExec, dependsOn: ':classes') {
     classpath = sourceSets.main.runtimeClasspath
     main = 'core.node.TraderDemoKt'
-    args = ['--dir=beta', '--fake-trade-with=alpha', '--network-address=beta:31338',
-            '--timestamper-identity-file=alpha/identity-public', '--timestamper-address=alpha']
+    args = ['--dir=seller', '--fake-trade-with=localhost', '--network-address=localhost:31338',
+            '--timestamper-identity-file=buyer/identity-public', '--timestamper-address=localhost']
 }

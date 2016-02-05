@@ -9,7 +9,7 @@
 package core.node
 
 import com.google.common.net.HostAndPort
-import com.google.common.util.concurrent.MoreExecutors
+import core.RunOnCallerThread
 import core.ThreadBox
 import core.messaging.*
 import core.utilities.loggerFor
@@ -90,7 +90,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         return mutex.locked {
             sendClients.getOrPut(addr) {
                 maybeSetupConnection(addr.hostAndPort)
-                val qName = addr.hostAndPort.hostText
+                val qName = addr.hostAndPort.toString()
                 session.createProducer(qName)
             }
         }
@@ -124,7 +124,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
 
         // Create a queue on which to receive messages and set up the handler.
         session = clientFactory.createSession()
-        session.createQueue(myHostPort.hostText, "inbound", false)
+        session.createQueue(myHostPort.toString(), "inbound", false)
         inboundConsumer = session.createConsumer("inbound").setMessageHandler { message: ClientMessage ->
             // This code runs for every inbound message.
             if (!message.containsProperty(TOPIC_PROPERTY)) {
@@ -155,7 +155,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
                 override fun serialise(): ByteArray = bits
             }
             for (handler in deliverTo) {
-                (handler.executor ?: MoreExecutors.directExecutor()).execute {
+                (handler.executor ?: RunOnCallerThread).execute {
                     try {
                         handler.callback(msg, handler)
                     } catch(e: Exception) {
@@ -220,7 +220,7 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
     private enum class ConnectionDirection { INBOUND, OUTBOUND }
 
     private fun maybeSetupConnection(hostAndPort: HostAndPort) {
-        val name = hostAndPort.hostText
+        val name = hostAndPort.toString()
 
         // To make ourselves talk to a remote server, we need a "bridge". Bridges are things inside Artemis that know how
         // to handle remote machines going away temporarily, retry connections, etc. They're the bit that handles
