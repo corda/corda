@@ -89,11 +89,11 @@ fun main(args: Array<String>) {
 
     val config = loadConfigFile(configFile)
 
-    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(DEFAULT_PORT)
+    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
     val timestamperId = if (options.has(timestamperIdentityFile)) {
-        val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(DEFAULT_PORT)
+        val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
         LegallyIdentifiableNode(ArtemisMessagingService.makeRecipient(addr), party)
@@ -143,7 +143,7 @@ fun main(args: Array<String>) {
             println("Need the --fake-trade-with command line argument")
             System.exit(1)
         }
-        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(DEFAULT_PORT)
+        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
         node.net.runOnNextMessage("test.junktrade.initiate") { msg ->
             val sessionID = msg.data.deserialize<Long>()

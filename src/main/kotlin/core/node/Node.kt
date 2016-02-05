@@ -25,8 +25,6 @@ import java.security.KeyPairGenerator
 import java.util.*
 import java.util.concurrent.Executors
 
-val DEFAULT_PORT = 31337
-
 class ConfigurationException(message: String) : Exception(message)
 
 // TODO: Split this into a regression testing environment
@@ -194,5 +192,8 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
+
+        /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
+        val DEFAULT_PORT = 31337
     }
 }
