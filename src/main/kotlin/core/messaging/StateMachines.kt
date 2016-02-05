@@ -17,13 +17,13 @@ import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import core.crypto.SecureHash
 import core.ServiceHub
+import core.crypto.SecureHash
+import core.crypto.sha256
 import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
-import core.crypto.sha256
 import core.utilities.trace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -166,19 +166,12 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
         psm.prepareForResumeWith(serviceHub, obj, logger, onSuspend)
 
-        try {
-            // Now either start or carry on with the protocol from where it left off (or at the start).
-            resumeFunc(psm)
+        resumeFunc(psm)
 
-            // We're back! Check if the fiber is finished and if so, clean up.
-            if (psm.isTerminated) {
-                _stateMachines.remove(psm)
-                checkpointsMap.remove(prevCheckpointKey)
-            }
-        } catch (t: Throwable) {
-            // TODO: Quasar is logging exceptions by itself too, find out where and stop it.
-            logger.error("Caught error whilst invoking protocol state machine", t)
-            throw t
+        // We're back! Check if the fiber is finished and if so, clean up.
+        if (psm.isTerminated) {
+            _stateMachines.remove(psm)
+            checkpointsMap.remove(prevCheckpointKey)
         }
     }
 
@@ -233,6 +226,12 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     @Transient lateinit var serviceHub: ServiceHub
     @Transient protected lateinit var logger: Logger
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
+
+    init {
+        setDefaultUncaughtExceptionHandler { strand, throwable ->
+            logger.error("Caught error whilst running protocol state machine ${this.javaClass.name}", throwable)
+        }
+    }
 
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R> get() {
