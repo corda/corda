@@ -6,10 +6,6 @@
  * All other rights reserved.
  */
 
-/*
- * Copyright 2015, R3 CEV. All rights reserved.
- */
-
 import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
