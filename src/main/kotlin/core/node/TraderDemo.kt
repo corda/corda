@@ -28,6 +28,7 @@ import java.nio.file.Paths
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import kotlin.system.exitProcess
 
 // TRADING DEMO
 //
@@ -74,8 +75,7 @@ fun main(args: Array<String>) {
     } catch (e: Exception) {
         println(e.message)
         printHelp()
-        System.exit(1)
-        throw Exception()   // TODO: Remove when upgrading to Kotlin 1.0 RC
+        exitProcess(1)
     }
 
     BriefLogFormatter.initVerbose("platform.trade")
@@ -141,7 +141,7 @@ fun main(args: Array<String>) {
         // Grab a session ID for the fake trade from the other side, then kick off the seller and sell them some junk.
         if (!options.has(fakeTradeWithArg)) {
             println("Need the --fake-trade-with command line argument")
-            System.exit(1)
+            exitProcess(1)
         }
         val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
@@ -188,7 +188,7 @@ private fun loadConfigFile(configFile: Path): NodeConfiguration {
         println()
         println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
         println()
-        System.exit(1)
+        exitProcess(1)
     }
 
     val defaultLegalName = "Global MegaCorp, Ltd."
