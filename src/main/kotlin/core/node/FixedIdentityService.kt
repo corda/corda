@@ -16,6 +16,6 @@ import java.security.PublicKey
  * Scaffolding: a dummy identity service that just expects to have identities loaded off disk or found elsewhere.
  */
 class FixedIdentityService(private val identities: List<Party>) : IdentityService {
-    private val keyToParties = identities.toMapBy { it.owningKey }
+    private val keyToParties = identities.associateBy { it.owningKey }
     override fun partyFromKey(key: PublicKey): Party? = keyToParties[key]
 }

@@ -13,7 +13,7 @@ allprojects {
 }
 
 buildscript {
-    ext.kotlin_version = '1.0.0-beta-4584'
+    ext.kotlin_version = '1.0.0-rc-1036'
     ext.quasar_version = '0.7.4'
     ext.asm_version = '0.5.3'
     ext.artemis_version = '1.2.0'
@@ -24,7 +24,9 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.4"
+
+        // Dokka (JavaDoc equivalent for Kotlin) download is huge so just comment this out for now.
+        // classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
     }
 }
 

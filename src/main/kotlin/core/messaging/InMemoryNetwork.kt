@@ -22,7 +22,6 @@ import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
 import javax.annotation.concurrent.GuardedBy
 import javax.annotation.concurrent.ThreadSafe
-import kotlin.concurrent.currentThread
 import kotlin.concurrent.thread
 
 /**
@@ -96,7 +95,7 @@ public class InMemoryNetwork {
     fun stop() {
         // toArrayList here just copies the collection, which we need because node.stop() will delete itself from
         // the network map by calling netNodeHasShutdown. So we would get a CoModException if we didn't copy first.
-        for (node in handleNodeMap.values.toArrayList())
+        for (node in handleNodeMap.values.toMutableList())
             node.stop()
 
         counter = -1
@@ -155,7 +154,7 @@ public class InMemoryNetwork {
 
         protected val backgroundThread = if (manuallyPumped) null else
             thread(isDaemon = true, name = "In-memory message dispatcher ") {
-                while (!currentThread.isInterrupted) {
+                while (!Thread.currentThread().isInterrupted) {
                     try {
                         pumpInternal(true)
                     } catch(e: InterruptedException) {

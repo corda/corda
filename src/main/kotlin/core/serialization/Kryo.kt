@@ -105,7 +105,7 @@ fun <T : Any> T.serialize(kryo: Kryo = THREAD_LOCAL_KRYO.get(), includeClassName
  */
 class ImmutableClassSerializer<T : Any>(val klass: KClass<T>) : Serializer<T>() {
     val props = klass.memberProperties.sortedBy { it.name }
-    val propsByName = props.toMapBy { it.name }
+    val propsByName = props.associateBy { it.name }
     val constructor = klass.primaryConstructor!!
 
     init {
