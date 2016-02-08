@@ -32,24 +32,7 @@ import kotlin.system.exitProcess
 
 // TRADING DEMO
 //
-// This demo app can be run in one of two modes. In the listening mode it will buy commercial paper from a selling node
-// that connects to it, using IOU cash it issued to itself. It also runs a timestamping service in this mode. In the
-// non-listening mode, it will connect to the specified listening node and sell some commercial paper in return for
-// cash. There's currently no UI so all you can see is log messages.
-//
-// Please note that the software currently assumes every node has a unique DNS name. Thus you cannot name both nodes
-// "localhost". This might get fixed in future, but for now to run the listening node, alias "alpha" to "localhost"
-// in your /etc/hosts file and then try a command line like this:
-//
-//   --dir=alpha --service-fake-trades --network-address=alpha
-//
-// To run the node that initiates a trade, alias "beta" to "localhost" in your /etc/hosts file and then try a command
-// line like this:
-//
-//  --dir=beta --fake-trade-with=alpha --network-address=beta:31338
-//  --timestamper-identity-file=alpha/identity-public --timestamper-address=alpha
-//
-// Alternatively,
+// Please see docs/build/html/running-the-trading-demo.html
 
 
 fun main(args: Array<String>) {
