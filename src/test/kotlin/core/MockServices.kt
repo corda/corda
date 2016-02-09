@@ -9,6 +9,7 @@
 package core
 
 import core.crypto.DigitalSignature
+import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.signWithECDSA
 import core.messaging.MessagingService
@@ -18,6 +19,7 @@ import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testutils.TEST_KEYS_TO_CORP_MAP
+import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import java.security.KeyPair
 import java.security.PrivateKey
@@ -74,6 +76,14 @@ class MockStorageService : StorageService {
         synchronized(tables) {
             return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
         }
+    }
+}
+
+object MockContractFactory : ContractFactory {
+    override operator fun <T : Contract> get(hash: SecureHash): T {
+        val clazz = TEST_PROGRAM_MAP[hash] ?: throw UnknownContractException()
+        @Suppress("UNCHECKED_CAST")
+        return clazz.newInstance() as T
     }
 }
 

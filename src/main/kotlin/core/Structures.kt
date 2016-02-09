@@ -134,3 +134,16 @@ interface Contract {
      */
     val legalContractReference: SecureHash
 }
+
+/** A contract factory knows how to lazily load and instantiate contract objects. */
+interface ContractFactory {
+    /**
+     * Loads, instantiates and returns a contract object from its class bytecodes, given the hash of that bytecode.
+     *
+     * @throws UnknownContractException if the hash doesn't map to any known contract.
+     * @throws ClassCastException if the hash mapped to a contract, but it was not of type T
+     */
+    operator fun <T : Contract> get(hash: SecureHash): T
+}
+
+class UnknownContractException : Exception()

@@ -157,11 +157,11 @@ class CrowdFundTests {
         val validClose = makeFundedTX(TEST_TX_TIME + 8.days)
 
         val e = assertFailsWith(TransactionVerificationException::class) {
-            TransactionGroup(setOf(registerTX, pledgeTX, tooEarlyClose), setOf(miniCorpWalletTx, aliceWalletTX)).verify(TEST_PROGRAM_MAP)
+            TransactionGroup(setOf(registerTX, pledgeTX, tooEarlyClose), setOf(miniCorpWalletTx, aliceWalletTX)).verify(MockContractFactory)
         }
         assertTrue(e.cause!!.message!!.contains("the closing date has past"))
 
         // This verification passes
-        TransactionGroup(setOf(registerTX, pledgeTX, validClose), setOf(aliceWalletTX)).verify(TEST_PROGRAM_MAP)
+        TransactionGroup(setOf(registerTX, pledgeTX, validClose), setOf(aliceWalletTX)).verify(MockContractFactory)
     }
 }

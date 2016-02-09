@@ -216,11 +216,11 @@ class CommercialPaperTestsGeneric {
         val validRedemption = makeRedeemTX(TEST_TX_TIME + 31.days)
 
         val e = assertFailsWith(TransactionVerificationException::class) {
-            TransactionGroup(setOf(issueTX, moveTX, tooEarlyRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(TEST_PROGRAM_MAP)
+            TransactionGroup(setOf(issueTX, moveTX, tooEarlyRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(MockContractFactory)
         }
         assertTrue(e.cause!!.message!!.contains("paper must have matured"))
 
-        TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(TEST_PROGRAM_MAP)
+        TransactionGroup(setOf(issueTX, moveTX, validRedemption), setOf(corpWalletTX, alicesWalletTX)).verify(MockContractFactory)
     }
 
     // Generate a trade lifecycle with various parameters.

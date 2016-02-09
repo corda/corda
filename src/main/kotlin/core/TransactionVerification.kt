@@ -27,7 +27,7 @@ class TransactionGroup(val transactions: Set<LedgerTransaction>, val nonVerified
     /**
      * Verifies the group and returns the set of resolved transactions.
      */
-    fun verify(programMap: Map<SecureHash, Contract>): Set<TransactionForVerification> {
+    fun verify(programMap: ContractFactory): Set<TransactionForVerification> {
         // Check that every input can be resolved to an output.
         // Check that no output is referenced by more than one input.
         // Cycles should be impossible due to the use of hashes as pointers.
@@ -73,12 +73,12 @@ data class TransactionForVerification(val inStates: List<ContractState>,
      * @throws IllegalStateException if a state refers to an unknown contract.
      */
     @Throws(TransactionVerificationException::class, IllegalStateException::class)
-    fun verify(programMap: Map<SecureHash, Contract>) {
+    fun verify(programMap: ContractFactory) {
         // For each input and output state, locate the program to run. Then execute the verification function. If any
         // throws an exception, the entire transaction is invalid.
         val programHashes = (inStates.map { it.programRef } + outStates.map { it.programRef }).toSet()
         for (hash in programHashes) {
-            val program = programMap[hash] ?: throw IllegalStateException("Unknown program hash $hash")
+            val program: Contract = programMap[hash]
             try {
                 program.verify(this)
             } catch(e: Throwable) {

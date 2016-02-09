@@ -52,13 +52,13 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
-// a sandbox. For now we just instantiate right at the start of the program.
-val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
-        CASH_PROGRAM_ID to Cash(),
-        CP_PROGRAM_ID to CommercialPaper(),
-        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper(),
-        CROWDFUND_PROGRAM_ID to CrowdFund(),
-        DUMMY_PROGRAM_ID to DummyContract
+// a sandbox. For unit tests we just have a hard-coded list.
+val TEST_PROGRAM_MAP: Map<SecureHash, Class<out Contract>> = mapOf(
+        CASH_PROGRAM_ID to Cash::class.java,
+        CP_PROGRAM_ID to CommercialPaper::class.java,
+        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
+        CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
+        DUMMY_PROGRAM_ID to DummyContract::class.java
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -135,7 +135,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
     protected fun run(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
         val tx = TransactionForVerification(inStates, outStates.map { it.state }, cmds, SecureHash.randomSHA256())
-        tx.verify(TEST_PROGRAM_MAP)
+        tx.verify(MockContractFactory)
     }
 
     fun accepts(time: Instant = TEST_TX_TIME) = run(time)
@@ -297,7 +297,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun verify() {
         val group = toTransactionGroup()
         try {
-            group.verify(TEST_PROGRAM_MAP)
+            group.verify(MockContractFactory)
         } catch (e: TransactionVerificationException) {
             // Let the developer know the index of the transaction that failed.
             val ltx: LedgerTransaction = txns.find { it.hash == e.tx.origHash }!!
