@@ -118,8 +118,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     /**
-     * Kicks off a brand new state machine of the given class. It will log with the named logger, and the
-     * [initialArgs] object will be passed to the call method of the [ProtocolStateMachine] object.
+     * Kicks off a brand new state machine of the given class. It will log with the named logger.
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
@@ -262,7 +261,7 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): T {
+    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): UntrustworthyData<T> {
         Fiber.parkAndSerialize { fiber, serializer ->
             // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
             val deserializer = Fiber.getFiberSerializer() as KryoSerializer
@@ -275,18 +274,18 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
         }
         val tmp = resumeWithObject ?: throw IllegalStateException("Expected to receive something")
         resumeWithObject = null
-        return tmp as T
+        return UntrustworthyData(tmp as T)
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                 obj: Any, recvType: Class<T>): T {
+                                 obj: Any, recvType: Class<T>): UntrustworthyData<T> {
         val result = FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, obj, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): T {
+    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
         val result = FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
         return suspendAndExpectReceive(result)
     }
@@ -295,6 +294,29 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
+    }
+}
+
+/**
+ * A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+ * a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
+ * first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:
+ *
+ * - Is this object the one you actually expected? Did the other side hand you back something technically valid but
+ *   not what you asked for?
+ * - Is the object disobeying its own invariants?
+ * - Are any objects *reachable* from this object mismatched or not what you expected?
+ * - Is it suspiciously large or small?
+ */
+class UntrustworthyData<T>(private val fromUntrustedWorld: T) {
+    val data: T
+        @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
+        get() = fromUntrustedWorld
+
+    @Suppress("DEPRECATION")
+    inline fun validate(validator: (T) -> Unit): T {
+        validator(data)
+        return data
     }
 }
 

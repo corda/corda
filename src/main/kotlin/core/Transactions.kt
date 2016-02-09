@@ -79,7 +79,7 @@ data class WireTransaction(val inputs: List<StateRef>,
 data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
     init { check(sigs.isNotEmpty()) }
 
-    // Lazily calculated access to the deserialised/hashed transaction data.
+    /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { txBits.deserialize() }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
@@ -124,6 +124,9 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
 
     /** Returns the same transaction but with an additional (unchecked) signature */
     fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
+
+    /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
+    operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
 }
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
