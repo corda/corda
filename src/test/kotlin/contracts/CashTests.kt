@@ -28,7 +28,6 @@ class CashTests {
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
 
-    fun Cash.State.editInstitution(party: Party) = copy(deposit = deposit.copy(party = party))
     fun Cash.State.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
 
     @Test
@@ -53,7 +52,7 @@ class CashTests {
             }
             tweak {
                 output { outState }
-                output { outState.editInstitution(MINI_CORP) }
+                output { outState `issued by` MINI_CORP }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this `fails requirement` "at least one cash input"
             }
@@ -153,7 +152,7 @@ class CashTests {
         // Can't change issuer.
         transaction {
             input { inState }
-            output { outState.editInstitution(MINI_CORP) }
+            output { outState `issued by` MINI_CORP }
             this `fails requirement` "at issuer MegaCorp the amounts balance"
         }
         // Can't change deposit reference when splitting.
@@ -184,7 +183,7 @@ class CashTests {
         // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
             output { outState }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this `fails requirement` "at issuer MiniCorp the amounts balance"
@@ -224,9 +223,9 @@ class CashTests {
         // Multi-issuer case.
         transaction {
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
 
-            output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
+            output { inState.copy(amount = inState.amount - 200.DOLLARS) `issued by` MINI_CORP }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
@@ -246,7 +245,7 @@ class CashTests {
         transaction {
             // Gather 2000 dollars from two different issuers.
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
 
             // Can't merge them together.
             tweak {
@@ -262,7 +261,7 @@ class CashTests {
 
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
-            output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
+            output { inState.copy(owner = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this.accepts()
         }
