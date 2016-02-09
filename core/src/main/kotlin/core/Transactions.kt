@@ -12,6 +12,7 @@ import co.paralleluniverse.fibers.Suspendable
 import core.crypto.DigitalSignature
 import core.crypto.SecureHash
 import core.crypto.signWithECDSA
+import core.crypto.toStringShort
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
@@ -83,6 +84,9 @@ data class WireTransaction(val inputs: List<StateRef>,
         return SignedTransaction(serialized, withSigs)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(id, index))
+
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
@@ -128,7 +132,7 @@ data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>, val s
         val cmdKeys = tx.commands.flatMap { it.pubkeys }.toSet()
         val sigKeys = sigs.map { it.by }.toSet()
         if (!sigKeys.containsAll(cmdKeys))
-            throw SignatureException("Missing signatures on the transaction for: ${cmdKeys - sigKeys}")
+            throw SignatureException("Missing signatures on transaction ${id.prefixChars()} for: ${(cmdKeys - sigKeys).map { it.toStringShort() }}")
     }
 
     /**

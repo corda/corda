@@ -14,16 +14,16 @@ import contracts.Cash
 import contracts.sumCashBy
 import core.*
 import core.crypto.DigitalSignature
+import core.crypto.SecureHash
 import core.crypto.signWithECDSA
-import core.messaging.LegallyIdentifiableNode
-import core.messaging.ProtocolStateMachine
-import core.messaging.SingleMessageRecipient
-import core.messaging.StateMachineManager
+import core.messaging.*
+import core.node.DataVendingService
 import core.node.TimestamperClient
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
+import java.util.*
 
 /**
  * This asset trading protocol implements a "delivery vs payment" type swap. It has two parties (B and S for buyer
@@ -67,6 +67,12 @@ object TwoPartyTradeProtocol {
         return buyer.resultFuture
     }
 
+    class UnacceptablePriceException(val givenPrice: Amount) : Exception()
+    class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
+        override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
+    }
+    class ExcessivelyLargeTransactionGraphException() : Exception()
+
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
     class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
@@ -103,11 +109,14 @@ object TwoPartyTradeProtocol {
             // Make the first message we'll send to kick off the protocol.
             val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
 
-            val maybePartialTX = sendAndReceive(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello, SignedTransaction::class.java)
-            val partialTX = maybePartialTX.validate {
+            val maybeSTX = sendAndReceive<SignedTransaction>(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello)
+
+            maybeSTX.validate {
                 it.verifySignatures()
-                logger.trace { "Received partially signed transaction" }
                 val wtx: WireTransaction = it.tx
+                logger.trace { "Received partially signed transaction: ${it.id}" }
+
+                checkDependencies(it)
 
                 requireThat {
                     "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
@@ -123,8 +132,121 @@ object TwoPartyTradeProtocol {
                     // but the goal of this code is not to be fully secure, but rather, just to find good ways to
                     // express protocol state machines on top of the messaging layer.
                 }
+                return it
             }
-            return partialTX
+        }
+
+        @Suspendable
+        open fun checkDependencies(txToCheck: SignedTransaction) {
+            val toVerify = HashSet<LedgerTransaction>()
+            val alreadyVerified = HashSet<LedgerTransaction>()
+            val downloadedSignedTxns = ArrayList<SignedTransaction>()
+
+            fetchDependenciesAndCheckSignatures(txToCheck.tx.inputs, toVerify, alreadyVerified, downloadedSignedTxns)
+
+            TransactionGroup(toVerify, alreadyVerified).verify(serviceHub.storageService.contractPrograms)
+
+            // Now write all the transactions we just validated back to the database for next time, including
+            // signatures so we can serve up these transactions to other peers when we, in turn, send one that
+            // depends on them onto another peer.
+            //
+            // It may seem tempting to write transactions to the database as we receive them, instead of all at once
+            // here at the end. Doing it this way avoids cases where a transaction is in the database but its
+            // dependencies aren't, or an unvalidated and possibly broken tx is there.
+            serviceHub.storageService.validatedTransactions.putAll(downloadedSignedTxns.associateBy { it.id })
+        }
+
+        @Suspendable
+        private fun fetchDependenciesAndCheckSignatures(depsToCheck: List<StateRef>,
+                                                        toVerify: HashSet<LedgerTransaction>,
+                                                        alreadyVerified: HashSet<LedgerTransaction>,
+                                                        downloadedSignedTxns: ArrayList<SignedTransaction>) {
+            // A1. Create a work queue of transaction hashes waiting for resolution. Create a TransactionGroup.
+            //
+            // B1. Pop a hash. Look it up in the database. If it's not there, put the hash into a list for sending to
+            //     the other peer. If it is there, load it and put its outputs into the TransactionGroup as unverified
+            //     roots, because it's already been validated before.
+            // B2. If the queue is not empty, GOTO B1
+            // B3. If the request list is empty, GOTO D1
+            //
+            // C1. Send the request for hashes to the peer and wait for the response. Clear the request list.
+            // C2. For each transaction returned, verify that it does indeed hash to the requested transaction.
+            // C3. Add each transaction to the TransactionGroup.
+            // C4. Add each input state in each transaction to the work queue.
+            //
+            // D1. Verify the transaction group.
+            // D2. Write all the transactions in the group to the database.
+            // END
+            //
+            // Note: This protocol leaks private data. If you download a transaction and then do NOT request a
+            // dependency, it means you already have it, which in turn means you must have been involved with it before
+            // somehow, either in the tx itself or in any following spend of it. If there were no following spends, then
+            // your peer knows for sure that you were involved ... this is bad! The only obvious ways to fix this are
+            // something like onion routing of requests, secure hardware, or both.
+            //
+            // TODO: This needs to be factored out into a general subprotocol and subprotocol handling improved.
+
+            val workQ = ArrayList<StateRef>()
+            workQ.addAll(depsToCheck)
+
+            val nextRequests = ArrayList<SecureHash>()
+
+            val db = serviceHub.storageService.validatedTransactions
+
+            var limitCounter = 0
+            while (true) {
+                for (ref in workQ) {
+                    val stx: SignedTransaction? = db[ref.txhash]
+                    if (stx == null) {
+                        // Transaction wasn't found in our local database, so we have to ask for it.
+                        nextRequests.add(ref.txhash)
+                    } else {
+                        alreadyVerified.add(stx.verifyToLedgerTransaction(serviceHub.identityService))
+                    }
+                }
+                workQ.clear()
+
+                if (nextRequests.isEmpty())
+                    break
+
+                val sid = random63BitValue()
+                val fetchReq = DataVendingService.Request(nextRequests, serviceHub.networkService.myAddress, sid)
+                logger.info("Requesting ${nextRequests.size} dependency(s) for verification")
+                val maybeTxns: UntrustworthyData<ArrayList<SignedTransaction?>> =
+                        sendAndReceive("platform.fetch.tx", otherSide, 0, sid, fetchReq)
+
+                // Check for a buggy/malicious peer answering with something that we didn't ask for, and then
+                // verify the signatures on the transactions and look up the identities to get LedgerTransactions.
+                // Note that this doesn't run contracts: just checks the signatures match the data.
+                val stxns: List<SignedTransaction> = validateTXFetchResponse(maybeTxns, nextRequests)
+                nextRequests.clear()
+                val ltxns = stxns.map { it.verifyToLedgerTransaction(serviceHub.identityService) }
+
+                // Add to the TransactionGroup, pending verification.
+                toVerify.addAll(ltxns)
+                downloadedSignedTxns.addAll(stxns)
+
+                // And now add all the input states to the work queue for database or remote resolution.
+                workQ.addAll(ltxns.flatMap { it.inputs })
+
+                // And loop around ...
+                limitCounter += workQ.size
+                if (limitCounter > 5000)
+                    throw ExcessivelyLargeTransactionGraphException()
+            }
+        }
+
+        private fun validateTXFetchResponse(maybeTxns: UntrustworthyData<ArrayList<SignedTransaction?>>,
+                                            nextRequests: ArrayList<SecureHash>): List<SignedTransaction> {
+            return maybeTxns.validate { response ->
+                require(response.size == nextRequests.size)
+                val answers = response.requireNoNulls()
+                // Check transactions actually hash to what we requested, if this fails the remote node
+                // is a malicious protocol violator or buggy.
+                for ((index, stx) in answers.withIndex())
+                    require(stx.id == nextRequests[index])
+                answers
+            }
         }
 
         open fun signWithOurKey(partialTX: SignedTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
@@ -139,18 +261,11 @@ object TwoPartyTradeProtocol {
                                 tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
             val fullySigned = partialTX + tsaSig + ourSignature
 
-            // TODO: We should run it through our full TransactionGroup of all transactions here.
-
             logger.trace { "Built finished transaction, sending back to secondary!" }
 
             send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(tsaSig, ourSignature))
             return fullySigned
         }
-    }
-
-    class UnacceptablePriceException(val givenPrice: Amount) : Exception()
-    class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
-        override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
     open class Buyer(val otherSide: SingleMessageRecipient,
@@ -189,6 +304,8 @@ object TwoPartyTradeProtocol {
                     throw UnacceptablePriceException(it.price)
                 if (!typeToBuy.isInstance(it.assetForSale.state))
                     throw AssetMismatchException(typeToBuy.name, assetTypeName)
+
+                return@validate it
             }
 
             // TODO: Either look up the stateref here in our local db, or accept a long chain of states and
@@ -203,7 +320,7 @@ object TwoPartyTradeProtocol {
 
             // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
 
-            return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate {}
+            return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate { it }
         }
 
         open fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedTransaction {

@@ -69,6 +69,8 @@ data class TransactionForVerification(val inStates: List<ContractState>,
     override fun equals(other: Any?) = other is TransactionForVerification && other.origHash == origHash
 
     /**
+     * Runs the smart contracts governing this transaction.
+     *
      * @throws TransactionVerificationException if a contract throws an exception, the original is in the cause field
      * @throws IllegalStateException if a state refers to an unknown contract.
      */

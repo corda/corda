@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 
 class E2ETestWalletServiceTest {
     val services: ServiceHub = MockServices(
-            keyManagement = MockKeyManagementService(emptyMap(), arrayListOf<KeyPair>(ALICE_KEY, ALICE_KEY, ALICE_KEY))
+        keyManagement = MockKeyManagementService(emptyMap(), arrayListOf<KeyPair>(ALICE_KEY, ALICE_KEY, ALICE_KEY))
     )
 
     @Test fun splits() {

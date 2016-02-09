@@ -12,7 +12,6 @@ import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
-import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
@@ -86,7 +85,7 @@ fun main(args: Array<String>) {
 
     // Now do some fake nonsense just to give us some activity.
 
-    (node.services.walletService as E2ETestWalletService).fillWithSomeTestCash(1000.DOLLARS)
+    (node.services.walletService as E2ETestWalletService).fillWithSomeTestCash(1500.DOLLARS)
 
     val timestampingAuthority = node.services.networkMapService.timestampingNodes.first()
     if (listening) {
@@ -103,7 +102,7 @@ fun main(args: Array<String>) {
             val replyTo = msg.data.deserialize<SingleMessageRecipient>(includeClassName = true)
             val buyerSessionID = random63BitValue()
             println("Got a new junk trade request, sending back session ID and starting buy protocol")
-            val future = TwoPartyTradeProtocol.runBuyer(node.smm, timestampingAuthority, replyTo, 100.DOLLARS,
+            val future = TwoPartyTradeProtocol.runBuyer(node.smm, timestampingAuthority, replyTo, 1000.DOLLARS,
                     CommercialPaper.State::class.java, buyerSessionID)
 
             future success {
@@ -138,10 +137,10 @@ fun main(args: Array<String>) {
             println("Got session ID back, now starting the sell protocol")
 
             val cpOwnerKey = node.keyManagement.freshKey()
-            val commercialPaper = makeFakeCommercialPaper(cpOwnerKey.public)
+            val commercialPaper = makeFakeCommercialPaper(node.storage, cpOwnerKey.public)
 
             val future = TwoPartyTradeProtocol.runSeller(node.smm, timestampingAuthority,
-                    otherSide, commercialPaper, 100.DOLLARS, cpOwnerKey, sessionID)
+                    otherSide, commercialPaper, 1000.DOLLARS, cpOwnerKey, sessionID)
 
             future success {
                 println()
@@ -165,13 +164,28 @@ fun main(args: Array<String>) {
     }
 }
 
-fun makeFakeCommercialPaper(ownedBy: PublicKey): StateAndRef<CommercialPaper.State> {
+fun makeFakeCommercialPaper(storageService: StorageService, ownedBy: PublicKey): StateAndRef<CommercialPaper.State> {
     // Make a fake company that's issued its own paper.
-    val party = Party("MegaCorp, Inc", generateKeyPair().public)
-    // ownedBy here is the random key that gives us control over it.
-    val paper = CommercialPaper.State(party.ref(1,2,3), ownedBy, 1100.DOLLARS, Instant.now() + 10.days)
-    val randomRef = StateRef(SecureHash.randomSHA256(), 0)
-    return StateAndRef(paper, randomRef)
+    val keyPair = generateKeyPair()
+    val party = Party("MegaCorp, Inc", keyPair.public)
+
+    val issuance = run {
+        val tx = CommercialPaper().generateIssue(party.ref(1,2,3), 1100.DOLLARS, Instant.now() + 10.days)
+        tx.signWith(keyPair)
+        tx.toSignedTransaction(true)
+    }
+
+    val move = run {
+        val tx = TransactionBuilder()
+        CommercialPaper().generateMove(tx, issuance.tx.outRef(0), ownedBy)
+        tx.signWith(keyPair)
+        tx.toSignedTransaction(true)
+    }
+
+    storageService.validatedTransactions[issuance.id] = issuance
+    storageService.validatedTransactions[move.id] = move
+
+    return move.tx.outRef(0)
 }
 
 private fun loadConfigFile(configFile: Path): NodeConfiguration {

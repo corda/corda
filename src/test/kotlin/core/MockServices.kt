@@ -15,9 +15,11 @@ import core.crypto.signWithECDSA
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
 import core.messaging.NetworkMap
+import core.node.DataVendingService
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
+import core.testutils.RecordingMap
 import core.testutils.TEST_KEYS_TO_CORP_MAP
 import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
@@ -65,16 +67,27 @@ class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletSer
 }
 
 @ThreadSafe
-class MockStorageService : StorageService {
+class MockStorageService(val isRecording: Boolean = false) : StorageService {
     override val myLegalIdentityKey: KeyPair = generateKeyPair()
     override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
 
     private val tables = HashMap<String, MutableMap<Any, Any>>()
 
+    override val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+        get() = getMap("validated-transactions")
+
+    override val contractPrograms = MockContractFactory
+
     @Suppress("UNCHECKED_CAST")
     override fun <K, V> getMap(tableName: String): MutableMap<K, V> {
         synchronized(tables) {
-            return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
+            return tables.getOrPut(tableName) {
+                val map = Collections.synchronizedMap(HashMap<Any, Any>())
+                if (isRecording)
+                    RecordingMap(map)
+                else
+                    map
+            } as MutableMap<K, V>
         }
     }
 }
@@ -107,4 +120,12 @@ class MockServices(
         get() = networkMap ?: throw UnsupportedOperationException()
     override val storageService: StorageService
         get() = storage ?: throw UnsupportedOperationException()
+
+    init {
+        if (net != null && storage != null) {
+            // Creating this class is sufficient, we don't have to store it anywhere, because it registers a listener
+            // on the networking service, so that will keep it from being collected.
+            DataVendingService(net, storage)
+        }
+    }
 }

@@ -16,6 +16,7 @@ import core.ThreadBox
 import core.crypto.sha256
 import core.node.TimestamperNodeService
 import core.utilities.loggerFor
+import java.security.KeyPair
 import java.time.Instant
 import java.util.*
 import java.util.concurrent.Executor
@@ -221,10 +222,7 @@ class InMemoryNetwork {
 
         private fun pumpInternal(block: Boolean): Boolean {
             val q = getQueueForHandle(handle)
-            val message = if (block) q.take() else q.poll()
-
-            if (message == null)
-                return false
+            val message = (if (block) q.take() else q.poll()) ?: return false
 
             val deliverTo = state.locked {
                 val h = handlers.filter { if (it.topic.isBlank()) true else message.topic == it.topic }

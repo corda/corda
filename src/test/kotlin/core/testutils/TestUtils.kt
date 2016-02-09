@@ -15,6 +15,7 @@ import core.*
 import core.crypto.*
 import core.serialization.serialize
 import core.visualiser.GraphVisualiser
+import java.security.KeyPair
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -41,7 +42,7 @@ val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
 
-val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY)
+val ALL_TEST_KEYS = listOf(MEGA_CORP_KEY, MINI_CORP_KEY, ALICE_KEY, BOB_KEY, DummyTimestampingAuthority.key)
 
 val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
         MEGA_CORP_PUBKEY to MEGA_CORP,
@@ -315,15 +316,17 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
     }
 
-    fun signAll(): List<SignedTransaction> {
+    fun signAll(vararg extraKeys: KeyPair): List<SignedTransaction> {
         return txns.map { wtx ->
-            val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
+            val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toMutableSet()
             val bits = wtx.serialize()
             require(bits == wtx.serialized)
             val sigs = ArrayList<DigitalSignature.WithKey>()
-            for (key in ALL_TEST_KEYS) {
-                if (allPubKeys.contains(key.public))
+            for (key in ALL_TEST_KEYS + extraKeys) {
+                if (allPubKeys.contains(key.public)) {
                     sigs += key.signWithECDSA(bits)
+                    allPubKeys -= key.public
+                }
             }
             wtx.toSignedTransaction(sigs)
         }

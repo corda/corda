@@ -49,6 +49,9 @@ import javax.annotation.concurrent.ThreadSafe
  * TODO: Consider the issue of continuation identity more deeply: is it a safe assumption that a serialised
  *       continuation is always unique?
  * TODO: Think about how to bring the system to a clean stop so it can be upgraded without any serialised stacks on disk
+ * TODO: Timeouts
+ * TODO: Surfacing of exceptions via an API and/or management UI
+ * TODO: Ability to control checkpointing explicitly, for cases where you know replaying a message can't hurt
  */
 @ThreadSafe
 class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor) {
@@ -237,12 +240,6 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     @Transient protected lateinit var logger: Logger
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
 
-    init {
-        setDefaultUncaughtExceptionHandler { strand, throwable ->
-            logger.error("Caught error whilst running protocol state machine ${this.javaClass.name}", throwable)
-        }
-    }
-
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R> get() {
         return _resultFuture ?: run {
@@ -258,6 +255,10 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
         this.logger = logger
         this.resumeWithObject = withObject
         this.serviceHub = serviceHub
+
+        setUncaughtExceptionHandler { strand, throwable ->
+            logger.error("Caught error whilst running protocol state machine ${strand.javaClass.name}", throwable)
+        }
     }
 
     // This line may look useless, but it's needed to convince the Quasar bytecode rewriter to do the right thing.
@@ -306,6 +307,15 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
         val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
     }
+
+    // Kotlin helpers that allow the use of generic types.
+    inline fun <reified T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long,
+                                                sessionIDForReceive: Long, obj: Any): UntrustworthyData<T> {
+        return sendAndReceive(topic, destination, sessionIDForSend, sessionIDForReceive, obj, T::class.java)
+    }
+    inline fun <reified T : Any> receive(topic: String, sessionIDForReceive: Long): UntrustworthyData<T> {
+        return receive(topic, sessionIDForReceive, T::class.java)
+    }
 }
 
 /**
@@ -325,10 +335,7 @@ class UntrustworthyData<T>(private val fromUntrustedWorld: T) {
         get() = fromUntrustedWorld
 
     @Suppress("DEPRECATION")
-    inline fun validate(validator: (T) -> Unit): T {
-        validator(data)
-        return data
-    }
+    inline fun <R> validate(validator: (T) -> R) = validator(data)
 }
 
 // TODO: Clean this up

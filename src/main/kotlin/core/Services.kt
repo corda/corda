@@ -10,6 +10,7 @@ package core
 
 import co.paralleluniverse.fibers.Suspendable
 import core.crypto.DigitalSignature
+import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
@@ -79,6 +80,18 @@ object DummyTimestampingAuthority {
  */
 interface StorageService {
     fun <K,V> getMap(tableName: String): MutableMap<K, V>
+
+    /**
+     * A map of hash->tx where tx has been signature/contract validated and the states are known to be correct.
+     * The signatures aren't technically needed after that point, but we keep them around so that we can relay
+     * the transaction data to other nodes that need it.
+     */
+    val validatedTransactions: MutableMap<SecureHash, SignedTransaction>
+
+    /**
+     * A map of program hash->contract class type, used for verification.
+     */
+    val contractPrograms: ContractFactory
 
     /**
      * Returns the legal identity that this node is configured with. Assumed to be initialised when the node is

@@ -109,9 +109,10 @@ class TimestamperClient(private val psm: ProtocolStateMachine<*>, private val no
                 sessionID, req, DigitalSignature.LegallyIdentifiable::class.java)
 
         // Check that the timestamping authority gave us back a valid signature and didn't break somehow
-        val signature = maybeSignature.validate { it.verifyWithECDSA(wtxBytes) }
-
-        return signature
+        maybeSignature.validate { sig ->
+            sig.verifyWithECDSA(wtxBytes)
+            return sig
+        }
     }
 }
 

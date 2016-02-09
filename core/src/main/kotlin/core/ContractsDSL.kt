@@ -45,9 +45,7 @@ class Requirements {
     }
 }
 val R = Requirements()
-inline fun requireThat(body: Requirements.() -> Unit) {
-    R.body()
-}
+inline fun <R> requireThat(body: Requirements.() -> R) = R.body()
 
 //// Amounts //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
