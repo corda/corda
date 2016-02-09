@@ -16,7 +16,7 @@ import java.security.*
 import java.security.interfaces.ECPublicKey
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
-sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
+sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
         init { require(bits.size == 32) }
         override val signatureAlgorithmName: String get() = "SHA256withECDSA"
