@@ -1,3 +1,12 @@
+import com.google.common.io.ByteStreams
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.FileTime
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipFile
+
 group 'com.r3cev.prototyping'
 version '1.0-SNAPSHOT'
 
@@ -26,7 +35,9 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // Dokka (JavaDoc equivalent for Kotlin) download is huge so just comment this out for now.
-        // classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
+        //classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
+
+        classpath "com.google.guava:guava:19.0"
     }
 }
 
@@ -116,4 +127,60 @@ task runDemoSeller(type: JavaExec, dependsOn: ':classes') {
     main = 'core.node.TraderDemoKt'
     args = ['--dir=seller', '--fake-trade-with=localhost', '--network-address=localhost:31338',
             '--timestamper-identity-file=buyer/identity-public', '--timestamper-address=localhost']
+}
+class CanonicalizerPlugin implements Plugin<Project> {
+    void apply(Project project) {
+
+        project.getTasks().getByName('jar').doLast() {
+
+            def zipPath = (String) project.jar.archivePath
+            def destPath = Files.createTempFile("processzip", null)
+
+            def zeroTime = FileTime.fromMillis(0)
+
+            def input = new ZipFile(zipPath)
+            def entries = input.entries()
+
+            def output = new ZipOutputStream(new FileOutputStream(destPath.toFile()))
+            output.setMethod(ZipOutputStream.STORED)
+
+            while (entries.hasMoreElements()) {
+                def entry = entries.nextElement()
+
+                def newEntry = new ZipEntry( entry.name )
+
+                newEntry.setLastModifiedTime(zeroTime)
+                newEntry.setCreationTime(zeroTime)
+                newEntry.compressedSize = -1
+                newEntry.size = entry.size
+                newEntry.crc = entry.crc
+
+                output.putNextEntry(newEntry)
+
+                ByteStreams.copy(input.getInputStream(entry), output)
+
+                output.closeEntry()
+            }
+            output.close()
+            input.close()
+
+            Files.move(destPath, Paths.get(zipPath), StandardCopyOption.REPLACE_EXISTING)
+        }
+
+    }
+}
+
+project(':contracts') {
+    apply plugin: 'java'
+    apply plugin: 'kotlin'
+
+    apply plugin: CanonicalizerPlugin
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        compile rootProject
+    }
 }
