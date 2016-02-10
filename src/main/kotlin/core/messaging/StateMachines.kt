@@ -17,13 +17,13 @@ import com.esotericsoftware.kryo.io.Output
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.google.common.util.concurrent.SettableFuture
-import core.SecureHash
 import core.ServiceHub
+import core.crypto.SecureHash
+import core.crypto.sha256
 import core.serialization.THREAD_LOCAL_KRYO
 import core.serialization.createKryo
 import core.serialization.deserialize
 import core.serialization.serialize
-import core.sha256
 import core.utilities.trace
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -59,6 +59,15 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     // property.
     private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolStateMachine<*>>())
 
+    // This is a workaround for something Gradle does to us during unit tests. It replaces stderr with its own
+    // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
+    // want because it can't get recreated properly. It turns out there's no good workaround for this! All the obvious
+    // approaches fail. Pending resolution of https://github.com/puniverse/quasar/issues/153 we just disable
+    // checkpointing when unit tests are run inside Gradle. The right fix is probably to make Quasar's
+    // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
+    // ever recover.
+    val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
+
     /** Returns a snapshot of the currently registered state machines. */
     val stateMachines: List<ProtocolStateMachine<*>> get() {
         synchronized(_stateMachines) {
@@ -82,7 +91,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     )
 
     init {
-        restoreCheckpoints()
+        if (checkpointing)
+            restoreCheckpoints()
     }
 
     /** Reads the database map and resurrects any serialised state machines. */
@@ -118,8 +128,7 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     }
 
     /**
-     * Kicks off a brand new state machine of the given class. It will log with the named logger, and the
-     * [initialArgs] object will be passed to the call method of the [ProtocolStateMachine] object.
+     * Kicks off a brand new state machine of the given class. It will log with the named logger.
      * The state machine will be persisted when it suspends, with automated restart if the StateMachineManager is
      * restarted with checkpointed state machines in the storage service.
      */
@@ -166,19 +175,12 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
 
         psm.prepareForResumeWith(serviceHub, obj, logger, onSuspend)
 
-        try {
-            // Now either start or carry on with the protocol from where it left off (or at the start).
-            resumeFunc(psm)
+        resumeFunc(psm)
 
-            // We're back! Check if the fiber is finished and if so, clean up.
-            if (psm.isTerminated) {
-                _stateMachines.remove(psm)
-                checkpointsMap.remove(prevCheckpointKey)
-            }
-        } catch (t: Throwable) {
-            // TODO: Quasar is logging exceptions by itself too, find out where and stop it.
-            logger.error("Caught error whilst invoking protocol state machine", t)
-            throw t
+        // We're back! Check if the fiber is finished and if so, clean up.
+        if (psm.isTerminated) {
+            _stateMachines.remove(psm)
+            checkpointsMap.remove(prevCheckpointKey)
         }
     }
 
@@ -187,7 +189,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                                                  serialisedFiber: ByteArray) {
         val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
-        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
+        if (checkpointing)
+            persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
@@ -234,6 +237,12 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     @Transient protected lateinit var logger: Logger
     @Transient private var _resultFuture: SettableFuture<R>? = SettableFuture.create<R>()
 
+    init {
+        setDefaultUncaughtExceptionHandler { strand, throwable ->
+            logger.error("Caught error whilst running protocol state machine ${this.javaClass.name}", throwable)
+        }
+    }
+
     /** This future will complete when the call method returns. */
     val resultFuture: ListenableFuture<R> get() {
         return _resultFuture ?: run {
@@ -263,7 +272,7 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
-    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): T {
+    private fun <T : Any> suspendAndExpectReceive(with: FiberRequest): UntrustworthyData<T> {
         Fiber.parkAndSerialize { fiber, serializer ->
             // We don't use the passed-in serializer here, because we need to use our own augmented Kryo.
             val deserializer = Fiber.getFiberSerializer() as KryoSerializer
@@ -276,18 +285,18 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
         }
         val tmp = resumeWithObject ?: throw IllegalStateException("Expected to receive something")
         resumeWithObject = null
-        return tmp as T
+        return UntrustworthyData(tmp as T)
     }
 
     @Suspendable @Suppress("UNCHECKED_CAST")
     fun <T : Any> sendAndReceive(topic: String, destination: MessageRecipients, sessionIDForSend: Long, sessionIDForReceive: Long,
-                                 obj: Any, recvType: Class<T>): T {
+                                 obj: Any, recvType: Class<T>): UntrustworthyData<T> {
         val result = FiberRequest.ExpectingResponse(topic, destination, sessionIDForSend, sessionIDForReceive, obj, recvType)
         return suspendAndExpectReceive(result)
     }
 
     @Suspendable
-    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): T {
+    fun <T : Any> receive(topic: String, sessionIDForReceive: Long, recvType: Class<T>): UntrustworthyData<T> {
         val result = FiberRequest.ExpectingResponse(topic, null, -1, sessionIDForReceive, null, recvType)
         return suspendAndExpectReceive(result)
     }
@@ -296,6 +305,29 @@ abstract class ProtocolStateMachine<R> : Fiber<R>("protocol", SameThreadFiberSch
     fun send(topic: String, destination: MessageRecipients, sessionID: Long, obj: Any) {
         val result = FiberRequest.NotExpectingResponse(topic, destination, sessionID, obj)
         Fiber.parkAndSerialize { fiber, writer -> suspendFunc!!(result, writer.write(fiber)) }
+    }
+}
+
+/**
+ * A small utility to approximate taint tracking: if a method gives you back one of these, it means the data came from
+ * a remote source that may be incentivised to pass us junk that violates basic assumptions and thus must be checked
+ * first. The wrapper helps you to avoid forgetting this vital step. Things you might want to check are:
+ *
+ * - Is this object the one you actually expected? Did the other side hand you back something technically valid but
+ *   not what you asked for?
+ * - Is the object disobeying its own invariants?
+ * - Are any objects *reachable* from this object mismatched or not what you expected?
+ * - Is it suspiciously large or small?
+ */
+class UntrustworthyData<T>(private val fromUntrustedWorld: T) {
+    val data: T
+        @Deprecated("Accessing the untrustworthy data directly without validating it first is a bad idea")
+        get() = fromUntrustedWorld
+
+    @Suppress("DEPRECATION")
+    inline fun validate(validator: (T) -> Unit): T {
+        validator(data)
+        return data
     }
 }
 

@@ -10,18 +10,20 @@ package core.node
 
 import com.google.common.net.HostAndPort
 import core.*
+import core.crypto.generateKeyPair
 import core.messaging.*
 import core.serialization.deserialize
 import core.serialization.serialize
 import core.utilities.loggerFor
+import java.io.RandomAccessFile
+import java.lang.management.ManagementFactory
+import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.util.*
 import java.util.concurrent.Executors
-
-val DEFAULT_PORT = 31337
 
 class ConfigurationException(message: String) : Exception(message)
 
@@ -65,17 +67,27 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
         override val identityService: IdentityService get() = identity
     }
 
-    // TODO: Implement mutual exclusion so we can't start the node twice by accident.
-
-    val storage = makeStorageService(dir)
-    val smm = StateMachineManager(services, serverThread)
-    val net = ArtemisMessagingService(dir, myNetAddr)
-    val wallet: WalletService = E2ETestWalletService(services)
-    val keyManagement = E2ETestKeyManagementService()
+    val storage: StorageService
+    val smm: StateMachineManager
+    val net: ArtemisMessagingService
+    val wallet: WalletService
+    val keyManagement: E2ETestKeyManagementService
     val inNodeTimestampingService: TimestamperNodeService?
     val identity: IdentityService
 
+    // Avoid the lock being garbage collected. We don't really need to release it as the OS will do so for us
+    // when our process shuts down, but we try in stop() anyway just to be nice.
+    private var nodeFileLock: FileLock? = null
+
     init {
+        alreadyRunningNodeCheck()
+
+        storage = makeStorageService(dir)
+        smm = StateMachineManager(services, serverThread)
+        net = ArtemisMessagingService(dir, myNetAddr)
+        wallet = E2ETestWalletService(services)
+        keyManagement = E2ETestKeyManagementService()
+
         // Insert a network map entry for the timestamper: this is all temp scaffolding and will go away. If we are
         // given the details, the timestamping node is somewhere else. Otherwise, we do our own timestamping.
         val tsid = if (timestamperAddress != null) {
@@ -101,6 +113,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
     fun stop() {
         net.stop()
         serverThread.shutdownNow()
+        nodeFileLock!!.release()
     }
 
     fun makeStorageService(dir: Path): StorageService {
@@ -114,7 +127,7 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
 
         val (identity, keypair) = if (!Files.exists(privKeyFile)) {
             log.info("Identity key not found, generating fresh key!")
-            val keypair: KeyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+            val keypair: KeyPair = generateKeyPair()
             keypair.serialize().writeToFile(privKeyFile)
             val myIdentity = Party(configuration.myLegalName, keypair.public)
             // We include the Party class with the file here to help catch mixups when admins provide files of the
@@ -152,8 +165,35 @@ class Node(val dir: Path, val myNetAddr: HostAndPort, val configuration: NodeCon
         }
     }
 
+    private fun alreadyRunningNodeCheck() {
+        // Write out our process ID (which may or may not resemble a UNIX process id - to us it's just a string) to a
+        // file that we'll do our best to delete on exit. But if we don't, it'll be overwritten next time. If it already
+        // exists, we try to take the file lock first before replacing it and if that fails it means we're being started
+        // twice with the same directory: that's a user error and we should bail out.
+        val pidPath = dir.resolve("process-id")
+        val file = pidPath.toFile()
+        if (file.exists()) {
+            val f = RandomAccessFile(file, "rw")
+            val l = f.channel.tryLock()
+            if (l == null) {
+                println("It appears there is already a node running with the specified data directory $dir")
+                println("Shut that other node down and try again. It may have process ID ${file.readText()}")
+                System.exit(1)
+            }
+            nodeFileLock = l
+        }
+        val ourProcessID: String = ManagementFactory.getRuntimeMXBean().name.split("@")[0]
+        Files.write(pidPath, ourProcessID.toByteArray(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        pidPath.toFile().deleteOnExit()
+        if (nodeFileLock == null)
+            nodeFileLock = RandomAccessFile(file, "rw").channel.lock()
+    }
+
     companion object {
         val PRIVATE_KEY_FILE_NAME = "identity-private-key"
         val PUBLIC_IDENTITY_FILE_NAME = "identity-public"
+
+        /** The port that is used by default if none is specified. As you know, 31337 is the most elite number. */
+        val DEFAULT_PORT = 31337
     }
 }

@@ -8,8 +8,6 @@
 
 package core.crypto;
 
-import core.*;
-
 import java.math.*;
 import java.util.*;
 
@@ -145,7 +143,7 @@ public class Base58 {
             throw new AddressFormatException("Input too short");
         byte[] data = Arrays.copyOfRange(decoded, 0, decoded.length - 4);
         byte[] checksum = Arrays.copyOfRange(decoded, decoded.length - 4, decoded.length);
-        byte[] actualChecksum = Arrays.copyOfRange(SecureHash.Companion.sha256Twice(data).getBits(), 0, 4);
+        byte[] actualChecksum = Arrays.copyOfRange(SecureHash.sha256Twice(data).getBits(), 0, 4);
         if (!Arrays.equals(checksum, actualChecksum))
             throw new AddressFormatException("Checksum does not validate");
         return data;

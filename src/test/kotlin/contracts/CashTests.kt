@@ -6,14 +6,11 @@
  * All other rights reserved.
  */
 
-/*
- * Copyright 2015, R3 CEV. All rights reserved.
- */
-
 import contracts.Cash
 import contracts.DummyContract
 import contracts.InsufficientBalanceException
 import core.*
+import core.crypto.SecureHash
 import core.serialization.OpaqueBytes
 import core.testutils.*
 import org.junit.Test
@@ -31,7 +28,6 @@ class CashTests {
     )
     val outState = inState.copy(owner = DUMMY_PUBKEY_2)
 
-    fun Cash.State.editInstitution(party: Party) = copy(deposit = deposit.copy(party = party))
     fun Cash.State.editDepositRef(ref: Byte) = copy(deposit = deposit.copy(reference = OpaqueBytes.of(ref)))
 
     @Test
@@ -56,7 +52,7 @@ class CashTests {
             }
             tweak {
                 output { outState }
-                output { outState.editInstitution(MINI_CORP) }
+                output { outState `issued by` MINI_CORP }
                 arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
                 this `fails requirement` "at least one cash input"
             }
@@ -104,7 +100,7 @@ class CashTests {
         }
 
         val ptx = TransactionBuilder()
-        Cash().craftIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12,34), owner = DUMMY_PUBKEY_1)
+        Cash().generateIssue(ptx, 100.DOLLARS, MINI_CORP.ref(12,34), owner = DUMMY_PUBKEY_1)
         assertTrue(ptx.inputStates().isEmpty())
         val s = ptx.outputStates()[0] as Cash.State
         assertEquals(100.DOLLARS, s.amount)
@@ -156,7 +152,7 @@ class CashTests {
         // Can't change issuer.
         transaction {
             input { inState }
-            output { outState.editInstitution(MINI_CORP) }
+            output { outState `issued by` MINI_CORP }
             this `fails requirement` "at issuer MegaCorp the amounts balance"
         }
         // Can't change deposit reference when splitting.
@@ -187,7 +183,7 @@ class CashTests {
         // Can't have superfluous input states from different issuers.
         transaction {
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
             output { outState }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this `fails requirement` "at issuer MiniCorp the amounts balance"
@@ -227,9 +223,9 @@ class CashTests {
         // Multi-issuer case.
         transaction {
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
 
-            output { inState.copy(amount = inState.amount - 200.DOLLARS).editInstitution(MINI_CORP) }
+            output { inState.copy(amount = inState.amount - 200.DOLLARS) `issued by` MINI_CORP }
             output { inState.copy(amount = inState.amount - 200.DOLLARS) }
 
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
@@ -249,7 +245,7 @@ class CashTests {
         transaction {
             // Gather 2000 dollars from two different issuers.
             input { inState }
-            input { inState.editInstitution(MINI_CORP) }
+            input { inState `issued by` MINI_CORP }
 
             // Can't merge them together.
             tweak {
@@ -265,7 +261,7 @@ class CashTests {
 
             // This works.
             output { inState.copy(owner = DUMMY_PUBKEY_2) }
-            output { inState.copy(owner = DUMMY_PUBKEY_2).editInstitution(MINI_CORP) }
+            output { inState.copy(owner = DUMMY_PUBKEY_2) `issued by` MINI_CORP }
             arg(DUMMY_PUBKEY_1) { Cash.Commands.Move() }
             this.accepts()
         }
@@ -293,7 +289,7 @@ class CashTests {
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
-    // Spend crafting
+    // Spend tx generation
 
     val OUR_PUBKEY_1 = DUMMY_PUBKEY_1
     val THEIR_PUBKEY_1 = DUMMY_PUBKEY_2
@@ -301,7 +297,7 @@ class CashTests {
     fun makeCash(amount: Amount, corp: Party, depositRef: Byte = 1) =
             StateAndRef(
                     Cash.State(corp.ref(depositRef), amount, OUR_PUBKEY_1),
-                    ContractStateRef(SecureHash.randomSHA256(), Random().nextInt(32))
+                    StateRef(SecureHash.randomSHA256(), Random().nextInt(32))
             )
 
     val WALLET = listOf(
@@ -313,56 +309,56 @@ class CashTests {
 
     fun makeSpend(amount: Amount, dest: PublicKey): WireTransaction {
         val tx = TransactionBuilder()
-        Cash().craftSpend(tx, amount, dest, WALLET)
+        Cash().generateSpend(tx, amount, dest, WALLET)
         return tx.toWireTransaction()
     }
 
     @Test
-    fun craftSimpleDirectSpend() {
+    fun generateSimpleDirectSpend() {
         val wtx = makeSpend(100.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[0])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[0])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
-    fun craftSimpleSpendWithParties() {
+    fun generateSimpleSpendWithParties() {
         val tx = TransactionBuilder()
-        Cash().craftSpend(tx, 80.DOLLARS, ALICE, WALLET, setOf(MINI_CORP))
+        Cash().generateSpend(tx, 80.DOLLARS, ALICE, WALLET, setOf(MINI_CORP))
         assertEquals(WALLET[2].ref, tx.inputStates()[0])
     }
 
     @Test
-    fun craftSimpleSpendWithChange() {
+    fun generateSimpleSpendWithChange() {
         val wtx = makeSpend(10.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputStates[0])
-        assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputStates[1])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 10.DOLLARS), wtx.outputs[0])
+        assertEquals(WALLET[0].state.copy(amount = 90.DOLLARS), wtx.outputs[1])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
-    fun craftSpendWithTwoInputs() {
+    fun generateSpendWithTwoInputs() {
         val wtx = makeSpend(500.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[1].ref, wtx.inputStates[1])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[1].ref, wtx.inputs[1])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
-    fun craftSpendMixedDeposits() {
+    fun generateSpendMixedDeposits() {
         val wtx = makeSpend(580.DOLLARS, THEIR_PUBKEY_1)
-        assertEquals(WALLET[0].ref, wtx.inputStates[0])
-        assertEquals(WALLET[1].ref, wtx.inputStates[1])
-        assertEquals(WALLET[2].ref, wtx.inputStates[2])
-        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputStates[0])
-        assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputStates[1])
+        assertEquals(WALLET[0].ref, wtx.inputs[0])
+        assertEquals(WALLET[1].ref, wtx.inputs[1])
+        assertEquals(WALLET[2].ref, wtx.inputs[2])
+        assertEquals(WALLET[0].state.copy(owner = THEIR_PUBKEY_1, amount = 500.DOLLARS), wtx.outputs[0])
+        assertEquals(WALLET[2].state.copy(owner = THEIR_PUBKEY_1), wtx.outputs[1])
         assertEquals(OUR_PUBKEY_1, wtx.commands[0].pubkeys[0])
     }
 
     @Test
-    fun craftSpendInsufficientBalance() {
+    fun generateSpendInsufficientBalance() {
         val e: InsufficientBalanceException = assertFailsWith("balance") {
             makeSpend(1000.DOLLARS, THEIR_PUBKEY_1)
         }

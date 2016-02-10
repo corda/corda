@@ -6,17 +6,17 @@
  * All other rights reserved.
  */
 
-package core
+package core.crypto
 
 import com.google.common.io.BaseEncoding
-import core.crypto.Base58
+import core.Party
 import core.serialization.OpaqueBytes
 import java.math.BigInteger
 import java.security.*
 import java.security.interfaces.ECPublicKey
 
 // "sealed" here means there can't be any subclasses other than the ones defined here.
-sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
+sealed class SecureHash private constructor(bits: ByteArray) : OpaqueBytes(bits) {
     class SHA256(bits: ByteArray) : SecureHash(bits) {
         init { require(bits.size == 32) }
         override val signatureAlgorithmName: String get() = "SHA256withECDSA"
@@ -28,18 +28,19 @@ sealed class SecureHash(bits: ByteArray) : OpaqueBytes(bits) {
 
     // Like static methods in Java, except the 'companion' is a singleton that can have state.
     companion object {
+        @JvmStatic
         fun parse(str: String) = BaseEncoding.base16().decode(str.toLowerCase()).let {
             when (it.size) {
-                32 -> SecureHash.SHA256(it)
+                32 -> SHA256(it)
                 else -> throw IllegalArgumentException("Provided string is not 32 bytes in base 16 (hex): $str")
             }
         }
 
-        fun sha256(bits: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bits))
-        fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
-        fun sha256(str: String) = sha256(str.toByteArray())
+        @JvmStatic fun sha256(bits: ByteArray) = SHA256(MessageDigest.getInstance("SHA-256").digest(bits))
+        @JvmStatic fun sha256Twice(bits: ByteArray) = sha256(sha256(bits).bits)
+        @JvmStatic fun sha256(str: String) = sha256(str.toByteArray())
 
-        fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
+        @JvmStatic fun randomSHA256() = sha256(SecureRandom.getInstanceStrong().generateSeed(32))
     }
 
     abstract val signatureAlgorithmName: String
@@ -123,3 +124,6 @@ fun PublicKey.toStringShort(): String {
 // Allow Kotlin destructuring:    val (private, public) = keypair
 operator fun KeyPair.component1() = this.private
 operator fun KeyPair.component2() = this.public
+
+/** A simple wrapper that will make it easier to swap out the EC algorithm we use in future */
+fun generateKeyPair() = KeyPairGenerator.getInstance("EC").genKeyPair()

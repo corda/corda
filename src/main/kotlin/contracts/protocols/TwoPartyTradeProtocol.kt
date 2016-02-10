@@ -13,12 +13,13 @@ import com.google.common.util.concurrent.ListenableFuture
 import contracts.Cash
 import contracts.sumCashBy
 import core.*
+import core.crypto.DigitalSignature
+import core.crypto.signWithECDSA
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.ProtocolStateMachine
 import core.messaging.SingleMessageRecipient
 import core.messaging.StateMachineManager
 import core.node.TimestamperClient
-import core.serialization.deserialize
 import core.utilities.trace
 import java.security.KeyPair
 import java.security.PublicKey
@@ -66,103 +67,167 @@ object TwoPartyTradeProtocol {
         return buyer.resultFuture
     }
 
-    class Seller(val otherSide: SingleMessageRecipient,
-                 val timestampingAuthority: LegallyIdentifiableNode,
-                 val assetToSell: StateAndRef<OwnableState>,
-                 val price: Amount,
-                 val myKeyPair: KeyPair,
-                 val buyerSessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
-        @Suspendable
-        override fun call(): Pair<WireTransaction, LedgerTransaction> {
-            val sessionID = random63BitValue()
-
-            // Make the first message we'll send to kick off the protocol.
-            val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
-
-            val partialTX = sendAndReceive(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello, SignedWireTransaction::class.java)
-            logger.trace { "Received partially signed transaction" }
-
-            partialTX.verifySignatures()
-            val wtx: WireTransaction = partialTX.txBits.deserialize()
-
-            requireThat {
-                "transaction sends us the right amount of cash" by (wtx.outputStates.sumCashBy(myKeyPair.public) == price)
-                // There are all sorts of funny games a malicious secondary might play here, we should fix them:
-                //
-                // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
-                //   we're reusing keys! So don't reuse keys!
-                // - This tx may not be valid according to the contracts of the input states, so we must resolve
-                //   and fully audit the transaction chains to convince ourselves that it is actually valid.
-                // - This tx may include output states that impose odd conditions on the movement of the cash,
-                //   once we implement state pairing.
-                //
-                // but the goal of this code is not to be fully secure, but rather, just to find good ways to
-                // express protocol state machines on top of the messaging layer.
-            }
-
-            // Sign with our key and get the timestamping authorities key as well.
-            // These two steps could be done in parallel, in theory.
-            val ourSignature = myKeyPair.signWithECDSA(partialTX.txBits)
-            val tsaSig = TimestamperClient(this, timestampingAuthority).timestamp(partialTX.txBits)
-            val fullySigned = partialTX.withAdditionalSignature(tsaSig).withAdditionalSignature(ourSignature)
-            val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
-
-            // We should run it through our full TransactionGroup of all transactions here.
-
-            logger.trace { "Built finished transaction, sending back to secondary!" }
-
-            send(TRADE_TOPIC, otherSide, buyerSessionID, fullySigned)
-
-            return Pair(wtx, ltx)
-        }
-    }
-
     // This object is serialised to the network and is the first protocol message the seller sends to the buyer.
-    private class SellerTradeInfo(
+    class SellerTradeInfo(
             val assetForSale: StateAndRef<OwnableState>,
             val price: Amount,
             val sellerOwnerKey: PublicKey,
             val sessionID: Long
     )
 
+    class SignaturesFromSeller(val timestampAuthoritySig: DigitalSignature.WithKey, val sellerSig: DigitalSignature.WithKey)
+
+    open class Seller(val otherSide: SingleMessageRecipient,
+                      val timestampingAuthority: LegallyIdentifiableNode,
+                      val assetToSell: StateAndRef<OwnableState>,
+                      val price: Amount,
+                      val myKeyPair: KeyPair,
+                      val buyerSessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
+        @Suspendable
+        override fun call(): Pair<WireTransaction, LedgerTransaction> {
+            val partialTX: SignedWireTransaction = receiveAndCheckProposedTransaction()
+
+            // These two steps could be done in parallel, in theory. Our framework doesn't support that yet though.
+            val ourSignature = signWithOurKey(partialTX)
+            val tsaSig = timestamp(partialTX)
+
+            val ledgerTX = sendSignatures(partialTX, ourSignature, tsaSig)
+
+            return Pair(partialTX.tx, ledgerTX)
+        }
+
+        @Suspendable
+        open fun receiveAndCheckProposedTransaction(): SignedWireTransaction {
+            val sessionID = random63BitValue()
+
+            // Make the first message we'll send to kick off the protocol.
+            val hello = SellerTradeInfo(assetToSell, price, myKeyPair.public, sessionID)
+
+            val maybePartialTX = sendAndReceive(TRADE_TOPIC, otherSide, buyerSessionID, sessionID, hello, SignedWireTransaction::class.java)
+            val partialTX = maybePartialTX.validate {
+                it.verifySignatures()
+                logger.trace { "Received partially signed transaction" }
+                val wtx: WireTransaction = it.tx
+
+                requireThat {
+                    "transaction sends us the right amount of cash" by (wtx.outputs.sumCashBy(myKeyPair.public) == price)
+                    // There are all sorts of funny games a malicious secondary might play here, we should fix them:
+                    //
+                    // - This tx may attempt to send some assets we aren't intending to sell to the secondary, if
+                    //   we're reusing keys! So don't reuse keys!
+                    // - This tx may not be valid according to the contracts of the input states, so we must resolve
+                    //   and fully audit the transaction chains to convince ourselves that it is actually valid.
+                    // - This tx may include output states that impose odd conditions on the movement of the cash,
+                    //   once we implement state pairing.
+                    //
+                    // but the goal of this code is not to be fully secure, but rather, just to find good ways to
+                    // express protocol state machines on top of the messaging layer.
+                }
+            }
+            return partialTX
+        }
+
+        open fun signWithOurKey(partialTX: SignedWireTransaction) = myKeyPair.signWithECDSA(partialTX.txBits)
+
+        @Suspendable
+        open fun timestamp(partialTX: SignedWireTransaction): DigitalSignature.LegallyIdentifiable {
+            return TimestamperClient(this, timestampingAuthority).timestamp(partialTX.txBits)
+        }
+
+        @Suspendable
+        open fun sendSignatures(partialTX: SignedWireTransaction, ourSignature: DigitalSignature.WithKey,
+                                tsaSig: DigitalSignature.LegallyIdentifiable): LedgerTransaction {
+            val fullySigned = partialTX + tsaSig + ourSignature
+            val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
+
+            // TODO: We should run it through our full TransactionGroup of all transactions here.
+
+            logger.trace { "Built finished transaction, sending back to secondary!" }
+
+            send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(tsaSig, ourSignature))
+            return ltx
+        }
+    }
 
     class UnacceptablePriceException(val givenPrice: Amount) : Exception()
     class AssetMismatchException(val expectedTypeName: String, val typeName: String) : Exception() {
         override fun toString() = "The submitted asset didn't match the expected type: $expectedTypeName vs $typeName"
     }
 
-    // The buyer's side of the protocol. See note above Seller to learn about the caveats here.
-    class Buyer(val otherSide: SingleMessageRecipient,
-                val timestampingAuthority: Party,
-                val acceptablePrice: Amount,
-                val typeToBuy: Class<out OwnableState>,
-                val sessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
+    open class Buyer(val otherSide: SingleMessageRecipient,
+                     val timestampingAuthority: Party,
+                     val acceptablePrice: Amount,
+                     val typeToBuy: Class<out OwnableState>,
+                     val sessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
         @Suspendable
         override fun call(): Pair<WireTransaction, LedgerTransaction> {
+            val tradeRequest = receiveAndValidateTradeRequest()
+            val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
+            val stx = signWithOurKeys(cashSigningPubKeys, ptx)
+            val signatures = swapSignaturesWithSeller(stx, tradeRequest.sessionID)
+
+            logger.trace { "Got signatures from seller, verifying ... "}
+            val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
+            val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
+
+            logger.trace { "Fully signed transaction was valid. Trade complete! :-)" }
+            return Pair(fullySigned.tx, ltx)
+        }
+
+        @Suspendable
+        open fun receiveAndValidateTradeRequest(): SellerTradeInfo {
             // Wait for a trade request to come in on our pre-provided session ID.
-            val tradeRequest = receive(TRADE_TOPIC, sessionID, SellerTradeInfo::class.java)
+            val maybeTradeRequest = receive(TRADE_TOPIC, sessionID, SellerTradeInfo::class.java)
 
-            // What is the seller trying to sell us?
-            val assetTypeName = tradeRequest.assetForSale.state.javaClass.name
-            logger.trace { "Got trade request for a $assetTypeName" }
+            val tradeRequest = maybeTradeRequest.validate {
+                // What is the seller trying to sell us?
+                val assetTypeName = it.assetForSale.state.javaClass.name
+                logger.trace { "Got trade request for a $assetTypeName" }
 
-            // Check the start message for acceptability.
-            check(tradeRequest.sessionID > 0)
-            if (tradeRequest.price > acceptablePrice)
-                throw UnacceptablePriceException(tradeRequest.price)
-            if (!typeToBuy.isInstance(tradeRequest.assetForSale.state))
-                throw AssetMismatchException(typeToBuy.name, assetTypeName)
+                // Check the start message for acceptability.
+                check(it.sessionID > 0)
+                if (it.price > acceptablePrice)
+                    throw UnacceptablePriceException(it.price)
+                if (!typeToBuy.isInstance(it.assetForSale.state))
+                    throw AssetMismatchException(typeToBuy.name, assetTypeName)
+            }
 
             // TODO: Either look up the stateref here in our local db, or accept a long chain of states and
             // validate them to audit the other side and ensure it actually owns the state we are being offered!
             // For now, just assume validity!
+            return tradeRequest
+        }
 
-            // Generate the shared transaction that both sides will sign, using the data we have.
+        @Suspendable
+        open fun swapSignaturesWithSeller(stx: SignedWireTransaction, theirSessionID: Long): SignaturesFromSeller {
+            logger.trace { "Sending partially signed transaction to seller" }
+
+            // TODO: Protect against the seller terminating here and leaving us in the lurch without the final tx.
+
+            return sendAndReceive(TRADE_TOPIC, otherSide, theirSessionID, sessionID, stx, SignaturesFromSeller::class.java).validate {}
+        }
+
+        open fun signWithOurKeys(cashSigningPubKeys: List<PublicKey>, ptx: TransactionBuilder): SignedWireTransaction {
+            // Now sign the transaction with whatever keys we need to move the cash.
+            for (k in cashSigningPubKeys) {
+                val priv = serviceHub.keyManagementService.toPrivate(k)
+                ptx.signWith(KeyPair(k, priv))
+            }
+
+            val stx = ptx.toSignedTransaction(checkSufficientSignatures = false)
+            stx.verifySignatures()  // Verifies that we generated a signed transaction correctly.
+
+            // TODO: Could run verify() here to make sure the only signature missing is the sellers.
+
+            return stx
+        }
+
+        open fun assembleSharedTX(tradeRequest: SellerTradeInfo): Pair<TransactionBuilder, List<PublicKey>> {
             val ptx = TransactionBuilder()
             // Add input and output states for the movement of cash, by using the Cash contract to generate the states.
             val wallet = serviceHub.walletService.currentWallet
             val cashStates = wallet.statesOfType<Cash.State>()
-            val cashSigningPubKeys = Cash().craftSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
+            val cashSigningPubKeys = Cash().generateSpend(ptx, tradeRequest.price, tradeRequest.sellerOwnerKey, cashStates)
             // Add inputs/outputs/a command for the movement of the asset.
             ptx.addInputState(tradeRequest.assetForSale.ref)
             // Just pick some new public key for now. This won't be linked with our identity in any way, which is what
@@ -177,33 +242,7 @@ object TwoPartyTradeProtocol {
             // And add a request for timestamping: it may be that none of the contracts need this! But it can't hurt
             // to have one.
             ptx.setTime(Instant.now(), timestampingAuthority, 30.seconds)
-
-            // Now sign the transaction with whatever keys we need to move the cash.
-            for (k in cashSigningPubKeys) {
-                val priv = serviceHub.keyManagementService.toPrivate(k)
-                ptx.signWith(KeyPair(k, priv))
-            }
-
-            val stx = ptx.toSignedTransaction(checkSufficientSignatures = false)
-            stx.verifySignatures()  // Verifies that we generated a signed transaction correctly.
-
-            // TODO: Could run verify() here to make sure the only signature missing is the sellers.
-
-            logger.trace { "Sending partially signed transaction to seller" }
-
-            // TODO: Protect against the buyer terminating here and leaving us in the lurch without the final tx.
-            // TODO: Protect against a malicious buyer sending us back a different transaction to the one we built.
-
-            val fullySigned = sendAndReceive(TRADE_TOPIC, otherSide, tradeRequest.sessionID,
-                    sessionID, stx, SignedWireTransaction::class.java)
-
-            logger.trace { "Got fully signed transaction, verifying ... "}
-
-            val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
-
-            logger.trace { "Fully signed transaction was valid. Trade complete! :-)" }
-
-            return Pair(fullySigned.tx, ltx)
+            return Pair(ptx, cashSigningPubKeys)
         }
     }
 }

@@ -10,8 +10,8 @@ package core.node
 
 import core.KeyManagementService
 import core.ThreadBox
+import core.crypto.generateKeyPair
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.util.*
@@ -39,7 +39,7 @@ class E2ETestKeyManagementService : KeyManagementService {
     override val keys: Map<PublicKey, PrivateKey> get() = mutex.locked { HashMap(keys) }
 
     override fun freshKey(): KeyPair {
-        val keypair = KeyPairGenerator.getInstance("EC").genKeyPair()
+        val keypair = generateKeyPair()
         mutex.locked {
             keys[keypair.public] = keypair.private
         }

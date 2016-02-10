@@ -9,11 +9,12 @@
 package core
 
 import co.paralleluniverse.fibers.Suspendable
+import core.crypto.DigitalSignature
+import core.crypto.generateKeyPair
 import core.messaging.MessagingService
 import core.messaging.NetworkMap
 import core.serialization.SerializedBytes
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
 
@@ -91,7 +92,7 @@ interface TimestamperService {
 // We define a dummy authority here to allow to us to develop prototype contracts in the absence of a real authority.
 // The timestamper itself is implemented in the unit test part of the code (in TestUtils.kt).
 object DummyTimestampingAuthority {
-    val key = KeyPairGenerator.getInstance("EC").genKeyPair()
+    val key = generateKeyPair()
     val identity = Party("The dummy timestamper", key.public)
 }
 

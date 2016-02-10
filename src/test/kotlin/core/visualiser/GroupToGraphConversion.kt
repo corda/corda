@@ -10,7 +10,7 @@ package core.visualiser
 
 import core.CommandData
 import core.ContractState
-import core.SecureHash
+import core.crypto.SecureHash
 import core.testutils.TransactionGroupDSL
 import org.graphstream.graph.Edge
 import org.graphstream.graph.Node
@@ -34,9 +34,9 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
             txNode.styleClass = "tx"
 
             // Now create a vertex for each output state.
-            for (outIndex in tx.outStates.indices) {
+            for (outIndex in tx.outputs.indices) {
                 val node = graph.addNode<Node>(tx.outRef<ContractState>(outIndex).ref.toString())
-                val state = tx.outStates[outIndex]
+                val state = tx.outputs[outIndex]
                 node.label = stateToLabel(state)
                 node.styleClass = stateToCSSClass(state) + ",state"
                 node.setAttribute("state", state)
@@ -55,7 +55,7 @@ class GraphVisualiser(val dsl: TransactionGroupDSL<in ContractState>) {
         }
         // And now all states and transactions were mapped to graph nodes, hook up the input edges.
         for ((txIndex, tx) in tg.transactions.withIndex()) {
-            for ((inputIndex, ref) in tx.inStateRefs.withIndex()) {
+            for ((inputIndex, ref) in tx.inputs.withIndex()) {
                 val edge = graph.addEdge<Edge>("tx$txIndex-in$inputIndex", ref.toString(), "tx$txIndex", true)
                 edge.weight = 1.2
             }

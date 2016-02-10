@@ -9,6 +9,9 @@
 package core
 
 import co.paralleluniverse.fibers.Suspendable
+import core.crypto.DigitalSignature
+import core.crypto.SecureHash
+import core.crypto.signWithECDSA
 import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
@@ -51,22 +54,22 @@ import java.util.*
  */
 
 /** Transaction ready for serialisation, without any signatures attached. */
-data class WireTransaction(val inputStates: List<ContractStateRef>,
-                           val outputStates: List<ContractState>,
+data class WireTransaction(val inputs: List<StateRef>,
+                           val outputs: List<ContractState>,
                            val commands: List<Command>) {
     fun toLedgerTransaction(identityService: IdentityService, originalHash: SecureHash): LedgerTransaction {
         val authenticatedArgs = commands.map {
             val institutions = it.pubkeys.mapNotNull { pk -> identityService.partyFromKey(pk) }
             AuthenticatedObject(it.pubkeys, institutions, it.data)
         }
-        return LedgerTransaction(inputStates, outputStates, authenticatedArgs, originalHash)
+        return LedgerTransaction(inputs, outputs, authenticatedArgs, originalHash)
     }
 
     override fun toString(): String {
         val buf = StringBuilder()
         buf.appendln("Transaction:")
-        for (input in inputStates) buf.appendln("${Emoji.rightArrow}INPUT:   $input")
-        for (output in outputStates) buf.appendln("${Emoji.leftArrow}OUTPUT:  $output")
+        for (input in inputs) buf.appendln("${Emoji.rightArrow}INPUT:   $input")
+        for (output in outputs) buf.appendln("${Emoji.leftArrow}OUTPUT:  $output")
         for (command in commands) buf.appendln("${Emoji.diamond}COMMAND: $command")
         return buf.toString()
     }
@@ -76,7 +79,7 @@ data class WireTransaction(val inputStates: List<ContractStateRef>,
 data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
     init { check(sigs.isNotEmpty()) }
 
-    // Lazily calculated access to the deserialised/hashed transaction data.
+    /** Lazily calculated access to the deserialised/hashed transaction data. */
     val tx: WireTransaction by lazy { txBits.deserialize() }
 
     /** A transaction ID is the hash of the [WireTransaction]. Thus adding or removing a signature does not change it. */
@@ -121,11 +124,14 @@ data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, v
 
     /** Returns the same transaction but with an additional (unchecked) signature */
     fun withAdditionalSignature(sig: DigitalSignature.WithKey) = copy(sigs = sigs + sig)
+
+    /** Alias for [withAdditionalSignature] to let you use Kotlin operator overloading. */
+    operator fun plus(sig: DigitalSignature.WithKey) = withAdditionalSignature(sig)
 }
 
 /** A mutable transaction that's in the process of being built, before all signatures are present. */
-class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> = arrayListOf(),
-                         private val outputStates: MutableList<ContractState> = arrayListOf(),
+class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf(),
+                         private val outputs: MutableList<ContractState> = arrayListOf(),
                          private val commands: MutableList<Command> = arrayListOf()) {
 
     val time: TimestampCommand? get() = commands.mapNotNull { it.data as? TimestampCommand }.singleOrNull()
@@ -152,8 +158,8 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
     public fun withItems(vararg items: Any): TransactionBuilder {
         for (t in items) {
             when (t) {
-                is ContractStateRef -> inputStates.add(t)
-                is ContractState -> outputStates.add(t)
+                is StateRef -> inputs.add(t)
+                is ContractState -> outputs.add(t)
                 is Command -> commands.add(t)
                 else -> throw IllegalArgumentException("Wrong argument type: ${t.javaClass}")
             }
@@ -211,7 +217,7 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
         currentSigs.add(sig)
     }
 
-    fun toWireTransaction() = WireTransaction(ArrayList(inputStates), ArrayList(outputStates), ArrayList(commands))
+    fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(outputs), ArrayList(commands))
 
     fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedWireTransaction {
         if (checkSufficientSignatures) {
@@ -224,14 +230,14 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
         return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
-    fun addInputState(ref: ContractStateRef) {
+    fun addInputState(ref: StateRef) {
         check(currentSigs.isEmpty())
-        inputStates.add(ref)
+        inputs.add(ref)
     }
 
     fun addOutputState(state: ContractState) {
         check(currentSigs.isEmpty())
-        outputStates.add(state)
+        outputs.add(state)
     }
 
     fun addCommand(arg: Command) {
@@ -245,8 +251,8 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
     fun addCommand(data: CommandData, keys: List<PublicKey>) = addCommand(Command(data, keys))
 
     // Accessors that yield immutable snapshots.
-    fun inputStates(): List<ContractStateRef> = ArrayList(inputStates)
-    fun outputStates(): List<ContractState> = ArrayList(outputStates)
+    fun inputStates(): List<StateRef> = ArrayList(inputs)
+    fun outputStates(): List<ContractState> = ArrayList(outputs)
     fun commands(): List<Command> = ArrayList(commands)
 }
 
@@ -256,20 +262,20 @@ class TransactionBuilder(private val inputStates: MutableList<ContractStateRef> 
  * with the commands from the wire, and verified/looked up.
  */
 data class LedgerTransaction(
-    /** The input states which will be consumed/invalidated by the execution of this transaction. */
-    val inStateRefs: List<ContractStateRef>,
-    /** The states that will be generated by the execution of this transaction. */
-    val outStates: List<ContractState>,
-    /** Arbitrary data passed to the program of each input state. */
+        /** The input states which will be consumed/invalidated by the execution of this transaction. */
+    val inputs: List<StateRef>,
+        /** The states that will be generated by the execution of this transaction. */
+    val outputs: List<ContractState>,
+        /** Arbitrary data passed to the program of each input state. */
     val commands: List<AuthenticatedObject<CommandData>>,
-    /** The hash of the original serialised SignedTransaction */
+        /** The hash of the original serialised SignedTransaction */
     val hash: SecureHash
 ) {
     @Suppress("UNCHECKED_CAST")
-    fun <T : ContractState> outRef(index: Int) = StateAndRef(outStates[index] as T, ContractStateRef(hash, index))
+    fun <T : ContractState> outRef(index: Int) = StateAndRef(outputs[index] as T, StateRef(hash, index))
 
     fun <T : ContractState> outRef(state: T): StateAndRef<T> {
-        val i = outStates.indexOf(state)
+        val i = outputs.indexOf(state)
         if (i == -1)
             throw IllegalArgumentException("State not found in this transaction")
         return outRef(i)

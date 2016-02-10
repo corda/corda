@@ -636,22 +636,22 @@ again to ensure the third transaction fails with a message that contains "must h
 the exact message).
 
 
-Adding a crafting API to your contract
+Adding a generation API to your contract
 --------------------------------------
 
 Contract classes **must** provide a verify function, but they may optionally also provide helper functions to simplify
-their usage. A simple class of functions most contracts provide are *crafting functions*, which either generate or
+their usage. A simple class of functions most contracts provide are *generation functions*, which either create or
 modify a transaction to perform certain actions (an action is normally mappable 1:1 to a command, but doesn't have to
 be so).
 
-Crafting may involve complex logic. For example, the cash contract has a ``craftSpend`` method that is given a set of
+Generation may involve complex logic. For example, the cash contract has a ``generateSpend`` method that is given a set of
 cash states and chooses a way to combine them together to satisfy the amount of money that is being sent. In the
 immutable-state model that we are using ledger entries (states) can only be created and deleted, but never modified.
 Therefore to send $1200 when we have only $900 and $500 requires combining both states together, and then creating
 two new output states of $1200 and $200 back to ourselves. This latter state is called the *change* and is a concept
 that should be familiar to anyone who has worked with Bitcoin.
 
-As another example, we can imagine code that implements a netting algorithm may craft complex transactions that must
+As another example, we can imagine code that implements a netting algorithm may generate complex transactions that must
 be signed by many people. Whilst such code might be too big for a single utility method (it'd probably be sized more
 like a module), the basic concept is the same: preparation of a transaction using complex logic.
 
@@ -662,7 +662,7 @@ a method to wrap up the issuance process:
 
    .. sourcecode:: kotlin
 
-      fun craftIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
+      fun generateIssue(issuance: InstitutionReference, faceValue: Amount, maturityDate: Instant): TransactionBuilder {
           val state = State(issuance, issuance.party.owningKey, faceValue, maturityDate)
           return TransactionBuilder(state, WireCommand(Commands.Issue, issuance.party.owningKey))
       }
@@ -673,7 +673,7 @@ returns a ``TransactionBuilder``. A ``TransactionBuilder`` is one of the few mut
 It allows you to add inputs, outputs and commands to it and is designed to be passed around, potentially between
 multiple contracts.
 
-.. note:: Crafting methods should ideally be written to compose with each other, that is, they should take a
+.. note:: Generation methods should ideally be written to compose with each other, that is, they should take a
    ``TransactionBuilder`` as an argument instead of returning one, unless you are sure it doesn't make sense to
    combine this type of transaction with others. In this case, issuing CP at the same time as doing other things
    would just introduce complexity that isn't likely to be worth it, so we return a fresh object each time: instead,
@@ -697,7 +697,7 @@ What about moving the paper, i.e. reassigning ownership to someone else?
 
    .. sourcecode:: kotlin
 
-      fun craftMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
+      fun generateMove(tx: TransactionBuilder, paper: StateAndRef<State>, newOwner: PublicKey) {
           tx.addInputState(paper.ref)
           tx.addOutputState(paper.state.copy(owner = newOwner))
           tx.addArg(WireCommand(Commands.Move, paper.state.owner))
@@ -705,7 +705,7 @@ What about moving the paper, i.e. reassigning ownership to someone else?
 
 Here, the method takes a pre-existing ``TransactionBuilder`` and adds to it. This is correct because typically
 you will want to combine a sale of CP atomically with the movement of some other asset, such as cash. So both
-craft methods should operate on the same transaction. You can see an example of this being done in the unit tests
+generate methods should operate on the same transaction. You can see an example of this being done in the unit tests
 for the commercial paper contract.
 
 The paper is given to us as a ``StateAndRef<CommercialPaper.State>`` object. This is exactly what it sounds like:
@@ -719,9 +719,9 @@ Finally, we can do redemption.
    .. sourcecode:: kotlin
 
       @Throws(InsufficientBalanceException::class)
-      fun craftRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
+      fun generateRedeem(tx: TransactionBuilder, paper: StateAndRef<State>, wallet: List<StateAndRef<Cash.State>>) {
           // Add the cash movement using the states in our wallet.
-          Cash().craftSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
+          Cash().generateSpend(tx, paper.state.faceValue, paper.state.owner, wallet)
           tx.addInputState(paper.ref)
           tx.addArg(WireCommand(CommercialPaper.Commands.Redeem, paper.state.owner))
       }
@@ -744,10 +744,9 @@ A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, w
 is recognised by the network. The most important next step is for the participating entities to sign it using the
 ``signWith()`` method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
 signature inside the ``TransactionBuilder``. Once all parties have signed, you can call ``TransactionBuilder.toSignedTransaction()``
-to get a ``SignedWireTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*.
-
-.. note:: Timestamping and passing around of partial transactions for group signing is not yet fully implemented.
-   This tutorial will be updated once it is.
+to get a ``SignedWireTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*,
+which can be done using a ``TimestamperClient``. To learn more about that, please refer to the
+:doc:`protocol-state-machines` document.
 
 You can see how transactions flow through the different stages of construction by examining the commercial paper
 unit tests.

@@ -12,6 +12,8 @@ import com.google.common.net.HostAndPort
 import contracts.CommercialPaper
 import contracts.protocols.TwoPartyTradeProtocol
 import core.*
+import core.crypto.SecureHash
+import core.crypto.generateKeyPair
 import core.messaging.LegallyIdentifiableNode
 import core.messaging.SingleMessageRecipient
 import core.messaging.runOnNextMessage
@@ -23,31 +25,14 @@ import joptsimple.OptionParser
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
+import kotlin.system.exitProcess
 
 // TRADING DEMO
 //
-// This demo app can be run in one of two modes. In the listening mode it will buy commercial paper from a selling node
-// that connects to it, using IOU cash it issued to itself. It also runs a timestamping service in this mode. In the
-// non-listening mode, it will connect to the specified listening node and sell some commercial paper in return for
-// cash. There's currently no UI so all you can see is log messages.
-//
-// Please note that the software currently assumes every node has a unique DNS name. Thus you cannot name both nodes
-// "localhost". This might get fixed in future, but for now to run the listening node, alias "alpha" to "localhost"
-// in your /etc/hosts file and then try a command line like this:
-//
-//   --dir=alpha --service-fake-trades --network-address=alpha
-//
-// To run the node that initiates a trade, alias "beta" to "localhost" in your /etc/hosts file and then try a command
-// line like this:
-//
-//  --dir=beta --fake-trade-with=alpha --network-address=beta:31338
-//  --timestamper-identity-file=alpha/identity-public --timestamper-address=alpha
-//
-// Alternatively,
+// Please see docs/build/html/running-the-trading-demo.html
 
 
 fun main(args: Array<String>) {
@@ -73,8 +58,7 @@ fun main(args: Array<String>) {
     } catch (e: Exception) {
         println(e.message)
         printHelp()
-        System.exit(1)
-        throw Exception()   // TODO: Remove when upgrading to Kotlin 1.0 RC
+        exitProcess(1)
     }
 
     BriefLogFormatter.initVerbose("platform.trade")
@@ -88,11 +72,11 @@ fun main(args: Array<String>) {
 
     val config = loadConfigFile(configFile)
 
-    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(DEFAULT_PORT)
+    val myNetAddr = HostAndPort.fromString(options.valueOf(networkAddressArg)).withDefaultPort(Node.DEFAULT_PORT)
     val listening = options.has(serviceFakeTradesArg)
 
     val timestamperId = if (options.has(timestamperIdentityFile)) {
-        val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(DEFAULT_PORT)
+        val addr = HostAndPort.fromString(options.valueOf(timestamperNetAddr)).withDefaultPort(Node.DEFAULT_PORT)
         val path = Paths.get(options.valueOf(timestamperIdentityFile))
         val party = Files.readAllBytes(path).deserialize<Party>(includeClassName = true)
         LegallyIdentifiableNode(ArtemisMessagingService.makeRecipient(addr), party)
@@ -140,9 +124,9 @@ fun main(args: Array<String>) {
         // Grab a session ID for the fake trade from the other side, then kick off the seller and sell them some junk.
         if (!options.has(fakeTradeWithArg)) {
             println("Need the --fake-trade-with command line argument")
-            System.exit(1)
+            exitProcess(1)
         }
-        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(DEFAULT_PORT)
+        val peerAddr = HostAndPort.fromString(options.valuesOf(fakeTradeWithArg).single()).withDefaultPort(Node.DEFAULT_PORT)
         val otherSide = ArtemisMessagingService.makeRecipient(peerAddr)
         node.net.runOnNextMessage("test.junktrade.initiate") { msg ->
             val sessionID = msg.data.deserialize<Long>()
@@ -175,10 +159,10 @@ fun main(args: Array<String>) {
 
 fun makeFakeCommercialPaper(ownedBy: PublicKey): StateAndRef<CommercialPaper.State> {
     // Make a fake company that's issued its own paper.
-    val party = Party("MegaCorp, Inc", KeyPairGenerator.getInstance("EC").genKeyPair().public)
+    val party = Party("MegaCorp, Inc", generateKeyPair().public)
     // ownedBy here is the random key that gives us control over it.
     val paper = CommercialPaper.State(party.ref(1,2,3), ownedBy, 1100.DOLLARS, Instant.now() + 10.days)
-    val randomRef = ContractStateRef(SecureHash.randomSHA256(), 0)
+    val randomRef = StateRef(SecureHash.randomSHA256(), 0)
     return StateAndRef(paper, randomRef)
 }
 
@@ -187,7 +171,7 @@ private fun loadConfigFile(configFile: Path): NodeConfiguration {
         println()
         println("This is the first run, so you should edit the config file in $configFile and then start the node again.")
         println()
-        System.exit(1)
+        exitProcess(1)
     }
 
     val defaultLegalName = "Global MegaCorp, Ltd."

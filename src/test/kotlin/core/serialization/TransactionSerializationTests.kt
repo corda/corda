@@ -10,7 +10,11 @@ package core.serialization
 
 import contracts.Cash
 import core.*
-import core.testutils.*
+import core.crypto.SecureHash
+import core.testutils.DUMMY_PUBKEY_1
+import core.testutils.MINI_CORP
+import core.testutils.TEST_TX_TIME
+import core.testutils.TestUtils
 import org.junit.Before
 import org.junit.Test
 import java.security.SignatureException
@@ -24,7 +28,7 @@ class TransactionSerializationTests {
     val outputState = Cash.State(depositRef, 600.POUNDS, DUMMY_PUBKEY_1)
     val changeState = Cash.State(depositRef, 400.POUNDS, TestUtils.keypair.public)
 
-    val fakeStateRef = ContractStateRef(SecureHash.sha256("fake tx id"), 0)
+    val fakeStateRef = StateRef(SecureHash.sha256("fake tx id"), 0)
     lateinit var tx: TransactionBuilder
 
     @Before
@@ -91,8 +95,8 @@ class TransactionSerializationTests {
         val stx = tx.toSignedTransaction()
         val ltx = stx.verifyToLedgerTransaction(MockIdentityService)
         assertEquals(tx.commands().map { it.data }, ltx.commands.map { it.value })
-        assertEquals(tx.inputStates(), ltx.inStateRefs)
-        assertEquals(tx.outputStates(), ltx.outStates)
+        assertEquals(tx.inputStates(), ltx.inputs)
+        assertEquals(tx.outputStates(), ltx.outputs)
         assertEquals(TEST_TX_TIME, ltx.commands.getTimestampBy(DUMMY_TIMESTAMPER.identity)!!.midpoint)
     }
 }

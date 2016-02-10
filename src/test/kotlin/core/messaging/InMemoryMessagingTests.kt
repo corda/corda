@@ -21,10 +21,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 open class TestWithInMemoryNetwork {
-    val nodes: MutableMap<InMemoryNetwork.Handle, InMemoryNetwork.Node> = HashMap()
+    val nodes: MutableMap<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode> = HashMap()
     lateinit var network: InMemoryNetwork
 
-    fun makeNode(inBackground: Boolean = false): Pair<InMemoryNetwork.Handle, InMemoryNetwork.Node> {
+    fun makeNode(inBackground: Boolean = false): Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode> {
         // The manuallyPumped = true bit means that we must call the pump method on the system in order to
         val (address, builder) = network.createNode(!inBackground)
         val node = builder.start().get()

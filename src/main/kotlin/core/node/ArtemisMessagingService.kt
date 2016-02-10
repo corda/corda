@@ -111,11 +111,16 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         secConfig.addUser("internal", password)
         secConfig.addRole("internal", "internal")
         secConfig.defaultUser = "internal"
-        config.setSecurityRoles(mapOf(
+        config.securityRoles = mapOf(
                 "#" to setOf(Role("internal", true, true, true, true, true, true, true))
-        ))
+        )
         val secManager = ActiveMQJAASSecurityManager(InVMLoginModule::class.java.name, secConfig)
         mq.setSecurityManager(secManager)
+
+        // Currently we cannot find out if something goes wrong during startup :( This is bug ARTEMIS-388 filed by me.
+        // The fix should be in the 1.3.0 release:
+        //
+        // https://issues.apache.org/jira/browse/ARTEMIS-388
         mq.start()
 
         // Connect to our in-memory server.
@@ -242,19 +247,19 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
                     hostAndPort.hostText, hostAndPort.port))
             mq.activeMQServer.deployBridge(BridgeConfiguration().apply {
                 setName(name)
-                setQueueName(name)
-                setForwardingAddress(name)
-                setStaticConnectors(listOf(name))
-                setConfirmationWindowSize(100000)   // a guess
+                queueName = name
+                forwardingAddress = name
+                staticConnectors = listOf(name)
+                confirmationWindowSize = 100000   // a guess
             })
         }
     }
 
     private fun setConfigDirectories(config: Configuration, dir: Path) {
         config.apply {
-            setBindingsDirectory(dir.resolve("bindings").toString())
-            setJournalDirectory(dir.resolve("journal").toString())
-            setLargeMessagesDirectory(dir.resolve("largemessages").toString())
+            bindingsDirectory = dir.resolve("bindings").toString()
+            journalDirectory = dir.resolve("journal").toString()
+            largeMessagesDirectory = dir.resolve("largemessages").toString()
         }
     }
 
@@ -262,11 +267,9 @@ class ArtemisMessagingService(val directory: Path, val myHostPort: HostAndPort) 
         val config = ConfigurationImpl()
         setConfigDirectories(config, directory)
         // We will be talking to our server purely in memory.
-        config.setAcceptorConfigurations(
-                setOf(
-                        tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port),
-                        TransportConfiguration(InVMAcceptorFactory::class.java.name)
-                )
+        config.acceptorConfigurations = setOf(
+                tcpTransport(ConnectionDirection.INBOUND, "0.0.0.0", hp.port),
+                TransportConfiguration(InVMAcceptorFactory::class.java.name)
         )
         return config
     }

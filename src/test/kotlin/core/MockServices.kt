@@ -8,6 +8,10 @@
 
 package core
 
+import core.crypto.DigitalSignature
+import core.crypto.SecureHash
+import core.crypto.generateKeyPair
+import core.crypto.signWithECDSA
 import core.messaging.MessagingService
 import core.messaging.MockNetworkMap
 import core.messaging.NetworkMap
@@ -15,9 +19,9 @@ import core.node.TimestampingError
 import core.serialization.SerializedBytes
 import core.serialization.deserialize
 import core.testutils.TEST_KEYS_TO_CORP_MAP
+import core.testutils.TEST_PROGRAM_MAP
 import core.testutils.TEST_TX_TIME
 import java.security.KeyPair
-import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.time.Clock
@@ -51,7 +55,7 @@ object MockIdentityService : IdentityService {
 
 class MockKeyManagementService(
         override val keys: Map<PublicKey, PrivateKey>,
-        val nextKeys: MutableList<KeyPair> = arrayListOf(KeyPairGenerator.getInstance("EC").genKeyPair())
+        val nextKeys: MutableList<KeyPair> = arrayListOf(generateKeyPair())
 ) : KeyManagementService {
     override fun freshKey() = nextKeys.removeAt(nextKeys.lastIndex)
 }
@@ -62,7 +66,7 @@ class MockWalletService(val states: List<StateAndRef<OwnableState>>) : WalletSer
 
 @ThreadSafe
 class MockStorageService : StorageService {
-    override val myLegalIdentityKey: KeyPair = KeyPairGenerator.getInstance("EC").genKeyPair()
+    override val myLegalIdentityKey: KeyPair = generateKeyPair()
     override val myLegalIdentity: Party = Party("Unit test party", myLegalIdentityKey.public)
 
     private val tables = HashMap<String, MutableMap<Any, Any>>()
@@ -72,6 +76,14 @@ class MockStorageService : StorageService {
         synchronized(tables) {
             return tables.getOrPut(tableName) { Collections.synchronizedMap(HashMap<Any, Any>()) } as MutableMap<K, V>
         }
+    }
+}
+
+object MockContractFactory : ContractFactory {
+    override operator fun <T : Contract> get(hash: SecureHash): T {
+        val clazz = TEST_PROGRAM_MAP[hash] ?: throw UnknownContractException()
+        @Suppress("UNCHECKED_CAST")
+        return clazz.newInstance() as T
     }
 }
 

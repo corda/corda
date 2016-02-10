@@ -10,6 +10,7 @@ package core.node
 
 import co.paralleluniverse.fibers.Suspendable
 import core.*
+import core.crypto.SecureHash
 import core.messaging.*
 import core.serialization.serialize
 import core.testutils.ALICE
@@ -26,12 +27,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
-    lateinit var myNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.Node>
-    lateinit var serviceNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.Node>
+    lateinit var myNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode>
+    lateinit var serviceNode: Pair<InMemoryNetwork.Handle, InMemoryNetwork.InMemoryNode>
     lateinit var service: TimestamperNodeService
 
     val ptx = TransactionBuilder().apply {
-        addInputState(ContractStateRef(SecureHash.randomSHA256(), 0))
+        addInputState(StateRef(SecureHash.randomSHA256(), 0))
         addOutputState(100.DOLLARS.CASH)
     }
 
@@ -62,7 +63,7 @@ class TimestamperNodeServiceTest : TestWithInMemoryNetwork() {
         override fun call(): Boolean {
             val client = TimestamperClient(this, server)
             val ptx = TransactionBuilder().apply {
-                addInputState(ContractStateRef(SecureHash.randomSHA256(), 0))
+                addInputState(StateRef(SecureHash.randomSHA256(), 0))
                 addOutputState(100.DOLLARS.CASH)
             }
             ptx.addCommand(TimestampCommand(now - 20.seconds, now + 20.seconds), server.identity.owningKey)

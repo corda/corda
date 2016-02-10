@@ -12,8 +12,11 @@ package core.testutils
 
 import contracts.*
 import core.*
+import core.crypto.DummyPublicKey
+import core.crypto.NullPublicKey
+import core.crypto.SecureHash
+import core.crypto.generateKeyPair
 import core.visualiser.GraphVisualiser
-import java.security.KeyPairGenerator
 import java.security.PublicKey
 import java.time.Instant
 import java.util.*
@@ -22,8 +25,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.fail
 
 object TestUtils {
-    val keypair = KeyPairGenerator.getInstance("EC").genKeyPair()
-    val keypair2 = KeyPairGenerator.getInstance("EC").genKeyPair()
+    val keypair = generateKeyPair()
+    val keypair2 = generateKeyPair()
 }
 
 // A few dummy values for testing.
@@ -33,9 +36,9 @@ val MINI_CORP_KEY = TestUtils.keypair2
 val MINI_CORP_PUBKEY = MINI_CORP_KEY.public
 val DUMMY_PUBKEY_1 = DummyPublicKey("x1")
 val DUMMY_PUBKEY_2 = DummyPublicKey("x2")
-val ALICE_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val ALICE_KEY = generateKeyPair()
 val ALICE = ALICE_KEY.public
-val BOB_KEY = KeyPairGenerator.getInstance("EC").genKeyPair()
+val BOB_KEY = generateKeyPair()
 val BOB = BOB_KEY.public
 val MEGA_CORP = Party("MegaCorp", MEGA_CORP_PUBKEY)
 val MINI_CORP = Party("MiniCorp", MINI_CORP_PUBKEY)
@@ -49,13 +52,13 @@ val TEST_KEYS_TO_CORP_MAP: Map<PublicKey, Party> = mapOf(
 val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 
 // In a real system this would be a persistent map of hash to bytecode and we'd instantiate the object as needed inside
-// a sandbox. For now we just instantiate right at the start of the program.
-val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
-        CASH_PROGRAM_ID to Cash(),
-        CP_PROGRAM_ID to CommercialPaper(),
-        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper(),
-        CROWDFUND_PROGRAM_ID to CrowdFund(),
-        DUMMY_PROGRAM_ID to DummyContract
+// a sandbox. For unit tests we just have a hard-coded list.
+val TEST_PROGRAM_MAP: Map<SecureHash, Class<out Contract>> = mapOf(
+        CASH_PROGRAM_ID to Cash::class.java,
+        CP_PROGRAM_ID to CommercialPaper::class.java,
+        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper::class.java,
+        CROWDFUND_PROGRAM_ID to CrowdFund::class.java,
+        DUMMY_PROGRAM_ID to DummyContract::class.java
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,7 +82,9 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 //
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
-infix fun Cash.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
+infix fun Cash.State.`owned by`(owner: PublicKey) = copy(owner = owner)
+infix fun Cash.State.`issued by`(party: Party) = copy(deposit = deposit.copy(party = party))
+infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
 infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
 
 // Allows you to write 100.DOLLARS.CASH
@@ -130,7 +135,7 @@ open class TransactionForTest : AbstractTransactionForTest() {
     protected fun run(time: Instant) {
         val cmds = commandsToAuthenticatedObjects()
         val tx = TransactionForVerification(inStates, outStates.map { it.state }, cmds, SecureHash.randomSHA256())
-        tx.verify(TEST_PROGRAM_MAP)
+        tx.verify(MockContractFactory)
     }
 
     fun accepts(time: Instant = TEST_TX_TIME) = run(time)
@@ -201,7 +206,7 @@ fun transaction(body: TransactionForTest.() -> Unit) = TransactionForTest().appl
 
 class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     open inner class LedgerTransactionDSL : AbstractTransactionForTest() {
-        private val inStates = ArrayList<ContractStateRef>()
+        private val inStates = ArrayList<StateRef>()
 
         fun input(label: String) {
             inStates.add(label.outputRef)
@@ -219,7 +224,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     val String.output: T get() = labelToOutputs[this] ?: throw IllegalArgumentException("State with label '$this' was not found")
-    val String.outputRef: ContractStateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
+    val String.outputRef: StateRef get() = labelToRefs[this] ?: throw IllegalArgumentException("Unknown label \"$this\"")
 
     fun <C : ContractState> lookup(label: String) = StateAndRef(label.output as C, label.outputRef)
 
@@ -228,7 +233,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             val ltx = toLedgerTransaction()
             for ((index, labelledState) in outStates.withIndex()) {
                 if (labelledState.label != null) {
-                    labelToRefs[labelledState.label] = ContractStateRef(ltx.hash, index)
+                    labelToRefs[labelledState.label] = StateRef(ltx.hash, index)
                     if (stateType.isInstance(labelledState.state)) {
                         labelToOutputs[labelledState.label] = labelledState.state as T
                     }
@@ -240,7 +245,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     }
 
     private val rootTxns = ArrayList<LedgerTransaction>()
-    private val labelToRefs = HashMap<String, ContractStateRef>()
+    private val labelToRefs = HashMap<String, StateRef>()
     private val labelToOutputs = HashMap<String, T>()
     private val outputsToLabels = HashMap<ContractState, String>()
 
@@ -253,7 +258,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
             val ltx = wtx.toLedgerTransaction(MockIdentityService, SecureHash.randomSHA256())
             for ((index, state) in outputStates.withIndex()) {
                 val label = state.label!!
-                labelToRefs[label] = ContractStateRef(ltx.hash, index)
+                labelToRefs[label] = StateRef(ltx.hash, index)
                 outputsToLabels[state.state] = label
                 labelToOutputs[label] = state.state as T
             }
@@ -292,7 +297,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
     fun verify() {
         val group = toTransactionGroup()
         try {
-            group.verify(TEST_PROGRAM_MAP)
+            group.verify(MockContractFactory)
         } catch (e: TransactionVerificationException) {
             // Let the developer know the index of the transaction that failed.
             val ltx: LedgerTransaction = txns.find { it.hash == e.tx.origHash }!!
