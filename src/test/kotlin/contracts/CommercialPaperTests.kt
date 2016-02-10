@@ -12,6 +12,8 @@ import core.*
 import core.node.TimestampingError
 import core.testutils.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.Parameterized
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -19,16 +21,46 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 interface ICommercialPaperTestTemplate {
-    open fun getPaper() : ICommercialPaperState
-    open fun getIssueCommand() : CommandData
-    open fun getRedeemCommand() : CommandData
-    open fun getMoveCommand() : CommandData
+    open fun getPaper(): ICommercialPaperState
+    open fun getIssueCommand(): CommandData
+    open fun getRedeemCommand(): CommandData
+    open fun getMoveCommand(): CommandData
 }
 
-open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTemplate) {
+class JavaCommercialPaperTest() : ICommercialPaperTestTemplate {
+    override fun getPaper(): ICommercialPaperState = JavaCommercialPaper.State(
+            MEGA_CORP.ref(123),
+            MEGA_CORP_PUBKEY,
+            1000.DOLLARS,
+            TEST_TX_TIME + 7.days
+    )
 
-    val thisTest = templateToTest
-    val PAPER_1 = thisTest.getPaper()
+    override fun getIssueCommand(): CommandData = JavaCommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(): CommandData = JavaCommercialPaper.Commands.Redeem()
+    override fun getMoveCommand(): CommandData = JavaCommercialPaper.Commands.Move()
+}
+
+class KotlinCommercialPaperTest() : ICommercialPaperTestTemplate {
+    override fun getPaper() : ICommercialPaperState = CommercialPaper.State(
+            issuance = MEGA_CORP.ref(123),
+            owner = MEGA_CORP_PUBKEY,
+            faceValue = 1000.DOLLARS,
+            maturityDate = TEST_TX_TIME + 7.days
+    )
+    override fun getIssueCommand(): CommandData = CommercialPaper.Commands.Issue()
+    override fun getRedeemCommand(): CommandData = CommercialPaper.Commands.Redeem()
+    override fun getMoveCommand(): CommandData = CommercialPaper.Commands.Move()
+}
+
+@RunWith(Parameterized::class)
+class CommercialPaperTestsGeneric {
+    companion object {
+        @Parameterized.Parameters @JvmStatic
+        fun data() = listOf(JavaCommercialPaperTest(), KotlinCommercialPaperTest())
+    }
+
+    @Parameterized.Parameter
+    lateinit var thisTest: ICommercialPaperTestTemplate
 
     @Test
     fun ok() {
@@ -44,7 +76,7 @@ open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTempl
     fun `key mismatch at issue`() {
         transactionGroup {
             transaction {
-                output { PAPER_1 }
+                output { thisTest.getPaper() }
                 arg(DUMMY_PUBKEY_1) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
@@ -57,7 +89,7 @@ open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTempl
     fun `face value is not zero`() {
         transactionGroup {
             transaction {
-                output { PAPER_1.withFaceValue(0.DOLLARS) }
+                output { thisTest.getPaper().withFaceValue(0.DOLLARS) }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
@@ -70,7 +102,7 @@ open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTempl
     fun `maturity date not in the past`() {
         transactionGroup {
             transaction {
-                output { PAPER_1.withMaturityDate(TEST_TX_TIME - 10.days) }
+                output { thisTest.getPaper().withMaturityDate(TEST_TX_TIME - 10.days) }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
@@ -105,11 +137,11 @@ open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTempl
     fun `issue cannot replace an existing state`() {
         transactionGroup {
             roots {
-                transaction(PAPER_1 label "paper")
+                transaction(thisTest.getPaper() label "paper")
             }
             transaction {
                 input("paper")
-                output { PAPER_1 }
+                output { thisTest.getPaper() }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }
@@ -203,7 +235,7 @@ open class CommercialPaperTestsGeneric(templateToTest: ICommercialPaperTestTempl
 
             // Some CP is issued onto the ledger by MegaCorp.
             transaction("Issuance") {
-                output("paper") { PAPER_1 }
+                output("paper") { thisTest.getPaper() }
                 arg(MEGA_CORP_PUBKEY) { thisTest.getIssueCommand() }
                 timestamp(TEST_TX_TIME)
             }

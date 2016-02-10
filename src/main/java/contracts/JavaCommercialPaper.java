@@ -26,7 +26,7 @@ import static kotlin.collections.CollectionsKt.*;
  *
  */
 public class JavaCommercialPaper implements Contract {
-    public static core.SecureHash JCP_PROGRAM_ID = SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+    public static SecureHash JCP_PROGRAM_ID = SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
 
     public static class State implements ContractState, ICommercialPaperState {
         private PartyReference issuance;
@@ -201,7 +201,7 @@ public class JavaCommercialPaper implements Contract {
                     Amount received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
 
                     if (! received.equals(input.getFaceValue()))
-                        throw new IllegalStateException(String.format("Failed Requirement: received amount equals the face value"));
+                        throw new IllegalStateException("Failed Requirement: received amount equals the face value");
                     if (time.isBefore(input.getMaturityDate()))
                         throw new IllegalStateException("Failed requirement: the paper must have matured");
                     if (!input.getFaceValue().equals(received))
@@ -220,21 +220,20 @@ public class JavaCommercialPaper implements Contract {
         return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
     }
 
-    public TransactionBuilder craftIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
+    public TransactionBuilder generateIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
         State state = new State(issuance,issuance.getParty().getOwningKey(), faceValue, maturityDate);
         return new TransactionBuilder().withItems(state,  new Command( new Commands.Issue(), issuance.getParty().getOwningKey()));
     }
 
-    public void craftRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException  {
+    public void generateRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException  {
         new Cash().craftSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
         tx.addInputState(paper.getRef());
         tx.addCommand(new Command( new Commands.Redeem(), paper.getState().getOwner()));
     }
 
-    public void craftMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
+    public void generateMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
         tx.addInputState(paper.getRef());
         tx.addOutputState(new State(paper.getState().getIssuance(), newOwner, paper.getState().getFaceValue(), paper.getState().getMaturityDate()));
         tx.addCommand(new Command(new Commands.Move(), paper.getState().getOwner()));
-
     }
 }
