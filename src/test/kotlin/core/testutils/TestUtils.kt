@@ -53,6 +53,7 @@ val TEST_TX_TIME = Instant.parse("2015-04-17T12:00:00.00Z")
 val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
         CASH_PROGRAM_ID to Cash(),
         CP_PROGRAM_ID to CommercialPaper(),
+        JavaCommercialPaper.JCP_PROGRAM_ID to JavaCommercialPaper(),
         CROWDFUND_PROGRAM_ID to CrowdFund(),
         DUMMY_PROGRAM_ID to DummyContract
 )
@@ -79,7 +80,8 @@ val TEST_PROGRAM_MAP: Map<SecureHash, Contract> = mapOf(
 // TODO: Make it impossible to forget to test either a failure or an accept for each transaction{} block
 
 infix fun Cash.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
-infix fun CommercialPaper.State.`owned by`(owner: PublicKey) = this.copy(owner = owner)
+infix fun ICommercialPaperState.`owned by`(new_owner: PublicKey) = this.withOwner(new_owner)
+
 // Allows you to write 100.DOLLARS.CASH
 val Amount.CASH: Cash.State get() = Cash.State(MINI_CORP.ref(1,2,3), this, NullPublicKey)
 

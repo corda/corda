@@ -47,12 +47,18 @@ class CommercialPaper : Contract {
             override val owner: PublicKey,
             val faceValue: Amount,
             val maturityDate: Instant
-    ) : OwnableState {
+    ) : OwnableState, ICommercialPaperState {
         override val programRef = CP_PROGRAM_ID
 
         fun withoutOwner() = copy(owner = NullPublicKey)
         override fun withNewOwner(newOwner: PublicKey) = Pair(Commands.Move(), copy(owner = newOwner))
         override fun toString() = "${Emoji.newspaper}CommercialPaper(of $faceValue redeemable on $maturityDate by '$issuance', owned by ${owner.toStringShort()})"
+
+        // Although kotlin is smart enough not to need these, as we are using the ICommercialPaperState, we need to declare them explicitly for use later,
+        override fun withOwner(newOwner: PublicKey): ICommercialPaperState = copy(owner = newOwner)
+        override fun withIssuance(newIssuance: PartyReference): ICommercialPaperState = copy(issuance = newIssuance)
+        override fun withFaceValue(newFaceValue: Amount): ICommercialPaperState = copy(faceValue = newFaceValue)
+        override fun withMaturityDate(newMaturityDate: Instant): ICommercialPaperState = copy(maturityDate = newMaturityDate)
     }
 
     interface Commands : CommandData {

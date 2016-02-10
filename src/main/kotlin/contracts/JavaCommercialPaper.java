@@ -19,14 +19,16 @@ import java.util.*;
 import static core.ContractsDSLKt.*;
 import static kotlin.collections.CollectionsKt.*;
 
+
 /**
  * This is a Java version of the CommercialPaper contract (chosen because it's simple). This demonstrates how the
  * use of Kotlin for implementation of the framework does not impose the same language choice on contract developers.
  *
- * NOTE: For illustration only. Not unit tested.
  */
 public class JavaCommercialPaper implements Contract {
-    public static class State implements ContractState {
+    public static core.SecureHash JCP_PROGRAM_ID = SecureHash.Companion.sha256("java commercial paper (this should be a bytecode hash)");
+
+    public static class State implements ContractState, ICommercialPaperState {
         private PartyReference issuance;
         private PublicKey owner;
         private Amount faceValue;
@@ -42,8 +44,23 @@ public class JavaCommercialPaper implements Contract {
         }
 
         public State copy() {
-            State ret = new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
-            return ret;
+            return new State(this.issuance, this.owner, this.faceValue, this.maturityDate);
+        }
+
+        public ICommercialPaperState withOwner(PublicKey newOwner) {
+            return new State(this.issuance, newOwner, this.faceValue, this.maturityDate);
+        }
+
+        public ICommercialPaperState withIssuance(PartyReference newIssuance) {
+            return new State(newIssuance, this.owner, this.faceValue, this.maturityDate);
+        }
+
+        public ICommercialPaperState withFaceValue(Amount newFaceValue) {
+            return new State(this.issuance, this.owner, newFaceValue, this.maturityDate);
+        }
+
+        public ICommercialPaperState withMaturityDate(Instant newMaturityDate) {
+            return new State(this.issuance, this.owner, this.faceValue, newMaturityDate);
         }
 
         public PartyReference getIssuance() {
@@ -120,46 +137,78 @@ public class JavaCommercialPaper implements Contract {
 
     @Override
     public void verify(@NotNull TransactionForVerification tx) {
-        // There are two possible things that can be done with CP. The first is trading it. The second is redeeming it
-        // for cash on or after the maturity date.
+        // There are three possible things that can be done with CP.
+        // Issuance, trading (aka moving in this prototype) and redeeming.
+        // Each command has it's own set of restrictions which the verify function ... verifies.
+
         List<InOutGroup<State>> groups = tx.groupStates(State.class, State::withoutOwner);
 
         // Find the command that instructs us what to do and check there's exactly one.
-        AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), Commands.class);
 
-        TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
-        if (timestampCommand == null)
-            throw new IllegalArgumentException("must be timestamped");
-        Instant time = timestampCommand.getMidpoint();
+        AuthenticatedObject<CommandData> cmd = requireSingleCommand(tx.getCommands(), JavaCommercialPaper.Commands.class);
 
         for (InOutGroup<State> group : groups) {
             List<State> inputs = group.getInputs();
             List<State> outputs = group.getOutputs();
 
-            // For now do not allow multiple pieces of CP to trade in a single transaction. Study this more!
-            State input = single(filterIsInstance(inputs, State.class));
-
-            if (!cmd.getSigners().contains(input.getOwner()))
-                throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
-
-            if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
-                // Check the output CP state is the same as the input state, ignoring the owner field.
+            // For now do not allow multiple pieces of CP to trade in a single transaction.
+            if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Issue) {
                 State output = single(outputs);
+                if (!inputs.isEmpty()) {
+                    throw new IllegalStateException("Failed Requirement: there is no input state");
+                }
+                if (output.faceValue.getPennies() == 0) {
+                    throw new IllegalStateException("Failed Requirement: the face value is not zero");
+                }
 
-                if (!output.getFaceValue().equals(input.getFaceValue()) ||
-                        !output.getIssuance().equals(input.getIssuance()) ||
-                        !output.getMaturityDate().equals(input.getMaturityDate()))
-                    throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
-            } else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem) {
-                Amount received = CashKt.sumCashOrNull(inputs);
-                if (received == null)
-                    throw new IllegalStateException("Failed requirement: no cash being redeemed");
-                if (input.getMaturityDate().isAfter(time))
-                    throw new IllegalStateException("Failed requirement: the paper must have matured");
-                if (!input.getFaceValue().equals(received))
-                    throw new IllegalStateException("Failed requirement: the received amount equals the face value");
-                if (!outputs.isEmpty())
-                    throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+                TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
+                if (timestampCommand == null)
+                    throw new IllegalArgumentException("Failed Requirement: must be timestamped");
+
+                Instant time = timestampCommand.getBefore();
+
+                if (! time.isBefore(output.maturityDate)) {
+                    throw new IllegalStateException("Failed Requirement: the maturity date is not in the past");
+                }
+
+                if (!cmd.getSigners().contains(output.issuance.getParty().getOwningKey())) {
+                    throw new IllegalStateException("Failed Requirement: the issuance is signed by the claimed issuer of the paper");
+                }
+            }
+            else { // Everything else (Move, Redeem) requires inputs (they are not first to be actioned)
+                   // There should be only a single input due to aggregation above
+                State input = single(inputs);
+
+                if (!cmd.getSigners().contains(input.getOwner()))
+                    throw new IllegalStateException("Failed requirement: the transaction is signed by the owner of the CP");
+
+                if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Move) {
+                    // Check the output CP state is the same as the input state, ignoring the owner field.
+                    State output = single(outputs);
+
+                    if (!output.getFaceValue().equals(input.getFaceValue()) ||
+                            !output.getIssuance().equals(input.getIssuance()) ||
+                            !output.getMaturityDate().equals(input.getMaturityDate()))
+                        throw new IllegalStateException("Failed requirement: the output state is the same as the input state except for owner");
+                }
+                else if (cmd.getValue() instanceof JavaCommercialPaper.Commands.Redeem)
+                {
+                    TimestampCommand timestampCommand = tx.getTimestampBy(DummyTimestampingAuthority.INSTANCE.getIdentity());
+                    if (timestampCommand == null)
+                        throw new IllegalArgumentException("Failed Requirement: must be timestamped");
+                    Instant time = timestampCommand.getBefore();
+
+                    Amount received = CashKt.sumCashBy(tx.getOutStates(), input.getOwner());
+
+                    if (! received.equals(input.getFaceValue()))
+                        throw new IllegalStateException(String.format("Failed Requirement: received amount equals the face value"));
+                    if (time.isBefore(input.getMaturityDate()))
+                        throw new IllegalStateException("Failed requirement: the paper must have matured");
+                    if (!input.getFaceValue().equals(received))
+                        throw new IllegalStateException("Failed requirement: the received amount equals the face value");
+                    if (!outputs.isEmpty())
+                        throw new IllegalStateException("Failed requirement: the paper must be destroyed");
+                }
             }
         }
     }
@@ -169,5 +218,23 @@ public class JavaCommercialPaper implements Contract {
     public SecureHash getLegalContractReference() {
         // TODO: Should return hash of the contract's contents, not its URI
         return SecureHash.Companion.sha256("https://en.wikipedia.org/wiki/Commercial_paper");
+    }
+
+    public TransactionBuilder craftIssue(@NotNull PartyReference issuance, @NotNull Amount faceValue, @Nullable Instant maturityDate) {
+        State state = new State(issuance,issuance.getParty().getOwningKey(), faceValue, maturityDate);
+        return new TransactionBuilder().withItems(state,  new Command( new Commands.Issue(), issuance.getParty().getOwningKey()));
+    }
+
+    public void craftRedeem(TransactionBuilder tx, StateAndRef<State> paper, List<StateAndRef<Cash.State>> wallet) throws InsufficientBalanceException  {
+        new Cash().craftSpend(tx, paper.getState().getFaceValue(), paper.getState().getOwner(), wallet, null);
+        tx.addInputState(paper.getRef());
+        tx.addCommand(new Command( new Commands.Redeem(), paper.getState().getOwner()));
+    }
+
+    public void craftMove(TransactionBuilder tx, StateAndRef<State> paper, PublicKey newOwner) {
+        tx.addInputState(paper.getRef());
+        tx.addOutputState(new State(paper.getState().getIssuance(), newOwner, paper.getState().getFaceValue(), paper.getState().getMaturityDate()));
+        tx.addCommand(new Command(new Commands.Move(), paper.getState().getOwner()));
+
     }
 }
