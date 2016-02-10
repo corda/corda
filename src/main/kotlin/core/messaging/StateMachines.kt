@@ -59,6 +59,15 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     // property.
     private val _stateMachines = Collections.synchronizedList(ArrayList<ProtocolStateMachine<*>>())
 
+    // This is a workaround for something Gradle does to us during unit tests. It replaces stderr with its own
+    // class that inserts itself into a ThreadLocal. That then gets caught in fiber serialisation, which we don't
+    // want because it can't get recreated properly. It turns out there's no good workaround for this! All the obvious
+    // approaches fail. Pending resolution of https://github.com/puniverse/quasar/issues/153 we just disable
+    // checkpointing when unit tests are run inside Gradle. The right fix is probably to make Quasar's
+    // bit-too-clever-for-its-own-good ThreadLocal serialisation trick. It already wasted far more time than it can
+    // ever recover.
+    val checkpointing: Boolean get() = !System.err.javaClass.name.contains("LinePerThreadBufferingOutputStream")
+
     /** Returns a snapshot of the currently registered state machines. */
     val stateMachines: List<ProtocolStateMachine<*>> get() {
         synchronized(_stateMachines) {
@@ -82,7 +91,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
     )
 
     init {
-        restoreCheckpoints()
+        if (checkpointing)
+            restoreCheckpoints()
     }
 
     /** Reads the database map and resurrects any serialised state machines. */
@@ -179,7 +189,8 @@ class StateMachineManager(val serviceHub: ServiceHub, val runInThread: Executor)
                                                  serialisedFiber: ByteArray) {
         val checkpoint = Checkpoint(serialisedFiber, logger.name, topic, responseType.name)
         val curPersistedBytes = checkpoint.serialize().bits
-        persistCheckpoint(prevCheckpointKey, curPersistedBytes)
+        if (checkpointing)
+            persistCheckpoint(prevCheckpointKey, curPersistedBytes)
         val newCheckpointKey = curPersistedBytes.sha256()
         net.runOnNextMessage(topic, runInThread) { netMsg ->
             val obj: Any = THREAD_LOCAL_KRYO.get().readObject(Input(netMsg.data), responseType)
