@@ -26,7 +26,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // Dokka (JavaDoc equivalent for Kotlin) download is huge so just comment this out for now.
-        //classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
+        // classpath "org.jetbrains.dokka:dokka-gradle-plugin:0.9.6"
     }
 }
 
