@@ -111,7 +111,7 @@ each side.
 
           fun runSeller(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
                         otherSide: SingleMessageRecipient, assetToSell: StateAndRef<OwnableState>, price: Amount,
-                        myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<Pair<WireTransaction, LedgerTransaction>> {
+                        myKeyPair: KeyPair, buyerSessionID: Long): ListenableFuture<SignedTransaction> {
               val seller = Seller(otherSide, timestampingAuthority, assetToSell, price, myKeyPair, buyerSessionID)
               smm.add("$TRADE_TOPIC.seller", seller)
               return seller.resultFuture
@@ -119,7 +119,7 @@ each side.
 
           fun runBuyer(smm: StateMachineManager, timestampingAuthority: LegallyIdentifiableNode,
                        otherSide: SingleMessageRecipient, acceptablePrice: Amount, typeToBuy: Class<out OwnableState>,
-                       sessionID: Long): ListenableFuture<Pair<WireTransaction, LedgerTransaction>> {
+                       sessionID: Long): ListenableFuture<SignedTransaction> {
               val buyer = Buyer(otherSide, timestampingAuthority.identity, acceptablePrice, typeToBuy, sessionID)
               smm.add("$TRADE_TOPIC.buyer", buyer)
               return buyer.resultFuture
@@ -140,9 +140,9 @@ each side.
                        val assetToSell: StateAndRef<OwnableState>,
                        val price: Amount,
                        val myKeyPair: KeyPair,
-                       val buyerSessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
+                       val buyerSessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
               @Suspendable
-              override fun call(): Pair<WireTransaction, LedgerTransaction> {
+              override fun call(): SignedTransaction {
                   TODO()
               }
           }
@@ -156,9 +156,9 @@ each side.
                       val timestampingAuthority: Party,
                       val acceptablePrice: Amount,
                       val typeToBuy: Class<out OwnableState>,
-                      val sessionID: Long) : ProtocolStateMachine<Pair<WireTransaction, LedgerTransaction>>() {
+                      val sessionID: Long) : ProtocolStateMachine<SignedTransaction>() {
               @Suspendable
-              override fun call(): Pair<WireTransaction, LedgerTransaction> {
+              override fun call(): SignedTransaction {
                   TODO()
               }
           }
@@ -251,9 +251,9 @@ Let's implement the ``Seller.call`` method. This will be invoked by the platform
       val ourSignature = signWithOurKey(partialTX)
       val tsaSig = timestamp(partialTX)
 
-      val ledgerTX = sendSignatures(partialTX, ourSignature, tsaSig)
+      val stx: SignedTransaction = sendSignatures(partialTX, ourSignature, tsaSig)
 
-      return Pair(partialTX.tx, ledgerTX)
+      return stx
 
 Here we see the outline of the procedure. We receive a proposed trade transaction from the buyer and check that it's
 valid. Then we sign with our own key, request a timestamping authority to assert with another signature that the
@@ -338,16 +338,16 @@ Here's the rest of the code:
 
       @Suspendable
       open fun sendSignatures(partialTX: SignedTransaction, ourSignature: DigitalSignature.WithKey,
-                              tsaSig: DigitalSignature.LegallyIdentifiable): LedgerTransaction {
+                              tsaSig: DigitalSignature.LegallyIdentifiable): SignedTransaction {
           val fullySigned = partialTX + tsaSig + ourSignature
-          val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
+          fullySigned.verify()
 
           // TODO: We should run it through our full TransactionGroup of all transactions here.
 
           logger.trace { "Built finished transaction, sending back to secondary!" }
 
           send(TRADE_TOPIC, otherSide, buyerSessionID, SignaturesFromSeller(tsaSig, ourSignature))
-          return ltx
+          return fullySigned
       }
 
 It's should be all pretty straightforward: here, ``txBits`` is the raw byte array representing the transaction.
@@ -372,7 +372,7 @@ OK, let's do the same for the buyer side:
    .. sourcecode:: kotlin
 
       @Suspendable
-      override fun call(): Pair<WireTransaction, LedgerTransaction> {
+      override fun call(): SignedTransaction {
           val tradeRequest = receiveAndValidateTradeRequest()
           val (ptx, cashSigningPubKeys) = assembleSharedTX(tradeRequest)
           val stx = signWithOurKeys(cashSigningPubKeys, ptx)
@@ -380,10 +380,10 @@ OK, let's do the same for the buyer side:
 
           logger.trace { "Got signatures from seller, verifying ... "}
           val fullySigned = stx + signatures.timestampAuthoritySig + signatures.sellerSig
-          val ltx = fullySigned.verifyToLedgerTransaction(serviceHub.identityService)
+          fullySigned.verify()
 
           logger.trace { "Fully signed transaction was valid. Trade complete! :-)" }
-          return Pair(fullySigned.tx, ltx)
+          return fullySigned
       }
 
       @Suspendable

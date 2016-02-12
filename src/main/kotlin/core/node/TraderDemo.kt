@@ -110,7 +110,7 @@ fun main(args: Array<String>) {
                 println()
                 println("Purchase complete - we are a happy customer! Final transaction is:")
                 println()
-                println(Emoji.renderIfSupported(it.first))
+                println(Emoji.renderIfSupported(it))
                 println()
                 println("Waiting for another seller to connect. Or press Ctrl-C to shut me down.")
             }
@@ -145,7 +145,7 @@ fun main(args: Array<String>) {
                 println()
                 println("Final transaction is")
                 println()
-                println(Emoji.renderIfSupported(it.first))
+                println(Emoji.renderIfSupported(it))
                 println()
                 node.stop()
             }
