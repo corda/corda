@@ -744,7 +744,7 @@ A ``TransactionBuilder`` is not by itself ready to be used anywhere, so first, w
 is recognised by the network. The most important next step is for the participating entities to sign it using the
 ``signWith()`` method. This takes a keypair, serialises the transaction, signs the serialised form and then stores the
 signature inside the ``TransactionBuilder``. Once all parties have signed, you can call ``TransactionBuilder.toSignedTransaction()``
-to get a ``SignedWireTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*,
+to get a ``SignedTransaction`` object. This is an immutable form of the transaction that's ready for *timestamping*,
 which can be done using a ``TimestamperClient``. To learn more about that, please refer to the
 :doc:`protocol-state-machines` document.
 

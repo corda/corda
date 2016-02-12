@@ -16,7 +16,7 @@ import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import com.esotericsoftware.kryo.serializers.JavaSerializer
-import core.SignedWireTransaction
+import core.SignedTransaction
 import core.crypto.SecureHash
 import core.crypto.generateKeyPair
 import core.crypto.sha256
@@ -206,7 +206,7 @@ fun createKryo(k: Kryo = Kryo()): Kryo {
         // Some classes have to be handled with the ImmutableClassSerializer because they need to have their
         // constructors be invoked (typically for lazy members).
         val immutables = listOf(
-            SignedWireTransaction::class,
+            SignedTransaction::class,
             SerializedBytes::class
         )
 

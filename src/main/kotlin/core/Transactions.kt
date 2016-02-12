@@ -78,9 +78,9 @@ data class WireTransaction(val inputs: List<StateRef>,
         return LedgerTransaction(inputs, outputs, authenticatedArgs, id)
     }
 
-    /** Serialises and returns this transaction as a [SignedWireTransaction] with no signatures attached. */
-    fun toSignedTransaction(withSigs: List<DigitalSignature.WithKey>): SignedWireTransaction {
-        return SignedWireTransaction(serialized, withSigs)
+    /** Serialises and returns this transaction as a [SignedTransaction] with no signatures attached. */
+    fun toSignedTransaction(withSigs: List<DigitalSignature.WithKey>): SignedTransaction {
+        return SignedTransaction(serialized, withSigs)
     }
 
     override fun toString(): String {
@@ -94,7 +94,7 @@ data class WireTransaction(val inputs: List<StateRef>,
 }
 
 /** Container for a [WireTransaction] and attached signatures. */
-data class SignedWireTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
+data class SignedTransaction(val txBits: SerializedBytes<WireTransaction>, val sigs: List<DigitalSignature.WithKey>) {
     init { check(sigs.isNotEmpty()) }
 
     /** Lazily calculated access to the deserialised/hashed transaction data. */
@@ -237,7 +237,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
 
     fun toWireTransaction() = WireTransaction(ArrayList(inputs), ArrayList(outputs), ArrayList(commands))
 
-    fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedWireTransaction {
+    fun toSignedTransaction(checkSufficientSignatures: Boolean = true): SignedTransaction {
         if (checkSufficientSignatures) {
             val gotKeys = currentSigs.map { it.by }.toSet()
             for (command in commands) {
@@ -245,7 +245,7 @@ class TransactionBuilder(private val inputs: MutableList<StateRef> = arrayListOf
                     throw IllegalStateException("Missing signatures on the transaction for a ${command.data.javaClass.canonicalName} command")
             }
         }
-        return SignedWireTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
+        return SignedTransaction(toWireTransaction().serialize(), ArrayList(currentSigs))
     }
 
     fun addInputState(ref: StateRef) {
@@ -299,13 +299,13 @@ data class LedgerTransaction(
     }
 
     /**
-     * Converts this transaction to [SignedWireTransaction] form, optionally using the provided keys to sign. There is
+     * Converts this transaction to [SignedTransaction] form, optionally using the provided keys to sign. There is
      * no requirement that [andSignWithKeys] include all required keys.
      *
      * @throws IllegalArgumentException if a key is provided that isn't listed in any command and [allowUnusedKeys]
      *                                  is false.
      */
-    fun toSignedTransaction(andSignWithKeys: List<KeyPair> = emptyList(), allowUnusedKeys: Boolean = false): SignedWireTransaction {
+    fun toSignedTransaction(andSignWithKeys: List<KeyPair> = emptyList(), allowUnusedKeys: Boolean = false): SignedTransaction {
         val allPubKeys = commands.flatMap { it.signers }.toSet()
         val wtx = toWireTransaction()
         val bits = wtx.serialize()

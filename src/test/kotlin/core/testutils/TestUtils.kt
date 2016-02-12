@@ -315,7 +315,7 @@ class TransactionGroupDSL<T : ContractState>(private val stateType: Class<T>) {
         GraphVisualiser(this as TransactionGroupDSL<ContractState>).display()
     }
 
-    fun signAll(): List<SignedWireTransaction> {
+    fun signAll(): List<SignedTransaction> {
         return txns.map { wtx ->
             val allPubKeys = wtx.commands.flatMap { it.pubkeys }.toSet()
             val bits = wtx.serialize()

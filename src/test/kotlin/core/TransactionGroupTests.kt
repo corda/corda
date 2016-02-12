@@ -132,7 +132,7 @@ class TransactionGroupTests {
 
     @Test
     fun signGroup() {
-        val signedTxns: List<SignedWireTransaction> = transactionGroup {
+        val signedTxns: List<SignedTransaction> = transactionGroup {
             transaction {
                 output("£1000") { A_THOUSAND_POUNDS }
                 arg(MINI_CORP_PUBKEY) { Cash.Commands.Issue() }
